@@ -1,0 +1,41 @@
+{
+  "app_version": "9.1.1",
+  "source_baseline": "9.1.0",
+  "api_versions": {
+    "casino": "v1",
+    "players": "v1",
+    "ledger": "v1",
+    "bots": "v1",
+    "autoplay": "v1",
+    "admin": "v1",
+    "roulette": "v1",
+    "slots": "v1",
+    "blackjack": "v1",
+    "baccarat": "v1",
+    "keno": "v1",
+    "bingo": "v1"
+  },
+  "modules": {
+    "application": "9.1.1",
+    "core": "9.1.0",
+    "ledger": "9.0.1",
+    "players": "9.0.1",
+    "bots": "1.0.0",
+    "autoplay": "1.1.0",
+    "audio": "9.1.0",
+    "admin": "1.1.0",
+    "roulette": "9.1.0",
+    "slots": "9.0.1",
+    "blackjack": "9.0.1",
+    "baccarat": "9.0.1",
+    "keno": "9.0.1",
+    "bingo": "9.0.1",
+    "tests": "1.1.1",
+    "docs": "1.1.1",
+    "contracts": "1.0.0",
+    "tooling": "1.0.0",
+    "commenting_policy": "1.0.0"
+  },
+  "compatible_frontend_bundle": "web-9.1.1",
+  "notes": "Repository bootstrap; gameplay baseline remains v9.1.0."
+}

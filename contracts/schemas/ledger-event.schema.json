@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "ledger_id",
+    "ts",
+    "player_id",
+    "amount",
+    "balance_before",
+    "balance_after",
+    "transaction_type"
+  ],
+  "properties": {
+    "ledger_id": {
+      "type": "string"
+    },
+    "ts": {
+      "type": "string"
+    },
+    "player_id": {
+      "type": "string"
+    },
+    "amount": {
+      "type": "number"
+    },
+    "balance_before": {
+      "type": "number"
+    },
+    "balance_after": {
+      "type": "number"
+    },
+    "transaction_type": {
+      "type": "string"
+    },
+    "game": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "round_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "details": {
+      "type": "object"
+    }
+  }
+}

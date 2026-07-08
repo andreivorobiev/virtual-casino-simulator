@@ -1,0 +1,15 @@
+{
+  "module": "autoplay",
+  "version": "1.1.0",
+  "paths": [
+    "casino/core/autoplay.py",
+    "web/core/autoplay.js"
+  ],
+  "requirements_prefixes": [
+    "AUTO"
+  ],
+  "depends_on": [
+    "core",
+    "ledger"
+  ]
+}

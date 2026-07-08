@@ -1,0 +1,73 @@
+openapi: 3.0.3
+info:
+  title: Virtual Casino bingo API
+  version: v1
+  description: Frozen v1 API contract skeleton for compatibility governance.
+paths:
+  /api/v1/games/bingo/state:
+    get:
+      summary: GET /api/v1/games/bingo/state
+      operationId: bingo_GET_api_v1_games_bingo_state
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/games/bingo/cards:
+    post:
+      summary: POST /api/v1/games/bingo/cards
+      operationId: bingo_POST_api_v1_games_bingo_cards
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/games/bingo/call:
+    post:
+      summary: POST /api/v1/games/bingo/call
+      operationId: bingo_POST_api_v1_games_bingo_call
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/games/bingo/auto:
+    post:
+      summary: POST /api/v1/games/bingo/auto
+      operationId: bingo_POST_api_v1_games_bingo_auto
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/games/bingo/reset:
+    post:
+      summary: POST /api/v1/games/bingo/reset
+      operationId: bingo_POST_api_v1_games_bingo_reset
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+components:
+  schemas:
+    ApiEnvelope:
+      type: object
+      required: [ok]
+      properties:
+        ok:
+          type: boolean
+        data:
+          type: object
+        error:
+          type: object

@@ -1,0 +1,72 @@
+openapi: 3.0.3
+info:
+  title: Virtual Casino players API
+  version: v1
+  description: Frozen v1 API contract skeleton for compatibility governance.
+paths:
+  /api/v1/players:
+    get:
+      summary: GET /api/v1/players
+      operationId: players_GET_api_v1_players
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+    post:
+      summary: POST /api/v1/players
+      operationId: players_POST_api_v1_players
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/players/{player_id}:
+    get:
+      summary: GET /api/v1/players/{player_id}
+      operationId: players_GET_api_v1_players_player_id
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/players/{player_id}/add-money:
+    post:
+      summary: POST /api/v1/players/{player_id}/add-money
+      operationId: players_POST_api_v1_players_player_id_add_money
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/players/{player_id}/ledger:
+    get:
+      summary: GET /api/v1/players/{player_id}/ledger
+      operationId: players_GET_api_v1_players_player_id_ledger
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+components:
+  schemas:
+    ApiEnvelope:
+      type: object
+      required: [ok]
+      properties:
+        ok:
+          type: boolean
+        data:
+          type: object
+        error:
+          type: object

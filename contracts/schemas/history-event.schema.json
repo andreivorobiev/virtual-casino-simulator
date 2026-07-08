@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "timestamp",
+    "game",
+    "round_id",
+    "player_id"
+  ],
+  "properties": {
+    "timestamp": {
+      "type": "string"
+    },
+    "game": {
+      "type": "string"
+    },
+    "round_id": {
+      "type": "string"
+    },
+    "player_id": {
+      "type": "string"
+    },
+    "details_json": {
+      "type": "string"
+    }
+  }
+}

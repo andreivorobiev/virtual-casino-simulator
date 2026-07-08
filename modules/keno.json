@@ -1,0 +1,27 @@
+{
+  "module": "keno",
+  "version": "9.0.1",
+  "paths": [
+    "casino/games/keno/",
+    "web/games/keno.js"
+  ],
+  "requirements_prefixes": [
+    "KENO"
+  ],
+  "contracts": [
+    "contracts/openapi/keno.v1.yaml"
+  ],
+  "depends_on": [
+    "core",
+    "ledger",
+    "players",
+    "autoplay"
+  ],
+  "may_not_depend_on": [
+    "roulette",
+    "slots",
+    "blackjack",
+    "baccarat",
+    "bingo"
+  ]
+}

@@ -1,0 +1,9 @@
+name: Codex Review Placeholder
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+jobs:
+  codex_review_placeholder:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Enable OpenAI Codex GitHub Action after repository secrets and policy are configured."

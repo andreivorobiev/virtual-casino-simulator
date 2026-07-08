@@ -1,0 +1,128 @@
+openapi: 3.0.3
+info:
+  title: Virtual Casino roulette API
+  version: v1
+  description: Frozen v1 API contract skeleton for compatibility governance.
+paths:
+  /api/v1/games/roulette/state:
+    get:
+      summary: GET /api/v1/games/roulette/state
+      operationId: roulette_GET_api_v1_games_roulette_state
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/games/roulette/settings:
+    post:
+      summary: POST /api/v1/games/roulette/settings
+      operationId: roulette_POST_api_v1_games_roulette_settings
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/games/roulette/bet-catalog:
+    get:
+      summary: GET /api/v1/games/roulette/bet-catalog
+      operationId: roulette_GET_api_v1_games_roulette_bet_catalog
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/games/roulette/bets:
+    post:
+      summary: POST /api/v1/games/roulette/bets
+      operationId: roulette_POST_api_v1_games_roulette_bets
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/games/roulette/call-bet:
+    post:
+      summary: POST /api/v1/games/roulette/call-bet
+      operationId: roulette_POST_api_v1_games_roulette_call_bet
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/games/roulette/rebet:
+    post:
+      summary: POST /api/v1/games/roulette/rebet
+      operationId: roulette_POST_api_v1_games_roulette_rebet
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/games/roulette/bets/{bet_id}:
+    delete:
+      summary: DELETE /api/v1/games/roulette/bets/{bet_id}
+      operationId: roulette_DELETE_api_v1_games_roulette_bets_bet_id
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/games/roulette/clear:
+    post:
+      summary: POST /api/v1/games/roulette/clear
+      operationId: roulette_POST_api_v1_games_roulette_clear
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/games/roulette/spin:
+    post:
+      summary: POST /api/v1/games/roulette/spin
+      operationId: roulette_POST_api_v1_games_roulette_spin
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/games/roulette/stats:
+    get:
+      summary: GET /api/v1/games/roulette/stats
+      operationId: roulette_GET_api_v1_games_roulette_stats
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+components:
+  schemas:
+    ApiEnvelope:
+      type: object
+      required: [ok]
+      properties:
+        ok:
+          type: boolean
+        data:
+          type: object
+        error:
+          type: object

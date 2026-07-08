@@ -1,0 +1,106 @@
+openapi: 3.0.3
+info:
+  title: Virtual Casino bots API
+  version: v1
+  description: Frozen v1 API contract skeleton for compatibility governance.
+paths:
+  /api/v1/bots:
+    get:
+      summary: GET /api/v1/bots
+      operationId: bots_GET_api_v1_bots
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/bots/capabilities:
+    get:
+      summary: GET /api/v1/bots/capabilities
+      operationId: bots_GET_api_v1_bots_capabilities
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/bots/{bot_id}:
+    post:
+      summary: POST /api/v1/bots/{bot_id}
+      operationId: bots_POST_api_v1_bots_bot_id
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/bots/{bot_id}/enable:
+    post:
+      summary: POST /api/v1/bots/{bot_id}/enable
+      operationId: bots_POST_api_v1_bots_bot_id_enable
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/bots/{bot_id}/disable:
+    post:
+      summary: POST /api/v1/bots/{bot_id}/disable
+      operationId: bots_POST_api_v1_bots_bot_id_disable
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/bots/{bot_id}/strategy:
+    post:
+      summary: POST /api/v1/bots/{bot_id}/strategy
+      operationId: bots_POST_api_v1_bots_bot_id_strategy
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/games/{game_id}/eligible-bots:
+    get:
+      summary: GET /api/v1/games/{game_id}/eligible-bots
+      operationId: bots_GET_api_v1_games_game_id_eligible_bots
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/games/{game_id}/bots/play-round:
+    post:
+      summary: POST /api/v1/games/{game_id}/bots/play-round
+      operationId: bots_POST_api_v1_games_game_id_bots_play_round
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+components:
+  schemas:
+    ApiEnvelope:
+      type: object
+      required: [ok]
+      properties:
+        ok:
+          type: boolean
+        data:
+          type: object
+        error:
+          type: object

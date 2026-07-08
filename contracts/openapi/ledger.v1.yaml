@@ -1,0 +1,40 @@
+openapi: 3.0.3
+info:
+  title: Virtual Casino ledger API
+  version: v1
+  description: Frozen v1 API contract skeleton for compatibility governance.
+paths:
+  /api/v1/players/{player_id}/ledger:
+    get:
+      summary: GET /api/v1/players/{player_id}/ledger
+      operationId: ledger_GET_api_v1_players_player_id_ledger
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/admin/ledger:
+    get:
+      summary: GET /api/v1/admin/ledger
+      operationId: ledger_GET_api_v1_admin_ledger
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+components:
+  schemas:
+    ApiEnvelope:
+      type: object
+      required: [ok]
+      properties:
+        ok:
+          type: boolean
+        data:
+          type: object
+        error:
+          type: object

@@ -1,0 +1,19 @@
+{
+  "module": "bots",
+  "version": "1.0.0",
+  "paths": [
+    "casino/bots/",
+    "web/core/bots.js"
+  ],
+  "requirements_prefixes": [
+    "BOT"
+  ],
+  "depends_on": [
+    "core",
+    "players",
+    "ledger"
+  ],
+  "may_not_depend_on": [
+    "casino/games/* internal modules"
+  ]
+}

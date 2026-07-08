@@ -1,0 +1,171 @@
+openapi: 3.0.3
+info:
+  title: Virtual Casino admin API
+  version: v1
+  description: Frozen v1 API contract skeleton for compatibility governance.
+paths:
+  /api/v1/admin/overview:
+    get:
+      summary: GET /api/v1/admin/overview
+      operationId: admin_GET_api_v1_admin_overview
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/admin/dashboard:
+    get:
+      summary: GET /api/v1/admin/dashboard
+      operationId: admin_GET_api_v1_admin_dashboard
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/admin/modules:
+    get:
+      summary: GET /api/v1/admin/modules
+      operationId: admin_GET_api_v1_admin_modules
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/admin/requirements:
+    get:
+      summary: GET /api/v1/admin/requirements
+      operationId: admin_GET_api_v1_admin_requirements
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/admin/game-states:
+    get:
+      summary: GET /api/v1/admin/game-states
+      operationId: admin_GET_api_v1_admin_game_states
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/admin/logs:
+    get:
+      summary: GET /api/v1/admin/logs
+      operationId: admin_GET_api_v1_admin_logs
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/admin/ledger:
+    get:
+      summary: GET /api/v1/admin/ledger
+      operationId: admin_GET_api_v1_admin_ledger
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/admin/history:
+    get:
+      summary: GET /api/v1/admin/history
+      operationId: admin_GET_api_v1_admin_history
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/admin/test-results:
+    get:
+      summary: GET /api/v1/admin/test-results
+      operationId: admin_GET_api_v1_admin_test_results
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/admin/audio-settings:
+    get:
+      summary: GET /api/v1/admin/audio-settings
+      operationId: admin_GET_api_v1_admin_audio_settings
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+    post:
+      summary: POST /api/v1/admin/audio-settings
+      operationId: admin_POST_api_v1_admin_audio_settings
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/admin/autoplay:
+    get:
+      summary: GET /api/v1/admin/autoplay
+      operationId: admin_GET_api_v1_admin_autoplay
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/admin/autoplay/stop-all:
+    post:
+      summary: POST /api/v1/admin/autoplay/stop-all
+      operationId: admin_POST_api_v1_admin_autoplay_stop_all
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/admin/bots:
+    get:
+      summary: GET /api/v1/admin/bots
+      operationId: admin_GET_api_v1_admin_bots
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+components:
+  schemas:
+    ApiEnvelope:
+      type: object
+      required: [ok]
+      properties:
+        ok:
+          type: boolean
+        data:
+          type: object
+        error:
+          type: object

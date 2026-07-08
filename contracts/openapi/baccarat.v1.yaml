@@ -1,0 +1,73 @@
+openapi: 3.0.3
+info:
+  title: Virtual Casino baccarat API
+  version: v1
+  description: Frozen v1 API contract skeleton for compatibility governance.
+paths:
+  /api/v1/games/baccarat/state:
+    get:
+      summary: GET /api/v1/games/baccarat/state
+      operationId: baccarat_GET_api_v1_games_baccarat_state
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/games/baccarat/settings:
+    post:
+      summary: POST /api/v1/games/baccarat/settings
+      operationId: baccarat_POST_api_v1_games_baccarat_settings
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/games/baccarat/bets:
+    post:
+      summary: POST /api/v1/games/baccarat/bets
+      operationId: baccarat_POST_api_v1_games_baccarat_bets
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/games/baccarat/bets/{bet_id}:
+    delete:
+      summary: DELETE /api/v1/games/baccarat/bets/{bet_id}
+      operationId: baccarat_DELETE_api_v1_games_baccarat_bets_bet_id
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/games/baccarat/deal:
+    post:
+      summary: POST /api/v1/games/baccarat/deal
+      operationId: baccarat_POST_api_v1_games_baccarat_deal
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+components:
+  schemas:
+    ApiEnvelope:
+      type: object
+      required: [ok]
+      properties:
+        ok:
+          type: boolean
+        data:
+          type: object
+        error:
+          type: object

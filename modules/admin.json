@@ -1,0 +1,18 @@
+{
+  "module": "admin",
+  "version": "1.1.0",
+  "paths": [
+    "casino/admin.py",
+    "web/admin.html",
+    "web/admin.js"
+  ],
+  "requirements_prefixes": [
+    "ADMIN"
+  ],
+  "depends_on": [
+    "core",
+    "bots",
+    "autoplay",
+    "audio"
+  ]
+}

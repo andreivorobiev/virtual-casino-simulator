@@ -1,0 +1,51 @@
+openapi: 3.0.3
+info:
+  title: Virtual Casino slots API
+  version: v1
+  description: Frozen v1 API contract skeleton for compatibility governance.
+paths:
+  /api/v1/games/slots/state:
+    get:
+      summary: GET /api/v1/games/slots/state
+      operationId: slots_GET_api_v1_games_slots_state
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/games/slots/config:
+    get:
+      summary: GET /api/v1/games/slots/config
+      operationId: slots_GET_api_v1_games_slots_config
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/games/slots/spin:
+    post:
+      summary: POST /api/v1/games/slots/spin
+      operationId: slots_POST_api_v1_games_slots_spin
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+components:
+  schemas:
+    ApiEnvelope:
+      type: object
+      required: [ok]
+      properties:
+        ok:
+          type: boolean
+        data:
+          type: object
+        error:
+          type: object

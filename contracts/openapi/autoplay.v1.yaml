@@ -1,0 +1,106 @@
+openapi: 3.0.3
+info:
+  title: Virtual Casino autoplay API
+  version: v1
+  description: Frozen v1 API contract skeleton for compatibility governance.
+paths:
+  /api/v1/autoplay/start:
+    post:
+      summary: POST /api/v1/autoplay/start
+      operationId: autoplay_POST_api_v1_autoplay_start
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/autoplay/stop:
+    post:
+      summary: POST /api/v1/autoplay/stop
+      operationId: autoplay_POST_api_v1_autoplay_stop
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/autoplay/complete:
+    post:
+      summary: POST /api/v1/autoplay/complete
+      operationId: autoplay_POST_api_v1_autoplay_complete
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/autoplay/tick:
+    post:
+      summary: POST /api/v1/autoplay/tick
+      operationId: autoplay_POST_api_v1_autoplay_tick
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/autoplay/finish-stop:
+    post:
+      summary: POST /api/v1/autoplay/finish-stop
+      operationId: autoplay_POST_api_v1_autoplay_finish_stop
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/autoplay/stop-all:
+    post:
+      summary: POST /api/v1/autoplay/stop-all
+      operationId: autoplay_POST_api_v1_autoplay_stop_all
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/autoplay/sessions:
+    get:
+      summary: GET /api/v1/autoplay/sessions
+      operationId: autoplay_GET_api_v1_autoplay_sessions
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/autoplay/sessions/{autoplay_id}:
+    get:
+      summary: GET /api/v1/autoplay/sessions/{autoplay_id}
+      operationId: autoplay_GET_api_v1_autoplay_sessions_autoplay_id
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+components:
+  schemas:
+    ApiEnvelope:
+      type: object
+      required: [ok]
+      properties:
+        ok:
+          type: boolean
+        data:
+          type: object
+        error:
+          type: object

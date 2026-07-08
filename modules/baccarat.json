@@ -1,0 +1,27 @@
+{
+  "module": "baccarat",
+  "version": "9.0.1",
+  "paths": [
+    "casino/games/baccarat/",
+    "web/games/baccarat.js"
+  ],
+  "requirements_prefixes": [
+    "BAC"
+  ],
+  "contracts": [
+    "contracts/openapi/baccarat.v1.yaml"
+  ],
+  "depends_on": [
+    "core",
+    "ledger",
+    "players",
+    "autoplay"
+  ],
+  "may_not_depend_on": [
+    "roulette",
+    "slots",
+    "blackjack",
+    "keno",
+    "bingo"
+  ]
+}

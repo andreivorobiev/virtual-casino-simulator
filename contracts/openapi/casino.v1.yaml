@@ -1,0 +1,84 @@
+openapi: 3.0.3
+info:
+  title: Virtual Casino casino API
+  version: v1
+  description: Frozen v1 API contract skeleton for compatibility governance.
+paths:
+  /api/v1/casino/games:
+    get:
+      summary: GET /api/v1/casino/games
+      operationId: casino_GET_api_v1_casino_games
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/casino/state:
+    get:
+      summary: GET /api/v1/casino/state
+      operationId: casino_GET_api_v1_casino_state
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/casino/reset:
+    post:
+      summary: POST /api/v1/casino/reset
+      operationId: casino_POST_api_v1_casino_reset
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/casino/history:
+    get:
+      summary: GET /api/v1/casino/history
+      operationId: casino_GET_api_v1_casino_history
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/casino/logs/recent:
+    get:
+      summary: GET /api/v1/casino/logs/recent
+      operationId: casino_GET_api_v1_casino_logs_recent
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/log/client:
+    post:
+      summary: POST /api/v1/log/client
+      operationId: casino_POST_api_v1_log_client
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+components:
+  schemas:
+    ApiEnvelope:
+      type: object
+      required: [ok]
+      properties:
+        ok:
+          type: boolean
+        data:
+          type: object
+        error:
+          type: object

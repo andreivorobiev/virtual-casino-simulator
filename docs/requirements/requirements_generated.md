@@ -1,0 +1,372 @@
+# Virtual Casino Requirements and Validation
+
+Application: 9.1.1
+
+## Modules
+
+- application: 9.1.1
+- core: 9.1.0
+- ledger: 9.0.1
+- players: 9.0.1
+- bots: 1.0.0
+- autoplay: 1.1.0
+- audio: 9.1.0
+- admin: 1.1.0
+- roulette: 9.1.0
+- slots: 9.0.1
+- blackjack: 9.0.1
+- baccarat: 9.0.1
+- keno: 9.0.1
+- bingo: 9.0.1
+- tests: 1.1.1
+- docs: 1.1.1
+- contracts: 1.0.0
+- tooling: 1.0.0
+- commenting_policy: 1.0.0
+
+## Requirements
+
+- **CORE-001** (Core) - PASS: Application runs locally in a browser from one-click launchers.
+- **CORE-002** (Core) - PASS: Windows launcher starts the local Python server.
+- **CORE-003** (Core) - PASS: macOS launcher starts the local Python server.
+- **CORE-004** (Core) - PASS: Application remains fake-money only with no real payment flows.
+- **CORE-005** (Core) - PASS: Lobby loads independently of all individual game modules.
+- **CORE-006** (Core) - PASS: Top navigation exposes all games equally.
+- **CORE-007** (Core) - PASS: Admin navigation is available without replacing game navigation.
+- **CORE-008** (Core) - PASS: Game modules are loaded dynamically on the frontend.
+- **CORE-009** (Core) - PASS: Backend game modules are registered through clean API routes.
+- **CORE-010** (Core) - PASS: A failure in one frontend game module is contained to that game view when possible.
+- **CORE-011** (Core) - PASS: All API responses use a consistent ok/data or ok/error envelope.
+- **CORE-012** (Core) - PASS: The app exposes /api/v1 versioned routes.
+- **CORE-013** (Core) - PASS: The server writes no-store cache headers for API responses.
+- **CORE-014** (Core) - PASS: The app supports state reset for testing.
+- **CORE-015** (Core) - PASS: The app preserves compact 1080p layout using panel-level scroll areas.
+- **CORE-016** (Core) - PASS: The casino state endpoint returns games, players, recent history, and ledger.
+- **CORE-017** (Core) - PASS: The app stores persistent data under data/.
+- **CORE-018** (Core) - PASS: The app stores isolated per-game state under data/games/.
+- **CORE-019** (Core) - PASS: The app migrates older v7/v8 data best-effort.
+- **CORE-020** (Core) - PASS: The README documents run and test commands.
+- **LEDGER-001** (Ledger) - PASS: Each player has a persistent fake-money balance.
+- **LEDGER-002** (Ledger) - PASS: Human player exists by default.
+- **LEDGER-003** (Ledger) - PASS: Three bot players exist by default.
+- **LEDGER-004** (Ledger) - PASS: Add-money requires a positive amount.
+- **LEDGER-005** (Ledger) - PASS: All betting debits go through the ledger service.
+- **LEDGER-006** (Ledger) - PASS: All payout credits go through the ledger service.
+- **LEDGER-007** (Ledger) - PASS: Ledger events include player, game, round, transaction type, amount, before, and after balance.
+- **LEDGER-008** (Ledger) - PASS: Ledger is append-only JSONL.
+- **LEDGER-009** (Ledger) - PASS: Insufficient funds rejects debit transactions.
+- **LEDGER-010** (Ledger) - PASS: Roulette bet placement debits immediately.
+- **LEDGER-011** (Ledger) - PASS: Roulette clear-before-spin credits refunds.
+- **LEDGER-012** (Ledger) - PASS: Blackjack initial deal debits immediately.
+- **LEDGER-013** (Ledger) - PASS: Blackjack double down debits separately.
+- **LEDGER-014** (Ledger) - PASS: Blackjack split debits separately.
+- **LEDGER-015** (Ledger) - PASS: Blackjack insurance debits separately.
+- **LEDGER-016** (Ledger) - PASS: Baccarat bet placement debits immediately.
+- **LEDGER-017** (Ledger) - PASS: Baccarat bet cancellation credits refunds.
+- **LEDGER-018** (Ledger) - PASS: Keno ticket purchase debits immediately.
+- **LEDGER-019** (Ledger) - PASS: Keno ticket cancellation credits refunds.
+- **LEDGER-020** (Ledger) - PASS: Bingo card purchase debits immediately.
+- **LEDGER-021** (Ledger) - PASS: Bingo reset before calls credits refunds.
+- **LEDGER-022** (Ledger) - PASS: Slot spin debits spin cost before settlement.
+- **LEDGER-023** (Ledger) - PASS: All game settlement payouts credit after results are known.
+- **LEDGER-024** (Ledger) - PASS: Ledger is visible in the admin console.
+- **LEDGER-025** (Ledger) - PASS: Player balances are visible in the main UI.
+- **LOG-001** (Logging) - PASS: Application log is written as JSONL.
+- **LOG-002** (Logging) - PASS: Error log is written as JSONL.
+- **LOG-003** (Logging) - PASS: Client/browser log is written as JSONL.
+- **LOG-004** (Logging) - PASS: API requests are logged with method and path.
+- **LOG-005** (Logging) - PASS: Unhandled API exceptions are logged.
+- **LOG-006** (Logging) - PASS: Client window errors are posted to the backend logger.
+- **LOG-007** (Logging) - PASS: Recent app logs are exposed through admin APIs.
+- **LOG-008** (Logging) - PASS: Recent error logs are exposed through admin APIs.
+- **LOG-009** (Logging) - PASS: Recent client logs are exposed through admin APIs.
+- **LOG-010** (Logging) - PASS: Logs are displayed in the /admin console.
+- **LOG-011** (Logging) - PASS: Test results are written under logs/test-runs/.
+- **LOG-012** (Logging) - PASS: Bingo abandoned sessions are logged.
+- **LOG-013** (Logging) - PASS: Roulette spin results are logged.
+- **LOG-014** (Logging) - PASS: Blackjack deals are logged.
+- **LOG-015** (Logging) - PASS: Baccarat coups are logged.
+- **ROU-001** (Roulette) - PASS: Single-zero roulette mode supports 0 and 1-36.
+- **ROU-002** (Roulette) - PASS: Double-zero roulette mode supports 0, 00, and 1-36.
+- **ROU-003** (Roulette) - PASS: Wheel mode cannot change while open bets exist.
+- **ROU-004** (Roulette) - PASS: Zero rule selector supports normal, la partage, and en prison.
+- **ROU-005** (Roulette) - PASS: Straight-up bets are legal for all wheel numbers.
+- **ROU-006** (Roulette) - PASS: Split bets are legal for adjacent table numbers.
+- **ROU-007** (Roulette) - PASS: Zero split 0/00 is legal in double-zero mode.
+- **ROU-008** (Roulette) - PASS: Street bets are legal for each table row.
+- **ROU-009** (Roulette) - PASS: Corner bets are legal for all four-number intersections.
+- **ROU-010** (Roulette) - PASS: Six-line bets are legal for adjacent row pairs.
+- **ROU-011** (Roulette) - PASS: Zero trios are exposed where layout-appropriate.
+- **ROU-012** (Roulette) - PASS: First-four/top-line bets are exposed by mode.
+- **ROU-013** (Roulette) - PASS: Dozen bets are exposed and pay 2:1 net.
+- **ROU-014** (Roulette) - PASS: Column bets are exposed and pay 2:1 net.
+- **ROU-015** (Roulette) - PASS: Red and black outside bets are exposed.
+- **ROU-016** (Roulette) - PASS: Odd and even outside bets are exposed.
+- **ROU-017** (Roulette) - PASS: Low and high outside bets are exposed.
+- **ROU-018** (Roulette) - PASS: Snake bet is exposed.
+- **ROU-019** (Roulette) - PASS: Racetrack call bets include Snake.
+- **ROU-020** (Roulette) - PASS: Racetrack call bets include Voisins.
+- **ROU-021** (Roulette) - PASS: Racetrack call bets include Tiers.
+- **ROU-022** (Roulette) - PASS: Racetrack call bets include Orphelins.
+- **ROU-023** (Roulette) - PASS: Racetrack call bets include Jeu Zero.
+- **ROU-024** (Roulette) - PASS: Racetrack call bets include number and neighbors.
+- **ROU-025** (Roulette) - PASS: Racetrack call bets include final digit.
+- **ROU-026** (Roulette) - PASS: Racetrack call bets include complete number.
+- **ROU-027** (Roulette) - PASS: Straight-up winning bets credit stake plus 35:1 profit.
+- **ROU-028** (Roulette) - PASS: Split winning bets credit stake plus 17:1 profit.
+- **ROU-029** (Roulette) - PASS: Street winning bets credit stake plus 11:1 profit.
+- **ROU-030** (Roulette) - PASS: Corner winning bets credit stake plus 8:1 profit.
+- **ROU-031** (Roulette) - PASS: Line winning bets credit stake plus 5:1 profit.
+- **ROU-032** (Roulette) - PASS: La partage returns half of even-money outside bets on zero.
+- **ROU-033** (Roulette) - PASS: En prison carries eligible even-money outside bets into the next round.
+- **ROU-034** (Roulette) - PASS: Roulette spin writes history rows.
+- **ROU-035** (Roulette) - PASS: Roulette stores last 1000 roll results.
+- **ROU-036** (Roulette) - PASS: Roulette stats include frequency by number.
+- **ROU-037** (Roulette) - PASS: Roulette stats include red/black/green counts.
+- **ROU-038** (Roulette) - PASS: Roulette stats include odd/even counts.
+- **ROU-039** (Roulette) - PASS: Roulette stats include low/high counts.
+- **ROU-040** (Roulette) - PASS: Roulette stats include dozen and column counts.
+- **ROU-041** (Roulette) - PASS: Roulette UI renders a vector wheel.
+- **ROU-042** (Roulette) - PASS: Roulette UI animates wheel and ball while spinning.
+- **ROU-043** (Roulette) - PASS: Roulette UI renders a real table-style layout.
+- **ROU-044** (Roulette) - PASS: Roulette UI allows clicking number cells for straight bets.
+- **ROU-045** (Roulette) - PASS: Roulette UI exposes clickable inside-bet spots.
+- **ROU-046** (Roulette) - PASS: Roulette UI draws chips on table spots with amounts.
+- **ROU-047** (Roulette) - PASS: Roulette auto play repeats saved bet templates.
+- **ROU-048** (Roulette) - PASS: Roulette bots can be enabled with strategy and stake settings.
+- **ROU-049** (Roulette) - PASS: Roulette scoreboard shows human and bot balances.
+- **ROU-050** (Roulette) - PASS: Roulette voice announces the rolled number.
+- **SLOT-001** (Slots) - PASS: Slots uses five reels.
+- **SLOT-002** (Slots) - PASS: Slots uses three visible rows.
+- **SLOT-003** (Slots) - PASS: Slots uses reel-strip stop positions.
+- **SLOT-004** (Slots) - PASS: Slots supports 1 payline.
+- **SLOT-005** (Slots) - PASS: Slots supports 3 paylines.
+- **SLOT-006** (Slots) - PASS: Slots supports 5 paylines.
+- **SLOT-007** (Slots) - PASS: Slots supports 9 paylines.
+- **SLOT-008** (Slots) - PASS: Slots supports 20 paylines.
+- **SLOT-009** (Slots) - PASS: Slots evaluates wild substitutions.
+- **SLOT-010** (Slots) - PASS: Slots evaluates scatter payouts.
+- **SLOT-011** (Slots) - PASS: Slots awards free spins on scatter trigger.
+- **SLOT-012** (Slots) - PASS: Slots carries free spins in persistent state.
+- **SLOT-013** (Slots) - PASS: Slots maintains fake progressive jackpot.
+- **SLOT-014** (Slots) - PASS: Slots resets progressive after jackpot hit.
+- **SLOT-015** (Slots) - PASS: Slots exposes paytable in API.
+- **SLOT-016** (Slots) - PASS: Slots displays paytable in UI.
+- **SLOT-017** (Slots) - PASS: Slots debits non-free spin cost immediately.
+- **SLOT-018** (Slots) - PASS: Slots credits wins after spin evaluation.
+- **SLOT-019** (Slots) - PASS: Slots logs spin history.
+- **SLOT-020** (Slots) - PASS: Slots UI animates reels.
+- **SLOT-021** (Slots) - PASS: Slots UI highlights winning symbols.
+- **SLOT-022** (Slots) - PASS: Slots UI shows recent spins.
+- **SLOT-023** (Slots) - PASS: Slots auto play repeats selected line setup.
+- **SLOT-024** (Slots) - PASS: Slots speed control supports slow/medium/fast.
+- **SLOT-025** (Slots) - PASS: Slots sounds play during spin.
+- **SLOT-026** (Slots) - PASS: Slots remains fake-money only.
+- **BJ-001** (Blackjack) - PASS: Blackjack deals two player cards and two dealer cards.
+- **BJ-002** (Blackjack) - PASS: Dealer hole card is hidden in public state.
+- **BJ-003** (Blackjack) - PASS: Aces can count as 1 or 11.
+- **BJ-004** (Blackjack) - PASS: Soft totals are computed correctly for multi-ace hands.
+- **BJ-005** (Blackjack) - PASS: Natural blackjack pays configured blackjack payout.
+- **BJ-006** (Blackjack) - PASS: Push returns the stake.
+- **BJ-007** (Blackjack) - PASS: Dealer stands or hits soft 17 according to setting.
+- **BJ-008** (Blackjack) - PASS: Player can hit during active hand.
+- **BJ-009** (Blackjack) - PASS: Player can stand during active hand.
+- **BJ-010** (Blackjack) - PASS: Double down is available when legal.
+- **BJ-011** (Blackjack) - PASS: Double down debits an additional wager.
+- **BJ-012** (Blackjack) - PASS: Double down deals exactly one card and stands.
+- **BJ-013** (Blackjack) - PASS: Split is available for equal blackjack values.
+- **BJ-014** (Blackjack) - PASS: Split debits an additional wager.
+- **BJ-015** (Blackjack) - PASS: Resplit is limited by max_split_hands.
+- **BJ-016** (Blackjack) - PASS: Double-after-split setting is enforced.
+- **BJ-017** (Blackjack) - PASS: Split aces one-card rule is enforced.
+- **BJ-018** (Blackjack) - PASS: Late surrender setting is enforced.
+- **BJ-019** (Blackjack) - PASS: Surrender credits half the wager.
+- **BJ-020** (Blackjack) - PASS: Insurance is available only against dealer Ace.
+- **BJ-021** (Blackjack) - PASS: Insurance cannot be bought more than once.
+- **BJ-022** (Blackjack) - PASS: Insurance maximum is half original wager.
+- **BJ-023** (Blackjack) - PASS: Even money is available with player blackjack against dealer Ace.
+- **BJ-024** (Blackjack) - PASS: Blackjack table rules cannot change during active rounds.
+- **BJ-025** (Blackjack) - PASS: A player cannot start multiple active blackjack rounds.
+- **BJ-026** (Blackjack) - PASS: Blackjack uses a persistent shoe.
+- **BJ-027** (Blackjack) - PASS: Blackjack state endpoint exposes shoe count.
+- **BJ-028** (Blackjack) - PASS: Blackjack UI renders dealer and player hands.
+- **BJ-029** (Blackjack) - PASS: Blackjack UI exposes action buttons.
+- **BJ-030** (Blackjack) - PASS: Blackjack writes history rows on settlement.
+- **BAC-001** (Baccarat) - PASS: Baccarat implements Punto Banco Player/Banker/Tie betting.
+- **BAC-002** (Baccarat) - PASS: Baccarat uses configurable 6 or 8 deck shoe.
+- **BAC-003** (Baccarat) - PASS: Baccarat uses persistent shoe state.
+- **BAC-004** (Baccarat) - PASS: Baccarat burn-card procedure runs when shoe is created.
+- **BAC-005** (Baccarat) - PASS: Baccarat cut-card reshuffle threshold is supported.
+- **BAC-006** (Baccarat) - PASS: Baccarat deals in Player, Banker, Player, Banker order.
+- **BAC-007** (Baccarat) - PASS: Aces count as one.
+- **BAC-008** (Baccarat) - PASS: Tens and face cards count as zero.
+- **BAC-009** (Baccarat) - PASS: Hand totals are modulo 10.
+- **BAC-010** (Baccarat) - PASS: Natural 8 or 9 stops drawing.
+- **BAC-011** (Baccarat) - PASS: Player draws on 0-5 and stands on 6-7.
+- **BAC-012** (Baccarat) - PASS: Banker draw tableau is implemented.
+- **BAC-013** (Baccarat) - PASS: Player bet pays 1:1.
+- **BAC-014** (Baccarat) - PASS: Banker bet pays with 5 percent commission by default.
+- **BAC-015** (Baccarat) - PASS: Tie bet pays configurable 8:1 default.
+- **BAC-016** (Baccarat) - PASS: Player/Banker bets push on tie.
+- **BAC-017** (Baccarat) - PASS: Baccarat bets debit immediately.
+- **BAC-018** (Baccarat) - PASS: Baccarat bet cancellation refunds before deal.
+- **BAC-019** (Baccarat) - PASS: Baccarat bots can place strategy bets.
+- **BAC-020** (Baccarat) - PASS: Baccarat UI shows cards, totals, and winner.
+- **BAC-021** (Baccarat) - PASS: Baccarat UI shows road history.
+- **BAC-022** (Baccarat) - PASS: Baccarat UI shows shoe and burn info.
+- **BAC-023** (Baccarat) - PASS: Baccarat auto play repeats selected bet.
+- **BAC-024** (Baccarat) - PASS: Baccarat writes history rows.
+- **KENO-001** (Keno) - PASS: Keno supports numbers 1 through 80.
+- **KENO-002** (Keno) - PASS: Keno allows selecting 1 to 20 spots.
+- **KENO-003** (Keno) - PASS: Keno draws 20 unique numbers.
+- **KENO-004** (Keno) - PASS: Keno uses explicit paytable rows for 1-20 spots.
+- **KENO-005** (Keno) - PASS: Keno ticket purchase debits immediately.
+- **KENO-006** (Keno) - PASS: Keno ticket cancellation refunds before draw.
+- **KENO-007** (Keno) - PASS: Keno payout is based on spots, catches, and wager.
+- **KENO-008** (Keno) - PASS: Keno stores last draws.
+- **KENO-009** (Keno) - PASS: Keno UI has unique test IDs for every number.
+- **KENO-010** (Keno) - PASS: Keno UI highlights selected numbers.
+- **KENO-011** (Keno) - PASS: Keno UI highlights drawn numbers.
+- **KENO-012** (Keno) - PASS: Keno UI highlights catches.
+- **KENO-013** (Keno) - PASS: Keno UI displays paytable.
+- **KENO-014** (Keno) - PASS: Keno UI displays drawn balls.
+- **KENO-015** (Keno) - PASS: Keno draw animation reveals balls.
+- **KENO-016** (Keno) - PASS: Keno bots can buy quick-pick tickets.
+- **KENO-017** (Keno) - PASS: Keno bot strategies include 3/5/10/20 spot quick picks.
+- **KENO-018** (Keno) - PASS: Keno auto play repeats selected ticket.
+- **KENO-019** (Keno) - PASS: Keno speed control supports slow/medium/fast.
+- **KENO-020** (Keno) - PASS: Keno writes history rows.
+- **KENO-021** (Keno) - PASS: Keno remains fake-money only.
+- **KENO-022** (Keno) - PASS: Keno browser tests avoid ambiguous text selectors.
+- **BINGO-001** (Bingo) - PASS: Bingo uses 75-ball American rules.
+- **BINGO-002** (Bingo) - PASS: Bingo card has B column 1-15.
+- **BINGO-003** (Bingo) - PASS: Bingo card has I column 16-30.
+- **BINGO-004** (Bingo) - PASS: Bingo card has N column 31-45.
+- **BINGO-005** (Bingo) - PASS: Bingo card has G column 46-60.
+- **BINGO-006** (Bingo) - PASS: Bingo card has O column 61-75.
+- **BINGO-007** (Bingo) - PASS: Bingo card has free center space.
+- **BINGO-008** (Bingo) - PASS: Bingo supports any-line pattern.
+- **BINGO-009** (Bingo) - PASS: Bingo supports four-corners pattern.
+- **BINGO-010** (Bingo) - PASS: Bingo supports postage-stamp pattern.
+- **BINGO-011** (Bingo) - PASS: Bingo supports blackout pattern.
+- **BINGO-012** (Bingo) - PASS: Bingo card purchase debits immediately.
+- **BINGO-013** (Bingo) - PASS: Bingo reset before called balls refunds cards.
+- **BINGO-014** (Bingo) - PASS: Bingo reset after called balls logs abandoned session.
+- **BINGO-015** (Bingo) - PASS: Bingo calls unique balls.
+- **BINGO-016** (Bingo) - PASS: Bingo called balls use B/I/N/G/O labels.
+- **BINGO-017** (Bingo) - PASS: Bingo marks called cells.
+- **BINGO-018** (Bingo) - PASS: Bingo highlights winning pattern.
+- **BINGO-019** (Bingo) - PASS: Bingo supports bot cards.
+- **BINGO-020** (Bingo) - PASS: Bingo awards payout to the winning card.
+- **BINGO-021** (Bingo) - PASS: Bingo auto play calls until a winner.
+- **BINGO-022** (Bingo) - PASS: Bingo UI shows cards in play.
+- **BINGO-023** (Bingo) - PASS: Bingo writes history rows.
+- **BINGO-024** (Bingo) - PASS: Bingo remains fake-money only.
+- **ADMIN-001** (Admin) - PASS: Admin console is available at /admin.
+- **ADMIN-002** (Admin) - PASS: Admin console is unauthenticated for local use.
+- **ADMIN-003** (Admin) - PASS: Admin overview shows version and requirement counts.
+- **ADMIN-004** (Admin) - PASS: Admin modules tab shows module revision numbers.
+- **ADMIN-005** (Admin) - PASS: Admin players tab shows player balances.
+- **ADMIN-006** (Admin) - PASS: Admin ledger tab shows recent ledger events.
+- **ADMIN-007** (Admin) - PASS: Admin history tab shows recent history rows.
+- **ADMIN-008** (Admin) - PASS: Admin logs tab shows app/error/client logs.
+- **ADMIN-009** (Admin) - PASS: Admin game-states tab shows isolated game states.
+- **ADMIN-010** (Admin) - PASS: Admin requirements tab shows requirement coverage.
+- **ADMIN-011** (Admin) - PASS: Admin test-results tab shows latest test results.
+- **ADMIN-012** (Admin) - PASS: Admin has a return-to-casino control.
+- **TEST-001** (Testing) - PASS: API test harness starts local server on a free port.
+- **TEST-002** (Testing) - PASS: API test harness resets state before tests.
+- **TEST-003** (Testing) - PASS: API tests validate core and admin endpoints.
+- **TEST-004** (Testing) - PASS: API tests validate roulette debit/settlement/rebet/en-prison.
+- **TEST-005** (Testing) - PASS: API tests validate slots spin behavior.
+- **TEST-006** (Testing) - PASS: API tests validate blackjack active-round protections.
+- **TEST-007** (Testing) - PASS: API tests validate baccarat deal behavior.
+- **TEST-008** (Testing) - PASS: API tests validate Keno paytable and draw behavior.
+- **TEST-009** (Testing) - PASS: API tests validate Bingo refund and auto-win behavior.
+- **TEST-010** (Testing) - PASS: Browser test harness uses Playwright.
+- **TEST-011** (Testing) - PASS: Browser tests reset state before tests.
+- **TEST-012** (Testing) - PASS: Browser tests use stable data-testid selectors.
+- **TEST-013** (Testing) - PASS: Browser tests capture console errors.
+- **TEST-014** (Testing) - PASS: Browser tests capture page errors.
+- **TEST-015** (Testing) - PASS: Browser tests save screenshots on failure.
+- **TEST-016** (Testing) - PASS: Browser tests validate lobby load.
+- **TEST-017** (Testing) - PASS: Browser tests validate roulette wheel/table/chips/spin.
+- **TEST-018** (Testing) - PASS: Browser tests validate slots spin UI.
+- **TEST-019** (Testing) - PASS: Browser tests validate Keno number selectors.
+- **TEST-020** (Testing) - PASS: Browser tests validate Bingo card UI.
+- **TEST-021** (Testing) - PASS: Browser tests validate Blackjack hand UI.
+- **TEST-022** (Testing) - PASS: Browser tests validate Baccarat deal UI.
+- **TEST-023** (Testing) - PASS: Browser tests validate Admin UI.
+- **TEST-024** (Testing) - PASS: Test results are written to JSON for admin viewing.
+- **DOC-001** (Documentation) - PASS: A PDF requirements and validation document is generated for the release.
+- **DOC-002** (Documentation) - PASS: Markdown copy of requirements document is included.
+- **DOC-003** (Documentation) - PASS: Requirements are numbered with stable IDs.
+- **DOC-004** (Documentation) - PASS: Each requirement lists module ownership.
+- **DOC-005** (Documentation) - PASS: Each requirement lists implementation files.
+- **DOC-006** (Documentation) - PASS: Each requirement lists validation status.
+- **DOC-007** (Documentation) - PASS: Each requirement lists API tests where applicable.
+- **DOC-008** (Documentation) - PASS: Each requirement lists browser tests where applicable.
+- **DOC-009** (Documentation) - PASS: Module-specific revision numbers are documented.
+- **DOC-010** (Documentation) - PASS: Architecture diagram is included in the PDF.
+- **DOC-011** (Documentation) - PASS: API surface diagram is included in the PDF.
+- **DOC-012** (Documentation) - PASS: Data/logging diagram is included in the PDF.
+- **DOC-013** (Documentation) - PASS: Release notes are included in the package.
+- **DOC-014** (Documentation) - PASS: Release notes summarize fixed regressions.
+- **DOC-015** (Documentation) - PASS: Known limitations are documented when applicable.
+- **BOT-001** (Bots) - PASS: Bots are represented as controllers for player accounts, not embedded game objects.
+- **BOT-002** (Bots) - PASS: Game modules must not import bot strategy modules.
+- **BOT-003** (Bots) - PASS: A bot appears for a game only when it has a compatible strategy.
+- **BOT-004** (Bots) - PASS: Bot actions use the same public game APIs and engine validation paths as human actions.
+- **BOT-005** (Bots) - PASS: Bot money movement uses the shared ledger system.
+- **BOT-006** (Bots) - PASS: Bot strategy assignment is visible and editable from Admin.
+- **BOT-007** (Bots) - PASS: Bot actions are logged with bot_id, player_id, game_id, round context, and strategy_id where applicable.
+- **BOT-008** (Bots) - PASS: Unsupported games hide bot controllers rather than showing incompatible bot settings.
+- **AUDIO-001** (Audio) - PASS: Sound configuration is global and not owned by any game page.
+- **AUDIO-002** (Audio) - PASS: Full Sound and Voice settings live under /admin.
+- **AUDIO-003** (Audio) - PASS: Game pages may trigger sound events but do not render full sound settings panels.
+- **AUDIO-004** (Audio) - PASS: Audio settings persist in data/settings/audio.json.
+- **AUDIO-005** (Audio) - PASS: Voice preview uses the currently selected settings.
+- **AUDIO-006** (Audio) - PASS: Master mute stops new sound effects and voice announcements.
+- **AUDIO-007** (Audio) - PASS: Per-game voice announcements are individually configurable.
+- **AUTO-001** (Autoplay) - PASS: Autoplay is centrally controlled rather than implemented as unrelated game loops.
+- **AUTO-002** (Autoplay) - PASS: Every autoplay run has an autoplay_id.
+- **AUTO-003** (Autoplay) - PASS: Stop prevents any new round or action from starting.
+- **AUTO-004** (Autoplay) - PASS: Stop during an atomic action completes that action safely and schedules no follow-up action.
+- **AUTO-005** (Autoplay) - PASS: Autoplay speed consistently affects inter-round delay.
+- **AUTO-006** (Autoplay) - PASS: Autoplay logs start, stop, tick, completion, and error status through the server session store.
+- **AUTO-007** (Autoplay) - PASS: Admin shows active and recent autoplay sessions.
+- **AUTO-008** (Autoplay) - PASS: Admin Stop All requests stop for all server-registered autoplay sessions.
+- **AUTO-009** (Autoplay) - PASS: Roulette autoplay repeats the saved bet template.
+- **AUTO-010** (Autoplay) - PASS: Slots autoplay repeats current spin parameters.
+- **AUTO-011** (Autoplay) - PASS: Baccarat autoplay repeats selected standing wagers.
+- **AUTO-012** (Autoplay) - PASS: Keno autoplay repeats the selected ticket.
+- **AUTO-013** (Autoplay) - PASS: Bingo autoplay uses stepwise ball calls so Stop is honored between calls.
+- **AUTO-014** (Autoplay) - PASS: Blackjack autoplay remains disabled unless an explicit strategy controller is later enabled.
+- **ADMIN-013** (Admin) - PASS: Admin console uses a dedicated sidebar/topbar control-plane layout.
+- **ADMIN-014** (Admin) - PASS: Admin Dashboard shows version, players, bots, autoplay, errors, and requirement summary.
+- **ADMIN-015** (Admin) - PASS: Admin Players & Bots tab shows player balances and bot strategy assignments.
+- **ADMIN-016** (Admin) - PASS: Admin Ledger tab shows transaction audit rows.
+- **ADMIN-017** (Admin) - PASS: Admin Telemetry tab shows app, error, and client logs.
+- **ADMIN-018** (Admin) - PASS: Admin Game States tab shows isolated game state files.
+- **ADMIN-019** (Admin) - PASS: Admin Audio & Voice tab stores global audio settings.
+- **ADMIN-020** (Admin) - PASS: Admin Autoplay tab shows sessions and Stop All.
+- **ADMIN-021** (Admin) - PASS: Admin Requirements tab shows requirement coverage.
+- **ADMIN-022** (Admin) - PASS: Admin Tests tab shows latest test results.
+- **ROU-051** (Roulette) - PASS: Roulette wheel must not default to a fake zero result when no spin has occurred.
+- **ROU-052** (Roulette) - PASS: Roulette wheel shows the latest actual spin result after settlement.
+- **ROU-053** (Roulette) - PASS: Roulette wheel selected pocket and backend spin result must match.
+- **ROU-054** (Roulette) - PASS: Roulette spin animation starts before settlement display and ends on the result state.
+- **ROU-055** (Roulette) - PASS: Roulette ball indicator uses the selected pocket when a result exists.
+- **ROU-056** (Roulette) - PASS: Roulette sound settings are not rendered on the Roulette page.
+- **UX-001** (UX) - PASS: Game stages reserve fixed visual areas during normal gameplay.
+- **UX-002** (UX) - PASS: Action rails remain stable while actions execute.
+- **UX-003** (UX) - PASS: Result messages render in fixed-height regions.
+- **UX-004** (UX) - PASS: Long history, stats, paytables, and logs use internal scroll areas.
+- **UX-005** (UX) - PASS: Autoplay status changes do not resize the main game stage.
+- **UX-006** (UX) - PASS: Animations prefer transform/opacity and avoid layout-changing motion.
+- **TEST-025** (Tests) - PASS: Browser tests use stable data-testid selectors for autoplay and admin controls.
+- **TEST-026** (Tests) - PASS: Browser tests verify Roulette autoplay stop behavior.
+- **TEST-027** (Tests) - PASS: API tests verify bot controller endpoints.
+- **TEST-028** (Tests) - PASS: API tests verify persisted audio settings.
+- **TEST-029** (Tests) - PASS: API tests verify server-registered autoplay session lifecycle.
+- **TEST-030** (Tests) - PASS: Test results remain visible in Admin.

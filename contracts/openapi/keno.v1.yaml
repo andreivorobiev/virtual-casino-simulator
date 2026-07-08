@@ -1,0 +1,62 @@
+openapi: 3.0.3
+info:
+  title: Virtual Casino keno API
+  version: v1
+  description: Frozen v1 API contract skeleton for compatibility governance.
+paths:
+  /api/v1/games/keno/state:
+    get:
+      summary: GET /api/v1/games/keno/state
+      operationId: keno_GET_api_v1_games_keno_state
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/games/keno/tickets:
+    post:
+      summary: POST /api/v1/games/keno/tickets
+      operationId: keno_POST_api_v1_games_keno_tickets
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/games/keno/tickets/{ticket_id}:
+    delete:
+      summary: DELETE /api/v1/games/keno/tickets/{ticket_id}
+      operationId: keno_DELETE_api_v1_games_keno_tickets_ticket_id
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/games/keno/draw:
+    post:
+      summary: POST /api/v1/games/keno/draw
+      operationId: keno_POST_api_v1_games_keno_draw
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+components:
+  schemas:
+    ApiEnvelope:
+      type: object
+      required: [ok]
+      properties:
+        ok:
+          type: boolean
+        data:
+          type: object
+        error:
+          type: object

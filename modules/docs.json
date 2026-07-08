@@ -1,0 +1,17 @@
+{
+  "module": "docs",
+  "version": "1.1.1",
+  "paths": [
+    "docs/",
+    "ARCHITECTURE.md",
+    "RELEASE_NOTES.md"
+  ],
+  "requirements_prefixes": [
+    "DOC"
+  ],
+  "depends_on": [
+    "requirements",
+    "contracts",
+    "modules"
+  ]
+}

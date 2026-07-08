@@ -1,0 +1,26 @@
+{
+  "module": "blackjack",
+  "version": "9.0.1",
+  "paths": [
+    "casino/games/blackjack/",
+    "web/games/blackjack.js"
+  ],
+  "requirements_prefixes": [
+    "BJ"
+  ],
+  "contracts": [
+    "contracts/openapi/blackjack.v1.yaml"
+  ],
+  "depends_on": [
+    "core",
+    "ledger",
+    "players"
+  ],
+  "may_not_depend_on": [
+    "roulette",
+    "slots",
+    "baccarat",
+    "keno",
+    "bingo"
+  ]
+}

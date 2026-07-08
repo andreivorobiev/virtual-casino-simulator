@@ -1,0 +1,14 @@
+{
+  "module": "commenting_policy",
+  "version": "1.0.0",
+  "paths": [
+    "docs/commenting_policy.md",
+    "scripts/check_comment_density.py"
+  ],
+  "requirements_prefixes": [
+    "COMMENT"
+  ],
+  "depends_on": [
+    "tooling"
+  ]
+}

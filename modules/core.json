@@ -1,0 +1,17 @@
+{
+  "module": "core",
+  "version": "9.1.0",
+  "paths": [
+    "casino/core/",
+    "casino/app.py",
+    "casino/router.py",
+    "casino/errors.py",
+    "casino/config.py"
+  ],
+  "requirements_prefixes": [
+    "CORE",
+    "LEDGER",
+    "LOG"
+  ],
+  "depends_on": []
+}

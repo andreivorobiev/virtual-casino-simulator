@@ -1,0 +1,41 @@
+{
+  "players": [
+    {
+      "balance": 5030.0,
+      "created_at": "2026-07-08T19:25:24.001Z",
+      "display_name": "You",
+      "player_id": "human",
+      "status": "active",
+      "type": "human",
+      "updated_at": "2026-07-08T19:25:24.281Z"
+    },
+    {
+      "balance": 5000.0,
+      "created_at": "2026-07-08T19:25:24.001Z",
+      "display_name": "Ava",
+      "player_id": "bot_1",
+      "status": "active",
+      "type": "bot",
+      "updated_at": "2026-07-08T19:25:24.001Z"
+    },
+    {
+      "balance": 5000.0,
+      "created_at": "2026-07-08T19:25:24.001Z",
+      "display_name": "Mia",
+      "player_id": "bot_2",
+      "status": "active",
+      "type": "bot",
+      "updated_at": "2026-07-08T19:25:24.001Z"
+    },
+    {
+      "balance": 5000.0,
+      "created_at": "2026-07-08T19:25:24.001Z",
+      "display_name": "Zoe",
+      "player_id": "bot_3",
+      "status": "active",
+      "type": "bot",
+      "updated_at": "2026-07-08T19:25:24.001Z"
+    }
+  ],
+  "schema_version": "v9_1"
+}

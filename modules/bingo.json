@@ -1,0 +1,27 @@
+{
+  "module": "bingo",
+  "version": "9.0.1",
+  "paths": [
+    "casino/games/bingo/",
+    "web/games/bingo.js"
+  ],
+  "requirements_prefixes": [
+    "BINGO"
+  ],
+  "contracts": [
+    "contracts/openapi/bingo.v1.yaml"
+  ],
+  "depends_on": [
+    "core",
+    "ledger",
+    "players",
+    "autoplay"
+  ],
+  "may_not_depend_on": [
+    "roulette",
+    "slots",
+    "blackjack",
+    "baccarat",
+    "keno"
+  ]
+}

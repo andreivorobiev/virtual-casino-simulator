@@ -1,0 +1,9 @@
+[project]
+name = "virtual-casino-simulator"
+version = "9.1.1"
+description = "Local fake-money virtual casino simulator with isolated modules and GitHub/Codex governance."
+requires-python = ">=3.10"
+
+[tool.virtual_casino]
+source_baseline = "9.1.0"
+release_purpose = "Repository Bootstrap + Codex Migration Payload"

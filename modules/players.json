@@ -1,0 +1,14 @@
+{
+  "module": "players",
+  "version": "9.0.1",
+  "paths": [
+    "casino/core/players.py"
+  ],
+  "requirements_prefixes": [
+    "PLAYER"
+  ],
+  "depends_on": [
+    "core",
+    "ledger"
+  ]
+}

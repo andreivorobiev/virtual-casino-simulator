@@ -1,0 +1,14 @@
+{
+  "module": "audio",
+  "version": "9.1.0",
+  "paths": [
+    "casino/core/settings.py",
+    "web/core/voice.js"
+  ],
+  "requirements_prefixes": [
+    "AUDIO"
+  ],
+  "depends_on": [
+    "core"
+  ]
+}

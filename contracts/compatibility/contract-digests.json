@@ -1,0 +1,14 @@
+{
+  "contracts/openapi/admin.v1.yaml": "267be3ef6ea749011d474a10cea307b63c5d7619bc09dfa2b14974f874ed108f",
+  "contracts/openapi/autoplay.v1.yaml": "435d7bf8d4a278e6b56634695f8fcfcb9648f1d8b7297c942ebc6c5c97c0d552",
+  "contracts/openapi/baccarat.v1.yaml": "738da72771628936fb2305331a01b810befbd26413f38d8901036cac4f372b48",
+  "contracts/openapi/bingo.v1.yaml": "eb402f2638437453ec48fb1a46aaa27c503e4f23063d28226af2fcf14c74a917",
+  "contracts/openapi/blackjack.v1.yaml": "05f2ef714085167758194b991efcd8ae28335cca9f5f6834a33417f7e3f22497",
+  "contracts/openapi/bots.v1.yaml": "d8e5a6657cbd64479c2c64c98e6c3e43b6b2128cde1ed7df9099145adfdc4c25",
+  "contracts/openapi/casino.v1.yaml": "3f47a6f4a0274837aa0d3ddcc79b96b6640fc3c1a37dd84cc2b1ef10fbb1fd85",
+  "contracts/openapi/keno.v1.yaml": "3d3af7c097f3e82a4082961724cf11797be9a948a38dcb3c1765db3086f54f2d",
+  "contracts/openapi/ledger.v1.yaml": "806bc3c22155d2c99d7551c6f97cb9987e3f84297d6055e8dd1e45d341e31ab1",
+  "contracts/openapi/players.v1.yaml": "b19157f531284418dce4ddacb362657ea80273d27070fcf4f038c9c2bdc9448b",
+  "contracts/openapi/roulette.v1.yaml": "3a6056635e0293cca1018bbd89079dcb096dc01b3c6faeb4feacad14620b569d",
+  "contracts/openapi/slots.v1.yaml": "e1d9e3b53fb2751809ebf7ae707fbf8d4e987f0c6267ad8fe184eba98b893e62"
+}

@@ -1,0 +1,28 @@
+{
+  "module": "roulette",
+  "version": "9.1.0",
+  "paths": [
+    "casino/games/roulette/",
+    "web/games/roulette.js"
+  ],
+  "requirements_prefixes": [
+    "ROU",
+    "ROU-WHEEL"
+  ],
+  "contracts": [
+    "contracts/openapi/roulette.v1.yaml"
+  ],
+  "depends_on": [
+    "core",
+    "ledger",
+    "players",
+    "autoplay"
+  ],
+  "may_not_depend_on": [
+    "slots",
+    "blackjack",
+    "baccarat",
+    "keno",
+    "bingo"
+  ]
+}

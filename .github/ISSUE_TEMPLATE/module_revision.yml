@@ -1,0 +1,31 @@
+name: Module revision
+description: Create a structured Module revision issue.
+body:
+  - type: input
+    id: module
+    attributes:
+      label: Module
+      description: Which module is impacted?
+    validations:
+      required: true
+  - type: textarea
+    id: requirements
+    attributes:
+      label: Requirement IDs
+      description: List impacted requirement IDs.
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: Describe the requested change.
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation required
+      description: List tests and docs that must be updated.
+    validations:
+      required: true

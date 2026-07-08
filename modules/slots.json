@@ -1,0 +1,28 @@
+{
+  "module": "slots",
+  "version": "9.0.1",
+  "paths": [
+    "casino/games/slots/",
+    "web/games/slots.js"
+  ],
+  "requirements_prefixes": [
+    "SLOT",
+    "SLOTS"
+  ],
+  "contracts": [
+    "contracts/openapi/slots.v1.yaml"
+  ],
+  "depends_on": [
+    "core",
+    "ledger",
+    "players",
+    "autoplay"
+  ],
+  "may_not_depend_on": [
+    "roulette",
+    "blackjack",
+    "baccarat",
+    "keno",
+    "bingo"
+  ]
+}

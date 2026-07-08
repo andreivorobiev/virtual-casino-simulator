@@ -1,0 +1,13 @@
+{
+  "module": "ledger",
+  "version": "9.0.1",
+  "paths": [
+    "casino/core/ledger.py"
+  ],
+  "requirements_prefixes": [
+    "LEDGER"
+  ],
+  "depends_on": [
+    "core"
+  ]
+}

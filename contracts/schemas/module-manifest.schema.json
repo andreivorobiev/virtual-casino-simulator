@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "module",
+    "version"
+  ],
+  "properties": {
+    "module": {
+      "type": "string"
+    },
+    "version": {
+      "type": "string"
+    },
+    "paths": {
+      "type": "array"
+    },
+    "depends_on": {
+      "type": "array"
+    }
+  }
+}

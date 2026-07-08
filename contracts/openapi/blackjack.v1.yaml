@@ -1,0 +1,128 @@
+openapi: 3.0.3
+info:
+  title: Virtual Casino blackjack API
+  version: v1
+  description: Frozen v1 API contract skeleton for compatibility governance.
+paths:
+  /api/v1/games/blackjack/state:
+    get:
+      summary: GET /api/v1/games/blackjack/state
+      operationId: blackjack_GET_api_v1_games_blackjack_state
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/games/blackjack/settings:
+    post:
+      summary: POST /api/v1/games/blackjack/settings
+      operationId: blackjack_POST_api_v1_games_blackjack_settings
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/games/blackjack/rounds:
+    post:
+      summary: POST /api/v1/games/blackjack/rounds
+      operationId: blackjack_POST_api_v1_games_blackjack_rounds
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/games/blackjack/rounds/{round_id}/hit:
+    post:
+      summary: POST /api/v1/games/blackjack/rounds/{round_id}/hit
+      operationId: blackjack_POST_api_v1_games_blackjack_rounds_round_id_hit
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/games/blackjack/rounds/{round_id}/stand:
+    post:
+      summary: POST /api/v1/games/blackjack/rounds/{round_id}/stand
+      operationId: blackjack_POST_api_v1_games_blackjack_rounds_round_id_stand
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/games/blackjack/rounds/{round_id}/double:
+    post:
+      summary: POST /api/v1/games/blackjack/rounds/{round_id}/double
+      operationId: blackjack_POST_api_v1_games_blackjack_rounds_round_id_double
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/games/blackjack/rounds/{round_id}/split:
+    post:
+      summary: POST /api/v1/games/blackjack/rounds/{round_id}/split
+      operationId: blackjack_POST_api_v1_games_blackjack_rounds_round_id_split
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/games/blackjack/rounds/{round_id}/surrender:
+    post:
+      summary: POST /api/v1/games/blackjack/rounds/{round_id}/surrender
+      operationId: blackjack_POST_api_v1_games_blackjack_rounds_round_id_surrender
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/games/blackjack/rounds/{round_id}/insurance:
+    post:
+      summary: POST /api/v1/games/blackjack/rounds/{round_id}/insurance
+      operationId: blackjack_POST_api_v1_games_blackjack_rounds_round_id_insurance
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/games/blackjack/rounds/{round_id}/even-money:
+    post:
+      summary: POST /api/v1/games/blackjack/rounds/{round_id}/even-money
+      operationId: blackjack_POST_api_v1_games_blackjack_rounds_round_id_even_money
+      responses:
+        '200':
+          description: Standard API envelope response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+components:
+  schemas:
+    ApiEnvelope:
+      type: object
+      required: [ok]
+      properties:
+        ok:
+          type: boolean
+        data:
+          type: object
+        error:
+          type: object

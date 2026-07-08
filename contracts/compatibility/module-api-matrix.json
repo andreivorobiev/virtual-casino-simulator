@@ -1,0 +1,33 @@
+{
+  "application": [],
+  "core": [],
+  "ledger": [],
+  "players": [],
+  "bots": [],
+  "autoplay": [],
+  "audio": [],
+  "admin": [],
+  "roulette": [
+    "contracts/openapi/roulette.v1.yaml"
+  ],
+  "slots": [
+    "contracts/openapi/slots.v1.yaml"
+  ],
+  "blackjack": [
+    "contracts/openapi/blackjack.v1.yaml"
+  ],
+  "baccarat": [
+    "contracts/openapi/baccarat.v1.yaml"
+  ],
+  "keno": [
+    "contracts/openapi/keno.v1.yaml"
+  ],
+  "bingo": [
+    "contracts/openapi/bingo.v1.yaml"
+  ],
+  "tests": [],
+  "docs": [],
+  "contracts": [],
+  "tooling": [],
+  "commenting_policy": []
+}

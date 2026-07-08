@@ -1,0 +1,28 @@
+# Default owner for all repository files.
+* @andre
+
+# Core services and contracts.
+/casino/core/ @andre
+/casino/bots/ @andre
+/contracts/ @andre
+/scripts/ @andre
+/modules/ @andre
+
+# Game modules.
+/casino/games/roulette/ @andre
+/web/games/roulette.js @andre
+/casino/games/slots/ @andre
+/web/games/slots.js @andre
+/casino/games/blackjack/ @andre
+/web/games/blackjack.js @andre
+/casino/games/baccarat/ @andre
+/web/games/baccarat.js @andre
+/casino/games/keno/ @andre
+/web/games/keno.js @andre
+/casino/games/bingo/ @andre
+/web/games/bingo.js @andre
+
+# Documentation and tests.
+/docs/ @andre
+/tests/ @andre
+/.github/ @andre
