@@ -56,6 +56,7 @@ python3 tests/run_tests.py --browser
 
 ## Documents
 
+- `docs/codex_parallel_workflow.md`
 - `docs/requirements_validation_v9_1.pdf`
 - `docs/requirements_validation_v9_1.md`
 - `docs/requirements.json`

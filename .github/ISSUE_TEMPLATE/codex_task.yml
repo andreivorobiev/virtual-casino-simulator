@@ -1,31 +1,92 @@
 name: Codex task
-description: Create a structured Codex task issue.
+description: Create a structured Codex task issue for a single worker chat.
 body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this for one bounded Codex worker task. The coordinator should fill enough context that a new chat can work without relying on prior chat history.
   - type: input
     id: module
     attributes:
       label: Module
       description: Which module is impacted?
+      placeholder: roulette, slots, docs, tooling, contracts
     validations:
       required: true
   - type: textarea
     id: requirements
     attributes:
       label: Requirement IDs
-      description: List impacted requirement IDs.
+      description: List requirement IDs added, changed, or validated.
+      placeholder: |
+        Added: None
+        Changed: ROU-001
+        Validated: TEST-017
     validations:
       required: true
   - type: textarea
     id: summary
     attributes:
       label: Summary
-      description: Describe the requested change.
+      description: Describe the requested change, including explicit non-goals.
+      placeholder: |
+        Goal:
+        Non-goals:
+        User-visible behavior:
     validations:
       required: true
+  - type: textarea
+    id: file_ownership
+    attributes:
+      label: File ownership
+      description: List owned files, no-touch files, and allowed adjacent files for this worker.
+      placeholder: |
+        Owned files:
+        No-touch files:
+        Allowed adjacent files:
+    validations:
+      required: true
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: Compatibility impact
+      description: State API, gameplay, ledger, bot, autoplay, and data impact.
+      placeholder: |
+        API contract impact:
+        Gameplay impact:
+        Ledger impact:
+        Bot/autoplay impact:
+        Data migration impact:
+    validations:
+      required: true
+  - type: input
+    id: branch
+    attributes:
+      label: Branch
+      description: Expected branch name for this task.
+      placeholder: agent/roulette-ui-history
+    validations:
+      required: true
+  - type: textarea
+    id: coordination
+    attributes:
+      label: Coordination notes
+      description: List parallel workers, stacked PR dependencies, or blockers.
+      placeholder: |
+        Parallel workers:
+        Depends on:
+        Blocks:
+    validations:
+      required: false
   - type: textarea
     id: validation
     attributes:
       label: Validation required
       description: List tests and docs that must be updated.
+      placeholder: |
+        Required scripts:
+        API tests:
+        Browser tests:
+        Manual checks:
     validations:
       required: true
