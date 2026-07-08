@@ -19,9 +19,9 @@ Application: 9.1.1
 - keno: 9.0.1
 - bingo: 9.0.1
 - tests: 1.1.1
-- docs: 1.1.1
+- docs: 1.1.2
 - contracts: 1.0.0
-- tooling: 1.0.0
+- tooling: 1.0.1
 - commenting_policy: 1.0.0
 
 ## Requirements
@@ -313,6 +313,8 @@ Application: 9.1.1
 - **DOC-013** (Documentation) - PASS: Release notes are included in the package.
 - **DOC-014** (Documentation) - PASS: Release notes summarize fixed regressions.
 - **DOC-015** (Documentation) - PASS: Known limitations are documented when applicable.
+- **DOC-016** (Documentation) - PASS: Parallel Codex workflow documentation defines coordinator and worker chat responsibilities.
+- **TOOL-001** (Tooling) - PASS: Codex task packets and prompts preserve scope, file ownership, validation, and PR handback context for worker chats.
 - **BOT-001** (Bots) - PASS: Bots are represented as controllers for player accounts, not embedded game objects.
 - **BOT-002** (Bots) - PASS: Game modules must not import bot strategy modules.
 - **BOT-003** (Bots) - PASS: A bot appears for a game only when it has a compatible strategy.

@@ -1,5 +1,14 @@
 ## Summary
 
+## Coordination
+
+- Issue:
+- Task packet:
+- Branch:
+- Parallel workers or stacked PRs:
+- Owned files:
+- No-touch files honored:
+
 ## Impacted modules
 
 - [ ] Core
@@ -32,6 +41,12 @@ Validated:
 - [ ] Breaking change requiring v2 or compatibility shim
 - [ ] Contract files updated
 - [ ] Compatibility matrix updated
+
+## Gameplay impact
+
+- [ ] No gameplay behavior changed
+- [ ] Gameplay behavior changed as required by listed requirement IDs
+- [ ] Browser-visible behavior changed and browser evidence is included
 
 ## Version bumps
 

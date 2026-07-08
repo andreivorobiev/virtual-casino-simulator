@@ -18,6 +18,7 @@ All work should happen through GitHub issues and pull requests.
 Use one of these patterns:
 
 ```text
+agent/<module>-<short-description>
 feature/<module>/<short-description>
 bugfix/<module>/<short-description>
 docs/<short-description>
@@ -29,6 +30,11 @@ release/<module>-<version>
 
 A PR should normally touch one module plus tests/docs/contracts for that module.
 Cross-module PRs require an explicit impact analysis.
+
+## Parallel Codex work
+
+Use `docs/codex_parallel_workflow.md` when multiple chats work at the same time.
+Start each worker chat from a GitHub issue or `codex/tasks/TASK_PACKET_TEMPLATE.md`.
 
 ## API changes
 

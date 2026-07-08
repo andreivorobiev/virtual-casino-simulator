@@ -361,6 +361,7 @@ flowchart LR
 | DOC-013 | Release notes are included in the package. | PASS |  |  |
 | DOC-014 | Release notes summarize fixed regressions. | PASS |  |  |
 | DOC-015 | Known limitations are documented when applicable. | PASS |  |  |
+| DOC-016 | Parallel Codex workflow documentation defines coordinator and worker chat responsibilities. | PASS |  |  |
 
 ### Keno
 
@@ -570,6 +571,12 @@ flowchart LR
 | TEST-028 | API tests verify persisted audio settings. | PASS | API-CONTROL-001 |  |
 | TEST-029 | API tests verify server-registered autoplay session lifecycle. | PASS | API-CONTROL-001 |  |
 | TEST-030 | Test results remain visible in Admin. | PASS |  |  |
+
+### Tooling
+
+| ID | Requirement | Status | API tests | Browser tests |
+|---|---|---|---|---|
+| TOOL-001 | Codex task packets and prompts preserve scope, file ownership, validation, and PR handback context for worker chats. | PASS |  |  |
 
 ### UX
 
