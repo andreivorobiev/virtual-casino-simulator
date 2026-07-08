@@ -1,0 +1,15 @@
+# Keep source, docs, contracts, and workflows stable across platforms.
+* text=auto eol=lf
+
+# Preserve generated release documents as binary assets.
+*.pdf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.zip binary
+
+# Preserve local launcher conventions.
+*.bat text eol=crlf
+*.command text eol=lf
