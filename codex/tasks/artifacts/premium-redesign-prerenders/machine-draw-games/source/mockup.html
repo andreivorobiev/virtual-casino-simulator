@@ -1,0 +1,615 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=2048, initial-scale=1">
+    <title>Premium Machine and Draw Game Prerenders</title>
+    <link rel="stylesheet" href="mockup.css">
+  </head>
+  <body>
+    <main class="mock-stack">
+      <section id="slots-idle" class="mock-screen slots">
+        <img class="backdrop" src="../assets/slots-backdrop.png" alt="">
+        <div class="vignette"></div>
+        <header class="topbar">
+          <div class="brand">
+            <div class="brand-mark">S</div>
+            <div>
+              <div class="brand-title">Virtual Casino Simulator</div>
+              <div class="brand-subtitle">Fake-money only</div>
+            </div>
+          </div>
+          <nav class="nav">
+            <span>Lobby</span><span>Roulette</span><span class="active">Slots</span><span>Keno</span><span>Bingo</span><span>Blackjack</span><span>Baccarat</span><span>Admin</span>
+          </nav>
+          <div class="wallet">
+            <div class="wallet-pill">Balance: $5,030.00</div><div class="icon-pill">$</div><div class="icon-pill">P1</div>
+          </div>
+        </header>
+        <div class="game-shell">
+          <div class="screen-title-row">
+            <div>
+              <div class="kicker">Slots proposal state 1 of 4</div>
+              <h1 class="screen-title">Idle Reels</h1>
+            </div>
+            <div class="state-strip">
+              <div class="state-chip"><b>5 reels x 3 rows</b><span>Stable cabinet viewport</span></div>
+              <div class="state-chip"><b>20 paylines</b><span>Line setup visible</span></div>
+              <div class="state-chip"><b>Autoplay ready</b><span>No layout shift</span></div>
+              <div class="state-chip"><b>Ledger backed</b><span>Spin cost reserved</span></div>
+            </div>
+          </div>
+          <div class="main-grid">
+            <aside class="panel">
+              <h2>Controls</h2>
+              <div class="field-grid">
+                <div class="field"><label>Paylines</label><strong>20</strong></div>
+                <div class="field"><label>Line bet</label><strong>$5</strong></div>
+              </div>
+              <div class="btn-row single"><div class="btn primary">Spin</div></div>
+              <div class="autoplay-panel">
+                <div class="status"><span><i class="dot"></i>Ready</span><strong>Slots autoplay</strong></div>
+                <div class="small-copy">Repeats current line setup. Stop occupies the same reserved control row when running.</div>
+                <div class="btn-row"><div class="btn">Slow</div><div class="btn gold">Medium</div></div>
+              </div>
+              <div class="metric-grid">
+                <div class="metric"><span>Round cost</span><strong>$100</strong></div>
+                <div class="metric"><span>Free spins</span><strong>0</strong></div>
+              </div>
+            </aside>
+            <section class="panel slot-stage">
+              <div class="slot-cabinet">
+                <div class="slot-marquee"><span>Midnight Ledger Slots</span><span>Progressive $1,284.00</span></div>
+                <div class="slot-reels">
+                  <div class="slot-cell bell">BELL</div><div class="slot-cell cherry">CHERRY</div><div class="slot-cell seven">7</div><div class="slot-cell bar">BAR</div><div class="slot-cell wild">WILD</div>
+                  <div class="slot-cell bar">BAR</div><div class="slot-cell wild">WILD</div><div class="slot-cell cherry">CHERRY</div><div class="slot-cell bell">BELL</div><div class="slot-cell seven">7</div>
+                  <div class="slot-cell lemon">LEMON</div><div class="slot-cell bar">BAR</div><div class="slot-cell scatter">SCAT</div><div class="slot-cell cherry">CHERRY</div><div class="slot-cell bell">BELL</div>
+                </div>
+                <div class="slot-footer"><div class="small-copy">Last result appears below without resizing the reels.</div><div class="spin-button">SPIN</div><div class="lever"></div></div>
+              </div>
+              <div class="result-box"><strong>Ready.</strong> Cost and payout summary remains locked under the cabinet. Spin to play.</div>
+            </section>
+            <aside class="panel details-panel">
+              <h2>Paytable</h2>
+              <div class="paytable-grid">
+                <div class="pay-row"><strong>Seven</strong> 3=50x, 4=250x, 5=progressive</div>
+                <div class="pay-row"><strong>Wild</strong> Substitutes on active lines</div>
+                <div class="pay-row"><strong>Scatter</strong> 3+ awards free spins</div>
+                <div class="pay-row"><strong>Bar</strong> 3=10x, 4=40x, 5=160x</div>
+              </div>
+              <h3>Recent spins</h3>
+              <div class="scroll-list">
+                <div class="list-row"><span>slot-0928, 20 lines</span><strong>$0</strong></div>
+                <div class="list-row"><span>slot-0927, 9 lines</span><strong>$35</strong></div>
+                <div class="list-row"><span>slot-0926, 20 lines</span><strong>$0</strong></div>
+              </div>
+            </aside>
+          </div>
+        </div>
+        <footer class="statusbar"><span>All games use fake money only</span><span>Server time: 2026-07-08 15:02:11</span><span>Connected</span></footer>
+      </section>
+
+      <section id="slots-spin" class="mock-screen slots">
+        <img class="backdrop" src="../assets/slots-backdrop.png" alt="">
+        <div class="vignette"></div>
+        <header class="topbar">
+          <div class="brand"><div class="brand-mark">S</div><div><div class="brand-title">Virtual Casino Simulator</div><div class="brand-subtitle">Fake-money only</div></div></div>
+          <nav class="nav"><span>Lobby</span><span>Roulette</span><span class="active">Slots</span><span>Keno</span><span>Bingo</span><span>Blackjack</span><span>Baccarat</span><span>Admin</span></nav>
+          <div class="wallet"><div class="wallet-pill">Balance: $4,930.00</div><div class="icon-pill">$</div><div class="icon-pill">P1</div></div>
+        </header>
+        <div class="game-shell">
+          <div class="screen-title-row">
+            <div><div class="kicker">Slots proposal state 2 of 4</div><h1 class="screen-title">Spin In Progress</h1></div>
+            <div class="state-strip">
+              <div class="state-chip"><b>Debit committed</b><span>$100 ledger event</span></div>
+              <div class="state-chip"><b>Reels moving</b><span>Transform-only blur</span></div>
+              <div class="state-chip"><b>Autoplay active</b><span>8 of 25 queued</span></div>
+              <div class="state-chip"><b>Result reserved</b><span>No stage resize</span></div>
+            </div>
+          </div>
+          <div class="main-grid">
+            <aside class="panel">
+              <h2>Controls</h2>
+              <div class="field-grid"><div class="field"><label>Paylines</label><strong>20</strong></div><div class="field"><label>Line bet</label><strong>$5</strong></div></div>
+              <div class="btn-row single"><div class="btn primary disabled">Spinning</div></div>
+              <div class="autoplay-panel">
+                <div class="status"><span><i class="dot"></i>Running</span><strong>8 / 25</strong></div>
+                <div class="meter"><div class="meter-label"><span>Session progress</span><strong>32%</strong></div><div class="meter-bar"><div class="meter-fill" style="width:32%"></div></div></div>
+                <div class="btn-row"><div class="btn">Pause</div><div class="btn primary">Stop</div></div>
+              </div>
+              <div class="metric-grid"><div class="metric"><span>Round cost</span><strong>$100</strong></div><div class="metric"><span>Speed</span><strong>Medium</strong></div></div>
+            </aside>
+            <section class="panel slot-stage">
+              <div class="slot-cabinet">
+                <div class="slot-marquee"><span>Midnight Ledger Slots</span><span>Evaluating reels</span></div>
+                <div class="slot-reels">
+                  <div class="slot-cell blur"></div><div class="slot-cell blur"></div><div class="slot-cell blur"></div><div class="slot-cell blur"></div><div class="slot-cell blur"></div>
+                  <div class="slot-cell blur"></div><div class="slot-cell blur"></div><div class="slot-cell blur"></div><div class="slot-cell blur"></div><div class="slot-cell blur"></div>
+                  <div class="slot-cell blur"></div><div class="slot-cell blur"></div><div class="slot-cell blur"></div><div class="slot-cell blur"></div><div class="slot-cell blur"></div>
+                </div>
+                <div class="slot-footer"><div class="small-copy">Columns stop left to right while the cabinet size remains fixed.</div><div class="spin-button">WAIT</div><div class="lever"></div></div>
+              </div>
+              <div class="result-box"><strong>Spin accepted.</strong> Cost $100 debited. Reels are settling; payout region stays visible.</div>
+            </section>
+            <aside class="panel details-panel">
+              <h2>Paytable</h2>
+              <div class="paytable-grid">
+                <div class="pay-row"><strong>Seven</strong> 3=50x, 4=250x, 5=progressive</div>
+                <div class="pay-row"><strong>Wild</strong> Substitutes on active lines</div>
+                <div class="pay-row"><strong>Scatter</strong> 3+ awards free spins</div>
+                <div class="pay-row"><strong>Bar</strong> 3=10x, 4=40x, 5=160x</div>
+              </div>
+              <h3>Recent spins</h3>
+              <div class="scroll-list">
+                <div class="list-row active"><span>slot-0929, in progress</span><strong>...</strong></div>
+                <div class="list-row"><span>slot-0928, 20 lines</span><strong>$0</strong></div>
+                <div class="list-row"><span>slot-0927, 9 lines</span><strong>$35</strong></div>
+              </div>
+            </aside>
+          </div>
+        </div>
+        <footer class="statusbar"><span>Stop prevents new autoplay spins</span><span>Server time: 2026-07-08 15:02:14</span><span>Connected</span></footer>
+      </section>
+
+      <section id="slots-win" class="mock-screen slots">
+        <img class="backdrop" src="../assets/slots-backdrop.png" alt="">
+        <div class="vignette"></div>
+        <header class="topbar">
+          <div class="brand"><div class="brand-mark">S</div><div><div class="brand-title">Virtual Casino Simulator</div><div class="brand-subtitle">Fake-money only</div></div></div>
+          <nav class="nav"><span>Lobby</span><span>Roulette</span><span class="active">Slots</span><span>Keno</span><span>Bingo</span><span>Blackjack</span><span>Baccarat</span><span>Admin</span></nav>
+          <div class="wallet"><div class="wallet-pill">Balance: $5,430.00</div><div class="icon-pill">$</div><div class="icon-pill">P1</div></div>
+        </header>
+        <div class="game-shell">
+          <div class="screen-title-row">
+            <div><div class="kicker">Slots proposal state 3 of 4</div><h1 class="screen-title">Win and Payline Reveal</h1></div>
+            <div class="state-strip">
+              <div class="state-chip"><b>Line 7 hit</b><span>5 BAR with wild</span></div>
+              <div class="state-chip"><b>Payout credited</b><span>$500 after result</span></div>
+              <div class="state-chip"><b>Glow layer</b><span>Overlay only</span></div>
+              <div class="state-chip"><b>History update</b><span>Scroll region fixed</span></div>
+            </div>
+          </div>
+          <div class="main-grid">
+            <aside class="panel">
+              <h2>Controls</h2>
+              <div class="field-grid"><div class="field"><label>Paylines</label><strong>20</strong></div><div class="field"><label>Line bet</label><strong>$5</strong></div></div>
+              <div class="btn-row single"><div class="btn primary">Spin again</div></div>
+              <div class="autoplay-panel">
+                <div class="status"><span><i class="dot"></i>Ready</span><strong>Autoplay paused</strong></div>
+                <div class="small-copy">Win reveal runs in the same stage before the next automated spin may begin.</div>
+                <div class="btn-row"><div class="btn gold">Resume</div><div class="btn">Edit plan</div></div>
+              </div>
+              <div class="metric-grid"><div class="metric"><span>Cost</span><strong>$100</strong></div><div class="metric"><span>Payout</span><strong>$500</strong></div></div>
+            </aside>
+            <section class="panel slot-stage">
+              <div class="slot-cabinet">
+                <div class="slot-marquee"><span>Midnight Ledger Slots</span><span>Line 7 pays $500</span></div>
+                <div class="slot-reels">
+                  <div class="slot-cell cherry">CHERRY</div><div class="slot-cell bell">BELL</div><div class="slot-cell seven">7</div><div class="slot-cell scatter">SCAT</div><div class="slot-cell lemon">LEMON</div>
+                  <div class="slot-cell bar win">BAR</div><div class="slot-cell bar win">BAR</div><div class="slot-cell wild win">WILD</div><div class="slot-cell bar win">BAR</div><div class="slot-cell bar win">BAR</div>
+                  <div class="slot-cell lemon">LEMON</div><div class="slot-cell cherry">CHERRY</div><div class="slot-cell bell">BELL</div><div class="slot-cell seven">7</div><div class="slot-cell wild">WILD</div>
+                  <svg class="payline" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M 4 50 L 96 50"></path></svg>
+                </div>
+                <div class="slot-footer"><div class="small-copy">Payline is a composited SVG/DOM overlay; symbols do not move.</div><div class="spin-button">WIN</div><div class="lever"></div></div>
+              </div>
+              <div class="result-box"><strong>Line 7:</strong> five BAR symbols with WILD substitution. Cost $100, payout $500, net +$400.</div>
+            </section>
+            <aside class="panel details-panel">
+              <h2>Paytable</h2>
+              <div class="paytable-grid">
+                <div class="pay-row"><strong>Seven</strong> 3=50x, 4=250x, 5=progressive</div>
+                <div class="pay-row"><strong>Wild</strong> Substitutes on active lines</div>
+                <div class="pay-row"><strong>Scatter</strong> 3+ awards free spins</div>
+                <div class="pay-row active"><strong>Bar</strong> 3=10x, 4=40x, 5=160x</div>
+              </div>
+              <h3>Recent spins</h3>
+              <div class="scroll-list">
+                <div class="list-row active"><span>slot-0929, 20 lines</span><strong>$500</strong></div>
+                <div class="list-row"><span>slot-0928, 20 lines</span><strong>$0</strong></div>
+                <div class="list-row"><span>slot-0927, 9 lines</span><strong>$35</strong></div>
+              </div>
+            </aside>
+          </div>
+        </div>
+        <footer class="statusbar"><span>Settlement payout credited after evaluation</span><span>Server time: 2026-07-08 15:02:18</span><span>Connected</span></footer>
+      </section>
+
+      <section id="slots-free-progressive" class="mock-screen slots">
+        <img class="backdrop" src="../assets/slots-backdrop.png" alt="">
+        <div class="vignette"></div>
+        <header class="topbar">
+          <div class="brand"><div class="brand-mark">S</div><div><div class="brand-title">Virtual Casino Simulator</div><div class="brand-subtitle">Fake-money only</div></div></div>
+          <nav class="nav"><span>Lobby</span><span>Roulette</span><span class="active">Slots</span><span>Keno</span><span>Bingo</span><span>Blackjack</span><span>Baccarat</span><span>Admin</span></nav>
+          <div class="wallet"><div class="wallet-pill">Balance: $5,430.00</div><div class="icon-pill">$</div><div class="icon-pill">P1</div></div>
+        </header>
+        <div class="game-shell">
+          <div class="screen-title-row">
+            <div><div class="kicker">Slots proposal state 4 of 4</div><h1 class="screen-title">Free Spin and Progressive Context</h1></div>
+            <div class="state-strip">
+              <div class="state-chip"><b>Scatter trigger</b><span>3+ awards 8 spins</span></div>
+              <div class="state-chip"><b>Free spin bank</b><span>Persistent state</span></div>
+              <div class="state-chip"><b>Progressive</b><span>$1,312.00 meter</span></div>
+              <div class="state-chip"><b>Autoplay aware</b><span>Plan waits for reveal</span></div>
+            </div>
+          </div>
+          <div class="main-grid">
+            <aside class="panel">
+              <h2>Controls</h2>
+              <div class="field-grid"><div class="field"><label>Paylines</label><strong>20</strong></div><div class="field"><label>Line bet</label><strong>$5</strong></div></div>
+              <div class="btn-row single"><div class="btn gold">Use free spin</div></div>
+              <div class="autoplay-panel">
+                <div class="status"><span><i class="dot"></i>Bonus ready</span><strong>8 free</strong></div>
+                <div class="small-copy">Free spins consume the bank first and keep the same cabinet and control rail.</div>
+                <div class="btn-row"><div class="btn gold">Auto bonus</div><div class="btn">Stop</div></div>
+              </div>
+              <div class="meter">
+                <div class="meter-label"><span>Progressive meter</span><strong>$1,312.00</strong></div>
+                <div class="meter-bar"><div class="meter-fill" style="width:74%"></div></div>
+              </div>
+            </aside>
+            <section class="panel slot-stage">
+              <div class="slot-cabinet">
+                <div class="slot-marquee"><span>Scatter bonus unlocked</span><span>Free spins: 8</span></div>
+                <div class="slot-reels">
+                  <div class="slot-cell scatter win">SCAT</div><div class="slot-cell cherry">CHERRY</div><div class="slot-cell seven">7</div><div class="slot-cell bar">BAR</div><div class="slot-cell scatter win">SCAT</div>
+                  <div class="slot-cell bell">BELL</div><div class="slot-cell wild">WILD</div><div class="slot-cell scatter win">SCAT</div><div class="slot-cell bell">BELL</div><div class="slot-cell seven">7</div>
+                  <div class="slot-cell lemon">LEMON</div><div class="slot-cell bar">BAR</div><div class="slot-cell cherry">CHERRY</div><div class="slot-cell wild">WILD</div><div class="slot-cell bell">BELL</div>
+                </div>
+                <div class="slot-footer"><div class="small-copy">Scatter glow reuses the same winning-symbol treatment.</div><div class="spin-button">BONUS</div><div class="lever"></div></div>
+              </div>
+              <div class="result-box"><strong>Scatter 3:</strong> awards 8 free spins. Progressive remains visible for five-SEVEN active-line context.</div>
+            </section>
+            <aside class="panel details-panel">
+              <h2>Feature summary</h2>
+              <div class="paytable-grid">
+                <div class="pay-row active"><strong>Scatter</strong> 3=5x, 4=20x, 5=100x</div>
+                <div class="pay-row"><strong>Free spins</strong> 8 spins on 3+ scatters</div>
+                <div class="pay-row"><strong>Progressive</strong> Five SEVEN on active line</div>
+                <div class="pay-row"><strong>History</strong> Bonus result joins spin log</div>
+              </div>
+              <h3>Recent spins</h3>
+              <div class="scroll-list">
+                <div class="list-row active"><span>slot-0930, scatter trigger</span><strong>8 free</strong></div>
+                <div class="list-row"><span>slot-0929, 20 lines</span><strong>$500</strong></div>
+                <div class="list-row"><span>slot-0928, 20 lines</span><strong>$0</strong></div>
+              </div>
+            </aside>
+          </div>
+        </div>
+        <footer class="statusbar"><span>Free spins and progressive are fake-money state only</span><span>Server time: 2026-07-08 15:02:21</span><span>Connected</span></footer>
+      </section>
+
+      <section id="keno-selection" class="mock-screen keno">
+        <img class="backdrop" src="../assets/keno-backdrop.png" alt="">
+        <div class="vignette"></div>
+        <header class="topbar">
+          <div class="brand"><div class="brand-mark">K</div><div><div class="brand-title">Virtual Casino Simulator</div><div class="brand-subtitle">Fake-money only</div></div></div>
+          <nav class="nav"><span>Lobby</span><span>Roulette</span><span>Slots</span><span class="active">Keno</span><span>Bingo</span><span>Blackjack</span><span>Baccarat</span><span>Admin</span></nav>
+          <div class="wallet"><div class="wallet-pill">Balance: $5,030.00</div><div class="icon-pill">$</div><div class="icon-pill">P1</div></div>
+        </header>
+        <div class="game-shell">
+          <div class="screen-title-row">
+            <div><div class="kicker">Keno proposal state 1 of 3</div><h1 class="screen-title">Spot Selection</h1></div>
+            <div class="state-strip">
+              <div class="state-chip"><b>1-80 board</b><span>10 x 8 stable grid</span></div>
+              <div class="state-chip"><b>1-20 spots</b><span>10 selected here</span></div>
+              <div class="state-chip"><b>Bot panel</b><span>Quick-pick strategies</span></div>
+              <div class="state-chip"><b>Autoplay ready</b><span>Repeats ticket</span></div>
+            </div>
+          </div>
+          <div class="main-grid">
+            <aside class="panel">
+              <h2>Ticket</h2>
+              <div class="field-grid"><div class="field"><label>Amount</label><strong>$5</strong></div><div class="field"><label>Spots</label><strong>10 / 20</strong></div></div>
+              <div class="btn-row three"><div class="btn">Pick 5</div><div class="btn gold">Pick 10</div><div class="btn">Clear</div></div>
+              <div class="btn-row"><div class="btn gold">Buy ticket</div><div class="btn primary">Draw 20</div></div>
+              <div class="autoplay-panel"><div class="status"><span><i class="dot"></i>Ready</span><strong>Repeat ticket</strong></div><div class="small-copy">Autoplay stores the selected ticket but does not resize the board.</div></div>
+              <div class="bot-panel"><div class="status"><span><i class="dot"></i>Bots available</span><strong>3 active</strong></div><div class="small-copy">3-spot, 5-spot, and 10-spot quick-pick strategies are shown in a reserved rail.</div></div>
+            </aside>
+            <section class="panel keno-stage">
+              <h2>Pick 1-20 Spots</h2>
+              <div class="keno-board select">
+                <span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span>
+                <span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span>
+                <span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span>
+                <span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span>
+                <span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span>
+                <span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span>
+                <span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span>
+                <span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span>
+              </div>
+              <div class="result-box"><strong>Selected:</strong> 3, 8, 12, 17, 24, 31, 44, 55, 63, 72. Buy ticket remains in the left rail.</div>
+            </section>
+            <aside class="panel details-panel">
+              <h2>Open ticket</h2>
+              <div class="ticket-strip"><span class="ticket-number">3</span><span class="ticket-number">8</span><span class="ticket-number">12</span><span class="ticket-number">17</span><span class="ticket-number">24</span><span class="ticket-number">31</span><span class="ticket-number">44</span><span class="ticket-number">55</span><span class="ticket-number">63</span><span class="ticket-number">72</span></div>
+              <h3>Paytable preview</h3>
+              <div class="scroll-list">
+                <div class="list-row active"><span>10 spots, 5 catches</span><strong>20x</strong></div>
+                <div class="list-row"><span>10 spots, 6 catches</span><strong>80x</strong></div>
+                <div class="list-row"><span>10 spots, 7 catches</span><strong>400x</strong></div>
+                <div class="list-row"><span>10 spots, 8+ catches</span><strong>Major</strong></div>
+              </div>
+            </aside>
+          </div>
+        </div>
+        <footer class="statusbar"><span>Keno ticket purchase debits immediately</span><span>Server time: 2026-07-08 15:03:01</span><span>Connected</span></footer>
+      </section>
+
+      <section id="keno-draw" class="mock-screen keno">
+        <img class="backdrop" src="../assets/keno-backdrop.png" alt="">
+        <div class="vignette"></div>
+        <header class="topbar">
+          <div class="brand"><div class="brand-mark">K</div><div><div class="brand-title">Virtual Casino Simulator</div><div class="brand-subtitle">Fake-money only</div></div></div>
+          <nav class="nav"><span>Lobby</span><span>Roulette</span><span>Slots</span><span class="active">Keno</span><span>Bingo</span><span>Blackjack</span><span>Baccarat</span><span>Admin</span></nav>
+          <div class="wallet"><div class="wallet-pill">Balance: $5,025.00</div><div class="icon-pill">$</div><div class="icon-pill">P1</div></div>
+        </header>
+        <div class="game-shell">
+          <div class="screen-title-row">
+            <div><div class="kicker">Keno proposal state 2 of 3</div><h1 class="screen-title">Draw In Progress</h1></div>
+            <div class="state-strip">
+              <div class="state-chip"><b>12 / 20 drawn</b><span>Ball rail reserved</span></div>
+              <div class="state-chip"><b>5 catches</b><span>Live match glow</span></div>
+              <div class="state-chip"><b>Bot round</b><span>Settles with humans</span></div>
+              <div class="state-chip"><b>Autoplay safe</b><span>Stop after atomic draw</span></div>
+            </div>
+          </div>
+          <div class="main-grid">
+            <aside class="panel">
+              <h2>Ticket</h2>
+              <div class="field-grid"><div class="field"><label>Amount</label><strong>$5</strong></div><div class="field"><label>Spots</label><strong>10</strong></div></div>
+              <div class="btn-row"><div class="btn disabled">Buy ticket</div><div class="btn primary disabled">Drawing</div></div>
+              <div class="autoplay-panel"><div class="status"><span><i class="dot"></i>Running</span><strong>4 / 12</strong></div><div class="meter"><div class="meter-label"><span>Draw reveal</span><strong>60%</strong></div><div class="meter-bar"><div class="meter-fill" style="width:60%"></div></div></div><div class="btn-row single"><div class="btn primary">Stop after draw</div></div></div>
+              <div class="bot-panel"><div class="status"><span><i class="dot"></i>Bot tickets</span><strong>3 settled</strong></div><div class="small-copy">Bot controller results remain in the right detail drawer.</div></div>
+            </aside>
+            <section class="panel keno-stage">
+              <h2>Live Draw Board</h2>
+              <div class="keno-board draw">
+                <span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span>
+                <span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span>
+                <span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span>
+                <span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span>
+                <span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span>
+                <span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span>
+                <span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span>
+                <span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span>
+              </div>
+              <div class="draw-rail"><span class="ball">3</span><span class="ball">6</span><span class="ball">12</span><span class="ball">18</span><span class="ball">22</span><span class="ball">31</span><span class="ball">39</span><span class="ball">44</span><span class="ball">51</span><span class="ball">63</span><span class="ball">69</span><span class="ball live">75</span></div>
+              <div class="result-box"><strong>Drawing:</strong> 12 of 20 balls revealed. Five catches are highlighted while the ticket and paytable stay visible.</div>
+            </section>
+            <aside class="panel details-panel">
+              <h2>Drawn balls</h2>
+              <div class="ticket-strip"><span class="ticket-number">3</span><span class="ticket-number">6</span><span class="ticket-number">12</span><span class="ticket-number">18</span><span class="ticket-number">22</span><span class="ticket-number">31</span><span class="ticket-number">39</span><span class="ticket-number">44</span><span class="ticket-number">51</span><span class="ticket-number">63</span><span class="ticket-number">69</span><span class="ticket-number">75</span></div>
+              <h3>Bot results</h3>
+              <div class="scroll-list">
+                <div class="list-row"><span>bot_maya, 5-spot</span><strong>2 catches</strong></div>
+                <div class="list-row"><span>bot_eli, 10-spot</span><strong>3 catches</strong></div>
+                <div class="list-row"><span>bot_rin, 20-spot</span><strong>7 catches</strong></div>
+              </div>
+            </aside>
+          </div>
+        </div>
+        <footer class="statusbar"><span>Keno draw reveals numbers without moving the grid</span><span>Server time: 2026-07-08 15:03:08</span><span>Connected</span></footer>
+      </section>
+
+      <section id="keno-result" class="mock-screen keno">
+        <img class="backdrop" src="../assets/keno-backdrop.png" alt="">
+        <div class="vignette"></div>
+        <header class="topbar">
+          <div class="brand"><div class="brand-mark">K</div><div><div class="brand-title">Virtual Casino Simulator</div><div class="brand-subtitle">Fake-money only</div></div></div>
+          <nav class="nav"><span>Lobby</span><span>Roulette</span><span>Slots</span><span class="active">Keno</span><span>Bingo</span><span>Blackjack</span><span>Baccarat</span><span>Admin</span></nav>
+          <div class="wallet"><div class="wallet-pill">Balance: $5,125.00</div><div class="icon-pill">$</div><div class="icon-pill">P1</div></div>
+        </header>
+        <div class="game-shell">
+          <div class="screen-title-row">
+            <div><div class="kicker">Keno proposal state 3 of 3</div><h1 class="screen-title">Result and Paytable Comparison</h1></div>
+            <div class="state-strip">
+              <div class="state-chip"><b>20 drawn</b><span>Final board locked</span></div>
+              <div class="state-chip"><b>5 catches</b><span>10-spot row active</span></div>
+              <div class="state-chip"><b>$100 payout</b><span>20x on $5 wager</span></div>
+              <div class="state-chip"><b>History written</b><span>Drawer scrolls</span></div>
+            </div>
+          </div>
+          <div class="main-grid">
+            <aside class="panel">
+              <h2>Ticket</h2>
+              <div class="field-grid"><div class="field"><label>Amount</label><strong>$5</strong></div><div class="field"><label>Catches</label><strong>5</strong></div></div>
+              <div class="btn-row"><div class="btn gold">Replay ticket</div><div class="btn primary">New draw</div></div>
+              <div class="autoplay-panel"><div class="status"><span><i class="dot"></i>Ready</span><strong>Repeat ticket</strong></div><div class="small-copy">Autoplay can continue from the same 10-spot ticket after the result reveal completes.</div></div>
+              <div class="bot-panel"><div class="status"><span><i class="dot"></i>Bots complete</span><strong>3 rows</strong></div><div class="small-copy">Bot summaries occupy a stable drawer under the paytable.</div></div>
+            </aside>
+            <section class="panel keno-stage">
+              <h2>Final Draw Board</h2>
+              <div class="keno-board result">
+                <span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span>
+                <span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span>
+                <span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span>
+                <span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span>
+                <span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span>
+                <span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span>
+                <span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span>
+                <span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span><span class="keno-number"></span>
+              </div>
+              <div class="result-box"><strong>Result:</strong> 5 catches on a 10-spot ticket. Payout $100; net +$95 after the $5 ticket debit.</div>
+            </section>
+            <aside class="panel details-panel">
+              <h2>Paytable comparison</h2>
+              <div class="scroll-list">
+                <div class="list-row"><span>10 spots, 3 catches</span><strong>2x</strong></div>
+                <div class="list-row"><span>10 spots, 4 catches</span><strong>5x</strong></div>
+                <div class="list-row active"><span>10 spots, 5 catches</span><strong>20x</strong></div>
+                <div class="list-row"><span>10 spots, 6 catches</span><strong>80x</strong></div>
+                <div class="list-row"><span>10 spots, 7 catches</span><strong>400x</strong></div>
+              </div>
+              <h3>Last draw</h3>
+              <div class="ticket-strip"><span class="ticket-number">3</span><span class="ticket-number">6</span><span class="ticket-number">12</span><span class="ticket-number">18</span><span class="ticket-number">22</span><span class="ticket-number">31</span><span class="ticket-number">39</span><span class="ticket-number">44</span><span class="ticket-number">51</span><span class="ticket-number">63</span><span class="ticket-number">69</span><span class="ticket-number">75</span><span class="ticket-number">5</span><span class="ticket-number">27</span><span class="ticket-number">34</span><span class="ticket-number">46</span><span class="ticket-number">52</span><span class="ticket-number">58</span><span class="ticket-number">71</span><span class="ticket-number">80</span></div>
+            </aside>
+          </div>
+        </div>
+        <footer class="statusbar"><span>Keno payout credits after the draw result</span><span>Server time: 2026-07-08 15:03:14</span><span>Connected</span></footer>
+      </section>
+
+      <section id="bingo-ready" class="mock-screen bingo">
+        <img class="backdrop" src="../assets/bingo-backdrop.png" alt="">
+        <div class="vignette"></div>
+        <header class="topbar">
+          <div class="brand"><div class="brand-mark">B</div><div><div class="brand-title">Virtual Casino Simulator</div><div class="brand-subtitle">Fake-money only</div></div></div>
+          <nav class="nav"><span>Lobby</span><span>Roulette</span><span>Slots</span><span>Keno</span><span class="active">Bingo</span><span>Blackjack</span><span>Baccarat</span><span>Admin</span></nav>
+          <div class="wallet"><div class="wallet-pill">Balance: $5,030.00</div><div class="icon-pill">$</div><div class="icon-pill">P1</div></div>
+        </header>
+        <div class="game-shell">
+          <div class="screen-title-row">
+            <div><div class="kicker">Bingo proposal state 1 of 3</div><h1 class="screen-title">Card Purchase Ready</h1></div>
+            <div class="state-strip">
+              <div class="state-chip"><b>75-ball rules</b><span>B/I/N/G/O labels</span></div>
+              <div class="state-chip"><b>Any line</b><span>Pattern selected</span></div>
+              <div class="state-chip"><b>Bot cards</b><span>Reserved control panel</span></div>
+              <div class="state-chip"><b>Autoplay ready</b><span>Stepwise calls</span></div>
+            </div>
+          </div>
+          <div class="main-grid">
+            <aside class="panel">
+              <h2>Card setup</h2>
+              <div class="field-grid"><div class="field"><label>Amount</label><strong>$5</strong></div><div class="field"><label>Pattern</label><strong>Any line</strong></div></div>
+              <div class="btn-row"><div class="btn gold">Buy card</div><div class="btn primary">Call next</div></div>
+              <div class="autoplay-panel"><div class="status"><span><i class="dot"></i>Ready</span><strong>Stepwise</strong></div><div class="small-copy">Autoplay calls one ball per tick so Stop can prevent the next call.</div></div>
+              <div class="bot-panel"><div class="status"><span><i class="dot"></i>Bot cards</span><strong>3 available</strong></div><div class="small-copy">Bot purchases stay grouped here and never push the card region.</div></div>
+            </aside>
+            <section class="panel bingo-stage">
+              <h2>Human Card</h2>
+              <div class="bingo-card">
+                <div class="bingo-head">B</div><div class="bingo-head">I</div><div class="bingo-head">N</div><div class="bingo-head">G</div><div class="bingo-head">O</div>
+                <div class="bingo-cell">7</div><div class="bingo-cell">18</div><div class="bingo-cell">33</div><div class="bingo-cell">49</div><div class="bingo-cell">62</div>
+                <div class="bingo-cell">12</div><div class="bingo-cell">22</div><div class="bingo-cell">38</div><div class="bingo-cell">53</div><div class="bingo-cell">70</div>
+                <div class="bingo-cell">4</div><div class="bingo-cell">29</div><div class="bingo-cell marked">FREE</div><div class="bingo-cell">58</div><div class="bingo-cell">68</div>
+                <div class="bingo-cell">15</div><div class="bingo-cell">19</div><div class="bingo-cell">42</div><div class="bingo-cell">55</div><div class="bingo-cell">73</div>
+                <div class="bingo-cell">1</div><div class="bingo-cell">27</div><div class="bingo-cell">36</div><div class="bingo-cell">60</div><div class="bingo-cell">66</div>
+              </div>
+              <div class="result-box"><strong>Ready.</strong> Buy card debits immediately. Calls, cards in play, and result text use fixed regions.</div>
+            </section>
+            <aside class="panel details-panel">
+              <h2>Cards in play</h2>
+              <div class="scroll-list">
+                <div class="list-row active"><span>human, any line</span><strong>$5</strong></div>
+                <div class="list-row"><span>bot_maya, any line</span><strong>$5</strong></div>
+                <div class="list-row"><span>bot_eli, corners</span><strong>$5</strong></div>
+              </div>
+              <h3>Called balls</h3>
+              <p class="small-copy">No calls yet. This drawer will fill without resizing the card.</p>
+            </aside>
+          </div>
+        </div>
+        <footer class="statusbar"><span>Bingo card purchase debits immediately</span><span>Server time: 2026-07-08 15:04:01</span><span>Connected</span></footer>
+      </section>
+
+      <section id="bingo-call" class="mock-screen bingo">
+        <img class="backdrop" src="../assets/bingo-backdrop.png" alt="">
+        <div class="vignette"></div>
+        <header class="topbar">
+          <div class="brand"><div class="brand-mark">B</div><div><div class="brand-title">Virtual Casino Simulator</div><div class="brand-subtitle">Fake-money only</div></div></div>
+          <nav class="nav"><span>Lobby</span><span>Roulette</span><span>Slots</span><span>Keno</span><span class="active">Bingo</span><span>Blackjack</span><span>Baccarat</span><span>Admin</span></nav>
+          <div class="wallet"><div class="wallet-pill">Balance: $5,025.00</div><div class="icon-pill">$</div><div class="icon-pill">P1</div></div>
+        </header>
+        <div class="game-shell">
+          <div class="screen-title-row">
+            <div><div class="kicker">Bingo proposal state 2 of 3</div><h1 class="screen-title">Ball Call In Progress</h1></div>
+            <div class="state-strip">
+              <div class="state-chip"><b>17 calls</b><span>Latest ball highlighted</span></div>
+              <div class="state-chip"><b>Daub layer</b><span>Opacity overlay only</span></div>
+              <div class="state-chip"><b>Autoplay active</b><span>Step 9 / 30</span></div>
+              <div class="state-chip"><b>Bot cards visible</b><span>Status drawer fixed</span></div>
+            </div>
+          </div>
+          <div class="main-grid">
+            <aside class="panel">
+              <h2>Card setup</h2>
+              <div class="field-grid"><div class="field"><label>Amount</label><strong>$5</strong></div><div class="field"><label>Pattern</label><strong>Any line</strong></div></div>
+              <div class="btn-row"><div class="btn disabled">Buy card</div><div class="btn primary disabled">Calling</div></div>
+              <div class="autoplay-panel"><div class="status"><span><i class="dot"></i>Running</span><strong>9 / 30</strong></div><div class="meter"><div class="meter-label"><span>Calls to cap</span><strong>57%</strong></div><div class="meter-bar"><div class="meter-fill" style="width:57%"></div></div></div><div class="btn-row single"><div class="btn primary">Stop before next call</div></div></div>
+              <div class="bot-panel"><div class="status"><span><i class="dot"></i>Bot cards</span><strong>3 tracking</strong></div><div class="small-copy">Bot daubs happen through the same public call action.</div></div>
+            </aside>
+            <section class="panel bingo-stage">
+              <h2>Human Card</h2>
+              <div class="bingo-card">
+                <div class="bingo-head">B</div><div class="bingo-head">I</div><div class="bingo-head">N</div><div class="bingo-head">G</div><div class="bingo-head">O</div>
+                <div class="bingo-cell marked">7</div><div class="bingo-cell">18</div><div class="bingo-cell marked">33</div><div class="bingo-cell marked">49</div><div class="bingo-cell">62</div>
+                <div class="bingo-cell">12</div><div class="bingo-cell marked">22</div><div class="bingo-cell">38</div><div class="bingo-cell">53</div><div class="bingo-cell marked">70</div>
+                <div class="bingo-cell">4</div><div class="bingo-cell">29</div><div class="bingo-cell marked">FREE</div><div class="bingo-cell marked">58</div><div class="bingo-cell">68</div>
+                <div class="bingo-cell marked">15</div><div class="bingo-cell">19</div><div class="bingo-cell">42</div><div class="bingo-cell">55</div><div class="bingo-cell">73</div>
+                <div class="bingo-cell">1</div><div class="bingo-cell marked">27</div><div class="bingo-cell">36</div><div class="bingo-cell">60</div><div class="bingo-cell marked">66</div>
+              </div>
+              <div class="call-display"><div class="call-ball">G-58</div><div><strong>Latest call:</strong><p class="small-copy">Ball G-58 was called and daubed on the human card. The call panel is a fixed-height animation bay.</p></div></div>
+            </section>
+            <aside class="panel details-panel">
+              <h2>Called balls</h2>
+              <div class="called-grid"><span class="called-chip">B-7</span><span class="called-chip">B-15</span><span class="called-chip">I-22</span><span class="called-chip">I-27</span><span class="called-chip">N-33</span><span class="called-chip">FREE</span><span class="called-chip">G-49</span><span class="called-chip">G-58</span><span class="called-chip">O-66</span><span class="called-chip">O-70</span></div>
+              <h3>Cards in play</h3>
+              <div class="scroll-list">
+                <div class="list-row active"><span>human</span><strong>10 marks</strong></div>
+                <div class="list-row"><span>bot_maya</span><strong>7 marks</strong></div>
+                <div class="list-row"><span>bot_eli</span><strong>9 marks</strong></div>
+              </div>
+            </aside>
+          </div>
+        </div>
+        <footer class="statusbar"><span>Bingo autoplay honors Stop between ball calls</span><span>Server time: 2026-07-08 15:04:18</span><span>Connected</span></footer>
+      </section>
+
+      <section id="bingo-win" class="mock-screen bingo">
+        <img class="backdrop" src="../assets/bingo-backdrop.png" alt="">
+        <div class="vignette"></div>
+        <header class="topbar">
+          <div class="brand"><div class="brand-mark">B</div><div><div class="brand-title">Virtual Casino Simulator</div><div class="brand-subtitle">Fake-money only</div></div></div>
+          <nav class="nav"><span>Lobby</span><span>Roulette</span><span>Slots</span><span>Keno</span><span class="active">Bingo</span><span>Blackjack</span><span>Baccarat</span><span>Admin</span></nav>
+          <div class="wallet"><div class="wallet-pill">Balance: $5,245.00</div><div class="icon-pill">$</div><div class="icon-pill">P1</div></div>
+        </header>
+        <div class="game-shell">
+          <div class="screen-title-row">
+            <div><div class="kicker">Bingo proposal state 3 of 3</div><h1 class="screen-title">Winning Pattern Highlight</h1></div>
+            <div class="state-strip">
+              <div class="state-chip"><b>Winner: human</b><span>Any line complete</span></div>
+              <div class="state-chip"><b>$225 payout</b><span>Credited after win</span></div>
+              <div class="state-chip"><b>Pattern overlay</b><span>Cells do not shift</span></div>
+              <div class="state-chip"><b>Session history</b><span>Drawer scrolls</span></div>
+            </div>
+          </div>
+          <div class="main-grid">
+            <aside class="panel">
+              <h2>Card setup</h2>
+              <div class="field-grid"><div class="field"><label>Amount</label><strong>$5</strong></div><div class="field"><label>Pattern</label><strong>Any line</strong></div></div>
+              <div class="btn-row"><div class="btn gold">Buy next card</div><div class="btn primary">Reset table</div></div>
+              <div class="autoplay-panel"><div class="status"><span><i class="dot red"></i>Complete</span><strong>Winner found</strong></div><div class="small-copy">Autoplay stops after the winning settlement and schedules no new call.</div></div>
+              <div class="bot-panel"><div class="status"><span><i class="dot"></i>Bot cards</span><strong>Settled</strong></div><div class="small-copy">Bot rows stay available for comparison after the winner banner appears.</div></div>
+            </aside>
+            <section class="panel bingo-stage">
+              <h2>Human Card</h2>
+              <div class="bingo-card">
+                <div class="bingo-head">B</div><div class="bingo-head">I</div><div class="bingo-head">N</div><div class="bingo-head">G</div><div class="bingo-head">O</div>
+                <div class="bingo-cell win marked">7</div><div class="bingo-cell win marked">18</div><div class="bingo-cell win marked">33</div><div class="bingo-cell win marked">49</div><div class="bingo-cell win marked">62</div>
+                <div class="bingo-cell">12</div><div class="bingo-cell marked">22</div><div class="bingo-cell">38</div><div class="bingo-cell">53</div><div class="bingo-cell marked">70</div>
+                <div class="bingo-cell">4</div><div class="bingo-cell">29</div><div class="bingo-cell marked">FREE</div><div class="bingo-cell marked">58</div><div class="bingo-cell">68</div>
+                <div class="bingo-cell marked">15</div><div class="bingo-cell">19</div><div class="bingo-cell">42</div><div class="bingo-cell">55</div><div class="bingo-cell">73</div>
+                <div class="bingo-cell">1</div><div class="bingo-cell marked">27</div><div class="bingo-cell">36</div><div class="bingo-cell">60</div><div class="bingo-cell marked">66</div>
+              </div>
+              <div class="call-display"><div class="call-ball">O-62</div><div><strong>Bingo.</strong><p class="small-copy">Top row completes the any-line pattern. Payout and winner text use the reserved result zone.</p></div></div>
+            </section>
+            <aside class="panel details-panel">
+              <h2>Session result</h2>
+              <div class="scroll-list">
+                <div class="list-row active"><span>human, any line</span><strong>$225</strong></div>
+                <div class="list-row"><span>bot_maya</span><strong>no win</strong></div>
+                <div class="list-row"><span>bot_eli</span><strong>no win</strong></div>
+              </div>
+              <h3>Recent sessions</h3>
+              <div class="scroll-list">
+                <div class="list-row active"><span>Any line, 23 calls</span><strong>human</strong></div>
+                <div class="list-row"><span>Corners, 41 calls</span><strong>bot_eli</strong></div>
+              </div>
+            </aside>
+          </div>
+        </div>
+        <footer class="statusbar"><span>Bingo payout credits after winning card detection</span><span>Server time: 2026-07-08 15:04:28</span><span>Connected</span></footer>
+      </section>
+    </main>
+  </body>
+</html>
