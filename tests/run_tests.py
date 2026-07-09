@@ -387,8 +387,60 @@ def run_browser_tests():
                 run_case('BR-AUTO-ROU-001',['AUTO-003','AUTO-010','ROU-047'],lambda: page.get_by_text('Off').first.is_visible())
                 # Restore English for game prerender evidence after the locale-preservation smoke test.
                 page.evaluate("""async () => { const i18n = await import('/core/i18n.js'); await i18n.setLocale('en-US', { persistLocal: false }); }""")
+                # Navigate to the premium Slots route before collecting state evidence.
+                page.get_by_test_id('nav-slots').click()
+                # Wait for the fixed reel grid to mount before measuring layout stability.
+                page.get_by_test_id('slot-grid').wait_for(timeout=5000)
+                # Capture the idle cabinet state for worker handback evidence.
+                shot('slots_idle.png')
+                # Store the idle cabinet box so spin/result states can be compared.
+                idle_box=page.get_by_test_id('slots-cabinet').bounding_box()
+                # Store the idle result box so the reserved payout region can be compared.
+                idle_result_box=page.get_by_test_id('slots-result').bounding_box()
+                # Start one real spin through the browser-visible control.
+                page.get_by_test_id('slots-spin').click()
+                # Pause during the in-progress animation window before the API result reveal.
+                page.wait_for_timeout(120)
+                # Capture the moving-reels state for worker handback evidence.
+                shot('slots_spinning.png')
+                # Store the spinning cabinet box to prove the cabinet does not jump.
+                spinning_box=page.get_by_test_id('slots-cabinet').bounding_box()
+                # Store the spinning result box to prove the payout region stays reserved.
+                spinning_result_box=page.get_by_test_id('slots-result').bounding_box()
+                # Wait for the spin result reveal to settle.
+                page.wait_for_timeout(1200)
+                # Capture the settled result state for worker handback evidence.
+                shot('slots_result.png')
+                # Store the settled cabinet box for the final stability comparison.
+                result_box=page.get_by_test_id('slots-cabinet').bounding_box()
+                # Store the settled result box for the final reserved-region comparison.
+                result_result_box=page.get_by_test_id('slots-result').bounding_box()
+                # Define the premium_slots function used by this module.
+                def premium_slots():
+                    # Verify the fixed five-by-three reel surface remains visible.
+                    assert page.get_by_test_id('slot-grid').is_visible()
+                    # Verify the fixed result region is present after a real spin.
+                    assert page.get_by_test_id('slots-result').is_visible()
+                    # Verify recent spins are shown in the right drawer.
+                    assert page.get_by_test_id('slots-recent-spins').is_visible()
+                    # Verify the Slots bot capability panel is reserved.
+                    assert page.get_by_test_id('slots-bot-panel').is_visible()
+                    # Verify the cabinet width stays stable from idle to spinning.
+                    assert abs(idle_box['width']-spinning_box['width']) < 2
+                    # Verify the cabinet height stays stable from idle to spinning.
+                    assert abs(idle_box['height']-spinning_box['height']) < 2
+                    # Verify the cabinet width stays stable from idle to result reveal.
+                    assert abs(idle_box['width']-result_box['width']) < 2
+                    # Verify the cabinet height stays stable from idle to result reveal.
+                    assert abs(idle_box['height']-result_box['height']) < 2
+                    # Verify the result-region height stays stable during the spin.
+                    assert abs(idle_result_box['height']-spinning_result_box['height']) < 2
+                    # Verify the result-region height stays stable after the spin.
+                    assert abs(idle_result_box['height']-result_result_box['height']) < 2
+                    # Verify the premium Slots route avoids page-level horizontal overflow.
+                    assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1')
                 # Execute this statement as part of the module's documented control flow.
-                page.get_by_test_id('nav-slots').click(); page.get_by_test_id('slots-spin').click(); page.wait_for_timeout(1200); run_case('BR-SLOT-001',['SLOT-020','SLOT-021'],lambda: page.get_by_test_id('slot-grid').is_visible())
+                run_case('BR-SLOT-001',['SLOT-020','SLOT-021','SLOT-022','SLOT-023','SLOT-024','SLOT-025','SLOT-026','AUTO-010','LEDGER-025','UX-007','UX-009'],premium_slots)
                 # Navigate to Keno and wait for the premium route shell to mount.
                 page.get_by_test_id('nav-keno').click(); page.get_by_test_id('keno-premium-hero').wait_for(timeout=5000)
                 # Select ten deterministic spots so paytable comparison has a stable row.
