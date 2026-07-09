@@ -15,10 +15,10 @@ Application: 9.1.1
 - roulette: 9.1.0
 - slots: 9.0.1
 - blackjack: 9.0.1
-- baccarat: 9.0.1
+- baccarat: 9.0.2
 - keno: 9.0.1
 - bingo: 9.0.1
-- tests: 1.2.0
+- tests: 1.2.1
 - docs: 1.1.3
 - contracts: 1.0.0
 - tooling: 1.0.1
