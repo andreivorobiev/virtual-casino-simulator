@@ -12,6 +12,8 @@ sys.path.insert(0, str(ROOT))
 from casino.games.blackjack import api as blackjack_api, engine as blackjack_engine
 # Import auth helpers so API tests can seed users through the backend storage seam.
 from casino.core import auth as auth_core
+# Import auth cookie settings so browser tests can enter through the backend session seam.
+from casino.config import AUTH_SESSION_COOKIE
 # Set RESULTS to the value needed for the next operation.
 RESULTS=[]
 # Set SESSION_TOKEN to the value needed for the next operation.
@@ -421,6 +423,8 @@ def run_browser_tests():
     try:
         # Call an asynchronous API/helper and wait for the result before continuing.
         api(base,'/api/v1/casino/reset','POST',{})
+        # Call an asynchronous API/helper and wait for the result before continuing.
+        login_default_user(base)
         # Manage this resource with automatic setup and cleanup.
         with sync_playwright() as p:
             
@@ -436,6 +440,8 @@ def run_browser_tests():
                 return 2
             # Set page to the value needed for the next operation.
             page=browser.new_page(viewport={'width':1920,'height':1080})
+            # Set a session cookie so browser tests exercise authenticated app/API access.
+            page.context.add_cookies([{'name':AUTH_SESSION_COOKIE,'value':SESSION_TOKEN,'url':base,'httpOnly':True,'sameSite':'Lax'}])
             # Set console_errors to the value needed for the next operation.
             console_errors=[]; page_errors=[]
             # Set page.on('console', lambda msg: console_errors.append(msg.tex to the value needed for the next operation.
