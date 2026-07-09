@@ -1,4 +1,5 @@
 {
+  "nav.users": "Users",
   "autoplay.stopAll": "Stop all autoplay",
   "autoplay.subtitle": "Active and recent autoplay sessions.",
   "autoplay.title": "Autoplay",
@@ -57,5 +58,10 @@
   "players.subtitle": "Bots are controllers for player accounts. Strategies are assigned here, not inside games.",
   "players.title": "Players & Bots",
   "system.subtitle": "Routes, modules, and raw overview.",
-  "system.title": "System"
+  "system.title": "System",
+  "users.createButton": "Create user",
+  "users.createTitle": "Create Beta User",
+  "users.subtitle": "Create beta users, inspect token state, manage terms status, and preserve per-account locale preferences.",
+  "users.tableTitle": "Managed Users",
+  "users.title": "Users"
 }

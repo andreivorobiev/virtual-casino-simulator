@@ -1,4 +1,10 @@
 {
+  "nav.users": "Users",
+  "users.createButton": "Create user",
+  "users.createTitle": "Create Beta User",
+  "users.subtitle": "Create beta users, inspect token state, manage terms status, and preserve per-account locale preferences.",
+  "users.tableTitle": "Managed Users",
+  "users.title": "Users",
   "autoplay.stopAll": "Остановить всю автоигру",
   "autoplay.subtitle": "Активные и недавние сессии автоигры.",
   "autoplay.title": "Автоигра",

@@ -331,8 +331,26 @@ def run_api_tests():
             r=api(base,'/api/v1/admin/requirements'); assert len(r['requirements'])>100
             # Set l to the value needed for the next operation.
             l=api(base,'/api/v1/admin/logs?kind=app&limit=10'); assert isinstance(l['logs'],list)
+            # Set created to the Admin-created beta user with ledger-backed starting tokens.
+            created=api(base,'/api/v1/admin/users','POST',{'email':'beta.api@example.test','display_name':'Beta API','initial_tokens':1234,'terms_accepted':False,'language':'ru-RU','format_locale':'browser'}); assert created['user']['token_balance']==1234
+            # Set user_id to the durable Admin user id for follow-up operations.
+            user_id=created['user']['user_id']; assert created['temporary_password']
+            # Verify the created user's terms and locale state are visible.
+            assert created['user']['terms_status']=='pending' and created['user']['language']=='ru-RU'
+            # Set listed to the Admin user listing with token state inspection.
+            listed=api(base,'/api/v1/admin/users'); assert any(u['user_id']==user_id and u['token_state']=='active' for u in listed['users'])
+            # Set deactivated to the user after Admin deactivation.
+            deactivated=api(base,f'/api/v1/admin/users/{user_id}/deactivate','POST',{})['user']; assert deactivated['status']=='inactive' and deactivated['token_state']=='inactive'
+            # Set reactivated to the user after Admin reactivation.
+            reactivated=api(base,f'/api/v1/admin/users/{user_id}/reactivate','POST',{})['user']; assert reactivated['status']=='active' and reactivated['token_state']=='active'
+            # Set reset to the user after Admin password reset.
+            reset=api(base,f'/api/v1/admin/users/{user_id}/password-reset','POST',{}) ; assert reset['temporary_password'] and reset['user']['password_reset_required'] is True
+            # Set terms to the user after Admin marks terms accepted.
+            terms=api(base,f'/api/v1/admin/users/{user_id}/terms','POST',{'accepted':True})['user']; assert terms['terms_status']=='accepted'
+            # Set localized to the user after Admin preserves account locale settings.
+            localized=api(base,f'/api/v1/admin/users/{user_id}/locale','POST',{'language':'en-US','format_locale':'en-US','use_browser_locale':False})['user']; assert localized['language']=='en-US' and localized['format_locale']=='en-US'
         # Execute this statement as part of the module's documented control flow.
-        run_case('API-ADMIN-001',['ADMIN-001','DOC-001','LOG-001'],admin)
+        run_case('API-ADMIN-001',['ADMIN-001','DOC-001','LOG-001','ADMIN-USER-PENDING-035','TERMS-PENDING-035','TOKEN-PENDING-035','I18N-003'],admin)
     # Run cleanup logic regardless of success or failure.
     finally:
         # Set proc.terminate(); proc.wait(timeout to the value needed for the next operation.
@@ -639,6 +657,50 @@ def run_browser_tests():
                 page.goto(base+'/admin', wait_until='networkidle')
                 # Execute this statement as part of the module's documented control flow.
                 run_case('BR-ADMIN-001',['ADMIN-001','ADMIN-010'],lambda: page.get_by_test_id('admin-tab-audio').is_visible())
+                # Define the admin_users_browser function used by this module.
+                def admin_users_browser():
+                    # Open the Admin Users tab.
+                    page.get_by_test_id('admin-tab-users').click()
+                    # Wait for the create-user form to render.
+                    page.get_by_test_id('admin-user-email').wait_for(timeout=5000)
+                    # Fill the beta user's email.
+                    page.get_by_test_id('admin-user-email').fill('beta.browser@example.test')
+                    # Fill the beta user's display name.
+                    page.get_by_test_id('admin-user-name').fill('Beta Browser')
+                    # Set a deterministic starting token balance.
+                    page.get_by_test_id('admin-user-tokens').fill('777')
+                    # Select Russian to verify per-user locale controls render.
+                    page.get_by_test_id('admin-user-language').select_option('ru-RU')
+                    # Create the beta user through the visible Admin action.
+                    page.get_by_test_id('admin-create-user').click()
+                    # Wait for the created user to appear in the table.
+                    page.wait_for_function("() => document.body.innerText.includes('beta.browser@example.test')")
+                    # Wait for the one-time temporary password notice.
+                    page.get_by_test_id('admin-user-temp-password').wait_for(timeout=5000)
+                    # Deactivate the user through the first row action.
+                    page.get_by_test_id('admin-user-toggle').first.click()
+                    # Wait for the inactive state to render.
+                    page.wait_for_function("() => document.body.innerText.includes('inactive')")
+                    # Reactivate the user through the same row action.
+                    page.get_by_test_id('admin-user-toggle').first.click()
+                    # Wait for the active state to render.
+                    page.wait_for_function("() => document.body.innerText.includes('active')")
+                    # Reset the user's password through the visible action.
+                    page.get_by_test_id('admin-user-reset').first.click()
+                    # Wait for the refreshed temporary password notice.
+                    page.get_by_test_id('admin-user-temp-password').wait_for(timeout=5000)
+                    # Accept terms through the visible action.
+                    page.get_by_test_id('admin-user-terms').first.click()
+                    # Wait for the accepted terms status to render.
+                    page.wait_for_function("() => document.body.innerText.includes('accepted')")
+                    # Save locale preferences from the rendered row controls.
+                    page.get_by_test_id('admin-user-save-locale').first.click()
+                    # Verify the token balance remains visible after all actions.
+                    assert '$777.00' in page.locator('#adminView').inner_text()
+                    # Verify the existing Language / Locale tab remains reachable.
+                    page.get_by_test_id('admin-tab-language').click(); page.get_by_test_id('admin-language-select').wait_for(timeout=5000)
+                # Execute this statement as part of the module's documented control flow.
+                run_case('BR-ADMIN-USERS-001',['ADMIN-USER-PENDING-035','TERMS-PENDING-035','TOKEN-PENDING-035','I18N-003'],admin_users_browser)
                 # Execute this statement as part of the module's documented control flow.
                 page.get_by_test_id('admin-tab-audio').click(); page.get_by_test_id('admin-save-audio').wait_for(timeout=5000)
                 # Execute this statement as part of the module's documented control flow.
