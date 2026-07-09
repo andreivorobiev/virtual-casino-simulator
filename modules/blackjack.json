@@ -1,6 +1,6 @@
 {
   "module": "blackjack",
-  "version": "9.0.1",
+  "version": "9.0.2",
   "paths": [
     "casino/games/blackjack/",
     "web/games/blackjack.js"
