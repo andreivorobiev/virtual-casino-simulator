@@ -15,12 +15,12 @@
     "blackjack": "9.0.2",
     "baccarat": "9.0.1",
     "keno": "9.1.0",
-    "bingo": "9.0.1",
+    "bingo": "9.1.0",
     "tests": "1.3.0",
     "docs": "1.1.3",
     "contracts": "1.0.0",
     "tooling": "1.0.1",
     "commenting_policy": "1.0.0"
   },
-  "generated_at": "2026-07-08T21:45:00.000000Z"
+  "generated_at": "2026-07-09T00:00:00.000000Z"
 }
