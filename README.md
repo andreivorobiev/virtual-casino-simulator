@@ -5,7 +5,7 @@
 This payload adds GitHub/Codex governance, module manifests, API contract skeletons, validation scripts, GitHub workflows, and the mandatory commenting policy. It does not intentionally change gameplay behavior from the v9.1.0 baseline.
 
 
-Local fake-money virtual casino with Roulette, Slots, Blackjack, Baccarat, Keno, and American Bingo.
+Local play-token virtual casino with Roulette, Slots, Blackjack, Baccarat, Keno, and American Bingo.
 
 ## Run
 

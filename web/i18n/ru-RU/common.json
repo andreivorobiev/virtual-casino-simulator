@@ -5,7 +5,7 @@
   "actions.refresh": "Обновить",
   "actions.reset": "Сбросить",
   "actions.save": "Сохранить",
-  "money.balance": "Баланс: {amount}",
+  "money.balance": "Токены: {amount}",
   "status.loading": "Загрузка...",
   "status.off": "Выкл."
 }
