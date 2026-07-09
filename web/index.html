@@ -1,3 +1,55 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Virtual Casino Simulator v9</title><link rel="stylesheet" href="/styles.css"></head>
-<body><header class="topbar"><div class="brand"><div class="logo">♠</div><div><strong>Virtual Casino Simulator</strong><small>v9 validation release - fake money only</small></div></div><nav id="main-nav" class="nav"></nav><div class="wallet"><span id="balance">Balance...</span><input id="add-money-amount" type="number" value="1000" min="1"><button id="add-money-btn" data-testid="add-money">Add fake money</button></div></header><main id="view" class="screen"></main><div id="toast" class="toast" hidden></div><script type="module" src="/app.js"></script></body></html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Virtual Casino Simulator v9</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body class="casino-page">
+  <!-- Premium shared shell: brand, route navigation, wallet, and add-money affordance. -->
+  <header class="casino-topbar" data-testid="premium-topbar">
+    <div class="brand-lockup">
+      <div class="brand-mark" aria-hidden="true">&#9824;</div>
+      <div class="brand-copy">
+        <strong>Virtual Casino Simulator</strong>
+        <span>Fake-money only</span>
+      </div>
+    </div>
+    <nav id="main-nav" class="casino-nav" aria-label="Primary"></nav>
+    <div class="top-actions">
+      <div class="wallet-pill" data-testid="premium-wallet">
+        <span id="balance-label" class="wallet-label">Human balance</span>
+        <strong id="balance" class="wallet-amount">Loading...</strong>
+      </div>
+      <details class="wallet-menu">
+        <summary class="icon-button" aria-label="Add fake money"><span class="coin-stack" aria-hidden="true"></span></summary>
+        <div class="wallet-popover">
+          <label for="add-money-amount">Add fake money</label>
+          <div class="wallet-add-row">
+            <input id="add-money-amount" type="number" value="1000" min="1">
+            <button id="add-money-btn" class="primary" data-testid="add-money">Add</button>
+          </div>
+        </div>
+      </details>
+      <button class="icon-button profile-dot" type="button" aria-label="Human player"><span aria-hidden="true"></span></button>
+    </div>
+  </header>
+
+  <!-- Main route outlet: lobby markup is rendered here and game modules mount here unchanged. -->
+  <main id="view" class="screen lobby-screen"></main>
+
+  <!-- Persistent status rail keeps fake-money, ledger, app, player, and connection state visible. -->
+  <footer id="shell-status" class="status-bar" data-testid="shell-status">
+    <span class="status-item"><span class="gold">SAFE</span>All games use fake money only</span>
+    <span class="status-item"><span class="gold">LEDGER</span>Ledger-backed outcomes</span>
+    <span class="status-item"><span class="gold">APP</span><span id="status-version">Loading</span></span>
+    <span class="status-item"><span class="gold">PLAYERS</span><span id="status-players">0 online</span></span>
+    <span class="status-item"><span id="connection-dot" class="status-dot"></span><span id="connection-status">Connecting</span></span>
+  </footer>
+
+  <!-- Toasts remain outside the route outlet so navigation never destroys feedback. -->
+  <div id="toast" class="toast" hidden></div>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
