@@ -391,8 +391,44 @@ def run_browser_tests():
                 page.get_by_test_id('nav-keno').click(); page.get_by_test_id('keno-num-1').click(); page.get_by_test_id('keno-num-2').click(); page.get_by_test_id('keno-num-3').click(); page.get_by_test_id('keno-draw').click(); page.wait_for_timeout(1500); run_case('BR-KENO-001',['KENO-020','KENO-021'],lambda: page.get_by_test_id('keno-grid').is_visible())
                 # Execute this statement as part of the module's documented control flow.
                 page.get_by_test_id('nav-bingo').click(); page.get_by_test_id('bingo-buy').click(); page.get_by_test_id('bingo-call').click(); page.wait_for_timeout(700); run_case('BR-BINGO-001',['BINGO-030','BINGO-031'],lambda: page.get_by_test_id('bingo-card').is_visible())
+                # Navigate to Blackjack before checking the premium table surface.
+                page.get_by_test_id('nav-blackjack').click()
+                # Wait for the premium Blackjack shell to mount.
+                page.get_by_test_id('blackjack-premium').wait_for(timeout=5000)
+                # Deal one hand through the public Blackjack action button.
+                page.get_by_test_id('blackjack-deal').click()
+                # Wait for the first player hand lane to render.
+                page.get_by_test_id('blackjack-hand-0').wait_for(timeout=5000)
+                # Capture normal Blackjack browser evidence from the running app.
+                shot('blackjack-normal-hand.png')
+                # Store the backend round id exposed by the stable test hook.
+                blackjack_round_id=page.get_by_test_id('blackjack-round-id').get_attribute('data-round-id')
+                # Define the blackjack_premium function used by this module.
+                def blackjack_premium():
+                    # Verify the premium central felt is visible.
+                    assert page.get_by_test_id('blackjack-stage').is_visible()
+                    # Verify the fixed settlement/decision drawer is visible.
+                    assert page.get_by_test_id('blackjack-drawer').is_visible()
+                    # Verify the mounted action rail exposes Blackjack decisions.
+                    assert page.get_by_test_id('blackjack-action-rail').is_visible()
+                    # Verify disabled Blackjack autoplay remains visible as a control-plane panel.
+                    assert page.get_by_test_id('blackjack-autoplay-panel').is_visible()
+                    # Verify the bot compatibility panel is rendered without game-module coupling.
+                    assert page.get_by_test_id('blackjack-bot-panel').is_visible()
                 # Execute this statement as part of the module's documented control flow.
-                page.get_by_test_id('nav-blackjack').click(); page.get_by_test_id('blackjack-deal').click(); page.wait_for_timeout(700); run_case('BR-BJ-001',['BJ-030','BJ-031'],lambda: page.get_by_test_id('blackjack-hand-0').is_visible())
+                run_case('BR-BJ-001',['BJ-028','BJ-029','BJ-030','AUTO-014'],blackjack_premium)
+                # Switch Blackjack locale in place to verify gameplay state is preserved.
+                page.evaluate("""async () => { const i18n = await import('/core/i18n.js'); await i18n.initI18n({ domains: ['games/blackjack'] }); await i18n.loadI18nDomain('games/blackjack'); await i18n.setLocale('ru-RU', { persistLocal: false }); }""")
+                # Define the blackjack_i18n function used by this module.
+                def blackjack_i18n():
+                    # Verify the same hand remains visible after localized rerender.
+                    assert page.get_by_test_id('blackjack-hand-0').is_visible()
+                    # Verify the selected backend round id did not change on locale switch.
+                    assert page.get_by_test_id('blackjack-round-id').get_attribute('data-round-id')==blackjack_round_id
+                # Execute this statement as part of the module's documented control flow.
+                run_case('BR-BJ-I18N-001',['I18N-002','BJ-028'],blackjack_i18n)
+                # Restore English for later browser assertions that use fixed English text.
+                page.evaluate("""async () => { const i18n = await import('/core/i18n.js'); await i18n.setLocale('en-US', { persistLocal: false }); }""")
                 # Execute this statement as part of the module's documented control flow.
                 page.get_by_test_id('nav-baccarat').click(); page.get_by_test_id('baccarat-banker').click(); page.get_by_test_id('baccarat-deal').click(); page.wait_for_timeout(900); run_case('BR-BAC-001',['BAC-020','BAC-021'],lambda: page.get_by_text('Winner:').is_visible())
                 # Set page.goto(base+'/admin', wait_until to the value needed for the next operation.
