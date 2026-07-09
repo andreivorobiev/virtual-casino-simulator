@@ -4,6 +4,9 @@ version = "9.1.1"
 description = "Local fake-money virtual casino simulator with isolated modules and GitHub/Codex governance."
 requires-python = ">=3.10"
 
+[project.optional-dependencies]
+mysql = ["mysql-connector-python>=8.4"]
+
 [tool.virtual_casino]
 source_baseline = "9.1.0"
 release_purpose = "Repository Bootstrap + Codex Migration Payload"

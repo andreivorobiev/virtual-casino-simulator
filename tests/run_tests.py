@@ -10,6 +10,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 # Import Blackjack helpers so deterministic API-suite checks can cover table rules.
 from casino.games.blackjack import api as blackjack_api, engine as blackjack_engine
+# Import storage tests so provider parity can run without the broad API suite.
+from tests import storage_tests
 # Set RESULTS to the value needed for the next operation.
 RESULTS=[]
 # Set PLACEHOLDER_RE to the value needed for the next operation.
@@ -78,6 +80,13 @@ def run_case(test_id, reqs, fn):
     try: fn(); record(test_id, reqs, 'PASS')
     # Handle the expected failure path for the protected logic.
     except Exception as e: record(test_id, reqs, 'FAIL', str(e)); raise
+
+# Define the run_storage_tests function used by this module.
+def run_storage_tests():
+    # Execute the JSON fallback parity test for provider-backed players, ledger, history, and settings.
+    run_case('STORAGE-JSON-001',['CORE-017','LEDGER-001','LEDGER-007','TEST-030'],storage_tests.run_json_provider_parity)
+    # Execute the MySQL schema and atomic ledger-provider path test without requiring a live service.
+    run_case('STORAGE-MYSQL-001',['CORE-017','LEDGER-001','LEDGER-007','LEDGER-009'],storage_tests.run_mysql_schema_provider_path)
 
 # Define the read_i18n_json function used by this module.
 def read_i18n_json(path):
@@ -689,11 +698,13 @@ def run_browser_tests():
 # Define the main function used by this module.
 def main():
     # Set ap to the value needed for the next operation.
-    ap=argparse.ArgumentParser(); ap.add_argument('--api',action='store_true'); ap.add_argument('--browser',action='store_true'); args=ap.parse_args()
+    ap=argparse.ArgumentParser(); ap.add_argument('--api',action='store_true'); ap.add_argument('--browser',action='store_true'); ap.add_argument('--storage',action='store_true'); args=ap.parse_args()
     # Branch when the following condition is true.
-    if not args.api and not args.browser: args.api=True
+    if not args.api and not args.browser and not args.storage: args.api=True
     # Start protected logic so failures can be handled safely.
     try:
+        # Branch when the following condition is true.
+        if args.storage: run_storage_tests()
         # Branch when the following condition is true.
         if args.api: run_api_tests()
         # Branch when the following condition is true.
