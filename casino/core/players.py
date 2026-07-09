@@ -102,3 +102,20 @@ def create_player(display_name: str, kind: str = "human", balance: float = 5000.
     save_players(state)
     # Return the computed value to the caller.
     return player
+
+# Define the ensure_player_for_user function used by this module.
+def ensure_player_for_user(user_id: str, display_name: str, player_id: str | None = None) -> dict:
+    # Branch when the caller supplied an existing player binding.
+    if player_id:
+        # Start protected logic so missing legacy players can be repaired.
+        try:
+            # Return the computed value to the caller.
+            return get_player(player_id)
+        # Handle the expected failure path for the protected logic.
+        except NotFoundError:
+            # Continue so a replacement player can be created for the user.
+            pass
+    # Set label to the value needed for the next operation.
+    label = display_name.strip() if display_name and display_name.strip() else user_id
+    # Return the computed value to the caller.
+    return create_player(label, "human", 5000.0)
