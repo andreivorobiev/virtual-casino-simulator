@@ -122,7 +122,7 @@ async function playersBots() {
 // Define userRows to render Admin user-management rows.
 function userRows(users) {
   // Return one row per beta user with token, status, terms, and locale controls.
-  return users.map(user => `<tr data-user="${safe(user.user_id)}"><td>${safe(user.email)}</td><td>${safe(user.display_name)}</td><td>${safe(user.status)}</td><td>${formatMoney(user.token_balance)}</td><td>${safe(user.token_state)}</td><td>${safe(user.terms_status)}</td><td><select class="user-language">${localeOptions(user.language || 'en-US')}</select></td><td><select class="user-format">${formatLocaleOptions(user.format_locale || 'browser')}</select></td><td><button class="save-user-locale" data-user="${safe(user.user_id)}" data-testid="admin-user-save-locale">Save locale</button><button class="toggle-user" data-user="${safe(user.user_id)}" data-action="${user.status === 'active' ? 'deactivate' : 'reactivate'}" data-testid="admin-user-toggle">${user.status === 'active' ? 'Deactivate' : 'Reactivate'}</button><button class="reset-user-password" data-user="${safe(user.user_id)}" data-testid="admin-user-reset">Reset password</button><button class="terms-user" data-user="${safe(user.user_id)}" data-accepted="${user.terms_status !== 'accepted'}" data-testid="admin-user-terms">${user.terms_status === 'accepted' ? 'Clear terms' : 'Accept terms'}</button></td></tr>`);
+  return users.map(user => `<tr data-testid="admin-user-row" data-user="${safe(user.user_id)}" data-email="${safe(user.email)}" data-status="${safe(user.status)}" data-terms="${safe(user.terms_status)}"><td>${safe(user.email)}</td><td>${safe(user.display_name)}</td><td>${safe(user.status)}</td><td data-testid="admin-user-token-balance">${formatMoney(user.token_balance)}</td><td>${safe(user.token_state)}</td><td>${safe(user.terms_status)}</td><td><select class="user-language">${localeOptions(user.language || 'en-US')}</select></td><td><select class="user-format">${formatLocaleOptions(user.format_locale || 'browser')}</select></td><td><button class="save-user-locale" data-user="${safe(user.user_id)}" data-testid="admin-user-save-locale">Save locale</button><button class="toggle-user" data-user="${safe(user.user_id)}" data-action="${user.status === 'active' ? 'deactivate' : 'reactivate'}" data-testid="admin-user-toggle">${user.status === 'active' ? 'Deactivate' : 'Reactivate'}</button><button class="reset-user-password" data-user="${safe(user.user_id)}" data-testid="admin-user-reset">Reset password</button><button class="terms-user" data-user="${safe(user.user_id)}" data-accepted="${user.terms_status !== 'accepted'}" data-testid="admin-user-terms">${user.terms_status === 'accepted' ? 'Clear terms' : 'Accept terms'}</button></td></tr>`);
 }
 
 // Define users to render the Admin beta-user management workspace.
@@ -160,7 +160,7 @@ async function createUser() {
   // Show user creation feedback.
   toast('User created.', true);
   // Refresh the users table with the new account.
-  users();
+  await users();
 }
 
 // Define toggleUser to deactivate or reactivate a beta account.
@@ -170,7 +170,7 @@ async function toggleUser(button) {
   // Show status-change feedback.
   toast('User status updated.', true);
   // Refresh the users table after the change.
-  users();
+  await users();
 }
 
 // Define resetUserPassword to generate a new one-time password.
@@ -182,7 +182,7 @@ async function resetUserPassword(button) {
   // Show reset feedback.
   toast('Temporary password generated.', true);
   // Refresh the users table while preserving the password notice.
-  users();
+  await users();
 }
 
 // Define updateUserTerms to set a user's terms acceptance status.
@@ -192,7 +192,7 @@ async function updateUserTerms(button) {
   // Show terms update feedback.
   toast('Terms status updated.', true);
   // Refresh the users table after the change.
-  users();
+  await users();
 }
 
 // Define saveUserLocale to persist per-user locale preferences.
@@ -206,7 +206,7 @@ async function saveUserLocale(button) {
   // Show locale update feedback.
   toast('User locale saved.', true);
   // Refresh the users table after the change.
-  users();
+  await users();
 }
 
 // Define saveBot to submit one bot controller edit through the existing public endpoint.

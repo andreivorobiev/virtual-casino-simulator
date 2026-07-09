@@ -673,30 +673,32 @@ def run_browser_tests():
                     page.get_by_test_id('admin-user-language').select_option('ru-RU')
                     # Create the beta user through the visible Admin action.
                     page.get_by_test_id('admin-create-user').click()
-                    # Wait for the created user to appear in the table.
-                    page.wait_for_function("() => document.body.innerText.includes('beta.browser@example.test')")
+                    # Store a stable locator for the created user row.
+                    user_row=page.locator('tr[data-testid="admin-user-row"][data-email="beta.browser@example.test"]')
+                    # Wait for the created user row to appear in the table.
+                    user_row.wait_for(timeout=10000)
                     # Wait for the one-time temporary password notice.
                     page.get_by_test_id('admin-user-temp-password').wait_for(timeout=5000)
                     # Deactivate the user through the first row action.
-                    page.get_by_test_id('admin-user-toggle').first.click()
+                    user_row.get_by_test_id('admin-user-toggle').click()
                     # Wait for the inactive state to render.
-                    page.wait_for_function("() => document.body.innerText.includes('inactive')")
+                    page.locator('tr[data-testid="admin-user-row"][data-email="beta.browser@example.test"][data-status="inactive"]').wait_for(timeout=10000)
                     # Reactivate the user through the same row action.
-                    page.get_by_test_id('admin-user-toggle').first.click()
+                    user_row.get_by_test_id('admin-user-toggle').click()
                     # Wait for the active state to render.
-                    page.wait_for_function("() => document.body.innerText.includes('active')")
+                    page.locator('tr[data-testid="admin-user-row"][data-email="beta.browser@example.test"][data-status="active"]').wait_for(timeout=10000)
                     # Reset the user's password through the visible action.
-                    page.get_by_test_id('admin-user-reset').first.click()
+                    user_row.get_by_test_id('admin-user-reset').click()
                     # Wait for the refreshed temporary password notice.
                     page.get_by_test_id('admin-user-temp-password').wait_for(timeout=5000)
                     # Accept terms through the visible action.
-                    page.get_by_test_id('admin-user-terms').first.click()
+                    user_row.get_by_test_id('admin-user-terms').click()
                     # Wait for the accepted terms status to render.
-                    page.wait_for_function("() => document.body.innerText.includes('accepted')")
+                    page.locator('tr[data-testid="admin-user-row"][data-email="beta.browser@example.test"][data-terms="accepted"]').wait_for(timeout=10000)
                     # Save locale preferences from the rendered row controls.
-                    page.get_by_test_id('admin-user-save-locale').first.click()
+                    user_row.get_by_test_id('admin-user-save-locale').click()
                     # Verify the token balance remains visible after all actions.
-                    assert '$777.00' in page.locator('#adminView').inner_text()
+                    assert '$777.00' in user_row.get_by_test_id('admin-user-token-balance').inner_text()
                     # Verify the existing Language / Locale tab remains reachable.
                     page.get_by_test_id('admin-tab-language').click(); page.get_by_test_id('admin-language-select').wait_for(timeout=5000)
                 # Execute this statement as part of the module's documented control flow.
