@@ -329,18 +329,62 @@ def run_browser_tests():
                 run_case('BR-LOBBY-RESP-001',['CORE-015','UX-009'],responsive_lobby)
                 # Restore desktop dimensions before existing game interaction coverage runs.
                 page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(250)
-                # Set page.get_by_test_id('nav-roulette').click(); page.get_by_tes to the value needed for the next operation.
+                # Open Roulette and wait for the premium vector wheel to mount.
                 page.get_by_test_id('nav-roulette').click(); page.get_by_test_id('roulette-wheel').wait_for()
+                # Define the premium_roulette_layout function used by this module.
+                def premium_roulette_layout():
+                    # Verify the premium three-zone layout is mounted.
+                    assert page.get_by_test_id('roulette-premium-layout').is_visible()
+                    # Verify the fixed table board remains visible.
+                    assert page.get_by_test_id('roulette-table').is_visible()
+                    # Verify the bet slip drawer remains visible.
+                    assert page.get_by_test_id('roulette-bet-slip').is_visible()
+                    # Verify the scoreboard drawer region remains visible.
+                    assert page.get_by_test_id('roulette-scoreboard').is_visible()
+                    # Verify the stats spark region remains visible.
+                    assert page.get_by_test_id('roulette-stats-spark').is_visible()
+                    # Verify inside-bet spots remain available for click coverage.
+                    assert page.locator('[data-testid^="roulette-spot-"]').count() > 0
+                    # Verify the bot/autoplay rail remains mounted without resizing the stage.
+                    assert page.locator('#botPanel').is_visible()
                 # Execute this statement as part of the module's documented control flow.
+                run_case('BR-ROU-PREMIUM-001',['ROU-041','ROU-043','ROU-045','ROU-048','ROU-049','UX-007','UX-009'],premium_roulette_layout)
+                # Capture betting-state visual evidence for the Roulette worker handback.
+                shot('roulette-premium-betting.png')
+                # Place a straight bet and wait for the table chip to render.
                 page.get_by_test_id('roulette-num-17').click(); page.locator('.bet-chip').first.wait_for(timeout=3000)
                 # Call the i18n runtime directly to verify language switching does not remount gameplay.
                 page.evaluate("""async () => { const i18n = await import('/core/i18n.js'); await i18n.initI18n({ domains: ['games/roulette'] }); await i18n.setLocale('ru-RU', { persistLocal: false }); }""")
                 # Execute this statement as part of the module's documented control flow.
-                run_case('BR-I18N-GAMESTATE-ROU-001',['I18N-002'],lambda: page.locator('.bet-chip').first.is_visible())
+                run_case('BR-I18N-GAMESTATE-ROU-001',['I18N-002','ROU-046'],lambda: page.locator('.bet-chip').first.is_visible())
+                # Spin the wheel through the existing Roulette UI action.
+                page.get_by_test_id('roulette-spin').click()
+                # Wait for the fixed result region to reach the settled phase.
+                page.wait_for_function("() => document.querySelector('[data-testid=\"roulette-result-region\"]')?.dataset.phase === 'settled'", timeout=7000)
+                # Define the premium_roulette_settled function used by this module.
+                def premium_roulette_settled():
+                    # Read the settled result region.
+                    result=page.get_by_test_id('roulette-result-region')
+                    # Read the vector wheel region.
+                    wheel=page.get_by_test_id('roulette-wheel')
+                    # Verify the result region reached the settled state.
+                    assert result.get_attribute('data-phase')=='settled'
+                    # Verify the wheel-selected pocket matches the backend result display.
+                    assert result.get_attribute('data-result-number')==wheel.get_attribute('data-selected-result')
+                    # Verify the table board remains visible after settlement.
+                    assert page.locator('.roulette-table-board').is_visible()
+                    # Verify the drawer still renders after bets settle.
+                    assert page.get_by_test_id('roulette-bet-slip').is_visible()
+                    # Verify recent stats remain visible after settlement.
+                    assert page.get_by_test_id('roulette-stats-spark').is_visible()
                 # Execute this statement as part of the module's documented control flow.
-                page.get_by_test_id('roulette-spin').click(); page.wait_for_timeout(3200)
+                run_case('BR-ROU-001',['ROU-040','ROU-041','ROU-042','ROU-043','ROU-044','ROU-046','ROU-049','ROU-050','ROU-052','ROU-053','ROU-054','ROU-055','ROU-056'],premium_roulette_settled)
+                # Capture settled-state visual evidence for the Roulette worker handback.
+                shot('roulette-premium-settled.png')
+                # Start and stop Roulette autoplay through the shared control-plane widget.
+                page.get_by_test_id('roulette-auto-rounds').fill('5'); page.get_by_test_id('roulette-auto-start').click(); page.wait_for_timeout(400); page.get_by_test_id('roulette-auto-stop').click(); page.wait_for_timeout(500)
                 # Execute this statement as part of the module's documented control flow.
-                run_case('BR-ROU-001',['ROU-040','ROU-041','ROU-050'],lambda: page.locator('.roulette-table-board').is_visible()); page.get_by_test_id('roulette-auto-rounds').fill('5'); page.get_by_test_id('roulette-auto-start').click(); page.wait_for_timeout(400); page.get_by_test_id('roulette-auto-stop').click(); page.wait_for_timeout(500); run_case('BR-AUTO-ROU-001',['AUTO-003','AUTO-010'],lambda: page.get_by_text('Off').first.is_visible())
+                run_case('BR-AUTO-ROU-001',['AUTO-003','AUTO-010','ROU-047'],lambda: page.get_by_text('Off').first.is_visible())
                 # Execute this statement as part of the module's documented control flow.
                 page.get_by_test_id('nav-slots').click(); page.get_by_test_id('slots-spin').click(); page.wait_for_timeout(1200); run_case('BR-SLOT-001',['SLOT-020','SLOT-021'],lambda: page.get_by_test_id('slot-grid').is_visible())
                 # Execute this statement as part of the module's documented control flow.
