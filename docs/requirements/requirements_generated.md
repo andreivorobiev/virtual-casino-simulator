@@ -12,9 +12,9 @@ Application: 9.1.1
 - autoplay: 1.1.0
 - audio: 9.1.0
 - admin: 1.2.0
-- roulette: 9.1.0
+- roulette: 9.2.0
 - slots: 9.0.1
-- blackjack: 9.0.1
+- blackjack: 9.0.2
 - baccarat: 9.0.1
 - keno: 9.1.0
 - bingo: 9.0.1

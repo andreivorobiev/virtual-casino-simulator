@@ -329,18 +329,62 @@ def run_browser_tests():
                 run_case('BR-LOBBY-RESP-001',['CORE-015','UX-009'],responsive_lobby)
                 # Restore desktop dimensions before existing game interaction coverage runs.
                 page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(250)
-                # Set page.get_by_test_id('nav-roulette').click(); page.get_by_tes to the value needed for the next operation.
+                # Open Roulette and wait for the premium vector wheel to mount.
                 page.get_by_test_id('nav-roulette').click(); page.get_by_test_id('roulette-wheel').wait_for()
+                # Define the premium_roulette_layout function used by this module.
+                def premium_roulette_layout():
+                    # Verify the premium three-zone layout is mounted.
+                    assert page.get_by_test_id('roulette-premium-layout').is_visible()
+                    # Verify the fixed table board remains visible.
+                    assert page.get_by_test_id('roulette-table').is_visible()
+                    # Verify the bet slip drawer remains visible.
+                    assert page.get_by_test_id('roulette-bet-slip').is_visible()
+                    # Verify the scoreboard drawer region remains visible.
+                    assert page.get_by_test_id('roulette-scoreboard').is_visible()
+                    # Verify the stats spark region remains visible.
+                    assert page.get_by_test_id('roulette-stats-spark').is_visible()
+                    # Verify inside-bet spots remain available for click coverage.
+                    assert page.locator('[data-testid^="roulette-spot-"]').count() > 0
+                    # Verify the bot/autoplay rail remains mounted without resizing the stage.
+                    assert page.locator('#botPanel').is_visible()
                 # Execute this statement as part of the module's documented control flow.
+                run_case('BR-ROU-PREMIUM-001',['ROU-041','ROU-043','ROU-045','ROU-048','ROU-049','UX-007','UX-009'],premium_roulette_layout)
+                # Capture betting-state visual evidence for the Roulette worker handback.
+                shot('roulette-premium-betting.png')
+                # Place a straight bet and wait for the table chip to render.
                 page.get_by_test_id('roulette-num-17').click(); page.locator('.bet-chip').first.wait_for(timeout=3000)
                 # Call the i18n runtime directly to verify language switching does not remount gameplay.
                 page.evaluate("""async () => { const i18n = await import('/core/i18n.js'); await i18n.initI18n({ domains: ['games/roulette'] }); await i18n.setLocale('ru-RU', { persistLocal: false }); }""")
                 # Execute this statement as part of the module's documented control flow.
-                run_case('BR-I18N-GAMESTATE-ROU-001',['I18N-002'],lambda: page.locator('.bet-chip').first.is_visible())
+                run_case('BR-I18N-GAMESTATE-ROU-001',['I18N-002','ROU-046'],lambda: page.locator('.bet-chip').first.is_visible())
+                # Spin the wheel through the existing Roulette UI action.
+                page.get_by_test_id('roulette-spin').click()
+                # Wait for the fixed result region to reach the settled phase.
+                page.wait_for_function("() => document.querySelector('[data-testid=\"roulette-result-region\"]')?.dataset.phase === 'settled'", timeout=7000)
+                # Define the premium_roulette_settled function used by this module.
+                def premium_roulette_settled():
+                    # Read the settled result region.
+                    result=page.get_by_test_id('roulette-result-region')
+                    # Read the vector wheel region.
+                    wheel=page.get_by_test_id('roulette-wheel')
+                    # Verify the result region reached the settled state.
+                    assert result.get_attribute('data-phase')=='settled'
+                    # Verify the wheel-selected pocket matches the backend result display.
+                    assert result.get_attribute('data-result-number')==wheel.get_attribute('data-selected-result')
+                    # Verify the table board remains visible after settlement.
+                    assert page.locator('.roulette-table-board').is_visible()
+                    # Verify the drawer still renders after bets settle.
+                    assert page.get_by_test_id('roulette-bet-slip').is_visible()
+                    # Verify recent stats remain visible after settlement.
+                    assert page.get_by_test_id('roulette-stats-spark').is_visible()
                 # Execute this statement as part of the module's documented control flow.
-                page.get_by_test_id('roulette-spin').click(); page.wait_for_timeout(3200)
+                run_case('BR-ROU-001',['ROU-040','ROU-041','ROU-042','ROU-043','ROU-044','ROU-046','ROU-049','ROU-050','ROU-052','ROU-053','ROU-054','ROU-055','ROU-056'],premium_roulette_settled)
+                # Capture settled-state visual evidence for the Roulette worker handback.
+                shot('roulette-premium-settled.png')
+                # Start and stop Roulette autoplay through the shared control-plane widget.
+                page.get_by_test_id('roulette-auto-rounds').fill('5'); page.get_by_test_id('roulette-auto-start').click(); page.wait_for_timeout(400); page.get_by_test_id('roulette-auto-stop').click(); page.wait_for_timeout(500)
                 # Execute this statement as part of the module's documented control flow.
-                run_case('BR-ROU-001',['ROU-040','ROU-041','ROU-050'],lambda: page.locator('.roulette-table-board').is_visible()); page.get_by_test_id('roulette-auto-rounds').fill('5'); page.get_by_test_id('roulette-auto-start').click(); page.wait_for_timeout(400); page.get_by_test_id('roulette-auto-stop').click(); page.wait_for_timeout(500); run_case('BR-AUTO-ROU-001',['AUTO-003','AUTO-010'],lambda: page.get_by_text('Off').first.is_visible())
+                run_case('BR-AUTO-ROU-001',['AUTO-003','AUTO-010','ROU-047'],lambda: page.get_by_text('Off').first.is_visible())
                 # Restore English for game prerender evidence after the locale-preservation smoke test.
                 page.evaluate("""async () => { const i18n = await import('/core/i18n.js'); await i18n.setLocale('en-US', { persistLocal: false }); }""")
                 # Execute this statement as part of the module's documented control flow.
@@ -389,8 +433,44 @@ def run_browser_tests():
                 run_case('BR-KENO-001',['KENO-009','KENO-010','KENO-011','KENO-012','KENO-013','KENO-014','KENO-015','KENO-018','KENO-020','KENO-021','KENO-022','AUTO-012','UX-007','UX-009'],premium_keno)
                 # Execute this statement as part of the module's documented control flow.
                 page.get_by_test_id('nav-bingo').click(); page.get_by_test_id('bingo-buy').click(); page.get_by_test_id('bingo-call').click(); page.wait_for_timeout(700); run_case('BR-BINGO-001',['BINGO-030','BINGO-031'],lambda: page.get_by_test_id('bingo-card').is_visible())
+                # Navigate to Blackjack before checking the premium table surface.
+                page.get_by_test_id('nav-blackjack').click()
+                # Wait for the premium Blackjack shell to mount.
+                page.get_by_test_id('blackjack-premium').wait_for(timeout=5000)
+                # Deal one hand through the public Blackjack action button.
+                page.get_by_test_id('blackjack-deal').click()
+                # Wait for the first player hand lane to render.
+                page.get_by_test_id('blackjack-hand-0').wait_for(timeout=5000)
+                # Capture normal Blackjack browser evidence from the running app.
+                shot('blackjack-normal-hand.png')
+                # Store the backend round id exposed by the stable test hook.
+                blackjack_round_id=page.get_by_test_id('blackjack-round-id').get_attribute('data-round-id')
+                # Define the blackjack_premium function used by this module.
+                def blackjack_premium():
+                    # Verify the premium central felt is visible.
+                    assert page.get_by_test_id('blackjack-stage').is_visible()
+                    # Verify the fixed settlement/decision drawer is visible.
+                    assert page.get_by_test_id('blackjack-drawer').is_visible()
+                    # Verify the mounted action rail exposes Blackjack decisions.
+                    assert page.get_by_test_id('blackjack-action-rail').is_visible()
+                    # Verify disabled Blackjack autoplay remains visible as a control-plane panel.
+                    assert page.get_by_test_id('blackjack-autoplay-panel').is_visible()
+                    # Verify the bot compatibility panel is rendered without game-module coupling.
+                    assert page.get_by_test_id('blackjack-bot-panel').is_visible()
                 # Execute this statement as part of the module's documented control flow.
-                page.get_by_test_id('nav-blackjack').click(); page.get_by_test_id('blackjack-deal').click(); page.wait_for_timeout(700); run_case('BR-BJ-001',['BJ-030','BJ-031'],lambda: page.get_by_test_id('blackjack-hand-0').is_visible())
+                run_case('BR-BJ-001',['BJ-028','BJ-029','BJ-030','AUTO-014'],blackjack_premium)
+                # Switch Blackjack locale in place to verify gameplay state is preserved.
+                page.evaluate("""async () => { const i18n = await import('/core/i18n.js'); await i18n.initI18n({ domains: ['games/blackjack'] }); await i18n.loadI18nDomain('games/blackjack'); await i18n.setLocale('ru-RU', { persistLocal: false }); }""")
+                # Define the blackjack_i18n function used by this module.
+                def blackjack_i18n():
+                    # Verify the same hand remains visible after localized rerender.
+                    assert page.get_by_test_id('blackjack-hand-0').is_visible()
+                    # Verify the selected backend round id did not change on locale switch.
+                    assert page.get_by_test_id('blackjack-round-id').get_attribute('data-round-id')==blackjack_round_id
+                # Execute this statement as part of the module's documented control flow.
+                run_case('BR-BJ-I18N-001',['I18N-002','BJ-028'],blackjack_i18n)
+                # Restore English for later browser assertions that use fixed English text.
+                page.evaluate("""async () => { const i18n = await import('/core/i18n.js'); await i18n.setLocale('en-US', { persistLocal: false }); }""")
                 # Execute this statement as part of the module's documented control flow.
                 page.get_by_test_id('nav-baccarat').click(); page.get_by_test_id('baccarat-banker').click(); page.get_by_test_id('baccarat-deal').click(); page.wait_for_timeout(900); run_case('BR-BAC-001',['BAC-020','BAC-021'],lambda: page.get_by_text('Winner:').is_visible())
                 # Set page.goto(base+'/admin', wait_until to the value needed for the next operation.
