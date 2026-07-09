@@ -692,7 +692,17 @@ def run_browser_tests():
                     # Wait for the refreshed temporary password notice.
                     page.get_by_test_id('admin-user-temp-password').wait_for(timeout=5000)
                     # Accept terms through the visible action.
-                    user_row.get_by_test_id('admin-user-terms').click()
+                    with page.expect_response(lambda response: '/api/v1/admin/users/' in response.url and response.url.endswith('/terms') and response.request.method == 'POST') as terms_response_info:
+                        # Click the exact terms button in the created user's row.
+                        user_row.get_by_test_id('admin-user-terms').click()
+                    # Store the terms API response so the browser test proves persistence completed.
+                    terms_response=terms_response_info.value.json()
+                    # Verify the terms API returned the standard success envelope.
+                    assert terms_response['ok'] is True
+                    # Wait for a fresh Users fetch after the visible terms action.
+                    with page.expect_response(lambda response: response.url.endswith('/api/v1/admin/users') and response.request.method == 'GET'):
+                        # Refresh the active Users tab so row attributes come from persisted state.
+                        page.get_by_test_id('admin-refresh').click()
                     # Wait for the accepted terms status to render.
                     page.locator('tr[data-testid="admin-user-row"][data-email="beta.browser@example.test"][data-terms="accepted"]').wait_for(timeout=10000)
                     # Save locale preferences from the rendered row controls.
