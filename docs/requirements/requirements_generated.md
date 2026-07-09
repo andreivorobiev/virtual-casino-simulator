@@ -4,21 +4,21 @@ Application: 9.1.1
 
 ## Modules
 
-- application: 9.1.2
+- application: 9.2.0
 - core: 9.1.0
 - ledger: 9.0.1
 - players: 9.0.1
 - bots: 1.0.0
 - autoplay: 1.1.0
 - audio: 9.1.0
-- admin: 1.1.0
+- admin: 1.2.0
 - roulette: 9.1.0
 - slots: 9.0.1
 - blackjack: 9.0.1
 - baccarat: 9.0.1
 - keno: 9.0.1
 - bingo: 9.0.1
-- tests: 1.1.2
+- tests: 1.2.0
 - docs: 1.1.3
 - contracts: 1.0.0
 - tooling: 1.0.1
@@ -369,6 +369,9 @@ Application: 9.1.1
 - **UX-007** (UX) - PASS: The shared casino shell uses the approved premium visual system with persistent navigation, wallet, and fake-money status cues.
 - **UX-008** (UX) - PASS: The lobby presents all current games as premium visual cards with route actions and capability tags.
 - **UX-009** (UX) - PASS: The shared shell and lobby remain usable on narrow viewports without page-level horizontal overflow.
+- **I18N-001** (I18n) - PASS: Frontend i18n runtime loads manifest-driven English and Russian resources with fallback and placeholder parity.
+- **I18N-002** (I18n) - PASS: Language switching updates locale state in place without navigation, reload, or gameplay remounting.
+- **I18N-003** (I18n) - PASS: Admin Language/Locale controls support English/Russian selection, locale previews, diagnostics, and browser-local persistence.
 - **TEST-025** (Tests) - PASS: Browser tests use stable data-testid selectors for autoplay and admin controls.
 - **TEST-026** (Tests) - PASS: Browser tests verify Roulette autoplay stop behavior.
 - **TEST-027** (Tests) - PASS: API tests verify bot controller endpoints.

@@ -1,0 +1,14 @@
+{
+  "betSlip.empty": "Ставок пока нет.",
+  "betSlip.title": "Купон ставок",
+  "controls.clearBets": "Убрать ставки",
+  "controls.rebet": "Повторить ставку",
+  "controls.spin": "КРУТИТЬ",
+  "controls.wheel": "Колесо",
+  "controls.zeroRule": "Правило зеро",
+  "result.noHumanBets": "Ставки игрока не рассчитывались.",
+  "result.noSpinYet": "Спина ещё не было. Ставки списываются сразу после размещения.",
+  "result.rolled": "Выпало {number}",
+  "settings.zeroRule.normal": "Обычное: зеро проигрывает",
+  "title": "Рулетка"
+}
