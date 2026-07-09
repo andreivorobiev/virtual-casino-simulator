@@ -1,6 +1,6 @@
 {
   "module": "baccarat",
-  "version": "9.0.1",
+  "version": "9.0.2",
   "paths": [
     "casino/games/baccarat/",
     "web/games/baccarat.js"

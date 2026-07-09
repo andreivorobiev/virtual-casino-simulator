@@ -349,8 +349,30 @@ def run_browser_tests():
                 page.get_by_test_id('nav-bingo').click(); page.get_by_test_id('bingo-buy').click(); page.get_by_test_id('bingo-call').click(); page.wait_for_timeout(700); run_case('BR-BINGO-001',['BINGO-030','BINGO-031'],lambda: page.get_by_test_id('bingo-card').is_visible())
                 # Execute this statement as part of the module's documented control flow.
                 page.get_by_test_id('nav-blackjack').click(); page.get_by_test_id('blackjack-deal').click(); page.wait_for_timeout(700); run_case('BR-BJ-001',['BJ-030','BJ-031'],lambda: page.get_by_test_id('blackjack-hand-0').is_visible())
-                # Execute this statement as part of the module's documented control flow.
-                page.get_by_test_id('nav-baccarat').click(); page.get_by_test_id('baccarat-banker').click(); page.get_by_test_id('baccarat-deal').click(); page.wait_for_timeout(900); run_case('BR-BAC-001',['BAC-020','BAC-021'],lambda: page.get_by_text('Winner:').is_visible())
+                # Navigate to Baccarat before asserting the premium table surfaces.
+                page.get_by_test_id('nav-baccarat').click()
+                # Wait for the wager setup state to mount.
+                page.get_by_test_id('baccarat-wager-setup').wait_for(timeout=5000)
+                # Place a banker wager through the same public control a player uses.
+                page.get_by_test_id('baccarat-banker').click()
+                # Deal one coup so the reveal theater and settlement state are exercised.
+                page.get_by_test_id('baccarat-deal').click()
+                # Wait for the post-reveal result state to settle.
+                page.get_by_test_id('baccarat-result').wait_for(timeout=5000)
+                # Define the Baccarat browser assertion bundle for premium UI requirements.
+                def baccarat_browser():
+                    # Assert the fixed Baccarat table is visible.
+                    assert page.get_by_test_id('baccarat-table').is_visible()
+                    # Assert dealt cards and totals are mounted in the player hand.
+                    assert page.get_by_test_id('baccarat-player-hand').is_visible()
+                    # Assert road history remains visible after settlement.
+                    assert page.get_by_test_id('baccarat-road-history').is_visible()
+                    # Assert shoe and burn information remains visible in the drawer.
+                    assert page.get_by_test_id('baccarat-shoe-summary').is_visible()
+                    # Assert Baccarat autoplay controls remain mounted in the rail.
+                    assert page.get_by_test_id('autoplay-baccarat').is_visible()
+                # Execute the Baccarat browser case after the premium result state is visible.
+                run_case('BR-BAC-001',['BAC-020','BAC-021','BAC-022','BAC-023','LEDGER-025','UX-009'],baccarat_browser)
                 # Set page.goto(base+'/admin', wait_until to the value needed for the next operation.
                 page.goto(base+'/admin', wait_until='networkidle')
                 # Execute this statement as part of the module's documented control flow.
