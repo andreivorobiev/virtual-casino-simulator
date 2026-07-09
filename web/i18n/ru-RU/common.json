@@ -1,0 +1,11 @@
+{
+  "actions.applyNow": "Применить сейчас",
+  "actions.backToCasino": "Назад в казино",
+  "actions.previewLobby": "Предпросмотр лобби",
+  "actions.refresh": "Обновить",
+  "actions.reset": "Сбросить",
+  "actions.save": "Сохранить",
+  "money.balance": "Баланс: {amount}",
+  "status.loading": "Загрузка...",
+  "status.off": "Выкл."
+}

@@ -1,13 +1,15 @@
 # AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
 #!/usr/bin/env python3
 # Import required dependency so this module can use its public functions or constants.
-import argparse, json, os, socket, subprocess, sys, time, traceback, urllib.request
+import argparse, json, os, re, socket, subprocess, sys, time, traceback, urllib.request
 # Import required dependency so this module can use its public functions or constants.
 from pathlib import Path
 # Set ROOT to the value needed for the next operation.
 ROOT = Path(__file__).resolve().parents[1]
 # Set RESULTS to the value needed for the next operation.
 RESULTS=[]
+# Set PLACEHOLDER_RE to the value needed for the next operation.
+PLACEHOLDER_RE = re.compile(r"\{([a-zA-Z0-9_]+)\}")
 
 # Define the record function used by this module.
 def record(test_id, reqs, status, message=''):
@@ -73,6 +75,51 @@ def run_case(test_id, reqs, fn):
     # Handle the expected failure path for the protected logic.
     except Exception as e: record(test_id, reqs, 'FAIL', str(e)); raise
 
+# Define the read_i18n_json function used by this module.
+def read_i18n_json(path):
+    # Return parsed UTF-8 JSON resources for i18n validation.
+    return json.loads(path.read_text(encoding='utf-8'))
+
+# Define the i18n_placeholders function used by this module.
+def i18n_placeholders(value):
+    # Return placeholder names from string values and ignore non-string metadata.
+    return set(PLACEHOLDER_RE.findall(value)) if isinstance(value, str) else set()
+
+# Define the validate_i18n_resources function used by this module.
+def validate_i18n_resources():
+    # Set manifest to the value needed for the next operation.
+    manifest=read_i18n_json(ROOT/'web'/'i18n'/'manifest.json')
+    # Set locales to the value needed for the next operation.
+    locales=[locale['id'] for locale in manifest['locales']]
+    # Set domains to the value needed for the next operation.
+    domains=manifest['domains']
+    # Execute this statement as part of the module's documented control flow.
+    assert manifest['defaultLocale']=='en-US'
+    # Execute this statement as part of the module's documented control flow.
+    assert 'ru-RU' in locales
+    # Iterate through the collection to process each item.
+    for domain in domains:
+        # Set source_path to the value needed for the next operation.
+        source_path=ROOT/'web'/'i18n'/'en-US'/Path(*domain.split('/')).with_suffix('.json')
+        # Set source to the value needed for the next operation.
+        source=read_i18n_json(source_path)
+        # Iterate through the collection to process each item.
+        for locale in locales:
+            # Set candidate_path to the value needed for the next operation.
+            candidate_path=ROOT/'web'/'i18n'/locale/Path(*domain.split('/')).with_suffix('.json')
+            # Set candidate to the value needed for the next operation.
+            candidate=read_i18n_json(candidate_path)
+            # Execute this statement as part of the module's documented control flow.
+            assert set(candidate)==set(source), f'{locale}/{domain} key mismatch'
+            # Iterate through the collection to process each item.
+            for key, source_value in source.items():
+                # Set translated_value to the value needed for the next operation.
+                translated_value=candidate[key]
+                # Execute this statement as part of the module's documented control flow.
+                assert translated_value!='', f'{locale}/{domain}/{key} is empty'
+                # Execute this statement as part of the module's documented control flow.
+                assert i18n_placeholders(translated_value)==i18n_placeholders(source_value), f'{locale}/{domain}/{key} placeholder mismatch'
+
 # Define the run_api_tests function used by this module.
 def run_api_tests():
     # Set proc,base to the value needed for the next operation.
@@ -89,6 +136,9 @@ def run_api_tests():
             a=api(base,'/api/v1/admin/overview'); assert a['app_version']=='9.1.1'
         # Execute this statement as part of the module's documented control flow.
         run_case('API-CORE-001',['CORE-001','ADMIN-001'],core)
+
+        # Execute this statement as part of the module's documented control flow.
+        run_case('API-I18N-001',['I18N-001','I18N-003'],validate_i18n_resources)
 
         # Define the bots_audio_autoplay function used by this module.
         def bots_audio_autoplay():
@@ -243,8 +293,16 @@ def run_browser_tests():
                 page.goto(base, wait_until='networkidle'); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Execute this statement as part of the module's documented control flow.
                 run_case('BR-LOBBY-001',['UI-001','CORE-010'],lambda: page.get_by_test_id('card-roulette').is_visible())
-                # Set page.get_by_test_id('nav-roulette').click(); page.get_by_tes to the value needed for the next operation.
-                page.get_by_test_id('nav-roulette').click(); page.get_by_test_id('roulette-wheel').wait_for(); page.get_by_test_id('roulette-num-17').click(); page.locator('.bet-chip').first.wait_for(timeout=3000); page.get_by_test_id('roulette-spin').click(); page.wait_for_timeout(3200)
+                # Execute this statement as part of the module's documented control flow.
+                page.get_by_test_id('nav-roulette').click(); page.get_by_test_id('roulette-wheel').wait_for()
+                # Execute this statement as part of the module's documented control flow.
+                page.get_by_test_id('roulette-num-17').click(); page.locator('.bet-chip').first.wait_for(timeout=3000)
+                # Call the i18n runtime directly to verify language switching does not remount gameplay.
+                page.evaluate("""async () => { const i18n = await import('/core/i18n.js'); await i18n.initI18n({ domains: ['games/roulette'] }); await i18n.setLocale('ru-RU', { persistLocal: false }); }""")
+                # Execute this statement as part of the module's documented control flow.
+                run_case('BR-I18N-GAMESTATE-ROU-001',['I18N-002'],lambda: page.locator('.bet-chip').first.is_visible())
+                # Execute this statement as part of the module's documented control flow.
+                page.get_by_test_id('roulette-spin').click(); page.wait_for_timeout(3200)
                 # Execute this statement as part of the module's documented control flow.
                 run_case('BR-ROU-001',['ROU-040','ROU-041','ROU-050'],lambda: page.locator('.roulette-table-board').is_visible()); page.get_by_test_id('roulette-auto-rounds').fill('5'); page.get_by_test_id('roulette-auto-start').click(); page.wait_for_timeout(400); page.get_by_test_id('roulette-auto-stop').click(); page.wait_for_timeout(500); run_case('BR-AUTO-ROU-001',['AUTO-003','AUTO-010'],lambda: page.get_by_text('Off').first.is_visible())
                 # Execute this statement as part of the module's documented control flow.
@@ -258,7 +316,43 @@ def run_browser_tests():
                 # Execute this statement as part of the module's documented control flow.
                 page.get_by_test_id('nav-baccarat').click(); page.get_by_test_id('baccarat-banker').click(); page.get_by_test_id('baccarat-deal').click(); page.wait_for_timeout(900); run_case('BR-BAC-001',['BAC-020','BAC-021'],lambda: page.get_by_text('Winner:').is_visible())
                 # Set page.goto(base+'/admin', wait_until to the value needed for the next operation.
-                page.goto(base+'/admin', wait_until='networkidle'); run_case('BR-ADMIN-001',['ADMIN-001','ADMIN-010'],lambda: page.get_by_test_id('admin-tab-audio').is_visible()); page.get_by_test_id('admin-tab-audio').click(); page.get_by_test_id('admin-save-audio').wait_for(timeout=5000); run_case('BR-AUDIO-001',['AUDIO-002','AUDIO-005'],lambda: page.get_by_test_id('admin-preview-voice').is_visible())
+                page.goto(base+'/admin', wait_until='networkidle')
+                # Execute this statement as part of the module's documented control flow.
+                run_case('BR-ADMIN-001',['ADMIN-001','ADMIN-010'],lambda: page.get_by_test_id('admin-tab-audio').is_visible())
+                # Execute this statement as part of the module's documented control flow.
+                page.get_by_test_id('admin-tab-audio').click(); page.get_by_test_id('admin-save-audio').wait_for(timeout=5000)
+                # Execute this statement as part of the module's documented control flow.
+                run_case('BR-AUDIO-001',['AUDIO-002','AUDIO-005'],lambda: page.get_by_test_id('admin-preview-voice').is_visible())
+                # Define the admin_i18n function used by this module.
+                def admin_i18n():
+                    # Open the new Language/Locale tab.
+                    page.get_by_test_id('admin-tab-language').click()
+                    # Wait for the language select to render.
+                    page.get_by_test_id('admin-language-select').wait_for(timeout=5000)
+                    # Select Russian as the display language.
+                    page.get_by_test_id('admin-language-select').select_option('ru-RU')
+                    # Apply the locale and persist the browser-local setting.
+                    page.get_by_test_id('admin-locale-apply').click()
+                    # Wait for the runtime state to report Russian.
+                    page.wait_for_function("() => window.CasinoI18n && window.CasinoI18n.getLocaleState().locale === 'ru-RU'")
+                    # Wait for the rendered diagnostics to catch up with the runtime state.
+                    page.wait_for_function("() => document.querySelector('[data-testid=\"admin-locale-state\"]')?.textContent?.includes('ru-RU')")
+                    # Execute this statement as part of the module's documented control flow.
+                    assert 'ru-RU' in page.get_by_test_id('admin-locale-state').inner_text()
+                    # Reload Admin to verify browser-local persistence.
+                    page.reload(wait_until='networkidle')
+                    # Wait for the reloaded runtime to restore Russian.
+                    page.wait_for_function("() => window.CasinoI18n && window.CasinoI18n.getLocaleState().locale === 'ru-RU'")
+                    # Reopen Language/Locale after reload so diagnostics are visible.
+                    page.get_by_test_id('admin-tab-language').click()
+                    # Wait for the rendered diagnostics to show restored Russian.
+                    page.wait_for_function("() => document.querySelector('[data-testid=\"admin-locale-state\"]')?.textContent?.includes('ru-RU')")
+                    # Execute this statement as part of the module's documented control flow.
+                    assert 'ru-RU' in page.get_by_test_id('admin-locale-state').inner_text()
+                    # Clear the test preference so later manual sessions start from defaults.
+                    page.evaluate("localStorage.removeItem('casino.locale.settings.v1')")
+                # Execute this statement as part of the module's documented control flow.
+                run_case('BR-I18N-ADMIN-001',['I18N-001','I18N-003'],admin_i18n)
                 # Branch when the following condition is true.
                 if console_errors or page_errors: raise AssertionError('Browser errors: '+str(console_errors+page_errors))
             # Handle the expected failure path for the protected logic.

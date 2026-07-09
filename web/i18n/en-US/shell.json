@@ -1,0 +1,21 @@
+{
+  "brand.subtitle": "v9 validation release - fake money only",
+  "brand.title": "Virtual Casino Simulator",
+  "games.baccarat.description": "Punto Banco shoe with burn/cut behavior, Player/Banker/Tie bets, bots, and road history.",
+  "games.baccarat.label": "Baccarat",
+  "games.bingo.description": "75-ball American Bingo with patterns, bot cards, call history, and winning pattern highlights.",
+  "games.bingo.label": "Bingo",
+  "games.blackjack.description": "Hit, stand, double, split, surrender, insurance, even money, and table rule controls.",
+  "games.blackjack.label": "Blackjack",
+  "games.keno.description": "Pick 1-20 spots, draw 20 numbers, paytable display, animations, and bot tickets.",
+  "games.keno.label": "Keno",
+  "games.roulette.description": "Animated wheel, direct chip placement, inside/outside bets, racetrack specials, bots, zero rules, and last-1000 stats.",
+  "games.roulette.label": "Roulette",
+  "games.slots.description": "Animated 5-reel slot with reel strips, paylines, wilds, scatters, free spins, and fake progressive.",
+  "games.slots.label": "Slots",
+  "lobby.openGame": "Open {game}",
+  "nav.admin": "Admin",
+  "nav.lobby": "Lobby",
+  "toast.fakeMoneyAdded": "Fake money added.",
+  "wallet.addFakeMoney": "Add fake money"
+}

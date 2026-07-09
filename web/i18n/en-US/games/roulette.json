@@ -1,0 +1,14 @@
+{
+  "betSlip.empty": "No bets placed.",
+  "betSlip.title": "Bet slip",
+  "controls.clearBets": "Clear bets",
+  "controls.rebet": "Rebet",
+  "controls.spin": "SPIN",
+  "controls.wheel": "Wheel",
+  "controls.zeroRule": "Zero rule",
+  "result.noHumanBets": "No human bets settled.",
+  "result.noSpinYet": "No spin yet. Bets debit immediately when placed.",
+  "result.rolled": "Rolled {number}",
+  "settings.zeroRule.normal": "Normal: zero loses",
+  "title": "Roulette"
+}

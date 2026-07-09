@@ -1,12 +1,15 @@
 {
   "module": "application",
-  "version": "9.1.1",
+  "version": "9.2.0",
   "paths": [
     "run.py",
-    "README.md"
+    "README.md",
+    "web/core/i18n.js",
+    "web/i18n/"
   ],
   "requirements_prefixes": [
-    "CORE"
+    "CORE",
+    "I18N"
   ],
   "depends_on": [
     "core",

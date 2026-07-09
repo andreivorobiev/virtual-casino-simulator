@@ -5352,6 +5352,64 @@
       "notes": "Introduced in v9.1.0."
     },
     {
+      "id": "I18N-001",
+      "module": "I18n",
+      "description": "Frontend i18n runtime loads manifest-driven English and Russian resources with fallback and placeholder parity.",
+      "status": "PASS",
+      "api_tests": [
+        "API-I18N-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "web/core/i18n.js",
+        "web/i18n/manifest.json",
+        "web/i18n/en-US/common.json",
+        "web/i18n/ru-RU/common.json"
+      ],
+      "introduced_in": "9.2.0",
+      "changed_in": "9.2.0",
+      "notes": "English remains the canonical source locale; Russian resources must match keys and placeholders."
+    },
+    {
+      "id": "I18N-002",
+      "module": "I18n",
+      "description": "Language switching updates locale state in place without navigation, reload, or gameplay remounting.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-I18N-GAMESTATE-ROU-001"
+      ],
+      "implementation_files": [
+        "web/core/i18n.js",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "9.2.0",
+      "changed_in": "9.2.0",
+      "notes": "The runtime dispatches casino-locale-changed and preserves mounted gameplay state."
+    },
+    {
+      "id": "I18N-003",
+      "module": "I18n",
+      "description": "Admin Language/Locale controls support English/Russian selection, locale previews, diagnostics, and browser-local persistence.",
+      "status": "PASS",
+      "api_tests": [
+        "API-I18N-001"
+      ],
+      "browser_tests": [
+        "BR-I18N-ADMIN-001"
+      ],
+      "implementation_files": [
+        "web/admin.html",
+        "web/admin.js",
+        "web/i18n/en-US/admin.json",
+        "web/i18n/ru-RU/admin.json",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "9.2.0",
+      "changed_in": "9.2.0",
+      "notes": "Persistence is browser-local via localStorage; no Admin v1 persistence endpoint or contract change is introduced."
+    },
+    {
       "id": "TEST-025",
       "module": "Tests",
       "description": "Browser tests use stable data-testid selectors for autoplay and admin controls.",
