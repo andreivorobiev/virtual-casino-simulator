@@ -3,6 +3,8 @@
 import { api, post } from './api.js';
 // Export this symbol so other modules can use it through the public module boundary.
 export const money = n => `$${Number(n || 0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+// Export this symbol so auth-aware shell code can render fake tokens without real-money currency marks.
+export const tokens = n => `\u25c8 ${Number(n || 0).toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:0})}`;
 // Export this symbol so other modules can use it through the public module boundary.
 export function toast(message, ok=false){ const t=document.getElementById('toast'); if(!t)return; t.textContent=message; t.style.background=ok?'#10381f':'#2b1111'; t.style.color=ok?'#c8ffd1':'#ffd3d3'; t.hidden=false; clearTimeout(toast._timer); toast._timer=setTimeout(()=>{t.hidden=true},4500); }
 // Export this symbol so other modules can use it through the public module boundary.
@@ -19,6 +21,25 @@ export async function refreshBalance(){
   if(label) label.textContent='Human balance';
   // Return the player payload for callers that need the current balance.
   return d.player;
+}
+// Export this symbol so the authenticated shell can render the current-user token balance.
+export function renderTokenBalance(currentUser){
+  // Read the optional player object from the v2 current-user payload.
+  const player=currentUser?.player || {};
+  // Read the optional user object from the v2 current-user payload.
+  const user=currentUser?.user || {};
+  // Prefer explicit token fields while tolerating early backend payload drafts.
+  const amount=player.token_balance ?? player.tokens ?? user.token_balance ?? user.tokens ?? currentUser?.token_balance ?? currentUser?.tokens?.balance ?? 0;
+  // Find the shared wallet amount node in the premium shell.
+  const el=document.getElementById('balance');
+  // Update the wallet amount with the fake-token glyph required by the auth UI packet.
+  if(el) el.textContent=tokens(amount);
+  // Find the optional wallet label node used by the premium shell.
+  const label=document.getElementById('balance-label');
+  // Keep the wallet label explicit for authenticated current-user sessions.
+  if(label) label.textContent='Token balance';
+  // Return the normalized numeric amount for callers that need testable state.
+  return Number(amount || 0);
 }
 // Export this symbol so other modules can use it through the public module boundary.
 export async function addFakeMoney(amount){ const d=await post('/api/v1/players/human/add-money',{amount}); await refreshBalance(); return d; }

@@ -1,5 +1,14 @@
 {
-  "brand.subtitle": "v9 validation release - fake money only",
+  "auth.copy": "Sign in to the private beta toy simulator before entering the casino. Tokens are fake, have no cash value, and are only for local simulation.",
+  "auth.eyebrow": "Private beta",
+  "auth.language": "Language",
+  "auth.loggedOut": "You have been logged out.",
+  "auth.password": "Password",
+  "auth.submit": "Sign in",
+  "auth.termsCheck": "I understand this is a toy simulator, not a gambling site, and tokens have no cash value.",
+  "auth.title": "Sign in to play",
+  "auth.username": "Username",
+  "brand.subtitle": "v9 validation release - fake tokens only",
   "brand.title": "Virtual Casino Simulator",
   "games.baccarat.description": "Punto Banco shoe with burn/cut behavior, Player/Banker/Tie bets, bots, and road history.",
   "games.baccarat.label": "Baccarat",
@@ -16,6 +25,13 @@
   "lobby.openGame": "Open {game}",
   "nav.admin": "Admin",
   "nav.lobby": "Lobby",
+  "terms.accept": "Accept and continue",
+  "terms.copy": "Review and accept the current private beta terms before using the simulator.",
+  "terms.eyebrow": "Terms required",
+  "terms.title": "Toy simulator terms",
+  "terms.version": "Terms version: {version}",
   "toast.fakeMoneyAdded": "Fake money added.",
-  "wallet.addFakeMoney": "Add fake money"
+  "toast.tokensAdded": "Added {amount} fake tokens.",
+  "wallet.addFakeMoney": "Add fake money",
+  "wallet.addTokens": "Add tokens"
 }

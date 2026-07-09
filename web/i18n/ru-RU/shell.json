@@ -1,4 +1,13 @@
 {
+  "auth.copy": "Sign in to the private beta toy simulator before entering the casino. Tokens are fake, have no cash value, and are only for local simulation.",
+  "auth.eyebrow": "Private beta",
+  "auth.language": "Language",
+  "auth.loggedOut": "You have been logged out.",
+  "auth.password": "Password",
+  "auth.submit": "Sign in",
+  "auth.termsCheck": "I understand this is a toy simulator, not a gambling site, and tokens have no cash value.",
+  "auth.title": "Sign in to play",
+  "auth.username": "Username",
   "brand.subtitle": "Проверочный релиз v9 - только условные деньги",
   "brand.title": "Virtual Casino Simulator",
   "games.baccarat.description": "Колодная Punto Banco с burn/cut, ставками Player/Banker/Tie, ботами и историей дорог.",
@@ -18,4 +27,12 @@
   "nav.lobby": "Лобби",
   "toast.fakeMoneyAdded": "Условные деньги добавлены.",
   "wallet.addFakeMoney": "Пополнить условный баланс"
+  ,
+  "terms.accept": "Accept and continue",
+  "terms.copy": "Review and accept the current private beta terms before using the simulator.",
+  "terms.eyebrow": "Terms required",
+  "terms.title": "Toy simulator terms",
+  "terms.version": "Terms version: {version}",
+  "toast.tokensAdded": "Added {amount} fake tokens.",
+  "wallet.addTokens": "Add tokens"
 }
