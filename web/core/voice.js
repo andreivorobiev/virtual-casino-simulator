@@ -17,6 +17,8 @@ export function availableVoices(){try{return speechSynthesis.getVoices().map((v,
 function canSfx(){return AUDIO_SETTINGS.master_enabled!==false && AUDIO_SETTINGS.sfx_enabled!==false && Number(AUDIO_SETTINGS.master_volume)>0 && Number(AUDIO_SETTINGS.sfx_volume)>0;}
 // Define the sfxVolume function that implements this UI or API behavior.
 function sfxVolume(v){return Number(v||.05)*Number(AUDIO_SETTINGS.master_volume||1)*Number(AUDIO_SETTINGS.sfx_volume||1);}
+// Define the audioProbe function so browser tests can observe sound behavior without real speakers.
+function audioProbe(event){try{window.__casinoAudioProbe?.({...event,timestamp:Date.now()});}catch(_){ }}
 // Export this symbol so other modules can use it through the public module boundary.
 export function speak(text, gameId='global'){
   // Start protected logic so failures can be handled safely.
@@ -43,8 +45,14 @@ export function speak(text, gameId='global'){
     if(v)u.voice=v;
     // Set u.rate to the value needed for the next operation.
     u.rate=Number(AUDIO_SETTINGS.voice_rate||.95); u.pitch=Number(AUDIO_SETTINGS.voice_pitch||1.08); u.volume=Number(AUDIO_SETTINGS.voice_volume||1)*Number(AUDIO_SETTINGS.master_volume||1);
+    // Record voice completion so long-suite browser checks can detect cut-off announcements.
+    u.onend=()=>audioProbe({kind:'voice_end',gameId,text});
+    // Record speech errors so audio tests can distinguish browser failure from missing events.
+    u.onerror=e=>audioProbe({kind:'voice_error',gameId,text,error:String(e?.error||e?.message||'speech error')});
+    // Record the start request before handing the utterance to the browser speech queue.
+    audioProbe({kind:'voice_start',gameId,text});
     // Execute this statement as part of the module's documented control flow.
-    speechSynthesis.cancel(); speechSynthesis.speak(u);
+    if(speechSynthesis.paused) speechSynthesis.resume?.(); speechSynthesis.speak(u);
   // Explain this executable/data line so future Codex changes preserve intent.
   }catch(_){ }
 }
@@ -52,6 +60,8 @@ export function speak(text, gameId='global'){
 export function clickSound(freq=520,duration=.08,volume=.04){
  // Execute this statement as part of the module's documented control flow.
  if(!canSfx()) return;
+ // Record the effect request for long-suite browser audio verification.
+ audioProbe({kind:'sfx_start',freq,duration,volume});
  // Start protected logic so failures can be handled safely.
  try{ audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)(); const osc=audioCtx.createOscillator(), gain=audioCtx.createGain(); osc.frequency.value=freq; gain.gain.value=sfxVolume(volume); osc.type='triangle'; osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); setTimeout(()=>{try{osc.stop();}catch{}},duration*1000);}catch(_){ }
 }
