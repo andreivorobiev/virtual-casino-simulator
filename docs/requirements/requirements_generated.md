@@ -5,9 +5,9 @@ Application: 9.1.1
 ## Modules
 
 - application: 9.2.0
-- core: 9.1.0
+- core: 9.2.0
 - ledger: 9.0.1
-- players: 9.0.1
+- players: 9.1.0
 - bots: 1.0.0
 - autoplay: 1.1.0
 - audio: 9.1.1
@@ -18,10 +18,10 @@ Application: 9.1.1
 - baccarat: 9.0.2
 - keno: 9.1.0
 - bingo: 9.1.0
-- tests: 1.3.1
+- tests: 1.4.0
 - docs: 1.1.4
 - contracts: 1.0.0
-- tooling: 1.1.0
+- tooling: 1.1.1
 - commenting_policy: 1.0.0
 
 ## Requirements
