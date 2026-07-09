@@ -39,3 +39,9 @@
 - Requirement IDs, contracts, module versions, tests, and docs are aligned.
 - Mandatory long suite 100 passes from a copied deployment environment.
 - Coordinator asks before optional suite 300 or 500.
+
+## Durable Requirement/Contract References
+
+- Requirements foundation: AUTH-001 through AUTH-005, SESSION-001 through SESSION-004, USER-001 through USER-005, STORAGE-001 through STORAGE-004, MYSQL-001 through MYSQL-004, TERMS-001 through TERMS-004, LIC-001 through LIC-003, TOKEN-001 through TOKEN-004, API-001 through API-002, and TEST-037 through TEST-040.
+- v2 contract foundation: `contracts/openapi/auth.v2.yaml` and `contracts/openapi/admin-users.v2.yaml`.
+- Compatibility metadata: `contracts/compatibility/auth-mysql-token-foundation.json`, `contracts/compatibility/module-api-matrix.json`, and `contracts/compatibility/contract-digests.json`.

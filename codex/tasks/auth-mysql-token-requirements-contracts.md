@@ -20,6 +20,12 @@
 - Requirement IDs changed: Supersede conflicting unauthenticated/local-only and fake-money wording requirements without deleting them.
 - Requirement IDs validated: DOC-016, TOOL-001, relevant CORE/API/ADMIN/TEST governance IDs.
 
+## Durable Requirement/Contract References
+
+- This packet owns creation of AUTH-001 through AUTH-005, SESSION-001 through SESSION-004, USER-001 through USER-005, STORAGE-001 through STORAGE-004, MYSQL-001 through MYSQL-004, TERMS-001 through TERMS-004, LIC-001 through LIC-003, TOKEN-001 through TOKEN-004, API-001 through API-002, and TEST-037 through TEST-040.
+- This packet owns `contracts/openapi/auth.v2.yaml`, `contracts/openapi/admin-users.v2.yaml`, and `contracts/compatibility/auth-mysql-token-foundation.json`.
+- Runtime implementation remains out of scope.
+
 ## Scope
 
 - Impacted modules: docs, contracts, tooling, application.
