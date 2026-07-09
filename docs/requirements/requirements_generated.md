@@ -10,7 +10,7 @@ Application: 9.1.1
 - players: 9.0.1
 - bots: 1.0.0
 - autoplay: 1.1.0
-- audio: 9.1.0
+- audio: 9.1.1
 - admin: 1.1.0
 - roulette: 9.1.0
 - slots: 9.0.1
@@ -18,10 +18,10 @@ Application: 9.1.1
 - baccarat: 9.0.1
 - keno: 9.0.1
 - bingo: 9.0.1
-- tests: 1.1.1
-- docs: 1.1.2
+- tests: 1.2.0
+- docs: 1.1.4
 - contracts: 1.0.0
-- tooling: 1.0.1
+- tooling: 1.1.0
 - commenting_policy: 1.0.0
 
 ## Requirements
@@ -315,6 +315,7 @@ Application: 9.1.1
 - **DOC-015** (Documentation) - PASS: Known limitations are documented when applicable.
 - **DOC-016** (Documentation) - PASS: Parallel Codex workflow documentation defines coordinator and worker chat responsibilities.
 - **TOOL-001** (Tooling) - PASS: Codex task packets and prompts preserve scope, file ownership, validation, and PR handback context for worker chats.
+- **TOOL-002** (Tooling) - PASS: GitHub Actions exposes Suite 100 as a pull request check and Suite 300 or 500 as a manually selected sharded soak run.
 - **BOT-001** (Bots) - PASS: Bots are represented as controllers for player accounts, not embedded game objects.
 - **BOT-002** (Bots) - PASS: Game modules must not import bot strategy modules.
 - **BOT-003** (Bots) - PASS: A bot appears for a game only when it has a compatible strategy.
@@ -372,3 +373,11 @@ Application: 9.1.1
 - **TEST-028** (Tests) - PASS: API tests verify persisted audio settings.
 - **TEST-029** (Tests) - PASS: API tests verify server-registered autoplay session lifecycle.
 - **TEST-030** (Tests) - PASS: Test results remain visible in Admin.
+- **TEST-031** (Tests) - PASS: Long casino suites provide 100, 300, and 500 scenario profiles.
+- **TEST-032** (Tests) - PASS: Every long-suite scenario exercises Roulette, Slots, Blackjack, Baccarat, Keno, and Bingo.
+- **TEST-033** (Tests) - PASS: Long casino suites support deterministic shard-count and shard-index execution for parallel workers.
+- **TEST-034** (Tests) - PASS: Long casino suites can copy the whole tree to a disposable deployment environment and delete it after the run.
+- **TEST-035** (Tests) - PASS: Long casino suites write JSON reports with scenario counts, game counts, and requirement touch counts.
+- **TEST-036** (Tests) - PASS: Suite 100 is available as the mandatory long-suite pull request validation path.
+- **AUDIO-008** (Audio) - PASS: Browser audio verification observes voice and sound-effect events without requiring physical speakers.
+- **AUDIO-009** (Audio) - PASS: Repeated Baccarat announcements complete without being cancelled by the next deal.

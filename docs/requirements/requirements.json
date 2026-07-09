@@ -4468,6 +4468,22 @@
       "notes": "Introduced for multi-chat coordination."
     },
     {
+      "id": "TOOL-002",
+      "module": "Tooling",
+      "description": "GitHub Actions exposes Suite 100 as a pull request check and Suite 300 or 500 as a manually selected sharded soak run.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        ".github/workflows/long-suite-100.yml",
+        ".github/workflows/long-suite-soak.yml",
+        "docs/long_test_suites.md"
+      ],
+      "introduced_in": "9.1.2",
+      "changed_in": "9.1.2",
+      "notes": "Suite 100 becomes a PR workflow check; Suite 300/500 are chosen through workflow_dispatch."
+    },
+    {
       "id": "BOT-001",
       "module": "Bots",
       "description": "Bots are represented as controllers for player accounts, not embedded game objects.",
@@ -5458,6 +5474,157 @@
       "introduced_in": "9.1.0",
       "changed_in": "9.1.0",
       "notes": "Introduced in v9.1.0."
+    },
+    {
+      "id": "TEST-031",
+      "module": "Tests",
+      "description": "Long casino suites provide 100, 300, and 500 scenario profiles.",
+      "status": "PASS",
+      "api_tests": [
+        "LONG-SUITE-100",
+        "LONG-SUITE-300",
+        "LONG-SUITE-500"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/long_suites.py",
+        "docs/long_test_suites.md"
+      ],
+      "introduced_in": "9.1.2",
+      "changed_in": "9.1.2",
+      "notes": "Introduced for deployment-style long testing."
+    },
+    {
+      "id": "TEST-032",
+      "module": "Tests",
+      "description": "Every long-suite scenario exercises Roulette, Slots, Blackjack, Baccarat, Keno, and Bingo.",
+      "status": "PASS",
+      "api_tests": [
+        "LONG-SUITE-100",
+        "LONG-SUITE-300",
+        "LONG-SUITE-500"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/long_suites.py",
+        "docs/long_test_suites.md"
+      ],
+      "introduced_in": "9.1.2",
+      "changed_in": "9.1.2",
+      "notes": "Each scenario records per-game play counts."
+    },
+    {
+      "id": "TEST-033",
+      "module": "Tests",
+      "description": "Long casino suites support deterministic shard-count and shard-index execution for parallel workers.",
+      "status": "PASS",
+      "api_tests": [
+        "LONG-SUITE-100",
+        "LONG-SUITE-300",
+        "LONG-SUITE-500"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/long_suites.py",
+        "docs/long_test_suites.md"
+      ],
+      "introduced_in": "9.1.2",
+      "changed_in": "9.1.2",
+      "notes": "Modulo sharding keeps worker ownership stable."
+    },
+    {
+      "id": "TEST-034",
+      "module": "Tests",
+      "description": "Long casino suites can copy the whole tree to a disposable deployment environment and delete it after the run.",
+      "status": "PASS",
+      "api_tests": [
+        "LONG-SUITE-100",
+        "LONG-SUITE-300",
+        "LONG-SUITE-500"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/long_suites.py",
+        "docs/long_test_suites.md"
+      ],
+      "introduced_in": "9.1.2",
+      "changed_in": "9.1.2",
+      "notes": "Deployment roots must be outside the source checkout."
+    },
+    {
+      "id": "TEST-035",
+      "module": "Tests",
+      "description": "Long casino suites write JSON reports with scenario counts, game counts, and requirement touch counts.",
+      "status": "PASS",
+      "api_tests": [
+        "LONG-SUITE-100",
+        "LONG-SUITE-300",
+        "LONG-SUITE-500"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/long_suites.py",
+        "docs/long_test_suites.md"
+      ],
+      "introduced_in": "9.1.2",
+      "changed_in": "9.1.2",
+      "notes": "Reports are written under logs/test-runs unless an explicit path is supplied."
+    },
+    {
+      "id": "TEST-036",
+      "module": "Tests",
+      "description": "Suite 100 is available as the mandatory long-suite pull request validation path.",
+      "status": "PASS",
+      "api_tests": [
+        "LONG-SUITE-100"
+      ],
+      "browser_tests": [
+        "LONG-AUDIO-001"
+      ],
+      "implementation_files": [
+        "tests/long_suites.py",
+        ".github/workflows/long-suite-100.yml",
+        "docs/long_test_suites.md"
+      ],
+      "introduced_in": "9.1.2",
+      "changed_in": "9.1.2",
+      "notes": "Repository rulesets must add the Long Suite 100 check as required after this workflow lands."
+    },
+    {
+      "id": "AUDIO-008",
+      "module": "Audio",
+      "description": "Browser audio verification observes voice and sound-effect events without requiring physical speakers.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "LONG-AUDIO-001"
+      ],
+      "implementation_files": [
+        "web/core/voice.js",
+        "tests/long_suites.py",
+        "docs/long_test_suites.md"
+      ],
+      "introduced_in": "9.1.2",
+      "changed_in": "9.1.2",
+      "notes": "A test-only probe records speech and SFX events when present."
+    },
+    {
+      "id": "AUDIO-009",
+      "module": "Audio",
+      "description": "Repeated Baccarat announcements complete without being cancelled by the next deal.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "LONG-AUDIO-001"
+      ],
+      "implementation_files": [
+        "web/core/voice.js",
+        "tests/long_suites.py",
+        "docs/long_test_suites.md"
+      ],
+      "introduced_in": "9.1.2",
+      "changed_in": "9.1.2",
+      "notes": "Voice announcements queue instead of cancelling active speech."
     }
   ]
 }
