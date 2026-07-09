@@ -18,7 +18,7 @@ Application: 9.1.1
 - baccarat: 9.0.1
 - keno: 9.0.1
 - bingo: 9.0.1
-- tests: 1.1.1
+- tests: 1.1.2
 - docs: 1.1.2
 - contracts: 1.0.0
 - tooling: 1.0.1
