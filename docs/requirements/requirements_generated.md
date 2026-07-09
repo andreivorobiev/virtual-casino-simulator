@@ -19,9 +19,9 @@ Application: 9.1.1
 - keno: 9.1.0
 - bingo: 9.1.0
 - tests: 1.3.1
-- docs: 1.1.4
+- docs: 1.1.5
 - contracts: 1.0.0
-- tooling: 1.1.0
+- tooling: 1.1.1
 - commenting_policy: 1.0.0
 
 ## Requirements
