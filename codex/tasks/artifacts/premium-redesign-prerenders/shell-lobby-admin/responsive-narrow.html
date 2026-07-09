@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Responsive Narrow Premium Shell Prerender</title>
+  <link rel="stylesheet" href="premium-shell.css">
+</head>
+<body class="casino-page mobile-page">
+  <!-- Narrow shell proposal: compact brand/wallet rows and reduced game nav. -->
+  <header class="mobile-top">
+    <div class="mobile-brand-row">
+      <div class="brand-lockup">
+        <div class="brand-mark" aria-hidden="true">&#9824;</div>
+        <div class="brand-copy">
+          <strong>Virtual Casino Simulator</strong>
+          <span>Fake-money only</span>
+        </div>
+      </div>
+      <button class="icon-button" aria-label="Profile">&#9679;</button>
+    </div>
+    <div class="mobile-wallet">
+      <div class="wallet-pill">
+        <span class="wallet-label">Balance</span>
+        <strong class="wallet-amount">$5,030</strong>
+      </div>
+      <button class="icon-button" aria-label="Add fake money"><span class="coin-stack" aria-hidden="true"></span></button>
+    </div>
+    <nav class="mobile-nav" aria-label="Primary">
+      <button class="nav-item active">Lobby</button>
+      <button class="nav-item">Games</button>
+      <button class="nav-item">Admin</button>
+      <button class="nav-item">More</button>
+    </nav>
+  </header>
+
+  <!-- Narrow lobby proposal: stacked hero and scroll-ready game cards. -->
+  <main class="mobile-main">
+    <p class="eyebrow">Choose your table</p>
+    <h1 class="hero-title">Midnight Ledger Casino</h1>
+    <section class="mobile-card-stack" aria-label="Featured games">
+      <article class="mobile-game-card">
+        <div class="card-art roulette-art"></div>
+        <div class="game-card-content">
+          <h2 class="game-heading">Roulette</h2>
+          <div class="tag-row"><span class="tag">Bots</span><span class="tag">Autoplay</span><span class="tag">Stats</span></div>
+        </div>
+      </article>
+      <article class="mobile-game-card">
+        <div class="card-art slot-art"></div>
+        <div class="game-card-content">
+          <h2 class="game-heading">Slots</h2>
+          <div class="tag-row"><span class="tag">Free spins</span><span class="tag">Paylines</span></div>
+        </div>
+      </article>
+      <article class="mobile-game-card">
+        <div class="card-art baccarat-art"></div>
+        <div class="game-card-content">
+          <h2 class="game-heading">Baccarat</h2>
+          <div class="tag-row"><span class="tag">Roads</span><span class="tag">Bots</span></div>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <!-- Narrow status rail proposal keeps connection and ledger cues visible. -->
+  <footer class="status-bar mobile-status-bar">
+    <span class="status-item"><span class="gold">&#9878;</span>Ledger-backed</span>
+    <span class="status-item"><span class="status-dot"></span>Online</span>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,24 @@
+name: Long Suite 100
+on:
+  pull_request:
+  workflow_dispatch:
+jobs:
+  long_suite_100:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dev requirements
+        run: python -m pip install -r requirements-dev.txt
+      - name: Install Playwright Chromium
+        run: python -m playwright install chromium
+      - name: Run mandatory Suite 100
+        run: python tests/long_suites.py --suite 100 --copy-deployment
+      - name: Upload long-suite artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: long-suite-100-artifacts
+          path: logs/test-runs/

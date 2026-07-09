@@ -1,0 +1,43 @@
+name: Long Suite Soak
+on:
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: 'Which long suite should run?'
+        required: true
+        default: '300'
+        type: choice
+        options:
+          - '300'
+          - '500'
+jobs:
+  long_suite_soak:
+    name: long_suite_${{ inputs.suite }}_shard_${{ matrix.shard }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dev requirements
+        run: python -m pip install -r requirements-dev.txt
+      - name: Install Playwright Chromium
+        run: python -m playwright install chromium
+      - name: Run selected long-suite shard
+        shell: bash
+        run: |
+          if [ "${{ matrix.shard }}" = "0" ]; then
+            python tests/long_suites.py --suite "${{ inputs.suite }}" --shard-count 10 --shard-index "${{ matrix.shard }}" --copy-deployment
+          else
+            python tests/long_suites.py --suite "${{ inputs.suite }}" --shard-count 10 --shard-index "${{ matrix.shard }}" --copy-deployment --skip-browser-audio
+          fi
+      - name: Upload long-suite shard artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: long-suite-${{ inputs.suite }}-shard-${{ matrix.shard }}-artifacts
+          path: logs/test-runs/

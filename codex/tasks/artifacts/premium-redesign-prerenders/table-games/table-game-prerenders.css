@@ -1,0 +1,1239 @@
+/* Premium table-game prerender base tokens. */
+:root {
+  --ink: #fff3d0;
+  --muted: #c6c1aa;
+  --dim: #817c69;
+  --gold: #f3c766;
+  --gold-strong: #ffd978;
+  --felt: #063421;
+  --felt-bright: #0b6940;
+  --panel: rgba(7, 23, 17, 0.9);
+  --panel-2: rgba(12, 34, 27, 0.96);
+  --stroke: rgba(243, 199, 102, 0.42);
+  --stroke-soft: rgba(255, 255, 255, 0.14);
+  --red: #b3212c;
+  --red-dark: #751018;
+  --black: #07090a;
+  --blue: #1f58a8;
+  --purple: #4d2c72;
+  --shadow: rgba(0, 0, 0, 0.52);
+  --radius: 8px;
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+}
+
+/* Page shell for local screenshot rendering. */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #060c09;
+  color: var(--ink);
+}
+
+.shot {
+  position: relative;
+  width: 1600px;
+  height: 900px;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(1, 7, 6, 0.2), rgba(1, 5, 4, 0.72)),
+    linear-gradient(115deg, #08130f 0%, #05130d 40%, #07120f 100%);
+  color: var(--ink);
+}
+
+.shot::before {
+  content: "";
+  position: absolute;
+  inset: 86px 0 0;
+  background:
+    linear-gradient(90deg, rgba(243, 199, 102, 0.07), transparent 18%, rgba(190, 28, 43, 0.07) 52%, transparent 82%),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 86px),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0));
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.shot::after {
+  content: "";
+  position: absolute;
+  inset: 86px 0 auto;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+}
+
+/* Top navigation mirrors the approved lobby reference. */
+.topbar {
+  position: relative;
+  z-index: 2;
+  height: 86px;
+  display: grid;
+  grid-template-columns: 330px 1fr 350px;
+  gap: 18px;
+  align-items: center;
+  padding: 14px 24px;
+  background: rgba(1, 14, 10, 0.95);
+  border-bottom: 1px solid rgba(243, 199, 102, 0.55);
+}
+
+.brand-lockup,
+.wallet-cluster,
+.main-nav {
+  display: flex;
+  align-items: center;
+}
+
+.brand-lockup {
+  gap: 12px;
+}
+
+.brand-mark {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--gold);
+  border-radius: 50%;
+  color: var(--gold-strong);
+  font-family: Georgia, serif;
+  font-weight: 900;
+  box-shadow: inset 0 0 18px rgba(243, 199, 102, 0.18), 0 0 18px rgba(243, 199, 102, 0.18);
+}
+
+.brand-lockup strong {
+  display: block;
+  font-size: 19px;
+  line-height: 1.1;
+}
+
+.brand-lockup span,
+.game-heading p,
+.eyebrow {
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+  letter-spacing: 0;
+}
+
+.main-nav {
+  justify-content: center;
+  gap: 4px;
+  padding: 5px;
+  border: 1px solid rgba(243, 199, 102, 0.18);
+  border-radius: 28px;
+  background: rgba(0, 0, 0, 0.24);
+}
+
+.main-nav span,
+.main-nav strong {
+  min-width: 92px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 22px;
+  font-size: 16px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.main-nav strong {
+  color: #201405;
+  background: linear-gradient(180deg, #ffe6a4, #c49536);
+  box-shadow: 0 8px 26px rgba(243, 199, 102, 0.25);
+}
+
+.wallet-cluster {
+  justify-content: end;
+  gap: 10px;
+}
+
+.balance,
+.coin-button,
+.avatar {
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(243, 199, 102, 0.26);
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 24px;
+  font-weight: 800;
+}
+
+.balance {
+  min-width: 185px;
+  padding: 0 18px;
+  color: #ffe4a3;
+  font-size: 18px;
+}
+
+.coin-button {
+  width: 70px;
+  color: var(--gold-strong);
+}
+
+.avatar {
+  width: 48px;
+}
+
+/* Main composition keeps state areas stable. */
+.surface {
+  position: relative;
+  z-index: 1;
+  height: 814px;
+  padding: 26px 42px 30px;
+}
+
+.game-heading {
+  height: 104px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 6px 18px;
+}
+
+.game-heading h1 {
+  margin: 4px 0 0;
+  color: #ffe4a0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 54px;
+  line-height: 1;
+  letter-spacing: 0;
+  text-shadow: 0 8px 30px rgba(0, 0, 0, 0.48);
+}
+
+.status-ribbon {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(150px, auto));
+  gap: 0;
+  border: 1px solid rgba(243, 199, 102, 0.38);
+  border-radius: 8px;
+  background: rgba(6, 32, 22, 0.82);
+  overflow: hidden;
+}
+
+.status-ribbon span {
+  min-height: 62px;
+  display: grid;
+  place-items: center;
+  padding: 0 20px;
+  border-right: 1px solid rgba(243, 199, 102, 0.18);
+  color: #f7ddb0;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.status-ribbon span:last-child {
+  border-right: 0;
+}
+
+.game-grid {
+  height: 660px;
+  display: grid;
+  grid-template-columns: 294px minmax(0, 1fr) 340px;
+  gap: 14px;
+}
+
+.rail,
+.stage,
+.drawer {
+  min-height: 0;
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(0, 0, 0, 0.1)),
+    var(--panel);
+  box-shadow: 0 22px 50px var(--shadow), inset 0 0 0 1px rgba(255, 255, 255, 0.035);
+}
+
+.rail,
+.drawer {
+  padding: 16px;
+  overflow: hidden;
+}
+
+.stage {
+  position: relative;
+  padding: 16px;
+  overflow: hidden;
+}
+
+h2,
+h3 {
+  margin: 0;
+  letter-spacing: 0;
+}
+
+h2 {
+  color: #ffe0a3;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 28px;
+}
+
+h3 {
+  margin-top: 18px;
+  margin-bottom: 8px;
+  color: var(--gold);
+  font-size: 15px;
+  text-transform: uppercase;
+}
+
+button,
+.primary-action,
+.secondary-action {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: var(--radius);
+  color: var(--ink);
+  font: inherit;
+}
+
+.primary-action,
+.secondary-action {
+  height: 46px;
+  display: grid;
+  place-items: center;
+  padding: 0 22px;
+  font-weight: 900;
+}
+
+.primary-action {
+  background: linear-gradient(180deg, #cc3037, #870a13);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 10px 24px rgba(135, 10, 19, 0.34);
+}
+
+.secondary-action {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.wide {
+  width: 100%;
+}
+
+.disabled,
+.locked {
+  opacity: 0.72;
+}
+
+.field-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+label,
+.amount-input,
+.metric-row,
+.score-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+  padding: 9px 10px;
+  border: 1px solid var(--stroke-soft);
+  border-radius: var(--radius);
+  background: rgba(0, 0, 0, 0.2);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+label b,
+.amount-input b,
+.metric-row b,
+.score-row b {
+  color: #ffe2a0;
+}
+
+.chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.chip,
+.table-chip,
+.wager-chip {
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #211300;
+  font-weight: 1000;
+  border: 5px dashed rgba(255, 255, 255, 0.76);
+  background:
+    radial-gradient(circle at 38% 32%, #fff8db 0 22%, #f4c55e 23% 52%, #8a5414 53% 100%);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.36);
+}
+
+.chip {
+  width: 50px;
+  height: 50px;
+  font-size: 12px;
+}
+
+.chip.active {
+  outline: 2px solid #fff5d4;
+  transform: translateY(-2px);
+}
+
+.chip-25,
+.chip-100,
+.chip-500 {
+  background:
+    radial-gradient(circle at 38% 32%, #fffdf1 0 20%, #314a67 21% 48%, #d1a245 49% 100%);
+}
+
+.segmented,
+.action-matrix,
+.mini-list {
+  display: grid;
+  gap: 8px;
+}
+
+.segmented {
+  grid-template-columns: 1fr 1fr;
+}
+
+.segmented span,
+.action-matrix span,
+.mini-list span {
+  min-height: 38px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--stroke-soft);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.055);
+  color: #f5dec0;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.control-plane,
+.progress-card,
+.settlement-card {
+  margin-top: 16px;
+  padding: 12px;
+  border: 1px solid rgba(243, 199, 102, 0.26);
+  border-radius: var(--radius);
+  background: rgba(243, 199, 102, 0.075);
+}
+
+.control-plane b,
+.progress-card b,
+.settlement-card b {
+  display: block;
+  margin-bottom: 4px;
+  color: #ffe1a6;
+}
+
+.control-plane span,
+.progress-card span,
+.settlement-card span {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.bot-plane {
+  border-color: rgba(79, 176, 131, 0.38);
+  background: rgba(79, 176, 131, 0.08);
+}
+
+.muted-plane {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.meter {
+  height: 8px;
+  margin-top: 10px;
+  border-radius: 99px;
+  background: rgba(0, 0, 0, 0.36);
+  overflow: hidden;
+}
+
+.meter i {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, #af1e2b, var(--gold));
+}
+
+.stage-toolbar {
+  height: 64px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.stage-toolbar h2 {
+  margin-top: 4px;
+}
+
+.fixed-result {
+  min-height: 72px;
+  margin-top: 12px;
+  padding: 13px;
+  border: 1px solid var(--stroke-soft);
+  border-radius: var(--radius);
+  background: rgba(0, 0, 0, 0.27);
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.fixed-result.win {
+  color: #ffe9b6;
+  border-color: rgba(243, 199, 102, 0.6);
+  background: rgba(116, 25, 27, 0.25);
+}
+
+.slip-list,
+.history-lines {
+  display: grid;
+  gap: 8px;
+}
+
+.slip-list {
+  min-height: 122px;
+}
+
+.slip-list div,
+.history-lines span {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 36px;
+  align-items: center;
+  padding: 8px 10px;
+  border: 1px solid var(--stroke-soft);
+  border-radius: var(--radius);
+  background: rgba(0, 0, 0, 0.18);
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.slip-list b {
+  color: #ffe2a0;
+}
+
+.metric-row.win,
+.settlement-card.win {
+  border-color: rgba(255, 217, 120, 0.66);
+  background: rgba(243, 199, 102, 0.12);
+}
+
+.settlement-card.pending {
+  min-height: 86px;
+}
+
+.spark-bars {
+  height: 78px;
+  display: flex;
+  align-items: end;
+  gap: 7px;
+  padding: 12px;
+  border: 1px solid var(--stroke-soft);
+  border-radius: var(--radius);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.spark-bars i {
+  flex: 1;
+  min-height: 10px;
+  border-radius: 6px 6px 2px 2px;
+  background: linear-gradient(180deg, var(--gold), #8b1b24);
+}
+
+.history-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.history-pills span,
+.history-pills strong {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid var(--stroke-soft);
+  background: rgba(0, 0, 0, 0.22);
+  color: #f4ddbc;
+  font-size: 12px;
+}
+
+.history-pills strong {
+  color: #1d1200;
+  background: var(--gold);
+}
+
+/* Roulette-specific table and wheel. */
+.roulette-grid .rail {
+  padding: 12px;
+}
+
+.roulette-grid .rail h2 {
+  font-size: 26px;
+}
+
+.roulette-grid .rail h3 {
+  margin-top: 10px;
+  margin-bottom: 6px;
+}
+
+.roulette-grid .field-pair {
+  margin-top: 10px;
+}
+
+.roulette-grid label,
+.roulette-grid .amount-input,
+.roulette-grid .metric-row,
+.roulette-grid .score-row {
+  min-height: 36px;
+  padding: 7px 9px;
+  font-size: 12px;
+}
+
+.roulette-grid .chip {
+  width: 44px;
+  height: 44px;
+  font-size: 11px;
+}
+
+.roulette-grid .segmented,
+.roulette-grid .mini-list {
+  gap: 6px;
+}
+
+.roulette-grid .segmented span,
+.roulette-grid .mini-list span {
+  min-height: 29px;
+  font-size: 12px;
+}
+
+.roulette-grid .control-plane,
+.roulette-grid .progress-card {
+  margin-top: 8px;
+  padding: 8px 10px;
+}
+
+.roulette-grid .control-plane span,
+.roulette-grid .progress-card span {
+  font-size: 12px;
+}
+
+.roulette-grid .meter {
+  margin-top: 6px;
+}
+
+.roulette-table-wrap {
+  display: grid;
+  grid-template-columns: 282px minmax(0, 1fr);
+  gap: 14px;
+  height: 552px;
+}
+
+.wheel-panel {
+  padding: 14px;
+  border: 1px solid var(--stroke-soft);
+  border-radius: var(--radius);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.22)),
+    #091811;
+}
+
+.premium-wheel {
+  position: relative;
+  width: 236px;
+  height: 236px;
+  margin: 12px auto 0;
+  border-radius: 50%;
+  border: 7px solid #9d6f22;
+  background:
+    repeating-conic-gradient(from -6deg, #98151d 0 9deg, #050505 9deg 18deg, #0d7a43 18deg 27deg, #050505 27deg 36deg),
+    radial-gradient(circle, #5a300c 0 32%, transparent 33%),
+    #111;
+  box-shadow: inset 0 0 34px rgba(0, 0, 0, 0.85), 0 18px 40px rgba(0, 0, 0, 0.5);
+}
+
+.premium-wheel::before {
+  content: "";
+  position: absolute;
+  inset: 31px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 245, 211, 0.65);
+}
+
+.premium-wheel::after {
+  content: "";
+  position: absolute;
+  inset: 69px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 44% 38%, #f7d284, #7a3d0b 44%, #2c1205 76%);
+  border: 2px solid rgba(255, 255, 255, 0.35);
+}
+
+.pocket {
+  position: absolute;
+  z-index: 2;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 900;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+}
+
+.green-pocket {
+  left: 102px;
+  top: 8px;
+  background: #0d6f3d;
+}
+
+.red-pocket {
+  background: #9c1721;
+}
+
+.black-pocket {
+  background: #070707;
+}
+
+.p1 {
+  right: 42px;
+  top: 32px;
+}
+
+.p2 {
+  right: 18px;
+  top: 104px;
+}
+
+.p3 {
+  right: 52px;
+  bottom: 25px;
+}
+
+.p4 {
+  left: 42px;
+  bottom: 25px;
+}
+
+.p5 {
+  left: 18px;
+  top: 104px;
+}
+
+.wheel-hub {
+  position: absolute;
+  z-index: 4;
+  inset: 92px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #f6d481, #6f3b10);
+  border: 2px solid rgba(255, 255, 255, 0.42);
+}
+
+.wheel-ball {
+  position: absolute;
+  z-index: 5;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff8e9;
+  box-shadow: 0 0 14px #fff;
+}
+
+.wheel-ball.parked {
+  left: 72px;
+  bottom: 34px;
+}
+
+.wheel-ball.orbit {
+  left: 178px;
+  top: 42px;
+}
+
+.wheel-ball.result-ball {
+  left: 74px;
+  top: 176px;
+}
+
+.premium-wheel.spinning {
+  filter: saturate(1.25);
+}
+
+.premium-wheel.spinning .pocket {
+  filter: blur(0.6px);
+}
+
+.motion-arc {
+  position: absolute;
+  z-index: 3;
+  inset: 17px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  border-top-color: rgba(255, 255, 255, 0.85);
+  border-right-color: rgba(255, 217, 120, 0.55);
+  transform: rotate(34deg);
+}
+
+.reveal-glow,
+.result-glow {
+  box-shadow: inset 0 0 45px rgba(243, 199, 102, 0.16);
+}
+
+.roulette-layout {
+  display: grid;
+  grid-template-columns: 58px 1fr;
+  grid-template-rows: 408px 112px;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px;
+  border: 2px solid rgba(243, 199, 102, 0.46);
+  border-radius: var(--radius);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(0, 0, 0, 0.18)),
+    linear-gradient(145deg, #0a5b35, #07301f);
+  box-shadow: inset 0 0 38px rgba(0, 0, 0, 0.44);
+}
+
+.zero-cell {
+  grid-row: 1;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.62);
+  border-radius: var(--radius);
+  background: #0a8547;
+  font-size: 28px;
+  font-weight: 1000;
+}
+
+.number-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(12, 1fr);
+  gap: 4px;
+}
+
+.number-grid span,
+.outside-grid span {
+  position: relative;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 6px;
+  color: #fff4df;
+  font-size: 18px;
+  font-weight: 1000;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+}
+
+.red-cell,
+.red-bet {
+  background: linear-gradient(180deg, #c52431, #7b1018);
+}
+
+.black-cell,
+.black-bet {
+  background: linear-gradient(180deg, #202426, #030303);
+}
+
+.outside-grid {
+  grid-column: 1 / 3;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  grid-template-rows: 1fr 1fr;
+  gap: 5px;
+}
+
+.outside-grid span:nth-child(-n + 3) {
+  grid-column: span 2;
+}
+
+.table-chip {
+  position: absolute;
+  z-index: 3;
+  right: -11px;
+  top: -13px;
+  width: 42px;
+  height: 42px;
+  font-size: 10px;
+}
+
+.table-chip.small {
+  width: 34px;
+  height: 34px;
+  top: -10px;
+}
+
+.table-dimmed {
+  filter: saturate(0.86);
+}
+
+.reveal-cell,
+.result-cell {
+  outline: 3px solid var(--gold-strong);
+  box-shadow: inset 0 0 24px rgba(255, 217, 120, 0.36), 0 0 18px rgba(255, 217, 120, 0.24);
+}
+
+.result-marker {
+  position: absolute;
+  right: 5px;
+  bottom: 4px;
+  color: var(--gold-strong);
+  font-size: 9px;
+  font-style: normal;
+}
+
+.faded {
+  opacity: 0.55;
+}
+
+/* Card game shared styling. */
+.blackjack-felt,
+.baccarat-felt {
+  position: relative;
+  height: 552px;
+  overflow: hidden;
+  border: 2px solid rgba(243, 199, 102, 0.46);
+  border-radius: var(--radius);
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.07), rgba(0, 0, 0, 0.18)),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.028) 0 1px, transparent 1px 72px),
+    #08462d;
+  box-shadow: inset 0 0 54px rgba(0, 0, 0, 0.48);
+}
+
+.card-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.card {
+  width: 78px;
+  height: 112px;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  align-items: center;
+  justify-items: center;
+  padding: 10px;
+  border-radius: 8px;
+  background: linear-gradient(160deg, #fffdf4, #e8ddc3);
+  color: #111;
+  box-shadow: 0 14px 26px rgba(0, 0, 0, 0.35), inset 0 0 0 1px rgba(80, 54, 20, 0.16);
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.card span {
+  font-size: 40px;
+  font-weight: 900;
+}
+
+.card small {
+  font-size: 25px;
+  line-height: 1;
+}
+
+.red-card {
+  color: #a81420;
+}
+
+.black-card {
+  color: #111;
+}
+
+.card-back {
+  color: #ffe0a3;
+  background:
+    linear-gradient(45deg, rgba(255, 255, 255, 0.08) 25%, transparent 25% 50%, rgba(255, 255, 255, 0.08) 50% 75%, transparent 75%),
+    linear-gradient(160deg, #1f315d, #14172a);
+  background-size: 14px 14px, auto;
+}
+
+.card-back span {
+  font-size: 25px;
+}
+
+.ghost-card {
+  opacity: 0.22;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px dashed rgba(255, 255, 255, 0.36);
+  box-shadow: none;
+}
+
+.peel-card {
+  transform: rotate(-5deg) translateY(-8px);
+  box-shadow: 0 18px 34px rgba(0, 0, 0, 0.45), 0 0 18px rgba(255, 217, 120, 0.28);
+}
+
+.zone-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.zone-title b {
+  color: #ffe0a3;
+}
+
+.wager-chip {
+  position: absolute;
+  width: 54px;
+  height: 54px;
+  right: 18px;
+  bottom: 18px;
+  font-size: 12px;
+}
+
+.win-chip {
+  background:
+    radial-gradient(circle at 38% 32%, #fff8db 0 22%, #9df5bd 23% 52%, #247b4b 53% 100%);
+}
+
+/* Blackjack layout reserves dealer and multi-hand lanes. */
+.action-matrix {
+  grid-template-columns: 1fr 1fr;
+}
+
+.action-matrix span.enabled {
+  color: #1e1200;
+  background: linear-gradient(180deg, #ffe2a3, #c49332);
+}
+
+.action-matrix span.disabled {
+  color: var(--dim);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.action-matrix span.selected {
+  outline: 2px solid #fff4cf;
+}
+
+.action-matrix span.accent {
+  color: #fff4df;
+  background: linear-gradient(180deg, #2e67b0, #163a73);
+}
+
+.dealer-zone {
+  position: absolute;
+  left: 50%;
+  top: 34px;
+  width: 330px;
+  transform: translateX(-50%);
+  padding: 14px;
+  border: 1px solid rgba(243, 199, 102, 0.24);
+  border-radius: var(--radius);
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.table-logo {
+  position: absolute;
+  left: 50%;
+  top: 234px;
+  transform: translateX(-50%);
+  width: 270px;
+  height: 116px;
+  display: grid;
+  place-items: center;
+  color: rgba(255, 228, 160, 0.75);
+  border: 2px solid rgba(243, 199, 102, 0.34);
+  border-radius: 50%;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 24px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.table-logo span {
+  display: block;
+  margin-top: 4px;
+  color: rgba(255, 255, 255, 0.54);
+  font-size: 12px;
+}
+
+.hand-lane {
+  position: absolute;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: var(--radius);
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.blackjack-felt > .hand-lane {
+  left: 50%;
+  bottom: 34px;
+  width: 410px;
+  min-height: 174px;
+  transform: translateX(-50%);
+}
+
+.active-hand {
+  border-color: rgba(255, 217, 120, 0.75);
+  box-shadow: inset 0 0 28px rgba(255, 217, 120, 0.1), 0 0 20px rgba(255, 217, 120, 0.12);
+}
+
+.split-hands {
+  position: absolute;
+  left: 32px;
+  right: 32px;
+  bottom: 34px;
+  height: 205px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+.split-hands .hand-lane {
+  position: relative;
+}
+
+.resolved-hand {
+  opacity: 0.86;
+}
+
+.won-hand {
+  border-color: rgba(156, 255, 188, 0.65);
+  box-shadow: inset 0 0 28px rgba(156, 255, 188, 0.12);
+}
+
+.settled-state .dealer-zone {
+  width: 430px;
+}
+
+.shoe-bars {
+  height: 64px;
+}
+
+/* Baccarat layout keeps hands, wager zones, and road stable. */
+.baccarat-actions {
+  grid-template-columns: 1fr;
+}
+
+.baccarat-hands {
+  position: absolute;
+  left: 30px;
+  right: 30px;
+  top: 34px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.baccarat-hand {
+  min-height: 180px;
+  padding: 15px;
+  border: 1px solid rgba(243, 199, 102, 0.28);
+  border-radius: var(--radius);
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.player-hand {
+  box-shadow: inset 0 0 30px rgba(49, 114, 199, 0.1);
+}
+
+.banker-hand {
+  box-shadow: inset 0 0 30px rgba(190, 28, 43, 0.1);
+}
+
+.placeholder-row {
+  min-height: 118px;
+}
+
+.baccarat-bet-layout {
+  position: absolute;
+  left: 30px;
+  right: 30px;
+  bottom: 34px;
+  display: grid;
+  grid-template-columns: 1.2fr 0.85fr 1.2fr;
+  gap: 14px;
+}
+
+.bet-zone {
+  position: relative;
+  height: 210px;
+  display: grid;
+  place-items: center;
+  border: 2px solid rgba(255, 255, 255, 0.22);
+  border-radius: var(--radius);
+  color: #fff4df;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 30px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.player-zone {
+  background: linear-gradient(180deg, rgba(31, 88, 168, 0.5), rgba(7, 42, 76, 0.46));
+}
+
+.tie-zone {
+  background: linear-gradient(180deg, rgba(77, 44, 114, 0.52), rgba(41, 22, 62, 0.5));
+}
+
+.banker-zone {
+  background: linear-gradient(180deg, rgba(179, 33, 44, 0.5), rgba(82, 13, 18, 0.5));
+}
+
+.active-reveal {
+  border-color: rgba(255, 217, 120, 0.72);
+}
+
+.winning-hand,
+.winning-zone {
+  border-color: rgba(255, 217, 120, 0.82);
+  box-shadow: inset 0 0 34px rgba(255, 217, 120, 0.14), 0 0 20px rgba(255, 217, 120, 0.12);
+}
+
+.road-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid var(--stroke-soft);
+  border-radius: var(--radius);
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.road-grid span,
+.road-grid strong {
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 50%;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.road-grid span:empty {
+  opacity: 0.35;
+  border-style: dashed;
+}
+
+.road-p {
+  background: var(--blue);
+}
+
+.road-b {
+  background: var(--red);
+}
+
+.road-t {
+  background: var(--purple);
+}
+
+.result-road strong {
+  outline: 3px solid var(--gold);
+}

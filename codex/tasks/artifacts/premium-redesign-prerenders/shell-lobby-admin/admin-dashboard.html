@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Premium Admin Dashboard Prerender</title>
+  <link rel="stylesheet" href="premium-shell.css">
+</head>
+<body class="admin-page">
+  <main class="admin-shell">
+    <!-- Admin sidebar proposal: dense control-plane navigation with premium material treatment. -->
+    <aside class="admin-sidebar">
+      <div class="admin-brand">
+        <div class="admin-mark" aria-hidden="true">&#9824;</div>
+        <div>
+          <strong>Admin</strong>
+          <span>Local control plane</span>
+        </div>
+      </div>
+      <nav class="admin-nav" aria-label="Admin">
+        <button class="admin-nav-item active"><span>&#9632;</span><span>Dashboard</span><small>6</small></button>
+        <button class="admin-nav-item"><span>&#9679;</span><span>Players & Bots</span><small>4</small></button>
+        <button class="admin-nav-item"><span>&#9878;</span><span>Ledger</span><small>500</small></button>
+        <button class="admin-nav-item"><span>&#128200;</span><span>Telemetry</span><small>3</small></button>
+        <button class="admin-nav-item"><span>&#9654;</span><span>Autoplay</span><small>2</small></button>
+        <button class="admin-nav-item"><span>&#9835;</span><span>Audio & Voice</span><small></small></button>
+        <button class="admin-nav-item"><span>&#127760;</span><span>Language / Locale</span><small>new</small></button>
+        <button class="admin-nav-item"><span>&#10003;</span><span>Requirements</span><small>186</small></button>
+        <button class="admin-nav-item"><span>&#9881;</span><span>System</span><small>9.1.1</small></button>
+      </nav>
+      <div class="admin-side-footer">
+        <button class="return-link">Back to Casino</button>
+        <div class="mini-stat"><span>Server</span><strong>Online</strong></div>
+      </div>
+    </aside>
+
+    <!-- Admin dashboard proposal: compact metrics, ledger table, errors, and autoplay sessions. -->
+    <section class="admin-main">
+      <header class="admin-topbar">
+        <div class="admin-title">
+          <h1>Dashboard</h1>
+          <p>System health, balances, telemetry, and recent events.</p>
+        </div>
+        <div class="admin-toolbar">
+          <button class="control-button">Export</button>
+          <button class="control-button primary">Refresh</button>
+        </div>
+      </header>
+      <div class="admin-content">
+        <section class="metric-grid" aria-label="Dashboard metrics">
+          <div class="metric-card"><span>App version</span><strong>9.1.1</strong><small>module manifest aligned</small></div>
+          <div class="metric-card"><span>Players</span><strong>4</strong><small>human plus bots</small></div>
+          <div class="metric-card"><span>Bots</span><strong>3</strong><small>strategy controlled</small></div>
+          <div class="metric-card"><span>Autoplay</span><strong>2</strong><small>1 stop requested</small></div>
+          <div class="metric-card"><span>Errors today</span><strong>0</strong><small>client logs quiet</small></div>
+          <div class="metric-card"><span>Requirements</span><strong>186</strong><small>PASS registry</small></div>
+        </section>
+        <section class="admin-grid">
+          <article class="admin-card">
+            <header class="admin-card-header">
+              <h2>Recent Ledger</h2>
+              <span class="state-pill">append-only</span>
+            </header>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead><tr><th>Time</th><th>Player</th><th>Game</th><th>Type</th><th>Amount</th><th>After</th></tr></thead>
+                <tbody>
+                  <tr><td>14:23:11</td><td>human</td><td>roulette</td><td>bet_debit</td><td>-$25.00</td><td>$5,030.00</td></tr>
+                  <tr><td>14:22:46</td><td>bot_ava</td><td>baccarat</td><td>settlement_credit</td><td>+$95.00</td><td>$4,860.00</td></tr>
+                  <tr><td>14:21:37</td><td>human</td><td>slots</td><td>spin_payout</td><td>+$120.00</td><td>$5,055.00</td></tr>
+                  <tr><td>14:20:03</td><td>bot_noa</td><td>keno</td><td>ticket_purchase</td><td>-$10.00</td><td>$5,220.00</td></tr>
+                  <tr><td>14:18:52</td><td>human</td><td>blackjack</td><td>double_down</td><td>-$50.00</td><td>$4,935.00</td></tr>
+                  <tr><td>14:17:45</td><td>bot_mira</td><td>bingo</td><td>card_purchase</td><td>-$5.00</td><td>$5,115.00</td></tr>
+                  <tr><td>14:15:30</td><td>human</td><td>roulette</td><td>settlement_credit</td><td>+$350.00</td><td>$4,985.00</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+          <div class="right-stack">
+            <article class="admin-card">
+              <header class="admin-card-header">
+                <h3>Autoplay Sessions</h3>
+                <span class="state-pill alert-pill">Stop all available</span>
+              </header>
+              <div class="table-wrap">
+                <table class="data-table">
+                  <thead><tr><th>Game</th><th>Player</th><th>Status</th><th>Done</th></tr></thead>
+                  <tbody>
+                    <tr><td>roulette</td><td>bot_ava</td><td><span class="state-pill">running</span></td><td>18 / 50</td></tr>
+                    <tr><td>slots</td><td>human</td><td><span class="state-pill alert-pill">stop requested</span></td><td>9 / 10</td></tr>
+                    <tr><td>baccarat</td><td>bot_mira</td><td>complete</td><td>25 / 25</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </article>
+            <article class="admin-card">
+              <header class="admin-card-header">
+                <h3>Telemetry</h3>
+                <span class="state-pill">live</span>
+              </header>
+              <div class="log-list">
+                <div class="log-row"><span>14:23:10 app</span>GET /api/v1/admin/dashboard 200</div>
+                <div class="log-row"><span>14:22:45 game</span>baccarat coup settled for bot_ava</div>
+                <div class="log-row"><span>14:21:37 client</span>slots result announcement queued</div>
+                <div class="log-row"><span>14:20:03 ledger</span>keno ticket_purchase persisted</div>
+              </div>
+            </article>
+          </div>
+        </section>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
