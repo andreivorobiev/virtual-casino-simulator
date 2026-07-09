@@ -313,11 +313,45 @@ def run_browser_audio_verification(client, repeats, report):
 })();
 """
     )
+    # Define the install_auth_mock function used by this module.
+    def install_auth_mock(page):
+        # Store mocked auth state because backend v2 auth APIs are owned by issue 39.
+        auth_state = {"tokens": 10000, "locale": "en-US"}  # Start long audio checks authenticated.
+        # Define the auth_payload function used by this module.
+        def auth_payload():
+            # Return a draft v2 current-user payload for frontend-only long-suite checks.
+            return {"user": {"user_id": "long_suite_user", "username": "long-suite", "display_name": "Long Suite Player", "locale": auth_state["locale"]}, "player": {"player_id": "human", "token_balance": auth_state["tokens"]}, "terms": {"required": False, "version": "private-beta-1"}}  # Mirror the browser-suite mock shape.
+        # Define the mocked_auth_response function used by this module.
+        def mocked_auth_response(ok=True, data=None, message="Unhandled auth mock"):
+            # Return a standard API envelope string for Playwright route fulfillment.
+            return json.dumps({"ok": ok, "data": data or {}, "error": None if ok else {"code": "AUTH_MOCK", "message": message}})  # Preserve the standard envelope.
+        # Define the handle_auth_route function used by this module.
+        def handle_auth_route(route):
+            # Store request so path, method, and body can drive the v2 auth mock.
+            request = route.request  # Keep request metadata local to the route handler.
+            # Store path so endpoint matching ignores host and query details.
+            path = request.url.split("/api/v2", 1)[1].split("?", 1)[0]  # Normalize the v2 path.
+            # Branch for current-user session lookup.
+            if path == "/me" and request.method == "GET":  # Let the shell enter the casino immediately.
+                return route.fulfill(status=200, content_type="application/json", body=mocked_auth_response(True, auth_payload()))  # Return authenticated current user.
+            # Branch for token additions through the current-user wallet.
+            if path == "/me/tokens/add" and request.method == "POST":  # Keep the wallet endpoint available if shell code calls it.
+                body = json.loads(request.post_data or "{}")  # Parse the requested token amount.
+                auth_state["tokens"] += int(body.get("amount") or 0)  # Update the mocked token balance.
+                return route.fulfill(status=200, content_type="application/json", body=mocked_auth_response(True, auth_payload()))  # Return updated current user.
+            # Branch for logout in case future long-suite cleanup clicks it.
+            if path == "/auth/logout" and request.method == "POST":  # Accept logout without changing backend scope.
+                return route.fulfill(status=200, content_type="application/json", body=mocked_auth_response(True, {}))  # Return an empty success envelope.
+            # Return a route-local standard failure for unexpected v2 auth endpoints.
+            return route.fulfill(status=200, content_type="application/json", body=mocked_auth_response(False))  # Avoid browser console HTTP errors.
+        # Route planned v2 auth/current-user APIs so long suites can run before issue 39 lands.
+        page.route("**/api/v2/**", handle_auth_route)  # Install the focused Playwright route mock.
     client.call("/api/v1/admin/audio-settings", "POST", {"master_enabled": True, "sfx_enabled": True, "voice_enabled": True, "announce_roulette_results": True, "announce_blackjack_results": True, "announce_baccarat_results": True, "announce_bingo_calls": True, "announce_keno_results": True})  # Enable every game announcement.
     with sync_playwright() as playwright:  # Own the browser lifecycle for this verification.
         browser = playwright.chromium.launch(headless=True)  # Launch Chromium for actual UI audio paths.
         page = browser.new_page()  # Create an isolated page.
         page.add_init_script(init_script)  # Install probes before app scripts run.
+        install_auth_mock(page)  # Mock planned v2 auth so the audio suite can enter the casino.
         page.goto(client.base_url + "/", wait_until="networkidle")  # Load the app shell.
         page.get_by_test_id("nav-roulette").click()  # Navigate to Roulette.
         page.get_by_test_id("roulette-outside-red").click()  # Trigger Roulette SFX.

@@ -9,6 +9,13 @@ export const tokens = n => `\u25c8 ${Number(n || 0).toLocaleString(undefined,{mi
 export function toast(message, ok=false){ const t=document.getElementById('toast'); if(!t)return; t.textContent=message; t.style.background=ok?'#10381f':'#2b1111'; t.style.color=ok?'#c8ffd1':'#ffd3d3'; t.hidden=false; clearTimeout(toast._timer); toast._timer=setTimeout(()=>{t.hidden=true},4500); }
 // Export this symbol so other modules can use it through the public module boundary.
 export async function refreshBalance(){
+  // Branch when the authenticated shell owns wallet rendering.
+  if(window.CasinoCurrentUser){
+    // Render the current-user fake-token balance instead of legacy v1 fake money.
+    renderTokenBalance(window.CasinoCurrentUser);
+    // Return the current-user player payload for legacy callers that expect a player-like object.
+    return window.CasinoCurrentUser.player || {};
+  }
   // Read the human player through the frozen player API.
   const d=await api('/api/v1/players/human');
   // Find the shared wallet amount node in the premium shell.

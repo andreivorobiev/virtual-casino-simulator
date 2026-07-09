@@ -139,8 +139,8 @@ label {
   position: relative;
   z-index: 2;
   display: grid;
-  grid-template-columns: minmax(260px, 360px) minmax(620px, 1fr) auto;
-  gap: 24px;
+  grid-template-columns: minmax(240px, 320px) minmax(420px, 1fr) auto;
+  gap: 16px;
   align-items: center;
   min-height: 92px;
   padding: 14px 24px;

@@ -77,6 +77,8 @@ function wireLocaleSelect(select, afterChange) {
 
 // Keep persistent shell profile and wallet nodes synchronized with the current user.
 function updateCurrentUserShell() {
+  // Expose the current-user session so legacy game refresh calls keep token formatting.
+  window.CasinoCurrentUser = currentSession;
   // Render the fake-token balance with the required token glyph.
   const amount = renderTokenBalance(currentSession);
   // Read the logout button reserved by index.html.
@@ -95,6 +97,8 @@ function updateCurrentUserShell() {
 
 // Render a logged-out browser gate before any casino route can mount.
 function renderLoginGate(message = '') {
+  // Clear the public current-user hook while the browser is logged out.
+  window.CasinoCurrentUser = null;
   // Mark the document so chrome and game routes stay hidden while logged out.
   document.body.classList.add('auth-locked');
   // Read the main route outlet reserved by index.html.
@@ -428,6 +432,8 @@ async function init() {
     try { await logout(); } catch (_) {}
     // Clear the current session after the backend logout attempt completes.
     currentSession = null;
+    // Clear the public current-user hook after logout.
+    window.CasinoCurrentUser = null;
     // Reset the active route so a later login starts at the lobby.
     active = null;
     // Render the browser login gate after logout.

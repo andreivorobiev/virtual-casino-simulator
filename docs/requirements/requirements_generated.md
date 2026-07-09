@@ -4,7 +4,7 @@ Application: 9.1.1
 
 ## Modules
 
-- application: 9.2.0
+- application: 9.2.2
 - core: 9.1.0
 - ledger: 9.0.1
 - players: 9.0.1
@@ -18,10 +18,10 @@ Application: 9.1.1
 - baccarat: 9.0.2
 - keno: 9.1.0
 - bingo: 9.1.0
-- tests: 1.3.1
-- docs: 1.1.4
+- tests: 1.3.3
+- docs: 1.1.5
 - contracts: 1.0.0
-- tooling: 1.1.0
+- tooling: 1.1.1
 - commenting_policy: 1.0.0
 
 ## Requirements
