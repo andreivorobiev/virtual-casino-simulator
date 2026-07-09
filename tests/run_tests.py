@@ -241,10 +241,46 @@ def run_browser_tests():
             try:
                 # Set page.goto(base, wait_until to the value needed for the next operation.
                 page.goto(base, wait_until='networkidle'); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Define the premium_shell function used by this module.
+                def premium_shell():
+                    # Verify the premium topbar remains visible at app load.
+                    assert page.get_by_test_id('premium-topbar').is_visible()
+                    # Verify the shared wallet remains visible for the human balance.
+                    assert page.get_by_test_id('premium-wallet').is_visible()
+                    # Verify the persistent shell status rail is present.
+                    assert page.get_by_test_id('shell-status').is_visible()
+                    # Verify the all-games navigation keeps Baccarat reachable.
+                    assert page.get_by_test_id('nav-baccarat').is_visible()
                 # Execute this statement as part of the module's documented control flow.
-                run_case('BR-LOBBY-001',['UI-001','CORE-010'],lambda: page.get_by_test_id('card-roulette').is_visible())
+                run_case('BR-SHELL-001',['UX-007','CORE-006','LEDGER-025'],premium_shell)
+                # Define the premium_lobby function used by this module.
+                def premium_lobby():
+                    # Verify the lobby renders one premium card for every current game.
+                    assert page.locator('[data-testid^="card-"]').count()==6
+                    # Verify the status/trust rail from the approved lobby is visible.
+                    assert page.get_by_test_id('lobby-trust-rail').is_visible()
+                    # Verify the premium lobby headline renders in the first route view.
+                    assert page.get_by_text('Midnight Ledger Casino').is_visible()
+                    # Verify the Roulette card still exposes its route action.
+                    assert page.get_by_test_id('open-roulette').is_visible()
+                # Execute this statement as part of the module's documented control flow.
+                run_case('BR-LOBBY-001',['CORE-005','CORE-006','UX-008'],premium_lobby)
+                # Resize the browser to the approved narrow viewport before responsive checks.
+                page.set_viewport_size({'width':390,'height':844}); page.wait_for_timeout(250)
+                # Define the responsive_lobby function used by this module.
+                def responsive_lobby():
+                    # Verify the stacked topbar remains visible on a narrow viewport.
+                    assert page.get_by_test_id('premium-topbar').is_visible()
+                    # Verify the lobby does not introduce page-level horizontal overflow.
+                    assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1')
+                    # Verify the featured game card remains visible after responsive stacking.
+                    assert page.get_by_test_id('card-roulette').is_visible()
+                # Execute this statement as part of the module's documented control flow.
+                run_case('BR-LOBBY-RESP-001',['CORE-015','UX-009'],responsive_lobby)
+                # Restore desktop dimensions before existing game interaction coverage runs.
+                page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(250)
                 # Set page.get_by_test_id('nav-roulette').click(); page.get_by_tes to the value needed for the next operation.
-                page.get_by_test_id('nav-roulette').click(); page.get_by_test_id('roulette-wheel').wait_for(); page.get_by_test_id('roulette-num-17').click(); page.locator('.bet-chip').first.wait_for(timeout=3000); page.get_by_test_id('roulette-spin').click(); page.wait_for_timeout(3200)
+                page.get_by_test_id('nav-roulette').click(); page.get_by_test_id('roulette-wheel').wait_for(); page.locator('[data-outbtn="red"]').click(); page.locator('.bet-chip').first.wait_for(timeout=3000); page.get_by_test_id('roulette-spin').click(); page.wait_for_timeout(3200)
                 # Execute this statement as part of the module's documented control flow.
                 run_case('BR-ROU-001',['ROU-040','ROU-041','ROU-050'],lambda: page.locator('.roulette-table-board').is_visible()); page.get_by_test_id('roulette-auto-rounds').fill('5'); page.get_by_test_id('roulette-auto-start').click(); page.wait_for_timeout(400); page.get_by_test_id('roulette-auto-stop').click(); page.wait_for_timeout(500); run_case('BR-AUTO-ROU-001',['AUTO-003','AUTO-010'],lambda: page.get_by_text('Off').first.is_visible())
                 # Execute this statement as part of the module's documented control flow.
