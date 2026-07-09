@@ -21,7 +21,7 @@ Application: 9.1.1
 - tests: 1.3.1
 - docs: 1.1.4
 - contracts: 1.0.0
-- tooling: 1.1.0
+- tooling: 1.1.1
 - commenting_policy: 1.0.0
 
 ## Requirements
