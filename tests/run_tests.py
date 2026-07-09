@@ -341,10 +341,52 @@ def run_browser_tests():
                 page.get_by_test_id('roulette-spin').click(); page.wait_for_timeout(3200)
                 # Execute this statement as part of the module's documented control flow.
                 run_case('BR-ROU-001',['ROU-040','ROU-041','ROU-050'],lambda: page.locator('.roulette-table-board').is_visible()); page.get_by_test_id('roulette-auto-rounds').fill('5'); page.get_by_test_id('roulette-auto-start').click(); page.wait_for_timeout(400); page.get_by_test_id('roulette-auto-stop').click(); page.wait_for_timeout(500); run_case('BR-AUTO-ROU-001',['AUTO-003','AUTO-010'],lambda: page.get_by_text('Off').first.is_visible())
+                # Restore English for game prerender evidence after the locale-preservation smoke test.
+                page.evaluate("""async () => { const i18n = await import('/core/i18n.js'); await i18n.setLocale('en-US', { persistLocal: false }); }""")
                 # Execute this statement as part of the module's documented control flow.
                 page.get_by_test_id('nav-slots').click(); page.get_by_test_id('slots-spin').click(); page.wait_for_timeout(1200); run_case('BR-SLOT-001',['SLOT-020','SLOT-021'],lambda: page.get_by_test_id('slot-grid').is_visible())
+                # Navigate to Keno and wait for the premium route shell to mount.
+                page.get_by_test_id('nav-keno').click(); page.get_by_test_id('keno-premium-hero').wait_for(timeout=5000)
+                # Select ten deterministic spots so paytable comparison has a stable row.
+                for spot in [3,8,12,17,24,31,44,55,63,72]: page.get_by_test_id(f'keno-num-{spot}').click()
+                # Store the spot-selection board box for stability assertions.
+                keno_selection_box=page.get_by_test_id('keno-grid').bounding_box()
+                # Capture the approved spot-selection evidence state.
+                shot('keno_spot_selection.png')
+                # Start the draw through the same human action used in normal play.
+                page.get_by_test_id('keno-draw').click()
+                # Wait until the animated draw rail shows a partial reveal.
+                page.wait_for_function("""() => { const count = document.querySelectorAll('[data-testid="keno-drawn-ball"]').length; return count >= 8 && count < 20; }""", timeout=3000)
+                # Store the draw-progress board box for stability assertions.
+                keno_progress_box=page.get_by_test_id('keno-grid').bounding_box()
+                # Capture the approved draw-progress evidence state.
+                shot('keno_draw_progress.png')
+                # Wait for the full Keno draw and comparison drawer to finish rendering.
+                page.wait_for_function("""() => document.querySelectorAll('[data-testid="keno-drawn-ball"]').length === 20""", timeout=5000); page.get_by_test_id('keno-paytable-comparison').wait_for(timeout=5000)
+                # Store the final-result board box for stability assertions.
+                keno_result_box=page.get_by_test_id('keno-grid').bounding_box()
+                # Capture the approved result and paytable-comparison evidence state.
+                shot('keno_result_paytable_comparison.png')
+                # Define the premium_keno function used by this module.
+                def premium_keno():
+                    # Verify the stable 1-80 board remains mounted.
+                    assert page.get_by_test_id('keno-grid').is_visible()
+                    # Verify every Keno number still exposes a unique test id.
+                    assert page.locator('[data-testid^="keno-num-"]').count()==80
+                    # Verify the selected spot state remains visible.
+                    assert page.locator('.keno-num.selected').count()>=10
+                    # Verify the completed draw shows all 20 drawn balls.
+                    assert page.locator('[data-testid="keno-drawn-ball"]').count()==20
+                    # Verify the paytable comparison and active row are visible.
+                    assert page.get_by_test_id('keno-paytable-comparison').is_visible(); assert page.get_by_test_id('keno-paytable-active').is_visible()
+                    # Verify ticket, bot, autoplay, and history surfaces remain mounted.
+                    assert page.get_by_test_id('keno-ticket-drawer').is_visible(); assert page.get_by_test_id('keno-bot-panel').is_visible(); assert page.get_by_test_id('autoplay-keno').is_visible(); assert page.get_by_test_id('keno-history').is_visible()
+                    # Verify the board width remains stable from selection to draw progress.
+                    assert abs(keno_selection_box['width']-keno_progress_box['width'])<2
+                    # Verify the board height remains stable from selection to final result.
+                    assert abs(keno_selection_box['height']-keno_result_box['height'])<2
                 # Execute this statement as part of the module's documented control flow.
-                page.get_by_test_id('nav-keno').click(); page.get_by_test_id('keno-num-1').click(); page.get_by_test_id('keno-num-2').click(); page.get_by_test_id('keno-num-3').click(); page.get_by_test_id('keno-draw').click(); page.wait_for_timeout(1500); run_case('BR-KENO-001',['KENO-020','KENO-021'],lambda: page.get_by_test_id('keno-grid').is_visible())
+                run_case('BR-KENO-001',['KENO-009','KENO-010','KENO-011','KENO-012','KENO-013','KENO-014','KENO-015','KENO-018','KENO-020','KENO-021','KENO-022','AUTO-012','UX-007','UX-009'],premium_keno)
                 # Execute this statement as part of the module's documented control flow.
                 page.get_by_test_id('nav-bingo').click(); page.get_by_test_id('bingo-buy').click(); page.get_by_test_id('bingo-call').click(); page.wait_for_timeout(700); run_case('BR-BINGO-001',['BINGO-030','BINGO-031'],lambda: page.get_by_test_id('bingo-card').is_visible())
                 # Execute this statement as part of the module's documented control flow.
