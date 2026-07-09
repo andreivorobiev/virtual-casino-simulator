@@ -4,7 +4,7 @@ Application: 9.1.1
 
 ## Modules
 
-- application: 9.1.1
+- application: 9.1.2
 - core: 9.1.0
 - ledger: 9.0.1
 - players: 9.0.1
@@ -18,8 +18,8 @@ Application: 9.1.1
 - baccarat: 9.0.1
 - keno: 9.0.1
 - bingo: 9.0.1
-- tests: 1.1.1
-- docs: 1.1.2
+- tests: 1.1.2
+- docs: 1.1.3
 - contracts: 1.0.0
 - tooling: 1.0.1
 - commenting_policy: 1.0.0
@@ -289,7 +289,7 @@ Application: 9.1.1
 - **TEST-013** (Testing) - PASS: Browser tests capture console errors.
 - **TEST-014** (Testing) - PASS: Browser tests capture page errors.
 - **TEST-015** (Testing) - PASS: Browser tests save screenshots on failure.
-- **TEST-016** (Testing) - PASS: Browser tests validate lobby load.
+- **TEST-016** (Testing) - PASS: Browser tests validate premium shell and lobby load.
 - **TEST-017** (Testing) - PASS: Browser tests validate roulette wheel/table/chips/spin.
 - **TEST-018** (Testing) - PASS: Browser tests validate slots spin UI.
 - **TEST-019** (Testing) - PASS: Browser tests validate Keno number selectors.
@@ -366,6 +366,9 @@ Application: 9.1.1
 - **UX-004** (UX) - PASS: Long history, stats, paytables, and logs use internal scroll areas.
 - **UX-005** (UX) - PASS: Autoplay status changes do not resize the main game stage.
 - **UX-006** (UX) - PASS: Animations prefer transform/opacity and avoid layout-changing motion.
+- **UX-007** (UX) - PASS: The shared casino shell uses the approved premium visual system with persistent navigation, wallet, and fake-money status cues.
+- **UX-008** (UX) - PASS: The lobby presents all current games as premium visual cards with route actions and capability tags.
+- **UX-009** (UX) - PASS: The shared shell and lobby remain usable on narrow viewports without page-level horizontal overflow.
 - **TEST-025** (Tests) - PASS: Browser tests use stable data-testid selectors for autoplay and admin controls.
 - **TEST-026** (Tests) - PASS: Browser tests verify Roulette autoplay stop behavior.
 - **TEST-027** (Tests) - PASS: API tests verify bot controller endpoints.
