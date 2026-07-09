@@ -29,6 +29,23 @@ export async function api(path, options = {}) {
 export const post = (path, body = {}) => api(path, { method: 'POST', body });
 // Export this symbol so other modules can use it through the public module boundary.
 export const del = (path, body = {}) => api(path, { method: 'DELETE', body });
+// Export this symbol so game modules can resolve the active player without hardcoded human state.
+export function currentPlayerId() {
+  // Return the authenticated shell player when the login shell has exposed one.
+  return window.CasinoCurrentUser?.player_id || window.CasinoCurrentPlayer?.player_id || localStorage.getItem('casino.currentPlayerId') || 'human';
+}
+// Export this symbol so v1 GET endpoints can receive the current player as an additive query value.
+export function currentPlayerPath(path) {
+  // Store separator so paths with existing query strings remain valid.
+  const separator = path.includes('?') ? '&' : '?';
+  // Return the path with a current-player query parameter.
+  return `${path}${separator}player_id=${encodeURIComponent(currentPlayerId())}`;
+}
+// Export this symbol so action payloads use the current player while preserving explicit overrides.
+export function withCurrentPlayer(body = {}) {
+  // Return a payload that defaults to the active player without replacing caller-supplied ids.
+  return { player_id: currentPlayerId(), ...body };
+}
 // Export this symbol so other modules can use it through the public module boundary.
 export async function logClient(event, details = {}) {
   // Start protected logic so failures can be handled safely.

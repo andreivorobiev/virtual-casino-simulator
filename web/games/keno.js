@@ -1,6 +1,6 @@
 // AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
 // Import required dependency so this module can use the frozen Keno API contract.
-import { api, post, del } from '../core/api.js';
+import { api, post, del, currentPlayerId, currentPlayerPath, withCurrentPlayer } from '../core/api.js';
 // Import required dependency so this module can reuse shared premium formatting and feedback helpers.
 import { toast, refreshBalance, safe, renderShellMetric } from '../core/ui.js';
 // Import required dependency so Keno autoplay stays inside the shared control plane.
@@ -94,10 +94,10 @@ function sortedNumbers(values) {
   return [...(values || [])].map(Number).sort((a, b) => a - b);
 }
 
-// Define currentHumanTickets to read open human tickets from the latest Keno state.
+// Define currentHumanTickets to read open current-player tickets from the latest Keno state.
 function currentHumanTickets() {
-  // Return only human tickets so bot tickets stay isolated in bot result surfaces.
-  return (state?.open_tickets || []).filter(ticket => ticket.player_id === 'human');
+  // Return only active-player tickets so bot tickets stay isolated in bot result surfaces.
+  return (state?.open_tickets || []).filter(ticket => ticket.player_id === currentPlayerId());
 }
 
 // Define latestStoredDraw to read the most recent persisted draw from state history.
@@ -108,10 +108,10 @@ function latestStoredDraw() {
   return draws.length ? draws[draws.length - 1] : null;
 }
 
-// Define humanResults to find every human result on the currently focused draw.
+// Define humanResults to find every current-player result on the currently focused draw.
 function humanResults() {
-  // Return only human settlements from the draw payload.
-  return (lastDraw?.results || []).filter(result => result.ticket?.player_id === 'human');
+  // Return only active-player settlements from the draw payload.
+  return (lastDraw?.results || []).filter(result => result.ticket?.player_id === currentPlayerId());
 }
 
 // Define primaryHumanResult to select the result that drives summary and paytable comparison.
@@ -123,7 +123,7 @@ function primaryHumanResult() {
 // Define botResults to find non-human results on the currently focused draw.
 function botResults() {
   // Return bot settlements so the details drawer can remain separate from the human ticket.
-  return (lastDraw?.results || []).filter(result => result.ticket?.player_id !== 'human');
+  return (lastDraw?.results || []).filter(result => result.ticket?.player_id !== currentPlayerId());
 }
 
 // Define activeDrawNumbers to expose only numbers that should currently be visible.
@@ -223,7 +223,7 @@ function syncSelectionFromState() {
   // Branch when an open ticket should control the visible ticket spots.
   if (ticket) selected = new Set(sortedNumbers(ticket.spots));
   // Store the newest persisted human result when no open ticket exists.
-  const result = !ticket ? (latestStoredDraw()?.results || []).find(item => item.ticket?.player_id === 'human') : null;
+  const result = !ticket ? (latestStoredDraw()?.results || []).find(item => item.ticket?.player_id === currentPlayerId()) : null;
   // Branch when recent history can restore the last played human ticket.
   if (!ticket && result?.ticket?.spots) selected = new Set(sortedNumbers(result.ticket.spots));
 }
@@ -248,7 +248,7 @@ async function load() {
   // Ensure the Keno domain is loaded even if i18n was already initialized by another route.
   await loadI18nDomain(KENO_DOMAIN);
   // Load current Keno state through the frozen v1 endpoint.
-  const data = await api('/api/v1/games/keno/state');
+  const data = await api(currentPlayerPath('/api/v1/games/keno/state'));
   // Apply the API payload to local render state.
   applyKenoPayload(data);
   // Store the latest draw so history and result reloads have an immediate focus.
@@ -279,7 +279,7 @@ async function buyTicket({ renderAfter = true } = {}) {
   // Start protected ticket purchase so API validation errors become toasts.
   try {
     // Purchase a ticket with the selected spots and human fake-money amount.
-    const data = await post('/api/v1/games/keno/tickets', { player_id: 'human', amount, spots: selectedNumbers() });
+    const data = await post('/api/v1/games/keno/tickets', withCurrentPlayer({ amount, spots: selectedNumbers() }));
     // Apply the returned Keno state and paytable.
     applyKenoPayload(data);
     // Clear focused draw data when the user is preparing a fresh ticket.
@@ -310,7 +310,7 @@ async function clearTicket(ticketId) {
   // Start protected ticket clearing so missing-ticket errors become toasts.
   try {
     // Request the documented pre-draw ticket refund for the human player.
-    const data = await del(`/api/v1/games/keno/tickets/${ticketId}`, { player_id: 'human' });
+    const data = await del(`/api/v1/games/keno/tickets/${ticketId}`, withCurrentPlayer());
     // Apply the returned Keno state and paytable.
     applyKenoPayload(data);
     // Render the updated ticket drawer and controls.
@@ -348,7 +348,7 @@ async function draw(show = true) {
     // Store bot ticket actions for the reserved bot panel.
     lastBotActions = botRound.actions || [];
     // Run the documented Keno draw endpoint without changing payload shape.
-    const data = await post('/api/v1/games/keno/draw', {});
+    const data = await post('/api/v1/games/keno/draw', withCurrentPlayer());
     // Apply final state and paytable from the draw response.
     applyKenoPayload(data);
     // Store the draw payload for result and drawer surfaces.
@@ -380,7 +380,7 @@ async function draw(show = true) {
     // Refresh the shared wallet after Keno settlements.
     await refreshBalance();
     // Store the primary human result for the optional voice announcement.
-    const human = data.settlements.find(settlement => settlement.result.ticket.player_id === 'human');
+    const human = data.settlements.find(settlement => settlement.result.ticket.player_id === currentPlayerId());
     // Speak the completed Keno catch count only for visible human draws.
     if (show) speak(tx('voice.caught', { count: human?.result.catch_count || 0 }), 'keno');
   // Handle draw errors without losing the route.
@@ -737,7 +737,7 @@ function historyHtml() {
   // Store rendered history rows.
   const rows = draws.map(drawItem => {
     // Store the human result for this historical draw.
-    const result = (drawItem.results || []).find(item => item.ticket?.player_id === 'human');
+    const result = (drawItem.results || []).find(item => item.ticket?.player_id === currentPlayerId());
     // Store the row summary text.
     const summary = result ? tx('history.row', { catches: result.catch_count, spots: result.ticket.spots.length, payout: moneyText(result.payout) }) : tx('history.noHuman');
     // Return one history row with a safe round id and summary.
