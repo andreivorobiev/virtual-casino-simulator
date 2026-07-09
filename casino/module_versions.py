@@ -38,7 +38,7 @@ MODULE_REVISIONS = {
     # Execute this statement as part of the module's documented control flow.
     "admin": "1.1.0",
     # Execute this statement as part of the module's documented control flow.
-    "tests": "1.2.0",
+    "tests": "1.3.1",
     # Execute this statement as part of the module's documented control flow.
     "docs": "1.1.4",
     # Execute this statement as part of the module's documented control flow.
