@@ -20,7 +20,7 @@ MODULE_REVISIONS = {
     # Execute this statement as part of the module's documented control flow.
     "autoplay_controller": "1.1.0",
     # Execute this statement as part of the module's documented control flow.
-    "audio_voice": "9.1.0",
+    "audio_voice": "9.1.1",
     # Execute this statement as part of the module's documented control flow.
     "logging": "9.1.0",
     # Execute this statement as part of the module's documented control flow.
@@ -38,13 +38,13 @@ MODULE_REVISIONS = {
     # Execute this statement as part of the module's documented control flow.
     "admin": "1.1.0",
     # Execute this statement as part of the module's documented control flow.
-    "tests": "1.1.1",
+    "tests": "1.3.1",
     # Execute this statement as part of the module's documented control flow.
-    "docs": "1.1.1",
+    "docs": "1.1.4",
     # Execute this statement as part of the module's documented control flow.
     "contracts": "1.0.0",
     # Execute this statement as part of the module's documented control flow.
-    "tooling": "1.0.0",
+    "tooling": "1.1.0",
     # Execute this statement as part of the module's documented control flow.
     "commenting_policy": "1.0.0",
 }

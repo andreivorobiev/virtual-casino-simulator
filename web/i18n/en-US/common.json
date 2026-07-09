@@ -1,0 +1,11 @@
+{
+  "actions.applyNow": "Apply now",
+  "actions.backToCasino": "Back to Casino",
+  "actions.previewLobby": "Preview lobby",
+  "actions.refresh": "Refresh",
+  "actions.reset": "Reset",
+  "actions.save": "Save",
+  "money.balance": "Balance: {amount}",
+  "status.loading": "Loading...",
+  "status.off": "Off"
+}

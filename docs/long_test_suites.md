@@ -1,0 +1,68 @@
+# Long Casino Test Suites
+
+The long-suite runner lives at `tests/long_suites.py` and is intended for deployment-style validation, not quick local smoke checks.
+
+## Suite Profiles
+
+| Suite | Logical scenario tests | Minimum requirement touches | Default Baccarat audio repeats |
+| --- | ---: | ---: | ---: |
+| `100` | 100 | 10 | 10 |
+| `300` | 300 | 20 | 20 |
+| `500` | 500 | 30 | 30 |
+
+Every scenario plays all six games: Roulette, Slots, Blackjack, Baccarat, Keno, and Bingo. The runner also touches Admin audio settings, autoplay start/stop, and the requirements registry so the JSON report can prove requirement touch counts.
+
+## Deployment-Style Run
+
+Use a disposable environment when you want the run to behave like a deployment:
+
+```powershell
+$py = "C:\Users\andre\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe"
+& $py tests/long_suites.py --suite 100 --copy-deployment
+```
+
+By default, copied environments are created under `C:\Users\andre\Documents\Codex\casino-environments` and are deleted after the run. Add `--keep-env` only when debugging a failed environment.
+
+## Pull Request Build
+
+Suite `100` is wired into `.github/workflows/long-suite-100.yml` and runs on every pull request. Treat the `Long Suite 100 / long_suite_100` check as mandatory once repository branch protection is updated to require it.
+
+The workflow runs:
+
+```powershell
+python tests/long_suites.py --suite 100 --copy-deployment
+```
+
+This includes the browser audio verification path.
+
+## Parallel Shards
+
+Ten workers can split Suite 500 like this:
+
+```powershell
+$py = "C:\Users\andre\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe"
+& $py tests/long_suites.py --suite 500 --shard-count 10 --shard-index 0 --copy-deployment
+```
+
+Launch shard indexes `0` through `9` in separate workers. Sharding is deterministic: scenario `n` belongs to worker `n % shard_count`.
+
+Do not run parallel long suites against the same checkout. The runner creates a per-tree lock under `logs/test-runs/long_suite_runtime.lock` so accidental same-folder parallelism fails clearly instead of racing on `data/`. Use `--copy-deployment` for each worker to give every shard its own runtime data directory.
+
+## Manual 300/500 Soak
+
+`.github/workflows/long-suite-soak.yml` is a manual workflow. GitHub prompts for either Suite `300` or Suite `500`, then launches ten matrix shards with isolated disposable deployment copies. Shard `0` runs browser audio verification; shards `1` through `9` skip browser audio and focus on API/gameplay volume.
+
+## Audio Verification
+
+Browser audio verification is enabled by default. It instruments `speechSynthesis` and `AudioContext` in Playwright, then verifies:
+
+- voice events are observable without physical speakers;
+- sound-effect paths emit events;
+- repeated Baccarat deals produce matching voice starts and completions;
+- no `voice_cancel` event occurs during the repeated Baccarat run.
+
+Use `--skip-browser-audio` only for API-only stress runs where another worker is already covering `LONG-AUDIO-001`.
+
+## Reports
+
+Reports are written to `logs/test-runs/long_suite_<suite>_shard_<index>_of_<count>.json` unless `--json-report` is supplied. Reports include scenario evidence, per-game play counts, requirement count, minimum requirement touches, and audio event counts.

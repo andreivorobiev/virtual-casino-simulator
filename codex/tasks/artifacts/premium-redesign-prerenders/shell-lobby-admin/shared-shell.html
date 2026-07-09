@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Shared Premium Shell Prerender</title>
+  <link rel="stylesheet" href="premium-shell.css">
+</head>
+<body class="casino-page">
+  <!-- Shared shell topbar proposal with a game route selected. -->
+  <header class="casino-topbar">
+    <div class="brand-lockup">
+      <div class="brand-mark" aria-hidden="true">&#9824;</div>
+      <div class="brand-copy">
+        <strong>Virtual Casino Simulator</strong>
+        <span>Fake-money only</span>
+      </div>
+    </div>
+    <nav class="casino-nav" aria-label="Primary">
+      <button class="nav-item"><span aria-hidden="true">&#8962;</span>Lobby</button>
+      <button class="nav-item active">Roulette</button>
+      <button class="nav-item">Slots</button>
+      <button class="nav-item">Keno</button>
+      <button class="nav-item">Bingo</button>
+      <button class="nav-item">Blackjack</button>
+      <button class="nav-item">Baccarat</button>
+      <button class="nav-item admin">Admin</button>
+    </nav>
+    <div class="top-actions">
+      <div class="wallet-pill">
+        <span class="wallet-label">Human balance</span>
+        <strong class="wallet-amount">$5,030.00</strong>
+      </div>
+      <button class="icon-button" aria-label="Add fake money"><span class="coin-stack" aria-hidden="true"></span></button>
+      <button class="icon-button" aria-label="Player profile">&#9679;</button>
+    </div>
+  </header>
+
+  <!-- Shared shell layout proposal: left controls, fixed game stage, right details rail. -->
+  <main class="casino-main shell-main">
+    <aside class="glass-panel panel-pad">
+      <h2 class="panel-title">Round Controls <span class="gold">R-1042</span></h2>
+      <div class="rail-stack">
+        <div class="mini-stat"><span>Selected chip</span><strong>$25</strong></div>
+        <div class="mini-stat"><span>Current wager</span><strong>$175</strong></div>
+        <div class="mini-stat"><span>Zero rule</span><strong>La partage</strong></div>
+        <div class="mini-stat"><span>Wheel mode</span><strong>Single zero</strong></div>
+      </div>
+      <h2 class="panel-title" style="margin-top:22px">Autoplay</h2>
+      <div class="rail-stack">
+        <div class="mini-stat"><span>Status</span><strong>Ready</strong></div>
+        <div class="mini-stat"><span>Speed</span><strong>Medium</strong></div>
+        <div class="mini-stat"><span>Round limit</span><strong>25</strong></div>
+      </div>
+    </aside>
+
+    <section class="glass-panel game-stage-mock">
+      <div class="stage-header">
+        <div>
+          <h1>Roulette</h1>
+          <p>Stable table stage with fixed result and action regions.</p>
+        </div>
+        <div class="wallet-pill">
+          <span class="wallet-label">Reserved result</span>
+          <strong class="wallet-amount">No spin yet</strong>
+        </div>
+      </div>
+      <div class="stage-board" aria-label="Game stage placeholder"></div>
+      <div class="action-dock">
+        <div class="result-slot">Result messages stay in this fixed-height area so action changes do not shift the table.</div>
+        <button class="control-button">Clear bets</button>
+        <button class="control-button">Repeat</button>
+        <button class="control-button primary">Spin</button>
+      </div>
+    </section>
+
+    <aside class="glass-panel panel-pad">
+      <h2 class="panel-title">Status Rail <span class="gold">&#128200;</span></h2>
+      <div class="rail-stack">
+        <div class="mini-stat"><span>Human</span><strong>$5,030.00</strong></div>
+        <div class="mini-stat"><span>Bot Ava</span><strong>$4,860.00</strong></div>
+        <div class="mini-stat"><span>Bot Noa</span><strong>$5,220.00</strong></div>
+      </div>
+      <h2 class="panel-title" style="margin-top:22px">Recent Ledger</h2>
+      <div class="ledger-list">
+        <div class="ledger-row"><span><strong>Roulette</strong><br>bet debit</span><span class="gold">-$25</span></div>
+        <div class="ledger-row"><span><strong>Slots</strong><br>spin payout</span><span class="gold">+$120</span></div>
+        <div class="ledger-row"><span><strong>Baccarat</strong><br>banker win</span><span class="gold">+$95</span></div>
+        <div class="ledger-row"><span><strong>Keno</strong><br>ticket purchase</span><span class="gold">-$10</span></div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- Shared shell bottom status rail proposal. -->
+  <footer class="status-bar">
+    <span class="status-item"><span class="gold">&#128737;</span>Fake-money local session</span>
+    <span class="status-item"><span class="gold">&#9878;</span>Ledger service online</span>
+    <span class="status-item"><span class="gold">&#9654;</span>No autoplay running</span>
+    <span class="status-item"><span class="status-dot"></span>Connected</span>
+  </footer>
+</body>
+</html>

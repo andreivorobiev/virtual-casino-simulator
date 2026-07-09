@@ -1,0 +1,1273 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Static source mockup for premium table-game prerenders. -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Premium Table Game Prerenders</title>
+    <link rel="stylesheet" href="./table-game-prerenders.css">
+  </head>
+  <body>
+    <!-- Roulette state: betting setup. -->
+    <article class="shot game-roulette" id="roulette-betting-setup" aria-label="Roulette betting setup prerender">
+      <header class="topbar">
+        <div class="brand-lockup">
+          <div class="brand-mark">VC</div>
+          <div>
+            <strong>Virtual Casino Simulator</strong>
+            <span>Fake-money only</span>
+          </div>
+        </div>
+        <nav class="main-nav" aria-label="Games">
+          <span>Lobby</span>
+          <strong>Roulette</strong>
+          <span>Slots</span>
+          <span>Keno</span>
+          <span>Bingo</span>
+          <span>Blackjack</span>
+          <span>Baccarat</span>
+          <span>Admin</span>
+        </nav>
+        <div class="wallet-cluster">
+          <div class="balance">Balance: $5,030.00</div>
+          <div class="coin-button">CHIP</div>
+          <div class="avatar">P1</div>
+        </div>
+      </header>
+      <main class="surface">
+        <section class="game-heading">
+          <div>
+            <p>Table game proposal</p>
+            <h1>Roulette</h1>
+          </div>
+          <div class="status-ribbon">
+            <span>Single-zero table</span>
+            <span>La partage ready</span>
+            <span>Last 1000 stats reserved</span>
+            <span>Ledger debits on bet</span>
+          </div>
+        </section>
+        <section class="game-grid roulette-grid">
+          <aside class="rail">
+            <h2>Controls</h2>
+            <div class="field-pair">
+              <label>Wheel <b>Single 0</b></label>
+              <label>Zero rule <b>Normal</b></label>
+            </div>
+            <h3>Chip stack</h3>
+            <div class="chips">
+              <span class="chip chip-1">$1</span>
+              <span class="chip chip-5 active">$5</span>
+              <span class="chip chip-25">$25</span>
+              <span class="chip chip-100">$100</span>
+            </div>
+            <h3>Fast bets</h3>
+            <div class="segmented">
+              <span>Red</span>
+              <span>Black</span>
+              <span>Odd</span>
+              <span>Even</span>
+              <span>1-18</span>
+              <span>19-36</span>
+            </div>
+            <h3>Racetrack</h3>
+            <div class="mini-list">
+              <span>Voisins du Zero</span>
+              <span>Tiers du Cylindre</span>
+              <span>Orphelins</span>
+              <span>Snake</span>
+            </div>
+            <div class="control-plane">
+              <b>Autoplay</b>
+              <span>Template ready after first spin</span>
+              <div class="meter"><i style="width: 28%"></i></div>
+            </div>
+            <div class="control-plane bot-plane">
+              <b>Bots</b>
+              <span>3 controllers idle</span>
+            </div>
+          </aside>
+          <section class="stage roulette-stage">
+            <div class="stage-toolbar">
+              <div>
+                <span class="eyebrow">Round ROU-731</span>
+                <h2>Place bets</h2>
+              </div>
+              <button class="primary-action">Spin</button>
+            </div>
+            <div class="roulette-table-wrap">
+              <div class="wheel-panel">
+                <div class="premium-wheel">
+                  <span class="pocket green-pocket">0</span>
+                  <span class="pocket red-pocket p1">32</span>
+                  <span class="pocket black-pocket p2">15</span>
+                  <span class="pocket red-pocket p3">19</span>
+                  <span class="pocket black-pocket p4">4</span>
+                  <span class="pocket red-pocket p5">21</span>
+                  <span class="wheel-ball parked"></span>
+                  <span class="wheel-hub"></span>
+                </div>
+                <div class="fixed-result quiet">No spin yet. Betting debits are visible immediately.</div>
+              </div>
+              <div class="roulette-layout">
+                <div class="zero-cell">0</div>
+                <div class="number-grid">
+                  <span class="red-cell">3</span><span class="black-cell">6</span><span class="red-cell">9</span>
+                  <span class="black-cell">12</span><span class="red-cell">15</span><span class="black-cell">18</span>
+                  <span class="red-cell">21</span><span class="black-cell">24</span><span class="red-cell">27</span>
+                  <span class="black-cell">30</span><span class="red-cell chip-target">33<i class="table-chip">$25</i></span><span class="black-cell">36</span>
+                  <span class="black-cell">2</span><span class="red-cell">5</span><span class="black-cell">8</span>
+                  <span class="red-cell">11</span><span class="black-cell">14</span><span class="red-cell">17</span>
+                  <span class="black-cell">20</span><span class="red-cell">23</span><span class="black-cell">26</span>
+                  <span class="red-cell">29</span><span class="black-cell">32</span><span class="red-cell">35</span>
+                  <span class="red-cell">1</span><span class="black-cell">4</span><span class="red-cell">7</span>
+                  <span class="black-cell">10</span><span class="red-cell chip-target">13<i class="table-chip">$5</i></span><span class="black-cell">16</span>
+                  <span class="red-cell">19</span><span class="black-cell">22</span><span class="red-cell">25</span>
+                  <span class="black-cell">28</span><span class="red-cell">31</span><span class="black-cell">34</span>
+                </div>
+                <div class="outside-grid">
+                  <span>1st 12</span><span>2nd 12</span><span>3rd 12</span>
+                  <span>1 to 18</span><span>Even</span><span class="red-bet">Red<i class="table-chip small">$10</i></span><span class="black-bet">Black</span><span>Odd</span><span>19 to 36</span>
+                </div>
+              </div>
+            </div>
+          </section>
+          <aside class="drawer">
+            <h2>Bet slip</h2>
+            <div class="metric-row"><span>Open total</span><b>$40.00</b></div>
+            <div class="slip-list">
+              <div><span>Straight 13</span><b>$5</b></div>
+              <div><span>Straight 33</span><b>$25</b></div>
+              <div><span>Red outside</span><b>$10</b></div>
+            </div>
+            <h3>Scoreboard</h3>
+            <div class="score-row"><span>Human</span><b>$5,030</b></div>
+            <div class="score-row"><span>Bot-Ada</span><b>$4,880</b></div>
+            <div class="score-row"><span>Bot-Linus</span><b>$5,105</b></div>
+            <h3>Stats rail</h3>
+            <div class="spark-bars">
+              <i style="height: 34%"></i><i style="height: 76%"></i><i style="height: 51%"></i><i style="height: 68%"></i><i style="height: 42%"></i><i style="height: 88%"></i><i style="height: 57%"></i><i style="height: 35%"></i>
+            </div>
+            <div class="history-pills">
+              <span>7</span><span>20</span><span>1</span><span>33</span><span>0</span><span>24</span><span>13</span><span>31</span><span>18</span>
+            </div>
+          </aside>
+        </section>
+      </main>
+    </article>
+
+    <!-- Roulette state: spinning and reveal. -->
+    <article class="shot game-roulette" id="roulette-spinning-reveal" aria-label="Roulette spinning reveal prerender">
+      <header class="topbar">
+        <div class="brand-lockup">
+          <div class="brand-mark">VC</div>
+          <div>
+            <strong>Virtual Casino Simulator</strong>
+            <span>Fake-money only</span>
+          </div>
+        </div>
+        <nav class="main-nav" aria-label="Games">
+          <span>Lobby</span>
+          <strong>Roulette</strong>
+          <span>Slots</span>
+          <span>Keno</span>
+          <span>Bingo</span>
+          <span>Blackjack</span>
+          <span>Baccarat</span>
+          <span>Admin</span>
+        </nav>
+        <div class="wallet-cluster">
+          <div class="balance">Balance: $4,990.00</div>
+          <div class="coin-button">CHIP</div>
+          <div class="avatar">P1</div>
+        </div>
+      </header>
+      <main class="surface">
+        <section class="game-heading">
+          <div>
+            <p>Table game proposal</p>
+            <h1>Roulette</h1>
+          </div>
+          <div class="status-ribbon">
+            <span>Spin in progress</span>
+            <span>Result panel reserved</span>
+            <span>Action rail locked</span>
+            <span>Bot wagers included</span>
+          </div>
+        </section>
+        <section class="game-grid roulette-grid">
+          <aside class="rail locked">
+            <h2>Controls</h2>
+            <div class="field-pair">
+              <label>Wheel <b>Single 0</b></label>
+              <label>Zero rule <b>Normal</b></label>
+            </div>
+            <h3>Chip stack</h3>
+            <div class="chips">
+              <span class="chip chip-1">$1</span>
+              <span class="chip chip-5 active">$5</span>
+              <span class="chip chip-25">$25</span>
+              <span class="chip chip-100">$100</span>
+            </div>
+            <h3>Round status</h3>
+            <div class="progress-card">
+              <b>Wheel spinning</b>
+              <span>Settlement waits for animation lock-in</span>
+              <div class="meter"><i style="width: 74%"></i></div>
+            </div>
+            <div class="control-plane">
+              <b>Autoplay</b>
+              <span>Running: repeat saved bet template</span>
+              <div class="meter"><i style="width: 56%"></i></div>
+            </div>
+            <div class="control-plane bot-plane">
+              <b>Bots</b>
+              <span>2 of 3 committed this round</span>
+            </div>
+          </aside>
+          <section class="stage roulette-stage">
+            <div class="stage-toolbar">
+              <div>
+                <span class="eyebrow">Round ROU-732</span>
+                <h2>Spinning</h2>
+              </div>
+              <button class="primary-action disabled">Resolving</button>
+            </div>
+            <div class="roulette-table-wrap">
+              <div class="wheel-panel reveal-glow">
+                <div class="premium-wheel spinning">
+                  <span class="pocket green-pocket">0</span>
+                  <span class="pocket red-pocket p1">32</span>
+                  <span class="pocket black-pocket p2">15</span>
+                  <span class="pocket red-pocket p3">19</span>
+                  <span class="pocket black-pocket p4">4</span>
+                  <span class="pocket red-pocket p5">21</span>
+                  <span class="wheel-ball orbit"></span>
+                  <span class="wheel-hub"></span>
+                  <span class="motion-arc"></span>
+                </div>
+                <div class="fixed-result quiet">Ball entering reveal arc. Result remains hidden.</div>
+              </div>
+              <div class="roulette-layout table-dimmed">
+                <div class="zero-cell">0</div>
+                <div class="number-grid">
+                  <span class="red-cell">3</span><span class="black-cell">6</span><span class="red-cell">9</span>
+                  <span class="black-cell">12</span><span class="red-cell">15</span><span class="black-cell">18</span>
+                  <span class="red-cell">21</span><span class="black-cell">24</span><span class="red-cell">27</span>
+                  <span class="black-cell">30</span><span class="red-cell chip-target">33<i class="table-chip">$25</i></span><span class="black-cell">36</span>
+                  <span class="black-cell">2</span><span class="red-cell">5</span><span class="black-cell">8</span>
+                  <span class="red-cell">11</span><span class="black-cell">14</span><span class="red-cell reveal-cell">17</span>
+                  <span class="black-cell">20</span><span class="red-cell">23</span><span class="black-cell">26</span>
+                  <span class="red-cell">29</span><span class="black-cell">32</span><span class="red-cell">35</span>
+                  <span class="red-cell">1</span><span class="black-cell">4</span><span class="red-cell">7</span>
+                  <span class="black-cell">10</span><span class="red-cell chip-target">13<i class="table-chip">$5</i></span><span class="black-cell">16</span>
+                  <span class="red-cell">19</span><span class="black-cell">22</span><span class="red-cell">25</span>
+                  <span class="black-cell">28</span><span class="red-cell">31</span><span class="black-cell">34</span>
+                </div>
+                <div class="outside-grid">
+                  <span>1st 12</span><span>2nd 12</span><span>3rd 12</span>
+                  <span>1 to 18</span><span>Even</span><span class="red-bet">Red<i class="table-chip small">$10</i></span><span class="black-bet">Black</span><span>Odd</span><span>19 to 36</span>
+                </div>
+              </div>
+            </div>
+          </section>
+          <aside class="drawer">
+            <h2>Bet slip</h2>
+            <div class="metric-row"><span>Locked total</span><b>$40.00</b></div>
+            <div class="slip-list locked">
+              <div><span>Straight 13</span><b>$5</b></div>
+              <div><span>Straight 33</span><b>$25</b></div>
+              <div><span>Red outside</span><b>$10</b></div>
+            </div>
+            <h3>Stable result region</h3>
+            <div class="settlement-card pending">
+              <b>Waiting for pocket</b>
+              <span>No layout resize while animation runs</span>
+            </div>
+            <h3>Stats rail</h3>
+            <div class="spark-bars">
+              <i style="height: 34%"></i><i style="height: 76%"></i><i style="height: 51%"></i><i style="height: 68%"></i><i style="height: 42%"></i><i style="height: 88%"></i><i style="height: 57%"></i><i style="height: 35%"></i>
+            </div>
+            <div class="history-pills">
+              <span>7</span><span>20</span><span>1</span><span>33</span><span>0</span><span>24</span><span>13</span><span>31</span><span>18</span>
+            </div>
+          </aside>
+        </section>
+      </main>
+    </article>
+
+    <!-- Roulette state: settled result. -->
+    <article class="shot game-roulette" id="roulette-settled-result" aria-label="Roulette settled result prerender">
+      <header class="topbar">
+        <div class="brand-lockup">
+          <div class="brand-mark">VC</div>
+          <div>
+            <strong>Virtual Casino Simulator</strong>
+            <span>Fake-money only</span>
+          </div>
+        </div>
+        <nav class="main-nav" aria-label="Games">
+          <span>Lobby</span>
+          <strong>Roulette</strong>
+          <span>Slots</span>
+          <span>Keno</span>
+          <span>Bingo</span>
+          <span>Blackjack</span>
+          <span>Baccarat</span>
+          <span>Admin</span>
+        </nav>
+        <div class="wallet-cluster">
+          <div class="balance">Balance: $5,340.00</div>
+          <div class="coin-button">CHIP</div>
+          <div class="avatar">P1</div>
+        </div>
+      </header>
+      <main class="surface">
+        <section class="game-heading">
+          <div>
+            <p>Table game proposal</p>
+            <h1>Roulette</h1>
+          </div>
+          <div class="status-ribbon">
+            <span>Result locked</span>
+            <span>Bet slip collapsed in place</span>
+            <span>Stats updated</span>
+            <span>Voice announce queued</span>
+          </div>
+        </section>
+        <section class="game-grid roulette-grid">
+          <aside class="rail">
+            <h2>Controls</h2>
+            <div class="field-pair">
+              <label>Wheel <b>Single 0</b></label>
+              <label>Zero rule <b>Normal</b></label>
+            </div>
+            <h3>Chip stack</h3>
+            <div class="chips">
+              <span class="chip chip-1">$1</span>
+              <span class="chip chip-5 active">$5</span>
+              <span class="chip chip-25">$25</span>
+              <span class="chip chip-100">$100</span>
+            </div>
+            <h3>Next action</h3>
+            <div class="segmented">
+              <span>Rebet</span>
+              <span>Clear</span>
+              <span>Spin</span>
+              <span>Save template</span>
+            </div>
+            <div class="control-plane">
+              <b>Autoplay</b>
+              <span>Next round in 04s</span>
+              <div class="meter"><i style="width: 82%"></i></div>
+            </div>
+            <div class="control-plane bot-plane">
+              <b>Bots</b>
+              <span>Bot-Ada won $90 on split 14/17</span>
+            </div>
+          </aside>
+          <section class="stage roulette-stage">
+            <div class="stage-toolbar">
+              <div>
+                <span class="eyebrow">Round ROU-732</span>
+                <h2>Settled</h2>
+              </div>
+              <button class="primary-action">Rebet</button>
+            </div>
+            <div class="roulette-table-wrap">
+              <div class="wheel-panel result-glow">
+                <div class="premium-wheel settled">
+                  <span class="pocket green-pocket">0</span>
+                  <span class="pocket red-pocket p1">32</span>
+                  <span class="pocket black-pocket p2">15</span>
+                  <span class="pocket red-pocket p3">19</span>
+                  <span class="pocket black-pocket p4">4</span>
+                  <span class="pocket red-pocket p5">21</span>
+                  <span class="wheel-ball result-ball"></span>
+                  <span class="wheel-hub"></span>
+                </div>
+                <div class="fixed-result win">Rolled <b>17 black</b>. Straight 13 lost. Red lost. No fake zero fallback.</div>
+              </div>
+              <div class="roulette-layout">
+                <div class="zero-cell">0</div>
+                <div class="number-grid">
+                  <span class="red-cell">3</span><span class="black-cell">6</span><span class="red-cell">9</span>
+                  <span class="black-cell">12</span><span class="red-cell">15</span><span class="black-cell">18</span>
+                  <span class="red-cell">21</span><span class="black-cell">24</span><span class="red-cell">27</span>
+                  <span class="black-cell">30</span><span class="red-cell">33</span><span class="black-cell">36</span>
+                  <span class="black-cell">2</span><span class="red-cell">5</span><span class="black-cell">8</span>
+                  <span class="red-cell">11</span><span class="black-cell">14</span><span class="red-cell reveal-cell result-cell">17<i class="result-marker">WIN</i></span>
+                  <span class="black-cell">20</span><span class="red-cell">23</span><span class="black-cell">26</span>
+                  <span class="red-cell">29</span><span class="black-cell">32</span><span class="red-cell">35</span>
+                  <span class="red-cell">1</span><span class="black-cell">4</span><span class="red-cell">7</span>
+                  <span class="black-cell">10</span><span class="red-cell">13</span><span class="black-cell">16</span>
+                  <span class="red-cell">19</span><span class="black-cell">22</span><span class="red-cell">25</span>
+                  <span class="black-cell">28</span><span class="red-cell">31</span><span class="black-cell">34</span>
+                </div>
+                <div class="outside-grid">
+                  <span>1st 12</span><span>2nd 12</span><span>3rd 12</span>
+                  <span>1 to 18</span><span>Even</span><span class="red-bet faded">Red</span><span class="black-bet result-cell">Black</span><span>Odd</span><span>19 to 36</span>
+                </div>
+              </div>
+            </div>
+          </section>
+          <aside class="drawer">
+            <h2>Settlement</h2>
+            <div class="metric-row win"><span>Human net</span><b>-$40.00</b></div>
+            <div class="slip-list">
+              <div><span>Straight 13</span><b>Lost</b></div>
+              <div><span>Straight 33</span><b>Lost</b></div>
+              <div><span>Red outside</span><b>Lost</b></div>
+            </div>
+            <h3>Scoreboard</h3>
+            <div class="score-row"><span>Human</span><b>$5,340</b></div>
+            <div class="score-row"><span>Bot-Ada</span><b>$4,970</b></div>
+            <div class="score-row"><span>Bot-Linus</span><b>$5,105</b></div>
+            <h3>Stats rail</h3>
+            <div class="spark-bars">
+              <i style="height: 34%"></i><i style="height: 76%"></i><i style="height: 51%"></i><i style="height: 68%"></i><i style="height: 42%"></i><i style="height: 96%"></i><i style="height: 57%"></i><i style="height: 35%"></i>
+            </div>
+            <div class="history-pills">
+              <span>20</span><span>1</span><span>33</span><span>0</span><span>24</span><span>13</span><span>31</span><span>18</span><strong>17</strong>
+            </div>
+          </aside>
+        </section>
+      </main>
+    </article>
+
+    <!-- Blackjack state: initial deal. -->
+    <article class="shot game-blackjack" id="blackjack-initial-deal" aria-label="Blackjack initial deal prerender">
+      <header class="topbar">
+        <div class="brand-lockup">
+          <div class="brand-mark">VC</div>
+          <div>
+            <strong>Virtual Casino Simulator</strong>
+            <span>Fake-money only</span>
+          </div>
+        </div>
+        <nav class="main-nav" aria-label="Games">
+          <span>Lobby</span>
+          <span>Roulette</span>
+          <span>Slots</span>
+          <span>Keno</span>
+          <span>Bingo</span>
+          <strong>Blackjack</strong>
+          <span>Baccarat</span>
+          <span>Admin</span>
+        </nav>
+        <div class="wallet-cluster">
+          <div class="balance">Balance: $5,030.00</div>
+          <div class="coin-button">CHIP</div>
+          <div class="avatar">P1</div>
+        </div>
+      </header>
+      <main class="surface">
+        <section class="game-heading">
+          <div>
+            <p>Table game proposal</p>
+            <h1>Blackjack</h1>
+          </div>
+          <div class="status-ribbon">
+            <span>Dealer hole card hidden</span>
+            <span>Premium action rail</span>
+            <span>Shoe count visible</span>
+            <span>Autoplay disabled by rule</span>
+          </div>
+        </section>
+        <section class="game-grid blackjack-grid">
+          <aside class="rail">
+            <h2>Bet and rules</h2>
+            <div class="amount-input"><span>Bet</span><b>$25</b></div>
+            <button class="primary-action wide">Deal</button>
+            <h3>Actions</h3>
+            <div class="action-matrix">
+              <span class="enabled">Hit</span>
+              <span class="enabled">Stand</span>
+              <span class="enabled">Double</span>
+              <span class="disabled">Split</span>
+              <span class="enabled">Surrender</span>
+              <span class="disabled">Insurance</span>
+            </div>
+            <h3>Table rules</h3>
+            <div class="mini-list">
+              <span>6 decks</span>
+              <span>Blackjack pays 3:2</span>
+              <span>Double after split on</span>
+              <span>Late surrender on</span>
+            </div>
+            <div class="control-plane muted-plane">
+              <b>Autoplay</b>
+              <span>Disabled until a blackjack strategy controller exists</span>
+            </div>
+          </aside>
+          <section class="stage blackjack-stage">
+            <div class="stage-toolbar">
+              <div>
+                <span class="eyebrow">Round BJ-184</span>
+                <h2>Initial deal</h2>
+              </div>
+              <button class="secondary-action">Rules locked</button>
+            </div>
+            <div class="blackjack-felt">
+              <div class="dealer-zone">
+                <div class="zone-title"><span>Dealer</span><b>Shows 10</b></div>
+                <div class="card-row">
+                  <div class="card black-card"><span>K</span><small>&spades;</small></div>
+                  <div class="card card-back"><span>VC</span></div>
+                </div>
+              </div>
+              <div class="table-logo">BLACKJACK<br><span>PAYS 3 TO 2</span></div>
+              <div class="hand-lane active-hand">
+                <div class="zone-title"><span>Human - Hand 1</span><b>17 soft</b></div>
+                <div class="card-row">
+                  <div class="card red-card"><span>A</span><small>&hearts;</small></div>
+                  <div class="card black-card"><span>6</span><small>&clubs;</small></div>
+                </div>
+                <div class="wager-chip">$25</div>
+              </div>
+            </div>
+          </section>
+          <aside class="drawer">
+            <h2>Round drawer</h2>
+            <div class="metric-row"><span>Status</span><b>Player turn</b></div>
+            <div class="metric-row"><span>Shoe</span><b>286 cards</b></div>
+            <div class="metric-row"><span>Active hand</span><b>1 of 1</b></div>
+            <h3>Decision hint</h3>
+            <div class="settlement-card pending">
+              <b>Soft 17</b>
+              <span>Hit, stand, double, or surrender remain in the same reserved action rail.</span>
+            </div>
+            <h3>Recent rounds</h3>
+            <div class="history-lines">
+              <span>BJ-183 - Push</span>
+              <span>BJ-182 - Dealer bust</span>
+              <span>BJ-181 - Surrender</span>
+            </div>
+          </aside>
+        </section>
+      </main>
+    </article>
+
+    <!-- Blackjack state: active decision. -->
+    <article class="shot game-blackjack" id="blackjack-active-decision" aria-label="Blackjack active decision prerender">
+      <header class="topbar">
+        <div class="brand-lockup">
+          <div class="brand-mark">VC</div>
+          <div>
+            <strong>Virtual Casino Simulator</strong>
+            <span>Fake-money only</span>
+          </div>
+        </div>
+        <nav class="main-nav" aria-label="Games">
+          <span>Lobby</span>
+          <span>Roulette</span>
+          <span>Slots</span>
+          <span>Keno</span>
+          <span>Bingo</span>
+          <strong>Blackjack</strong>
+          <span>Baccarat</span>
+          <span>Admin</span>
+        </nav>
+        <div class="wallet-cluster">
+          <div class="balance">Balance: $5,005.00</div>
+          <div class="coin-button">CHIP</div>
+          <div class="avatar">P1</div>
+        </div>
+      </header>
+      <main class="surface">
+        <section class="game-heading">
+          <div>
+            <p>Table game proposal</p>
+            <h1>Blackjack</h1>
+          </div>
+          <div class="status-ribbon">
+            <span>Dealer ace</span>
+            <span>Insurance available</span>
+            <span>Late surrender legal</span>
+            <span>Controls do not reflow</span>
+          </div>
+        </section>
+        <section class="game-grid blackjack-grid">
+          <aside class="rail">
+            <h2>Bet and rules</h2>
+            <div class="amount-input"><span>Bet</span><b>$50</b></div>
+            <button class="primary-action wide disabled">Deal locked</button>
+            <h3>Actions</h3>
+            <div class="action-matrix">
+              <span class="enabled selected">Hit</span>
+              <span class="enabled">Stand</span>
+              <span class="enabled">Double</span>
+              <span class="disabled">Split</span>
+              <span class="enabled">Surrender</span>
+              <span class="enabled accent">Insurance</span>
+            </div>
+            <h3>Insurance</h3>
+            <div class="progress-card">
+              <b>Max $25</b>
+              <span>Available only against dealer Ace</span>
+            </div>
+            <div class="control-plane muted-plane">
+              <b>Autoplay</b>
+              <span>Manual only for blackjack per AUTO-014</span>
+            </div>
+          </aside>
+          <section class="stage blackjack-stage">
+            <div class="stage-toolbar">
+              <div>
+                <span class="eyebrow">Round BJ-185</span>
+                <h2>Active decision</h2>
+              </div>
+              <button class="secondary-action">Active hand highlighted</button>
+            </div>
+            <div class="blackjack-felt decision-state">
+              <div class="dealer-zone">
+                <div class="zone-title"><span>Dealer</span><b>Shows Ace</b></div>
+                <div class="card-row">
+                  <div class="card red-card"><span>A</span><small>&diams;</small></div>
+                  <div class="card card-back"><span>VC</span></div>
+                </div>
+              </div>
+              <div class="table-logo">INSURANCE<br><span>AVAILABLE</span></div>
+              <div class="hand-lane active-hand">
+                <div class="zone-title"><span>Human - Hand 1</span><b>11 hard</b></div>
+                <div class="card-row">
+                  <div class="card black-card"><span>8</span><small>&clubs;</small></div>
+                  <div class="card red-card"><span>3</span><small>&hearts;</small></div>
+                </div>
+                <div class="wager-chip">$50</div>
+              </div>
+            </div>
+          </section>
+          <aside class="drawer">
+            <h2>Round drawer</h2>
+            <div class="metric-row"><span>Status</span><b>Player turn</b></div>
+            <div class="metric-row"><span>Insurance</span><b>Open</b></div>
+            <div class="metric-row"><span>Shoe</span><b>281 cards</b></div>
+            <h3>Decision stack</h3>
+            <div class="slip-list">
+              <div><span>Recommended flow</span><b>Double</b></div>
+              <div><span>Insurance</span><b>Optional</b></div>
+              <div><span>Surrender</span><b>Legal</b></div>
+            </div>
+            <h3>Ledger preview</h3>
+            <div class="settlement-card pending">
+              <b>Double would debit $50</b>
+              <span>Insurance would debit up to $25 separately.</span>
+            </div>
+          </aside>
+        </section>
+      </main>
+    </article>
+
+    <!-- Blackjack state: split and multi-hand layout. -->
+    <article class="shot game-blackjack" id="blackjack-split-multi-hand" aria-label="Blackjack split multi-hand prerender">
+      <header class="topbar">
+        <div class="brand-lockup">
+          <div class="brand-mark">VC</div>
+          <div>
+            <strong>Virtual Casino Simulator</strong>
+            <span>Fake-money only</span>
+          </div>
+        </div>
+        <nav class="main-nav" aria-label="Games">
+          <span>Lobby</span>
+          <span>Roulette</span>
+          <span>Slots</span>
+          <span>Keno</span>
+          <span>Bingo</span>
+          <strong>Blackjack</strong>
+          <span>Baccarat</span>
+          <span>Admin</span>
+        </nav>
+        <div class="wallet-cluster">
+          <div class="balance">Balance: $4,950.00</div>
+          <div class="coin-button">CHIP</div>
+          <div class="avatar">P1</div>
+        </div>
+      </header>
+      <main class="surface">
+        <section class="game-heading">
+          <div>
+            <p>Table game proposal</p>
+            <h1>Blackjack</h1>
+          </div>
+          <div class="status-ribbon">
+            <span>Split layout</span>
+            <span>Two hand lanes reserved</span>
+            <span>Double after split visible</span>
+            <span>Ledger tracks added wager</span>
+          </div>
+        </section>
+        <section class="game-grid blackjack-grid">
+          <aside class="rail">
+            <h2>Bet and rules</h2>
+            <div class="amount-input"><span>Original bet</span><b>$50</b></div>
+            <div class="amount-input"><span>Split debit</span><b>$50</b></div>
+            <h3>Actions</h3>
+            <div class="action-matrix">
+              <span class="enabled">Hit</span>
+              <span class="enabled selected">Stand</span>
+              <span class="enabled">Double</span>
+              <span class="disabled">Split</span>
+              <span class="disabled">Surrender</span>
+              <span class="disabled">Insurance</span>
+            </div>
+            <h3>Hand queue</h3>
+            <div class="mini-list">
+              <span>Hand 1 stood on 19</span>
+              <span>Hand 2 active on 12</span>
+              <span>Dealer resolves after queue</span>
+            </div>
+            <div class="control-plane muted-plane">
+              <b>Autoplay</b>
+              <span>Disabled: split decisions require human control</span>
+            </div>
+          </aside>
+          <section class="stage blackjack-stage">
+            <div class="stage-toolbar">
+              <div>
+                <span class="eyebrow">Round BJ-186</span>
+                <h2>Split hands</h2>
+              </div>
+              <button class="secondary-action">Hand 2 active</button>
+            </div>
+            <div class="blackjack-felt split-state">
+              <div class="dealer-zone">
+                <div class="zone-title"><span>Dealer</span><b>Shows 6</b></div>
+                <div class="card-row">
+                  <div class="card black-card"><span>6</span><small>&spades;</small></div>
+                  <div class="card card-back"><span>VC</span></div>
+                </div>
+              </div>
+              <div class="split-hands">
+                <div class="hand-lane resolved-hand">
+                  <div class="zone-title"><span>Hand 1</span><b>19 stood</b></div>
+                  <div class="card-row">
+                    <div class="card red-card"><span>8</span><small>&hearts;</small></div>
+                    <div class="card black-card"><span>A</span><small>&clubs;</small></div>
+                  </div>
+                  <div class="wager-chip">$50</div>
+                </div>
+                <div class="hand-lane active-hand">
+                  <div class="zone-title"><span>Hand 2</span><b>12 active</b></div>
+                  <div class="card-row">
+                    <div class="card black-card"><span>8</span><small>&spades;</small></div>
+                    <div class="card red-card"><span>4</span><small>&diams;</small></div>
+                  </div>
+                  <div class="wager-chip">$50</div>
+                </div>
+              </div>
+            </div>
+          </section>
+          <aside class="drawer">
+            <h2>Round drawer</h2>
+            <div class="metric-row"><span>Status</span><b>Player turn</b></div>
+            <div class="metric-row"><span>Hands</span><b>2 of 4 max</b></div>
+            <div class="metric-row"><span>Total wager</span><b>$100</b></div>
+            <h3>Queue</h3>
+            <div class="history-lines">
+              <span>Split accepted - extra debit posted</span>
+              <span>Hand 1 drew Ace and stood</span>
+              <span>Hand 2 awaiting action</span>
+            </div>
+            <h3>Stability note</h3>
+            <div class="settlement-card pending">
+              <b>Reserved multi-hand grid</b>
+              <span>Additional hands occupy fixed lanes instead of pushing controls.</span>
+            </div>
+          </aside>
+        </section>
+      </main>
+    </article>
+
+    <!-- Blackjack state: settled result. -->
+    <article class="shot game-blackjack" id="blackjack-settled-result" aria-label="Blackjack settled result prerender">
+      <header class="topbar">
+        <div class="brand-lockup">
+          <div class="brand-mark">VC</div>
+          <div>
+            <strong>Virtual Casino Simulator</strong>
+            <span>Fake-money only</span>
+          </div>
+        </div>
+        <nav class="main-nav" aria-label="Games">
+          <span>Lobby</span>
+          <span>Roulette</span>
+          <span>Slots</span>
+          <span>Keno</span>
+          <span>Bingo</span>
+          <strong>Blackjack</strong>
+          <span>Baccarat</span>
+          <span>Admin</span>
+        </nav>
+        <div class="wallet-cluster">
+          <div class="balance">Balance: $5,150.00</div>
+          <div class="coin-button">CHIP</div>
+          <div class="avatar">P1</div>
+        </div>
+      </header>
+      <main class="surface">
+        <section class="game-heading">
+          <div>
+            <p>Table game proposal</p>
+            <h1>Blackjack</h1>
+          </div>
+          <div class="status-ribbon">
+            <span>Dealer resolved</span>
+            <span>Hand outcomes pinned</span>
+            <span>History row written</span>
+            <span>New deal ready</span>
+          </div>
+        </section>
+        <section class="game-grid blackjack-grid">
+          <aside class="rail">
+            <h2>Bet and rules</h2>
+            <div class="amount-input"><span>Next bet</span><b>$50</b></div>
+            <button class="primary-action wide">Deal next hand</button>
+            <h3>Actions</h3>
+            <div class="action-matrix">
+              <span class="disabled">Hit</span>
+              <span class="disabled">Stand</span>
+              <span class="disabled">Double</span>
+              <span class="disabled">Split</span>
+              <span class="disabled">Surrender</span>
+              <span class="disabled">Insurance</span>
+            </div>
+            <h3>Table rules</h3>
+            <div class="mini-list">
+              <span>Dealer stands soft 17</span>
+              <span>Blackjack pays 3:2</span>
+              <span>Late surrender on</span>
+            </div>
+            <div class="control-plane muted-plane">
+              <b>Autoplay</b>
+              <span>Still disabled after settlement</span>
+            </div>
+          </aside>
+          <section class="stage blackjack-stage">
+            <div class="stage-toolbar">
+              <div>
+                <span class="eyebrow">Round BJ-187</span>
+                <h2>Settled</h2>
+              </div>
+              <button class="secondary-action">Net +$100</button>
+            </div>
+            <div class="blackjack-felt settled-state">
+              <div class="dealer-zone">
+                <div class="zone-title"><span>Dealer</span><b>22 bust</b></div>
+                <div class="card-row">
+                  <div class="card black-card"><span>6</span><small>&spades;</small></div>
+                  <div class="card red-card"><span>10</span><small>&hearts;</small></div>
+                  <div class="card black-card"><span>6</span><small>&clubs;</small></div>
+                </div>
+              </div>
+              <div class="split-hands">
+                <div class="hand-lane won-hand">
+                  <div class="zone-title"><span>Hand 1</span><b>Win +$50</b></div>
+                  <div class="card-row">
+                    <div class="card red-card"><span>8</span><small>&hearts;</small></div>
+                    <div class="card black-card"><span>A</span><small>&clubs;</small></div>
+                  </div>
+                  <div class="wager-chip win-chip">$100</div>
+                </div>
+                <div class="hand-lane won-hand">
+                  <div class="zone-title"><span>Hand 2</span><b>Win +$50</b></div>
+                  <div class="card-row">
+                    <div class="card black-card"><span>8</span><small>&spades;</small></div>
+                    <div class="card red-card"><span>4</span><small>&diams;</small></div>
+                    <div class="card black-card"><span>9</span><small>&clubs;</small></div>
+                  </div>
+                  <div class="wager-chip win-chip">$100</div>
+                </div>
+              </div>
+            </div>
+          </section>
+          <aside class="drawer">
+            <h2>Settlement</h2>
+            <div class="metric-row win"><span>Net</span><b>+$100.00</b></div>
+            <div class="slip-list">
+              <div><span>Hand 1 vs bust</span><b>Win</b></div>
+              <div><span>Hand 2 vs bust</span><b>Win</b></div>
+              <div><span>History</span><b>Written</b></div>
+            </div>
+            <h3>Shoe</h3>
+            <div class="spark-bars shoe-bars">
+              <i style="height: 87%"></i><i style="height: 81%"></i><i style="height: 78%"></i><i style="height: 75%"></i><i style="height: 70%"></i>
+            </div>
+            <h3>Recent rounds</h3>
+            <div class="history-lines">
+              <span>BJ-187 - Split win</span>
+              <span>BJ-186 - Push</span>
+              <span>BJ-185 - Insurance lost</span>
+            </div>
+          </aside>
+        </section>
+      </main>
+    </article>
+
+    <!-- Baccarat state: wager setup. -->
+    <article class="shot game-baccarat" id="baccarat-wager-setup" aria-label="Baccarat wager setup prerender">
+      <header class="topbar">
+        <div class="brand-lockup">
+          <div class="brand-mark">VC</div>
+          <div>
+            <strong>Virtual Casino Simulator</strong>
+            <span>Fake-money only</span>
+          </div>
+        </div>
+        <nav class="main-nav" aria-label="Games">
+          <span>Lobby</span>
+          <span>Roulette</span>
+          <span>Slots</span>
+          <span>Keno</span>
+          <span>Bingo</span>
+          <span>Blackjack</span>
+          <strong>Baccarat</strong>
+          <span>Admin</span>
+        </nav>
+        <div class="wallet-cluster">
+          <div class="balance">Balance: $5,030.00</div>
+          <div class="coin-button">CHIP</div>
+          <div class="avatar">P1</div>
+        </div>
+      </header>
+      <main class="surface">
+        <section class="game-heading">
+          <div>
+            <p>Table game proposal</p>
+            <h1>Baccarat</h1>
+          </div>
+          <div class="status-ribbon">
+            <span>Punto Banco</span>
+            <span>Standing wagers</span>
+            <span>Burn info visible</span>
+            <span>Road reserved</span>
+          </div>
+        </section>
+        <section class="game-grid baccarat-grid">
+          <aside class="rail">
+            <h2>Wager controls</h2>
+            <div class="chips">
+              <span class="chip chip-5 active">$5</span>
+              <span class="chip chip-25">$25</span>
+              <span class="chip chip-100">$100</span>
+              <span class="chip chip-500">$500</span>
+            </div>
+            <h3>Bet zones</h3>
+            <div class="action-matrix baccarat-actions">
+              <span class="enabled selected">Player</span>
+              <span class="enabled">Banker</span>
+              <span class="enabled">Tie</span>
+            </div>
+            <button class="primary-action wide">Deal</button>
+            <div class="control-plane">
+              <b>Autoplay</b>
+              <span>Repeat selected standing wager: Banker</span>
+              <div class="meter"><i style="width: 42%"></i></div>
+            </div>
+            <div class="control-plane bot-plane">
+              <b>Bots</b>
+              <span>Bot controllers can place strategy bets</span>
+            </div>
+          </aside>
+          <section class="stage baccarat-stage">
+            <div class="stage-toolbar">
+              <div>
+                <span class="eyebrow">Coup BAC-309</span>
+                <h2>Place wagers</h2>
+              </div>
+              <button class="secondary-action">8-deck shoe</button>
+            </div>
+            <div class="baccarat-felt">
+              <div class="baccarat-hands">
+                <div class="baccarat-hand player-hand">
+                  <div class="zone-title"><span>Player</span><b>Total pending</b></div>
+                  <div class="card-row placeholder-row">
+                    <div class="card ghost-card"></div>
+                    <div class="card ghost-card"></div>
+                    <div class="card ghost-card"></div>
+                  </div>
+                </div>
+                <div class="baccarat-hand banker-hand">
+                  <div class="zone-title"><span>Banker</span><b>Total pending</b></div>
+                  <div class="card-row placeholder-row">
+                    <div class="card ghost-card"></div>
+                    <div class="card ghost-card"></div>
+                    <div class="card ghost-card"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="baccarat-bet-layout">
+                <div class="bet-zone player-zone">Player 1:1<i class="table-chip">$25</i></div>
+                <div class="bet-zone tie-zone">Tie 8:1</div>
+                <div class="bet-zone banker-zone">Banker 0.95:1<i class="table-chip small">$5</i></div>
+              </div>
+            </div>
+          </section>
+          <aside class="drawer">
+            <h2>Open bets</h2>
+            <div class="metric-row"><span>Total</span><b>$30.00</b></div>
+            <div class="slip-list">
+              <div><span>Player</span><b>$25</b></div>
+              <div><span>Banker</span><b>$5</b></div>
+            </div>
+            <h3>Shoe</h3>
+            <div class="metric-row"><span>Shoe ID</span><b>BAC-S8-12</b></div>
+            <div class="metric-row"><span>Burn</span><b>7 clubs</b></div>
+            <div class="metric-row"><span>Remaining</span><b>407 cards</b></div>
+            <h3>Road</h3>
+            <div class="road-grid empty-road">
+              <span></span><span></span><span></span><span></span><span></span><span></span>
+              <span></span><span></span><span></span><span></span><span></span><span></span>
+              <span></span><span></span><span></span><span></span><span></span><span></span>
+            </div>
+          </aside>
+        </section>
+      </main>
+    </article>
+
+    <!-- Baccarat state: card reveal. -->
+    <article class="shot game-baccarat" id="baccarat-card-reveal" aria-label="Baccarat card reveal prerender">
+      <header class="topbar">
+        <div class="brand-lockup">
+          <div class="brand-mark">VC</div>
+          <div>
+            <strong>Virtual Casino Simulator</strong>
+            <span>Fake-money only</span>
+          </div>
+        </div>
+        <nav class="main-nav" aria-label="Games">
+          <span>Lobby</span>
+          <span>Roulette</span>
+          <span>Slots</span>
+          <span>Keno</span>
+          <span>Bingo</span>
+          <span>Blackjack</span>
+          <strong>Baccarat</strong>
+          <span>Admin</span>
+        </nav>
+        <div class="wallet-cluster">
+          <div class="balance">Balance: $5,000.00</div>
+          <div class="coin-button">CHIP</div>
+          <div class="avatar">P1</div>
+        </div>
+      </header>
+      <main class="surface">
+        <section class="game-heading">
+          <div>
+            <p>Table game proposal</p>
+            <h1>Baccarat</h1>
+          </div>
+          <div class="status-ribbon">
+            <span>Cards revealing</span>
+            <span>Natural check</span>
+            <span>Tableau pending</span>
+            <span>Road unchanged until result</span>
+          </div>
+        </section>
+        <section class="game-grid baccarat-grid">
+          <aside class="rail locked">
+            <h2>Wager controls</h2>
+            <div class="chips">
+              <span class="chip chip-5 active">$5</span>
+              <span class="chip chip-25">$25</span>
+              <span class="chip chip-100">$100</span>
+              <span class="chip chip-500">$500</span>
+            </div>
+            <h3>Round status</h3>
+            <div class="progress-card">
+              <b>Revealing cards</b>
+              <span>Player second card is sliding into place</span>
+              <div class="meter"><i style="width: 62%"></i></div>
+            </div>
+            <button class="primary-action wide disabled">Deal locked</button>
+            <div class="control-plane">
+              <b>Autoplay</b>
+              <span>Running: next tick waits for settlement</span>
+              <div class="meter"><i style="width: 65%"></i></div>
+            </div>
+            <div class="control-plane bot-plane">
+              <b>Bots</b>
+              <span>Bot-Mika wagered Banker $20</span>
+            </div>
+          </aside>
+          <section class="stage baccarat-stage">
+            <div class="stage-toolbar">
+              <div>
+                <span class="eyebrow">Coup BAC-310</span>
+                <h2>Reveal</h2>
+              </div>
+              <button class="secondary-action">Draw tableau pending</button>
+            </div>
+            <div class="baccarat-felt reveal-state">
+              <div class="baccarat-hands">
+                <div class="baccarat-hand player-hand active-reveal">
+                  <div class="zone-title"><span>Player</span><b>Total 6</b></div>
+                  <div class="card-row">
+                    <div class="card red-card"><span>4</span><small>&hearts;</small></div>
+                    <div class="card peel-card"><span>2</span><small>&diams;</small></div>
+                    <div class="card ghost-card"></div>
+                  </div>
+                </div>
+                <div class="baccarat-hand banker-hand">
+                  <div class="zone-title"><span>Banker</span><b>Total 5</b></div>
+                  <div class="card-row">
+                    <div class="card black-card"><span>K</span><small>&clubs;</small></div>
+                    <div class="card red-card"><span>5</span><small>&hearts;</small></div>
+                    <div class="card ghost-card"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="baccarat-bet-layout">
+                <div class="bet-zone player-zone">Player 1:1<i class="table-chip">$25</i></div>
+                <div class="bet-zone tie-zone">Tie 8:1</div>
+                <div class="bet-zone banker-zone">Banker 0.95:1<i class="table-chip small">$5</i></div>
+              </div>
+            </div>
+          </section>
+          <aside class="drawer">
+            <h2>Open bets</h2>
+            <div class="metric-row"><span>Locked total</span><b>$30.00</b></div>
+            <div class="slip-list locked">
+              <div><span>Player</span><b>$25</b></div>
+              <div><span>Banker</span><b>$5</b></div>
+            </div>
+            <h3>Reveal log</h3>
+            <div class="history-lines">
+              <span>Player 4 hearts</span>
+              <span>Banker K clubs</span>
+              <span>Player 2 diamonds</span>
+              <span>Banker 5 hearts</span>
+            </div>
+            <h3>Road</h3>
+            <div class="road-grid">
+              <span class="road-b">B</span><span class="road-p">P</span><span class="road-b">B</span><span class="road-t">T</span><span class="road-p">P</span><span></span>
+              <span class="road-b">B</span><span class="road-b">B</span><span class="road-p">P</span><span></span><span></span><span></span>
+              <span class="road-p">P</span><span class="road-b">B</span><span></span><span></span><span></span><span></span>
+            </div>
+          </aside>
+        </section>
+      </main>
+    </article>
+
+    <!-- Baccarat state: result and road history. -->
+    <article class="shot game-baccarat" id="baccarat-result-road-history" aria-label="Baccarat result and road history prerender">
+      <header class="topbar">
+        <div class="brand-lockup">
+          <div class="brand-mark">VC</div>
+          <div>
+            <strong>Virtual Casino Simulator</strong>
+            <span>Fake-money only</span>
+          </div>
+        </div>
+        <nav class="main-nav" aria-label="Games">
+          <span>Lobby</span>
+          <span>Roulette</span>
+          <span>Slots</span>
+          <span>Keno</span>
+          <span>Bingo</span>
+          <span>Blackjack</span>
+          <strong>Baccarat</strong>
+          <span>Admin</span>
+        </nav>
+        <div class="wallet-cluster">
+          <div class="balance">Balance: $5,025.00</div>
+          <div class="coin-button">CHIP</div>
+          <div class="avatar">P1</div>
+        </div>
+      </header>
+      <main class="surface">
+        <section class="game-heading">
+          <div>
+            <p>Table game proposal</p>
+            <h1>Baccarat</h1>
+          </div>
+          <div class="status-ribbon">
+            <span>Player wins</span>
+            <span>Settlement posted</span>
+            <span>Road history updated</span>
+            <span>Next coup ready</span>
+          </div>
+        </section>
+        <section class="game-grid baccarat-grid">
+          <aside class="rail">
+            <h2>Wager controls</h2>
+            <div class="chips">
+              <span class="chip chip-5 active">$5</span>
+              <span class="chip chip-25">$25</span>
+              <span class="chip chip-100">$100</span>
+              <span class="chip chip-500">$500</span>
+            </div>
+            <h3>Repeat wager</h3>
+            <div class="action-matrix baccarat-actions">
+              <span class="enabled selected">Player</span>
+              <span class="enabled">Banker</span>
+              <span class="enabled">Tie</span>
+            </div>
+            <button class="primary-action wide">Deal next coup</button>
+            <div class="control-plane">
+              <b>Autoplay</b>
+              <span>Next Banker template paused for review</span>
+              <div class="meter"><i style="width: 18%"></i></div>
+            </div>
+            <div class="control-plane bot-plane">
+              <b>Bots</b>
+              <span>Bot-Mika lost Banker $20</span>
+            </div>
+          </aside>
+          <section class="stage baccarat-stage">
+            <div class="stage-toolbar">
+              <div>
+                <span class="eyebrow">Coup BAC-310</span>
+                <h2>Player wins</h2>
+              </div>
+              <button class="secondary-action">Net +$20</button>
+            </div>
+            <div class="baccarat-felt settled-baccarat">
+              <div class="baccarat-hands">
+                <div class="baccarat-hand player-hand winning-hand">
+                  <div class="zone-title"><span>Player</span><b>Total 6</b></div>
+                  <div class="card-row">
+                    <div class="card red-card"><span>4</span><small>&hearts;</small></div>
+                    <div class="card red-card"><span>2</span><small>&diams;</small></div>
+                    <div class="card ghost-card"></div>
+                  </div>
+                </div>
+                <div class="baccarat-hand banker-hand">
+                  <div class="zone-title"><span>Banker</span><b>Total 5</b></div>
+                  <div class="card-row">
+                    <div class="card black-card"><span>K</span><small>&clubs;</small></div>
+                    <div class="card red-card"><span>5</span><small>&hearts;</small></div>
+                    <div class="card ghost-card"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="baccarat-bet-layout">
+                <div class="bet-zone player-zone winning-zone">Player pays 1:1<i class="table-chip">$50</i></div>
+                <div class="bet-zone tie-zone faded">Tie 8:1</div>
+                <div class="bet-zone banker-zone faded">Banker lost</div>
+              </div>
+            </div>
+          </section>
+          <aside class="drawer">
+            <h2>Settlement</h2>
+            <div class="metric-row win"><span>Human net</span><b>+$20.00</b></div>
+            <div class="slip-list">
+              <div><span>Player $25</span><b>Win $50</b></div>
+              <div><span>Banker $5</span><b>Lost</b></div>
+            </div>
+            <h3>Shoe</h3>
+            <div class="metric-row"><span>Remaining</span><b>403 cards</b></div>
+            <div class="metric-row"><span>Cut card</span><b>Safe</b></div>
+            <h3>Road</h3>
+            <div class="road-grid result-road">
+              <span class="road-b">B</span><span class="road-p">P</span><span class="road-b">B</span><span class="road-t">T</span><span class="road-p">P</span><strong class="road-p">P</strong>
+              <span class="road-b">B</span><span class="road-b">B</span><span class="road-p">P</span><span></span><span></span><span></span>
+              <span class="road-p">P</span><span class="road-b">B</span><span></span><span></span><span></span><span></span>
+            </div>
+          </aside>
+        </section>
+      </main>
+    </article>
+  </body>
+</html>
