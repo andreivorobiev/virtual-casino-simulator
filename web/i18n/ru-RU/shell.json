@@ -1,0 +1,21 @@
+{
+  "brand.subtitle": "Проверочный релиз v9 - только условные деньги",
+  "brand.title": "Virtual Casino Simulator",
+  "games.baccarat.description": "Колодная Punto Banco с burn/cut, ставками Player/Banker/Tie, ботами и историей дорог.",
+  "games.baccarat.label": "Баккара",
+  "games.bingo.description": "Американское бинго на 75 шаров с паттернами, картами ботов, историей вызовов и подсветкой выигрыша.",
+  "games.bingo.label": "Бинго",
+  "games.blackjack.description": "Hit, stand, double, split, surrender, insurance, even money и настройки правил стола.",
+  "games.blackjack.label": "Блэкджек",
+  "games.keno.description": "Выбор от 1 до 20 номеров, розыгрыш 20 чисел, таблица выплат, анимации и билеты ботов.",
+  "games.keno.label": "Кено",
+  "games.roulette.description": "Анимированное колесо, ставки фишками, внутренние и внешние поля, racetrack, боты, правила зеро и статистика последних 1000 спинов.",
+  "games.roulette.label": "Рулетка",
+  "games.slots.description": "Анимированный слот 5x3 с лентами барабанов, линиями, wild, scatter, free spins и условным прогрессивом.",
+  "games.slots.label": "Слоты",
+  "lobby.openGame": "Открыть {game}",
+  "nav.admin": "Админ",
+  "nav.lobby": "Лобби",
+  "toast.fakeMoneyAdded": "Условные деньги добавлены.",
+  "wallet.addFakeMoney": "Пополнить условный баланс"
+}

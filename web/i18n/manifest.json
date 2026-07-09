@@ -1,0 +1,59 @@
+{
+  "defaultLocale": "en-US",
+  "fallbackLocale": "en-US",
+  "aliases": {
+    "en": "en-US",
+    "ru": "ru-RU"
+  },
+  "locales": [
+    {
+      "id": "en-US",
+      "label": "English",
+      "nativeLabel": "English",
+      "dir": "ltr",
+      "uiReady": true,
+      "voiceReady": true
+    },
+    {
+      "id": "ru-RU",
+      "label": "Russian",
+      "nativeLabel": "Русский",
+      "dir": "ltr",
+      "uiReady": true,
+      "voiceReady": false
+    }
+  ],
+  "plannedLocales": [
+    "es-ES",
+    "zh-CN",
+    "hi-IN",
+    "ar-SA",
+    "pt-BR",
+    "bn-BD",
+    "fr-FR",
+    "de-DE",
+    "ja-JP",
+    "ko-KR",
+    "it-IT",
+    "tr-TR",
+    "vi-VN",
+    "pl-PL",
+    "nl-NL",
+    "sv-SE",
+    "th-TH",
+    "id-ID"
+  ],
+  "domains": [
+    "common",
+    "shell",
+    "admin",
+    "core/autoplay",
+    "core/bots",
+    "games/roulette",
+    "games/slots",
+    "games/keno",
+    "games/bingo",
+    "games/blackjack",
+    "games/baccarat"
+  ]
+}

@@ -339,14 +339,24 @@ def run_browser_audio_verification(client, repeats, report):
         page.get_by_test_id("nav-blackjack").click()  # Navigate to Blackjack.
         page.get_by_test_id("blackjack-deal").click()  # Deal Blackjack.
         page.wait_for_timeout(500)  # Wait for deal.
-        page.get_by_test_id("blackjack-stand").click()  # Trigger possible settlement voice.
+        blackjack_stand = page.get_by_test_id("blackjack-stand")  # Cache the Blackjack stand control.
+        if blackjack_stand.is_enabled():  # Stand only when the dealt hand still needs player action.
+            blackjack_stand.click()  # Trigger possible settlement voice.
         page.wait_for_timeout(900)  # Wait for settlement.
         page.get_by_test_id("nav-baccarat").click()  # Navigate to Baccarat.
         for _ in range(repeats):  # Repeated Baccarat deals catch speech cutoff regressions.
             page.get_by_test_id("baccarat-banker").click()  # Place banker bet.
             page.get_by_test_id("baccarat-deal").click()  # Deal coup and trigger voice.
             page.wait_for_timeout(350)  # Overlap speech while letting each deal action finish.
-        page.wait_for_timeout(1300)  # Let queued baccarat speech finish.
+        audio_deadline = time.time() + 15  # Allow slower CI browsers to finish queued speech events.
+        while time.time() < audio_deadline:  # Poll until the expected Baccarat completions are visible.
+            interim_events = page.evaluate("window.__casinoAudioEvents")  # Read the current probe log.
+            interim_starts = [event for event in interim_events if event.get("kind") == "voice_start" and event.get("gameId") == "baccarat"]  # Count observed starts.
+            interim_voice_ends = [event for event in interim_events if event.get("kind") == "voice_end" and event.get("gameId") == "baccarat"]  # Count app-level completions.
+            interim_speech_ends = [event for event in interim_events if event.get("kind") == "speech_end" and str(event.get("text", "")).startswith("Baccarat ")]  # Count stub completions.
+            if len(interim_starts) >= repeats and max(len(interim_voice_ends), len(interim_speech_ends)) >= repeats:  # Stop once all expected speech finished.
+                break  # Leave the poll loop after complete evidence is available.
+            page.wait_for_timeout(250)  # Let pending speech callbacks complete.
         events = page.evaluate("window.__casinoAudioEvents")  # Read the audio probe log.
         browser.close()  # Close Chromium before assertions.
     baccarat_starts = [event for event in events if event.get("kind") == "voice_start" and event.get("gameId") == "baccarat"]  # Count baccarat starts.

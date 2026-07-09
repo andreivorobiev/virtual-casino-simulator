@@ -1,9 +1,11 @@
 {
   "module": "slots",
-  "version": "9.0.1",
+  "version": "9.0.2",
   "paths": [
     "casino/games/slots/",
-    "web/games/slots.js"
+    "web/games/slots.js",
+    "web/i18n/en-US/games/slots.json",
+    "web/i18n/ru-RU/games/slots.json"
   ],
   "requirements_prefixes": [
     "SLOT",
