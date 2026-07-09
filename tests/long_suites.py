@@ -17,6 +17,8 @@ from pathlib import Path  # Handle Windows paths consistently.
 
 # Store ROOT so the script can locate the repository from any working directory.
 ROOT = Path(__file__).resolve().parents[1]
+# Store AUTH_SESSION_COOKIE so browser verification can use the backend session cookie name without importing app code.
+AUTH_SESSION_COOKIE = "casino_session"
 # Store GAME_IDS so every scenario can assert that every game was exercised.
 GAME_IDS = ("roulette", "slots", "blackjack", "baccarat", "keno", "bingo")
 # Store RED_NUMBERS so Roulette outside bets use the documented API payload shape.
@@ -37,11 +39,15 @@ class ApiClient:
     # Initialize the client with the base URL for one deployment server.
     def __init__(self, base_url):
         self.base_url = base_url.rstrip("/")  # Normalize URL joins.
+        self.session_token = None  # Store the active backend session token for protected API calls.
 
     # Call a JSON endpoint and return its standard data envelope.
-    def call(self, path, method="GET", body=None, ok=True):
+    def call(self, path, method="GET", body=None, ok=True, auth=True):
         data = None if body is None else json.dumps(body).encode("utf-8")  # Encode JSON request bodies.
-        req = urllib.request.Request(self.base_url + path, data=data, method=method, headers={"Content-Type": "application/json"})  # Build the request.
+        headers = {"Content-Type": "application/json"}  # Start with JSON headers for every API request.
+        if auth and self.session_token:  # Attach the bearer token when a protected call has a session.
+            headers["Authorization"] = f"Bearer {self.session_token}"  # Send backend session credentials.
+        req = urllib.request.Request(self.base_url + path, data=data, method=method, headers=headers)  # Build the request.
         try:
             with urllib.request.urlopen(req, timeout=20) as resp:  # Execute the request with a bounded wait.
                 payload = json.loads(resp.read().decode("utf-8"))  # Decode the standard response envelope.
@@ -52,6 +58,14 @@ class ApiClient:
         if not ok and payload.get("ok"):  # Enforce failure for negative calls.
             raise AssertionError({"expected_failure": True, "payload": payload})  # Fail if a negative check succeeds.
         return payload["data"] if payload.get("ok") else payload  # Return data or the raw error envelope.
+
+    # Login with the bootstrap admin and store a reusable session token.
+    def login_default_user(self):
+        email = os.environ.get("CASINO_BOOTSTRAP_ADMIN_EMAIL", "admin@example.local")  # Match backend bootstrap defaults.
+        password = os.environ.get("CASINO_BOOTSTRAP_ADMIN_PASSWORD", "admin-password")  # Match backend bootstrap defaults.
+        session = self.call("/api/v2/auth/login", "POST", {"email": email, "password": password}, auth=False)["session"]  # Login through the public auth endpoint.
+        self.session_token = session["token"]  # Store the token for later protected calls.
+        return self.session_token  # Return the token for browser cookie setup.
 
     # Fetch the current human balance as a float.
     def balance(self):
@@ -108,7 +122,7 @@ def start_server(repo_root):
     client = ApiClient(base)  # Build an API client for readiness checks.
     for _ in range(120):  # Poll readiness for up to twelve seconds.
         try:
-            client.call("/api/v1/casino/state")  # Probe the server state endpoint.
+            client.login_default_user()  # Probe readiness through the public login endpoint.
             return proc, client  # Return once the server is ready.
         except Exception:  # Retry transient startup failures until the server is ready.
             time.sleep(0.1)  # Give the server a moment to boot.
@@ -317,6 +331,7 @@ def run_browser_audio_verification(client, repeats, report):
     with sync_playwright() as playwright:  # Own the browser lifecycle for this verification.
         browser = playwright.chromium.launch(headless=True)  # Launch Chromium for actual UI audio paths.
         page = browser.new_page()  # Create an isolated page.
+        page.context.add_cookies([{"name": AUTH_SESSION_COOKIE, "value": client.session_token, "url": client.base_url, "httpOnly": True, "sameSite": "Lax"}])  # Enter the UI with a real backend session.
         page.add_init_script(init_script)  # Install probes before app scripts run.
         page.goto(client.base_url + "/", wait_until="networkidle")  # Load the app shell.
         page.get_by_test_id("nav-roulette").click()  # Navigate to Roulette.
@@ -419,6 +434,7 @@ def main():
         coverage = CoverageLedger(requirement_ids)  # Start coverage accounting.
         proc, client = start_server(repo_root)  # Launch the deployed app.
         client.call("/api/v1/casino/reset", "POST", {})  # Start the shard from clean data.
+        client.login_default_user()  # Restore the session invalidated by reset.
         for index in indices:  # Execute each scenario assigned to this shard.
             run_full_casino_scenario(client, index, coverage)  # Run one full-casino test.
         min_touches = coverage.min_requirement_touch_count()  # Compute actual requirement touch floor.
