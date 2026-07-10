@@ -1,4 +1,5 @@
 {
+  "nav.users": "Users",
   "autoplay.stopAll": "Stop all autoplay",
   "autoplay.subtitle": "Active and recent autoplay sessions.",
   "autoplay.title": "Autoplay",
@@ -25,8 +26,8 @@
   "language.localeSettings": "Locale Settings",
   "language.missingKeys": "Missing key count",
   "language.persistBrowser": "Persist language for this browser",
-  "language.previewBalance": "Balance preview: {amount}",
-  "language.previewPhrase": "Choose your table. All games use fake money only. Ledger-backed outcomes are visible in Admin.",
+  "language.previewBalance": "Token preview: {amount}",
+  "language.previewPhrase": "Choose your table. All games use play tokens only. Ledger-backed outcomes are visible in Admin.",
   "language.readyCount": "2 ready / 20 planned",
   "language.resolvedLocale": "Resolved locale",
   "language.resetBrowser": "Reset to browser default",
@@ -40,7 +41,7 @@
   "language.top20Title": "Top-20 Language Scalability",
   "language.uiReady": "UI ready",
   "language.useBrowser": "Use browser default",
-  "ledger.subtitle": "Money movement audit log.",
+  "ledger.subtitle": "Token movement audit log.",
   "ledger.title": "Ledger",
   "nav.audio": "Audio & Voice",
   "nav.autoplay": "Autoplay",
@@ -57,5 +58,10 @@
   "players.subtitle": "Bots are controllers for player accounts. Strategies are assigned here, not inside games.",
   "players.title": "Players & Bots",
   "system.subtitle": "Routes, modules, and raw overview.",
-  "system.title": "System"
+  "system.title": "System",
+  "users.createButton": "Create user",
+  "users.createTitle": "Create Beta User",
+  "users.subtitle": "Create beta users, inspect token state, manage terms status, and preserve per-account locale preferences.",
+  "users.tableTitle": "Managed Users",
+  "users.title": "Users"
 }

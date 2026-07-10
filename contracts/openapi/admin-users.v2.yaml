@@ -1,0 +1,310 @@
+openapi: 3.0.3
+info:
+  title: Virtual Casino admin user-management API
+  version: v2
+  description: Additive v2 contract skeleton for private beta user administration, terms status, locale, and token/player inspection.
+servers:
+  - url: /api/v2
+paths:
+  /admin/users:
+    get:
+      summary: List private beta users for Admin management.
+      operationId: admin_users_v2_list_users
+      security:
+        - cookieSession: []
+      responses:
+        '200':
+          description: Standard API envelope carrying user summaries.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserListEnvelope'
+    post:
+      summary: Create a private beta user and default bound player.
+      operationId: admin_users_v2_create_user
+      security:
+        - cookieSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '200':
+          description: Standard API envelope carrying the created user summary.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserEnvelope'
+  /admin/users/{user_id}:
+    get:
+      summary: Inspect one private beta user's account, terms, player, and state summary.
+      operationId: admin_users_v2_get_user
+      security:
+        - cookieSession: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: Standard API envelope carrying a user detail record.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDetailEnvelope'
+    patch:
+      summary: Update user active status, role assignments, display name, or locale.
+      operationId: admin_users_v2_update_user
+      security:
+        - cookieSession: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: Standard API envelope carrying the updated user summary.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserEnvelope'
+  /admin/users/{user_id}/password:
+    post:
+      summary: Reset a private beta user's password.
+      operationId: admin_users_v2_reset_password
+      security:
+        - cookieSession: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '200':
+          description: Standard API envelope confirming password reset.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserEnvelope'
+  /admin/users/{user_id}/terms:
+    patch:
+      summary: Inspect or update Admin-visible terms status metadata for a user.
+      operationId: admin_users_v2_update_terms
+      security:
+        - cookieSession: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminTermsRequest'
+      responses:
+        '200':
+          description: Standard API envelope carrying updated terms metadata.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TermsEnvelope'
+  /admin/users/{user_id}/state:
+    get:
+      summary: Inspect user-scoped player balance, ledger, and game-state summary without exposing other users.
+      operationId: admin_users_v2_get_user_state
+      security:
+        - cookieSession: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: Standard API envelope carrying user-scoped state summary.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserStateEnvelope'
+components:
+  securitySchemes:
+    cookieSession:
+      type: apiKey
+      in: cookie
+      name: casino_session
+  parameters:
+    UserId:
+      name: user_id
+      in: path
+      required: true
+      schema:
+        type: string
+  schemas:
+    CreateUserRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+          format: password
+        display_name:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+        locale:
+          type: string
+    UpdateUserRequest:
+      type: object
+      properties:
+        active:
+          type: boolean
+        display_name:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+        locale:
+          type: string
+    ResetPasswordRequest:
+      type: object
+      required: [password]
+      properties:
+        password:
+          type: string
+          format: password
+    AdminTermsRequest:
+      type: object
+      properties:
+        accepted:
+          type: boolean
+        terms_version:
+          type: string
+        note:
+          type: string
+    UserSummary:
+      type: object
+      required: [user_id, username, active, roles, terms_accepted]
+      properties:
+        user_id:
+          type: string
+        username:
+          type: string
+        display_name:
+          type: string
+        active:
+          type: boolean
+        roles:
+          type: array
+          items:
+            type: string
+        locale:
+          type: string
+        terms_accepted:
+          type: boolean
+        player_id:
+          type: string
+    UserDetail:
+      allOf:
+        - $ref: '#/components/schemas/UserSummary'
+        - type: object
+          properties:
+            created_at:
+              type: string
+              format: date-time
+            updated_at:
+              type: string
+              format: date-time
+            token_balance:
+              type: number
+            terms:
+              $ref: '#/components/schemas/TermsStatus'
+    TermsStatus:
+      type: object
+      required: [required_version, accepted]
+      properties:
+        required_version:
+          type: string
+        accepted:
+          type: boolean
+        accepted_version:
+          type: string
+          nullable: true
+        accepted_at:
+          type: string
+          format: date-time
+          nullable: true
+    UserStateSummary:
+      type: object
+      required: [user_id, player_id, token_balance, game_states]
+      properties:
+        user_id:
+          type: string
+        player_id:
+          type: string
+        token_balance:
+          type: number
+        recent_ledger_count:
+          type: integer
+        game_states:
+          type: object
+          additionalProperties:
+            type: object
+    UserListEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          required: [users]
+          properties:
+            users:
+              type: array
+              items:
+                $ref: '#/components/schemas/UserSummary'
+    UserEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/UserSummary'
+    UserDetailEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/UserDetail'
+    TermsEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/TermsStatus'
+    UserStateEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/UserStateSummary'

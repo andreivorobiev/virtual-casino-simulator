@@ -325,10 +325,10 @@ export function formatNumber(value, options = {}) {
   return new Intl.NumberFormat(formatLocale || activeLocale, options).format(Number(value || 0));
 }
 
-// Export formatMoney as the fake-money currency formatter for UI display only.
+// Export formatMoney as the play-token amount formatter for UI display only.
 export function formatMoney(value, options = {}) {
-  // Return a USD-formatted fake-money value without changing ledger semantics.
-  return new Intl.NumberFormat(formatLocale || activeLocale, { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2, ...options }).format(Number(value || 0));
+  // Return a token-marked numeric value without changing ledger semantics.
+  return `◈${new Intl.NumberFormat(formatLocale || activeLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2, ...options }).format(Number(value || 0))}`;
 }
 
 // Export formatDate as the locale-aware date/time formatter.

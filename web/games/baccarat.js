@@ -1,6 +1,6 @@
 // AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
 // Import required dependency so this module can use the frozen v1 Baccarat API.
-import { api, post, del } from '../core/api.js';
+import { api, post, del, currentPlayerId, currentPlayerPath, withCurrentPlayer } from '../core/api.js';
 // Import required dependency so this module can render safe HTML and refresh the shared wallet.
 import { refreshBalance, safe, toast } from '../core/ui.js';
 // Import required dependency so this module can mount the shared autoplay control plane.
@@ -91,10 +91,10 @@ function currentPlayers() {
   return window._lastBaccaratPlayers || [];
 }
 
-// Define humanBets to isolate human wagers from bot wagers.
+// Define humanBets to isolate current-player wagers from bot wagers.
 function humanBets(source = []) {
-  // Return only human-owned bets from the supplied v1 bet collection.
-  return (source || []).filter(bet => bet.player_id === 'human');
+  // Return only active-player bets from the supplied v1 bet collection.
+  return (source || []).filter(bet => bet.player_id === currentPlayerId());
 }
 
 // Define activeBets to return the bets relevant to the current phase.
@@ -340,7 +340,7 @@ function outcomeLabel(outcome) {
 // Define humanSettlementRows to read settlement rows for the human player.
 function humanSettlementRows() {
   // Return only settlements attached to the human player.
-  return (lastSettlements || []).filter(row => row.bet?.player_id === 'human');
+  return (lastSettlements || []).filter(row => row.bet?.player_id === currentPlayerId());
 }
 
 // Define humanNet to calculate displayed settlement net from the existing payload.
@@ -450,7 +450,7 @@ async function placeBet(type, { rerender = true } = {}) {
   // Store the repeat bet so Deal and autoplay reuse the latest intentional wager.
   repeatBet = type;
   // Post the bet through the existing v1 endpoint.
-  const payload = await post('/api/v1/games/baccarat/bets', { player_id: 'human', amount: chip, bet_type: type });
+  const payload = await post('/api/v1/games/baccarat/bets', withCurrentPlayer({ amount: chip, bet_type: type }));
   // Store the updated public state returned by the API.
   state = payload.state;
   // Cache player balances for the drawer scoreboard.
@@ -472,7 +472,7 @@ async function placeBet(type, { rerender = true } = {}) {
 // Define clearBet to refund an open human Baccarat wager through v1.
 async function clearBet(id) {
   // Delete the open bet through the existing v1 endpoint.
-  const payload = await del(`/api/v1/games/baccarat/bets/${id}`, { player_id: 'human' });
+  const payload = await del(`/api/v1/games/baccarat/bets/${id}`, withCurrentPlayer());
   // Store the updated public state returned by the API.
   state = payload.state;
   // Cache player balances for the drawer scoreboard.
@@ -517,7 +517,7 @@ async function deal(show = true) {
     // Let eligible bot controllers act through their public control plane.
     await playBotRound('baccarat');
     // Deal the coup through the frozen v1 Baccarat endpoint.
-    const payload = await post('/api/v1/games/baccarat/deal', {});
+    const payload = await post('/api/v1/games/baccarat/deal', withCurrentPlayer());
     // Store the updated public state returned by the API.
     state = payload.state;
     // Cache player balances for the drawer scoreboard.
@@ -589,7 +589,7 @@ export const BaccaratGame = {
     // Subscribe to locale changes so text refreshes without remounting gameplay state.
     unsubscribeLocale = onLocaleChange(() => render());
     // Load public Baccarat state through the frozen v1 endpoint.
-    const payload = await api('/api/v1/games/baccarat/state');
+    const payload = await api(currentPlayerPath('/api/v1/games/baccarat/state'));
     // Store the public state for rendering.
     state = payload.state;
     // Cache player balances for the drawer scoreboard.

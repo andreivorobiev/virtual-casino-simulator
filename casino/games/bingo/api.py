@@ -1,6 +1,6 @@
 # AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
 # Import required dependency so this module can use its public functions or constants.
-from casino.core.state_store import load_game_state, save_game_state
+from casino.core.state_store import load_player_game_state, save_player_game_state
 # Import required dependency so this module can use its public functions or constants.
 from casino.core.validation import require_amount, require_player_id
 # Import required dependency so this module can use its public functions or constants.
@@ -13,13 +13,19 @@ from casino.games.bingo import engine
 # Set GAME_ID to the value needed for the next operation.
 GAME_ID="bingo"
 
+# Define the request_player_id function used by this module.
+def request_player_id(body, query) -> str:
+    # Return the explicit player id while preserving the legacy human default.
+    return require_player_id({"player_id": body.get("player_id") or query.get("player_id") or "human"})
 
 # Define the payload function used by this module.
-def payload(state=None):
+def payload(player_id: str, state=None):
     # Set state to the value needed for the next operation.
-    state = state or load_game_state(GAME_ID, engine.default_state)
+    state = state or load_player_game_state(GAME_ID, player_id, engine.default_state)
+    # Set visible_players to the value needed for private game payloads.
+    visible_players = [p for p in players.list_players() if p["player_id"] == player_id or p.get("type") == "bot"]
     # Return the computed value to the caller.
-    return {"game":GAME_ID,"state":state,"player":players.get_player("human"),"players":players.list_players()}
+    return {"game":GAME_ID,"state":state,"player":players.get_player(player_id),"players":visible_players}
 
 
 # Define the settle_if_done function used by this module.
@@ -51,16 +57,16 @@ def register(router):
     # Attach this decorator so the following function is registered with the framework.
     @router.get(r"/api/v1/games/bingo/state")
     # Define the state function used by this module.
-    def state(body, query): return payload()
+    def state(body, query): return payload(request_player_id(body, query))
 
     # Attach this decorator so the following function is registered with the framework.
     @router.post(r"/api/v1/games/bingo/cards")
     # Define the card function used by this module.
     def card(body, query):
         # Set player_id to the value needed for the next operation.
-        player_id=require_player_id(body); amount=require_amount(body.get("amount")); pattern=body.get("pattern","line")
+        player_id=request_player_id(body, query); amount=require_amount(body.get("amount")); pattern=body.get("pattern","line")
         # Set state to the value needed for the next operation.
-        state=load_game_state(GAME_ID, engine.default_state)
+        state=load_player_game_state(GAME_ID, player_id, engine.default_state)
         # Execute this statement as part of the module's documented control flow.
         ledger.debit(player_id, amount, "BINGO_CARD_PURCHASED", GAME_ID, None, {"pattern":pattern})
         # Start protected logic so failures can be handled safely.
@@ -74,18 +80,20 @@ def register(router):
             # Execute this statement as part of the module's documented control flow.
             raise
         # Execute this statement as part of the module's documented control flow.
-        save_game_state(GAME_ID,state); return {"session":sess, **payload(state)}
+        save_player_game_state(GAME_ID, player_id, state); return {"session":sess, **payload(player_id, state)}
 
     # Attach this decorator so the following function is registered with the framework.
     @router.post(r"/api/v1/games/bingo/call")
     # Define the call function used by this module.
     def call(body, query):
+        # Set player_id to the value needed for the next operation.
+        player_id = request_player_id(body, query)
         # Set state to the value needed for the next operation.
-        state=load_game_state(GAME_ID, engine.default_state)
+        state=load_player_game_state(GAME_ID, player_id, engine.default_state)
         # Set sess,n to the value needed for the next operation.
         sess,n=engine.call_next(state); credits=settle_if_done(sess)
         # Execute this statement as part of the module's documented control flow.
-        save_game_state(GAME_ID,state); return {"session":sess,"called":n,"label":engine.ball_label(n),"credits":credits, **payload(state)}
+        save_player_game_state(GAME_ID, player_id, state); return {"session":sess,"called":n,"label":engine.ball_label(n),"credits":credits, **payload(player_id, state)}
 
     # Attach this decorator so the following function is registered with the framework.
     @router.post(r"/api/v1/games/bingo/auto")
@@ -93,19 +101,23 @@ def register(router):
     def auto(body, query):
         # Compatibility endpoint: only calls a small number of balls now. The browser-level
         # autoplay controller uses /call one tick at a time so Stop can be honored.
+        # Set player_id to the value needed for the next operation.
+        player_id = request_player_id(body, query)
         # Set state to the value needed for the next operation.
-        state=load_game_state(GAME_ID, engine.default_state)
+        state=load_player_game_state(GAME_ID, player_id, engine.default_state)
         # Set sess,calls to the value needed for the next operation.
         sess,calls=engine.auto_play(state, int(body.get("max_calls",1))); credits=settle_if_done(sess)
         # Execute this statement as part of the module's documented control flow.
-        save_game_state(GAME_ID,state); return {"session":sess,"calls":calls,"labels":[engine.ball_label(n) for n in calls],"credits":credits, **payload(state)}
+        save_player_game_state(GAME_ID, player_id, state); return {"session":sess,"calls":calls,"labels":[engine.ball_label(n) for n in calls],"credits":credits, **payload(player_id, state)}
 
     # Attach this decorator so the following function is registered with the framework.
     @router.post(r"/api/v1/games/bingo/reset")
     # Define the reset function used by this module.
     def reset(body, query):
+        # Set player_id to the value needed for the next operation.
+        player_id = request_player_id(body, query)
         # Set state to the value needed for the next operation.
-        state=load_game_state(GAME_ID, engine.default_state)
+        state=load_player_game_state(GAME_ID, player_id, engine.default_state)
         # Set sess to the value needed for the next operation.
         sess=state.get("active_session")
         # Set refunds to the value needed for the next operation.
@@ -129,4 +141,4 @@ def register(router):
         # Set state["active_session"] to the value needed for the next operation.
         state["active_session"] = None
         # Execute this statement as part of the module's documented control flow.
-        save_game_state(GAME_ID,state); return {"refunds":refunds, **payload(state)}
+        save_player_game_state(GAME_ID, player_id, state); return {"refunds":refunds, **payload(player_id, state)}

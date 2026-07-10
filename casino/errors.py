@@ -28,6 +28,20 @@ class ValidationError(CasinoError):
         # Execute this statement as part of the module's documented control flow.
         super().__init__("VALIDATION_ERROR", message, 400, details)
 
+# Define the UnauthorizedError class that groups related behavior.
+class UnauthorizedError(CasinoError):
+    # Define the __init__ function used by this module.
+    def __init__(self, message="Authentication is required", details=None):
+        # Execute this statement as part of the module's documented control flow.
+        super().__init__("UNAUTHORIZED", message, 401, details)
+
+# Define the ForbiddenError class that groups related behavior.
+class ForbiddenError(CasinoError):
+    # Define the __init__ function used by this module.
+    def __init__(self, message="Permission denied", details=None):
+        # Execute this statement as part of the module's documented control flow.
+        super().__init__("FORBIDDEN", message, 403, details)
+
 # Define the InsufficientFundsError class that groups related behavior.
 class InsufficientFundsError(CasinoError):
     # Define the __init__ function used by this module.

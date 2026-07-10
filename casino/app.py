@@ -28,8 +28,10 @@ from casino.router import Router
 from casino.errors import CasinoError, ValidationError
 # Import required dependency so this module can use its public functions or constants.
 from casino.core.state_store import ensure_dirs, migrate_from_v7_if_needed
+# Import required dependency so this module can bootstrap whichever storage provider is configured.
+from casino.core.storage import bootstrap_players, get_storage_provider
 # Import required dependency so this module can use its public functions or constants.
-from casino.core import logger, players, ledger, history
+from casino.core import logger, players, ledger, history, auth
 # Import required dependency so this module can use its public functions or constants.
 from casino.games.registry import list_games
 # Import required dependency so this module can use its public functions or constants.
@@ -76,14 +78,18 @@ def build_router() -> Router:
     def reset(body, query):
         # Import required dependency so this module can use its public functions or constants.
         import shutil
+        # Reset configured provider state before bootstrapping default players.
+        get_storage_provider().reset()
         # Branch when the following condition is true.
         if DATA_DIR.exists():
             # Use this standard-library helper to perform the requested operation.
             shutil.rmtree(DATA_DIR)
         # Execute this statement as part of the module's documented control flow.
         ensure_dirs()
-        # Execute this statement as part of the module's documented control flow.
+        # Bootstrap default players through the active provider after reset.
         players.save_players(players.default_players())
+        # Execute this statement as part of the module's documented control flow.
+        auth.bootstrap_admin_from_env()
         # Execute this statement as part of the module's documented control flow.
         logger.info("casino_reset")
         # Return the computed value to the caller.
@@ -154,6 +160,49 @@ def build_router() -> Router:
     def client_log(body, query):
         # Return the computed value to the caller.
         return {"logged": logger.client("client_event", **body)}
+
+    # Attach this decorator so the following function is registered with the framework.
+    @router.post(r"/api/v2/auth/login")
+    # Define the auth_login function used by this module.
+    def auth_login(body, query, context):
+        # Set result to the value needed for the next operation.
+        result = auth.login(body.get("email", ""), body.get("password", ""), context.get("client", ""))
+        # Execute this statement as part of the module's documented control flow.
+        context.setdefault("response_headers", []).append(auth.cookie_header(result["session"]["token"]))
+        # Return the computed value to the caller.
+        return result
+
+    # Attach this decorator so the following function is registered with the framework.
+    @router.post(r"/api/v2/auth/logout")
+    # Define the auth_logout function used by this module.
+    def auth_logout(body, query, context):
+        # Set token to the value needed for the next operation.
+        token = auth.extract_bearer_token(context.get("headers", {})) or auth.extract_cookie_token(context.get("headers", {}))
+        # Execute this statement as part of the module's documented control flow.
+        context.setdefault("response_headers", []).append(auth.clear_cookie_header())
+        # Return the computed value to the caller.
+        return auth.logout(token)
+
+    # Attach this decorator so the following function is registered with the framework.
+    @router.get(r"/api/v2/auth/session")
+    # Define the auth_session function used by this module.
+    def auth_session(body, query, context):
+        # Return the computed value to the caller.
+        return auth.current_user_payload(context["session"], context["user"])
+
+    # Attach this decorator so the following function is registered with the framework.
+    @router.get(r"/api/v2/me")
+    # Define the current_user function used by this module.
+    def current_user(body, query, context):
+        # Return the computed value to the caller.
+        return auth.current_user_payload(context["session"], context["user"])
+
+    # Attach this decorator so the following function is registered with the framework.
+    @router.get(r"/api/v2/me/terms")
+    # Define the current_user_terms function used by this module.
+    def current_user_terms(body, query, context):
+        # Return the computed value to the caller.
+        return {"terms": auth.terms_status(context["user"])}
 
     # Attach this decorator so the following function is registered with the framework.
     @router.post(r"/api/v1/autoplay/start")
@@ -267,7 +316,7 @@ class Handler(BaseHTTPRequestHandler):
             return {"_raw": raw.decode("utf-8", errors="replace")}
 
     # Define the _send_json function used by this module.
-    def _send_json(self, status, payload):
+    def _send_json(self, status, payload, extra_headers=None):
         # Set raw to the value needed for the next operation.
         raw = json.dumps(payload, indent=2, sort_keys=True).encode("utf-8")
         # Execute this statement as part of the module's documented control flow.
@@ -278,6 +327,10 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(raw)))
         # Execute this statement as part of the module's documented control flow.
         self.send_header("Cache-Control", "no-store")
+        # Iterate through the collection to process each item.
+        for name, value in extra_headers or []:
+            # Execute this statement as part of the module's documented control flow.
+            self.send_header(name, value)
         # Execute this statement as part of the module's documented control flow.
         self.end_headers()
         # Execute this statement as part of the module's documented control flow.
@@ -291,12 +344,24 @@ class Handler(BaseHTTPRequestHandler):
         try:
             # Set body to the value needed for the next operation.
             body = self._read_body() if self.command in ("POST", "PUT", "DELETE") else {}
+            # Set path to the value needed for the next operation.
+            path = urlparse(self.path).path
+            # Set context to the value needed for the next operation.
+            context = {"headers": self.headers, "client": self.client_address[0], "response_headers": []}
+            # Branch when the request targets a protected API route.
+            if not auth.is_public_api_path(path):
+                # Set session,user to the value needed for the next operation.
+                session, user = auth.authenticate_headers(self.headers)
+                # Set context["session"] to the value needed for the next operation.
+                context["session"] = session
+                # Set context["user"] to the value needed for the next operation.
+                context["user"] = user
             # Set logger.info("api_request", request_id to the value needed for the next operation.
             logger.info("api_request", request_id=request_id, method=self.command, path=self.path)
             # Set data to the value needed for the next operation.
-            data = ROUTER.dispatch(self.command, self.path, body)
+            data = ROUTER.dispatch(self.command, self.path, body, context)
             # Execute this statement as part of the module's documented control flow.
-            self._send_json(200, {"ok": True, "data": data})
+            self._send_json(200, {"ok": True, "data": data}, context.get("response_headers"))
         # Handle the expected failure path for the protected logic.
         except CasinoError as e:
             # Set logger.warning("api_error", request_id to the value needed for the next operation.
@@ -384,10 +449,10 @@ def serve(host=DEFAULT_HOST, port=DEFAULT_PORT, open_browser=True):
     ensure_dirs()
     # Execute this statement as part of the module's documented control flow.
     migrate_from_v7_if_needed()
-    # Branch when the following condition is true.
-    if not (DATA_DIR / "players.json").exists():
-        # Execute this statement as part of the module's documented control flow.
-        players.save_players(players.default_players())
+    # Bootstrap default players through the active provider when storage is fresh.
+    bootstrap_players(players.default_players)
+    # Bootstrap the default administrator after player storage is initialized.
+    auth.bootstrap_admin_from_env()
     # Set httpd to the value needed for the next operation.
     httpd = ThreadingHTTPServer((host, port), Handler)
     # Set url to the value needed for the next operation.

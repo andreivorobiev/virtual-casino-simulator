@@ -10,6 +10,8 @@ import { applyTranslations, formatDate, formatMoney, formatNumber, getLocaleSett
 
 // Store current so refresh and locale rerendering preserve the active Admin tab.
 let current = 'dashboard';
+// Store lastUserPassword so Admin can see the latest one-time credential after rerender.
+let lastUserPassword = '';
 // Store view so tab renderers share the same Admin content target.
 const view = document.getElementById('adminView');
 // Store title so tab renderers can update the current heading.
@@ -25,6 +27,12 @@ const pre = object => `<pre class="logview">${safe(JSON.stringify(object, null, 
 const table = (heads, rows) => `<table class="mini-table"><tr>${heads.map(head => `<th>${safe(head)}</th>`).join('')}</tr>${rows.join('')}</table>`;
 // Define option to render a selected-safe select option.
 const option = (value, label, selected) => `<option value="${safe(value)}" ${selected === value ? 'selected' : ''}>${safe(label)}</option>`;
+
+// Define isActiveTab to guard async tab renders against visible sidebar state.
+function isActiveTab(tab) {
+  // Return whether the requested tab is currently highlighted in the Admin sidebar.
+  return document.querySelector(`[data-tab="${tab}"]`)?.classList.contains('gold');
+}
 
 // Define setTitle so each tab can update the Admin heading consistently.
 function setTitle(text, helper = '') {
@@ -52,6 +60,8 @@ async function load(tab = 'dashboard') {
     if (tab === 'dashboard') return dashboard();
     // Branch to the players/bots renderer.
     if (tab === 'players') return playersBots();
+    // Branch to the Admin beta-user renderer.
+    if (tab === 'users') return users();
     // Branch to the ledger renderer.
     if (tab === 'ledger') return ledger();
     // Branch to the history renderer.
@@ -85,6 +95,8 @@ async function dashboard() {
   setTitle(t('dashboard.title', {}, 'admin'), t('dashboard.subtitle', {}, 'admin'));
   // Load the dashboard envelope data through the frozen Admin endpoint.
   const data = await api('/api/v1/admin/dashboard');
+  // Stop stale dashboard responses from overwriting a newer active tab.
+  if (!isActiveTab('dashboard')) return;
   // Store active autoplay sessions using the existing status set.
   const active = (data.autoplay_sessions || []).filter(session => ['running', 'stop_requested', 'paused', 'starting'].includes(session.status));
   // Render the dashboard without changing the existing API shape.
@@ -105,6 +117,96 @@ async function playersBots() {
   view.innerHTML = `<section class="admin-card"><h3>${safe(t('nav.players', {}, 'admin'))}</h3>${table(['ID', 'Name', 'Type', 'Balance'], (data.players || []).map(player => `<tr><td>${safe(player.player_id)}</td><td>${safe(player.display_name)}</td><td>${safe(player.type)}</td><td>${formatMoney(player.balance)}</td></tr>`))}</section><section class="admin-card"><h3>Bot controllers</h3>${(data.bots || []).map(bot => `<div class="bot-edit" data-bot="${safe(bot.bot_id)}"><div class="row"><b>${safe(bot.display_name)}</b><label><input type="checkbox" class="bot-enabled" ${bot.enabled ? 'checked' : ''}> Enabled</label><span class="badge">${formatMoney(bot.balance)}</span></div>${gameOptions.map(game => `<div class="row"><label>${safe(game)} strategy <select class="bot-strategy" data-game="${safe(game)}">${capabilities[game].strategies.map(strategy => `<option value="${safe(strategy.id)}" ${bot.strategies?.[game] === strategy.id ? 'selected' : ''}>${safe(strategy.label)}</option>`).join('')}</select></label><label>Stake <input class="bot-stake" data-game="${safe(game)}" type="number" min="1" value="${safe(bot.stakes?.[game] || 5)}"></label></div>`).join('')}<button class="save-bot" data-bot="${safe(bot.bot_id)}">Save ${safe(bot.display_name)}</button></div>`).join('')}</section>`;
   // Bind save buttons after rendering each bot edit card.
   view.querySelectorAll('.save-bot').forEach(button => button.onclick = async () => saveBot(button));
+}
+
+// Define userRows to render Admin user-management rows.
+function userRows(users) {
+  // Return one row per beta user with token, status, terms, and locale controls.
+  return users.map(user => `<tr data-testid="admin-user-row" data-user="${safe(user.user_id)}" data-email="${safe(user.email)}" data-status="${safe(user.status)}" data-terms="${safe(user.terms_status)}"><td>${safe(user.email)}</td><td>${safe(user.display_name)}</td><td>${safe(user.status)}</td><td data-testid="admin-user-token-balance">${formatMoney(user.token_balance)}</td><td>${safe(user.token_state)}</td><td>${safe(user.terms_status)}</td><td><select class="user-language">${localeOptions(user.language || 'en-US')}</select></td><td><select class="user-format">${formatLocaleOptions(user.format_locale || 'browser')}</select></td><td><button class="save-user-locale" data-user="${safe(user.user_id)}" data-testid="admin-user-save-locale">Save locale</button><button class="toggle-user" data-user="${safe(user.user_id)}" data-action="${user.status === 'active' ? 'deactivate' : 'reactivate'}" data-testid="admin-user-toggle">${user.status === 'active' ? 'Deactivate' : 'Reactivate'}</button><button class="reset-user-password" data-user="${safe(user.user_id)}" data-testid="admin-user-reset">Reset password</button><button class="terms-user" data-user="${safe(user.user_id)}" data-accepted="${user.terms_status !== 'accepted'}" data-testid="admin-user-terms">${user.terms_status === 'accepted' ? 'Clear terms' : 'Accept terms'}</button></td></tr>`);
+}
+
+// Define users to render the Admin beta-user management workspace.
+async function users() {
+  // Set the localized users title and subtitle.
+  setTitle(t('users.title', {}, 'admin'), t('users.subtitle', {}, 'admin'));
+  // Load users through the Admin user-management endpoint.
+  const data = await api('/api/v1/admin/users');
+  // Stop stale user-management responses from overwriting a newer active tab.
+  if (!isActiveTab('users')) return;
+  // Store password notice so rerenders can show the latest one-time credential.
+  const passwordNotice = lastUserPassword ? `<div class="result-box" data-testid="admin-user-temp-password">Latest temporary password: ${safe(lastUserPassword)}</div>` : '';
+  // Render creation controls and token-state inspection table.
+  view.innerHTML = `<section class="admin-card"><h3>${safe(t('users.createTitle', {}, 'admin'))}</h3><div class="grid3"><label>Email<input id="admin_user_email" data-testid="admin-user-email" type="email" placeholder="beta@example.test"></label><label>Display name<input id="admin_user_name" data-testid="admin-user-name" placeholder="Beta Player"></label><label>Initial tokens<input id="admin_user_tokens" data-testid="admin-user-tokens" type="number" min="0" step="1" value="5000"></label></div><div class="grid3"><label>Temporary password<input id="admin_user_password" data-testid="admin-user-password" type="text" placeholder="Generate if blank"></label><label>Language<select id="admin_user_language" data-testid="admin-user-language">${localeOptions('en-US')}</select></label><label>Format locale<select id="admin_user_format" data-testid="admin-user-format">${formatLocaleOptions('browser')}</select></label></div><label><input id="admin_user_terms" data-testid="admin-user-terms-initial" type="checkbox"> Terms accepted</label><button id="admin_create_user" data-testid="admin-create-user" class="gold">${safe(t('users.createButton', {}, 'admin'))}</button>${passwordNotice}</section><section class="admin-card"><h3>${safe(t('users.tableTitle', {}, 'admin'))}</h3>${table(['Email', 'Name', 'Status', 'Token balance', 'Token state', 'Terms', 'Language', 'Format', 'Actions'], userRows(data.users || []))}</section>`;
+  // Bind the create-user button after rendering.
+  view.querySelector('#admin_create_user').onclick = createUser;
+  // Bind user action buttons after rendering the table.
+  view.querySelectorAll('.toggle-user').forEach(button => button.onclick = () => toggleUser(button));
+  // Bind password reset buttons after rendering the table.
+  view.querySelectorAll('.reset-user-password').forEach(button => button.onclick = () => resetUserPassword(button));
+  // Bind terms status buttons after rendering the table.
+  view.querySelectorAll('.terms-user').forEach(button => button.onclick = () => updateUserTerms(button));
+  // Bind locale save buttons after rendering the table.
+  view.querySelectorAll('.save-user-locale').forEach(button => button.onclick = () => saveUserLocale(button));
+}
+
+// Define createUser to submit a new beta user through Admin.
+async function createUser() {
+  // Store payload from the rendered create-user form.
+  const payload = { email: view.querySelector('#admin_user_email').value, display_name: view.querySelector('#admin_user_name').value, initial_tokens: Number(view.querySelector('#admin_user_tokens').value || 0), password: view.querySelector('#admin_user_password').value, language: view.querySelector('#admin_user_language').value, format_locale: view.querySelector('#admin_user_format').value, terms_accepted: view.querySelector('#admin_user_terms').checked };
+  // Create the user through the Admin API.
+  const result = await post('/api/v1/admin/users', payload);
+  // Store the one-time password so Admin can hand it to the beta user.
+  lastUserPassword = result.temporary_password || '';
+  // Show user creation feedback.
+  toast('User created.', true);
+  // Refresh the users table with the new account.
+  await users();
+}
+
+// Define toggleUser to deactivate or reactivate a beta account.
+async function toggleUser(button) {
+  // Post the requested status transition for this user.
+  await post(`/api/v1/admin/users/${button.dataset.user}/${button.dataset.action}`, {});
+  // Show status-change feedback.
+  toast('User status updated.', true);
+  // Refresh the users table after the change.
+  await users();
+}
+
+// Define resetUserPassword to generate a new one-time password.
+async function resetUserPassword(button) {
+  // Reset the user's password through the Admin API.
+  const result = await post(`/api/v1/admin/users/${button.dataset.user}/password-reset`, {});
+  // Store the one-time password so Admin can hand it to the beta user.
+  lastUserPassword = result.temporary_password || '';
+  // Show reset feedback.
+  toast('Temporary password generated.', true);
+  // Refresh the users table while preserving the password notice.
+  await users();
+}
+
+// Define updateUserTerms to set a user's terms acceptance status.
+async function updateUserTerms(button) {
+  // Post the requested terms status through the Admin API.
+  await post(`/api/v1/admin/users/${button.dataset.user}/terms`, { accepted: button.dataset.accepted === 'true' });
+  // Show terms update feedback.
+  toast('Terms status updated.', true);
+  // Refresh the users table after the change.
+  await users();
+}
+
+// Define saveUserLocale to persist per-user locale preferences.
+async function saveUserLocale(button) {
+  // Store the nearest rendered user row for control lookup.
+  const row = button.closest('tr[data-user]');
+  // Store the locale payload from row controls.
+  const payload = { language: row.querySelector('.user-language').value, format_locale: row.querySelector('.user-format').value, use_browser_locale: false };
+  // Persist the locale preferences through the Admin API.
+  await post(`/api/v1/admin/users/${button.dataset.user}/locale`, payload);
+  // Show locale update feedback.
+  toast('User locale saved.', true);
+  // Refresh the users table after the change.
+  await users();
 }
 
 // Define saveBot to submit one bot controller edit through the existing public endpoint.
@@ -274,7 +376,7 @@ async function language() {
   // Store selected format using browser sentinel when that preference is active.
   const selectedFormat = settings.formatLocale || state.formatLocale;
   // Render language cards, settings, previews, and diagnostics.
-  view.innerHTML = `<div class="admin-split"><section class="admin-card"><div class="row"><h3 style="margin-right:auto">${safe(t('language.availableTitle', {}, 'admin'))}</h3><span class="badge">${safe(t('language.readyCount', {}, 'admin'))}</span></div><div class="grid2">${languageCards(selectedLanguage)}</div><h3>${safe(t('language.top20Title', {}, 'admin'))}</h3>${plannedLanguageGrid()}</section><section class="admin-card"><h3>${safe(t('language.localeSettings', {}, 'admin'))}</h3><div class="grid2"><label>${safe(t('language.displayLanguage', {}, 'admin'))}<select id="admin_language" data-testid="admin-language-select">${localeOptions(selectedLanguage)}</select></label><label>${safe(t('language.formatLocale', {}, 'admin'))}<select id="admin_format_locale" data-testid="admin-format-locale-select">${formatLocaleOptions(selectedFormat)}</select></label></div><label><input id="admin_use_browser" type="checkbox" ${settings.useBrowserLocale ? 'checked' : ''}> ${safe(t('language.useBrowser', {}, 'admin'))}</label><label><input id="admin_persist_browser" type="checkbox" checked> ${safe(t('language.persistBrowser', {}, 'admin'))}</label><div class="result-box"><p data-testid="admin-money-preview">${safe(t('language.previewBalance', { amount: formatMoney(5030) }, 'admin'))}</p><p>${safe(t('language.datePreview', {}, 'admin'))}: ${safe(formatDate(new Date(), { dateStyle: 'medium', timeStyle: 'short' }))}</p></div><div class="row"><button id="admin_apply_locale" data-testid="admin-locale-apply" class="gold">${safe(t('language.apply', {}, 'admin'))}</button><button id="admin_save_locale" data-testid="admin-locale-save">${safe(t('language.saveBrowser', {}, 'admin'))}</button><button id="admin_reset_locale" data-testid="admin-locale-reset">${safe(t('language.resetBrowser', {}, 'admin'))}</button><button id="admin_preview_lobby">${safe(t('actions.previewLobby'))}</button></div>${diagnosticsTable(state)}<h3>${safe(t('language.stringPreview', {}, 'admin'))}</h3><div class="bot-edit"><b>English</b><p>Choose your table. All games use fake money only. Ledger-backed outcomes are visible in Admin.</p></div><div class="bot-edit"><b>Русский</b><p>Выберите стол. Все игры используют только условные деньги. Результаты с учётом ledger видны в Admin.</p></div><div class="bot-edit"><b>${safe(t('language.fallback', {}, 'admin'))}</b><p>${safe(t('language.fallbackDescription', {}, 'admin'))}</p></div></section></div>`;
+  view.innerHTML = `<div class="admin-split"><section class="admin-card"><div class="row"><h3 style="margin-right:auto">${safe(t('language.availableTitle', {}, 'admin'))}</h3><span class="badge">${safe(t('language.readyCount', {}, 'admin'))}</span></div><div class="grid2">${languageCards(selectedLanguage)}</div><h3>${safe(t('language.top20Title', {}, 'admin'))}</h3>${plannedLanguageGrid()}</section><section class="admin-card"><h3>${safe(t('language.localeSettings', {}, 'admin'))}</h3><div class="grid2"><label>${safe(t('language.displayLanguage', {}, 'admin'))}<select id="admin_language" data-testid="admin-language-select">${localeOptions(selectedLanguage)}</select></label><label>${safe(t('language.formatLocale', {}, 'admin'))}<select id="admin_format_locale" data-testid="admin-format-locale-select">${formatLocaleOptions(selectedFormat)}</select></label></div><label><input id="admin_use_browser" type="checkbox" ${settings.useBrowserLocale ? 'checked' : ''}> ${safe(t('language.useBrowser', {}, 'admin'))}</label><label><input id="admin_persist_browser" type="checkbox" checked> ${safe(t('language.persistBrowser', {}, 'admin'))}</label><div class="result-box"><p data-testid="admin-money-preview">${safe(t('language.previewBalance', { amount: formatMoney(5030) }, 'admin'))}</p><p>${safe(t('language.datePreview', {}, 'admin'))}: ${safe(formatDate(new Date(), { dateStyle: 'medium', timeStyle: 'short' }))}</p></div><div class="row"><button id="admin_apply_locale" data-testid="admin-locale-apply" class="gold">${safe(t('language.apply', {}, 'admin'))}</button><button id="admin_save_locale" data-testid="admin-locale-save">${safe(t('language.saveBrowser', {}, 'admin'))}</button><button id="admin_reset_locale" data-testid="admin-locale-reset">${safe(t('language.resetBrowser', {}, 'admin'))}</button><button id="admin_preview_lobby">${safe(t('actions.previewLobby'))}</button></div>${diagnosticsTable(state)}<h3>${safe(t('language.stringPreview', {}, 'admin'))}</h3><div class="bot-edit"><b>English</b><p>Choose your table. All games use play tokens only. Ledger-backed outcomes are visible in Admin.</p></div><div class="bot-edit"><b>Русский</b><p>Выберите стол. Все игры используют только игровые токены. Результаты с учётом ledger видны в Admin.</p></div><div class="bot-edit"><b>${safe(t('language.fallback', {}, 'admin'))}</b><p>${safe(t('language.fallbackDescription', {}, 'admin'))}</p></div></section></div>`;
   // Bind language form events after rendering.
   bindLanguageControls();
 }

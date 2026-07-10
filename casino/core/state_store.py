@@ -13,6 +13,8 @@ from typing import Any, Callable
 from casino.config import DATA_DIR, GAME_DATA_DIR, LOG_DIR, SCHEMA_VERSION
 # Import required dependency so this module can use its public functions or constants.
 from casino.core.clock import utc_now
+# Import required dependency so migration can honor the configured storage provider.
+from casino.core.storage import storage_provider_name
 
 # Set _LOCK to the value needed for the next operation.
 _LOCK = threading.RLock()
@@ -86,6 +88,13 @@ def game_state_path(game_id: str) -> Path:
     # Return the computed value to the caller.
     return GAME_DATA_DIR / f"{game_id}.json"
 
+# Define the player_game_state_path function used by this module.
+def player_game_state_path(game_id: str, player_id: str) -> Path:
+    # Set safe_player_id to the value needed for filesystem-safe player state.
+    safe_player_id = "".join(ch if ch.isalnum() or ch in ("-", "_") else "_" for ch in str(player_id or "human"))
+    # Return the computed value to the caller.
+    return GAME_DATA_DIR / game_id / f"{safe_player_id}.json"
+
 # Define the load_game_state function used by this module.
 def load_game_state(game_id: str, default_factory: Callable[[], dict]) -> dict:
     # Set state to the value needed for the next operation.
@@ -93,6 +102,25 @@ def load_game_state(game_id: str, default_factory: Callable[[], dict]) -> dict:
     # Branch when the following condition is true.
     if not isinstance(state, dict):
         # Set state to the value needed for the next operation.
+        state = default_factory()
+    # Execute this statement as part of the module's documented control flow.
+    state.setdefault("schema_version", SCHEMA_VERSION)
+    # Return the computed value to the caller.
+    return state
+
+# Define the load_player_game_state function used by this module.
+def load_player_game_state(game_id: str, player_id: str, default_factory: Callable[[], dict]) -> dict:
+    # Set path to the player-scoped file so private sessions do not share in-progress state.
+    path = player_game_state_path(game_id, player_id)
+    # Branch when a legacy human state file should be honored for v1 compatibility.
+    if str(player_id or "human") == "human" and not path.exists() and game_state_path(game_id).exists():
+        # Return the legacy state so existing local data remains readable.
+        return load_game_state(game_id, default_factory)
+    # Set state to the value needed for the next operation.
+    state = read_json(path, default_factory)
+    # Branch when the stored payload is malformed.
+    if not isinstance(state, dict):
+        # Set state to a fresh default payload.
         state = default_factory()
     # Execute this statement as part of the module's documented control flow.
     state.setdefault("schema_version", SCHEMA_VERSION)
@@ -110,6 +138,17 @@ def save_game_state(game_id: str, state: dict) -> None:
     # Execute this statement as part of the module's documented control flow.
     write_json(game_state_path(game_id), state)
 
+# Define the save_player_game_state function used by this module.
+def save_player_game_state(game_id: str, player_id: str, state: dict) -> None:
+    # Set state to a copy so callers keep their in-memory object identity.
+    state = dict(state)
+    # Set state["schema_version"] to the value needed for the next operation.
+    state["schema_version"] = SCHEMA_VERSION
+    # Set state["updated_at"] to the value needed for the next operation.
+    state["updated_at"] = utc_now()
+    # Execute this statement as part of the module's documented control flow.
+    write_json(player_game_state_path(game_id, player_id), state)
+
 # Define the migrate_from_v7_if_needed function used by this module.
 def migrate_from_v7_if_needed() -> None:
     """Best-effort migration of older monolithic files into v8 data layout.
@@ -119,6 +158,10 @@ def migrate_from_v7_if_needed() -> None:
     """
     # Execute this statement as part of the module's documented control flow.
     ensure_dirs()
+    # Branch when configured storage is not JSON because MySQL starts fresh by design.
+    if storage_provider_name() != "json":
+        # Return without importing local legacy files into the configured database.
+        return
     # Set marker to the value needed for the next operation.
     marker = DATA_DIR / ".v8_migration_complete"
     # Branch when the following condition is true.
