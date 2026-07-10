@@ -99,4 +99,3 @@ def run_mysql_schema_provider_path():
     assert "start_transaction" in source
     # Verify the MySQL ledger path inserts the ledger row before committing.
     assert "INSERT INTO casino_ledger" in source and "connection.commit()" in source
-

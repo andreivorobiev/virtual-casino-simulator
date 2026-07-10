@@ -457,22 +457,144 @@ def run_browser_tests():
             page.on('console', lambda msg: console_errors.append(msg.text) if msg.type=='error' else None)
             # Execute this statement as part of the module's documented control flow.
             page.on('pageerror', lambda err: page_errors.append(str(err)))
+            # Store mocked auth state because backend v2 auth APIs are owned by issue 39.
+            auth_state={'logged_in':False,'terms_required':True,'tokens':5000,'locale':'en-US'}
+            # Define the auth_payload function used by this module.
+            def auth_payload():
+                # Return a draft v2 current-user payload for frontend-only browser checks.
+                return {'user':{'user_id':'user_demo','username':'demo','display_name':'Demo Player','locale':auth_state['locale']},'player':{'player_id':'human','token_balance':auth_state['tokens']},'terms':{'required':auth_state['terms_required'],'version':'private-beta-1'}}
+            # Define the mocked_auth_response function used by this module.
+            def mocked_auth_response(ok=True, data=None, status=200, message='Unauthorized'):
+                # Return a standard API envelope string for Playwright route fulfillment.
+                return json.dumps({'ok':ok,'data':data or {},'error':None if ok else {'code':'AUTH_REQUIRED','message':message}})
+            # Define the handle_auth_route function used by this module.
+            def handle_auth_route(route):
+                # Store request so path, method, and body can drive the v2 auth mock.
+                request=route.request
+                # Store path so endpoint matching ignores host and query details.
+                path=request.url.split('/api/v2',1)[1].split('?',1)[0]
+                # Branch for current-user session lookup.
+                if path=='/me' and request.method=='GET':
+                    # Return a standard failure envelope until mocked login completes.
+                    if not auth_state['logged_in']: return route.fulfill(status=200,content_type='application/json',body=mocked_auth_response(False))
+                    # Return the current mocked user session.
+                    return route.fulfill(status=200,content_type='application/json',body=mocked_auth_response(True,auth_payload()))
+                # Branch for browser login.
+                if path=='/auth/login' and request.method=='POST':
+                    # Store submitted JSON so locale preservation can be asserted.
+                    body=json.loads(request.post_data or '{}')
+                    # Mark the mocked browser session logged in.
+                    auth_state['logged_in']=True
+                    # Preserve the locale the frontend sends with login.
+                    auth_state['locale']=body.get('locale') or auth_state['locale']
+                    # Return the mocked current-user payload after login.
+                    return route.fulfill(status=200,content_type='application/json',body=mocked_auth_response(True,auth_payload()))
+                # Branch for terms acceptance.
+                if path=='/me/terms/accept' and request.method=='POST':
+                    # Mark terms accepted so the shell can enter the casino.
+                    auth_state['terms_required']=False
+                    # Return the updated mocked current-user payload.
+                    return route.fulfill(status=200,content_type='application/json',body=mocked_auth_response(True,auth_payload()))
+                # Branch for token additions through the current-user wallet.
+                if path=='/me/tokens/add' and request.method=='POST':
+                    # Store submitted JSON so the requested amount can update the mock ledger balance.
+                    body=json.loads(request.post_data or '{}')
+                    # Add the requested fake tokens for frontend wallet validation.
+                    auth_state['tokens']+=int(body.get('amount') or 0)
+                    # Return the updated mocked current-user payload.
+                    return route.fulfill(status=200,content_type='application/json',body=mocked_auth_response(True,auth_payload()))
+                # Branch for browser logout.
+                if path=='/auth/logout' and request.method=='POST':
+                    # Mark the mocked browser session logged out.
+                    auth_state['logged_in']=False
+                    # Return an empty success envelope for logout.
+                    return route.fulfill(status=200,content_type='application/json',body=mocked_auth_response(True,{}))
+                # Return a route-local 404 for unexpected v2 auth endpoints.
+                return route.fulfill(status=404,content_type='application/json',body=mocked_auth_response(False,status=404,message='Unhandled auth mock'))
+            # Route planned v2 auth/current-user APIs so frontend work can proceed before issue 39 lands.
+            page.route('**/api/v2/**', handle_auth_route)
             # Define the shot function used by this module.
             def shot(name): page.screenshot(path=str(screenshots/name), full_page=True)
             # Start protected logic so failures can be handled safely.
             try:
-                # Set page.goto(base, wait_until to the value needed for the next operation.
-                page.goto(base, wait_until='networkidle'); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Navigate to the casino while unauthenticated to verify the login gate.
+                page.goto(base, wait_until='networkidle'); page.get_by_test_id('login-gate').wait_for(timeout=5000)
+                # Capture logged-out login evidence for the frontend auth handback.
+                shot('auth_login_gate.png')
+                # Define the auth_login_gate function used by this module.
+                def auth_login_gate():
+                    # Verify the login panel is visible before casino routes mount.
+                    assert page.get_by_test_id('login-gate').is_visible()
+                    # Verify the premium topbar is hidden while logged out.
+                    assert not page.get_by_test_id('premium-topbar').is_visible()
+                    # Verify the required toy-simulator terms checkbox is visible.
+                    assert page.get_by_test_id('login-terms-check').is_visible()
+                # Execute this statement as part of the module's documented control flow.
+                run_case('BR-AUTH-LOGIN-001',['AUTH-UI-001','TERMS-UI-001'],auth_login_gate)
+                # Switch locale before login to prove auth state preserves the chosen language.
+                page.get_by_test_id('auth-locale-select').select_option('ru-RU')
+                # Wait for the login gate rerender triggered by the locale switch.
+                page.wait_for_function("() => window.CasinoI18n && window.CasinoI18n.getLocaleState().locale === 'ru-RU'")
+                # Wait for the fresh username field to be ready after the locale rerender.
+                page.get_by_test_id('login-username').wait_for(timeout=5000)
+                # Let the auth form rerender settle before entering credentials.
+                page.wait_for_timeout(150)
+                # Fill the mocked login form through browser-visible controls.
+                page.get_by_test_id('login-username').fill('demo'); page.get_by_test_id('login-password').fill('password'); page.get_by_test_id('login-terms-check').check(); page.get_by_test_id('login-submit').click()
+                # Wait for the terms acceptance screen returned by the mocked v2 login payload.
+                page.get_by_test_id('terms-gate').wait_for(timeout=5000)
+                # Capture terms evidence for the frontend auth handback.
+                shot('auth_terms_gate.png')
+                # Execute this statement as part of the module's documented control flow.
+                run_case('BR-AUTH-TERMS-001',['TERMS-UI-001'],lambda: page.get_by_test_id('accept-terms').is_visible())
+                # Accept terms through the planned current-user endpoint.
+                page.get_by_test_id('accept-terms').click()
+                # Wait for the authenticated casino shell to mount after terms acceptance.
+                page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Capture authenticated shell evidence for the frontend auth handback.
+                shot('auth_shell_tokens.png')
+                # Define the auth_shell function used by this module.
+                def auth_shell():
+                    # Verify the premium topbar is visible after login and terms acceptance.
+                    assert page.get_by_test_id('premium-topbar').is_visible()
+                    # Verify the current-user wallet uses the fake-token glyph.
+                    assert '◈' in page.get_by_test_id('premium-wallet').inner_text()
+                    # Verify the chosen locale survived login and terms acceptance.
+                    assert page.get_by_test_id('shell-locale-select').input_value()=='ru-RU'
+                # Execute this statement as part of the module's documented control flow.
+                run_case('BR-AUTH-SHELL-001',['AUTH-UI-001','TOKEN-UI-001','I18N-003'],auth_shell)
+                # Open the token wallet menu before adding fake tokens.
+                page.locator('.wallet-menu summary').click()
+                # Fill the add-token amount through the browser-visible token control.
+                page.get_by_test_id('add-tokens').wait_for(timeout=5000); page.locator('#add-token-amount').fill('250'); page.get_by_test_id('add-tokens').click()
+                # Wait until the wallet reflects the mocked ledger-backed token addition.
+                page.wait_for_function("() => document.querySelector('[data-testid=\"premium-wallet\"]')?.textContent?.includes('5,250')")
+                # Execute this statement as part of the module's documented control flow.
+                run_case('BR-AUTH-TOKENS-001',['TOKEN-UI-001'],lambda: '5,250' in page.get_by_test_id('premium-wallet').inner_text())
+                # Store the current route before switching locale from the authenticated shell.
+                route_before_locale=page.get_by_test_id('lobby').is_visible()
+                # Switch back to English through the persistent shell selector.
+                page.get_by_test_id('shell-locale-select').select_option('en-US')
+                # Wait for the runtime locale state to reflect the shell switch.
+                page.wait_for_function("() => window.CasinoI18n && window.CasinoI18n.getLocaleState().locale === 'en-US'")
+                # Execute this statement as part of the module's documented control flow.
+                run_case('BR-AUTH-LOCALE-001',['I18N-003','AUTH-UI-001'],lambda: route_before_locale and page.get_by_test_id('lobby').is_visible() and '5,250' in page.get_by_test_id('premium-wallet').inner_text())
+                # Logout through the shell control to verify the browser returns to the login gate.
+                page.get_by_test_id('logout').click(); page.get_by_test_id('login-gate').wait_for(timeout=5000)
+                # Execute this statement as part of the module's documented control flow.
+                run_case('BR-AUTH-LOGOUT-001',['AUTH-UI-001'],lambda: page.get_by_test_id('login-gate').is_visible() and not page.get_by_test_id('premium-topbar').is_visible())
+                # Re-login after logout so the existing browser suite can continue authenticated.
+                page.get_by_test_id('login-username').fill('demo'); page.get_by_test_id('login-password').fill('password'); page.get_by_test_id('login-terms-check').check(); page.get_by_test_id('login-submit').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Define the premium_shell function used by this module.
                 def premium_shell():
                     # Verify the premium topbar remains visible at app load.
                     assert page.get_by_test_id('premium-topbar').is_visible()
-                    # Verify the shared wallet remains visible for the human token balance.
+                    # Verify the shared wallet remains visible for the current user's token balance.
                     assert page.get_by_test_id('premium-wallet').is_visible()
                     # Verify the wallet displays the play-token mark instead of a currency symbol.
                     assert '◈' in page.get_by_test_id('premium-wallet').inner_text()
-                    # Verify the wallet label uses token terminology for the human player.
-                    assert 'human tokens' in page.get_by_test_id('premium-wallet').inner_text().lower()
+                    # Verify the wallet label uses authenticated token-balance terminology.
+                    assert 'token balance' in page.get_by_test_id('premium-wallet').inner_text().lower()
                     # Verify the persistent shell status rail is present.
                     assert page.get_by_test_id('shell-status').is_visible()
                     # Verify the status rail describes the simulator as play-token only.
@@ -484,19 +606,19 @@ def run_browser_tests():
                 # Open the wallet popover through the token top-up control.
                 page.locator('summary[aria-label="Add play tokens"]').click()
                 # Set a deterministic token top-up amount for the wallet terminology check.
-                page.locator('#add-money-amount').fill('123')
-                # Submit the token top-up through the existing compatible player endpoint.
-                page.get_by_test_id('add-money').click()
+                page.locator('#add-token-amount').fill('123')
+                # Submit the token top-up through the authenticated current-user endpoint.
+                page.get_by_test_id('add-tokens').click()
                 # Wait for the wallet toast to show the token mark and play-token wording.
-                page.wait_for_function("() => document.querySelector('#toast')?.textContent?.includes('◈123.00') && document.querySelector('#toast')?.textContent?.includes('play tokens')")
+                page.wait_for_function("() => document.querySelector('#toast')?.textContent?.includes('◈123') && document.querySelector('#toast')?.textContent?.includes('play tokens')")
                 # Capture token wallet evidence for the worker handback.
                 shot('token_wallet.png')
                 # Define the token_wallet function used by this module.
                 def token_wallet():
                     # Verify the wallet retained token terminology after the add-token action.
-                    assert 'human tokens' in page.get_by_test_id('premium-wallet').inner_text().lower()
+                    assert 'token balance' in page.get_by_test_id('premium-wallet').inner_text().lower()
                     # Verify the toast uses the token mark for the added amount.
-                    assert '◈123.00' in page.locator('#toast').inner_text()
+                    assert '◈123' in page.locator('#toast').inner_text()
                     # Verify the toast describes play tokens instead of real-money language.
                     assert 'play tokens' in page.locator('#toast').inner_text()
                 # Execute this statement as part of the module's documented control flow.

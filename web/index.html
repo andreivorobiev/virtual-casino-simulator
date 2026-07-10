@@ -19,20 +19,21 @@
     <nav id="main-nav" class="casino-nav" aria-label="Primary"></nav>
     <div class="top-actions">
       <div class="wallet-pill" data-testid="premium-wallet">
-        <span id="balance-label" class="wallet-label">Human tokens</span>
+        <span id="balance-label" class="wallet-label">Token balance</span>
         <strong id="balance" class="wallet-amount">Loading...</strong>
       </div>
       <details class="wallet-menu">
         <summary class="icon-button" aria-label="Add play tokens"><span class="coin-stack" aria-hidden="true"></span></summary>
         <div class="wallet-popover">
-          <label for="add-money-amount">Add play tokens</label>
+          <label for="add-token-amount">Add play tokens</label>
           <div class="wallet-add-row">
-            <input id="add-money-amount" type="number" value="1000" min="1">
-            <button id="add-money-btn" class="primary" data-testid="add-money">Add</button>
+            <input id="add-token-amount" type="number" value="1000" min="1">
+            <button id="add-token-btn" class="primary" data-testid="add-tokens">Add</button>
           </div>
         </div>
       </details>
-      <button class="icon-button profile-dot" type="button" aria-label="Human player"><span aria-hidden="true"></span></button>
+      <select id="shell-locale-select" class="shell-locale" data-testid="shell-locale-select" aria-label="Language"></select>
+      <button id="logout-btn" class="icon-button profile-dot" type="button" aria-label="Logout" data-testid="logout"><span aria-hidden="true"></span></button>
     </div>
   </header>
 
