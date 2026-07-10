@@ -5875,6 +5875,25 @@
       "notes": "Planned by GitHub epic #34 and child issue #35; runtime implementation is intentionally out of scope for the requirements/contracts worker."
     },
     {
+      "id": "AUTH-006",
+      "module": "Auth",
+      "description": "Non-loopback or explicitly public deployment startup requires explicit bootstrap Admin settings and rejects known local defaults before runtime state is mutated.",
+      "status": "PASS",
+      "api_tests": [
+        "API-AUTH-DEPLOYMENT-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/config.py",
+        "casino/app.py",
+        "tests/run_tests.py",
+        "docs/requirements/requirements.md"
+      ],
+      "introduced_in": "deployment-default-hardening",
+      "changed_in": "deployment-default-hardening",
+      "notes": "Added for GitHub issue #62; loopback developer startup retains local defaults while public startup fails closed without unique explicit configuration."
+    },
+    {
       "id": "SESSION-001",
       "module": "Session",
       "description": "Successful login creates a server-side session represented to clients by a protected session cookie.",
@@ -6435,6 +6454,25 @@
       "introduced_in": "auth-mysql-token-foundation",
       "changed_in": "auth-mysql-token-foundation",
       "notes": "Planned by GitHub epic #34 and child issue #35; runtime implementation is intentionally out of scope for the requirements/contracts worker."
+    },
+    {
+      "id": "TEST-041",
+      "module": "Tests",
+      "description": "API validation covers loopback default preservation and fail-closed bootstrap configuration for non-loopback or explicitly public deployment startup.",
+      "status": "PASS",
+      "api_tests": [
+        "API-AUTH-DEPLOYMENT-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/run_tests.py",
+        "casino/config.py",
+        "casino/app.py",
+        "docs/requirements/requirements.md"
+      ],
+      "introduced_in": "deployment-default-hardening",
+      "changed_in": "deployment-default-hardening",
+      "notes": "Added for GitHub issue #62; test diagnostics never include bootstrap setting values."
     }
   ]
 }
