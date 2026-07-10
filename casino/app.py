@@ -21,7 +21,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 # Import required dependency so this module can use its public functions or constants.
-from casino.config import DEFAULT_HOST, DEFAULT_PORT, WEB_DIR, DATA_DIR, APP_VERSION
+from casino.config import DEFAULT_HOST, DEFAULT_PORT, WEB_DIR, DATA_DIR, APP_VERSION, validate_bootstrap_for_startup
 # Import required dependency so this module can use its public functions or constants.
 from casino.router import Router
 # Import required dependency so this module can use its public functions or constants.
@@ -447,6 +447,8 @@ class Handler(BaseHTTPRequestHandler):
 
 # Define the serve function used by this module.
 def serve(host=DEFAULT_HOST, port=DEFAULT_PORT, open_browser=True):
+    # Reject unsafe public bootstrap configuration before creating or migrating any runtime state.
+    validate_bootstrap_for_startup(host)
     # Execute this statement as part of the module's documented control flow.
     ensure_dirs()
     # Execute this statement as part of the module's documented control flow.

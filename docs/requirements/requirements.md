@@ -8,11 +8,11 @@ This redesigned documentation uses separated architecture views, cleaner Mermaid
 
 ## Executive summary
 
-- Requirements tracked: **400**
-- PASS: **354**
+- Requirements tracked: **402**
+- PASS: **356**
 - PLANNED: **39**
 - SUPERSEDED: **7**
-- Requirements with API/rule tests: **228**
+- Requirements with API/rule tests: **230**
 - Requirements with browser tests: **92**
 
 ## Auth/MySQL/token foundation addendum
@@ -23,7 +23,7 @@ This addendum records the durable planning requirements for GitHub epic #34 and 
 
 | Prefix | Scope | Requirement IDs |
 |---|---|---|
-| AUTH | Private beta login, bootstrap Admin, protected APIs, and Admin-only authorization. | AUTH-001 through AUTH-005 |
+| AUTH | Private beta login, bootstrap Admin, protected APIs, Admin-only authorization, and deployment-default hardening. | AUTH-001 through AUTH-006 |
 | SESSION | Session creation, logout, current-user lookup, and invalid session rejection. | SESSION-001 through SESSION-004 |
 | USER | Durable users, bound players, private state, Admin user management, and bot/user separation. | USER-001 through USER-005 |
 | STORAGE | Storage provider abstraction, JSON fallback, covered persisted domains, and envelope errors. | STORAGE-001 through STORAGE-004 |
@@ -32,7 +32,13 @@ This addendum records the durable planning requirements for GitHub epic #34 and 
 | LIC | Apache-2.0 source licensing and no-real-money/no-redemption legal posture. | LIC-001 through LIC-003 |
 | TOKEN | Play-token terminology, v2 token language, ledger-backed add-token flows, and private balances. | TOKEN-001 through TOKEN-004 |
 | API | Frozen v1 compatibility with additive v2 auth/current-user/Admin-user envelope contracts. | API-001 through API-002 |
-| TEST | Required auth, storage/MySQL, private-session, and copied-deployment integration validation. | TEST-037 through TEST-040 |
+| TEST | Required auth, storage/MySQL, private-session, copied-deployment, and deployment-default validation. | TEST-037 through TEST-041 |
+
+### Deployment-default hardening
+
+Loopback-only developer startup keeps its convenient local bootstrap behavior. Any non-loopback bind automatically requires explicit `CASINO_BOOTSTRAP_ADMIN_EMAIL` and `CASINO_BOOTSTRAP_ADMIN_PASSWORD` settings and rejects the known local defaults before runtime state is created or migrated.
+
+Deployments that bind to loopback but become externally reachable through a tunnel, reverse proxy, hosted platform, or similar network path must also set `CASINO_DEPLOYMENT_MODE` to `deployment`, `production`, or `public`. The startup guard reports configuration key names only and never includes supplied values in diagnostics.
 
 ### Superseded wording
 

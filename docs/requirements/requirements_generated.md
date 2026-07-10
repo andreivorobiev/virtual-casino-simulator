@@ -5,7 +5,7 @@ Application: 9.1.1
 ## Modules
 
 - application: 9.2.5
-- core: 9.2.2
+- core: 9.2.3
 - ledger: 9.0.2
 - players: 9.1.0
 - bots: 1.0.0
@@ -18,8 +18,8 @@ Application: 9.1.1
 - baccarat: 9.0.3
 - keno: 9.1.1
 - bingo: 9.1.2
-- tests: 1.4.5
-- docs: 1.2.2
+- tests: 1.4.6
+- docs: 1.2.3
 - contracts: 1.1.0
 - tooling: 1.1.3
 - commenting_policy: 1.0.0
@@ -392,6 +392,7 @@ Application: 9.1.1
 - **AUTH-003** (Auth) - PLANNED: Bootstrap Admin creation is operator-controlled and separate from public runtime registration.
 - **AUTH-004** (Auth) - PLANNED: Unauthenticated or inactive-user access returns the standard ok/error API envelope without leaking protected data.
 - **AUTH-005** (Auth) - PLANNED: Authenticated Admin-only actions require an active user with an Admin role.
+- **AUTH-006** (Auth) - PASS: Non-loopback or explicitly public deployment startup requires explicit bootstrap Admin settings and rejects known local defaults before runtime state is mutated.
 - **SESSION-001** (Session) - PLANNED: Successful login creates a server-side session represented to clients by a protected session cookie.
 - **SESSION-002** (Session) - PLANNED: Logout invalidates the current session before returning a standard ok/data envelope.
 - **SESSION-003** (Session) - PLANNED: Current-user lookup returns user, role, session, terms, locale, and bound player token balance data.
@@ -426,3 +427,4 @@ Application: 9.1.1
 - **TEST-038** (Tests) - PLANNED: Storage tests cover JSON provider parity and MySQL schema/provider behavior where environment support is available.
 - **TEST-039** (Tests) - PLANNED: API and browser tests cover two authenticated users playing each game with isolated balances, state, history, bots, and autoplay.
 - **TEST-040** (Tests) - PLANNED: Integration validation runs the complete auth, MySQL, token terminology, licensing, and private-session path from a copied deployment environment.
+- **TEST-041** (Tests) - PASS: API validation covers loopback default preservation and fail-closed bootstrap configuration for non-loopback or explicitly public deployment startup.

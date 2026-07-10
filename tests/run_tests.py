@@ -12,6 +12,8 @@ sys.path.insert(0, str(ROOT))
 from casino.games.blackjack import api as blackjack_api, engine as blackjack_engine
 # Import auth helpers so API tests can seed users through the backend storage seam.
 from casino.core import auth as auth_core
+# Import configuration helpers so startup hardening can be tested without launching a public listener.
+from casino import config as casino_config
 # Import auth cookie settings so browser tests can enter through the backend session seam.
 from casino.config import AUTH_SESSION_COOKIE
 # Import storage tests so provider parity can run without the broad API suite.
@@ -162,8 +164,57 @@ def validate_i18n_resources():
                 # Execute this statement as part of the module's documented control flow.
                 assert i18n_placeholders(translated_value)==i18n_placeholders(source_value), f'{locale}/{domain}/{key} placeholder mismatch'
 
+# Define the validate_deployment_bootstrap function used to prove fail-closed public startup behavior.
+def validate_deployment_bootstrap():
+    # Preserve no-configuration developer startup on the default IPv4 loopback binding.
+    casino_config.validate_bootstrap_for_startup('127.0.0.1', {})
+    # Preserve no-configuration developer startup on the IPv6 loopback binding.
+    casino_config.validate_bootstrap_for_startup('::1', {})
+    # Build explicit public configuration from synthetic values that are never printed by the test harness.
+    public_environment={
+        # Supply a non-local bootstrap identity for the guarded deployment path.
+        'CASINO_BOOTSTRAP_ADMIN_EMAIL':'deployment-test@example.invalid',
+        # Supply a test-only unique value for the guarded deployment path.
+        'CASINO_BOOTSTRAP_ADMIN_PASSWORD':'deployment-test-' + ('x' * 32),
+    }
+    # Accept a non-loopback binding only after both required settings are explicit and non-default.
+    casino_config.validate_bootstrap_for_startup('0.0.0.0', public_environment)
+    # Copy the explicit settings before adding a public mode signal on a loopback binding.
+    public_mode_environment=dict(public_environment)
+    # Mark the loopback process as a production deployment so the explicit guard remains active.
+    public_mode_environment[casino_config.DEPLOYMENT_MODE_ENV]='production'
+    # Accept explicit public mode on loopback only with hardened bootstrap settings.
+    casino_config.validate_bootstrap_for_startup('127.0.0.1', public_mode_environment)
+    # Iterate over unsafe public cases that must fail before server or storage startup.
+    for unsafe_host, unsafe_environment in (
+        # Reject a wildcard listener when no bootstrap configuration is supplied.
+        ('0.0.0.0', {}),
+        # Reject explicit public mode on loopback when no bootstrap configuration is supplied.
+        ('127.0.0.1', {casino_config.DEPLOYMENT_MODE_ENV:'public'}),
+        # Reject explicitly supplied values when they still select the known local defaults.
+        ('0.0.0.0', {
+            # Reuse the local identity constant so the test never copies its value into output.
+            'CASINO_BOOTSTRAP_ADMIN_EMAIL':casino_config.LOCAL_BOOTSTRAP_ADMIN_EMAIL,
+            # Reuse the local credential constant so the test never copies its value into output.
+            'CASINO_BOOTSTRAP_ADMIN_PASSWORD':casino_config.AUTH_BOOTSTRAP_ADMIN_PASSWORD,
+        }),
+    # Finish the unsafe-case collection and begin the validation loop.
+    ):
+        # Start protected logic so the expected fail-closed exception can be asserted.
+        try:
+            # Validate the unsafe case and fail the test if startup is incorrectly allowed.
+            casino_config.validate_bootstrap_for_startup(unsafe_host, unsafe_environment)
+        # Handle the required public-startup rejection without recording sensitive configuration.
+        except RuntimeError:
+            # Continue after observing the expected guard rejection.
+            continue
+        # Raise a value-free assertion when an unsafe deployment case bypasses the guard.
+        raise AssertionError('unsafe public bootstrap configuration was accepted')
+
 # Define the run_api_tests function used by this module.
 def run_api_tests():
+    # Record focused deployment-default coverage before starting the normal loopback API server.
+    run_case('API-AUTH-DEPLOYMENT-001',['AUTH-006','TEST-041'],validate_deployment_bootstrap)
     # Set proc,base to the value needed for the next operation.
     proc,base=start_server()
     # Start protected logic so failures can be handled safely.
