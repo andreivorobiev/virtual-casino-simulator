@@ -5,7 +5,7 @@ Application: 9.1.1
 ## Modules
 
 - application: 9.2.8
-- core: 9.3.1
+- core: 9.3.2
 - ledger: 9.0.2
 - players: 9.1.0
 - bots: 1.0.0
@@ -18,7 +18,7 @@ Application: 9.1.1
 - baccarat: 9.0.3
 - keno: 9.1.1
 - bingo: 9.1.2
-- tests: 1.5.1
+- tests: 1.5.2
 - docs: 1.3.1
 - contracts: 1.1.1
 - tooling: 1.2.0
@@ -432,3 +432,7 @@ Application: 9.1.1
 - **CARD-002** (Application) - PASS: Reusable frontend card-renderer primitives produce accessible responsive card markup and remain safe under reduced-motion preferences.
 - **POKER-001** (Core) - PASS: Shared poker primitives evaluate standard five-card hands and select the strongest five-card result from six- or seven-card inputs using deterministic tie breakers.
 - **POKER-002** (Docs) - PASS: Downstream game workers have usage documentation for shared card, shuffle, poker-evaluation, and frontend-renderer primitives.
+- **DICE-001** (Core) - PASS: Reusable dice-roll primitives support deterministic seeded random hooks for tests.
+- **MOTION-001** (Core) - PASS: Reusable motion timing helpers respect reduced-motion preferences while preserving asynchronous callback semantics.
+- **MOTION-002** (Core) - PASS: Route and reload lifecycle cleanup prevents stale motion timers after navigation or explicit teardown.
+- **MOTION-003** (Tests) - PASS: Primitive-level tests prove deterministic dice and timing hooks, reduced-motion behavior, and timer cleanup.
