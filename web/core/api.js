@@ -39,6 +39,25 @@ export const logout = () => post('/api/v2/auth/logout', {});
 export const acceptTerms = body => post('/api/v2/me/terms/accept', body);
 // Export this symbol so the shell can request ledger-backed token additions for the current user.
 export const addUserTokens = body => post('/api/v2/me/tokens/add', body);
+// Export this symbol so game modules can resolve the active player without hardcoded human state.
+export function currentPlayerId() {
+  // Store the authenticated shell player when the login shell has exposed one.
+  const shellPlayer = window.CasinoCurrentUser?.player || window.CasinoCurrentPlayer || {};
+  // Return the authenticated player id, an explicit browser override, or the legacy human fallback.
+  return shellPlayer.player_id || window.CasinoCurrentUser?.player_id || localStorage.getItem('casino.currentPlayerId') || 'human';
+}
+// Export this symbol so v1 GET endpoints can receive the current player as an additive query value.
+export function currentPlayerPath(path) {
+  // Store separator so paths with existing query strings remain valid.
+  const separator = path.includes('?') ? '&' : '?';
+  // Return the path with a current-player query parameter.
+  return `${path}${separator}player_id=${encodeURIComponent(currentPlayerId())}`;
+}
+// Export this symbol so action payloads use the current player while preserving explicit overrides.
+export function withCurrentPlayer(body = {}) {
+  // Return a payload that defaults to the active player without replacing caller-supplied ids.
+  return { player_id: currentPlayerId(), ...body };
+}
 // Export this symbol so other modules can use it through the public module boundary.
 export async function logClient(event, details = {}) {
   // Start protected logic so failures can be handled safely.

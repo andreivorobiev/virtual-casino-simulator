@@ -1,6 +1,6 @@
 // AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
 // Import the frozen API helpers used by this frontend module.
-import { api, post } from '../core/api.js';
+import { api, post, currentPlayerPath, withCurrentPlayer } from '../core/api.js';
 // Import shared shell/UI helpers so formatting, cards, toasts, and wallet refreshes stay consistent.
 import { toast, refreshBalance, cardHtml, safe } from '../core/ui.js';
 // Import the i18n runtime so Blackjack text can refresh without remounting gameplay state.
@@ -75,7 +75,7 @@ async function load() {
   // Load the owned Blackjack resource bundle before visible strings are generated.
   await loadI18nDomain(I18N_DOMAIN);
   // Read current Blackjack state through the frozen v1 endpoint.
-  const payload = await api(`${API_ROOT}/state`);
+  const payload = await api(currentPlayerPath(`${API_ROOT}/state`));
   // Store the module state payload for all render helpers.
   state = payload.state;
   // Prefer any active round but keep the newest settled round visible when no active hand exists.
@@ -162,7 +162,7 @@ async function deal() {
   // Start protected action handling so validation errors become toasts.
   try {
     // Deal a new round through the frozen v1 route.
-    const payload = await post(`${API_ROOT}/rounds`, { player_id: 'human', bet_amount: amount });
+    const payload = await post(`${API_ROOT}/rounds`, withCurrentPlayer({ bet_amount: amount }));
     // Store the returned state snapshot.
     state = payload.state;
     // Select the newly dealt round in the visible table.
@@ -218,7 +218,7 @@ async function act(actionId) {
   // Start protected action handling so validation errors become toasts.
   try {
     // Post to the existing Blackjack action route without changing payload contracts.
-    const payload = await post(`${API_ROOT}/rounds/${roundItem.round_id}/${meta.endpoint}`, actionBody(actionId));
+    const payload = await post(`${API_ROOT}/rounds/${roundItem.round_id}/${meta.endpoint}`, withCurrentPlayer(actionBody(actionId)));
     // Store the returned state snapshot.
     state = payload.state;
     // Keep the same round visible after the action.
@@ -272,7 +272,7 @@ async function settings() {
   // Start protected settings handling so conflicts become toasts.
   try {
     // Post rule changes through the frozen v1 settings endpoint.
-    const payload = await post(`${API_ROOT}/settings`, body);
+    const payload = await post(`${API_ROOT}/settings`, withCurrentPlayer(body));
     // Store the returned state snapshot.
     state = payload.state;
     // Keep the selected or latest round visible after rule changes.

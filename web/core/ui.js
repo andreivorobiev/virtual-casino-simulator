@@ -1,6 +1,6 @@
 // AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
 // Import required dependency so this module can use its public functions or constants.
-import { api, post } from './api.js';
+import { api, post, currentPlayerId, withCurrentPlayer } from './api.js';
 // Export this symbol so other modules can display play-token amounts consistently.
 export const money = n => `◈${Number(n || 0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}`;
 // Export this symbol so auth-aware shell code can render play tokens without real-money currency marks.
@@ -16,8 +16,8 @@ export async function refreshBalance(){
     // Return the current-user player payload for legacy callers that expect a player-like object.
     return window.CasinoCurrentUser.player || {};
   }
-  // Read the human player through the frozen player API.
-  const d=await api('/api/v1/players/human');
+  // Read the current player through the frozen player API.
+  const d=await api(`/api/v1/players/${encodeURIComponent(currentPlayerId())}`);
   // Find the shared wallet amount node in the premium shell.
   const el=document.getElementById('balance');
   // Update the wallet amount without duplicating the label text.
@@ -25,7 +25,7 @@ export async function refreshBalance(){
   // Find the optional wallet label node used by the premium shell.
   const label=document.getElementById('balance-label');
   // Keep the wallet label explicit for screen readers and narrow layouts.
-  if(label) label.textContent='Human tokens';
+  if(label) label.textContent='Player tokens';
   // Return the player payload for callers that need the current balance.
   return d.player;
 }
@@ -49,7 +49,7 @@ export function renderTokenBalance(currentUser){
   return Number(amount || 0);
 }
 // Export this symbol so callers can keep using the compatible add-money endpoint for token top-ups.
-export async function addFakeMoney(amount){ const d=await post('/api/v1/players/human/add-money',{amount}); await refreshBalance(); return d; }
+export async function addFakeMoney(amount){ const d=await post(`/api/v1/players/${encodeURIComponent(currentPlayerId())}/add-money`,withCurrentPlayer({amount})); await refreshBalance(); return d; }
 // Export this symbol so other modules can use it through the public module boundary.
 export function cardHtml(card){ if(!card)return''; if(card==='??') return '<div class="playing-card back">?</div>'; if(typeof card==='string'){ const suit=card.slice(-1), rank=card.slice(0,-1), red=suit==='\u2665'||suit==='\u2666'; return `<div class="playing-card ${red?'red':''}">${rank}<br>${suit}</div>`;} const red=card.suit==='\u2665'||card.suit==='\u2666'; return `<div class="playing-card ${red?'red':''}">${card.rank}<br>${card.suit}</div>`; }
 // Export this symbol so other modules can use it through the public module boundary.

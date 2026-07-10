@@ -1,6 +1,6 @@
 # AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
 # Import required dependency so this module can use its public functions or constants.
-from casino.core.state_store import load_game_state, save_game_state
+from casino.core.state_store import load_player_game_state, save_player_game_state
 # Import required dependency so this module can use its public functions or constants.
 from casino.core.validation import require_amount, require_player_id
 # Import required dependency so this module can use its public functions or constants.
@@ -18,18 +18,24 @@ from casino.errors import ValidationError
 GAME_ID = "roulette"
 
 
+# Define the request_player_id function used by this module.
+def request_player_id(body, query) -> str:
+    # Return the explicit player id while keeping legacy v1 calls on the human player.
+    return require_player_id({"player_id": body.get("player_id") or query.get("player_id") or "human"})
+
+
 # Define the scoreboards function used by this module.
-def scoreboards():
+def scoreboards(player_id: str):
     # Return the computed value to the caller.
-    return [{"player_id": p["player_id"], "display_name": p["display_name"], "balance": p["balance"], "type": p["type"]} for p in players.list_players()]
+    return [{"player_id": p["player_id"], "display_name": p["display_name"], "balance": p["balance"], "type": p["type"]} for p in players.list_players() if p["player_id"] == player_id or p.get("type") == "bot"]
 
 
 # Define the state_payload function used by this module.
-def state_payload(state=None):
+def state_payload(player_id: str, state=None):
     # Set state to the value needed for the next operation.
-    state = state or load_game_state(GAME_ID, engine.default_state)
+    state = state or load_player_game_state(GAME_ID, player_id, engine.default_state)
     # Return the computed value to the caller.
-    return {"game": GAME_ID, "state": state, "player": players.get_player("human"), "players": scoreboards(), "catalog": rules.catalog(state.get("mode", "double")), "stats": engine.stats(state)}
+    return {"game": GAME_ID, "state": state, "player": players.get_player(player_id), "players": scoreboards(player_id), "catalog": rules.catalog(state.get("mode", "double")), "stats": engine.stats(state)}
 
 
 # Define the register function used by this module.
@@ -38,15 +44,19 @@ def register(router):
     @router.get(r"/api/v1/games/roulette/state")
     # Define the state function used by this module.
     def state(body, query):
+        # Set player_id to the value needed for the next operation.
+        player_id = request_player_id(body, query)
         # Return the computed value to the caller.
-        return state_payload()
+        return state_payload(player_id)
 
     # Attach this decorator so the following function is registered with the framework.
     @router.post(r"/api/v1/games/roulette/settings")
     # Define the settings function used by this module.
     def settings(body, query):
+        # Set player_id to the value needed for the next operation.
+        player_id = request_player_id(body, query)
         # Set state to the value needed for the next operation.
-        state = load_game_state(GAME_ID, engine.default_state)
+        state = load_player_game_state(GAME_ID, player_id, engine.default_state)
         # Branch when the following condition is true.
         if "mode" in body:
             # Execute this statement as part of the module's documented control flow.
@@ -60,9 +70,9 @@ def register(router):
             # Set state["zero_rule"] to the value needed for the next operation.
             state["zero_rule"] = body["zero_rule"]
         # Execute this statement as part of the module's documented control flow.
-        save_game_state(GAME_ID, state)
+        save_player_game_state(GAME_ID, player_id, state)
         # Return the computed value to the caller.
-        return state_payload(state)
+        return state_payload(player_id, state)
 
     # Attach this decorator so the following function is registered with the framework.
     @router.get(r"/api/v1/games/roulette/bet-catalog")
@@ -78,28 +88,28 @@ def register(router):
     # Define the place_bet function used by this module.
     def place_bet(body, query):
         # Set player_id to the value needed for the next operation.
-        player_id = require_player_id(body)
+        player_id = request_player_id(body, query)
         # Set amount to the value needed for the next operation.
         amount = require_amount(body.get("amount"))
         # Set state to the value needed for the next operation.
-        state = load_game_state(GAME_ID, engine.default_state)
+        state = load_player_game_state(GAME_ID, player_id, engine.default_state)
         # Set item to the value needed for the next operation.
         item = engine.add_bet_to_state(state, player_id, body.get("bet_type"), amount, [str(x) for x in body.get("covered_numbers", [])], body.get("label"), source="manual")
         # Set led to the value needed for the next operation.
         led = ledger.debit(player_id, amount, "ROULETTE_BET_PLACED", GAME_ID, item["round_id"], {"bet_id": item["bet_id"], "covered_numbers": item["covered_numbers"], "bet_type": item["type"]})
         # Execute this statement as part of the module's documented control flow.
-        save_game_state(GAME_ID, state)
+        save_player_game_state(GAME_ID, player_id, state)
         # Set logger.info("roulette_bet_placed", player_id to the value needed for the next operation.
         logger.info("roulette_bet_placed", player_id=player_id, bet_id=item["bet_id"], amount=amount, bet_type=item["type"])
         # Return the computed value to the caller.
-        return {"bet": item, "ledger": led, **state_payload(state)}
+        return {"bet": item, "ledger": led, **state_payload(player_id, state)}
 
     # Attach this decorator so the following function is registered with the framework.
     @router.post(r"/api/v1/games/roulette/call-bet")
     # Define the call_bet function used by this module.
     def call_bet(body, query):
         # Set player_id to the value needed for the next operation.
-        player_id = require_player_id(body)
+        player_id = request_player_id(body, query)
         # Set amount to the value needed for the next operation.
         amount = require_amount(body.get("amount"))
         # Set call_type to the value needed for the next operation.
@@ -107,7 +117,7 @@ def register(router):
         # Set number to the value needed for the next operation.
         number = body.get("number")
         # Set state to the value needed for the next operation.
-        state = load_game_state(GAME_ID, engine.default_state)
+        state = load_player_game_state(GAME_ID, player_id, engine.default_state)
         # Set comps to the value needed for the next operation.
         comps = expand_call_bet(state.get("mode","double"), call_type, amount, number)
         # Branch when the following condition is true.
@@ -125,18 +135,18 @@ def register(router):
             # Execute this statement as part of the module's documented control flow.
             placed.append(item)
         # Execute this statement as part of the module's documented control flow.
-        save_game_state(GAME_ID, state)
+        save_player_game_state(GAME_ID, player_id, state)
         # Return the computed value to the caller.
-        return {"placed": placed, "ledger": ledgers, **state_payload(state)}
+        return {"placed": placed, "ledger": ledgers, **state_payload(player_id, state)}
 
     # Attach this decorator so the following function is registered with the framework.
     @router.post(r"/api/v1/games/roulette/rebet")
     # Define the rebet function used by this module.
     def rebet(body, query):
         # Set player_id to the value needed for the next operation.
-        player_id = require_player_id(body)
+        player_id = request_player_id(body, query)
         # Set state to the value needed for the next operation.
-        state = load_game_state(GAME_ID, engine.default_state)
+        state = load_player_game_state(GAME_ID, player_id, engine.default_state)
         # Set template to the value needed for the next operation.
         template = state.get("last_bet_template") or []
         # Branch when the following condition is true.
@@ -154,35 +164,35 @@ def register(router):
             # Execute this statement as part of the module's documented control flow.
             placed.append(item)
         # Execute this statement as part of the module's documented control flow.
-        save_game_state(GAME_ID, state)
+        save_player_game_state(GAME_ID, player_id, state)
         # Return the computed value to the caller.
-        return {"placed": placed, "ledger": ledgers, **state_payload(state)}
+        return {"placed": placed, "ledger": ledgers, **state_payload(player_id, state)}
 
     # Attach this decorator so the following function is registered with the framework.
     @router.delete(r"/api/v1/games/roulette/bets/(?P<bet_id>[^/]+)")
     # Define the clear_bet function used by this module.
     def clear_bet(body, query, bet_id):
         # Set player_id to the value needed for the next operation.
-        player_id = body.get("player_id") or query.get("player_id") or "human"
+        player_id = request_player_id(body, query)
         # Set state to the value needed for the next operation.
-        state = load_game_state(GAME_ID, engine.default_state)
+        state = load_player_game_state(GAME_ID, player_id, engine.default_state)
         # Set bet to the value needed for the next operation.
         bet = engine.remove_bet_from_state(state, bet_id, player_id)
         # Set cred to the value needed for the next operation.
         cred = ledger.credit(player_id, bet["amount"], "ROULETTE_BET_REFUND", GAME_ID, bet["round_id"], {"bet_id": bet_id})
         # Execute this statement as part of the module's documented control flow.
-        save_game_state(GAME_ID, state)
+        save_player_game_state(GAME_ID, player_id, state)
         # Return the computed value to the caller.
-        return {"cleared": bet, "ledger": cred, **state_payload(state)}
+        return {"cleared": bet, "ledger": cred, **state_payload(player_id, state)}
 
     # Attach this decorator so the following function is registered with the framework.
     @router.post(r"/api/v1/games/roulette/clear")
     # Define the clear_all function used by this module.
     def clear_all(body, query):
         # Set player_id to the value needed for the next operation.
-        player_id = require_player_id(body)
+        player_id = request_player_id(body, query)
         # Set state to the value needed for the next operation.
-        state = load_game_state(GAME_ID, engine.default_state)
+        state = load_player_game_state(GAME_ID, player_id, engine.default_state)
         # Set open_round to the value needed for the next operation.
         open_round = engine.ensure_open_round(state)
         # Set bets to the value needed for the next operation.
@@ -194,18 +204,20 @@ def register(router):
             # Execute this statement as part of the module's documented control flow.
             ledger.credit(player_id, b["amount"], "ROULETTE_BET_REFUND", GAME_ID, b["round_id"], {"bet_id": b["bet_id"]})
         # Execute this statement as part of the module's documented control flow.
-        save_game_state(GAME_ID, state)
+        save_player_game_state(GAME_ID, player_id, state)
         # Return the computed value to the caller.
-        return {"cleared": bets, **state_payload(state)}
+        return {"cleared": bets, **state_payload(player_id, state)}
 
     # Attach this decorator so the following function is registered with the framework.
     @router.post(r"/api/v1/games/roulette/spin")
     # Define the spin function used by this module.
     def spin(body, query):
+        # Set player_id to the value needed for the next operation.
+        player_id = request_player_id(body, query)
         # Set state to the value needed for the next operation.
-        state = load_game_state(GAME_ID, engine.default_state)
+        state = load_player_game_state(GAME_ID, player_id, engine.default_state)
         # Execute this statement as part of the module's documented control flow.
-        engine.save_template_from_round(state, "human")
+        engine.save_template_from_round(state, player_id)
         # Set zero_rule to the value needed for the next operation.
         zero_rule = state.get("zero_rule", "normal")
         # Set settled to the value needed for the next operation.
@@ -235,15 +247,17 @@ def register(router):
             # Execute this statement as part of the module's documented control flow.
             settlements.append({"bet": bet, "settlement": res, "ledger": credit_ev, "carried_bet": carried})
         # Execute this statement as part of the module's documented control flow.
-        save_game_state(GAME_ID, state)
+        save_player_game_state(GAME_ID, player_id, state)
         # Set logger.info("roulette_spin_result", round_id to the value needed for the next operation.
         logger.info("roulette_spin_result", round_id=settled["round_id"], result=settled["result"], color=settled["result_color"], bet_count=len(settled.get("bets",[])))
         # Return the computed value to the caller.
-        return {"round": settled, "settlements": settlements, "bot_bets": [], **state_payload(state)}
+        return {"round": settled, "settlements": settlements, "bot_bets": [], **state_payload(player_id, state)}
 
     # Attach this decorator so the following function is registered with the framework.
     @router.get(r"/api/v1/games/roulette/stats")
     # Define the stats function used by this module.
     def stats(body, query):
+        # Set player_id to the value needed for the next operation.
+        player_id = request_player_id(body, query)
         # Return the computed value to the caller.
-        return engine.stats(load_game_state(GAME_ID, engine.default_state))
+        return engine.stats(load_player_game_state(GAME_ID, player_id, engine.default_state))

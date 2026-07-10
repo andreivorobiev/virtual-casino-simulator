@@ -405,6 +405,82 @@ def run_api_tests():
             api(base,'/api/v1/games/bingo/cards','POST',{'player_id':'human','amount':5,'pattern':'line'}); a=api(base,'/api/v1/games/bingo/auto','POST',{'max_calls':75}); assert a['session']['status']=='won'
         # Execute this statement as part of the module's documented control flow.
         run_case('API-BINGO-001',['BINGO-001','BINGO-010','BINGO-020'],bingo)
+        # Define the private_sessions function used by this module.
+        def private_sessions():
+            # Reset state so the multi-player isolation evidence is not mixed with earlier cases.
+            api(base,'/api/v1/casino/reset','POST',{})
+            # Re-login after reset because reset reseeds auth/session state.
+            login_default_user(base)
+            # Create the first human account used by the private-session scenario.
+            user_a=api(base,'/api/v1/players','POST',{'display_name':'Private A','type':'human','balance':5000})['player']['player_id']
+            # Create the second human account used by the private-session scenario.
+            user_b=api(base,'/api/v1/players','POST',{'display_name':'Private B','type':'human','balance':5000})['player']['player_id']
+            # Place an open Roulette bet for user A.
+            rou_a=api(base,'/api/v1/games/roulette/bets','POST',{'player_id':user_a,'amount':10,'bet_type':'red','covered_numbers':['1','3','5','7','9','12','14','16','18','19','21','23','25','27','30','32','34','36']})['bet']['bet_id']
+            # Verify user B does not see user A's Roulette bet.
+            assert not api(base,f'/api/v1/games/roulette/state?player_id={user_b}')['state']['open_round']['bets']
+            # Place and settle a separate Roulette bet for user B.
+            api(base,'/api/v1/games/roulette/bets','POST',{'player_id':user_b,'amount':5,'bet_type':'straight','covered_numbers':['17'],'label':'17'})
+            # Settle only user B's Roulette state.
+            api(base,'/api/v1/games/roulette/spin','POST',{'player_id':user_b,'force_result':'17'})
+            # Verify user A's Roulette bet remains open in user A's state.
+            assert api(base,f'/api/v1/games/roulette/state?player_id={user_a}')['state']['open_round']['bets'][0]['bet_id']==rou_a
+            # Spin Slots once for user A.
+            slot_a=api(base,'/api/v1/games/slots/spin','POST',{'player_id':user_a,'active_lines':1,'line_bet':1})['spin']['round_id']
+            # Spin Slots once for user B.
+            slot_b=api(base,'/api/v1/games/slots/spin','POST',{'player_id':user_b,'active_lines':3,'line_bet':1})['spin']['round_id']
+            # Verify each user sees only their own Slots spin history.
+            assert api(base,f'/api/v1/games/slots/state?player_id={user_a}')['state']['last_spins'][-1]['round_id']==slot_a
+            # Verify user B's Slots state is separate from user A's.
+            assert api(base,f'/api/v1/games/slots/state?player_id={user_b}')['state']['last_spins'][-1]['round_id']==slot_b
+            # Deal one Blackjack round for user A.
+            bj_a=api(base,'/api/v1/games/blackjack/rounds','POST',{'player_id':user_a,'bet_amount':10})['round']['round_id']
+            # Deal one Blackjack round for user B.
+            bj_b=api(base,'/api/v1/games/blackjack/rounds','POST',{'player_id':user_b,'bet_amount':10})['round']['round_id']
+            # Verify user A sees only user A's Blackjack round.
+            assert bj_a in api(base,f'/api/v1/games/blackjack/state?player_id={user_a}')['state']['rounds']
+            # Verify user B sees only user B's Blackjack round.
+            assert bj_b in api(base,f'/api/v1/games/blackjack/state?player_id={user_b}')['state']['rounds']
+            # Place a Baccarat bet for user A and leave it open.
+            bac_a=api(base,'/api/v1/games/baccarat/bets','POST',{'player_id':user_a,'amount':10,'bet_type':'banker'})['bet']['bet_id']
+            # Verify user B does not see user A's Baccarat bet.
+            assert not api(base,f'/api/v1/games/baccarat/state?player_id={user_b}')['state']['open_bets']
+            # Place and settle a separate Baccarat coup for user B.
+            api(base,'/api/v1/games/baccarat/bets','POST',{'player_id':user_b,'amount':10,'bet_type':'player'})
+            # Deal only user B's Baccarat state.
+            api(base,'/api/v1/games/baccarat/deal','POST',{'player_id':user_b})
+            # Verify user A's Baccarat bet remains open.
+            assert api(base,f'/api/v1/games/baccarat/state?player_id={user_a}')['state']['open_bets'][0]['bet_id']==bac_a
+            # Buy a Keno ticket for user A and leave it open.
+            keno_a=api(base,'/api/v1/games/keno/tickets','POST',{'player_id':user_a,'amount':5,'spots':[1,2,3]})['ticket']['ticket_id']
+            # Verify user B does not see user A's Keno ticket.
+            assert not api(base,f'/api/v1/games/keno/state?player_id={user_b}')['state']['open_tickets']
+            # Buy and draw a separate Keno ticket for user B.
+            api(base,'/api/v1/games/keno/tickets','POST',{'player_id':user_b,'amount':5,'spots':[4,5,6]})
+            # Draw only user B's Keno state.
+            api(base,'/api/v1/games/keno/draw','POST',{'player_id':user_b})
+            # Verify user A's Keno ticket remains open.
+            assert api(base,f'/api/v1/games/keno/state?player_id={user_a}')['state']['open_tickets'][0]['ticket_id']==keno_a
+            # Buy a Bingo card for user A and leave the session active.
+            bingo_a=api(base,'/api/v1/games/bingo/cards','POST',{'player_id':user_a,'amount':5,'pattern':'line'})['session']['session_id']
+            # Verify user B does not see user A's Bingo session.
+            assert api(base,f'/api/v1/games/bingo/state?player_id={user_b}')['state']['active_session'] is None
+            # Buy and reset a separate Bingo session for user B.
+            api(base,'/api/v1/games/bingo/cards','POST',{'player_id':user_b,'amount':5,'pattern':'line'})
+            # Reset only user B's Bingo state.
+            api(base,'/api/v1/games/bingo/reset','POST',{'player_id':user_b})
+            # Verify user A's Bingo session remains active.
+            assert api(base,f'/api/v1/games/bingo/state?player_id={user_a}')['state']['active_session']['session_id']==bingo_a
+            # Read user A's ledger rows after multi-game play.
+            ledger_a=api(base,f'/api/v1/players/{user_a}/ledger')['ledger']
+            # Read user B's ledger rows after multi-game play.
+            ledger_b=api(base,f'/api/v1/players/{user_b}/ledger')['ledger']
+            # Verify each ledger view contains only the requested player id.
+            assert ledger_a and all(row['player_id']==user_a for row in ledger_a)
+            # Verify user B ledger view contains only user B rows.
+            assert ledger_b and all(row['player_id']==user_b for row in ledger_b)
+        # Execute this statement as part of the module's documented control flow.
+        run_case('API-PRIVATE-SESSIONS-001',['ROU-010','SLOT-019','BJ-020','BAC-010','KENO-008','BINGO-020','LEDGER-001','AUTO-001'],private_sessions)
         # Define the admin function used by this module.
         def admin():
             # Set r to the value needed for the next operation.

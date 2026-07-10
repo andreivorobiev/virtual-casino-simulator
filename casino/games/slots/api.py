@@ -1,6 +1,6 @@
 # AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
 # Import required dependency so this module can use its public functions or constants.
-from casino.core.state_store import load_game_state, save_game_state
+from casino.core.state_store import load_player_game_state, save_player_game_state
 # Import required dependency so this module can use its public functions or constants.
 from casino.core.validation import require_amount, require_player_id
 # Import required dependency so this module can use its public functions or constants.
@@ -15,31 +15,36 @@ from casino.errors import ValidationError
 # Set GAME_ID to the value needed for the next operation.
 GAME_ID = "slots"
 
+# Define the request_player_id function used by this module.
+def request_player_id(body, query) -> str:
+    # Return the explicit player id while preserving the legacy human default.
+    return require_player_id({"player_id": body.get("player_id") or query.get("player_id") or "human"})
+
 # Define the payload function used by this module.
-def payload(state=None):
+def payload(player_id: str, state=None):
     # Set state to the value needed for the next operation.
-    state = state or load_game_state(GAME_ID, engine.default_state)
+    state = state or load_player_game_state(GAME_ID, player_id, engine.default_state)
     # Return the computed value to the caller.
-    return {"game": GAME_ID, "state": state, "player": players.get_player("human"), "config": {"symbols": engine.SYMBOLS, "paylines": list(engine.PAYLINES.keys()), "paytable": engine.PAYTABLE}}
+    return {"game": GAME_ID, "state": state, "player": players.get_player(player_id), "config": {"symbols": engine.SYMBOLS, "paylines": list(engine.PAYLINES.keys()), "paytable": engine.PAYTABLE}}
 
 # Define the register function used by this module.
 def register(router):
     # Attach this decorator so the following function is registered with the framework.
     @router.get(r"/api/v1/games/slots/state")
     # Define the state function used by this module.
-    def state(body, query): return payload()
+    def state(body, query): return payload(request_player_id(body, query))
 
     # Attach this decorator so the following function is registered with the framework.
     @router.get(r"/api/v1/games/slots/config")
     # Define the config function used by this module.
-    def config(body, query): return payload()["config"]
+    def config(body, query): return payload(request_player_id(body, query))["config"]
 
     # Attach this decorator so the following function is registered with the framework.
     @router.post(r"/api/v1/games/slots/spin")
     # Define the spin function used by this module.
     def spin(body, query):
         # Set player_id to the value needed for the next operation.
-        player_id = require_player_id(body)
+        player_id = request_player_id(body, query)
         # Start protected logic so failures can be handled safely.
         try:
             # Set active_lines to the value needed for the next operation.
@@ -55,7 +60,7 @@ def register(router):
         # Set line_bet to the value needed for the next operation.
         line_bet = require_amount(body.get("line_bet", 1))
         # Set state to the value needed for the next operation.
-        state = load_game_state(GAME_ID, engine.default_state)
+        state = load_player_game_state(GAME_ID, player_id, engine.default_state)
         # Set is_free to the value needed for the next operation.
         is_free = int(state.get("free_spins",0)) > 0
         # Set cost to the value needed for the next operation.
@@ -79,6 +84,6 @@ def register(router):
         # Execute this statement as part of the module's documented control flow.
         append_history(GAME_ID, result["round_id"], player_id, "spin", f"{active_lines} lines @ {line_bet}", cost, "win" if result["payout"] else "loss", result["payout"], bal, result)
         # Execute this statement as part of the module's documented control flow.
-        save_game_state(GAME_ID, state)
+        save_player_game_state(GAME_ID, player_id, state)
         # Return the computed value to the caller.
-        return {"spin": result, "debit": debit, "credit": credit, **payload(state)}
+        return {"spin": result, "debit": debit, "credit": credit, **payload(player_id, state)}

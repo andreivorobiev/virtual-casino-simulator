@@ -1,6 +1,6 @@
 // AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
 // Import required dependency so this module can call frozen Roulette API endpoints.
-import { api, post, del } from '../core/api.js';
+import { api, post, del, currentPlayerId, currentPlayerPath, withCurrentPlayer } from '../core/api.js';
 // Import shared UI helpers so the Roulette surface matches the premium shell contract.
 import { money, signedMoney, toast, refreshBalance, safe } from '../core/ui.js';
 // Import autoplay renderer so Roulette keeps using the shared control-plane session behavior.
@@ -181,7 +181,7 @@ async function load() {
   // Initialize the localized bot placeholder before the first visible render.
   botPanelCache = loadingBotPanelHtml();
   // Load the current Roulette state through the frozen v1 endpoint.
-  const payload = await api('/api/v1/games/roulette/state');
+  const payload = await api(currentPlayerPath('/api/v1/games/roulette/state'));
   // Apply the response to local render caches.
   applyPayload(payload);
   // Render the game before slower bot markup resolves.
@@ -202,10 +202,10 @@ async function updateBotPanel() {
   if (panel) panel.innerHTML = botPanelCache;
 }
 
-// Return the current human-owned open-round bets.
+// Return the current player-owned open-round bets.
 function humanBets() {
-  // Filter open bets to the human player while tolerating unloaded state.
-  return state?.open_round?.bets?.filter(bet => bet.player_id === 'human') || [];
+  // Filter open bets to the active player while tolerating unloaded state.
+  return state?.open_round?.bets?.filter(bet => bet.player_id === currentPlayerId()) || [];
 }
 
 // Return the total human stake for a supplied or current bet list.
@@ -236,7 +236,7 @@ async function placeBet(bet, amount = chip) {
     return;
   }
   // Post the bet through the frozen v1 endpoint.
-  const payload = await post('/api/v1/games/roulette/bets', { player_id: 'human', amount, bet_type: bet.type, covered_numbers: bet.covered_numbers, label: bet.label });
+  const payload = await post('/api/v1/games/roulette/bets', withCurrentPlayer({ amount, bet_type: bet.type, covered_numbers: bet.covered_numbers, label: bet.label }));
   // Apply returned state, catalog, players, and stats.
   applyPayload(payload);
   // Mark the route as actively accepting bets.
@@ -256,7 +256,7 @@ async function placeCall(type) {
   // Read the optional call/final number from the current control rail.
   const number = root.querySelector('#callNumber')?.value || undefined;
   // Post the call bet using the existing v1 payload shape.
-  const payload = await post('/api/v1/games/roulette/call-bet', { player_id: 'human', amount: chip, call_type: type, number });
+  const payload = await post('/api/v1/games/roulette/call-bet', withCurrentPlayer({ amount: chip, call_type: type, number }));
   // Apply returned state, catalog, players, and stats.
   applyPayload(payload);
   // Mark the route as actively accepting bets.
@@ -274,7 +274,7 @@ async function placeCall(type) {
 // Clear one human bet by id through the documented refund endpoint.
 async function clearBet(id) {
   // Delete the bet through the frozen v1 endpoint.
-  const payload = await del(`/api/v1/games/roulette/bets/${id}`, { player_id: 'human' });
+  const payload = await del(`/api/v1/games/roulette/bets/${id}`, withCurrentPlayer());
   // Apply returned state, catalog, players, and stats.
   applyPayload(payload);
   // Mark the route as actively accepting bets.
@@ -290,7 +290,7 @@ async function clearBet(id) {
 // Clear all human bets through the documented refund endpoint.
 async function clearAll() {
   // Post the clear request through the frozen v1 endpoint.
-  const payload = await post('/api/v1/games/roulette/clear', { player_id: 'human' });
+  const payload = await post('/api/v1/games/roulette/clear', withCurrentPlayer());
   // Apply returned state, catalog, players, and stats.
   applyPayload(payload);
   // Mark the route as actively accepting bets.
@@ -306,7 +306,7 @@ async function clearAll() {
 // Rebuild the previous human bet template through the documented endpoint.
 async function rebet() {
   // Post the rebet request through the frozen v1 endpoint.
-  const payload = await post('/api/v1/games/roulette/rebet', { player_id: 'human' });
+  const payload = await post('/api/v1/games/roulette/rebet', withCurrentPlayer());
   // Apply returned state, catalog, players, and stats.
   applyPayload(payload);
   // Mark the route as actively accepting bets.
@@ -328,7 +328,7 @@ async function settings() {
   // Read the selected zero rule from the control rail.
   const zeroRule = root.querySelector('#zero')?.value;
   // Post settings without adding or changing any payload fields.
-  const payload = await post('/api/v1/games/roulette/settings', { mode, zero_rule: zeroRule });
+  const payload = await post('/api/v1/games/roulette/settings', withCurrentPlayer({ mode, zero_rule: zeroRule }));
   // Apply returned state, catalog, players, and stats.
   applyPayload(payload);
   // Mark the route as actively accepting bets.
@@ -370,7 +370,7 @@ async function spin(show = true) {
     // Play the existing wheel rolling sound with shorter timing for autoplay.
     rouletteRollSound(show ? 2600 : 700);
     // Post the spin request through the frozen v1 endpoint without changing payloads.
-    const payload = await post('/api/v1/games/roulette/spin', {});
+    const payload = await post('/api/v1/games/roulette/spin', withCurrentPlayer());
     // Wait for the visual reveal lock before showing settlement.
     await new Promise(resolve => setTimeout(resolve, show ? 2600 : 250));
     // Apply returned state, catalog, players, and stats.
@@ -382,7 +382,7 @@ async function spin(show = true) {
     // Store the authoritative round id from this spin response.
     lastRoundId = payload.round.round_id;
     // Filter settlement rows to the human player for the drawer.
-    const human = (payload.settlements || []).filter(row => row.bet.player_id === 'human');
+    const human = (payload.settlements || []).filter(row => row.bet.player_id === currentPlayerId());
     // Cache settlement row presentation using existing API values only.
     lastSettlements = human.map(row => ({ label: row.bet.label, amount: Number(row.bet.amount || 0), outcome: row.settlement.outcome, credit: Number(row.settlement.credit || 0) }));
     // Compute a presentation-only human net from already-debited stake and returned credits.

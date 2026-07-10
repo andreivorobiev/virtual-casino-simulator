@@ -1,6 +1,6 @@
 # AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
 # Import required dependency so this module can use its public functions or constants.
-from casino.core.state_store import load_game_state, save_game_state
+from casino.core.state_store import load_player_game_state, save_player_game_state
 # Import required dependency so this module can use its public functions or constants.
 from casino.core.validation import require_amount, require_player_id
 # Import required dependency so this module can use its public functions or constants.
@@ -14,6 +14,11 @@ from casino.errors import ValidationError, ConflictError
 
 # Set GAME_ID to the value needed for the next operation.
 GAME_ID = "blackjack"
+
+# Define the request_player_id function used by this module.
+def request_player_id(body, query) -> str:
+    # Return the explicit player id while preserving the legacy human default.
+    return require_player_id({"player_id": body.get("player_id") or query.get("player_id") or "human"})
 
 # Define the exposed_round function used by this module.
 def exposed_round(rnd):
@@ -29,11 +34,13 @@ def exposed_round(rnd):
     return copy
 
 # Define the state_payload function used by this module.
-def state_payload(state=None):
+def state_payload(player_id: str, state=None):
     # Set state to the value needed for the next operation.
-    state = state or load_game_state(GAME_ID, engine.default_state)
+    state = state or load_player_game_state(GAME_ID, player_id, engine.default_state)
+    # Set visible_players to the value needed for private game payloads.
+    visible_players = [p for p in players.list_players() if p["player_id"] == player_id or p.get("type") == "bot"]
     # Return the computed value to the caller.
-    return {"game": GAME_ID, "state": {"rules": state.get("rules"), "shoe_count": len(state.get("shoe",[])), "rounds": {rid: exposed_round(r) for rid,r in state.get("rounds",{}).items()}}, "player": players.get_player("human"), "players": players.list_players()}
+    return {"game": GAME_ID, "state": {"rules": state.get("rules"), "shoe_count": len(state.get("shoe",[])), "rounds": {rid: exposed_round(r) for rid,r in state.get("rounds",{}).items()}}, "player": players.get_player(player_id), "players": visible_players}
 
 # Define the finish_if_needed function used by this module.
 def finish_if_needed(state, rnd):
@@ -74,14 +81,16 @@ def register(router):
     # Attach this decorator so the following function is registered with the framework.
     @router.get(r"/api/v1/games/blackjack/state")
     # Define the state function used by this module.
-    def state(body, query): return state_payload()
+    def state(body, query): return state_payload(request_player_id(body, query))
 
     # Attach this decorator so the following function is registered with the framework.
     @router.post(r"/api/v1/games/blackjack/settings")
     # Define the settings function used by this module.
     def settings(body, query):
+        # Set player_id to the value needed for the next operation.
+        player_id = request_player_id(body, query)
         # Set state to the value needed for the next operation.
-        state = load_game_state(GAME_ID, engine.default_state)
+        state = load_player_game_state(GAME_ID, player_id, engine.default_state)
         # Branch when the following condition is true.
         if has_active_round(state):
             # Raise an error so invalid input or state is reported explicitly.
@@ -93,18 +102,18 @@ def register(router):
             # Branch when the following condition is true.
             if key in body: rules[key] = body[key]
         # Execute this statement as part of the module's documented control flow.
-        save_game_state(GAME_ID, state)
+        save_player_game_state(GAME_ID, player_id, state)
         # Return the computed value to the caller.
-        return state_payload(state)
+        return state_payload(player_id, state)
 
     # Attach this decorator so the following function is registered with the framework.
     @router.post(r"/api/v1/games/blackjack/rounds")
     # Define the deal function used by this module.
     def deal(body, query):
         # Set player_id to the value needed for the next operation.
-        player_id = require_player_id(body); amount = require_amount(body.get("bet_amount"))
+        player_id = request_player_id(body, query); amount = require_amount(body.get("bet_amount"))
         # Set state to the value needed for the next operation.
-        state = load_game_state(GAME_ID, engine.default_state)
+        state = load_player_game_state(GAME_ID, player_id, engine.default_state)
         # Execute this statement as part of the module's documented control flow.
         ledger.debit(player_id, amount, "BLACKJACK_INITIAL_BET", GAME_ID, None, {})
         # Start protected logic so failures can be handled safely.
@@ -120,44 +129,50 @@ def register(router):
         # Set credits to the value needed for the next operation.
         credits = finish_if_needed(state, rnd)
         # Execute this statement as part of the module's documented control flow.
-        save_game_state(GAME_ID, state)
+        save_player_game_state(GAME_ID, player_id, state)
         # Set logger.info("blackjack_round_dealt", round_id to the value needed for the next operation.
         logger.info("blackjack_round_dealt", round_id=rnd["round_id"], player_id=player_id, bet=amount)
         # Return the computed value to the caller.
-        return {"round": exposed_round(rnd), "credits": credits, **state_payload(state)}
+        return {"round": exposed_round(rnd), "credits": credits, **state_payload(player_id, state)}
 
     # Attach this decorator so the following function is registered with the framework.
     @router.post(r"/api/v1/games/blackjack/rounds/(?P<round_id>[^/]+)/hit")
     # Define the hit function used by this module.
     def hit(body, query, round_id):
+        # Set player_id to the value needed for the next operation.
+        player_id = request_player_id(body, query)
         # Set state to the value needed for the next operation.
-        state = load_game_state(GAME_ID, engine.default_state)
+        state = load_player_game_state(GAME_ID, player_id, engine.default_state)
         # Set rnd to the value needed for the next operation.
         rnd = engine.hit(state, round_id); credits = finish_if_needed(state, rnd)
         # Execute this statement as part of the module's documented control flow.
-        save_game_state(GAME_ID, state)
+        save_player_game_state(GAME_ID, player_id, state)
         # Return the computed value to the caller.
-        return {"round": exposed_round(rnd), "credits": credits, **state_payload(state)}
+        return {"round": exposed_round(rnd), "credits": credits, **state_payload(player_id, state)}
 
     # Attach this decorator so the following function is registered with the framework.
     @router.post(r"/api/v1/games/blackjack/rounds/(?P<round_id>[^/]+)/stand")
     # Define the stand function used by this module.
     def stand(body, query, round_id):
+        # Set player_id to the value needed for the next operation.
+        player_id = request_player_id(body, query)
         # Set state to the value needed for the next operation.
-        state = load_game_state(GAME_ID, engine.default_state)
+        state = load_player_game_state(GAME_ID, player_id, engine.default_state)
         # Set rnd to the value needed for the next operation.
         rnd = engine.stand(state, round_id); credits = finish_if_needed(state, rnd)
         # Execute this statement as part of the module's documented control flow.
-        save_game_state(GAME_ID, state)
+        save_player_game_state(GAME_ID, player_id, state)
         # Return the computed value to the caller.
-        return {"round": exposed_round(rnd), "credits": credits, **state_payload(state)}
+        return {"round": exposed_round(rnd), "credits": credits, **state_payload(player_id, state)}
 
     # Attach this decorator so the following function is registered with the framework.
     @router.post(r"/api/v1/games/blackjack/rounds/(?P<round_id>[^/]+)/double")
     # Define the double function used by this module.
     def double(body, query, round_id):
+        # Set player_id to the value needed for the next operation.
+        player_id = request_player_id(body, query)
         # Set state to the value needed for the next operation.
-        state = load_game_state(GAME_ID, engine.default_state)
+        state = load_player_game_state(GAME_ID, player_id, engine.default_state)
         # Set rnd to the value needed for the next operation.
         rnd = engine.get_round(state, round_id)
         # Set h to the value needed for the next operation.
@@ -181,16 +196,18 @@ def register(router):
         # Set credits to the value needed for the next operation.
         credits = finish_if_needed(state, rnd)
         # Execute this statement as part of the module's documented control flow.
-        save_game_state(GAME_ID, state)
+        save_player_game_state(GAME_ID, player_id, state)
         # Return the computed value to the caller.
-        return {"round": exposed_round(rnd), "credits": credits, **state_payload(state)}
+        return {"round": exposed_round(rnd), "credits": credits, **state_payload(player_id, state)}
 
     # Attach this decorator so the following function is registered with the framework.
     @router.post(r"/api/v1/games/blackjack/rounds/(?P<round_id>[^/]+)/split")
     # Define the split function used by this module.
     def split(body, query, round_id):
+        # Set player_id to the value needed for the next operation.
+        player_id = request_player_id(body, query)
         # Set state to the value needed for the next operation.
-        state = load_game_state(GAME_ID, engine.default_state)
+        state = load_player_game_state(GAME_ID, player_id, engine.default_state)
         # Set rnd to the value needed for the next operation.
         rnd = engine.get_round(state, round_id)
         # Set h to the value needed for the next operation.
@@ -214,31 +231,35 @@ def register(router):
         # Set credits to the value needed for the next operation.
         credits = finish_if_needed(state, rnd)
         # Execute this statement as part of the module's documented control flow.
-        save_game_state(GAME_ID, state)
+        save_player_game_state(GAME_ID, player_id, state)
         # Return the computed value to the caller.
-        return {"round": exposed_round(rnd), "credits": credits, **state_payload(state)}
+        return {"round": exposed_round(rnd), "credits": credits, **state_payload(player_id, state)}
 
     # Attach this decorator so the following function is registered with the framework.
     @router.post(r"/api/v1/games/blackjack/rounds/(?P<round_id>[^/]+)/surrender")
     # Define the surrender function used by this module.
     def surrender(body, query, round_id):
+        # Set player_id to the value needed for the next operation.
+        player_id = request_player_id(body, query)
         # Set state to the value needed for the next operation.
-        state = load_game_state(GAME_ID, engine.default_state)
+        state = load_player_game_state(GAME_ID, player_id, engine.default_state)
         # Set rnd to the value needed for the next operation.
         rnd = engine.surrender(state, round_id); credits = finish_if_needed(state, rnd)
         # Execute this statement as part of the module's documented control flow.
-        save_game_state(GAME_ID, state)
+        save_player_game_state(GAME_ID, player_id, state)
         # Return the computed value to the caller.
-        return {"round": exposed_round(rnd), "credits": credits, **state_payload(state)}
+        return {"round": exposed_round(rnd), "credits": credits, **state_payload(player_id, state)}
 
     # Attach this decorator so the following function is registered with the framework.
     @router.post(r"/api/v1/games/blackjack/rounds/(?P<round_id>[^/]+)/insurance")
     # Define the insurance function used by this module.
     def insurance(body, query, round_id):
+        # Set player_id to the value needed for the next operation.
+        player_id = request_player_id(body, query)
         # Set amount to the value needed for the next operation.
         amount = require_amount(body.get("amount"))
         # Set state to the value needed for the next operation.
-        state = load_game_state(GAME_ID, engine.default_state)
+        state = load_player_game_state(GAME_ID, player_id, engine.default_state)
         # Set rnd to the value needed for the next operation.
         rnd = engine.get_round(state, round_id)
         # Branch when the following condition is true.
@@ -266,16 +287,18 @@ def register(router):
         # Set rnd["insurance"] to the value needed for the next operation.
         rnd["insurance"] = {"amount": amount, "dealer_blackjack": dealer_bj, "payout": payout}
         # Execute this statement as part of the module's documented control flow.
-        save_game_state(GAME_ID, state)
+        save_player_game_state(GAME_ID, player_id, state)
         # Return the computed value to the caller.
-        return {"round": exposed_round(rnd), "credit": credit, **state_payload(state)}
+        return {"round": exposed_round(rnd), "credit": credit, **state_payload(player_id, state)}
 
     # Attach this decorator so the following function is registered with the framework.
     @router.post(r"/api/v1/games/blackjack/rounds/(?P<round_id>[^/]+)/even-money")
     # Define the even_money function used by this module.
     def even_money(body, query, round_id):
+        # Set player_id to the value needed for the next operation.
+        player_id = request_player_id(body, query)
         # Set state to the value needed for the next operation.
-        state = load_game_state(GAME_ID, engine.default_state)
+        state = load_player_game_state(GAME_ID, player_id, engine.default_state)
         # Set rnd to the value needed for the next operation.
         rnd = engine.get_round(state, round_id)
         # Set h to the value needed for the next operation.
@@ -295,6 +318,6 @@ def register(router):
         # Set credits to the value needed for the next operation.
         credits = finish_if_needed(state, rnd)
         # Execute this statement as part of the module's documented control flow.
-        save_game_state(GAME_ID, state)
+        save_player_game_state(GAME_ID, player_id, state)
         # Return the computed value to the caller.
-        return {"round": exposed_round(rnd), "credits": credits, **state_payload(state)}
+        return {"round": exposed_round(rnd), "credits": credits, **state_payload(player_id, state)}

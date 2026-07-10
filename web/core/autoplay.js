@@ -1,6 +1,6 @@
 // AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
 // Import required dependency so this module can use its public functions or constants.
-import { api, post } from './api.js';
+import { api, post, currentPlayerId } from './api.js';
 // Store sessions so later code can read or update this value.
 const sessions = window.__casinoAutoplaySessions || new Map();
 // Set window.__casinoAutoplaySessions to the value needed for the next operation.
@@ -84,7 +84,7 @@ export function renderAutoplay({id,onTick,plan={}}){
     // Set s.stopRequested to the value needed for the next operation.
     s.stopRequested=false; s.running=true; setUi(s);
     // Start protected logic so failures can be handled safely.
-    try{ const d=await post('/api/v1/autoplay/start',{game_id:id,player_id:'human',speed:s.speed,round_limit:s.remaining,plan}); s.serverId=d.session.autoplay_id; }catch(e){ s.serverId=null; }
+    try{ const d=await post('/api/v1/autoplay/start',{game_id:id,player_id:currentPlayerId(),speed:s.speed,round_limit:s.remaining,plan}); s.serverId=d.session.autoplay_id; }catch(e){ s.serverId=null; }
     // Execute this statement as part of the module's documented control flow.
     loop(s);
   };

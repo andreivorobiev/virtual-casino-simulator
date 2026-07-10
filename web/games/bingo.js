@@ -1,6 +1,6 @@
 // AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
 // Import the frozen API helpers used by the Bingo browser module.
-import { api, post } from '../core/api.js';
+import { api, post, currentPlayerId, currentPlayerPath, withCurrentPlayer } from '../core/api.js';
 // Import shared premium UI helpers for balance refreshes, escaping, tags, and shell metrics.
 import { refreshBalance, safe, renderPremiumTag, renderShellMetric, toast } from '../core/ui.js';
 // Import the shared autoplay controller so Bingo remains a control-plane loop.
@@ -138,8 +138,8 @@ function loadingBotsHtml() {
 function humanCardRecord(session) {
   // Return null when there is no session to inspect.
   if (!session) return null;
-  // Return the explicit human card record when cards are present.
-  return (session.cards || []).find(card => card.player_id === 'human') || (session.card ? { card_id: 'human-card', player_id: 'human', amount: session.amount, card: session.card, status: session.status, payout: session.payout || 0 } : null);
+  // Return the explicit current-player card record when cards are present.
+  return (session.cards || []).find(card => card.player_id === currentPlayerId()) || (session.card ? { card_id: 'current-player-card', player_id: currentPlayerId(), amount: session.amount, card: session.card, status: session.status, payout: session.payout || 0 } : null);
 }
 
 // Define stageCardRecord so completed sessions can highlight the actual winning card.
@@ -207,7 +207,7 @@ function heroHtml(session) {
   // Store current cards so card and bot metrics reflect the displayed session.
   const cards = sessionCards(session);
   // Store bot card count separately from the human card.
-  const botCount = cards.filter(card => card.player_id !== 'human').length;
+  const botCount = cards.filter(card => card.player_id !== currentPlayerId()).length;
   // Render premium capability tags with the shared UI helper.
   const tags = [tr('tags.fakeMoney'), tr('tags.ledger'), tr('tags.autoplay')].map(renderPremiumTag).join('');
   // Render shell metrics with the shared helper so Bingo follows the foundation contract.
@@ -231,7 +231,7 @@ function statusCardHtml(session) {
 // Define botSummaryHtml to keep bot-card context near the controls.
 function botSummaryHtml(session) {
   // Store the number of bot cards currently attached to the session.
-  const botCount = sessionCards(session).filter(card => card.player_id !== 'human').length;
+  const botCount = sessionCards(session).filter(card => card.player_id !== currentPlayerId()).length;
   // Store the state-specific summary key.
   const key = session?.status === 'won' ? 'settled' : (botCount ? 'tracking' : 'available');
   // Return a compact localized bot-card summary.
@@ -381,7 +381,7 @@ async function updateBotPanel() {
 // Define load to initialize Bingo state from the frozen state endpoint.
 async function load() {
   // Load the latest Bingo state through the v1 API envelope.
-  const data = await api('/api/v1/games/bingo/state');
+  const data = await api(currentPlayerPath('/api/v1/games/bingo/state'));
   // Store the game state for all render helpers.
   state = data.state;
   // Display the active session or the latest completed session on initial mount.
@@ -405,7 +405,7 @@ async function buy() {
   // Read the pattern from the current select before posting the card purchase.
   pattern = root.querySelector('#bingoPattern')?.value || pattern;
   // Purchase the human card through the frozen v1 Bingo API.
-  const data = await post('/api/v1/games/bingo/cards', { player_id: 'human', amount, pattern });
+  const data = await post('/api/v1/games/bingo/cards', withCurrentPlayer({ amount, pattern }));
   // Store the immediate state so the human card appears without waiting for bots.
   state = data.state;
   // Store the returned active session for rendering.
@@ -419,7 +419,7 @@ async function buy() {
   // Let eligible bot controllers purchase cards through their public controller endpoint.
   await playBotRound('bingo');
   // Reload state so bot cards appear in the cards-in-play drawer.
-  const refreshed = await api('/api/v1/games/bingo/state');
+  const refreshed = await api(currentPlayerPath('/api/v1/games/bingo/state'));
   // Store the refreshed state after bot controller actions.
   state = refreshed.state;
   // Keep the active session visible after bot cards are attached.
@@ -445,7 +445,7 @@ async function call(showVoice = true) {
   // Start protected logic so API errors show as toasts and preserve state.
   try {
     // Call the frozen v1 endpoint for a single ball.
-    const data = await post('/api/v1/games/bingo/call', {});
+    const data = await post('/api/v1/games/bingo/call', withCurrentPlayer());
     // Store the returned state, which may clear active_session after a win.
     state = data.state;
     // Retain the returned session so a completed winning card remains visible.
@@ -484,7 +484,7 @@ async function call(showVoice = true) {
 // Define reset to clear or abandon the current Bingo session through the API.
 async function reset() {
   // Reset the Bingo table through the frozen v1 endpoint.
-  const data = await post('/api/v1/games/bingo/reset', {});
+  const data = await post('/api/v1/games/bingo/reset', withCurrentPlayer());
   // Store the reset state returned by the API.
   state = data.state;
   // Show the latest completed session if one exists after reset.
