@@ -15,8 +15,8 @@ def render_markdown():
     req = json.loads((ROOT / "docs" / "requirements" / "requirements.json").read_text(encoding="utf-8"))
     # Set modules to the value needed for the next operation.
     modules = json.loads((ROOT / "modules" / "module-manifest.json").read_text(encoding="utf-8"))
-    # Set lines to the value needed for the next operation.
-    lines = ["# Virtual Casino Requirements and Validation", "", f"Application: {modules['application']}", "", "## Modules", ""]
+    # Start the generated document with explicit packaged-release and provenance labels.
+    lines = ["# Virtual Casino Requirements and Validation", "", f"Packaged application release: {modules['application']}", "", f"Historical source baseline: {modules['source_baseline']}", "", "## Independent module revisions", ""]
     # Iterate through the collection to process each item.
     for name, version in modules.get("modules", {}).items():
         # Execute this statement as part of the module's documented control flow.
@@ -42,12 +42,18 @@ def main():
     out = ROOT / "docs" / "requirements" / "requirements_generated.md"
     # Set text to the value needed for the next operation.
     text = render_markdown()
-    # Branch when the following condition is true.
-    if args.check and out.exists() and out.read_text(encoding="utf-8") != text:
-        # Write diagnostic output so the current operation can be inspected.
-        print("Generated docs are out of date; run python scripts/generate_docs.py")
-        # Return the computed value to the caller.
-        return 1
+    # Branch when validation mode should compare without mutating the generated artifact.
+    if args.check:
+        # Fail when the generated document is absent or differs from canonical inputs.
+        if not out.exists() or out.read_text(encoding="utf-8") != text:
+            # Write diagnostic output so the current operation can be inspected.
+            print("Generated docs are out of date; run python scripts/generate_docs.py")
+            # Return the computed value to the caller.
+            return 1
+        # Report a successful non-mutating generated-document comparison.
+        print(f"Generated docs are current: {out}")
+        # Return without rewriting the checked artifact or normalizing its line endings.
+        return 0
     # Set out.write_text(text, encoding to the value needed for the next operation.
     out.write_text(text, encoding="utf-8")
     # Write diagnostic output so the current operation can be inspected.

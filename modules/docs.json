@@ -1,8 +1,9 @@
 {
   "module": "docs",
-  "version": "1.3.1",
+  "version": "1.3.2",
   "paths": [
     "docs/",
+    "CODEX_START_HERE.md",
     "ARCHITECTURE.md",
     "RELEASE_NOTES.md",
     "LICENSE",

@@ -1,11 +1,25 @@
-# Virtual Casino Simulator v9.1.1
+# Virtual Casino Simulator
 
-## v9.1.1 repository bootstrap
+Packaged application release: `9.1.1`
 
-This payload adds GitHub/Codex governance, module manifests, API contract skeletons, validation scripts, GitHub workflows, and the mandatory commenting policy. It does not intentionally change gameplay behavior from the v9.1.0 baseline.
+Historical source baseline: `9.1.0`
 
+Local play-token browser casino simulator with Roulette, Slots, Blackjack, Baccarat, Keno, American Bingo, isolated game state, ledger-backed wallet accounting, authenticated private-beta users, Admin telemetry, and optional JSON or MySQL persistence.
 
-Local play-token virtual casino toy simulator with Roulette, Slots, Blackjack, Baccarat, Keno, and American Bingo.
+## Current repository status
+
+This repository has advanced beyond the original v9.1.1 bootstrap snapshot. The packaged release remains v9.1.1 until a formal release artifact is created, while independently versioned modules continue to receive compatible source changes. Current module revisions and requirement status are recorded in the canonical manifests and generated requirements document.
+
+## Version sources
+
+`modules/module-manifest.json` is the canonical aggregate version source:
+
+- Top-level `application` is the packaged application release shown by runtime, API, browser, and Admin surfaces. It changes only with a formal application release artifact.
+- Entries under `modules` are independent source-module revisions. They must be bumped when their owned source changes and may advance without changing the packaged application release.
+- `modules.application` is the application module revision, not the packaged application release.
+- Top-level `source_baseline` is historical source provenance and is not a current release number.
+
+Runtime version metadata is loaded by `casino/module_versions.py`; `scripts/validate_versions.py` rejects drift between the aggregate manifest, module manifests, runtime values, package metadata, README, and starter documentation.
 
 ## Legal and play-token status
 
@@ -35,16 +49,6 @@ Admin console:
 http://127.0.0.1:8765/admin
 ```
 
-## v9.1.0 gameplay baseline highlights
-
-- Separated bot controller architecture.
-- Redesigned `/admin` control plane.
-- Global Sound & Voice settings live in Admin.
-- Central autoplay sessions with working Stop behavior.
-- Roulette wheel no longer defaults to fake zero state.
-- Layout-stability changes reduce screen jerk during play.
-- Requirement registry now includes 344 numbered requirements.
-
 ## Tests
 
 API and rule tests:
@@ -57,19 +61,29 @@ python tests/run_tests.py --api
 Browser tests:
 
 ```bash
-python3 -m pip install -r requirements-dev.txt
-python3 -m playwright install chromium
-python3 tests/run_tests.py --browser
+python -m pip install -r requirements-dev.txt
+python -m playwright install chromium
+python tests/run_tests.py --browser
+```
+
+Repository validation:
+
+```bash
+python scripts/validate_requirements.py
+python scripts/validate_versions.py
+python scripts/generate_docs.py --check
+python scripts/check_comment_density.py
 ```
 
 ## Documents
 
+- `CODEX_START_HERE.md`
 - `docs/codex_parallel_workflow.md`
 - `docs/legal/README.md`
 - `docs/legal/terms.md`
 - `docs/legal/privacy.md`
-- `docs/requirements_validation_v9_1.pdf`
-- `docs/requirements_validation_v9_1.md`
-- `docs/requirements.json`
+- `docs/requirements/requirements.json`
+- `docs/requirements/requirements_generated.md`
+- `docs/visual_design_standard.md`
 - `ARCHITECTURE.md`
 - `RELEASE_NOTES.md`

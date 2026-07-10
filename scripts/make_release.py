@@ -3,6 +3,8 @@
 import argparse
 # Import required dependency so this module can use its public functions or constants.
 import hashlib
+# Import JSON support so the requested release can be compared with canonical metadata.
+import json
 # Import required dependency so this module can use its public functions or constants.
 import pathlib
 # Import required dependency so this module can use its public functions or constants.
@@ -32,6 +34,12 @@ def main():
     parser.add_argument("--app-version", required=True)
     # Set args to the value needed for the next operation.
     args = parser.parse_args()
+    # Load the canonical packaged application release before starting expensive release validation.
+    canonical_version = json.loads((ROOT / "modules" / "module-manifest.json").read_text(encoding="utf-8"))["application"]
+    # Reject a workflow input that would label artifacts differently from their runtime version.
+    if args.app_version != canonical_version:
+        # Stop with an argparse diagnostic before tests, generation, or packaging can mutate the tree.
+        parser.error(f"--app-version must match canonical packaged application release {canonical_version}")
     # Execute this statement as part of the module's documented control flow.
     run([sys.executable, "verify_rules.py"])
     # Execute this statement as part of the module's documented control flow.
