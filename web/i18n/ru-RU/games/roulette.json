@@ -94,6 +94,7 @@
   "status.voiceQueued": "Озвучивание поставлено в очередь",
   "status.zeroReady": "Правила зеро готовы",
   "table.winMarker": "WIN",
+  "units.playTokens": "\u0438\u0433\u0440\u043e\u0432\u044b\u0445 \u0442\u043e\u043a\u0435\u043d\u043e\u0432",
   "title": "Рулетка",
   "voice.rolled": "В рулетке выпало {number}"
 }

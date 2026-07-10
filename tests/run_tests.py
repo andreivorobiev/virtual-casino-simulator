@@ -682,8 +682,12 @@ def run_browser_tests():
                 return route.fulfill(status=404,content_type='application/json',body=mocked_auth_response(False,status=404,message='Unhandled auth mock'))
             # Route planned v2 auth/current-user APIs so frontend work can proceed before issue 39 lands.
             page.route('**/api/v2/**', handle_auth_route)
+            # Install an audio probe before navigation so Roulette voice text can be matched to the authoritative result.
+            page.add_init_script("window.__casinoAudioEvents=[]; window.__casinoAudioProbe=(event)=>window.__casinoAudioEvents.push(event);")
             # Define the shot function used by this module.
             def shot(name): page.screenshot(path=str(screenshots/name), full_page=True)
+            # Define a viewport capture helper for transform-heavy live game motion evidence.
+            def viewport_shot(name): page.screenshot(path=str(screenshots/name), full_page=False)
             # Store browser JavaScript that audits visible player-facing strings and localized attributes.
             route_i18n_audit_script=r"""async ({ domain, interpolationKey }) => {
               // Read the public runtime state after the requested route has mounted.
@@ -959,6 +963,14 @@ def run_browser_tests():
                 def premium_roulette_layout():
                     # Verify the premium three-zone layout is mounted.
                     assert page.get_by_test_id('roulette-premium-layout').is_visible()
+                    # Verify the dimensional wheel frame is mounted as a dedicated casino focal region.
+                    assert page.get_by_test_id('roulette-wheel-frame').is_visible()
+                    # Verify the layered metallic rim is present instead of a flat placeholder circle.
+                    assert page.get_by_test_id('roulette-wheel-rim').is_visible()
+                    # Verify the ball track is independently rendered for credible wheel motion.
+                    assert page.get_by_test_id('roulette-ball-track').is_visible()
+                    # Verify the physical ball indicator remains visible in both parked and selected states.
+                    assert page.get_by_test_id('roulette-ball').is_visible()
                     # Verify the fixed table board remains visible.
                     assert page.get_by_test_id('roulette-table').is_visible()
                     # Verify the bet slip drawer remains visible.
@@ -969,8 +981,18 @@ def run_browser_tests():
                     assert page.get_by_test_id('roulette-stats-spark').is_visible()
                     # Verify inside-bet spots remain available for click coverage.
                     assert page.locator('[data-testid^="roulette-spot-"]').count() > 0
-                    # Verify the bot/autoplay rail remains mounted without resizing the stage.
-                    assert page.locator('#botPanel').is_visible()
+                    # Verify the bot controller stays mounted inside its progressive disclosure region.
+                    assert page.locator('#botPanel').count() == 1
+                    # Verify table rules are initially collapsed so wagering controls keep priority.
+                    assert page.get_by_test_id('roulette-rules-disclosure').get_attribute('open') is None
+                    # Verify racetrack bets are initially collapsed as an advanced betting mode.
+                    assert page.get_by_test_id('roulette-racetrack-disclosure').get_attribute('open') is None
+                    # Verify autoplay is initially collapsed so Spin remains the dominant action.
+                    assert page.get_by_test_id('roulette-autoplay-disclosure').get_attribute('open') is None
+                    # Verify bot controls are initially collapsed so the table retains visual focus.
+                    assert page.get_by_test_id('roulette-bots-disclosure').get_attribute('open') is None
+                    # Verify no internal lifecycle ribbon is exposed as player-facing interface.
+                    assert page.locator('.roulette-status-ribbon').count() == 0
                     # Verify English Roulette content contains no visible raw resource keys.
                     assert_no_visible_roulette_keys()
                     # Read the three desktop zones so shared rail spacing can be checked independently of game content.
@@ -978,7 +1000,7 @@ def run_browser_tests():
                     # Read the game header position so status content cannot collide with the table layout.
                     header_box=page.locator('.roulette-header').bounding_box()
                     # Verify both side rails have premium desktop width instead of cramped developer-form columns.
-                    assert control_box and control_box['width'] >= 330 and drawer_box and drawer_box['width'] >= 345
+                    assert control_box and control_box['width'] >= 330 and drawer_box and drawer_box['width'] >= 345, {'control':control_box,'stage':stage_box,'drawer':drawer_box,'layout':layout_box}
                     # Verify the game stage remains wider than both support rails combined.
                     assert stage_box and stage_box['width'] > control_box['width'] + drawer_box['width']
                     # Verify the route header ends before the three-zone table layout begins.
@@ -1013,8 +1035,38 @@ def run_browser_tests():
                 shot('after-pass-shell-roulette-desktop.png')
                 # Capture betting-state visual evidence for the Roulette worker handback.
                 shot('roulette-premium-betting.png')
+                # Store the English Roulette surface text for visible resource-key rejection.
+                roulette_english_text=page.get_by_test_id('roulette-premium').inner_text()
+                # Verify no common Roulette resource-key prefix leaks in the English route.
+                assert not any(prefix in roulette_english_text for prefix in ('header.','controls.','stage.','result.','betSlip.','settlement.','scoreboard.','stats.','status.','settings.','bets.'))
+                # Verify Roulette values use explicit fake-money language instead of the legacy diamond-like glyph.
+                assert 'play tokens' in roulette_english_text and '\ufffd' not in roulette_english_text and '\u00e2\u2014\u02c6' not in roulette_english_text
+                # Verify the English route resolved every requested i18n key.
+                assert page.evaluate("import('/core/i18n.js').then(i18n => i18n.getLocaleState().missingKeyCount)") == 0
+                # Let the newly mounted route complete paint before capturing idle evidence.
+                page.wait_for_timeout(300)
+                # Capture idle-state visual evidence before any wager is placed.
+                shot('roulette-premium-idle.png')
+                # Store the stable table bounds before interaction so settlement cannot shift the board.
+                roulette_table_bounds=page.get_by_test_id('roulette-table').bounding_box()
+                # Store the wheel bounds so the desktop composition proves the wheel is a visible focal element.
+                roulette_wheel_bounds=page.get_by_test_id('roulette-wheel').bounding_box()
+                # Verify the desktop wheel is large enough to preserve pocket and ball clarity.
+                assert roulette_wheel_bounds and roulette_wheel_bounds['width'] >= 280
                 # Place a straight bet and wait for the table chip to render.
                 page.get_by_test_id('roulette-num-17').click(); page.locator('.bet-chip').first.wait_for(timeout=3000)
+                # Store the wagered chip bounds for table-geometry alignment proof.
+                roulette_chip_bounds=page.locator('.bet-chip').first.bounding_box()
+                # Store the selected number-cell bounds for table-geometry alignment proof.
+                roulette_target_bounds=page.get_by_test_id('roulette-num-17').bounding_box()
+                # Verify the wagered chip is horizontally centered on its logical number cell.
+                assert abs((roulette_chip_bounds['x']+roulette_chip_bounds['width']/2)-(roulette_target_bounds['x']+roulette_target_bounds['width']/2)) <= 2
+                # Verify the wagered chip is vertically centered on its logical number cell.
+                assert abs((roulette_chip_bounds['y']+roulette_chip_bounds['height']/2)-(roulette_target_bounds['y']+roulette_target_bounds['height']/2)) <= 2
+                # Let the short physical chip-placement accent complete before static evidence capture.
+                page.wait_for_timeout(250)
+                # Capture the aligned wagered-table state before locale and spin transitions.
+                shot('roulette-premium-wagered.png')
                 # Call the i18n runtime directly to verify language switching does not remount gameplay.
                 page.evaluate("""async () => { const i18n = await import('/core/i18n.js'); await i18n.initI18n({ domains: ['games/roulette'] }); await i18n.setLocale('ru-RU', { persistLocal: false }); }""")
                 # Define the localized Roulette state assertion used by the existing i18n browser case.
@@ -1023,14 +1075,36 @@ def run_browser_tests():
                     assert page.locator('.bet-chip').first.is_visible()
                     # Verify Russian Roulette content contains no visible raw resource keys.
                     assert_no_visible_roulette_keys()
+                    # Verify localized Roulette amounts retain explicit fake-money language without the legacy glyph.
+                    assert '\u0438\u0433\u0440\u043e\u0432\u044b\u0445 \u0442\u043e\u043a\u0435\u043d\u043e\u0432' in page.get_by_test_id('roulette-premium').inner_text()
                     # Verify shared keyboard scroll semantics survive the localized game rerender.
                     assert page.get_by_test_id('roulette-control-rail').get_attribute('tabindex')=='0'
                 # Execute this statement as part of the module's documented control flow.
                 run_case('BR-I18N-GAMESTATE-ROU-001',['I18N-001','I18N-002','ROU-046'],roulette_i18n_state)
-                # Spin the wheel through the existing Roulette UI action.
-                page.get_by_test_id('roulette-spin').click()
+                # Capture the authoritative backend spin response while using the visible Roulette action.
+                with page.expect_response(lambda response: response.url.endswith('/api/v1/games/roulette/spin') and response.request.method == 'POST') as roulette_spin_response_info:
+                    # Spin the wheel through the dominant Roulette UI action.
+                    page.get_by_test_id('roulette-spin').click()
+                # Read the standard API envelope returned for this exact visible spin.
+                roulette_spin_payload=roulette_spin_response_info.value.json()
+                # Store the backend-authoritative pocket for cross-surface settlement checks.
+                roulette_backend_result=str(roulette_spin_payload['data']['round']['result'])
+                # Wait briefly for the rotor and ball to enter their visible counter-rotation phase.
+                page.wait_for_timeout(450)
+                # Verify the wheel rotor uses its weighted clockwise animation.
+                assert page.get_by_test_id('roulette-rotor').get_attribute('data-motion-direction') == 'clockwise'
+                # Verify the ball uses its independent counterclockwise animation.
+                assert page.get_by_test_id('roulette-ball').get_attribute('data-motion-direction') == 'counterclockwise'
+                # Verify the rotor is still in its animated reveal phase.
+                assert 'spinning' in (page.get_by_test_id('roulette-rotor').get_attribute('class') or '')
+                # Verify the ball is still in its animated reveal phase.
+                assert 'spinning' in (page.get_by_test_id('roulette-ball').get_attribute('class') or '')
+                # Capture the locked spinning state before the backend result is presented.
+                viewport_shot('roulette-premium-spinning.png')
                 # Wait for the fixed result region to reach the settled phase.
                 page.wait_for_function("() => document.querySelector('[data-testid=\"roulette-result-region\"]')?.dataset.phase === 'settled'", timeout=7000)
+                # Wait for the Roulette voice probe to observe the announcement queued after settlement refresh.
+                page.wait_for_function("() => window.__casinoAudioEvents.some(event => event.kind === 'voice_start' && event.gameId === 'roulette')", timeout=3000)
                 # Define the premium_roulette_settled function used by this module.
                 def premium_roulette_settled():
                     # Read the settled result region.
@@ -1041,6 +1115,22 @@ def run_browser_tests():
                     assert result.get_attribute('data-phase')=='settled'
                     # Verify the wheel-selected pocket matches the backend result display.
                     assert result.get_attribute('data-result-number')==wheel.get_attribute('data-selected-result')
+                    # Verify the result panel matches the authoritative backend response for this spin.
+                    assert result.get_attribute('data-result-number')==roulette_backend_result
+                    # Verify the corresponding table number owns the settled-result highlight.
+                    assert page.get_by_test_id(f'roulette-num-{roulette_backend_result}').evaluate("node => node.parentElement.classList.contains('result-cell')")
+                    # Verify the latest history pocket matches the authoritative backend response.
+                    assert page.get_by_test_id('roulette-recent-results').locator('span').last.inner_text()==roulette_backend_result
+                    # Store Roulette voice events emitted by the visible spin.
+                    roulette_voice_events=page.evaluate("window.__casinoAudioEvents.filter(event => event.kind === 'voice_start' && event.gameId === 'roulette')")
+                    # Verify the queued voice announcement names the authoritative result pocket.
+                    assert roulette_voice_events and roulette_backend_result in roulette_voice_events[-1]['text']
+                    # Read the table bounds after settlement rerendering.
+                    settled_table_bounds=page.get_by_test_id('roulette-table').bounding_box()
+                    # Verify the betting board keeps its horizontal anchor through the spin and settlement phases.
+                    assert abs(settled_table_bounds['x']-roulette_table_bounds['x']) <= 1
+                    # Verify the betting board keeps its vertical anchor through the spin and settlement phases.
+                    assert abs(settled_table_bounds['y']-roulette_table_bounds['y']) <= 1
                     # Verify the table board remains visible after settlement.
                     assert page.locator('.roulette-table-board').is_visible()
                     # Verify the drawer still renders after bets settle.
@@ -1049,14 +1139,54 @@ def run_browser_tests():
                     assert page.get_by_test_id('roulette-stats-spark').is_visible()
                 # Execute this statement as part of the module's documented control flow.
                 run_case('BR-ROU-001',['ROU-040','ROU-041','ROU-042','ROU-043','ROU-044','ROU-046','ROU-049','ROU-050','ROU-052','ROU-053','ROU-054','ROU-055','ROU-056'],premium_roulette_settled)
+                # Let the short physical ball-settle accent complete before capturing static evidence.
+                page.wait_for_timeout(700)
                 # Capture settled-state visual evidence for the Roulette worker handback.
                 shot('roulette-premium-settled.png')
+                # Restore English before expanding shared controls and capturing route-return evidence.
+                page.evaluate("""async () => { const i18n = await import('/core/i18n.js'); await i18n.setLocale('en-US', { persistLocal: false }); }""")
+                # Expand autoplay through its player-facing disclosure control.
+                page.get_by_test_id('roulette-autoplay-disclosure').locator('summary').click()
                 # Start and stop Roulette autoplay through the shared control-plane widget.
                 page.get_by_test_id('roulette-auto-rounds').fill('5'); page.get_by_test_id('roulette-auto-start').click(); page.wait_for_timeout(400); page.get_by_test_id('roulette-auto-stop').click(); page.wait_for_timeout(500)
                 # Execute this statement as part of the module's documented control flow.
                 run_case('BR-AUTO-ROU-001',['AUTO-003','AUTO-010','ROU-047'],lambda: page.get_by_text('Off').first.is_visible())
-                # Restore English for game prerender evidence after the locale-preservation smoke test.
-                page.evaluate("""async () => { const i18n = await import('/core/i18n.js'); await i18n.setLocale('en-US', { persistLocal: false }); }""")
+                # Collapse autoplay after verification so route-return evidence restores the gameplay-first composition.
+                page.get_by_test_id('roulette-autoplay-disclosure').locator('summary').click()
+                # Store the settled result before leaving the route.
+                roulette_result_before_return=page.get_by_test_id('roulette-result-region').get_attribute('data-result-number')
+                # Leave Roulette through the shared navigation to exercise route unmounting.
+                page.get_by_test_id('nav-slots').click(); page.get_by_test_id('slot-grid').wait_for(timeout=5000)
+                # Return to Roulette and wait for the premium wheel to remount from persisted state.
+                page.get_by_test_id('nav-roulette').click(); page.get_by_test_id('roulette-wheel').wait_for(timeout=5000)
+                # Verify the route return preserves the authoritative settled pocket.
+                assert page.get_by_test_id('roulette-result-region').get_attribute('data-result-number') == roulette_result_before_return
+                # Let the remounted route complete paint before capturing return evidence.
+                page.wait_for_timeout(1200)
+                # Capture route-return evidence after the complete unmount and remount cycle.
+                shot('roulette-premium-route-return.png')
+                # Resize to the authoritative desktop-compact matrix viewport.
+                page.set_viewport_size({'width':1440,'height':900}); page.wait_for_timeout(350)
+                # Verify the compact layout makes one intentional column transition instead of clipping three cramped zones.
+                assert page.get_by_test_id('roulette-premium-layout').evaluate("el => getComputedStyle(el).gridTemplateColumns.split(' ').length === 1")
+                # Verify the desktop-compact route has no page-level horizontal overflow.
+                assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1')
+                # Read compact document and panel measurements for actionable responsive diagnostics.
+                compact_diagnostics=page.evaluate("() => { const stage=document.querySelector('[data-testid=\"roulette-premium-stage\"]'); const drawer=document.querySelector('[data-testid=\"roulette-bet-slip\"]'); return { scrollHeight:document.documentElement.scrollHeight, viewport:window.innerHeight, stage:stage.getBoundingClientRect().toJSON(), drawer:drawer.getBoundingClientRect().toJSON(), pageOverflow:getComputedStyle(document.querySelector('.casino-page')).overflow, screenOverflow:getComputedStyle(document.querySelector('.game-screen')).overflow }; }")
+                # Verify the compact route expands the document so every stacked panel remains reachable.
+                assert compact_diagnostics['scrollHeight'] > compact_diagnostics['viewport'] and compact_diagnostics['drawer']['bottom'] <= compact_diagnostics['scrollHeight'] + 1 and compact_diagnostics['stage']['height'] > 600, compact_diagnostics
+                # Verify both Roulette focal regions remain visible after compact recomposition.
+                assert page.get_by_test_id('roulette-wheel').is_visible() and page.get_by_test_id('roulette-table').is_visible()
+                # Capture full compact-layout evidence at the governed 1440 by 900 viewport.
+                page.screenshot(path=str(screenshots/'after-pass-roulette-compact.png'),full_page=True)
+                # Resize to a narrow responsive viewport for Roulette-specific overflow verification.
+                page.set_viewport_size({'width':760,'height':900}); page.wait_for_timeout(250)
+                # Verify Roulette does not create page-level horizontal overflow at the responsive width.
+                assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1')
+                # Verify both the wheel and full table regions remain present after responsive recomposition.
+                assert page.get_by_test_id('roulette-wheel').is_visible() and page.get_by_test_id('roulette-table').is_visible()
+                # Restore desktop dimensions before the next game evidence run.
+                page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(250)
                 # Navigate to the premium Slots route before collecting state evidence.
                 page.get_by_test_id('nav-slots').click()
                 # Wait for the fixed reel grid to mount before measuring layout stability.
