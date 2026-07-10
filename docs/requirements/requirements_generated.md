@@ -4,23 +4,23 @@ Application: 9.1.1
 
 ## Modules
 
-- application: 9.2.6
-- core: 9.2.3
+- application: 9.2.7
+- core: 9.2.4
 - ledger: 9.0.2
 - players: 9.1.0
 - bots: 1.0.0
 - autoplay: 1.1.1
 - audio: 9.1.1
-- admin: 1.2.2
+- admin: 1.2.3
 - roulette: 9.2.2
 - slots: 9.0.4
 - blackjack: 9.0.3
 - baccarat: 9.0.3
 - keno: 9.1.1
 - bingo: 9.1.2
-- tests: 1.4.7
-- docs: 1.2.3
-- contracts: 1.1.0
+- tests: 1.4.8
+- docs: 1.2.4
+- contracts: 1.1.1
 - tooling: 1.1.3
 - commenting_policy: 1.0.0
 
@@ -387,21 +387,21 @@ Application: 9.1.1
 - **TEST-036** (Tests) - PASS: Suite 100 is available as the mandatory long-suite pull request validation path.
 - **AUDIO-008** (Audio) - PASS: Browser audio verification observes voice and sound-effect events without requiring physical speakers.
 - **AUDIO-009** (Audio) - PASS: Repeated Baccarat announcements complete without being cancelled by the next deal.
-- **AUTH-001** (Auth) - PLANNED: Protected browser app and API routes require an authenticated private beta session.
-- **AUTH-002** (Auth) - PLANNED: Login verifies server-side credentials and does not expose public self-signup or external identity-provider flows.
+- **AUTH-001** (Auth) - PASS: Protected browser app and API routes require an authenticated private beta session.
+- **AUTH-002** (Auth) - PASS: Login verifies server-side credentials and does not expose public self-signup or external identity-provider flows.
 - **AUTH-003** (Auth) - PLANNED: Bootstrap Admin creation is operator-controlled and separate from public runtime registration.
-- **AUTH-004** (Auth) - PLANNED: Unauthenticated or inactive-user access returns the standard ok/error API envelope without leaking protected data.
-- **AUTH-005** (Auth) - PLANNED: Authenticated Admin-only actions require an active user with an Admin role.
+- **AUTH-004** (Auth) - PASS: Unauthenticated or inactive-user access returns the standard ok/error API envelope without leaking protected data.
+- **AUTH-005** (Auth) - PASS: Authenticated Admin-only actions require an active user with an Admin role.
 - **AUTH-006** (Auth) - PASS: Non-loopback or explicitly public deployment startup requires explicit bootstrap Admin settings and rejects known local defaults before runtime state is mutated.
-- **SESSION-001** (Session) - PLANNED: Successful login creates a server-side session represented to clients by a protected session cookie.
-- **SESSION-002** (Session) - PLANNED: Logout invalidates the current session before returning a standard ok/data envelope.
-- **SESSION-003** (Session) - PLANNED: Current-user lookup returns user, role, session, terms, locale, and bound player token balance data.
-- **SESSION-004** (Session) - PLANNED: Expired, revoked, or deactivated-user sessions are rejected consistently across protected APIs.
-- **USER-001** (Users) - PLANNED: Each authenticated user has a durable user record and a bound default player account.
-- **USER-002** (Users) - PLANNED: User records include roles, active status, locale preference, and terms acceptance metadata.
+- **SESSION-001** (Session) - PASS: Successful login creates a server-side session represented to clients by a protected session cookie.
+- **SESSION-002** (Session) - PASS: Logout invalidates the current session before returning a standard ok/data envelope.
+- **SESSION-003** (Session) - PASS: Current-user lookup returns user, role, session, terms, locale, and bound player token balance data.
+- **SESSION-004** (Session) - PASS: Expired, revoked, or deactivated-user sessions are rejected consistently across protected APIs.
+- **USER-001** (Users) - PASS: Each authenticated user has a durable user record and a bound default player account.
+- **USER-002** (Users) - PASS: User records include roles, active status, locale preference, and terms acceptance metadata.
 - **USER-003** (Users) - PLANNED: Different authenticated users have isolated player balances, game state, history, and ledger views.
-- **USER-004** (Users) - PLANNED: Admin can create users, deactivate or reactivate users, reset passwords, and inspect user state through v2 Admin APIs.
-- **USER-005** (Users) - PLANNED: Bot controller accounts remain separate from private beta login users and cannot cross user session boundaries.
+- **USER-004** (Users) - PASS: Admin can create users, deactivate or reactivate users, reset passwords, and inspect user state through v2 Admin APIs.
+- **USER-005** (Users) - PASS: Bot controller accounts remain separate from private beta login users and cannot cross user session boundaries.
 - **STORAGE-001** (Storage) - PLANNED: Persistence is accessed through a storage provider abstraction with the existing local JSON provider as the default.
 - **STORAGE-002** (Storage) - PLANNED: The storage provider supports users, sessions, terms acceptance, player records, game state, history, settings, and ledger data.
 - **STORAGE-003** (Storage) - PLANNED: Default local JSON persistence remains available without requiring MySQL configuration.
@@ -410,20 +410,20 @@ Application: 9.1.1
 - **MYSQL-002** (MySQL) - PLANNED: Ledger-affecting MySQL writes are atomic so token debits, credits, refunds, and winnings remain consistent.
 - **MYSQL-003** (MySQL) - PLANNED: MySQL support starts from fresh seed/bootstrap data and does not require importing the existing local JSON data set.
 - **MYSQL-004** (MySQL) - PLANNED: The application can run with JSON storage when MySQL environment configuration is absent.
-- **TERMS-001** (Terms) - PLANNED: Private beta users must accept toy-simulator terms before gameplay actions are available.
-- **TERMS-002** (Terms) - PLANNED: Terms acceptance records include user, required terms version, accepted version, timestamp, and source context.
-- **TERMS-003** (Terms) - PLANNED: Current-user and Admin v2 APIs expose terms acceptance status without exposing other users' private state.
+- **TERMS-001** (Terms) - PASS: Private beta users must accept toy-simulator terms before gameplay actions are available.
+- **TERMS-002** (Terms) - PASS: Terms acceptance records include user, required terms version, accepted version, timestamp, and source context.
+- **TERMS-003** (Terms) - PASS: Current-user and Admin v2 APIs expose terms acceptance status without exposing other users' private state.
 - **TERMS-004** (Terms) - PLANNED: Legal terms and privacy documentation describe the app as a private beta toy simulator rather than a gambling site.
 - **LIC-001** (Licensing) - PLANNED: Repository source-code licensing is documented using Apache-2.0 for this private beta foundation.
 - **LIC-002** (Licensing) - PLANNED: User-facing legal docs state the simulator has no real-money wagering, deposits, withdrawals, or prizes.
 - **LIC-003** (Licensing) - PLANNED: Play tokens have no cash value, are not redeemable, and do not represent money or stored value.
 - **TOKEN-001** (Tokens) - PLANNED: User-facing casino balances, wagers, payouts, and add-balance flows use play-token terminology instead of dollar or money wording.
-- **TOKEN-002** (Tokens) - PLANNED: New v2 APIs may use token terminology while v1 wire fields remain compatible for existing clients.
-- **TOKEN-003** (Tokens) - PLANNED: Add-token flows are ledger-backed play-token credits and never payment, deposit, or purchase flows.
-- **TOKEN-004** (Tokens) - PLANNED: Token balances are scoped to the authenticated user's bound player and remain private from other non-Admin users.
-- **API-001** (API) - PLANNED: The frozen /api/v1 compatibility surface remains available while auth, current-user, and Admin user-management additions use /api/v2.
-- **API-002** (API) - PLANNED: v2 auth, current-user, terms, token, and Admin user-management responses use the standard ok/data or ok/error envelope.
-- **TEST-037** (Tests) - PLANNED: API tests cover login, logout, current-user lookup, unauthorized access, bootstrap Admin, inactive users, and terms status.
+- **TOKEN-002** (Tokens) - PASS: New v2 APIs may use token terminology while v1 wire fields remain compatible for existing clients.
+- **TOKEN-003** (Tokens) - PASS: Add-token flows are ledger-backed play-token credits and never payment, deposit, or purchase flows.
+- **TOKEN-004** (Tokens) - PASS: Token balances are scoped to the authenticated user's bound player and remain private from other non-Admin users.
+- **API-001** (API) - PASS: The frozen /api/v1 compatibility surface remains available while auth, current-user, and Admin user-management additions use /api/v2.
+- **API-002** (API) - PASS: v2 auth, current-user, terms, token, and Admin user-management responses use the standard ok/data or ok/error envelope.
+- **TEST-037** (Tests) - PASS: API tests cover login, logout, current-user lookup, unauthorized access, bootstrap Admin, inactive users, and terms status.
 - **TEST-038** (Tests) - PLANNED: Storage tests cover JSON provider parity and MySQL schema/provider behavior where environment support is available.
 - **TEST-039** (Tests) - PLANNED: API and browser tests cover two authenticated users playing each game with isolated balances, state, history, bots, and autoplay.
 - **TEST-040** (Tests) - PLANNED: Integration validation runs the complete auth, MySQL, token terminology, licensing, and private-session path from a copied deployment environment.

@@ -5793,7 +5793,7 @@
       "id": "AUTH-001",
       "module": "Auth",
       "description": "Protected browser app and API routes require an authenticated private beta session.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [
         "API-AUTH-001"
       ],
@@ -5810,7 +5810,7 @@
       "id": "AUTH-002",
       "module": "Auth",
       "description": "Login verifies server-side credentials and does not expose public self-signup or external identity-provider flows.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [
         "API-AUTH-001"
       ],
@@ -5844,7 +5844,7 @@
       "id": "AUTH-004",
       "module": "Auth",
       "description": "Unauthenticated or inactive-user access returns the standard ok/error API envelope without leaking protected data.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [
         "API-AUTH-001"
       ],
@@ -5861,7 +5861,7 @@
       "id": "AUTH-005",
       "module": "Auth",
       "description": "Authenticated Admin-only actions require an active user with an Admin role.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [
         "API-ADMIN-USERS-001"
       ],
@@ -5897,7 +5897,7 @@
       "id": "SESSION-001",
       "module": "Session",
       "description": "Successful login creates a server-side session represented to clients by a protected session cookie.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [
         "API-AUTH-001"
       ],
@@ -5913,7 +5913,7 @@
       "id": "SESSION-002",
       "module": "Session",
       "description": "Logout invalidates the current session before returning a standard ok/data envelope.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [
         "API-AUTH-001"
       ],
@@ -5929,7 +5929,7 @@
       "id": "SESSION-003",
       "module": "Session",
       "description": "Current-user lookup returns user, role, session, terms, locale, and bound player token balance data.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [
         "API-AUTH-001"
       ],
@@ -5945,7 +5945,7 @@
       "id": "SESSION-004",
       "module": "Session",
       "description": "Expired, revoked, or deactivated-user sessions are rejected consistently across protected APIs.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [
         "API-AUTH-001"
       ],
@@ -5961,7 +5961,7 @@
       "id": "USER-001",
       "module": "Users",
       "description": "Each authenticated user has a durable user record and a bound default player account.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [
         "API-AUTH-001"
       ],
@@ -5978,7 +5978,7 @@
       "id": "USER-002",
       "module": "Users",
       "description": "User records include roles, active status, locale preference, and terms acceptance metadata.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [
         "API-ADMIN-USERS-001"
       ],
@@ -6012,7 +6012,7 @@
       "id": "USER-004",
       "module": "Users",
       "description": "Admin can create users, deactivate or reactivate users, reset passwords, and inspect user state through v2 Admin APIs.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [
         "API-ADMIN-USERS-001"
       ],
@@ -6031,7 +6031,7 @@
       "id": "USER-005",
       "module": "Users",
       "description": "Bot controller accounts remain separate from private beta login users and cannot cross user session boundaries.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [
         "API-PRIVATE-SESSION-001"
       ],
@@ -6175,7 +6175,7 @@
       "id": "TERMS-001",
       "module": "Terms",
       "description": "Private beta users must accept toy-simulator terms before gameplay actions are available.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [
         "API-TERMS-001"
       ],
@@ -6194,7 +6194,7 @@
       "id": "TERMS-002",
       "module": "Terms",
       "description": "Terms acceptance records include user, required terms version, accepted version, timestamp, and source context.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [
         "API-TERMS-001"
       ],
@@ -6210,7 +6210,7 @@
       "id": "TERMS-003",
       "module": "Terms",
       "description": "Current-user and Admin v2 APIs expose terms acceptance status without exposing other users' private state.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [
         "API-TERMS-001",
         "API-ADMIN-USERS-001"
@@ -6300,7 +6300,7 @@
       "id": "TOKEN-002",
       "module": "Tokens",
       "description": "New v2 APIs may use token terminology while v1 wire fields remain compatible for existing clients.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [
         "API-CONTRACT-V2-001"
       ],
@@ -6317,7 +6317,7 @@
       "id": "TOKEN-003",
       "module": "Tokens",
       "description": "Add-token flows are ledger-backed play-token credits and never payment, deposit, or purchase flows.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [
         "API-TOKEN-001"
       ],
@@ -6335,7 +6335,7 @@
       "id": "TOKEN-004",
       "module": "Tokens",
       "description": "Token balances are scoped to the authenticated user's bound player and remain private from other non-Admin users.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [
         "API-PRIVATE-SESSION-001"
       ],
@@ -6353,7 +6353,7 @@
       "id": "API-001",
       "module": "API",
       "description": "The frozen /api/v1 compatibility surface remains available while auth, current-user, and Admin user-management additions use /api/v2.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [
         "API-CONTRACT-V2-001"
       ],
@@ -6370,7 +6370,7 @@
       "id": "API-002",
       "module": "API",
       "description": "v2 auth, current-user, terms, token, and Admin user-management responses use the standard ok/data or ok/error envelope.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [
         "API-CONTRACT-V2-001"
       ],
@@ -6387,7 +6387,7 @@
       "id": "TEST-037",
       "module": "Tests",
       "description": "API tests cover login, logout, current-user lookup, unauthorized access, bootstrap Admin, inactive users, and terms status.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [
         "API-AUTH-001"
       ],

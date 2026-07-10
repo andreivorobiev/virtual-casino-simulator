@@ -131,10 +131,12 @@ def verify_password(password: str, encoded: str) -> bool:
         if algorithm != "pbkdf2_sha256":
             # Return the computed value to the caller.
             return False
-        # Set salt to the value needed for the next operation.
-        salt = base64.b64decode(salt_text.encode("ascii"))
-        # Set expected to the value needed for the next operation.
-        expected = base64.b64decode(digest_text.encode("ascii"))
+        # Decode canonical base64 verifiers while retaining compatibility with the legacy Admin hex format.
+        legacy_hex = len(salt_text) == 24 and len(digest_text) == 64
+        # Decode the salt using the format identified above.
+        salt = salt_text.encode("ascii") if legacy_hex else base64.b64decode(salt_text.encode("ascii"))
+        # Decode the expected digest using the same stored verifier format.
+        expected = bytes.fromhex(digest_text) if legacy_hex else base64.b64decode(digest_text.encode("ascii"))
         # Set actual to the value needed for the next operation.
         actual = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, int(iterations))
         # Return the computed value to the caller.
@@ -146,8 +148,18 @@ def verify_password(password: str, encoded: str) -> bool:
 
 # Define the public_user function used by this module.
 def public_user(user: dict) -> dict:
-    # Return the computed value to the caller.
-    return {key: value for key, value in user.items() if key != "password_hash"}
+    # Copy the durable identity without exposing its password verifier.
+    result = {key: value for key, value in user.items() if key != "password_hash"}
+    # Publish the username alias required by the v2 contract while email remains compatible.
+    result["username"] = user.get("username") or user.get("email", "")
+    # Publish the canonical role list while retaining the historical singular role field.
+    result["roles"] = list(user.get("roles") or [user.get("role", "player")])
+    # Publish the contract's active flag from the durable status value.
+    result["active"] = user.get("status") == "active"
+    # Publish the canonical locale from legacy or current account metadata.
+    result["locale"] = user.get("locale") or user.get("language") or "en-US"
+    # Return the contract-compatible identity summary.
+    return result
 
 # Define the find_user_by_email function used by this module.
 def find_user_by_email(email: str) -> dict | None:
@@ -174,7 +186,7 @@ def find_user_by_id(user_id: str) -> dict | None:
     return None
 
 # Define the create_user function used by this module.
-def create_user(email: str, password: str, display_name: str, role: str = "player", player_id: str | None = None, terms_required: bool = True) -> dict:
+def create_user(email: str, password: str, display_name: str, role: str = "player", player_id: str | None = None, terms_required: bool = True, locale: str = "en-US") -> dict:
     # Set normalized to the value needed for the next operation.
     normalized = normalize_email(email)
     # Branch when the following condition is true.
@@ -196,7 +208,7 @@ def create_user(email: str, password: str, display_name: str, role: str = "playe
     # Set now to the value needed for the next operation.
     now = utc_now()
     # Set user to the value needed for the next operation.
-    user = {"user_id": new_id("user"), "email": normalized, "display_name": display_name.strip() or normalized, "role": role, "status": "active", "player_id": bound_player["player_id"], "password_hash": hash_password(password), "terms_required": terms_required, "terms_accepted_at": None, "created_at": now, "updated_at": now, "identity_provider": "local"}
+    user = {"user_id": new_id("user"), "email": normalized, "username": normalized, "display_name": display_name.strip() or normalized, "role": role, "roles": [role], "status": "active", "player_id": bound_player["player_id"], "password_hash": hash_password(password), "terms_required": terms_required, "terms_accepted_at": None, "locale": locale or "en-US", "language": locale or "en-US", "created_at": now, "updated_at": now, "identity_provider": "local"}
     # Execute this statement as part of the module's documented control flow.
     state.setdefault("users", []).append(user)
     # Execute this statement as part of the module's documented control flow.
@@ -224,6 +236,62 @@ def set_user_status(email: str, status: str) -> dict:
             return user
     # Raise an error so invalid input or state is reported explicitly.
     raise ValidationError("user was not found")
+
+
+# Define roles_for_user so authorization reads old and new identity records consistently.
+def roles_for_user(user: dict) -> list[str]:
+    # Return a normalized role list from the canonical collection or legacy singular value.
+    return [str(role).lower() for role in (user.get("roles") or [user.get("role", "player")])]
+
+
+# Define is_admin so all Admin APIs share one authorization decision.
+def is_admin(user: dict) -> bool:
+    # Return whether the authenticated active identity has the Admin role.
+    return user.get("status") == "active" and "admin" in roles_for_user(user)
+
+
+# Define require_admin so protected Admin endpoints fail closed before dispatch.
+def require_admin(user: dict) -> None:
+    # Reject authenticated users that do not hold the Admin role.
+    if not is_admin(user):
+        # Raise the standard forbidden response without exposing Admin data.
+        raise ForbiddenError("Admin role is required")
+
+
+# Define update_user_by_id so Admin and current-user flows mutate the canonical identity store.
+def update_user_by_id(user_id: str, updater) -> dict:
+    # Load the canonical user registry before applying an account mutation.
+    state = load_users()
+    # Iterate through identities to find the requested durable account.
+    for user in state.get("users", []):
+        # Branch when the durable user id matches the request.
+        if user.get("user_id") == user_id:
+            # Apply the caller-owned mutation to the canonical record.
+            updater(user)
+            # Refresh the account audit timestamp after the mutation.
+            user["updated_at"] = utc_now()
+            # Persist the canonical registry after a successful mutation.
+            save_users(state)
+            # Return the updated durable identity.
+            return user
+    # Raise a validation error when no canonical identity matches.
+    raise ValidationError("user was not found")
+
+
+# Define set_user_password so Admin resets produce login-ready canonical credentials.
+def set_user_password(user_id: str, password: str) -> dict:
+    # Reject empty replacement passwords before hashing.
+    if not password:
+        # Raise an explicit validation error for the Admin form.
+        raise ValidationError("password is required")
+    # Update the canonical password verifier and reset metadata together.
+    return update_user_by_id(user_id, lambda user: user.update({"password_hash": hash_password(password), "password_reset_required": True, "password_version": int(user.get("password_version", 0)) + 1, "password_reset_at": utc_now()}))
+
+
+# Define accept_terms so the browser and Admin share canonical terms metadata.
+def accept_terms(user_id: str, terms_version: str | None = None, accepted: bool = True, source: str = "current_user") -> dict:
+    # Store acceptance or revocation on the canonical identity record.
+    return update_user_by_id(user_id, lambda user: user.update({"terms_required": not accepted, "terms_accepted_at": utc_now() if accepted else None, "terms_accepted_version": terms_version if accepted else None, "terms_acceptance_source": source if accepted else None}))
 
 # Define the bootstrap_admin_from_env function used by this module.
 def bootstrap_admin_from_env() -> dict:
@@ -267,8 +335,12 @@ def create_session(user: dict, client: str = "") -> dict:
 
 # Define the public_session function used by this module.
 def public_session(session: dict) -> dict:
-    # Return the computed value to the caller.
-    return {key: value for key, value in session.items() if key != "token"}
+    # Copy public session metadata without exposing the bearer token.
+    result = {key: value for key, value in session.items() if key != "token"}
+    # Publish the contract's issued_at alias from the durable creation timestamp.
+    result["issued_at"] = session.get("issued_at") or session.get("created_at")
+    # Return the contract-compatible session summary.
+    return result
 
 # Define the login function used by this module.
 def login(email: str, password: str, client: str = "") -> dict:
@@ -284,8 +356,12 @@ def login(email: str, password: str, client: str = "") -> dict:
         raise ForbiddenError("User is inactive")
     # Set session to the value needed for the next operation.
     session = create_session(user, client)
-    # Return the computed value to the caller.
-    return {"user": public_user(user), "session": {**public_session(session), "token": session["token"]}, "player": players.get_player(user["player_id"])}
+    # Build the same canonical current-user payload used by session and shell refreshes.
+    result = current_user_payload(session, user)
+    # Include the bearer token for compatible non-cookie API clients.
+    result["session"]["token"] = session["token"]
+    # Return one authenticated source of truth for identity and wallet state.
+    return result
 
 # Define the extract_bearer_token function used by this module.
 def extract_bearer_token(headers) -> str:
@@ -370,17 +446,19 @@ def logout(token: str) -> dict:
 def current_user_payload(session: dict, user: dict) -> dict:
     # Set player to the value needed for the next operation.
     player = players.get_player(user["player_id"])
-    # Return the computed value to the caller.
-    return {"user": public_user(user), "session": public_session(session), "player": player, "terms": terms_status(user)}
+    # Publish one authenticated player summary with an explicit play-token balance field.
+    player_summary = {**player, "token_balance": round(float(player.get("balance", 0)), 2), "token_label": "play tokens"}
+    # Return the canonical current-user payload used by login, session, shell, and wallet refreshes.
+    return {"user": public_user(user), "session": public_session(session), "player": player_summary, "terms": terms_status(user)}
 
 # Define the terms_status function used by this module.
 def terms_status(user: dict) -> dict:
     # Set required to the value needed for the next operation.
-    required = bool(user.get("terms_required", True))
+    required = bool(user.get("terms_required", True)) and not bool(user.get("terms_accepted_at"))
     # Set accepted_at to the value needed for the next operation.
     accepted_at = user.get("terms_accepted_at")
     # Return the computed value to the caller.
-    return {"required": required, "accepted": (not required) or bool(accepted_at), "accepted_at": accepted_at}
+    return {"required": required, "required_version": "private-beta-1", "accepted": not required, "accepted_version": user.get("terms_accepted_version"), "accepted_at": accepted_at}
 
 # Define the cookie_header function used by this module.
 def cookie_header(token: str) -> tuple[str, str]:
