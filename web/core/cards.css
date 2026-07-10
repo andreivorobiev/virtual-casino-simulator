@@ -1,0 +1,64 @@
+/* Provide responsive, accessible presentation hooks for CARD-002 renderers. */
+.playing-card-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: clamp(0.35rem, 1vw, 0.75rem);
+  max-width: 100%;
+}
+
+.playing-card {
+  align-items: center;
+  aspect-ratio: 5 / 7;
+  background: #fffdf8;
+  border: 2px solid #d8d1c5;
+  border-radius: 0.65rem;
+  color: #161616;
+  display: inline-flex;
+  flex: 0 1 clamp(3.25rem, 10vw, 6.5rem);
+  flex-direction: column;
+  font-size: clamp(1rem, 3vw, 1.75rem);
+  justify-content: space-between;
+  min-width: 3.25rem;
+  overflow: hidden;
+  padding: clamp(0.3rem, 1vw, 0.65rem);
+  transition: box-shadow 160ms ease, transform 160ms ease;
+}
+
+.playing-card--red {
+  color: #a51e2d;
+}
+
+.playing-card--selected {
+  box-shadow: 0 0 0 3px #f4c95d;
+  transform: translateY(-0.2rem);
+}
+
+.playing-card--back {
+  background: repeating-linear-gradient(45deg, #5c1220, #5c1220 6px, #801c2d 6px, #801c2d 12px);
+  color: #fff;
+  justify-content: center;
+}
+
+.playing-card__rank,
+.playing-card__suit {
+  line-height: 1;
+}
+
+/* Disable decorative movement for users who request reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  .playing-card {
+    scroll-behavior: auto;
+    transition: none;
+  }
+
+  .playing-card--selected {
+    transform: none;
+  }
+}
+
+/* Keep cards readable while allowing groups to wrap on compact mobile stages. */
+@media (max-width: 480px) {
+  .playing-card {
+    flex-basis: calc(25% - 0.5rem);
+  }
+}
