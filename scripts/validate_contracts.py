@@ -15,6 +15,11 @@ REQUIRED = [
     # Execute this statement as part of the module's documented control flow.
     "roulette", "slots", "blackjack", "baccarat", "keno", "bingo",
 ]
+# Set REQUIRED_V2 to the value needed for the next operation.
+REQUIRED_V2 = [
+    # Execute this statement as part of the module's documented control flow.
+    "auth", "admin-users",
+]
 
 # Define the main function used by this module.
 def main():
@@ -44,6 +49,30 @@ def main():
         if "/api/v1/" not in text:
             # Execute this statement as part of the module's documented control flow.
             errors.append(f"{path} does not contain /api/v1 paths")
+    # Iterate through the collection to process each item.
+    for name in REQUIRED_V2:
+        # Set path to the value needed for the next operation.
+        path = CONTRACT_DIR / f"{name}.v2.yaml"
+        # Branch when the following condition is true.
+        if not path.exists():
+            # Execute this statement as part of the module's documented control flow.
+            errors.append(f"missing contract: {path}")
+            # Execute this statement as part of the module's documented control flow.
+            continue
+        # Set text to the value needed for the next operation.
+        text = path.read_text(encoding="utf-8")
+        # Branch when the following condition is true.
+        if "openapi: 3.0.3" not in text:
+            # Execute this statement as part of the module's documented control flow.
+            errors.append(f"{path} does not declare OpenAPI 3.0.3")
+        # Branch when the following condition is true.
+        if "paths:" not in text:
+            # Execute this statement as part of the module's documented control flow.
+            errors.append(f"{path} has no paths section")
+        # Branch when the following condition is true.
+        if "/api/v2" not in text:
+            # Execute this statement as part of the module's documented control flow.
+            errors.append(f"{path} does not contain /api/v2 paths")
     # Set schema_dir to the value needed for the next operation.
     schema_dir = ROOT / "contracts" / "schemas"
     # Iterate through the collection to process each item.
@@ -63,7 +92,7 @@ def main():
         # Return the computed value to the caller.
         return 1
     # Write diagnostic output so the current operation can be inspected.
-    print(f"Contract validation passed for {len(REQUIRED)} OpenAPI files.")
+    print(f"Contract validation passed for {len(REQUIRED) + len(REQUIRED_V2)} OpenAPI files.")
     # Return the computed value to the caller.
     return 0
 

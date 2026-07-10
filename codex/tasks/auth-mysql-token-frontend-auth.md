@@ -20,6 +20,12 @@
 - Requirement IDs changed: Supersede visible unauthenticated/local-only assumptions.
 - Requirement IDs validated: UX, I18N, ADMIN as applicable, CORE, TOKEN.
 
+## Durable Requirement/Contract References
+
+- Implement AUTH-001, AUTH-004, SESSION-003, TERMS-001 through TERMS-003, TOKEN-001, TOKEN-003, TOKEN-004, API-001, API-002, and TEST-037.
+- Consume `contracts/openapi/auth.v2.yaml` for login, logout, current-user, terms acceptance, and add-token envelope shape.
+- Leave Admin user-management contract consumption to the Admin worker unless shared navigation/session state requires coordination.
+
 ## Scope
 
 - Impacted modules: application, admin frontend as entry point only, tests.
