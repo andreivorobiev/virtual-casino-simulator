@@ -7,7 +7,7 @@
   "auth.submit": "Sign in",
   "auth.termsCheck": "I understand this is a toy simulator, not a gambling site, and play tokens have no cash value.",
   "auth.title": "Sign in to play",
-  "auth.username": "Username",
+  "auth.email": "Email",
   "brand.subtitle": "v9 validation release - play tokens only",
   "brand.title": "Virtual Casino Simulator",
   "games.baccarat.description": "Punto Banco shoe with burn/cut behavior, Player/Banker/Tie bets, bots, and road history.",

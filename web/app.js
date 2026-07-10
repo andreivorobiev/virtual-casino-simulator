@@ -106,7 +106,7 @@ function renderLoginGate(message = '') {
   // Apply the auth screen class contract for login and terms flows.
   view.className = 'screen auth-screen';
   // Render the browser login gate with private-beta toy-simulator acknowledgement.
-  view.innerHTML = `<section class="auth-panel" data-testid="login-gate"><p class="eyebrow">${safe(t('auth.eyebrow', {}, 'shell'))}</p><h1>${safe(t('auth.title', {}, 'shell'))}</h1><p class="auth-copy">${safe(t('auth.copy', {}, 'shell'))}</p><form id="login-form" class="auth-form"><label>${safe(t('auth.username', {}, 'shell'))}<input id="login-username" data-testid="login-username" autocomplete="username" required></label><label>${safe(t('auth.password', {}, 'shell'))}<input id="login-password" data-testid="login-password" type="password" autocomplete="current-password" required></label><label>${safe(t('auth.language', {}, 'shell'))}<select id="auth-locale-select" data-testid="auth-locale-select"></select></label><label class="check-row"><input id="login-terms-check" data-testid="login-terms-check" type="checkbox" required><span>${safe(t('auth.termsCheck', {}, 'shell'))}</span></label><button class="primary" data-testid="login-submit" type="submit">${safe(t('auth.submit', {}, 'shell'))}</button><p id="auth-message" class="auth-message">${safe(message)}</p></form></section>`;
+  view.innerHTML = `<section class="auth-panel" data-testid="login-gate"><p class="eyebrow">${safe(t('auth.eyebrow', {}, 'shell'))}</p><h1>${safe(t('auth.title', {}, 'shell'))}</h1><p class="auth-copy">${safe(t('auth.copy', {}, 'shell'))}</p><form id="login-form" class="auth-form"><label>${safe(t('auth.email', {}, 'shell'))}<input id="login-email" data-testid="login-email" type="email" autocomplete="username" required></label><label>${safe(t('auth.password', {}, 'shell'))}<input id="login-password" data-testid="login-password" type="password" autocomplete="current-password" required></label><label>${safe(t('auth.language', {}, 'shell'))}<select id="auth-locale-select" data-testid="auth-locale-select"></select></label><label class="check-row"><input id="login-terms-check" data-testid="login-terms-check" type="checkbox" required><span>${safe(t('auth.termsCheck', {}, 'shell'))}</span></label><button class="primary" data-testid="login-submit" type="submit">${safe(t('auth.submit', {}, 'shell'))}</button><p id="auth-message" class="auth-message">${safe(message)}</p></form></section>`;
   // Wire the auth-screen locale selector and rerender the gate after switching.
   wireLocaleSelect(document.getElementById('auth-locale-select'), () => renderLoginGate(message));
   // Wire form submission through the v2 auth login endpoint.
@@ -155,14 +155,14 @@ async function handleLoginSubmit(event) {
   const message = document.getElementById('auth-message');
   // Start protected login logic so validation errors stay inside the auth panel.
   try {
-    // Read the username from the browser-visible login field.
-    const username = document.getElementById('login-username').value.trim();
+    // Read the email from the browser-visible login field.
+    const email = document.getElementById('login-email').value.trim();
     // Read the password from the browser-visible login field.
     const password = document.getElementById('login-password').value;
     // Read the active locale so backend sessions can preserve user language.
     const locale = getLocaleState().locale;
     // Call the planned v2 auth endpoint without changing backend internals.
-    const session = await login({ username, password, locale, terms_acknowledged: true });
+    const session = await login({ email, password, locale, terms_acknowledged: true });
     // Enter the authenticated shell or terms step from the returned payload.
     await enterAuthenticated(session);
   // Handle failed login attempts with local auth-panel feedback.

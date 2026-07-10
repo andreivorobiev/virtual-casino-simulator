@@ -182,6 +182,8 @@ def run_api_tests():
             login=api(base,'/api/v2/auth/login','POST',{'email':DEFAULT_AUTH_EMAIL,'password':DEFAULT_AUTH_PASSWORD},auth_token=None); assert login['user']['role']=='admin'
             # Set token to the value needed for the next operation.
             token=login['session']['token']; assert token
+            # Verify the published username field remains a compatible alias for the same email credential.
+            aliased_login=api(base,'/api/v2/auth/login','POST',{'username':DEFAULT_AUTH_EMAIL,'password':DEFAULT_AUTH_PASSWORD},auth_token=None); assert aliased_login['user']['email']==DEFAULT_AUTH_EMAIL
             # Set session to the value needed for the next operation.
             session=api(base,'/api/v2/auth/session',auth_token=token); assert session['user']['email']==DEFAULT_AUTH_EMAIL
             # Set me to the value needed for the next operation.
@@ -541,6 +543,26 @@ def run_browser_tests():
                 record('BR-SETUP-001',['TEST-010'],'FAIL','Playwright browser runtime missing or blocked: '+str(exc).split('\n')[0])
                 # Return the computed value to the caller.
                 return 2
+            # Open an isolated browser page so the visible login form must establish its own backend session.
+            real_login_page=browser.new_page(viewport={'width':1920,'height':1080})
+            # Start protected login verification so the isolated page is always closed before the broad suite.
+            try:
+                # Navigate without a seeded cookie so the real backend returns the login gate.
+                real_login_page.goto(base, wait_until='networkidle'); real_login_page.get_by_test_id('login-gate').wait_for(timeout=5000)
+                # Observe the actual backend login response while submitting browser-visible credentials.
+                with real_login_page.expect_response(lambda response: response.url.endswith('/api/v2/auth/login') and response.request.method == 'POST') as login_response_info:
+                    # Fill the bootstrap email and password through the same controls used by a local player.
+                    real_login_page.get_by_test_id('login-email').fill(DEFAULT_AUTH_EMAIL); real_login_page.get_by_test_id('login-password').fill(DEFAULT_AUTH_PASSWORD); real_login_page.get_by_test_id('login-terms-check').check(); real_login_page.get_by_test_id('login-submit').click()
+                # Store the real response payload so the test proves the backend accepted the form request.
+                real_login_response=login_response_info.value.json()
+                # Wait for the authenticated shell that can only mount after the backend session cookie is accepted.
+                real_login_page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Record the focused real-backend browser login regression coverage.
+                run_case('BR-AUTH-BACKEND-001',['AUTH-001','AUTH-002','SESSION-001'],lambda: real_login_response['ok'] is True and real_login_response['data']['user']['email']==DEFAULT_AUTH_EMAIL and real_login_page.get_by_test_id('lobby').is_visible())
+            # Close the focused page even when its assertions fail.
+            finally:
+                # Release the isolated backend-login browser context before the existing broad UI suite.
+                real_login_page.close()
             # Set page to the value needed for the next operation.
             page=browser.new_page(viewport={'width':1920,'height':1080})
             # Set a session cookie so browser tests exercise authenticated app/API access.
@@ -629,12 +651,12 @@ def run_browser_tests():
                 page.get_by_test_id('auth-locale-select').select_option('ru-RU')
                 # Wait for the login gate rerender triggered by the locale switch.
                 page.wait_for_function("() => window.CasinoI18n && window.CasinoI18n.getLocaleState().locale === 'ru-RU'")
-                # Wait for the fresh username field to be ready after the locale rerender.
-                page.get_by_test_id('login-username').wait_for(timeout=5000)
+                # Wait for the fresh email field to be ready after the locale rerender.
+                page.get_by_test_id('login-email').wait_for(timeout=5000)
                 # Let the auth form rerender settle before entering credentials.
                 page.wait_for_timeout(150)
                 # Fill the mocked login form through browser-visible controls.
-                page.get_by_test_id('login-username').fill('demo'); page.get_by_test_id('login-password').fill('password'); page.get_by_test_id('login-terms-check').check(); page.get_by_test_id('login-submit').click()
+                page.get_by_test_id('login-email').fill('demo@example.local'); page.get_by_test_id('login-password').fill('password'); page.get_by_test_id('login-terms-check').check(); page.get_by_test_id('login-submit').click()
                 # Wait for the terms acceptance screen returned by the mocked v2 login payload.
                 page.get_by_test_id('terms-gate').wait_for(timeout=5000)
                 # Capture terms evidence for the frontend auth handback.
@@ -678,7 +700,7 @@ def run_browser_tests():
                 # Execute this statement as part of the module's documented control flow.
                 run_case('BR-AUTH-LOGOUT-001',['AUTH-UI-001'],lambda: page.get_by_test_id('login-gate').is_visible() and not page.get_by_test_id('premium-topbar').is_visible())
                 # Re-login after logout so the existing browser suite can continue authenticated.
-                page.get_by_test_id('login-username').fill('demo'); page.get_by_test_id('login-password').fill('password'); page.get_by_test_id('login-terms-check').check(); page.get_by_test_id('login-submit').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                page.get_by_test_id('login-email').fill('demo@example.local'); page.get_by_test_id('login-password').fill('password'); page.get_by_test_id('login-terms-check').check(); page.get_by_test_id('login-submit').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Define the premium_shell function used by this module.
                 def premium_shell():
                     # Verify the premium topbar remains visible at app load.
