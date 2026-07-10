@@ -40,6 +40,8 @@ Use this packet to start a new worker chat. Fill every section or write `None`.
 ## Required reading
 
 - `AGENTS.md`
+- `docs/visual_design_standard.md` for browser-visible tasks
+- `tests/visual/visual_matrix.json` for browser-visible tasks
 - Relevant nested `AGENTS.md`:
 - Relevant module manifests:
 - Relevant contracts:
@@ -49,7 +51,10 @@ Use this packet to start a new worker chat. Fill every section or write `None`.
 
 - Required tests:
 - Required scripts:
+- Visual matrix surface/state IDs:
+- Required locales/viewports:
 - Browser evidence:
+- Evidence classification (`before_failure` or `after_pass`):
 - Manual checks:
 
 ## Handback

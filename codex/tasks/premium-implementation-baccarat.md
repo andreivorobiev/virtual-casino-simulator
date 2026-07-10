@@ -42,6 +42,7 @@ Implement the approved premium Baccarat frontend with wager setup, card reveal, 
 ## Required Reading
 
 - `AGENTS.md`
+- `docs/visual_design_standard.md` and `tests/visual/visual_matrix.json`
 - relevant nested game `AGENTS.md`
 - `modules/baccarat.json`
 - `docs/requirements/requirements.json`

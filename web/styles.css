@@ -139,8 +139,8 @@ label {
   position: relative;
   z-index: 2;
   display: grid;
-  grid-template-columns: minmax(240px, 320px) minmax(420px, 1fr) auto;
-  gap: 16px;
+  grid-template-columns: minmax(230px, 290px) minmax(420px, 1fr) auto;
+  gap: 18px;
   align-items: center;
   min-height: 92px;
   padding: 14px 24px;
@@ -210,7 +210,21 @@ label {
   border-radius: 24px;
   background: rgba(2, 16, 11, 0.72);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+  scrollbar-color: rgba(255, 217, 130, 0.52) transparent;
   scrollbar-width: thin;
+}
+
+.casino-nav::-webkit-scrollbar {
+  height: 4px;
+}
+
+.casino-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.casino-nav::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(255, 217, 130, 0.52);
 }
 
 .nav-item {
@@ -243,7 +257,7 @@ label {
 .top-actions {
   position: relative;
   display: flex;
-  gap: 14px;
+  gap: 10px;
   align-items: center;
   justify-content: end;
   min-width: 0;
@@ -258,28 +272,57 @@ label {
 }
 
 .wallet-pill {
-  display: flex;
-  gap: 14px;
-  align-items: center;
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  column-gap: 11px;
+  row-gap: 1px;
+  align-content: center;
+  min-width: 188px;
   min-height: 52px;
-  padding: 0 18px;
-  border: 1px solid rgba(255, 215, 128, 0.24);
+  padding: 7px 15px 7px 10px;
+  border: 1px solid rgba(255, 215, 128, 0.42);
   border-radius: 18px;
-  background: rgba(4, 19, 14, 0.84);
-  box-shadow: inset 0 0 22px rgba(255, 218, 130, 0.04);
+  background:
+    linear-gradient(135deg, rgba(255, 217, 130, 0.12), transparent 48%),
+    rgba(4, 19, 14, 0.9);
+  box-shadow: inset 0 0 22px rgba(255, 218, 130, 0.06), 0 10px 26px rgba(0, 0, 0, 0.22);
+}
+
+.wallet-pill::before {
+  display: grid;
+  grid-row: 1 / span 2;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid rgba(255, 224, 148, 0.7);
+  border-radius: 50%;
+  color: #2a1b03;
+  background: linear-gradient(145deg, #ffecad, #c58e22);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.66), 0 0 18px rgba(255, 199, 83, 0.18);
+  content: "PLAY";
+  font-size: 8px;
+  font-weight: 1000;
+  letter-spacing: .05em;
 }
 
 .wallet-label {
+  align-self: end;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .1em;
+  line-height: 1.1;
   text-transform: uppercase;
   white-space: nowrap;
 }
 
 .wallet-amount {
+  align-self: start;
   color: #fff2c2;
-  font-size: 20px;
-  font-weight: 800;
+  font-size: 21px;
+  font-weight: 900;
+  line-height: 1.1;
   white-space: nowrap;
 }
 
@@ -444,7 +487,7 @@ label {
 }
 
 .game-screen {
-  padding: 20px 26px 70px;
+  padding: 18px 22px 70px;
 }
 
 /* Premium lobby hero, trust rail, and game-card gallery. */
@@ -895,6 +938,16 @@ label {
   white-space: nowrap;
 }
 
+.status-item > .gold {
+  padding: 4px 7px;
+  border: 1px solid rgba(255, 217, 130, 0.26);
+  border-radius: 999px;
+  background: rgba(255, 217, 130, 0.08);
+  font-size: 10px;
+  font-weight: 1000;
+  letter-spacing: .08em;
+}
+
 .status-dot {
   width: 8px;
   height: 8px;
@@ -927,7 +980,7 @@ label {
 /* Shared game module primitives retained for existing modules and future workers. */
 .game-layout {
   display: grid;
-  gap: 10px;
+  gap: 18px;
   height: 100%;
   min-height: 0;
   overflow: hidden;
@@ -943,7 +996,7 @@ label {
 }
 
 .three-col {
-  grid-template-columns: 315px minmax(0, 1fr) 330px;
+  grid-template-columns: 340px minmax(0, 1fr) 355px;
 }
 
 .panel,
@@ -951,14 +1004,48 @@ label {
   min-width: 0;
   min-height: 0;
   overflow: auto;
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  background: linear-gradient(145deg, rgba(7, 26, 19, 0.92), rgba(3, 15, 11, 0.86));
-  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.42), inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 215, 128, 0.4);
+  border-radius: 22px;
+  background:
+    linear-gradient(145deg, rgba(255, 217, 130, 0.035), transparent 38%),
+    linear-gradient(145deg, rgba(7, 26, 19, 0.94), rgba(3, 15, 11, 0.9));
+  box-shadow: 0 20px 54px rgba(0, 0, 0, 0.44), inset 0 0 0 1px rgba(255, 255, 255, 0.035);
+  scrollbar-color: rgba(255, 217, 130, 0.42) transparent;
+  scrollbar-width: thin;
 }
 
 .panel {
-  padding: 12px;
+  padding: 18px;
+}
+
+.panel::-webkit-scrollbar,
+.glass-panel::-webkit-scrollbar,
+.scrollbox::-webkit-scrollbar,
+.stable-list::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.panel::-webkit-scrollbar-track,
+.glass-panel::-webkit-scrollbar-track,
+.scrollbox::-webkit-scrollbar-track,
+.stable-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.panel::-webkit-scrollbar-thumb,
+.glass-panel::-webkit-scrollbar-thumb,
+.scrollbox::-webkit-scrollbar-thumb,
+.stable-list::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(255, 217, 130, 0.42);
+}
+
+.panel::-webkit-scrollbar-thumb:hover,
+.glass-panel::-webkit-scrollbar-thumb:hover,
+.scrollbox::-webkit-scrollbar-thumb:hover,
+.stable-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 217, 130, 0.68);
 }
 
 .panel-pad {
@@ -976,6 +1063,19 @@ label {
 h2,
 h3 {
   margin: 0 0 10px;
+}
+
+.control-rail > h2:first-child,
+.control-rail > .game-title:first-child,
+.details-drawer > h2:first-child,
+.details-drawer > .game-title:first-child {
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 217, 130, 0.22);
+  color: #fff0b8;
+  font-family: var(--font-display);
+  font-size: 24px;
+  line-height: 1.1;
 }
 
 h2,
@@ -1033,11 +1133,14 @@ h3 {
 }
 
 .badge {
-  padding: 4px 9px;
-  border: 1px solid var(--border-soft);
+  padding: 5px 10px;
+  border: 1px solid rgba(255, 217, 130, 0.2);
   border-radius: 999px;
-  color: var(--muted);
-  background: rgba(255, 255, 255, .06);
+  color: #ddd4b7;
+  background: linear-gradient(180deg, rgba(255, 217, 130, 0.09), rgba(255, 255, 255, 0.035));
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.2;
 }
 
 .rail-stack {
@@ -1073,9 +1176,32 @@ h3 {
   overflow: auto;
 }
 
+.control-rail,
+.details-drawer {
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+}
+
+.control-rail:focus-visible,
+.details-drawer:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: -5px;
+}
+
 .game-stage {
   position: relative;
   overflow: hidden;
+  border-color: rgba(255, 215, 128, 0.58);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.045);
+  isolation: isolate;
+}
+
+.control-rail {
+  border-top: 2px solid rgba(255, 215, 128, 0.48);
+}
+
+.details-drawer {
+  border-top: 2px solid rgba(156, 255, 188, 0.34);
 }
 
 .action-row {
@@ -1523,6 +1649,17 @@ h3 {
   overflow: auto;
 }
 
+/* Desktop rails own intentional scrolling so nested lists do not create competing primary scroll areas. */
+@media (min-width: 1201px) {
+  .control-rail .scrollbox,
+  .control-rail .stable-list,
+  .details-drawer .scrollbox,
+  .details-drawer .stable-list {
+    max-height: none;
+    overflow: visible;
+  }
+}
+
 .mini-table {
   width: 100%;
   border-collapse: collapse;
@@ -1647,7 +1784,60 @@ h3 {
 }
 
 /* Responsive shell and game behavior for narrow and medium viewports. */
+@media (max-height: 950px) and (min-width: 1201px) {
+  .lobby-screen {
+    padding: 24px 38px 64px;
+  }
+
+  .lobby {
+    gap: 20px;
+  }
+
+  .eyebrow {
+    font-size: 24px;
+  }
+
+  .hero-title {
+    font-size: 44px;
+  }
+
+  .hero-rule {
+    margin-top: 10px;
+  }
+
+  .trust-item {
+    min-height: 72px;
+    padding: 12px 16px;
+  }
+
+  .game-gallery {
+    grid-template-rows: repeat(2, minmax(210px, 1fr));
+  }
+}
+
 @media (max-width: 1350px) {
+  .casino-topbar {
+    grid-template-columns: minmax(210px, 250px) minmax(0, 1fr) auto;
+    gap: 10px;
+    padding-right: 14px;
+    padding-left: 14px;
+  }
+
+  .brand-mark,
+  .logo {
+    width: 50px;
+    height: 50px;
+  }
+
+  .brand-copy span,
+  .brand small {
+    display: none;
+  }
+
+  .wallet-pill {
+    min-width: 170px;
+  }
+
   .admin-card-grid {
     grid-template-columns: repeat(3, 1fr);
   }
@@ -1657,7 +1847,7 @@ h3 {
   }
 
   .three-col {
-    grid-template-columns: 300px minmax(0, 1fr) 290px;
+    grid-template-columns: 288px minmax(0, 1fr) 300px;
   }
 
   .roulette-table-board {
@@ -1707,7 +1897,7 @@ h3 {
 
   .top-actions {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-columns: minmax(0, 1fr) auto auto auto;
     justify-content: stretch;
   }
 
@@ -1794,6 +1984,19 @@ h3 {
     overflow: visible;
   }
 
+  .game-screen .stable-game.game-layout {
+    display: flex;
+    flex-direction: column;
+    grid-template-rows: auto;
+    height: auto !important;
+    contain: none !important;
+  }
+
+  .game-screen .stable-game.game-layout > .panel {
+    flex: 0 0 auto;
+    height: auto;
+  }
+
   .status-bar {
     grid-template-columns: 1fr auto;
     gap: 10px;
@@ -1822,11 +2025,42 @@ h3 {
   }
 
   .wallet-label {
-    font-size: 12px;
+    overflow: hidden;
+    font-size: 9px;
+    text-overflow: ellipsis;
   }
 
   .wallet-amount {
-    font-size: 20px;
+    font-size: 17px;
+  }
+
+  .top-actions {
+    grid-template-columns: minmax(0, 1fr) 46px 46px;
+  }
+
+  .wallet-pill {
+    min-width: 0;
+  }
+
+  .wallet-menu {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .profile-dot {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .shell-locale {
+    grid-row: 2;
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .icon-button {
+    width: 46px;
+    height: 46px;
   }
 
   .casino-nav {

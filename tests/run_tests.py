@@ -524,6 +524,8 @@ def run_browser_tests():
         print('Playwright is not installed. Install with python -m pip install -r requirements-dev.txt and python -m playwright install chromium'); return 2
     # Set proc,base to the value needed for the next operation.
     proc,base=start_server(); screenshots=ROOT/'logs'/'test-runs'; screenshots.mkdir(parents=True,exist_ok=True)
+    # Parse the authoritative visual matrix so browser coverage fails fast on invalid governance data.
+    visual_matrix=json.loads((ROOT/'tests'/'visual'/'visual_matrix.json').read_text(encoding='utf-8'))
     # Start protected logic so failures can be handled safely.
     try:
         # Call an asynchronous API/helper and wait for the result before continuing.
@@ -778,8 +780,8 @@ def run_browser_tests():
                 def auth_shell():
                     # Verify the premium topbar is visible after login and terms acceptance.
                     assert page.get_by_test_id('premium-topbar').is_visible()
-                    # Verify the current-user wallet uses the fake-token glyph.
-                    assert '◈' in page.get_by_test_id('premium-wallet').inner_text()
+                    # Verify the current-user wallet shows the numeric balance without a replacement-looking glyph.
+                    assert '5,000' in page.get_by_test_id('premium-wallet').inner_text() and '◈' not in page.get_by_test_id('premium-wallet').inner_text()
                     # Verify the chosen locale survived login and terms acceptance.
                     assert page.get_by_test_id('shell-locale-select').input_value()=='ru-RU'
                 # Execute this statement as part of the module's documented control flow.
@@ -808,14 +810,24 @@ def run_browser_tests():
                 page.get_by_test_id('login-email').fill('demo@example.local'); page.get_by_test_id('login-password').fill('password'); page.get_by_test_id('login-terms-check').check(); page.get_by_test_id('login-submit').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Define the premium_shell function used by this module.
                 def premium_shell():
+                    # Verify the visual matrix exposes the required schema, viewports, locales, gates, and surfaces.
+                    assert visual_matrix.get('schema_version')==1 and visual_matrix.get('viewports') and visual_matrix.get('locales') and visual_matrix.get('gates') and visual_matrix.get('surfaces')
                     # Verify the premium topbar remains visible at app load.
                     assert page.get_by_test_id('premium-topbar').is_visible()
                     # Verify the shared wallet remains visible for the current user's token balance.
                     assert page.get_by_test_id('premium-wallet').is_visible()
-                    # Verify the wallet displays the play-token mark instead of a currency symbol.
-                    assert '◈' in page.get_by_test_id('premium-wallet').inner_text()
+                    # Verify the wallet relies on its PLAY medallion and legible value instead of a replacement-looking glyph.
+                    assert '5,250' in page.get_by_test_id('premium-wallet').inner_text() and '◈' not in page.get_by_test_id('premium-wallet').inner_text()
                     # Verify the wallet label uses authenticated token-balance terminology.
                     assert 'token balance' in page.get_by_test_id('premium-wallet').inner_text().lower()
+                    # Read the wallet label position so the visual hierarchy can be checked without pixel snapshots.
+                    wallet_label_box=page.locator('#balance-label').bounding_box()
+                    # Read the wallet amount position so the primary value can be compared with its label.
+                    wallet_amount_box=page.locator('#balance').bounding_box()
+                    # Verify the compact label sits above the larger play-token amount.
+                    assert wallet_label_box and wallet_amount_box and wallet_label_box['y'] < wallet_amount_box['y']
+                    # Verify the desktop shell does not introduce page-level horizontal overflow.
+                    assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1')
                     # Verify the persistent shell status rail is present.
                     assert page.get_by_test_id('shell-status').is_visible()
                     # Verify the status rail describes the simulator as play-token only.
@@ -831,15 +843,15 @@ def run_browser_tests():
                 # Submit the token top-up through the authenticated current-user endpoint.
                 page.get_by_test_id('add-tokens').click()
                 # Wait for the wallet toast to show the token mark and play-token wording.
-                page.wait_for_function("() => document.querySelector('#toast')?.textContent?.includes('◈123') && document.querySelector('#toast')?.textContent?.includes('play tokens')")
+                page.wait_for_function("() => document.querySelector('#toast')?.textContent?.includes('123') && document.querySelector('#toast')?.textContent?.includes('play tokens')")
                 # Capture token wallet evidence for the worker handback.
                 shot('token_wallet.png')
                 # Define the token_wallet function used by this module.
                 def token_wallet():
                     # Verify the wallet retained token terminology after the add-token action.
                     assert 'token balance' in page.get_by_test_id('premium-wallet').inner_text().lower()
-                    # Verify the toast uses the token mark for the added amount.
-                    assert '◈123' in page.locator('#toast').inner_text()
+                    # Verify the toast presents the numeric amount without a replacement-looking glyph.
+                    assert '123' in page.locator('#toast').inner_text() and '◈' not in page.locator('#toast').inner_text()
                     # Verify the toast describes play tokens instead of real-money language.
                     assert 'play tokens' in page.locator('#toast').inner_text()
                 # Execute this statement as part of the module's documented control flow.
@@ -856,10 +868,18 @@ def run_browser_tests():
                     assert page.get_by_test_id('open-roulette').is_visible()
                 # Execute this statement as part of the module's documented control flow.
                 run_case('BR-LOBBY-001',['CORE-005','CORE-006','UX-008'],premium_lobby)
-                # Resize the browser to the approved narrow viewport before responsive checks.
-                page.set_viewport_size({'width':390,'height':844}); page.wait_for_timeout(250)
+                # Capture the polished desktop lobby and shared topbar for review evidence.
+                shot('after-pass-shell-lobby-desktop.png')
+                # Resize the browser to the compact desktop viewport before responsive checks.
+                page.set_viewport_size({'width':1440,'height':900}); page.wait_for_timeout(250)
                 # Define the responsive_lobby function used by this module.
                 def responsive_lobby():
+                    # Verify compact desktop preserves the complete wallet and avoids page-level horizontal overflow.
+                    assert page.get_by_test_id('premium-wallet').is_visible() and page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1')
+                    # Capture the compact desktop shell for visual-matrix evidence.
+                    shot('after-pass-shell-lobby-compact.png')
+                    # Resize to the approved mobile viewport inside the same responsive matrix case.
+                    page.set_viewport_size({'width':390,'height':844}); page.wait_for_timeout(250)
                     # Verify the stacked topbar remains visible on a narrow viewport.
                     assert page.get_by_test_id('premium-topbar').is_visible()
                     # Verify the lobby does not introduce page-level horizontal overflow.
@@ -868,6 +888,8 @@ def run_browser_tests():
                     assert page.get_by_test_id('card-roulette').is_visible()
                 # Execute this statement as part of the module's documented control flow.
                 run_case('BR-LOBBY-RESP-001',['CORE-015','UX-009'],responsive_lobby)
+                # Capture the narrow stacked shell so mobile top-action behavior can be reviewed.
+                shot('after-pass-shell-lobby-mobile.png')
                 # Restore desktop dimensions before existing game interaction coverage runs.
                 page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(250)
                 # Open Roulette and wait for the premium vector wheel to mount.
@@ -900,8 +922,44 @@ def run_browser_tests():
                     assert page.locator('#botPanel').is_visible()
                     # Verify English Roulette content contains no visible raw resource keys.
                     assert_no_visible_roulette_keys()
+                    # Read the three desktop zones so shared rail spacing can be checked independently of game content.
+                    control_box=page.get_by_test_id('roulette-control-rail').bounding_box(); layout_box=page.get_by_test_id('roulette-premium-layout').bounding_box(); stage_box=page.get_by_test_id('roulette-premium-stage').bounding_box(); drawer_box=page.get_by_test_id('roulette-bet-slip').bounding_box()
+                    # Read the game header position so status content cannot collide with the table layout.
+                    header_box=page.locator('.roulette-header').bounding_box()
+                    # Verify both side rails have premium desktop width instead of cramped developer-form columns.
+                    assert control_box and control_box['width'] >= 330 and drawer_box and drawer_box['width'] >= 345
+                    # Verify the game stage remains wider than both support rails combined.
+                    assert stage_box and stage_box['width'] > control_box['width'] + drawer_box['width']
+                    # Verify the route header ends before the three-zone table layout begins.
+                    assert header_box and layout_box and header_box['y'] + header_box['height'] <= layout_box['y'] + 1
+                    # Verify the rail uses the shared thin scrollbar treatment instead of native full-width chrome.
+                    assert page.get_by_test_id('roulette-control-rail').evaluate("(el) => getComputedStyle(el).scrollbarWidth === 'thin'")
+                    # Verify the shared control rail is a named keyboard-focusable region.
+                    assert page.get_by_test_id('roulette-control-rail').get_attribute('tabindex')=='0' and page.get_by_test_id('roulette-control-rail').get_attribute('role')=='region'
+                    # Verify nested rail lists expand into the single intentional desktop rail scroll surface.
+                    assert page.get_by_test_id('roulette-bet-slip').evaluate("(el) => [...el.querySelectorAll('.scrollbox,.stable-list')].every(child => !['auto','scroll'].includes(getComputedStyle(child).overflowY))")
+                    # Verify the wallet, wager chips, main table, and primary action fit inside the desktop viewport without rail scrolling.
+                    assert page.evaluate("() => ['premium-wallet','chip-1','roulette-table','roulette-spin'].every(id => { const el=document.querySelector(`[data-testid=\"${id}\"]`); if(!el)return false; const box=el.getBoundingClientRect(); return box.top>=0 && box.bottom<=window.innerHeight-54; })")
+                    # Resize to a tablet viewport so the shared three-zone layout can prove its stacked fallback.
+                    page.set_viewport_size({'width':1024,'height':900}); page.wait_for_timeout(250)
+                    # Read responsive panel positions after the shared breakpoint stacks the game layout.
+                    tablet_control=page.get_by_test_id('roulette-control-rail').bounding_box(); tablet_stage=page.get_by_test_id('roulette-premium-stage').bounding_box(); tablet_drawer=page.get_by_test_id('roulette-bet-slip').bounding_box()
+                    # Read computed responsive layout diagnostics for actionable assertion output on sizing regressions.
+                    tablet_layout=page.get_by_test_id('roulette-premium-layout').evaluate("(el) => ({display:getComputedStyle(el).display,height:getComputedStyle(el).height,rows:getComputedStyle(el).gridTemplateRows,contain:getComputedStyle(el).contain,box:el.getBoundingClientRect().height,scroll:el.scrollHeight,children:[...el.children].map(child => ({height:child.getBoundingClientRect().height,scroll:child.scrollHeight,overflow:getComputedStyle(child).overflow}))})")
+                    # Verify responsive game content stays inside the viewport without horizontal overflow.
+                    assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1')
+                    # Verify the control, stage, and status panels stack in their intended reading order.
+                    assert tablet_control and tablet_stage and tablet_drawer and tablet_control['y'] < tablet_stage['y'] < tablet_drawer['y']
+                    # Verify the responsive flex stack sizes the control rail to its content without an empty tail.
+                    assert tablet_layout['display']=='flex' and abs(tablet_control['height']-tablet_layout['children'][0]['scroll']) <= 4, {'control':tablet_control,'layout':tablet_layout}
+                    # Capture the key-clean tablet header and first stacked panel as after-pass evidence.
+                    page.screenshot(path=str(screenshots/'after-pass-shell-roulette-tablet.png'),full_page=False)
+                    # Restore desktop dimensions before gameplay interaction coverage continues.
+                    page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(250)
                 # Execute this statement as part of the module's documented control flow.
                 run_case('BR-ROU-PREMIUM-001',['ROU-041','ROU-043','ROU-045','ROU-048','ROU-049','UX-007','UX-009'],premium_roulette_layout)
+                # Capture the key-clean desktop Roulette shell as after-pass evidence.
+                shot('after-pass-shell-roulette-desktop.png')
                 # Capture betting-state visual evidence for the Roulette worker handback.
                 shot('roulette-premium-betting.png')
                 # Place a straight bet and wait for the table chip to render.
@@ -914,6 +972,8 @@ def run_browser_tests():
                     assert page.locator('.bet-chip').first.is_visible()
                     # Verify Russian Roulette content contains no visible raw resource keys.
                     assert_no_visible_roulette_keys()
+                    # Verify shared keyboard scroll semantics survive the localized game rerender.
+                    assert page.get_by_test_id('roulette-control-rail').get_attribute('tabindex')=='0'
                 # Execute this statement as part of the module's documented control flow.
                 run_case('BR-I18N-GAMESTATE-ROU-001',['I18N-001','I18N-002','ROU-046'],roulette_i18n_state)
                 # Spin the wheel through the existing Roulette UI action.
@@ -952,6 +1012,12 @@ def run_browser_tests():
                 page.get_by_test_id('slot-grid').wait_for(timeout=5000)
                 # Capture the idle cabinet state for worker handback evidence.
                 shot('slots_idle.png')
+                # Capture the English Slots screen as after-pass shared shell and game-layout evidence.
+                shot('after-pass-shell-slots-desktop.png')
+                # Read the Slots surface copy so acceptance evidence cannot contain leaked resource keys.
+                slots_evidence_text=page.get_by_test_id('slots-premium').inner_text()
+                # Verify the after-pass game evidence contains user-facing copy rather than internal resource identifiers.
+                assert 'controls.' not in slots_evidence_text and 'status.' not in slots_evidence_text and 'slots.' not in slots_evidence_text
                 # Store the idle cabinet box so spin/result states can be compared.
                 idle_box=page.get_by_test_id('slots-cabinet').bounding_box()
                 # Store the idle result box so the reserved payout region can be compared.

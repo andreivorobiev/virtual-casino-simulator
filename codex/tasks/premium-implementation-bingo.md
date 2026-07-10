@@ -42,6 +42,7 @@ Implement the approved premium Bingo frontend with stable card purchase, ball-ca
 ## Required Reading
 
 - `AGENTS.md`
+- `docs/visual_design_standard.md` and `tests/visual/visual_matrix.json`
 - relevant nested game `AGENTS.md`
 - `modules/bingo.json`
 - `docs/requirements/requirements.json`

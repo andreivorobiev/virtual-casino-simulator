@@ -63,6 +63,7 @@ Only files necessary to resolve the branch combination:
 ## Required Reading
 
 - `AGENTS.md`
+- `docs/visual_design_standard.md` and `tests/visual/visual_matrix.json`
 - `docs/codex_parallel_workflow.md`
 - `modules/module-manifest.json`
 - `codex/tasks/premium-implementation-epic.md`

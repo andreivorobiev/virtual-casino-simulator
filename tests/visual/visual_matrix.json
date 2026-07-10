@@ -1,0 +1,336 @@
+{
+  "schema_version": 1,
+  "authority": "docs/visual_design_standard.md",
+  "evidence_classes": [
+    "before_failure",
+    "after_pass"
+  ],
+  "viewports": [
+    {
+      "id": "desktop_primary",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "id": "desktop_compact",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "id": "tablet",
+      "width": 1024,
+      "height": 900
+    },
+    {
+      "id": "mobile",
+      "width": 390,
+      "height": 844
+    }
+  ],
+  "locales": [
+    "en-US",
+    "ru-RU"
+  ],
+  "gates": [
+    {
+      "id": "VIS-COPY-001",
+      "rule": "No resource keys, fallback identifiers, internal phase names, or debug labels are visible."
+    },
+    {
+      "id": "VIS-TOKEN-001",
+      "rule": "The current-user wallet has a reliable medallion, Play token balance label, numeric value, and no replacement-looking or currency glyph."
+    },
+    {
+      "id": "VIS-TOKEN-002",
+      "rule": "Visible copy uses play-token terminology and contains no real-money deposit, purchase, withdrawal, cash, or dollar framing."
+    },
+    {
+      "id": "VIS-LAYOUT-001",
+      "rule": "At desktop_primary the game stage is wider and visually stronger than both support rails combined."
+    },
+    {
+      "id": "VIS-LAYOUT-002",
+      "rule": "At desktop_primary the wallet, title and phase, primary wager selector, primary action, and full stage are visible without rail scrolling."
+    },
+    {
+      "id": "VIS-LAYOUT-003",
+      "rule": "No page-level horizontal overflow exists at any required viewport."
+    },
+    {
+      "id": "VIS-SCROLL-001",
+      "rule": "A desktop rail owns at most one intentional themed scroll surface and contains no nested primary scroll container."
+    },
+    {
+      "id": "VIS-SCROLL-002",
+      "rule": "Intentional scroll regions support keyboard focus, visible focus indication, wheel input, and touch panning."
+    },
+    {
+      "id": "VIS-HIERARCHY-001",
+      "rule": "Controls, player-facing status, and historical or statistical data use visually distinct regions."
+    },
+    {
+      "id": "VIS-RESPONSIVE-001",
+      "rule": "Tablet and mobile stacks contain no desktop-height empty tails, collisions, clipping, or unexplained wallet collapse."
+    },
+    {
+      "id": "VIS-EVIDENCE-001",
+      "rule": "Acceptance evidence is marked after_pass and records branch, commit, surface, state, locale, viewport, and path."
+    }
+  ],
+  "surfaces": [
+    {
+      "id": "auth",
+      "route": "/",
+      "selector": "[data-testid='login-gate'], [data-testid='terms-gate']",
+      "states": [
+        "login",
+        "terms_required",
+        "invalid_credentials"
+      ],
+      "locales": [
+        "en-US",
+        "ru-RU"
+      ],
+      "viewports": [
+        "desktop_primary",
+        "mobile"
+      ],
+      "gates": [
+        "VIS-COPY-001",
+        "VIS-TOKEN-002",
+        "VIS-LAYOUT-003",
+        "VIS-RESPONSIVE-001"
+      ]
+    },
+    {
+      "id": "shell_lobby",
+      "route": "/",
+      "selector": "[data-testid='premium-topbar'], [data-testid='lobby']",
+      "states": [
+        "authenticated",
+        "wallet_closed",
+        "wallet_open",
+        "token_added"
+      ],
+      "locales": [
+        "en-US",
+        "ru-RU"
+      ],
+      "viewports": [
+        "desktop_primary",
+        "desktop_compact",
+        "tablet",
+        "mobile"
+      ],
+      "gates": [
+        "VIS-COPY-001",
+        "VIS-TOKEN-001",
+        "VIS-TOKEN-002",
+        "VIS-LAYOUT-003",
+        "VIS-RESPONSIVE-001",
+        "VIS-EVIDENCE-001"
+      ]
+    },
+    {
+      "id": "roulette",
+      "route": "roulette",
+      "selector": "[data-testid='roulette-premium']",
+      "states": [
+        "betting",
+        "spinning",
+        "settled"
+      ],
+      "locales": [
+        "en-US",
+        "ru-RU"
+      ],
+      "viewports": [
+        "desktop_primary",
+        "desktop_compact",
+        "tablet"
+      ],
+      "gates": [
+        "VIS-COPY-001",
+        "VIS-LAYOUT-001",
+        "VIS-LAYOUT-002",
+        "VIS-LAYOUT-003",
+        "VIS-SCROLL-001",
+        "VIS-SCROLL-002",
+        "VIS-HIERARCHY-001",
+        "VIS-RESPONSIVE-001"
+      ]
+    },
+    {
+      "id": "slots",
+      "route": "slots",
+      "selector": "[data-testid='slots-premium']",
+      "states": [
+        "idle",
+        "spinning",
+        "win",
+        "bonus"
+      ],
+      "locales": [
+        "en-US",
+        "ru-RU"
+      ],
+      "viewports": [
+        "desktop_primary",
+        "desktop_compact",
+        "mobile"
+      ],
+      "gates": [
+        "VIS-COPY-001",
+        "VIS-LAYOUT-001",
+        "VIS-LAYOUT-002",
+        "VIS-LAYOUT-003",
+        "VIS-SCROLL-001",
+        "VIS-HIERARCHY-001",
+        "VIS-RESPONSIVE-001"
+      ]
+    },
+    {
+      "id": "keno",
+      "route": "keno",
+      "selector": "[data-testid='keno-premium-hero']",
+      "states": [
+        "selection",
+        "drawing",
+        "result"
+      ],
+      "locales": [
+        "en-US",
+        "ru-RU"
+      ],
+      "viewports": [
+        "desktop_primary",
+        "desktop_compact",
+        "mobile"
+      ],
+      "gates": [
+        "VIS-COPY-001",
+        "VIS-LAYOUT-001",
+        "VIS-LAYOUT-002",
+        "VIS-LAYOUT-003",
+        "VIS-SCROLL-001",
+        "VIS-HIERARCHY-001",
+        "VIS-RESPONSIVE-001"
+      ]
+    },
+    {
+      "id": "bingo",
+      "route": "bingo",
+      "selector": "[data-testid='premium-bingo']",
+      "states": [
+        "purchase_ready",
+        "calling",
+        "won"
+      ],
+      "locales": [
+        "en-US",
+        "ru-RU"
+      ],
+      "viewports": [
+        "desktop_primary",
+        "desktop_compact",
+        "mobile"
+      ],
+      "gates": [
+        "VIS-COPY-001",
+        "VIS-LAYOUT-001",
+        "VIS-LAYOUT-002",
+        "VIS-LAYOUT-003",
+        "VIS-SCROLL-001",
+        "VIS-HIERARCHY-001",
+        "VIS-RESPONSIVE-001"
+      ]
+    },
+    {
+      "id": "blackjack",
+      "route": "blackjack",
+      "selector": "[data-testid='blackjack-premium']",
+      "states": [
+        "initial_deal",
+        "decision",
+        "split",
+        "settled"
+      ],
+      "locales": [
+        "en-US",
+        "ru-RU"
+      ],
+      "viewports": [
+        "desktop_primary",
+        "desktop_compact",
+        "mobile"
+      ],
+      "gates": [
+        "VIS-COPY-001",
+        "VIS-LAYOUT-001",
+        "VIS-LAYOUT-002",
+        "VIS-LAYOUT-003",
+        "VIS-SCROLL-001",
+        "VIS-HIERARCHY-001",
+        "VIS-RESPONSIVE-001"
+      ]
+    },
+    {
+      "id": "baccarat",
+      "route": "baccarat",
+      "selector": "[data-testid='baccarat-table']",
+      "states": [
+        "wagering",
+        "revealing",
+        "result"
+      ],
+      "locales": [
+        "en-US",
+        "ru-RU"
+      ],
+      "viewports": [
+        "desktop_primary",
+        "desktop_compact",
+        "mobile"
+      ],
+      "gates": [
+        "VIS-COPY-001",
+        "VIS-LAYOUT-001",
+        "VIS-LAYOUT-002",
+        "VIS-LAYOUT-003",
+        "VIS-SCROLL-001",
+        "VIS-HIERARCHY-001",
+        "VIS-RESPONSIVE-001"
+      ]
+    },
+    {
+      "id": "admin",
+      "route": "/admin",
+      "selector": "#admin.admin-shell",
+      "states": [
+        "dashboard",
+        "players_and_bots",
+        "users",
+        "language",
+        "test_results"
+      ],
+      "locales": [
+        "en-US",
+        "ru-RU"
+      ],
+      "viewports": [
+        "desktop_primary",
+        "desktop_compact",
+        "tablet"
+      ],
+      "gates": [
+        "VIS-COPY-001",
+        "VIS-TOKEN-002",
+        "VIS-LAYOUT-003",
+        "VIS-SCROLL-001",
+        "VIS-SCROLL-002",
+        "VIS-HIERARCHY-001",
+        "VIS-RESPONSIVE-001"
+      ]
+    }
+  ]
+}

@@ -44,6 +44,7 @@
 ## Required reading
 
 - `AGENTS.md`
+- `docs/visual_design_standard.md` and `tests/visual/visual_matrix.json`
 - `web/AGENTS.md`
 - `modules/application.json`, `modules/tests.json`
 - `web/core/api.js`, `web/core/ui.js`, `web/app.js`

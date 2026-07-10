@@ -31,6 +31,8 @@ let active = null;
 let latestState = null;
 // Cache the authenticated current-user payload so wallet and profile UI stay consistent.
 let currentSession = null;
+// Track the active game-rail observer so navigation never leaves duplicate mutation listeners.
+let gameRailObserver = null;
 
 // Relay game/autoplay toast events through the shell-level toast outlet.
 window.addEventListener('casino-toast', event => toast(event.detail?.message || 'Auto stopped'));
@@ -73,6 +75,33 @@ function wireLocaleSelect(select, afterChange) {
   select.value = getLocaleState().locale;
   // Switch language in place without resetting the active route or auth step.
   select.onchange = async () => { await setLocale(select.value); afterChange?.(); };
+}
+
+// Make intentional game-rail scrolling discoverable to keyboard and assistive-technology users.
+function prepareGameScrollRegions(view) {
+  // Find the shared control and data rails rendered by the active game module.
+  view.querySelectorAll('.control-rail, .details-drawer').forEach(region => {
+    // Include the intentional scroll region in the natural keyboard tab order.
+    region.tabIndex = 0;
+    // Identify each rail as a navigable document region.
+    region.setAttribute('role', 'region');
+    // Read the first visible heading so the region has a useful accessible name.
+    const heading = region.querySelector('h1, h2, h3');
+    // Label the region from its own content while retaining a safe fallback.
+    region.setAttribute('aria-label', heading?.textContent?.trim() || 'Game panel');
+  });
+}
+
+// Preserve scroll-region semantics when a game replaces its render tree during phase updates.
+function observeGameScrollRegions(view) {
+  // Disconnect the previous route observer before watching the newly mounted game.
+  gameRailObserver?.disconnect();
+  // Apply semantics immediately to the first completed game render.
+  prepareGameScrollRegions(view);
+  // Reapply semantics after game-owned rerenders replace rail elements.
+  gameRailObserver = new MutationObserver(() => prepareGameScrollRegions(view));
+  // Watch structural replacements without observing the attributes this helper sets.
+  gameRailObserver.observe(view, { childList: true, subtree: true });
 }
 
 // Keep persistent shell profile and wallet nodes synchronized with the current user.
@@ -354,6 +383,8 @@ export async function navigate(route) {
     const view = document.getElementById('view');
     // Render the lobby when the target route is lobby.
     if (targetRoute === 'lobby') {
+      // Stop observing game-only rails before rendering the lobby surface.
+      gameRailObserver?.disconnect();
       // Apply the lobby screen class contract for responsive shell styling.
       view.className = 'screen lobby-screen';
       // Render lobby markup from the cached or freshly loaded state.
@@ -373,6 +404,8 @@ export async function navigate(route) {
     const game = await loadGame(desc);
     // Mount the game into the same route outlet used by the original app.
     await game.mount(view);
+    // Prepare shared game rails for intentional keyboard and touch scrolling.
+    observeGameScrollRegions(view);
     // Refresh the authenticated token wallet after route mount.
     updateCurrentUserShell();
   // Handle navigation errors with a route-local recovery panel.
