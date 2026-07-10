@@ -13,7 +13,10 @@ requires-python = ">=3.10"
 mysql = ["mysql-connector-python>=8.4"]
 
 [tool.setuptools.packages.find]
-include = ["casino*"]
+include = ["casino*", "modules*"]
+
+[tool.setuptools.package-data]
+modules = ["module-manifest.json"]
 
 [tool.virtual_casino]
 source_baseline = "9.1.0"

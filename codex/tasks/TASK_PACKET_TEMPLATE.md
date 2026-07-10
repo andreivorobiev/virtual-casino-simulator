@@ -25,6 +25,8 @@ Use this packet to start a new worker chat. Fill every section or write `None`.
 ## Scope
 
 - Impacted modules:
+- Packaged application release impact:
+- Independent module revision bumps planned:
 - Owned files:
 - Files not to touch:
 - Allowed adjacent files:
@@ -60,6 +62,8 @@ Use this packet to start a new worker chat. Fill every section or write `None`.
 ## Handback
 
 - Expected PR summary:
+- Final packaged application release impact:
+- Final independent module revision bumps:
 - Evidence to include:
 - Open questions to report:
 - Stop conditions:

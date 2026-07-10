@@ -12,8 +12,8 @@ def list_games():
     for g in GAMES:
         # Set x to the value needed for the next operation.
         x=dict(g)
-        # Set x["revision"] to the value needed for the next operation.
-        x["revision"] = MODULE_REVISIONS.get(g["id"], "0.0.0")
+        # Require every configured game to have a canonical module revision instead of masking drift.
+        x["revision"] = MODULE_REVISIONS[g["id"]]
         # Execute this statement as part of the module's documented control flow.
         out.append(x)
     # Return the computed value to the caller.

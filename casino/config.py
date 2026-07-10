@@ -7,6 +7,8 @@ import hashlib
 import ipaddress
 # Import required dependency so this module can use its public functions or constants.
 import os
+# Import the packaged application release from the canonical version-manifest loader.
+from casino.module_versions import APP_VERSION
 
 # Set ROOT_DIR to the value needed for the next operation.
 ROOT_DIR = Path(__file__).resolve().parents[1]
@@ -24,8 +26,6 @@ DOCS_DIR = ROOT_DIR / "docs"
 DEFAULT_HOST = "127.0.0.1"
 # Set DEFAULT_PORT to the value needed for the next operation.
 DEFAULT_PORT = 8765
-# Set APP_VERSION to the value needed for the next operation.
-APP_VERSION = "9.1.1"
 # Set SCHEMA_VERSION to the value needed for the next operation.
 SCHEMA_VERSION = "v9_1"
 # Set AUTH_SESSION_COOKIE to the value needed for the next operation.

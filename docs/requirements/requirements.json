@@ -1,6 +1,6 @@
 {
-  "release": "9.1.0",
-  "generated_at": "2026-07-09T00:00:00Z",
+  "source_baseline": "9.1.0",
+  "created_at": "2026-07-09T00:00:00Z",
   "requirements": [
     {
       "id": "CORE-001",
@@ -277,8 +277,7 @@
       "api_tests": [],
       "browser_tests": [],
       "implementation_files": [
-        "casino/app.py",
-        "web/app.js"
+        "README.md"
       ],
       "notes": ""
     },
@@ -3769,6 +3768,9 @@
       ],
       "implementation_files": [
         "casino/admin.py",
+        "casino/config.py",
+        "casino/module_versions.py",
+        "modules/module-manifest.json",
         "web/admin.html",
         "web/admin.js"
       ],
@@ -3782,9 +3784,13 @@
       "api_tests": [
         "API-ADMIN-001"
       ],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-ADMIN-001"
+      ],
       "implementation_files": [
         "casino/admin.py",
+        "casino/module_versions.py",
+        "modules/module-manifest.json",
         "web/admin.html",
         "web/admin.js"
       ],
@@ -4381,10 +4387,12 @@
       "api_tests": [],
       "browser_tests": [],
       "implementation_files": [
-        "docs/requirements_validation_v9.pdf",
-        "docs/requirements_validation_v9.md",
-        "docs/requirements.json",
-        "RELEASE_NOTES.md"
+        "README.md",
+        "CODEX_START_HERE.md",
+        "modules/module-manifest.json",
+        "docs/requirements/requirements_generated.md",
+        "scripts/generate_docs.py",
+        "scripts/validate_versions.py"
       ],
       "notes": ""
     },
@@ -4487,6 +4495,7 @@
       "browser_tests": [],
       "implementation_files": [
         "docs/codex_parallel_workflow.md",
+        "CODEX_START_HERE.md",
         "CONTRIBUTING.md",
         "README.md"
       ],
@@ -5045,9 +5054,14 @@
       "api_tests": [
         "API-ADMIN-001"
       ],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-ADMIN-001"
+      ],
       "implementation_files": [
         "casino/admin.py",
+        "casino/config.py",
+        "casino/module_versions.py",
+        "modules/module-manifest.json",
         "web/admin.html",
         "web/admin.js",
         "web/styles.css"

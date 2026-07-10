@@ -13,6 +13,12 @@ Do not treat chat history as the source of truth. Use these durable records inst
 - `codex/tasks/*.md` task packets for worker handoffs.
 - Pull requests for reviewable implementation history and validation evidence.
 
+## Version ownership
+
+Use `modules/module-manifest.json` as the canonical aggregate version source. Its top-level `application` value is the packaged application release and changes only when a formal application release artifact is produced. The entries under `modules` are independent source-module revisions and may advance between packaged releases; `modules.application` is an application module revision, not the packaged release.
+
+Workers must bump each directly affected module revision in both the aggregate manifest and its matching `modules/<name>.json` file. Ordinary feature and corrective PRs should report packaged-release impact as `None` unless the coordinator explicitly assigns release-artifact work. Runtime, API, browser, Admin, README, and starter-document release displays must stay aligned with the top-level packaged release.
+
 ## Chat roles
 
 Use one long-lived coordinator chat and many bounded worker chats.
@@ -85,7 +91,8 @@ Every PR must include:
 
 - Requirement IDs added, changed, or validated.
 - Impacted modules.
-- Version bumps.
+- Packaged application release impact.
+- Independent module revision bumps.
 - API contract impact.
 - Gameplay impact.
 - Tests and validations run.

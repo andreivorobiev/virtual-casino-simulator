@@ -6,6 +6,10 @@ import argparse, json, os, re, socket, subprocess, sys, time, traceback, urllib.
 from pathlib import Path
 # Set ROOT to the value needed for the next operation.
 ROOT = Path(__file__).resolve().parents[1]
+# Load canonical packaged and module versions once for API and browser regression checks.
+VERSION_MANIFEST = json.loads((ROOT/'modules'/'module-manifest.json').read_text(encoding='utf-8'))
+# Build the exact ordered module rows returned by Admin version endpoints.
+EXPECTED_MODULE_ROWS = [{'module':module,'revision':revision} for module,revision in VERSION_MANIFEST['modules'].items()]
 # Add the repository root so direct module imports work from this script.
 sys.path.insert(0, str(ROOT))
 # Import Blackjack helpers so deterministic API-suite checks can cover table rules.
@@ -450,12 +454,18 @@ def run_api_tests():
         run_case('API-WALLET-RESTART-001',['SESSION-003','USER-001','TOKEN-003','TOKEN-004','TEST-039'],wallet_restart_persistence)
         # Define the core function used by this module.
         def core():
-            # Set s to the value needed for the next operation.
-            s=api(base,'/api/v1/casino/state'); assert any(g['id']=='roulette' for g in s['games']); assert any(p['player_id']=='bot_1' for p in s['players'])
-            # Set a to the value needed for the next operation.
-            a=api(base,'/api/v1/admin/overview'); assert a['app_version']=='9.1.1'
+            # Load the casino state that publishes packaged and game-module version metadata.
+            state=api(base,'/api/v1/casino/state')
+            # Preserve the existing core assertions for configured games and visible bot players.
+            assert any(game['id']=='roulette' for game in state['games']) and any(player['player_id']=='bot_1' for player in state['players'])
+            # Require the public runtime version to match the canonical packaged application release.
+            assert state['version']==VERSION_MANIFEST['application']
+            # Build expected game revisions from configured games and canonical module metadata.
+            expected_game_revisions={game['id']:VERSION_MANIFEST['modules'][game['id']] for game in casino_config.GAMES}
+            # Require every published game revision to match the canonical module manifest exactly.
+            assert {game['id']:game['revision'] for game in state['games']}==expected_game_revisions
         # Execute this statement as part of the module's documented control flow.
-        run_case('API-CORE-001',['CORE-001','ADMIN-001'],core)
+        run_case('API-CORE-001',['CORE-001','CORE-016','TEST-003'],core)
 
         # Execute this statement as part of the module's documented control flow.
         run_case('API-I18N-001',['I18N-001','I18N-003'],validate_i18n_resources)
@@ -723,6 +733,14 @@ def run_api_tests():
         run_case('API-GAME-STATE-ISOLATION-001',['ROU-010','SLOT-019','BJ-020','BAC-010','KENO-008','BINGO-020','LEDGER-001','AUTO-001'],private_sessions)
         # Define the admin function used by this module.
         def admin():
+            # Load the Admin overview that publishes packaged release and module revision metadata.
+            overview=api(base,'/api/v1/admin/overview')
+            # Require Admin's packaged release to match the canonical top-level application version.
+            assert overview['app_version']==VERSION_MANIFEST['application']
+            # Require Admin overview module revisions to match exact canonical order and values.
+            assert overview['module_revisions']==EXPECTED_MODULE_ROWS
+            # Require the dedicated module endpoint to publish the same canonical rows.
+            assert api(base,'/api/v1/admin/modules')['modules']==EXPECTED_MODULE_ROWS
             # Set r to the value needed for the next operation.
             r=api(base,'/api/v1/admin/requirements'); assert len(r['requirements'])>100
             # Set l to the value needed for the next operation.
@@ -746,7 +764,7 @@ def run_api_tests():
             # Set localized to the user after Admin preserves account locale settings.
             localized=api(base,f'/api/v1/admin/users/{user_id}/locale','POST',{'language':'en-US','format_locale':'en-US','use_browser_locale':False})['user']; assert localized['language']=='en-US' and localized['format_locale']=='en-US'
         # Execute this statement as part of the module's documented control flow.
-        run_case('API-ADMIN-001',['ADMIN-001','DOC-001','LOG-001','ADMIN-USER-PENDING-035','TERMS-PENDING-035','TOKEN-PENDING-035','I18N-003'],admin)
+        run_case('API-ADMIN-001',['ADMIN-001','ADMIN-003','ADMIN-004','ADMIN-014','DOC-001','LOG-001','ADMIN-USER-PENDING-035','TERMS-PENDING-035','TOKEN-PENDING-035','I18N-003','TEST-003'],admin)
     # Run cleanup logic regardless of success or failure.
     finally:
         # Set proc.terminate(); proc.wait(timeout to the value needed for the next operation.
@@ -1566,8 +1584,28 @@ def run_browser_tests():
                 assert admin_browser_login.json()['ok'] is True
                 # Set page.goto(base+'/admin', wait_until to the value needed for the next operation.
                 page.goto(base+'/admin', wait_until='networkidle')
-                # Execute this statement as part of the module's documented control flow.
-                run_case('BR-ADMIN-001',['ADMIN-001','ADMIN-010'],lambda: page.get_by_test_id('admin-tab-audio').is_visible())
+                # Define the Admin dashboard version check mapped to its existing browser requirement coverage.
+                def admin_dashboard_browser():
+                    # Require the existing Admin navigation to remain available after dashboard load.
+                    assert page.get_by_test_id('admin-tab-audio').is_visible()
+                    # Locate the existing App summary card without changing production markup for the test.
+                    app_card=page.locator('#adminView .admin-card').filter(has_text='App')
+                    # Require the browser-visible packaged release to match the canonical top-level version.
+                    assert app_card.get_by_text(VERSION_MANIFEST['application'],exact=True).is_visible()
+                    # Open the existing System tab where canonical module revisions are displayed.
+                    page.locator('[data-tab="system"]').click()
+                    # Wait for the module-revision table to replace the dashboard asynchronously.
+                    page.get_by_text('Module revisions',exact=True).wait_for(timeout=5000)
+                    # Select the first System table that lists module and revision columns.
+                    module_table=page.locator('#adminView table').first
+                    # Require one header plus every canonical module row.
+                    assert module_table.locator('tr').count()==len(EXPECTED_MODULE_ROWS)+1
+                    # Compare each browser-visible module row with canonical manifest values.
+                    for expected in EXPECTED_MODULE_ROWS:
+                        # Require exactly one row containing both the module name and its canonical revision.
+                        assert module_table.locator('tr').filter(has_text=expected['module']).filter(has_text=expected['revision']).count()==1
+                # Execute the mapped Admin dashboard and packaged-release browser regression.
+                run_case('BR-ADMIN-001',['ADMIN-001','ADMIN-003','ADMIN-004','ADMIN-010','ADMIN-014','TEST-023'],admin_dashboard_browser)
                 # Define the admin_users_browser function used by this module.
                 def admin_users_browser():
                     # Open the Admin Users tab.
