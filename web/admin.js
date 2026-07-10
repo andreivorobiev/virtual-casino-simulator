@@ -28,6 +28,28 @@ const table = (heads, rows) => `<table class="mini-table"><tr>${heads.map(head =
 // Define option to render a selected-safe select option.
 const option = (value, label, selected) => `<option value="${safe(value)}" ${selected === value ? 'selected' : ''}>${safe(label)}</option>`;
 
+// Define humanLabel to turn API event enums into concise Admin-facing labels.
+const humanLabel = value => String(value || '').replace(/[_-]+/g, ' ').replace(/\b\w/g, letter => letter.toUpperCase());
+// Define emptyState to replace raw empty arrays with a calm, actionable Admin message.
+const emptyState = (titleText, detailText, testId = '') => `<div class="admin-empty-state"${testId ? ` data-testid="${safe(testId)}"` : ''}><div><strong>${safe(titleText)}</strong><p>${safe(detailText)}</p></div></div>`;
+
+// Define eventList to present telemetry records with readable event labels and stable empty states.
+function eventList(events, emptyTitle, emptyDetail, testId, hideTechnicalDetails = false) {
+  // Store only object records so malformed diagnostics never leak as raw values.
+  const records = Array.isArray(events) ? events.filter(event => event && typeof event === 'object') : [];
+  // Return the polished empty state when this event stream has no records.
+  if (!records.length) return emptyState(emptyTitle, emptyDetail, testId);
+  // Build newest records first with internal event enums converted to human labels.
+  const rows = records.slice().reverse().map(event => {
+    // Store display details without repeating raw event, level, timestamp, or traceback fields.
+    const details = hideTechnicalDetails ? 'An application error was recorded. Review the local service log for technical details.' : Object.entries(event).filter(([key]) => !['event', 'level', 'ts', 'traceback'].includes(key)).map(([key, value]) => `${humanLabel(key)}: ${typeof value === 'object' ? JSON.stringify(value) : value}`).join(' | ');
+    // Return one accessible event summary row.
+    return `<article class="admin-event"><strong>${safe(humanLabel(event.event || event.level || 'System event'))}</strong><p>${safe(details || 'Recorded successfully.')}</p><time>${safe(event.ts || 'Time unavailable')}</time></article>`;
+  }).join(''); // Finish the event-card markup before wrapping the list.
+  // Return the complete readable event list.
+  return `<div class="admin-event-list" data-testid="${safe(testId)}">${rows}</div>`;
+}
+
 // Define isActiveTab to guard async tab renders against visible sidebar state.
 function isActiveTab(tab) {
   // Return whether the requested tab is currently highlighted in the Admin sidebar.
@@ -84,8 +106,8 @@ async function load(tab = 'dashboard') {
     if (tab === 'system') return system();
   // Handle renderer failures by showing a local Admin error card.
   } catch (error) {
-    // Render the error without throwing through the browser event loop.
-    view.innerHTML = `<div class="admin-card danger"><h2>Admin error</h2><p>${safe(error.message)}</p></div>`;
+    // Render a human recovery state without exposing raw transport or server diagnostics.
+    view.innerHTML = `<section class="admin-card danger" data-testid="admin-load-error"><h2>Unable to load this Admin view</h2><p>The requested information is temporarily unavailable. Check that the local casino service is running, then use Refresh to try again.</p></section>`;
   }
 }
 
@@ -100,7 +122,7 @@ async function dashboard() {
   // Store active autoplay sessions using the existing status set.
   const active = (data.autoplay_sessions || []).filter(session => ['running', 'stop_requested', 'paused', 'starting'].includes(session.status));
   // Render the dashboard without changing the existing API shape.
-  view.innerHTML = `<div class="admin-card-grid"><div class="admin-card"><b>App</b><h2>${safe(data.app_version)}</h2></div><div class="admin-card"><b>${safe(t('nav.players', {}, 'admin'))}</b><h2>${formatNumber(data.players.length)}</h2></div><div class="admin-card"><b>Bots</b><h2>${formatNumber(data.bots.length)}</h2></div><div class="admin-card"><b>${safe(t('dashboard.activeAutoplay', {}, 'admin'))}</b><h2>${formatNumber(active.length)}</h2></div><div class="admin-card"><b>${safe(t('dashboard.errorsToday', {}, 'admin'))}</b><h2>${formatNumber((data.logs.errors || []).length)}</h2></div><div class="admin-card"><b>${safe(t('nav.requirements', {}, 'admin'))}</b><h2>${formatNumber(Object.values(data.requirement_counts || {}).reduce((sum, count) => sum + count, 0))}</h2></div></div><div class="admin-split"><section class="admin-card"><h3>${safe(t('dashboard.recentLedger', {}, 'admin'))}</h3>${table(['Time', 'Player', 'Game', 'Type', 'Amount'], (data.recent_ledger || []).slice(-12).reverse().map(row => `<tr><td>${safe(row.ts)}</td><td>${safe(row.player_id)}</td><td>${safe(row.game)}</td><td>${safe(row.transaction_type)}</td><td>${formatMoney(row.amount)}</td></tr>`))}</section><section class="admin-card"><h3>${safe(t('dashboard.recentErrors', {}, 'admin'))}</h3>${pre(data.logs.errors || [])}</section></div>`;
+  view.innerHTML = `<div class="admin-card-grid"><div class="admin-card"><b>App</b><h2>${safe(data.app_version)}</h2></div><div class="admin-card"><b>${safe(t('nav.players', {}, 'admin'))}</b><h2>${formatNumber(data.players.length)}</h2></div><div class="admin-card"><b>Bots</b><h2>${formatNumber(data.bots.length)}</h2></div><div class="admin-card"><b>${safe(t('dashboard.activeAutoplay', {}, 'admin'))}</b><h2>${formatNumber(active.length)}</h2></div><div class="admin-card"><b>${safe(t('dashboard.errorsToday', {}, 'admin'))}</b><h2>${formatNumber((data.logs.errors || []).length)}</h2></div><div class="admin-card"><b>${safe(t('nav.requirements', {}, 'admin'))}</b><h2>${formatNumber(Object.values(data.requirement_counts || {}).reduce((sum, count) => sum + count, 0))}</h2></div></div><div class="admin-split"><section class="admin-card"><h3>${safe(t('dashboard.recentLedger', {}, 'admin'))}</h3>${(data.recent_ledger || []).length ? table(['Time', 'Player', 'Game', 'Type', 'Amount'], data.recent_ledger.slice(-12).reverse().map(row => `<tr><td>${safe(row.ts)}</td><td>${safe(row.player_id)}</td><td>${safe(humanLabel(row.game))}</td><td>${safe(humanLabel(row.transaction_type))}</td><td>${formatMoney(row.amount)}</td></tr>`)) : emptyState('No recent token activity', 'Ledger events will appear here after a wager, payout, refund, or token adjustment.', 'admin-ledger-empty')}</section><section class="admin-card"><h3>${safe(t('dashboard.recentErrors', {}, 'admin'))}</h3>${eventList(data.logs.errors, 'No recent errors', 'The local casino has not recorded any application errors today.', 'admin-errors-empty', true)}</section></div>`;
 }
 
 // Define playersBots to preserve bot controller editing in Admin.
@@ -238,7 +260,7 @@ async function ledger() {
   // Load ledger rows through the existing Admin endpoint.
   const data = await api('/api/v1/admin/ledger?limit=500');
   // Render ledger rows using the active locale's money formatter.
-  view.innerHTML = `<section class="admin-card"><h3>${safe(t('ledger.title', {}, 'admin'))}</h3>${table(['Time', 'Player', 'Game', 'Round', 'Type', 'Amount', 'Before', 'After'], (data.ledger || []).slice().reverse().map(row => `<tr><td>${safe(row.ts)}</td><td>${safe(row.player_id)}</td><td>${safe(row.game)}</td><td>${safe(row.round_id)}</td><td>${safe(row.transaction_type)}</td><td>${formatMoney(row.amount)}</td><td>${formatMoney(row.balance_before)}</td><td>${formatMoney(row.balance_after)}</td></tr>`))}</section>`;
+  view.innerHTML = `<section class="admin-card"><h3>${safe(t('ledger.title', {}, 'admin'))}</h3>${(data.ledger || []).length ? table(['Time', 'Player', 'Game', 'Round', 'Type', 'Amount', 'Before', 'After'], data.ledger.slice().reverse().map(row => `<tr><td>${safe(row.ts)}</td><td>${safe(row.player_id)}</td><td>${safe(humanLabel(row.game))}</td><td>${safe(row.round_id)}</td><td>${safe(humanLabel(row.transaction_type))}</td><td>${formatMoney(row.amount)}</td><td>${formatMoney(row.balance_before)}</td><td>${formatMoney(row.balance_after)}</td></tr>`)) : emptyState('No ledger events yet', 'Token activity will appear here after players begin using the casino.', 'admin-ledger-empty')}</section>`;
 }
 
 // Define history to show cross-game history rows.
@@ -262,7 +284,7 @@ async function telemetry() {
   // Load browser client logs through the existing Admin endpoint.
   const client = await api('/api/v1/admin/logs?kind=client&limit=200');
   // Render the three log panes.
-  view.innerHTML = `<div class="admin-split"><section class="admin-card"><h3>App logs</h3>${pre(app.logs)}</section><section class="admin-card"><h3>Error logs</h3>${pre(errors.logs)}</section></div><section class="admin-card"><h3>Client logs</h3>${pre(client.logs)}</section>`;
+  view.innerHTML = `<div class="admin-split"><section class="admin-card"><h3>Application events</h3>${eventList(app.logs, 'No application events', 'Application activity will appear here as the local service is used.', 'admin-app-events')}</section><section class="admin-card"><h3>Error events</h3>${eventList(errors.logs, 'No error events', 'No server errors have been recorded for the current day.', 'admin-error-events', true)}</section></div><section class="admin-card"><h3>Browser events</h3>${eventList(client.logs, 'No browser events', 'Browser activity will appear here after a client sends telemetry.', 'admin-client-events')}</section>`;
 }
 
 // Define states to show isolated game state files.

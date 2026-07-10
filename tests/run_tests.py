@@ -1358,18 +1358,28 @@ def run_browser_tests():
                 shot('roulette-premium-route-return.png')
                 # Resize to the authoritative desktop-compact matrix viewport.
                 page.set_viewport_size({'width':1440,'height':900}); page.wait_for_timeout(350)
-                # Verify the compact layout makes one intentional column transition instead of clipping three cramped zones.
-                assert page.get_by_test_id('roulette-premium-layout').evaluate("el => getComputedStyle(el).gridTemplateColumns.split(' ').length === 1")
+                # Verify the compact desktop layout keeps the dominant stage between two subordinate rails.
+                assert page.get_by_test_id('roulette-premium-layout').evaluate("el => getComputedStyle(el).gridTemplateColumns.split(' ').length === 3")
                 # Verify the desktop-compact route has no page-level horizontal overflow.
                 assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1')
-                # Read compact document and panel measurements for actionable responsive diagnostics.
-                compact_diagnostics=page.evaluate("() => { const stage=document.querySelector('[data-testid=\"roulette-premium-stage\"]'); const drawer=document.querySelector('[data-testid=\"roulette-bet-slip\"]'); return { scrollHeight:document.documentElement.scrollHeight, viewport:window.innerHeight, stage:stage.getBoundingClientRect().toJSON(), drawer:drawer.getBoundingClientRect().toJSON(), pageOverflow:getComputedStyle(document.querySelector('.casino-page')).overflow, screenOverflow:getComputedStyle(document.querySelector('.game-screen')).overflow }; }")
-                # Verify the compact route expands the document so every stacked panel remains reachable.
-                assert compact_diagnostics['scrollHeight'] > compact_diagnostics['viewport'] and compact_diagnostics['drawer']['bottom'] <= compact_diagnostics['scrollHeight'] + 1 and compact_diagnostics['stage']['height'] > 600, compact_diagnostics
-                # Verify both Roulette focal regions remain visible after compact recomposition.
-                assert page.get_by_test_id('roulette-wheel').is_visible() and page.get_by_test_id('roulette-table').is_visible()
-                # Capture full compact-layout evidence at the governed 1440 by 900 viewport.
-                page.screenshot(path=str(screenshots/'after-pass-roulette-compact.png'),full_page=True)
+                # Read compact navigation and Roulette measurements for actionable fold diagnostics.
+                compact_diagnostics=page.evaluate("() => { const ids=['nav-lobby','nav-roulette','nav-slots','nav-keno','nav-bingo','nav-blackjack','nav-baccarat','nav-admin']; const nav=document.querySelector('.casino-nav').getBoundingClientRect(); const items=ids.map(id => document.querySelector(`[data-testid=\"${id}\"]`)?.getBoundingClientRect().toJSON()); const stage=document.querySelector('[data-testid=\"roulette-premium-stage\"]')?.getBoundingClientRect().toJSON(); const wheel=document.querySelector('[data-testid=\"roulette-wheel\"]')?.getBoundingClientRect().toJSON(); const table=document.querySelector('[data-testid=\"roulette-table\"]')?.getBoundingClientRect().toJSON(); const spin=document.querySelector('[data-testid=\"roulette-spin\"]')?.getBoundingClientRect().toJSON(); return {nav,items,stage,wheel,table,spin,height:innerHeight}; }")
+                # Verify every desktop navigation item is fully visible inside the shared navigation surface.
+                assert all(item and item['left'] >= compact_diagnostics['nav']['left'] - 1 and item['right'] <= compact_diagnostics['nav']['right'] + 1 for item in compact_diagnostics['items']), compact_diagnostics
+                # Verify the full Roulette stage and primary action remain above the 1440 by 900 fold.
+                assert all(compact_diagnostics[key] and compact_diagnostics[key]['bottom'] <= compact_diagnostics['height'] + 1 for key in ('stage','wheel','table','spin')), compact_diagnostics
+                # Verify player-facing Roulette copy does not expose an internal round identifier.
+                assert 'rou_' not in page.get_by_test_id('roulette-premium').inner_text()
+                # Capture compact-layout acceptance evidence at the governed 1440 by 900 viewport.
+                page.screenshot(path=str(screenshots/'after-pass-roulette-compact.png'),full_page=False)
+                # Resize to the evaluator's second compact desktop viewport.
+                page.set_viewport_size({'width':1366,'height':768}); page.wait_for_timeout(350)
+                # Read the second compact viewport measurements after responsive compression.
+                compact_1366=page.evaluate("() => { const nav=document.querySelector('.casino-nav').getBoundingClientRect(); const items=[...document.querySelectorAll('.casino-nav .nav-item')].map(item => item.getBoundingClientRect().toJSON()); const ids=['roulette-premium-stage','roulette-wheel','roulette-table','roulette-spin']; const boxes=Object.fromEntries(ids.map(id => [id,document.querySelector(`[data-testid=\"${id}\"]`)?.getBoundingClientRect().toJSON()])); return {nav,items,boxes,width:innerWidth,height:innerHeight,scrollWidth:document.documentElement.scrollWidth}; }")
+                # Verify navigation, page width, stage, wheel, table, and Spin all remain fully usable at 1366 by 768.
+                assert compact_1366['scrollWidth'] <= compact_1366['width'] + 1 and all(item['left'] >= compact_1366['nav']['left'] - 1 and item['right'] <= compact_1366['nav']['right'] + 1 for item in compact_1366['items']) and all(box and box['bottom'] <= compact_1366['height'] - 54 for box in compact_1366['boxes'].values()), compact_1366
+                # Capture the evaluator-sized compact desktop acceptance evidence.
+                page.screenshot(path=str(screenshots/'after-pass-roulette-1366x768.png'),full_page=False)
                 # Resize to a narrow responsive viewport for Roulette-specific overflow verification.
                 page.set_viewport_size({'width':760,'height':900}); page.wait_for_timeout(250)
                 # Verify Roulette does not create page-level horizontal overflow at the responsive width.
@@ -1480,6 +1490,18 @@ def run_browser_tests():
                     assert abs(keno_selection_box['height']-keno_result_box['height'])<2
                 # Execute this statement as part of the module's documented control flow.
                 run_case('BR-KENO-001',['KENO-009','KENO-010','KENO-011','KENO-012','KENO-013','KENO-014','KENO-015','KENO-018','KENO-020','KENO-021','KENO-022','AUTO-012','UX-007','UX-009'],premium_keno)
+                # Resize to the governed mobile viewport for Keno containment coverage.
+                page.set_viewport_size({'width':390,'height':844}); page.wait_for_timeout(300)
+                # Read page and intended board-scroll widths at the exact evaluator viewport.
+                keno_mobile=page.evaluate("() => { const board=document.querySelector('[data-testid=\"keno-board-scroll\"]'); return {viewport:innerWidth,documentWidth:document.documentElement.scrollWidth,bodyWidth:document.body.scrollWidth,clientWidth:board.clientWidth,scrollWidth:board.scrollWidth,tabindex:board.getAttribute('tabindex'),role:board.getAttribute('role'),label:board.getAttribute('aria-label')}; }")
+                # Verify the page stays at viewport width while the number board owns intentional accessible overflow.
+                assert keno_mobile['documentWidth'] <= keno_mobile['viewport'] + 1 and keno_mobile['bodyWidth'] <= keno_mobile['viewport'] + 1 and keno_mobile['scrollWidth'] > keno_mobile['clientWidth'] and keno_mobile['tabindex']=='0' and keno_mobile['role']=='region' and keno_mobile['label'], keno_mobile
+                # Bring the intended board scroller into the viewport for focused acceptance evidence.
+                page.get_by_test_id('keno-board-scroll').scroll_into_view_if_needed(); page.wait_for_timeout(150)
+                # Capture the contained Keno mobile board as acceptance evidence.
+                page.screenshot(path=str(screenshots/'after-pass-keno-mobile-390x844.png'),full_page=False)
+                # Restore desktop dimensions before the next game evidence run.
+                page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(250)
                 # Execute this statement as part of the module's documented control flow.
                 page.get_by_test_id('nav-bingo').click(); page.get_by_test_id('bingo-buy').click(); page.wait_for_function("() => document.querySelector('[data-testid=\"bingo-call\"]') && !document.querySelector('[data-testid=\"bingo-call\"]').disabled"); page.get_by_test_id('bingo-call').click(); page.wait_for_timeout(700); page.evaluate("""async () => { const response = await fetch('/api/v1/games/bingo/auto', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ max_calls: 75 }) }); const payload = await response.json(); if (!payload.ok) throw new Error(payload.error?.message || 'Bingo auto failed'); }"""); page.get_by_test_id('nav-bingo').click(); page.locator('[data-winning-cell="true"]').first.wait_for(timeout=5000); run_case('BR-BINGO-001',['BINGO-017','BINGO-018','BINGO-021','BINGO-022','AUTO-013'],lambda: page.get_by_test_id('bingo-card').is_visible() and page.locator('[data-winning-cell="true"]').first.is_visible() and page.get_by_test_id('bingo-cards-drawer').is_visible() and page.get_by_test_id('autoplay-bingo').is_visible())
                 # Navigate to Blackjack before checking the premium table surface.
@@ -1553,7 +1575,7 @@ def run_browser_tests():
                     # Verify concurrent repeated initialization loads both requested domains exactly once in state.
                     assert {'games/roulette','games/bingo'}.issubset(set(concurrent_state['loadedDomains']))
                     # Store stable navigation, mount, domain, and interpolation probes for every game route.
-                    route_specs=[('nav-roulette','roulette-wheel','games/roulette','stage.round'),('nav-slots','slot-grid','games/slots','history.row'),('nav-keno','keno-premium-hero','games/keno','metric.finalDraw.label'),('nav-bingo','premium-bingo','games/bingo','drawer.callsText'),('nav-blackjack','blackjack-premium','games/blackjack','drawer.cards'),('nav-baccarat','baccarat-wager-setup','games/baccarat','shoe.cards')]
+                    route_specs=[('nav-roulette','roulette-wheel','games/roulette','stats.rolls'),('nav-slots','slot-grid','games/slots','history.row'),('nav-keno','keno-premium-hero','games/keno','metric.finalDraw.label'),('nav-bingo','premium-bingo','games/bingo','drawer.callsText'),('nav-blackjack','blackjack-premium','games/blackjack','drawer.cards'),('nav-baccarat','baccarat-wager-setup','games/baccarat','shoe.cards')]
                     # Audit every route in both installed UI locales without persisting the test preference.
                     for locale in ('en-US','ru-RU'):
                         # Switch locale in place so the same route state is exercised in both languages.
@@ -1606,6 +1628,18 @@ def run_browser_tests():
                         assert module_table.locator('tr').filter(has_text=expected['module']).filter(has_text=expected['revision']).count()==1
                 # Execute the mapped Admin dashboard and packaged-release browser regression.
                 run_case('BR-ADMIN-001',['ADMIN-001','ADMIN-003','ADMIN-004','ADMIN-010','ADMIN-014','TEST-023'],admin_dashboard_browser)
+                # Open Telemetry to verify Admin event presentation uses human labels and polished empty states.
+                page.locator('[data-tab="telemetry"]').click(); page.get_by_text('Application events',exact=True).wait_for(timeout=5000)
+                # Store visible telemetry copy for raw identifier and raw-array regression checks.
+                telemetry_text=page.locator('#adminView').inner_text()
+                # Verify raw API event identifiers and raw empty arrays are absent from the Admin presentation.
+                assert 'api_request' not in telemetry_text and 'http_access' not in telemetry_text and '[WinError' not in telemetry_text and 'Traceback' not in telemetry_text and '[]' not in telemetry_text
+                # Verify every available stream is represented by human event cards or a polished empty state.
+                assert page.locator('#adminView .admin-event-list, #adminView .admin-empty-state').count() == 3
+                # Capture the repaired Admin telemetry presentation at desktop compact size.
+                page.set_viewport_size({'width':1440,'height':900}); page.wait_for_timeout(250); page.screenshot(path=str(screenshots/'after-pass-admin-telemetry-compact.png'),full_page=False)
+                # Restore desktop dimensions before remaining Admin cases.
+                page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(250)
                 # Define the admin_users_browser function used by this module.
                 def admin_users_browser():
                     # Open the Admin Users tab.
