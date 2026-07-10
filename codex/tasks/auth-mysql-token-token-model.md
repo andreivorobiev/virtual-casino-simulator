@@ -20,6 +20,12 @@
 - Requirement IDs changed: Supersede fake-money display wording requirements where needed.
 - Requirement IDs validated: UX, I18N, DOC, TEST, and token terminology requirements.
 
+## Durable Requirement/Contract References
+
+- Implement TOKEN-001 through TOKEN-004, LIC-002, LIC-003, TERMS-004, API-001, API-002, and TEST-039 where visible token wording is covered by tests.
+- New v2 APIs may use token terminology per `contracts/openapi/auth.v2.yaml`; do not rename frozen v1 wire fields.
+- Superseded fake-money wording is recorded on CORE-004, LEDGER-001, SLOT-026, KENO-021, and BINGO-024.
+
 ## Scope
 
 - Impacted modules: application, docs, tests, tooling, all frontend game modules for visible strings only.

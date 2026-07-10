@@ -1,12 +1,19 @@
 {
-  "application": [],
+  "application": [
+    "contracts/openapi/auth.v2.yaml"
+  ],
   "core": [],
   "ledger": [],
-  "players": [],
+  "players": [
+    "contracts/openapi/admin-users.v2.yaml",
+    "contracts/openapi/auth.v2.yaml"
+  ],
   "bots": [],
   "autoplay": [],
   "audio": [],
-  "admin": [],
+  "admin": [
+    "contracts/openapi/admin-users.v2.yaml"
+  ],
   "roulette": [
     "contracts/openapi/roulette.v1.yaml"
   ],
@@ -27,7 +34,10 @@
   ],
   "tests": [],
   "docs": [],
-  "contracts": [],
+  "contracts": [
+    "contracts/openapi/admin-users.v2.yaml",
+    "contracts/openapi/auth.v2.yaml"
+  ],
   "tooling": [],
   "commenting_policy": []
 }
