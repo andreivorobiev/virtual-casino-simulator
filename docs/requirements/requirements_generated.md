@@ -4,21 +4,21 @@ Application: 9.1.1
 
 ## Modules
 
-- application: 9.2.0
+- application: 9.2.1
 - core: 9.1.0
 - ledger: 9.0.1
 - players: 9.0.1
 - bots: 1.0.0
 - autoplay: 1.1.0
 - audio: 9.1.1
-- admin: 1.2.0
+- admin: 1.2.1
 - roulette: 9.2.0
-- slots: 9.0.2
+- slots: 9.0.3
 - blackjack: 9.0.2
 - baccarat: 9.0.2
 - keno: 9.1.0
-- bingo: 9.1.0
-- tests: 1.3.1
+- bingo: 9.1.1
+- tests: 1.3.2
 - docs: 1.2.1
 - contracts: 1.1.0
 - tooling: 1.1.2

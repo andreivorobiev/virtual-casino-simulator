@@ -75,5 +75,5 @@
   "symbolShort.SPIN": "SPIN",
   "symbolShort.WILD": "WLD",
   "title": "Slots",
-  "voice.paid": "Slots paid {amount} dollars"
+  "voice.paid": "Slots paid {amount} in play tokens"
 }
