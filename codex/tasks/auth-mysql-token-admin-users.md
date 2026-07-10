@@ -20,6 +20,12 @@
 - Requirement IDs changed: Supersede unauthenticated Admin assumptions.
 - Requirement IDs validated: ADMIN, AUTH, USER, TOKEN, I18N.
 
+## Durable Requirement/Contract References
+
+- Implement AUTH-005, USER-002, USER-004, TERMS-003, TOKEN-004, API-001, API-002, and TEST-037.
+- Consume `contracts/openapi/admin-users.v2.yaml` for user list/create/update, password reset, terms metadata, and user-state inspection shape.
+- Consume `contracts/openapi/auth.v2.yaml` for current authenticated Admin session context.
+
 ## Scope
 
 - Impacted modules: admin, core auth/user services, tests.

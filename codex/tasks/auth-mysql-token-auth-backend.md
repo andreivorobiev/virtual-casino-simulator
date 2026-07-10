@@ -20,6 +20,12 @@
 - Requirement IDs changed: Supersede unauthenticated Admin/local API assumptions where needed.
 - Requirement IDs validated: CORE, ADMIN, PLAYERS, LEDGER, API, AUTH.
 
+## Durable Requirement/Contract References
+
+- Implement AUTH-001 through AUTH-005, SESSION-001 through SESSION-004, USER-001, USER-002, TERMS-002, TERMS-003, API-001, API-002, and TEST-037.
+- Consume `contracts/openapi/auth.v2.yaml` for login, logout, session, terms acceptance, current-user, and add-token response envelope shape.
+- Coordinate with `contracts/openapi/admin-users.v2.yaml` only for bootstrap/Admin-role behavior that the Admin user-management worker later expands.
+
 ## Scope
 
 - Impacted modules: core, players, admin, contracts, tests.

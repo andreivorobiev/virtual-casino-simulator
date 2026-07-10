@@ -5,7 +5,7 @@
   "actions.refresh": "Refresh",
   "actions.reset": "Reset",
   "actions.save": "Save",
-  "money.balance": "Balance: {amount}",
+  "money.balance": "Tokens: {amount}",
   "status.loading": "Loading...",
   "status.off": "Off"
 }
