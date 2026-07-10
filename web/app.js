@@ -273,8 +273,8 @@ function lobbyHtml(state = latestState) {
   const playerCount = Array.isArray(state?.players) ? state.players.length : 0;
   // Render the game card collection from the shared route registry.
   const cards = gameDescriptors.map(game => lobbyCardHtml(game)).join('');
-  // Render the premium trust rail with fake-token, bot, autoplay, and ledger cues.
-  const trustRail = [trustItemHtml('SIM', 'Local Simulator', 'All fake tokens'), trustItemHtml('BOT', `${playerCount} Players`, 'Human and bots'), trustItemHtml('AUTO', 'Autoplay Ready', 'Control-plane automation'), trustItemHtml('LED', 'Ledger-Backed', `${gameCount} games tracked`)].join('');
+  // Render the premium trust rail with play-token, bot, autoplay, and ledger cues.
+  const trustRail = [trustItemHtml('SIM', 'Local Simulator', 'All play tokens'), trustItemHtml('BOT', `${playerCount} Players`, 'Human and bots'), trustItemHtml('AUTO', 'Autoplay Ready', 'Control-plane automation'), trustItemHtml('LED', 'Ledger-Backed', `${gameCount} games tracked`)].join('');
   // Return the complete lobby markup as one route payload.
   return `<section class="lobby" data-testid="lobby"><section class="lobby-hero" aria-label="Lobby introduction"><div><p class="eyebrow">Choose your table</p><h1 class="hero-title">Midnight Ledger Casino</h1><div class="hero-rule"><span>&#9824;</span></div></div><aside class="trust-rail" data-testid="lobby-trust-rail" aria-label="Casino status">${trustRail}</aside></section><section class="game-gallery" aria-label="Games">${cards}</section></section>`;
 }
@@ -404,7 +404,7 @@ async function init() {
   addButton.onclick = async () => {
     // Start protected token mutation so validation errors become toasts.
     try {
-      // Read the requested fake-token amount from the wallet input.
+      // Read the requested play-token amount from the wallet input.
       const amount = Number(document.getElementById('add-token-amount').value || 0);
       // Call the current-user token helper, which returns the updated v2 session payload.
       const session = await addUserTokens({ amount });

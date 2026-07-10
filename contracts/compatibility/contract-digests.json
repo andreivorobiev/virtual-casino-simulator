@@ -1,5 +1,7 @@
 {
+  "contracts/openapi/admin-users.v2.yaml": "fdb52a0bea081d964c32689a1f788ab3d6fe9ad4f9badca5a7114c3bcd885b56",
   "contracts/openapi/admin.v1.yaml": "267be3ef6ea749011d474a10cea307b63c5d7619bc09dfa2b14974f874ed108f",
+  "contracts/openapi/auth.v2.yaml": "a16a87bb75a7c415798112a2e961e3685f9769c8b7ee27b1da5347526a3a12e3",
   "contracts/openapi/autoplay.v1.yaml": "435d7bf8d4a278e6b56634695f8fcfcb9648f1d8b7297c942ebc6c5c97c0d552",
   "contracts/openapi/baccarat.v1.yaml": "738da72771628936fb2305331a01b810befbd26413f38d8901036cac4f372b48",
   "contracts/openapi/bingo.v1.yaml": "eb402f2638437453ec48fb1a46aaa27c503e4f23063d28226af2fcf14c74a917",

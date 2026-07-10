@@ -8,10 +8,35 @@ This redesigned documentation uses separated architecture views, cleaner Mermaid
 
 ## Executive summary
 
-- Requirements tracked: **344**
-- PASS: **344**
-- Requirements with API/rule tests: **186**
-- Requirements with browser tests: **76**
+- Requirements tracked: **400**
+- PASS: **354**
+- PLANNED: **39**
+- SUPERSEDED: **7**
+- Requirements with API/rule tests: **228**
+- Requirements with browser tests: **92**
+
+## Auth/MySQL/token foundation addendum
+
+This addendum records the durable planning requirements for GitHub epic #34 and issue #35. Runtime authentication, storage, frontend, Admin UI, and gameplay behavior are intentionally assigned to follow-up worker packets.
+
+### Added planned requirement groups
+
+| Prefix | Scope | Requirement IDs |
+|---|---|---|
+| AUTH | Private beta login, bootstrap Admin, protected APIs, and Admin-only authorization. | AUTH-001 through AUTH-005 |
+| SESSION | Session creation, logout, current-user lookup, and invalid session rejection. | SESSION-001 through SESSION-004 |
+| USER | Durable users, bound players, private state, Admin user management, and bot/user separation. | USER-001 through USER-005 |
+| STORAGE | Storage provider abstraction, JSON fallback, covered persisted domains, and envelope errors. | STORAGE-001 through STORAGE-004 |
+| MYSQL | Fresh MySQL schema bootstrap, atomic ledger writes, fresh-start policy, and JSON fallback. | MYSQL-001 through MYSQL-004 |
+| TERMS | Private beta toy-simulator terms acceptance and terms status exposure. | TERMS-001 through TERMS-004 |
+| LIC | Apache-2.0 source licensing and no-real-money/no-redemption legal posture. | LIC-001 through LIC-003 |
+| TOKEN | Play-token terminology, v2 token language, ledger-backed add-token flows, and private balances. | TOKEN-001 through TOKEN-004 |
+| API | Frozen v1 compatibility with additive v2 auth/current-user/Admin-user envelope contracts. | API-001 through API-002 |
+| TEST | Required auth, storage/MySQL, private-session, and copied-deployment integration validation. | TEST-037 through TEST-040 |
+
+### Superseded wording
+
+The new planned requirements supersede the local-only, unauthenticated, or fake-money wording in ADMIN-002, CORE-004, LEDGER-001, LEDGER-002, SLOT-026, KENO-021, and BINGO-024 without deleting those permanent IDs.
 
 ## Module revisions
 
