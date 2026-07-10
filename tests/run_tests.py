@@ -1427,7 +1427,9 @@ def run_browser_tests():
                 # Restore English for later browser assertions that use fixed English text.
                 page.evaluate("""async () => { const i18n = await import('/core/i18n.js'); await i18n.setLocale('en-US', { persistLocal: false }); }""")
                 # Navigate to Baccarat before asserting the premium table surfaces.
-                page.get_by_test_id('nav-baccarat').click()
+                with page.expect_response(lambda response: response.url.endswith('/api/v2/me') and response.request.method == 'GET'):
+                    # Click Baccarat and wait for its final mount-time wallet refresh response.
+                    page.get_by_test_id('nav-baccarat').click()
                 # Wait for the wager setup state to mount.
                 page.get_by_test_id('baccarat-wager-setup').wait_for(timeout=5000)
                 # Place a banker wager through the same public control a player uses.
@@ -1464,8 +1466,16 @@ def run_browser_tests():
                         page.evaluate("async locale => { const i18n = await import('/core/i18n.js'); await i18n.setLocale(locale, { persistLocal: false }); }", locale)
                         # Mount and inspect each lazy game route under the active locale.
                         for nav_testid,ready_testid,domain,interpolation_key in route_specs:
-                            # Navigate through the player-visible shell control.
-                            page.get_by_test_id(nav_testid).click()
+                            # Branch for Baccarat because its mount finishes with an authenticated wallet refresh.
+                            if domain == 'games/baccarat':
+                                # Wait for the mount's final wallet response so the next route cannot abort it.
+                                with page.expect_response(lambda response: response.url.endswith('/api/v2/me') and response.request.method == 'GET'):
+                                    # Navigate through the player-visible shell control.
+                                    page.get_by_test_id(nav_testid).click()
+                            # Navigate other routes through the same player-visible shell control.
+                            else:
+                                # Click the route after no special completion response is required.
+                                page.get_by_test_id(nav_testid).click()
                             # Wait for the route-owned stable mount selector before scanning strings.
                             page.get_by_test_id(ready_testid).wait_for(timeout=5000)
                             # Apply the complete domain, key-leak, placeholder, encoding, and label audit.
