@@ -454,6 +454,10 @@ class MySQLStorageProvider(StorageProvider):
     def __init__(self, config: MySQLConfig | None = None) -> None:
         # Store the connection configuration without opening a connection yet.
         self.config = config or MySQLConfig.from_env()
+        # Track whether this process has already verified and versioned the schema.
+        self._ready = False
+        # Serialize first-use schema bootstrap across concurrent request threads.
+        self._ready_lock = threading.RLock()
 
     # Import mysql.connector only when the MySQL provider is selected.
     def _connector(self):
@@ -478,6 +482,14 @@ class MySQLStorageProvider(StorageProvider):
     def schema_statements() -> list[str]:  # Return schema DDL in dependency order.
         # Return schema statements in dependency order for fresh databases.
         return [
+            # Create the schema-version table used to prove bootstrap compatibility.
+            """
+            CREATE TABLE IF NOT EXISTS casino_schema_versions (
+              component VARCHAR(64) PRIMARY KEY,
+              schema_version VARCHAR(32) NOT NULL,
+              applied_at VARCHAR(64) NOT NULL
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """,
             # Create the players table that owns wallet balances.
             """
             CREATE TABLE IF NOT EXISTS casino_players (
@@ -539,22 +551,39 @@ class MySQLStorageProvider(StorageProvider):
 
     # Ensure the MySQL schema exists before reads and writes.
     def ensure_ready(self) -> None:
-        # Open a connection for schema creation.
-        connection = self.connect()
-        # Start protected schema setup so the connection is always closed.
-        try:
-            # Open a cursor for DDL statements.
-            cursor = connection.cursor()
-            # Execute each schema statement in dependency order.
-            for statement in self.schema_statements():
-                # Create the table or leave the existing compatible table in place.
-                cursor.execute(statement)
-            # Commit schema creation before returning to callers.
-            connection.commit()
-        # Always close the connection after schema setup.
-        finally:
-            # Close the MySQL connection for this operation.
-            connection.close()
+        # Return immediately after this provider instance has completed bootstrap.
+        if self._ready:
+            # Avoid repeating DDL on every document or game-state operation.
+            return
+        # Serialize the first schema check so request threads do not race DDL.
+        with self._ready_lock:
+            # Return when another thread completed bootstrap while this thread waited.
+            if self._ready:
+                # Reuse the schema readiness established by the winning thread.
+                return
+            # Open a connection for schema creation.
+            connection = self.connect()
+            # Start protected schema setup so the connection is always closed.
+            try:
+                # Open a cursor for DDL statements.
+                cursor = connection.cursor()
+                # Execute each schema statement in dependency order.
+                for statement in self.schema_statements():
+                    # Create the table or leave the existing compatible table in place.
+                    cursor.execute(statement)
+                # Record the active application schema after all compatible tables exist.
+                cursor.execute(
+                    "INSERT INTO casino_schema_versions (component, schema_version, applied_at) VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE schema_version = VALUES(schema_version), applied_at = VALUES(applied_at)",  # Upsert the provider schema marker.
+                    ("casino", SCHEMA_VERSION, utc_now()),  # Bind the stable component and current schema version.
+                )
+                # Commit schema creation before returning to callers.
+                connection.commit()
+                # Mark this provider ready only after the schema transaction commits.
+                self._ready = True
+            # Always close the connection after schema setup.
+            finally:
+                # Close the MySQL connection for this operation.
+                connection.close()
 
     # Reset MySQL storage tables while preserving the schema.
     def reset(self) -> None:
@@ -604,8 +633,12 @@ class MySQLStorageProvider(StorageProvider):
     def _seed_players_if_empty(self, cursor, default_factory: Callable[[], dict]) -> None:
         # Count rows so seed data is only inserted into a fresh database.
         cursor.execute("SELECT COUNT(*) FROM casino_players")
+        # Fetch the count row from tuple or dictionary cursors used by different callers.
+        count_row = cursor.fetchone()
+        # Normalize the aggregate value without depending on the cursor row representation.
+        player_count = next(iter(count_row.values())) if isinstance(count_row, dict) else count_row[0]
         # Branch when no players exist yet.
-        if int(cursor.fetchone()[0]) == 0:
+        if int(player_count) == 0:
             # Build the default player document from the caller's factory.
             state = default_factory()
             # Insert each default player row.

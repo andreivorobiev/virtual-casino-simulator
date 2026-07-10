@@ -2,6 +2,8 @@
 #!/usr/bin/env python3
 # Import required dependency so tests can inspect provider implementation details.
 import inspect
+# Import required dependency so live ledger calls can overlap across connections.
+from concurrent.futures import ThreadPoolExecutor
 # Import required dependency so test data can be written outside the real data directory.
 import tempfile
 # Import required dependency so isolated JSON provider paths are platform-safe.
@@ -82,7 +84,7 @@ def run_mysql_schema_provider_path():
     # Join statements for lightweight structural assertions.
     joined = "\n".join(statements)
     # Verify every expected table is present in the provider schema.
-    assert "casino_players" in joined and "casino_ledger" in joined and "casino_history" in joined and "casino_documents" in joined
+    assert "casino_schema_versions" in joined and "casino_players" in joined and "casino_ledger" in joined and "casino_history" in joined and "casino_documents" in joined
     # Verify wallet and ledger money columns use fixed decimal precision.
     assert "DECIMAL(18,2)" in joined
     # Verify ledger rows depend on player rows through a foreign key.
@@ -90,7 +92,7 @@ def run_mysql_schema_provider_path():
     # Read the checked-in SQL schema artifact.
     schema_file = (ROOT / "scripts" / "mysql_schema.sql").read_text(encoding="utf-8")
     # Verify the SQL artifact exposes the same table set as the provider schema.
-    assert all(table in schema_file for table in ("casino_players", "casino_ledger", "casino_history", "casino_documents"))
+    assert all(table in schema_file for table in ("casino_schema_versions", "casino_players", "casino_ledger", "casino_history", "casino_documents"))
     # Read the MySQL transaction implementation source.
     source = inspect.getsource(storage.MySQLStorageProvider.transact_ledger)
     # Verify the MySQL ledger path locks the player row before mutating balance.
@@ -99,3 +101,58 @@ def run_mysql_schema_provider_path():
     assert "start_transaction" in source
     # Verify the MySQL ledger path inserts the ledger row before committing.
     assert "INSERT INTO casino_ledger" in source and "connection.commit()" in source
+
+
+# Exercise real MySQL persistence, domain documents, and concurrent ledger locking.
+def run_mysql_live_provider_path():
+    # Import representative provider-backed domains only when live MySQL was requested.
+    from casino.bots import profiles
+    # Import the data root used to derive stable provider document keys.
+    from casino.config import DATA_DIR
+    # Import core services whose JSON-shaped state must no longer create hybrid files.
+    from casino.core import auth, autoplay, ledger, players, state_store, storage
+
+    # Build the explicitly configured provider without ever reading or displaying its password.
+    provider = storage.MySQLStorageProvider()
+    # Inject the live provider so all services share the same test target.
+    storage.set_provider_for_tests(provider)
+    # Start protected logic so later test modes rebuild their normal provider.
+    try:
+        # Clear the dedicated integration database while preserving its schema.
+        provider.reset()
+        # Seed fresh private-beta player rows through the provider abstraction.
+        players.save_players(players.default_players())
+        # Create a real auth user so users and terms acceptance enter the provider document table.
+        user = auth.create_user("mysql.integration@example.test", "mysql-integration-password", "MySQL Integration", terms_required=False)
+        # Login so a live session document is persisted alongside the user record.
+        login = auth.login(user["email"], "mysql-integration-password", "mysql-live-test")
+        # Persist representative player-scoped game state through the generic state-store seam.
+        state_store.save_player_game_state("slots", "human", {"spins": [{"round_id": "mysql_restart_round"}]})
+        # Persist bot profile state through the real bots module.
+        bot = profiles.update_bot("bot_1", {"enabled": False})
+        # Persist an autoplay session through the real control-plane module.
+        autoplay_session = autoplay.start("slots", "human", "medium", 2, {"type": "mysql-live"}, {})
+        # Capture the wallet balance before overlapping atomic debits.
+        starting_balance = players.get_player("human")["balance"]
+        # Execute independent MySQL transactions concurrently against one wallet row.
+        with ThreadPoolExecutor(max_workers=8) as executor:
+            # Materialize all futures so every debit either commits or fails the test.
+            events = list(executor.map(lambda index: ledger.debit("human", 1, "MYSQL_CONCURRENT_DEBIT", "storage", f"mysql_concurrent_{index}", {"index": index}), range(20)))
+        # Verify row locking prevented lost updates across concurrent connections.
+        assert players.get_player("human")["balance"] == starting_balance - 20
+        # Verify each committed transaction produced one unique append-only ledger event.
+        assert len({event["ledger_id"] for event in events}) == 20
+        # Rebuild the provider to simulate a fresh application process after restart.
+        storage.set_provider_for_tests(storage.MySQLStorageProvider())
+        # Verify the previously issued session still resolves to its persisted user.
+        session, reopened_user = auth.authenticate_token(login["session"]["token"])
+        # Verify auth identity and session data survived provider reconstruction.
+        assert reopened_user["user_id"] == user["user_id"] and session["user_id"] == user["user_id"]
+        # Verify player-scoped game state survived provider reconstruction.
+        assert state_store.load_player_game_state("slots", "human", lambda: {})["spins"][0]["round_id"] == "mysql_restart_round"
+        # Verify bot profile and autoplay state survived provider reconstruction.
+        assert profiles.get_bot("bot_1")["enabled"] is bot["enabled"] and autoplay.get_session(autoplay_session["autoplay_id"])["status"] == "running"
+    # Always clear provider injection after the live integration test.
+    finally:
+        # Restore normal provider selection for later API or browser suites.
+        storage.set_provider_for_tests(None)

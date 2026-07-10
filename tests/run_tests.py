@@ -116,11 +116,15 @@ def assert_condition(value, message):
     assert value, message
 
 # Define the run_storage_tests function used by this module.
-def run_storage_tests():
+def run_storage_tests(include_live=False):
     # Execute the JSON fallback parity test for provider-backed players, ledger, history, and settings.
     run_case('STORAGE-JSON-001',['CORE-017','LEDGER-001','LEDGER-007','TEST-030'],storage_tests.run_json_provider_parity)
     # Execute the MySQL schema and atomic ledger-provider path test without requiring a live service.
     run_case('STORAGE-MYSQL-001',['CORE-017','LEDGER-001','LEDGER-007','LEDGER-009'],storage_tests.run_mysql_schema_provider_path)
+    # Execute the real-service persistence and concurrent-ledger gate only when explicitly requested.
+    if include_live:
+        # Map the live integration case to the durable storage and MySQL requirements.
+        run_case('STORAGE-MYSQL-LIVE-001',['STORAGE-001','STORAGE-002','STORAGE-003','STORAGE-004','MYSQL-001','MYSQL-002','MYSQL-003','MYSQL-004','TEST-038'],storage_tests.run_mysql_live_provider_path)
 
 # Define the read_i18n_json function used by this module.
 def read_i18n_json(path):
@@ -319,7 +323,13 @@ def run_api_tests():
             # Verify the action used user A and did not debit user B.
             assert cross_bet['player_id']==user_a['player_id'] and api(base,'/api/v2/me',auth_token=token_b)['player']['token_balance']==250
             # Complete Roulette for user A through the bound session action.
-            api(base,'/api/v1/games/roulette/spin','POST',{'player_id':user_b['player_id'],'force_result':'17'},auth_token=token_a)
+            roulette_a=api(base,'/api/v1/games/roulette/spin','POST',{'player_id':user_b['player_id'],'force_result':'17'},auth_token=token_a)
+            # Place user B's own forced-winning Roulette wager while submitting user A's id.
+            roulette_b_bet=api(base,'/api/v1/games/roulette/bets','POST',{'player_id':user_a['player_id'],'amount':10,'bet_type':'straight','covered_numbers':['18'],'label':'18'},auth_token=token_b)['bet']
+            # Settle user B's Roulette wager through its authenticated session.
+            roulette_b=api(base,'/api/v1/games/roulette/spin','POST',{'player_id':user_a['player_id'],'force_result':'18'},auth_token=token_b)
+            # Verify both Roulette actions used session-derived identities and produced payouts.
+            assert str(roulette_a['round']['result'])=='17' and roulette_b_bet['player_id']==user_b['player_id'] and str(roulette_b['round']['result'])=='18' and any(row['settlement']['credit']>0 for row in roulette_a['settlements'] if row['bet']['player_id']==user_a['player_id']) and any(row['settlement']['credit']>0 for row in roulette_b['settlements'] if row['bet']['player_id']==user_b['player_id'])
             # Play Slots independently for both users to cover a second game without state leakage.
             slot_a=api(base,'/api/v1/games/slots/spin','POST',{'player_id':user_b['player_id'],'active_lines':1,'line_bet':1},auth_token=token_a)['spin']
             # Play Slots for user B through its own session binding.
@@ -328,6 +338,60 @@ def run_api_tests():
             assert api(base,f'/api/v1/games/slots/state?player_id={user_b["player_id"]}',auth_token=token_a)['state']['last_spins'][-1]['round_id']==slot_a['round_id']
             # Verify user B reads its own distinct Slots result.
             assert api(base,f'/api/v1/games/slots/state?player_id={user_a["player_id"]}',auth_token=token_b)['state']['last_spins'][-1]['round_id']==slot_b['round_id']
+            # Deal Blackjack for user A while submitting user B's player id.
+            blackjack_a=api(base,'/api/v1/games/blackjack/rounds','POST',{'player_id':user_b['player_id'],'bet_amount':10},auth_token=token_a)['round']
+            # Deal Blackjack independently for user B while submitting user A's player id.
+            blackjack_b=api(base,'/api/v1/games/blackjack/rounds','POST',{'player_id':user_a['player_id'],'bet_amount':10},auth_token=token_b)['round']
+            # Verify each authenticated user owns only its own Blackjack round.
+            assert blackjack_a['player_id']==user_a['player_id'] and blackjack_b['player_id']==user_b['player_id'] and blackjack_a['round_id'] in api(base,'/api/v1/games/blackjack/state',auth_token=token_a)['state']['rounds'] and blackjack_b['round_id'] in api(base,'/api/v1/games/blackjack/state',auth_token=token_b)['state']['rounds']
+            # Place Baccarat wagers for both sessions while submitting the opposite player ids.
+            baccarat_a_bet=api(base,'/api/v1/games/baccarat/bets','POST',{'player_id':user_b['player_id'],'amount':10,'bet_type':'banker'},auth_token=token_a)['bet']
+            # Place user B's independent Baccarat wager.
+            baccarat_b_bet=api(base,'/api/v1/games/baccarat/bets','POST',{'player_id':user_a['player_id'],'amount':10,'bet_type':'player'},auth_token=token_b)['bet']
+            # Deal and settle one private Baccarat coup for each authenticated user.
+            baccarat_a=api(base,'/api/v1/games/baccarat/deal','POST',{'player_id':user_b['player_id']},auth_token=token_a)
+            # Settle user B's separate Baccarat state.
+            baccarat_b=api(base,'/api/v1/games/baccarat/deal','POST',{'player_id':user_a['player_id']},auth_token=token_b)
+            # Verify Baccarat wager ownership and private coup identifiers.
+            assert baccarat_a_bet['player_id']==user_a['player_id'] and baccarat_b_bet['player_id']==user_b['player_id'] and baccarat_a['coup']['round_id']!=baccarat_b['coup']['round_id']
+            # Buy Keno tickets for both sessions while submitting the opposite player ids.
+            keno_a_ticket=api(base,'/api/v1/games/keno/tickets','POST',{'player_id':user_b['player_id'],'amount':5,'spots':[1,2,3]},auth_token=token_a)['ticket']
+            # Buy user B's isolated Keno ticket.
+            keno_b_ticket=api(base,'/api/v1/games/keno/tickets','POST',{'player_id':user_a['player_id'],'amount':5,'spots':[4,5,6]},auth_token=token_b)['ticket']
+            # Draw and settle Keno independently for each authenticated user.
+            keno_a=api(base,'/api/v1/games/keno/draw','POST',{'player_id':user_b['player_id']},auth_token=token_a)
+            # Draw user B's separate Keno state.
+            keno_b=api(base,'/api/v1/games/keno/draw','POST',{'player_id':user_a['player_id']},auth_token=token_b)
+            # Verify ticket ownership and distinct Keno round identifiers.
+            assert keno_a_ticket['player_id']==user_a['player_id'] and keno_b_ticket['player_id']==user_b['player_id'] and keno_a['draw']['round_id']!=keno_b['draw']['round_id']
+            # Buy a Bingo card for user A and prove reset refunds the bound wallet.
+            bingo_a_session=api(base,'/api/v1/games/bingo/cards','POST',{'player_id':user_b['player_id'],'amount':5,'pattern':'line'},auth_token=token_a)['session']
+            # Reset user A's private Bingo session to exercise the refund path.
+            bingo_a_refund=api(base,'/api/v1/games/bingo/reset','POST',{'player_id':user_b['player_id']},auth_token=token_a)
+            # Buy user B's Bingo card through its independent session.
+            bingo_b_session=api(base,'/api/v1/games/bingo/cards','POST',{'player_id':user_a['player_id'],'amount':5,'pattern':'line'},auth_token=token_b)['session']
+            # Complete user B's Bingo session to exercise payout settlement.
+            bingo_b=api(base,'/api/v1/games/bingo/auto','POST',{'player_id':user_a['player_id'],'max_calls':75},auth_token=token_b)
+            # Verify Bingo identity binding, refund, and terminal payout paths.
+            assert bingo_a_session['player_id']==user_a['player_id'] and bingo_b_session['player_id']==user_b['player_id'] and bingo_a_refund['refunds'] and bingo_b['session']['status']=='won'
+            # Read private game history through each normal-user session.
+            history_a=api(base,'/api/v1/casino/history',auth_token=token_a)['history']
+            # Read user B's independent history view.
+            history_b=api(base,'/api/v1/casino/history',auth_token=token_b)['history']
+            # Verify history never exposes the other authenticated player's records.
+            assert history_a and history_b and all(row['player_id']==user_a['player_id'] for row in history_a) and all(row['player_id']==user_b['player_id'] for row in history_b)
+            # Refresh both canonical wallets after all six games have settled.
+            wallet_a=api(base,'/api/v2/me',auth_token=token_a)['player']['token_balance']
+            # Refresh user B's canonical wallet independently.
+            wallet_b=api(base,'/api/v2/me',auth_token=token_b)['player']['token_balance']
+            # Verify final ledger balances agree with the canonical wallet refresh for each user.
+            ledger_a=api(base,f'/api/v1/players/{user_a["player_id"]}/ledger',auth_token=token_a)['ledger']; ledger_b=api(base,f'/api/v1/players/{user_b["player_id"]}/ledger',auth_token=token_b)['ledger']; assert ledger_a[-1]['balance_after']==wallet_a and ledger_b[-1]['balance_after']==wallet_b
+            # Log out both real sessions after the six-game integration path.
+            api(base,'/api/v2/auth/logout','POST',{},auth_token=token_a); api(base,'/api/v2/auth/logout','POST',{},auth_token=token_b)
+            # Verify both logged-out bearer tokens are rejected.
+            assert api(base,'/api/v2/me',ok=False,auth_token=token_a)['error']['code']=='UNAUTHORIZED' and api(base,'/api/v2/me',ok=False,auth_token=token_b)['error']['code']=='UNAUTHORIZED'
+            # Log both users in again so later cross-user and restart checks use fresh sessions.
+            token_a=api(base,'/api/v2/auth/login','POST',{'username':'wallet-a@example.local','password':'wallet-a-password'},auth_token=None)['session']['token']; token_b=api(base,'/api/v2/auth/login','POST',{'username':'wallet-b@example.local','password':'wallet-b-password'},auth_token=None)['session']['token']
             # Start autoplay with a foreign id and verify the authenticated binding wins.
             auto_a=api(base,'/api/v1/autoplay/start','POST',{'game_id':'roulette','player_id':user_b['player_id'],'speed':'medium','round_limit':1},auth_token=token_a)['session']
             # Verify user B cannot mutate user A's server-side autoplay session.
@@ -343,7 +407,7 @@ def run_api_tests():
             # Verify normal users cannot mutate shared bot-controller accounts.
             assert api(base,'/api/v1/bots/bot_roulette_1/enable','POST',{},ok=False,auth_token=token_a)['error']['code']=='FORBIDDEN'
             # Store the durable post-game balance and terms state for restart verification.
-            integrity_state.update({'email':'wallet-a@example.local','password':'wallet-a-password','balance':api(base,'/api/v2/me',auth_token=token_a)['player']['token_balance'],'admin_blocked':len(admin_paths),'token_credit_count':len(credits_after)-len(credits_before),'contract_player':added_a})
+            integrity_state.update({'email':'wallet-a@example.local','password':'wallet-a-password','balance':api(base,'/api/v2/me',auth_token=token_a)['player']['token_balance'],'admin_blocked':len(admin_paths),'token_credit_count':len(credits_after)-len(credits_before),'contract_player':added_a,'users':[{'email':'wallet-a@example.local','password':'wallet-a-password','player_id':user_a['player_id'],'balance':wallet_a,'roulette_round':roulette_a['round']['round_id'],'slots_round':slot_a['round_id'],'blackjack_round':blackjack_a['round_id'],'baccarat_round':baccarat_a['coup']['round_id'],'keno_round':keno_a['draw']['round_id'],'bingo_session':bingo_a_session['session_id'],'bingo_completed':False},{'email':'wallet-b@example.local','password':'wallet-b-password','player_id':user_b['player_id'],'balance':wallet_b,'roulette_round':roulette_b['round']['round_id'],'slots_round':slot_b['round_id'],'blackjack_round':blackjack_b['round_id'],'baccarat_round':baccarat_b['coup']['round_id'],'keno_round':keno_b['draw']['round_id'],'bingo_session':bingo_b['session']['session_id'],'bingo_completed':True}],'six_game_history_counts':[len(history_a),len(history_b)]})
         # Execute the real-backend integrity regression as one mapped API case.
         run_case('API-PRIVATE-SESSION-001',['SESSION-003','USER-001','USER-003','USER-005','TOKEN-004','TEST-039'],wallet_auth_integrity)
         # Record exact token credit coverage under the permanent test id referenced by TOKEN-003.
@@ -360,12 +424,28 @@ def run_api_tests():
         proc,base=start_server()
         # Define wallet_restart_persistence to verify canonical identity and ledger state survive restart.
         def wallet_restart_persistence():
-            # Log in the Admin-created normal user after the new server process starts.
-            login=api(base,'/api/v2/auth/login','POST',{'username':integrity_state['email'],'password':integrity_state['password']},auth_token=None)
-            # Read the canonical current-user state through the restarted backend.
-            me=api(base,'/api/v2/me',auth_token=login['session']['token'])
-            # Verify both the exact balance and accepted terms survived the process restart.
-            assert me['player']['token_balance']==integrity_state['balance'] and me['terms']['accepted'] is True and me['terms']['required'] is False
+            # Iterate through both canonical users after the backend process restart.
+            for expected in integrity_state['users']:
+                # Log in the Admin-created normal user after the new server process starts.
+                login=api(base,'/api/v2/auth/login','POST',{'username':expected['email'],'password':expected['password']},auth_token=None)
+                # Store the restarted session token for private state checks.
+                token=login['session']['token']
+                # Read the canonical current-user state through the restarted backend.
+                me=api(base,'/api/v2/me',auth_token=token)
+                # Verify exact balance and accepted terms survived the process restart.
+                assert me['player']['token_balance']==expected['balance'] and me['terms']['accepted'] is True and me['terms']['required'] is False
+                # Read every private game state again after restart.
+                roulette_state=api(base,'/api/v1/games/roulette/state',auth_token=token)['state']; slots_state=api(base,'/api/v1/games/slots/state',auth_token=token)['state']; blackjack_state=api(base,'/api/v1/games/blackjack/state',auth_token=token)['state']; baccarat_state=api(base,'/api/v1/games/baccarat/state',auth_token=token)['state']; keno_state=api(base,'/api/v1/games/keno/state',auth_token=token)['state']; bingo_state=api(base,'/api/v1/games/bingo/state',auth_token=token)['state']
+                # Verify Roulette, Slots, Blackjack, Baccarat, and Keno identifiers survived under the session-derived player.
+                assert any(row['round_id']==expected['roulette_round'] for row in roulette_state['last_results']) and slots_state['last_spins'][-1]['round_id']==expected['slots_round'] and expected['blackjack_round'] in blackjack_state['rounds'] and any(row['round_id']==expected['baccarat_round'] for row in baccarat_state['last_coups']) and any(row['round_id']==expected['keno_round'] for row in keno_state['last_draws'])
+                # Verify Bingo terminal/refund state survived for the corresponding user.
+                assert (any(row['session_id']==expected['bingo_session'] for row in bingo_state['last_sessions']) if expected['bingo_completed'] else bingo_state['active_session'] is None)
+                # Read restarted private history and ledger views.
+                restarted_history=api(base,'/api/v1/casino/history',auth_token=token)['history']; restarted_ledger=api(base,f'/api/v1/players/{expected["player_id"]}/ledger',auth_token=token)['ledger']
+                # Verify restarted history includes the user's Bingo settlement and never leaks another player.
+                assert any(row['round_id']==expected['bingo_session'] for row in restarted_history) and all(row['player_id']==expected['player_id'] for row in restarted_history) and all(row['player_id']==expected['player_id'] for row in restarted_ledger)
+            # Verify both users produced persisted private history across the six-game gate.
+            assert all(count>0 for count in integrity_state['six_game_history_counts'])
         # Record the live restart persistence regression under the same integrity requirements.
         run_case('API-WALLET-RESTART-001',['SESSION-003','USER-001','TOKEN-003','TOKEN-004','TEST-039'],wallet_restart_persistence)
         # Define the core function used by this module.
@@ -1235,7 +1315,13 @@ def run_browser_tests():
                 # Expand autoplay through its player-facing disclosure control.
                 page.get_by_test_id('roulette-autoplay-disclosure').locator('summary').click()
                 # Start and stop Roulette autoplay through the shared control-plane widget.
-                page.get_by_test_id('roulette-auto-rounds').fill('5'); page.get_by_test_id('roulette-auto-start').click(); page.wait_for_timeout(400); page.get_by_test_id('roulette-auto-stop').click(); page.wait_for_timeout(500)
+                page.get_by_test_id('roulette-auto-rounds').fill('5'); page.get_by_test_id('roulette-auto-start').click()
+                # Wait for the committed autoplay spin to enter its visible atomic action before requesting stop.
+                page.wait_for_function("() => document.querySelector('[data-testid=\"roulette-result-region\"]')?.dataset.phase === 'spinning'", timeout=7000)
+                # Request stop while the current committed spin is allowed to finish safely.
+                page.get_by_test_id('roulette-auto-stop').click()
+                # Wait for that committed spin to settle before capturing route-return persistence evidence.
+                page.wait_for_function("() => document.querySelector('[data-testid=\"roulette-result-region\"]')?.dataset.phase === 'settled'", timeout=7000)
                 # Execute this statement as part of the module's documented control flow.
                 run_case('BR-AUTO-ROU-001',['AUTO-003','AUTO-010','ROU-047'],lambda: page.get_by_text('Off').first.is_visible())
                 # Collapse autoplay after verification so route-return evidence restores the gameplay-first composition.
@@ -1417,7 +1503,9 @@ def run_browser_tests():
                 # Restore English for later browser assertions that use fixed English text.
                 page.evaluate("""async () => { const i18n = await import('/core/i18n.js'); await i18n.setLocale('en-US', { persistLocal: false }); }""")
                 # Navigate to Baccarat before asserting the premium table surfaces.
-                page.get_by_test_id('nav-baccarat').click()
+                with page.expect_response(lambda response: response.url.endswith('/api/v2/me') and response.request.method == 'GET'):
+                    # Click Baccarat and wait for its final mount-time wallet refresh response.
+                    page.get_by_test_id('nav-baccarat').click()
                 # Wait for the wager setup state to mount.
                 page.get_by_test_id('baccarat-wager-setup').wait_for(timeout=5000)
                 # Place a banker wager through the same public control a player uses.
@@ -1454,8 +1542,16 @@ def run_browser_tests():
                         page.evaluate("async locale => { const i18n = await import('/core/i18n.js'); await i18n.setLocale(locale, { persistLocal: false }); }", locale)
                         # Mount and inspect each lazy game route under the active locale.
                         for nav_testid,ready_testid,domain,interpolation_key in route_specs:
-                            # Navigate through the player-visible shell control.
-                            page.get_by_test_id(nav_testid).click()
+                            # Branch for Baccarat because its mount finishes with an authenticated wallet refresh.
+                            if domain == 'games/baccarat':
+                                # Wait for the mount's final wallet response so the next route cannot abort it.
+                                with page.expect_response(lambda response: response.url.endswith('/api/v2/me') and response.request.method == 'GET'):
+                                    # Navigate through the player-visible shell control.
+                                    page.get_by_test_id(nav_testid).click()
+                            # Navigate other routes through the same player-visible shell control.
+                            else:
+                                # Click the route after no special completion response is required.
+                                page.get_by_test_id(nav_testid).click()
                             # Wait for the route-owned stable mount selector before scanning strings.
                             page.get_by_test_id(ready_testid).wait_for(timeout=5000)
                             # Apply the complete domain, key-leak, placeholder, encoding, and label audit.
@@ -1588,13 +1684,13 @@ def run_browser_tests():
 # Define the main function used by this module.
 def main():
     # Set ap to the value needed for the next operation.
-    ap=argparse.ArgumentParser(); ap.add_argument('--api',action='store_true'); ap.add_argument('--browser',action='store_true'); ap.add_argument('--storage',action='store_true'); args=ap.parse_args()
+    ap=argparse.ArgumentParser(); ap.add_argument('--api',action='store_true'); ap.add_argument('--browser',action='store_true'); ap.add_argument('--storage',action='store_true'); ap.add_argument('--mysql-live',action='store_true'); args=ap.parse_args()
     # Branch when the following condition is true.
-    if not args.api and not args.browser and not args.storage: args.api=True
+    if not args.api and not args.browser and not args.storage and not args.mysql_live: args.api=True
     # Start protected logic so failures can be handled safely.
     try:
         # Branch when the following condition is true.
-        if args.storage: run_storage_tests()
+        if args.storage or args.mysql_live: run_storage_tests(include_live=args.mysql_live)
         # Branch when the following condition is true.
         if args.api: run_api_tests()
         # Branch when the following condition is true.

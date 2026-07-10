@@ -25,3 +25,21 @@ logs/
 # Local OS/editor noise.
 .DS_Store
 Thumbs.db
+
+# Local runtime secrets; checked-in examples remain visible and reviewable.
+.env
+.env.*
+!.env.example
+!.env.*.example
+oci_api_key*.pem
+oci_api_key*.key
+id_rsa*
+id_ed25519*
+
+# Terraform local state and secret variable values; example variable files remain tracked.
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.auto.tfvars
+!*.tfvars.example
