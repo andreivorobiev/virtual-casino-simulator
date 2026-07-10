@@ -4,8 +4,8 @@ Application: 9.1.1
 
 ## Modules
 
-- application: 9.2.7
-- core: 9.3.0
+- application: 9.2.8
+- core: 9.3.1
 - ledger: 9.0.2
 - players: 9.1.0
 - bots: 1.0.0
@@ -18,8 +18,8 @@ Application: 9.1.1
 - baccarat: 9.0.3
 - keno: 9.1.1
 - bingo: 9.1.2
-- tests: 1.5.0
-- docs: 1.3.0
+- tests: 1.5.1
+- docs: 1.3.1
 - contracts: 1.1.1
 - tooling: 1.2.0
 - commenting_policy: 1.0.0
@@ -428,3 +428,7 @@ Application: 9.1.1
 - **TEST-039** (Tests) - PLANNED: API and browser tests cover two authenticated users playing each game with isolated balances, state, history, bots, and autoplay.
 - **TEST-040** (Tests) - PLANNED: Integration validation runs the complete auth, MySQL, token terminology, licensing, and private-session path from a copied deployment environment.
 - **TEST-041** (Tests) - PASS: API validation covers loopback default preservation and fail-closed bootstrap configuration for non-loopback or explicitly public deployment startup.
+- **CARD-001** (Core) - PASS: Shared card and deck primitives provide validated cards, ordered deck construction, non-mutating shuffles, and deterministic seeded shuffle hooks for tests.
+- **CARD-002** (Application) - PASS: Reusable frontend card-renderer primitives produce accessible responsive card markup and remain safe under reduced-motion preferences.
+- **POKER-001** (Core) - PASS: Shared poker primitives evaluate standard five-card hands and select the strongest five-card result from six- or seven-card inputs using deterministic tie breakers.
+- **POKER-002** (Docs) - PASS: Downstream game workers have usage documentation for shared card, shuffle, poker-evaluation, and frontend-renderer primitives.

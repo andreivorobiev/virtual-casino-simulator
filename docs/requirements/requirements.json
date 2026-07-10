@@ -6487,6 +6487,66 @@
       "introduced_in": "deployment-default-hardening",
       "changed_in": "deployment-default-hardening",
       "notes": "Added for GitHub issue #62; test diagnostics never include bootstrap setting values."
+    },
+    {
+      "id": "CARD-001",
+      "module": "Core",
+      "description": "Shared card and deck primitives provide validated cards, ordered deck construction, non-mutating shuffles, and deterministic seeded shuffle hooks for tests.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/cards.py",
+        "tests/card_poker_primitives_tests.py"
+      ],
+      "introduced_in": "card-poker-primitives",
+      "changed_in": "card-poker-primitives",
+      "notes": "Allocated on GitHub issue #96; focused unit coverage includes a pinned seeded shuffle vector."
+    },
+    {
+      "id": "CARD-002",
+      "module": "Application",
+      "description": "Reusable frontend card-renderer primitives produce accessible responsive card markup and remain safe under reduced-motion preferences.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        "web/core/cards.js",
+        "web/core/cards.css",
+        "tests/card_renderer_tests.js"
+      ],
+      "introduced_in": "card-poker-primitives",
+      "changed_in": "card-poker-primitives",
+      "notes": "Allocated on GitHub issue #96; primitives are intentionally unregistered, so no current visual-matrix surface changes."
+    },
+    {
+      "id": "POKER-001",
+      "module": "Core",
+      "description": "Shared poker primitives evaluate standard five-card hands and select the strongest five-card result from six- or seven-card inputs using deterministic tie breakers.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/poker.py",
+        "tests/card_poker_primitives_tests.py"
+      ],
+      "introduced_in": "card-poker-primitives",
+      "changed_in": "card-poker-primitives",
+      "notes": "Allocated on GitHub issue #96; fixtures cover every standard category, ace-low straights, kickers, and seven-card best-hand selection."
+    },
+    {
+      "id": "POKER-002",
+      "module": "Docs",
+      "description": "Downstream game workers have usage documentation for shared card, shuffle, poker-evaluation, and frontend-renderer primitives.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        "docs/card_poker_primitives.md"
+      ],
+      "introduced_in": "card-poker-primitives",
+      "changed_in": "card-poker-primitives",
+      "notes": "Allocated on GitHub issue #96; game-specific paytables, timers, and registration remain downstream responsibilities."
     }
   ]
 }
