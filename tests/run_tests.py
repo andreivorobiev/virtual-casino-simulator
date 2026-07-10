@@ -631,6 +631,111 @@ def run_browser_tests():
             page.route('**/api/v2/**', handle_auth_route)
             # Define the shot function used by this module.
             def shot(name): page.screenshot(path=str(screenshots/name), full_page=True)
+            # Store browser JavaScript that audits visible player-facing strings and localized attributes.
+            route_i18n_audit_script=r"""async ({ domain, interpolationKey }) => {
+              // Read the public runtime state after the requested route has mounted.
+              const state = window.CasinoI18n.getLocaleState();
+              // Store the active locale so resource inspection matches rendered text.
+              const locale = state.locale;
+              // Load every active resource dictionary so any installed key leak is detectable.
+              const loadedResources = await Promise.all(state.loadedDomains.map(async loadedDomain => {
+                // Fetch the locale-owned dictionary without relying on browser cache state.
+                const response = await fetch(`/i18n/${locale}/${loadedDomain}.json`, { cache: 'no-cache' });
+                // Return the decoded dictionary or an empty object for a failed fetch.
+                return response.ok ? response.json() : {};
+              }));
+              // Fetch the route dictionary for representative title and interpolation checks.
+              const domainResponse = await fetch(`/i18n/${locale}/${domain}.json`, { cache: 'no-cache' });
+              // Decode the route dictionary when its resource request succeeds.
+              const domainResource = domainResponse.ok ? await domainResponse.json() : {};
+              // Combine all loaded dictionary keys into one exact-match leak catalog.
+              const installedKeys = new Set(loadedResources.flatMap(resource => Object.keys(resource)));
+              // Define visibility using layout boxes plus computed visibility.
+              const isVisible = element => Boolean(element && (element.offsetWidth || element.offsetHeight || element.getClientRects().length) && getComputedStyle(element).visibility !== 'hidden');
+              // Collect normalized player-visible strings from text and descriptive attributes.
+              const entries = [];
+              // Walk text nodes so concatenated container text cannot hide an exact raw key.
+              const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+              // Visit every rendered text node in document order.
+              while (walker.nextNode()) {
+                // Read the element that controls visibility for the current text node.
+                const parent = walker.currentNode.parentElement;
+                // Add each non-empty visible line as an independently auditable value.
+                if (isVisible(parent)) entries.push(...walker.currentNode.textContent.split(/\r?\n/).map(value => value.trim()).filter(Boolean));
+              }
+              // Inspect localized tooltip, placeholder, and accessible-name attributes.
+              document.querySelectorAll('*').forEach(element => {
+                // Skip hidden elements because this gate targets rendered player surfaces.
+                if (!isVisible(element)) return;
+                // Check every supported player-facing descriptive attribute.
+                ['title', 'placeholder', 'aria-label', 'data-tooltip'].forEach(attribute => {
+                  // Normalize the attribute value before leak classification.
+                  const value = element.getAttribute(attribute)?.trim();
+                  // Add populated values to the shared surface catalog.
+                  if (value) entries.push(value);
+                });
+              });
+              // Read combined visible text for representative-label and interpolation matching.
+              const bodyText = document.body.innerText;
+              // Find exact installed resource keys exposed as player-facing values.
+              const rawKeys = [...new Set(entries.filter(value => installedKeys.has(value)))].sort();
+              // Find named placeholders that survived interpolation on any visible surface.
+              const unresolvedPlaceholders = [...new Set(entries.filter(value => /\{[a-zA-Z0-9_]+\}/.test(value)))].sort();
+              // Find Unicode replacement characters produced by broken resource decoding.
+              const replacementCharacters = [...new Set(entries.filter(value => value.includes('\uFFFD')))].sort();
+              // Find visible null-like sentinel values produced by missing application data.
+              const invalidValues = [...new Set(entries.filter(value => /(^|\s)(undefined|null|NaN)(?=$|\s|[.,;:!?])/.test(value)))].sort();
+              // Read the route's canonical localized game title.
+              const representativeTitle = domainResource.title;
+              // Read one route-owned localized template that must render concrete parameters.
+              const interpolationTemplate = domainResource[interpolationKey];
+              // Escape static template text before constructing the rendered-value pattern.
+              const escapeRegex = value => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+              // Replace named template slots with non-placeholder rendered-value matches.
+              const interpolationPattern = interpolationTemplate ? new RegExp(interpolationTemplate.split(/\{[a-zA-Z0-9_]+\}/).map(escapeRegex).join('[^\\n{}]+')) : null;
+              // Return complete evidence so Python assertions can produce focused failures.
+              return {
+                // Include locale/domain runtime diagnostics.
+                state,
+                // Include exact raw-key matches.
+                rawKeys,
+                // Include unresolved named placeholders.
+                unresolvedPlaceholders,
+                // Include broken-decoding evidence.
+                replacementCharacters,
+                // Include null-like visible values.
+                invalidValues,
+                // Include the expected route title.
+                representativeTitle,
+                // Report whether the human route title is visible.
+                titleVisible: Boolean(representativeTitle && bodyText.includes(representativeTitle)),
+                // Include the expected interpolation template for failure output.
+                interpolationTemplate,
+                // Report whether a concrete rendered interpolation matches the template.
+                interpolationVisible: Boolean(interpolationPattern && interpolationPattern.test(bodyText)),
+              };
+            // Finish the browser audit function after returning structured evidence.
+            }"""
+            # Define a reusable assertion for one mounted game route and active locale.
+            def assert_route_i18n(domain, interpolation_key):
+                # Run the complete player-surface audit in the mounted browser page.
+                audit=page.evaluate(route_i18n_audit_script, {'domain':domain,'interpolationKey':interpolation_key})
+                # Verify the lazy route registered and loaded its own resource domain.
+                assert domain in audit['state']['loadedDomains'], f'{domain} not loaded: {audit["state"]}'
+                # Verify no lookup fell through to the raw-key fallback anywhere in the accumulated flow.
+                assert audit['state']['missingKeyCount']==0, f'{domain} missing keys: {audit["state"]}'
+                # Verify visible text, tooltip, placeholder, and accessible labels contain no installed raw keys.
+                assert not audit['rawKeys'], f'{domain} visible raw keys: {audit["rawKeys"]}'
+                # Verify all visible interpolated strings replaced their named placeholders.
+                assert not audit['unresolvedPlaceholders'], f'{domain} unresolved placeholders: {audit["unresolvedPlaceholders"]}'
+                # Verify decoded resources contain no Unicode replacement characters on player surfaces.
+                assert not audit['replacementCharacters'], f'{domain} replacement characters: {audit["replacementCharacters"]}'
+                # Verify player-visible values never degrade to JavaScript/Python null sentinels.
+                assert not audit['invalidValues'], f'{domain} invalid values: {audit["invalidValues"]}'
+                # Verify each route renders its locale-owned human game title.
+                assert audit['titleVisible'], f'{domain} missing representative title: {audit["representativeTitle"]}'
+                # Verify one representative localized interpolation is rendered with concrete values.
+                assert audit['interpolationVisible'], f'{domain} missing interpolation: {audit["interpolationTemplate"]}'
             # Start protected logic so failures can be handled safely.
             try:
                 # Navigate to the casino while unauthenticated to verify the login gate.
@@ -767,6 +872,16 @@ def run_browser_tests():
                 page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(250)
                 # Open Roulette and wait for the premium vector wheel to mount.
                 page.get_by_test_id('nav-roulette').click(); page.get_by_test_id('roulette-wheel').wait_for()
+                # Define the raw Roulette resource keys reported as visible regressions.
+                roulette_visible_keys={'header.kicker','title','controls.title','controls.spin','settlement.title','scoreboard.title'}
+                # Define a focused rendered-text assertion for raw Roulette key leakage.
+                def assert_no_visible_roulette_keys():
+                    # Read non-empty visible body lines so exact key labels can be detected without selector coupling.
+                    visible_lines={line.strip() for line in page.locator('body').inner_text().splitlines() if line.strip()}
+                    # Verify none of the reported resource keys escaped into rendered text.
+                    assert roulette_visible_keys.isdisjoint(visible_lines), f'Visible i18n keys: {sorted(roulette_visible_keys & visible_lines)}'
+                    # Verify the runtime did not encounter any missing resources during the normal shell and Roulette flow.
+                    assert page.evaluate("() => window.CasinoI18n.getLocaleState().missingKeyCount") == 0
                 # Define the premium_roulette_layout function used by this module.
                 def premium_roulette_layout():
                     # Verify the premium three-zone layout is mounted.
@@ -783,6 +898,8 @@ def run_browser_tests():
                     assert page.locator('[data-testid^="roulette-spot-"]').count() > 0
                     # Verify the bot/autoplay rail remains mounted without resizing the stage.
                     assert page.locator('#botPanel').is_visible()
+                    # Verify English Roulette content contains no visible raw resource keys.
+                    assert_no_visible_roulette_keys()
                 # Execute this statement as part of the module's documented control flow.
                 run_case('BR-ROU-PREMIUM-001',['ROU-041','ROU-043','ROU-045','ROU-048','ROU-049','UX-007','UX-009'],premium_roulette_layout)
                 # Capture betting-state visual evidence for the Roulette worker handback.
@@ -791,8 +908,14 @@ def run_browser_tests():
                 page.get_by_test_id('roulette-num-17').click(); page.locator('.bet-chip').first.wait_for(timeout=3000)
                 # Call the i18n runtime directly to verify language switching does not remount gameplay.
                 page.evaluate("""async () => { const i18n = await import('/core/i18n.js'); await i18n.initI18n({ domains: ['games/roulette'] }); await i18n.setLocale('ru-RU', { persistLocal: false }); }""")
+                # Define the localized Roulette state assertion used by the existing i18n browser case.
+                def roulette_i18n_state():
+                    # Verify the same placed chip remains visible after the localized rerender.
+                    assert page.locator('.bet-chip').first.is_visible()
+                    # Verify Russian Roulette content contains no visible raw resource keys.
+                    assert_no_visible_roulette_keys()
                 # Execute this statement as part of the module's documented control flow.
-                run_case('BR-I18N-GAMESTATE-ROU-001',['I18N-002','ROU-046'],lambda: page.locator('.bet-chip').first.is_visible())
+                run_case('BR-I18N-GAMESTATE-ROU-001',['I18N-001','I18N-002','ROU-046'],roulette_i18n_state)
                 # Spin the wheel through the existing Roulette UI action.
                 page.get_by_test_id('roulette-spin').click()
                 # Wait for the fixed result region to reach the settled phase.
@@ -983,6 +1106,30 @@ def run_browser_tests():
                     assert page.get_by_test_id('autoplay-baccarat').is_visible()
                 # Execute the Baccarat browser case after the premium result state is visible.
                 run_case('BR-BAC-001',['BAC-020','BAC-021','BAC-022','BAC-023','LEDGER-025','UX-009'],baccarat_browser)
+                # Define the complete lazy-domain and rendered-string audit required for all game routes.
+                def all_game_route_i18n():
+                    # Reenter initialization concurrently with repeated and distinct lazy domains.
+                    concurrent_state=page.evaluate("""async () => { const i18n = await import('/core/i18n.js'); await Promise.all([i18n.initI18n({ domains: ['games/roulette'] }), i18n.initI18n({ domains: ['games/roulette', 'games/bingo'] }), i18n.initI18n({ domains: ['games/bingo'] })]); return i18n.getLocaleState(); }""")
+                    # Verify concurrent repeated initialization loads both requested domains exactly once in state.
+                    assert {'games/roulette','games/bingo'}.issubset(set(concurrent_state['loadedDomains']))
+                    # Store stable navigation, mount, domain, and interpolation probes for every game route.
+                    route_specs=[('nav-roulette','roulette-wheel','games/roulette','stage.round'),('nav-slots','slot-grid','games/slots','history.row'),('nav-keno','keno-premium-hero','games/keno','metric.finalDraw.label'),('nav-bingo','premium-bingo','games/bingo','drawer.callsText'),('nav-blackjack','blackjack-premium','games/blackjack','drawer.cards'),('nav-baccarat','baccarat-wager-setup','games/baccarat','shoe.cards')]
+                    # Audit every route in both installed UI locales without persisting the test preference.
+                    for locale in ('en-US','ru-RU'):
+                        # Switch locale in place so the same route state is exercised in both languages.
+                        page.evaluate("async locale => { const i18n = await import('/core/i18n.js'); await i18n.setLocale(locale, { persistLocal: false }); }", locale)
+                        # Mount and inspect each lazy game route under the active locale.
+                        for nav_testid,ready_testid,domain,interpolation_key in route_specs:
+                            # Navigate through the player-visible shell control.
+                            page.get_by_test_id(nav_testid).click()
+                            # Wait for the route-owned stable mount selector before scanning strings.
+                            page.get_by_test_id(ready_testid).wait_for(timeout=5000)
+                            # Apply the complete domain, key-leak, placeholder, encoding, and label audit.
+                            assert_route_i18n(domain, interpolation_key)
+                    # Restore English so the following independent Admin page starts from the suite default.
+                    page.evaluate("async () => { const i18n = await import('/core/i18n.js'); await i18n.setLocale('en-US', { persistLocal: false }); }")
+                # Execute the release-blocking i18n audit as one requirement-mapped browser case.
+                run_case('BR-I18N-ROUTES-001',['I18N-001','I18N-002'],all_game_route_i18n)
                 # Set page.goto(base+'/admin', wait_until to the value needed for the next operation.
                 page.goto(base+'/admin', wait_until='networkidle')
                 # Execute this statement as part of the module's documented control flow.
