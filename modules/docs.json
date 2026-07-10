@@ -1,13 +1,18 @@
 {
   "module": "docs",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "paths": [
     "docs/",
     "ARCHITECTURE.md",
-    "RELEASE_NOTES.md"
+    "RELEASE_NOTES.md",
+    "LICENSE",
+    "NOTICE",
+    "CONTRIBUTING.md"
   ],
   "requirements_prefixes": [
-    "DOC"
+    "DOC",
+    "LIC",
+    "TERMS"
   ],
   "depends_on": [
     "requirements",
