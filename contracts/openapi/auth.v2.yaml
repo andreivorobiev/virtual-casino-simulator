@@ -1,0 +1,281 @@
+openapi: 3.0.3
+info:
+  title: Virtual Casino auth and current-user API
+  version: v2
+  description: Additive v2 contract skeleton for authenticated private beta play, current-user state, terms acceptance, and play-token balance flows.
+servers:
+  - url: /api/v2
+paths:
+  /auth/login:
+    post:
+      summary: Create an authenticated private beta session.
+      operationId: auth_v2_login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Standard API envelope carrying the authenticated session summary.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthEnvelope'
+        '401':
+          description: Standard API envelope carrying an authentication error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /auth/logout:
+    post:
+      summary: Revoke the current authenticated session.
+      operationId: auth_v2_logout
+      security:
+        - cookieSession: []
+      responses:
+        '200':
+          description: Standard API envelope confirming logout.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmptyEnvelope'
+  /auth/session:
+    get:
+      summary: Inspect the current authenticated session without mutating it.
+      operationId: auth_v2_session
+      security:
+        - cookieSession: []
+      responses:
+        '200':
+          description: Standard API envelope carrying current session state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthEnvelope'
+        '401':
+          description: Standard API envelope carrying an authentication error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /auth/terms/accept:
+    post:
+      summary: Record private beta toy-simulator terms acceptance for the current user.
+      operationId: auth_v2_accept_terms
+      security:
+        - cookieSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TermsAcceptanceRequest'
+      responses:
+        '200':
+          description: Standard API envelope carrying the updated terms status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TermsEnvelope'
+  /me:
+    get:
+      summary: Return the authenticated user, roles, terms status, locale, and bound player summary.
+      operationId: auth_v2_get_me
+      security:
+        - cookieSession: []
+      responses:
+        '200':
+          description: Standard API envelope carrying current-user state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUserEnvelope'
+        '401':
+          description: Standard API envelope carrying an authentication error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /me/tokens/add:
+    post:
+      summary: Request a ledger-backed play-token credit for the authenticated user's bound player.
+      operationId: auth_v2_add_current_user_tokens
+      security:
+        - cookieSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddTokensRequest'
+      responses:
+        '200':
+          description: Standard API envelope carrying the updated player token balance.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlayerEnvelope'
+components:
+  securitySchemes:
+    cookieSession:
+      type: apiKey
+      in: cookie
+      name: casino_session
+  schemas:
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+          format: password
+    TermsAcceptanceRequest:
+      type: object
+      required: [terms_version]
+      properties:
+        terms_version:
+          type: string
+        accepted:
+          type: boolean
+          default: true
+    AddTokensRequest:
+      type: object
+      required: [amount]
+      properties:
+        amount:
+          type: number
+          minimum: 0.01
+        reason:
+          type: string
+    CurrentUser:
+      type: object
+      required: [user, player, session, terms]
+      properties:
+        user:
+          $ref: '#/components/schemas/UserSummary'
+        player:
+          $ref: '#/components/schemas/PlayerSummary'
+        session:
+          $ref: '#/components/schemas/SessionSummary'
+        terms:
+          $ref: '#/components/schemas/TermsStatus'
+    UserSummary:
+      type: object
+      required: [user_id, username, roles, active]
+      properties:
+        user_id:
+          type: string
+        username:
+          type: string
+        display_name:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+        active:
+          type: boolean
+        locale:
+          type: string
+    PlayerSummary:
+      type: object
+      required: [player_id, token_balance]
+      properties:
+        player_id:
+          type: string
+        token_balance:
+          type: number
+        token_label:
+          type: string
+    SessionSummary:
+      type: object
+      required: [session_id, issued_at, expires_at]
+      properties:
+        session_id:
+          type: string
+        issued_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+    TermsStatus:
+      type: object
+      required: [required_version, accepted, accepted_version]
+      properties:
+        required_version:
+          type: string
+        accepted:
+          type: boolean
+        accepted_version:
+          type: string
+          nullable: true
+        accepted_at:
+          type: string
+          format: date-time
+          nullable: true
+    AuthEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/CurrentUser'
+    CurrentUserEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/CurrentUser'
+    PlayerEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/PlayerSummary'
+    TermsEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/TermsStatus'
+    EmptyEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+    ErrorEnvelope:
+      type: object
+      required: [ok, error]
+      properties:
+        ok:
+          type: boolean
+          enum: [false]
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string

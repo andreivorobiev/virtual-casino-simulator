@@ -20,6 +20,12 @@
 - Requirement IDs changed: None unless validation policy needs superseding.
 - Requirement IDs validated: All new epic IDs plus existing game, ledger, bot, autoplay, admin, API, UX, I18N, and long-suite IDs.
 
+## Durable Requirement/Contract References
+
+- Validate AUTH-001 through AUTH-005, SESSION-001 through SESSION-004, USER-001 through USER-005, STORAGE-001 through STORAGE-004, MYSQL-001 through MYSQL-004, TERMS-001 through TERMS-004, LIC-001 through LIC-003, TOKEN-001 through TOKEN-004, API-001 through API-002, and TEST-037 through TEST-040.
+- Use `contracts/openapi/auth.v2.yaml`, `contracts/openapi/admin-users.v2.yaml`, and `contracts/compatibility/auth-mysql-token-foundation.json` as the contract baseline.
+- Copied-deployment validation evidence should explicitly map to TEST-040.
+
 ## Scope
 
 - Impacted modules: tests, tooling, docs, CI.

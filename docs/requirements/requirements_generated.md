@@ -19,9 +19,9 @@ Application: 9.1.1
 - keno: 9.1.0
 - bingo: 9.1.0
 - tests: 1.3.1
-- docs: 1.1.5
-- contracts: 1.0.0
-- tooling: 1.1.1
+- docs: 1.2.1
+- contracts: 1.1.0
+- tooling: 1.1.2
 - commenting_policy: 1.0.0
 
 ## Requirements
@@ -29,7 +29,7 @@ Application: 9.1.1
 - **CORE-001** (Core) - PASS: Application runs locally in a browser from one-click launchers.
 - **CORE-002** (Core) - PASS: Windows launcher starts the local Python server.
 - **CORE-003** (Core) - PASS: macOS launcher starts the local Python server.
-- **CORE-004** (Core) - PASS: Application remains fake-money only with no real payment flows.
+- **CORE-004** (Core) - SUPERSEDED: Application remains fake-money only with no real payment flows.
 - **CORE-005** (Core) - PASS: Lobby loads independently of all individual game modules.
 - **CORE-006** (Core) - PASS: Top navigation exposes all games equally.
 - **CORE-007** (Core) - PASS: Admin navigation is available without replacing game navigation.
@@ -46,8 +46,8 @@ Application: 9.1.1
 - **CORE-018** (Core) - PASS: The app stores isolated per-game state under data/games/.
 - **CORE-019** (Core) - PASS: The app migrates older v7/v8 data best-effort.
 - **CORE-020** (Core) - PASS: The README documents run and test commands.
-- **LEDGER-001** (Ledger) - PASS: Each player has a persistent fake-money balance.
-- **LEDGER-002** (Ledger) - PASS: Human player exists by default.
+- **LEDGER-001** (Ledger) - SUPERSEDED: Each player has a persistent fake-money balance.
+- **LEDGER-002** (Ledger) - SUPERSEDED: Human player exists by default.
 - **LEDGER-003** (Ledger) - PASS: Three bot players exist by default.
 - **LEDGER-004** (Ledger) - PASS: Add-money requires a positive amount.
 - **LEDGER-005** (Ledger) - PASS: All betting debits go through the ledger service.
@@ -161,7 +161,7 @@ Application: 9.1.1
 - **SLOT-023** (Slots) - PASS: Slots auto play repeats selected line setup.
 - **SLOT-024** (Slots) - PASS: Slots speed control supports slow/medium/fast.
 - **SLOT-025** (Slots) - PASS: Slots sounds play during spin.
-- **SLOT-026** (Slots) - PASS: Slots remains fake-money only.
+- **SLOT-026** (Slots) - SUPERSEDED: Slots remains fake-money only.
 - **BJ-001** (Blackjack) - PASS: Blackjack deals two player cards and two dealer cards.
 - **BJ-002** (Blackjack) - PASS: Dealer hole card is hidden in public state.
 - **BJ-003** (Blackjack) - PASS: Aces can count as 1 or 11.
@@ -236,7 +236,7 @@ Application: 9.1.1
 - **KENO-018** (Keno) - PASS: Keno auto play repeats selected ticket.
 - **KENO-019** (Keno) - PASS: Keno speed control supports slow/medium/fast.
 - **KENO-020** (Keno) - PASS: Keno writes history rows.
-- **KENO-021** (Keno) - PASS: Keno remains fake-money only.
+- **KENO-021** (Keno) - SUPERSEDED: Keno remains fake-money only.
 - **KENO-022** (Keno) - PASS: Keno browser tests avoid ambiguous text selectors.
 - **BINGO-001** (Bingo) - PASS: Bingo uses 75-ball American rules.
 - **BINGO-002** (Bingo) - PASS: Bingo card has B column 1-15.
@@ -261,9 +261,9 @@ Application: 9.1.1
 - **BINGO-021** (Bingo) - PASS: Bingo auto play calls until a winner.
 - **BINGO-022** (Bingo) - PASS: Bingo UI shows cards in play.
 - **BINGO-023** (Bingo) - PASS: Bingo writes history rows.
-- **BINGO-024** (Bingo) - PASS: Bingo remains fake-money only.
+- **BINGO-024** (Bingo) - SUPERSEDED: Bingo remains fake-money only.
 - **ADMIN-001** (Admin) - PASS: Admin console is available at /admin.
-- **ADMIN-002** (Admin) - PASS: Admin console is unauthenticated for local use.
+- **ADMIN-002** (Admin) - SUPERSEDED: Admin console is unauthenticated for local use.
 - **ADMIN-003** (Admin) - PASS: Admin overview shows version and requirement counts.
 - **ADMIN-004** (Admin) - PASS: Admin modules tab shows module revision numbers.
 - **ADMIN-005** (Admin) - PASS: Admin players tab shows player balances.
@@ -387,3 +387,42 @@ Application: 9.1.1
 - **TEST-036** (Tests) - PASS: Suite 100 is available as the mandatory long-suite pull request validation path.
 - **AUDIO-008** (Audio) - PASS: Browser audio verification observes voice and sound-effect events without requiring physical speakers.
 - **AUDIO-009** (Audio) - PASS: Repeated Baccarat announcements complete without being cancelled by the next deal.
+- **AUTH-001** (Auth) - PLANNED: Protected browser app and API routes require an authenticated private beta session.
+- **AUTH-002** (Auth) - PLANNED: Login verifies server-side credentials and does not expose public self-signup or external identity-provider flows.
+- **AUTH-003** (Auth) - PLANNED: Bootstrap Admin creation is operator-controlled and separate from public runtime registration.
+- **AUTH-004** (Auth) - PLANNED: Unauthenticated or inactive-user access returns the standard ok/error API envelope without leaking protected data.
+- **AUTH-005** (Auth) - PLANNED: Authenticated Admin-only actions require an active user with an Admin role.
+- **SESSION-001** (Session) - PLANNED: Successful login creates a server-side session represented to clients by a protected session cookie.
+- **SESSION-002** (Session) - PLANNED: Logout invalidates the current session before returning a standard ok/data envelope.
+- **SESSION-003** (Session) - PLANNED: Current-user lookup returns user, role, session, terms, locale, and bound player token balance data.
+- **SESSION-004** (Session) - PLANNED: Expired, revoked, or deactivated-user sessions are rejected consistently across protected APIs.
+- **USER-001** (Users) - PLANNED: Each authenticated user has a durable user record and a bound default player account.
+- **USER-002** (Users) - PLANNED: User records include roles, active status, locale preference, and terms acceptance metadata.
+- **USER-003** (Users) - PLANNED: Different authenticated users have isolated player balances, game state, history, and ledger views.
+- **USER-004** (Users) - PLANNED: Admin can create users, deactivate or reactivate users, reset passwords, and inspect user state through v2 Admin APIs.
+- **USER-005** (Users) - PLANNED: Bot controller accounts remain separate from private beta login users and cannot cross user session boundaries.
+- **STORAGE-001** (Storage) - PLANNED: Persistence is accessed through a storage provider abstraction with the existing local JSON provider as the default.
+- **STORAGE-002** (Storage) - PLANNED: The storage provider supports users, sessions, terms acceptance, player records, game state, history, settings, and ledger data.
+- **STORAGE-003** (Storage) - PLANNED: Default local JSON persistence remains available without requiring MySQL configuration.
+- **STORAGE-004** (Storage) - PLANNED: Runtime storage errors are surfaced through the standard ok/error API envelope.
+- **MYSQL-001** (MySQL) - PLANNED: A configured MySQL storage provider can bootstrap the approved schema for fresh private beta deployments.
+- **MYSQL-002** (MySQL) - PLANNED: Ledger-affecting MySQL writes are atomic so token debits, credits, refunds, and winnings remain consistent.
+- **MYSQL-003** (MySQL) - PLANNED: MySQL support starts from fresh seed/bootstrap data and does not require importing the existing local JSON data set.
+- **MYSQL-004** (MySQL) - PLANNED: The application can run with JSON storage when MySQL environment configuration is absent.
+- **TERMS-001** (Terms) - PLANNED: Private beta users must accept toy-simulator terms before gameplay actions are available.
+- **TERMS-002** (Terms) - PLANNED: Terms acceptance records include user, required terms version, accepted version, timestamp, and source context.
+- **TERMS-003** (Terms) - PLANNED: Current-user and Admin v2 APIs expose terms acceptance status without exposing other users' private state.
+- **TERMS-004** (Terms) - PLANNED: Legal terms and privacy documentation describe the app as a private beta toy simulator rather than a gambling site.
+- **LIC-001** (Licensing) - PLANNED: Repository source-code licensing is documented using Apache-2.0 for this private beta foundation.
+- **LIC-002** (Licensing) - PLANNED: User-facing legal docs state the simulator has no real-money wagering, deposits, withdrawals, or prizes.
+- **LIC-003** (Licensing) - PLANNED: Play tokens have no cash value, are not redeemable, and do not represent money or stored value.
+- **TOKEN-001** (Tokens) - PLANNED: User-facing casino balances, wagers, payouts, and add-balance flows use play-token terminology instead of dollar or money wording.
+- **TOKEN-002** (Tokens) - PLANNED: New v2 APIs may use token terminology while v1 wire fields remain compatible for existing clients.
+- **TOKEN-003** (Tokens) - PLANNED: Add-token flows are ledger-backed play-token credits and never payment, deposit, or purchase flows.
+- **TOKEN-004** (Tokens) - PLANNED: Token balances are scoped to the authenticated user's bound player and remain private from other non-Admin users.
+- **API-001** (API) - PLANNED: The frozen /api/v1 compatibility surface remains available while auth, current-user, and Admin user-management additions use /api/v2.
+- **API-002** (API) - PLANNED: v2 auth, current-user, terms, token, and Admin user-management responses use the standard ok/data or ok/error envelope.
+- **TEST-037** (Tests) - PLANNED: API tests cover login, logout, current-user lookup, unauthorized access, bootstrap Admin, inactive users, and terms status.
+- **TEST-038** (Tests) - PLANNED: Storage tests cover JSON provider parity and MySQL schema/provider behavior where environment support is available.
+- **TEST-039** (Tests) - PLANNED: API and browser tests cover two authenticated users playing each game with isolated balances, state, history, bots, and autoplay.
+- **TEST-040** (Tests) - PLANNED: Integration validation runs the complete auth, MySQL, token terminology, licensing, and private-session path from a copied deployment environment.
