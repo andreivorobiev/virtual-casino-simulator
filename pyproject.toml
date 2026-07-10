@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "virtual-casino-simulator"
 version = "9.1.1"
@@ -7,6 +11,9 @@ requires-python = ">=3.10"
 
 [project.optional-dependencies]
 mysql = ["mysql-connector-python>=8.4"]
+
+[tool.setuptools.packages.find]
+include = ["casino*"]
 
 [tool.virtual_casino]
 source_baseline = "9.1.0"

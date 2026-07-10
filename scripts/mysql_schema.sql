@@ -1,6 +1,13 @@
 -- MySQL storage schema for the Virtual Casino Simulator.
 -- Apply this to a fresh database selected by CASINO_MYSQL_DATABASE before running with CASINO_STORAGE_PROVIDER=mysql.
 
+-- Schema versions make provider bootstrap state explicit for restart and migration checks.
+CREATE TABLE IF NOT EXISTS casino_schema_versions (
+  component VARCHAR(64) PRIMARY KEY,
+  schema_version VARCHAR(32) NOT NULL,
+  applied_at VARCHAR(64) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Player wallets own fake-money balances and are locked during ledger settlement.
 CREATE TABLE IF NOT EXISTS casino_players (
   player_id VARCHAR(64) PRIMARY KEY,

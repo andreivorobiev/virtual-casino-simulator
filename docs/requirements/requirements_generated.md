@@ -402,14 +402,14 @@ Application: 9.1.1
 - **USER-003** (Users) - PLANNED: Different authenticated users have isolated player balances, game state, history, and ledger views.
 - **USER-004** (Users) - PASS: Admin can create users, deactivate or reactivate users, reset passwords, and inspect user state through v2 Admin APIs.
 - **USER-005** (Users) - PASS: Bot controller accounts remain separate from private beta login users and cannot cross user session boundaries.
-- **STORAGE-001** (Storage) - PLANNED: Persistence is accessed through a storage provider abstraction with the existing local JSON provider as the default.
-- **STORAGE-002** (Storage) - PLANNED: The storage provider supports users, sessions, terms acceptance, player records, game state, history, settings, and ledger data.
-- **STORAGE-003** (Storage) - PLANNED: Default local JSON persistence remains available without requiring MySQL configuration.
-- **STORAGE-004** (Storage) - PLANNED: Runtime storage errors are surfaced through the standard ok/error API envelope.
-- **MYSQL-001** (MySQL) - PLANNED: A configured MySQL storage provider can bootstrap the approved schema for fresh private beta deployments.
-- **MYSQL-002** (MySQL) - PLANNED: Ledger-affecting MySQL writes are atomic so token debits, credits, refunds, and winnings remain consistent.
-- **MYSQL-003** (MySQL) - PLANNED: MySQL support starts from fresh seed/bootstrap data and does not require importing the existing local JSON data set.
-- **MYSQL-004** (MySQL) - PLANNED: The application can run with JSON storage when MySQL environment configuration is absent.
+- **STORAGE-001** (Storage) - PASS: Persistence is accessed through a storage provider abstraction with the existing local JSON provider as the default.
+- **STORAGE-002** (Storage) - PASS: The storage provider supports users, sessions, terms acceptance, player records, game state, history, settings, and ledger data.
+- **STORAGE-003** (Storage) - PASS: Default local JSON persistence remains available without requiring MySQL configuration.
+- **STORAGE-004** (Storage) - PASS: Runtime storage errors are surfaced through the standard ok/error API envelope.
+- **MYSQL-001** (MySQL) - PASS: A configured MySQL storage provider can bootstrap the approved schema for fresh private beta deployments.
+- **MYSQL-002** (MySQL) - PASS: Ledger-affecting MySQL writes are atomic so token debits, credits, refunds, and winnings remain consistent.
+- **MYSQL-003** (MySQL) - PASS: MySQL support starts from fresh seed/bootstrap data and does not require importing the existing local JSON data set.
+- **MYSQL-004** (MySQL) - PASS: The application can run with JSON storage when MySQL environment configuration is absent.
 - **TERMS-001** (Terms) - PASS: Private beta users must accept toy-simulator terms before gameplay actions are available.
 - **TERMS-002** (Terms) - PASS: Terms acceptance records include user, required terms version, accepted version, timestamp, and source context.
 - **TERMS-003** (Terms) - PASS: Current-user and Admin v2 APIs expose terms acceptance status without exposing other users' private state.
@@ -424,7 +424,7 @@ Application: 9.1.1
 - **API-001** (API) - PASS: The frozen /api/v1 compatibility surface remains available while auth, current-user, and Admin user-management additions use /api/v2.
 - **API-002** (API) - PASS: v2 auth, current-user, terms, token, and Admin user-management responses use the standard ok/data or ok/error envelope.
 - **TEST-037** (Tests) - PASS: API tests cover login, logout, current-user lookup, unauthorized access, bootstrap Admin, inactive users, and terms status.
-- **TEST-038** (Tests) - PLANNED: Storage tests cover JSON provider parity and MySQL schema/provider behavior where environment support is available.
+- **TEST-038** (Tests) - PASS: Storage tests cover JSON provider parity and MySQL schema/provider behavior where environment support is available.
 - **TEST-039** (Tests) - PLANNED: API and browser tests cover two authenticated users playing each game with isolated balances, state, history, bots, and autoplay.
 - **TEST-040** (Tests) - PLANNED: Integration validation runs the complete auth, MySQL, token terminology, licensing, and private-session path from a copied deployment environment.
 - **TEST-041** (Tests) - PASS: API validation covers loopback default preservation and fail-closed bootstrap configuration for non-loopback or explicitly public deployment startup.

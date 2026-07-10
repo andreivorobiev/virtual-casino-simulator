@@ -13,11 +13,22 @@ from typing import Any, Callable
 from casino.config import DATA_DIR, GAME_DATA_DIR, LOG_DIR, SCHEMA_VERSION
 # Import required dependency so this module can use its public functions or constants.
 from casino.core.clock import utc_now
-# Import required dependency so migration can honor the configured storage provider.
-from casino.core.storage import storage_provider_name
+# Import required dependency so JSON-shaped state can use the configured storage provider.
+from casino.core.storage import get_storage_provider, storage_provider_name
 
 # Set _LOCK to the value needed for the next operation.
 _LOCK = threading.RLock()
+
+# Convert a data-directory path into the stable provider document key used by MySQL.
+def _provider_document_key(path: Path) -> str | None:
+    # Start protected path handling so files outside data/ retain normal filesystem behavior.
+    try:
+        # Return a portable relative key so copied deployments share the same document names.
+        return path.resolve().relative_to(DATA_DIR.resolve()).as_posix()
+    # Keep logs and other non-data files on disk when they are outside the provider root.
+    except ValueError:
+        # Return no key so the caller continues through the JSON file fallback.
+        return None
 
 # Define the ensure_dirs function used by this module.
 def ensure_dirs() -> None:
@@ -34,6 +45,12 @@ def ensure_dirs() -> None:
 
 # Define the read_json function used by this module.
 def read_json(path: Path, default: Any) -> Any:
+    # Resolve the provider document key for persistent files under data/.
+    document_key = _provider_document_key(path)
+    # Route every JSON-shaped data document through MySQL when it is explicitly selected.
+    if document_key is not None and storage_provider_name() == "mysql":
+        # Preserve lazy default-factory behavior through the provider abstraction.
+        return get_storage_provider().read_document(document_key, default)
     # Execute this statement as part of the module's documented control flow.
     ensure_dirs()
     # Manage this resource with automatic setup and cleanup.
@@ -57,6 +74,14 @@ def read_json(path: Path, default: Any) -> Any:
 
 # Define the write_json function used by this module.
 def write_json(path: Path, data: Any) -> None:
+    # Resolve the provider document key for persistent files under data/.
+    document_key = _provider_document_key(path)
+    # Route every JSON-shaped data document through MySQL when it is explicitly selected.
+    if document_key is not None and storage_provider_name() == "mysql":
+        # Persist auth, sessions, game state, bots, autoplay, and settings as provider documents.
+        get_storage_provider().write_document(document_key, data)
+        # Stop before creating a hybrid JSON copy on disk.
+        return
     # Execute this statement as part of the module's documented control flow.
     ensure_dirs()
     # Manage this resource with automatic setup and cleanup.

@@ -6047,129 +6047,142 @@
       "id": "STORAGE-001",
       "module": "Storage",
       "description": "Persistence is accessed through a storage provider abstraction with the existing local JSON provider as the default.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [
-        "API-STORAGE-001"
+        "STORAGE-JSON-001",
+        "STORAGE-MYSQL-LIVE-001"
       ],
       "browser_tests": [],
       "implementation_files": [
-        "codex/tasks/auth-mysql-token-storage.md"
+        "casino/core/storage.py",
+        "casino/core/state_store.py",
+        "tests/storage_tests.py"
       ],
       "introduced_in": "auth-mysql-token-foundation",
       "changed_in": "auth-mysql-token-foundation",
-      "notes": "Planned by GitHub epic #34 and child issue #35; runtime implementation is intentionally out of scope for the requirements/contracts worker."
+      "notes": "Validated by issue #68 with explicit JSON default selection and a live MySQL provider run."
     },
     {
       "id": "STORAGE-002",
       "module": "Storage",
       "description": "The storage provider supports users, sessions, terms acceptance, player records, game state, history, settings, and ledger data.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [
-        "API-STORAGE-001"
+        "STORAGE-MYSQL-LIVE-001"
       ],
       "browser_tests": [],
       "implementation_files": [
-        "codex/tasks/auth-mysql-token-storage.md"
+        "casino/core/storage.py",
+        "casino/core/state_store.py",
+        "tests/storage_tests.py"
       ],
       "introduced_in": "auth-mysql-token-foundation",
       "changed_in": "auth-mysql-token-foundation",
-      "notes": "Planned by GitHub epic #34 and child issue #35; runtime implementation is intentionally out of scope for the requirements/contracts worker."
+      "notes": "Provider documents cover auth, sessions, terms, game state, settings, autoplay, and bot profiles; typed tables cover players, ledger, and history."
     },
     {
       "id": "STORAGE-003",
       "module": "Storage",
       "description": "Default local JSON persistence remains available without requiring MySQL configuration.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [
-        "API-STORAGE-JSON-001"
+        "STORAGE-JSON-001"
       ],
       "browser_tests": [],
       "implementation_files": [
-        "codex/tasks/auth-mysql-token-storage.md"
+        "casino/core/storage.py",
+        "tests/storage_tests.py"
       ],
       "introduced_in": "auth-mysql-token-foundation",
       "changed_in": "auth-mysql-token-foundation",
-      "notes": "Planned by GitHub epic #34 and child issue #35; runtime implementation is intentionally out of scope for the requirements/contracts worker."
+      "notes": "JSON remains the default when CASINO_STORAGE_PROVIDER is absent."
     },
     {
       "id": "STORAGE-004",
       "module": "Storage",
       "description": "Runtime storage errors are surfaced through the standard ok/error API envelope.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [
-        "API-STORAGE-001"
+        "API-ERR-001"
       ],
       "browser_tests": [],
       "implementation_files": [
-        "codex/tasks/auth-mysql-token-storage.md"
+        "casino/app.py",
+        "casino/core/storage.py"
       ],
       "introduced_in": "auth-mysql-token-foundation",
       "changed_in": "auth-mysql-token-foundation",
-      "notes": "Planned by GitHub epic #34 and child issue #35; runtime implementation is intentionally out of scope for the requirements/contracts worker."
+      "notes": "Storage failures continue through the application error handler and standard response envelope."
     },
     {
       "id": "MYSQL-001",
       "module": "MySQL",
       "description": "A configured MySQL storage provider can bootstrap the approved schema for fresh private beta deployments.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [
-        "API-MYSQL-001"
+        "STORAGE-MYSQL-001",
+        "STORAGE-MYSQL-LIVE-001"
       ],
       "browser_tests": [],
       "implementation_files": [
-        "codex/tasks/auth-mysql-token-storage.md"
+        "casino/core/storage.py",
+        "scripts/mysql_schema.sql",
+        "tests/storage_tests.py"
       ],
       "introduced_in": "auth-mysql-token-foundation",
       "changed_in": "auth-mysql-token-foundation",
-      "notes": "Planned by GitHub epic #34 and child issue #35; runtime implementation is intentionally out of scope for the requirements/contracts worker."
+      "notes": "Fresh-schema bootstrap and schema-version recording were validated against MySQL Community Server 8.4 LTS."
     },
     {
       "id": "MYSQL-002",
       "module": "MySQL",
       "description": "Ledger-affecting MySQL writes are atomic so token debits, credits, refunds, and winnings remain consistent.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [
-        "API-MYSQL-LEDGER-001"
+        "STORAGE-MYSQL-LIVE-001"
       ],
       "browser_tests": [],
       "implementation_files": [
-        "codex/tasks/auth-mysql-token-storage.md"
+        "casino/core/storage.py",
+        "tests/storage_tests.py"
       ],
       "introduced_in": "auth-mysql-token-foundation",
       "changed_in": "auth-mysql-token-foundation",
-      "notes": "Planned by GitHub epic #34 and child issue #35; runtime implementation is intentionally out of scope for the requirements/contracts worker."
+      "notes": "Concurrent live debits validate SELECT FOR UPDATE and one commit boundary without lost wallet updates."
     },
     {
       "id": "MYSQL-003",
       "module": "MySQL",
       "description": "MySQL support starts from fresh seed/bootstrap data and does not require importing the existing local JSON data set.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [
-        "API-MYSQL-001"
+        "STORAGE-MYSQL-LIVE-001"
       ],
       "browser_tests": [],
       "implementation_files": [
-        "codex/tasks/auth-mysql-token-storage.md"
+        "casino/core/storage.py",
+        "casino/core/state_store.py"
       ],
       "introduced_in": "auth-mysql-token-foundation",
       "changed_in": "auth-mysql-token-foundation",
-      "notes": "Planned by GitHub epic #34 and child issue #35; runtime implementation is intentionally out of scope for the requirements/contracts worker."
+      "notes": "MySQL starts from provider seed data and intentionally skips legacy JSON import."
     },
     {
       "id": "MYSQL-004",
       "module": "MySQL",
       "description": "The application can run with JSON storage when MySQL environment configuration is absent.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [
-        "API-STORAGE-JSON-001"
+        "STORAGE-JSON-001"
       ],
       "browser_tests": [],
       "implementation_files": [
-        "codex/tasks/auth-mysql-token-storage.md"
+        "casino/core/storage.py",
+        "tests/storage_tests.py"
       ],
       "introduced_in": "auth-mysql-token-foundation",
       "changed_in": "auth-mysql-token-foundation",
-      "notes": "Planned by GitHub epic #34 and child issue #35; runtime implementation is intentionally out of scope for the requirements/contracts worker."
+      "notes": "JSON fallback remains available without MySQL environment configuration."
     },
     {
       "id": "TERMS-001",
@@ -6404,19 +6417,20 @@
       "id": "TEST-038",
       "module": "Tests",
       "description": "Storage tests cover JSON provider parity and MySQL schema/provider behavior where environment support is available.",
-      "status": "PLANNED",
+      "status": "PASS",
       "api_tests": [
-        "API-STORAGE-001",
-        "API-MYSQL-001"
+        "STORAGE-JSON-001",
+        "STORAGE-MYSQL-001",
+        "STORAGE-MYSQL-LIVE-001"
       ],
       "browser_tests": [],
       "implementation_files": [
-        "codex/tasks/auth-mysql-token-storage.md",
-        "codex/tasks/auth-mysql-token-validation.md"
+        "tests/storage_tests.py",
+        "tests/run_tests.py"
       ],
       "introduced_in": "auth-mysql-token-foundation",
       "changed_in": "auth-mysql-token-foundation",
-      "notes": "Planned by GitHub epic #34 and child issue #35; runtime implementation is intentionally out of scope for the requirements/contracts worker."
+      "notes": "Issue #68 adds an explicit live-service gate while preserving service-free schema checks."
     },
     {
       "id": "TEST-039",

@@ -116,11 +116,15 @@ def assert_condition(value, message):
     assert value, message
 
 # Define the run_storage_tests function used by this module.
-def run_storage_tests():
+def run_storage_tests(include_live=False):
     # Execute the JSON fallback parity test for provider-backed players, ledger, history, and settings.
     run_case('STORAGE-JSON-001',['CORE-017','LEDGER-001','LEDGER-007','TEST-030'],storage_tests.run_json_provider_parity)
     # Execute the MySQL schema and atomic ledger-provider path test without requiring a live service.
     run_case('STORAGE-MYSQL-001',['CORE-017','LEDGER-001','LEDGER-007','LEDGER-009'],storage_tests.run_mysql_schema_provider_path)
+    # Execute the real-service persistence and concurrent-ledger gate only when explicitly requested.
+    if include_live:
+        # Map the live integration case to the durable storage and MySQL requirements.
+        run_case('STORAGE-MYSQL-LIVE-001',['STORAGE-001','STORAGE-002','STORAGE-003','STORAGE-004','MYSQL-001','MYSQL-002','MYSQL-003','MYSQL-004','TEST-038'],storage_tests.run_mysql_live_provider_path)
 
 # Define the read_i18n_json function used by this module.
 def read_i18n_json(path):
@@ -1235,7 +1239,13 @@ def run_browser_tests():
                 # Expand autoplay through its player-facing disclosure control.
                 page.get_by_test_id('roulette-autoplay-disclosure').locator('summary').click()
                 # Start and stop Roulette autoplay through the shared control-plane widget.
-                page.get_by_test_id('roulette-auto-rounds').fill('5'); page.get_by_test_id('roulette-auto-start').click(); page.wait_for_timeout(400); page.get_by_test_id('roulette-auto-stop').click(); page.wait_for_timeout(500)
+                page.get_by_test_id('roulette-auto-rounds').fill('5'); page.get_by_test_id('roulette-auto-start').click()
+                # Wait for the committed autoplay spin to enter its visible atomic action before requesting stop.
+                page.wait_for_function("() => document.querySelector('[data-testid=\"roulette-result-region\"]')?.dataset.phase === 'spinning'", timeout=7000)
+                # Request stop while the current committed spin is allowed to finish safely.
+                page.get_by_test_id('roulette-auto-stop').click()
+                # Wait for that committed spin to settle before capturing route-return persistence evidence.
+                page.wait_for_function("() => document.querySelector('[data-testid=\"roulette-result-region\"]')?.dataset.phase === 'settled'", timeout=7000)
                 # Execute this statement as part of the module's documented control flow.
                 run_case('BR-AUTO-ROU-001',['AUTO-003','AUTO-010','ROU-047'],lambda: page.get_by_text('Off').first.is_visible())
                 # Collapse autoplay after verification so route-return evidence restores the gameplay-first composition.
@@ -1588,13 +1598,13 @@ def run_browser_tests():
 # Define the main function used by this module.
 def main():
     # Set ap to the value needed for the next operation.
-    ap=argparse.ArgumentParser(); ap.add_argument('--api',action='store_true'); ap.add_argument('--browser',action='store_true'); ap.add_argument('--storage',action='store_true'); args=ap.parse_args()
+    ap=argparse.ArgumentParser(); ap.add_argument('--api',action='store_true'); ap.add_argument('--browser',action='store_true'); ap.add_argument('--storage',action='store_true'); ap.add_argument('--mysql-live',action='store_true'); args=ap.parse_args()
     # Branch when the following condition is true.
-    if not args.api and not args.browser and not args.storage: args.api=True
+    if not args.api and not args.browser and not args.storage and not args.mysql_live: args.api=True
     # Start protected logic so failures can be handled safely.
     try:
         # Branch when the following condition is true.
-        if args.storage: run_storage_tests()
+        if args.storage or args.mysql_live: run_storage_tests(include_live=args.mysql_live)
         # Branch when the following condition is true.
         if args.api: run_api_tests()
         # Branch when the following condition is true.
