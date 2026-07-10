@@ -5478,7 +5478,9 @@
       "api_tests": [
         "API-I18N-001"
       ],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-I18N-ROUTES-001"
+      ],
       "implementation_files": [
         "web/core/i18n.js",
         "web/i18n/manifest.json",
@@ -5486,8 +5488,8 @@
         "web/i18n/ru-RU/common.json"
       ],
       "introduced_in": "9.2.0",
-      "changed_in": "9.2.0",
-      "notes": "English remains the canonical source locale; Russian resources must match keys and placeholders."
+      "changed_in": "9.2.4",
+      "notes": "English remains the canonical source locale; Russian resources must match keys and placeholders. BR-I18N-ROUTES-001 verifies concurrent lazy-domain loading and scans every game route in both locales for player-visible key, placeholder, encoding, and invalid-value leaks."
     },
     {
       "id": "I18N-002",

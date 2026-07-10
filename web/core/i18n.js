@@ -180,8 +180,17 @@ function applyDocumentLocale() {
 
 // Export initI18n so pages can load the domains they own before rendering.
 export async function initI18n({ domains = [] } = {}) {
-  // Branch when initialization is already in progress or complete.
-  if (initPromise) return initPromise;
+  // Branch when base initialization is already in progress or complete.
+  if (initPromise) {
+    // Wait for base locale state before loading domains requested by a lazy route.
+    await initPromise;
+    // Load every newly requested domain so late-mounted games never render raw keys.
+    await Promise.all([...new Set(domains)].map(domain => loadI18nDomain(domain)));
+    // Refresh declarative strings after late domain resources become available.
+    applyTranslations(document);
+    // Return current state so repeated initialization matches the first-call contract.
+    return getLocaleState();
+  }
   // Set initPromise so concurrent module imports share the same startup work.
   initPromise = (async () => {
     // Call manifest loading before resolving locales.
