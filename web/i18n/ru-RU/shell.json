@@ -7,7 +7,7 @@
   "auth.submit": "Войти",
   "auth.termsCheck": "Я понимаю, что это игрушечный симулятор, а не сайт азартных игр, и игровые токены не имеют денежной ценности.",
   "auth.title": "Войдите, чтобы играть",
-  "auth.username": "Имя пользователя",
+  "auth.email": "Электронная почта",
   "brand.subtitle": "Проверочный релиз v9 - только игровые токены",
   "brand.title": "Virtual Casino Simulator",
   "games.baccarat.description": "Punto Banco с burn/cut, ставками Player/Banker/Tie, ботами и историей дорог.",

@@ -165,8 +165,10 @@ def build_router() -> Router:
     @router.post(r"/api/v2/auth/login")
     # Define the auth_login function used by this module.
     def auth_login(body, query, context):
-        # Set result to the value needed for the next operation.
-        result = auth.login(body.get("email", ""), body.get("password", ""), context.get("client", ""))
+        # Prefer the explicit email field while preserving the published username alias for compatible clients.
+        email = body.get("email") or body.get("username", "")
+        # Authenticate the normalized email credential through the backend auth service.
+        result = auth.login(email, body.get("password", ""), context.get("client", ""))
         # Execute this statement as part of the module's documented control flow.
         context.setdefault("response_headers", []).append(auth.cookie_header(result["session"]["token"]))
         # Return the computed value to the caller.
