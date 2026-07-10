@@ -1,8 +1,10 @@
 // AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
 // Import required dependency so this module can call the frozen API envelope safely.
-import { api, logClient } from './core/api.js';
+import { acceptTerms, addUserTokens, api, currentUser, logClient, login, logout } from './core/api.js';
 // Import required dependency so this module can render shared wallet and premium UI helpers.
-import { refreshBalance, addFakeMoney, toast, money, safe, renderPremiumTag } from './core/ui.js';
+import { renderTokenBalance, toast, tokens, safe, renderPremiumTag } from './core/ui.js';
+// Import required dependency so the shell can preserve locale across auth and route changes.
+import { getLocaleState, initI18n, onLocaleChange, setLocale, t } from './core/i18n.js';
 // Import required dependency so this module can preload global voice settings before games mount.
 import { loadVoiceSettings } from './core/voice.js';
 
@@ -27,6 +29,8 @@ const loadedGames = new Map();
 let active = null;
 // Cache the latest casino state so lobby and status rail values render without extra calls.
 let latestState = null;
+// Cache the authenticated current-user payload so wallet and profile UI stay consistent.
+let currentSession = null;
 
 // Relay game/autoplay toast events through the shell-level toast outlet.
 window.addEventListener('casino-toast', event => toast(event.detail?.message || 'Auto stopped'));
@@ -34,6 +38,175 @@ window.addEventListener('casino-toast', event => toast(event.detail?.message || 
 window.addEventListener('error', event => logClient('window_error', { message: event.message, filename: event.filename, lineno: event.lineno, colno: event.colno }));
 // Report unhandled promise rejections through the client log API for admin visibility.
 window.addEventListener('unhandledrejection', event => logClient('unhandled_rejection', { reason: String(event.reason?.message || event.reason) }));
+
+// Normalize the draft v2 current-user payloads without committing to backend internals.
+function normalizeCurrentUser(payload) {
+  // Store data so standard API envelopes and direct payloads both work.
+  const data = payload?.current_user || payload || {};
+  // Store user so profile fields can be read from one place.
+  const user = data.user || {};
+  // Store player so token fields can be read from one place.
+  const player = data.player || {};
+  // Store terms so terms-required flags can be read from one place.
+  const terms = data.terms || user.terms || {};
+  // Store termsRequired so early backend payload drafts remain compatible.
+  const termsRequired = terms.required === true || user.terms_required === true || data.terms_required === true || terms.accepted === false;
+  // Return a normalized current-user session object for shell rendering.
+  return { ...data, user, player, terms: { ...terms, required: termsRequired } };
+}
+
+// Render the locale selector options from the loaded manifest.
+function localeOptionsHtml() {
+  // Store locales so the selector follows the manifest rather than hard-coded values.
+  const locales = getLocaleState().locales || [];
+  // Return option markup for every enabled UI locale.
+  return locales.map(locale => `<option value="${safe(locale.id)}">${safe(locale.nativeLabel || locale.label || locale.id)}</option>`).join('');
+}
+
+// Wire a locale selector while preserving the current auth or route state.
+function wireLocaleSelect(select, afterChange) {
+  // Stop when the requested selector is not present in the current screen.
+  if (!select) return;
+  // Fill the selector with manifest locales before setting the active option.
+  select.innerHTML = localeOptionsHtml();
+  // Select the active locale so refreshes preserve the user's choice.
+  select.value = getLocaleState().locale;
+  // Switch language in place without resetting the active route or auth step.
+  select.onchange = async () => { await setLocale(select.value); afterChange?.(); };
+}
+
+// Keep persistent shell profile and wallet nodes synchronized with the current user.
+function updateCurrentUserShell() {
+  // Expose the current-user session so legacy game refresh calls keep token formatting.
+  window.CasinoCurrentUser = currentSession;
+  // Render the fake-token balance with the required token glyph.
+  const amount = renderTokenBalance(currentSession);
+  // Read the logout button reserved by index.html.
+  const logoutButton = document.getElementById('logout-btn');
+  // Read the best available display name for the authenticated user.
+  const name = currentSession?.user?.display_name || currentSession?.user?.username || currentSession?.user?.email || 'Player';
+  // Label the logout control with the current user for accessibility.
+  if (logoutButton) logoutButton.setAttribute('aria-label', `Logout ${name}`);
+  // Read the language selector in the persistent topbar.
+  const localeSelect = document.getElementById('shell-locale-select');
+  // Wire the persistent locale selector without remounting games.
+  wireLocaleSelect(localeSelect, () => { renderNav(); if (active === 'lobby') navigate('lobby'); });
+  // Return the rendered token amount for test and toast flows.
+  return amount;
+}
+
+// Render a logged-out browser gate before any casino route can mount.
+function renderLoginGate(message = '') {
+  // Clear the public current-user hook while the browser is logged out.
+  window.CasinoCurrentUser = null;
+  // Mark the document so chrome and game routes stay hidden while logged out.
+  document.body.classList.add('auth-locked');
+  // Read the main route outlet reserved by index.html.
+  const view = document.getElementById('view');
+  // Apply the auth screen class contract for login and terms flows.
+  view.className = 'screen auth-screen';
+  // Render the browser login gate with private-beta toy-simulator acknowledgement.
+  view.innerHTML = `<section class="auth-panel" data-testid="login-gate"><p class="eyebrow">${safe(t('auth.eyebrow', {}, 'shell'))}</p><h1>${safe(t('auth.title', {}, 'shell'))}</h1><p class="auth-copy">${safe(t('auth.copy', {}, 'shell'))}</p><form id="login-form" class="auth-form"><label>${safe(t('auth.username', {}, 'shell'))}<input id="login-username" data-testid="login-username" autocomplete="username" required></label><label>${safe(t('auth.password', {}, 'shell'))}<input id="login-password" data-testid="login-password" type="password" autocomplete="current-password" required></label><label>${safe(t('auth.language', {}, 'shell'))}<select id="auth-locale-select" data-testid="auth-locale-select"></select></label><label class="check-row"><input id="login-terms-check" data-testid="login-terms-check" type="checkbox" required><span>${safe(t('auth.termsCheck', {}, 'shell'))}</span></label><button class="primary" data-testid="login-submit" type="submit">${safe(t('auth.submit', {}, 'shell'))}</button><p id="auth-message" class="auth-message">${safe(message)}</p></form></section>`;
+  // Wire the auth-screen locale selector and rerender the gate after switching.
+  wireLocaleSelect(document.getElementById('auth-locale-select'), () => renderLoginGate(message));
+  // Wire form submission through the v2 auth login endpoint.
+  document.getElementById('login-form').onsubmit = handleLoginSubmit;
+}
+
+// Render the terms acceptance step when the current session still requires it.
+function renderTermsGate(session) {
+  // Store the current session so accepted terms can continue into the shell.
+  currentSession = session;
+  // Mark the document so chrome and game routes stay hidden until terms are accepted.
+  document.body.classList.add('auth-locked');
+  // Read the main route outlet reserved by index.html.
+  const view = document.getElementById('view');
+  // Apply the auth screen class contract for login and terms flows.
+  view.className = 'screen auth-screen';
+  // Read the required terms version from the current-user payload.
+  const version = session.terms?.version || session.terms?.required_version || 'private-beta';
+  // Render a concise toy-simulator terms acknowledgement gate.
+  view.innerHTML = `<section class="auth-panel" data-testid="terms-gate"><p class="eyebrow">${safe(t('terms.eyebrow', {}, 'shell'))}</p><h1>${safe(t('terms.title', {}, 'shell'))}</h1><p class="auth-copy">${safe(t('terms.copy', {}, 'shell'))}</p><p class="auth-copy strong">${safe(t('terms.version', { version }, 'shell'))}</p><button id="accept-terms-btn" class="primary" data-testid="accept-terms" type="button">${safe(t('terms.accept', {}, 'shell'))}</button><p id="auth-message" class="auth-message"></p></section>`;
+  // Wire the accept button through the v2 current-user terms endpoint.
+  document.getElementById('accept-terms-btn').onclick = handleTermsAccept;
+}
+
+// Enter the authenticated casino shell after login and terms are complete.
+async function enterAuthenticated(session) {
+  // Store the normalized current user for shell rendering.
+  currentSession = normalizeCurrentUser(session);
+  // Branch to terms acceptance before showing the casino shell.
+  if (currentSession.terms?.required) { renderTermsGate(currentSession); return; }
+  // Reveal the casino chrome now that the browser session is authenticated.
+  document.body.classList.remove('auth-locked');
+  // Update the persistent wallet, logout, and locale controls.
+  updateCurrentUserShell();
+  // Load casino state for status rail and initial lobby counts.
+  await refreshShellState();
+  // Render the active route or the lobby after successful authentication.
+  await navigate(active || 'lobby');
+}
+
+// Submit the login form to the backend-owned auth endpoint.
+async function handleLoginSubmit(event) {
+  // Prevent the browser from reloading during the auth flow.
+  event.preventDefault();
+  // Read the shared message outlet for validation and API errors.
+  const message = document.getElementById('auth-message');
+  // Start protected login logic so validation errors stay inside the auth panel.
+  try {
+    // Read the username from the browser-visible login field.
+    const username = document.getElementById('login-username').value.trim();
+    // Read the password from the browser-visible login field.
+    const password = document.getElementById('login-password').value;
+    // Read the active locale so backend sessions can preserve user language.
+    const locale = getLocaleState().locale;
+    // Call the planned v2 auth endpoint without changing backend internals.
+    const session = await login({ username, password, locale, terms_acknowledged: true });
+    // Enter the authenticated shell or terms step from the returned payload.
+    await enterAuthenticated(session);
+  // Handle failed login attempts with local auth-panel feedback.
+  } catch (err) {
+    // Render the API error without leaving the login gate.
+    if (message) message.textContent = err.message;
+  }
+}
+
+// Accept the required private beta toy-simulator terms for the current user.
+async function handleTermsAccept() {
+  // Read the shared message outlet for API errors.
+  const message = document.getElementById('auth-message');
+  // Start protected terms logic so API errors stay inside the terms panel.
+  try {
+    // Read the required terms version from the cached session.
+    const version = currentSession?.terms?.version || currentSession?.terms?.required_version || 'private-beta';
+    // Call the planned v2 current-user terms endpoint.
+    const session = await acceptTerms({ terms_version: version, locale: getLocaleState().locale });
+    // Enter the authenticated shell with the updated current-user payload.
+    await enterAuthenticated(session);
+  // Handle failed terms acceptance with local auth-panel feedback.
+  } catch (err) {
+    // Render the API error without leaving the terms gate.
+    if (message) message.textContent = err.message;
+  }
+}
+
+// Refresh the current-user session and choose the correct first screen.
+async function refreshCurrentSession() {
+  // Start protected current-user loading so anonymous browsers see the login gate.
+  try {
+    // Read the planned v2 current-user endpoint.
+    const session = await currentUser();
+    // Enter the authenticated shell or terms step from the returned payload.
+    await enterAuthenticated(session);
+  // Handle missing or expired sessions by showing the browser login gate.
+  } catch (_) {
+    // Clear the current session so no stale wallet can render.
+    currentSession = null;
+    // Render the logged-out gate before any route mounts.
+    renderLoginGate();
+  }
+}
 
 // Load a game module lazily while preserving one module boundary per game.
 async function loadGame(desc) {
@@ -63,11 +236,11 @@ function renderNav() {
   // Read the navigation outlet that index.html reserves for route buttons.
   const nav = document.getElementById('main-nav');
   // Build the lobby button with the active shell class when selected.
-  const items = [`<button data-route="lobby" class="nav-item ${active === 'lobby' ? 'active' : ''}" data-testid="nav-lobby"><span class="nav-icon" aria-hidden="true">&#8962;</span>Lobby</button>`];
+  const items = [`<button data-route="lobby" class="nav-item ${active === 'lobby' ? 'active' : ''}" data-testid="nav-lobby"><span class="nav-icon" aria-hidden="true">&#8962;</span>${safe(t('nav.lobby', {}, 'shell'))}</button>`];
   // Add one button per game so every game remains equally reachable.
-  gameDescriptors.forEach(game => items.push(`<button data-route="${game.id}" class="nav-item ${active === game.id ? 'active' : ''}" data-testid="nav-${game.id}">${safe(game.label)}</button>`));
+  gameDescriptors.forEach(game => items.push(`<button data-route="${game.id}" class="nav-item ${active === game.id ? 'active' : ''}" data-testid="nav-${game.id}">${safe(t(`games.${game.id}.label`, {}, 'shell'))}</button>`));
   // Add the Admin route as a normal top-level shell affordance.
-  items.push('<button data-admin="true" class="nav-item admin" data-testid="nav-admin">Admin</button>');
+  items.push(`<button data-admin="true" class="nav-item admin" data-testid="nav-admin">${safe(t('nav.admin', {}, 'shell'))}</button>`);
   // Replace the nav contents atomically so active state cannot drift.
   nav.innerHTML = items.join('');
   // Wire every app route button to the shared navigate function.
@@ -100,8 +273,8 @@ function lobbyHtml(state = latestState) {
   const playerCount = Array.isArray(state?.players) ? state.players.length : 0;
   // Render the game card collection from the shared route registry.
   const cards = gameDescriptors.map(game => lobbyCardHtml(game)).join('');
-  // Render the premium trust rail with fake-money, bot, autoplay, and ledger cues.
-  const trustRail = [trustItemHtml('SIM', 'Local Simulator', 'All fake money'), trustItemHtml('BOT', `${playerCount} Players`, 'Human and bots'), trustItemHtml('AUTO', 'Autoplay Ready', 'Control-plane automation'), trustItemHtml('LED', 'Ledger-Backed', `${gameCount} games tracked`)].join('');
+  // Render the premium trust rail with play-token, bot, autoplay, and ledger cues.
+  const trustRail = [trustItemHtml('SIM', 'Local Simulator', 'All play tokens'), trustItemHtml('BOT', `${playerCount} Players`, 'Human and bots'), trustItemHtml('AUTO', 'Autoplay Ready', 'Control-plane automation'), trustItemHtml('LED', 'Ledger-Backed', `${gameCount} games tracked`)].join('');
   // Return the complete lobby markup as one route payload.
   return `<section class="lobby" data-testid="lobby"><section class="lobby-hero" aria-label="Lobby introduction"><div><p class="eyebrow">Choose your table</p><h1 class="hero-title">Midnight Ledger Casino</h1><div class="hero-rule"><span>&#9824;</span></div></div><aside class="trust-rail" data-testid="lobby-trust-rail" aria-label="Casino status">${trustRail}</aside></section><section class="game-gallery" aria-label="Games">${cards}</section></section>`;
 }
@@ -159,6 +332,8 @@ async function refreshShellState(options = {}) {
 
 // Navigate between lobby and game routes while keeping one mounted game at a time.
 export async function navigate(route) {
+  // Branch when an unauthenticated browser tries to navigate before the auth gate is complete.
+  if (!currentSession || currentSession.terms?.required) return;
   // Store the requested route for error reporting.
   let targetRoute = route;
   // Start protected navigation so failures render inside the route outlet.
@@ -198,8 +373,8 @@ export async function navigate(route) {
     const game = await loadGame(desc);
     // Mount the game into the same route outlet used by the original app.
     await game.mount(view);
-    // Refresh wallet and status rail after route mount.
-    await refreshBalance();
+    // Refresh the authenticated token wallet after route mount.
+    updateCurrentUserShell();
   // Handle navigation errors with a route-local recovery panel.
   } catch (err) {
     // Write diagnostic output so the current operation can be inspected.
@@ -219,36 +394,57 @@ export async function navigate(route) {
 
 // Initialize shell state, wallet behavior, and the first lobby route.
 async function init() {
-  // Read the add-money button from the wallet popover.
-  const addButton = document.getElementById('add-money-btn');
-  // Wire fake-money addition through the existing public player endpoint.
+  // Initialize i18n before any auth or shell markup renders.
+  await initI18n({ domains: ['shell'] });
+  // Repaint persistent shell text when the locale changes.
+  onLocaleChange(() => { if (currentSession && !currentSession.terms?.required) { renderNav(); updateCurrentUserShell(); if (active === 'lobby') navigate('lobby'); } });
+  // Read the add-token button from the wallet popover.
+  const addButton = document.getElementById('add-token-btn');
+  // Wire token addition through the planned ledger-backed current-user endpoint.
   addButton.onclick = async () => {
-    // Start protected wallet mutation so validation errors become toasts.
+    // Start protected token mutation so validation errors become toasts.
     try {
-      // Read the requested fake-money amount from the wallet input.
-      const amount = Number(document.getElementById('add-money-amount').value || 0);
-      // Call the existing add-money helper, which refreshes the balance.
-      await addFakeMoney(amount);
+      // Read the requested play-token amount from the wallet input.
+      const amount = Number(document.getElementById('add-token-amount').value || 0);
+      // Call the current-user token helper, which returns the updated v2 session payload.
+      const session = await addUserTokens({ amount });
+      // Store the updated current user so wallet and shell controls stay current.
+      currentSession = normalizeCurrentUser(session);
+      // Refresh the token wallet from the updated current-user payload.
+      updateCurrentUserShell();
       // Refresh shell state so status rail counts stay current.
       await refreshShellState({ quiet: true });
-      // Close the wallet popover after a successful fake-money addition.
+      // Close the wallet popover after a successful token addition.
       document.querySelector('.wallet-menu')?.removeAttribute('open');
-      // Show positive feedback for the completed wallet action.
-      toast(`Added ${money(amount)} in fake money.`, true);
+      // Show positive feedback for the completed token action.
+      toast(t('toast.tokensAdded', { amount: tokens(amount) }, 'shell'), true);
     // Handle validation or API errors from the wallet action.
     } catch (err) {
       // Show the error message without interrupting the current route.
       toast(err.message);
     }
   };
+  // Read the logout button from the persistent topbar.
+  const logoutButton = document.getElementById('logout-btn');
+  // Wire logout through the planned v2 auth endpoint.
+  logoutButton.onclick = async () => {
+    // Start protected logout logic so stale sessions still end locally.
+    try { await logout(); } catch (_) {}
+    // Clear the current session after the backend logout attempt completes.
+    currentSession = null;
+    // Clear the public current-user hook after logout.
+    window.CasinoCurrentUser = null;
+    // Reset the active route so a later login starts at the lobby.
+    active = null;
+    // Render the browser login gate after logout.
+    renderLoginGate(t('auth.loggedOut', {}, 'shell'));
+  };
   // Start protected bootstrapping so the app can still show a friendly error toast.
   try {
     // Preload global voice settings for game modules that announce events.
     await loadVoiceSettings();
-    // Load casino state for status rail and initial lobby counts.
-    await refreshShellState();
-    // Load the human player balance into the premium wallet.
-    await refreshBalance();
+    // Resolve the current-user session before any casino route can mount.
+    await refreshCurrentSession();
   // Handle initial state failures with a visible toast and client log.
   } catch (err) {
     // Show the startup error in the shell toast.
@@ -256,10 +452,8 @@ async function init() {
     // Record the initial load failure for Admin telemetry.
     await logClient('initial_state_error', { message: err.message });
   }
-  // Render the lobby after shell bootstrapping has finished.
-  navigate('lobby');
   // Poll shell state periodically for connection and player-count status.
-  setInterval(() => refreshShellState({ quiet: true }), 30000);
+  setInterval(() => { if (currentSession && !currentSession.terms?.required) refreshShellState({ quiet: true }); }, 30000);
 }
 
 // Start the premium shell controller.

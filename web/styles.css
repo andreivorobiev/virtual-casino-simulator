@@ -126,12 +126,21 @@ label {
     linear-gradient(180deg, transparent 0, rgba(0, 0, 0, 0.28) 74%);
 }
 
+.casino-page.auth-locked {
+  overflow: auto;
+}
+
+.auth-locked .casino-topbar,
+.auth-locked .status-bar {
+  display: none;
+}
+
 .casino-topbar {
   position: relative;
   z-index: 2;
   display: grid;
-  grid-template-columns: minmax(260px, 360px) minmax(620px, 1fr) auto;
-  gap: 24px;
+  grid-template-columns: minmax(240px, 320px) minmax(420px, 1fr) auto;
+  gap: 16px;
   align-items: center;
   min-height: 92px;
   padding: 14px 24px;
@@ -238,6 +247,14 @@ label {
   align-items: center;
   justify-content: end;
   min-width: 0;
+}
+
+.shell-locale {
+  width: 126px;
+  height: 52px;
+  min-height: 52px;
+  border-radius: 18px;
+  background: rgba(4, 19, 14, 0.84);
 }
 
 .wallet-pill {
@@ -353,6 +370,73 @@ label {
   height: calc(100vh - 92px - 54px);
   min-height: 0;
   overflow: hidden;
+}
+
+.auth-screen {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  height: auto;
+  padding: 28px;
+  overflow: auto;
+}
+
+.auth-panel {
+  display: grid;
+  gap: 16px;
+  width: min(560px, 100%);
+  padding: 28px;
+  border: 1px solid rgba(255, 199, 83, 0.64);
+  border-radius: 18px;
+  background: rgba(3, 17, 12, 0.92);
+  box-shadow: 0 22px 70px rgba(0, 0, 0, 0.54), inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+.auth-panel h1 {
+  margin: 0;
+  color: var(--gold);
+  font-family: var(--font-display);
+  font-size: 42px;
+  line-height: 1.05;
+}
+
+.auth-copy {
+  margin: 0;
+  color: #ddd4b7;
+  font-size: 16px;
+  line-height: 1.45;
+}
+
+.auth-copy.strong {
+  color: #fff2c2;
+  font-weight: 800;
+}
+
+.auth-form {
+  display: grid;
+  gap: 14px;
+}
+
+.check-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: start;
+  color: #ddd4b7;
+  font-size: 14px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.check-row input {
+  min-height: 0;
+  margin-top: 2px;
+}
+
+.auth-message {
+  min-height: 20px;
+  margin: 0;
+  color: var(--bad);
 }
 
 .lobby-screen {

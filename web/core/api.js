@@ -2,7 +2,7 @@
 // Export this symbol so other modules can use it through the public module boundary.
 export async function api(path, options = {}) {
   // Store init so later code can read or update this value.
-  const init = { method: options.method || (options.body !== undefined ? 'POST' : 'GET'), headers: { 'Content-Type': 'application/json' } };
+  const init = { method: options.method || (options.body !== undefined ? 'POST' : 'GET'), headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }, credentials: 'include' };
   // Branch when the following condition is true.
   if (options.body !== undefined) init.body = JSON.stringify(options.body);
   // Store res so later code can read or update this value.
@@ -29,6 +29,16 @@ export async function api(path, options = {}) {
 export const post = (path, body = {}) => api(path, { method: 'POST', body });
 // Export this symbol so other modules can use it through the public module boundary.
 export const del = (path, body = {}) => api(path, { method: 'DELETE', body });
+// Export this symbol so the shell can read the authenticated v2 current-user payload.
+export const currentUser = () => api('/api/v2/me');
+// Export this symbol so the shell can start an authenticated browser session.
+export const login = body => post('/api/v2/auth/login', body);
+// Export this symbol so the shell can end the current authenticated browser session.
+export const logout = () => post('/api/v2/auth/logout', {});
+// Export this symbol so the shell can acknowledge the private beta toy-simulator terms.
+export const acceptTerms = body => post('/api/v2/me/terms/accept', body);
+// Export this symbol so the shell can request ledger-backed token additions for the current user.
+export const addUserTokens = body => post('/api/v2/me/tokens/add', body);
 // Export this symbol so other modules can use it through the public module boundary.
 export async function logClient(event, details = {}) {
   // Start protected logic so failures can be handled safely.

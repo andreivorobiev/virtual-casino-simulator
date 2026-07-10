@@ -2,7 +2,11 @@
 name = "virtual-casino-simulator"
 version = "9.1.1"
 description = "Local fake-money virtual casino simulator with isolated modules and GitHub/Codex governance."
+license = { text = "Apache-2.0" }
 requires-python = ">=3.10"
+
+[project.optional-dependencies]
+mysql = ["mysql-connector-python>=8.4"]
 
 [tool.virtual_casino]
 source_baseline = "9.1.0"

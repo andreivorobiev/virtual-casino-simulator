@@ -20,6 +20,12 @@
 - Requirement IDs changed: Supersede JSON-only persistence assumptions where needed.
 - Requirement IDs validated: CORE, LEDGER, PLAYER, STORAGE, MYSQL, TEST.
 
+## Durable Requirement/Contract References
+
+- Implement STORAGE-001 through STORAGE-004, MYSQL-001 through MYSQL-004, USER-001, USER-003, SESSION-001, SESSION-004, TOKEN-004, and TEST-038.
+- Preserve API-001 and API-002 envelope expectations if storage errors surface through API responses.
+- Do not add new contract files unless storage-specific envelope behavior cannot be represented by the existing v1 or v2 contracts.
+
 ## Scope
 
 - Impacted modules: core, ledger, players, tooling, tests.

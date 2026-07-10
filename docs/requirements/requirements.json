@@ -1,6 +1,6 @@
 {
   "release": "9.1.0",
-  "generated_at": "2026-07-08T09:14:36Z",
+  "generated_at": "2026-07-09T00:00:00Z",
   "requirements": [
     {
       "id": "CORE-001",
@@ -45,14 +45,20 @@
       "id": "CORE-004",
       "module": "Core",
       "description": "Application remains fake-money only with no real payment flows.",
-      "status": "PASS",
+      "status": "SUPERSEDED",
       "api_tests": [],
       "browser_tests": [],
       "implementation_files": [
         "casino/app.py",
         "web/app.js"
       ],
-      "notes": ""
+      "notes": "Superseded wording keeps the no-real-money policy while replacing fake-money language with toy-simulator play-token terms.",
+      "changed_in": "auth-mysql-token-foundation",
+      "superseded_by": [
+        "LIC-002",
+        "LIC-003",
+        "TOKEN-001"
+      ]
     },
     {
       "id": "CORE-005",
@@ -280,27 +286,37 @@
       "id": "LEDGER-001",
       "module": "Ledger",
       "description": "Each player has a persistent fake-money balance.",
-      "status": "PASS",
+      "status": "SUPERSEDED",
       "api_tests": [],
       "browser_tests": [],
       "implementation_files": [
         "casino/core/ledger.py",
         "casino/core/players.py"
       ],
-      "notes": ""
+      "notes": "Superseded wording replaces fake-money balances with user-scoped play-token balances.",
+      "changed_in": "auth-mysql-token-foundation",
+      "superseded_by": [
+        "TOKEN-004",
+        "USER-003"
+      ]
     },
     {
       "id": "LEDGER-002",
       "module": "Ledger",
       "description": "Human player exists by default.",
-      "status": "PASS",
+      "status": "SUPERSEDED",
       "api_tests": [],
       "browser_tests": [],
       "implementation_files": [
         "casino/core/ledger.py",
         "casino/core/players.py"
       ],
-      "notes": ""
+      "notes": "Superseded by authenticated users with bound player accounts instead of one default human assumption.",
+      "changed_in": "auth-mysql-token-foundation",
+      "superseded_by": [
+        "USER-001",
+        "USER-003"
+      ]
     },
     {
       "id": "LEDGER-003",
@@ -2096,7 +2112,7 @@
       "id": "SLOT-026",
       "module": "Slots",
       "description": "Slots remains fake-money only.",
-      "status": "PASS",
+      "status": "SUPERSEDED",
       "api_tests": [],
       "browser_tests": [
         "BR-SLOT-001"
@@ -2106,7 +2122,13 @@
         "casino/games/slots/api.py",
         "web/games/slots.js"
       ],
-      "notes": ""
+      "notes": "Superseded wording keeps no-real-money gameplay while using play-token terminology.",
+      "changed_in": "auth-mysql-token-foundation",
+      "superseded_by": [
+        "LIC-002",
+        "LIC-003",
+        "TOKEN-001"
+      ]
     },
     {
       "id": "BJ-001",
@@ -3266,7 +3288,7 @@
       "id": "KENO-021",
       "module": "Keno",
       "description": "Keno remains fake-money only.",
-      "status": "PASS",
+      "status": "SUPERSEDED",
       "api_tests": [],
       "browser_tests": [
         "BR-KENO-001"
@@ -3276,7 +3298,13 @@
         "casino/games/keno/api.py",
         "web/games/keno.js"
       ],
-      "notes": ""
+      "notes": "Superseded wording keeps no-real-money gameplay while using play-token terminology.",
+      "changed_in": "auth-mysql-token-foundation",
+      "superseded_by": [
+        "LIC-002",
+        "LIC-003",
+        "TOKEN-001"
+      ]
     },
     {
       "id": "KENO-022",
@@ -3670,7 +3698,7 @@
       "id": "BINGO-024",
       "module": "Bingo",
       "description": "Bingo remains fake-money only.",
-      "status": "PASS",
+      "status": "SUPERSEDED",
       "api_tests": [
         "API-BINGO-001"
       ],
@@ -3680,7 +3708,13 @@
         "casino/games/bingo/api.py",
         "web/games/bingo.js"
       ],
-      "notes": ""
+      "notes": "Superseded wording keeps no-real-money gameplay while using play-token terminology.",
+      "changed_in": "auth-mysql-token-foundation",
+      "superseded_by": [
+        "LIC-002",
+        "LIC-003",
+        "TOKEN-001"
+      ]
     },
     {
       "id": "ADMIN-001",
@@ -3704,7 +3738,7 @@
       "id": "ADMIN-002",
       "module": "Admin",
       "description": "Admin console is unauthenticated for local use.",
-      "status": "PASS",
+      "status": "SUPERSEDED",
       "api_tests": [
         "API-ADMIN-001"
       ],
@@ -3714,7 +3748,13 @@
         "web/admin.html",
         "web/admin.js"
       ],
-      "notes": ""
+      "notes": "Superseded for the authenticated private beta foundation; Admin will require authenticated Admin sessions in v2.",
+      "changed_in": "auth-mysql-token-foundation",
+      "superseded_by": [
+        "AUTH-001",
+        "SESSION-001",
+        "USER-004"
+      ]
     },
     {
       "id": "ADMIN-003",
@@ -5746,6 +5786,653 @@
       "introduced_in": "9.1.2",
       "changed_in": "9.1.2",
       "notes": "Voice announcements queue instead of cancelling active speech."
+    },
+    {
+      "id": "AUTH-001",
+      "module": "Auth",
+      "description": "Protected browser app and API routes require an authenticated private beta session.",
+      "status": "PLANNED",
+      "api_tests": [
+        "API-AUTH-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "contracts/openapi/auth.v2.yaml",
+        "codex/tasks/auth-mysql-token-auth-backend.md"
+      ],
+      "introduced_in": "auth-mysql-token-foundation",
+      "changed_in": "auth-mysql-token-foundation",
+      "notes": "Planned by GitHub epic #34 and child issue #35; runtime implementation is intentionally out of scope for the requirements/contracts worker."
+    },
+    {
+      "id": "AUTH-002",
+      "module": "Auth",
+      "description": "Login verifies server-side credentials and does not expose public self-signup or external identity-provider flows.",
+      "status": "PLANNED",
+      "api_tests": [
+        "API-AUTH-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "contracts/openapi/auth.v2.yaml",
+        "codex/tasks/auth-mysql-token-auth-backend.md"
+      ],
+      "introduced_in": "auth-mysql-token-foundation",
+      "changed_in": "auth-mysql-token-foundation",
+      "notes": "Planned by GitHub epic #34 and child issue #35; runtime implementation is intentionally out of scope for the requirements/contracts worker."
+    },
+    {
+      "id": "AUTH-003",
+      "module": "Auth",
+      "description": "Bootstrap Admin creation is operator-controlled and separate from public runtime registration.",
+      "status": "PLANNED",
+      "api_tests": [
+        "API-AUTH-BOOTSTRAP-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "contracts/openapi/auth.v2.yaml",
+        "codex/tasks/auth-mysql-token-auth-backend.md"
+      ],
+      "introduced_in": "auth-mysql-token-foundation",
+      "changed_in": "auth-mysql-token-foundation",
+      "notes": "Planned by GitHub epic #34 and child issue #35; runtime implementation is intentionally out of scope for the requirements/contracts worker."
+    },
+    {
+      "id": "AUTH-004",
+      "module": "Auth",
+      "description": "Unauthenticated or inactive-user access returns the standard ok/error API envelope without leaking protected data.",
+      "status": "PLANNED",
+      "api_tests": [
+        "API-AUTH-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "contracts/openapi/auth.v2.yaml",
+        "codex/tasks/auth-mysql-token-auth-backend.md"
+      ],
+      "introduced_in": "auth-mysql-token-foundation",
+      "changed_in": "auth-mysql-token-foundation",
+      "notes": "Planned by GitHub epic #34 and child issue #35; runtime implementation is intentionally out of scope for the requirements/contracts worker."
+    },
+    {
+      "id": "AUTH-005",
+      "module": "Auth",
+      "description": "Authenticated Admin-only actions require an active user with an Admin role.",
+      "status": "PLANNED",
+      "api_tests": [
+        "API-ADMIN-USERS-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "contracts/openapi/admin-users.v2.yaml",
+        "codex/tasks/auth-mysql-token-admin-users.md"
+      ],
+      "introduced_in": "auth-mysql-token-foundation",
+      "changed_in": "auth-mysql-token-foundation",
+      "notes": "Planned by GitHub epic #34 and child issue #35; runtime implementation is intentionally out of scope for the requirements/contracts worker."
+    },
+    {
+      "id": "SESSION-001",
+      "module": "Session",
+      "description": "Successful login creates a server-side session represented to clients by a protected session cookie.",
+      "status": "PLANNED",
+      "api_tests": [
+        "API-AUTH-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "contracts/openapi/auth.v2.yaml"
+      ],
+      "introduced_in": "auth-mysql-token-foundation",
+      "changed_in": "auth-mysql-token-foundation",
+      "notes": "Planned by GitHub epic #34 and child issue #35; runtime implementation is intentionally out of scope for the requirements/contracts worker."
+    },
+    {
+      "id": "SESSION-002",
+      "module": "Session",
+      "description": "Logout invalidates the current session before returning a standard ok/data envelope.",
+      "status": "PLANNED",
+      "api_tests": [
+        "API-AUTH-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "contracts/openapi/auth.v2.yaml"
+      ],
+      "introduced_in": "auth-mysql-token-foundation",
+      "changed_in": "auth-mysql-token-foundation",
+      "notes": "Planned by GitHub epic #34 and child issue #35; runtime implementation is intentionally out of scope for the requirements/contracts worker."
+    },
+    {
+      "id": "SESSION-003",
+      "module": "Session",
+      "description": "Current-user lookup returns user, role, session, terms, locale, and bound player token balance data.",
+      "status": "PLANNED",
+      "api_tests": [
+        "API-AUTH-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "contracts/openapi/auth.v2.yaml"
+      ],
+      "introduced_in": "auth-mysql-token-foundation",
+      "changed_in": "auth-mysql-token-foundation",
+      "notes": "Planned by GitHub epic #34 and child issue #35; runtime implementation is intentionally out of scope for the requirements/contracts worker."
+    },
+    {
+      "id": "SESSION-004",
+      "module": "Session",
+      "description": "Expired, revoked, or deactivated-user sessions are rejected consistently across protected APIs.",
+      "status": "PLANNED",
+      "api_tests": [
+        "API-AUTH-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "contracts/openapi/auth.v2.yaml"
+      ],
+      "introduced_in": "auth-mysql-token-foundation",
+      "changed_in": "auth-mysql-token-foundation",
+      "notes": "Planned by GitHub epic #34 and child issue #35; runtime implementation is intentionally out of scope for the requirements/contracts worker."
+    },
+    {
+      "id": "USER-001",
+      "module": "Users",
+      "description": "Each authenticated user has a durable user record and a bound default player account.",
+      "status": "PLANNED",
+      "api_tests": [
+        "API-AUTH-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "contracts/openapi/auth.v2.yaml",
+        "contracts/openapi/admin-users.v2.yaml"
+      ],
+      "introduced_in": "auth-mysql-token-foundation",
+      "changed_in": "auth-mysql-token-foundation",
+      "notes": "Planned by GitHub epic #34 and child issue #35; runtime implementation is intentionally out of scope for the requirements/contracts worker."
+    },
+    {
+      "id": "USER-002",
+      "module": "Users",
+      "description": "User records include roles, active status, locale preference, and terms acceptance metadata.",
+      "status": "PLANNED",
+      "api_tests": [
+        "API-ADMIN-USERS-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "contracts/openapi/admin-users.v2.yaml"
+      ],
+      "introduced_in": "auth-mysql-token-foundation",
+      "changed_in": "auth-mysql-token-foundation",
+      "notes": "Planned by GitHub epic #34 and child issue #35; runtime implementation is intentionally out of scope for the requirements/contracts worker."
+    },
+    {
+      "id": "USER-003",
+      "module": "Users",
+      "description": "Different authenticated users have isolated player balances, game state, history, and ledger views.",
+      "status": "PLANNED",
+      "api_tests": [
+        "API-PRIVATE-SESSION-001"
+      ],
+      "browser_tests": [
+        "BR-PRIVATE-SESSION-001"
+      ],
+      "implementation_files": [
+        "codex/tasks/auth-mysql-token-private-sessions.md"
+      ],
+      "introduced_in": "auth-mysql-token-foundation",
+      "changed_in": "auth-mysql-token-foundation",
+      "notes": "Planned by GitHub epic #34 and child issue #35; runtime implementation is intentionally out of scope for the requirements/contracts worker."
+    },
+    {
+      "id": "USER-004",
+      "module": "Users",
+      "description": "Admin can create users, deactivate or reactivate users, reset passwords, and inspect user state through v2 Admin APIs.",
+      "status": "PLANNED",
+      "api_tests": [
+        "API-ADMIN-USERS-001"
+      ],
+      "browser_tests": [
+        "BR-ADMIN-USERS-001"
+      ],
+      "implementation_files": [
+        "contracts/openapi/admin-users.v2.yaml",
+        "codex/tasks/auth-mysql-token-admin-users.md"
+      ],
+      "introduced_in": "auth-mysql-token-foundation",
+      "changed_in": "auth-mysql-token-foundation",
+      "notes": "Planned by GitHub epic #34 and child issue #35; runtime implementation is intentionally out of scope for the requirements/contracts worker."
+    },
+    {
+      "id": "USER-005",
+      "module": "Users",
+      "description": "Bot controller accounts remain separate from private beta login users and cannot cross user session boundaries.",
+      "status": "PLANNED",
+      "api_tests": [
+        "API-PRIVATE-SESSION-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "codex/tasks/auth-mysql-token-private-sessions.md"
+      ],
+      "introduced_in": "auth-mysql-token-foundation",
+      "changed_in": "auth-mysql-token-foundation",
+      "notes": "Planned by GitHub epic #34 and child issue #35; runtime implementation is intentionally out of scope for the requirements/contracts worker."
+    },
+    {
+      "id": "STORAGE-001",
+      "module": "Storage",
+      "description": "Persistence is accessed through a storage provider abstraction with the existing local JSON provider as the default.",
+      "status": "PLANNED",
+      "api_tests": [
+        "API-STORAGE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "codex/tasks/auth-mysql-token-storage.md"
+      ],
+      "introduced_in": "auth-mysql-token-foundation",
+      "changed_in": "auth-mysql-token-foundation",
+      "notes": "Planned by GitHub epic #34 and child issue #35; runtime implementation is intentionally out of scope for the requirements/contracts worker."
+    },
+    {
+      "id": "STORAGE-002",
+      "module": "Storage",
+      "description": "The storage provider supports users, sessions, terms acceptance, player records, game state, history, settings, and ledger data.",
+      "status": "PLANNED",
+      "api_tests": [
+        "API-STORAGE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "codex/tasks/auth-mysql-token-storage.md"
+      ],
+      "introduced_in": "auth-mysql-token-foundation",
+      "changed_in": "auth-mysql-token-foundation",
+      "notes": "Planned by GitHub epic #34 and child issue #35; runtime implementation is intentionally out of scope for the requirements/contracts worker."
+    },
+    {
+      "id": "STORAGE-003",
+      "module": "Storage",
+      "description": "Default local JSON persistence remains available without requiring MySQL configuration.",
+      "status": "PLANNED",
+      "api_tests": [
+        "API-STORAGE-JSON-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "codex/tasks/auth-mysql-token-storage.md"
+      ],
+      "introduced_in": "auth-mysql-token-foundation",
+      "changed_in": "auth-mysql-token-foundation",
+      "notes": "Planned by GitHub epic #34 and child issue #35; runtime implementation is intentionally out of scope for the requirements/contracts worker."
+    },
+    {
+      "id": "STORAGE-004",
+      "module": "Storage",
+      "description": "Runtime storage errors are surfaced through the standard ok/error API envelope.",
+      "status": "PLANNED",
+      "api_tests": [
+        "API-STORAGE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "codex/tasks/auth-mysql-token-storage.md"
+      ],
+      "introduced_in": "auth-mysql-token-foundation",
+      "changed_in": "auth-mysql-token-foundation",
+      "notes": "Planned by GitHub epic #34 and child issue #35; runtime implementation is intentionally out of scope for the requirements/contracts worker."
+    },
+    {
+      "id": "MYSQL-001",
+      "module": "MySQL",
+      "description": "A configured MySQL storage provider can bootstrap the approved schema for fresh private beta deployments.",
+      "status": "PLANNED",
+      "api_tests": [
+        "API-MYSQL-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "codex/tasks/auth-mysql-token-storage.md"
+      ],
+      "introduced_in": "auth-mysql-token-foundation",
+      "changed_in": "auth-mysql-token-foundation",
+      "notes": "Planned by GitHub epic #34 and child issue #35; runtime implementation is intentionally out of scope for the requirements/contracts worker."
+    },
+    {
+      "id": "MYSQL-002",
+      "module": "MySQL",
+      "description": "Ledger-affecting MySQL writes are atomic so token debits, credits, refunds, and winnings remain consistent.",
+      "status": "PLANNED",
+      "api_tests": [
+        "API-MYSQL-LEDGER-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "codex/tasks/auth-mysql-token-storage.md"
+      ],
+      "introduced_in": "auth-mysql-token-foundation",
+      "changed_in": "auth-mysql-token-foundation",
+      "notes": "Planned by GitHub epic #34 and child issue #35; runtime implementation is intentionally out of scope for the requirements/contracts worker."
+    },
+    {
+      "id": "MYSQL-003",
+      "module": "MySQL",
+      "description": "MySQL support starts from fresh seed/bootstrap data and does not require importing the existing local JSON data set.",
+      "status": "PLANNED",
+      "api_tests": [
+        "API-MYSQL-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "codex/tasks/auth-mysql-token-storage.md"
+      ],
+      "introduced_in": "auth-mysql-token-foundation",
+      "changed_in": "auth-mysql-token-foundation",
+      "notes": "Planned by GitHub epic #34 and child issue #35; runtime implementation is intentionally out of scope for the requirements/contracts worker."
+    },
+    {
+      "id": "MYSQL-004",
+      "module": "MySQL",
+      "description": "The application can run with JSON storage when MySQL environment configuration is absent.",
+      "status": "PLANNED",
+      "api_tests": [
+        "API-STORAGE-JSON-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "codex/tasks/auth-mysql-token-storage.md"
+      ],
+      "introduced_in": "auth-mysql-token-foundation",
+      "changed_in": "auth-mysql-token-foundation",
+      "notes": "Planned by GitHub epic #34 and child issue #35; runtime implementation is intentionally out of scope for the requirements/contracts worker."
+    },
+    {
+      "id": "TERMS-001",
+      "module": "Terms",
+      "description": "Private beta users must accept toy-simulator terms before gameplay actions are available.",
+      "status": "PLANNED",
+      "api_tests": [
+        "API-TERMS-001"
+      ],
+      "browser_tests": [
+        "BR-TERMS-001"
+      ],
+      "implementation_files": [
+        "contracts/openapi/auth.v2.yaml",
+        "codex/tasks/auth-mysql-token-frontend-auth.md"
+      ],
+      "introduced_in": "auth-mysql-token-foundation",
+      "changed_in": "auth-mysql-token-foundation",
+      "notes": "Planned by GitHub epic #34 and child issue #35; runtime implementation is intentionally out of scope for the requirements/contracts worker."
+    },
+    {
+      "id": "TERMS-002",
+      "module": "Terms",
+      "description": "Terms acceptance records include user, required terms version, accepted version, timestamp, and source context.",
+      "status": "PLANNED",
+      "api_tests": [
+        "API-TERMS-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "contracts/openapi/auth.v2.yaml"
+      ],
+      "introduced_in": "auth-mysql-token-foundation",
+      "changed_in": "auth-mysql-token-foundation",
+      "notes": "Planned by GitHub epic #34 and child issue #35; runtime implementation is intentionally out of scope for the requirements/contracts worker."
+    },
+    {
+      "id": "TERMS-003",
+      "module": "Terms",
+      "description": "Current-user and Admin v2 APIs expose terms acceptance status without exposing other users' private state.",
+      "status": "PLANNED",
+      "api_tests": [
+        "API-TERMS-001",
+        "API-ADMIN-USERS-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "contracts/openapi/auth.v2.yaml",
+        "contracts/openapi/admin-users.v2.yaml"
+      ],
+      "introduced_in": "auth-mysql-token-foundation",
+      "changed_in": "auth-mysql-token-foundation",
+      "notes": "Planned by GitHub epic #34 and child issue #35; runtime implementation is intentionally out of scope for the requirements/contracts worker."
+    },
+    {
+      "id": "TERMS-004",
+      "module": "Terms",
+      "description": "Legal terms and privacy documentation describe the app as a private beta toy simulator rather than a gambling site.",
+      "status": "PLANNED",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        "codex/tasks/auth-mysql-token-licensing.md"
+      ],
+      "introduced_in": "auth-mysql-token-foundation",
+      "changed_in": "auth-mysql-token-foundation",
+      "notes": "Planned by GitHub epic #34 and child issue #35; runtime implementation is intentionally out of scope for the requirements/contracts worker."
+    },
+    {
+      "id": "LIC-001",
+      "module": "Licensing",
+      "description": "Repository source-code licensing is documented using Apache-2.0 for this private beta foundation.",
+      "status": "PLANNED",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        "codex/tasks/auth-mysql-token-licensing.md"
+      ],
+      "introduced_in": "auth-mysql-token-foundation",
+      "changed_in": "auth-mysql-token-foundation",
+      "notes": "Planned by GitHub epic #34 and child issue #35; runtime implementation is intentionally out of scope for the requirements/contracts worker."
+    },
+    {
+      "id": "LIC-002",
+      "module": "Licensing",
+      "description": "User-facing legal docs state the simulator has no real-money wagering, deposits, withdrawals, or prizes.",
+      "status": "PLANNED",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        "codex/tasks/auth-mysql-token-licensing.md"
+      ],
+      "introduced_in": "auth-mysql-token-foundation",
+      "changed_in": "auth-mysql-token-foundation",
+      "notes": "Planned by GitHub epic #34 and child issue #35; runtime implementation is intentionally out of scope for the requirements/contracts worker."
+    },
+    {
+      "id": "LIC-003",
+      "module": "Licensing",
+      "description": "Play tokens have no cash value, are not redeemable, and do not represent money or stored value.",
+      "status": "PLANNED",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        "codex/tasks/auth-mysql-token-licensing.md"
+      ],
+      "introduced_in": "auth-mysql-token-foundation",
+      "changed_in": "auth-mysql-token-foundation",
+      "notes": "Planned by GitHub epic #34 and child issue #35; runtime implementation is intentionally out of scope for the requirements/contracts worker."
+    },
+    {
+      "id": "TOKEN-001",
+      "module": "Tokens",
+      "description": "User-facing casino balances, wagers, payouts, and add-balance flows use play-token terminology instead of dollar or money wording.",
+      "status": "PLANNED",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-TOKEN-001"
+      ],
+      "implementation_files": [
+        "codex/tasks/auth-mysql-token-token-model.md"
+      ],
+      "introduced_in": "auth-mysql-token-foundation",
+      "changed_in": "auth-mysql-token-foundation",
+      "notes": "Planned by GitHub epic #34 and child issue #35; runtime implementation is intentionally out of scope for the requirements/contracts worker."
+    },
+    {
+      "id": "TOKEN-002",
+      "module": "Tokens",
+      "description": "New v2 APIs may use token terminology while v1 wire fields remain compatible for existing clients.",
+      "status": "PLANNED",
+      "api_tests": [
+        "API-CONTRACT-V2-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "contracts/openapi/auth.v2.yaml",
+        "contracts/openapi/admin-users.v2.yaml"
+      ],
+      "introduced_in": "auth-mysql-token-foundation",
+      "changed_in": "auth-mysql-token-foundation",
+      "notes": "Planned by GitHub epic #34 and child issue #35; runtime implementation is intentionally out of scope for the requirements/contracts worker."
+    },
+    {
+      "id": "TOKEN-003",
+      "module": "Tokens",
+      "description": "Add-token flows are ledger-backed play-token credits and never payment, deposit, or purchase flows.",
+      "status": "PLANNED",
+      "api_tests": [
+        "API-TOKEN-001"
+      ],
+      "browser_tests": [
+        "BR-TOKEN-001"
+      ],
+      "implementation_files": [
+        "contracts/openapi/auth.v2.yaml"
+      ],
+      "introduced_in": "auth-mysql-token-foundation",
+      "changed_in": "auth-mysql-token-foundation",
+      "notes": "Planned by GitHub epic #34 and child issue #35; runtime implementation is intentionally out of scope for the requirements/contracts worker."
+    },
+    {
+      "id": "TOKEN-004",
+      "module": "Tokens",
+      "description": "Token balances are scoped to the authenticated user's bound player and remain private from other non-Admin users.",
+      "status": "PLANNED",
+      "api_tests": [
+        "API-PRIVATE-SESSION-001"
+      ],
+      "browser_tests": [
+        "BR-PRIVATE-SESSION-001"
+      ],
+      "implementation_files": [
+        "contracts/openapi/auth.v2.yaml"
+      ],
+      "introduced_in": "auth-mysql-token-foundation",
+      "changed_in": "auth-mysql-token-foundation",
+      "notes": "Planned by GitHub epic #34 and child issue #35; runtime implementation is intentionally out of scope for the requirements/contracts worker."
+    },
+    {
+      "id": "API-001",
+      "module": "API",
+      "description": "The frozen /api/v1 compatibility surface remains available while auth, current-user, and Admin user-management additions use /api/v2.",
+      "status": "PLANNED",
+      "api_tests": [
+        "API-CONTRACT-V2-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "contracts/openapi/auth.v2.yaml",
+        "contracts/openapi/admin-users.v2.yaml"
+      ],
+      "introduced_in": "auth-mysql-token-foundation",
+      "changed_in": "auth-mysql-token-foundation",
+      "notes": "Planned by GitHub epic #34 and child issue #35; runtime implementation is intentionally out of scope for the requirements/contracts worker."
+    },
+    {
+      "id": "API-002",
+      "module": "API",
+      "description": "v2 auth, current-user, terms, token, and Admin user-management responses use the standard ok/data or ok/error envelope.",
+      "status": "PLANNED",
+      "api_tests": [
+        "API-CONTRACT-V2-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "contracts/openapi/auth.v2.yaml",
+        "contracts/openapi/admin-users.v2.yaml"
+      ],
+      "introduced_in": "auth-mysql-token-foundation",
+      "changed_in": "auth-mysql-token-foundation",
+      "notes": "Planned by GitHub epic #34 and child issue #35; runtime implementation is intentionally out of scope for the requirements/contracts worker."
+    },
+    {
+      "id": "TEST-037",
+      "module": "Tests",
+      "description": "API tests cover login, logout, current-user lookup, unauthorized access, bootstrap Admin, inactive users, and terms status.",
+      "status": "PLANNED",
+      "api_tests": [
+        "API-AUTH-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "codex/tasks/auth-mysql-token-auth-backend.md",
+        "codex/tasks/auth-mysql-token-validation.md"
+      ],
+      "introduced_in": "auth-mysql-token-foundation",
+      "changed_in": "auth-mysql-token-foundation",
+      "notes": "Planned by GitHub epic #34 and child issue #35; runtime implementation is intentionally out of scope for the requirements/contracts worker."
+    },
+    {
+      "id": "TEST-038",
+      "module": "Tests",
+      "description": "Storage tests cover JSON provider parity and MySQL schema/provider behavior where environment support is available.",
+      "status": "PLANNED",
+      "api_tests": [
+        "API-STORAGE-001",
+        "API-MYSQL-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "codex/tasks/auth-mysql-token-storage.md",
+        "codex/tasks/auth-mysql-token-validation.md"
+      ],
+      "introduced_in": "auth-mysql-token-foundation",
+      "changed_in": "auth-mysql-token-foundation",
+      "notes": "Planned by GitHub epic #34 and child issue #35; runtime implementation is intentionally out of scope for the requirements/contracts worker."
+    },
+    {
+      "id": "TEST-039",
+      "module": "Tests",
+      "description": "API and browser tests cover two authenticated users playing each game with isolated balances, state, history, bots, and autoplay.",
+      "status": "PLANNED",
+      "api_tests": [
+        "API-PRIVATE-SESSION-001"
+      ],
+      "browser_tests": [
+        "BR-PRIVATE-SESSION-001"
+      ],
+      "implementation_files": [
+        "codex/tasks/auth-mysql-token-private-sessions.md",
+        "codex/tasks/auth-mysql-token-validation.md"
+      ],
+      "introduced_in": "auth-mysql-token-foundation",
+      "changed_in": "auth-mysql-token-foundation",
+      "notes": "Planned by GitHub epic #34 and child issue #35; runtime implementation is intentionally out of scope for the requirements/contracts worker."
+    },
+    {
+      "id": "TEST-040",
+      "module": "Tests",
+      "description": "Integration validation runs the complete auth, MySQL, token terminology, licensing, and private-session path from a copied deployment environment.",
+      "status": "PLANNED",
+      "api_tests": [
+        "LONG-SUITE-100"
+      ],
+      "browser_tests": [
+        "LONG-AUTH-001"
+      ],
+      "implementation_files": [
+        "codex/tasks/auth-mysql-token-validation.md"
+      ],
+      "introduced_in": "auth-mysql-token-foundation",
+      "changed_in": "auth-mysql-token-foundation",
+      "notes": "Planned by GitHub epic #34 and child issue #35; runtime implementation is intentionally out of scope for the requirements/contracts worker."
     }
   ]
 }

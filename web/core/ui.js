@@ -1,12 +1,21 @@
 // AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
 // Import required dependency so this module can use its public functions or constants.
 import { api, post } from './api.js';
-// Export this symbol so other modules can use it through the public module boundary.
-export const money = n => `$${Number(n || 0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+// Export this symbol so other modules can display play-token amounts consistently.
+export const money = n => `◈${Number(n || 0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+// Export this symbol so auth-aware shell code can render play tokens without real-money currency marks.
+export const tokens = n => `◈${Number(n || 0).toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:0})}`;
 // Export this symbol so other modules can use it through the public module boundary.
 export function toast(message, ok=false){ const t=document.getElementById('toast'); if(!t)return; t.textContent=message; t.style.background=ok?'#10381f':'#2b1111'; t.style.color=ok?'#c8ffd1':'#ffd3d3'; t.hidden=false; clearTimeout(toast._timer); toast._timer=setTimeout(()=>{t.hidden=true},4500); }
 // Export this symbol so other modules can use it through the public module boundary.
 export async function refreshBalance(){
+  // Branch when the authenticated shell owns wallet rendering.
+  if(window.CasinoCurrentUser){
+    // Render the current-user play-token balance instead of the legacy v1 wallet.
+    renderTokenBalance(window.CasinoCurrentUser);
+    // Return the current-user player payload for legacy callers that expect a player-like object.
+    return window.CasinoCurrentUser.player || {};
+  }
   // Read the human player through the frozen player API.
   const d=await api('/api/v1/players/human');
   // Find the shared wallet amount node in the premium shell.
@@ -16,14 +25,33 @@ export async function refreshBalance(){
   // Find the optional wallet label node used by the premium shell.
   const label=document.getElementById('balance-label');
   // Keep the wallet label explicit for screen readers and narrow layouts.
-  if(label) label.textContent='Human balance';
+  if(label) label.textContent='Human tokens';
   // Return the player payload for callers that need the current balance.
   return d.player;
 }
-// Export this symbol so other modules can use it through the public module boundary.
+// Export this symbol so the authenticated shell can render the current-user token balance.
+export function renderTokenBalance(currentUser){
+  // Read the optional player object from the v2 current-user payload.
+  const player=currentUser?.player || {};
+  // Read the optional user object from the v2 current-user payload.
+  const user=currentUser?.user || {};
+  // Prefer explicit token fields while tolerating early backend payload drafts.
+  const amount=player.token_balance ?? player.tokens ?? user.token_balance ?? user.tokens ?? currentUser?.token_balance ?? currentUser?.tokens?.balance ?? 0;
+  // Find the shared wallet amount node in the premium shell.
+  const el=document.getElementById('balance');
+  // Update the wallet amount with the play-token glyph required by the auth UI packet.
+  if(el) el.textContent=tokens(amount);
+  // Find the optional wallet label node used by the premium shell.
+  const label=document.getElementById('balance-label');
+  // Keep the wallet label explicit for authenticated current-user sessions.
+  if(label) label.textContent='Token balance';
+  // Return the normalized numeric amount for callers that need testable state.
+  return Number(amount || 0);
+}
+// Export this symbol so callers can keep using the compatible add-money endpoint for token top-ups.
 export async function addFakeMoney(amount){ const d=await post('/api/v1/players/human/add-money',{amount}); await refreshBalance(); return d; }
 // Export this symbol so other modules can use it through the public module boundary.
-export function cardHtml(card){ if(!card)return''; if(card==='??') return '<div class="playing-card back">?</div>'; if(typeof card==='string'){ const suit=card.slice(-1), rank=card.slice(0,-1), red=suit==='♥'||suit==='♦'; return `<div class="playing-card ${red?'red':''}">${rank}<br>${suit}</div>`;} const red=card.suit==='♥'||card.suit==='♦'; return `<div class="playing-card ${red?'red':''}">${card.rank}<br>${card.suit}</div>`; }
+export function cardHtml(card){ if(!card)return''; if(card==='??') return '<div class="playing-card back">?</div>'; if(typeof card==='string'){ const suit=card.slice(-1), rank=card.slice(0,-1), red=suit==='\u2665'||suit==='\u2666'; return `<div class="playing-card ${red?'red':''}">${rank}<br>${suit}</div>`;} const red=card.suit==='\u2665'||card.suit==='\u2666'; return `<div class="playing-card ${red?'red':''}">${card.rank}<br>${card.suit}</div>`; }
 // Export this symbol so other modules can use it through the public module boundary.
 export function safe(s){ return String(s ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
 // Export this symbol so later game workers can reuse the approved premium tag markup.
