@@ -6547,6 +6547,68 @@
       "introduced_in": "card-poker-primitives",
       "changed_in": "card-poker-primitives",
       "notes": "Allocated on GitHub issue #96; game-specific paytables, timers, and registration remain downstream responsibilities."
+    },
+    {
+      "id": "DICE-001",
+      "module": "Core",
+      "description": "Reusable dice-roll primitives support deterministic seeded random hooks for tests.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        "web/core/dice.js",
+        "tests/unit/dice_motion_primitives.test.mjs"
+      ],
+      "introduced_in": "dice-motion-primitives",
+      "changed_in": "dice-motion-primitives",
+      "notes": "Implemented for GitHub issue #97 with numeric or string seeds, injectable random sources, and bounded one-based dice results."
+    },
+    {
+      "id": "MOTION-001",
+      "module": "Core",
+      "description": "Reusable motion timing helpers respect reduced-motion preferences while preserving asynchronous callback semantics.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        "web/core/motion.js",
+        "tests/unit/dice_motion_primitives.test.mjs"
+      ],
+      "introduced_in": "dice-motion-primitives",
+      "changed_in": "dice-motion-primitives",
+      "notes": "Implemented for GitHub issue #97 with platform preference detection plus explicit and injectable overrides."
+    },
+    {
+      "id": "MOTION-002",
+      "module": "Core",
+      "description": "Route and reload lifecycle cleanup prevents stale motion timers after navigation or explicit teardown.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        "web/core/motion.js",
+        "tests/unit/dice_motion_primitives.test.mjs"
+      ],
+      "introduced_in": "dice-motion-primitives",
+      "changed_in": "dice-motion-primitives",
+      "notes": "Implemented for GitHub issue #97 with disposable timer scopes and pagehide, beforeunload, popstate, and hashchange cleanup."
+    },
+    {
+      "id": "MOTION-003",
+      "module": "Tests",
+      "description": "Primitive-level tests prove deterministic dice and timing hooks, reduced-motion behavior, and timer cleanup.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/helpers/motion_test_helpers.mjs",
+        "tests/unit/dice_motion_primitives.test.mjs",
+        "web/core/dice.js",
+        "web/core/motion.js"
+      ],
+      "introduced_in": "dice-motion-primitives",
+      "changed_in": "dice-motion-primitives",
+      "notes": "Implemented for GitHub issue #97 as a standalone Node unit suite with fake clock and lifecycle event targets."
     }
   ]
 }
