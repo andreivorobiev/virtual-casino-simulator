@@ -1,5 +1,7 @@
 # AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
 # Import required dependency so this module can use its public functions or constants.
+import inspect
+# Import required dependency so this module can use its public functions or constants.
 import re
 # Import required dependency so this module can use its public functions or constants.
 from urllib.parse import urlparse, parse_qs
@@ -70,7 +72,7 @@ class Router:
         return deco
 
     # Define the dispatch function used by this module.
-    def dispatch(self, method: str, raw_path: str, body: dict | None = None):
+    def dispatch(self, method: str, raw_path: str, body: dict | None = None, context: dict | None = None):
         # Set parsed to the value needed for the next operation.
         parsed = urlparse(raw_path)
         # Set path to the value needed for the next operation.
@@ -85,6 +87,11 @@ class Router:
             if m:
                 # Set kwargs to the value needed for the next operation.
                 kwargs = m.groupdict()
+                # Return the computed value to the caller.
+                # Branch when the route handler accepts the request context.
+                if "context" in inspect.signature(route.handler).parameters:
+                    # Return the computed value to the caller.
+                    return route.handler(body or {}, query, context=context or {}, **kwargs)
                 # Return the computed value to the caller.
                 return route.handler(body or {}, query, **kwargs)
         # Raise an error so invalid input or state is reported explicitly.

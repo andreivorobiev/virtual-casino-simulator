@@ -10,10 +10,20 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 # Import Blackjack helpers so deterministic API-suite checks can cover table rules.
 from casino.games.blackjack import api as blackjack_api, engine as blackjack_engine
+# Import auth helpers so API tests can seed users through the backend storage seam.
+from casino.core import auth as auth_core
+# Import auth cookie settings so browser tests can enter through the backend session seam.
+from casino.config import AUTH_SESSION_COOKIE
 # Import storage tests so provider parity can run without the broad API suite.
 from tests import storage_tests
 # Set RESULTS to the value needed for the next operation.
 RESULTS=[]
+# Set SESSION_TOKEN to the value needed for the next operation.
+SESSION_TOKEN=None
+# Set DEFAULT_AUTH_EMAIL to the value needed for the next operation.
+DEFAULT_AUTH_EMAIL=os.environ.get("CASINO_BOOTSTRAP_ADMIN_EMAIL", "admin@example.local")
+# Set DEFAULT_AUTH_PASSWORD to the value needed for the next operation.
+DEFAULT_AUTH_PASSWORD=os.environ.get("CASINO_BOOTSTRAP_ADMIN_PASSWORD", "admin-password")
 # Set PLACEHOLDER_RE to the value needed for the next operation.
 PLACEHOLDER_RE = re.compile(r"\{([a-zA-Z0-9_]+)\}")
 
@@ -39,11 +49,19 @@ def free_port():
     s=socket.socket(); s.bind(('127.0.0.1',0)); port=s.getsockname()[1]; s.close(); return port
 
 # Define the api function used by this module.
-def api(base, path, method='GET', body=None, ok=True):
+def api(base, path, method='GET', body=None, ok=True, auth_token='__default__'):
     # Set data to the value needed for the next operation.
     data = None if body is None else json.dumps(body).encode('utf-8')
+    # Set headers to the value needed for the next operation.
+    headers={'Content-Type':'application/json'}
+    # Set token to the value needed for the next operation.
+    token=SESSION_TOKEN if auth_token == '__default__' else auth_token
+    # Branch when a caller wants an authenticated request.
+    if token:
+        # Set headers['Authorization'] to the value needed for the next operation.
+        headers['Authorization']=f'Bearer {token}'
     # Set req to the value needed for the next operation.
-    req = urllib.request.Request(base + path, data=data, method=method, headers={'Content-Type':'application/json'})
+    req = urllib.request.Request(base + path, data=data, method=method, headers=headers)
     # Start protected logic so failures can be handled safely.
     try:
         # Manage this resource with automatic setup and cleanup.
@@ -59,6 +77,17 @@ def api(base, path, method='GET', body=None, ok=True):
     # Return the computed value to the caller.
     return payload['data'] if payload.get('ok') else payload
 
+# Define the login_default_user function used by this module.
+def login_default_user(base):
+    # Make SESSION_TOKEN writable so the harness can reuse the latest login.
+    global SESSION_TOKEN
+    # Set session to the value needed for the next operation.
+    session=api(base,'/api/v2/auth/login','POST',{'email':DEFAULT_AUTH_EMAIL,'password':DEFAULT_AUTH_PASSWORD},auth_token=None)['session']
+    # Set SESSION_TOKEN to the value needed for the next operation.
+    SESSION_TOKEN=session['token']
+    # Return the computed value to the caller.
+    return SESSION_TOKEN
+
 # Define the start_server function used by this module.
 def start_server():
     # Set port to the value needed for the next operation.
@@ -68,7 +97,7 @@ def start_server():
     # Iterate through the collection to process each item.
     for _ in range(80):
         # Start protected logic so failures can be handled safely.
-        try: api(base,'/api/v1/casino/state'); return proc,base
+        try: login_default_user(base); return proc,base
         # Handle the expected failure path for the protected logic.
         except Exception: time.sleep(.1)
     # Set out to the value needed for the next operation.
@@ -140,7 +169,45 @@ def run_api_tests():
     # Start protected logic so failures can be handled safely.
     try:
         # Call an asynchronous API/helper and wait for the result before continuing.
+        login_default_user(base)
+        # Call an asynchronous API/helper and wait for the result before continuing.
         api(base,'/api/v1/casino/reset','POST',{})
+        # Call an asynchronous API/helper and wait for the result before continuing.
+        login_default_user(base)
+        # Define the auth_backend function used by this module.
+        def auth_backend():
+            # Set blocked to the value needed for the next operation.
+            blocked=api(base,'/api/v1/casino/state',ok=False,auth_token=None); assert blocked['error']['code']=='UNAUTHORIZED'
+            # Set login to the value needed for the next operation.
+            login=api(base,'/api/v2/auth/login','POST',{'email':DEFAULT_AUTH_EMAIL,'password':DEFAULT_AUTH_PASSWORD},auth_token=None); assert login['user']['role']=='admin'
+            # Set token to the value needed for the next operation.
+            token=login['session']['token']; assert token
+            # Set session to the value needed for the next operation.
+            session=api(base,'/api/v2/auth/session',auth_token=token); assert session['user']['email']==DEFAULT_AUTH_EMAIL
+            # Set me to the value needed for the next operation.
+            me=api(base,'/api/v2/me',auth_token=token); assert me['player']['player_id']=='human'
+            # Set terms to the value needed for the next operation.
+            terms=api(base,'/api/v2/me/terms',auth_token=token); assert terms['terms']['accepted'] is True
+            # Set out to the value needed for the next operation.
+            out=api(base,'/api/v2/auth/logout','POST',{},auth_token=token); assert out['logged_out'] is True
+            # Execute this statement as part of the module's documented control flow.
+            api(base,'/api/v2/auth/session',ok=False,auth_token=token)
+            # Set inactive_email to the value needed for the next operation.
+            inactive_email='inactive@example.local'
+            # Start protected logic so repeated local runs can reuse the same inactive user.
+            try:
+                # Execute this statement as part of the module's documented control flow.
+                auth_core.create_user(inactive_email,'inactive-password','Inactive Player')
+            # Handle the expected failure path for the protected logic.
+            except Exception:
+                # Intentionally leave this block empty.
+                pass
+            # Execute this statement as part of the module's documented control flow.
+            auth_core.set_user_status(inactive_email,'inactive')
+            # Set inactive to the value needed for the next operation.
+            inactive=api(base,'/api/v2/auth/login','POST',{'email':inactive_email,'password':'inactive-password'},ok=False,auth_token=None); assert inactive['error']['code']=='FORBIDDEN'
+        # Execute this statement as part of the module's documented control flow.
+        run_case('API-AUTH-001',['AUTH-001','SESSION-001','USER-001','TERMS-001'],auth_backend)
         # Define the core function used by this module.
         def core():
             # Set s to the value needed for the next operation.
@@ -210,6 +277,8 @@ def run_api_tests():
             for _ in range(20):
                 # Call an asynchronous API/helper and wait for the result before continuing.
                 api(base,'/api/v1/casino/reset','POST',{})
+                # Call an asynchronous API/helper and wait for the result before continuing.
+                login_default_user(base)
                 # Set bj to the value needed for the next operation.
                 bj=api(base,'/api/v1/games/blackjack/rounds','POST',{'player_id':'human','bet_amount':10}); rid=bj['round']['round_id']; assert rid
                 # Branch when the following condition is true.
@@ -314,6 +383,8 @@ def run_api_tests():
         def baccarat():
             # Call an asynchronous API/helper and wait for the result before continuing.
             api(base,'/api/v1/casino/reset','POST',{})
+            # Call an asynchronous API/helper and wait for the result before continuing.
+            login_default_user(base)
             # Set api(base,'/api/v1/games/baccarat/bets','POST',{'player_id':' to the value needed for the next operation.
             api(base,'/api/v1/games/baccarat/bets','POST',{'player_id':'human','amount':10,'bet_type':'banker'}); d=api(base,'/api/v1/games/baccarat/deal','POST',{}); assert d['coup']['player_cards'] and d['coup']['banker_cards']; assert d['bot_bets'] is not None
         # Execute this statement as part of the module's documented control flow.
@@ -361,6 +432,8 @@ def run_browser_tests():
     try:
         # Call an asynchronous API/helper and wait for the result before continuing.
         api(base,'/api/v1/casino/reset','POST',{})
+        # Call an asynchronous API/helper and wait for the result before continuing.
+        login_default_user(base)
         # Manage this resource with automatic setup and cleanup.
         with sync_playwright() as p:
             
@@ -376,6 +449,8 @@ def run_browser_tests():
                 return 2
             # Set page to the value needed for the next operation.
             page=browser.new_page(viewport={'width':1920,'height':1080})
+            # Set a session cookie so browser tests exercise authenticated app/API access.
+            page.context.add_cookies([{'name':AUTH_SESSION_COOKIE,'value':SESSION_TOKEN,'url':base,'httpOnly':True,'sameSite':'Lax'}])
             # Set console_errors to the value needed for the next operation.
             console_errors=[]; page_errors=[]
             # Set page.on('console', lambda msg: console_errors.append(msg.tex to the value needed for the next operation.
