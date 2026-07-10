@@ -688,13 +688,23 @@ def run_browser_tests():
                     # Wait for the active state to render.
                     page.locator('tr[data-testid="admin-user-row"][data-email="beta.browser@example.test"][data-status="active"]').wait_for(timeout=10000)
                     # Reset the user's password through the visible action.
-                    user_row.get_by_test_id('admin-user-reset').click()
+                    with page.expect_response(lambda response: response.url.endswith('/password-reset') and response.request.method == 'POST') as reset_response_info:
+                        # Wait for the reset-triggered Users refresh before the next action can race it.
+                        with page.expect_response(lambda response: response.url.endswith('/api/v1/admin/users') and response.request.method == 'GET'):
+                            # Click the exact password reset button in the created user's row.
+                            user_row.get_by_test_id('admin-user-reset').click()
+                    # Store the reset API response so the browser test proves reset completed.
+                    reset_response=reset_response_info.value.json()
+                    # Verify the reset API returned the standard success envelope.
+                    assert reset_response['ok'] is True
                     # Wait for the refreshed temporary password notice.
                     page.get_by_test_id('admin-user-temp-password').wait_for(timeout=5000)
                     # Accept terms through the visible action.
                     with page.expect_response(lambda response: '/api/v1/admin/users/' in response.url and response.url.endswith('/terms') and response.request.method == 'POST') as terms_response_info:
-                        # Click the exact terms button in the created user's row.
-                        user_row.get_by_test_id('admin-user-terms').click()
+                        # Wait for the terms-triggered Users refresh before checking row attributes.
+                        with page.expect_response(lambda response: response.url.endswith('/api/v1/admin/users') and response.request.method == 'GET'):
+                            # Click the exact terms button in the created user's row.
+                            user_row.get_by_test_id('admin-user-terms').click()
                     # Store the terms API response so the browser test proves persistence completed.
                     terms_response=terms_response_info.value.json()
                     # Verify the terms API returned the standard success envelope.
