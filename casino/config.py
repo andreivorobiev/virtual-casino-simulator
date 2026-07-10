@@ -22,6 +22,16 @@ DEFAULT_PORT = 8765
 APP_VERSION = "9.1.1"
 # Set SCHEMA_VERSION to the value needed for the next operation.
 SCHEMA_VERSION = "v9_1"
+# Set DEFAULT_STORAGE_PROVIDER to keep local runs on JSON unless explicitly configured.
+DEFAULT_STORAGE_PROVIDER = "json"
+# Set DEFAULT_MYSQL_HOST to the developer-friendly MySQL host default.
+DEFAULT_MYSQL_HOST = "127.0.0.1"
+# Set DEFAULT_MYSQL_PORT to the standard MySQL TCP port.
+DEFAULT_MYSQL_PORT = 3306
+# Set DEFAULT_MYSQL_USER to the conventional local casino database user.
+DEFAULT_MYSQL_USER = "casino"
+# Set DEFAULT_MYSQL_DATABASE to the conventional local casino database name.
+DEFAULT_MYSQL_DATABASE = "virtual_casino"
 
 # Set GAMES to the value needed for the next operation.
 GAMES = [

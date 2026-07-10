@@ -1,17 +1,14 @@
 # AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
-# Import required dependency so this module can use its public functions or constants.
-from casino.config import DATA_DIR, SCHEMA_VERSION
+# Import required dependency so this module can use schema version metadata.
+from casino.config import SCHEMA_VERSION
 # Import required dependency so this module can use its public functions or constants.
 from casino.core.clock import utc_now
-# Import required dependency so this module can use its public functions or constants.
-from casino.core.state_store import read_json, write_json
+# Import required dependency so this module can use the configured storage provider.
+from casino.core.storage import get_storage_provider
 # Import required dependency so this module can use its public functions or constants.
 from casino.core.ids import new_id
 # Import required dependency so this module can use its public functions or constants.
 from casino.errors import NotFoundError, ValidationError
-
-# Set PLAYERS_PATH to the value needed for the next operation.
-PLAYERS_PATH = DATA_DIR / "players.json"
 
 # Define the default_players function used by this module.
 def default_players() -> dict:
@@ -31,8 +28,8 @@ def default_players() -> dict:
 
 # Define the load_players function used by this module.
 def load_players() -> dict:
-    # Set state to the value needed for the next operation.
-    state = read_json(PLAYERS_PATH, default_players)
+    # Set state to the configured provider's player document.
+    state = get_storage_provider().load_players(default_players)
     # Branch when the following condition is true.
     if not isinstance(state, dict) or "players" not in state:
         # Set state to the value needed for the next operation.
@@ -44,8 +41,8 @@ def load_players() -> dict:
 def save_players(state: dict) -> None:
     # Set state["schema_version"] to the value needed for the next operation.
     state["schema_version"] = SCHEMA_VERSION
-    # Execute this statement as part of the module's documented control flow.
-    write_json(PLAYERS_PATH, state)
+    # Persist the player document through the active storage provider.
+    get_storage_provider().save_players(state)
 
 # Define the list_players function used by this module.
 def list_players() -> list[dict]:
@@ -65,24 +62,8 @@ def get_player(player_id: str) -> dict:
 
 # Define the update_player function used by this module.
 def update_player(player_id: str, updater) -> dict:
-    # Set state to the value needed for the next operation.
-    state = load_players()
-    # Iterate through the collection to process each item.
-    for p in state["players"]:
-        # Branch when the following condition is true.
-        if p["player_id"] == player_id:
-            # Execute this statement as part of the module's documented control flow.
-            updater(p)
-            # Set p["balance"] to the value needed for the next operation.
-            p["balance"] = round(float(p.get("balance", 0)), 2)
-            # Set p["updated_at"] to the value needed for the next operation.
-            p["updated_at"] = utc_now()
-            # Execute this statement as part of the module's documented control flow.
-            save_players(state)
-            # Return the computed value to the caller.
-            return p
-    # Raise an error so invalid input or state is reported explicitly.
-    raise NotFoundError(f"Player {player_id} was not found")
+    # Return the provider-managed update so JSON and MySQL share player semantics.
+    return get_storage_provider().update_player(player_id, updater)
 
 # Define the create_player function used by this module.
 def create_player(display_name: str, kind: str = "human", balance: float = 5000.0) -> dict:

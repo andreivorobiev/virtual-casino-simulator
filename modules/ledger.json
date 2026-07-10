@@ -1,6 +1,6 @@
 {
   "module": "ledger",
-  "version": "9.0.1",
+  "version": "9.0.2",
   "paths": [
     "casino/core/ledger.py"
   ],

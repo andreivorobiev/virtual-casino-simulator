@@ -5,9 +5,9 @@ Application: 9.1.1
 ## Modules
 
 - application: 9.2.1
-- core: 9.1.0
-- ledger: 9.0.1
-- players: 9.0.1
+- core: 9.1.1
+- ledger: 9.0.2
+- players: 9.0.2
 - bots: 1.0.0
 - autoplay: 1.1.0
 - audio: 9.1.1
