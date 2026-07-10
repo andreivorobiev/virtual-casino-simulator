@@ -42,6 +42,7 @@ Implement the approved premium Slots frontend with stable reels, spin-in-progres
 ## Required Reading
 
 - `AGENTS.md`
+- `docs/visual_design_standard.md` and `tests/visual/visual_matrix.json`
 - relevant nested game `AGENTS.md`
 - `modules/slots.json`
 - `docs/requirements/requirements.json`

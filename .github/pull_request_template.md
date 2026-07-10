@@ -48,6 +48,18 @@ Validated:
 - [ ] Gameplay behavior changed as required by listed requirement IDs
 - [ ] Browser-visible behavior changed and browser evidence is included
 
+## Visual governance
+
+- [ ] No browser-visible behavior changed
+- [ ] Read `docs/visual_design_standard.md`
+- [ ] Visual matrix surface/state IDs are listed below
+- [ ] Required locales and viewports from `tests/visual/visual_matrix.json` were checked
+- [ ] Evidence is classified as `after_pass`; known-failing screenshots are not presented as acceptance evidence
+
+Visual matrix rows:
+Evidence classification, locale, viewport, and paths:
+Intentional exceptions and follow-up issue:
+
 ## Version bumps
 
 ## Tests run

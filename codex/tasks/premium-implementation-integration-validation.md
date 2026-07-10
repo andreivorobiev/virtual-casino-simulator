@@ -38,6 +38,7 @@ Run the final integration pass for the premium redesign: resolve cross-worker vi
 ## Required Reading
 
 - `AGENTS.md`
+- `docs/visual_design_standard.md` and `tests/visual/visual_matrix.json`
 - `docs/codex_parallel_workflow.md`
 - `modules/module-manifest.json`
 - all child task packets for issues #12 through #19

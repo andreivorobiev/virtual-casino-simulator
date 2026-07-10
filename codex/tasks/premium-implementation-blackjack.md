@@ -42,6 +42,7 @@ Implement the approved premium Blackjack frontend with stable multi-hand lanes, 
 ## Required Reading
 
 - `AGENTS.md`
+- `docs/visual_design_standard.md` and `tests/visual/visual_matrix.json`
 - relevant nested game `AGENTS.md`
 - `modules/blackjack.json`
 - `docs/requirements/requirements.json`

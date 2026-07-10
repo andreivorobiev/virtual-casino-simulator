@@ -51,6 +51,7 @@ Implement the approved premium shared visual foundation in the production app: s
 ## Required Reading
 
 - `AGENTS.md`
+- `docs/visual_design_standard.md` and `tests/visual/visual_matrix.json`
 - `web/AGENTS.md`
 - `modules/module-manifest.json`
 - `modules/application.json`

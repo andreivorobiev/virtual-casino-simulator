@@ -83,6 +83,13 @@ GitHub is the source of truth after this payload is pushed. Work must happen thr
 - Do not add uncommented executable Python or JavaScript lines.
 - When you touch a file, improve comment clarity in that file.
 
+## Visual UI policy
+
+- `docs/visual_design_standard.md` is authoritative for browser-visible layout, wallet, scrolling, hierarchy, responsive behavior, accessibility, and evidence quality.
+- `tests/visual/visual_matrix.json` is the machine-readable inventory of required surfaces, states, locales, viewports, and visual gates.
+- Read both files before changing browser-visible UI and name the affected matrix rows in the PR.
+- Known-failing or before-state screenshots are not acceptance evidence.
+
 ## Required validation commands
 
 Run the relevant subset and prefer the full set before PR handoff:

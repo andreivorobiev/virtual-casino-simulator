@@ -9,6 +9,7 @@ You are a worker chat for one Virtual Casino Simulator task.
 3. Read every relevant nested `AGENTS.md`.
 4. Read the impacted module manifests under `modules/`.
 5. Read relevant contracts before touching API behavior.
+6. For browser-visible work, read `docs/visual_design_standard.md` and select the affected rows in `tests/visual/visual_matrix.json`.
 
 ## Scope rules
 
@@ -25,6 +26,7 @@ You are a worker chat for one Virtual Casino Simulator task.
 - Bump module versions when module source changes.
 - Preserve `/api/v1` compatibility unless the packet explicitly authorizes a versioned change.
 - Include browser evidence for browser-visible behavior.
+- Treat known-failing and before-state screenshots only as `before_failure`; acceptance requires matrix-labeled `after_pass` evidence.
 
 ## Handback
 

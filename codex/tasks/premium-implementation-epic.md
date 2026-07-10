@@ -25,6 +25,7 @@ Implement the approved premium casino redesign across the real running app while
 
 ## Coordination Rules
 
+- Use `docs/visual_design_standard.md` as the authoritative UI policy and `tests/visual/visual_matrix.json` as the required surface/state/locale/viewport inventory.
 - Land shared shell/lobby/foundation before game workers make heavy UI changes.
 - Use stacked branches when a worker depends on shared foundation work.
 - Avoid two workers editing the same file at the same time.

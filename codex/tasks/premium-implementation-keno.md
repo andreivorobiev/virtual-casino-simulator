@@ -42,6 +42,7 @@ Implement the approved premium Keno frontend with stable number board, spot sele
 ## Required Reading
 
 - `AGENTS.md`
+- `docs/visual_design_standard.md` and `tests/visual/visual_matrix.json`
 - relevant nested game `AGENTS.md`
 - `modules/keno.json`
 - `docs/requirements/requirements.json`

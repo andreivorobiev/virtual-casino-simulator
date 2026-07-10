@@ -51,6 +51,7 @@ Implement a frontend i18n runtime, English and Russian resource files, shell/adm
 ## Required Reading
 
 - `AGENTS.md`
+- `docs/visual_design_standard.md` and `tests/visual/visual_matrix.json`
 - `web/AGENTS.md`
 - `modules/module-manifest.json`
 - `modules/admin.json`

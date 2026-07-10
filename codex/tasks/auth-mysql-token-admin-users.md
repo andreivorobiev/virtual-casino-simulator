@@ -44,6 +44,7 @@
 ## Required reading
 
 - `AGENTS.md`
+- `docs/visual_design_standard.md` and `tests/visual/visual_matrix.json`
 - `web/AGENTS.md`
 - `casino/core/AGENTS.md`
 - `modules/admin.json`, `modules/core.json`, `modules/tests.json`

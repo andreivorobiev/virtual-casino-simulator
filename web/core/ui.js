@@ -3,8 +3,10 @@
 import { api, post, currentPlayerId, withCurrentPlayer } from './api.js';
 // Export this symbol so other modules can display play-token amounts consistently.
 export const money = n => `◈${Number(n || 0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+// Export this symbol so wallet values stay legible without relying on a replacement-looking glyph.
+export const tokenAmount = n => Number(n || 0).toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:0});
 // Export this symbol so auth-aware shell code can render play tokens without real-money currency marks.
-export const tokens = n => `◈${Number(n || 0).toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:0})}`;
+export const tokens = n => tokenAmount(n);
 // Export this symbol so other modules can use it through the public module boundary.
 export function toast(message, ok=false){ const t=document.getElementById('toast'); if(!t)return; t.textContent=message; t.style.background=ok?'#10381f':'#2b1111'; t.style.color=ok?'#c8ffd1':'#ffd3d3'; t.hidden=false; clearTimeout(toast._timer); toast._timer=setTimeout(()=>{t.hidden=true},4500); }
 // Export this symbol so other modules can use it through the public module boundary.
@@ -21,11 +23,11 @@ export async function refreshBalance(){
   // Find the shared wallet amount node in the premium shell.
   const el=document.getElementById('balance');
   // Update the wallet amount without duplicating the label text.
-  if(el) el.textContent=money(d.player.balance);
+  if(el) el.textContent=tokenAmount(d.player.balance);
   // Find the optional wallet label node used by the premium shell.
   const label=document.getElementById('balance-label');
   // Keep the wallet label explicit for screen readers and narrow layouts.
-  if(label) label.textContent='Player tokens';
+  if(label) label.textContent='Play token balance';
   // Return the player payload for callers that need the current balance.
   return d.player;
 }
@@ -39,12 +41,12 @@ export function renderTokenBalance(currentUser){
   const amount=player.token_balance ?? player.tokens ?? user.token_balance ?? user.tokens ?? currentUser?.token_balance ?? currentUser?.tokens?.balance ?? 0;
   // Find the shared wallet amount node in the premium shell.
   const el=document.getElementById('balance');
-  // Update the wallet amount with the play-token glyph required by the auth UI packet.
-  if(el) el.textContent=tokens(amount);
+  // Update the wallet with a legible number while the shell medallion and label provide token context.
+  if(el) el.textContent=tokenAmount(amount);
   // Find the optional wallet label node used by the premium shell.
   const label=document.getElementById('balance-label');
   // Keep the wallet label explicit for authenticated current-user sessions.
-  if(label) label.textContent='Token balance';
+  if(label) label.textContent='Play token balance';
   // Return the normalized numeric amount for callers that need testable state.
   return Number(amount || 0);
 }
