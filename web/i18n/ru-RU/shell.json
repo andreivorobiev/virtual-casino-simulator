@@ -1,5 +1,5 @@
 {
-  "brand.subtitle": "Проверочный релиз v9 - только условные деньги",
+  "brand.subtitle": "Проверочный релиз v9 - только игровые токены",
   "brand.title": "Virtual Casino Simulator",
   "games.baccarat.description": "Колодная Punto Banco с burn/cut, ставками Player/Banker/Tie, ботами и историей дорог.",
   "games.baccarat.label": "Баккара",
@@ -16,6 +16,6 @@
   "lobby.openGame": "Открыть {game}",
   "nav.admin": "Админ",
   "nav.lobby": "Лобби",
-  "toast.fakeMoneyAdded": "Условные деньги добавлены.",
-  "wallet.addFakeMoney": "Пополнить условный баланс"
+  "toast.fakeMoneyAdded": "Игровые токены добавлены.",
+  "wallet.addFakeMoney": "Добавить игровые токены"
 }

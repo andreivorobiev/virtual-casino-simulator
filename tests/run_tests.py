@@ -14,6 +14,8 @@ from casino.games.blackjack import api as blackjack_api, engine as blackjack_eng
 from casino.core import auth as auth_core
 # Import auth cookie settings so browser tests can enter through the backend session seam.
 from casino.config import AUTH_SESSION_COOKIE
+# Import storage tests so provider parity can run without the broad API suite.
+from tests import storage_tests
 # Set RESULTS to the value needed for the next operation.
 RESULTS=[]
 # Set SESSION_TOKEN to the value needed for the next operation.
@@ -107,6 +109,13 @@ def run_case(test_id, reqs, fn):
     try: fn(); record(test_id, reqs, 'PASS')
     # Handle the expected failure path for the protected logic.
     except Exception as e: record(test_id, reqs, 'FAIL', str(e)); raise
+
+# Define the run_storage_tests function used by this module.
+def run_storage_tests():
+    # Execute the JSON fallback parity test for provider-backed players, ledger, history, and settings.
+    run_case('STORAGE-JSON-001',['CORE-017','LEDGER-001','LEDGER-007','TEST-030'],storage_tests.run_json_provider_parity)
+    # Execute the MySQL schema and atomic ledger-provider path test without requiring a live service.
+    run_case('STORAGE-MYSQL-001',['CORE-017','LEDGER-001','LEDGER-007','LEDGER-009'],storage_tests.run_mysql_schema_provider_path)
 
 # Define the read_i18n_json function used by this module.
 def read_i18n_json(path):
@@ -458,14 +467,40 @@ def run_browser_tests():
                 def premium_shell():
                     # Verify the premium topbar remains visible at app load.
                     assert page.get_by_test_id('premium-topbar').is_visible()
-                    # Verify the shared wallet remains visible for the human balance.
+                    # Verify the shared wallet remains visible for the human token balance.
                     assert page.get_by_test_id('premium-wallet').is_visible()
+                    # Verify the wallet displays the play-token mark instead of a currency symbol.
+                    assert '◈' in page.get_by_test_id('premium-wallet').inner_text()
+                    # Verify the wallet label uses token terminology for the human player.
+                    assert 'human tokens' in page.get_by_test_id('premium-wallet').inner_text().lower()
                     # Verify the persistent shell status rail is present.
                     assert page.get_by_test_id('shell-status').is_visible()
+                    # Verify the status rail describes the simulator as play-token only.
+                    assert page.get_by_text('All games use play tokens only').is_visible()
                     # Verify the all-games navigation keeps Baccarat reachable.
                     assert page.get_by_test_id('nav-baccarat').is_visible()
                 # Execute this statement as part of the module's documented control flow.
-                run_case('BR-SHELL-001',['UX-007','CORE-006','LEDGER-025'],premium_shell)
+                run_case('BR-SHELL-001',['UX-007','CORE-006','LEDGER-025','TOKEN-001','TOKEN-002'],premium_shell)
+                # Open the wallet popover through the token top-up control.
+                page.locator('summary[aria-label="Add play tokens"]').click()
+                # Set a deterministic token top-up amount for the wallet terminology check.
+                page.locator('#add-money-amount').fill('123')
+                # Submit the token top-up through the existing compatible player endpoint.
+                page.get_by_test_id('add-money').click()
+                # Wait for the wallet toast to show the token mark and play-token wording.
+                page.wait_for_function("() => document.querySelector('#toast')?.textContent?.includes('◈123.00') && document.querySelector('#toast')?.textContent?.includes('play tokens')")
+                # Capture token wallet evidence for the worker handback.
+                shot('token_wallet.png')
+                # Define the token_wallet function used by this module.
+                def token_wallet():
+                    # Verify the wallet retained token terminology after the add-token action.
+                    assert 'human tokens' in page.get_by_test_id('premium-wallet').inner_text().lower()
+                    # Verify the toast uses the token mark for the added amount.
+                    assert '◈123.00' in page.locator('#toast').inner_text()
+                    # Verify the toast describes play tokens instead of real-money language.
+                    assert 'play tokens' in page.locator('#toast').inner_text()
+                # Execute this statement as part of the module's documented control flow.
+                run_case('BR-TOKEN-WALLET-001',['TOKEN-001','TOKEN-002','LEDGER-025'],token_wallet)
                 # Define the premium_lobby function used by this module.
                 def premium_lobby():
                     # Verify the lobby renders one premium card for every current game.
@@ -764,11 +799,13 @@ def run_browser_tests():
 # Define the main function used by this module.
 def main():
     # Set ap to the value needed for the next operation.
-    ap=argparse.ArgumentParser(); ap.add_argument('--api',action='store_true'); ap.add_argument('--browser',action='store_true'); args=ap.parse_args()
+    ap=argparse.ArgumentParser(); ap.add_argument('--api',action='store_true'); ap.add_argument('--browser',action='store_true'); ap.add_argument('--storage',action='store_true'); args=ap.parse_args()
     # Branch when the following condition is true.
-    if not args.api and not args.browser: args.api=True
+    if not args.api and not args.browser and not args.storage: args.api=True
     # Start protected logic so failures can be handled safely.
     try:
+        # Branch when the following condition is true.
+        if args.storage: run_storage_tests()
         # Branch when the following condition is true.
         if args.api: run_api_tests()
         # Branch when the following condition is true.

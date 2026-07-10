@@ -1,5 +1,5 @@
 {
-  "brand.subtitle": "v9 validation release - fake money only",
+  "brand.subtitle": "v9 validation release - play tokens only",
   "brand.title": "Virtual Casino Simulator",
   "games.baccarat.description": "Punto Banco shoe with burn/cut behavior, Player/Banker/Tie bets, bots, and road history.",
   "games.baccarat.label": "Baccarat",
@@ -16,6 +16,6 @@
   "lobby.openGame": "Open {game}",
   "nav.admin": "Admin",
   "nav.lobby": "Lobby",
-  "toast.fakeMoneyAdded": "Fake money added.",
-  "wallet.addFakeMoney": "Add fake money"
+  "toast.fakeMoneyAdded": "Play tokens added.",
+  "wallet.addFakeMoney": "Add play tokens"
 }

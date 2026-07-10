@@ -2,6 +2,12 @@
 
 All work should happen through GitHub issues and pull requests.
 
+## License and terms boundaries
+
+Contributions to repository source code are expected to be compatible with the Apache License, Version 2.0 in `LICENSE`.
+
+Do not add runtime behavior, documentation, examples, or issue text that presents Virtual Casino Simulator as a gambling site, real-money play, payment product, cash-out product, sweepstakes, sportsbook, lottery, or prize-redemption service. Play tokens must remain fake simulator values with no cash value and no redemption, sale, transfer, exchange, withdrawal, or conversion path.
+
 ## Required PR contents
 
 - Summary of the change.

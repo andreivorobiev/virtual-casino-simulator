@@ -13,6 +13,8 @@ from typing import Any, Callable
 from casino.config import DATA_DIR, GAME_DATA_DIR, LOG_DIR, SCHEMA_VERSION
 # Import required dependency so this module can use its public functions or constants.
 from casino.core.clock import utc_now
+# Import required dependency so migration can honor the configured storage provider.
+from casino.core.storage import storage_provider_name
 
 # Set _LOCK to the value needed for the next operation.
 _LOCK = threading.RLock()
@@ -119,6 +121,10 @@ def migrate_from_v7_if_needed() -> None:
     """
     # Execute this statement as part of the module's documented control flow.
     ensure_dirs()
+    # Branch when configured storage is not JSON because MySQL starts fresh by design.
+    if storage_provider_name() != "json":
+        # Return without importing local legacy files into the configured database.
+        return
     # Set marker to the value needed for the next operation.
     marker = DATA_DIR / ".v8_migration_complete"
     # Branch when the following condition is true.

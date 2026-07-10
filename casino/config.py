@@ -34,6 +34,16 @@ AUTH_BOOTSTRAP_ADMIN_EMAIL = os.environ.get("CASINO_BOOTSTRAP_ADMIN_EMAIL", "adm
 AUTH_BOOTSTRAP_ADMIN_PASSWORD = os.environ.get("CASINO_BOOTSTRAP_ADMIN_PASSWORD", "admin-password")
 # Set AUTH_BOOTSTRAP_ADMIN_DISPLAY_NAME to the value needed for the next operation.
 AUTH_BOOTSTRAP_ADMIN_DISPLAY_NAME = os.environ.get("CASINO_BOOTSTRAP_ADMIN_DISPLAY_NAME", "Bootstrap Admin")
+# Set DEFAULT_STORAGE_PROVIDER to keep local runs on JSON unless explicitly configured.
+DEFAULT_STORAGE_PROVIDER = "json"
+# Set DEFAULT_MYSQL_HOST to the developer-friendly MySQL host default.
+DEFAULT_MYSQL_HOST = "127.0.0.1"
+# Set DEFAULT_MYSQL_PORT to the standard MySQL TCP port.
+DEFAULT_MYSQL_PORT = 3306
+# Set DEFAULT_MYSQL_USER to the conventional local casino database user.
+DEFAULT_MYSQL_USER = "casino"
+# Set DEFAULT_MYSQL_DATABASE to the conventional local casino database name.
+DEFAULT_MYSQL_DATABASE = "virtual_casino"
 
 # Set GAMES to the value needed for the next operation.
 GAMES = [

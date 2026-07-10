@@ -100,8 +100,8 @@ function lobbyHtml(state = latestState) {
   const playerCount = Array.isArray(state?.players) ? state.players.length : 0;
   // Render the game card collection from the shared route registry.
   const cards = gameDescriptors.map(game => lobbyCardHtml(game)).join('');
-  // Render the premium trust rail with fake-money, bot, autoplay, and ledger cues.
-  const trustRail = [trustItemHtml('SIM', 'Local Simulator', 'All fake money'), trustItemHtml('BOT', `${playerCount} Players`, 'Human and bots'), trustItemHtml('AUTO', 'Autoplay Ready', 'Control-plane automation'), trustItemHtml('LED', 'Ledger-Backed', `${gameCount} games tracked`)].join('');
+  // Render the premium trust rail with play-token, bot, autoplay, and ledger cues.
+  const trustRail = [trustItemHtml('SIM', 'Local Simulator', 'All play tokens'), trustItemHtml('BOT', `${playerCount} Players`, 'Human and bots'), trustItemHtml('AUTO', 'Autoplay Ready', 'Control-plane automation'), trustItemHtml('LED', 'Ledger-Backed', `${gameCount} games tracked`)].join('');
   // Return the complete lobby markup as one route payload.
   return `<section class="lobby" data-testid="lobby"><section class="lobby-hero" aria-label="Lobby introduction"><div><p class="eyebrow">Choose your table</p><h1 class="hero-title">Midnight Ledger Casino</h1><div class="hero-rule"><span>&#9824;</span></div></div><aside class="trust-rail" data-testid="lobby-trust-rail" aria-label="Casino status">${trustRail}</aside></section><section class="game-gallery" aria-label="Games">${cards}</section></section>`;
 }
@@ -221,20 +221,20 @@ export async function navigate(route) {
 async function init() {
   // Read the add-money button from the wallet popover.
   const addButton = document.getElementById('add-money-btn');
-  // Wire fake-money addition through the existing public player endpoint.
+  // Wire play-token addition through the existing compatible player endpoint.
   addButton.onclick = async () => {
     // Start protected wallet mutation so validation errors become toasts.
     try {
-      // Read the requested fake-money amount from the wallet input.
+      // Read the requested play-token amount from the wallet input.
       const amount = Number(document.getElementById('add-money-amount').value || 0);
       // Call the existing add-money helper, which refreshes the balance.
       await addFakeMoney(amount);
       // Refresh shell state so status rail counts stay current.
       await refreshShellState({ quiet: true });
-      // Close the wallet popover after a successful fake-money addition.
+      // Close the wallet popover after a successful play-token addition.
       document.querySelector('.wallet-menu')?.removeAttribute('open');
       // Show positive feedback for the completed wallet action.
-      toast(`Added ${money(amount)} in fake money.`, true);
+      toast(`Added ${money(amount)} in play tokens.`, true);
     // Handle validation or API errors from the wallet action.
     } catch (err) {
       // Show the error message without interrupting the current route.
