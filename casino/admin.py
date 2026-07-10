@@ -1,7 +1,5 @@
 # AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
 # Import required dependency so this module can use its public functions or constants.
-import hashlib
-# Import required dependency so this module can use its public functions or constants.
 import json
 # Import required dependency so this module can use its public functions or constants.
 import secrets
@@ -12,13 +10,11 @@ from casino.config import DATA_DIR, GAME_DATA_DIR, LOG_DIR, DOCS_DIR, APP_VERSIO
 # Import required dependency so this module can use its public functions or constants.
 from casino.module_versions import list_module_revisions
 # Import required dependency so this module can use its public functions or constants.
-from casino.core import players, ledger, history, logger, autoplay, settings
+from casino.core import auth, players, ledger, history, logger, autoplay, settings
 # Import required dependency so this module can use its public functions or constants.
 from casino.core.clock import utc_now
 # Import required dependency so this module can use its public functions or constants.
-from casino.core.ids import new_id
-# Import required dependency so this module can use its public functions or constants.
-from casino.core.state_store import read_json, write_json
+from casino.core.state_store import read_json
 # Import required dependency so this module can use its public functions or constants.
 from casino.bots import profiles
 # Import required dependency so this module can use its public functions or constants.
@@ -56,22 +52,34 @@ def _default_admin_users():
 
 # Define the _load_admin_users function used by this module.
 def _load_admin_users():
-    # Set state to the persisted user-management state or a new default state.
-    state = read_json(ADMIN_USERS_PATH, _default_admin_users)
-    # Branch when the stored payload is malformed.
-    if not isinstance(state, dict) or "users" not in state:
-        # Set state to a fresh default so Admin can recover from invalid files.
-        state = _default_admin_users()
-    # Return the normalized state to callers.
+    # Load the canonical auth registry used by both login and Admin user management.
+    state = auth.load_users()
+    # Track whether legacy reconciliation adds any canonical identities.
+    changed = False
+    # Read legacy Admin-only identities so existing local deployments can be reconciled once.
+    legacy = read_json(ADMIN_USERS_PATH, _default_admin_users)
+    # Iterate through valid legacy identities without creating duplicate canonical accounts.
+    for user in legacy.get("users", []) if isinstance(legacy, dict) else []:
+        # Skip identities already represented by durable id or normalized email.
+        if any(existing.get("user_id") == user.get("user_id") or existing.get("email") == user.get("email") for existing in state.get("users", [])):
+            # Continue with the next legacy identity.
+            continue
+        # Copy the legacy identity into the login-ready canonical registry.
+        state.setdefault("users", []).append({**user, "username": user.get("email", ""), "roles": [user.get("role", "player")], "identity_provider": user.get("identity_provider", "local")})
+        # Mark the canonical registry for persistence after reconciliation.
+        changed = True
+    # Persist only when reconciliation added identities to the canonical registry.
+    if changed:
+        # Save the reconciled canonical identities once.
+        auth.save_users(state)
+    # Return the canonical identity state to all Admin operations.
     return state
 
 
 # Define the _save_admin_users function used by this module.
 def _save_admin_users(state):
-    # Set the schema marker so future migrations can identify this payload.
-    state["schema_version"] = "admin-users-v1"
-    # Persist the user-management state through the shared JSON store.
-    write_json(ADMIN_USERS_PATH, state)
+    # Persist Admin mutations through the canonical auth identity store.
+    auth.save_users(state)
 
 
 # Define the _clean_text function used by this module.
@@ -94,16 +102,6 @@ def _as_bool(value):
         return value
     # Return a permissive truthy check for form and JSON inputs.
     return str(value).strip().lower() in {"1", "true", "yes", "on", "accepted"}
-
-
-# Define the _hash_password function used by this module.
-def _hash_password(password):
-    # Set salt to a fresh random value for the stored password verifier.
-    salt = secrets.token_hex(12)
-    # Set digest to a PBKDF2 hash so raw passwords are not stored.
-    digest = hashlib.pbkdf2_hmac("sha256", str(password).encode("utf-8"), salt.encode("utf-8"), 100_000).hex()
-    # Return a self-describing verifier string for future auth service consumption.
-    return f"pbkdf2_sha256$100000${salt}${digest}"
 
 
 # Define the _temporary_password function used by this module.
@@ -160,6 +158,16 @@ def _public_admin_user(user):
     public_user["player_status"] = player.get("status", "unknown")
     # Set public_user["terms_status"] to a compact accepted/pending value.
     public_user["terms_status"] = "accepted" if user.get("terms_accepted_at") else "pending"
+    # Publish the v2 contract's boolean terms status alongside the v1 compact label.
+    public_user["terms_accepted"] = bool(user.get("terms_accepted_at")) or not bool(user.get("terms_required", True))
+    # Publish the v2 active flag while preserving the legacy status string.
+    public_user["active"] = user.get("status") == "active"
+    # Publish the canonical username alias required by the v2 Admin contract.
+    public_user["username"] = user.get("username") or user.get("email", "")
+    # Publish a canonical role collection while retaining the legacy role field.
+    public_user["roles"] = list(user.get("roles") or [user.get("role", "player")])
+    # Publish the canonical locale from current or legacy metadata.
+    public_user["locale"] = user.get("locale") or user.get("language") or "en-US"
     # Return the safe user payload.
     return public_user
 
@@ -194,43 +202,12 @@ def create_admin_user(body):
     password = body.get("password") or _temporary_password()
     # Set player to a linked wallet created with zero direct balance.
     player = players.create_player(display_name, "human", 0)
-    # Set user to the persisted beta account metadata.
-    user = {
-        # Store the durable Admin user id.
-        "user_id": new_id("user"),
-        # Store the linked wallet id used for ledger-backed balances.
-        "player_id": player["player_id"],
-        # Store the normalized email for lookup and display.
-        "email": email,
-        # Store the display name for Admin tables.
-        "display_name": display_name,
-        # Store the role without enabling external identity providers.
-        "role": _clean_text(body.get("role"), "role", required=False, default="beta_player") or "beta_player",
-        # Store the current account status.
-        "status": "active",
-        # Store the salted password verifier for future auth service consumption.
-        "password_hash": _hash_password(password),
-        # Require the user to rotate generated or Admin-set credentials.
-        "password_reset_required": True,
-        # Start password versioning for reset auditability.
-        "password_version": 1,
-        # Store terms acceptance time only when Admin marks it accepted.
-        "terms_accepted_at": utc_now() if _as_bool(body.get("terms_accepted")) else None,
-        # Store the display language preference without touching browser-local Admin controls.
-        "language": language,
-        # Store the format locale preference without changing ledger semantics.
-        "format_locale": format_locale,
-        # Store whether browser locale resolution should remain preferred.
-        "use_browser_locale": _as_bool(body.get("use_browser_locale", True)),
-        # Store creation time for Admin inspection.
-        "created_at": utc_now(),
-        # Store update time for Admin inspection.
-        "updated_at": utc_now(),
-    }
-    # Append the new user before applying the ledger grant.
-    state["users"].append(user)
-    # Persist user metadata before ledger crediting so details can reference the id.
-    _save_admin_users(state)
+    # Normalize the requested role to the canonical player/Admin vocabulary.
+    role = _clean_text(body.get("role"), "role", required=False, default="player") or "player"
+    # Create the login identity through the same canonical auth service used by session login.
+    user = auth.create_user(email, password, display_name, role, player["player_id"], not _as_bool(body.get("terms_accepted")), language)
+    # Add Admin-facing locale and credential-rotation metadata to the canonical identity.
+    user = auth.update_user_by_id(user["user_id"], lambda record: record.update({"format_locale": format_locale, "use_browser_locale": _as_bool(body.get("use_browser_locale", True)), "password_reset_required": True, "password_version": 1, "terms_accepted_at": utc_now() if _as_bool(body.get("terms_accepted")) else None}))
     # Branch when Admin grants starting tokens.
     if initial_tokens:
         # Credit the linked wallet through the ledger to preserve token invariants.
@@ -265,18 +242,8 @@ def reset_admin_user_password(user_id, body):
     user = _user_by_id(state, user_id)
     # Set password to the provided password or generated reset value.
     password = body.get("password") or _temporary_password()
-    # Set user["password_hash"] to the new salted verifier.
-    user["password_hash"] = _hash_password(password)
-    # Set user["password_reset_required"] so the next auth flow can require rotation.
-    user["password_reset_required"] = True
-    # Increment the password version for Admin inspection.
-    user["password_version"] = int(user.get("password_version", 0)) + 1
-    # Set user["password_reset_at"] to the current reset audit timestamp.
-    user["password_reset_at"] = utc_now()
-    # Set user["updated_at"] to the current audit timestamp.
-    user["updated_at"] = utc_now()
-    # Persist the reset metadata.
-    _save_admin_users(state)
+    # Replace the password through the canonical auth service so login sees the reset immediately.
+    user = auth.set_user_password(user_id, password)
     # Return the one-time temporary password and safe user payload.
     return {"user": _public_admin_user(user), "temporary_password": password}
 
@@ -289,12 +256,8 @@ def update_admin_user_terms(user_id, body):
     user = _user_by_id(state, user_id)
     # Set accepted to the requested terms acceptance state.
     accepted = _as_bool(body.get("accepted", body.get("terms_accepted")))
-    # Set user["terms_accepted_at"] based on the requested status.
-    user["terms_accepted_at"] = utc_now() if accepted else None
-    # Set user["updated_at"] to the current audit timestamp.
-    user["updated_at"] = utc_now()
-    # Persist the terms status update.
-    _save_admin_users(state)
+    # Store terms state through the canonical auth service used by the browser gate.
+    user = auth.accept_terms(user_id, body.get("terms_version") or "private-beta-1", accepted, "admin")
     # Return the safe user payload after terms status change.
     return {"user": _public_admin_user(user)}
 
@@ -307,6 +270,8 @@ def update_admin_user_locale(user_id, body):
     user = _user_by_id(state, user_id)
     # Set user["language"] from the Admin locale control payload.
     user["language"] = _clean_text(body.get("language"), "language", required=False, default=user.get("language", "en-US")) or "en-US"
+    # Mirror the display language to the canonical v2 locale field.
+    user["locale"] = user["language"]
     # Set user["format_locale"] from the Admin locale control payload.
     user["format_locale"] = _clean_text(body.get("format_locale"), "format_locale", required=False, default=user.get("format_locale", "browser")) or "browser"
     # Set user["use_browser_locale"] from the Admin locale control payload.
@@ -317,6 +282,46 @@ def update_admin_user_locale(user_id, body):
     _save_admin_users(state)
     # Return the safe user payload after locale update.
     return {"user": _public_admin_user(user)}
+
+
+# Define update_admin_user so the v2 PATCH contract mutates the canonical identity.
+def update_admin_user(user_id, body):
+    # Define the canonical mutation applied to the requested identity.
+    def mutate(user):
+        # Update active status only when the contract field is present.
+        if "active" in body:
+            # Map the boolean contract field to the durable status value.
+            user["status"] = "active" if _as_bool(body.get("active")) else "inactive"
+        # Update display name only when the contract field is present.
+        if "display_name" in body:
+            # Store the validated display name.
+            user["display_name"] = _clean_text(body.get("display_name"), "display_name")
+        # Update roles only when the contract field is present.
+        if "roles" in body:
+            # Normalize the role list and preserve the compatible singular primary role.
+            user["roles"] = [str(role).strip().lower() for role in body.get("roles", []) if str(role).strip()]
+            # Store the primary role for older clients.
+            user["role"] = user["roles"][0] if user["roles"] else "player"
+        # Update locale metadata only when the contract field is present.
+        if "locale" in body:
+            # Store one locale across canonical and legacy aliases.
+            user["locale"] = user["language"] = _clean_text(body.get("locale"), "locale")
+    # Apply the mutation through the canonical auth service.
+    user = auth.update_user_by_id(user_id, mutate)
+    # Keep the bound player status aligned with the canonical account status.
+    players.update_player(user["player_id"], lambda player: player.update({"status": user.get("status", "active")}))
+    # Return the Admin-safe canonical summary.
+    return _public_admin_user(user)
+
+
+# Define admin_user_state so v2 inspection stays scoped to one canonical user.
+def admin_user_state(user_id):
+    # Load the canonical user and linked player.
+    user = _user_by_id(_load_admin_users(), user_id)
+    # Read the linked wallet from the shared player provider.
+    player = _linked_player(user)
+    # Return only this user's balance, ledger count, and player-scoped game marker.
+    return {"user_id": user["user_id"], "player_id": user["player_id"], "token_balance": round(float(player.get("balance", 0)), 2), "recent_ledger_count": len(ledger.read_recent(user["player_id"], 100)), "game_states": {}}
 
 
 # Define the requirements function used by this module.
@@ -472,6 +477,59 @@ def register(router):
     def admin_update_user_locale(body, query, user_id):
         # Return the user after updating account locale preferences.
         return update_admin_user_locale(user_id, body)
+
+    # Register the published v2 canonical user listing route.
+    @router.get(r"/api/v2/admin/users")
+    # Define admin_users_v2_list for contract-compatible summaries.
+    def admin_users_v2_list(body, query):
+        # Return the canonical Admin user collection.
+        return {"users": list_admin_users()}
+
+    # Register the published v2 canonical user creation route.
+    @router.post(r"/api/v2/admin/users")
+    # Define admin_users_v2_create for login-ready identity creation.
+    def admin_users_v2_create(body, query):
+        # Map the published username field to the canonical email identifier.
+        payload = {**body, "email": body.get("email") or body.get("username"), "display_name": body.get("display_name") or body.get("username"), "role": (body.get("roles") or ["player"])[0], "language": body.get("locale") or "en-US", "initial_tokens": body.get("initial_tokens", 0)}
+        # Return the flat user summary required by the v2 envelope.
+        return create_admin_user(payload)["user"]
+
+    # Register the published v2 canonical user detail route.
+    @router.get(r"/api/v2/admin/users/(?P<user_id>[^/]+)")
+    # Define admin_users_v2_detail for one safe identity record.
+    def admin_users_v2_detail(body, query, user_id):
+        # Return the flat Admin-safe canonical identity.
+        return _public_admin_user(_user_by_id(_load_admin_users(), user_id))
+
+    # Register the published v2 canonical user update route.
+    @router.patch(r"/api/v2/admin/users/(?P<user_id>[^/]+)")
+    # Define admin_users_v2_update for roles, status, display name, and locale.
+    def admin_users_v2_update(body, query, user_id):
+        # Return the updated canonical identity summary.
+        return update_admin_user(user_id, body)
+
+    # Register the published v2 password reset route.
+    @router.post(r"/api/v2/admin/users/(?P<user_id>[^/]+)/password")
+    # Define admin_users_v2_password for login-ready password changes.
+    def admin_users_v2_password(body, query, user_id):
+        # Return the flat updated identity without exposing password material.
+        return reset_admin_user_password(user_id, body)["user"]
+
+    # Register the published v2 terms metadata update route.
+    @router.patch(r"/api/v2/admin/users/(?P<user_id>[^/]+)/terms")
+    # Define admin_users_v2_terms for canonical terms state updates.
+    def admin_users_v2_terms(body, query, user_id):
+        # Update canonical terms metadata before returning the contract status object.
+        user = update_admin_user_terms(user_id, body)["user"]
+        # Return the canonical v2 terms status.
+        return auth.terms_status(_user_by_id(_load_admin_users(), user["user_id"]))
+
+    # Register the published v2 scoped user-state route.
+    @router.get(r"/api/v2/admin/users/(?P<user_id>[^/]+)/state")
+    # Define admin_users_v2_state for wallet and ledger inspection.
+    def admin_users_v2_state(body, query, user_id):
+        # Return state scoped to the requested canonical identity only.
+        return admin_user_state(user_id)
 
     # Attach this decorator so the following function is registered with the framework.
     @router.get(r"/api/v1/admin/logs")

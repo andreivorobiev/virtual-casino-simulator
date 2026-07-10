@@ -36,7 +36,7 @@ export const login = body => post('/api/v2/auth/login', body);
 // Export this symbol so the shell can end the current authenticated browser session.
 export const logout = () => post('/api/v2/auth/logout', {});
 // Export this symbol so the shell can acknowledge the private beta toy-simulator terms.
-export const acceptTerms = body => post('/api/v2/me/terms/accept', body);
+export const acceptTerms = body => post('/api/v2/auth/terms/accept', body);
 // Export this symbol so the shell can request ledger-backed token additions for the current user.
 export const addUserTokens = body => post('/api/v2/me/tokens/add', body);
 // Export this symbol so game modules can resolve the active player without hardcoded human state.

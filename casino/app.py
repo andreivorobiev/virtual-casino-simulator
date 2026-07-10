@@ -7,6 +7,8 @@ import json
 import mimetypes
 # Import required dependency so this module can use its public functions or constants.
 import os
+# Import regular expressions so player resource paths can be authorization-checked.
+import re
 # Import required dependency so this module can use its public functions or constants.
 import sys
 # Import required dependency so this module can use its public functions or constants.
@@ -25,7 +27,7 @@ from casino.config import DEFAULT_HOST, DEFAULT_PORT, WEB_DIR, DATA_DIR, APP_VER
 # Import required dependency so this module can use its public functions or constants.
 from casino.router import Router
 # Import required dependency so this module can use its public functions or constants.
-from casino.errors import CasinoError, ValidationError
+from casino.errors import CasinoError, ForbiddenError, ValidationError
 # Import required dependency so this module can use its public functions or constants.
 from casino.core.state_store import ensure_dirs, migrate_from_v7_if_needed
 # Import required dependency so this module can bootstrap whichever storage provider is configured.
@@ -58,6 +60,17 @@ def build_router() -> Router:
     # Set router to the value needed for the next operation.
     router = Router()
 
+    # Define authorize_autoplay so session identifiers cannot cross authenticated player boundaries.
+    def authorize_autoplay(context, autoplay_id):
+        # Load the referenced server-side autoplay session.
+        session = autoplay.get_session(autoplay_id)
+        # Reject normal users addressing another player's autoplay session.
+        if not auth.is_admin(context["user"]) and session.get("player_id") != context["user"].get("player_id"):
+            # Raise the standard forbidden response without mutating the foreign session.
+            raise ForbiddenError("Autoplay session is outside the authenticated player")
+        # Return the authorized session for callers that need it.
+        return session
+
     # Attach this decorator so the following function is registered with the framework.
     @router.get(r"/api/v1/casino/games")
     # Define the games function used by this module.
@@ -68,14 +81,26 @@ def build_router() -> Router:
     # Attach this decorator so the following function is registered with the framework.
     @router.get(r"/api/v1/casino/state")
     # Define the casino_state function used by this module.
-    def casino_state(body, query):
-        # Return the computed value to the caller.
-        return {"version": APP_VERSION, "games": list_games(), "players": players.list_players(), "recent_history": history.recent_history(25), "recent_ledger": ledger.read_recent(limit=25)}
+    def casino_state(body, query, context):
+        # Read the bound player so non-Admin state never exposes another wallet.
+        player_id = context.get("bound_player_id")
+        # Publish all players only to Admins and the authenticated player otherwise.
+        visible_players = players.list_players() if auth.is_admin(context["user"]) else [players.get_player(player_id)]
+        # Read recent history before applying the session privacy boundary.
+        recent_history = history.recent_history(25)
+        # Filter history records when they carry a player id and the caller is not Admin.
+        visible_history = recent_history if auth.is_admin(context["user"]) else [row for row in recent_history if row.get("player_id") == player_id]
+        # Read only the bound player's ledger for normal authenticated users.
+        recent_ledger = ledger.read_recent(None if auth.is_admin(context["user"]) else player_id, 25)
+        # Return the session-scoped casino summary.
+        return {"version": APP_VERSION, "games": list_games(), "players": visible_players, "recent_history": visible_history, "recent_ledger": recent_ledger}
 
     # Attach this decorator so the following function is registered with the framework.
     @router.post(r"/api/v1/casino/reset")
     # Define the reset function used by this module.
-    def reset(body, query):
+    def reset(body, query, context):
+        # Require an Admin role before destroying shared local casino state.
+        auth.require_admin(context["user"])
         # Import required dependency so this module can use its public functions or constants.
         import shutil
         # Reset configured provider state before bootstrapping default players.
@@ -98,14 +123,18 @@ def build_router() -> Router:
     # Attach this decorator so the following function is registered with the framework.
     @router.get(r"/api/v1/casino/history")
     # Define the get_history function used by this module.
-    def get_history(body, query):
-        # Return the computed value to the caller.
-        return {"history": history.recent_history(int(query.get("limit", 100)), query.get("game") or None)}
+    def get_history(body, query, context):
+        # Read recent history for the requested game before applying privacy filters.
+        rows = history.recent_history(int(query.get("limit", 100)), query.get("game") or None)
+        # Return global history to Admins and session-player records to normal users.
+        return {"history": rows if auth.is_admin(context["user"]) else [row for row in rows if row.get("player_id") == context["bound_player_id"]]}
 
     # Attach this decorator so the following function is registered with the framework.
     @router.get(r"/api/v1/casino/logs/recent")
     # Define the get_logs function used by this module.
-    def get_logs(body, query):
+    def get_logs(body, query, context):
+        # Require Admin authorization before returning application log records.
+        auth.require_admin(context["user"])
         # Set kind to the value needed for the next operation.
         kind = query.get("kind", "app")
         # Return the computed value to the caller.
@@ -114,9 +143,9 @@ def build_router() -> Router:
     # Attach this decorator so the following function is registered with the framework.
     @router.get(r"/api/v1/players")
     # Define the get_players function used by this module.
-    def get_players(body, query):
-        # Return the computed value to the caller.
-        return {"players": players.list_players()}
+    def get_players(body, query, context):
+        # Return every player to Admins and only the session-bound player otherwise.
+        return {"players": players.list_players() if auth.is_admin(context["user"]) else [players.get_player(context["bound_player_id"])]}
 
     # Attach this decorator so the following function is registered with the framework.
     @router.get(r"/api/v1/players/(?P<player_id>[^/]+)")
@@ -128,7 +157,9 @@ def build_router() -> Router:
     # Attach this decorator so the following function is registered with the framework.
     @router.post(r"/api/v1/players")
     # Define the create_player function used by this module.
-    def create_player(body, query):
+    def create_player(body, query, context):
+        # Keep arbitrary player creation behind the Admin authorization boundary.
+        auth.require_admin(context["user"])
         # Return the computed value to the caller.
         return {"player": players.create_player(body.get("display_name", "Player"), body.get("type", "human"), float(body.get("balance", 5000)))}
 
@@ -206,6 +237,37 @@ def build_router() -> Router:
         # Return the computed value to the caller.
         return {"terms": auth.terms_status(context["user"])}
 
+    # Attach the published terms acceptance route to the canonical user store.
+    @router.post(r"/api/v2/auth/terms/accept")
+    # Define current_user_accept_terms for authenticated browser terms completion.
+    def current_user_accept_terms(body, query, context):
+        # Store the accepted version on the authenticated identity only.
+        user = auth.accept_terms(context["user"]["user_id"], body.get("terms_version"), body.get("accepted", True) is not False)
+        # Return the published v2 terms status shape.
+        return auth.terms_status(user)
+
+    # Preserve the frontend draft alias while clients move to the published auth path.
+    @router.post(r"/api/v2/me/terms/accept")
+    # Define current_user_accept_terms_alias as a compatibility shim.
+    def current_user_accept_terms_alias(body, query, context):
+        # Delegate the alias to the same canonical acceptance operation.
+        return current_user_accept_terms(body, query, context)
+
+    # Attach the published current-user token credit endpoint.
+    @router.post(r"/api/v2/me/tokens/add")
+    # Define current_user_add_tokens for ledger-backed session wallet credits.
+    def current_user_add_tokens(body, query, context):
+        # Parse the requested play-token amount from the contract body.
+        amount = float(body.get("amount", 0))
+        # Reject zero and negative credits before touching the ledger.
+        if amount <= 0:
+            # Raise the standard validation envelope for invalid wallet requests.
+            raise ValidationError("Token amount must be positive")
+        # Credit exactly one ledger event to the authenticated user's bound player.
+        ledger.credit(context["user"]["player_id"], amount, "PLAY_TOKENS_ADDED", "wallet", None, {"reason": body.get("reason") or "current_user_add", "user_id": context["user"]["user_id"]})
+        # Return the contract's updated player summary from the canonical current-user source.
+        return auth.current_user_payload(context["session"], context["user"])["player"]
+
     # Attach this decorator so the following function is registered with the framework.
     @router.post(r"/api/v1/autoplay/start")
     # Define the autoplay_start function used by this module.
@@ -216,51 +278,63 @@ def build_router() -> Router:
     # Attach this decorator so the following function is registered with the framework.
     @router.post(r"/api/v1/autoplay/stop")
     # Define the autoplay_stop function used by this module.
-    def autoplay_stop(body, query):
+    def autoplay_stop(body, query, context):
+        # Authorize the requested autoplay session before mutating it.
+        authorize_autoplay(context, body.get("autoplay_id"))
         # Return the computed value to the caller.
         return {"session": autoplay.stop(body.get("autoplay_id"))}
 
     # Attach this decorator so the following function is registered with the framework.
     @router.post(r"/api/v1/autoplay/complete")
     # Define the autoplay_complete function used by this module.
-    def autoplay_complete(body, query):
+    def autoplay_complete(body, query, context):
+        # Authorize the requested autoplay session before mutating it.
+        authorize_autoplay(context, body.get("autoplay_id"))
         # Return the computed value to the caller.
         return {"session": autoplay.complete(body.get("autoplay_id"))}
 
     # Attach this decorator so the following function is registered with the framework.
     @router.post(r"/api/v1/autoplay/tick")
     # Define the autoplay_tick function used by this module.
-    def autoplay_tick(body, query):
+    def autoplay_tick(body, query, context):
+        # Authorize the requested autoplay session before mutating it.
+        authorize_autoplay(context, body.get("autoplay_id"))
         # Return the computed value to the caller.
         return {"session": autoplay.tick(body.get("autoplay_id"))}
 
     # Attach this decorator so the following function is registered with the framework.
     @router.post(r"/api/v1/autoplay/finish-stop")
     # Define the autoplay_finish_stop function used by this module.
-    def autoplay_finish_stop(body, query):
+    def autoplay_finish_stop(body, query, context):
+        # Authorize the requested autoplay session before mutating it.
+        authorize_autoplay(context, body.get("autoplay_id"))
         # Return the computed value to the caller.
         return {"session": autoplay.finish_stop(body.get("autoplay_id"))}
 
     # Attach this decorator so the following function is registered with the framework.
     @router.post(r"/api/v1/autoplay/stop-all")
     # Define the autoplay_stop_all function used by this module.
-    def autoplay_stop_all(body, query):
+    def autoplay_stop_all(body, query, context):
+        # Reserve global autoplay mutation for authenticated Admins.
+        auth.require_admin(context["user"])
         # Return the computed value to the caller.
         return {"sessions": autoplay.stop_all()}
 
     # Attach this decorator so the following function is registered with the framework.
     @router.get(r"/api/v1/autoplay/sessions")
     # Define the autoplay_sessions function used by this module.
-    def autoplay_sessions(body, query):
-        # Return the computed value to the caller.
-        return {"sessions": autoplay.list_sessions(query.get("active") == "1")}
+    def autoplay_sessions(body, query, context):
+        # Read the requested server-side sessions before applying the player scope.
+        sessions = autoplay.list_sessions(query.get("active") == "1")
+        # Return all sessions to Admins and only the authenticated player's sessions otherwise.
+        return {"sessions": sessions if auth.is_admin(context["user"]) else [session for session in sessions if session.get("player_id") == context["user"].get("player_id")]}
 
     # Attach this decorator so the following function is registered with the framework.
     @router.get(r"/api/v1/autoplay/sessions/(?P<autoplay_id>[^/]+)")
     # Define the autoplay_get_session function used by this module.
-    def autoplay_get_session(body, query, autoplay_id):
-        # Return the computed value to the caller.
-        return {"session": autoplay.get_session(autoplay_id)}
+    def autoplay_get_session(body, query, autoplay_id, context):
+        # Return only an autoplay session authorized for the current identity.
+        return {"session": authorize_autoplay(context, autoplay_id)}
 
     # Execute this statement as part of the module's documented control flow.
     register_bots(router)
@@ -345,7 +419,7 @@ class Handler(BaseHTTPRequestHandler):
         # Start protected logic so failures can be handled safely.
         try:
             # Set body to the value needed for the next operation.
-            body = self._read_body() if self.command in ("POST", "PUT", "DELETE") else {}
+            body = self._read_body() if self.command in ("POST", "PUT", "PATCH", "DELETE") else {}
             # Set path to the value needed for the next operation.
             path = urlparse(self.path).path
             # Set context to the value needed for the next operation.
@@ -358,6 +432,32 @@ class Handler(BaseHTTPRequestHandler):
                 context["session"] = session
                 # Set context["user"] to the value needed for the next operation.
                 context["user"] = user
+                # Enforce Admin authorization centrally for every current and future Admin API.
+                if path.startswith("/api/v1/admin/") or path.startswith("/api/v2/admin/"):
+                    # Reject normal authenticated users before route dispatch can expose data or mutate state.
+                    auth.require_admin(user)
+                # Bind normal-user game and autoplay payloads to their authenticated player.
+                if not auth.is_admin(user):
+                    # Store the binding so query parsing also replaces stale player ids.
+                    context["bound_player_id"] = user["player_id"]
+                    # Block gameplay, autoplay, and wallet mutation until required terms are accepted.
+                    if auth.terms_status(user)["required"] and (path.startswith("/api/v1/games/") or path.startswith("/api/v1/autoplay/") or path == "/api/v2/me/tokens/add"):
+                        # Raise a forbidden response while leaving read-only terms/current-user routes available.
+                        raise ForbiddenError("Terms acceptance is required before play")
+                    # Keep global bot configuration and bot-account actions behind the Admin role.
+                    if self.command != "GET" and path.startswith("/api/v1/bots/"):
+                        # Reject normal users before shared bot configuration can be changed.
+                        raise ForbiddenError("Admin role is required for bot account configuration")
+                    # Replace caller-provided player ids for all game and autoplay actions.
+                    if path.startswith("/api/v1/games/") or path.startswith("/api/v1/autoplay/"):
+                        # Force the public action to operate on the authenticated player's wallet and state.
+                        body["player_id"] = user["player_id"]
+                    # Match player-resource paths so cross-user wallet reads and writes fail closed.
+                    player_match = re.match(r"^/api/v1/players/([^/]+)", path)
+                    # Reject a normal user attempting to address another player's resource.
+                    if player_match and player_match.group(1) != user["player_id"]:
+                        # Raise the standard forbidden envelope without confirming private player details.
+                        raise ForbiddenError("Player resource is outside the authenticated session")
             # Set logger.info("api_request", request_id to the value needed for the next operation.
             logger.info("api_request", request_id=request_id, method=self.command, path=self.path)
             # Set data to the value needed for the next operation.
@@ -394,6 +494,11 @@ class Handler(BaseHTTPRequestHandler):
     # Define the do_DELETE function used by this module.
     def do_DELETE(self):
         # Return the computed value to the caller.
+        return self._handle_api()
+
+    # Define do_PATCH so published v2 Admin update routes are reachable.
+    def do_PATCH(self):
+        # Return the authenticated API response for the PATCH request.
         return self._handle_api()
 
     # Define the _serve_static function used by this module.

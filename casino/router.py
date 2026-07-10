@@ -62,6 +62,15 @@ class Router:
         # Return the computed value to the caller.
         return deco
 
+    # Define patch so v2 Admin updates can use their published HTTP method.
+    def patch(self, pattern: str):
+        # Define the decorator that registers a PATCH route.
+        def deco(fn):
+            # Register the handler and return it unchanged.
+            self.add("PATCH", pattern, fn); return fn
+        # Return the route decorator to the caller.
+        return deco
+
     # Define the delete function used by this module.
     def delete(self, pattern: str):
         # Define the deco function used by this module.
@@ -79,6 +88,10 @@ class Router:
         path = parsed.path
         # Set query to the value needed for the next operation.
         query = {k: v[-1] if v else "" for k, v in parse_qs(parsed.query).items()}
+        # Bind non-Admin query-scoped game state to the authenticated player.
+        if context and context.get("bound_player_id"):
+            # Replace stale or malicious query player ids with the session binding.
+            query["player_id"] = context["bound_player_id"]
         # Iterate through the collection to process each item.
         for route in self.routes:
             # Set m to the value needed for the next operation.

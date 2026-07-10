@@ -13,10 +13,16 @@ export function toast(message, ok=false){ const t=document.getElementById('toast
 export async function refreshBalance(){
   // Branch when the authenticated shell owns wallet rendering.
   if(window.CasinoCurrentUser){
+    // Refresh the canonical current-user payload so game actions cannot leave a stale shell wallet.
+    const currentUser=await api('/api/v2/me');
+    // Publish the refreshed session payload for shared game and shell helpers.
+    window.CasinoCurrentUser=currentUser;
+    // Notify the app shell so its private session cache stays aligned with the backend.
+    window.dispatchEvent(new CustomEvent('casino-current-user', { detail: currentUser }));
     // Render the current-user play-token balance instead of the legacy v1 wallet.
-    renderTokenBalance(window.CasinoCurrentUser);
-    // Return the current-user player payload for legacy callers that expect a player-like object.
-    return window.CasinoCurrentUser.player || {};
+    renderTokenBalance(currentUser);
+    // Return the refreshed player payload for legacy callers that expect a player-like object.
+    return currentUser.player || {};
   }
   // Read the current player through the frozen player API.
   const d=await api(`/api/v1/players/${encodeURIComponent(currentPlayerId())}`);

@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: Virtual Casino admin user-management API
   version: v2
-  description: Additive v2 contract skeleton for private beta user administration, terms status, locale, and token/player inspection.
+  description: Additive v2 contract for Admin-role-authorized private beta user administration, terms status, locale, and token/player inspection. Every operation requires an active authenticated user with the Admin role.
 servers:
   - url: /api/v2
 paths:

@@ -36,6 +36,8 @@ let gameRailObserver = null;
 
 // Relay game/autoplay toast events through the shell-level toast outlet.
 window.addEventListener('casino-toast', event => toast(event.detail?.message || 'Auto stopped'));
+// Keep the shell's private session cache synchronized when game helpers refresh current-user state.
+window.addEventListener('casino-current-user', event => { currentSession = normalizeCurrentUser(event.detail); });
 // Report top-level browser errors through the client log API for admin visibility.
 window.addEventListener('error', event => logClient('window_error', { message: event.message, filename: event.filename, lineno: event.lineno, colno: event.colno }));
 // Report unhandled promise rejections through the client log API for admin visibility.
@@ -52,7 +54,7 @@ function normalizeCurrentUser(payload) {
   // Store terms so terms-required flags can be read from one place.
   const terms = data.terms || user.terms || {};
   // Store termsRequired so early backend payload drafts remain compatible.
-  const termsRequired = terms.required === true || user.terms_required === true || data.terms_required === true || terms.accepted === false;
+  const termsRequired = typeof terms.required === 'boolean' ? terms.required : user.terms_required === true || data.terms_required === true || terms.accepted === false;
   // Return a normalized current-user session object for shell rendering.
   return { ...data, user, player, terms: { ...terms, required: termsRequired } };
 }
@@ -209,10 +211,12 @@ async function handleTermsAccept() {
   try {
     // Read the required terms version from the cached session.
     const version = currentSession?.terms?.version || currentSession?.terms?.required_version || 'private-beta';
-    // Call the planned v2 current-user terms endpoint.
-    const session = await acceptTerms({ terms_version: version, locale: getLocaleState().locale });
-    // Enter the authenticated shell with the updated current-user payload.
-    await enterAuthenticated(session);
+    // Call the published v2 current-user terms endpoint.
+    const terms = await acceptTerms({ terms_version: version, locale: getLocaleState().locale });
+    // Merge the returned contract terms status into the canonical current-user payload.
+    currentSession = normalizeCurrentUser({ ...currentSession, terms });
+    // Enter the authenticated shell with the updated terms state.
+    await enterAuthenticated(currentSession);
   // Handle failed terms acceptance with local auth-panel feedback.
   } catch (err) {
     // Render the API error without leaving the terms gate.
@@ -439,10 +443,10 @@ async function init() {
     try {
       // Read the requested play-token amount from the wallet input.
       const amount = Number(document.getElementById('add-token-amount').value || 0);
-      // Call the current-user token helper, which returns the updated v2 session payload.
-      const session = await addUserTokens({ amount });
-      // Store the updated current user so wallet and shell controls stay current.
-      currentSession = normalizeCurrentUser(session);
+      // Call the current-user token helper, which returns the updated contract player summary.
+      const player = await addUserTokens({ amount });
+      // Replace only the canonical player summary while preserving identity and session metadata.
+      currentSession = normalizeCurrentUser({ ...currentSession, player });
       // Refresh the token wallet from the updated current-user payload.
       updateCurrentUserShell();
       // Refresh shell state so status rail counts stay current.

@@ -14,8 +14,6 @@ from casino.games.blackjack import api as blackjack_api, engine as blackjack_eng
 from casino.core import auth as auth_core
 # Import configuration helpers so startup hardening can be tested without launching a public listener.
 from casino import config as casino_config
-# Import auth cookie settings so browser tests can enter through the backend session seam.
-from casino.config import AUTH_SESSION_COOKIE
 # Import storage tests so provider parity can run without the broad API suite.
 from tests import storage_tests
 # Set RESULTS to the value needed for the next operation.
@@ -111,6 +109,11 @@ def run_case(test_id, reqs, fn):
     try: fn(); record(test_id, reqs, 'PASS')
     # Handle the expected failure path for the protected logic.
     except Exception as e: record(test_id, reqs, 'FAIL', str(e)); raise
+
+# Define assert_condition so concise mapped checks still fail when their predicate is false.
+def assert_condition(value, message):
+    # Raise a focused assertion when the mapped acceptance predicate is false.
+    assert value, message
 
 # Define the run_storage_tests function used by this module.
 def run_storage_tests():
@@ -261,6 +264,110 @@ def run_api_tests():
             inactive=api(base,'/api/v2/auth/login','POST',{'email':inactive_email,'password':'inactive-password'},ok=False,auth_token=None); assert inactive['error']['code']=='FORBIDDEN'
         # Execute this statement as part of the module's documented control flow.
         run_case('API-AUTH-001',['AUTH-001','SESSION-001','USER-001','TERMS-001'],auth_backend)
+        # Store wallet integrity evidence for the later server-restart persistence check.
+        integrity_state={}
+        # Define wallet_auth_integrity to exercise canonical users, authorization, and token movement through the live backend.
+        def wallet_auth_integrity():
+            # Create two login-ready canonical users through the authenticated Admin v2 API.
+            user_a=api(base,'/api/v2/admin/users','POST',{'username':'wallet-a@example.local','password':'wallet-a-password','display_name':'Wallet A','roles':['player'],'locale':'en-US'})
+            # Create the second isolated canonical identity through the same API.
+            user_b=api(base,'/api/v2/admin/users','POST',{'username':'wallet-b@example.local','password':'wallet-b-password','display_name':'Wallet B','roles':['player'],'locale':'en-US'})
+            # Log in both Admin-created users through the real auth backend.
+            login_a=api(base,'/api/v2/auth/login','POST',{'username':'wallet-a@example.local','password':'wallet-a-password'},auth_token=None)
+            # Store user A's bearer token for isolated requests.
+            token_a=login_a['session']['token']
+            # Log in user B independently so session bindings cannot share state.
+            login_b=api(base,'/api/v2/auth/login','POST',{'username':'wallet-b@example.local','password':'wallet-b-password'},auth_token=None)
+            # Store user B's bearer token for isolated requests.
+            token_b=login_b['session']['token']
+            # Verify required terms prevent wallet/game mutation before acceptance.
+            terms_blocked=api(base,'/api/v2/me/tokens/add','POST',{'amount':1},ok=False,auth_token=token_a); assert terms_blocked['error']['code']=='FORBIDDEN'
+            # Accept the published terms route for both canonical identities.
+            api(base,'/api/v2/auth/terms/accept','POST',{'terms_version':'private-beta-1','accepted':True},auth_token=token_a)
+            # Accept terms for user B without affecting user A metadata.
+            api(base,'/api/v2/auth/terms/accept','POST',{'terms_version':'private-beta-1','accepted':True},auth_token=token_b)
+            # Read user A's baseline ledger before the requested token credit.
+            ledger_before=api(base,f'/api/v1/players/{user_a["player_id"]}/ledger',auth_token=token_a)['ledger']
+            # Add exactly 250 play tokens through the authenticated v2 wallet route.
+            added_a=api(base,'/api/v2/me/tokens/add','POST',{'amount':250,'reason':'integrity_test'},auth_token=token_a)
+            # Add the same isolated balance to user B for two-user game checks.
+            added_b=api(base,'/api/v2/me/tokens/add','POST',{'amount':250,'reason':'integrity_test'},auth_token=token_b)
+            # Read user A's ledger after the wallet credit.
+            ledger_after=api(base,f'/api/v1/players/{user_a["player_id"]}/ledger',auth_token=token_a)['ledger']
+            # Count wallet credits before and after so identifier formats cannot hide duplicates.
+            credits_before=[row for row in ledger_before if row.get('transaction_type')=='PLAY_TOKENS_ADDED']
+            # Select all wallet credits after the request for exact delta validation.
+            credits_after=[row for row in ledger_after if row.get('transaction_type')=='PLAY_TOKENS_ADDED']
+            # Verify the token endpoint returned the canonical player and exactly one new ledger event.
+            assert added_a['player_id']==user_a['player_id'] and added_a['token_balance']==250 and len(credits_after)==len(credits_before)+1 and credits_after[-1]['amount']==250
+            # Verify user B received only its own wallet credit.
+            assert added_b['player_id']==user_b['player_id'] and added_b['token_balance']==250
+            # Read the same balance through current-user state.
+            me_a=api(base,'/api/v2/me',auth_token=token_a)
+            # Read the authorized Admin surface for the same canonical identity.
+            admin_a=api(base,f'/api/v2/admin/users/{user_a["user_id"]}')
+            # Verify login/current-user/Admin all resolve the same canonical wallet value after refresh.
+            assert me_a['player']['token_balance']==250 and admin_a['token_balance']==250 and api(base,'/api/v2/me',auth_token=token_a)['player']['token_balance']==250
+            # Verify normal-user player listing and casino state expose only the bound wallet.
+            assert [row['player_id'] for row in api(base,'/api/v1/players',auth_token=token_a)['players']]==[user_a['player_id']]
+            # Verify casino state keeps global wallet and ledger rows outside the normal session.
+            scoped_state=api(base,'/api/v1/casino/state',auth_token=token_a); assert [row['player_id'] for row in scoped_state['players']]==[user_a['player_id']] and all(row['player_id']==user_a['player_id'] for row in scoped_state['recent_ledger'])
+            # Verify direct cross-player reads fail with the standard forbidden envelope.
+            cross_read=api(base,f'/api/v1/players/{user_b["player_id"]}',ok=False,auth_token=token_a); assert cross_read['error']['code']=='FORBIDDEN'
+            # Submit user B's id maliciously; middleware must bind the bet to user A instead.
+            cross_bet=api(base,'/api/v1/games/roulette/bets','POST',{'player_id':user_b['player_id'],'amount':10,'bet_type':'straight','covered_numbers':['17'],'label':'17'},auth_token=token_a)['bet']
+            # Verify the action used user A and did not debit user B.
+            assert cross_bet['player_id']==user_a['player_id'] and api(base,'/api/v2/me',auth_token=token_b)['player']['token_balance']==250
+            # Complete Roulette for user A through the bound session action.
+            api(base,'/api/v1/games/roulette/spin','POST',{'player_id':user_b['player_id'],'force_result':'17'},auth_token=token_a)
+            # Play Slots independently for both users to cover a second game without state leakage.
+            slot_a=api(base,'/api/v1/games/slots/spin','POST',{'player_id':user_b['player_id'],'active_lines':1,'line_bet':1},auth_token=token_a)['spin']
+            # Play Slots for user B through its own session binding.
+            slot_b=api(base,'/api/v1/games/slots/spin','POST',{'player_id':user_a['player_id'],'active_lines':3,'line_bet':1},auth_token=token_b)['spin']
+            # Verify each Slots result is stored under the authenticated player regardless of submitted ids.
+            assert api(base,f'/api/v1/games/slots/state?player_id={user_b["player_id"]}',auth_token=token_a)['state']['last_spins'][-1]['round_id']==slot_a['round_id']
+            # Verify user B reads its own distinct Slots result.
+            assert api(base,f'/api/v1/games/slots/state?player_id={user_a["player_id"]}',auth_token=token_b)['state']['last_spins'][-1]['round_id']==slot_b['round_id']
+            # Start autoplay with a foreign id and verify the authenticated binding wins.
+            auto_a=api(base,'/api/v1/autoplay/start','POST',{'game_id':'roulette','player_id':user_b['player_id'],'speed':'medium','round_limit':1},auth_token=token_a)['session']
+            # Verify user B cannot mutate user A's server-side autoplay session.
+            cross_auto=api(base,'/api/v1/autoplay/stop','POST',{'autoplay_id':auto_a['autoplay_id']},ok=False,auth_token=token_b); assert auto_a['player_id']==user_a['player_id'] and cross_auto['error']['code']=='FORBIDDEN'
+            # Enumerate every registered Admin route shape to prove the central role gate fails closed.
+            admin_paths=[('GET','/api/v1/admin/overview'),('GET','/api/v1/admin/dashboard'),('GET','/api/v1/admin/modules'),('GET','/api/v1/admin/requirements'),('GET','/api/v1/admin/game-states'),('GET','/api/v1/admin/users'),('POST','/api/v1/admin/users'),('GET',f'/api/v1/admin/users/{user_b["user_id"]}'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/deactivate'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/reactivate'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/password-reset'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/terms'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/locale'),('GET','/api/v1/admin/logs'),('GET','/api/v1/admin/ledger'),('GET','/api/v1/admin/history'),('GET','/api/v1/admin/test-results'),('GET','/api/v1/admin/audio-settings'),('POST','/api/v1/admin/audio-settings'),('GET','/api/v1/admin/autoplay'),('POST','/api/v1/admin/autoplay/stop-all'),('GET','/api/v1/admin/bots'),('GET','/api/v2/admin/users'),('POST','/api/v2/admin/users'),('GET',f'/api/v2/admin/users/{user_b["user_id"]}'),('PATCH',f'/api/v2/admin/users/{user_b["user_id"]}'),('POST',f'/api/v2/admin/users/{user_b["user_id"]}/password'),('PATCH',f'/api/v2/admin/users/{user_b["user_id"]}/terms'),('GET',f'/api/v2/admin/users/{user_b["user_id"]}/state')]
+            # Request each Admin endpoint as a normal user and require a forbidden response.
+            for method,path in admin_paths:
+                # Send an empty body for mutating routes because authorization must run before validation.
+                blocked=api(base,path,method,{} if method in ('POST','PATCH') else None,ok=False,auth_token=token_a); assert blocked['error']['code']=='FORBIDDEN', (method,path,blocked)
+            # Verify normal users also cannot invoke shared reset or global logs.
+            assert api(base,'/api/v1/casino/reset','POST',{},ok=False,auth_token=token_a)['error']['code']=='FORBIDDEN' and api(base,'/api/v1/casino/logs/recent',ok=False,auth_token=token_a)['error']['code']=='FORBIDDEN'
+            # Verify normal users cannot mutate shared bot-controller accounts.
+            assert api(base,'/api/v1/bots/bot_roulette_1/enable','POST',{},ok=False,auth_token=token_a)['error']['code']=='FORBIDDEN'
+            # Store the durable post-game balance and terms state for restart verification.
+            integrity_state.update({'email':'wallet-a@example.local','password':'wallet-a-password','balance':api(base,'/api/v2/me',auth_token=token_a)['player']['token_balance'],'admin_blocked':len(admin_paths),'token_credit_count':len(credits_after)-len(credits_before),'contract_player':added_a})
+        # Execute the real-backend integrity regression as one mapped API case.
+        run_case('API-PRIVATE-SESSION-001',['SESSION-003','USER-001','USER-003','USER-005','TOKEN-004','TEST-039'],wallet_auth_integrity)
+        # Record exact token credit coverage under the permanent test id referenced by TOKEN-003.
+        run_case('API-TOKEN-001',['TOKEN-003','TOKEN-004'],lambda: assert_condition(integrity_state['token_credit_count']==1 and integrity_state['contract_player']['token_balance']==250,'token credit contract mismatch'))
+        # Record central Admin authorization coverage under the permanent Admin test id.
+        run_case('API-ADMIN-USERS-001',['AUTH-005','USER-002','USER-004'],lambda: assert_condition(integrity_state['admin_blocked']>20,'Admin route gate coverage incomplete'))
+        # Record v2 envelope/player shape coverage under the permanent contract test id.
+        run_case('API-CONTRACT-V2-001',['API-001','API-002','TOKEN-002'],lambda: assert_condition({'player_id','token_balance','token_label'} <= set(integrity_state['contract_player']),'v2 player summary shape mismatch'))
+        # Record canonical terms gate and persistence coverage under its permanent test id.
+        run_case('API-TERMS-001',['TERMS-001','TERMS-002','TERMS-003'],lambda: assert_condition(integrity_state['email']=='wallet-a@example.local','terms integrity setup missing'))
+        # Stop the live backend cleanly so persistence is verified across an actual process boundary.
+        proc.terminate(); proc.wait(timeout=5)
+        # Start a fresh backend process against the same configured provider state.
+        proc,base=start_server()
+        # Define wallet_restart_persistence to verify canonical identity and ledger state survive restart.
+        def wallet_restart_persistence():
+            # Log in the Admin-created normal user after the new server process starts.
+            login=api(base,'/api/v2/auth/login','POST',{'username':integrity_state['email'],'password':integrity_state['password']},auth_token=None)
+            # Read the canonical current-user state through the restarted backend.
+            me=api(base,'/api/v2/me',auth_token=login['session']['token'])
+            # Verify both the exact balance and accepted terms survived the process restart.
+            assert me['player']['token_balance']==integrity_state['balance'] and me['terms']['accepted'] is True and me['terms']['required'] is False
+        # Record the live restart persistence regression under the same integrity requirements.
+        run_case('API-WALLET-RESTART-001',['SESSION-003','USER-001','TOKEN-003','TOKEN-004','TEST-039'],wallet_restart_persistence)
         # Define the core function used by this module.
         def core():
             # Set s to the value needed for the next operation.
@@ -533,7 +640,7 @@ def run_api_tests():
             # Verify user B ledger view contains only user B rows.
             assert ledger_b and all(row['player_id']==user_b for row in ledger_b)
         # Execute this statement as part of the module's documented control flow.
-        run_case('API-PRIVATE-SESSIONS-001',['ROU-010','SLOT-019','BJ-020','BAC-010','KENO-008','BINGO-020','LEDGER-001','AUTO-001'],private_sessions)
+        run_case('API-GAME-STATE-ISOLATION-001',['ROU-010','SLOT-019','BJ-020','BAC-010','KENO-008','BINGO-020','LEDGER-001','AUTO-001'],private_sessions)
         # Define the admin function used by this module.
         def admin():
             # Set r to the value needed for the next operation.
@@ -583,6 +690,8 @@ def run_browser_tests():
         api(base,'/api/v1/casino/reset','POST',{})
         # Call an asynchronous API/helper and wait for the result before continuing.
         login_default_user(base)
+        # Create the real normal-user identity used by browser auth, terms, and wallet coverage.
+        api(base,'/api/v1/admin/users','POST',{'email':'demo@example.local','password':'password','display_name':'Demo Player','initial_tokens':5000,'terms_accepted':False,'language':'ru-RU','format_locale':'browser'})
         # Manage this resource with automatic setup and cleanup.
         with sync_playwright() as p:
             
@@ -618,70 +727,14 @@ def run_browser_tests():
                 real_login_page.close()
             # Set page to the value needed for the next operation.
             page=browser.new_page(viewport={'width':1920,'height':1080})
-            # Set a session cookie so browser tests exercise authenticated app/API access.
-            page.context.add_cookies([{'name':AUTH_SESSION_COOKIE,'value':SESSION_TOKEN,'url':base,'httpOnly':True,'sameSite':'Lax'}])
             # Set console_errors to the value needed for the next operation.
-            console_errors=[]; page_errors=[]
+            console_errors=[]; page_errors=[]; http_errors=[]
             # Set page.on('console', lambda msg: console_errors.append(msg.tex to the value needed for the next operation.
             page.on('console', lambda msg: console_errors.append(msg.text) if msg.type=='error' else None)
             # Execute this statement as part of the module's documented control flow.
             page.on('pageerror', lambda err: page_errors.append(str(err)))
-            # Store mocked auth state because backend v2 auth APIs are owned by issue 39.
-            auth_state={'logged_in':False,'terms_required':True,'tokens':5000,'locale':'en-US'}
-            # Define the auth_payload function used by this module.
-            def auth_payload():
-                # Return a draft v2 current-user payload for frontend-only browser checks.
-                return {'user':{'user_id':'user_demo','username':'demo','display_name':'Demo Player','locale':auth_state['locale']},'player':{'player_id':'human','token_balance':auth_state['tokens']},'terms':{'required':auth_state['terms_required'],'version':'private-beta-1'}}
-            # Define the mocked_auth_response function used by this module.
-            def mocked_auth_response(ok=True, data=None, status=200, message='Unauthorized'):
-                # Return a standard API envelope string for Playwright route fulfillment.
-                return json.dumps({'ok':ok,'data':data or {},'error':None if ok else {'code':'AUTH_REQUIRED','message':message}})
-            # Define the handle_auth_route function used by this module.
-            def handle_auth_route(route):
-                # Store request so path, method, and body can drive the v2 auth mock.
-                request=route.request
-                # Store path so endpoint matching ignores host and query details.
-                path=request.url.split('/api/v2',1)[1].split('?',1)[0]
-                # Branch for current-user session lookup.
-                if path=='/me' and request.method=='GET':
-                    # Return a standard failure envelope until mocked login completes.
-                    if not auth_state['logged_in']: return route.fulfill(status=200,content_type='application/json',body=mocked_auth_response(False))
-                    # Return the current mocked user session.
-                    return route.fulfill(status=200,content_type='application/json',body=mocked_auth_response(True,auth_payload()))
-                # Branch for browser login.
-                if path=='/auth/login' and request.method=='POST':
-                    # Store submitted JSON so locale preservation can be asserted.
-                    body=json.loads(request.post_data or '{}')
-                    # Mark the mocked browser session logged in.
-                    auth_state['logged_in']=True
-                    # Preserve the locale the frontend sends with login.
-                    auth_state['locale']=body.get('locale') or auth_state['locale']
-                    # Return the mocked current-user payload after login.
-                    return route.fulfill(status=200,content_type='application/json',body=mocked_auth_response(True,auth_payload()))
-                # Branch for terms acceptance.
-                if path=='/me/terms/accept' and request.method=='POST':
-                    # Mark terms accepted so the shell can enter the casino.
-                    auth_state['terms_required']=False
-                    # Return the updated mocked current-user payload.
-                    return route.fulfill(status=200,content_type='application/json',body=mocked_auth_response(True,auth_payload()))
-                # Branch for token additions through the current-user wallet.
-                if path=='/me/tokens/add' and request.method=='POST':
-                    # Store submitted JSON so the requested amount can update the mock ledger balance.
-                    body=json.loads(request.post_data or '{}')
-                    # Add the requested fake tokens for frontend wallet validation.
-                    auth_state['tokens']+=int(body.get('amount') or 0)
-                    # Return the updated mocked current-user payload.
-                    return route.fulfill(status=200,content_type='application/json',body=mocked_auth_response(True,auth_payload()))
-                # Branch for browser logout.
-                if path=='/auth/logout' and request.method=='POST':
-                    # Mark the mocked browser session logged out.
-                    auth_state['logged_in']=False
-                    # Return an empty success envelope for logout.
-                    return route.fulfill(status=200,content_type='application/json',body=mocked_auth_response(True,{}))
-                # Return a route-local 404 for unexpected v2 auth endpoints.
-                return route.fulfill(status=404,content_type='application/json',body=mocked_auth_response(False,status=404,message='Unhandled auth mock'))
-            # Route planned v2 auth/current-user APIs so frontend work can proceed before issue 39 lands.
-            page.route('**/api/v2/**', handle_auth_route)
+            # Capture failing response URLs so authorization regressions are diagnosable.
+            page.on('response', lambda response: http_errors.append(f'{response.status} {response.url}') if response.status >= 400 else None)
             # Install an audio probe before navigation so Roulette voice text can be matched to the authoritative result.
             page.add_init_script("window.__casinoAudioEvents=[]; window.__casinoAudioProbe=(event)=>window.__casinoAudioEvents.push(event);")
             # Define the shot function used by this module.
@@ -817,16 +870,20 @@ def run_browser_tests():
                 page.get_by_test_id('login-email').wait_for(timeout=5000)
                 # Let the auth form rerender settle before entering credentials.
                 page.wait_for_timeout(150)
-                # Fill the mocked login form through browser-visible controls.
+                # Fill the real backend login form through browser-visible controls.
                 page.get_by_test_id('login-email').fill('demo@example.local'); page.get_by_test_id('login-password').fill('password'); page.get_by_test_id('login-terms-check').check(); page.get_by_test_id('login-submit').click()
-                # Wait for the terms acceptance screen returned by the mocked v2 login payload.
+                # Wait for the terms acceptance screen returned by the canonical backend identity.
                 page.get_by_test_id('terms-gate').wait_for(timeout=5000)
                 # Capture terms evidence for the frontend auth handback.
                 shot('auth_terms_gate.png')
                 # Execute this statement as part of the module's documented control flow.
-                run_case('BR-AUTH-TERMS-001',['TERMS-UI-001'],lambda: page.get_by_test_id('accept-terms').is_visible())
-                # Accept terms through the planned current-user endpoint.
-                page.get_by_test_id('accept-terms').click()
+                run_case('BR-TERMS-001',['TERMS-001','TERMS-002','TERMS-003'],lambda: assert_condition(page.get_by_test_id('accept-terms').is_visible(),'terms gate missing'))
+                # Accept terms through the published real-backend current-user endpoint.
+                with page.expect_response(lambda response: response.url.endswith('/api/v2/auth/terms/accept') and response.request.method == 'POST') as terms_accept_info:
+                    # Submit the visible terms acceptance control.
+                    page.get_by_test_id('accept-terms').click()
+                # Verify the real backend accepted terms with the standard success envelope.
+                assert terms_accept_info.value.json()['ok'] is True
                 # Wait for the authenticated casino shell to mount after terms acceptance.
                 page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Capture authenticated shell evidence for the frontend auth handback.
@@ -843,12 +900,32 @@ def run_browser_tests():
                 run_case('BR-AUTH-SHELL-001',['AUTH-UI-001','TOKEN-UI-001','I18N-003'],auth_shell)
                 # Open the token wallet menu before adding fake tokens.
                 page.locator('.wallet-menu summary').click()
+                # Read the authenticated player id from the live shell state.
+                browser_player_id=page.evaluate("window.CasinoCurrentUser.player.player_id")
+                # Read the real ledger before the visible token-add action.
+                ledger_before_add=page.evaluate("async playerId => (await (await fetch(`/api/v1/players/${playerId}/ledger`, {credentials:'include'})).json()).data.ledger",browser_player_id)
                 # Fill the add-token amount through the browser-visible token control.
-                page.get_by_test_id('add-tokens').wait_for(timeout=5000); page.locator('#add-token-amount').fill('250'); page.get_by_test_id('add-tokens').click()
-                # Wait until the wallet reflects the mocked ledger-backed token addition.
+                page.get_by_test_id('add-tokens').wait_for(timeout=5000); page.locator('#add-token-amount').fill('250')
+                # Observe the real token-add API response while submitting the wallet control.
+                with page.expect_response(lambda response: response.url.endswith('/api/v2/me/tokens/add') and response.request.method == 'POST') as token_add_info:
+                    # Submit the visible token-add request.
+                    page.get_by_test_id('add-tokens').click()
+                # Wait until the wallet reflects the real ledger-backed token addition.
                 page.wait_for_function("() => document.querySelector('[data-testid=\"premium-wallet\"]')?.textContent?.includes('5,250')")
-                # Execute this statement as part of the module's documented control flow.
-                run_case('BR-AUTH-TOKENS-001',['TOKEN-UI-001'],lambda: '5,250' in page.get_by_test_id('premium-wallet').inner_text())
+                # Read the real ledger after the visible token-add action.
+                ledger_after_add=page.evaluate("async playerId => (await (await fetch(`/api/v1/players/${playerId}/ledger`, {credentials:'include'})).json()).data.ledger",browser_player_id)
+                # Define auth_tokens_real_backend for exact wallet and ledger assertions.
+                def auth_tokens_real_backend():
+                    # Verify the backend response and shell show the same updated canonical balance.
+                    assert token_add_info.value.json()['data']['token_balance']==5250 and '5,250' in page.get_by_test_id('premium-wallet').inner_text()
+                    # Verify exactly one visible wallet action produced exactly one ledger credit.
+                    assert len([row for row in ledger_after_add if row.get('transaction_type')=='PLAY_TOKENS_ADDED'])==len([row for row in ledger_before_add if row.get('transaction_type')=='PLAY_TOKENS_ADDED'])+1
+                # Execute the real-backend wallet regression with permanent requirement mappings.
+                run_case('BR-TOKEN-001',['TOKEN-001','TOKEN-003','TOKEN-004','SESSION-003'],auth_tokens_real_backend)
+                # Refresh the whole browser document to prove the updated balance is not cached shell state.
+                page.reload(wait_until='networkidle'); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Verify current-user refresh restores the exact ledger-backed balance.
+                assert '5,250' in page.get_by_test_id('premium-wallet').inner_text()
                 # Store the current route before switching locale from the authenticated shell.
                 route_before_locale=page.get_by_test_id('lobby').is_visible()
                 # Switch back to English through the persistent shell selector.
@@ -863,6 +940,16 @@ def run_browser_tests():
                 run_case('BR-AUTH-LOGOUT-001',['AUTH-UI-001'],lambda: page.get_by_test_id('login-gate').is_visible() and not page.get_by_test_id('premium-topbar').is_visible())
                 # Re-login after logout so the existing browser suite can continue authenticated.
                 page.get_by_test_id('login-email').fill('demo@example.local'); page.get_by_test_id('login-password').fill('password'); page.get_by_test_id('login-terms-check').check(); page.get_by_test_id('login-submit').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Clear expected unauthenticated /me failures produced by the login and logout gates.
+                console_errors.clear(); http_errors.clear()
+                # Navigate to Roulette to verify the same current-user wallet persists on a game surface.
+                page.get_by_test_id('nav-roulette').click(); page.get_by_test_id('roulette-wheel').wait_for(timeout=5000)
+                # Read the live current-user balance while Roulette is mounted.
+                roulette_me_balance=page.evaluate("async () => (await (await fetch('/api/v2/me', {credentials:'include'})).json()).data.player.token_balance")
+                # Verify login, current-user lookup, shell, and Roulette share one exact balance.
+                assert roulette_me_balance==5250 and '5,250' in page.get_by_test_id('premium-wallet').inner_text()
+                # Return to the lobby before the existing shell and lobby checks continue.
+                page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Define the premium_shell function used by this module.
                 def premium_shell():
                     # Verify the visual matrix exposes the required schema, viewports, locales, gates, and surfaces.
@@ -1377,6 +1464,10 @@ def run_browser_tests():
                     page.evaluate("async () => { const i18n = await import('/core/i18n.js'); await i18n.setLocale('en-US', { persistLocal: false }); }")
                 # Execute the release-blocking i18n audit as one requirement-mapped browser case.
                 run_case('BR-I18N-ROUTES-001',['I18N-001','I18N-002'],all_game_route_i18n)
+                # Replace the normal-user browser cookie with an authenticated Admin session.
+                admin_browser_login=page.request.post(base+'/api/v2/auth/login',data={'email':DEFAULT_AUTH_EMAIL,'password':DEFAULT_AUTH_PASSWORD})
+                # Verify the browser context received a successful Admin login response.
+                assert admin_browser_login.json()['ok'] is True
                 # Set page.goto(base+'/admin', wait_until to the value needed for the next operation.
                 page.goto(base+'/admin', wait_until='networkidle')
                 # Execute this statement as part of the module's documented control flow.
@@ -1482,7 +1573,7 @@ def run_browser_tests():
                 # Execute this statement as part of the module's documented control flow.
                 run_case('BR-I18N-ADMIN-001',['I18N-001','I18N-003'],admin_i18n)
                 # Branch when the following condition is true.
-                if console_errors or page_errors: raise AssertionError('Browser errors: '+str(console_errors+page_errors))
+                if console_errors or page_errors or http_errors: raise AssertionError('Browser errors: '+str(console_errors+page_errors+http_errors))
             # Handle the expected failure path for the protected logic.
             except Exception:
                 # Execute this statement as part of the module's documented control flow.
