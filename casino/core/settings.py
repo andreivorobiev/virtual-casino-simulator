@@ -1,15 +1,13 @@
 # AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
 # Import required dependency so this module can use its public functions or constants.
 from __future__ import annotations
-# Import required dependency so this module can use its public functions or constants.
-from casino.config import DATA_DIR, SCHEMA_VERSION
-# Import required dependency so this module can use its public functions or constants.
-from casino.core.state_store import read_json, write_json
+# Import required dependency so this module can use schema version metadata.
+from casino.config import SCHEMA_VERSION
+# Import required dependency so this module can use the configured storage provider.
+from casino.core.storage import get_storage_provider
 
-# Set SETTINGS_DIR to the value needed for the next operation.
-SETTINGS_DIR = DATA_DIR / "settings"
-# Set AUDIO_PATH to the value needed for the next operation.
-AUDIO_PATH = SETTINGS_DIR / "audio.json"
+# Set AUDIO_DOCUMENT_KEY to the provider document key for audio settings.
+AUDIO_DOCUMENT_KEY = "settings/audio"
 
 # Set DEFAULT_AUDIO to the value needed for the next operation.
 DEFAULT_AUDIO = {
@@ -50,8 +48,8 @@ DEFAULT_AUDIO = {
 
 # Define the audio_settings function used by this module.
 def audio_settings() -> dict:
-    # Set state to the value needed for the next operation.
-    state = read_json(AUDIO_PATH, DEFAULT_AUDIO.copy)
+    # Set state to the provider-backed audio settings document.
+    state = get_storage_provider().read_document(AUDIO_DOCUMENT_KEY, DEFAULT_AUDIO.copy)
     # Branch when the following condition is true.
     if not isinstance(state, dict):
         # Set state to the value needed for the next operation.
@@ -82,7 +80,7 @@ def save_audio_settings(updates: dict) -> dict:
             elif key == "preferred_voice_name":
                 # Set state[key] to the value needed for the next operation.
                 state[key] = str(val or "")
-    # Execute this statement as part of the module's documented control flow.
-    write_json(AUDIO_PATH, state)
+    # Persist the audio settings document through the active storage provider.
+    get_storage_provider().write_document(AUDIO_DOCUMENT_KEY, state)
     # Return the computed value to the caller.
     return state

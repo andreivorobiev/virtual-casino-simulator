@@ -2,7 +2,7 @@
   "title": "Bingo",
   "kicker": "Premium 75-ball draw",
   "subtitle": "Buy a card, let compatible bot controllers join, then call one ball at a time with stable daubs, card rows, and result space.",
-  "tags.fakeMoney": "Fake money only",
+  "tags.fakeMoney": "Play tokens only",
   "tags.ledger": "Ledger-backed",
   "tags.autoplay": "Stepwise autoplay",
   "metric.rules.label": "75-ball rules",

@@ -1,6 +1,6 @@
 {
   "module": "application",
-  "version": "9.2.0",
+  "version": "9.2.3",
   "paths": [
     "run.py",
     "README.md",

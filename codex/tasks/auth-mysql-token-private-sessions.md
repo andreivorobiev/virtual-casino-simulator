@@ -20,6 +20,12 @@
 - Requirement IDs changed: Supersede hardcoded single-human assumptions.
 - Requirement IDs validated: ROU, SLOT, BJ, BAC, KENO, BINGO, LEDGER, BOT, AUTO, AUTH.
 
+## Durable Requirement/Contract References
+
+- Implement USER-003, USER-005, TOKEN-004, STORAGE-002, MYSQL-002, API-001, API-002, and TEST-039.
+- Consume `contracts/openapi/auth.v2.yaml` for current-user/player identity and token-balance shape.
+- Preserve v1 compatibility unless the coordinator approves an explicit v2-only game API adaptation or compatibility shim.
+
 ## Scope
 
 - Impacted modules: roulette, slots, blackjack, baccarat, keno, bingo, ledger, autoplay, bots, tests.

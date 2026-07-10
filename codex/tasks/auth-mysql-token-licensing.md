@@ -20,6 +20,12 @@
 - Requirement IDs changed: Supersede any docs wording that implies real-money or gambling-site behavior.
 - Requirement IDs validated: DOC-016 and relevant docs governance IDs.
 
+## Durable Requirement/Contract References
+
+- Implement LIC-001 through LIC-003, TERMS-004, TOKEN-001, and DOC-016.
+- Superseded no-real-money wording is recorded on CORE-004, SLOT-026, KENO-021, and BINGO-024; preserve the policy while using toy-simulator/play-token language.
+- No API contract changes are expected for this packet.
+
 ## Scope
 
 - Impacted modules: docs, application metadata.

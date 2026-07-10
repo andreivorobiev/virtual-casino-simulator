@@ -1,0 +1,31 @@
+{
+  "epic": "https://github.com/andreivorobiev/virtual-casino-simulator/issues/34",
+  "issue": "https://github.com/andreivorobiev/virtual-casino-simulator/issues/35",
+  "created_at": "2026-07-09T00:00:00Z",
+  "status": "planned-contract-foundation",
+  "v1_compatibility": {
+    "policy": "preserved",
+    "notes": "Existing /api/v1 contracts remain frozen. Authenticated private beta behavior is introduced through additive /api/v2 contracts or compatibility shims in later implementation PRs."
+  },
+  "v2_contracts": {
+    "auth_current_user_terms_tokens": "contracts/openapi/auth.v2.yaml",
+    "admin_user_management": "contracts/openapi/admin-users.v2.yaml"
+  },
+  "requirement_prefixes": [
+    "AUTH",
+    "USER",
+    "STORAGE",
+    "MYSQL",
+    "SESSION",
+    "TERMS",
+    "LIC",
+    "TOKEN",
+    "API",
+    "TEST"
+  ],
+  "non_goals": [
+    "No runtime auth implementation in this worker.",
+    "No storage provider implementation in this worker.",
+    "No frontend login, Admin UI, or game behavior changes in this worker."
+  ]
+}
