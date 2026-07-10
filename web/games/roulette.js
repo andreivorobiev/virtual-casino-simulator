@@ -2,7 +2,7 @@
 // Import required dependency so this module can call frozen Roulette API endpoints.
 import { api, post, del, currentPlayerId, currentPlayerPath, withCurrentPlayer } from '../core/api.js';
 // Import shared UI helpers so the Roulette surface matches the premium shell contract.
-import { money, signedMoney, toast, refreshBalance, safe } from '../core/ui.js';
+import { toast, refreshBalance, safe } from '../core/ui.js';
 // Import autoplay renderer so Roulette keeps using the shared control-plane session behavior.
 import { renderAutoplay } from '../core/autoplay.js';
 // Import voice helpers so spin sounds and announcements preserve existing behavior.
@@ -14,6 +14,10 @@ import { initI18n, onLocaleChange, t } from '../core/i18n.js';
 
 // Store the i18n resource domain owned by this game module.
 const GAME_DOMAIN = 'games/roulette';
+// Store the shared autoplay domain so progressive-disclosure labels remain localized.
+const AUTOPLAY_DOMAIN = 'core/autoplay';
+// Store the shared bots domain so the collapsed controller label remains localized.
+const BOTS_DOMAIN = 'core/bots';
 // Store the local style element id so repeated mounts do not duplicate Roulette-only CSS.
 const PREMIUM_STYLE_ID = 'roulette-premium-style';
 // Store chip denominations so the control rail remains stable across rerenders.
@@ -24,63 +28,101 @@ const RED_NUMBERS = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 
 const BOARD = { width: 760, height: 560, x0: 170, y0: 82, cw: 132, ch: 34 };
 // Store premium Roulette CSS inside the owned module so shared foundation styles stay untouched.
 const PREMIUM_STYLE = [
-  '.roulette-premium{display:grid;grid-template-rows:auto minmax(0,1fr);gap:10px;height:100%;min-height:0;}', // Keep the route mounted inside the shared #view shell without page-level overflow.
-  '.roulette-premium .roulette-header{display:grid;grid-template-columns:minmax(0,1fr) minmax(360px,auto);gap:14px;align-items:end;min-height:92px;}', // Reserve a stable proposal-style heading and status ribbon band.
-  '.roulette-premium .roulette-kicker{margin:0 0 4px;color:var(--muted);font-size:13px;}', // Match the small prerender kicker without adding explanatory UI text.
-  '.roulette-premium h1{margin:0;color:#fff0b8;font-family:var(--font-display);font-size:52px;line-height:.95;text-shadow:0 2px 18px rgba(255,217,120,.16);}', // Make Roulette the first-viewport signal inside the game route.
-  '.roulette-status-ribbon{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));overflow:hidden;border:1px solid rgba(255,217,120,.45);border-radius:8px;background:rgba(7,40,27,.76);}', // Mirror the approved four-cell state ribbon.
-  '.roulette-status-ribbon span{display:grid;place-items:center;min-height:62px;padding:8px 10px;border-left:1px solid rgba(255,217,120,.18);color:#ffe9ad;font-size:12px;font-weight:900;text-align:center;}', // Keep ribbon text centered and contained.
-  '.roulette-status-ribbon span:first-child{border-left:0;}', // Avoid double borders on the first ribbon cell.
-  '.roulette-premium .game-layout{height:100%;min-height:0;}', // Keep the three-zone game grid stable inside the route body.
-  '.roulette-premium .control-rail,.roulette-premium .details-drawer{background:linear-gradient(145deg,rgba(12,38,28,.94),rgba(3,17,12,.92));}', // Give side rails the darker premium table framing from the prerenders.
-  '.roulette-control-section{margin-top:10px;}', // Space control groups without resizing the main stage.
-  '.roulette-control-section h3{margin-bottom:6px;text-transform:uppercase;font-size:14px;letter-spacing:0;}', // Match compact rail labels while respecting the no-negative-letter-spacing rule.
-  '.roulette-settings{display:grid;grid-template-columns:1fr;gap:8px;}', // Stack settings so localized labels fit inside the rail.
-  '.roulette-settings label{display:grid;grid-template-columns:1fr;gap:5px;min-height:58px;padding:8px;border:1px solid var(--border-soft);border-radius:8px;background:rgba(255,255,255,.04);color:var(--muted);font-size:12px;}', // Keep select controls framed and scannable.
-  '.roulette-settings select,.roulette-call-input{width:100%;min-height:34px;}', // Ensure form controls keep a predictable rail footprint.
-  '.roulette-fast-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}', // Arrange fast outside bets like the approved segmented rail.
-  '.roulette-call-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}', // Keep call-bet controls compact and balanced.
-  '.roulette-fast-grid button,.roulette-call-grid button,.roulette-secondary-actions button{min-height:31px;padding:6px 8px;border-color:rgba(255,255,255,.16);border-radius:8px;background:rgba(255,255,255,.06);font-size:12px;}', // Make secondary controls polished without touching global buttons.
-  '.roulette-secondary-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px;}', // Keep rebet and spot toggles mounted in the same lane.
-  '.roulette-control-plane{margin-top:8px;padding:10px;border:1px solid rgba(255,217,120,.35);border-radius:8px;background:rgba(255,217,120,.07);}', // Reuse the prerender control-plane treatment for custom panels.
-  '.roulette-control-plane b{display:block;color:#ffe9ad;}', // Keep control-plane headings readable in both locales.
-  '.roulette-control-plane span{display:block;margin-top:4px;color:var(--muted);font-size:12px;}', // Keep panel details fixed-size and muted.
-  '.roulette-meter{height:7px;margin-top:8px;overflow:hidden;border-radius:999px;background:rgba(0,0,0,.35);}', // Reserve the meter track used by prerender status cards.
-  '.roulette-meter i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#b62530,#ffd978);}', // Draw progress using transform-free paint only.
-  '.roulette-premium .game-stage{padding:16px;background:linear-gradient(145deg,rgba(14,45,32,.94),rgba(3,18,13,.9));}', // Match the central premium stage surface.
-  '.roulette-stage-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:64px;margin-bottom:10px;}', // Reserve toolbar space across betting, spinning, and settled states.
-  '.roulette-stage-toolbar .eyebrow{margin:0;color:var(--muted);font-size:12px;}', // Keep round metadata compact.
-  '.roulette-stage-toolbar h2{margin:2px 0 0;color:#fff0b8;font-family:var(--font-display);font-size:32px;}', // Use stage-scale type without crowding controls.
-  '.roulette-stage-toolbar button{min-width:126px;min-height:44px;}', // Stabilize the primary action button.
-  '.roulette-premium .roulette-stage{min-height:0;}', // Let the existing responsive grid control wheel/table placement.
-  '.roulette-premium .wheel-card{position:relative;border-radius:8px;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(0,0,0,.22)),#091811;}', // Bring the wheel panel closer to the approved mockup.
-  '.roulette-premium .wheel-card.reveal-glow,.roulette-premium .wheel-card.result-glow{box-shadow:inset 0 0 45px rgba(243,199,102,.16),0 16px 34px rgba(0,0,0,.32);}', // Add state glow without changing layout.
-  '.roulette-premium .roulette-wheel{filter:drop-shadow(0 18px 28px rgba(0,0,0,.46));}', // Give the vector wheel table depth.
-  '.roulette-premium .fixed-result{display:grid;align-content:center;min-height:96px;border-radius:8px;}', // Keep the result region fixed through all spin states.
-  '.roulette-premium .fixed-result.win{border-color:rgba(255,217,120,.66);background:linear-gradient(135deg,rgba(255,217,120,.12),rgba(116,24,28,.18));color:#ffe9ad;}', // Highlight settled results while staying within the rail palette.
-  '.roulette-premium .roulette-table-board{height:590px;border-color:rgba(243,199,102,.62);border-radius:8px;background:linear-gradient(135deg,rgba(255,255,255,.04),rgba(0,0,0,.18)),linear-gradient(145deg,#0a5b35,#07301f);}', // Match the approved felt and gold trim while leaving room for the outside row.
-  '.roulette-table-board.roulette-board-dimmed{filter:saturate(.86);}', // Dim the table during the spin/reveal state without resizing it.
-  '.roulette-premium .table-cell,.roulette-premium .outside-cell{border-color:rgba(255,255,255,.58);border-radius:6px;}', // Polish existing table cells while preserving absolute hit areas.
-  '.roulette-premium .table-cell.result-cell,.roulette-premium .outside-cell.result-cell{outline:3px solid #ffd978;box-shadow:inset 0 0 24px rgba(255,217,120,.36),0 0 18px rgba(255,217,120,.24);}', // Lock settled-result marker to the winning table area.
-  '.roulette-result-marker{position:absolute;right:5px;bottom:3px;color:#ffd978;font-size:9px;font-weight:1000;}', // Keep the WIN marker small enough for table cells.
-  '.roulette-premium .spot{width:16px;height:16px;border-width:1px;background:rgba(255,217,120,.36);opacity:.28;}', // Keep inside-bet hotspots discoverable without cluttering the premium felt.
-  '.roulette-premium .spot:hover{opacity:1;}', // Make inside-bet hotspots clear on hover.
-  '.roulette-premium .bet-chip{animation:rouletteChipPop .18s ease-out;}', // Make placed chips feel responsive without layout motion.
-  '@keyframes rouletteChipPop{from{transform:scale(.82);opacity:.5;}to{transform:scale(1);opacity:1;}}', // Animate only transform and opacity per UX requirements.
-  '.roulette-drawer-title{display:flex;align-items:center;justify-content:space-between;gap:8px;}', // Keep drawer headings and phase badges aligned.
-  '.roulette-settlement-card{min-height:86px;margin:8px 0;padding:12px;border:1px solid rgba(255,217,120,.42);border-radius:8px;background:rgba(255,217,120,.08);}', // Reserve settlement space during spins and after results.
-  '.roulette-settlement-card b{display:block;color:#ffe9ad;}', // Keep settlement card heading readable.
-  '.roulette-settlement-card span{display:block;margin-top:6px;color:var(--muted);font-size:12px;}', // Keep settlement card detail compact.
-  '.roulette-spark-bars{display:grid;grid-template-columns:repeat(8,1fr);align-items:end;gap:7px;height:72px;margin:8px 0;padding:10px;border:1px solid var(--border-soft);border-radius:8px;background:rgba(0,0,0,.16);}', // Reserve the recent-stats chart from the approved drawer.
-  '.roulette-spark-bars i{display:block;min-height:10px;border-radius:6px 6px 2px 2px;background:linear-gradient(180deg,#ffd978,#b62530);}', // Draw simple stat bars from live frequency data.
-  '.roulette-history-pills{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;}', // Keep latest-result pills in a stable wrapping row.
-  '.roulette-history-pills span{display:grid;place-items:center;width:32px;height:32px;border:1px solid var(--border-soft);border-radius:50%;background:rgba(0,0,0,.2);color:#f7e3bf;font-size:12px;}', // Render recent pockets as compact chips.
-  '.roulette-history-pills span.result-cell{border-color:#ffd978;background:#ffd978;color:#1f1400;font-weight:1000;}', // Highlight the latest settled pocket.
-  '.roulette-premium .stats-grid{grid-template-columns:repeat(5,1fr);}', // Keep dense frequency tiles from crowding the drawer.
-  '.roulette-phase-badge{padding:4px 8px;border:1px solid var(--border-soft);border-radius:999px;color:var(--muted);font-size:12px;}', // Add a compact phase badge without expanding the drawer.
-  '.roulette-premium .danger{min-width:72px;}', // Replace symbol-only remove controls with explicit text that localizes.
-  '@media (max-width:1200px){.roulette-premium{height:auto;}.roulette-premium .roulette-header{grid-template-columns:1fr;}.roulette-status-ribbon{grid-template-columns:1fr 1fr;}.roulette-premium h1{font-size:40px;}}', // Preserve narrow viewport usability without shared CSS changes.
-  '@media (max-width:560px){.roulette-status-ribbon{grid-template-columns:1fr;}.roulette-premium h1{font-size:34px;}.roulette-fast-grid,.roulette-call-grid,.roulette-secondary-actions{grid-template-columns:1fr;}}', // Keep all text inside controls on very narrow screens.
+  '.roulette-premium{display:grid;grid-template-rows:auto minmax(0,1fr);gap:12px;height:100%;min-height:0;container-type:inline-size;}', // Keep the complete table route stable inside the shared shell.
+  '.roulette-premium .roulette-header{display:grid;align-items:end;min-height:66px;}', // Keep the route title compact and free of internal lifecycle diagnostics.
+  '.roulette-premium .roulette-kicker{margin:0 0 2px;color:#d6c79c;font-size:11px;text-transform:uppercase;letter-spacing:.14em;}', // Present the table category as a restrained casino eyebrow.
+  '.roulette-premium h1{margin:0;color:#fff0b8;font-family:var(--font-display);font-size:46px;line-height:.92;text-shadow:0 2px 22px rgba(255,217,120,.2);}', // Give Roulette a strong but space-conscious route title.
+  '.roulette-premium .game-layout{grid-template-columns:340px minmax(0,1fr) 355px;height:100%;min-height:0;}', // Match the governed premium rail widths while leaving the center stage dominant at primary desktop size.
+  '.roulette-premium .panel{border-color:rgba(220,178,75,.46);box-shadow:inset 0 1px rgba(255,255,255,.035),0 18px 44px rgba(0,0,0,.24);}', // Add consistent gold-edged table furniture depth.
+  '.roulette-premium .control-rail,.roulette-premium .details-drawer{padding:13px;background:linear-gradient(155deg,rgba(11,43,30,.97),rgba(3,18,13,.96));scrollbar-color:rgba(218,175,70,.55) transparent;}', // Keep supporting rails dark, compact, and subordinate to gameplay.
+  '.roulette-premium .game-title{margin:0 0 10px;color:#ffe8a8;font-size:24px;}', // Make the control heading feel like table signage.
+  '.roulette-control-section{margin-top:10px;}', // Space control groups without changing their footprint across phases.
+  '.roulette-control-section h3{margin:0 0 6px;color:#e7bc52;text-transform:uppercase;font-size:12px;letter-spacing:.08em;}', // Use small gold rail labels instead of debug-like headings.
+  '.roulette-settings{display:grid;grid-template-columns:1fr 1fr;gap:7px;}', // Pair table settings to save vertical space.
+  '.roulette-settings label{display:grid;gap:5px;min-width:0;padding:8px;border:1px solid rgba(255,255,255,.11);border-radius:10px;background:rgba(255,255,255,.035);color:#d6c79c;font-size:11px;font-weight:800;}', // Frame settings as compact dealer controls.
+  '.roulette-settings select,.roulette-call-input{width:100%;min-width:0;min-height:34px;border-color:rgba(219,177,73,.28);background:#061c14;}', // Keep native fields inside the premium surface palette.
+  '.roulette-premium .chip-row{gap:5px;}', // Keep all chip values available without an oversized control band.
+  '.roulette-premium .chip{width:42px;height:42px;min-height:42px;font-size:10px;box-shadow:0 5px 13px rgba(0,0,0,.42);}', // Give chip selectors a physical table-chip scale.
+  '.roulette-fast-grid,.roulette-call-grid,.roulette-secondary-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px;}', // Keep secondary choices aligned in predictable lanes.
+  '.roulette-fast-grid button,.roulette-call-grid button,.roulette-secondary-actions button{min-height:32px;padding:6px 7px;border-color:rgba(255,255,255,.14);border-radius:8px;background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.025));font-size:11px;}', // Style utility bets as player controls rather than diagnostics.
+  '.roulette-fast-grid button[data-outbtn="red"]{background:linear-gradient(180deg,#b72835,#75141d);}', // Give the red shortcut its casino color cue.
+  '.roulette-fast-grid button[data-outbtn="black"]{background:linear-gradient(180deg,#252a28,#080b0a);}', // Give the black shortcut its casino color cue.
+  '.roulette-advanced{margin-top:9px;border:1px solid rgba(218,175,70,.24);border-radius:10px;background:rgba(0,0,0,.14);}', // Contain advanced rules and automation without making them dominate the rail.
+  '.roulette-advanced summary{padding:9px 10px;color:#e7bc52;cursor:pointer;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.07em;}', // Present optional controls as intentional expandable casino features.
+  '.roulette-advanced[open] summary{border-bottom:1px solid rgba(218,175,70,.18);}', // Separate the advanced heading from its opened contents.
+  '.roulette-advanced-body{padding:8px;}', // Keep advanced bet controls comfortably inset.
+  '.roulette-call-number{display:grid;gap:5px;margin:8px 0;color:#d6c79c;font-size:11px;font-weight:800;}', // Present the call number as a labeled table field.
+  '.roulette-control-plane{margin-top:8px;padding:10px;border:1px solid rgba(76,170,116,.32);border-radius:10px;background:linear-gradient(135deg,rgba(30,104,66,.17),rgba(0,0,0,.12));}', // Give bot and autoplay status a quiet control-plane treatment.
+  '.roulette-control-plane b{display:block;color:#ffe9ad;}', // Keep controller headings readable.
+  '.roulette-control-plane span{display:block;margin-top:4px;color:var(--muted);font-size:11px;}', // Keep controller details visually secondary.
+  '.roulette-premium #botPanel{overflow:visible;}', // Let bot rows expand into the single intentional control-rail scroll region.
+  '.roulette-premium #botPanel .mini-table{font-size:10px;}', // Keep bot controller data legible in the compact rail.
+  '.roulette-premium .game-stage{padding:13px;overflow:hidden;background:radial-gradient(circle at 42% 10%,rgba(33,104,68,.25),transparent 42%),linear-gradient(150deg,rgba(10,43,29,.98),rgba(2,17,12,.98));}', // Keep the complete illuminated game stage static instead of introducing another primary scroll surface.
+  '.roulette-stage-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:58px;margin-bottom:10px;padding:0 2px;}', // Reserve the same dealer action bar in every phase.
+  '.roulette-stage-toolbar .eyebrow{margin:0;color:#cdbf97;font-size:11px;letter-spacing:.08em;}', // Keep localized round metadata understated without altering its rendered case.
+  '.roulette-stage-toolbar h2{margin:2px 0 0;color:#fff0b8;font-family:var(--font-display);font-size:30px;line-height:1;}', // Make the current phase immediately scannable.
+  '.roulette-stage-toolbar button{min-width:112px;min-height:42px;}', // Stabilize the clear and spin controls.
+  '.roulette-stage-toolbar .primary{border-color:#e7bd58;background:linear-gradient(180deg,#d6323d,#8e1822);box-shadow:0 10px 24px rgba(128,14,24,.28),inset 0 1px rgba(255,255,255,.2);}', // Give the spin action a premium dealer-button finish.
+  '.roulette-premium .roulette-stage{grid-template-columns:minmax(300px,360px) minmax(0,1fr);gap:12px;align-items:stretch;min-height:590px;}', // Keep wheel and betting board balanced at wide desktop sizes.
+  '.roulette-premium .wheel-card{position:relative;display:grid;grid-template-rows:minmax(0,1fr) 118px;min-height:590px;overflow:hidden;border:1px solid rgba(218,175,70,.34);border-radius:14px;background:radial-gradient(circle at 50% 34%,rgba(57,121,84,.28),transparent 42%),linear-gradient(180deg,#0b251b,#04130e);}', // Build a dedicated wheel plinth instead of a generic panel.
+  '.roulette-premium .wheel-card::before{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(115deg,rgba(255,255,255,.06),transparent 24%,transparent 74%,rgba(218,175,70,.045));}', // Add soft directional table lighting.
+  '.roulette-premium .wheel-card.reveal-glow{box-shadow:inset 0 0 64px rgba(244,194,79,.13),0 18px 38px rgba(0,0,0,.36);}', // Illuminate the wheel plinth during the reveal arc.
+  '.roulette-premium .wheel-card.result-glow{box-shadow:inset 0 0 70px rgba(244,194,79,.18),0 18px 38px rgba(0,0,0,.36);}', // Hold a warmer settled-state glow without resizing the stage.
+  '.roulette-wheel-frame{position:relative;z-index:1;display:grid;place-items:center;min-height:0;padding:14px 8px 4px;perspective:850px;}', // Provide a dimensional viewing angle and stable wheel envelope.
+  '.roulette-wheel-frame::after{content:"";position:absolute;left:15%;right:15%;bottom:5%;height:10%;border-radius:50%;background:rgba(0,0,0,.42);filter:blur(14px);z-index:-1;}', // Ground the wheel with a soft table shadow.
+  '.roulette-premium .roulette-wheel{width:min(100%,360px);max-width:360px;filter:drop-shadow(0 22px 26px rgba(0,0,0,.58));}', // Make the vector wheel large and weighty without a fragile 3D compositor layer.
+  '.roulette-wheel .wheel-rim-highlight{opacity:.68;}', // Add a polished metal reflection to the outer rim.
+  '.roulette-wheel .wheel-ball{filter:drop-shadow(0 3px 3px rgba(0,0,0,.75));}', // Separate the ivory ball from the track during motion and settlement.
+  '.roulette-premium .wheel-ring.spinning{animation:roulettePremiumWheelSpin 3.6s cubic-bezier(.08,.64,.14,1);}', // Decelerate the pocket ring like a weighted physical rotor.
+  '.roulette-premium .ball-dot.spinning{animation:roulettePremiumBallSpin 3.6s cubic-bezier(.1,.76,.16,1);}', // Counter-rotate the ball through a longer reveal arc.
+  '.roulette-wheel .ball-dot.settled{animation:rouletteBallSettle .52s cubic-bezier(.2,.8,.2,1);}', // Give the authoritative result a short physical settle rather than an abrupt swap.
+  '.roulette-wheel .ball-dot.parked{opacity:.72;}', // Show an unassigned ball without implying a fake result pocket.
+  '.roulette-premium .fixed-result{position:relative;z-index:2;display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:12px;min-height:100px;margin:0 12px 12px;padding:12px 14px;overflow:hidden;border:1px solid rgba(255,255,255,.1);border-radius:11px;background:linear-gradient(135deg,rgba(0,0,0,.36),rgba(255,255,255,.025));}', // Integrate result presentation into the wheel console.
+  '.roulette-result-pocket{display:grid;place-items:center;width:58px;height:58px;border:2px solid rgba(255,238,183,.68);border-radius:50%;color:#fff5d5;font-family:var(--font-display);font-size:26px;font-weight:1000;box-shadow:0 8px 18px rgba(0,0,0,.42),inset 0 0 18px rgba(255,255,255,.12);}', // Present the winning pocket as the primary settlement signal.
+  '.roulette-result-copy{display:grid;gap:3px;min-width:0;}', // Keep result headline and supporting value aligned.
+  '.roulette-result-copy b{color:#ffe9ad;font-size:16px;}', // Emphasize the authoritative rolled number.
+  '.roulette-result-copy span{color:#cfc4a7;font-size:11px;line-height:1.35;}', // Keep net and state details compact and readable.
+  '.roulette-spin-orbit{position:relative;width:52px;height:52px;border:2px solid rgba(255,231,160,.25);border-radius:50%;}', // Reserve a motion indicator in the result console while the outcome is hidden.
+  '.roulette-spin-orbit::after{content:"";position:absolute;inset:6px;border-top:3px solid #f0c45d;border-radius:50%;animation:rouletteOrbit 1s linear infinite;}', // Animate only transform to signal the reveal phase.
+  '.roulette-premium .fixed-result.win{border-color:rgba(236,191,83,.62);background:linear-gradient(135deg,rgba(117,25,31,.34),rgba(222,177,70,.09));}', // Give the settled result a composed burgundy-and-gold treatment.
+  '.roulette-table-shell{display:grid;place-items:start center;width:100%;min-width:0;height:590px;overflow:hidden;border-radius:13px;}', // Let the fixed hit-map board scale within responsive stage widths.
+  '.roulette-premium .roulette-table-board{flex:none;width:760px;height:590px;border-color:rgba(236,191,83,.68);border-radius:12px;background:radial-gradient(circle at 45% 18%,rgba(255,255,255,.07),transparent 35%),linear-gradient(145deg,#0a6a3d,#073321);box-shadow:inset 0 0 50px rgba(0,0,0,.42),0 14px 30px rgba(0,0,0,.28);}', // Give the betting layout rich felt, gold trim, and consistent geometry.
+  '.roulette-table-board.roulette-board-dimmed{filter:saturate(.72) brightness(.78);}', // Dim the table during the reveal without layout motion.
+  '.roulette-premium .table-cell,.roulette-premium .outside-cell{border-color:rgba(255,245,218,.65);border-radius:5px;box-shadow:inset 0 1px rgba(255,255,255,.08);}', // Polish cell edges while preserving every existing hit target.
+  '.roulette-premium .table-cell button:hover,.roulette-premium .outside-cell button:hover{box-shadow:inset 0 0 22px rgba(255,218,119,.2);}', // Add a restrained felt hover cue.
+  '.roulette-premium .table-cell.result-cell,.roulette-premium .outside-cell.result-cell{outline:3px solid #ffd978;box-shadow:inset 0 0 26px rgba(255,217,120,.4),0 0 22px rgba(255,217,120,.3);}', // Lock the settled result visibly to the winning table area.
+  '.roulette-result-marker{position:absolute;right:5px;bottom:3px;color:#ffd978;font-size:9px;font-weight:1000;}', // Keep the table WIN marker inside its pocket.
+  '.roulette-premium .spot{width:15px;height:15px;border-width:1px;background:rgba(255,217,120,.38);opacity:.2;}', // Make inside-bet hotspots discoverable without cluttering the felt.
+  '.roulette-premium .spot:hover{opacity:1;}', // Reveal inside-bet precision on intent.
+  '.roulette-premium .bet-chip{animation:rouletteChipPop .18s ease-out;}', // Make placed chips feel physical without layout-changing animation.
+  '@keyframes rouletteChipPop{from{transform:scale(.82);opacity:.5;}to{transform:scale(1);opacity:1;}}', // Animate chips with transform and opacity only.
+  '@keyframes rouletteOrbit{to{transform:rotate(360deg);}}', // Spin the result-console orbit without triggering layout.
+  '@keyframes roulettePremiumWheelSpin{0%{transform:rotate(0deg);}72%{transform:rotate(1670deg);}88%{transform:rotate(1762deg);}100%{transform:rotate(1800deg);}}', // Ease the rotor across several turns before lock-in.
+  '@keyframes roulettePremiumBallSpin{0%{transform:rotate(0deg) scale(1);}72%{transform:rotate(-2440deg) scale(1);}86%{transform:rotate(-2545deg) scale(.97);}94%{transform:rotate(-2582deg) scale(1.04);}100%{transform:rotate(-2600deg) scale(1);}}', // Add late-stage ball hops while preserving transform-only motion.
+  '@keyframes rouletteBallSettle{0%{transform:scale(.72);opacity:.35;}58%{transform:scale(1.14);opacity:1;}100%{transform:scale(1);opacity:1;}}', // Ease the ball into its authoritative pocket.
+  '.roulette-drawer-title{display:flex;align-items:center;justify-content:space-between;gap:8px;}', // Keep drawer heading and phase badge aligned.
+  '.roulette-drawer-title h3{margin:0;color:#ffe8a8;font-family:var(--font-display);font-size:24px;}', // Treat the bet slip or settlement as premium table furniture.
+  '.roulette-phase-badge{padding:4px 8px;border:1px solid rgba(218,175,70,.3);border-radius:999px;background:rgba(218,175,70,.07);color:#e8d69d;font-size:10px;text-transform:uppercase;letter-spacing:.08em;}', // Add a compact table-state badge.
+  '.roulette-premium .stable-list{min-height:92px;max-height:154px;overflow:auto;}', // Reserve slip height while containing long bet histories.
+  '.roulette-settlement-card{display:grid;grid-template-columns:1fr auto;align-items:center;min-height:66px;margin:8px 0;padding:11px;border:1px solid rgba(255,217,120,.4);border-radius:10px;background:linear-gradient(135deg,rgba(255,217,120,.1),rgba(118,25,31,.14));}', // Integrate settlement value as a compact ledger-backed card.
+  '.roulette-settlement-card b{display:block;color:#ffe9ad;}', // Keep the settlement heading readable.
+  '.roulette-settlement-card span{display:block;margin-top:0;color:#f3d989;font-size:15px;font-weight:1000;}', // Elevate the human net above raw log detail.
+  '.roulette-spark-bars{display:grid;grid-template-columns:repeat(8,1fr);align-items:end;gap:6px;height:62px;margin:7px 0;padding:8px;border:1px solid rgba(255,255,255,.1);border-radius:9px;background:rgba(0,0,0,.18);}', // Reserve the recent-stats chart inside a compact rail card.
+  '.roulette-spark-bars i{display:block;min-height:8px;border-radius:5px 5px 2px 2px;background:linear-gradient(180deg,#ffd978,#a81825);box-shadow:0 3px 8px rgba(0,0,0,.28);}', // Render live frequency bars with casino gold-to-red depth.
+  '.roulette-history-pills{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px;}', // Keep recent pockets in a stable wrapping row.
+  '.roulette-history-pills span{display:grid;place-items:center;width:29px;height:29px;border:1px solid rgba(255,255,255,.14);border-radius:50%;color:#f7e3bf;font-size:10px;}', // Render results as compact physical pocket tokens.
+  '.roulette-history-pills span.result-cell{border-color:#ffd978;background:#ffd978!important;color:#1f1400;font-weight:1000;}', // Highlight the latest settled pocket.
+  '.roulette-premium .details-drawer>h3,.roulette-premium .details-drawer>h4{color:#e7bc52;text-transform:uppercase;font-size:11px;letter-spacing:.08em;}', // Give secondary drawer sections one quiet hierarchy.
+  '.roulette-premium .details-drawer .mini-table{font-size:11px;}', // Keep scoreboard rows compact.
+  '.roulette-premium .details-drawer .stat-bars{max-height:110px;overflow:auto;}', // Contain long hot-number output inside the drawer.
+  '.roulette-premium .danger{min-width:64px;}', // Keep localized remove controls explicit.
+  '@media (min-width:1201px){.roulette-premium .stable-list,.roulette-premium .details-drawer .stat-bars{max-height:none;overflow:visible;}}', // Let drawer data expand into its single governed desktop rail scroll surface.
+  '@media (max-width:1650px){.roulette-premium .game-layout{grid-template-columns:235px minmax(0,1fr) 255px;}.roulette-premium .roulette-stage{grid-template-columns:1fr;}.roulette-premium .wheel-card{grid-template-columns:300px minmax(0,1fr);grid-template-rows:1fr;min-height:300px;}.roulette-premium .roulette-wheel{max-width:286px;}.roulette-table-shell{height:472px;}.roulette-premium .roulette-table-board{transform:scale(.8);transform-origin:top center;}}', // Fit the full route at common 1280 to 1440 desktop widths without page-level Roulette overflow.
+  '@media (max-width:1500px){.casino-page:has(.roulette-premium){overflow:auto;}.game-screen:has(.roulette-premium){height:auto;min-height:calc(100vh - 146px);overflow:visible;}.roulette-premium{height:auto;}.roulette-premium .game-layout{grid-template-columns:1fr;grid-template-rows:auto;height:auto;overflow:visible;contain:none;}.roulette-premium .game-stage{overflow:visible;}.roulette-premium .roulette-stage{grid-template-columns:330px minmax(0,1fr);}.roulette-premium .wheel-card{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) 118px;min-height:590px;}.roulette-premium .roulette-wheel{max-width:330px;}.roulette-table-shell{height:590px;}.roulette-premium .roulette-table-board{transform:none;}.roulette-premium .control-rail,.roulette-premium .details-drawer{overflow:visible;}}', // Give Roulette a genuine document-scrolling compact stack with content-sized panels and a complete wheel-and-board stage.
+  '@media (max-width:1200px){.roulette-premium .roulette-stage{grid-template-columns:1fr;}.roulette-premium .wheel-card{grid-template-columns:300px minmax(0,1fr);grid-template-rows:1fr;min-height:300px;}.roulette-premium .roulette-wheel{max-width:286px;}}', // Stack the stage below desktop widths while keeping the wheel console compact above the full table.
+  '@media (max-width:900px){.roulette-premium .roulette-stage{grid-template-columns:1fr;}.roulette-premium .wheel-card{grid-template-columns:280px minmax(0,1fr);grid-template-rows:1fr;min-height:290px;}.roulette-premium .roulette-wheel{max-width:270px;}.roulette-table-shell{height:520px;}.roulette-premium .roulette-table-board{transform:scale(.88);transform-origin:top center;}.roulette-premium h1{font-size:38px;}}', // Recompose the wheel console and fit the complete table on tablet widths.
+  '@media (max-width:720px){.roulette-premium .wheel-card{grid-template-columns:1fr;grid-template-rows:minmax(260px,1fr) 110px;}.roulette-table-shell{height:461px;}.roulette-premium .roulette-table-board{transform:scale(.78);transform-origin:top center;}.roulette-settings{grid-template-columns:1fr;}}', // Keep Roulette functional on small responsive viewports without page overflow.
+  '@media (max-width:560px){.roulette-fast-grid,.roulette-call-grid,.roulette-secondary-actions{grid-template-columns:1fr 1fr;}.roulette-table-shell{height:343px;}.roulette-premium .roulette-table-board{transform:scale(.58);}.roulette-premium .fixed-result{margin-inline:8px;}}', // Scale the fixed hit-map board while retaining every existing selector on narrow screens.
 ].join(''); // Combine Roulette-only CSS chunks into one style payload.
 
 // Store the route root so async callbacks can rerender the currently mounted view.
@@ -115,15 +157,27 @@ let lastHumanNet = 0;
 let spinBusy = false;
 // Store the i18n unsubscribe callback so unmount does not leak locale listeners.
 let localeUnsubscribe = null;
+// Store player-opened progressive disclosure ids across spin-driven rerenders.
+const openDisclosures = new Set();
 
 // Resolve a Roulette-owned localized string from the game domain.
 const rt = (key, params = {}) => t(key, params, GAME_DOMAIN);
 // Resolve and escape a localized string before inserting it into HTML.
 const text = (key, params = {}) => safe(rt(key, params));
+// Resolve and escape one shared-domain label for progressive disclosure controls.
+const sharedText = (key, domain) => safe(t(key, {}, domain));
+// Return an open attribute when the player left one optional control group expanded.
+const disclosureOpen = id => (openDisclosures.has(id) ? ' open' : '');
 // Return a disabled attribute while a spin is in progress.
 const disabledWhenSpinning = () => (spinBusy ? ' disabled' : '');
-// Return a display-safe short money string for chip faces and table chips.
-const chipMoney = amount => money(amount).replace('.00', '');
+// Return a locale-aware numeric amount without a currency or legacy token glyph.
+const amountNumber = amount => Number(amount || 0).toLocaleString(document.documentElement.lang || undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+// Return an explicit localized play-token amount for Roulette-owned value displays.
+const tokenMoney = amount => `${amountNumber(amount)} ${text('units.playTokens')}`;
+// Return a signed localized play-token amount for settled net values.
+const signedTokenMoney = amount => `${Number(amount || 0) >= 0 ? '+' : '-'}${tokenMoney(Math.abs(Number(amount || 0)))}`;
+// Return a compact denomination for physical chip faces whose heading supplies the token context.
+const chipMoney = amount => Number(amount || 0).toLocaleString(document.documentElement.lang || undefined, { maximumFractionDigits: 0 });
 
 // Ensure the local premium CSS is available exactly once per document.
 function ensurePremiumStyle() {
@@ -368,11 +422,11 @@ async function spin(show = true) {
     // Let compatible bots commit their public Roulette actions before the human spin.
     await playBotRound('roulette');
     // Play the existing wheel rolling sound with shorter timing for autoplay.
-    rouletteRollSound(show ? 2600 : 700);
+    rouletteRollSound(show ? 3600 : 700);
     // Post the spin request through the frozen v1 endpoint without changing payloads.
     const payload = await post('/api/v1/games/roulette/spin', withCurrentPlayer());
     // Wait for the visual reveal lock before showing settlement.
-    await new Promise(resolve => setTimeout(resolve, show ? 2600 : 250));
+    await new Promise(resolve => setTimeout(resolve, show ? 3600 : 250));
     // Apply returned state, catalog, players, and stats.
     applyPayload(payload);
     // Store the authoritative result from this spin response.
@@ -444,15 +498,15 @@ function wedgePath(index, count) {
   // Store the wedge end angle.
   const end = ((index + 1) / count) * Math.PI * 2 - Math.PI / 2;
   // Store the outer start point.
-  const outerStart = polar(150, 150, 144, start);
+  const outerStart = polar(150, 150, 122, start);
   // Store the outer end point.
-  const outerEnd = polar(150, 150, 144, end);
+  const outerEnd = polar(150, 150, 122, end);
   // Store the inner end point.
-  const innerEnd = polar(150, 150, 92, end);
+  const innerEnd = polar(150, 150, 84, end);
   // Store the inner start point.
-  const innerStart = polar(150, 150, 92, start);
+  const innerStart = polar(150, 150, 84, start);
   // Return the closed annular path for this pocket.
-  return `M ${outerStart.x} ${outerStart.y} A 144 144 0 0 1 ${outerEnd.x} ${outerEnd.y} L ${innerEnd.x} ${innerEnd.y} A 92 92 0 0 0 ${innerStart.x} ${innerStart.y} Z`;
+  return `M ${outerStart.x} ${outerStart.y} A 122 122 0 0 1 ${outerEnd.x} ${outerEnd.y} L ${innerEnd.x} ${innerEnd.y} A 84 84 0 0 0 ${innerStart.x} ${innerStart.y} Z`;
 }
 
 // Return the table-center coordinate for a straight-up number.
@@ -563,17 +617,19 @@ function wheelSvg() {
   // Store the selected angle for the ball indicator.
   const selectedAngle = selectedIndex >= 0 ? ((selectedIndex + .5) / nums.length) * Math.PI * 2 - Math.PI / 2 : null;
   // Store the ball x coordinate without defaulting to a fake result.
-  const ballX = selectedAngle == null ? 108 : 150 + Math.cos(selectedAngle) * 121;
+  const ballX = selectedAngle == null ? 150 : 150 + Math.cos(selectedAngle) * 134;
   // Store the ball y coordinate without defaulting to a fake result.
-  const ballY = selectedAngle == null ? 245 : 150 + Math.sin(selectedAngle) * 121;
+  const ballY = selectedAngle == null ? 16 : 150 + Math.sin(selectedAngle) * 134;
   // Build colored pocket wedges for the vector wheel.
-  const wedges = nums.map((number, index) => `<path d="${wedgePath(index, nums.length)}" fill="${pocketFill(number)}" stroke="rgba(255,245,211,.34)" stroke-width=".8"></path>`).join('');
+  const wedges = nums.map((number, index) => `<path d="${wedgePath(index, nums.length)}" fill="${pocketFill(number)}" stroke="rgba(255,245,211,.42)" stroke-width=".9"></path>`).join('');
   // Build pocket labels and selected marker circles.
-  const labels = nums.map((number, index) => { const angle = ((index + .5) / nums.length) * Math.PI * 2 - Math.PI / 2; const point = polar(150, 150, 119, angle); const fill = String(number) === '0' || String(number) === '00' ? '#d8ffe8' : '#fff4df'; const marker = String(number) === String(selected) ? `<circle cx="${point.x}" cy="${point.y}" r="13" fill="#ffd978" opacity=".28"></circle>` : ''; return `${marker}<text x="${point.x}" y="${point.y}" text-anchor="middle" dominant-baseline="middle" font-size="11" fill="${fill}" transform="rotate(${angle * 180 / Math.PI + 90} ${point.x} ${point.y})">${safe(number)}</text>`; }).join('');
+  const labels = nums.map((number, index) => { const angle = ((index + .5) / nums.length) * Math.PI  * 2 - Math.PI / 2; const point = polar(150, 150, 103, angle); const fill = String(number) === '0' || String(number) === '00' ? '#d8ffe8' : '#fff4df'; const marker = String(number) === String(selected) ? `<circle cx="${point.x}" cy="${point.y}" r="10" fill="#ffd978" opacity=".36"></circle>` : ''; return `${marker}<text x="${point.x}" y="${point.y}" text-anchor="middle" dominant-baseline="middle" font-size="11" font-weight="900" fill="${fill}" transform="rotate(${angle * 180 / Math.PI + 90} ${point.x} ${point.y})">${safe(number)}</text>`; }).join('');
   // Store the spinning class for transform-only animation.
   const spinClass = uiPhase === 'spinning' ? ' spinning' : '';
+  // Store the settled or parked ball class without implying an unplayed result.
+  const ballStateClass = uiPhase === 'settled' && selectedIndex >= 0 ? ' settled' : selectedIndex < 0 ? ' parked' : '';
   // Return the complete wheel SVG with a data attribute for browser assertions.
-  return `<svg class="roulette-wheel" viewBox="0 0 300 300" data-testid="roulette-wheel" data-selected-result="${safe(selected || 'none')}"><circle cx="150" cy="150" r="148" fill="#8d651f"></circle><g class="wheel-ring${spinClass}">${wedges}${labels}<circle cx="150" cy="150" r="88" fill="#51290a" stroke="rgba(255,245,211,.66)" stroke-width="2"></circle><circle cx="150" cy="150" r="53" fill="url(#rouletteHub)" stroke="rgba(255,255,255,.42)" stroke-width="2"></circle></g><defs><radialGradient id="rouletteHub"><stop offset="0" stop-color="#fff1ba"></stop><stop offset=".48" stop-color="#c88b2c"></stop><stop offset="1" stop-color="#351604"></stop></radialGradient></defs><g class="ball-dot${spinClass}"><circle cx="${ballX}" cy="${ballY}" r="7" fill="#fff8e9" stroke="#c7bca1" stroke-width="1.5"></circle></g></svg>`;
+  return `<svg class="roulette-wheel" viewBox="0 0 300 300" role="img" aria-label="${text('aria.header')}" data-testid="roulette-wheel" data-selected-result="${safe(selected || 'none')}"><defs><linearGradient id="rouletteRim" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff0a9"></stop><stop offset=".2" stop-color="#b87b20"></stop><stop offset=".48" stop-color="#4d2707"></stop><stop offset=".72" stop-color="#d9a541"></stop><stop offset="1" stop-color="#5a2d08"></stop></linearGradient><radialGradient id="rouletteBowl" cx="42%" cy="36%"><stop offset="0" stop-color="#9b5a1c"></stop><stop offset=".48" stop-color="#4d2309"></stop><stop offset="1" stop-color="#160b05"></stop></radialGradient><radialGradient id="rouletteHub" cx="40%" cy="34%"><stop offset="0" stop-color="#fff5bd"></stop><stop offset=".26" stop-color="#dca646"></stop><stop offset=".62" stop-color="#6b350d"></stop><stop offset="1" stop-color="#241006"></stop></radialGradient><radialGradient id="rouletteBall" cx="34%" cy="28%"><stop offset="0" stop-color="#ffffff"></stop><stop offset=".54" stop-color="#f5edd7"></stop><stop offset="1" stop-color="#a89d83"></stop></radialGradient></defs><ellipse cx="150" cy="275" rx="118" ry="13" fill="rgba(0,0,0,.42)"></ellipse><circle cx="150" cy="150" r="148" fill="url(#rouletteRim)" stroke="#f4d77b" stroke-width="1.2" data-testid="roulette-wheel-rim"></circle><circle class="wheel-rim-highlight" cx="145" cy="145" r="140" fill="none" stroke="rgba(255,239,179,.52)" stroke-width="3"></circle><circle cx="150" cy="150" r="138" fill="#2c1307" stroke="#6f3a0d" stroke-width="3"></circle><circle cx="150" cy="150" r="134" fill="#071b13" stroke="#e0b85a" stroke-width="2" data-testid="roulette-ball-track"></circle><circle cx="150" cy="150" r="125" fill="#0a2e20" stroke="rgba(255,244,207,.5)" stroke-width="1.5"></circle><g class="wheel-ring${spinClass}" data-testid="roulette-rotor" data-motion-direction="clockwise">${wedges}${labels}<circle cx="150" cy="150" r="82" fill="url(#rouletteBowl)" stroke="#d5a648" stroke-width="2"></circle><circle cx="150" cy="150" r="62" fill="#2a1107" stroke="rgba(255,231,159,.46)" stroke-width="1.5"></circle><path d="M150 94 L158 134 L206 150 L158 158 L150 206 L142 158 L94 150 L142 142 Z" fill="url(#rouletteRim)" opacity=".84"></path></g><circle cx="150" cy="150" r="40" fill="url(#rouletteHub)" stroke="#f2d77d" stroke-width="2"></circle><circle cx="150" cy="150" r="19" fill="url(#rouletteRim)" stroke="#fff0aa" stroke-width="1.5"></circle><path d="M150 119 L158 145 L150 151 L142 145 Z" fill="#f6d985" stroke="#6e350c" stroke-width="1"></path><circle cx="150" cy="128" r="5" fill="#fff0ad"></circle><path d="M142 7 L158 7 L150 22 Z" fill="#f1ca62" stroke="#5a2b08" stroke-width="1.2"></path><g class="ball-dot${spinClass}${ballStateClass}" data-testid="roulette-ball" data-motion-direction="counterclockwise"><circle cx="${ballX + 2}" cy="${ballY + 3}" r="7.5" fill="rgba(0,0,0,.42)"></circle><circle class="wheel-ball" cx="${ballX}" cy="${ballY}" r="7" fill="url(#rouletteBall)" stroke="#fff9e9" stroke-width="1.2"></circle><circle cx="${ballX - 2}" cy="${ballY - 2}" r="1.8" fill="#ffffff"></circle></g></svg>`;
 }
 
 // Render one absolute-positioned number cell.
@@ -654,26 +710,24 @@ function colorLabel(color) {
 // Render the result panel under the wheel.
 function resultHtml() {
   // Branch while the animation is intentionally hiding the result.
-  if (uiPhase === 'spinning') return `<div id="result" class="result-box fixed-result muted" data-testid="roulette-result-region" data-phase="spinning">${text('result.spinning')}</div>`;
+  if (uiPhase === 'spinning') return `<div id="result" class="fixed-result" data-testid="roulette-result-region" data-phase="spinning"><span class="roulette-spin-orbit" aria-hidden="true"></span><span class="roulette-result-copy"><b>${text('stage.spinning')}</b><span>${text('result.spinning')}</span></span></div>`;
   // Branch for a settled spin with an actual backend result.
   if (uiPhase === 'settled' && lastSpinResult !== null) {
-    // Store the settlement detail text.
-    const details = lastSettlements.map(row => `${safe(row.label)}: ${safe(outcomeLabel(row.outcome))}, ${text('settlement.credit')} ${money(row.credit)}`).join('<br>');
-    // Return the settled result region.
-    return `<div id="result" class="result-box fixed-result win" data-testid="roulette-result-region" data-phase="settled" data-result-number="${safe(lastSpinResult)}"><b>${text('result.rolled', { number: lastSpinResult })}</b> ${safe(colorLabel(lastSpinColor))}<br>${details || text('result.noHumanBets')}</div>`;
+    // Store the integrated net summary without repeating every settlement log row.
+    const settlementSummary = lastSettlements.length ? `${text('settlement.humanNet')}: ${signedTokenMoney(lastHumanNet)}` : text('result.noHumanBets');
+    // Return the settled result console with the authoritative pocket as the visual focus.
+    return `<div id="result" class="fixed-result win" data-testid="roulette-result-region" data-phase="settled" data-result-number="${safe(lastSpinResult)}"><span class="roulette-result-pocket ${numberColorClass(lastSpinResult)}">${safe(lastSpinResult)}</span><span class="roulette-result-copy"><b>${text('result.rolled', { number: lastSpinResult })}</b><span>${safe(colorLabel(lastSpinColor))} · ${settlementSummary}</span></span></div>`;
   }
   // Branch for a loaded state with a real previous result.
-  if (lastSpinResult !== null) return `<div id="result" class="result-box fixed-result muted" data-testid="roulette-result-region" data-phase="betting" data-result-number="${safe(lastSpinResult)}">${text('result.lastResult', { number: lastSpinResult })}</div>`;
+  if (lastSpinResult !== null) return `<div id="result" class="fixed-result" data-testid="roulette-result-region" data-phase="betting" data-result-number="${safe(lastSpinResult)}"><span class="roulette-result-pocket ${numberColorClass(lastSpinResult)}">${safe(lastSpinResult)}</span><span class="roulette-result-copy"><b>${text('result.lastResult', { number: lastSpinResult })}</b><span>${text('stage.placeBets')}</span></span></div>`;
   // Return the no-spin state without any fake result.
-  return `<div id="result" class="result-box fixed-result muted" data-testid="roulette-result-region" data-phase="betting" data-result-number="none">${text('result.noSpinYet')}</div>`;
+  return `<div id="result" class="fixed-result" data-testid="roulette-result-region" data-phase="betting" data-result-number="none"><span class="roulette-result-pocket">—</span><span class="roulette-result-copy"><b>${text('stage.placeBets')}</b><span>${text('result.noSpinYet')}</span></span></div>`;
 }
 
-// Render the premium header and status ribbon.
+// Render the premium route header without exposing internal lifecycle diagnostics.
 function headerHtml() {
-  // Store the four status keys for the current visual phase.
-  const statusKeys = uiPhase === 'spinning' ? ['status.spinning', 'status.resultReserved', 'status.actionLocked', 'status.botIncluded'] : uiPhase === 'settled' ? ['status.resultLocked', 'status.slipUpdated', 'status.statsUpdated', 'status.voiceQueued'] : ['status.tableMode', 'status.zeroReady', 'status.statsReserved', 'status.ledgerDebits'];
-  // Return the premium route heading and phase ribbon.
-  return `<section class="roulette-header" aria-label="${text('aria.header')}"><div><p class="roulette-kicker">${text('header.kicker')}</p><h1>${text('title')}</h1></div><div class="roulette-status-ribbon">${statusKeys.map(key => `<span>${text(key)}</span>`).join('')}</div></section>`;
+  // Return only player-facing table identity while stage and result regions own phase state.
+  return `<section class="roulette-header" aria-label="${text('aria.header')}"><div><p class="roulette-kicker">${text('header.kicker')}</p><h1>${text('title')}</h1></div></section>`;
 }
 
 // Render the control rail with settings, chips, fast bets, autoplay, and bots.
@@ -682,8 +736,12 @@ function controlRailHtml() {
   const canRebet = (state.last_bet_template || []).length > 0 && !spinBusy;
   // Store the spot toggle label.
   const spotLabel = showSpots ? text('controls.hideSpots') : text('controls.showSpots');
+  // Store the localized shared autoplay heading for its disclosure control.
+  const autoplayLabel = sharedText('title', AUTOPLAY_DOMAIN);
+  // Store the localized shared bot-controller heading for its disclosure control.
+  const botsLabel = sharedText('title', BOTS_DOMAIN);
   // Return the complete left rail.
-  return `<section class="panel control-rail" data-testid="roulette-control-rail"><h2 class="game-title">${text('controls.title')}</h2><div class="roulette-settings"><label>${text('controls.wheel')}<select id="mode" data-testid="roulette-mode"${disabledWhenSpinning()}><option value="single">${text('settings.wheel.single')}</option><option value="double">${text('settings.wheel.double')}</option></select></label><label>${text('controls.zeroRule')}<select id="zero" data-testid="roulette-zero"${disabledWhenSpinning()}><option value="normal">${text('settings.zeroRule.normal')}</option><option value="la_partage">${text('settings.zeroRule.laPartage')}</option><option value="en_prison">${text('settings.zeroRule.enPrison')}</option></select></label></div><div class="roulette-control-section"><h3>${text('controls.chipStack')}</h3><div class="chip-row">${CHIP_VALUES.map(value => `<button type="button" class="chip ${value === chip ? 'active' : ''}" data-chip="${value}" data-testid="chip-${value}"${disabledWhenSpinning()}>${chipMoney(value)}</button>`).join('')}</div></div><div class="roulette-control-section"><h3>${text('controls.fastBets')}</h3><div class="roulette-fast-grid">${['red', 'black', 'odd', 'even', 'low', 'high'].map(type => `<button type="button" data-outbtn="${type}"${disabledWhenSpinning()}>${text(`bets.${type}`)}</button>`).join('')}</div></div><div class="roulette-control-section"><h3>${text('controls.racetrack')}</h3><div class="roulette-call-grid">${['snake', 'voisins', 'tiers', 'orphelins', 'jeu_zero', 'neighbors', 'final', 'complete'].map(type => `<button type="button" data-call="${type}"${disabledWhenSpinning()}>${text(`callBets.${type}`)}</button>`).join('')}</div></div><label class="roulette-settings roulette-control-section">${text('controls.callNumber')}<input id="callNumber" class="roulette-call-input" type="text" value="17"${disabledWhenSpinning()}></label><div class="roulette-secondary-actions"><button type="button" id="toggleSpots"${disabledWhenSpinning()}>${spotLabel}</button><button type="button" id="rebet"${canRebet ? '' : ' disabled'}>${text('controls.rebet')}</button></div><div id="auto"></div><div class="roulette-control-section"><div class="roulette-control-plane"><b>${text('controls.soundTitle')}</b><span>${text('controls.soundAdmin')}</span></div></div><div id="botPanel" class="roulette-control-section">${botPanelCache}</div></section>`;
+  return `<section class="panel control-rail" data-testid="roulette-control-rail" tabindex="0" role="region" aria-label="${text('controls.title')}"><h2 class="game-title">${text('controls.title')}</h2><div class="roulette-control-section"><h3>${text('controls.chipStack')}</h3><div class="chip-row">${CHIP_VALUES.map(value => `<button type="button" class="chip ${value === chip ? 'active' : ''}" data-chip="${value}" data-testid="chip-${value}"${disabledWhenSpinning()}>${chipMoney(value)}</button>`).join('')}</div></div><div class="roulette-control-section"><h3>${text('controls.fastBets')}</h3><div class="roulette-fast-grid">${['red', 'black', 'odd', 'even', 'low', 'high'].map(type => `<button type="button" data-outbtn="${type}"${disabledWhenSpinning()}>${text(`bets.${type}`)}</button>`).join('')}</div></div><div class="roulette-secondary-actions roulette-control-section"><button type="button" id="toggleSpots"${disabledWhenSpinning()}>${spotLabel}</button><button type="button" id="rebet"${canRebet ? '' : ' disabled'}>${text('controls.rebet')}</button></div><details class="roulette-advanced" data-testid="roulette-rules-disclosure" data-roulette-disclosure="rules"${disclosureOpen('rules')}><summary>${text('controls.wheel')} · ${text('controls.zeroRule')}</summary><div class="roulette-advanced-body"><div class="roulette-settings"><label>${text('controls.wheel')}<select id="mode" data-testid="roulette-mode"${disabledWhenSpinning()}><option value="single">${text('settings.wheel.single')}</option><option value="double">${text('settings.wheel.double')}</option></select></label><label>${text('controls.zeroRule')}<select id="zero" data-testid="roulette-zero"${disabledWhenSpinning()}><option value="normal">${text('settings.zeroRule.normal')}</option><option value="la_partage">${text('settings.zeroRule.laPartage')}</option><option value="en_prison">${text('settings.zeroRule.enPrison')}</option></select></label></div></div></details><details class="roulette-advanced" data-testid="roulette-racetrack-disclosure" data-roulette-disclosure="racetrack"${disclosureOpen('racetrack')}><summary>${text('controls.racetrack')}</summary><div class="roulette-advanced-body"><div class="roulette-call-grid">${['snake', 'voisins', 'tiers', 'orphelins', 'jeu_zero', 'neighbors', 'final', 'complete'].map(type => `<button type="button" data-call="${type}"${disabledWhenSpinning()}>${text(`callBets.${type}`)}</button>`).join('')}</div><label class="roulette-call-number">${text('controls.callNumber')}<input id="callNumber" class="roulette-call-input" type="text" value="17"${disabledWhenSpinning()}></label></div></details><details class="roulette-advanced" data-testid="roulette-autoplay-disclosure" data-roulette-disclosure="autoplay"${disclosureOpen('autoplay')}><summary>${autoplayLabel}</summary><div id="auto" class="roulette-advanced-body"></div></details><details class="roulette-advanced" data-testid="roulette-bots-disclosure" data-roulette-disclosure="bots"${disclosureOpen('bots')}><summary>${botsLabel}</summary><div id="botPanel" class="roulette-advanced-body">${botPanelCache}</div></details></section>`;
 }
 
 // Render the central wheel and table stage.
@@ -699,7 +757,7 @@ function stageHtml() {
   // Store the clear disabled state.
   const clearDisabled = humanBets().length === 0 || spinBusy ? ' disabled' : '';
   // Return the complete central game stage.
-  return `<section class="panel game-stage" data-testid="roulette-premium-stage"><div class="roulette-stage-toolbar"><div><p class="eyebrow">${text('stage.round', { round })}</p><h2>${phaseTitle}</h2></div><div class="row"><button type="button" id="clear"${clearDisabled}>${text('controls.clearBets')}</button><button type="button" id="spin" data-testid="roulette-spin" class="primary"${disabledWhenSpinning()}>${primaryLabel}</button></div></div><div class="roulette-stage"><div class="wheel-card${wheelState}">${wheelSvg()}${resultHtml()}</div>${tableHtml()}</div></section>`;
+  return `<section class="panel game-stage" data-testid="roulette-premium-stage"><div class="roulette-stage-toolbar"><div><p class="eyebrow">${text('stage.round', { round })}</p><h2>${phaseTitle}</h2></div><div class="row"><button type="button" id="clear"${clearDisabled}>${text('controls.clearBets')}</button><button type="button" id="spin" data-testid="roulette-spin" class="primary"${disabledWhenSpinning()}>${primaryLabel}</button></div></div><div class="roulette-stage"><div class="wheel-card${wheelState}"><div class="roulette-wheel-frame" data-testid="roulette-wheel-frame">${wheelSvg()}</div>${resultHtml()}</div><div class="roulette-table-shell">${tableHtml()}</div></div></section>`;
 }
 
 // Render the player balance table for the right drawer.
@@ -707,7 +765,7 @@ function scoreboardHtml() {
   // Store player rows from the latest state payload.
   const players = window._lastPlayers || [];
   // Return a compact scoreboard table.
-  return `<table class="mini-table" data-testid="roulette-scoreboard"><tr><th>${text('scoreboard.player')}</th><th>${text('scoreboard.balance')}</th></tr>${players.map(player => `<tr><td>${safe(player.display_name)}</td><td>${money(player.balance)}</td></tr>`).join('')}</table>`;
+  return `<table class="mini-table" data-testid="roulette-scoreboard"><tr><th>${text('scoreboard.player')}</th><th>${text('scoreboard.balance')}</th></tr>${players.map(player => `<tr><td>${safe(player.display_name)}</td><td>${tokenMoney(player.balance)}</td></tr>`).join('')}</table>`;
 }
 
 // Render stat spark bars from live stats data.
@@ -735,7 +793,7 @@ function settlementCardHtml() {
   // Branch while a spin is waiting for the pocket reveal.
   if (uiPhase === 'spinning') return `<div class="roulette-settlement-card" data-testid="roulette-settlement-card"><b>${text('settlement.waiting')}</b><span>${text('settlement.noResize')}</span></div>`;
   // Branch after a settled spin.
-  if (uiPhase === 'settled') return `<div class="roulette-settlement-card" data-testid="roulette-settlement-card"><b>${text('settlement.humanNet')}</b><span>${signedMoney(lastHumanNet)}</span></div>`;
+  if (uiPhase === 'settled') return `<div class="roulette-settlement-card" data-testid="roulette-settlement-card"><b>${text('settlement.humanNet')}</b><span>${signedTokenMoney(lastHumanNet)}</span></div>`;
   // Return an empty string when the bet slip owns the drawer.
   return '';
 }
@@ -753,11 +811,11 @@ function drawerHtml() {
   // Store the phase badge.
   const badge = uiPhase === 'spinning' ? text('phase.spinning') : uiPhase === 'settled' ? text('phase.settled') : text('phase.betting');
   // Store the slip rows for open bets or settlement rows for settled results.
-  const rows = settlementMode ? lastSettlements.map(row => `<div class="bet-item"><span>${safe(row.label)}</span><b>${safe(outcomeLabel(row.outcome))}</b></div>`).join('') : bets.map(bet => `<div class="bet-item"><span>${safe(bet.label)}</span><b class="money">${money(bet.amount)}</b><button type="button" class="danger" data-clear="${safe(bet.bet_id)}"${disabledWhenSpinning()}>${text('controls.remove')}</button></div>`).join('');
+  const rows = settlementMode ? lastSettlements.map(row => `<div class="bet-item"><span>${safe(row.label)}</span><b>${safe(outcomeLabel(row.outcome))}</b></div>`).join('') : bets.map(bet => `<div class="bet-item"><span>${safe(bet.label)}</span><b class="money">${tokenMoney(bet.amount)}</b><button type="button" class="danger" data-clear="${safe(bet.bet_id)}"${disabledWhenSpinning()}>${text('controls.remove')}</button></div>`).join('');
   // Store the metric label.
   const metricLabel = uiPhase === 'spinning' ? text('betSlip.lockedTotal') : settlementMode ? text('settlement.humanNet') : text('betSlip.openTotal');
   // Store the metric value.
-  const metricValue = settlementMode ? signedMoney(lastHumanNet) : money(total);
+  const metricValue = settlementMode ? signedTokenMoney(lastHumanNet) : tokenMoney(total);
   // Return the complete right drawer.
   return `<section class="panel details-drawer" data-testid="roulette-bet-slip"><div class="roulette-drawer-title"><h3>${title}</h3><span class="roulette-phase-badge">${badge}</span></div><div class="stat"><span>${metricLabel}</span> <b class="money">${metricValue}</b></div><div class="bet-list stable-list">${rows || `<p class="muted">${text('betSlip.empty')}</p>`}</div>${settlementCardHtml()}<h3>${text('scoreboard.title')}</h3>${scoreboardHtml()}<h3>${text('stats.title')}</h3><div class="row"><span class="badge">${text('stats.rolls', { count: statsCount(lastStats.roll_count) })}</span><span class="badge">${text('stats.red', { count: statsCount(lastStats.colors?.red) })}</span><span class="badge">${text('stats.black', { count: statsCount(lastStats.colors?.black) })}</span><span class="badge">${text('stats.green', { count: statsCount(lastStats.colors?.green) })}</span></div>${sparkBarsHtml(lastStats)}${historyPillsHtml(lastStats)}<h4>${text('stats.hot')}</h4><div class="stat-bars">${(lastStats.hot || []).map(([number, count]) => `<div class="stat-bar"><b>${safe(number)}</b><div class="stat-fill" style="width:${Math.max(5, count / Math.max(1, ...Object.values(lastStats.frequency || {})) * 100)}%"></div><span>${safe(count)}</span></div>`).join('')}</div><h4>${text('stats.cold')}</h4><div class="row">${(lastStats.cold || []).map(([number, count]) => `<span class="badge">${safe(number)}: ${safe(count)}</span>`).join('')}</div></section>`;
 }
@@ -804,6 +862,8 @@ function wireControls() {
   root.querySelector('#spin').onclick = () => spin(true);
   // Wire spot visibility without touching game state.
   root.querySelector('#toggleSpots').onclick = () => { showSpots = !showSpots; render(); updateBotPanel(); };
+  // Preserve player-opened optional control groups across phase and locale rerenders.
+  root.querySelectorAll('[data-roulette-disclosure]').forEach(details => { details.ontoggle = () => { if (details.open) openDisclosures.add(details.dataset.rouletteDisclosure); else openDisclosures.delete(details.dataset.rouletteDisclosure); }; });
   // Render shared autoplay controls through the shared control-plane helper.
   autoBox = renderAutoplay({ id: 'roulette', plan: { type: 'repeat_bet_template' }, onTick: async () => { await ensureBetForAuto(); await spin(false); } });
   // Append autoplay controls into the reserved rail slot.
@@ -833,7 +893,7 @@ export const RouletteGame = {
     // Install Roulette-only premium styles.
     ensurePremiumStyle();
     // Initialize the Roulette resource domain before rendering visible strings.
-    await initI18n({ domains: [GAME_DOMAIN] });
+    await initI18n({ domains: [GAME_DOMAIN, AUTOPLAY_DOMAIN, BOTS_DOMAIN] });
     // Subscribe to locale changes so text refreshes without losing bets or spin state.
     localeUnsubscribe = onLocaleChange(() => render());
     // Load backend state and render the premium Roulette surface.

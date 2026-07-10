@@ -94,6 +94,7 @@
   "status.voiceQueued": "Voice announce queued",
   "status.zeroReady": "Zero rules ready",
   "table.winMarker": "WIN",
+  "units.playTokens": "play tokens",
   "title": "Roulette",
   "voice.rolled": "Roulette rolled {number}"
 }
