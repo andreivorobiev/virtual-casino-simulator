@@ -1,4 +1,5 @@
 {
+  "board.scrollLabel": "Keno number board",
   "title": "Keno",
   "phase.selection.eyebrow": "Keno draw room",
   "phase.selection.title": "Spot Selection",
