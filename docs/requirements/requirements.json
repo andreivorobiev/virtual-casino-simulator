@@ -6623,6 +6623,66 @@
       "introduced_in": "dice-motion-primitives",
       "changed_in": "dice-motion-primitives",
       "notes": "Implemented for GitHub issue #97 as a standalone Node unit suite with fake clock and lifecycle event targets."
+    },
+    {
+      "id": "CORE-021",
+      "module": "Core",
+      "description": "Module-owned game catalog metadata drives backend registration, frontend lazy routes, public additive metadata, and validator discovery from one source.",
+      "status": "PASS",
+      "api_tests": ["API-CATALOG-001"],
+      "browser_tests": ["BR-CATALOG-DISCOVERY-001"],
+      "implementation_files": ["casino/config.py", "casino/games/registry.py", "casino/app.py", "modules/*.json", "web/app.js", "scripts/validate_game_catalog.py", "docs/game_catalog_governance.md"],
+      "introduced_in": "wave0-catalog-governance",
+      "changed_in": "wave0-catalog-governance",
+      "notes": "Allocated for GitHub issue #81; module-manifest.json remains the #104 canonical version interface and is not repurposed as a catalog policy source."
+    },
+    {
+      "id": "CORE-022",
+      "module": "Core",
+      "description": "Canonical game routes restore the active game across direct deep links, reload, and browser Back and Forward navigation.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": ["BR-ROUTE-RESTORE-001"],
+      "implementation_files": ["web/app.js", "tests/run_tests.py"],
+      "introduced_in": "wave0-catalog-governance",
+      "changed_in": "wave0-catalog-governance",
+      "notes": "Allocated for GitHub issue #81 with canonical /games/<id> paths and compatible hash restoration."
+    },
+    {
+      "id": "UX-010",
+      "module": "Application",
+      "description": "The lobby provides accessible search and catalog-derived category navigation that remains usable for the approved 20-game target.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": ["BR-CATALOG-NAV-001"],
+      "implementation_files": ["web/app.js", "web/styles.css", "tests/visual/visual_matrix.json"],
+      "introduced_in": "wave0-catalog-governance",
+      "changed_in": "wave0-catalog-governance",
+      "notes": "Allocated for GitHub issue #81; filters derive categories from game-owned descriptors without per-game shell edits."
+    },
+    {
+      "id": "SESSION-005",
+      "module": "Core",
+      "description": "Every game API request resolves its player through one shared authenticated-session resolver before route dispatch.",
+      "status": "PASS",
+      "api_tests": ["API-CATALOG-001", "API-PRIVATE-SESSION-001"],
+      "browser_tests": [],
+      "implementation_files": ["casino/core/request_player.py", "casino/router.py", "casino/app.py"],
+      "introduced_in": "wave0-catalog-governance",
+      "changed_in": "wave0-catalog-governance",
+      "notes": "Allocated for GitHub issue #81; normal-user session bindings override body and query ids while Admin-compatible explicit resolution remains available."
+    },
+    {
+      "id": "TEST-042",
+      "module": "Tests",
+      "description": "Validators, generic browser discovery, and long suites load every game and its independently owned driver from catalog metadata without a duplicated game allowlist.",
+      "status": "PASS",
+      "api_tests": ["API-CATALOG-001", "LONG-SUITE-100"],
+      "browser_tests": ["BR-CATALOG-DISCOVERY-001"],
+      "implementation_files": ["tests/run_tests.py", "tests/long_suites.py", "tests/game_drivers/", "scripts/validate_game_catalog.py", "scripts/validate_module_boundaries.py", "scripts/validate_contracts.py"],
+      "introduced_in": "wave0-catalog-governance",
+      "changed_in": "wave0-catalog-governance",
+      "notes": "Allocated for GitHub issue #81; future games add their own module descriptor and driver rather than editing the shared suite runner."
     }
   ]
 }

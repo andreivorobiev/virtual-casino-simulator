@@ -3,11 +3,17 @@
 import pathlib
 # Import required dependency so this module can use its public functions or constants.
 import re
+# Import sys so direct validator execution can load the repository catalog.
+import sys
 
 # Set ROOT to the value needed for the next operation.
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-# Set GAMES to the value needed for the next operation.
-GAMES = ["roulette", "slots", "blackjack", "baccarat", "keno", "bingo"]
+# Add the repository root before importing the runtime catalog facade.
+sys.path.insert(0, str(ROOT))
+# Import the canonical game descriptors after resolving this checkout.
+from casino.config import GAMES as GAME_CATALOG
+# Derive module-boundary ids from the same descriptors used for runtime registration.
+GAMES = [game["id"] for game in GAME_CATALOG]
 # Set PY_IMPORT_RE to the value needed for the next operation.
 PY_IMPORT_RE = re.compile(r"^\s*(?:from|import)\s+([a-zA-Z0-9_.]+)")
 # Set JS_IMPORT_RE to the value needed for the next operation.

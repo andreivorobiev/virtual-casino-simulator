@@ -8,21 +8,8 @@ import { getLocaleState, initI18n, onLocaleChange, setLocale, t } from './core/i
 // Import required dependency so this module can preload global voice settings before games mount.
 import { loadVoiceSettings } from './core/voice.js';
 
-// Describe each game route once so navigation, lobby cards, and dynamic imports stay aligned.
-const gameDescriptors = [
-  // Define the Roulette route as the featured table game in the premium lobby.
-  { id: 'roulette', label: 'Roulette', path: './games/roulette.js', exportName: 'RouletteGame', featured: true, wide: false, artClass: 'roulette-art', symbol: '&#9679;', kicker: 'Featured', description: 'Classic wheel with inside and outside bets, racetrack specials, bots, zero rules, and last-1000 stats.', tags: ['Bots', 'Autoplay', 'Stats', 'Ledger-backed'] },
-  // Define the Slots route with the wide machine-card treatment.
-  { id: 'slots', label: 'Slots', path: './games/slots.js', exportName: 'SlotsGame', featured: false, wide: true, artClass: 'slot-art', symbol: '&#9638;', kicker: 'Machine', description: 'Animated 5-reel slots with paylines, wilds, scatters, free spins, and progressive features.', tags: ['Bots', 'Autoplay', 'Bonus rounds'] },
-  // Define the Keno route with draw-game tags and CSS-native card art.
-  { id: 'keno', label: 'Keno', path: './games/keno.js', exportName: 'KenoGame', featured: false, wide: false, artClass: 'keno-art', symbol: '18', kicker: 'Draw', description: 'Pick 1-20 spots, draw 20 numbers, paytable display, animations, and bot tickets.', tags: ['Bots', 'Autoplay', 'Stats'] },
-  // Define the Bingo route with draw-game tags and stable card treatment.
-  { id: 'bingo', label: 'Bingo', path: './games/bingo.js', exportName: 'BingoGame', featured: false, wide: false, artClass: 'bingo-art', symbol: '&#9638;', kicker: 'Cards', description: '75-ball American Bingo with patterns, bot cards, call history, and winning pattern highlights.', tags: ['Bots', 'Autoplay', 'Stats'] },
-  // Define the Blackjack route with table-game card and chip cues.
-  { id: 'blackjack', label: 'Blackjack', path: './games/blackjack.js', exportName: 'BlackjackGame', featured: false, wide: false, artClass: 'blackjack-art', symbol: '&#9824;', kicker: 'Table', description: 'Hit, stand, double, split, surrender, insurance, even money, and table rule controls.', tags: ['Bots', 'Autoplay', 'Stats', 'Ledger-backed'] },
-  // Define the Baccarat route with shoe, road-history, and bot capability cues.
-  { id: 'baccarat', label: 'Baccarat', path: './games/baccarat.js', exportName: 'BaccaratGame', featured: false, wide: false, artClass: 'baccarat-art', symbol: '&#9827;', kicker: 'Table', description: 'Punto Banco shoe with burn/cut behavior, Player/Banker/Tie bets, bots, and road history.', tags: ['Bots', 'Autoplay', 'Stats'] },
-];
+// Store frontend descriptors loaded from the same API catalog that registers backend games.
+let gameDescriptors = [];
 // Store loaded game modules so repeated route changes do not re-import the same module.
 const loadedGames = new Map();
 // Track the active route so navigation can show the selected shell item.
@@ -33,6 +20,10 @@ let latestState = null;
 let currentSession = null;
 // Track the active game-rail observer so navigation never leaves duplicate mutation listeners.
 let gameRailObserver = null;
+// Track the current lobby search without encoding transient filters into game routes.
+let lobbySearch = '';
+// Track the selected scalable catalog category.
+let lobbyCategory = 'all';
 
 // Relay game/autoplay toast events through the shell-level toast outlet.
 window.addEventListener('casino-toast', event => toast(event.detail?.message || 'Auto stopped'));
@@ -57,6 +48,46 @@ function normalizeCurrentUser(payload) {
   const termsRequired = typeof terms.required === 'boolean' ? terms.required : user.terms_required === true || data.terms_required === true || terms.accepted === false;
   // Return a normalized current-user session object for shell rendering.
   return { ...data, user, player, terms: { ...terms, required: termsRequired } };
+}
+
+// Convert one public API catalog row into the shell's route and presentation descriptor.
+function descriptorFromCatalog(game) {
+  // Read locale-owned metadata from the independently owned game descriptor.
+  const localized = game.translations?.[getLocaleState().locale] || {};
+  // Read nested lobby metadata while tolerating additive future fields.
+  const lobby = game.lobby || {};
+  // Return the exact shape consumed by navigation, search, cards, and lazy imports.
+  return { id: game.id, route: game.route || `/games/${game.id}`, label: localized.label || game.label, category: game.category, categories: game.categories || [game.category], path: game.frontend?.module, exportName: game.frontend?.export, readyTestId: game.frontend?.ready_testid, i18nDomain: game.frontend?.i18n_domain, i18nProbe: game.frontend?.i18n_probe, featured: lobby.featured === true, wide: lobby.wide === true, artClass: lobby.art_class || '', symbol: lobby.symbol || '', kicker: localized.kicker || lobby.kicker || game.category, description: localized.description || lobby.description || '', tags: localized.tags || lobby.tags || [] };
+}
+
+// Resolve the route represented by the current browser location for reload and history restoration.
+function routeFromLocation() {
+  // Match canonical reloadable game paths without accepting nested or ambiguous segments.
+  const match = location.pathname.match(/^\/games\/([^/]+)\/?$/);
+  // Decode the matched id so route comparison uses catalog identifiers.
+  if (match) return decodeURIComponent(match[1]);
+  // Preserve a compatible hash deep link for older bookmarks when it names a catalog game.
+  const hashRoute = location.hash.replace(/^#\/?/, '');
+  // Return the hash game only when the loaded catalog recognizes it.
+  if (gameDescriptors.some(game => game.id === hashRoute)) return hashRoute;
+  // Treat every non-game static path as the lobby shell route.
+  return 'lobby';
+}
+
+// Synchronize browser history with one resolved catalog route.
+function updateRouteHistory(route, mode = 'push') {
+  // Resolve the canonical path from catalog metadata or the lobby root.
+  const path = route === 'lobby' ? '/' : gameDescriptors.find(game => game.id === route)?.route || '/';
+  // Preserve locale and test query parameters while removing legacy route hashes.
+  const url = new URL(location.href);
+  // Apply the canonical route path to the current URL.
+  url.pathname = path;
+  // Clear only the legacy route hash after restoration.
+  url.hash = '';
+  // Avoid duplicate history entries when navigation resolves to the current URL.
+  if (location.pathname === url.pathname && location.hash === url.hash) return;
+  // Replace initial or invalid routes and push normal user navigation.
+  history[mode === 'replace' ? 'replaceState' : 'pushState']({ route }, '', `${url.pathname}${url.search}`);
 }
 
 // Render the locale selector options from the loaded manifest.
@@ -168,14 +199,18 @@ async function enterAuthenticated(session) {
   currentSession = normalizeCurrentUser(session);
   // Branch to terms acceptance before showing the casino shell.
   if (currentSession.terms?.required) { renderTermsGate(currentSession); return; }
+  // Load Admin-owned persisted voice settings only when this authenticated identity may read them.
+  if (currentSession.user?.role === 'admin') await loadVoiceSettings();
   // Reveal the casino chrome now that the browser session is authenticated.
   document.body.classList.remove('auth-locked');
   // Update the persistent wallet, logout, and locale controls.
   updateCurrentUserShell();
   // Load casino state for status rail and initial lobby counts.
   await refreshShellState();
-  // Render the active route or the lobby after successful authentication.
-  await navigate(active || 'lobby');
+  // Resolve a bookmarked, reloaded, or already-active route after the catalog is available.
+  const initialRoute = active || routeFromLocation();
+  // Render the restored route while replacing invalid or legacy location state.
+  await navigate(initialRoute, { history: 'replace' });
 }
 
 // Submit the login form to the backend-owned auth endpoint.
@@ -271,7 +306,7 @@ function renderNav() {
   // Build the lobby button with the active shell class when selected.
   const items = [`<button data-route="lobby" class="nav-item ${active === 'lobby' ? 'active' : ''}" data-testid="nav-lobby"><span class="nav-icon" aria-hidden="true">&#8962;</span>${safe(t('nav.lobby', {}, 'shell'))}</button>`];
   // Add one button per game so every game remains equally reachable.
-  gameDescriptors.forEach(game => items.push(`<button data-route="${game.id}" class="nav-item ${active === game.id ? 'active' : ''}" data-testid="nav-${game.id}">${safe(t(`games.${game.id}.label`, {}, 'shell'))}</button>`));
+  gameDescriptors.forEach(game => items.push(`<button data-route="${game.id}" class="nav-item ${active === game.id ? 'active' : ''}" data-testid="nav-${game.id}">${safe(game.label)}</button>`));
   // Add the Admin route as a normal top-level shell affordance.
   items.push(`<button data-admin="true" class="nav-item admin" data-testid="nav-admin">${safe(t('nav.admin', {}, 'shell'))}</button>`);
   // Replace the nav contents atomically so active state cannot drift.
@@ -298,18 +333,57 @@ function lobbyCardHtml(game) {
   return `<article class="game-card${sizeClass}" data-testid="card-${game.id}"><div class="card-art ${game.artClass}" aria-hidden="true"></div><span class="game-kicker">${game.featured ? '&#9733; ' : ''}${safe(game.kicker)}</span><div class="game-card-content"><h2 class="game-heading"><span class="game-symbol">${game.symbol}</span>${safe(game.label)}</h2><p>${safe(game.description)}</p><div class="tag-row">${tags}</div><button class="play-button" data-open-game="${game.id}" data-testid="open-${game.id}"><span>Play</span><span aria-hidden="true">&#8250;</span></button></div></article>`;
 }
 
+// Return catalog descriptors matching the active search and category filters.
+function filteredGames() {
+  // Normalize user search text for stable case-insensitive matching.
+  const query = lobbySearch.trim().toLocaleLowerCase();
+  // Filter the catalog across human labels, descriptions, tags, and category metadata.
+  return gameDescriptors.filter(game => {
+    // Require membership in the selected category unless all categories are active.
+    const categoryMatch = lobbyCategory === 'all' || game.categories.includes(lobbyCategory);
+    // Build one searchable text surface from module-owned catalog metadata.
+    const searchText = [game.label, game.description, ...game.tags, ...game.categories].join(' ').toLocaleLowerCase();
+    // Keep only games satisfying both scalable navigation facets.
+    return categoryMatch && (!query || searchText.includes(query));
+  });
+}
+
 // Render the full premium lobby with hero, status rail, and all current games.
 function lobbyHtml(state = latestState) {
   // Count the available games from API state while falling back to the frontend registry.
   const gameCount = Array.isArray(state?.games) ? state.games.length : gameDescriptors.length;
   // Count visible players so the lobby trust rail reflects the local casino state.
   const playerCount = Array.isArray(state?.players) ? state.players.length : 0;
-  // Render the game card collection from the shared route registry.
-  const cards = gameDescriptors.map(game => lobbyCardHtml(game)).join('');
+  // Render the filtered game card collection from the API catalog.
+  const visibleGames = filteredGames();
+  // Render a helpful empty state when no catalog entry matches both filters.
+  const cards = visibleGames.length ? visibleGames.map(game => lobbyCardHtml(game)).join('') : '<p class="catalog-empty" data-testid="catalog-empty">No games match these filters.</p>';
+  // Derive category navigation from catalog metadata so the 20-game target needs no shell edits.
+  const categories = [...new Set(gameDescriptors.flatMap(game => game.categories))].sort();
+  // Render one accessible category control per discovered category plus the all-games view.
+  const categoryButtons = ['all', ...categories].map(category => `<button type="button" class="catalog-category${lobbyCategory === category ? ' active' : ''}" data-catalog-category="${safe(category)}" aria-pressed="${lobbyCategory === category}">${safe(category === 'all' ? 'All games' : category.replace(/\b\w/g, character => character.toUpperCase()))}</button>`).join('');
+  // Read the approved target count from the additive API catalog summary.
+  const targetCount = state?.catalog?.target_game_count || gameCount;
   // Render the premium trust rail with play-token, bot, autoplay, and ledger cues.
   const trustRail = [trustItemHtml('SIM', 'Local Simulator', 'All play tokens'), trustItemHtml('BOT', `${playerCount} Players`, 'Human and bots'), trustItemHtml('AUTO', 'Autoplay Ready', 'Control-plane automation'), trustItemHtml('LED', 'Ledger-Backed', `${gameCount} games tracked`)].join('');
   // Return the complete lobby markup as one route payload.
-  return `<section class="lobby" data-testid="lobby"><section class="lobby-hero" aria-label="Lobby introduction"><div><p class="eyebrow">Choose your table</p><h1 class="hero-title">Midnight Ledger Casino</h1><div class="hero-rule"><span>&#9824;</span></div></div><aside class="trust-rail" data-testid="lobby-trust-rail" aria-label="Casino status">${trustRail}</aside></section><section class="game-gallery" aria-label="Games">${cards}</section></section>`;
+  return `<section class="lobby" data-testid="lobby"><section class="lobby-hero" aria-label="Lobby introduction"><div><p class="eyebrow">Choose your table</p><h1 class="hero-title">Midnight Ledger Casino</h1><div class="hero-rule"><span>&#9824;</span></div></div><aside class="trust-rail" data-testid="lobby-trust-rail" aria-label="Casino status">${trustRail}</aside></section><section class="catalog-controls" aria-label="Find a game"><label class="catalog-search-label" for="catalog-search">Search games</label><input id="catalog-search" data-testid="catalog-search" type="search" value="${safe(lobbySearch)}" placeholder="Search by game, feature, or category"><div class="catalog-categories" data-testid="catalog-categories" aria-label="Game categories">${categoryButtons}</div><p class="catalog-capacity" data-testid="catalog-capacity">${gameCount} available · catalog ready for ${targetCount}</p></section><section class="game-gallery" data-testid="game-gallery" aria-label="Games">${cards}</section></section>`;
+}
+
+// Render lobby markup and wire its catalog-driven controls after every filter change.
+function renderLobby(view, focusSearch = false) {
+  // Replace the lobby atomically so card and category counts cannot drift.
+  view.innerHTML = lobbyHtml(latestState);
+  // Read the search input rendered by the current catalog state.
+  const search = view.querySelector('[data-testid="catalog-search"]');
+  // Update search state and rerender matching cards for each user edit.
+  search.oninput = () => { lobbySearch = search.value; renderLobby(view, true); };
+  // Wire every discovered category to the same filtered catalog render.
+  view.querySelectorAll('[data-catalog-category]').forEach(button => { button.onclick = () => { lobbyCategory = button.dataset.catalogCategory; renderLobby(view); }; });
+  // Wire each visible game card to its canonical route.
+  view.querySelectorAll('[data-open-game]').forEach(button => { button.onclick = () => navigate(button.dataset.openGame); });
+  // Restore search focus and caret after the filter rerender.
+  if (focusSearch) { search.focus(); search.setSelectionRange(search.value.length, search.value.length); }
 }
 
 // Update one status text node if that node exists in the current document.
@@ -346,6 +420,8 @@ async function refreshShellState(options = {}) {
     const state = await api('/api/v1/casino/state');
     // Cache the state for lobby rendering and later refreshes.
     latestState = state;
+    // Rebuild frontend registration from the same public catalog used by backend registration.
+    gameDescriptors = (state.games || []).map(game => descriptorFromCatalog(game));
     // Mark the shell connected and update status values.
     updateShellStatus(state, true);
     // Return state to callers that need initial render data.
@@ -364,7 +440,7 @@ async function refreshShellState(options = {}) {
 }
 
 // Navigate between lobby and game routes while keeping one mounted game at a time.
-export async function navigate(route) {
+export async function navigate(route, options = {}) {
   // Branch when an unauthenticated browser tries to navigate before the auth gate is complete.
   if (!currentSession || currentSession.terms?.required) return;
   // Store the requested route for error reporting.
@@ -377,6 +453,8 @@ export async function navigate(route) {
     const knownGame = gameDescriptors.some(game => game.id === route);
     // Fall back to lobby for unknown routes.
     targetRoute = route === 'lobby' || knownGame ? route : 'lobby';
+    // Synchronize normal navigation, initial restoration, or invalid-route replacement with browser history.
+    if (options.history !== 'none') updateRouteHistory(targetRoute, options.history || (knownGame || route === 'lobby' ? 'push' : 'replace'));
     // Unmount the previously active game when that game supplied cleanup.
     if (previous && loadedGames.has(previous)) loadedGames.get(previous).unmount?.();
     // Store the active route for nav rendering.
@@ -391,10 +469,8 @@ export async function navigate(route) {
       gameRailObserver?.disconnect();
       // Apply the lobby screen class contract for responsive shell styling.
       view.className = 'screen lobby-screen';
-      // Render lobby markup from the cached or freshly loaded state.
-      view.innerHTML = lobbyHtml(latestState);
-      // Wire each premium game card button to its corresponding route.
-      view.querySelectorAll('[data-open-game]').forEach(button => { button.onclick = () => navigate(button.dataset.openGame); });
+      // Render lobby markup and catalog controls from the cached API state.
+      renderLobby(view);
       // Stop after lobby render because no game module is mounted.
       return;
     }
@@ -434,7 +510,9 @@ async function init() {
   // Initialize i18n before any auth or shell markup renders.
   await initI18n({ domains: ['shell'] });
   // Repaint persistent shell text when the locale changes.
-  onLocaleChange(() => { if (currentSession && !currentSession.terms?.required) { renderNav(); updateCurrentUserShell(); if (active === 'lobby') navigate('lobby'); } });
+  onLocaleChange(() => { if (currentSession && !currentSession.terms?.required) { gameDescriptors = (latestState?.games || []).map(game => descriptorFromCatalog(game)); renderNav(); updateCurrentUserShell(); if (active === 'lobby') navigate('lobby', { history: 'none' }); } });
+  // Restore game routes through browser Back and Forward without remounting stale history entries.
+  window.addEventListener('popstate', () => { if (currentSession && !currentSession.terms?.required) navigate(routeFromLocation(), { history: 'none' }); });
   // Read the add-token button from the wallet popover.
   const addButton = document.getElementById('add-token-btn');
   // Wire token addition through the planned ledger-backed current-user endpoint.
@@ -478,8 +556,6 @@ async function init() {
   };
   // Start protected bootstrapping so the app can still show a friendly error toast.
   try {
-    // Preload global voice settings for game modules that announce events.
-    await loadVoiceSettings();
     // Resolve the current-user session before any casino route can mount.
     await refreshCurrentSession();
   // Handle initial state failures with a visible toast and client log.

@@ -24,7 +24,7 @@ This addendum records the durable planning requirements for GitHub epic #34 and 
 | Prefix | Scope | Requirement IDs |
 |---|---|---|
 | AUTH | Private beta login, bootstrap Admin, protected APIs, Admin-only authorization, and deployment-default hardening. | AUTH-001 through AUTH-006 |
-| SESSION | Session creation, logout, current-user lookup, and invalid session rejection. | SESSION-001 through SESSION-004 |
+| SESSION | Session creation, logout, current-user lookup, invalid session rejection, and shared game-player resolution. | SESSION-001 through SESSION-005 |
 | USER | Durable users, bound players, private state, Admin user management, and bot/user separation. | USER-001 through USER-005 |
 | STORAGE | Storage provider abstraction, JSON fallback, covered persisted domains, and envelope errors. | STORAGE-001 through STORAGE-004 |
 | MYSQL | Fresh MySQL schema bootstrap, atomic ledger writes, fresh-start policy, and JSON fallback. | MYSQL-001 through MYSQL-004 |
@@ -32,13 +32,25 @@ This addendum records the durable planning requirements for GitHub epic #34 and 
 | LIC | Apache-2.0 source licensing and no-real-money/no-redemption legal posture. | LIC-001 through LIC-003 |
 | TOKEN | Play-token terminology, v2 token language, ledger-backed add-token flows, and private balances. | TOKEN-001 through TOKEN-004 |
 | API | Frozen v1 compatibility with additive v2 auth/current-user/Admin-user envelope contracts. | API-001 through API-002 |
-| TEST | Required auth, storage/MySQL, private-session, copied-deployment, and deployment-default validation. | TEST-037 through TEST-041 |
+| TEST | Required auth, storage/MySQL, private-session, copied-deployment, deployment-default, and catalog-driver validation. | TEST-037 through TEST-042 |
 
 ### Deployment-default hardening
 
 Loopback-only developer startup keeps its convenient local bootstrap behavior. Any non-loopback bind automatically requires explicit `CASINO_BOOTSTRAP_ADMIN_EMAIL` and `CASINO_BOOTSTRAP_ADMIN_PASSWORD` settings and rejects the known local defaults before runtime state is created or migrated.
 
 Deployments that bind to loopback but become externally reachable through a tunnel, reverse proxy, hosted platform, or similar network path must also set `CASINO_DEPLOYMENT_MODE` to `deployment`, `production`, or `public`. The startup guard reports configuration key names only and never includes supplied values in diagnostics.
+
+## Wave 0 catalog governance addendum
+
+GitHub issue #81 establishes module-owned game descriptors as the single catalog source for backend registration, frontend lazy routes, searchable/category lobby navigation, validators, and per-game long-suite drivers. The catalog advertises the approved 20-game capacity without registering unimplemented games. Runtime module revisions continue to come only from the #104 interface in `modules/module-manifest.json`.
+
+| ID | Requirement | Status | API tests | Browser tests |
+|---|---|---|---|---|
+| CORE-021 | Module-owned catalog metadata drives backend, frontend, API metadata, and validator discovery. | PASS | API-CATALOG-001 | BR-CATALOG-DISCOVERY-001 |
+| CORE-022 | Direct game links, reload, Back, and Forward restore canonical game routes. | PASS |  | BR-ROUTE-RESTORE-001 |
+| UX-010 | Lobby search and catalog-derived categories remain usable for the 20-game target. | PASS |  | BR-CATALOG-NAV-001 |
+| SESSION-005 | One shared authenticated-player resolver binds every game request before dispatch. | PASS | API-CATALOG-001, API-PRIVATE-SESSION-001 |  |
+| TEST-042 | Validators, browser discovery, and long suites discover games and drivers from catalog metadata. | PASS | API-CATALOG-001, LONG-SUITE-100 | BR-CATALOG-DISCOVERY-001 |
 
 ### Superseded wording
 

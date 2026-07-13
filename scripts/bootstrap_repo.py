@@ -46,6 +46,8 @@ def main():
     run([sys.executable, "scripts/validate_contracts.py"])
     # Execute this statement as part of the module's documented control flow.
     run([sys.executable, "scripts/validate_module_boundaries.py"])
+    # Validate catalog-owned backend, frontend, contract, route, and test-driver discovery hooks.
+    run([sys.executable, "scripts/validate_game_catalog.py"])
     # Execute this statement as part of the module's documented control flow.
     run([sys.executable, "scripts/validate_requirements.py"])
     # Execute this statement as part of the module's documented control flow.

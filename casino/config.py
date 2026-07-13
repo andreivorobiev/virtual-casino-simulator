@@ -1,6 +1,8 @@
 # AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
 # Import required dependency so this module can use its public functions or constants.
 from pathlib import Path
+# Import JSON support so per-module game descriptors form the canonical runtime catalog.
+import json
 # Import required dependency so this module can use its public functions or constants.
 import hashlib
 # Import required dependency so this module can use its public functions or constants.
@@ -111,18 +113,49 @@ def validate_bootstrap_for_startup(host: str, environ=None) -> None:
         # Raise a value-free diagnostic that tells the operator which settings need unique deployment values.
         raise RuntimeError("Public deployment rejects local bootstrap defaults; configure unique bootstrap Admin settings")
 
-# Set GAMES to the value needed for the next operation.
-GAMES = [
-    # Explain this executable/data line so future Codex changes preserve intent.
-    {"id": "roulette", "label": "Roulette", "kind": "table"},
-    # Explain this executable/data line so future Codex changes preserve intent.
-    {"id": "slots", "label": "Slots", "kind": "machine"},
-    # Explain this executable/data line so future Codex changes preserve intent.
-    {"id": "keno", "label": "Keno", "kind": "draw"},
-    # Explain this executable/data line so future Codex changes preserve intent.
-    {"id": "bingo", "label": "Bingo", "kind": "draw"},
-    # Explain this executable/data line so future Codex changes preserve intent.
-    {"id": "blackjack", "label": "Blackjack", "kind": "table"},
-    # Explain this executable/data line so future Codex changes preserve intent.
-    {"id": "baccarat", "label": "Baccarat", "kind": "table"},
-]
+# Set MODULES_DIR to the directory whose independently owned descriptors form the game catalog.
+MODULES_DIR = ROOT_DIR / "modules"
+# Record the approved expansion target without registering games that have not landed yet.
+GAME_CATALOG_TARGET = 20
+
+# Define load_game_catalog so backend, frontend, validators, and tests consume one metadata source.
+def load_game_catalog(modules_dir: Path = MODULES_DIR) -> list[dict]:
+    # Collect catalog entries from independently owned module descriptors.
+    games = []
+    # Scan descriptors deterministically so source-control ordering never changes runtime navigation.
+    for path in sorted(modules_dir.glob("*.json")):
+        # Skip the aggregate version interface because #104 reserves it for canonical revisions.
+        if path.name == "module-manifest.json":
+            # Continue to the independently owned module descriptors.
+            continue
+        # Parse one module descriptor before deciding whether it represents a browser game.
+        module = json.loads(path.read_text(encoding="utf-8"))
+        # Read the optional game entry used only by playable game modules.
+        game = module.get("game")
+        # Ignore non-game modules without creating a second allowlist.
+        if not game:
+            # Continue scanning remaining module descriptors.
+            continue
+        # Copy metadata so runtime callers cannot mutate the parsed module object.
+        entry = dict(game)
+        # Require catalog identity to match the independently versioned module owner.
+        if entry.get("id") != module.get("module"):
+            # Fail startup with an actionable descriptor path instead of silently registering drift.
+            raise RuntimeError(f"Game catalog id in {path.name} must match module {module.get('module')}")
+        # Carry contract ownership into validators without duplicating it inside the game object.
+        entry["contracts"] = list(module.get("contracts", []))
+        # Carry source paths into validators so future modules are checked through their own descriptor.
+        entry["paths"] = list(module.get("paths", []))
+        # Add the entry after its module-owned metadata has been normalized.
+        games.append(entry)
+    # Sort by explicit catalog order and stable game id for predictable navigation and evidence.
+    games.sort(key=lambda game: (int(game.get("sort_order", 9999)), game["id"]))
+    # Reject duplicate identifiers before dynamic imports or browser routes become ambiguous.
+    if len({game["id"] for game in games}) != len(games):
+        # Fail closed because duplicate catalog ids could register conflicting API routes.
+        raise RuntimeError("Game catalog contains duplicate ids")
+    # Return fresh catalog entries to the runtime configuration facade.
+    return games
+
+# Load the canonical catalog once so every runtime consumer sees the same ordered entries.
+GAMES = load_game_catalog()

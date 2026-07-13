@@ -1,6 +1,6 @@
 {
   "module": "baccarat",
-  "version": "9.0.3",
+  "version": "9.1.0",
   "paths": [
     "casino/games/baccarat/",
     "web/games/baccarat.js"
@@ -11,6 +11,19 @@
   "contracts": [
     "contracts/openapi/baccarat.v1.yaml"
   ],
+  "game": {
+    "id": "baccarat",
+    "sort_order": 60,
+    "route": "/games/baccarat",
+    "label": "Baccarat",
+    "category": "table",
+    "categories": ["table", "cards", "roadmaps"],
+    "backend": {"register": "casino.games.baccarat.api:register"},
+    "frontend": {"module": "./games/baccarat.js", "export": "BaccaratGame", "ready_testid": "baccarat-wager-setup", "i18n_domain": "games/baccarat", "i18n_probe": "shoe.cards"},
+    "tests": {"long_driver": "tests.game_drivers.baccarat:play"},
+    "translations": {"ru-RU": {"label": "Баккара", "kicker": "Стол", "description": "Punto Banco с колодой, ставками Игрок, Банкир и Ничья, ботами и историей дорог."}},
+    "lobby": {"featured": false, "wide": false, "art_class": "baccarat-art", "symbol": "&#9827;", "kicker": "Table", "description": "Punto Banco shoe with burn/cut behavior, Player/Banker/Tie bets, bots, and road history.", "tags": ["Bots", "Autoplay", "Stats"]}
+  },
   "depends_on": [
     "core",
     "ledger",

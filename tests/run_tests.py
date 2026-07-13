@@ -1,7 +1,7 @@
 # AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
 #!/usr/bin/env python3
 # Import required dependency so this module can use its public functions or constants.
-import argparse, json, os, re, socket, subprocess, sys, time, traceback, urllib.request
+import argparse, importlib, json, os, re, socket, subprocess, sys, time, traceback, urllib.request
 # Import required dependency so this module can use its public functions or constants.
 from pathlib import Path
 # Set ROOT to the value needed for the next operation.
@@ -18,6 +18,8 @@ from casino.games.blackjack import api as blackjack_api, engine as blackjack_eng
 from casino.core import auth as auth_core
 # Import configuration helpers so startup hardening can be tested without launching a public listener.
 from casino import config as casino_config
+# Import the shared resolver so session precedence is tested independently of individual game APIs.
+from casino.core.request_player import resolve_authenticated_player
 # Import storage tests so provider parity can run without the broad API suite.
 from tests import storage_tests
 # Set RESULTS to the value needed for the next operation.
@@ -466,6 +468,29 @@ def run_api_tests():
             assert {game['id']:game['revision'] for game in state['games']}==expected_game_revisions
         # Execute this statement as part of the module's documented control flow.
         run_case('API-CORE-001',['CORE-001','CORE-016','TEST-003'],core)
+
+        # Define catalog_foundation to prove every integration surface discovers the same games.
+        def catalog_foundation():
+            # Load the additive public catalog response through the frozen v1 envelope.
+            response=api(base,'/api/v1/casino/games')
+            # Compare exact ordered ids with the runtime descriptors used for backend registration.
+            expected_ids=[game['id'] for game in casino_config.GAMES]
+            # Require current and target counts to remain explicit for the 20-game expansion.
+            assert [game['id'] for game in response['games']]==expected_ids and response['catalog']=={'current_game_count':len(expected_ids),'target_game_count':20}
+            # Require public frontend routes while keeping backend and test import paths internal.
+            assert all(game['route']==f"/games/{game['id']}" and game['frontend']['module'] and 'backend' not in game and 'tests' not in game for game in response['games'])
+            # Resolve every independently owned long-suite driver from catalog metadata.
+            for game in casino_config.GAMES:
+                # Split the module-owned test reference into its import and callable names.
+                module_name,callable_name=game['tests']['long_driver'].split(':',1)
+                # Require each discovered driver to expose the documented callable.
+                assert callable(getattr(importlib.import_module(module_name),callable_name))
+            # Prove a malicious payload cannot override a normal authenticated session binding.
+            assert resolve_authenticated_player({'bound_player_id':'session-player','user':{'player_id':'session-player'}},{'player_id':'other-player'},{'player_id':'third-player'})=='session-player'
+            # Prove Admin-compatible explicit resolution remains available without a normal-user binding.
+            assert resolve_authenticated_player({'user':{'role':'admin'}},{'player_id':'human'},{})=='human'
+        # Execute the catalog, driver, route-metadata, and shared resolver acceptance gate.
+        run_case('API-CATALOG-001',['CORE-021','SESSION-005','TEST-042'],catalog_foundation)
 
         # Execute this statement as part of the module's documented control flow.
         run_case('API-I18N-001',['I18N-001','I18N-003'],validate_i18n_resources)
@@ -1099,15 +1124,39 @@ def run_browser_tests():
                 # Define the premium_lobby function used by this module.
                 def premium_lobby():
                     # Verify the lobby renders one premium card for every current game.
-                    assert page.locator('[data-testid^="card-"]').count()==6
+                    assert page.locator('[data-testid^="card-"]').count()==len(casino_config.GAMES)
                     # Verify the status/trust rail from the approved lobby is visible.
                     assert page.get_by_test_id('lobby-trust-rail').is_visible()
                     # Verify the premium lobby headline renders in the first route view.
                     assert page.get_by_text('Midnight Ledger Casino').is_visible()
                     # Verify the Roulette card still exposes its route action.
                     assert page.get_by_test_id('open-roulette').is_visible()
+                    # Verify the catalog advertises the approved expansion capacity.
+                    assert 'ready for 20' in page.get_by_test_id('catalog-capacity').inner_text()
                 # Execute this statement as part of the module's documented control flow.
                 run_case('BR-LOBBY-001',['CORE-005','CORE-006','UX-008'],premium_lobby)
+                # Define catalog_navigation to cover search and category facets from module metadata.
+                def catalog_navigation():
+                    # Filter by a game label through the visible search control.
+                    page.get_by_test_id('catalog-search').fill('roulette')
+                    # Wait for the catalog rerender to show only the matching game card.
+                    page.wait_for_function("() => document.querySelectorAll('[data-testid^=\"card-\"]').length === 1")
+                    # Require the matching card and no unrelated game card.
+                    assert page.get_by_test_id('card-roulette').is_visible() and page.locator('[data-testid^="card-"]').count()==1
+                    # Capture filtered catalog evidence at the primary desktop viewport.
+                    shot('after-pass-shell-lobby-catalog-filtered.png')
+                    # Clear search through the freshly rendered control.
+                    page.get_by_test_id('catalog-search').fill('')
+                    # Select the Table category derived from catalog metadata.
+                    page.locator('[data-catalog-category="table"]').click()
+                    # Count expected Table games from the same Python catalog source.
+                    expected_tables=len([game for game in casino_config.GAMES if 'table' in game['categories']])
+                    # Require exactly the catalog-owned Table entries to remain visible.
+                    assert page.locator('[data-testid^="card-"]').count()==expected_tables and page.get_by_test_id('card-blackjack').is_visible()
+                    # Restore the all-games category for later visual and route checks.
+                    page.locator('[data-catalog-category="all"]').click()
+                # Execute scalable lobby search and category navigation coverage.
+                run_case('BR-CATALOG-NAV-001',['UX-010','CORE-021'],catalog_navigation)
                 # Capture the polished desktop lobby and shared topbar for review evidence.
                 shot('after-pass-shell-lobby-desktop.png')
                 # Resize the browser to the compact desktop viewport before responsive checks.
@@ -1132,6 +1181,40 @@ def run_browser_tests():
                 shot('after-pass-shell-lobby-mobile.png')
                 # Restore desktop dimensions before existing game interaction coverage runs.
                 page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(250)
+                # Define catalog_route_discovery to mount every frontend driver from catalog metadata.
+                def catalog_route_discovery():
+                    # Visit every catalog game through its generated shell navigation control.
+                    for game in casino_config.GAMES:
+                        # Navigate through the generic catalog-owned test id.
+                        page.get_by_test_id(f"nav-{game['id']}").click()
+                        # Wait for the independently declared ready selector before continuing.
+                        page.get_by_test_id(game['frontend']['ready_testid']).wait_for(timeout=5000)
+                        # Require the canonical reloadable route to match module metadata.
+                        assert page.url.split('?',1)[0].endswith(game['route'])
+                    # Return to the lobby after generic discovery coverage.
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Execute catalog-driven frontend driver discovery for all current games.
+                run_case('BR-CATALOG-DISCOVERY-001',['CORE-021','TEST-042'],catalog_route_discovery)
+                # Define route_restoration to prove deep links, reload, Back, and Forward behavior.
+                def route_restoration():
+                    # Open Roulette directly through its canonical path using the authenticated browser context.
+                    page.goto(base+'/games/roulette',wait_until='networkidle'); page.get_by_test_id('roulette-wheel').wait_for(timeout=5000)
+                    # Reload the same deep link and require the route to remount without a lobby redirect.
+                    page.reload(wait_until='networkidle'); page.get_by_test_id('roulette-wheel').wait_for(timeout=5000)
+                    # Require the persistent brand and wallet to finish painting before acceptance evidence.
+                    page.locator('.brand-mark').wait_for(timeout=5000); page.get_by_test_id('premium-wallet').wait_for(timeout=5000); page.wait_for_timeout(300)
+                    # Capture the restored game surface at the primary desktop viewport.
+                    viewport_shot('after-pass-shell-route-roulette-desktop.png')
+                    # Push a second catalog route through normal shell navigation.
+                    page.get_by_test_id('nav-slots').click(); page.get_by_test_id('slot-grid').wait_for(timeout=5000)
+                    # Restore Roulette through browser Back and wait for the route-owned readiness selector.
+                    page.go_back(); page.get_by_test_id('roulette-wheel').wait_for(timeout=5000)
+                    # Restore Slots through browser Forward and wait for its route-owned readiness selector.
+                    page.go_forward(); page.get_by_test_id('slot-grid').wait_for(timeout=5000)
+                    # Return to the lobby so existing game interaction coverage starts from its normal baseline.
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Execute the browser lifecycle restoration gate.
+                run_case('BR-ROUTE-RESTORE-001',['CORE-022','MOTION-002'],route_restoration)
                 # Open Roulette and wait for the premium vector wheel to mount.
                 page.get_by_test_id('nav-roulette').click(); page.get_by_test_id('roulette-wheel').wait_for()
                 # Define the raw Roulette resource keys reported as visible regressions.

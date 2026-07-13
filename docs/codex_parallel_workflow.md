@@ -62,6 +62,8 @@ Paste the packet into the new chat along with:
 
 Parallel work on one game is allowed only when ownership is split by layer.
 
+Game expansion workers must also follow [`game_catalog_governance.md`](game_catalog_governance.md). Each isolated game owns its `modules/<game-id>.json` descriptor and `tests/game_drivers/<game-id>.py` driver; shared registration, shell, validator, and long-suite allowlists must not be reintroduced.
+
 Good splits:
 
 - Engine and settlement rules: `casino/games/<game>/`.

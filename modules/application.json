@@ -1,11 +1,13 @@
 {
   "module": "application",
-  "version": "9.2.10",
+  "version": "9.3.0",
   "paths": [
     "run.py",
     "pyproject.toml",
     "README.md",
     "modules/__init__.py",
+    "web/app.js",
+    "web/styles.css",
     "web/core/i18n.js",
     "web/i18n/"
   ],
