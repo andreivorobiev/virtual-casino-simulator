@@ -84,9 +84,9 @@ Each new game begins at module revision `1.0.0`. The packaged application releas
 
 | Integration | Application module | Tests module | Docs module | Contracts module |
 | --- | ---: | ---: | ---: | ---: |
-| #111 Multi-Hand Video Poker | 9.4.0 | 1.7.0 | 1.5.0 | 1.2.0 |
-| #113 Casino War | 9.5.0 | 1.8.0 | 1.6.0 | 1.3.0 |
-| #112 Big Six Wheel | 9.6.0 | 1.9.0 | 1.7.0 | 1.4.0 |
+| #111 Multi-Hand Video Poker | 9.4.0 | 1.7.0 | 1.6.0 | 1.2.0 |
+| #113 Casino War | 9.5.0 | 1.8.0 | 1.7.0 | 1.3.0 |
+| #112 Big Six Wheel | 9.6.0 | 1.9.0 | 1.8.0 | 1.4.0 |
 
 These values are reservations, not permission to overwrite a newer value. The integrator must re-read current `main` immediately before each bump.
 
