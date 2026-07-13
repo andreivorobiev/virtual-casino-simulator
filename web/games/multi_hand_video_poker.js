@@ -33,6 +33,8 @@ let busy = false;
 let unsubscribeLocale = null;
 // Store a fallback retry-id counter for browsers without randomUUID support.
 let requestCounter = 0;
+// Retain an unresolved deal retry key so a lost response can replay the same wager.
+let pendingRequestId = null;
 
 
 // Resolve one owned localized string without a visible hard-coded fallback.
@@ -217,10 +219,14 @@ async function deal() {
   const input = root?.querySelector('#mhvp-wager');
   // Normalize the cached wager used by this request and later renders.
   wagerPerHand = Math.max(0.01, Number(input?.value || wagerPerHand || 1));
+  // Reuse an unresolved request key so retry cannot create a second wager.
+  pendingRequestId = pendingRequestId || nextRequestId();
   // Post the selected mode, wager, and unique retry key for one aggregate debit.
-  const payload = await post(`${API_ROOT}/rounds`, withCurrentPlayer({ request_id: nextRequestId(), hand_count: handCount, wager_per_hand: wagerPerHand }));
+  const payload = await post(`${API_ROOT}/rounds`, withCurrentPlayer({ request_id: pendingRequestId, hand_count: handCount, wager_per_hand: wagerPerHand }));
   // Store returned reload-safe state after the committed wager.
   state = payload.state;
+  // Clear the retry key only after the server response proves state was recovered.
+  pendingRequestId = null;
   // Store the server paytable in case catalog integration mounted before initial state loading.
   paytable = payload.paytable || paytable;
   // Refresh the shared authenticated wallet after ledger movement.

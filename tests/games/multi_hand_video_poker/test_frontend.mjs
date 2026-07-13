@@ -30,6 +30,8 @@ assert.match(source, /import \{ renderCard \} from '\.\.\/core\/cards\.js'/);
 assert.match(source, /function localizedCard\b/);
 // Verify every required mode is represented in one canonical array.
 assert.match(source, /const HAND_COUNTS = \[3, 5, 10\]/);
+// Verify unresolved deal requests retain one idempotency key for safe browser retry.
+assert.match(source, /pendingRequestId = pendingRequestId \|\| nextRequestId\(\)/);
 // Verify this module owns no timer that could survive unmount.
 assert.doesNotMatch(source, /setTimeout|setInterval|requestAnimationFrame/);
 // Verify reduced-motion behavior is included in game-owned styling.
