@@ -1,0 +1,172 @@
+openapi: 3.0.3
+# Describe the additive issue-86 contract without changing existing v1 operations.
+info:
+  title: Virtual Casino Big Six Wheel API
+  version: v1
+  description: Additive session-bound Big Six Wheel contract for issue 86 and integration lane 77.
+# Define only game-owned routes; shared router registration remains with issue 77.
+paths:
+  # Expose session-owned reload state and immutable rules metadata.
+  /api/v1/games/big-six-wheel/state:
+    get:
+      summary: Read the authenticated player's Big Six rules and recent settled rounds
+      operationId: big_six_wheel_GET_api_v1_games_big_six_wheel_state
+      responses:
+        '200':
+          description: Standard success envelope containing game, outcomes, and recent_rounds
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BigSixStateEnvelope'
+        '401':
+          description: Standard error envelope when no authenticated session is available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorEnvelope'
+  # Execute one complete debit, outcome, and optional settlement action.
+  /api/v1/games/big-six-wheel/spins:
+    post:
+      summary: Execute or replay one atomic ledger-backed Big Six spin
+      operationId: big_six_wheel_POST_api_v1_games_big_six_wheel_spins
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BigSixSpinRequest'
+      responses:
+        '200':
+          description: Standard success envelope containing one settled or safely replayed round
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BigSixSpinEnvelope'
+        '400':
+          description: Standard error envelope for invalid wagers or request identity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorEnvelope'
+        '409':
+          description: Standard error envelope when one client request identity is reused with different wagers
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorEnvelope'
+# Keep all request, response, round, and standard-envelope shapes local to this contract.
+components:
+  schemas:
+    # Require a caller-stable action identity for safe retries.
+    BigSixSpinRequest:
+      type: object
+      additionalProperties: false
+      required: [client_request_id, wagers]
+      properties:
+        client_request_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          description: Stable caller-generated identity reused only when retrying the same spin action.
+        wagers:
+          type: object
+          minProperties: 1
+          additionalProperties: false
+          properties:
+            one: {$ref: '#/components/schemas/TokenAmount'}
+            two: {$ref: '#/components/schemas/TokenAmount'}
+            five: {$ref: '#/components/schemas/TokenAmount'}
+            ten: {$ref: '#/components/schemas/TokenAmount'}
+            twenty: {$ref: '#/components/schemas/TokenAmount'}
+            joker: {$ref: '#/components/schemas/TokenAmount'}
+            crest: {$ref: '#/components/schemas/TokenAmount'}
+    # Constrain fake-money play-token amounts to shared ledger precision.
+    TokenAmount:
+      type: number
+      minimum: 0.01
+      maximum: 1000000
+      multipleOf: 0.01
+      description: Fake-money play-token amount; never currency or redeemable value.
+    # Specialize the standard success envelope for state reads.
+    BigSixStateEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/ApiSuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [game, outcomes, recent_rounds]
+              properties:
+                game: {type: string, enum: [big_six_wheel]}
+                outcomes:
+                  type: array
+                  items: {$ref: '#/components/schemas/BigSixOutcome'}
+                recent_rounds:
+                  type: array
+                  maxItems: 100
+                  items: {$ref: '#/components/schemas/BigSixRound'}
+    # Specialize the standard success envelope for atomic spin actions.
+    BigSixSpinEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/ApiSuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [round, replayed]
+              properties:
+                round: {$ref: '#/components/schemas/BigSixRound'}
+                replayed: {type: boolean}
+                ledger:
+                  type: object
+                  nullable: true
+                  description: Game-owned wager and optional settlement event evidence for the authenticated player.
+    # Describe one legal wheel target from the fixed rules profile.
+    BigSixOutcome:
+      type: object
+      required: [id, segment_count, net_odds]
+      properties:
+        id: {type: string, enum: [one, two, five, ten, twenty, joker, crest]}
+        segment_count: {type: integer, minimum: 1, maximum: 23}
+        net_odds: {type: integer, enum: [1, 2, 5, 10, 20, 45]}
+    # Describe one immutable settled round returned on original and replayed requests.
+    BigSixRound:
+      type: object
+      required: [round_id, client_request_id, player_id, status, wagers, result_index, outcome, total_wager, total_return, net, settlements, settled_at]
+      properties:
+        round_id: {type: string}
+        client_request_id: {type: string}
+        player_id: {type: string, description: Authenticated session-bound player id; caller values cannot override the shared resolver.}
+        status: {type: string, enum: [settled]}
+        wagers: {type: object}
+        result_index: {type: integer, minimum: 0, maximum: 53}
+        outcome: {type: string, enum: [one, two, five, ten, twenty, joker, crest]}
+        net_odds: {type: integer}
+        total_wager: {type: number}
+        total_return: {type: number}
+        net: {type: number}
+        settlements:
+          type: array
+          items:
+            type: object
+        settled_at: {type: string}
+    # Preserve the repository-wide success envelope contract.
+    ApiSuccessEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok: {type: boolean, enum: [true]}
+        data: {type: object}
+    # Preserve the repository-wide error envelope contract.
+    ApiErrorEnvelope:
+      type: object
+      required: [ok, error]
+      properties:
+        ok: {type: boolean, enum: [false]}
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: {type: string}
+            message: {type: string}
+            details: {type: object}
