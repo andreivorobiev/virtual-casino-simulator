@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # Provide long, sharded, deployment-style casino test suites.
 import argparse  # Parse suite, shard, deployment, and audio options.
+import importlib  # Load independently owned per-game drivers from catalog references.
 import json  # Write machine-readable long-suite reports.
 import os  # Inspect paths and process environment safely.
 import random  # Vary deterministic scenario choices across iterations.
@@ -17,12 +18,15 @@ from pathlib import Path  # Handle Windows paths consistently.
 
 # Store ROOT so the script can locate the repository from any working directory.
 ROOT = Path(__file__).resolve().parents[1]
+# Add the repository root so direct script execution can import runtime catalog modules.
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))  # Prefer this checkout over unrelated installed packages.
+# Consume the same canonical game catalog as runtime registration after path setup.
+from casino.config import GAMES
 # Store AUTH_SESSION_COOKIE so browser verification can use the backend session cookie name without importing app code.
 AUTH_SESSION_COOKIE = "casino_session"
-# Store GAME_IDS so every scenario can assert that every game was exercised.
-GAME_IDS = ("roulette", "slots", "blackjack", "baccarat", "keno", "bingo")
-# Store RED_NUMBERS so Roulette outside bets use the documented API payload shape.
-RED_NUMBERS = ["1", "3", "5", "7", "9", "12", "14", "16", "18", "19", "21", "23", "25", "27", "30", "32", "34", "36"]
+# Store GAME_IDS from the runtime catalog so coverage automatically includes newly integrated games.
+GAME_IDS = tuple(game["id"] for game in GAMES)
 # Store SUITES so suite sizing and minimum coverage expectations stay declarative.
 SUITES = {
     # Suite 100 runs at least one hundred full-casino scenarios and requires ten touches per requirement.
@@ -137,76 +141,20 @@ def ensure_balance(client):
         client.call("/api/v1/players/human/add-money", "POST", {"amount": 10000})  # Top up only when needed.
 
 
-# Exercise Roulette with a setting change, a bet, and a settlement.
-def play_roulette(client, index, coverage):
-    client.call("/api/v1/games/roulette/clear", "POST", {"player_id": "human"})  # Clear stale human bets.
-    if index % 5 == 0:  # Periodically verify the en-prison zero-rule branch.
-        client.call("/api/v1/games/roulette/settings", "POST", {"zero_rule": "en_prison"})  # Exercise zero-rule settings.
-        client.call("/api/v1/games/roulette/bets", "POST", {"player_id": "human", "bet_type": "red", "amount": 5, "covered_numbers": RED_NUMBERS, "label": "Red"})  # Place outside bet.
-        result = client.call("/api/v1/games/roulette/spin", "POST", {"force_result": "0"})  # Force the prison path.
-        assert result["state"]["open_round"]["bets"], "en-prison bet was not carried"  # Verify carried bet.
-        client.call("/api/v1/games/roulette/clear", "POST", {"player_id": "human"})  # Clean carried bet before next game.
-    else:
-        client.call("/api/v1/games/roulette/settings", "POST", {"zero_rule": "normal"})  # Exercise standard setting.
-        client.call("/api/v1/games/roulette/bets", "POST", {"player_id": "human", "bet_type": "straight", "amount": 5, "covered_numbers": [str(17 + index % 3)], "label": str(17 + index % 3)})  # Place inside bet.
-        result = client.call("/api/v1/games/roulette/spin", "POST", {"force_result": str(17 + index % 3)})  # Force a win.
-        assert result["round"]["result"] == str(17 + index % 3), "forced Roulette result mismatch"  # Verify outcome.
-    coverage.touch_game("roulette")  # Count Roulette play.
+# Discover one callable long-suite driver from each independently owned catalog entry.
+def load_game_drivers():
+    drivers = []  # Preserve catalog order in every full-casino scenario.
+    for game in GAMES:  # Discover every current and future game without a central allowlist.
+        reference = game["tests"]["long_driver"]  # Read the module-owned driver reference.
+        module_name, callable_name = reference.split(":", 1)  # Separate the import path from its callable.
+        module = importlib.import_module(module_name)  # Import the per-game test driver.
+        driver = getattr(module, callable_name)  # Resolve the documented driver callable.
+        drivers.append((game["id"], driver))  # Bind the callable to its catalog game id.
+    return drivers  # Return deterministic discovered drivers to the scenario runner.
 
 
-# Exercise Slots with varied payline counts.
-def play_slots(client, index, coverage):
-    lines = [1, 3, 5, 9, 20][index % 5]  # Vary the active line count.
-    result = client.call("/api/v1/games/slots/spin", "POST", {"player_id": "human", "active_lines": lines, "line_bet": 1})  # Spin once.
-    assert result["spin"]["cost"] in (0, lines), "Slots cost did not match paid or free-spin rules"  # Verify debit/free-spin shape.
-    assert len(result["spin"]["grid"]) == 3, "Slots grid row count changed"  # Verify grid shape.
-    coverage.touch_game("slots")  # Count Slots play.
-
-
-# Exercise Blackjack with a deal and a safe settlement action when needed.
-def play_blackjack(client, index, coverage):
-    result = client.call("/api/v1/games/blackjack/rounds", "POST", {"player_id": "human", "bet_amount": 5 + index % 4})  # Deal one round.
-    round_data = result["round"]  # Keep the dealt round.
-    if round_data.get("status") == "player_turn":  # Stand only when the player must act.
-        result = client.call(f"/api/v1/games/blackjack/rounds/{round_data['round_id']}/stand", "POST", {"hand_index": 0})  # Stand to settle active hands.
-        round_data = result["round"]  # Refresh the settled round.
-    assert round_data["dealer"]["cards"], "Blackjack dealer cards missing"  # Verify dealer state.
-    coverage.touch_game("blackjack")  # Count Blackjack play.
-
-
-# Exercise Baccarat with all wager types across repeated scenarios.
-def play_baccarat(client, index, coverage):
-    bet_type = ["banker", "player", "tie"][index % 3]  # Rotate baccarat bet types.
-    client.call("/api/v1/games/baccarat/bets", "POST", {"player_id": "human", "amount": 5, "bet_type": bet_type})  # Place a wager.
-    result = client.call("/api/v1/games/baccarat/deal", "POST", {})  # Deal one coup.
-    assert result["coup"]["winner"] in ("player", "banker", "tie"), "Baccarat winner invalid"  # Verify winner enum.
-    assert result["coup"]["player_cards"] and result["coup"]["banker_cards"], "Baccarat cards missing"  # Verify cards.
-    coverage.touch_game("baccarat")  # Count Baccarat play.
-
-
-# Exercise Keno with both refund and draw paths.
-def play_keno(client, index, coverage):
-    spots = [1 + index % 10, 20 + index % 10, 40 + index % 10]  # Vary valid spots.
-    result = client.call("/api/v1/games/keno/tickets", "POST", {"player_id": "human", "amount": 4, "spots": spots})  # Buy a ticket.
-    ticket_id = result["ticket"]["ticket_id"]  # Keep the ticket ID.
-    if index % 2 == 0:  # Alternate Keno draw and refund behavior.
-        draw = client.call("/api/v1/games/keno/draw", "POST", {})["draw"]  # Draw twenty numbers.
-        assert len(draw["drawn"]) == 20, "Keno draw count changed"  # Verify draw size.
-    else:
-        client.call(f"/api/v1/games/keno/tickets/{ticket_id}", "DELETE", {"player_id": "human"})  # Exercise refund path.
-    coverage.touch_game("keno")  # Count Keno play.
-
-
-# Exercise Bingo with call, reset, and auto-win variants.
-def play_bingo(client, index, coverage):
-    client.call("/api/v1/games/bingo/cards", "POST", {"player_id": "human", "amount": 5, "pattern": "line"})  # Buy one card.
-    if index % 7 == 0:  # Periodically drive Bingo to an automatic win.
-        result = client.call("/api/v1/games/bingo/auto", "POST", {"max_calls": 75})  # Exercise auto-play path.
-        assert result["session"]["status"] == "won", "Bingo auto-play did not win"  # Verify terminal status.
-    else:
-        client.call("/api/v1/games/bingo/call", "POST", {})  # Call one ball.
-        client.call("/api/v1/games/bingo/reset", "POST", {})  # Reset and refund remaining active cards.
-    coverage.touch_game("bingo")  # Count Bingo play.
+# Load drivers once so discovery failures stop the suite before a listener starts.
+GAME_DRIVERS = load_game_drivers()
 
 
 # Exercise shared control-plane behavior used by long casino sessions.
@@ -227,12 +175,9 @@ def run_full_casino_scenario(client, index, coverage):
     touch_control_plane(client, index)  # Exercise shared admin/audio/autoplay behavior.
     details = {}  # Collect compact scenario evidence.
     before = client.balance()  # Capture starting balance.
-    play_roulette(client, index, coverage)  # Play Roulette.
-    play_slots(client, index, coverage)  # Play Slots.
-    play_blackjack(client, index, coverage)  # Play Blackjack.
-    play_baccarat(client, index, coverage)  # Play Baccarat.
-    play_keno(client, index, coverage)  # Play Keno.
-    play_bingo(client, index, coverage)  # Play Bingo.
+    for game_id, driver in GAME_DRIVERS:  # Exercise every game discovered from module-owned metadata.
+        driver(client, index)  # Run the current game's independently owned scenario driver.
+        coverage.touch_game(game_id)  # Count the catalog game after its driver succeeds.
     after = client.balance()  # Capture ending balance.
     coverage.touch_requirements()  # Count this all-game scenario against all requirement IDs.
     details["balance_before"] = before  # Record starting bankroll.

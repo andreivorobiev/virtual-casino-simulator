@@ -75,6 +75,10 @@
     {
       "id": "VIS-EVIDENCE-001",
       "rule": "Acceptance evidence is marked after_pass and records branch, commit, surface, state, locale, viewport, and path."
+    },
+    {
+      "id": "VIS-CATALOG-001",
+      "rule": "Catalog search, category filters, and restored game routes preserve accessible controls, readable cards, and the authenticated shared shell."
     }
   ],
   "surfaces": [
@@ -110,7 +114,9 @@
         "authenticated",
         "wallet_closed",
         "wallet_open",
-        "token_added"
+        "token_added",
+        "search_filtered",
+        "category_filtered"
       ],
       "locales": [
         "en-US",
@@ -128,7 +134,8 @@
         "VIS-TOKEN-002",
         "VIS-LAYOUT-003",
         "VIS-RESPONSIVE-001",
-        "VIS-EVIDENCE-001"
+        "VIS-EVIDENCE-001",
+        "VIS-CATALOG-001"
       ]
     },
     {
@@ -138,7 +145,8 @@
       "states": [
         "betting",
         "spinning",
-        "settled"
+        "settled",
+        "route_restored"
       ],
       "locales": [
         "en-US",
@@ -157,7 +165,8 @@
         "VIS-SCROLL-001",
         "VIS-SCROLL-002",
         "VIS-HIERARCHY-001",
-        "VIS-RESPONSIVE-001"
+        "VIS-RESPONSIVE-001",
+        "VIS-CATALOG-001"
       ]
     },
     {
@@ -168,7 +177,8 @@
         "idle",
         "spinning",
         "win",
-        "bonus"
+        "bonus",
+        "route_restored"
       ],
       "locales": [
         "en-US",
@@ -186,7 +196,8 @@
         "VIS-LAYOUT-003",
         "VIS-SCROLL-001",
         "VIS-HIERARCHY-001",
-        "VIS-RESPONSIVE-001"
+        "VIS-RESPONSIVE-001",
+        "VIS-CATALOG-001"
       ]
     },
     {
@@ -196,7 +207,8 @@
       "states": [
         "selection",
         "drawing",
-        "result"
+        "result",
+        "route_restored"
       ],
       "locales": [
         "en-US",
@@ -214,7 +226,8 @@
         "VIS-LAYOUT-003",
         "VIS-SCROLL-001",
         "VIS-HIERARCHY-001",
-        "VIS-RESPONSIVE-001"
+        "VIS-RESPONSIVE-001",
+        "VIS-CATALOG-001"
       ]
     },
     {
@@ -224,7 +237,8 @@
       "states": [
         "purchase_ready",
         "calling",
-        "won"
+        "won",
+        "route_restored"
       ],
       "locales": [
         "en-US",
@@ -242,7 +256,8 @@
         "VIS-LAYOUT-003",
         "VIS-SCROLL-001",
         "VIS-HIERARCHY-001",
-        "VIS-RESPONSIVE-001"
+        "VIS-RESPONSIVE-001",
+        "VIS-CATALOG-001"
       ]
     },
     {
@@ -253,7 +268,8 @@
         "initial_deal",
         "decision",
         "split",
-        "settled"
+        "settled",
+        "route_restored"
       ],
       "locales": [
         "en-US",
@@ -271,7 +287,8 @@
         "VIS-LAYOUT-003",
         "VIS-SCROLL-001",
         "VIS-HIERARCHY-001",
-        "VIS-RESPONSIVE-001"
+        "VIS-RESPONSIVE-001",
+        "VIS-CATALOG-001"
       ]
     },
     {
@@ -281,7 +298,8 @@
       "states": [
         "wagering",
         "revealing",
-        "result"
+        "result",
+        "route_restored"
       ],
       "locales": [
         "en-US",
@@ -299,7 +317,8 @@
         "VIS-LAYOUT-003",
         "VIS-SCROLL-001",
         "VIS-HIERARCHY-001",
-        "VIS-RESPONSIVE-001"
+        "VIS-RESPONSIVE-001",
+        "VIS-CATALOG-001"
       ]
     },
     {

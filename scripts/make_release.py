@@ -48,6 +48,8 @@ def main():
     run([sys.executable, "scripts/validate_contracts.py"])
     # Execute this statement as part of the module's documented control flow.
     run([sys.executable, "scripts/validate_module_boundaries.py"])
+    # Validate catalog-owned integration hooks before packaging a release artifact.
+    run([sys.executable, "scripts/validate_game_catalog.py"])
     # Execute this statement as part of the module's documented control flow.
     run([sys.executable, "scripts/validate_requirements.py"])
     # Execute this statement as part of the module's documented control flow.

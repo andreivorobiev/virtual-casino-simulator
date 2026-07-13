@@ -6,24 +6,24 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.2.10
-- core: 9.3.3
+- application: 9.3.0
+- core: 9.4.0
 - ledger: 9.0.2
 - players: 9.1.0
 - bots: 1.0.0
 - autoplay: 1.1.1
 - audio: 9.1.1
 - admin: 1.2.5
-- roulette: 9.2.3
-- slots: 9.0.4
-- blackjack: 9.0.3
-- baccarat: 9.0.3
-- keno: 9.1.2
-- bingo: 9.1.2
-- tests: 1.5.4
-- docs: 1.3.2
+- roulette: 9.3.0
+- slots: 9.1.0
+- blackjack: 9.1.0
+- baccarat: 9.1.0
+- keno: 9.2.0
+- bingo: 9.2.0
+- tests: 1.6.0
+- docs: 1.4.0
 - contracts: 1.1.1
-- tooling: 1.2.1
+- tooling: 1.3.0
 - commenting_policy: 1.0.0
 
 ## Requirements
@@ -438,3 +438,8 @@ Historical source baseline: 9.1.0
 - **MOTION-001** (Core) - PASS: Reusable motion timing helpers respect reduced-motion preferences while preserving asynchronous callback semantics.
 - **MOTION-002** (Core) - PASS: Route and reload lifecycle cleanup prevents stale motion timers after navigation or explicit teardown.
 - **MOTION-003** (Tests) - PASS: Primitive-level tests prove deterministic dice and timing hooks, reduced-motion behavior, and timer cleanup.
+- **CORE-021** (Core) - PASS: Module-owned game catalog metadata drives backend registration, frontend lazy routes, public additive metadata, and validator discovery from one source.
+- **CORE-022** (Core) - PASS: Canonical game routes restore the active game across direct deep links, reload, and browser Back and Forward navigation.
+- **UX-010** (Application) - PASS: The lobby provides accessible search and catalog-derived category navigation that remains usable for the approved 20-game target.
+- **SESSION-005** (Core) - PASS: Every game API request resolves its player through one shared authenticated-session resolver before route dispatch.
+- **TEST-042** (Tests) - PASS: Validators, generic browser discovery, and long suites load every game and its independently owned driver from catalog metadata without a duplicated game allowlist.

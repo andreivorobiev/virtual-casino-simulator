@@ -1,6 +1,6 @@
 {
   "module": "blackjack",
-  "version": "9.0.3",
+  "version": "9.1.0",
   "paths": [
     "casino/games/blackjack/",
     "web/games/blackjack.js"
@@ -11,6 +11,19 @@
   "contracts": [
     "contracts/openapi/blackjack.v1.yaml"
   ],
+  "game": {
+    "id": "blackjack",
+    "sort_order": 50,
+    "route": "/games/blackjack",
+    "label": "Blackjack",
+    "category": "table",
+    "categories": ["table", "cards", "strategy"],
+    "backend": {"register": "casino.games.blackjack.api:register"},
+    "frontend": {"module": "./games/blackjack.js", "export": "BlackjackGame", "ready_testid": "blackjack-premium", "i18n_domain": "games/blackjack", "i18n_probe": "drawer.cards"},
+    "tests": {"long_driver": "tests.game_drivers.blackjack:play"},
+    "translations": {"ru-RU": {"label": "Блэкджек", "kicker": "Стол", "description": "Взять, остановиться, удвоить, разделить, сдаться, страховка и настраиваемые правила стола."}},
+    "lobby": {"featured": false, "wide": false, "art_class": "blackjack-art", "symbol": "&#9824;", "kicker": "Table", "description": "Hit, stand, double, split, surrender, insurance, even money, and table rule controls.", "tags": ["Bots", "Autoplay", "Stats", "Ledger-backed"]}
+  },
   "depends_on": [
     "core",
     "ledger",

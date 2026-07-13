@@ -1,6 +1,6 @@
 {
   "module": "keno",
-  "version": "9.1.2",
+  "version": "9.2.0",
   "paths": [
     "casino/games/keno/",
     "web/games/keno.js"
@@ -11,6 +11,19 @@
   "contracts": [
     "contracts/openapi/keno.v1.yaml"
   ],
+  "game": {
+    "id": "keno",
+    "sort_order": 30,
+    "route": "/games/keno",
+    "label": "Keno",
+    "category": "draw",
+    "categories": ["draw", "numbers", "instant"],
+    "backend": {"register": "casino.games.keno.api:register"},
+    "frontend": {"module": "./games/keno.js", "export": "KenoGame", "ready_testid": "keno-premium-hero", "i18n_domain": "games/keno", "i18n_probe": "metric.finalDraw.label"},
+    "tests": {"long_driver": "tests.game_drivers.keno:play"},
+    "translations": {"ru-RU": {"label": "Кено", "kicker": "Тираж", "description": "Выберите от 1 до 20 номеров, наблюдайте тираж и сверяйтесь с таблицей выплат и статистикой."}},
+    "lobby": {"featured": false, "wide": false, "art_class": "keno-art", "symbol": "18", "kicker": "Draw", "description": "Pick 1-20 spots, draw 20 numbers, paytable display, animations, and bot tickets.", "tags": ["Bots", "Autoplay", "Stats"]}
+  },
   "depends_on": [
     "core",
     "ledger",

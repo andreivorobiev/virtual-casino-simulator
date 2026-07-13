@@ -18,5 +18,6 @@ jobs:
           python -m py_compile run.py verify_rules.py tests/run_tests.py $(find casino scripts -name "*.py")
           python verify_rules.py
           python tests/run_tests.py --api
+          python scripts/validate_game_catalog.py
           python scripts/validate_requirements.py
           python scripts/validate_versions.py

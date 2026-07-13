@@ -1,7 +1,7 @@
 # AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
 #!/usr/bin/env python3
 # Import required dependency so this module can use its public functions or constants.
-import argparse, json, os, re, socket, subprocess, sys, time, traceback, urllib.request
+import argparse, importlib, json, os, re, socket, subprocess, sys, time, traceback, urllib.request
 # Import required dependency so this module can use its public functions or constants.
 from pathlib import Path
 # Set ROOT to the value needed for the next operation.
@@ -18,6 +18,8 @@ from casino.games.blackjack import api as blackjack_api, engine as blackjack_eng
 from casino.core import auth as auth_core
 # Import configuration helpers so startup hardening can be tested without launching a public listener.
 from casino import config as casino_config
+# Import the shared resolver so session precedence is tested independently of individual game APIs.
+from casino.core.request_player import resolve_authenticated_player
 # Import storage tests so provider parity can run without the broad API suite.
 from tests import storage_tests
 # Set RESULTS to the value needed for the next operation.
@@ -467,6 +469,29 @@ def run_api_tests():
         # Execute this statement as part of the module's documented control flow.
         run_case('API-CORE-001',['CORE-001','CORE-016','TEST-003'],core)
 
+        # Define catalog_foundation to prove every integration surface discovers the same games.
+        def catalog_foundation():
+            # Load the additive public catalog response through the frozen v1 envelope.
+            response=api(base,'/api/v1/casino/games')
+            # Compare exact ordered ids with the runtime descriptors used for backend registration.
+            expected_ids=[game['id'] for game in casino_config.GAMES]
+            # Require current and target counts to remain explicit for the 20-game expansion.
+            assert [game['id'] for game in response['games']]==expected_ids and response['catalog']=={'current_game_count':len(expected_ids),'target_game_count':20}
+            # Require public frontend routes while keeping backend and test import paths internal.
+            assert all(game['route']==f"/games/{game['id']}" and game['frontend']['module'] and 'backend' not in game and 'tests' not in game for game in response['games'])
+            # Resolve every independently owned long-suite driver from catalog metadata.
+            for game in casino_config.GAMES:
+                # Split the module-owned test reference into its import and callable names.
+                module_name,callable_name=game['tests']['long_driver'].split(':',1)
+                # Require each discovered driver to expose the documented callable.
+                assert callable(getattr(importlib.import_module(module_name),callable_name))
+            # Prove a malicious payload cannot override a normal authenticated session binding.
+            assert resolve_authenticated_player({'bound_player_id':'session-player','user':{'player_id':'session-player'}},{'player_id':'other-player'},{'player_id':'third-player'})=='session-player'
+            # Prove Admin-compatible explicit resolution remains available without a normal-user binding.
+            assert resolve_authenticated_player({'user':{'role':'admin'}},{'player_id':'human'},{})=='human'
+        # Execute the catalog, driver, route-metadata, and shared resolver acceptance gate.
+        run_case('API-CATALOG-001',['CORE-021','SESSION-005','TEST-042'],catalog_foundation)
+
         # Execute this statement as part of the module's documented control flow.
         run_case('API-I18N-001',['I18N-001','I18N-003'],validate_i18n_resources)
 
@@ -839,6 +864,24 @@ def run_browser_tests():
             def shot(name): page.screenshot(path=str(screenshots/name), full_page=True)
             # Define a viewport capture helper for transform-heavy live game motion evidence.
             def viewport_shot(name): page.screenshot(path=str(screenshots/name), full_page=False)
+            # Read the current commit once so visual evidence sidecars identify the tested source exactly.
+            evidence_commit=subprocess.check_output(['git','rev-parse','HEAD'],cwd=str(ROOT),text=True).strip()
+            # Prefer the pull-request branch supplied by CI and fall back to the local symbolic branch name.
+            evidence_branch=os.environ.get('GITHUB_HEAD_REF') or subprocess.check_output(['git','branch','--show-current'],cwd=str(ROOT),text=True).strip() or 'detached'
+            # Capture a focused catalog artifact with the metadata required by the visual evidence gate.
+            def catalog_evidence(name, states, locale, viewport_id):
+                # Resolve the PNG target under the standard browser test artifact directory.
+                target=screenshots/name
+                # Capture only the localized catalog region so unrelated legacy lobby copy cannot obscure acceptance.
+                page.get_by_test_id('catalog-region').screenshot(path=str(target),animations='disabled',style='#toast, .status-bar { visibility: hidden !important; }')
+                # Record the active viewport dimensions alongside the named visual-matrix viewport.
+                viewport=page.viewport_size
+                # Record the current focus target so keyboard evidence remains auditable after the run.
+                focused=page.evaluate("() => document.activeElement?.getAttribute('data-catalog-category') || document.activeElement?.getAttribute('data-testid') || ''")
+                # Build the complete after-pass evidence metadata required by VIS-EVIDENCE-001.
+                metadata={'evidence_class':'after_pass','branch':evidence_branch,'commit':evidence_commit,'surface':'shell_lobby','states':states,'locale':locale,'viewport':{'id':viewport_id,**viewport},'path':str(target.relative_to(ROOT)).replace('\\','/'),'focused_control':focused}
+                # Write a UTF-8 sidecar next to the image so the evidence remains self-describing.
+                target.with_suffix('.json').write_text(json.dumps(metadata,indent=2,ensure_ascii=False),encoding='utf-8')
             # Store browser JavaScript that audits visible player-facing strings and localized attributes.
             route_i18n_audit_script=r"""async ({ domain, interpolationKey }) => {
               // Read the public runtime state after the requested route has mounted.
@@ -1099,15 +1142,107 @@ def run_browser_tests():
                 # Define the premium_lobby function used by this module.
                 def premium_lobby():
                     # Verify the lobby renders one premium card for every current game.
-                    assert page.locator('[data-testid^="card-"]').count()==6
+                    assert page.locator('[data-testid^="card-"]').count()==len(casino_config.GAMES)
                     # Verify the status/trust rail from the approved lobby is visible.
                     assert page.get_by_test_id('lobby-trust-rail').is_visible()
                     # Verify the premium lobby headline renders in the first route view.
                     assert page.get_by_text('Midnight Ledger Casino').is_visible()
                     # Verify the Roulette card still exposes its route action.
                     assert page.get_by_test_id('open-roulette').is_visible()
+                    # Verify the catalog advertises the approved expansion capacity.
+                    assert 'ready for 20' in page.get_by_test_id('catalog-capacity').inner_text()
                 # Execute this statement as part of the module's documented control flow.
                 run_case('BR-LOBBY-001',['CORE-005','CORE-006','UX-008'],premium_lobby)
+                # Define catalog_navigation to cover search and category facets from module metadata.
+                def catalog_navigation():
+                    # Filter by a game label through the visible search control.
+                    page.get_by_test_id('catalog-search').fill('roulette')
+                    # Wait for the catalog rerender to show only the matching game card.
+                    page.wait_for_function("() => document.querySelectorAll('[data-testid^=\"card-\"]').length === 1")
+                    # Require the matching card and no unrelated game card.
+                    assert page.get_by_test_id('card-roulette').is_visible() and page.locator('[data-testid^="card-"]').count()==1
+                    # Capture filtered catalog evidence at the primary desktop viewport.
+                    shot('after-pass-shell-lobby-catalog-filtered.png')
+                    # Clear search through the freshly rendered control.
+                    page.get_by_test_id('catalog-search').fill('')
+                    # Select the Table category derived from catalog metadata.
+                    page.locator('[data-catalog-category="table"]').click()
+                    # Count expected Table games from the same Python catalog source.
+                    expected_tables=len([game for game in casino_config.GAMES if 'table' in game['categories']])
+                    # Require exactly the catalog-owned Table entries to remain visible.
+                    assert page.locator('[data-testid^="card-"]').count()==expected_tables and page.get_by_test_id('card-blackjack').is_visible()
+                    # Restore the all-games category for later visual and route checks.
+                    page.locator('[data-catalog-category="all"]').click()
+                # Execute scalable lobby search and category navigation coverage.
+                run_case('BR-CATALOG-NAV-001',['UX-010','CORE-021'],catalog_navigation)
+                # Define the focused Russian catalog acceptance case requested for the shared lobby surface.
+                def catalog_ru_acceptance():
+                    # Switch the authenticated shell to Russian without navigating away from the lobby.
+                    page.get_by_test_id('shell-locale-select').select_option('ru-RU')
+                    # Wait for the catalog controls to rerender from the Russian shell resource.
+                    page.wait_for_function("() => document.querySelector('[data-testid=\"catalog-search\"]')?.placeholder === 'Поиск по игре, функции или категории'")
+                    # Verify the search label and placeholder both use shell i18n instead of English literals.
+                    assert page.locator('label[for="catalog-search"]').text_content()=='Поиск игр' and page.get_by_test_id('catalog-search').get_attribute('placeholder')=='Поиск по игре, функции или категории'
+                    # Define every catalog identifier and its installed Russian display label.
+                    category_labels={'all':'Все игры','cards':'Карточные','draw':'Розыгрыши','instant':'Быстрые','machine':'Автоматы','numbers':'Числа','reels':'Барабаны','roadmaps':'Дорожные карты','social':'Социальные','strategy':'Стратегия','table':'Настольные игры','wheel':'Колесо'}
+                    # Verify internal category ids never appear as transformed player-facing labels.
+                    for category,label in category_labels.items():
+                        # Require the exact localized label for each category discovered from the catalog.
+                        assert page.locator(f'[data-catalog-category="{category}"]').inner_text()==label
+                    # Verify catalog region, categories, and gallery accessible names are localized.
+                    assert page.get_by_test_id('catalog-region').get_attribute('aria-label')=='Найти игру' and page.get_by_test_id('catalog-categories').get_attribute('aria-label')=='Категории игр' and page.get_by_test_id('game-gallery').get_attribute('aria-label')=='Игры'
+                    # Verify localized capacity copy includes both current and approved target counts.
+                    assert page.get_by_test_id('catalog-capacity').inner_text()==f'Доступно: {len(casino_config.GAMES)} · каталог рассчитан на 20'
+                    # Select a localized category before exercising the no-result state.
+                    page.locator('[data-catalog-category="table"]').click()
+                    # Enter a Russian query with no matches so the localized empty state becomes visible.
+                    page.get_by_test_id('catalog-search').fill('нет совпадений')
+                    # Wait for the localized empty-state row after the live filter rerender.
+                    page.get_by_test_id('catalog-empty').wait_for(timeout=5000)
+                    # Verify the no-result message is the exact Russian shell resource value.
+                    assert page.get_by_test_id('catalog-empty').inner_text()=='Игры по заданным фильтрам не найдены.'
+                    # Collect visible and accessible catalog-control copy for a focused English-leak audit.
+                    catalog_copy=page.evaluate("""() => { const region=document.querySelector('[data-testid="catalog-region"]'); return [region.innerText,region.getAttribute('aria-label'),document.querySelector('[data-testid="catalog-search"]').placeholder,document.querySelector('[data-testid="catalog-categories"]').getAttribute('aria-label'),document.querySelector('[data-testid="game-gallery"]').getAttribute('aria-label')].join(' | '); }""")
+                    # List every superseded English catalog-control phrase that must not leak into Russian.
+                    english_phrases=['Search games','Search by game, feature, or category','All games','No games match these filters.','available','catalog ready for','Find a game','Game categories','Games']
+                    # Reject English catalog-control leakage case-insensitively across text and ARIA surfaces.
+                    assert not [phrase for phrase in english_phrases if phrase.lower() in catalog_copy.lower()],catalog_copy
+                    # Verify the desktop catalog is contained before recording focused RU evidence.
+                    assert page.evaluate("document.querySelector('[data-testid=\"catalog-region\"]').scrollWidth <= document.querySelector('[data-testid=\"catalog-region\"]').clientWidth + 1")
+                    # Reveal the selected localized category inside the horizontal category strip for evidence review.
+                    page.locator('[data-catalog-category="table"]').scroll_into_view_if_needed()
+                    # Capture Russian desktop search/category/empty/capacity evidence with metadata.
+                    catalog_evidence('after-pass-shell-lobby-catalog-ru-desktop.png',['search_filtered','category_filtered'],'ru-RU','desktop_primary')
+                    # Resize to the required mobile viewport for catalog containment and keyboard focus evidence.
+                    page.set_viewport_size({'width':390,'height':844}); page.wait_for_timeout(250)
+                    # Read the mobile control bounds after responsive stacking settles.
+                    controls_box=page.get_by_test_id('catalog-controls').bounding_box()
+                    # Verify the controls remain inside the mobile viewport without page-level horizontal overflow.
+                    assert controls_box and controls_box['x']>=0 and controls_box['x']+controls_box['width']<=390 and page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1')
+                    # Focus search as the keyboard entry point before tabbing to catalog categories.
+                    page.get_by_test_id('catalog-search').focus()
+                    # Move through the real keyboard order to the first category control.
+                    page.keyboard.press('Tab')
+                    # Verify keyboard focus reaches the localized all-games category.
+                    assert page.evaluate("document.activeElement?.getAttribute('data-catalog-category')")=='all'
+                    # Inspect the visible focus ring applied by the catalog accessibility style.
+                    focus_ring=page.evaluate("() => { const style=getComputedStyle(document.activeElement); return {style:style.outlineStyle,width:parseFloat(style.outlineWidth)}; }")
+                    # Require a visible nonzero focus indicator for the keyboard-selected category.
+                    assert focus_ring['style']!='none' and focus_ring['width']>=2,focus_ring
+                    # Capture focused Russian mobile containment evidence with metadata.
+                    catalog_evidence('after-pass-shell-lobby-catalog-ru-mobile.png',['search_filtered','category_filtered'],'ru-RU','mobile')
+                    # Restore desktop dimensions before returning to the English broad suite.
+                    page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(250)
+                    # Clear the empty-state query through the current mobile-rendered search control.
+                    page.get_by_test_id('catalog-search').fill('')
+                    # Restore the all-games category so later lobby checks see the complete catalog.
+                    page.locator('[data-catalog-category="all"]').click()
+                    # Return to English so established downstream assertions retain their canonical locale.
+                    page.get_by_test_id('shell-locale-select').select_option('en-US')
+                    # Wait for English catalog controls before the next browser case starts.
+                    page.wait_for_function("() => document.querySelector('[data-testid=\"catalog-search\"]')?.placeholder === 'Search by game, feature, or category'")
+                # Execute Russian copy, category-label, containment, and keyboard-focus acceptance coverage.
+                run_case('BR-CATALOG-I18N-RU-001',['UX-010','I18N-001'],catalog_ru_acceptance)
                 # Capture the polished desktop lobby and shared topbar for review evidence.
                 shot('after-pass-shell-lobby-desktop.png')
                 # Resize the browser to the compact desktop viewport before responsive checks.
@@ -1132,6 +1267,40 @@ def run_browser_tests():
                 shot('after-pass-shell-lobby-mobile.png')
                 # Restore desktop dimensions before existing game interaction coverage runs.
                 page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(250)
+                # Define catalog_route_discovery to mount every frontend driver from catalog metadata.
+                def catalog_route_discovery():
+                    # Visit every catalog game through its generated shell navigation control.
+                    for game in casino_config.GAMES:
+                        # Navigate through the generic catalog-owned test id.
+                        page.get_by_test_id(f"nav-{game['id']}").click()
+                        # Wait for the independently declared ready selector before continuing.
+                        page.get_by_test_id(game['frontend']['ready_testid']).wait_for(timeout=5000)
+                        # Require the canonical reloadable route to match module metadata.
+                        assert page.url.split('?',1)[0].endswith(game['route'])
+                    # Return to the lobby after generic discovery coverage.
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Execute catalog-driven frontend driver discovery for all current games.
+                run_case('BR-CATALOG-DISCOVERY-001',['CORE-021','TEST-042'],catalog_route_discovery)
+                # Define route_restoration to prove deep links, reload, Back, and Forward behavior.
+                def route_restoration():
+                    # Open Roulette directly through its canonical path using the authenticated browser context.
+                    page.goto(base+'/games/roulette',wait_until='networkidle'); page.get_by_test_id('roulette-wheel').wait_for(timeout=5000)
+                    # Reload the same deep link and require the route to remount without a lobby redirect.
+                    page.reload(wait_until='networkidle'); page.get_by_test_id('roulette-wheel').wait_for(timeout=5000)
+                    # Require the persistent brand and wallet to finish painting before acceptance evidence.
+                    page.locator('.brand-mark').wait_for(timeout=5000); page.get_by_test_id('premium-wallet').wait_for(timeout=5000); page.wait_for_timeout(300)
+                    # Capture the restored game surface at the primary desktop viewport.
+                    viewport_shot('after-pass-shell-route-roulette-desktop.png')
+                    # Push a second catalog route through normal shell navigation.
+                    page.get_by_test_id('nav-slots').click(); page.get_by_test_id('slot-grid').wait_for(timeout=5000)
+                    # Restore Roulette through browser Back and wait for the route-owned readiness selector.
+                    page.go_back(); page.get_by_test_id('roulette-wheel').wait_for(timeout=5000)
+                    # Restore Slots through browser Forward and wait for its route-owned readiness selector.
+                    page.go_forward(); page.get_by_test_id('slot-grid').wait_for(timeout=5000)
+                    # Return to the lobby so existing game interaction coverage starts from its normal baseline.
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Execute the browser lifecycle restoration gate.
+                run_case('BR-ROUTE-RESTORE-001',['CORE-022','MOTION-002'],route_restoration)
                 # Open Roulette and wait for the premium vector wheel to mount.
                 page.get_by_test_id('nav-roulette').click(); page.get_by_test_id('roulette-wheel').wait_for()
                 # Define the raw Roulette resource keys reported as visible regressions.

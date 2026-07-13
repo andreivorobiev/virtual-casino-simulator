@@ -174,10 +174,10 @@ def main():
     if 'include = ["casino*", "modules*"]' not in package_text:
         # Report packaging drift that would make installed runtime imports fail.
         errors.append("pyproject.toml must package the modules manifest owner alongside casino")
-    # Require the canonical aggregate manifest to be included as package data.
-    if 'modules = ["module-manifest.json"]' not in package_text:
-        # Report missing wheel data before an installed runtime can fail at import time.
-        errors.append("pyproject.toml must include module-manifest.json as modules package data")
+    # Require all module descriptors so installed runtime catalog discovery matches source checkouts.
+    if 'modules = ["*.json"]' not in package_text:
+        # Report missing wheel data before an installed runtime can lose catalog entries.
+        errors.append("pyproject.toml must include all module JSON descriptors as package data")
     # Extract the packaged project version from its dedicated metadata field.
     package_match = PROJECT_VERSION_RE.search(package_text)
     # Compare package metadata with the canonical packaged application release.

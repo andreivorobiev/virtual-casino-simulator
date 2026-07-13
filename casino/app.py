@@ -35,19 +35,7 @@ from casino.core.storage import bootstrap_players, get_storage_provider
 # Import required dependency so this module can use its public functions or constants.
 from casino.core import logger, players, ledger, history, auth
 # Import required dependency so this module can use its public functions or constants.
-from casino.games.registry import list_games
-# Import required dependency so this module can use its public functions or constants.
-from casino.games.roulette.api import register as register_roulette
-# Import required dependency so this module can use its public functions or constants.
-from casino.games.slots.api import register as register_slots
-# Import required dependency so this module can use its public functions or constants.
-from casino.games.blackjack.api import register as register_blackjack
-# Import required dependency so this module can use its public functions or constants.
-from casino.games.baccarat.api import register as register_baccarat
-# Import required dependency so this module can use its public functions or constants.
-from casino.games.keno.api import register as register_keno
-# Import required dependency so this module can use its public functions or constants.
-from casino.games.bingo.api import register as register_bingo
+from casino.games.registry import catalog_summary, list_games, register_games
 # Import required dependency so this module can use its public functions or constants.
 from casino.admin import register as register_admin
 # Import required dependency so this module can use its public functions or constants.
@@ -76,7 +64,7 @@ def build_router() -> Router:
     # Define the games function used by this module.
     def games(body, query):
         # Return the computed value to the caller.
-        return {"games": list_games()}
+        return {"games": list_games(), "catalog": catalog_summary()}
 
     # Attach this decorator so the following function is registered with the framework.
     @router.get(r"/api/v1/casino/state")
@@ -93,7 +81,7 @@ def build_router() -> Router:
         # Read only the bound player's ledger for normal authenticated users.
         recent_ledger = ledger.read_recent(None if auth.is_admin(context["user"]) else player_id, 25)
         # Return the session-scoped casino summary.
-        return {"version": APP_VERSION, "games": list_games(), "players": visible_players, "recent_history": visible_history, "recent_ledger": recent_ledger}
+        return {"version": APP_VERSION, "games": list_games(), "catalog": catalog_summary(), "players": visible_players, "recent_history": visible_history, "recent_ledger": recent_ledger}
 
     # Attach this decorator so the following function is registered with the framework.
     @router.post(r"/api/v1/casino/reset")
@@ -338,18 +326,8 @@ def build_router() -> Router:
 
     # Execute this statement as part of the module's documented control flow.
     register_bots(router)
-    # Execute this statement as part of the module's documented control flow.
-    register_roulette(router)
-    # Execute this statement as part of the module's documented control flow.
-    register_slots(router)
-    # Execute this statement as part of the module's documented control flow.
-    register_blackjack(router)
-    # Execute this statement as part of the module's documented control flow.
-    register_baccarat(router)
-    # Execute this statement as part of the module's documented control flow.
-    register_keno(router)
-    # Execute this statement as part of the module's documented control flow.
-    register_bingo(router)
+    # Register every game API from the canonical per-module catalog descriptors.
+    register_games(router)
     # Execute this statement as part of the module's documented control flow.
     register_admin(router)
     # Return the computed value to the caller.
@@ -448,8 +426,8 @@ class Handler(BaseHTTPRequestHandler):
                     if self.command != "GET" and path.startswith("/api/v1/bots/"):
                         # Reject normal users before shared bot configuration can be changed.
                         raise ForbiddenError("Admin role is required for bot account configuration")
-                    # Replace caller-provided player ids for all game and autoplay actions.
-                    if path.startswith("/api/v1/games/") or path.startswith("/api/v1/autoplay/"):
+                    # Replace caller-provided player ids for autoplay actions outside the game router.
+                    if path.startswith("/api/v1/autoplay/"):
                         # Force the public action to operate on the authenticated player's wallet and state.
                         body["player_id"] = user["player_id"]
                     # Match player-resource paths so cross-user wallet reads and writes fail closed.

@@ -16,7 +16,7 @@ mysql = ["mysql-connector-python>=8.4"]
 include = ["casino*", "modules*"]
 
 [tool.setuptools.package-data]
-modules = ["module-manifest.json"]
+modules = ["*.json"]
 
 [tool.virtual_casino]
 source_baseline = "9.1.0"
