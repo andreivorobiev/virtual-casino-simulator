@@ -348,6 +348,14 @@ function filteredGames() {
   });
 }
 
+// Resolve a player-facing localized label for one internal catalog category identifier.
+function categoryLabel(category) {
+  // Use the dedicated all-games copy for the synthetic category that is not owned by a game.
+  if (category === 'all') return t('catalog.allGames', {}, 'shell');
+  // Resolve installed category identifiers through explicit shell locale resources without title-casing internal ids.
+  return t(`catalog.category.${category}`, {}, 'shell');
+}
+
 // Render the full premium lobby with hero, status rail, and all current games.
 function lobbyHtml(state = latestState) {
   // Count the available games from API state while falling back to the frontend registry.
@@ -357,17 +365,17 @@ function lobbyHtml(state = latestState) {
   // Render the filtered game card collection from the API catalog.
   const visibleGames = filteredGames();
   // Render a helpful empty state when no catalog entry matches both filters.
-  const cards = visibleGames.length ? visibleGames.map(game => lobbyCardHtml(game)).join('') : '<p class="catalog-empty" data-testid="catalog-empty">No games match these filters.</p>';
+  const cards = visibleGames.length ? visibleGames.map(game => lobbyCardHtml(game)).join('') : `<p class="catalog-empty" data-testid="catalog-empty">${safe(t('catalog.empty', {}, 'shell'))}</p>`;
   // Derive category navigation from catalog metadata so the 20-game target needs no shell edits.
   const categories = [...new Set(gameDescriptors.flatMap(game => game.categories))].sort();
   // Render one accessible category control per discovered category plus the all-games view.
-  const categoryButtons = ['all', ...categories].map(category => `<button type="button" class="catalog-category${lobbyCategory === category ? ' active' : ''}" data-catalog-category="${safe(category)}" aria-pressed="${lobbyCategory === category}">${safe(category === 'all' ? 'All games' : category.replace(/\b\w/g, character => character.toUpperCase()))}</button>`).join('');
+  const categoryButtons = ['all', ...categories].map(category => `<button type="button" class="catalog-category${lobbyCategory === category ? ' active' : ''}" data-catalog-category="${safe(category)}" aria-pressed="${lobbyCategory === category}">${safe(categoryLabel(category))}</button>`).join('');
   // Read the approved target count from the additive API catalog summary.
   const targetCount = state?.catalog?.target_game_count || gameCount;
   // Render the premium trust rail with play-token, bot, autoplay, and ledger cues.
   const trustRail = [trustItemHtml('SIM', 'Local Simulator', 'All play tokens'), trustItemHtml('BOT', `${playerCount} Players`, 'Human and bots'), trustItemHtml('AUTO', 'Autoplay Ready', 'Control-plane automation'), trustItemHtml('LED', 'Ledger-Backed', `${gameCount} games tracked`)].join('');
   // Return the complete lobby markup as one route payload.
-  return `<section class="lobby" data-testid="lobby"><section class="lobby-hero" aria-label="Lobby introduction"><div><p class="eyebrow">Choose your table</p><h1 class="hero-title">Midnight Ledger Casino</h1><div class="hero-rule"><span>&#9824;</span></div></div><aside class="trust-rail" data-testid="lobby-trust-rail" aria-label="Casino status">${trustRail}</aside></section><section class="catalog-controls" aria-label="Find a game"><label class="catalog-search-label" for="catalog-search">Search games</label><input id="catalog-search" data-testid="catalog-search" type="search" value="${safe(lobbySearch)}" placeholder="Search by game, feature, or category"><div class="catalog-categories" data-testid="catalog-categories" aria-label="Game categories">${categoryButtons}</div><p class="catalog-capacity" data-testid="catalog-capacity">${gameCount} available · catalog ready for ${targetCount}</p></section><section class="game-gallery" data-testid="game-gallery" aria-label="Games">${cards}</section></section>`;
+  return `<section class="lobby" data-testid="lobby"><section class="lobby-hero" aria-label="Lobby introduction"><div><p class="eyebrow">Choose your table</p><h1 class="hero-title">Midnight Ledger Casino</h1><div class="hero-rule"><span>&#9824;</span></div></div><aside class="trust-rail" data-testid="lobby-trust-rail" aria-label="Casino status">${trustRail}</aside></section><section class="catalog-region" data-testid="catalog-region" aria-label="${safe(t('catalog.controlsAria', {}, 'shell'))}"><section class="catalog-controls" data-testid="catalog-controls"><label class="catalog-search-label" for="catalog-search">${safe(t('catalog.searchLabel', {}, 'shell'))}</label><input id="catalog-search" data-testid="catalog-search" type="search" value="${safe(lobbySearch)}" placeholder="${safe(t('catalog.searchPlaceholder', {}, 'shell'))}"><div class="catalog-categories" data-testid="catalog-categories" aria-label="${safe(t('catalog.categoriesAria', {}, 'shell'))}">${categoryButtons}</div><p class="catalog-capacity" data-testid="catalog-capacity">${safe(t('catalog.capacity', { current: gameCount, target: targetCount }, 'shell'))}</p></section><section class="game-gallery" data-testid="game-gallery" aria-label="${safe(t('catalog.galleryAria', {}, 'shell'))}">${cards}</section></section></section>`;
 }
 
 // Render lobby markup and wire its catalog-driven controls after every filter change.

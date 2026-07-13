@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # Validate module-owned game catalog metadata and all discoverable integration hooks.
 import importlib  # Resolve backend registration and long-suite driver references.
+import json  # Parse installed shell locale resources for catalog-copy governance.
 import pathlib  # Resolve catalog-owned frontend and contract paths.
 import re  # Confirm frontend exports without executing browser modules.
 import sys  # Load the current checkout when the validator runs directly.
@@ -14,6 +15,11 @@ sys.path.insert(0, str(ROOT))
 from casino.config import GAME_CATALOG_TARGET, GAMES
 # Import the #104 canonical version interface for module-revision checks.
 from casino.module_versions import MODULE_REVISIONS
+
+# List shell-owned catalog control keys that every installed locale must provide.
+CATALOG_COPY_KEYS = {"catalog.allGames", "catalog.categoriesAria", "catalog.controlsAria", "catalog.empty", "catalog.galleryAria", "catalog.capacity", "catalog.searchLabel", "catalog.searchPlaceholder"}
+# Load installed shell dictionaries so catalog identifiers can never leak as player-facing labels.
+SHELL_RESOURCES = {locale: json.loads((ROOT / "web" / "i18n" / locale / "shell.json").read_text(encoding="utf-8")) for locale in ("en-US", "ru-RU")}
 
 
 # Resolve a module-and-callable reference and report focused errors.
@@ -32,6 +38,7 @@ def resolve_callable(reference, description, errors):
 def main():
     errors = []  # Collect all catalog drift before returning a status.
     ids = [game["id"] for game in GAMES]  # Preserve ordered catalog ids for duplicate checks.
+    discovered_categories = {category for game in GAMES for category in game.get("categories", [])}  # Derive every category from module-owned metadata.
     if not ids:  # Reject an empty runtime that would hide all games.
         errors.append("game catalog is empty")  # Record the missing catalog foundation.
     if len(ids) != len(set(ids)):  # Reject ambiguous runtime and browser routes.
@@ -64,6 +71,17 @@ def main():
             errors.append(f"catalog game {game_id} has no browser ready_testid")  # Report missing driver metadata.
         if not game.get("contracts"):  # Require contract discovery for every playable game.
             errors.append(f"catalog game {game_id} has no contract paths")  # Report missing API governance.
+    for locale, resource in SHELL_RESOURCES.items():  # Validate catalog controls in every required visual locale.
+        for key in sorted(CATALOG_COPY_KEYS):  # Check fixed control copy separately from discovered category labels.
+            if not str(resource.get(key, "")).strip():  # Reject missing or blank localized control values.
+                errors.append(f"{locale} shell resource is missing catalog control key {key}")  # Report the exact locale and key.
+        for category in sorted(discovered_categories):  # Require display labels for every module-discovered category identifier.
+            key = f"catalog.category.{category}"  # Resolve the stable shell-resource key for this internal identifier.
+            label = str(resource.get(key, "")).strip()  # Read and normalize the localized display label.
+            if not label:  # Reject categories that would fall through to a raw resource key.
+                errors.append(f"{locale} shell resource is missing category label {key}")  # Report missing future-game taxonomy.
+            elif label.casefold() == category.casefold():  # Reject direct exposure of the internal identifier as display copy.
+                errors.append(f"{locale} category label {key} exposes its internal id")  # Report non-localized identifier leakage.
     if errors:  # Fail after returning all actionable catalog errors.
         print("Game catalog validation failed:")  # Print a stable failure heading.
         for error in errors:  # Print each independent drift class.

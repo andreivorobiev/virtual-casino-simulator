@@ -864,6 +864,24 @@ def run_browser_tests():
             def shot(name): page.screenshot(path=str(screenshots/name), full_page=True)
             # Define a viewport capture helper for transform-heavy live game motion evidence.
             def viewport_shot(name): page.screenshot(path=str(screenshots/name), full_page=False)
+            # Read the current commit once so visual evidence sidecars identify the tested source exactly.
+            evidence_commit=subprocess.check_output(['git','rev-parse','HEAD'],cwd=str(ROOT),text=True).strip()
+            # Prefer the pull-request branch supplied by CI and fall back to the local symbolic branch name.
+            evidence_branch=os.environ.get('GITHUB_HEAD_REF') or subprocess.check_output(['git','branch','--show-current'],cwd=str(ROOT),text=True).strip() or 'detached'
+            # Capture a focused catalog artifact with the metadata required by the visual evidence gate.
+            def catalog_evidence(name, states, locale, viewport_id):
+                # Resolve the PNG target under the standard browser test artifact directory.
+                target=screenshots/name
+                # Capture only the localized catalog region so unrelated legacy lobby copy cannot obscure acceptance.
+                page.get_by_test_id('catalog-region').screenshot(path=str(target),animations='disabled',style='#toast, .status-bar { visibility: hidden !important; }')
+                # Record the active viewport dimensions alongside the named visual-matrix viewport.
+                viewport=page.viewport_size
+                # Record the current focus target so keyboard evidence remains auditable after the run.
+                focused=page.evaluate("() => document.activeElement?.getAttribute('data-catalog-category') || document.activeElement?.getAttribute('data-testid') || ''")
+                # Build the complete after-pass evidence metadata required by VIS-EVIDENCE-001.
+                metadata={'evidence_class':'after_pass','branch':evidence_branch,'commit':evidence_commit,'surface':'shell_lobby','states':states,'locale':locale,'viewport':{'id':viewport_id,**viewport},'path':str(target.relative_to(ROOT)).replace('\\','/'),'focused_control':focused}
+                # Write a UTF-8 sidecar next to the image so the evidence remains self-describing.
+                target.with_suffix('.json').write_text(json.dumps(metadata,indent=2,ensure_ascii=False),encoding='utf-8')
             # Store browser JavaScript that audits visible player-facing strings and localized attributes.
             route_i18n_audit_script=r"""async ({ domain, interpolationKey }) => {
               // Read the public runtime state after the requested route has mounted.
@@ -1157,6 +1175,74 @@ def run_browser_tests():
                     page.locator('[data-catalog-category="all"]').click()
                 # Execute scalable lobby search and category navigation coverage.
                 run_case('BR-CATALOG-NAV-001',['UX-010','CORE-021'],catalog_navigation)
+                # Define the focused Russian catalog acceptance case requested for the shared lobby surface.
+                def catalog_ru_acceptance():
+                    # Switch the authenticated shell to Russian without navigating away from the lobby.
+                    page.get_by_test_id('shell-locale-select').select_option('ru-RU')
+                    # Wait for the catalog controls to rerender from the Russian shell resource.
+                    page.wait_for_function("() => document.querySelector('[data-testid=\"catalog-search\"]')?.placeholder === 'Поиск по игре, функции или категории'")
+                    # Verify the search label and placeholder both use shell i18n instead of English literals.
+                    assert page.locator('label[for="catalog-search"]').text_content()=='Поиск игр' and page.get_by_test_id('catalog-search').get_attribute('placeholder')=='Поиск по игре, функции или категории'
+                    # Define every catalog identifier and its installed Russian display label.
+                    category_labels={'all':'Все игры','cards':'Карточные','draw':'Розыгрыши','instant':'Быстрые','machine':'Автоматы','numbers':'Числа','reels':'Барабаны','roadmaps':'Дорожные карты','social':'Социальные','strategy':'Стратегия','table':'Настольные игры','wheel':'Колесо'}
+                    # Verify internal category ids never appear as transformed player-facing labels.
+                    for category,label in category_labels.items():
+                        # Require the exact localized label for each category discovered from the catalog.
+                        assert page.locator(f'[data-catalog-category="{category}"]').inner_text()==label
+                    # Verify catalog region, categories, and gallery accessible names are localized.
+                    assert page.get_by_test_id('catalog-region').get_attribute('aria-label')=='Найти игру' and page.get_by_test_id('catalog-categories').get_attribute('aria-label')=='Категории игр' and page.get_by_test_id('game-gallery').get_attribute('aria-label')=='Игры'
+                    # Verify localized capacity copy includes both current and approved target counts.
+                    assert page.get_by_test_id('catalog-capacity').inner_text()==f'Доступно: {len(casino_config.GAMES)} · каталог рассчитан на 20'
+                    # Select a localized category before exercising the no-result state.
+                    page.locator('[data-catalog-category="table"]').click()
+                    # Enter a Russian query with no matches so the localized empty state becomes visible.
+                    page.get_by_test_id('catalog-search').fill('нет совпадений')
+                    # Wait for the localized empty-state row after the live filter rerender.
+                    page.get_by_test_id('catalog-empty').wait_for(timeout=5000)
+                    # Verify the no-result message is the exact Russian shell resource value.
+                    assert page.get_by_test_id('catalog-empty').inner_text()=='Игры по заданным фильтрам не найдены.'
+                    # Collect visible and accessible catalog-control copy for a focused English-leak audit.
+                    catalog_copy=page.evaluate("""() => { const region=document.querySelector('[data-testid="catalog-region"]'); return [region.innerText,region.getAttribute('aria-label'),document.querySelector('[data-testid="catalog-search"]').placeholder,document.querySelector('[data-testid="catalog-categories"]').getAttribute('aria-label'),document.querySelector('[data-testid="game-gallery"]').getAttribute('aria-label')].join(' | '); }""")
+                    # List every superseded English catalog-control phrase that must not leak into Russian.
+                    english_phrases=['Search games','Search by game, feature, or category','All games','No games match these filters.','available','catalog ready for','Find a game','Game categories','Games']
+                    # Reject English catalog-control leakage case-insensitively across text and ARIA surfaces.
+                    assert not [phrase for phrase in english_phrases if phrase.lower() in catalog_copy.lower()],catalog_copy
+                    # Verify the desktop catalog is contained before recording focused RU evidence.
+                    assert page.evaluate("document.querySelector('[data-testid=\"catalog-region\"]').scrollWidth <= document.querySelector('[data-testid=\"catalog-region\"]').clientWidth + 1")
+                    # Reveal the selected localized category inside the horizontal category strip for evidence review.
+                    page.locator('[data-catalog-category="table"]').scroll_into_view_if_needed()
+                    # Capture Russian desktop search/category/empty/capacity evidence with metadata.
+                    catalog_evidence('after-pass-shell-lobby-catalog-ru-desktop.png',['search_filtered','category_filtered'],'ru-RU','desktop_primary')
+                    # Resize to the required mobile viewport for catalog containment and keyboard focus evidence.
+                    page.set_viewport_size({'width':390,'height':844}); page.wait_for_timeout(250)
+                    # Read the mobile control bounds after responsive stacking settles.
+                    controls_box=page.get_by_test_id('catalog-controls').bounding_box()
+                    # Verify the controls remain inside the mobile viewport without page-level horizontal overflow.
+                    assert controls_box and controls_box['x']>=0 and controls_box['x']+controls_box['width']<=390 and page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1')
+                    # Focus search as the keyboard entry point before tabbing to catalog categories.
+                    page.get_by_test_id('catalog-search').focus()
+                    # Move through the real keyboard order to the first category control.
+                    page.keyboard.press('Tab')
+                    # Verify keyboard focus reaches the localized all-games category.
+                    assert page.evaluate("document.activeElement?.getAttribute('data-catalog-category')")=='all'
+                    # Inspect the visible focus ring applied by the catalog accessibility style.
+                    focus_ring=page.evaluate("() => { const style=getComputedStyle(document.activeElement); return {style:style.outlineStyle,width:parseFloat(style.outlineWidth)}; }")
+                    # Require a visible nonzero focus indicator for the keyboard-selected category.
+                    assert focus_ring['style']!='none' and focus_ring['width']>=2,focus_ring
+                    # Capture focused Russian mobile containment evidence with metadata.
+                    catalog_evidence('after-pass-shell-lobby-catalog-ru-mobile.png',['search_filtered','category_filtered'],'ru-RU','mobile')
+                    # Restore desktop dimensions before returning to the English broad suite.
+                    page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(250)
+                    # Clear the empty-state query through the current mobile-rendered search control.
+                    page.get_by_test_id('catalog-search').fill('')
+                    # Restore the all-games category so later lobby checks see the complete catalog.
+                    page.locator('[data-catalog-category="all"]').click()
+                    # Return to English so established downstream assertions retain their canonical locale.
+                    page.get_by_test_id('shell-locale-select').select_option('en-US')
+                    # Wait for English catalog controls before the next browser case starts.
+                    page.wait_for_function("() => document.querySelector('[data-testid=\"catalog-search\"]')?.placeholder === 'Search by game, feature, or category'")
+                # Execute Russian copy, category-label, containment, and keyboard-focus acceptance coverage.
+                run_case('BR-CATALOG-I18N-RU-001',['UX-010','I18N-001'],catalog_ru_acceptance)
                 # Capture the polished desktop lobby and shared topbar for review evidence.
                 shot('after-pass-shell-lobby-desktop.png')
                 # Resize the browser to the compact desktop viewport before responsive checks.

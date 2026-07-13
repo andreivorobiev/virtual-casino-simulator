@@ -5493,17 +5493,21 @@
         "API-I18N-001"
       ],
       "browser_tests": [
-        "BR-I18N-ROUTES-001"
+        "BR-I18N-ROUTES-001",
+        "BR-CATALOG-I18N-RU-001"
       ],
       "implementation_files": [
         "web/core/i18n.js",
         "web/i18n/manifest.json",
         "web/i18n/en-US/common.json",
-        "web/i18n/ru-RU/common.json"
+        "web/i18n/ru-RU/common.json",
+        "web/i18n/en-US/shell.json",
+        "web/i18n/ru-RU/shell.json",
+        "scripts/validate_game_catalog.py"
       ],
       "introduced_in": "9.2.0",
       "changed_in": "9.2.4",
-      "notes": "English remains the canonical source locale; Russian resources must match keys and placeholders. BR-I18N-ROUTES-001 verifies concurrent lazy-domain loading and scans every game route in both locales for player-visible key, placeholder, encoding, and invalid-value leaks."
+      "notes": "English remains the canonical source locale; Russian resources must match keys and placeholders. BR-I18N-ROUTES-001 verifies concurrent lazy-domain loading and scans every game route in both locales for player-visible key, placeholder, encoding, and invalid-value leaks. BR-CATALOG-I18N-RU-001 verifies localized catalog copy, category labels, ARIA names, keyboard focus, and focused desktop/mobile evidence."
     },
     {
       "id": "I18N-002",
@@ -6654,11 +6658,11 @@
       "description": "The lobby provides accessible search and catalog-derived category navigation that remains usable for the approved 20-game target.",
       "status": "PASS",
       "api_tests": [],
-      "browser_tests": ["BR-CATALOG-NAV-001"],
-      "implementation_files": ["web/app.js", "web/styles.css", "tests/visual/visual_matrix.json"],
+      "browser_tests": ["BR-CATALOG-NAV-001", "BR-CATALOG-I18N-RU-001"],
+      "implementation_files": ["web/app.js", "web/styles.css", "web/i18n/en-US/shell.json", "web/i18n/ru-RU/shell.json", "tests/run_tests.py", "scripts/validate_game_catalog.py", "tests/visual/visual_matrix.json"],
       "introduced_in": "wave0-catalog-governance",
       "changed_in": "wave0-catalog-governance",
-      "notes": "Allocated for GitHub issue #81; filters derive categories from game-owned descriptors without per-game shell edits."
+      "notes": "Allocated for GitHub issue #81; filters derive category identifiers from game-owned descriptors without per-game shell edits, while shell resources provide localized display labels and accessible catalog-control copy."
     },
     {
       "id": "SESSION-005",
