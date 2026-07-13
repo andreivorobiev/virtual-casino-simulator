@@ -1,0 +1,76 @@
+{
+  "module": "multi_hand_video_poker",
+  "version": "1.0.0",
+  "paths": [
+    "casino/games/multi_hand_video_poker/",
+    "web/games/multi_hand_video_poker.js",
+    "web/i18n/en-US/games/multi_hand_video_poker.json",
+    "web/i18n/ru-RU/games/multi_hand_video_poker.json"
+  ],
+  "requirements_prefixes": [
+    "MHVP"
+  ],
+  "contracts": [
+    "contracts/openapi/multi_hand_video_poker.v1.yaml"
+  ],
+  "game": {
+    "id": "multi_hand_video_poker",
+    "sort_order": 70,
+    "route": "/games/multi_hand_video_poker",
+    "label": "Multi-Hand Video Poker",
+    "category": "machine",
+    "categories": [
+      "machine",
+      "cards",
+      "poker",
+      "strategy"
+    ],
+    "backend": {
+      "register": "casino.games.multi_hand_video_poker.api:register"
+    },
+    "frontend": {
+      "module": "./games/multi_hand_video_poker.js",
+      "export": "MultiHandVideoPokerGame",
+      "ready_testid": "multi-hand-video-poker",
+      "i18n_domain": "games/multi_hand_video_poker",
+      "i18n_probe": "controls.deal"
+    },
+    "tests": {
+      "long_driver": "tests.games.multi_hand_video_poker.driver:play"
+    },
+    "translations": {
+      "ru-RU": {
+        "label": "Мультиручный видеопокер",
+        "kicker": "Автомат",
+        "description": "Видеопокер «Валеты или старше» на 3, 5 или 10 рук с общей исходной рукой."
+      }
+    },
+    "lobby": {
+      "featured": false,
+      "wide": false,
+      "art_class": "multi-hand-video-poker-art",
+      "symbol": "VP",
+      "kicker": "Machine",
+      "description": "Jacks-or-Better play across 3, 5, or 10 independently completed hands.",
+      "tags": [
+        "Cards",
+        "Strategy",
+        "Ledger-backed",
+        "Multi-hand"
+      ]
+    }
+  },
+  "depends_on": [
+    "core",
+    "ledger",
+    "players"
+  ],
+  "may_not_depend_on": [
+    "roulette",
+    "slots",
+    "blackjack",
+    "baccarat",
+    "keno",
+    "bingo"
+  ]
+}

@@ -1,0 +1,311 @@
+openapi: 3.0.3
+info:
+  title: Virtual Casino Multi-Hand Video Poker API
+  version: v1
+  description: >-
+    Additive issue #94 contract for session-bound 3, 5, and 10-hand Jacks-or-Better play.
+    The authenticated router owns player identity. Round starts require a request_id so wager
+    retries reuse one round and one aggregate ledger debit.
+tags:
+  - name: Multi-Hand Video Poker
+    description: Deterministic game state with ledger-only aggregate wager and payout settlement.
+paths:
+  /api/v1/games/multi-hand-video-poker/state:
+    get:
+      tags: [Multi-Hand Video Poker]
+      operationId: multiHandVideoPokerState
+      summary: Read the authenticated player's reload-safe state
+      responses:
+        '200':
+          description: Current player-scoped game state and paytable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StateEnvelope'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/v1/games/multi-hand-video-poker/rounds:
+    post:
+      tags: [Multi-Hand Video Poker]
+      operationId: multiHandVideoPokerStartRound
+      summary: Start or replay one aggregate-wager round
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartRoundRequest'
+      responses:
+        '200':
+          description: New or replayed common hand with committed wager evidence
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoundEnvelope'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/v1/games/multi-hand-video-poker/rounds/{round_id}/holds:
+    post:
+      tags: [Multi-Hand Video Poker]
+      operationId: multiHandVideoPokerSetHolds
+      summary: Persist common held-card positions
+      parameters:
+        - $ref: '#/components/parameters/RoundId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HoldsRequest'
+      responses:
+        '200':
+          description: Reload-safe active round with updated holds
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoundEnvelope'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/v1/games/multi-hand-video-poker/rounds/{round_id}/draw:
+    post:
+      tags: [Multi-Hand Video Poker]
+      operationId: multiHandVideoPokerDraw
+      summary: Draw all independent hands and settle one aggregate payout
+      parameters:
+        - $ref: '#/components/parameters/RoundId'
+      responses:
+        '200':
+          description: Completed hands with optional committed payout evidence
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoundEnvelope'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+components:
+  parameters:
+    RoundId:
+      name: round_id
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: '^[A-Za-z0-9_-]+$'
+  responses:
+    ErrorResponse:
+      description: Standard API error envelope
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+  schemas:
+    StartRoundRequest:
+      type: object
+      additionalProperties: false
+      required: [request_id, hand_count, wager_per_hand]
+      properties:
+        request_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '^[A-Za-z0-9._:-]+$'
+        hand_count:
+          type: integer
+          enum: [3, 5, 10]
+        wager_per_hand:
+          type: number
+          minimum: 0.01
+          maximum: 100000
+        player_id:
+          type: string
+          description: Compatibility input overridden by the authenticated session resolver.
+    HoldsRequest:
+      type: object
+      additionalProperties: false
+      required: [holds]
+      properties:
+        holds:
+          type: array
+          uniqueItems: true
+          maxItems: 5
+          items:
+            type: integer
+            minimum: 0
+            maximum: 4
+        player_id:
+          type: string
+          description: Compatibility input overridden by the authenticated session resolver.
+    CardCode:
+      type: string
+      pattern: '^(10|[2-9JQKA])[CDHS]$'
+    HandResult:
+      type: object
+      required: [hand_index, cards, outcome, multiplier, payout]
+      properties:
+        hand_index:
+          type: integer
+          minimum: 0
+          maximum: 9
+        cards:
+          type: array
+          minItems: 5
+          maxItems: 5
+          items:
+            $ref: '#/components/schemas/CardCode'
+        outcome:
+          type: string
+          enum: [royal_flush, straight_flush, four_of_a_kind, full_house, flush, straight, three_of_a_kind, two_pair, jacks_or_better, no_win]
+        multiplier:
+          type: integer
+          minimum: 0
+        payout:
+          type: number
+          minimum: 0
+    Round:
+      type: object
+      required: [round_id, request_id, player_id, hand_count, wager_per_hand, total_wager, phase, initial_hand, holds, wager_status, payout_status, created_at]
+      properties:
+        round_id:
+          type: string
+        request_id:
+          type: string
+        player_id:
+          type: string
+        hand_count:
+          type: integer
+          enum: [3, 5, 10]
+        wager_per_hand:
+          type: number
+        total_wager:
+          type: number
+        phase:
+          type: string
+          enum: [hold, settled]
+        initial_hand:
+          type: array
+          minItems: 5
+          maxItems: 5
+          items:
+            $ref: '#/components/schemas/CardCode'
+        holds:
+          type: array
+          uniqueItems: true
+          items:
+            type: integer
+            minimum: 0
+            maximum: 4
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/HandResult'
+        total_payout:
+          type: number
+        net:
+          type: number
+        outcome:
+          type: string
+          enum: [win, push, loss]
+        wager_status:
+          type: string
+          enum: [pending, complete]
+        payout_status:
+          type: string
+          enum: [not_ready, pending, complete]
+        wager_ledger_id:
+          type: string
+        payout_ledger_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+    GameState:
+      type: object
+      required: [active_round, recent_rounds]
+      properties:
+        active_round:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/Round'
+        recent_rounds:
+          type: array
+          items:
+            $ref: '#/components/schemas/Round'
+    Player:
+      type: object
+      additionalProperties: true
+    LedgerEvent:
+      type: object
+      nullable: true
+      additionalProperties: true
+    StateData:
+      type: object
+      required: [game, state, player, hand_counts, paytable]
+      properties:
+        game:
+          type: string
+          enum: [multi_hand_video_poker]
+        state:
+          $ref: '#/components/schemas/GameState'
+        player:
+          $ref: '#/components/schemas/Player'
+        hand_counts:
+          type: array
+          items:
+            type: integer
+            enum: [3, 5, 10]
+        paytable:
+          type: object
+          additionalProperties:
+            type: integer
+    RoundData:
+      allOf:
+        - $ref: '#/components/schemas/StateData'
+        - type: object
+          required: [round]
+          properties:
+            round:
+              $ref: '#/components/schemas/Round'
+            wager:
+              $ref: '#/components/schemas/LedgerEvent'
+            payout:
+              $ref: '#/components/schemas/LedgerEvent'
+            replayed:
+              type: boolean
+    StateEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/StateData'
+    RoundEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/RoundData'
+    ErrorEnvelope:
+      type: object
+      required: [ok, error]
+      properties:
+        ok:
+          type: boolean
+          enum: [false]
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
