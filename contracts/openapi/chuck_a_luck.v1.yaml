@@ -1,0 +1,246 @@
+openapi: 3.0.3
+# Describe the additive issue-89 contract without changing existing v1 operations.
+info:
+  title: Virtual Casino Chuck-a-Luck API
+  version: v1
+  description: Additive session-bound Chuck-a-Luck contract for issue 89 and integration lane 77.
+# Define only game-owned routes; shared router registration remains with issue 77.
+paths:
+  # Expose session-owned reload state and immutable number-bet metadata.
+  /api/v1/games/chuck-a-luck/state:
+    get:
+      summary: Read the authenticated player's Chuck-a-Luck rules and recent settled rolls
+      operationId: chuck_a_luck_GET_api_v1_games_chuck_a_luck_state
+      responses:
+        '200':
+          description: Standard success envelope containing game state, player snapshot, and bet catalog
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChuckALuckStateEnvelope'
+        '401':
+          description: Standard error envelope when no authenticated session is available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorEnvelope'
+  # Execute one complete debit, three-die outcome, and optional settlement action.
+  /api/v1/games/chuck-a-luck/rolls:
+    post:
+      summary: Execute or replay one atomic ledger-backed Chuck-a-Luck roll
+      operationId: chuck_a_luck_POST_api_v1_games_chuck_a_luck_rolls
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChuckALuckRollRequest'
+      responses:
+        '200':
+          description: Standard success envelope containing one settled or safely replayed round
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChuckALuckRollEnvelope'
+        '400':
+          description: Standard error envelope for invalid wagers or request identity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorEnvelope'
+        '401':
+          description: Standard error envelope when no authenticated session is available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorEnvelope'
+        '409':
+          description: Standard error envelope when one request identity is reused with different wagers
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorEnvelope'
+# Keep all request, response, round, and standard-envelope shapes local to this contract.
+components:
+  schemas:
+    # Require a caller-stable action identity and one or more number wagers.
+    ChuckALuckRollRequest:
+      type: object
+      additionalProperties: false
+      required: [request_id, wagers]
+      properties:
+        request_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '^[A-Za-z0-9._:-]+$'
+          description: Stable caller-generated identity reused only when retrying the same roll action.
+        player_id:
+          type: string
+          description: Compatibility field overridden by the authenticated session-bound player resolver.
+        wagers:
+          $ref: '#/components/schemas/ChuckALuckWagers'
+    # Constrain the public number-wager map to faces one through six.
+    ChuckALuckWagers:
+      type: object
+      minProperties: 1
+      additionalProperties: false
+      properties:
+        one: {$ref: '#/components/schemas/TokenAmount'}
+        two: {$ref: '#/components/schemas/TokenAmount'}
+        three: {$ref: '#/components/schemas/TokenAmount'}
+        four: {$ref: '#/components/schemas/TokenAmount'}
+        five: {$ref: '#/components/schemas/TokenAmount'}
+        six: {$ref: '#/components/schemas/TokenAmount'}
+    # Constrain fake-money play-token amounts to shared ledger precision.
+    TokenAmount:
+      type: number
+      minimum: 0.01
+      maximum: 1000000
+      multipleOf: 0.01
+      description: Fake-money play-token amount; never currency or redeemable value.
+    # Specialize the standard success envelope for state reads.
+    ChuckALuckStateEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/ApiSuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/ChuckALuckPayload'
+    # Specialize the standard success envelope for atomic roll actions.
+    ChuckALuckRollEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/ApiSuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              allOf:
+                - $ref: '#/components/schemas/ChuckALuckPayload'
+                - type: object
+                  required: [round, replayed, ledger]
+                  properties:
+                    round: {$ref: '#/components/schemas/ChuckALuckRound'}
+                    replayed: {type: boolean}
+                    ledger: {$ref: '#/components/schemas/ChuckALuckLedgerEvidence'}
+    # Describe the common state, player, and immutable bet metadata payload.
+    ChuckALuckPayload:
+      type: object
+      required: [game, state, player, bet_catalog]
+      properties:
+        game: {type: string, enum: [chuck_a_luck]}
+        state: {$ref: '#/components/schemas/ChuckALuckState'}
+        player:
+          type: object
+          description: Current authenticated player's shared read-only wallet snapshot.
+        bet_catalog:
+          type: array
+          minItems: 6
+          maxItems: 6
+          items: {$ref: '#/components/schemas/ChuckALuckBetTarget'}
+    # Describe bounded reload-safe player-owned game state.
+    ChuckALuckState:
+      type: object
+      required: [recent_rounds]
+      properties:
+        schema_version:
+          type: string
+          description: Shared provider schema identifier, such as v9_1.
+        recent_rounds:
+          type: array
+          maxItems: 100
+          items: {$ref: '#/components/schemas/ChuckALuckRound'}
+    # Describe one legal number target and its one-, two-, and three-match profile.
+    ChuckALuckBetTarget:
+      type: object
+      required: [id, face, payouts]
+      properties:
+        id: {type: string, enum: [one, two, three, four, five, six]}
+        face: {type: integer, minimum: 1, maximum: 6}
+        payouts:
+          type: array
+          minItems: 3
+          maxItems: 3
+          items: {$ref: '#/components/schemas/ChuckALuckPayout'}
+    # Describe net winnings per unit stake for one matching-dice count.
+    ChuckALuckPayout:
+      type: object
+      required: [matches, net_multiplier]
+      properties:
+        matches: {type: integer, minimum: 1, maximum: 3}
+        net_multiplier: {type: integer, minimum: 1, maximum: 3}
+    # Describe one immutable settled round returned on original and replayed requests.
+    ChuckALuckRound:
+      type: object
+      required: [round_id, request_id, request_fingerprint, player_id, status, wagers, dice, total, is_triple, total_wager, total_return, net, settlements, settled_at]
+      properties:
+        round_id: {type: string}
+        request_id: {type: string}
+        request_fingerprint:
+          type: string
+          pattern: '^[0-9a-f]{64}$'
+        player_id:
+          type: string
+          description: Authenticated session-bound player id; caller values cannot override the shared resolver.
+        status: {type: string, enum: [settled]}
+        wagers: {$ref: '#/components/schemas/ChuckALuckWagers'}
+        dice:
+          type: array
+          minItems: 3
+          maxItems: 3
+          items: {type: integer, minimum: 1, maximum: 6}
+        total: {type: integer, minimum: 3, maximum: 18}
+        is_triple: {type: boolean}
+        total_wager: {type: number, minimum: 0.01}
+        total_return: {type: number, minimum: 0}
+        net: {type: number}
+        settlements:
+          type: array
+          minItems: 1
+          maxItems: 6
+          items: {$ref: '#/components/schemas/ChuckALuckSettlement'}
+        settled_at: {type: string}
+    # Explain the deterministic return for one covered number.
+    ChuckALuckSettlement:
+      type: object
+      required: [target, face, amount, matches, won, net_multiplier, return_amount, net]
+      properties:
+        target: {type: string, enum: [one, two, three, four, five, six]}
+        face: {type: integer, minimum: 1, maximum: 6}
+        amount: {$ref: '#/components/schemas/TokenAmount'}
+        matches: {type: integer, minimum: 0, maximum: 3}
+        won: {type: boolean}
+        net_multiplier: {type: integer, minimum: 0, maximum: 3}
+        return_amount: {type: number, minimum: 0}
+        net: {type: number}
+    # Preserve scoped wager and optional return event evidence for the settled round.
+    ChuckALuckLedgerEvidence:
+      type: object
+      required: [wager, settlement]
+      properties:
+        wager:
+          type: object
+          description: Committed aggregate wager debit for this authenticated player and round.
+        settlement:
+          type: object
+          nullable: true
+          description: Committed aggregate stake-plus-winnings credit, or null when every wager lost.
+    # Preserve the repository-wide success envelope contract.
+    ApiSuccessEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok: {type: boolean, enum: [true]}
+        data: {type: object}
+    # Preserve the repository-wide error envelope contract.
+    ApiErrorEnvelope:
+      type: object
+      required: [ok, error]
+      properties:
+        ok: {type: boolean, enum: [false]}
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: {type: string}
+            message: {type: string}
+            details: {type: object}
