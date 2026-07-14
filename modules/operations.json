@@ -1,0 +1,28 @@
+{
+  "module": "operations",
+  "version": "1.0.0",
+  "paths": [
+    "casino/operations/"
+  ],
+  "requirements_prefixes": [
+    "OPS"
+  ],
+  "contracts": [
+    "contracts/openapi/operations.v1.yaml"
+  ],
+  "compatibility": [
+    "contracts/compatibility/operations-foundation.json"
+  ],
+  "depends_on": [
+    "core"
+  ],
+  "may_not_depend_on": [
+    "roulette",
+    "slots",
+    "blackjack",
+    "baccarat",
+    "keno",
+    "bingo",
+    "multi_hand_video_poker"
+  ]
+}
