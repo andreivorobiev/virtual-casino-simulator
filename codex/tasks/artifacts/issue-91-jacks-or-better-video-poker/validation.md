@@ -1,6 +1,6 @@
 # Issue #91 focused validation
 
-Status: **FOCUSED PASS / EXPECTED SHARED BLOCKERS** on `codex/issue-91-jacks-or-better-video-poker`.
+Status: **CI CORRECTION LOCAL PASS / REMOTE CHECKS PENDING** on `codex/issue-91-jacks-or-better-video-poker`.
 
 ## Focused checks completed
 
@@ -10,22 +10,25 @@ Status: **FOCUSED PASS / EXPECTED SHARED BLOCKERS** on `codex/issue-91-jacks-or-
 - `node --check web/games/jacks_or_better_video_poker.js`: **PASS**.
 - `python -m unittest tests.card_poker_primitives_tests`: **PASS**, 9 tests.
 - `node tests/card_renderer_tests.js`: **PASS**.
-- `python scripts/validate_contracts.py`: **PASS**, 8 shared APIs and 8 catalog games.
+- `python scripts/validate_contracts.py`: **PASS**, 8 shared APIs and 7 integrated catalog games.
 - `python scripts/validate_module_boundaries.py`: **PASS**.
 - `python scripts/validate_requirements.py`: **PASS**, 420 requirements.
+- `python scripts/validate_versions.py`: **PASS**, packaged release `9.1.1` and 20 module revisions.
+- `python scripts/validate_game_catalog.py`: **PASS**, 7 current games and target 20.
 - `python scripts/check_comment_density.py`: **PASS**, 99.9%; the 11 reported warnings are pre-existing premium prerender lines outside this game slice.
 - `python verify_rules.py`: **PASS**, 32 checks.
 - `git diff --check`: **PASS**.
+- `git hash-object` against the prior committed descriptor blob: **PASS**, both are `a7bd9802f5c3e0df20a905882115c978cbe6c336`.
 
-The two focused game suites were rerun after the final ledger-audit assertions and frontend comment-density cleanup.
+The focused game suite and frontend static suite were rerun after moving the descriptor proposal out of automatic catalog discovery.
 
-## Expected shared-integration blockers
+## Shared-integration boundary
 
-- `python scripts/validate_versions.py`: **EXPECTED FAIL** with only `module manifests missing from aggregate manifest: jacks_or_better_video_poker` and `configured games missing canonical module revisions: jacks_or_better_video_poker`. The allowed descriptor is intentionally absent from forbidden `modules/module-manifest.json`.
-- `python scripts/validate_game_catalog.py`: **EXPECTED FAIL** with only `catalog game jacks_or_better_video_poker has no canonical module revision`. Issue #77 has not assigned the canonical aggregate revision.
+- The unchanged `1.0.0` descriptor proposal now lives under this evidence directory, outside automatic `modules/*.json` discovery, until issue #77 can promote it together with the canonical aggregate revision.
+- `python scripts/validate_versions.py` and `python scripts/validate_game_catalog.py` both pass on the isolated branch after that relocation.
 - Central requirements, compatibility metadata, visual-matrix registration, central browser/API mappings, and accepted real-backend evidence remain issue #77 work.
 
-The central `tests/run_tests.py --api` and `--browser` suites were not run from this isolated lane because the game is intentionally absent from the shared manifest/router and those flows bootstrap shared runtime `data/`. Real-backend browser evidence belongs on the exact #77 integration head after shared registration.
+The central API, browser, and long suites were not run locally because those flows bootstrap shared runtime `data/`. Their GitHub workflows must rerun on the corrected head; accepted real-backend game evidence still belongs on the exact #77 integration head after shared registration.
 
 ## Listener and runtime safety
 

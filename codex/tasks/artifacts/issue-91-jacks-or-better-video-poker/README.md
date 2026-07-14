@@ -12,7 +12,7 @@ Base at implementation start: `0a1ebc2d7d034bb855ad968215bc61adcd18f4c9` (`origi
 - Retry-safe deal and draw action IDs, persisted recovery markers, one wager debit, at most one payout credit, ledger replay detection, and no direct balance mutation.
 - Timer-free, responsive, reduced-motion-aware frontend behavior using the shared accessible card renderer.
 - Complete paired EN/RU visible and ARIA resources owned by the game domain.
-- An additive OpenAPI v1 contract, an independently versioned catalog descriptor proposal, focused tests, and a normalized catalog long driver.
+- An additive OpenAPI v1 contract, an independently versioned catalog descriptor proposal stored as issue evidence, focused tests, and a normalized catalog long driver.
 
 ## Requirement traceability
 
@@ -24,14 +24,14 @@ The implemented slice consumes confirmed requirements `CARD-001`, `CARD-002`, `P
 
 The following work remains owned by integration issue #77 and is not performed by this isolated branch:
 
-- Add `jacks_or_better_video_poker: 1.0.0` to `modules/module-manifest.json` and recompute current shared module revisions from the accepted integration base.
+- Promote `jacks_or_better_video_poker.module.proposal.json` into `modules/jacks_or_better_video_poker.json`, add `jacks_or_better_video_poker: 1.0.0` to `modules/module-manifest.json`, and recompute current shared module revisions from the accepted integration base.
 - Allocate permanent game requirement IDs and update `docs/requirements/requirements.json`, `docs/requirements/requirements.md`, and generated requirement documentation.
 - Add the game contract to `contracts/compatibility/module-api-matrix.json` and `contracts/compatibility/contract-digests.json`.
 - Add the proposed `jacks_or_better_video_poker` surface to `tests/visual/visual_matrix.json`.
 - Add central game-specific API/browser requirement mappings or test-runner wiring only if catalog discovery proves a narrow integration gap.
 - Capture and accept central real-backend EN/RU browser evidence from the exact integrated head.
 
-Until the aggregate revision lands, `scripts/validate_versions.py` is expected to report `module manifests missing from aggregate manifest: jacks_or_better_video_poker` and `configured games missing canonical module revisions: jacks_or_better_video_poker`. `scripts/validate_game_catalog.py` is expected to report `catalog game jacks_or_better_video_poker has no canonical module revision`. Those are shared-integration blockers, not authorization to edit the forbidden files here.
+The proposal is intentionally stored at `codex/tasks/artifacts/issue-91-jacks-or-better-video-poker/jacks_or_better_video_poker.module.proposal.json` so catalog discovery cannot install it before #77 supplies the aggregate revision and other shared records in one coordinated change. This placement keeps `scripts/validate_versions.py` and `scripts/validate_game_catalog.py` green on the isolated branch while preserving the complete `1.0.0` proposal for integration.
 
 ## Proposed visual matrix row for #77
 
