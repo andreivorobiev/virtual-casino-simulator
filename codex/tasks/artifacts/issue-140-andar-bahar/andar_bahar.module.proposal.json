@@ -1,0 +1,104 @@
+{
+  "module": "andar_bahar",
+  "version": "0.1.0-proposal",
+  "proposal_only": true,
+  "blocked_on": "#77 shared catalog/router/manifest/test-discovery integration",
+  "paths": [
+    "casino/games/andar_bahar/",
+    "web/games/andar_bahar.js",
+    "web/i18n/en-US/games/andar_bahar.json",
+    "web/i18n/ru-RU/games/andar_bahar.json"
+  ],
+  "requirements_prefixes": [
+    "AB-PROPOSED"
+  ],
+  "contracts": [
+    "contracts/openapi/andar_bahar.v1.yaml"
+  ],
+  "game": {
+    "id": "andar_bahar",
+    "sort_order": 150,
+    "route": "/games/andar_bahar",
+    "label": "Andar Bahar",
+    "category": "table",
+    "categories": [
+      "table",
+      "cards",
+      "showdown"
+    ],
+    "backend": {
+      "register": "casino.games.andar_bahar.api:register"
+    },
+    "frontend": {
+      "module": "./games/andar_bahar.js",
+      "export": "AndarBaharGame",
+      "ready_testid": "andar-bahar",
+      "i18n_domain": "games/andar_bahar",
+      "i18n_probe": "controls.play"
+    },
+    "tests": {
+      "focused": [
+        "tests/games/andar_bahar/test_engine.py",
+        "tests/games/andar_bahar/test_api.py",
+        "tests/games/andar_bahar/test_resources.py",
+        "tests/games/andar_bahar/check_frontend_module.js"
+      ],
+      "long_driver": "tests.game_drivers.andar_bahar:play"
+    },
+    "translations": {
+      "ru-RU": {
+        "label": "Андар Бахар",
+        "kicker": "Карточный стол",
+        "description": "Выберите Андар или Бахар и наблюдайте прозрачную раздачу до первого совпадения ранга с картой-джокером.",
+        "tags": [
+          "Карты",
+          "Сравнение ранга",
+          "Расчёт по реестру"
+        ]
+      }
+    },
+    "lobby": {
+      "featured": false,
+      "wide": false,
+      "art_class": "andar-bahar-art",
+      "symbol": "AB",
+      "kicker": "Card showdown",
+      "description": "Pick Andar or Bahar, reveal the joker card, and settle the first rank match through the play-token ledger.",
+      "tags": [
+        "Cards",
+        "Rank match",
+        "Ledger-backed"
+      ]
+    }
+  },
+  "depends_on": [
+    "core",
+    "ledger",
+    "players"
+  ],
+  "may_not_depend_on": [
+    "roulette",
+    "slots",
+    "blackjack",
+    "baccarat",
+    "keno",
+    "bingo",
+    "multi_hand_video_poker",
+    "casino_war",
+    "big_six_wheel",
+    "red_dog",
+    "dragon_tiger",
+    "hi_lo"
+  ],
+  "distinct_module_proof": {
+    "canonical_family": "Card Showdowns",
+    "primary_mechanic": "A joker/match card is exposed, cards are dealt alternately to Andar then Bahar, and the first side receiving the same rank wins.",
+    "not_a_variant_of_existing_games": [
+      "Not Baccarat: no Punto Banco totals, third-card rules, banker/player hand totals, shoe burn/cut-card strategy, tie bet, or commission model.",
+      "Not Hi-Lo: the player predicts a side, not whether one hidden card is higher or lower than a visible card.",
+      "Not Dragon Tiger or Casino War: no two-hand high-card comparison decides the result.",
+      "Not Red Dog: no spread between two cards or odds based on spread width."
+    ],
+    "countable_pending_integration": true
+  }
+}
