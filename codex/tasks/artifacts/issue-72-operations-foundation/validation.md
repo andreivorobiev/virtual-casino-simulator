@@ -1,20 +1,21 @@
 # Issue #72 focused validation
 
-Status: the Operations-owned foundation was reconciled onto main `727d5cf2a55d627e6b844cc871ff8e6f46a7c0bf`. Focused listener-free checks pass; shared integration remains serialized under #77.
+Status: the Operations-owned foundation was refreshed onto main `f8c836163eab3dc92d83e7bf875ee963c11bddcf`. Focused listener-free checks pass; shared integration remains serialized under #77.
 
 ## Reconciled listener-free checks
 
 - `python -m unittest discover -s tests/operations -p "test_*.py" -v` — PASS, 22 tests. Coverage includes storage-free liveness, canonical app version use, SHA sanitization, temporary JSON and MySQL readiness, retained heartbeat state, exact contract shapes, exception suppression, imported-error bypass prevention, and rejection of hostile, malformed, enum-spoofing, or impossible-timestamp returns.
 - `python -m py_compile` for all Operations source and focused test files — PASS.
 - `python verify_rules.py` — PASS, 32/32 checks.
-- `python scripts/validate_contracts.py` — PASS for the eight centrally registered APIs and eleven catalog games; the isolated Operations OpenAPI file remains covered by its focused static contract test until #77 adds central discovery.
+- `python scripts/validate_contracts.py` — PASS for the eight centrally registered APIs and twelve catalog games; the isolated Operations OpenAPI file remains covered by its focused static contract test until #77 adds central discovery.
 - `python scripts/validate_module_boundaries.py` — PASS.
-- `python scripts/validate_requirements.py` — PASS for 440 current requirements.
-- `python scripts/validate_versions.py` — PASS for packaged application 9.1.1 and 24 centrally registered module revisions while the Operations 1.0.0 proposal remains outside shared discovery.
+- `python scripts/validate_requirements.py` — PASS for 445 current requirements.
+- `python scripts/validate_versions.py` — PASS for packaged application 9.1.1 and 25 centrally registered module revisions while the Operations 1.0.0 proposal remains outside shared discovery.
 - `python scripts/check_comment_density.py` — PASS at 99.9%; the eleven warnings are pre-existing machine-draw prerender lines outside issue #72.
 - `python scripts/generate_docs.py --check` — PASS; generated requirements are current.
-- `python scripts/validate_game_catalog.py` — PASS for all eleven current catalog games.
+- `python scripts/validate_game_catalog.py` — PASS for all twelve current catalog games.
 - `git diff --check` — PASS for the complete reconciled working diff.
+- `git range-diff 727d5cf2..aac948be f8c83616..HEAD` — PASS; all three Operations commits remain patch-equivalent after the refresh.
 
 ## Pre-reconcile regression evidence
 
