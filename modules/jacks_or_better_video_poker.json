@@ -1,0 +1,83 @@
+{
+  "module": "jacks_or_better_video_poker",
+  "version": "1.0.0",
+  "paths": [
+    "casino/games/jacks_or_better_video_poker/",
+    "web/games/jacks_or_better_video_poker.js",
+    "web/i18n/en-US/games/jacks_or_better_video_poker.json",
+    "web/i18n/ru-RU/games/jacks_or_better_video_poker.json"
+  ],
+  "requirements_prefixes": [
+    "JOBVP"
+  ],
+  "contracts": [
+    "contracts/openapi/jacks_or_better_video_poker.v1.yaml"
+  ],
+  "game": {
+    "id": "jacks_or_better_video_poker",
+    "sort_order": 170,
+    "route": "/games/jacks_or_better_video_poker",
+    "label": "Jacks or Better Video Poker",
+    "category": "machine",
+    "categories": [
+      "machine",
+      "cards",
+      "poker",
+      "strategy"
+    ],
+    "backend": {
+      "register": "casino.games.jacks_or_better_video_poker.api:register"
+    },
+    "frontend": {
+      "module": "./games/jacks_or_better_video_poker.js",
+      "export": "JacksOrBetterVideoPokerGame",
+      "ready_testid": "jacks-or-better-video-poker",
+      "i18n_domain": "games/jacks_or_better_video_poker",
+      "i18n_probe": "controls.deal"
+    },
+    "tests": {
+      "long_driver": "tests.game_drivers.jacks_or_better_video_poker:play"
+    },
+    "translations": {
+      "ru-RU": {
+        "label": "Видеопокер «Валеты или старше»",
+        "kicker": "Автомат",
+        "description": "Классический дро-покер 9/6 с одной рукой, пятью уровнями ставки и расчётом игровыми жетонами через реестр.",
+        "tags": [
+          "Карты",
+          "Стратегия",
+          "Расчёт через реестр",
+          "Дро-покер"
+        ]
+      }
+    },
+    "lobby": {
+      "featured": false,
+      "wide": false,
+      "art_class": "jacks-or-better-video-poker-art",
+      "symbol": "JB",
+      "kicker": "Machine",
+      "description": "Classic 9/6 single-hand draw poker with one to five coins and ledger-backed play tokens.",
+      "tags": [
+        "Cards",
+        "Strategy",
+        "Ledger-backed",
+        "Draw poker"
+      ]
+    }
+  },
+  "depends_on": [
+    "core",
+    "ledger",
+    "players"
+  ],
+  "may_not_depend_on": [
+    "roulette",
+    "slots",
+    "blackjack",
+    "baccarat",
+    "keno",
+    "bingo",
+    "multi_hand_video_poker"
+  ]
+}
