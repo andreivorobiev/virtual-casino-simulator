@@ -1,0 +1,84 @@
+{
+  "module": "hi_lo",
+  "version": "1.0.0",
+  "paths": [
+    "casino/games/hi_lo/",
+    "web/games/hi_lo.js",
+    "web/i18n/en-US/games/hi_lo.json",
+    "web/i18n/ru-RU/games/hi_lo.json"
+  ],
+  "requirements_prefixes": [
+    "HILO"
+  ],
+  "contracts": [
+    "contracts/openapi/hi_lo.v1.yaml"
+  ],
+  "game": {
+    "id": "hi_lo",
+    "sort_order": 120,
+    "route": "/games/hi_lo",
+    "label": "Hi-Lo",
+    "category": "table",
+    "categories": [
+      "table",
+      "cards",
+      "strategy"
+    ],
+    "backend": {
+      "register": "casino.games.hi_lo.api:register"
+    },
+    "frontend": {
+      "module": "./games/hi_lo.js",
+      "export": "HiLoGame",
+      "ready_testid": "hi-lo",
+      "i18n_domain": "games/hi_lo",
+      "i18n_probe": "controls.deal"
+    },
+    "tests": {
+      "long_driver": "tests.game_drivers.hi_lo:play"
+    },
+    "translations": {
+      "ru-RU": {
+        "label": "Больше или меньше",
+        "kicker": "Карточный стол",
+        "description": "Откройте карту и угадайте, будет ли следующая карта старше или младше.",
+        "tags": [
+          "Карты",
+          "Стратегия",
+          "Расчёт по реестру"
+        ]
+      }
+    },
+    "lobby": {
+      "featured": false,
+      "wide": false,
+      "art_class": "hi-lo-art",
+      "symbol": "HL",
+      "kicker": "Card table",
+      "description": "Deal one card, predict higher or lower, and settle through the play-token ledger.",
+      "tags": [
+        "Cards",
+        "Strategy",
+        "Ledger-backed"
+      ]
+    }
+  },
+  "depends_on": [
+    "core",
+    "ledger",
+    "players"
+  ],
+  "may_not_depend_on": [
+    "roulette",
+    "slots",
+    "blackjack",
+    "baccarat",
+    "keno",
+    "bingo",
+    "multi_hand_video_poker",
+    "casino_war",
+    "big_six_wheel",
+    "red_dog",
+    "dragon_tiger"
+  ]
+}

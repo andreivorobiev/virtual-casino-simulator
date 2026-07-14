@@ -506,6 +506,32 @@ def run_api_tests():
             dragon_tiger_events_a=[row for row in dragon_tiger_ledger_a if row.get('game')=='dragon_tiger' and row.get('round_id')==dragon_tiger_a['round']['round_id']]; dragon_tiger_events_b=[row for row in dragon_tiger_ledger_b if row.get('game')=='dragon_tiger' and row.get('round_id')==dragon_tiger_b['round']['round_id']]
             # Require one wager debit, at most one settlement credit, and unique deterministic action keys per session.
             assert sum(row.get('transaction_type')=='DRAGON_TIGER_WAGER_DEBIT' for row in dragon_tiger_events_a)==1 and sum(row.get('transaction_type')=='DRAGON_TIGER_WAGER_DEBIT' for row in dragon_tiger_events_b)==1 and sum(row.get('transaction_type')=='DRAGON_TIGER_SETTLEMENT_CREDIT' for row in dragon_tiger_events_a)<=1 and sum(row.get('transaction_type')=='DRAGON_TIGER_SETTLEMENT_CREDIT' for row in dragon_tiger_events_b)<=1 and len({(row.get('details') or {}).get('idempotency_key') for row in dragon_tiger_events_a})==len(dragon_tiger_events_a) and len({(row.get('details') or {}).get('idempotency_key') for row in dragon_tiger_events_b})==len(dragon_tiger_events_b)
+            # Deal user A's Hi-Lo opening card while submitting user B's player id to challenge session binding.
+            hi_lo_a=api(base,'/api/v1/games/hi-lo/rounds','POST',{'player_id':user_b['player_id'],'wager':2,'action_id':'wallet-hi-lo-deal-a'},auth_token=token_a)
+            # Replay user A's exact deal so the backend must preserve its hidden result and one wager debit.
+            hi_lo_a_replay=api(base,'/api/v1/games/hi-lo/rounds','POST',{'player_id':user_b['player_id'],'wager':2,'action_id':'wallet-hi-lo-deal-a'},auth_token=token_a)
+            # Reuse the deal identity with a changed wager so immutable fingerprint validation fails closed.
+            hi_lo_conflict=api(base,'/api/v1/games/hi-lo/rounds','POST',{'player_id':user_b['player_id'],'wager':3,'action_id':'wallet-hi-lo-deal-a'},ok=False,auth_token=token_a)
+            # Deal user B's independent opening card while again submitting the opposite player id.
+            hi_lo_b=api(base,'/api/v1/games/hi-lo/rounds','POST',{'player_id':user_a['player_id'],'wager':2,'action_id':'wallet-hi-lo-deal-b'},auth_token=token_b)
+            # Require authenticated ownership, independent rounds, exact replay, conflict rejection, and a protected next card.
+            assert hi_lo_a['round']['player_id']==user_a['player_id'] and hi_lo_b['round']['player_id']==user_b['player_id'] and hi_lo_a['round']['round_id']!=hi_lo_b['round']['round_id'] and hi_lo_a_replay['replayed'] is True and hi_lo_a_replay['round']==hi_lo_a['round'] and hi_lo_a_replay['player']['balance']==hi_lo_a['player']['balance'] and hi_lo_conflict['error']['code']=='CONFLICT' and 'next_card' not in hi_lo_a['round'] and 'next_card' not in hi_lo_b['round']
+            # Settle user A's active choice through one public higher prediction under the bound session.
+            hi_lo_a_done=api(base,f'/api/v1/games/hi-lo/rounds/{hi_lo_a["round"]["round_id"]}/guesses','POST',{'player_id':user_b['player_id'],'guess':'higher','action_id':'wallet-hi-lo-guess-a'},auth_token=token_a)
+            # Replay the identical settlement so no refund or payout can be duplicated.
+            hi_lo_a_done_replay=api(base,f'/api/v1/games/hi-lo/rounds/{hi_lo_a["round"]["round_id"]}/guesses','POST',{'player_id':user_b['player_id'],'guess':'higher','action_id':'wallet-hi-lo-guess-a'},auth_token=token_a)
+            # Settle user B's independent active choice through the other documented direction.
+            hi_lo_b_done=api(base,f'/api/v1/games/hi-lo/rounds/{hi_lo_b["round"]["round_id"]}/guesses','POST',{'player_id':user_a['player_id'],'guess':'lower','action_id':'wallet-hi-lo-guess-b'},auth_token=token_b)
+            # Read both private Hi-Lo states while supplying hostile query identities.
+            hi_lo_state_a=api(base,f'/api/v1/games/hi-lo/state?player_id={user_b["player_id"]}',auth_token=token_a)['state']; hi_lo_state_b=api(base,f'/api/v1/games/hi-lo/state?player_id={user_a["player_id"]}',auth_token=token_b)['state']
+            # Require terminal private history, revealed result cards, and stable settlement replay for both sessions.
+            assert hi_lo_a_done['round']['phase']=='settled' and hi_lo_b_done['round']['phase']=='settled' and hi_lo_a_done['round'].get('next_card') and hi_lo_b_done['round'].get('next_card') and hi_lo_a_done_replay['replayed'] is True and hi_lo_a_done_replay['round']==hi_lo_a_done['round'] and hi_lo_a_done_replay['player']['balance']==hi_lo_a_done['player']['balance'] and hi_lo_state_a['recent_rounds'][-1]['round_id']==hi_lo_a['round']['round_id'] and hi_lo_state_b['recent_rounds'][-1]['round_id']==hi_lo_b['round']['round_id']
+            # Read both ledgers after Hi-Lo settlement for exactly-once debit, refund, and payout proof.
+            hi_lo_ledger_a=api(base,f'/api/v1/players/{user_a["player_id"]}/ledger',auth_token=token_a)['ledger']; hi_lo_ledger_b=api(base,f'/api/v1/players/{user_b["player_id"]}/ledger',auth_token=token_b)['ledger']
+            # Select only Hi-Lo rows for each independently completed round.
+            hi_lo_events_a=[row for row in hi_lo_ledger_a if row.get('game')=='hi_lo' and row.get('round_id')==hi_lo_a['round']['round_id']]; hi_lo_events_b=[row for row in hi_lo_ledger_b if row.get('game')=='hi_lo' and row.get('round_id')==hi_lo_b['round']['round_id']]
+            # Require one wager debit, at most one returned-token credit, and unique stable action ids per user.
+            assert sum(row.get('transaction_type')=='HI_LO_WAGER_DEBIT' for row in hi_lo_events_a)==1 and sum(row.get('transaction_type')=='HI_LO_WAGER_DEBIT' for row in hi_lo_events_b)==1 and sum(row.get('transaction_type') in ('HI_LO_REFUND_CREDIT','HI_LO_PAYOUT_CREDIT') for row in hi_lo_events_a)<=1 and sum(row.get('transaction_type') in ('HI_LO_REFUND_CREDIT','HI_LO_PAYOUT_CREDIT') for row in hi_lo_events_b)<=1 and len({(row.get('details') or {}).get('hi_lo_action_id') for row in hi_lo_events_a})==len(hi_lo_events_a) and len({(row.get('details') or {}).get('hi_lo_action_id') for row in hi_lo_events_b})==len(hi_lo_events_b)
             # Read private game history through each normal-user session.
             history_a=api(base,'/api/v1/casino/history',auth_token=token_a)['history']
             # Read user B's independent history view.
@@ -539,7 +565,7 @@ def run_api_tests():
             # Verify normal users cannot mutate shared bot-controller accounts.
             assert api(base,'/api/v1/bots/bot_roulette_1/enable','POST',{},ok=False,auth_token=token_a)['error']['code']=='FORBIDDEN'
             # Store the durable post-game balance and terms state for restart verification.
-            integrity_state.update({'email':'wallet-a@example.local','password':'wallet-a-password','balance':api(base,'/api/v2/me',auth_token=token_a)['player']['token_balance'],'admin_blocked':len(admin_paths),'token_credit_count':len(credits_after)-len(credits_before),'contract_player':added_a,'mhvp_verified':True,'casino_war_verified':True,'big_six_verified':True,'red_dog_verified':True,'dragon_tiger_verified':True,'users':[{'email':'wallet-a@example.local','password':'wallet-a-password','player_id':user_a['player_id'],'balance':wallet_a,'roulette_round':roulette_a['round']['round_id'],'slots_round':slot_a['round_id'],'blackjack_round':blackjack_a['round_id'],'baccarat_round':baccarat_a['coup']['round_id'],'keno_round':keno_a['draw']['round_id'],'bingo_session':bingo_a_session['session_id'],'bingo_completed':False,'mhvp_round':mhvp_a['round']['round_id'],'casino_war_round':casino_war_a['round']['round_id'],'big_six_round':big_six_a['round']['round_id'],'red_dog_round':red_dog_a['round']['round_id'],'dragon_tiger_round':dragon_tiger_a['round']['round_id']},{'email':'wallet-b@example.local','password':'wallet-b-password','player_id':user_b['player_id'],'balance':wallet_b,'roulette_round':roulette_b['round']['round_id'],'slots_round':slot_b['round_id'],'blackjack_round':blackjack_b['round_id'],'baccarat_round':baccarat_b['coup']['round_id'],'keno_round':keno_b['draw']['round_id'],'bingo_session':bingo_b['session']['session_id'],'bingo_completed':True,'mhvp_round':mhvp_b['round']['round_id'],'casino_war_round':casino_war_b['round']['round_id'],'big_six_round':big_six_b['round']['round_id'],'red_dog_round':red_dog_b['round']['round_id'],'dragon_tiger_round':dragon_tiger_b['round']['round_id']}],'history_game_counts':[len(history_a),len(history_b)]})
+            integrity_state.update({'email':'wallet-a@example.local','password':'wallet-a-password','balance':api(base,'/api/v2/me',auth_token=token_a)['player']['token_balance'],'admin_blocked':len(admin_paths),'token_credit_count':len(credits_after)-len(credits_before),'contract_player':added_a,'mhvp_verified':True,'casino_war_verified':True,'big_six_verified':True,'red_dog_verified':True,'dragon_tiger_verified':True,'hi_lo_verified':True,'users':[{'email':'wallet-a@example.local','password':'wallet-a-password','player_id':user_a['player_id'],'balance':wallet_a,'roulette_round':roulette_a['round']['round_id'],'slots_round':slot_a['round_id'],'blackjack_round':blackjack_a['round_id'],'baccarat_round':baccarat_a['coup']['round_id'],'keno_round':keno_a['draw']['round_id'],'bingo_session':bingo_a_session['session_id'],'bingo_completed':False,'mhvp_round':mhvp_a['round']['round_id'],'casino_war_round':casino_war_a['round']['round_id'],'big_six_round':big_six_a['round']['round_id'],'red_dog_round':red_dog_a['round']['round_id'],'dragon_tiger_round':dragon_tiger_a['round']['round_id'],'hi_lo_round':hi_lo_a['round']['round_id']},{'email':'wallet-b@example.local','password':'wallet-b-password','player_id':user_b['player_id'],'balance':wallet_b,'roulette_round':roulette_b['round']['round_id'],'slots_round':slot_b['round_id'],'blackjack_round':blackjack_b['round_id'],'baccarat_round':baccarat_b['coup']['round_id'],'keno_round':keno_b['draw']['round_id'],'bingo_session':bingo_b['session']['session_id'],'bingo_completed':True,'mhvp_round':mhvp_b['round']['round_id'],'casino_war_round':casino_war_b['round']['round_id'],'big_six_round':big_six_b['round']['round_id'],'red_dog_round':red_dog_b['round']['round_id'],'dragon_tiger_round':dragon_tiger_b['round']['round_id'],'hi_lo_round':hi_lo_b['round']['round_id']}],'history_game_counts':[len(history_a),len(history_b)]})
         # Execute the real-backend integrity regression as one mapped API case.
         run_case('API-PRIVATE-SESSION-001',['SESSION-003','USER-001','USER-003','USER-005','TOKEN-004','TEST-039'],wallet_auth_integrity)
         # Record Multi-Hand Video Poker session, mode, ledger, and retry coverage under its permanent test id.
@@ -552,6 +578,8 @@ def run_api_tests():
         run_case('API-RD-001',['RD-001','RD-002','RD-003'],lambda: assert_condition(integrity_state['red_dog_verified'],'Red Dog integration evidence missing'))
         # Record Dragon Tiger session, ledger, conflict, and retry coverage under its permanent test id.
         run_case('API-DT-001',['DT-001','DT-002','DT-003'],lambda: assert_condition(integrity_state['dragon_tiger_verified'],'Dragon Tiger integration evidence missing'))
+        # Record Hi-Lo session, ledger, conflict, and retry coverage under its permanent test id.
+        run_case('API-HILO-001',['HILO-001','HILO-002','HILO-003'],lambda: assert_condition(integrity_state['hi_lo_verified'],'Hi-Lo integration evidence missing'))
         # Record exact token credit coverage under the permanent test id referenced by TOKEN-003.
         run_case('API-TOKEN-001',['TOKEN-003','TOKEN-004'],lambda: assert_condition(integrity_state['token_credit_count']==1 and integrity_state['contract_player']['token_balance']==250,'token credit contract mismatch'))
         # Record central Admin authorization coverage under the permanent Admin test id.
@@ -577,7 +605,7 @@ def run_api_tests():
                 # Verify exact balance and accepted terms survived the process restart.
                 assert me['player']['token_balance']==expected['balance'] and me['terms']['accepted'] is True and me['terms']['required'] is False
                 # Read every private game state again after restart.
-                roulette_state=api(base,'/api/v1/games/roulette/state',auth_token=token)['state']; slots_state=api(base,'/api/v1/games/slots/state',auth_token=token)['state']; blackjack_state=api(base,'/api/v1/games/blackjack/state',auth_token=token)['state']; baccarat_state=api(base,'/api/v1/games/baccarat/state',auth_token=token)['state']; keno_state=api(base,'/api/v1/games/keno/state',auth_token=token)['state']; bingo_state=api(base,'/api/v1/games/bingo/state',auth_token=token)['state']; mhvp_state=api(base,'/api/v1/games/multi-hand-video-poker/state',auth_token=token)['state']; casino_war_state=api(base,'/api/v1/games/casino-war/state',auth_token=token)['state']; big_six_state=api(base,'/api/v1/games/big-six-wheel/state',auth_token=token); red_dog_state=api(base,'/api/v1/games/red-dog/state',auth_token=token)['state']; dragon_tiger_state=api(base,'/api/v1/games/dragon-tiger/state',auth_token=token)['state']
+                roulette_state=api(base,'/api/v1/games/roulette/state',auth_token=token)['state']; slots_state=api(base,'/api/v1/games/slots/state',auth_token=token)['state']; blackjack_state=api(base,'/api/v1/games/blackjack/state',auth_token=token)['state']; baccarat_state=api(base,'/api/v1/games/baccarat/state',auth_token=token)['state']; keno_state=api(base,'/api/v1/games/keno/state',auth_token=token)['state']; bingo_state=api(base,'/api/v1/games/bingo/state',auth_token=token)['state']; mhvp_state=api(base,'/api/v1/games/multi-hand-video-poker/state',auth_token=token)['state']; casino_war_state=api(base,'/api/v1/games/casino-war/state',auth_token=token)['state']; big_six_state=api(base,'/api/v1/games/big-six-wheel/state',auth_token=token); red_dog_state=api(base,'/api/v1/games/red-dog/state',auth_token=token)['state']; dragon_tiger_state=api(base,'/api/v1/games/dragon-tiger/state',auth_token=token)['state']; hi_lo_state=api(base,'/api/v1/games/hi-lo/state',auth_token=token)['state']
                 # Verify Roulette, Slots, Blackjack, Baccarat, and Keno identifiers survived under the session-derived player.
                 assert any(row['round_id']==expected['roulette_round'] for row in roulette_state['last_results']) and slots_state['last_spins'][-1]['round_id']==expected['slots_round'] and expected['blackjack_round'] in blackjack_state['rounds'] and any(row['round_id']==expected['baccarat_round'] for row in baccarat_state['last_coups']) and any(row['round_id']==expected['keno_round'] for row in keno_state['last_draws'])
                 # Verify Bingo terminal/refund state survived for the corresponding user.
@@ -592,6 +620,8 @@ def run_api_tests():
                 assert any(row['round_id']==expected['red_dog_round'] for row in red_dog_state['rounds'])
                 # Verify the settled Dragon Tiger round and shoe metadata survived and remain private after restart.
                 assert any(row['round_id']==expected['dragon_tiger_round'] for row in dragon_tiger_state['recent_rounds']) and dragon_tiger_state['shoe']['shoe_number']>=1
+                # Verify the settled Hi-Lo round survived and remains private after restart.
+                assert any(row['round_id']==expected['hi_lo_round'] for row in hi_lo_state['recent_rounds'])
                 # Read restarted private history and ledger views.
                 restarted_history=api(base,'/api/v1/casino/history',auth_token=token)['history']; restarted_ledger=api(base,f'/api/v1/players/{expected["player_id"]}/ledger',auth_token=token)['ledger']
                 # Verify restarted history includes the user's Bingo settlement and never leaks another player.
@@ -599,7 +629,7 @@ def run_api_tests():
             # Verify both users produced persisted private history across the history-producing games.
             assert all(count>0 for count in integrity_state['history_game_counts'])
         # Record the live restart persistence regression under the same integrity requirements.
-        run_case('API-WALLET-RESTART-001',['SESSION-003','USER-001','TOKEN-003','TOKEN-004','TEST-039','MHVP-002','CW-002','BIG-SIX-002','RD-002','DT-002'],wallet_restart_persistence)
+        run_case('API-WALLET-RESTART-001',['SESSION-003','USER-001','TOKEN-003','TOKEN-004','TEST-039','MHVP-002','CW-002','BIG-SIX-002','RD-002','DT-002','HILO-002'],wallet_restart_persistence)
         # Define the core function used by this module.
         def core():
             # Load the casino state that publishes packaged and game-module version metadata.
@@ -1899,6 +1929,100 @@ def run_browser_tests():
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Execute Dragon Tiger rules, session route, localization, replay, responsive, and visual gates.
                 run_case('BR-DT-001',['DT-001','DT-002','DT-004','DT-005'],dragon_tiger_acceptance)
+                # Define real-backend Hi-Lo browser, localization, responsive, decision, and visual acceptance coverage.
+                def hi_lo_acceptance():
+                    # Open the catalog-generated route and wait for the game-owned readiness selector.
+                    page.get_by_test_id('nav-hi_lo').click(); page.get_by_test_id('hi-lo').wait_for(timeout=5000)
+                    # Wait for the session-bound initial state request to replace the loading shell.
+                    page.wait_for_function("() => document.querySelector('.hilo-phase')?.textContent === 'Ready to deal'",timeout=5000)
+                    # Require the canonical route, complete English title, and initial ready phase.
+                    assert page.url.split('?',1)[0].endswith('/games/hi_lo') and page.locator('.hilo-header h1').inner_text()=='Hi-Lo' and page.locator('.hilo-phase').inner_text()=='Ready to deal'
+                    # Define every named viewport required by the Hi-Lo visual-matrix row.
+                    required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
+                    # Define a helper that captures one registered live state in both supported locales and every governed viewport.
+                    def localized_evidence(prefix,states):
+                        # Iterate through the complete English and Russian game domains.
+                        for locale in ('en-US','ru-RU'):
+                            # Switch locale through the authenticated shared shell without discarding game state.
+                            page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_function("locale => document.querySelector('[data-testid=\"shell-locale-select\"]')?.value === locale",arg=locale)
+                            # Allow the game-domain rerender to complete before reading localized copy.
+                            page.wait_for_timeout(100)
+                            # Verify the mounted game title belongs to the selected locale.
+                            assert page.locator('.hilo-header h1').inner_text()==('Hi-Lo' if locale=='en-US' else 'Больше — меньше')
+                            # Inspect the mounted Russian game for representative English-copy leakage.
+                            if locale=='ru-RU':
+                                # Read only the game-owned surface so shell brand names do not create false positives.
+                                russian_copy=page.locator('.hilo-shell').inner_text()
+                                # Reject representative English game labels from every Russian evidence state.
+                                assert not [phrase for phrase in ('Ready to deal','Choose higher or lower','Correct prediction','Round complete','Wager returned','Deal opening card','Play controls','Recent rounds','play tokens') if phrase.lower() in russian_copy.lower()],russian_copy
+                            # Capture the current localized state at every exact visual-matrix dimension.
+                            for viewport_id,width,height in required_viewports:
+                                # Resize before horizontal containment and active-route navigation checks.
+                                page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
+                                # Require the complete mounted table to stay visible without page-level horizontal overflow.
+                                assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.get_by_test_id('hi-lo').is_visible()
+                                # Measure the catalog navigation and its active Hi-Lo route after responsive layout.
+                                nav_bounds=page.evaluate("() => { const nav=document.querySelector('.casino-nav').getBoundingClientRect(); const activeElement=document.querySelector('[data-testid=\"nav-hi_lo\"]'); const active=activeElement.getBoundingClientRect(); return {nav:{left:nav.left,right:nav.right},active:{left:active.left,right:active.right},label:activeElement.textContent.trim()}; }")
+                                # Require the localized active label and its bounds to remain inside the visible navigation.
+                                assert nav_bounds['label']==('Hi-Lo' if locale=='en-US' else 'Больше или меньше') and nav_bounds['active']['left']>=nav_bounds['nav']['left']-1 and nav_bounds['active']['right']<=nav_bounds['nav']['right']+1,nav_bounds
+                                # Record self-describing after-pass evidence for this locale, state, and viewport.
+                                game_evidence(f'after-pass-hi-lo-{prefix}-{locale.lower()}-{viewport_id}.png','hi_lo',states,locale,viewport_id)
+                        # Restore English and primary desktop dimensions for deterministic controls and API searches.
+                        page.get_by_test_id('shell-locale-select').select_option('en-US'); page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(100)
+                    # Capture the ready state in both locales and every required viewport.
+                    localized_evidence('ready',['ready'])
+                    # Deal one real opening card through the mounted frontend control.
+                    page.locator('[data-action="deal"]').click(); page.wait_for_function("() => document.querySelector('.hilo-phase')?.textContent === 'Choose higher or lower'",timeout=5000)
+                    # Require the protected next card and both documented choice controls during the active decision.
+                    assert page.get_by_text('Face-down playing card',exact=True).count()==0 and page.locator('[data-guess="higher"]').is_enabled() and page.locator('[data-guess="lower"]').is_enabled()
+                    # Capture the higher-or-lower choice state in both locales and every required viewport.
+                    localized_evidence('choose',['choose_higher_or_lower'])
+                    # Complete the mounted choice so later direct public actions start without an active-round conflict.
+                    page.locator('[data-guess="higher"]').click(); page.wait_for_function("() => !['Choose higher or lower',''].includes(document.querySelector('.hilo-phase')?.textContent || '')",timeout=5000)
+                    # Define a bounded real-backend search for one documented settlement class.
+                    def find_outcome(target):
+                        # Retain real entropy while giving the one-in-thirteen tie state ample opportunity.
+                        for attempt in range(240):
+                            # Deal and settle one public session-bound round without any test-only seed seam.
+                            result=page.evaluate("""async ({target,attempt}) => { const call=async(path,body)=>{ const response=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); const payload=await response.json(); if(!payload.ok) throw new Error(payload.error?.message || 'Hi-Lo evidence action failed'); return payload.data; }; const deal=await call('/api/v1/games/hi-lo/rounds',{action_id:`browser-hi-lo-${target}-${attempt}-deal`,wager:1}); return (await call(`/api/v1/games/hi-lo/rounds/${encodeURIComponent(deal.round.round_id)}/guesses`,{action_id:`browser-hi-lo-${target}-${attempt}-guess`,guess:'higher'})).round; }""",{'target':target,'attempt':attempt})
+                            # Return immediately when the registered shuffled backend produces the requested class.
+                            if result['outcome']==target:
+                                # Preserve the exact terminal round for payout assertions.
+                                return result
+                        # Fail the browser case if the bounded real-backend search never reaches the governed state.
+                        raise AssertionError(f'Hi-Lo did not produce {target} within 240 rounds')
+                    # Find and mount one real correct prediction.
+                    correct_round=find_outcome('correct'); page.reload(wait_until='networkidle'); page.get_by_test_id('hi-lo').wait_for(timeout=5000)
+                    # Require the documented 2x return before recording correct-result evidence.
+                    assert correct_round['payout']==correct_round['wager']*2 and correct_round['net']==correct_round['wager']
+                    # Capture correct prediction evidence in both locales and every required viewport.
+                    localized_evidence('correct',['correct_guess'])
+                    # Find and mount one real incorrect prediction.
+                    incorrect_round=find_outcome('incorrect'); page.reload(wait_until='networkidle'); page.get_by_test_id('hi-lo').wait_for(timeout=5000)
+                    # Require the documented zero return before recording incorrect-result evidence.
+                    assert incorrect_round['payout']==0 and incorrect_round['net']==-incorrect_round['wager']
+                    # Capture incorrect prediction evidence in both locales and every required viewport.
+                    localized_evidence('incorrect',['incorrect_guess'])
+                    # Find and mount one real equal-rank refund.
+                    tie_round=find_outcome('tie'); page.reload(wait_until='networkidle'); page.get_by_test_id('hi-lo').wait_for(timeout=5000)
+                    # Require the documented 1x refund and zero net before recording tie evidence.
+                    assert tie_round['payout']==tie_round['wager'] and tie_round['net']==0
+                    # Capture equal-rank refund evidence in both locales and every required viewport.
+                    localized_evidence('tie-refund',['tie_refund'])
+                    # Emulate the governed reduced-motion preference on the timer-free terminal table.
+                    page.emulate_media(reduced_motion='reduce')
+                    # Capture reduced-motion evidence in both locales and every required viewport.
+                    localized_evidence('reduced-motion',['reduced_motion'])
+                    # Restore the default media preference for downstream browser cases.
+                    page.emulate_media(reduced_motion='no-preference')
+                    # Reload the canonical deep link and require private terminal history to restore.
+                    page.reload(wait_until='networkidle'); page.get_by_test_id('hi-lo').wait_for(timeout=5000)
+                    # Capture route restoration in both locales and every governed viewport.
+                    localized_evidence('route-restored',['route_restored'])
+                    # Return to the lobby so established downstream browser cases start normally.
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Execute Hi-Lo rules, session route, localization, responsive, and visual gates.
+                run_case('BR-HILO-001',['HILO-001','HILO-002','HILO-004','HILO-005'],hi_lo_acceptance)
                 # Define route_restoration to prove deep links, reload, Back, and Forward behavior.
                 def route_restoration():
                     # Open Roulette directly through its canonical path using the authenticated browser context.

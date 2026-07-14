@@ -526,6 +526,43 @@
         "VIS-EVIDENCE-001",
         "VIS-CATALOG-001"
       ]
+    },
+    {
+      "id": "hi_lo",
+      "route": "/games/hi_lo",
+      "selector": "[data-testid='hi-lo']",
+      "states": [
+        "ready",
+        "choose_higher_or_lower",
+        "correct_guess",
+        "incorrect_guess",
+        "tie_refund",
+        "reduced_motion",
+        "route_restored"
+      ],
+      "locales": [
+        "en-US",
+        "ru-RU"
+      ],
+      "viewports": [
+        "desktop_primary",
+        "desktop_compact",
+        "tablet",
+        "mobile"
+      ],
+      "gates": [
+        "VIS-COPY-001",
+        "VIS-TOKEN-002",
+        "VIS-LAYOUT-001",
+        "VIS-LAYOUT-002",
+        "VIS-LAYOUT-003",
+        "VIS-SCROLL-001",
+        "VIS-SCROLL-002",
+        "VIS-HIERARCHY-001",
+        "VIS-RESPONSIVE-001",
+        "VIS-EVIDENCE-001",
+        "VIS-CATALOG-001"
+      ]
     }
   ]
 }

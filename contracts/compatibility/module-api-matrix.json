@@ -47,6 +47,9 @@
   "dragon_tiger": [
     "contracts/openapi/dragon_tiger.v1.yaml"
   ],
+  "hi_lo": [
+    "contracts/openapi/hi_lo.v1.yaml"
+  ],
   "tests": [],
   "docs": [],
   "contracts": [
