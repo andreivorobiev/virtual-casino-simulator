@@ -62,20 +62,20 @@ The #77 integration owner retains permanent allocation and status authority. Thi
 - `TCP-004`: the game surface provides complete EN/RU visible and accessible copy across required responsive viewports with reduced-motion-safe lifecycle behavior.
 - `TCP-005`: catalog, contract, browser, long-suite, requirement, module, version, and visual evidence remain traceable through module-owned metadata.
 
-Existing cross-cutting requirements include `API-001`, `CARD-001`, `CARD-002`, `CORE-008`, `CORE-009`, `CORE-010`, `CORE-021`, `I18N-001`, `I18N-002`, `LEDGER-005`, `LEDGER-006`, `LEDGER-007`, `LEDGER-009`, `LEDGER-023`, `POKER-001`, `SESSION-005`, and `TEST-042`.
+Existing cross-cutting requirements include `API-001`, `CARD-001`, `CARD-002`, `CORE-008`, `CORE-009`, `CORE-010`, `CORE-021`, `I18N-001`, `I18N-002`, `LEDGER-005`, `LEDGER-006`, `LEDGER-007`, `LEDGER-009`, `LEDGER-023`, `POKER-001`, `SESSION-005`, `STORAGE-001`, `STORAGE-002`, and `TEST-042`.
 
 ## Integration handoff for #77
 
-The game descriptor proposes module version `1.0.0`, catalog sort order `190`, and canonical route `/games/three_card_poker`. Packaged application release impact is None.
+The issue-owned descriptor proposal at `codex/tasks/artifacts/issue-93-three-card-poker/three_card_poker.module.proposal.json` preserves module version `1.0.0`, catalog sort order `190`, and canonical route `/games/three_card_poker` without auto-installing the game before shared integration. Packaged application release impact is None.
 
 Before acceptance, #77 must:
 
-- add `three_card_poker: 1.0.0` to `modules/module-manifest.json` and recalculate shared module revisions from the then-current accepted `main`;
+- promote the proposal to `modules/three_card_poker.json`, add `three_card_poker: 1.0.0` to `modules/module-manifest.json`, and recalculate shared module revisions from the then-current accepted `main`;
 - allocate `TCP-001` through `TCP-005`, update central and generated requirements, and map permanent API/browser test IDs;
 - add the OpenAPI contract to the compatibility matrix and contract digest;
 - add the `three_card_poker` visual-matrix row and game-specific real-backend API/browser coverage;
 - run catalog discovery, the module-owned long driver, full API/browser suites, and Long Suite 100;
 - capture honest EN/RU `after_pass` evidence for every assigned state and viewport; and
-- record any listener PID and non-8765 loopback port, stop it, and verify closure.
+- record any listener PID and loopback port other than 8765 or 8877, stop it, and verify closure.
 
 No shared manifest, requirements registry, compatibility inventory, visual matrix, shell resource, central runner, or generated documentation is changed by this isolated slice.

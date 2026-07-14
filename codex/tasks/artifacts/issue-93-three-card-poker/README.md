@@ -2,7 +2,7 @@
 
 Branch: `codex/issue-93-three-card-poker`
 
-Implementation base: `0a1ebc2d7d034bb855ad968215bc61adcd18f4c9` (`main`)
+Readiness base: `727d5cf2a55d627e6b844cc871ff8e6f46a7c0bf` (`origin/main`)
 
 ## Delivered isolated slice
 
@@ -10,14 +10,14 @@ Implementation base: `0a1ebc2d7d034bb855ad968215bc61adcd18f4c9` (`main`)
 - Ante/Play decisions, Ante Bonus Paytable A, optional Pair Plus Paytable C, queen-high dealer qualification, and straight-over-flush ordering.
 - Session-bound, player-scoped, reload-safe API state with dealer cards hidden until settlement.
 - Ledger-only opening wager, Play wager, and payout orchestration with stable request/action identities and conflict-safe replay recovery.
-- Catalog-shaped module descriptor at `1.0.0`, additive v1 OpenAPI contract, catalog-discoverable long driver, responsive frontend module, and complete EN/RU game domains.
+- Catalog-shaped module descriptor proposal parked in this issue artifact directory as `three_card_poker.module.proposal.json`, outside auto-discovered `modules/`, with version `1.0.0`; the slice also includes an additive v1 OpenAPI contract, game-specific long driver, responsive frontend module, and complete EN/RU game domains.
 - Focused engine, API, frontend, shared-primitive, syntax, and repository validation coverage recorded separately in `validation.md`.
 
 ## Shared integration intentionally blocked
 
 The following remain owned by issue #77 and are not acceptance claims for this worker:
 
-- Add `three_card_poker: 1.0.0` to `modules/module-manifest.json` and reconcile all shared module versions.
+- Promote `three_card_poker.module.proposal.json` to `modules/three_card_poker.json`, add `three_card_poker: 1.0.0` to `modules/module-manifest.json`, and reconcile all shared module versions in the same #77 integration change.
 - Allocate permanent `TCP-001` through `TCP-005` entries and update central/generated requirement documents.
 - Register the contract in `contracts/compatibility/module-api-matrix.json` and `contracts/compatibility/contract-digests.json`.
 - Add game-specific central API/browser cases and the visual-matrix row.
