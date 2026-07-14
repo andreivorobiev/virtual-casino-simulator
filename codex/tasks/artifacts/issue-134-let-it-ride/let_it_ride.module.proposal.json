@@ -1,0 +1,120 @@
+{
+  "module": "let_it_ride",
+  "version": "0.1.0-proposal",
+  "proposal_only": true,
+  "blocked_on": "#77 shared catalog/router/manifest/test-discovery integration",
+  "paths": [
+    "casino/games/let_it_ride/",
+    "web/games/let_it_ride.js",
+    "web/i18n/en-US/games/let_it_ride.json",
+    "web/i18n/ru-RU/games/let_it_ride.json"
+  ],
+  "requirements_prefixes": [
+    "LIR-PROPOSED"
+  ],
+  "contracts": [
+    "contracts/openapi/let_it_ride.v1.yaml"
+  ],
+  "game": {
+    "id": "let_it_ride",
+    "sort_order": 134,
+    "route": "/games/let_it_ride",
+    "label": "Let It Ride",
+    "category": "table",
+    "categories": [
+      "table",
+      "cards",
+      "poker",
+      "strategy"
+    ],
+    "backend": {
+      "register": "casino.games.let_it_ride.api:register"
+    },
+    "frontend": {
+      "module": "./games/let_it_ride.js",
+      "export": "LetItRideGame",
+      "ready_testid": "let-it-ride",
+      "i18n_domain": "games/let_it_ride",
+      "i18n_probe": "controls.ride"
+    },
+    "tests": {
+      "focused": [
+        "tests.games.let_it_ride.test_engine",
+        "tests.games.let_it_ride.test_api",
+        "tests.games.let_it_ride.test_resources",
+        "tests/games/let_it_ride/test_frontend.mjs"
+      ],
+      "long_driver": "tests.game_drivers.let_it_ride:play"
+    },
+    "translations": {
+      "ru-RU": {
+        "label": "Let It Ride",
+        "kicker": "Покерный стол",
+        "description": "Начните с трёх равных ставок, забирайте доступные ставки на двух этапах или оставляйте их до финальной покерной комбинации.",
+        "tags": [
+          "Карты",
+          "Покер",
+          "Расчёт по реестру"
+        ]
+      }
+    },
+    "lobby": {
+      "featured": false,
+      "wide": false,
+      "art_class": "let-it-ride-art",
+      "symbol": "LIR",
+      "kicker": "Staged poker",
+      "description": "Commit three equal play-token wagers, pull back up to two, and settle the remaining units against a five-card poker paytable.",
+      "tags": [
+        "Cards",
+        "Poker",
+        "Ledger-backed"
+      ]
+    }
+  },
+  "depends_on": [
+    "core",
+    "ledger",
+    "players"
+  ],
+  "may_not_depend_on": [
+    "roulette",
+    "slots",
+    "blackjack",
+    "baccarat",
+    "keno",
+    "bingo",
+    "multi_hand_video_poker",
+    "casino_war",
+    "big_six_wheel",
+    "red_dog",
+    "dragon_tiger",
+    "hi_lo"
+  ],
+  "blocked_shared_integration": [
+    "modules/let_it_ride.json",
+    "modules/module-manifest.json",
+    "casino/games/registry.py",
+    "web/app.js",
+    "web/i18n/manifest.json",
+    "contracts/compatibility/module-api-matrix.json",
+    "contracts/compatibility/contract-digests.json",
+    "docs/requirements/requirements.json",
+    "docs/requirements/requirements_generated.md",
+    "tests/visual/visual_matrix.json",
+    "tests/game_drivers/let_it_ride.py",
+    "tests/run_tests.py",
+    "tests/long_suites.py"
+  ],
+  "distinct_module_proof": {
+    "canonical_family": "Poker Room",
+    "primary_mechanic": "Three equal wagers are committed up front, two eligible wagers can be withdrawn across two decision beats, and the remaining units settle against a five-card poker hand made from three player cards and two community cards.",
+    "not_a_variant_of_existing_games": [
+      "Not Multi-Hand Video Poker: there is no draw replacement phase, no multiple independent final hands, and the central decisions are staged wager withdrawal choices.",
+      "Not Red Dog or Acey-Deucey: the result is a five-card poker paytable rather than an in-between or spread card.",
+      "Not Casino War, Dragon Tiger, or Hi-Lo: no high-card comparison or single higher/lower prediction decides the round.",
+      "Not Baccarat or Blackjack: no banking hand total, dealer decision tree, split, double, or insurance flow exists."
+    ],
+    "countable_pending_integration": true
+  }
+}

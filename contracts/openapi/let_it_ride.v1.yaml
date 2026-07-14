@@ -1,0 +1,350 @@
+# Additive frozen-v1 contract for the isolated issue #134 Let It Ride slice.
+openapi: 3.0.3
+info:
+  title: Virtual Casino Let It Ride API
+  version: v1
+  description: >-
+    Additive issue #134 contract for session-bound, play-token-only Let It
+    Ride. The authenticated router owns player identity and overrides
+    compatibility player inputs. Every wager and decision command requires a
+    replay-safe action_id.
+tags:
+  - name: Let It Ride
+    description: Staged five-card poker decisions with ledger-only settlement.
+
+# Public game routes remain additive under the frozen /api/v1 compatibility surface.
+paths:
+  /api/v1/games/let-it-ride/state:
+    get:
+      tags: [Let It Ride]
+      summary: Read and recover the authenticated player's Let It Ride state
+      operationId: letItRideState
+      parameters:
+        - $ref: '#/components/parameters/CompatiblePlayerId'
+      responses:
+        '200':
+          $ref: '#/components/responses/LetItRideSuccess'
+        '401':
+          $ref: '#/components/responses/ApiError'
+  /api/v1/games/let-it-ride/rounds:
+    post:
+      tags: [Let It Ride]
+      summary: Deal one replay-safe three-wager Let It Ride opening
+      operationId: letItRideStartRound
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartRoundRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/LetItRideSuccess'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+  /api/v1/games/let-it-ride/rounds/{round_id}/first-decision:
+    post:
+      tags: [Let It Ride]
+      summary: Pull one eligible wager or let all three ride before the first community card
+      operationId: letItRideFirstDecision
+      parameters:
+        - $ref: '#/components/parameters/RoundId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DecisionRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/LetItRideSuccess'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+  /api/v1/games/let-it-ride/rounds/{round_id}/second-decision:
+    post:
+      tags: [Let It Ride]
+      summary: Pull one more eligible wager or settle the final hand
+      operationId: letItRideSecondDecision
+      parameters:
+        - $ref: '#/components/parameters/RoundId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DecisionRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/LetItRideSuccess'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+
+# Components define the standard envelope, action id, card, round, and state schemas.
+components:
+  parameters:
+    CompatiblePlayerId:
+      name: player_id
+      in: query
+      required: false
+      description: Compatibility input overridden by the authenticated session binding.
+      schema:
+        type: string
+    RoundId:
+      name: round_id
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: '^[A-Za-z0-9_-]+$'
+  responses:
+    LetItRideSuccess:
+      description: Standard successful API envelope.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/LetItRideEnvelope'
+    ApiError:
+      description: Standard failed API envelope.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+  schemas:
+    ActionId:
+      type: string
+      minLength: 8
+      maxLength: 128
+      pattern: '^[A-Za-z0-9._:-]+$'
+      description: Client-generated idempotency key scoped to one command and payload.
+    StartRoundRequest:
+      type: object
+      required: [action_id, wager]
+      additionalProperties: false
+      properties:
+        action_id:
+          $ref: '#/components/schemas/ActionId'
+        wager:
+          type: number
+          format: double
+          minimum: 0.01
+          maximum: 100000
+          description: Positive base play-token wager debited three times through one ledger movement.
+        player_id:
+          type: string
+          description: Compatibility input overridden by the authenticated session binding.
+    DecisionRequest:
+      type: object
+      required: [action_id, decision]
+      additionalProperties: false
+      properties:
+        action_id:
+          $ref: '#/components/schemas/ActionId'
+        decision:
+          type: string
+          enum: [ride, pull]
+          description: Whether to leave the eligible wager riding or pull it back.
+        player_id:
+          type: string
+          description: Compatibility input overridden by the authenticated session binding.
+    Card:
+      type: object
+      required: [rank, suit, code]
+      properties:
+        rank:
+          type: string
+          enum: ['2', '3', '4', '5', '6', '7', '8', '9', '10', J, Q, K, A]
+        suit:
+          type: string
+          enum: [clubs, diamonds, hearts, spades]
+        code:
+          type: string
+          pattern: '^(10|[2-9JQKA])[CDHS]$'
+    DecisionRecord:
+      type: object
+      required: [stage, decision, action_id]
+      properties:
+        stage:
+          type: string
+          enum: [first, second]
+        decision:
+          type: string
+          enum: [ride, pull]
+        action_id:
+          type: string
+    SettlementProgress:
+      type: object
+      required: [required_actions, committed_actions, complete]
+      properties:
+        required_actions:
+          type: integer
+          minimum: 1
+        committed_actions:
+          type: integer
+          minimum: 0
+        complete:
+          type: boolean
+    LetItRideRound:
+      type: object
+      required:
+        - round_id
+        - player_id
+        - phase
+        - wager
+        - total_initial_wager
+        - active_units
+        - withdrawn_units
+        - decisions
+        - player_cards
+        - community_cards
+        - revealed_community
+        - outcome
+        - multiplier
+        - payout
+        - refund
+        - net
+        - settlement
+      properties:
+        round_id:
+          type: string
+        player_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+        phase:
+          type: string
+          enum: [first_decision, second_decision, settled]
+        wager:
+          type: number
+        total_initial_wager:
+          type: number
+        active_units:
+          type: integer
+          minimum: 1
+          maximum: 3
+        withdrawn_units:
+          type: integer
+          minimum: 0
+          maximum: 2
+        decisions:
+          type: array
+          maxItems: 2
+          items:
+            $ref: '#/components/schemas/DecisionRecord'
+        player_cards:
+          type: array
+          minItems: 3
+          maxItems: 3
+          items:
+            $ref: '#/components/schemas/Card'
+        community_cards:
+          type: array
+          minItems: 2
+          maxItems: 2
+          items:
+            nullable: true
+            allOf:
+              - $ref: '#/components/schemas/Card'
+        revealed_community:
+          type: integer
+          minimum: 0
+          maximum: 2
+        outcome:
+          type: string
+          enum:
+            - decision_pending
+            - second_decision_pending
+            - royal_flush
+            - straight_flush
+            - four_of_a_kind
+            - full_house
+            - flush
+            - straight
+            - three_of_a_kind
+            - two_pair
+            - pair_of_tens_or_better
+            - no_win
+        multiplier:
+          type: integer
+          minimum: 0
+        payout:
+          type: number
+        refund:
+          type: number
+        net:
+          type: number
+        settlement:
+          $ref: '#/components/schemas/SettlementProgress'
+    LetItRideState:
+      type: object
+      required: [rules, shoe_count, shoes_dealt, rounds]
+      properties:
+        rules:
+          type: object
+        shoe_id:
+          type: string
+          nullable: true
+        shoe_count:
+          type: integer
+        shoes_dealt:
+          type: integer
+        rounds:
+          type: array
+          items:
+            $ref: '#/components/schemas/LetItRideRound'
+        active_round:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/LetItRideRound'
+    LetItRideData:
+      type: object
+      required: [game, state, player]
+      properties:
+        game:
+          type: string
+          enum: [let_it_ride]
+        state:
+          $ref: '#/components/schemas/LetItRideState'
+        round:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/LetItRideRound'
+        player:
+          type: object
+    LetItRideEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/LetItRideData'
+    ErrorBody:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+    ErrorEnvelope:
+      type: object
+      required: [ok, error]
+      properties:
+        ok:
+          type: boolean
+          enum: [false]
+        error:
+          $ref: '#/components/schemas/ErrorBody'
