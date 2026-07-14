@@ -1,0 +1,338 @@
+openapi: 3.0.3
+info:
+  title: Virtual Casino Casino Hold'em API
+  version: v1
+  description: >-
+    Additive issue #139 contract for authenticated Casino Hold'em play. Deal and
+    decision commands require independent action IDs so retries reuse one round and
+    each ante, call, push, or payout movement at most once in the local simulator.
+tags:
+  - name: Casino Hold'em
+    description: Player-scoped community-card poker with dealer qualification and ledger-only settlement.
+
+# Define only additive frozen-v1 game endpoints owned by this proposal slice.
+paths:
+  /api/v1/games/casino-holdem/state:
+    get:
+      tags: [Casino Hold'em]
+      operationId: casinoHoldemState
+      summary: Read the authenticated player's reload-safe Casino Hold'em state
+      responses:
+        '200':
+          description: Current game state, fixed rules, and bound player
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StateEnvelope'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/v1/games/casino-holdem/rounds:
+    post:
+      tags: [Casino Hold'em]
+      operationId: casinoHoldemStartRound
+      summary: Deal or replay one ante-backed flop decision
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartRoundRequest'
+      responses:
+        '200':
+          description: Prepared call-or-fold round with one committed ante debit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoundEnvelope'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/v1/games/casino-holdem/rounds/{round_id}/decision:
+    post:
+      tags: [Casino Hold'em]
+      operationId: casinoHoldemDecision
+      summary: Fold or commit the call wager and settle one showdown
+      parameters:
+        - $ref: '#/components/parameters/RoundId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DecisionRequest'
+      responses:
+        '200':
+          description: Folded or settled round with optional call and settlement ledger evidence
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoundEnvelope'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+
+# Reuse standard success/error envelopes while defining game-owned data shapes.
+components:
+  parameters:
+    RoundId:
+      name: round_id
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: '^choldem_[a-f0-9]{24}$'
+  responses:
+    ErrorResponse:
+      description: Standard API error envelope
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+  schemas:
+    ActionId:
+      type: string
+      minLength: 1
+      maxLength: 128
+      pattern: '^[A-Za-z0-9._:-]+$'
+    CardCode:
+      type: string
+      pattern: '^(10|[2-9JQKA])[CDHS]$'
+    StartRoundRequest:
+      type: object
+      additionalProperties: false
+      required: [action_id, wager]
+      properties:
+        action_id:
+          $ref: '#/components/schemas/ActionId'
+        wager:
+          type: number
+          minimum: 0.01
+          maximum: 100000
+        player_id:
+          type: string
+          description: Compatibility input overridden by the authenticated session resolver.
+    DecisionRequest:
+      type: object
+      additionalProperties: false
+      required: [action_id, decision]
+      properties:
+        action_id:
+          $ref: '#/components/schemas/ActionId'
+        decision:
+          type: string
+          enum: [call, fold]
+        player_id:
+          type: string
+          description: Compatibility input overridden by the authenticated session resolver.
+    Round:
+      type: object
+      additionalProperties: false
+      required:
+        - round_id
+        - player_id
+        - start_action_id
+        - wager
+        - phase
+        - player_cards
+        - community_cards
+        - ante_status
+        - call_status
+        - settlement_status
+        - created_at
+      properties:
+        round_id:
+          type: string
+          pattern: '^choldem_[a-f0-9]{24}$'
+        player_id:
+          type: string
+        start_action_id:
+          $ref: '#/components/schemas/ActionId'
+        decision_action_id:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/ActionId'
+        wager:
+          type: number
+          minimum: 0.01
+        call_wager:
+          type: number
+          nullable: true
+        phase:
+          type: string
+          enum: [decision, called, settled]
+        decision:
+          type: string
+          nullable: true
+          enum: [call, fold]
+        player_cards:
+          type: array
+          minItems: 2
+          maxItems: 2
+          items:
+            $ref: '#/components/schemas/CardCode'
+        dealer_cards:
+          description: Omitted until a called showdown reaches settlement.
+          type: array
+          minItems: 2
+          maxItems: 2
+          items:
+            $ref: '#/components/schemas/CardCode'
+        community_cards:
+          type: array
+          minItems: 3
+          maxItems: 5
+          items:
+            $ref: '#/components/schemas/CardCode'
+        player_rank:
+          type: string
+          nullable: true
+          enum: [royal_flush, straight_flush, four_of_a_kind, full_house, flush, straight, three_of_a_kind, two_pair, one_pair, high_card]
+        dealer_rank:
+          type: string
+          nullable: true
+          enum: [royal_flush, straight_flush, four_of_a_kind, full_house, flush, straight, three_of_a_kind, two_pair, one_pair, high_card]
+        dealer_qualifies:
+          type: boolean
+          nullable: true
+        outcome:
+          type: string
+          nullable: true
+          enum: [dealer_not_qualified, player_win, push, dealer_win, folded]
+        ante_credit:
+          type: number
+          nullable: true
+        call_credit:
+          type: number
+          nullable: true
+        payout:
+          type: number
+          minimum: 0
+        net:
+          type: number
+          nullable: true
+        ante_status:
+          type: string
+          enum: [pending, complete]
+        call_status:
+          type: string
+          enum: [not_ready, pending, complete]
+        settlement_status:
+          type: string
+          enum: [not_ready, pending, complete]
+        ante_ledger_id:
+          type: string
+        call_ledger_id:
+          type: string
+        settlement_ledger_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+    GameState:
+      type: object
+      required: [active_round, recent_rounds]
+      properties:
+        active_round:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/Round'
+        recent_rounds:
+          type: array
+          maxItems: 20
+          items:
+            $ref: '#/components/schemas/Round'
+    Rules:
+      type: object
+      required: [decisions, call_multiplier, dealer_qualifies, ante_return_multipliers]
+      properties:
+        decisions:
+          type: array
+          minItems: 2
+          maxItems: 2
+          items:
+            type: string
+            enum: [call, fold]
+        call_multiplier:
+          type: integer
+          enum: [2]
+        dealer_qualifies:
+          type: string
+          enum: [pair_of_fours_or_better]
+        ante_return_multipliers:
+          type: object
+          additionalProperties:
+            type: integer
+    Player:
+      type: object
+      additionalProperties: true
+    LedgerEvent:
+      type: object
+      nullable: true
+      additionalProperties: true
+    StateData:
+      type: object
+      required: [game, state, player, rules]
+      properties:
+        game:
+          type: string
+          enum: [casino_holdem]
+        state:
+          $ref: '#/components/schemas/GameState'
+        player:
+          $ref: '#/components/schemas/Player'
+        rules:
+          $ref: '#/components/schemas/Rules'
+    RoundData:
+      allOf:
+        - $ref: '#/components/schemas/StateData'
+        - type: object
+          required: [round, replayed]
+          properties:
+            round:
+              $ref: '#/components/schemas/Round'
+            ante:
+              $ref: '#/components/schemas/LedgerEvent'
+            call:
+              $ref: '#/components/schemas/LedgerEvent'
+            settlement:
+              $ref: '#/components/schemas/LedgerEvent'
+            replayed:
+              type: boolean
+            ledger_replayed:
+              type: boolean
+    StateEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/StateData'
+    RoundEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/RoundData'
+    ErrorEnvelope:
+      type: object
+      required: [ok, error]
+      properties:
+        ok:
+          type: boolean
+          enum: [false]
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
