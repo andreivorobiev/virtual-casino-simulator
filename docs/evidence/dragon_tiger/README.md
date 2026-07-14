@@ -4,7 +4,7 @@ Evidence class: issue-scoped development evidence from the production handler wi
 
 - Issue: [#83](https://github.com/andreivorobiev/virtual-casino-simulator/issues/83)
 - Branch: `codex/issue-83-dragon-tiger`
-- Tested source commit: `PENDING_SIGNED_COMMIT`
+- Tested source commit: `f9ad88a4dc73914ca231245e0e86d7b927b7fe0f`
 - Captured: 2026-07-14
 - Backend: production `casino.app.Handler`, authenticated local session, disposable operating-system temporary storage
 - Listener: PID `65620`, `127.0.0.1:56723`; PID stopped and port closure verified after capture
