@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.3.0
+- application: 9.4.0
 - core: 9.4.0
 - ledger: 9.0.2
 - players: 9.1.0
@@ -20,9 +20,10 @@ Historical source baseline: 9.1.0
 - baccarat: 9.1.0
 - keno: 9.2.0
 - bingo: 9.2.0
-- tests: 1.6.0
-- docs: 1.5.0
-- contracts: 1.1.1
+- multi_hand_video_poker: 1.0.0
+- tests: 1.7.0
+- docs: 1.6.0
+- contracts: 1.2.0
 - tooling: 1.3.0
 - commenting_policy: 1.0.0
 
@@ -443,3 +444,8 @@ Historical source baseline: 9.1.0
 - **UX-010** (Application) - PASS: The lobby provides accessible search and catalog-derived category navigation that remains usable for the approved 20-game target.
 - **SESSION-005** (Core) - PASS: Every game API request resolves its player through one shared authenticated-session resolver before route dispatch.
 - **TEST-042** (Tests) - PASS: Validators, generic browser discovery, and long suites load every game and its independently owned driver from catalog metadata without a duplicated game allowlist.
+- **MHVP-001** (Multi-Hand Video Poker) - PASS: Multi-Hand Video Poker deals one common Jacks-or-Better hand and completes 3, 5, or 10 independent result hands from shared hold positions.
+- **MHVP-002** (Multi-Hand Video Poker) - PASS: Authenticated sessions own isolated reload-safe Multi-Hand Video Poker state, hold selections, recent rounds, and canonical route restoration.
+- **MHVP-003** (Multi-Hand Video Poker) - PASS: Each Multi-Hand Video Poker round uses one aggregate ledger wager debit and at most one aggregate payout credit with idempotent retry recovery.
+- **MHVP-004** (Application) - PASS: The Multi-Hand Video Poker surface provides complete English and Russian copy and remains usable without overflow across required desktop, tablet, and mobile viewports.
+- **MHVP-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery automatically include Multi-Hand Video Poker with requirement, module, version, and visual evidence traceability.

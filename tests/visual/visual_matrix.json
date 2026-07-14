@@ -322,6 +322,40 @@
       ]
     },
     {
+      "id": "multi_hand_video_poker",
+      "route": "/games/multi_hand_video_poker",
+      "selector": "[data-testid='multi-hand-video-poker']",
+      "states": [
+        "ready",
+        "choose_holds",
+        "settled_3_hands",
+        "settled_5_hands",
+        "settled_10_hands",
+        "route_restored"
+      ],
+      "locales": [
+        "en-US",
+        "ru-RU"
+      ],
+      "viewports": [
+        "desktop_primary",
+        "desktop_compact",
+        "tablet",
+        "mobile"
+      ],
+      "gates": [
+        "VIS-COPY-001",
+        "VIS-TOKEN-002",
+        "VIS-LAYOUT-001",
+        "VIS-LAYOUT-002",
+        "VIS-LAYOUT-003",
+        "VIS-HIERARCHY-001",
+        "VIS-RESPONSIVE-001",
+        "VIS-EVIDENCE-001",
+        "VIS-CATALOG-001"
+      ]
+    },
+    {
       "id": "admin",
       "route": "/admin",
       "selector": "#admin.admin-shell",

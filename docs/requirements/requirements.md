@@ -49,8 +49,20 @@ GitHub issue #81 establishes module-owned game descriptors as the single catalog
 | CORE-021 | Module-owned catalog metadata drives backend, frontend, API metadata, and validator discovery. | PASS | API-CATALOG-001 | BR-CATALOG-DISCOVERY-001 |
 | CORE-022 | Direct game links, reload, Back, and Forward restore canonical game routes. | PASS |  | BR-ROUTE-RESTORE-001 |
 | UX-010 | Lobby search and catalog-derived categories remain usable for the 20-game target. | PASS |  | BR-CATALOG-NAV-001 |
-| SESSION-005 | One shared authenticated-player resolver binds every game request before dispatch. | PASS | API-CATALOG-001, API-PRIVATE-SESSION-001 |  |
+| SESSION-005 | One shared authenticated-player resolver binds every game request before dispatch. | PASS | API-CATALOG-001, API-PRIVATE-SESSION-001, API-MHVP-001 |  |
 | TEST-042 | Validators, browser discovery, and long suites discover games and drivers from catalog metadata. | PASS | API-CATALOG-001, LONG-SUITE-100 | BR-CATALOG-DISCOVERY-001 |
+
+## Multi-Hand Video Poker integration addendum
+
+GitHub issue #77 integrates the isolated issue #94 game slice first in the approved expansion sequence. The game keeps its module-owned implementation while the shared lane supplies canonical version registration, catalog and contract traceability, requirements, test discovery, and EN/RU visual evidence.
+
+| ID | Requirement | Status | API tests | Browser tests |
+|---|---|---|---|---|
+| MHVP-001 | One common Jacks-or-Better hand supports 3, 5, and 10 independently completed hands with shared holds. | PASS | API-MHVP-001 | BR-MHVP-001 |
+| MHVP-002 | Session-bound state, holds, recent rounds, and the canonical route remain private and reload-safe. | PASS | API-MHVP-001, API-WALLET-RESTART-001 | BR-MHVP-001 |
+| MHVP-003 | Aggregate wagers and payouts use ledger-only, retry-safe settlement. | PASS | API-MHVP-001 |  |
+| MHVP-004 | Complete EN/RU copy remains usable across required desktop, tablet, and mobile viewports. | PASS |  | BR-MHVP-001 |
+| MHVP-005 | Catalog, contract, browser, long-suite, requirement, module, version, and visual evidence are traceable. | PASS | API-CATALOG-001, LONG-SUITE-100 | BR-CATALOG-DISCOVERY-001, BR-MHVP-001 |
 
 ### Superseded wording
 
