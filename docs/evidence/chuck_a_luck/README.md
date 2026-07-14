@@ -4,13 +4,13 @@ Evidence class: `after_pass` for the isolated `chuck_a_luck` game surface.
 
 Source branch: `codex/game-chuck-a-luck`
 
-Tested source commit: `7e6ba3f744e4ab85363e687d330e0c010d7dbd9e`
+Tested source commit: `66b36dc78d419b04a3b9783e2ee59f114454a74e`
 
 Focused command: `python tests/games/chuck_a_luck/browser_check.py --evidence-dir docs/evidence/chuck_a_luck`
 
-Result: PASS on dedicated loopback port `53736`, process `86040`; listener closed and shared port `8765` untouched. The harness forced the disposable JSON provider and redirected all player, ledger, game-state, authentication, and log writes to a temporary directory outside the worktree.
+Result: PASS on dedicated loopback port `65261`, process `64596`; listener and process closed. User listeners `8765` / PID `66932` and `8877` / PID `78548` remained unchanged. The harness forced the disposable JSON provider and redirected all player, ledger, game-state, authentication, and log writes to a temporary directory outside the worktree.
 
-The pass used the real authenticated app, shared session-bound router, production game service, and shared ledger. Its game-local server shim added only the proposed `1.0.0` revision in memory and held the first fully committed response until rolling-state assertions completed. It did not edit the aggregate manifest or shared runtime files.
+The pass used the real authenticated app, shared session-bound router, production game service, and shared ledger. Its game-local server shim loaded the issue-owned descriptor through the production catalog loader, added only the proposed `1.0.0` revision in memory, and held the first fully committed response until rolling-state assertions completed. It did not edit the aggregate manifest or shared runtime files.
 
 ## Evidence set
 
