@@ -1,0 +1,319 @@
+# Declare one additive frozen-v1 contract owned entirely by issue #87.
+openapi: 3.0.3
+info:
+  title: Virtual Casino Scratch Cards API
+  version: v1
+  description: >-
+    Additive issue #87 contract for session-bound, reload-safe three-by-three Scratch Cards.
+    The authenticated router owns player identity. Purchases and scratches require stable action
+    identifiers so retries recover one card, one wager debit, and at most one payout credit.
+tags:
+  - name: Scratch Cards
+    description: Masked player-owned cards with partial reveal persistence and ledger-only settlement.
+
+# Publish only new paths so existing v1 clients remain backward compatible.
+paths:
+  /api/v1/games/scratch-cards/state:
+    get:
+      tags: [Scratch Cards]
+      operationId: scratchCardsState
+      summary: Read the authenticated player's masked reload-safe state
+      responses:
+        '200':
+          description: Current masked card, bounded settled history, wager menu, and rules metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StateEnvelope'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/v1/games/scratch-cards/cards:
+    post:
+      tags: [Scratch Cards]
+      operationId: scratchCardsStartCard
+      summary: Start or recover one ledger-backed private card
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartCardRequest'
+      responses:
+        '200':
+          description: New or replayed funded card with every unrevealed prize masked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionEnvelope'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/v1/games/scratch-cards/cards/{card_id}/scratches:
+    post:
+      tags: [Scratch Cards]
+      operationId: scratchCardsRevealPositions
+      summary: Reveal one or more cells and settle after all nine are visible
+      parameters:
+        - $ref: '#/components/parameters/CardId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScratchRequest'
+      responses:
+        '200':
+          description: Persisted partial reveal or replay-safe terminal settlement
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionEnvelope'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+
+# Define reusable path parameters, envelopes, and public masked-state schemas.
+components:
+  parameters:
+    CardId:
+      name: card_id
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: '^scr_[a-f0-9]{24}$'
+  responses:
+    ErrorResponse:
+      description: Standard API error envelope
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+  schemas:
+    StartCardRequest:
+      type: object
+      additionalProperties: false
+      required: [client_request_id, wager]
+      properties:
+        client_request_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '^\S{1,128}$'
+          description: Stable client action identity; conflicting reuse fails with a conflict error.
+        wager:
+          type: number
+          enum: [1, 2, 5, 10]
+          description: Play-token wager debited once through the shared ledger.
+        player_id:
+          type: string
+          description: Compatibility input overridden by the authenticated session resolver.
+    ScratchRequest:
+      type: object
+      additionalProperties: false
+      required: [action_id, positions]
+      properties:
+        action_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '^\S{1,128}$'
+          description: Stable identity for this exact card and normalized position set.
+        positions:
+          type: array
+          minItems: 1
+          maxItems: 9
+          uniqueItems: true
+          items:
+            type: integer
+            minimum: 0
+            maximum: 8
+        player_id:
+          type: string
+          description: Compatibility input overridden by the authenticated session resolver.
+    ScratchCell:
+      type: object
+      additionalProperties: false
+      required: [position, revealed]
+      properties:
+        position:
+          type: integer
+          minimum: 0
+          maximum: 8
+        revealed:
+          type: boolean
+        prize:
+          type: number
+          minimum: 0
+          description: Present only after this exact cell was revealed.
+    ScratchCard:
+      type: object
+      additionalProperties: false
+      required: [card_id, status, wager, cells, revealed_count, cell_count, purchased_at]
+      properties:
+        card_id:
+          type: string
+          pattern: '^scr_[a-f0-9]{24}$'
+        status:
+          type: string
+          enum: [purchasing, ready, scratching, settling, settled]
+        wager:
+          type: number
+          enum: [1, 2, 5, 10]
+        cells:
+          type: array
+          minItems: 9
+          maxItems: 9
+          items:
+            $ref: '#/components/schemas/ScratchCell'
+        revealed_count:
+          type: integer
+          minimum: 0
+          maximum: 9
+        cell_count:
+          type: integer
+          enum: [9]
+        purchased_at:
+          type: string
+          format: date-time
+        pending_client_request_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '^\S{1,128}$'
+          description: Present only while resuming a crash-interrupted purchase.
+        pending_action_id:
+          type: string
+          description: Present only while resuming a crash-interrupted final reveal.
+        pending_positions:
+          type: array
+          uniqueItems: true
+          items:
+            type: integer
+            minimum: 0
+            maximum: 8
+        payout:
+          type: number
+          minimum: 0
+          description: Present only on settled cards.
+        net:
+          type: number
+          description: Settled payout minus wager in play tokens.
+        outcome:
+          type: string
+          enum: [win, no_win]
+          description: Present only on settled cards.
+        settled_at:
+          type: string
+          format: date-time
+    ScratchState:
+      type: object
+      additionalProperties: false
+      required: [game, current_card, recent_cards, wager_options, rules]
+      properties:
+        game:
+          type: string
+          enum: [scratch_cards]
+        current_card:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/ScratchCard'
+        recent_cards:
+          type: array
+          maxItems: 20
+          items:
+            $ref: '#/components/schemas/ScratchCard'
+        wager_options:
+          type: array
+          items:
+            type: number
+            enum: [1, 2, 5, 10]
+        rules:
+          type: object
+          additionalProperties: false
+          required: [cell_count, match_count]
+          properties:
+            cell_count:
+              type: integer
+              enum: [9]
+            match_count:
+              type: integer
+              enum: [3]
+    LedgerEvent:
+      type: object
+      nullable: true
+      additionalProperties: false
+      required: [ledger_id, ts, amount, transaction_type, game, round_id]
+      properties:
+        ledger_id:
+          type: string
+        ts:
+          type: string
+          format: date-time
+        amount:
+          type: number
+        transaction_type:
+          type: string
+          enum: [SCRATCH_CARD_WAGER_DEBIT, SCRATCH_CARD_PAYOUT_CREDIT]
+        game:
+          type: string
+          enum: [scratch_cards]
+        round_id:
+          type: string
+          pattern: '^scr_[a-f0-9]{24}$'
+    LedgerEvidence:
+      type: object
+      required: [wager, payout]
+      properties:
+        wager:
+          $ref: '#/components/schemas/LedgerEvent'
+        payout:
+          $ref: '#/components/schemas/LedgerEvent'
+    ActionData:
+      type: object
+      required: [card, state, replayed, ledger]
+      properties:
+        card:
+          $ref: '#/components/schemas/ScratchCard'
+        state:
+          $ref: '#/components/schemas/ScratchState'
+        replayed:
+          type: boolean
+        ledger:
+          $ref: '#/components/schemas/LedgerEvidence'
+    StateEnvelope:
+      type: object
+      additionalProperties: false
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/ScratchState'
+    ActionEnvelope:
+      type: object
+      additionalProperties: false
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/ActionData'
+    ErrorEnvelope:
+      type: object
+      additionalProperties: false
+      required: [ok, error]
+      properties:
+        ok:
+          type: boolean
+          enum: [false]
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
