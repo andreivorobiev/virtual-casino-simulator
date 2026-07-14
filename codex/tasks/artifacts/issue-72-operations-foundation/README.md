@@ -10,7 +10,7 @@ Shared integration owner: [#77](https://github.com/andreivorobiev/virtual-casino
 
 ## Delivered isolated slice
 
-- Operations module revision `1.0.0` with no imports from game modules.
+- Operations module proposal revision `1.0.0` with no imports from game modules.
 - Storage-free liveness with the canonical #104 packaged application version.
 - Optional 7-to-40-character hexadecimal build SHA from the Operations-owned `CASINO_BUILD_SHA` deployment input; invalid, absent, or failing sources become `null`.
 - JSON readiness through read-only validation of the bootstrapped primary document plus root read/write access, without a probe marker or returned path/content.
@@ -55,7 +55,7 @@ The foundation intentionally does not edit these shared files:
 | --- | --- |
 | `casino/app.py` | Import `register` as `register_operations` and call `register_operations(router)` inside `build_router()` beside the other module registrars. |
 | `casino/core/auth.py` | Add exactly the three Operations probe paths to `PUBLIC_API_PATHS`; do not make any Admin route public. |
-| `modules/module-manifest.json` | Add `operations: 1.0.0` and recompute every directly affected shared module revision from the integration base. |
+| `modules/module-manifest.json` | Promote `operations.module.proposal.json` to `modules/operations.json`, add `operations: 1.0.0`, and recompute every directly affected shared module revision from the integration base. |
 | `docs/requirements/requirements.json` | Allocate permanent Operations and test IDs, evidence mappings, statuses, and issue notes. |
 | `docs/requirements/requirements_generated.md` | Regenerate with `scripts/generate_docs.py`; never hand-edit. |
 | `contracts/compatibility/module-api-matrix.json` | Register `operations.v1.yaml` under Operations and contracts ownership as required by current policy. |
@@ -95,13 +95,13 @@ The UI must not display internal field names, resource keys, provider error text
 ## Version and release impact
 
 - Packaged application release impact: None; remains the canonical top-level release unless formal release work is separately authorized.
-- Isolated Operations module: `1.0.0`.
+- Isolated Operations module proposal: `1.0.0`.
 - Expected shared integration bumps: recompute on the accepted #77 base rather than applying stale reservations from this packet.
 - Formal release notes/artifact: not in this worker scope.
 
 ## Current intentional blockers
 
-- `modules/operations.json` is absent from the forbidden shared aggregate manifest, so `scripts/validate_versions.py` must fail only with `module manifests missing from aggregate manifest: operations` on this isolated branch.
+- The preserved `operations.module.proposal.json` remains outside central module discovery, so `scripts/validate_versions.py` passes without requiring a forbidden aggregate-manifest edit. #77 must promote the proposal and register `operations: 1.0.0` together during serialized integration.
 - The routes are not reachable through the real application until #77 registers them.
 - The paths are not public until #77 updates the shared auth allowlist.
 - Permanent requirements, contract digest/matrix discovery, central API/browser tests, Admin UI/i18n, visual evidence, and copied-deployment smoke remain unimplemented here.

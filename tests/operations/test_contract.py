@@ -13,8 +13,8 @@ ROOT = Path(__file__).resolve().parents[2]
 OPENAPI_PATH = ROOT / "contracts" / "openapi" / "operations.v1.yaml"
 # Point to the isolated compatibility decision record.
 COMPATIBILITY_PATH = ROOT / "contracts" / "compatibility" / "operations-foundation.json"
-# Point to the independently owned Operations module descriptor.
-MODULE_PATH = ROOT / "modules" / "operations.json"
+# Point to the independently owned Operations module proposal outside shared discovery.
+MODULE_PROPOSAL_PATH = ROOT / "codex" / "tasks" / "artifacts" / "issue-72-operations-foundation" / "operations.module.proposal.json"
 
 
 # Verify artifacts that central validators cannot discover until #77 integrates them.
@@ -67,16 +67,18 @@ class OperationsContractTests(unittest.TestCase):
         # Verify raw exception diagnostics are explicitly forbidden.
         self.assertIn("raw exception text or class", record["forbidden_diagnostics"])
 
-    # Confirm Operations starts at 1.0.0 and owns only its isolated backend package and contracts.
-    def test_module_descriptor_is_operations_owned(self):
-        # Parse the independently versioned module descriptor.
-        module = json.loads(MODULE_PATH.read_text(encoding="utf-8"))
+    # Confirm the serialized Operations proposal remains at 1.0.0 outside shared module discovery.
+    def test_module_proposal_is_preserved_outside_shared_registry(self):
+        # Parse the independently owned module proposal from the issue artifact packet.
+        module = json.loads(MODULE_PROPOSAL_PATH.read_text(encoding="utf-8"))
         # Verify module identity, initial revision, and future permanent requirement prefix.
         self.assertEqual(("operations", "1.0.0", ["OPS"]), (module["module"], module["version"], module["requirements_prefixes"]))
         # Verify the descriptor never claims shared router, shell, or manifest paths.
         self.assertEqual(["casino/operations/"], module["paths"])
         # Verify the new OpenAPI file is the module's declared public contract.
         self.assertEqual(["contracts/openapi/operations.v1.yaml"], module["contracts"])
+        # Verify #77 remains the owner that will promote the proposal into central module discovery.
+        self.assertFalse((ROOT / "modules" / "operations.json").exists())
 
 
 # Run this focused suite when invoked directly by a worker.
