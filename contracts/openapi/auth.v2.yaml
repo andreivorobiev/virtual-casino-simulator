@@ -6,6 +6,31 @@ info:
 servers:
   - url: /api/v2
 paths:
+  /admin/oauth/providers:
+    get:
+      summary: Inspect disabled OAuth provider configuration through the Admin role gate.
+      operationId: auth_v2_admin_oauth_providers
+      security:
+        - cookieSession: []
+      responses:
+        '200':
+          description: Standard API envelope carrying secret-safe provider diagnostics.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OAuthProviderDiagnosticsEnvelope'
+        '401':
+          description: Standard API envelope for an unauthenticated request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          description: Standard API envelope for an authenticated non-Admin request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
   /auth/login:
     post:
       summary: Create an authenticated private beta session.
@@ -164,6 +189,55 @@ components:
           $ref: '#/components/schemas/SessionSummary'
         terms:
           $ref: '#/components/schemas/TermsStatus'
+    OAuthProviderDiagnostic:
+      type: object
+      required: [provider, flow, status, configuration_ready, runtime_available, enabled_requested, client_id_configured, client_secret_configured, callback_url, missing_variables, problems]
+      additionalProperties: false
+      properties:
+        provider:
+          type: string
+          enum: [local, google, facebook]
+        flow:
+          type: string
+          enum: [password, oauth2, oauth2_oidc]
+        status:
+          type: string
+          enum: [ready, disabled, misconfigured]
+        configuration_ready:
+          type: boolean
+          description: Structural configuration readiness only; this never implies runtime availability.
+        runtime_available:
+          type: boolean
+          description: False for Google and Facebook in the disabled foundation.
+        enabled_requested:
+          type: boolean
+        client_id_configured:
+          type: boolean
+        client_secret_configured:
+          type: boolean
+        callback_url:
+          type: string
+          format: uri
+          nullable: true
+        missing_variables:
+          type: array
+          items:
+            type: string
+        problems:
+          type: array
+          items:
+            type: string
+    OAuthProviderDiagnosticsData:
+      type: object
+      required: [providers]
+      additionalProperties: false
+      properties:
+        providers:
+          type: array
+          minItems: 3
+          maxItems: 3
+          items:
+            $ref: '#/components/schemas/OAuthProviderDiagnostic'
     UserSummary:
       type: object
       required: [user_id, username, roles, active]
@@ -255,6 +329,16 @@ components:
           enum: [true]
         data:
           $ref: '#/components/schemas/TermsStatus'
+    OAuthProviderDiagnosticsEnvelope:
+      type: object
+      required: [ok, data]
+      additionalProperties: false
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/OAuthProviderDiagnosticsData'
     EmptyEnvelope:
       type: object
       required: [ok, data]

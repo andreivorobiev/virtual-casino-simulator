@@ -40,6 +40,8 @@ from casino.games.registry import catalog_summary, list_games, register_games
 from casino.admin import register as register_admin
 # Import required dependency so this module can use its public functions or constants.
 from casino.bots.api import register as register_bots
+# Import the disabled OAuth registrar for Admin-only secret-safe diagnostics.
+from casino.core.oauth.api import register as register_oauth
 # Import the approved Operations registrar for liveness, readiness, and Admin telemetry.
 from casino.operations import register as register_operations
 # Import required dependency so this module can use its public functions or constants.
@@ -330,6 +332,8 @@ def build_router() -> Router:
     register_bots(router)
     # Register every game API from the canonical per-module catalog descriptors.
     register_games(router)
+    # Register only the Admin diagnostic OAuth route; provider action routes remain absent.
+    register_oauth(router)
     # Register Operations probes after game routes and before the Admin API surface.
     register_operations(router)
     # Execute this statement as part of the module's documented control flow.

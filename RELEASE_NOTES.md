@@ -1,5 +1,11 @@
 # Virtual Casino Simulator v9.1.0 Release Notes
 
+## Post-release module addendum: disabled OAuth provider foundation
+
+- Adds provider-neutral local, Google, and Facebook abstractions with mocked claim, callback-proof, and canonical identity-link validation while registering no provider authorization, link, callback, exchange, SDK, or live transport route.
+- Adds an Admin-only secret-safe diagnostic route plus EN/RU native-disabled Google/Facebook login controls; local password login and Operations readiness remain unchanged.
+- Adds permanent `OAUTH-001` through `OAUTH-006` and `TEST-045` traceability with centrally discovered mocked, API, browser, contract, responsive visual, and protected-listener cleanup evidence for GitHub issue #70.
+
 ## Post-release module addendum: Operations foundation
 
 - Adds minimal anonymous `/healthz`, authenticated `/readyz`, and Admin-only Operations diagnostics with bounded storage probes and strict secret-safe payload validation.
