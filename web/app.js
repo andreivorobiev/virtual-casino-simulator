@@ -16,6 +16,8 @@ const loadedGames = new Map();
 let active = null;
 // Cache the latest casino state so lobby and status rail values render without extra calls.
 let latestState = null;
+// Preserve the latest connection result so locale changes never invent a new status.
+let shellConnected = false;
 // Cache the authenticated current-user payload so wallet and profile UI stay consistent.
 let currentSession = null;
 // Track the active game-rail observer so navigation never leaves duplicate mutation listeners.
@@ -148,11 +150,25 @@ function updateCurrentUserShell() {
   // Read the best available display name for the authenticated user.
   const name = currentSession?.user?.display_name || currentSession?.user?.username || currentSession?.user?.email || 'Player';
   // Label the logout control with the current user for accessibility.
-  if (logoutButton) logoutButton.setAttribute('aria-label', `Logout ${name}`);
+  if (logoutButton) logoutButton.setAttribute('aria-label', t('auth.logout', { name }, 'shell'));
   // Read the language selector in the persistent topbar.
   const localeSelect = document.getElementById('shell-locale-select');
   // Wire the persistent locale selector without remounting games.
   wireLocaleSelect(localeSelect, () => { renderNav(); if (active === 'lobby') navigate('lobby'); });
+  // Localize the persistent brand and wallet labels that remain mounted across routes.
+  setStatusText('shell-brand-title', t('brand.title', {}, 'shell'));
+  // Keep the compact subtitle aligned with the selected shell locale.
+  setStatusText('shell-brand-subtitle', t('brand.subtitle', {}, 'shell'));
+  // Localize the visible wallet balance caption.
+  setStatusText('balance-label', t('wallet.balanceLabel', {}, 'shell'));
+  // Localize the wallet popover field label.
+  setStatusText('add-token-label', t('wallet.addTokens', {}, 'shell'));
+  // Localize the wallet submit action.
+  setStatusText('add-token-btn', t('wallet.add', {}, 'shell'));
+  // Localize the wallet menu's accessible name.
+  document.getElementById('wallet-menu-summary')?.setAttribute('aria-label', t('wallet.addTokens', {}, 'shell'));
+  // Localize the language selector's accessible name.
+  localeSelect?.setAttribute('aria-label', t('language.aria', {}, 'shell'));
   // Return the rendered token amount for test and toast flows.
   return amount;
 }
@@ -299,6 +315,18 @@ async function loadGame(desc) {
   }
 }
 
+// Center the active catalog route inside the current navigation viewport.
+function revealActiveNav() {
+  // Read the navigation outlet that index.html reserves for route buttons.
+  const nav = document.getElementById('main-nav');
+  // Stop when authentication has not yet exposed the shared navigation.
+  if (!nav) return;
+  // Read the active catalog route after the navigation layout is measurable.
+  const activeItem = nav.querySelector('.nav-item.active');
+  // Center a late-catalog active route inside desktop and mobile horizontal navigation.
+  if (activeItem) nav.scrollLeft = Math.max(0, activeItem.offsetLeft - ((nav.clientWidth - activeItem.offsetWidth) / 2));
+}
+
 // Render the premium top navigation from the route registry.
 function renderNav() {
   // Read the navigation outlet that index.html reserves for route buttons.
@@ -311,6 +339,8 @@ function renderNav() {
   items.push(`<button data-admin="true" class="nav-item admin" data-testid="nav-admin">${safe(t('nav.admin', {}, 'shell'))}</button>`);
   // Replace the nav contents atomically so active state cannot drift.
   nav.innerHTML = items.join('');
+  // Reveal the active route immediately after each catalog or locale render.
+  revealActiveNav();
   // Wire every app route button to the shared navigate function.
   nav.querySelectorAll('[data-route]').forEach(button => { button.onclick = () => navigate(button.dataset.route); });
   // Wire the Admin button to the existing dedicated Admin page.
@@ -404,16 +434,30 @@ function setStatusText(id, text) {
 
 // Keep the bottom status rail synchronized with the latest API state.
 function updateShellStatus(state, connected) {
+  // Retain the latest actual connection result for locale-only rerenders.
+  shellConnected = connected;
   // Resolve the app version string from API state or fallback text.
-  const version = state?.version ? `v${state.version}` : 'Unavailable';
+  const version = state?.version ? `v${state.version}` : t('status.unavailable', {}, 'shell');
   // Resolve player count text from the state payload.
-  const players = Array.isArray(state?.players) ? `${state.players.length} online` : '0 online';
+  const players = t('status.online', { count: Array.isArray(state?.players) ? state.players.length : 0 }, 'shell');
+  // Localize the persistent safety rail labels and details.
+  setStatusText('status-safe-code', t('status.safeCode', {}, 'shell'));
+  // Localize the play-token safety statement.
+  setStatusText('status-safe-detail', t('status.safeDetail', {}, 'shell'));
+  // Localize the ledger status label.
+  setStatusText('status-ledger-code', t('status.ledgerCode', {}, 'shell'));
+  // Localize the ledger-backed outcome statement.
+  setStatusText('status-ledger-detail', t('status.ledgerDetail', {}, 'shell'));
+  // Localize the application version label.
+  setStatusText('status-app-code', t('status.appCode', {}, 'shell'));
+  // Localize the player-count label.
+  setStatusText('status-players-code', t('status.playersCode', {}, 'shell'));
   // Write the version into the persistent status rail.
   setStatusText('status-version', version);
   // Write the player count into the persistent status rail.
   setStatusText('status-players', players);
   // Write the connection state into the persistent status rail.
-  setStatusText('connection-status', connected ? 'Connected' : 'Disconnected');
+  setStatusText('connection-status', t(connected ? 'status.connected' : 'status.disconnected', {}, 'shell'));
   // Find the visual connection indicator for online/offline styling.
   const dot = document.getElementById('connection-dot');
   // Toggle the offline class without assuming the status rail is present.
@@ -517,8 +561,10 @@ export async function navigate(route, options = {}) {
 async function init() {
   // Initialize i18n before any auth or shell markup renders.
   await initI18n({ domains: ['shell'] });
+  // Recalculate active-route visibility whenever responsive navigation layout changes.
+  window.addEventListener('resize', revealActiveNav);
   // Repaint persistent shell text when the locale changes.
-  onLocaleChange(() => { if (currentSession && !currentSession.terms?.required) { gameDescriptors = (latestState?.games || []).map(game => descriptorFromCatalog(game)); renderNav(); updateCurrentUserShell(); if (active === 'lobby') navigate('lobby', { history: 'none' }); } });
+  onLocaleChange(() => { if (currentSession && !currentSession.terms?.required) { gameDescriptors = (latestState?.games || []).map(game => descriptorFromCatalog(game)); renderNav(); updateCurrentUserShell(); updateShellStatus(latestState, shellConnected); if (active === 'lobby') navigate('lobby', { history: 'none' }); } });
   // Restore game routes through browser Back and Forward without remounting stale history entries.
   window.addEventListener('popstate', () => { if (currentSession && !currentSession.terms?.required) navigate(routeFromLocation(), { history: 'none' }); });
   // Read the add-token button from the wallet popover.

@@ -1,0 +1,83 @@
+{
+  "module": "dragon_tiger",
+  "version": "1.0.0",
+  "paths": [
+    "casino/games/dragon_tiger/",
+    "web/games/dragon_tiger.js",
+    "web/i18n/en-US/games/dragon_tiger.json",
+    "web/i18n/ru-RU/games/dragon_tiger.json"
+  ],
+  "requirements_prefixes": [
+    "DT"
+  ],
+  "contracts": [
+    "contracts/openapi/dragon_tiger.v1.yaml"
+  ],
+  "game": {
+    "id": "dragon_tiger",
+    "sort_order": 100,
+    "route": "/games/dragon_tiger",
+    "label": "Dragon Tiger",
+    "category": "table",
+    "categories": [
+      "table",
+      "cards",
+      "instant"
+    ],
+    "backend": {
+      "register": "casino.games.dragon_tiger.api:register"
+    },
+    "frontend": {
+      "module": "./games/dragon_tiger.js",
+      "export": "DragonTigerGame",
+      "ready_testid": "dragon-tiger-table",
+      "i18n_domain": "games/dragon_tiger",
+      "i18n_probe": "controls.deal"
+    },
+    "tests": {
+      "long_driver": "tests.game_drivers.dragon_tiger:play"
+    },
+    "translations": {
+      "ru-RU": {
+        "label": "Дракон и Тигр",
+        "kicker": "Быстрая карточная игра",
+        "description": "Одна карта Дракону, одна Тигру: старшая карта выигрывает, а при ничьей возвращается половина основной ставки.",
+        "tags": [
+          "Карты",
+          "Быстрая игра",
+          "Журнал ставок"
+        ]
+      }
+    },
+    "lobby": {
+      "featured": false,
+      "wide": false,
+      "art_class": "dragon-tiger-art",
+      "symbol": "DT",
+      "kicker": "Instant table",
+      "description": "One card for Dragon, one for Tiger, with a persistent eight-deck shoe and ledger-backed settlement.",
+      "tags": [
+        "Cards",
+        "Quick play",
+        "Ledger-backed"
+      ]
+    }
+  },
+  "depends_on": [
+    "core",
+    "ledger",
+    "players"
+  ],
+  "may_not_depend_on": [
+    "roulette",
+    "slots",
+    "blackjack",
+    "baccarat",
+    "keno",
+    "bingo",
+    "multi_hand_video_poker",
+    "casino_war",
+    "big_six_wheel",
+    "red_dog"
+  ]
+}

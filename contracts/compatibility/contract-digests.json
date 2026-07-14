@@ -10,6 +10,7 @@
   "contracts/openapi/big_six_wheel.v1.yaml": "ec31240b41fa5e6d18708a9b5cdeeeab59a123e594cb15e595cc2612d7e906db",
   "contracts/openapi/casino_war.v1.yaml": "a4f5c8e25148cb8803e3b08574997d4b28f357694c763e8c207658d8012327e8",
   "contracts/openapi/casino.v1.yaml": "3f47a6f4a0274837aa0d3ddcc79b96b6640fc3c1a37dd84cc2b1ef10fbb1fd85",
+  "contracts/openapi/dragon_tiger.v1.yaml": "c520a70fe7c4235bec5456cceb8c286723cd9a9f81d21c7159e4542b7d082300",
   "contracts/openapi/keno.v1.yaml": "3d3af7c097f3e82a4082961724cf11797be9a948a38dcb3c1765db3086f54f2d",
   "contracts/openapi/ledger.v1.yaml": "806bc3c22155d2c99d7551c6f97cb9987e3f84297d6055e8dd1e45d341e31ab1",
   "contracts/openapi/multi_hand_video_poker.v1.yaml": "85b3ef2cd12b03d19b34564b2aeac4fbe0e8dcee7073ffb8350b058d5217983b",
