@@ -1,0 +1,297 @@
+openapi: 3.0.3
+# Describe the additive issue-83 surface without changing existing v1 operations.
+info:
+  title: Virtual Casino Dragon Tiger API
+  version: v1
+  description: >-
+    Additive session-bound Dragon Tiger contract for issue 83 and shared integration lane 77.
+    Optional caller player identifiers are compatibility inputs overridden by the authenticated session.
+# Group the two game-owned operations under one catalog-discoverable tag.
+tags:
+  - name: Dragon Tiger
+    description: Persistent-shoe card comparison with ledger-only, replay-safe settlement.
+# Define only game-owned routes; shared catalog and router acceptance remain with issue 77.
+paths:
+  # Expose reload-safe state for the authenticated player.
+  /api/v1/games/dragon-tiger/state:
+    get:
+      tags: [Dragon Tiger]
+      summary: Read the authenticated player's Dragon Tiger rules, shoe, and recent rounds
+      operationId: dragon_tiger_GET_api_v1_games_dragon_tiger_state
+      parameters:
+        - $ref: '#/components/parameters/CompatiblePlayerId'
+      responses:
+        '200':
+          $ref: '#/components/responses/DragonTigerStateSuccess'
+        '401':
+          $ref: '#/components/responses/ApiError'
+  # Execute one complete wager, deal, and settlement action or replay it safely.
+  /api/v1/games/dragon-tiger/rounds:
+    post:
+      tags: [Dragon Tiger]
+      summary: Execute or replay one atomic Dragon Tiger round
+      operationId: dragon_tiger_POST_api_v1_games_dragon_tiger_rounds
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DragonTigerRoundRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/DragonTigerRoundSuccess'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+# Keep request, response, rule, shoe, round, and envelope shapes local to this contract.
+components:
+  parameters:
+    # Preserve the optional v1 compatibility input while documenting session precedence.
+    CompatiblePlayerId:
+      name: player_id
+      in: query
+      required: false
+      description: Compatibility input overridden by the authenticated session resolver.
+      schema:
+        type: string
+  responses:
+    # Return the standard success envelope specialized for state reads.
+    DragonTigerStateSuccess:
+      description: Standard success envelope containing rules and reload-safe player state.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DragonTigerStateEnvelope'
+    # Return the standard success envelope specialized for atomic rounds and replays.
+    DragonTigerRoundSuccess:
+      description: Standard success envelope containing a settled or safely replayed round.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DragonTigerRoundEnvelope'
+    # Preserve the repository-wide failed response envelope.
+    ApiError:
+      description: Standard failed API envelope.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorEnvelope'
+  schemas:
+    # Require one caller-stable identity for exactly-once round retries.
+    ActionId:
+      type: string
+      minLength: 8
+      maxLength: 128
+      pattern: '^[A-Za-z0-9._:-]+$'
+      description: Client-generated idempotency key reused only for the same semantic round request.
+    # Constrain fake-money token wagers to shared ledger precision and bounded local play.
+    TokenAmount:
+      type: number
+      minimum: 0.01
+      maximum: 1000000
+      multipleOf: 0.01
+      description: Fake-money play-token wager with no cash or redeemable value.
+    # Accept the three game-local bets and optional overridden compatibility identity.
+    DragonTigerRoundRequest:
+      type: object
+      additionalProperties: false
+      required: [action_id, bet, wager]
+      properties:
+        action_id:
+          $ref: '#/components/schemas/ActionId'
+        bet:
+          type: string
+          enum: [dragon, tiger, tie]
+        wager:
+          $ref: '#/components/schemas/TokenAmount'
+        player_id:
+          type: string
+          description: Compatibility input overridden by the authenticated session resolver.
+    # Reuse compact ASCII cards from the shared card primitive and frontend renderer.
+    CardCode:
+      type: string
+      pattern: '^(10|[2-9JQKA])[CDHS]$'
+    # Describe one bet's fixed net odds and its stake return when the result is a tie.
+    BetRule:
+      type: object
+      additionalProperties: false
+      required: [net_odds, tie_return]
+      properties:
+        net_odds:
+          type: number
+          enum: [1, 11]
+        tie_return:
+          type: number
+          enum: [0, 0.5]
+    # Publish the immutable named profile used by this simulator slice.
+    DragonTigerRules:
+      type: object
+      additionalProperties: false
+      required: [profile, deck_count, burn_count, cut_cards, bets]
+      properties:
+        profile:
+          type: string
+          enum: [standard-8d]
+        deck_count:
+          type: integer
+          enum: [8]
+        burn_count:
+          type: integer
+          enum: [3]
+        cut_cards:
+          type: integer
+          enum: [52]
+        bets:
+          type: object
+          additionalProperties: false
+          required: [dragon, tiger, tie]
+          properties:
+            dragon:
+              $ref: '#/components/schemas/BetRule'
+            tiger:
+              $ref: '#/components/schemas/BetRule'
+            tie:
+              $ref: '#/components/schemas/BetRule'
+    # Expose shoe lifecycle metadata without leaking the undealt card order.
+    DragonTigerShoe:
+      type: object
+      additionalProperties: false
+      required: [shoe_number, cards_remaining, shuffle_pending]
+      properties:
+        shoe_number:
+          type: integer
+          minimum: 0
+        cards_remaining:
+          type: integer
+          minimum: 0
+          maximum: 416
+        shuffle_pending:
+          type: boolean
+    # Describe an immutable round returned identically on the original action and safe replay.
+    DragonTigerRound:
+      type: object
+      additionalProperties: false
+      required: [round_id, action_id, player_id, status, bet, wager, dragon_card, tiger_card, winner, outcome, total_return, net, settled_at, shoe_number]
+      properties:
+        round_id:
+          type: string
+        action_id:
+          $ref: '#/components/schemas/ActionId'
+        player_id:
+          type: string
+          description: Authenticated session-bound identity; caller values cannot override it.
+        status:
+          type: string
+          enum: [settled]
+        bet:
+          type: string
+          enum: [dragon, tiger, tie]
+        wager:
+          $ref: '#/components/schemas/TokenAmount'
+        dragon_card:
+          $ref: '#/components/schemas/CardCode'
+        tiger_card:
+          $ref: '#/components/schemas/CardCode'
+        winner:
+          type: string
+          enum: [dragon, tiger, tie]
+        outcome:
+          type: string
+          enum: [win, half_loss, loss]
+        total_return:
+          type: number
+          minimum: 0
+        net:
+          type: number
+        settled_at:
+          type: string
+          format: date-time
+        shoe_number:
+          type: integer
+          minimum: 0
+    # Store only reload-safe public shoe metadata and bounded settled history.
+    DragonTigerState:
+      type: object
+      additionalProperties: false
+      required: [shoe, recent_rounds]
+      properties:
+        shoe:
+          $ref: '#/components/schemas/DragonTigerShoe'
+        recent_rounds:
+          type: array
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/DragonTigerRound'
+    # Allow the shared player payload to evolve without freezing unrelated player fields here.
+    Player:
+      type: object
+      additionalProperties: true
+    # Return the common state keys for both state reads and settled actions.
+    DragonTigerStateData:
+      type: object
+      required: [game, state, player, rules]
+      properties:
+        game:
+          type: string
+          enum: [dragon_tiger]
+        state:
+          $ref: '#/components/schemas/DragonTigerState'
+        player:
+          $ref: '#/components/schemas/Player'
+        rules:
+          $ref: '#/components/schemas/DragonTigerRules'
+    # Add the settled round, committed ledger evidence, and replay marker to state data.
+    DragonTigerRoundData:
+      allOf:
+        - $ref: '#/components/schemas/DragonTigerStateData'
+        - type: object
+          required: [round, ledger, replayed]
+          properties:
+            round:
+              $ref: '#/components/schemas/DragonTigerRound'
+            ledger:
+              type: object
+              additionalProperties: true
+            replayed:
+              type: boolean
+    # Preserve the repository-wide success envelope for state reads.
+    DragonTigerStateEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/DragonTigerStateData'
+    # Preserve the repository-wide success envelope for settled actions.
+    DragonTigerRoundEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/DragonTigerRoundData'
+    # Preserve the repository-wide error envelope for validation, auth, and conflict failures.
+    ApiErrorEnvelope:
+      type: object
+      required: [ok, error]
+      properties:
+        ok:
+          type: boolean
+          enum: [false]
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
