@@ -1,0 +1,371 @@
+openapi: 3.0.3
+# Describe the additive issue #95 contract without modifying existing v1 operations.
+info:
+  title: Virtual Casino Texas Hold'em Practice Table API
+  version: v1
+  description: >-
+    Additive session-bound fixed-ante Texas Hold'em practice contract for issue #95.
+    The authenticated router owns human identity. Every command requires an action_id;
+    one opening escrow debit reserves the maximum hand exposure, and terminal refund and
+    payout credits are recovered by unique ledger action details.
+# Group the isolated endpoints under one discoverable game tag.
+tags:
+  - name: Texas Hold'em Practice Table
+    description: One authenticated human against three server-managed practice opponents.
+# Define only game-owned routes; catalog materialization remains with issue #77.
+paths:
+  /api/v1/games/texas-holdem-practice-table/state:
+    get:
+      tags: [Texas Hold'em Practice Table]
+      operationId: texasHoldemPracticeTableState
+      summary: Read the authenticated player's reload-safe private table state
+      parameters:
+        - $ref: '#/components/parameters/CompatiblePlayerId'
+      responses:
+        '200':
+          description: Current redacted hand, settled history, rules, and player snapshot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StateEnvelope'
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/v1/games/texas-holdem-practice-table/hands:
+    post:
+      tags: [Texas Hold'em Practice Table]
+      operationId: texasHoldemPracticeTableStartHand
+      summary: Start or replay one escrow-backed practice hand
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartHandRequest'
+      responses:
+        '200':
+          description: New or replayed preflop hand after exactly-once escrow reservation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HandEnvelope'
+        '409':
+          $ref: '#/components/responses/ErrorResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/v1/games/texas-holdem-practice-table/hands/{hand_id}/actions:
+    post:
+      tags: [Texas Hold'em Practice Table]
+      operationId: texasHoldemPracticeTableAct
+      summary: Apply or replay one human call or fold and immediate server responses
+      parameters:
+        - $ref: '#/components/parameters/HandId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HandActionRequest'
+      responses:
+        '200':
+          description: Updated street or fully ledger-reconciled settlement
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HandEnvelope'
+        '404':
+          $ref: '#/components/responses/ErrorResponse'
+        '409':
+          $ref: '#/components/responses/ErrorResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+# Define reusable parameters, responses, and strict request boundaries.
+components:
+  parameters:
+    CompatiblePlayerId:
+      name: player_id
+      in: query
+      required: false
+      description: Compatibility input overridden by the authenticated session resolver.
+      schema:
+        type: string
+    HandId:
+      name: hand_id
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: '^[A-Za-z0-9_-]+$'
+  responses:
+    ErrorResponse:
+      description: Standard API error envelope
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+  schemas:
+    ActionId:
+      type: string
+      minLength: 8
+      maxLength: 96
+      pattern: '^[A-Za-z0-9._:-]+$'
+    StartHandRequest:
+      type: object
+      additionalProperties: false
+      required: [action_id, base_wager]
+      properties:
+        action_id:
+          $ref: '#/components/schemas/ActionId'
+        base_wager:
+          type: number
+          minimum: 0.01
+          maximum: 20000
+          description: Fixed ante/call unit; five units are reserved in one opening escrow debit.
+        player_id:
+          type: string
+          description: Compatibility input overridden by the authenticated session resolver.
+    HandActionRequest:
+      type: object
+      additionalProperties: false
+      required: [action_id, action, expected_phase]
+      properties:
+        action_id:
+          $ref: '#/components/schemas/ActionId'
+        action:
+          type: string
+          enum: [call, fold]
+        expected_phase:
+          type: string
+          enum: [preflop, flop, turn, river]
+          description: Optimistic precondition preventing a stale surface from consuming a later street.
+        player_id:
+          type: string
+          description: Compatibility input overridden by the authenticated session resolver.
+    CardCode:
+      type: string
+      description: Compact visible card code or a redacted active-opponent marker.
+      pattern: '^(10|[2-9JQKA])[CDHS]$|^\?\?$'
+    Seat:
+      type: object
+      required: [seat_id, kind, label_key, hole_cards, stack, contributed, folded]
+      properties:
+        seat_id:
+          type: string
+        kind:
+          type: string
+          enum: [human, server_bot]
+        label_key:
+          type: string
+        hole_cards:
+          type: array
+          minItems: 2
+          maxItems: 2
+          items:
+            $ref: '#/components/schemas/CardCode'
+        stack:
+          type: number
+          minimum: 0
+        contributed:
+          type: number
+          minimum: 0
+        folded:
+          type: boolean
+    ActionLogItem:
+      type: object
+      required: [seat_id, action, phase, amount, automated, created_at]
+      properties:
+        seat_id:
+          type: string
+        action:
+          type: string
+          enum: [call, fold]
+        phase:
+          type: string
+          enum: [preflop, flop, turn, river]
+        amount:
+          type: number
+          minimum: 0
+        automated:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+    Settlement:
+      type: object
+      required: [required_actions, committed_actions, complete]
+      properties:
+        required_actions:
+          type: integer
+          minimum: 1
+        committed_actions:
+          type: integer
+          minimum: 0
+        complete:
+          type: boolean
+    HandResult:
+      type: object
+      required: [winner_seat_ids, payouts, hand_ranks, human_outcome, human_refund, human_payout, human_return, human_net]
+      properties:
+        winner_seat_ids:
+          type: array
+          minItems: 1
+          items:
+            type: string
+        payouts:
+          type: object
+          additionalProperties:
+            type: number
+        hand_ranks:
+          type: object
+          additionalProperties:
+            type: object
+        human_outcome:
+          type: string
+          enum: [win, split, loss, folded]
+        human_refund:
+          type: number
+          minimum: 0
+        human_payout:
+          type: number
+          minimum: 0
+        human_return:
+          type: number
+          minimum: 0
+        human_net:
+          type: number
+    Hand:
+      type: object
+      required: [hand_id, base_wager, reserved_amount, phase, community_cards, seats, pot, legal_actions, action_log, settlement, created_at]
+      properties:
+        hand_id:
+          type: string
+        base_wager:
+          type: number
+        reserved_amount:
+          type: number
+        phase:
+          type: string
+          enum: [preflop, flop, turn, river, ledger_pending, settled]
+        community_cards:
+          type: array
+          maxItems: 5
+          items:
+            $ref: '#/components/schemas/CardCode'
+        seats:
+          type: array
+          minItems: 4
+          maxItems: 4
+          items:
+            $ref: '#/components/schemas/Seat'
+        pot:
+          type: number
+          minimum: 0
+        current_actor:
+          nullable: true
+          type: string
+        legal_actions:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            enum: [call, fold]
+        action_log:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActionLogItem'
+        result:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/HandResult'
+        settlement:
+          $ref: '#/components/schemas/Settlement'
+        created_at:
+          type: string
+          format: date-time
+        completed_at:
+          nullable: true
+          type: string
+          format: date-time
+    GameState:
+      type: object
+      required: [active_hand, recent_hands, rules]
+      properties:
+        active_hand:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/Hand'
+        recent_hands:
+          type: array
+          items:
+            $ref: '#/components/schemas/Hand'
+        rules:
+          type: object
+          required: [opponent_count, reserved_bet_units, actions]
+          properties:
+            opponent_count:
+              type: integer
+              enum: [3]
+            reserved_bet_units:
+              type: integer
+              enum: [5]
+            actions:
+              type: array
+              items:
+                type: string
+                enum: [call, fold]
+    Player:
+      type: object
+      additionalProperties: true
+    StateData:
+      type: object
+      required: [game, state, player, replayed]
+      properties:
+        game:
+          type: string
+          enum: [texas_holdem_practice_table]
+        state:
+          $ref: '#/components/schemas/GameState'
+        hand:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/Hand'
+        player:
+          $ref: '#/components/schemas/Player'
+        replayed:
+          type: boolean
+    StateEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/StateData'
+    HandEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/StateData'
+    ErrorEnvelope:
+      type: object
+      required: [ok, error]
+      properties:
+        ok:
+          type: boolean
+          enum: [false]
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
