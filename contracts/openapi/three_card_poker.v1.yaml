@@ -1,0 +1,334 @@
+openapi: 3.0.3
+info:
+  title: Virtual Casino Three Card Poker API
+  version: v1
+  description: >-
+    Additive issue #93 contract for authenticated, reload-safe Three Card Poker.
+    The router owns player identity, request and action identities provide retry safety,
+    and dealer cards remain hidden until Play or Fold reaches terminal settlement.
+tags:
+  - name: Three Card Poker
+    description: Ledger-backed Ante, Play, and optional Pair Plus actions.
+paths:
+  /api/v1/games/three-card-poker/state:
+    get:
+      tags: [Three Card Poker]
+      operationId: threeCardPokerState
+      summary: Read the authenticated player's reload-safe table state
+      responses:
+        '200':
+          description: Current player-scoped state and selected rule profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StateEnvelope'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/v1/games/three-card-poker/rounds:
+    post:
+      tags: [Three Card Poker]
+      operationId: threeCardPokerStartRound
+      summary: Deal or safely replay one opening-wager round
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartRoundRequest'
+      responses:
+        '200':
+          description: Decision-phase round with committed opening-wager evidence
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionEnvelope'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/v1/games/three-card-poker/rounds/{round_id}/decisions:
+    post:
+      tags: [Three Card Poker]
+      operationId: threeCardPokerDecide
+      summary: Play or fold and safely replay the terminal settlement
+      parameters:
+        - $ref: '#/components/parameters/RoundId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DecisionRequest'
+      responses:
+        '200':
+          description: Settled round with optional Play debit and payout credit evidence
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionEnvelope'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+components:
+  parameters:
+    RoundId:
+      name: round_id
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: '^[A-Za-z0-9_-]+$'
+  responses:
+    ErrorResponse:
+      description: Standard API error envelope
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+  schemas:
+    StartRoundRequest:
+      type: object
+      additionalProperties: false
+      required: [request_id, ante]
+      properties:
+        request_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '^[A-Za-z0-9._:-]+$'
+        ante:
+          type: number
+          minimum: 0.01
+          maximum: 100000
+        pair_plus:
+          type: number
+          minimum: 0
+          maximum: 100000
+          description: Optional Pair Plus Paytable C wager.
+        player_id:
+          type: string
+          description: Compatibility input overridden by the authenticated session resolver.
+    DecisionRequest:
+      type: object
+      additionalProperties: false
+      required: [action_id, decision]
+      properties:
+        action_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '^[A-Za-z0-9._:-]+$'
+        decision:
+          type: string
+          enum: [play, fold]
+        player_id:
+          type: string
+          description: Compatibility input overridden by the authenticated session resolver.
+    CardCode:
+      type: string
+      pattern: '^(10|[2-9JQKA])[CDHS]$'
+    PublicCardCode:
+      type: string
+      pattern: '^(\?\?|(10|[2-9JQKA])[CDHS])$'
+      description: Dealer cards use ?? until the round reaches settlement.
+    HandRank:
+      type: object
+      nullable: true
+      additionalProperties: true
+      description: Game-owned three-card category and deterministic comparison details.
+    PayoutBreakdown:
+      type: object
+      additionalProperties: true
+      description: Auditable returned-stake and net-win components for each wager lane.
+    Round:
+      type: object
+      required:
+        - round_id
+        - player_id
+        - deal_request_id
+        - decision_action_id
+        - phase
+        - decision
+        - ante
+        - pair_plus
+        - total_initial_wager
+        - play_wager
+        - total_wager
+        - player_hand
+        - dealer_hand
+        - player_rank
+        - dealer_rank
+        - dealer_qualifies
+        - outcome
+        - total_payout
+        - payout_breakdown
+        - net
+        - created_at
+        - completed_at
+      properties:
+        round_id:
+          type: string
+        player_id:
+          type: string
+        deal_request_id:
+          type: string
+        decision_action_id:
+          type: string
+          nullable: true
+        phase:
+          type: string
+          enum: [decision, settled]
+        decision:
+          type: string
+          nullable: true
+          enum: [play, fold]
+        ante:
+          type: number
+          minimum: 0.01
+        pair_plus:
+          type: number
+          minimum: 0
+        total_initial_wager:
+          type: number
+          minimum: 0.01
+        play_wager:
+          type: number
+          minimum: 0
+        total_wager:
+          type: number
+          minimum: 0.01
+        player_hand:
+          type: array
+          minItems: 3
+          maxItems: 3
+          items:
+            $ref: '#/components/schemas/CardCode'
+        dealer_hand:
+          type: array
+          minItems: 3
+          maxItems: 3
+          items:
+            $ref: '#/components/schemas/PublicCardCode'
+        player_rank:
+          $ref: '#/components/schemas/HandRank'
+        dealer_rank:
+          $ref: '#/components/schemas/HandRank'
+        dealer_qualifies:
+          type: boolean
+          nullable: true
+        outcome:
+          type: string
+          nullable: true
+        total_payout:
+          type: number
+          minimum: 0
+        payout_breakdown:
+          $ref: '#/components/schemas/PayoutBreakdown'
+        net:
+          type: number
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+    GameState:
+      type: object
+      required: [active_round, recent_rounds]
+      properties:
+        active_round:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/Round'
+        recent_rounds:
+          type: array
+          items:
+            $ref: '#/components/schemas/Round'
+    Player:
+      type: object
+      additionalProperties: true
+      description: Read-only authenticated player summary.
+    LedgerEvent:
+      type: object
+      nullable: true
+      additionalProperties: true
+      description: Committed shared-ledger event or null when no movement applies.
+    Rules:
+      type: object
+      required: [dealer_qualifying_rank, play_wager_multiplier, ante_bonus, pair_plus]
+      properties:
+        dealer_qualifying_rank:
+          type: string
+          enum: [Q]
+        play_wager_multiplier:
+          type: integer
+          enum: [1]
+        ante_bonus:
+          type: object
+          additionalProperties:
+            type: integer
+        pair_plus:
+          type: object
+          additionalProperties:
+            type: integer
+    StateData:
+      type: object
+      required: [game, state, player, rules]
+      properties:
+        game:
+          type: string
+          enum: [three_card_poker]
+        state:
+          $ref: '#/components/schemas/GameState'
+        player:
+          $ref: '#/components/schemas/Player'
+        rules:
+          $ref: '#/components/schemas/Rules'
+    ActionData:
+      allOf:
+        - $ref: '#/components/schemas/StateData'
+        - type: object
+          required: [round, wager, settlement, replayed]
+          properties:
+            round:
+              $ref: '#/components/schemas/Round'
+            wager:
+              $ref: '#/components/schemas/LedgerEvent'
+            settlement:
+              $ref: '#/components/schemas/LedgerEvent'
+            replayed:
+              type: boolean
+    StateEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/StateData'
+    ActionEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/ActionData'
+    ErrorEnvelope:
+      type: object
+      required: [ok, error]
+      properties:
+        ok:
+          type: boolean
+          enum: [false]
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object

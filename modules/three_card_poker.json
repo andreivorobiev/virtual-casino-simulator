@@ -1,0 +1,77 @@
+{
+  "module": "three_card_poker",
+  "version": "1.0.0",
+  "paths": [
+    "casino/games/three_card_poker/",
+    "web/games/three_card_poker.js",
+    "web/i18n/en-US/games/three_card_poker.json",
+    "web/i18n/ru-RU/games/three_card_poker.json"
+  ],
+  "requirements_prefixes": [
+    "TCP"
+  ],
+  "contracts": [
+    "contracts/openapi/three_card_poker.v1.yaml"
+  ],
+  "game": {
+    "id": "three_card_poker",
+    "sort_order": 190,
+    "route": "/games/three_card_poker",
+    "label": "Three Card Poker",
+    "category": "table",
+    "categories": [
+      "table",
+      "cards",
+      "poker",
+      "strategy"
+    ],
+    "backend": {
+      "register": "casino.games.three_card_poker.api:register"
+    },
+    "frontend": {
+      "module": "./games/three_card_poker.js",
+      "export": "ThreeCardPokerGame",
+      "ready_testid": "three-card-poker",
+      "i18n_domain": "games/three_card_poker",
+      "i18n_probe": "controls.deal"
+    },
+    "tests": {
+      "long_driver": "tests.game_drivers.three_card_poker:play"
+    },
+    "translations": {
+      "ru-RU": {
+        "label": "Трёхкарточный покер",
+        "kicker": "Карточный стол",
+        "description": "Анте, решение играть или сбросить карты и дополнительная ставка «Пара плюс» с расчётом через журнал игровых токенов."
+      }
+    },
+    "lobby": {
+      "featured": false,
+      "wide": false,
+      "art_class": "three-card-poker-art",
+      "symbol": "3C",
+      "kicker": "Card table",
+      "description": "Ante-and-play Three Card Poker with an optional Pair Plus wager and ledger-backed settlement.",
+      "tags": [
+        "Cards",
+        "Poker",
+        "Strategy",
+        "Ledger-backed"
+      ]
+    }
+  },
+  "depends_on": [
+    "core",
+    "ledger",
+    "players"
+  ],
+  "may_not_depend_on": [
+    "roulette",
+    "slots",
+    "blackjack",
+    "baccarat",
+    "keno",
+    "bingo",
+    "multi_hand_video_poker"
+  ]
+}
