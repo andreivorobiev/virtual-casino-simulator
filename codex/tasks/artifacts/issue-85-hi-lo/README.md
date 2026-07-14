@@ -12,14 +12,14 @@ Base at implementation start: `0a1ebc2d7d034bb855ad968215bc61adcd18f4c9` (`origi
 - Independent deal and guess action IDs with semantic conflict rejection, process-local serialization, state-before-ledger recovery, and player/game/action ledger scans.
 - Ledger-only wager, payout, and refund movements with no direct balance mutation.
 - Timer-free EN/RU lazy frontend using the shared accessible card renderer with game-local localized card ARIA labels.
-- Additive OpenAPI v1 contract, module-owned catalog descriptor proposal, focused engine/API/frontend tests, and catalog long driver.
+- Additive OpenAPI v1 contract, artifact-scoped catalog descriptor proposal, focused engine/API/frontend tests, and catalog long driver.
 
 ## Shared integration intentionally blocked
 
 The following actions remain owned by issue #77 and are not performed here:
 
 - Allocate permanent Hi-Lo requirement IDs; current issue #85 and main have none.
-- Add `hi_lo: 1.0.0` to `modules/module-manifest.json`.
+- Promote `hi_lo.module.proposal.json` into `modules/hi_lo.json` and add `hi_lo: 1.0.0` to `modules/module-manifest.json` in the same integration change.
 - Add central requirement records and regenerate requirement documentation.
 - Add the contract compatibility matrix and digest records.
 - Add the `hi_lo` surface to `tests/visual/visual_matrix.json`.
@@ -40,4 +40,4 @@ The following actions remain owned by issue #77 and are not performed here:
 
 No screenshot from this isolated branch is claimed as `after_pass`. The shared aggregate manifest and visual row are intentionally absent, so issue #77 must first activate the real catalog route and then capture acceptance images from the exact integrated head.
 
-Focused command evidence and the expected aggregate-manifest blocker are recorded in `validation.md` after execution. No listener is required for this isolated plan.
+Focused command evidence, the descriptor-proposal relocation, and green catalog/version validation are recorded in `validation.md`. No listener is required for this isolated plan.

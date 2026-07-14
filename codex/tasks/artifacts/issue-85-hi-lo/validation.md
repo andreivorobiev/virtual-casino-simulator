@@ -2,7 +2,7 @@
 
 Branch: `codex/game-hi-lo`
 
-Validated base: `origin/main` at `0a1ebc2d7d034bb855ad968215bc61adcd18f4c9`
+Validated base: `origin/main` at `153f1e3676e5cec23eef39cbace885a021a03187`
 
 Validation date: 2026-07-14
 
@@ -16,36 +16,35 @@ Validation date: 2026-07-14
 | `python -m unittest tests.card_poker_primitives_tests` | PASS: 9 shared #96 card-primitive tests. |
 | `node tests/card_renderer_tests.js` | PASS: shared card-renderer checks. |
 | `python verify_rules.py` | PASS: 32 rule checks. |
-| `python scripts/validate_contracts.py` | PASS: 8 shared APIs and 8 catalog games. |
+| `python scripts/validate_contracts.py` | PASS: 8 shared APIs and 8 integrated catalog games. |
 | `python scripts/validate_module_boundaries.py` | PASS. |
-| `python scripts/validate_requirements.py` | PASS: 420 requirements. No permanent Hi-Lo IDs are claimed. |
-| `python scripts/check_comment_density.py` | PASS: 9456/9467 meaningful lines have nearby comments (99.9%); all 11 warnings are pre-existing premium-redesign prerender lines outside this issue. |
+| `python scripts/validate_requirements.py` | PASS: 425 requirements. No permanent Hi-Lo IDs are claimed. |
+| `python scripts/validate_versions.py` | PASS: packaged release 9.1.1 and 21 integrated module revisions. |
+| `python scripts/validate_game_catalog.py` | PASS: 8 current games and target 20. |
+| `python scripts/check_comment_density.py` | PASS: 10126/10137 meaningful lines have nearby comments (99.9%); all 11 warnings are pre-existing premium-redesign prerender lines outside this issue. |
 | Descriptor hook import (`casino.games.hi_lo.api:register`, `tests.game_drivers.hi_lo:play`) | PASS. |
-| UTF-8 JSON parse for the descriptor and both locale files | PASS. |
+| UTF-8 JSON parse for the descriptor proposal and both locale files | PASS. |
 | `git diff --check` | PASS. |
 
-## Expected shared-integration blockers
+## CI correction
 
-`python scripts/validate_versions.py` exits 1 with only:
-
-```text
-Version validation failed:
- - module manifests missing from aggregate manifest: hi_lo
- - configured games missing canonical module revisions: hi_lo
-```
-
-`python scripts/validate_game_catalog.py` exits 1 with only:
+The unchanged `hi_lo` version `1.0.0` proposal is stored at:
 
 ```text
-Game catalog validation failed:
- - catalog game hi_lo has no canonical module revision
+codex/tasks/artifacts/issue-85-hi-lo/hi_lo.module.proposal.json
 ```
 
-Both failures require the forbidden `modules/module-manifest.json` integration edit and belong to issue #77. The worker-owned backend/frontend hooks, descriptor, contract, locales, driver, and focused tests are present.
+Its SHA-256 before and after relocation is:
+
+```text
+F091E3F14476ECA7FEE284A4893D0BE453C0D12AD1078C5DB795DE2760AC42B3
+```
+
+`modules/hi_lo.json` is absent. The proposal therefore cannot be auto-installed before #77 promotes it alongside the canonical aggregate revision. This removes the prior `/api/v1/casino/reset` `KeyError: 'hi_lo'` failure without editing shared files.
 
 ## Deferred integrated checks
 
-The following commands are intentionally deferred until #77 activates the shared aggregate revision, catalog route, requirement records, compatibility records, and visual-matrix row:
+GitHub's current-game API, browser, and Long Suite workflows may run normally because the proposal is not part of integrated descriptor discovery. Hi-Lo-specific versions of the following acceptance checks remain deferred until #77 promotes the proposal with the shared aggregate revision, catalog route, requirement records, compatibility records, and visual-matrix row:
 
 - `python tests/run_tests.py --api`
 - `python tests/run_tests.py --browser`
