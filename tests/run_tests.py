@@ -380,19 +380,49 @@ def run_api_tests():
             bingo_b=api(base,'/api/v1/games/bingo/auto','POST',{'player_id':user_a['player_id'],'max_calls':75},auth_token=token_b)
             # Verify Bingo identity binding, refund, and terminal payout paths.
             assert bingo_a_session['player_id']==user_a['player_id'] and bingo_b_session['player_id']==user_b['player_id'] and bingo_a_refund['refunds'] and bingo_b['session']['status']=='won'
+            # Deal user A's three-hand video poker round while submitting user B's player id.
+            mhvp_a=api(base,'/api/v1/games/multi-hand-video-poker/rounds','POST',{'player_id':user_b['player_id'],'request_id':'wallet-mhvp-a','hand_count':3,'wager_per_hand':1},auth_token=token_a)
+            # Replay user A's exact deal request so the live backend must recover one round and one wager debit.
+            mhvp_a_replay=api(base,'/api/v1/games/multi-hand-video-poker/rounds','POST',{'player_id':user_b['player_id'],'request_id':'wallet-mhvp-a','hand_count':3,'wager_per_hand':1},auth_token=token_a)
+            # Deal user B's independent five-hand round while submitting user A's player id.
+            mhvp_b=api(base,'/api/v1/games/multi-hand-video-poker/rounds','POST',{'player_id':user_a['player_id'],'request_id':'wallet-mhvp-b','hand_count':5,'wager_per_hand':1},auth_token=token_b)
+            # Verify session binding, idempotent replay, mode selection, and player isolation before drawing.
+            assert mhvp_a['round']['player_id']==user_a['player_id'] and mhvp_b['round']['player_id']==user_b['player_id'] and mhvp_a_replay['replayed'] is True and mhvp_a_replay['round']['round_id']==mhvp_a['round']['round_id'] and mhvp_a['round']['hand_count']==3 and mhvp_b['round']['hand_count']==5 and mhvp_a['round']['round_id']!=mhvp_b['round']['round_id']
+            # Persist user A's common holds through the public session-bound action.
+            api(base,f'/api/v1/games/multi-hand-video-poker/rounds/{mhvp_a["round"]["round_id"]}/holds','POST',{'player_id':user_b['player_id'],'holds':[0]},auth_token=token_a)
+            # Persist a distinct user B hold selection without exposing user A's round.
+            api(base,f'/api/v1/games/multi-hand-video-poker/rounds/{mhvp_b["round"]["round_id"]}/holds','POST',{'player_id':user_a['player_id'],'holds':[1]},auth_token=token_b)
+            # Draw and settle all three of user A's result lanes through the public endpoint.
+            mhvp_a_done=api(base,f'/api/v1/games/multi-hand-video-poker/rounds/{mhvp_a["round"]["round_id"]}/draw','POST',{'player_id':user_b['player_id']},auth_token=token_a)
+            # Draw and settle all five of user B's independent result lanes.
+            mhvp_b_done=api(base,f'/api/v1/games/multi-hand-video-poker/rounds/{mhvp_b["round"]["round_id"]}/draw','POST',{'player_id':user_a['player_id']},auth_token=token_b)
+            # Read each private video poker state while again submitting the opposite identity.
+            mhvp_a_state=api(base,f'/api/v1/games/multi-hand-video-poker/state?player_id={user_b["player_id"]}',auth_token=token_a)['state']
+            # Read user B's private video poker state through its own authenticated session.
+            mhvp_b_state=api(base,f'/api/v1/games/multi-hand-video-poker/state?player_id={user_a["player_id"]}',auth_token=token_b)['state']
+            # Verify result cardinality and reload-safe recent rounds stay isolated by session.
+            assert len(mhvp_a_done['round']['results'])==3 and len(mhvp_b_done['round']['results'])==5 and mhvp_a_state['recent_rounds'][-1]['round_id']==mhvp_a['round']['round_id'] and mhvp_b_state['recent_rounds'][-1]['round_id']==mhvp_b['round']['round_id']
+            # Read both ledgers after settlement to prove aggregate, exactly-once movement.
+            mhvp_ledger_a=api(base,f'/api/v1/players/{user_a["player_id"]}/ledger',auth_token=token_a)['ledger']; mhvp_ledger_b=api(base,f'/api/v1/players/{user_b["player_id"]}/ledger',auth_token=token_b)['ledger']
+            # Select only user A's video poker events for the completed round.
+            mhvp_events_a=[row for row in mhvp_ledger_a if row.get('game')=='multi_hand_video_poker' and row.get('round_id')==mhvp_a['round']['round_id']]
+            # Select only user B's video poker events for the completed round.
+            mhvp_events_b=[row for row in mhvp_ledger_b if row.get('game')=='multi_hand_video_poker' and row.get('round_id')==mhvp_b['round']['round_id']]
+            # Require one aggregate debit and no more than one aggregate credit for each round.
+            assert sum(row.get('transaction_type')=='MHVP_WAGER_DEBIT' for row in mhvp_events_a)==1 and sum(row.get('transaction_type')=='MHVP_WAGER_DEBIT' for row in mhvp_events_b)==1 and sum(row.get('transaction_type')=='MHVP_PAYOUT_CREDIT' for row in mhvp_events_a)<=1 and sum(row.get('transaction_type')=='MHVP_PAYOUT_CREDIT' for row in mhvp_events_b)<=1
             # Read private game history through each normal-user session.
             history_a=api(base,'/api/v1/casino/history',auth_token=token_a)['history']
             # Read user B's independent history view.
             history_b=api(base,'/api/v1/casino/history',auth_token=token_b)['history']
             # Verify history never exposes the other authenticated player's records.
             assert history_a and history_b and all(row['player_id']==user_a['player_id'] for row in history_a) and all(row['player_id']==user_b['player_id'] for row in history_b)
-            # Refresh both canonical wallets after all six games have settled.
+            # Refresh both canonical wallets after every integrated game has settled.
             wallet_a=api(base,'/api/v2/me',auth_token=token_a)['player']['token_balance']
             # Refresh user B's canonical wallet independently.
             wallet_b=api(base,'/api/v2/me',auth_token=token_b)['player']['token_balance']
             # Verify final ledger balances agree with the canonical wallet refresh for each user.
             ledger_a=api(base,f'/api/v1/players/{user_a["player_id"]}/ledger',auth_token=token_a)['ledger']; ledger_b=api(base,f'/api/v1/players/{user_b["player_id"]}/ledger',auth_token=token_b)['ledger']; assert ledger_a[-1]['balance_after']==wallet_a and ledger_b[-1]['balance_after']==wallet_b
-            # Log out both real sessions after the six-game integration path.
+            # Log out both real sessions after the integrated game path.
             api(base,'/api/v2/auth/logout','POST',{},auth_token=token_a); api(base,'/api/v2/auth/logout','POST',{},auth_token=token_b)
             # Verify both logged-out bearer tokens are rejected.
             assert api(base,'/api/v2/me',ok=False,auth_token=token_a)['error']['code']=='UNAUTHORIZED' and api(base,'/api/v2/me',ok=False,auth_token=token_b)['error']['code']=='UNAUTHORIZED'
@@ -413,9 +443,11 @@ def run_api_tests():
             # Verify normal users cannot mutate shared bot-controller accounts.
             assert api(base,'/api/v1/bots/bot_roulette_1/enable','POST',{},ok=False,auth_token=token_a)['error']['code']=='FORBIDDEN'
             # Store the durable post-game balance and terms state for restart verification.
-            integrity_state.update({'email':'wallet-a@example.local','password':'wallet-a-password','balance':api(base,'/api/v2/me',auth_token=token_a)['player']['token_balance'],'admin_blocked':len(admin_paths),'token_credit_count':len(credits_after)-len(credits_before),'contract_player':added_a,'users':[{'email':'wallet-a@example.local','password':'wallet-a-password','player_id':user_a['player_id'],'balance':wallet_a,'roulette_round':roulette_a['round']['round_id'],'slots_round':slot_a['round_id'],'blackjack_round':blackjack_a['round_id'],'baccarat_round':baccarat_a['coup']['round_id'],'keno_round':keno_a['draw']['round_id'],'bingo_session':bingo_a_session['session_id'],'bingo_completed':False},{'email':'wallet-b@example.local','password':'wallet-b-password','player_id':user_b['player_id'],'balance':wallet_b,'roulette_round':roulette_b['round']['round_id'],'slots_round':slot_b['round_id'],'blackjack_round':blackjack_b['round_id'],'baccarat_round':baccarat_b['coup']['round_id'],'keno_round':keno_b['draw']['round_id'],'bingo_session':bingo_b['session']['session_id'],'bingo_completed':True}],'six_game_history_counts':[len(history_a),len(history_b)]})
+            integrity_state.update({'email':'wallet-a@example.local','password':'wallet-a-password','balance':api(base,'/api/v2/me',auth_token=token_a)['player']['token_balance'],'admin_blocked':len(admin_paths),'token_credit_count':len(credits_after)-len(credits_before),'contract_player':added_a,'mhvp_verified':True,'users':[{'email':'wallet-a@example.local','password':'wallet-a-password','player_id':user_a['player_id'],'balance':wallet_a,'roulette_round':roulette_a['round']['round_id'],'slots_round':slot_a['round_id'],'blackjack_round':blackjack_a['round_id'],'baccarat_round':baccarat_a['coup']['round_id'],'keno_round':keno_a['draw']['round_id'],'bingo_session':bingo_a_session['session_id'],'bingo_completed':False,'mhvp_round':mhvp_a['round']['round_id']},{'email':'wallet-b@example.local','password':'wallet-b-password','player_id':user_b['player_id'],'balance':wallet_b,'roulette_round':roulette_b['round']['round_id'],'slots_round':slot_b['round_id'],'blackjack_round':blackjack_b['round_id'],'baccarat_round':baccarat_b['coup']['round_id'],'keno_round':keno_b['draw']['round_id'],'bingo_session':bingo_b['session']['session_id'],'bingo_completed':True,'mhvp_round':mhvp_b['round']['round_id']}],'history_game_counts':[len(history_a),len(history_b)]})
         # Execute the real-backend integrity regression as one mapped API case.
         run_case('API-PRIVATE-SESSION-001',['SESSION-003','USER-001','USER-003','USER-005','TOKEN-004','TEST-039'],wallet_auth_integrity)
+        # Record Multi-Hand Video Poker session, mode, ledger, and retry coverage under its permanent test id.
+        run_case('API-MHVP-001',['MHVP-001','MHVP-002','MHVP-003'],lambda: assert_condition(integrity_state['mhvp_verified'],'Multi-Hand Video Poker integration evidence missing'))
         # Record exact token credit coverage under the permanent test id referenced by TOKEN-003.
         run_case('API-TOKEN-001',['TOKEN-003','TOKEN-004'],lambda: assert_condition(integrity_state['token_credit_count']==1 and integrity_state['contract_player']['token_balance']==250,'token credit contract mismatch'))
         # Record central Admin authorization coverage under the permanent Admin test id.
@@ -441,19 +473,21 @@ def run_api_tests():
                 # Verify exact balance and accepted terms survived the process restart.
                 assert me['player']['token_balance']==expected['balance'] and me['terms']['accepted'] is True and me['terms']['required'] is False
                 # Read every private game state again after restart.
-                roulette_state=api(base,'/api/v1/games/roulette/state',auth_token=token)['state']; slots_state=api(base,'/api/v1/games/slots/state',auth_token=token)['state']; blackjack_state=api(base,'/api/v1/games/blackjack/state',auth_token=token)['state']; baccarat_state=api(base,'/api/v1/games/baccarat/state',auth_token=token)['state']; keno_state=api(base,'/api/v1/games/keno/state',auth_token=token)['state']; bingo_state=api(base,'/api/v1/games/bingo/state',auth_token=token)['state']
+                roulette_state=api(base,'/api/v1/games/roulette/state',auth_token=token)['state']; slots_state=api(base,'/api/v1/games/slots/state',auth_token=token)['state']; blackjack_state=api(base,'/api/v1/games/blackjack/state',auth_token=token)['state']; baccarat_state=api(base,'/api/v1/games/baccarat/state',auth_token=token)['state']; keno_state=api(base,'/api/v1/games/keno/state',auth_token=token)['state']; bingo_state=api(base,'/api/v1/games/bingo/state',auth_token=token)['state']; mhvp_state=api(base,'/api/v1/games/multi-hand-video-poker/state',auth_token=token)['state']
                 # Verify Roulette, Slots, Blackjack, Baccarat, and Keno identifiers survived under the session-derived player.
                 assert any(row['round_id']==expected['roulette_round'] for row in roulette_state['last_results']) and slots_state['last_spins'][-1]['round_id']==expected['slots_round'] and expected['blackjack_round'] in blackjack_state['rounds'] and any(row['round_id']==expected['baccarat_round'] for row in baccarat_state['last_coups']) and any(row['round_id']==expected['keno_round'] for row in keno_state['last_draws'])
                 # Verify Bingo terminal/refund state survived for the corresponding user.
                 assert (any(row['session_id']==expected['bingo_session'] for row in bingo_state['last_sessions']) if expected['bingo_completed'] else bingo_state['active_session'] is None)
+                # Verify the settled video poker round survived and remains private after restart.
+                assert any(row['round_id']==expected['mhvp_round'] for row in mhvp_state['recent_rounds'])
                 # Read restarted private history and ledger views.
                 restarted_history=api(base,'/api/v1/casino/history',auth_token=token)['history']; restarted_ledger=api(base,f'/api/v1/players/{expected["player_id"]}/ledger',auth_token=token)['ledger']
                 # Verify restarted history includes the user's Bingo settlement and never leaks another player.
                 assert any(row['round_id']==expected['bingo_session'] for row in restarted_history) and all(row['player_id']==expected['player_id'] for row in restarted_history) and all(row['player_id']==expected['player_id'] for row in restarted_ledger)
-            # Verify both users produced persisted private history across the six-game gate.
-            assert all(count>0 for count in integrity_state['six_game_history_counts'])
+            # Verify both users produced persisted private history across the history-producing games.
+            assert all(count>0 for count in integrity_state['history_game_counts'])
         # Record the live restart persistence regression under the same integrity requirements.
-        run_case('API-WALLET-RESTART-001',['SESSION-003','USER-001','TOKEN-003','TOKEN-004','TEST-039'],wallet_restart_persistence)
+        run_case('API-WALLET-RESTART-001',['SESSION-003','USER-001','TOKEN-003','TOKEN-004','TEST-039','MHVP-002'],wallet_restart_persistence)
         # Define the core function used by this module.
         def core():
             # Load the casino state that publishes packaged and game-module version metadata.
@@ -882,6 +916,20 @@ def run_browser_tests():
                 metadata={'evidence_class':'after_pass','branch':evidence_branch,'commit':evidence_commit,'surface':'shell_lobby','states':states,'locale':locale,'viewport':{'id':viewport_id,**viewport},'path':str(target.relative_to(ROOT)).replace('\\','/'),'focused_control':focused}
                 # Write a UTF-8 sidecar next to the image so the evidence remains self-describing.
                 target.with_suffix('.json').write_text(json.dumps(metadata,indent=2,ensure_ascii=False),encoding='utf-8')
+            # Capture one game viewport with the complete metadata required by the visual evidence gate.
+            def game_evidence(name, surface, states, locale, viewport_id):
+                # Resolve the PNG target under the standard browser test artifact directory.
+                target=screenshots/name
+                # Capture the visible shared shell and game stage without transient status overlays.
+                page.screenshot(path=str(target),full_page=True,animations='disabled',style='#toast, .status-bar { visibility: hidden !important; }')
+                # Record the active viewport dimensions alongside the named visual-matrix viewport.
+                viewport=page.viewport_size
+                # Record the current focus target for keyboard and hold-selection evidence.
+                focused=page.evaluate("() => document.activeElement?.getAttribute('data-testid') || document.activeElement?.getAttribute('data-action') || document.activeElement?.getAttribute('data-hold-position') || ''")
+                # Build the complete after-pass evidence metadata required by VIS-EVIDENCE-001.
+                metadata={'evidence_class':'after_pass','branch':evidence_branch,'commit':evidence_commit,'surface':surface,'states':states,'locale':locale,'viewport':{'id':viewport_id,**viewport},'path':str(target.relative_to(ROOT)).replace('\\','/'),'focused_control':focused}
+                # Write a UTF-8 sidecar next to the image so the evidence remains self-describing.
+                target.with_suffix('.json').write_text(json.dumps(metadata,indent=2,ensure_ascii=False),encoding='utf-8')
             # Store browser JavaScript that audits visible player-facing strings and localized attributes.
             route_i18n_audit_script=r"""async ({ domain, interpolationKey }) => {
               // Read the public runtime state after the requested route has mounted.
@@ -1184,7 +1232,7 @@ def run_browser_tests():
                     # Verify the search label and placeholder both use shell i18n instead of English literals.
                     assert page.locator('label[for="catalog-search"]').text_content()=='Поиск игр' and page.get_by_test_id('catalog-search').get_attribute('placeholder')=='Поиск по игре, функции или категории'
                     # Define every catalog identifier and its installed Russian display label.
-                    category_labels={'all':'Все игры','cards':'Карточные','draw':'Розыгрыши','instant':'Быстрые','machine':'Автоматы','numbers':'Числа','reels':'Барабаны','roadmaps':'Дорожные карты','social':'Социальные','strategy':'Стратегия','table':'Настольные игры','wheel':'Колесо'}
+                    category_labels={'all':'Все игры','cards':'Карточные','draw':'Розыгрыши','instant':'Быстрые','machine':'Автоматы','numbers':'Числа','poker':'Покер','reels':'Барабаны','roadmaps':'Дорожные карты','social':'Социальные','strategy':'Стратегия','table':'Настольные игры','wheel':'Колесо'}
                     # Verify internal category ids never appear as transformed player-facing labels.
                     for category,label in category_labels.items():
                         # Require the exact localized label for each category discovered from the catalog.
@@ -1281,6 +1329,80 @@ def run_browser_tests():
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Execute catalog-driven frontend driver discovery for all current games.
                 run_case('BR-CATALOG-DISCOVERY-001',['CORE-021','TEST-042'],catalog_route_discovery)
+                # Define real-backend Multi-Hand Video Poker browser and visual acceptance coverage.
+                def multi_hand_video_poker_acceptance():
+                    # Open the catalog-generated route and wait for its module-owned readiness selector.
+                    page.get_by_test_id('nav-multi_hand_video_poker').click(); page.get_by_test_id('multi-hand-video-poker').wait_for(timeout=5000)
+                    # Require the canonical route and complete English title before interaction.
+                    assert page.url.split('?',1)[0].endswith('/games/multi_hand_video_poker') and page.locator('.mhvp-header h1').inner_text()=='Multi-Hand Video Poker'
+                    # Reject raw resource identifiers from the initial player-facing surface.
+                    visible_lines={line.strip() for line in page.locator('body').inner_text().splitlines() if line.strip()}
+                    # Require representative owned resource keys to stay internal.
+                    assert not ({'controls.deal','controls.draw','phases.ready','stage.readyTitle','units.playTokens'} & visible_lines),visible_lines
+                    # Define all named viewports required by the Multi-Hand visual-matrix row.
+                    required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
+                    # Capture the localized English ready state at every required viewport.
+                    for viewport_id,width,height in required_viewports:
+                        # Resize to the exact visual-matrix dimensions before containment checks.
+                        page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(150)
+                        # Require the full page and mounted game surface to avoid horizontal overflow.
+                        assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.get_by_test_id('multi-hand-video-poker').is_visible()
+                        # Record self-describing English ready-state after-pass evidence.
+                        game_evidence(f'after-pass-mhvp-ready-en-{viewport_id}.png','multi_hand_video_poker',['ready'],'en-US',viewport_id)
+                    # Restore primary desktop dimensions for hold and multi-mode interaction evidence.
+                    page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(150)
+                    # Select the required three-hand mode and start one real-backend wagered round.
+                    page.locator('[data-hand-count="3"]').click(); page.locator('#mhvp-wager').fill('1'); page.locator('[data-action="deal"]').click(); page.get_by_test_id('mhvp-source-hand').wait_for(timeout=5000)
+                    # Hold the first common card and wait for the persisted pressed state after rerender.
+                    page.locator('[data-hold-position="0"]').click(); page.wait_for_function("() => document.querySelector('[data-hold-position=\"0\"]')?.getAttribute('aria-pressed') === 'true'")
+                    # Capture the English hold-decision state with the selected control visible.
+                    game_evidence('after-pass-mhvp-choose-holds-en-desktop_primary.png','multi_hand_video_poker',['choose_holds'],'en-US','desktop_primary')
+                    # Draw all three hands and require the exact result cardinality and aggregate summary.
+                    page.locator('[data-action="draw"]').click(); page.get_by_test_id('mhvp-summary').wait_for(timeout=5000); page.wait_for_function("(count) => document.querySelectorAll('[data-testid^=\"mhvp-result-\"]').length === count",arg=3)
+                    # Capture the completed three-hand English state at primary desktop.
+                    game_evidence('after-pass-mhvp-settled-3-en-desktop_primary.png','multi_hand_video_poker',['settled_3_hands'],'en-US','desktop_primary')
+                    # Select five hands and start the next real-backend round.
+                    page.locator('[data-hand-count="5"]').click(); page.locator('[data-action="deal"]').click(); page.get_by_test_id('mhvp-source-hand').wait_for(timeout=5000)
+                    # Complete five hands and require every catalog-discovered result lane.
+                    page.locator('[data-action="draw"]').click(); page.wait_for_function("(count) => document.querySelectorAll('[data-testid^=\"mhvp-result-\"]').length === count",arg=5)
+                    # Resize to compact desktop and capture the five-hand settlement state.
+                    page.set_viewport_size({'width':1440,'height':900}); page.wait_for_timeout(150); game_evidence('after-pass-mhvp-settled-5-en-desktop_compact.png','multi_hand_video_poker',['settled_5_hands'],'en-US','desktop_compact')
+                    # Select ten hands and start the highest-cardinality real-backend round.
+                    page.locator('[data-hand-count="10"]').click(); page.locator('[data-action="deal"]').click(); page.get_by_test_id('mhvp-source-hand').wait_for(timeout=5000)
+                    # Complete ten hands and require every result lane before responsive evidence.
+                    page.locator('[data-action="draw"]').click(); page.wait_for_function("(count) => document.querySelectorAll('[data-testid^=\"mhvp-result-\"]').length === count",arg=10)
+                    # Resize to tablet and capture the stacked ten-hand settlement state.
+                    page.set_viewport_size({'width':1024,'height':900}); page.wait_for_timeout(150); assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1'); game_evidence('after-pass-mhvp-settled-10-en-tablet.png','multi_hand_video_poker',['settled_10_hands'],'en-US','tablet')
+                    # Reload the canonical deep link and require the settled round to restore from real backend state.
+                    page.reload(wait_until='networkidle'); page.get_by_test_id('multi-hand-video-poker').wait_for(timeout=5000); page.wait_for_function("(count) => document.querySelectorAll('[data-testid^=\"mhvp-result-\"]').length === count",arg=10)
+                    # Restore primary desktop and capture canonical route restoration evidence.
+                    page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(150); game_evidence('after-pass-mhvp-route-restored-en-desktop_primary.png','multi_hand_video_poker',['route_restored','settled_10_hands'],'en-US','desktop_primary')
+                    # Switch the mounted real game to Russian without losing its persisted state.
+                    page.get_by_test_id('shell-locale-select').select_option('ru-RU'); page.wait_for_function("() => document.querySelector('.mhvp-header h1')?.textContent === 'Мультиручный видеопокер'")
+                    # Reject representative English game copy from the Russian player-facing surface.
+                    russian_copy=page.get_by_test_id('multi-hand-video-poker').inner_text(); english_phrases=['Multi-Hand Video Poker','Deal hands','Draw cards','Play controls','Paytable','Ready to deal','Choose cards to hold','play tokens']; assert not [phrase for phrase in english_phrases if phrase.lower() in russian_copy.lower()],russian_copy
+                    # Select three hands and start a Russian real-backend round for actionable evidence.
+                    page.locator('[data-hand-count="3"]').click(); page.locator('[data-action="deal"]').click(); page.get_by_test_id('mhvp-source-hand').wait_for(timeout=5000)
+                    # Hold the second common card and wait for its localized persisted selection.
+                    page.locator('[data-hold-position="1"]').click(); page.wait_for_function("() => document.querySelector('[data-hold-position=\"1\"]')?.getAttribute('aria-pressed') === 'true'")
+                    # Capture the Russian hold-decision state before drawing.
+                    game_evidence('after-pass-mhvp-choose-holds-ru-desktop_primary.png','multi_hand_video_poker',['choose_holds'],'ru-RU','desktop_primary')
+                    # Complete the Russian three-hand round and require the localized summary.
+                    page.locator('[data-action="draw"]').click(); page.get_by_test_id('mhvp-summary').wait_for(timeout=5000); page.wait_for_function("(count) => document.querySelectorAll('[data-testid^=\"mhvp-result-\"]').length === count",arg=3)
+                    # Capture Russian settled-state evidence at every required viewport.
+                    for viewport_id,width,height in required_viewports:
+                        # Resize to the exact visual-matrix dimensions before localized containment checks.
+                        page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(150)
+                        # Require the Russian game to remain visible without page-level horizontal overflow.
+                        assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.get_by_test_id('mhvp-summary').is_visible()
+                        # Record self-describing Russian three-hand settlement evidence.
+                        game_evidence(f'after-pass-mhvp-settled-3-ru-{viewport_id}.png','multi_hand_video_poker',['settled_3_hands'],'ru-RU',viewport_id)
+                    # Restore primary desktop and English locale for established downstream browser cases.
+                    page.set_viewport_size({'width':1920,'height':1080}); page.get_by_test_id('shell-locale-select').select_option('en-US'); page.wait_for_function("() => document.querySelector('.mhvp-header h1')?.textContent === 'Multi-Hand Video Poker'")
+                    # Return to the lobby so route restoration and existing game interactions start normally.
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Execute real-backend mode, localization, responsive, route, and visual acceptance coverage.
+                run_case('BR-MHVP-001',['MHVP-001','MHVP-002','MHVP-004','MHVP-005'],multi_hand_video_poker_acceptance)
                 # Define route_restoration to prove deep links, reload, Back, and Forward behavior.
                 def route_restoration():
                     # Open Roulette directly through its canonical path using the authenticated browser context.

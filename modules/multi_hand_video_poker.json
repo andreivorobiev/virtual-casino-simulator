@@ -36,7 +36,7 @@
       "i18n_probe": "controls.deal"
     },
     "tests": {
-      "long_driver": "tests.games.multi_hand_video_poker.driver:play"
+      "long_driver": "tests.game_drivers.multi_hand_video_poker:play"
     },
     "translations": {
       "ru-RU": {

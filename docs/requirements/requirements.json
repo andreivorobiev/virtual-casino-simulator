@@ -6669,7 +6669,7 @@
       "module": "Core",
       "description": "Every game API request resolves its player through one shared authenticated-session resolver before route dispatch.",
       "status": "PASS",
-      "api_tests": ["API-CATALOG-001", "API-PRIVATE-SESSION-001"],
+      "api_tests": ["API-CATALOG-001", "API-PRIVATE-SESSION-001", "API-MHVP-001"],
       "browser_tests": [],
       "implementation_files": ["casino/core/request_player.py", "casino/router.py", "casino/app.py"],
       "introduced_in": "wave0-catalog-governance",
@@ -6687,6 +6687,66 @@
       "introduced_in": "wave0-catalog-governance",
       "changed_in": "wave0-catalog-governance",
       "notes": "Allocated for GitHub issue #81; future games add their own module descriptor and driver rather than editing the shared suite runner."
+    },
+    {
+      "id": "MHVP-001",
+      "module": "Multi-Hand Video Poker",
+      "description": "Multi-Hand Video Poker deals one common Jacks-or-Better hand and completes 3, 5, or 10 independent result hands from shared hold positions.",
+      "status": "PASS",
+      "api_tests": ["API-MHVP-001"],
+      "browser_tests": ["BR-MHVP-001"],
+      "implementation_files": ["casino/games/multi_hand_video_poker/engine.py", "web/games/multi_hand_video_poker.js"],
+      "introduced_in": "game-expansion-mhvp",
+      "changed_in": "game-expansion-mhvp",
+      "notes": "Allocated by GitHub issue #77 for issue #94; the game uses the shared card and poker primitives and a fixed Jacks-or-Better paytable."
+    },
+    {
+      "id": "MHVP-002",
+      "module": "Multi-Hand Video Poker",
+      "description": "Authenticated sessions own isolated reload-safe Multi-Hand Video Poker state, hold selections, recent rounds, and canonical route restoration.",
+      "status": "PASS",
+      "api_tests": ["API-MHVP-001", "API-WALLET-RESTART-001"],
+      "browser_tests": ["BR-MHVP-001"],
+      "implementation_files": ["casino/games/multi_hand_video_poker/api.py", "casino/core/request_player.py", "web/app.js", "tests/run_tests.py"],
+      "introduced_in": "game-expansion-mhvp",
+      "changed_in": "game-expansion-mhvp",
+      "notes": "Normal-user session bindings override caller-supplied player ids, and persisted settled rounds survive backend restart."
+    },
+    {
+      "id": "MHVP-003",
+      "module": "Multi-Hand Video Poker",
+      "description": "Each Multi-Hand Video Poker round uses one aggregate ledger wager debit and at most one aggregate payout credit with idempotent retry recovery.",
+      "status": "PASS",
+      "api_tests": ["API-MHVP-001"],
+      "browser_tests": [],
+      "implementation_files": ["casino/games/multi_hand_video_poker/api.py", "casino/core/ledger.py", "tests/games/multi_hand_video_poker/test_api.py", "tests/run_tests.py"],
+      "introduced_in": "game-expansion-mhvp",
+      "changed_in": "game-expansion-mhvp",
+      "notes": "Game code never mutates balances directly; retry proof matches player, game, round, and transaction type."
+    },
+    {
+      "id": "MHVP-004",
+      "module": "Application",
+      "description": "The Multi-Hand Video Poker surface provides complete English and Russian copy and remains usable without overflow across required desktop, tablet, and mobile viewports.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": ["BR-MHVP-001"],
+      "implementation_files": ["web/games/multi_hand_video_poker.js", "web/i18n/en-US/games/multi_hand_video_poker.json", "web/i18n/ru-RU/games/multi_hand_video_poker.json", "tests/visual/visual_matrix.json", "tests/run_tests.py"],
+      "introduced_in": "game-expansion-mhvp",
+      "changed_in": "game-expansion-mhvp",
+      "notes": "Acceptance evidence covers both locales, all four named viewports, hold and settlement states, and canonical route restoration."
+    },
+    {
+      "id": "MHVP-005",
+      "module": "Tests",
+      "description": "Catalog, contract, browser, and long-suite discovery automatically include Multi-Hand Video Poker with requirement, module, version, and visual evidence traceability.",
+      "status": "PASS",
+      "api_tests": ["API-CATALOG-001", "LONG-SUITE-100"],
+      "browser_tests": ["BR-CATALOG-DISCOVERY-001", "BR-MHVP-001"],
+      "implementation_files": ["modules/multi_hand_video_poker.json", "modules/module-manifest.json", "contracts/compatibility/module-api-matrix.json", "tests/game_drivers/multi_hand_video_poker.py", "tests/visual/visual_matrix.json", "tests/run_tests.py"],
+      "introduced_in": "game-expansion-mhvp",
+      "changed_in": "game-expansion-mhvp",
+      "notes": "The descriptor uses sort order 70 and the normalized tests.game_drivers.multi_hand_video_poker:play driver reference reserved by issue #77."
     }
   ]
 }

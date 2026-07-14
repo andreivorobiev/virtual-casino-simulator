@@ -32,6 +32,9 @@
   "bingo": [
     "contracts/openapi/bingo.v1.yaml"
   ],
+  "multi_hand_video_poker": [
+    "contracts/openapi/multi_hand_video_poker.v1.yaml"
+  ],
   "tests": [],
   "docs": [],
   "contracts": [
