@@ -1,0 +1,234 @@
+openapi: 3.0.3
+info:
+  title: Virtual Casino Plinko API Proposal
+  version: v1
+  description: >-
+    Additive issue #136 contract proposal for authenticated, server-authoritative
+    Plinko drops. Shared compatibility registration remains owned by #77.
+tags:
+  - name: Plinko
+    description: Player-scoped pegboard drops with ledger-only settlement.
+
+# Define only additive frozen-v1 game endpoints owned by this proposal.
+paths:
+  /api/v1/games/plinko/state:
+    get:
+      tags: [Plinko]
+      operationId: plinkoState
+      summary: Read the authenticated player's reload-safe Plinko state
+      responses:
+        '200':
+          description: Current game state, fixed rules, and bound player
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StateEnvelope'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/v1/games/plinko/drops:
+    post:
+      tags: [Plinko]
+      operationId: plinkoDrop
+      summary: Commit or replay one wagered Plinko drop
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DropRequest'
+      responses:
+        '200':
+          description: Settled drop with committed path, bucket, multiplier, and ledger evidence
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DropEnvelope'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+
+# Reuse standard success/error envelopes while defining game-owned data shapes.
+components:
+  responses:
+    ErrorResponse:
+      description: Standard API error envelope
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+  schemas:
+    ActionId:
+      type: string
+      minLength: 1
+      maxLength: 128
+      pattern: '^[A-Za-z0-9._:-]+$'
+    DropRequest:
+      type: object
+      additionalProperties: false
+      required: [action_id, wager]
+      properties:
+        action_id:
+          $ref: '#/components/schemas/ActionId'
+        wager:
+          type: number
+          minimum: 0.01
+          maximum: 100000
+        player_id:
+          type: string
+          description: Compatibility input overridden by the authenticated session resolver.
+    Drop:
+      type: object
+      additionalProperties: false
+      required:
+        - drop_id
+        - player_id
+        - action_id
+        - wager
+        - path
+        - bucket
+        - multiplier
+        - payout
+        - net
+        - phase
+        - debit_status
+        - settlement_status
+        - created_at
+      properties:
+        drop_id:
+          type: string
+          pattern: '^plinko_[a-f0-9]{24}$'
+        player_id:
+          type: string
+        action_id:
+          $ref: '#/components/schemas/ActionId'
+        wager:
+          type: number
+          minimum: 0.01
+        path:
+          type: array
+          minItems: 8
+          maxItems: 8
+          items:
+            type: string
+            enum: [L, R]
+        bucket:
+          type: integer
+          minimum: 0
+          maximum: 8
+        multiplier:
+          type: number
+          enum: [0.2, 0.5, 1.0, 1.5, 2.0, 5.0]
+        payout:
+          type: number
+          minimum: 0
+        net:
+          type: number
+        phase:
+          type: string
+          enum: [settled]
+        debit_status:
+          type: string
+          enum: [pending, complete]
+        settlement_status:
+          type: string
+          enum: [pending, complete]
+        debit_ledger_id:
+          type: string
+        settlement_ledger_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    GameState:
+      type: object
+      required: [recent_drops]
+      properties:
+        recent_drops:
+          type: array
+          maxItems: 20
+          items:
+            $ref: '#/components/schemas/Drop'
+    Rules:
+      type: object
+      required: [rows, multipliers, bucket_count]
+      properties:
+        rows:
+          type: integer
+          enum: [8]
+        multipliers:
+          type: array
+          minItems: 9
+          maxItems: 9
+          items:
+            type: number
+        bucket_count:
+          type: integer
+          enum: [9]
+    Player:
+      type: object
+      additionalProperties: true
+    LedgerEvent:
+      type: object
+      nullable: true
+      additionalProperties: true
+    StateData:
+      type: object
+      required: [game, state, player, rules]
+      properties:
+        game:
+          type: string
+          enum: [plinko]
+        state:
+          $ref: '#/components/schemas/GameState'
+        player:
+          $ref: '#/components/schemas/Player'
+        rules:
+          $ref: '#/components/schemas/Rules'
+    DropData:
+      allOf:
+        - $ref: '#/components/schemas/StateData'
+        - type: object
+          required: [drop, replayed]
+          properties:
+            drop:
+              $ref: '#/components/schemas/Drop'
+            wager:
+              $ref: '#/components/schemas/LedgerEvent'
+            settlement:
+              $ref: '#/components/schemas/LedgerEvent'
+            replayed:
+              type: boolean
+    StateEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/StateData'
+    DropEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/DropData'
+    ErrorEnvelope:
+      type: object
+      required: [ok, error]
+      properties:
+        ok:
+          type: boolean
+          enum: [false]
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object

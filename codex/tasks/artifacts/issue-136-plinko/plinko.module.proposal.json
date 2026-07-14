@@ -1,0 +1,92 @@
+{
+  "module": "plinko",
+  "version": "1.0.0",
+  "paths": [
+    "casino/games/plinko/",
+    "web/games/plinko.js",
+    "web/i18n/en-US/games/plinko.json",
+    "web/i18n/ru-RU/games/plinko.json"
+  ],
+  "requirements_prefixes": [
+    "PLINKO"
+  ],
+  "contracts": [
+    "contracts/openapi/plinko.v1.yaml"
+  ],
+  "game": {
+    "id": "plinko",
+    "sort_order": null,
+    "route": "/games/plinko",
+    "label": "Plinko",
+    "category": "arcade",
+    "categories": [
+      "arcade",
+      "reels",
+      "instant"
+    ],
+    "backend": {
+      "register": "casino.games.plinko.api:register"
+    },
+    "frontend": {
+      "module": "./games/plinko.js",
+      "export": "PlinkoGame",
+      "ready_testid": "plinko",
+      "i18n_domain": "games/plinko",
+      "i18n_probe": "controls.drop"
+    },
+    "tests": {
+      "focused": [
+        "tests/games/plinko/test_engine.py",
+        "tests/games/plinko/test_api.py",
+        "tests/games/plinko/test_frontend.mjs"
+      ],
+      "long_driver": "tests.game_drivers.plinko:play"
+    },
+    "translations": {
+      "ru-RU": {
+        "label": "Plinko",
+        "kicker": "Доска со штифтами",
+        "description": "Запустите шайбу по серверно зафиксированному пути и получите выплату по открытой таблице множителей.",
+        "tags": [
+          "Аркада",
+          "Множители",
+          "Расчет по реестру"
+        ]
+      }
+    },
+    "lobby": {
+      "featured": false,
+      "wide": false,
+      "art_class": "plinko-art",
+      "symbol": "PL",
+      "kicker": "Pegboard drop",
+      "description": "Drop a puck through committed pegs and settle through transparent play-token multipliers.",
+      "tags": [
+        "Arcade",
+        "Multipliers",
+        "Ledger-backed"
+      ]
+    }
+  },
+  "depends_on": [
+    "core",
+    "ledger",
+    "players"
+  ],
+  "may_not_depend_on": [
+    "roulette",
+    "slots",
+    "blackjack",
+    "baccarat",
+    "keno",
+    "bingo",
+    "multi_hand_video_poker",
+    "casino_war",
+    "big_six_wheel",
+    "red_dog",
+    "dragon_tiger",
+    "hi_lo"
+  ],
+  "integration_owner": "#77",
+  "countable_status": "Distinct isolated module proposal; count acceptance pending shared #77 integration."
+}
