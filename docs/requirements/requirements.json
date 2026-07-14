@@ -6669,7 +6669,7 @@
       "module": "Core",
       "description": "Every game API request resolves its player through one shared authenticated-session resolver before route dispatch.",
       "status": "PASS",
-      "api_tests": ["API-CATALOG-001", "API-PRIVATE-SESSION-001", "API-MHVP-001", "API-CW-001", "API-BIG-SIX-001", "API-RD-001", "API-DT-001"],
+      "api_tests": ["API-CATALOG-001", "API-PRIVATE-SESSION-001", "API-MHVP-001", "API-CW-001", "API-BIG-SIX-001", "API-RD-001", "API-DT-001", "API-HILO-001"],
       "browser_tests": [],
       "implementation_files": ["casino/core/request_player.py", "casino/router.py", "casino/app.py"],
       "introduced_in": "wave0-catalog-governance",
@@ -6987,6 +6987,66 @@
       "introduced_in": "game-expansion-dragon-tiger",
       "changed_in": "game-expansion-dragon-tiger",
       "notes": "The descriptor uses sort order 100 and the normalized tests.game_drivers.dragon_tiger:play driver reference released by issue #77."
+    },
+    {
+      "id": "HILO-001",
+      "module": "Hi-Lo",
+      "description": "Hi-Lo compares two standard-card ranks with ace high and suits ignored, returning 2x for a correct prediction, 1x for an equal-rank refund, and 0 for an incorrect prediction.",
+      "status": "PASS",
+      "api_tests": ["API-HILO-001"],
+      "browser_tests": ["BR-HILO-001"],
+      "implementation_files": ["casino/games/hi_lo/engine.py", "web/games/hi_lo.js"],
+      "introduced_in": "game-expansion-hi-lo",
+      "changed_in": "game-expansion-hi-lo",
+      "notes": "Allocated by GitHub issue #77 for issue #85; focused and real-backend tests cover ace-high rank-only comparison and every correct, equal-rank, and incorrect settlement class."
+    },
+    {
+      "id": "HILO-002",
+      "module": "Hi-Lo",
+      "description": "Authenticated sessions own isolated reload-safe Hi-Lo active decisions, recent rounds, and canonical route restoration.",
+      "status": "PASS",
+      "api_tests": ["API-HILO-001", "API-WALLET-RESTART-001"],
+      "browser_tests": ["BR-HILO-001"],
+      "implementation_files": ["casino/games/hi_lo/api.py", "casino/core/request_player.py", "web/app.js", "tests/run_tests.py"],
+      "introduced_in": "game-expansion-hi-lo",
+      "changed_in": "game-expansion-hi-lo",
+      "notes": "Normal-user session context overrides caller-supplied player ids, and settled Hi-Lo history survives backend restart."
+    },
+    {
+      "id": "HILO-003",
+      "module": "Hi-Lo",
+      "description": "Hi-Lo wager debits, equal-rank refunds, and winning payouts use the shared ledger exactly once under stable action identifiers and immutable request fingerprints.",
+      "status": "PASS",
+      "api_tests": ["API-HILO-001"],
+      "browser_tests": [],
+      "implementation_files": ["casino/games/hi_lo/service.py", "casino/core/ledger.py", "tests/games/hi_lo/test_api.py", "tests/run_tests.py"],
+      "introduced_in": "game-expansion-hi-lo",
+      "changed_in": "game-expansion-hi-lo",
+      "notes": "Game code never mutates balances directly; exact deal and guess retries recover immutable ledger proof while changed wagers or directions fail closed."
+    },
+    {
+      "id": "HILO-004",
+      "module": "Application",
+      "description": "The Hi-Lo surface provides complete English and Russian copy and remains responsive, accessible, and reduced-motion safe across required viewports and decision outcomes.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": ["BR-HILO-001"],
+      "implementation_files": ["web/games/hi_lo.js", "web/i18n/en-US/games/hi_lo.json", "web/i18n/ru-RU/games/hi_lo.json", "tests/visual/visual_matrix.json", "tests/run_tests.py"],
+      "introduced_in": "game-expansion-hi-lo",
+      "changed_in": "game-expansion-hi-lo",
+      "notes": "Acceptance evidence covers both locales, all four named viewports, ready and choice states, correct, incorrect, and tie settlements, reduced motion, and canonical route restoration."
+    },
+    {
+      "id": "HILO-005",
+      "module": "Tests",
+      "description": "Catalog, contract, browser, and long-suite discovery automatically include Hi-Lo with requirement, module, version, and visual evidence traceability.",
+      "status": "PASS",
+      "api_tests": ["API-CATALOG-001", "LONG-SUITE-100"],
+      "browser_tests": ["BR-CATALOG-DISCOVERY-001", "BR-HILO-001"],
+      "implementation_files": ["modules/hi_lo.json", "modules/module-manifest.json", "contracts/compatibility/module-api-matrix.json", "tests/game_drivers/hi_lo.py", "tests/visual/visual_matrix.json", "tests/run_tests.py"],
+      "introduced_in": "game-expansion-hi-lo",
+      "changed_in": "game-expansion-hi-lo",
+      "notes": "The descriptor uses sort order 120 and the normalized tests.game_drivers.hi_lo:play driver reference released by issue #77."
     }
   ]
 }

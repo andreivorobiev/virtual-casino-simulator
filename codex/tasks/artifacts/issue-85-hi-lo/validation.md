@@ -1,58 +1,47 @@
-# Issue #85 focused validation
+# Issue #85 / #77 integrated validation
 
-Branch: `codex/game-hi-lo`
+Branch: `codex/issue-77-rebase-117`
 
-Validated base: `origin/main` at `153f1e3676e5cec23eef39cbace885a021a03187`
+Accepted base: `origin/main` at `727d5cf2a55d627e6b844cc871ff8e6f46a7c0bf`
 
 Validation date: 2026-07-14
 
-## Passing focused checks
+## Focused and static checks
 
 | Command | Result |
 | --- | --- |
-| `python -m unittest tests.games.hi_lo.test_engine tests.games.hi_lo.test_api` | PASS: 13 tests, including session isolation, semantic retry conflicts, restart recovery, crash-before-wager recovery, durable action receipts, and ledger settlement shapes. |
+| `python -m unittest tests.games.hi_lo.test_engine tests.games.hi_lo.test_api` | PASS: 13 tests covering rules, session isolation, semantic retry conflicts, restart recovery, durable receipts, and ledger settlement shapes. |
 | `node --check web/games/hi_lo.js` | PASS. |
 | `node tests/games/hi_lo/test_frontend.mjs` | PASS: localized visible/ARIA copy, shared card renderer, retry-stable IDs, responsive/reduced-motion CSS, and timer-free lifecycle checks. |
-| `python -m unittest tests.card_poker_primitives_tests` | PASS: 9 shared #96 card-primitive tests. |
-| `node tests/card_renderer_tests.js` | PASS: shared card-renderer checks. |
 | `python verify_rules.py` | PASS: 32 rule checks. |
-| `python scripts/validate_contracts.py` | PASS: 8 shared APIs and 8 integrated catalog games. |
+| `python scripts/validate_game_catalog.py` | PASS: 12 integrated games and target 20. |
+| `python scripts/validate_contracts.py` | PASS: 8 shared APIs and 12 catalog games. |
 | `python scripts/validate_module_boundaries.py` | PASS. |
-| `python scripts/validate_requirements.py` | PASS: 425 requirements. No permanent Hi-Lo IDs are claimed. |
-| `python scripts/validate_versions.py` | PASS: packaged release 9.1.1 and 21 integrated module revisions. |
-| `python scripts/validate_game_catalog.py` | PASS: 8 current games and target 20. |
-| `python scripts/check_comment_density.py` | PASS: 10126/10137 meaningful lines have nearby comments (99.9%); all 11 warnings are pre-existing premium-redesign prerender lines outside this issue. |
-| Descriptor hook import (`casino.games.hi_lo.api:register`, `tests.game_drivers.hi_lo:play`) | PASS. |
-| UTF-8 JSON parse for the descriptor proposal and both locale files | PASS. |
+| `python scripts/validate_requirements.py` | PASS: 445 requirements. |
+| `python scripts/validate_versions.py` | PASS: packaged release 9.1.1 and 25 module revisions. |
+| `python scripts/check_comment_density.py` | PASS: 12528/12539 meaningful lines have nearby comments; all 11 warnings are pre-existing premium-redesign prerender lines outside this scope. |
 | `git diff --check` | PASS. |
 
-## CI correction
+## Integrated real-backend gates
 
-The unchanged `hi_lo` version `1.0.0` proposal is stored at:
+- `python scripts/bootstrap_repo.py`: PASS in a disposable deployment.
+- `python tests/run_tests.py --api`: PASS, including `API-HILO-001`, authenticated hostile-player override checks, exact deal and guess replay, changed-wager conflict rejection, hidden-card protection, ledger-only debit/refund/payout, and `API-WALLET-RESTART-001` history persistence.
+- `python tests/run_tests.py --browser`: PASS, including catalog discovery, canonical route restoration, `BR-HILO-001`, complete EN/RU copy, four governed viewports, and every registered Hi-Lo state.
+- `python tests/long_suites.py --suite 100 --copy-deployment`: PASS with `hi_lo: 100` plays across 100 full-casino scenarios and all 445 requirements touched at least 100 times.
 
-```text
-codex/tasks/artifacts/issue-85-hi-lo/hi_lo.module.proposal.json
-```
+## Visual evidence
 
-Its SHA-256 before and after relocation is:
+`BR-HILO-001` generates 56 PNGs and 56 self-describing JSON sidecars under `logs/test-runs`:
 
-```text
-F091E3F14476ECA7FEE284A4893D0BE453C0D12AD1078C5DB795DE2760AC42B3
-```
+- states: `ready`, `choose_higher_or_lower`, `correct_guess`, `incorrect_guess`, `tie_refund`, `reduced_motion`, and `route_restored`;
+- locales: `en-US` and `ru-RU`;
+- viewports: `desktop_primary`, `desktop_compact`, `tablet`, and `mobile`;
+- source: the real catalog-registered backend and authenticated shared shell, with no forced-card or public test seam.
 
-`modules/hi_lo.json` is absent. The proposal therefore cannot be auto-installed before #77 promotes it alongside the canonical aggregate revision. This removes the prior `/api/v1/casino/reset` `KeyError: 'hi_lo'` failure without editing shared files.
+The test rejects English game leakage in Russian, page-level horizontal overflow, hidden or clipped active navigation, and an unlocalized catalog label. Representative English desktop choice and Russian mobile tie-refund images were visually inspected after the automated pass.
 
-## Deferred integrated checks
+## Listener and runtime safety
 
-GitHub's current-game API, browser, and Long Suite workflows may run normally because the proposal is not part of integrated descriptor discovery. Hi-Lo-specific versions of the following acceptance checks remain deferred until #77 promotes the proposal with the shared aggregate revision, catalog route, requirement records, compatibility records, and visual-matrix row:
+All validation runs in disposable copies outside the shared checkout. Smoke listeners use ephemeral loopback ports only and every recorded PID is stopped before the next run. Ports `8765` and `8877` and the user-owned shared `data/` state are never contacted, stopped, cleaned, staged, restored, or overwritten. The exact pushed-head listener table and closure checks are recorded in the pull request handback.
 
-- `python tests/run_tests.py --api`
-- `python tests/run_tests.py --browser`
-- the catalog-discovered long suite and route-restoration checks
-- authenticated real-backend EN/RU browser evidence at every required viewport
-
-`python scripts/bootstrap_repo.py` was not run because this isolated worker was expressly prohibited from overwriting or cleaning the user's live shared `data/` state. No listener was started, so PID and port are not applicable; port 8765 was untouched and no listener cleanup was required.
-
-## Evidence boundary
-
-No screenshot is claimed as integrated `after_pass` evidence. Issue #77 must rerun the deferred checks and capture browser evidence from the exact accepted integration head. This packet demonstrates isolated readiness only and does not claim shared integration acceptance.
+The disposable Long Suite deployment cleans itself after success. Temporary validation copies are removed after the exact-head GitHub handoff is complete.

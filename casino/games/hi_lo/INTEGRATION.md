@@ -1,24 +1,22 @@
-# Hi-Lo integration handoff for issue #77
+# Hi-Lo integration acceptance for issue #77
 
-The isolated module descriptor proposes `hi_lo` version `1.0.0`, catalog sort order `120`, canonical route `/games/hi_lo`, API slug `/api/v1/games/hi-lo`, and requirements prefix `HILO`.
+The canonical descriptor registers `hi_lo` version `1.0.0`, catalog sort order `120`, route `/games/hi_lo`, API slug `/api/v1/games/hi-lo`, and permanent requirements prefix `HILO`.
 
-## Shared changes reserved for #77
+## Shared changes supplied by #77
 
-The integration owner must:
+The integration owner:
 
-- allocate permanent Hi-Lo requirement IDs before adding them to the central registry;
-- add `hi_lo: 1.0.0` to `modules/module-manifest.json` from the then-current accepted base;
-- add the OpenAPI contract to compatibility matrices and contract digests;
-- add the Hi-Lo visual-matrix row and regenerate requirements documentation;
-- let catalog discovery register the backend, lazy frontend, translations, and long driver;
-- run real-backend authenticated API, browser, route-restoration, and long-suite acceptance;
-- capture `after_pass` EN/RU evidence from the exact integrated head.
+- allocates permanent requirements `HILO-001` through `HILO-005`;
+- registers `hi_lo: 1.0.0` in the aggregate module manifest;
+- registers the additive OpenAPI contract in compatibility matrices and digests;
+- adds the Hi-Lo visual-matrix row and regenerates requirement documentation;
+- lets catalog discovery register the backend, lazy frontend, translations, and long driver;
+- runs authenticated real-backend API, browser, route-restoration, and Long Suite 100 acceptance;
+- captures `after_pass` EN/RU evidence from the integrated branch.
 
-No worker commit in this branch edits those shared files.
+## Permanent requirement allocation
 
-## Requirement allocation needed
-
-Current main, issue #85, and the #77 sequencing contract do not allocate numbered Hi-Lo requirements. The descriptor's `HILO` prefix is provisional metadata only; the coordinator must choose the permanent IDs without this worker inventing them.
+Issue #77 permanently allocates `HILO-001` through `HILO-005` across five acceptance dimensions:
 
 The allocated block needs five acceptance dimensions:
 
@@ -28,9 +26,9 @@ The allocated block needs five acceptance dimensions:
 - complete EN/RU visible and accessible copy across responsive and reduced-motion states;
 - catalog, contract, driver, API, browser, module, version, requirement, and visual traceability.
 
-New entries must begin as `PLANNED` and become `PASS` only after #77 records real integrated evidence.
+The central requirement registry records these IDs as `PASS` only with mapped real-backend API, restart, browser, catalog, Long Suite 100, and visual evidence.
 
-## Proposed visual matrix row
+## Registered visual matrix row
 
 - Surface: `hi_lo`
 - Route: `/games/hi_lo`
@@ -42,6 +40,6 @@ New entries must begin as `PLANNED` and become `PASS` only after #77 records rea
 
 The game owns no timer, so reduced-motion validation covers the CSS preference path and absence of delayed lifecycle work.
 
-## Intake order
+## Intake status
 
-Sort order `120` is presentation metadata, not merge authorization. Keep this PR draft while #77 completes the currently released sequence. Rebase and validate Hi-Lo only after the coordinator explicitly assigns its intake step from the then-current `main`.
+Sort order `120` remains presentation metadata, not merge authorization. PR #117 stays draft until its exact pushed head has fresh green checks and the coordinator accepts the complete #77 evidence gate.

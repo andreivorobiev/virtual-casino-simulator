@@ -1,4 +1,4 @@
-# Hi-Lo isolated game slice
+# Hi-Lo game module
 
 Issue: [#85](https://github.com/andreivorobiev/virtual-casino-simulator/issues/85)
 
@@ -39,9 +39,9 @@ A future multi-process deployment must add an atomic unique idempotency key to t
 
 ## Requirement mapping
 
-Current shared requirements used by this isolated slice include `CARD-001`, `CARD-002`, `CORE-009`, `CORE-011`, `CORE-012`, `CORE-018`, `CORE-021`, `CORE-022`, `LEDGER-005`, `LEDGER-006`, `LEDGER-007`, `LEDGER-009`, `LEDGER-023`, `SESSION-005`, `I18N-001`, `I18N-002`, `TOKEN-001`, and `TEST-042`.
+Permanent Hi-Lo requirements are `HILO-001` through `HILO-005`. Shared requirements used by the module include `CARD-001`, `CARD-002`, `CORE-009`, `CORE-011`, `CORE-012`, `CORE-018`, `CORE-021`, `CORE-022`, `LEDGER-005`, `LEDGER-006`, `LEDGER-007`, `LEDGER-009`, `LEDGER-023`, `SESSION-005`, `I18N-001`, `I18N-002`, `TOKEN-001`, and `TEST-042`.
 
-Current main and GitHub issue #85 do not allocate permanent Hi-Lo-specific IDs. The module descriptor therefore proposes prefix `HILO`, while #77 retains authority to allocate the permanent five-dimension block for rules, session/reload behavior, ledger/retry safety, EN/RU responsive UI, and discovered acceptance evidence.
+Issue #77 owns the permanent five-dimension block for rules, session/reload behavior, ledger/retry safety, EN/RU responsive UI, and discovered acceptance evidence.
 
 ## Focused validation
 
@@ -54,4 +54,4 @@ python scripts/validate_requirements.py
 python scripts/check_comment_density.py
 ```
 
-Real shared-shell browser evidence remains blocked until #77 adds the aggregate revision and visual row.
+The #77 shared lane registers the descriptor, aggregate revision, compatibility metadata, visual row, and central API/browser/restart coverage. Long Suite 100 discovers this module through `tests.game_drivers.hi_lo:play`.

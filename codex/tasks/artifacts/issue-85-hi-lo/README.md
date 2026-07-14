@@ -1,10 +1,10 @@
-# Issue #85 isolated handoff evidence
+# Issue #85 Hi-Lo handoff and #77 integration evidence
 
-Branch: `codex/game-hi-lo`
+Integration branch: `codex/issue-77-rebase-117`
 
-Base at implementation start: `0a1ebc2d7d034bb855ad968215bc61adcd18f4c9` (`origin/main`)
+Accepted integration base: `727d5cf2a55d627e6b844cc871ff8e6f46a7c0bf` (`origin/main`)
 
-## Delivered isolated slice
+## Delivered game slice
 
 - Two-step Hi-Lo rules using the merged #96 standard-card primitive: deal one visible card, choose higher or lower, compare rank only with ace high.
 - Correct guesses return 2 times the wager, equal ranks refund 1 times the wager, and incorrect guesses return zero.
@@ -12,21 +12,21 @@ Base at implementation start: `0a1ebc2d7d034bb855ad968215bc61adcd18f4c9` (`origi
 - Independent deal and guess action IDs with semantic conflict rejection, process-local serialization, state-before-ledger recovery, and player/game/action ledger scans.
 - Ledger-only wager, payout, and refund movements with no direct balance mutation.
 - Timer-free EN/RU lazy frontend using the shared accessible card renderer with game-local localized card ARIA labels.
-- Additive OpenAPI v1 contract, artifact-scoped catalog descriptor proposal, focused engine/API/frontend tests, and catalog long driver.
+- Additive OpenAPI v1 contract, canonical catalog descriptor, focused engine/API/frontend tests, and catalog long driver.
 
-## Shared integration intentionally blocked
+## Shared integration completed by issue #77
 
-The following actions remain owned by issue #77 and are not performed here:
+The #77 lane owns and completes these shared actions:
 
-- Allocate permanent Hi-Lo requirement IDs; current issue #85 and main have none.
-- Promote `hi_lo.module.proposal.json` into `modules/hi_lo.json` and add `hi_lo: 1.0.0` to `modules/module-manifest.json` in the same integration change.
+- Allocate permanent requirements `HILO-001` through `HILO-005`.
+- Promote the descriptor into `modules/hi_lo.json` and register `hi_lo: 1.0.0` in `modules/module-manifest.json`.
 - Add central requirement records and regenerate requirement documentation.
 - Add the contract compatibility matrix and digest records.
 - Add the `hi_lo` surface to `tests/visual/visual_matrix.json`.
-- Run catalog-discovered central API/browser/long suites after the aggregate revision makes runtime registration valid.
+- Run catalog-discovered central API, browser, restart, and Long Suite 100 gates.
 - Capture real-backend authenticated `after_pass` EN/RU evidence from the integrated route.
 
-## Proposed visual matrix row
+## Registered visual matrix row
 
 - Surface: `hi_lo`
 - Route: `/games/hi_lo`
@@ -38,6 +38,6 @@ The following actions remain owned by issue #77 and are not performed here:
 
 ## Evidence classification
 
-No screenshot from this isolated branch is claimed as `after_pass`. The shared aggregate manifest and visual row are intentionally absent, so issue #77 must first activate the real catalog route and then capture acceptance images from the exact integrated head.
+The #77 browser gate generates 56 real-backend `after_pass` images and sidecars covering both locales, all four governed viewports, and every registered state from the integrated catalog route.
 
-Focused command evidence, the descriptor-proposal relocation, and green catalog/version validation are recorded in `validation.md`. No listener is required for this isolated plan.
+Focused commands, shared validators, bootstrap, API, browser, Long Suite 100, visual evidence, and listener cleanup are recorded in `validation.md` and the exact-head pull-request handback.
