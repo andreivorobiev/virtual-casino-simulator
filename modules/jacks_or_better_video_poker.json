@@ -79,5 +79,6 @@
     "keno",
     "bingo",
     "multi_hand_video_poker"
+    ,"casino_war", "big_six_wheel", "red_dog", "dragon_tiger", "hi_lo", "three_card_poker"
   ]
 }

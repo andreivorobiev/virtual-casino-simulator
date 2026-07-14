@@ -41,7 +41,7 @@ Existing games retain sort orders 10 through 60. The approved expansion slots ar
 | 140 | Sic Bo | future isolated slice | Reserved |
 | 150 | Chuck-a-Luck | future isolated slice | Reserved |
 | 160 | Craps | future isolated slice | Reserved |
-| 170 | Jacks or Better Video Poker | #91 | Next draft PR #115 |
+| 170 | Jacks or Better Video Poker | #91 | Released draft PR #115 |
 | 180 | Deuces Wild Video Poker | #92 | Held draft PR #119 |
 | 190 | Three Card Poker | #93 | Released draft PR #118 |
 | 200 | Texas Hold'em Practice Table | #95 | Held draft PR #120 |
@@ -59,6 +59,7 @@ Permanent game blocks are reserved as follows:
 - `DT-001` through `DT-005` for the same five acceptance dimensions for Dragon Tiger.
 - `HILO-001` through `HILO-005` for the same five acceptance dimensions for Hi-Lo.
 - `TCP-001` through `TCP-005` for the same five acceptance dimensions for Three Card Poker.
+- `JOBVP-001` through `JOBVP-005` for the same five acceptance dimensions for Jacks or Better Video Poker.
 
 New entries begin as `PLANNED`. The integration owner changes an entry to `PASS` only when its mapped real-backend tests and visual evidence have passed. Requirement IDs are never reused or renumbered after allocation.
 
@@ -102,6 +103,7 @@ Each new game begins at module revision `1.0.0`. The packaged application releas
 | #127 Dragon Tiger | 9.8.0 | 1.11.0 | 1.10.0 | 1.6.0 |
 | #117 Hi-Lo | 9.9.0 | 1.12.0 | 1.11.0 | 1.7.0 |
 | #118 Three Card Poker | 9.10.0 | 1.13.0 | 1.12.0 | 1.8.0 |
+| #115 Jacks or Better Video Poker | 9.11.0 | 1.14.0 | 1.13.0 | 1.9.0 |
 
 These values are reservations, not permission to overwrite a newer value. The integrator must re-read current `main` immediately before each bump.
 
@@ -125,6 +127,7 @@ Required visual states are:
 - Dragon Tiger: `ready`, `settled`, `tie_half_loss`, `exact_replay`, `reduced_motion`, and `route_restored`.
 - Hi-Lo: `ready`, `choose_higher_or_lower`, `correct_guess`, `incorrect_guess`, `tie_refund`, `reduced_motion`, and `route_restored`.
 - Three Card Poker: `ready`, `decision`, `player_win`, `dealer_win`, `dealer_not_qualified`, `folded`, `reduced_motion`, and `route_restored`.
+- Jacks or Better Video Poker: `ready`, `choose_holds`, `winning_hand`, `losing_hand`, `reduced_motion`, and `route_restored`.
 
 ## Validation and listener gate
 

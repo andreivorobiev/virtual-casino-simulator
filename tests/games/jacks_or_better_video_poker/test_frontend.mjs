@@ -17,8 +17,8 @@ const source = await readFile(path.join(root, 'web', 'games', 'jacks_or_better_v
 const english = JSON.parse(await readFile(path.join(root, 'web', 'i18n', 'en-US', 'games', 'jacks_or_better_video_poker.json'), 'utf8'));
 // Read the paired Russian game resource domain.
 const russian = JSON.parse(await readFile(path.join(root, 'web', 'i18n', 'ru-RU', 'games', 'jacks_or_better_video_poker.json'), 'utf8'));
-// Read the issue-owned descriptor proposal without auto-installing it before #77 integration.
-const descriptor = JSON.parse(await readFile(path.join(root, 'codex', 'tasks', 'artifacts', 'issue-91-jacks-or-better-video-poker', 'jacks_or_better_video_poker.module.proposal.json'), 'utf8'));
+// Read the canonical descriptor promoted by the #77 shared integration lane.
+const descriptor = JSON.parse(await readFile(path.join(root, 'modules', 'jacks_or_better_video_poker.json'), 'utf8'));
 // Read the additive frozen-v1 contract declared by the descriptor.
 const contract = await readFile(path.join(root, 'contracts', 'openapi', 'jacks_or_better_video_poker.v1.yaml'), 'utf8');
 
