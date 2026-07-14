@@ -1,0 +1,342 @@
+openapi: 3.0.3
+# Describe the additive issue-90 surface without changing existing v1 operations.
+info:
+  title: Virtual Casino Craps API
+  version: v1
+  description: >-
+    Additive session-bound Pass Line and Don't Pass contract for issue #90.
+    The authenticated game resolver owns player identity, while required request_id values
+    make round starts and dice rolls safe to retry in the local single-process simulator.
+# Group the isolated routes under one game-owned contract tag.
+tags:
+  - name: Craps
+    description: Reload-safe point play with ledger-only wagers, payouts, and refunds.
+paths:
+  # Expose only the authenticated player's current and recent game state.
+  /api/v1/games/craps/state:
+    get:
+      tags: [Craps]
+      operationId: crapsState
+      summary: Read the authenticated player's reload-safe Craps state
+      parameters:
+        - $ref: '#/components/parameters/CompatibilityPlayerId'
+      responses:
+        '200':
+          description: Current player-scoped round state and supported line bets
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StateEnvelope'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  # Debit one line wager and create or replay its pending come-out round.
+  /api/v1/games/craps/rounds:
+    post:
+      tags: [Craps]
+      operationId: crapsStartRound
+      summary: Start or replay one ledger-backed line-bet round
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartRoundRequest'
+      responses:
+        '200':
+          description: New or replayed round with committed wager evidence
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StartRoundEnvelope'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  # Advance one existing round with a server-authoritative two-die result.
+  /api/v1/games/craps/rounds/{round_id}/rolls:
+    post:
+      tags: [Craps]
+      operationId: crapsRoll
+      summary: Roll or replay one deterministic-identity Craps action
+      parameters:
+        - $ref: '#/components/parameters/RoundId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RollRequest'
+      responses:
+        '200':
+          description: Updated round, immutable roll result, and optional terminal settlement
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RollEnvelope'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+components:
+  # Reuse bounded route and compatibility identifiers across operations.
+  parameters:
+    RoundId:
+      name: round_id
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: '^[A-Za-z0-9_-]+$'
+    CompatibilityPlayerId:
+      name: player_id
+      in: query
+      required: false
+      deprecated: true
+      description: Compatibility input overridden by the authenticated session resolver.
+      schema:
+        type: string
+  # Preserve the repository-wide error envelope for every non-success response.
+  responses:
+    ErrorResponse:
+      description: Standard API error envelope
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+  schemas:
+    # Require one stable caller identity for each independently retryable action.
+    RequestId:
+      type: string
+      minLength: 1
+      maxLength: 128
+      pattern: '^[A-Za-z0-9._:-]+$'
+    # Constrain fake-money wagers to the shared ledger's supported precision and range.
+    TokenAmount:
+      type: number
+      minimum: 0.01
+      maximum: 100000
+      multipleOf: 0.01
+      description: Fake-money play-token amount with no cash or redemption value.
+    # Place one Pass Line or Don't Pass wager without accepting a caller-owned result.
+    StartRoundRequest:
+      type: object
+      additionalProperties: false
+      required: [request_id, bet_type, wager]
+      properties:
+        request_id:
+          $ref: '#/components/schemas/RequestId'
+        bet_type:
+          type: string
+          enum: [pass_line, dont_pass]
+        wager:
+          $ref: '#/components/schemas/TokenAmount'
+        player_id:
+          type: string
+          description: Compatibility input overridden by the authenticated session resolver.
+    # Advance one round without exposing dice values or a forced-result test seam publicly.
+    RollRequest:
+      type: object
+      additionalProperties: false
+      required: [request_id]
+      properties:
+        request_id:
+          $ref: '#/components/schemas/RequestId'
+        player_id:
+          type: string
+          description: Compatibility input overridden by the authenticated session resolver.
+    # Describe one immutable server-authoritative roll in chronological round history.
+    Roll:
+      type: object
+      required: [request_id, roll_index, dice, total, point_before, point_after, resolution, created_at]
+      properties:
+        request_id:
+          $ref: '#/components/schemas/RequestId'
+        roll_index:
+          type: integer
+          minimum: 1
+        dice:
+          type: array
+          minItems: 2
+          maxItems: 2
+          items:
+            type: integer
+            minimum: 1
+            maximum: 6
+        total:
+          type: integer
+          minimum: 2
+          maximum: 12
+        point_before:
+          type: integer
+          nullable: true
+          enum: [4, 5, 6, 8, 9, 10]
+        point_after:
+          type: integer
+          nullable: true
+          enum: [4, 5, 6, 8, 9, 10]
+        resolution:
+          type: string
+          enum: [natural, craps, bar_twelve, point_established, point_hit, seven_out, no_decision]
+        created_at:
+          type: string
+          format: date-time
+    # Describe one player-owned round through come-out, point, and terminal phases.
+    Round:
+      type: object
+      required: [round_id, start_request_id, player_id, bet_type, wager, phase, point, rolls, outcome, wager_status, settlement_status, created_at]
+      properties:
+        round_id:
+          type: string
+        start_request_id:
+          $ref: '#/components/schemas/RequestId'
+        player_id:
+          type: string
+          description: Authenticated session-bound player; caller values cannot override this identity.
+        bet_type:
+          type: string
+          enum: [pass_line, dont_pass]
+        wager:
+          $ref: '#/components/schemas/TokenAmount'
+        phase:
+          type: string
+          enum: [come_out, point, settled]
+        point:
+          type: integer
+          nullable: true
+          enum: [4, 5, 6, 8, 9, 10]
+        rolls:
+          type: array
+          items:
+            $ref: '#/components/schemas/Roll'
+        outcome:
+          type: string
+          nullable: true
+          enum: [win, loss, push]
+        wager_status:
+          type: string
+          enum: [pending, complete]
+        settlement_status:
+          type: string
+          enum: [not_ready, pending, complete]
+        wager_ledger_id:
+          type: string
+        settlement_ledger_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+    # Keep active and recent state isolated beneath the resolved player identity.
+    GameState:
+      type: object
+      required: [active_round, recent_rounds]
+      properties:
+        active_round:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/Round'
+        recent_rounds:
+          type: array
+          maxItems: 20
+          items:
+            $ref: '#/components/schemas/Round'
+    # Leave the shared player and ledger records additive and forward-compatible.
+    Player:
+      type: object
+      additionalProperties: true
+    LedgerEvent:
+      type: object
+      nullable: true
+      additionalProperties: true
+    # Define the common game payload returned after state and action requests.
+    StateData:
+      type: object
+      required: [game, state, player, bet_types]
+      properties:
+        game:
+          type: string
+          enum: [craps]
+        state:
+          $ref: '#/components/schemas/GameState'
+        player:
+          $ref: '#/components/schemas/Player'
+        bet_types:
+          type: array
+          minItems: 2
+          maxItems: 2
+          uniqueItems: true
+          items:
+            type: string
+            enum: [pass_line, dont_pass]
+    # Extend common state with the wager action and replay evidence.
+    StartRoundData:
+      allOf:
+        - $ref: '#/components/schemas/StateData'
+        - type: object
+          required: [round, replayed]
+          properties:
+            round:
+              $ref: '#/components/schemas/Round'
+            replayed:
+              type: boolean
+            wager_event:
+              $ref: '#/components/schemas/LedgerEvent'
+    # Extend common state with one immutable roll and optional terminal credit or refund.
+    RollData:
+      allOf:
+        - $ref: '#/components/schemas/StateData'
+        - type: object
+          required: [round, roll, replayed]
+          properties:
+            round:
+              $ref: '#/components/schemas/Round'
+            roll:
+              $ref: '#/components/schemas/Roll'
+            settlement:
+              $ref: '#/components/schemas/LedgerEvent'
+            replayed:
+              type: boolean
+    # Specialize the standard success envelope for each operation class.
+    StateEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/StateData'
+    StartRoundEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/StartRoundData'
+    RollEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/RollData'
+    # Preserve the repository-wide structured failure shape.
+    ErrorEnvelope:
+      type: object
+      required: [ok, error]
+      properties:
+        ok:
+          type: boolean
+          enum: [false]
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
