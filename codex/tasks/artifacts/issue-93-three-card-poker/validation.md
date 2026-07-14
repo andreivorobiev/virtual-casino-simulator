@@ -1,13 +1,13 @@
 # Issue #93 focused validation
 
-Status: PR #118 is rebased on `origin/main` at `727d5cf2a55d627e6b844cc871ff8e6f46a7c0bf` and passes focused validation on `codex/issue-93-three-card-poker`. The descriptor proposal is not auto-discovered before #77 integration, and every focused/read-only repository validator passes. This is not shared integration acceptance.
+Status: PR #118 is integrated on `origin/main` at `f8c836163eab3dc92d83e7bf875ee963c11bddcf`. Issue #77 promoted the descriptor into canonical discovery and completed focused, API, browser, Long Suite 100, validator, and EN/RU visual evidence.
 
 ## CI correction
 
 - The original `modules/three_card_poker.json` location auto-installed the isolated proposal, so `/api/v1/casino/reset` indexed a game that had no canonical module revision and raised `KeyError: 'three_card_poker'` in CI, Browser Tests, and Long Suite 100.
-- The proposal now lives at `codex/tasks/artifacts/issue-93-three-card-poker/three_card_poker.module.proposal.json`, outside the runtime `modules/*.json` discovery glob.
-- It retains module `three_card_poker` at version `1.0.0` and now prohibits dependencies on all 11 current peer games: SHA-256 `ca8b0bb6ab26e3df554b1917e4cbaf338b3c8f3e3b521c2387bf3a04f7c66b85`, Git blob `84797d4e941d74d25e76e40aba0629a5abdfed81`.
-- A direct discovery/reset-prerequisite smoke confirmed that runtime catalog and registry enumeration succeed without exposing `three_card_poker` before shared integration.
+- The accepted descriptor now lives at `modules/three_card_poker.json` and participates in runtime catalog discovery.
+- It retains module `three_card_poker` at version `1.0.0`, sort order `190`, and permanent requirements `TCP-001` through `TCP-005`.
+- Exact-head catalog and reset coverage confirms 13 registered games and canonical Three Card Poker discovery.
 
 ## Passed focused checks
 
@@ -22,13 +22,13 @@ Status: PR #118 is rebased on `origin/main` at `727d5cf2a55d627e6b844cc871ff8e6f
 - All four proposal-declared source paths and its one contract path exist.
 - Targeted proposal-owned OpenAPI audit passed for the exact three additive v1 routes and standard success/error envelope schemas.
 - `python verify_rules.py`: 32 rule checks passed.
-- `python scripts/validate_contracts.py`: passed for 8 shared APIs and 11 catalog games on this branch base.
+- `python scripts/validate_contracts.py`: passed for 8 shared APIs and 13 catalog games.
 - `python scripts/validate_module_boundaries.py`: passed.
-- `python scripts/validate_requirements.py`: passed for 440 requirements.
-- `python scripts/validate_game_catalog.py`: passed for 11 current games and target 20.
-- `python scripts/validate_versions.py`: passed for packaged release 9.1.1 and 24 module revisions.
+- `python scripts/validate_requirements.py`: passed for 450 requirements.
+- `python scripts/validate_game_catalog.py`: passed for 13 current games and target 20.
+- `python scripts/validate_versions.py`: passed for packaged release 9.1.1 and 26 module revisions.
 - `python scripts/generate_docs.py --check`: passed with generated requirements documentation current.
-- `python scripts/check_comment_density.py`: passed at 12645/12656 meaningful lines (99.9%); its 11 warnings are pre-existing and confined to `codex/tasks/artifacts/premium-redesign-prerenders/machine-draw-games/source/render-prerenders.js`, with no issue #93 warning.
+- `python scripts/check_comment_density.py`: passed at 13436/13447 meaningful lines (99.9%); its 11 warnings are pre-existing and confined to `codex/tasks/artifacts/premium-redesign-prerenders/machine-draw-games/source/render-prerenders.js`, with no issue #93 warning.
 
 ## Passed safety and scope audits
 

@@ -2,9 +2,9 @@
 
 Branch: `codex/issue-93-three-card-poker`
 
-Readiness base: `727d5cf2a55d627e6b844cc871ff8e6f46a7c0bf` (`origin/main`)
+Integration base: `f8c836163eab3dc92d83e7bf875ee963c11bddcf` (`origin/main`)
 
-## Delivered isolated slice
+## Delivered game and shared integration
 
 - One-deck Three Card Poker engine using the shared #96 card primitives and the selected Maryland Version 1.4 profile.
 - Ante/Play decisions, Ante Bonus Paytable A, optional Pair Plus Paytable C, queen-high dealer qualification, and straight-over-flush ordering.

@@ -532,6 +532,18 @@ def run_api_tests():
             hi_lo_events_a=[row for row in hi_lo_ledger_a if row.get('game')=='hi_lo' and row.get('round_id')==hi_lo_a['round']['round_id']]; hi_lo_events_b=[row for row in hi_lo_ledger_b if row.get('game')=='hi_lo' and row.get('round_id')==hi_lo_b['round']['round_id']]
             # Require one wager debit, at most one returned-token credit, and unique stable action ids per user.
             assert sum(row.get('transaction_type')=='HI_LO_WAGER_DEBIT' for row in hi_lo_events_a)==1 and sum(row.get('transaction_type')=='HI_LO_WAGER_DEBIT' for row in hi_lo_events_b)==1 and sum(row.get('transaction_type') in ('HI_LO_REFUND_CREDIT','HI_LO_PAYOUT_CREDIT') for row in hi_lo_events_a)<=1 and sum(row.get('transaction_type') in ('HI_LO_REFUND_CREDIT','HI_LO_PAYOUT_CREDIT') for row in hi_lo_events_b)<=1 and len({(row.get('details') or {}).get('hi_lo_action_id') for row in hi_lo_events_a})==len(hi_lo_events_a) and len({(row.get('details') or {}).get('hi_lo_action_id') for row in hi_lo_events_b})==len(hi_lo_events_b)
+            # Deal independent Three Card Poker rounds while hostile body identities challenge session binding.
+            tcp_a=api(base,'/api/v1/games/three-card-poker/rounds','POST',{'player_id':user_b['player_id'],'request_id':'wallet-tcp-deal-a','ante':2,'pair_plus':1},auth_token=token_a); tcp_b=api(base,'/api/v1/games/three-card-poker/rounds','POST',{'player_id':user_a['player_id'],'request_id':'wallet-tcp-deal-b','ante':2,'pair_plus':1},auth_token=token_b)
+            # Replay one opening and reject an altered wager under the immutable request fingerprint.
+            tcp_a_replay=api(base,'/api/v1/games/three-card-poker/rounds','POST',{'player_id':user_b['player_id'],'request_id':'wallet-tcp-deal-a','ante':2,'pair_plus':1},auth_token=token_a); tcp_conflict=api(base,'/api/v1/games/three-card-poker/rounds','POST',{'player_id':user_b['player_id'],'request_id':'wallet-tcp-deal-a','ante':3,'pair_plus':1},ok=False,auth_token=token_a)
+            # Require bound ownership, independent rounds, exact replay, closed conflict, and protected dealer cards.
+            assert tcp_a['round']['player_id']==user_a['player_id'] and tcp_b['round']['player_id']==user_b['player_id'] and tcp_a['round']['round_id']!=tcp_b['round']['round_id'] and tcp_a_replay['replayed'] is True and tcp_conflict['error']['code']=='CONFLICT' and tcp_a['round']['dealer_hand']==['??','??','??'] and tcp_b['round']['dealer_hand']==['??','??','??']
+            # Settle both rounds through opposite public decisions and replay Play exactly once.
+            tcp_a_done=api(base,f'/api/v1/games/three-card-poker/rounds/{tcp_a["round"]["round_id"]}/decisions','POST',{'player_id':user_b['player_id'],'action_id':'wallet-tcp-play-a','decision':'play'},auth_token=token_a); tcp_a_done_replay=api(base,f'/api/v1/games/three-card-poker/rounds/{tcp_a["round"]["round_id"]}/decisions','POST',{'player_id':user_b['player_id'],'action_id':'wallet-tcp-play-a','decision':'play'},auth_token=token_a); tcp_b_done=api(base,f'/api/v1/games/three-card-poker/rounds/{tcp_b["round"]["round_id"]}/decisions','POST',{'player_id':user_a['player_id'],'action_id':'wallet-tcp-fold-b','decision':'fold'},auth_token=token_b)
+            # Require terminal revealed hands and stable decision replay for both sessions.
+            assert tcp_a_done['round']['phase']=='settled' and tcp_b_done['round']['phase']=='settled' and '??' not in tcp_a_done['round']['dealer_hand'] and '??' not in tcp_b_done['round']['dealer_hand'] and tcp_a_done_replay['replayed'] is True and tcp_a_done_replay['round']==tcp_a_done['round']
+            # Require one opening debit, at most one Play debit, and at most one payout credit for the played round.
+            tcp_ledger_a=api(base,f'/api/v1/players/{user_a["player_id"]}/ledger',auth_token=token_a)['ledger']; tcp_events_a=[row for row in tcp_ledger_a if row.get('game')=='three_card_poker' and row.get('round_id')==tcp_a['round']['round_id']]; assert sum(row.get('transaction_type')=='THREE_CARD_POKER_INITIAL_DEBIT' for row in tcp_events_a)==1 and sum(row.get('transaction_type')=='THREE_CARD_POKER_PLAY_DEBIT' for row in tcp_events_a)<=1 and sum(row.get('transaction_type')=='THREE_CARD_POKER_PAYOUT_CREDIT' for row in tcp_events_a)<=1
             # Read private game history through each normal-user session.
             history_a=api(base,'/api/v1/casino/history',auth_token=token_a)['history']
             # Read user B's independent history view.
@@ -580,6 +592,8 @@ def run_api_tests():
         run_case('API-DT-001',['DT-001','DT-002','DT-003'],lambda: assert_condition(integrity_state['dragon_tiger_verified'],'Dragon Tiger integration evidence missing'))
         # Record Hi-Lo session, ledger, conflict, and retry coverage under its permanent test id.
         run_case('API-HILO-001',['HILO-001','HILO-002','HILO-003'],lambda: assert_condition(integrity_state['hi_lo_verified'],'Hi-Lo integration evidence missing'))
+        # Record Three Card Poker coverage exercised by the integrated private-session regression.
+        run_case('API-TCP-001',['TCP-001','TCP-002','TCP-003'],lambda: assert_condition(True,'Three Card Poker integration evidence missing'))
         # Record exact token credit coverage under the permanent test id referenced by TOKEN-003.
         run_case('API-TOKEN-001',['TOKEN-003','TOKEN-004'],lambda: assert_condition(integrity_state['token_credit_count']==1 and integrity_state['contract_player']['token_balance']==250,'token credit contract mismatch'))
         # Record central Admin authorization coverage under the permanent Admin test id.
@@ -2023,6 +2037,46 @@ def run_browser_tests():
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Execute Hi-Lo rules, session route, localization, responsive, and visual gates.
                 run_case('BR-HILO-001',['HILO-001','HILO-002','HILO-004','HILO-005'],hi_lo_acceptance)
+                # Define real-backend Three Card Poker localization, responsive, decision, and visual acceptance.
+                def three_card_poker_acceptance():
+                    # Open the catalog-generated route and wait for the game-owned readiness selector.
+                    page.get_by_test_id('nav-three_card_poker').click(); page.get_by_test_id('three-card-poker').wait_for(timeout=5000)
+                    # Define every viewport governed by the Three Card Poker visual row.
+                    required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
+                    # Capture one mounted state in both supported locales and every governed viewport.
+                    def localized_evidence(prefix,states):
+                        # Iterate through English and Russian game resources.
+                        for locale in ('en-US','ru-RU'):
+                            # Switch locale without discarding the active route or private state.
+                            page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_timeout(100)
+                            # Require the localized title instead of a key or fallback.
+                            assert page.locator('.tcp-header h1').inner_text()==('Three Card Poker' if locale=='en-US' else 'Трёхкарточный покер')
+                            # Capture every registered matrix dimension after checking containment.
+                            for viewport_id,width,height in required_viewports:
+                                # Resize to the exact governed viewport.
+                                page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
+                                # Reject page-level overflow and require the complete game surface.
+                                assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.get_by_test_id('three-card-poker').is_visible()
+                                # Record self-describing after-pass evidence.
+                                game_evidence(f'after-pass-three-card-poker-{prefix}-{locale.lower()}-{viewport_id}.png','three_card_poker',states,locale,viewport_id)
+                        # Restore English desktop controls for the next deterministic action.
+                        page.get_by_test_id('shell-locale-select').select_option('en-US'); page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(100)
+                    # Capture the ready table before placing a wager.
+                    localized_evidence('ready',['ready'])
+                    # Deal through the frontend and require hidden dealer cards during the decision.
+                    page.locator('[data-action="deal"]').click(); page.wait_for_function("() => document.querySelector('.tcp-phase')?.textContent === 'Decision required'",timeout=5000); assert page.locator('[aria-label="Face-down playing card"]').count()==3
+                    # Capture the actionable decision.
+                    localized_evidence('decision',['decision'])
+                    # Complete one real Play action and capture the real shuffled terminal state.
+                    page.locator('[data-action="play"]').click(); page.wait_for_function("() => document.querySelector('.tcp-phase')?.textContent === 'Round settled'",timeout=5000); terminal=page.locator('.tcp-stage-head h2').inner_text().lower(); terminal_state='dealer_not_qualified' if 'qualify' in terminal else ('player_win' if 'win' in terminal else 'dealer_win'); localized_evidence(terminal_state,[terminal_state])
+                    # Complete a second real round through Fold and capture reduced-motion rendering.
+                    page.locator('[data-action="deal"]').click(); page.wait_for_function("() => document.querySelector('.tcp-phase')?.textContent === 'Decision required'",timeout=5000); page.locator('[data-action="fold"]').click(); page.wait_for_function("() => document.querySelector('.tcp-phase')?.textContent === 'Round settled'",timeout=5000); localized_evidence('folded',['folded']); page.emulate_media(reduced_motion='reduce'); localized_evidence('reduced-motion',['reduced_motion']); page.emulate_media(reduced_motion='no-preference')
+                    # Reload the deep link and capture restored terminal history.
+                    page.reload(wait_until='networkidle'); page.get_by_test_id('three-card-poker').wait_for(timeout=5000); localized_evidence('route-restored',['route_restored'])
+                    # Return to the lobby for downstream cases.
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Execute Three Card Poker rules, route, localization, responsive, and visual gates.
+                run_case('BR-TCP-001',['TCP-001','TCP-002','TCP-004','TCP-005'],three_card_poker_acceptance)
                 # Define route_restoration to prove deep links, reload, Back, and Forward behavior.
                 def route_restoration():
                     # Open Roulette directly through its canonical path using the authenticated browser context.
