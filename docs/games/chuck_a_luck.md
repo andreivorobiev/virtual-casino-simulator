@@ -68,6 +68,6 @@ The isolated descriptor proposes module version `1.0.0` and reserved sort order 
 - register the contract in the shared compatibility or digest inventory;
 - let catalog discovery register `casino.games.chuck_a_luck.api:register`, `ChuckALuckGame`, both locale resources, and `tests.game_drivers.chuck_a_luck:play`;
 - add the `chuck_a_luck` visual-matrix surface with `ready`, `rolling`, `settled`, `reduced_motion`, and `route_restored` states for `en-US` and `ru-RU` at all four required viewports;
-- capture and review real-backend `after_pass` evidence after the shared route and catalog entry are integrated.
+- review the branch-local real-backend `after_pass` set under `docs/evidence/chuck_a_luck/` and recapture canonical rows if shared-shell integration changes the visible result.
 
 No shared catalog, router, configuration, shell, global i18n, test runner, long-suite registry, visual matrix, central requirement registry, generated documentation, compatibility matrix, or aggregate manifest file is changed by this isolated slice.

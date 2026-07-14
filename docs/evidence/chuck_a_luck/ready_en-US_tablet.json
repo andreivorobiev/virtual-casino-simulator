@@ -1,0 +1,14 @@
+{
+  "evidence_class": "after_pass",
+  "branch": "codex/game-chuck-a-luck",
+  "commit": "d386d7505e94f6d8d1c8d36907818656fce141e4",
+  "surface": "chuck_a_luck",
+  "state": "ready",
+  "locale": "en-US",
+  "viewport": {
+    "id": "tablet",
+    "width": 1024,
+    "height": 900
+  },
+  "path": "docs/evidence/chuck_a_luck/ready_en-US_tablet.png"
+}
