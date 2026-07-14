@@ -47,6 +47,14 @@ def main(argv=None):
     casino_config.GAME_DATA_DIR = casino_config.DATA_DIR / "games"
     # Redirect application and test logs away from the repository.
     casino_config.LOG_DIR = runtime_root / "logs"
+    # Resolve the issue-owned descriptor proposal without restoring runtime auto-discovery.
+    proposal_dir = ROOT / "codex" / "tasks" / "artifacts" / "issue-89-chuck-a-luck"
+    # Parse the proposal through the production catalog loader so the focused harness exercises its accepted shape.
+    proposed_games = casino_config.load_game_catalog(proposal_dir)
+    # Add only the isolated proposal to this disposable process after canonical startup discovery has completed.
+    casino_config.GAMES.extend(proposed_games)
+    # Preserve production catalog ordering inside the focused process after adding the proposal entry.
+    casino_config.GAMES.sort(key=lambda game: (int(game.get("sort_order", 9999)), game["id"]))
     # Add only the proposed game revision in memory so catalog responses can render the isolated descriptor.
     module_versions.MODULE_REVISIONS["chuck_a_luck"] = "1.0.0"
     # Import the isolated service before app construction so the focused process can hold one response after commit.

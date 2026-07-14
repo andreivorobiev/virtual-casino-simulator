@@ -61,8 +61,9 @@ The dice preview, deterministic motion seam, reduced-motion branch, and timer ow
 
 ## Integration handoff for #77
 
-The isolated descriptor proposes module version `1.0.0` and reserved sort order `150`. Integration must:
+The issue-owned descriptor artifact at `codex/tasks/artifacts/issue-89-chuck-a-luck/chuck_a_luck.module.proposal.json` preserves proposed module version `1.0.0` and reserved sort order `150` without enabling runtime auto-discovery. Integration must:
 
+- promote the proposal artifact to `modules/chuck_a_luck.json` in the same #77 change that adds its canonical revision;
 - add `chuck_a_luck: 1.0.0` to `modules/module-manifest.json`;
 - allocate permanent Chuck-a-Luck API/browser/test requirement IDs and replace the provisional `CHUCK` mapping;
 - register the contract in the shared compatibility or digest inventory;
