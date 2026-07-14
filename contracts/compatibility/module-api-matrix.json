@@ -38,6 +38,9 @@
   "casino_war": [
     "contracts/openapi/casino_war.v1.yaml"
   ],
+  "big_six_wheel": [
+    "contracts/openapi/big_six_wheel.v1.yaml"
+  ],
   "tests": [],
   "docs": [],
   "contracts": [

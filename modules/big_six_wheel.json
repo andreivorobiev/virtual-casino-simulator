@@ -1,0 +1,44 @@
+{
+  "module": "big_six_wheel",
+  "version": "1.0.0",
+  "paths": [
+    "casino/games/big_six_wheel/",
+    "web/games/big_six_wheel.js",
+    "web/i18n/en-US/games/big_six_wheel.json",
+    "web/i18n/ru-RU/games/big_six_wheel.json"
+  ],
+  "requirements_prefixes": [
+    "BIG-SIX"
+  ],
+  "contracts": [
+    "contracts/openapi/big_six_wheel.v1.yaml"
+  ],
+  "game": {
+    "id": "big_six_wheel",
+    "sort_order": 90,
+    "route": "/games/big_six_wheel",
+    "label": "Big Six Wheel",
+    "category": "wheel",
+    "categories": ["wheel", "table"],
+    "backend": {"register": "casino.games.big_six_wheel.api:register"},
+    "frontend": {"module": "./games/big_six_wheel.js", "export": "BigSixWheelGame", "ready_testid": "big-six-wheel", "i18n_domain": "games/big_six_wheel", "i18n_probe": "action.spin"},
+    "tests": {"long_driver": "tests.game_drivers.big_six_wheel:play"},
+    "translations": {"ru-RU": {"label": "Колесо Big Six", "kicker": "Колесо", "description": "Колесо из 54 секторов с семью вариантами ставок, серверным результатом и расчётом через журнал жетонов."}},
+    "lobby": {"featured": false, "wide": false, "art_class": "big-six-wheel-art", "symbol": "&#9673;", "kicker": "Wheel game", "description": "A 54-segment wheel with seven wager targets, deterministic test seams, and ledger-backed settlement.", "tags": ["Wheel", "Quick play", "Ledger-backed"]}
+  },
+  "depends_on": [
+    "core",
+    "ledger",
+    "players"
+  ],
+  "may_not_depend_on": [
+    "roulette",
+    "slots",
+    "blackjack",
+    "baccarat",
+    "keno",
+    "bingo",
+    "multi_hand_video_poker",
+    "casino_war"
+  ]
+}
