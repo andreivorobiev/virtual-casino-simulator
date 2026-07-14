@@ -75,7 +75,7 @@ The game descriptor carries the provisional `CRAPS` prefix. Only #77 may allocat
 
 ## Shared integration handoff for #77
 
-This isolated descriptor proposes module version `1.0.0`, route `/games/craps`, catalog sort order `160`, and only existing `table`, `numbers`, and `strategy` categories. It deliberately does not edit shared catalog, router, shell, test-runner, requirement, compatibility, visual-matrix, or aggregate-version files.
+The issue-owned descriptor at `codex/tasks/artifacts/issue-90-craps/craps.module.proposal.json` proposes module version `1.0.0`, route `/games/craps`, catalog sort order `160`, and only existing `table`, `numbers`, and `strategy` categories. It deliberately remains outside auto-discovered `modules/` and does not edit shared catalog, router, shell, test-runner, requirement, compatibility, visual-matrix, or aggregate-version files.
 
 #77 must later:
 
@@ -86,4 +86,4 @@ This isolated descriptor proposes module version `1.0.0`, route `/games/craps`, 
 - run real authenticated catalog/API/browser/long-suite acceptance and capture evidence from the exact integrated head;
 - keep the game pull request draft until the coordinator explicitly releases readiness.
 
-Before that shared revision entry exists, `scripts/validate_versions.py` is expected to report `module manifests missing from aggregate manifest: craps`, catalog validation is expected to report that Craps has no canonical module revision, and the shared shell cannot honestly be claimed as integrated acceptance.
+Until #77 promotes the proposal into the shared manifest and catalog, version and catalog validators ignore the issue artifact, and the shared shell cannot honestly be claimed as integrated acceptance.
