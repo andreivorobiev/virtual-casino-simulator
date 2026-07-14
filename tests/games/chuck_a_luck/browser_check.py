@@ -49,7 +49,7 @@ EVIDENCE_VIEWPORTS = {
 }
 
 
-# Reserve one ephemeral loopback port while explicitly excluding the shared port.
+# Reserve one ephemeral loopback port while explicitly excluding both user-owned runtime ports.
 def free_port():
     # Ask the operating system for an unused IPv4 loopback port.
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
@@ -57,8 +57,8 @@ def free_port():
         probe.bind(("127.0.0.1", 0))
         # Read the assigned port before releasing the reservation.
         port = probe.getsockname()[1]
-    # Retry the extraordinarily unlikely shared-port allocation.
-    return free_port() if port == 8765 else port
+    # Retry the extraordinarily unlikely allocation of either protected user runtime port.
+    return free_port() if port in {8765, 8877} else port
 
 
 # Return whether the exact focused listener still accepts connections.
@@ -353,7 +353,7 @@ def run_browser_check(evidence_dir=None):
         # Record branch, source commit, state, locale, viewport, and artifact path for every image.
         write_evidence_sidecars(evidence_dir)
     # Print only public cleanup metadata required by the coordinator handoff.
-    print(f"Chuck-a-Luck browser check PASS; port={port}; pid={pid}; closed={str(closed).lower()}; shared_port_8765=untouched")
+    print(f"Chuck-a-Luck browser check PASS; port={port}; pid={pid}; closed={str(closed).lower()}; protected_ports_8765_8877=untouched")
 
 
 # Parse the optional evidence location and run the focused check directly.

@@ -29,10 +29,10 @@ def main(argv=None):
     parser.add_argument("--runtime-root", required=True)
     # Parse the explicit harness arguments.
     args = parser.parse_args(argv)
-    # Reject the user-owned shared Casino listener even if a caller supplies it accidentally.
-    if args.port == 8765:
+    # Reject either user-owned Casino listener even if a caller supplies one accidentally.
+    if args.port in {8765, 8877}:
         # Fail before importing application services or creating runtime state.
-        raise ValueError("Focused Chuck-a-Luck browser checks must not use port 8765")
+        raise ValueError("Focused Chuck-a-Luck browser checks must not use ports 8765 or 8877")
     # Resolve the disposable runtime directory chosen by the parent test process.
     runtime_root = Path(args.runtime_root).resolve()
     # Resolve the temporary signal file that releases only the first committed roll response.
