@@ -1,4 +1,4 @@
-# Big Six Wheel isolated game slice
+# Big Six Wheel
 
 Issue: [#86](https://github.com/andreivorobiev/virtual-casino-simulator/issues/86)
 
@@ -38,17 +38,17 @@ Game code never writes balances directly. Insufficient funds, balance mutation, 
 
 ## Session boundary
 
-The game follows existing v1 handler shape while expecting #81 to bind `body.player_id` from the authenticated request context before dispatch. Body precedence is deliberate: the shared router overwrites caller input for `/api/v1/games/*`; query/default handling remains only for Admin-compatible and focused-test use. All state documents, ledger lookups, and response history are scoped to that resolved player.
+The game follows the frozen v1 handler shape and consumes the shared authenticated request context before compatible body or query values. Normal-user session identity therefore wins over hostile caller input. All state documents, ledger lookups, and response history are scoped to that resolved player.
 
-## Integration handoff for #77
+## Shared integration through #77
 
-The isolated descriptor is version `1.0.0`. Integration must:
+The integrated descriptor remains version `1.0.0` and the shared lane:
 
-- add `big_six_wheel: 1.0.0` to `modules/module-manifest.json` after #110 releases that file;
-- allocate permanent Big Six API/browser/test requirement IDs and replace the descriptor's provisional `BIG-SIX` prefix mapping;
-- register the new contract in any shared digest/compatibility inventory required after #110;
-- let catalog discovery register the backend, lazy frontend, and `tests.game_drivers.big_six_wheel:play` without hard-coded shell edits;
-- add the `big_six_wheel` visual-matrix surface with `ready`, `spinning`, and `settled` states for en-US and ru-RU at desktop primary, desktop compact, tablet, and mobile;
-- capture real-backend `after_pass` screenshots and motion/reduced-motion evidence only after the shared route is reachable.
+- registers `big_six_wheel: 1.0.0` in the aggregate manifest at catalog sort order 90;
+- maps permanent `BIG-SIX-001` through `BIG-SIX-005` requirements to API, browser, long-suite, and visual evidence;
+- registers the additive contract in the shared digest and compatibility inventories;
+- discovers the backend, lazy frontend, and `tests.game_drivers.big_six_wheel:play` from the module descriptor;
+- governs `ready`, `spinning`, `settled`, `reduced_motion`, and `route_restored` visual states for both locales and all four required viewports;
+- requires real-backend `after_pass` screenshots and exact-head evidence before PR acceptance.
 
-No shared catalog, router, shell, test runner, visual matrix, requirements registry, generated docs, or aggregate manifest file is changed by this slice.
+The game implementation remains isolated from every other game package; only the #77 lane owns these shared integration records.

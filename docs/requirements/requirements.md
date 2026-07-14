@@ -49,7 +49,7 @@ GitHub issue #81 establishes module-owned game descriptors as the single catalog
 | CORE-021 | Module-owned catalog metadata drives backend, frontend, API metadata, and validator discovery. | PASS | API-CATALOG-001 | BR-CATALOG-DISCOVERY-001 |
 | CORE-022 | Direct game links, reload, Back, and Forward restore canonical game routes. | PASS |  | BR-ROUTE-RESTORE-001 |
 | UX-010 | Lobby search and catalog-derived categories remain usable for the 20-game target. | PASS |  | BR-CATALOG-NAV-001 |
-| SESSION-005 | One shared authenticated-player resolver binds every game request before dispatch. | PASS | API-CATALOG-001, API-PRIVATE-SESSION-001, API-MHVP-001, API-CW-001 |  |
+| SESSION-005 | One shared authenticated-player resolver binds every game request before dispatch. | PASS | API-CATALOG-001, API-PRIVATE-SESSION-001, API-MHVP-001, API-CW-001, API-BIG-SIX-001 |  |
 | TEST-042 | Validators, browser discovery, and long suites discover games and drivers from catalog metadata. | PASS | API-CATALOG-001, LONG-SUITE-100 | BR-CATALOG-DISCOVERY-001 |
 
 ## Multi-Hand Video Poker integration addendum
@@ -75,6 +75,18 @@ GitHub issue #77 integrates the isolated issue #82 game slice second in the appr
 | CW-003 | Ante, war, surrender, and settlement movements use ledger-only exactly-once action identifiers. | PASS | API-CW-001 |  |
 | CW-004 | English and Russian Casino War remain usable across all required viewports and visual states. | PASS |  | BR-CW-001 |
 | CW-005 | Catalog, contract, browser, long-suite, requirement, module, version, and visual evidence are traceable. | PASS | API-CATALOG-001, LONG-SUITE-100 | BR-CATALOG-DISCOVERY-001, BR-CW-001 |
+
+## Big Six Wheel integration addendum
+
+GitHub issue #77 integrates the isolated issue #86 game slice third in the approved expansion sequence. The game keeps its module-owned implementation while the shared lane supplies canonical version registration, catalog and contract traceability, requirements, test discovery, and EN/RU visual evidence.
+
+| ID | Requirement | Status | API tests | Browser tests |
+|---|---|---|---|---|
+| BIG-SIX-001 | The approved 54-segment wheel profile supports seven wager targets, deterministic result testing, and documented net payouts. | PASS | API-BIG-SIX-001 | BR-BIG-SIX-001 |
+| BIG-SIX-002 | Session-bound Big Six state and history are isolated and survive reload, restart, and route restoration. | PASS | API-BIG-SIX-001, API-WALLET-RESTART-001 | BR-BIG-SIX-001 |
+| BIG-SIX-003 | Each spin uses one aggregate ledger debit and at most one settlement credit with exactly-once retry and conflict detection. | PASS | API-BIG-SIX-001 |  |
+| BIG-SIX-004 | English and Russian Big Six remain usable across all required viewports, active states, and reduced motion. | PASS |  | BR-BIG-SIX-001 |
+| BIG-SIX-005 | Catalog, contract, browser, long-suite, requirement, module, version, and visual evidence are traceable. | PASS | API-CATALOG-001, LONG-SUITE-100 | BR-CATALOG-DISCOVERY-001, BR-BIG-SIX-001 |
 
 ### Superseded wording
 

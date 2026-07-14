@@ -70,10 +70,10 @@ class BigSixWheelApiTests(unittest.TestCase):
         # Stop the scoped patch cleanly.
         self.service_patch.stop()
 
-    # Confirm the shared router's bound body id takes precedence over caller query values.
-    def test_state_uses_upstream_bound_body_player(self):
-        # Invoke the state handler with competing body and query ids.
-        result = self.router.routes[("GET", "/api/v1/games/big-six-wheel/state")]({"player_id": "session-player"}, {"player_id": "spoofed-player"})
+    # Confirm the shared router's authenticated context takes precedence over caller values.
+    def test_state_uses_authenticated_context_player(self):
+        # Invoke the state handler with competing context, body, and query ids.
+        result = self.router.routes[("GET", "/api/v1/games/big-six-wheel/state")]({"player_id": "body-player"}, {"player_id": "query-player"}, {"resolved_player_id": "session-player"})
         # Verify the game receives only the upstream-bound player identity.
         self.assertEqual(["session-player"], self.service.state_players)
         # Verify the raw data is ready for the shared standard envelope.
@@ -84,7 +84,7 @@ class BigSixWheelApiTests(unittest.TestCase):
         # Build the body shape from the additive OpenAPI contract.
         body = {"player_id": "session-player", "client_request_id": "api-1", "wagers": {"one": 5}}
         # Invoke the isolated action handler directly.
-        result = self.router.routes[("POST", "/api/v1/games/big-six-wheel/spins")](body, {})
+        result = self.router.routes[("POST", "/api/v1/games/big-six-wheel/spins")](body, {}, {"bound_player_id": "session-player"})
         # Verify the service receives the session-bound identity and complete request.
         self.assertEqual(("session-player", body), self.service.spin_calls[0])
         # Verify the response exposes settlement without building its own envelope.

@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.5.0
+- application: 9.6.0
 - core: 9.4.0
 - ledger: 9.0.2
 - players: 9.1.0
@@ -22,9 +22,10 @@ Historical source baseline: 9.1.0
 - bingo: 9.2.0
 - multi_hand_video_poker: 1.0.0
 - casino_war: 1.0.0
-- tests: 1.8.0
-- docs: 1.7.0
-- contracts: 1.3.0
+- big_six_wheel: 1.0.0
+- tests: 1.9.0
+- docs: 1.8.0
+- contracts: 1.4.0
 - tooling: 1.3.0
 - commenting_policy: 1.0.0
 
@@ -455,3 +456,8 @@ Historical source baseline: 9.1.0
 - **CW-003** (Casino War) - PASS: Casino War ante, optional war wager, surrender return, and settlement movements use the shared ledger exactly once under stable action identifiers.
 - **CW-004** (Application) - PASS: The Casino War surface provides complete English and Russian copy and remains usable without overflow across required desktop, tablet, and mobile viewports.
 - **CW-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery automatically include Casino War with requirement, module, version, and visual evidence traceability.
+- **BIG-SIX-001** (Big Six Wheel) - PASS: Big Six Wheel exposes the approved 54-segment profile, seven wager targets, deterministic result seam, and documented net payout table through its engine and browser surface.
+- **BIG-SIX-002** (Big Six Wheel) - PASS: Authenticated sessions own isolated reload-safe Big Six Wheel state, recent settlements, and canonical route restoration.
+- **BIG-SIX-003** (Big Six Wheel) - PASS: Each Big Six spin uses one aggregate ledger wager debit and at most one settlement credit with request-fingerprint conflict detection and exactly-once retry recovery.
+- **BIG-SIX-004** (Application) - PASS: The Big Six Wheel surface provides complete English and Russian copy, responsive ready/spinning/settled states, and reduced-motion-safe timer lifecycle behavior.
+- **BIG-SIX-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery automatically include Big Six Wheel with requirement, module, version, and visual evidence traceability.

@@ -6669,7 +6669,7 @@
       "module": "Core",
       "description": "Every game API request resolves its player through one shared authenticated-session resolver before route dispatch.",
       "status": "PASS",
-      "api_tests": ["API-CATALOG-001", "API-PRIVATE-SESSION-001", "API-MHVP-001", "API-CW-001"],
+      "api_tests": ["API-CATALOG-001", "API-PRIVATE-SESSION-001", "API-MHVP-001", "API-CW-001", "API-BIG-SIX-001"],
       "browser_tests": [],
       "implementation_files": ["casino/core/request_player.py", "casino/router.py", "casino/app.py"],
       "introduced_in": "wave0-catalog-governance",
@@ -6807,6 +6807,66 @@
       "introduced_in": "game-expansion-casino-war",
       "changed_in": "game-expansion-casino-war",
       "notes": "The descriptor uses sort order 80 and the normalized tests.game_drivers.casino_war:play driver reference reserved by issue #77."
+    },
+    {
+      "id": "BIG-SIX-001",
+      "module": "Big Six Wheel",
+      "description": "Big Six Wheel exposes the approved 54-segment profile, seven wager targets, deterministic result seam, and documented net payout table through its engine and browser surface.",
+      "status": "PASS",
+      "api_tests": ["API-BIG-SIX-001"],
+      "browser_tests": ["BR-BIG-SIX-001"],
+      "implementation_files": ["casino/games/big_six_wheel/engine.py", "casino/games/big_six_wheel/rules.py", "web/games/big_six_wheel.js"],
+      "introduced_in": "game-expansion-big-six",
+      "changed_in": "game-expansion-big-six",
+      "notes": "Allocated by GitHub issue #77 for issue #86; focused tests cover all legal targets, segment boundaries, normalization, and payout calculation."
+    },
+    {
+      "id": "BIG-SIX-002",
+      "module": "Big Six Wheel",
+      "description": "Authenticated sessions own isolated reload-safe Big Six Wheel state, recent settlements, and canonical route restoration.",
+      "status": "PASS",
+      "api_tests": ["API-BIG-SIX-001", "API-WALLET-RESTART-001"],
+      "browser_tests": ["BR-BIG-SIX-001"],
+      "implementation_files": ["casino/games/big_six_wheel/api.py", "casino/core/request_player.py", "web/app.js", "tests/run_tests.py"],
+      "introduced_in": "game-expansion-big-six",
+      "changed_in": "game-expansion-big-six",
+      "notes": "Normal-user session context overrides caller-supplied player ids, and settled round history survives backend restart."
+    },
+    {
+      "id": "BIG-SIX-003",
+      "module": "Big Six Wheel",
+      "description": "Each Big Six spin uses one aggregate ledger wager debit and at most one settlement credit with request-fingerprint conflict detection and exactly-once retry recovery.",
+      "status": "PASS",
+      "api_tests": ["API-BIG-SIX-001"],
+      "browser_tests": [],
+      "implementation_files": ["casino/games/big_six_wheel/service.py", "casino/core/ledger.py", "tests/api/big_six_wheel_api_tests.py", "tests/run_tests.py"],
+      "introduced_in": "game-expansion-big-six",
+      "changed_in": "game-expansion-big-six",
+      "notes": "Game code never mutates balances directly; stable round and ledger action keys make exact retries safe while changed wagers fail closed."
+    },
+    {
+      "id": "BIG-SIX-004",
+      "module": "Application",
+      "description": "The Big Six Wheel surface provides complete English and Russian copy, responsive ready/spinning/settled states, and reduced-motion-safe timer lifecycle behavior.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": ["BR-BIG-SIX-001"],
+      "implementation_files": ["web/games/big_six_wheel.js", "web/i18n/en-US/games/big_six_wheel.json", "web/i18n/ru-RU/games/big_six_wheel.json", "tests/visual/visual_matrix.json", "tests/run_tests.py"],
+      "introduced_in": "game-expansion-big-six",
+      "changed_in": "game-expansion-big-six",
+      "notes": "Acceptance evidence covers both locales, all four named viewports, active and settled play, reduced motion, and canonical route restoration."
+    },
+    {
+      "id": "BIG-SIX-005",
+      "module": "Tests",
+      "description": "Catalog, contract, browser, and long-suite discovery automatically include Big Six Wheel with requirement, module, version, and visual evidence traceability.",
+      "status": "PASS",
+      "api_tests": ["API-CATALOG-001", "LONG-SUITE-100"],
+      "browser_tests": ["BR-CATALOG-DISCOVERY-001", "BR-BIG-SIX-001"],
+      "implementation_files": ["modules/big_six_wheel.json", "modules/module-manifest.json", "contracts/compatibility/module-api-matrix.json", "tests/game_drivers/big_six_wheel.py", "tests/visual/visual_matrix.json", "tests/run_tests.py"],
+      "introduced_in": "game-expansion-big-six",
+      "changed_in": "game-expansion-big-six",
+      "notes": "The descriptor uses sort order 90 and the normalized tests.game_drivers.big_six_wheel:play driver reference reserved by issue #77."
     }
   ]
 }

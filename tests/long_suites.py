@@ -123,6 +123,7 @@ def start_server(repo_root):
     port = free_port()  # Pick an isolated port for this worker.
     proc = subprocess.Popen([sys.executable, str(repo_root / "run.py"), "--host", "127.0.0.1", "--port", str(port), "--no-browser"], cwd=str(repo_root), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)  # Launch server.
     base = f"http://127.0.0.1:{port}"  # Build the base URL.
+    print(f"Long-suite server PID {proc.pid} listening on {base}", flush=True)  # Record the isolated listener for exact evidence and cleanup verification.
     client = ApiClient(base)  # Build an API client for readiness checks.
     for _ in range(120):  # Poll readiness for up to twelve seconds.
         try:
