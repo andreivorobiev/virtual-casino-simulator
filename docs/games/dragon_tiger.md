@@ -1,4 +1,4 @@
-# Dragon Tiger isolated game slice
+# Dragon Tiger
 
 Issue: [#83](https://github.com/andreivorobiev/virtual-casino-simulator/issues/83)
 
@@ -50,31 +50,29 @@ The additive v1 contract exposes:
 
 Both operations use the standard `{ ok: true, data: ... }` or `{ ok: false, error: ... }` envelope. Optional `player_id` values remain compatibility inputs, but the shared `/api/v1/games/*` session resolver takes precedence. The state response never exposes undealt card order.
 
-## Requirement proposal
+## Registered requirements
 
-These permanent IDs are proposed for #77 to add to the central registry. They remain `PLANNED` until real registered-backend tests and required visual evidence pass.
+Issue #77 permanently registers these requirements with real-backend API, browser, restart, catalog, long-suite, and visual evidence.
 
-| ID | Proposed requirement | Initial status |
+| ID | Requirement | Status |
 | --- | --- | --- |
-| `DT-001` | Dragon Tiger implements the documented standard-8d comparison, payout, half-loss, and persistent-shoe rules with deterministic test seams. | `PLANNED` |
-| `DT-002` | The additive v1 state and round APIs are authenticated, session-bound, reload-safe, and preserve standard envelopes. | `PLANNED` |
-| `DT-003` | Every wager, return, and payout is ledger-only; identical retries are exactly-once and conflicting action reuse fails closed. | `PLANNED` |
-| `DT-004` | The browser surface is EN/RU clean, accessible, responsive, reduced-motion safe, and leaves no timers after teardown. | `PLANNED` |
-| `DT-005` | Focused engine/API/frontend tests, the catalog driver, and real-backend visual evidence cover required states and viewports. | `PLANNED` |
+| `DT-001` | Dragon Tiger implements the documented standard-8d comparison, payout, half-loss, and persistent-shoe rules with deterministic test seams. | `PASS` |
+| `DT-002` | The additive v1 state and round APIs are authenticated, session-bound, reload-safe, and preserve standard envelopes. | `PASS` |
+| `DT-003` | Every wager, return, and payout is ledger-only; identical retries are exactly-once and conflicting action reuse fails closed. | `PASS` |
+| `DT-004` | The browser surface and persistent shell are EN/RU clean, accessible, responsive, reduced-motion safe, and leave no game timers after teardown. | `PASS` |
+| `DT-005` | Focused engine/API/frontend tests, catalog discovery, Long Suite 100, and real-backend visual evidence cover required states and viewports. | `PASS` |
 
-The isolated module proposal starts at `1.0.0`. The API is additive and does not change any existing v1 operation or payload.
+The canonical game module starts at `1.0.0`. The API is additive and does not change any existing v1 operation or payload.
 
-## Integration handoff for #77
+## #77 integration acceptance
 
-The shared integration owner must:
+The controlled integration lane supplies:
 
-- add `dragon_tiger: 1.0.0` to `modules/module-manifest.json` from the then-current accepted main branch;
-- register `DT-001` through `DT-005`, map focused tests and browser evidence, and regenerate derived requirement documentation;
-- add the contract to compatibility matrices and digests;
-- add the `dragon_tiger` visual-matrix row and capture only real-backend `after_pass` evidence;
-- resolve the shared JSON ledger balance/event atomicity gap (or document the operational reconciliation gate) before unconditional crash-recovery acceptance;
-- localize the shared wallet label written by `web/core/ui.js` so ru-RU settlement refreshes cannot leak English shell copy;
-- validate catalog discovery for sort order 100, `/games/dragon_tiger`, backend registration, lazy frontend export, i18n domain, readiness selector, and long driver;
-- run the complete API, browser, catalog, contract, requirement, version, boundary, comment-density, and long-suite gates.
+- canonical manifest revision `dragon_tiger: 1.0.0`, sort order 100, and `/games/dragon_tiger` routing;
+- permanent `DT-001` through `DT-005` traceability and generated requirement documentation;
+- compatibility-matrix and digest registration for the additive v1 contract;
+- real-backend `after_pass` coverage for ready, settled, tie half-loss, exact replay, reduced motion, and route restoration in both locales and all four governed viewports;
+- localized persistent wallet/status copy and active-route visibility as the catalog grows;
+- API session/ledger/restart evidence, lazy frontend discovery, and the catalog-discovered Long Suite 100 driver.
 
-This isolated slice does not edit the aggregate manifest, shared catalog/router/shell, compatibility inventories, central requirements, visual matrix, or test discovery. Until #77 completes those gates, the draft is not integration acceptance and must remain draft.
+The shared JSON provider's separate balance and evidence writes retain an explicit operational boundary: a movement with missing evidence fails closed for reconciliation and is never repeated automatically. Acceptance proves exactly-once behavior for recorded movements without claiming unconditional recovery from an ambiguous provider crash.

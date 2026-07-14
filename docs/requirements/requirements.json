@@ -6669,7 +6669,7 @@
       "module": "Core",
       "description": "Every game API request resolves its player through one shared authenticated-session resolver before route dispatch.",
       "status": "PASS",
-      "api_tests": ["API-CATALOG-001", "API-PRIVATE-SESSION-001", "API-MHVP-001", "API-CW-001", "API-BIG-SIX-001", "API-RD-001"],
+      "api_tests": ["API-CATALOG-001", "API-PRIVATE-SESSION-001", "API-MHVP-001", "API-CW-001", "API-BIG-SIX-001", "API-RD-001", "API-DT-001"],
       "browser_tests": [],
       "implementation_files": ["casino/core/request_player.py", "casino/router.py", "casino/app.py"],
       "introduced_in": "wave0-catalog-governance",
@@ -6927,6 +6927,66 @@
       "introduced_in": "game-expansion-red-dog",
       "changed_in": "game-expansion-red-dog",
       "notes": "The descriptor uses sort order 110 and the normalized tests.game_drivers.red_dog:play driver reference released by issue #77."
+    },
+    {
+      "id": "DT-001",
+      "module": "Dragon Tiger",
+      "description": "The standard-8d Dragon Tiger profile deals Dragon first from an eight-deck shoe, compares ranks ace-low without suit tie-breaks, and applies the documented main-bet returns.",
+      "status": "PASS",
+      "api_tests": ["API-DT-001"],
+      "browser_tests": ["BR-DT-001"],
+      "implementation_files": ["casino/games/dragon_tiger/engine.py", "web/games/dragon_tiger.js"],
+      "introduced_in": "game-expansion-dragon-tiger",
+      "changed_in": "game-expansion-dragon-tiger",
+      "notes": "Allocated by GitHub issue #77 for issue #83; deterministic tests cover eight-deck shoe creation, three-card burn, 52-card reserve, Dragon-first dealing, ace-low rank comparison, 1:1 main returns, 11:1 Tie, and half-loss rounding."
+    },
+    {
+      "id": "DT-002",
+      "module": "Dragon Tiger",
+      "description": "Authenticated sessions own isolated reload-safe Dragon Tiger shoe state, settled rounds, and canonical route restoration.",
+      "status": "PASS",
+      "api_tests": ["API-DT-001", "API-WALLET-RESTART-001"],
+      "browser_tests": ["BR-DT-001"],
+      "implementation_files": ["casino/games/dragon_tiger/api.py", "casino/core/request_player.py", "web/app.js", "tests/run_tests.py"],
+      "introduced_in": "game-expansion-dragon-tiger",
+      "changed_in": "game-expansion-dragon-tiger",
+      "notes": "Normal-user session context overrides caller-supplied player ids, and settled Dragon Tiger history and shoe metadata survive backend restart."
+    },
+    {
+      "id": "DT-003",
+      "module": "Dragon Tiger",
+      "description": "Dragon Tiger wager debits and settlement credits use the shared ledger exactly once under stable action identifiers and immutable request fingerprints.",
+      "status": "PASS",
+      "api_tests": ["API-DT-001"],
+      "browser_tests": [],
+      "implementation_files": ["casino/games/dragon_tiger/service.py", "casino/core/ledger.py", "tests/games/dragon_tiger/test_api.py", "tests/run_tests.py"],
+      "introduced_in": "game-expansion-dragon-tiger",
+      "changed_in": "game-expansion-dragon-tiger",
+      "notes": "Game code never mutates balances directly; exact retries recover immutable wager and optional settlement proof while changed requests fail closed."
+    },
+    {
+      "id": "DT-004",
+      "module": "Application",
+      "description": "The Dragon Tiger surface and persistent shared shell provide complete English and Russian copy and remain responsive, accessible, and reduced-motion safe across required viewports.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": ["BR-DT-001"],
+      "implementation_files": ["web/games/dragon_tiger.js", "web/i18n/en-US/games/dragon_tiger.json", "web/i18n/ru-RU/games/dragon_tiger.json", "web/i18n/en-US/shell.json", "web/i18n/ru-RU/shell.json", "tests/visual/visual_matrix.json", "tests/run_tests.py"],
+      "introduced_in": "game-expansion-dragon-tiger",
+      "changed_in": "game-expansion-dragon-tiger",
+      "notes": "Acceptance covers both locales, all four named viewports, ready and settled play, tie half-loss, exact replay, reduced motion, route restoration, localized persistent shell copy, and active-route navigation visibility."
+    },
+    {
+      "id": "DT-005",
+      "module": "Tests",
+      "description": "Catalog, contract, browser, and long-suite discovery automatically include Dragon Tiger with requirement, module, version, and visual evidence traceability.",
+      "status": "PASS",
+      "api_tests": ["API-CATALOG-001", "LONG-SUITE-100"],
+      "browser_tests": ["BR-CATALOG-DISCOVERY-001", "BR-DT-001"],
+      "implementation_files": ["modules/dragon_tiger.json", "modules/module-manifest.json", "contracts/compatibility/module-api-matrix.json", "tests/game_drivers/dragon_tiger.py", "tests/visual/visual_matrix.json", "tests/run_tests.py"],
+      "introduced_in": "game-expansion-dragon-tiger",
+      "changed_in": "game-expansion-dragon-tiger",
+      "notes": "The descriptor uses sort order 100 and the normalized tests.game_drivers.dragon_tiger:play driver reference released by issue #77."
     }
   ]
 }

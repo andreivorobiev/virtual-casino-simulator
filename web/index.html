@@ -12,8 +12,8 @@
     <div class="brand-lockup">
       <div class="brand-mark" aria-hidden="true">&#9824;</div>
       <div class="brand-copy">
-        <strong>Virtual Casino Simulator</strong>
-        <span>Play tokens only</span>
+        <strong id="shell-brand-title">Virtual Casino Simulator</strong>
+        <span id="shell-brand-subtitle">Play tokens only</span>
       </div>
     </div>
     <nav id="main-nav" class="casino-nav" aria-label="Primary"></nav>
@@ -23,9 +23,9 @@
         <strong id="balance" class="wallet-amount">Loading...</strong>
       </div>
       <details class="wallet-menu">
-        <summary class="icon-button" aria-label="Add play tokens"><span class="coin-stack" aria-hidden="true"></span></summary>
+        <summary id="wallet-menu-summary" class="icon-button" aria-label="Add play tokens"><span class="coin-stack" aria-hidden="true"></span></summary>
         <div class="wallet-popover">
-          <label for="add-token-amount">Add play tokens</label>
+          <label id="add-token-label" for="add-token-amount">Add play tokens</label>
           <div class="wallet-add-row">
             <input id="add-token-amount" type="number" value="1000" min="1">
             <button id="add-token-btn" class="primary" data-testid="add-tokens">Add</button>
@@ -42,10 +42,10 @@
 
   <!-- Persistent status rail keeps play-token, ledger, app, player, and connection state visible. -->
   <footer id="shell-status" class="status-bar" data-testid="shell-status">
-    <span class="status-item"><span class="gold">SAFE</span>All games use play tokens only</span>
-    <span class="status-item"><span class="gold">LEDGER</span>Ledger-backed outcomes</span>
-    <span class="status-item"><span class="gold">APP</span><span id="status-version">Loading</span></span>
-    <span class="status-item"><span class="gold">PLAYERS</span><span id="status-players">0 online</span></span>
+    <span class="status-item"><span id="status-safe-code" class="gold">SAFE</span><span id="status-safe-detail">All games use play tokens only</span></span>
+    <span class="status-item"><span id="status-ledger-code" class="gold">LEDGER</span><span id="status-ledger-detail">Ledger-backed outcomes</span></span>
+    <span class="status-item"><span id="status-app-code" class="gold">APP</span><span id="status-version">Loading</span></span>
+    <span class="status-item"><span id="status-players-code" class="gold">PLAYERS</span><span id="status-players">0 online</span></span>
     <span class="status-item"><span id="connection-dot" class="status-dot"></span><span id="connection-status">Connecting</span></span>
   </footer>
 

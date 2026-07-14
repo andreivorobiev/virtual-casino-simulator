@@ -2,7 +2,7 @@
 
 Issue: [#83](https://github.com/andreivorobiev/virtual-casino-simulator/issues/83)
 
-This isolated module implements the named `standard-8d` profile: eight standard decks, no jokers, three burned cards on each new shoe, a fifty-two-card cut reserve, Dragon dealt first, Tiger dealt second, ace low, and rank-only comparison.
+This module implements the named `standard-8d` profile: eight standard decks, no jokers, three burned cards on each new shoe, a fifty-two-card cut reserve, Dragon dealt first, Tiger dealt second, ace low, and rank-only comparison.
 
 ## Settlement
 
@@ -27,4 +27,4 @@ This isolated module implements the named `standard-8d` profile: eight standard 
 - `GET /api/v1/games/dragon-tiger/state`
 - `POST /api/v1/games/dragon-tiger/rounds` with `{action_id, bet, wager}`
 
-The local proposal maps gameplay, session/reload safety, ledger retry safety, EN/RU behavior, and integration evidence to `DT-001` through `DT-005`. Issue #77 owns permanent central requirement registration and shared catalog acceptance.
+Gameplay, session/reload safety, ledger retry safety, EN/RU behavior, and integration evidence map permanently to `DT-001` through `DT-005`; issue #77 owns the shared catalog, contract, version, and evidence registration.

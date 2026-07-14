@@ -44,6 +44,9 @@
   "red_dog": [
     "contracts/openapi/red_dog.v1.yaml"
   ],
+  "dragon_tiger": [
+    "contracts/openapi/dragon_tiger.v1.yaml"
+  ],
   "tests": [],
   "docs": [],
   "contracts": [

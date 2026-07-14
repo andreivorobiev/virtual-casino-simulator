@@ -32,14 +32,12 @@ Evidence class: issue-scoped development evidence from the production handler wi
 - The frontend renders localized inert loading controls until the initial state GET settles, preventing a late GET from overwriting a just-committed POST; pending retries remain enabled with the same immutable payload.
 - The game module owns no timer or animation-frame callback; reduced-motion CSS removes route-local animation and transitions.
 
-## Honest blockers retained for #77
+## #77 registered acceptance
 
-- The aggregate manifest and canonical revision map do not yet contain `dragon_tiger: 1.0.0`; catalog and version validators therefore fail at the expected shared boundary.
-- Permanent `DT-001` through `DT-005`, compatibility inventories/digests, visual-matrix rows, and central test discovery remain unregistered.
-- The shared shell retains English wallet/footer/status copy in ru-RU, including `PLAY TOKEN BALANCE`, `Ledger-backed outcomes`, and `Connected`; #77 must localize those shared strings before RU acceptance.
-- The shared navigation clips the active `Dragon Tiger` label to `Dragon` at the desktop viewport edge, while the mobile carousel begins with a clipped `Лобби` and leaves the active route offscreen; #77 owns active-route visibility and shared-nav scrolling.
-- The shared JSON provider stores balance and ledger evidence separately. Dragon Tiger now persists pre-movement stages and fails closed when evidence is absent, preventing a repeated debit or credit, but automatic reconciliation still requires a shared atomic/idempotent ledger primitive or an approved operational gate.
+The shared integration lane resolves the isolated blockers by registering `dragon_tiger: 1.0.0`, permanent `DT-001` through `DT-005`, the compatibility matrix and digest, the visual-matrix row, central API/browser/restart cases, and the catalog-discovered Long Suite 100 driver.
 
-## Required post-integration acceptance
+`BR-DT-001` generates 48 PNGs plus 48 self-describing JSON sidecars from the tested head under `logs/test-runs`. The matrix covers `ready`, `settled`, `tie_half_loss`, `exact_replay`, `reduced_motion`, and `route_restored` in en-US and ru-RU at desktop primary, desktop compact, tablet, and mobile viewports. The test rejects raw keys and English game/shell leakage in Russian, requires horizontal containment, and verifies the active localized navigation label remains visible.
 
-#77 must rerun the registered backend and visual matrix from its exact accepted head, including ready, settled, tie half-loss, exact replay, reduced motion, and route-restored states in both locales and all required viewports. Only those captures may be marked `after_pass`.
+`API-DT-001` proves hostile caller player IDs cannot override either authenticated session, exact replay preserves the round, ledger evidence, and balance, changed reuse fails with `CONFLICT`, and each player receives one isolated wager debit plus at most one settlement credit. `API-WALLET-RESTART-001` proves settled history and shoe metadata survive restart. Suite 100 discovers `tests.game_drivers.dragon_tiger:play` from catalog metadata and exercises one complete real-backend action plus exact retry in every scenario.
+
+The persistent shared shell now localizes wallet, ledger, player, and connection status copy on locale changes, centers the active catalog route at desktop and mobile widths, and keeps 13 top-level route controls within two rows at the governed compact desktop. The provider's separate balance/evidence write boundary remains explicitly fail-closed: missing evidence requires reconciliation and never triggers an automatic repeat movement.

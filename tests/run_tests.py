@@ -486,6 +486,26 @@ def run_api_tests():
             red_dog_events_a=[row for row in red_dog_ledger_a if row.get('game')=='red_dog' and row.get('round_id')==red_dog_a['round']['round_id']]; red_dog_events_b=[row for row in red_dog_ledger_b if row.get('game')=='red_dog' and row.get('round_id')==red_dog_b['round']['round_id']]
             # Require one ante debit, unique stable ledger action ids, and complete settlement for each session.
             assert sum(row.get('transaction_type')=='RED_DOG_WAGER_DEBIT' for row in red_dog_events_a)==1 and sum(row.get('transaction_type')=='RED_DOG_WAGER_DEBIT' for row in red_dog_events_b)==1 and len({(row.get('details') or {}).get('red_dog_action_id') for row in red_dog_events_a})==len(red_dog_events_a) and len({(row.get('details') or {}).get('red_dog_action_id') for row in red_dog_events_b})==len(red_dog_events_b) and red_dog_a['round']['settlement']['complete'] and red_dog_b['round']['settlement']['complete'] and red_dog_a['round']['settlement']['required_actions']==red_dog_a['round']['settlement']['committed_actions'] and red_dog_b['round']['settlement']['required_actions']==red_dog_b['round']['settlement']['committed_actions']
+            # Deal user A's Dragon Tiger round while submitting user B's player id to challenge session binding.
+            dragon_tiger_a=api(base,'/api/v1/games/dragon-tiger/rounds','POST',{'player_id':user_b['player_id'],'bet':'dragon','wager':2,'action_id':'wallet-dragon-tiger-a'},auth_token=token_a)
+            # Replay user A's exact Dragon Tiger command to prove the ledger movements remain exactly once.
+            dragon_tiger_a_replay=api(base,'/api/v1/games/dragon-tiger/rounds','POST',{'player_id':user_b['player_id'],'bet':'dragon','wager':2,'action_id':'wallet-dragon-tiger-a'},auth_token=token_a)
+            # Reuse the action id with a changed wager so immutable request-fingerprint validation fails closed.
+            dragon_tiger_conflict=api(base,'/api/v1/games/dragon-tiger/rounds','POST',{'player_id':user_b['player_id'],'bet':'dragon','wager':3,'action_id':'wallet-dragon-tiger-a'},ok=False,auth_token=token_a)
+            # Deal user B's independent Dragon Tiger round while submitting user A's player id.
+            dragon_tiger_b=api(base,'/api/v1/games/dragon-tiger/rounds','POST',{'player_id':user_a['player_id'],'bet':'tiger','wager':2,'action_id':'wallet-dragon-tiger-b'},auth_token=token_b)
+            # Require authenticated ownership, independent results, stable replay, unchanged replay balance, and conflict rejection.
+            assert dragon_tiger_a['round']['player_id']==user_a['player_id'] and dragon_tiger_b['round']['player_id']==user_b['player_id'] and dragon_tiger_a['round']['round_id']!=dragon_tiger_b['round']['round_id'] and dragon_tiger_a_replay['replayed'] is True and dragon_tiger_a_replay['round']==dragon_tiger_a['round'] and dragon_tiger_a_replay['player']['balance']==dragon_tiger_a['player']['balance'] and dragon_tiger_conflict['error']['code']=='CONFLICT'
+            # Read both private Dragon Tiger states while again submitting the opposite player identities.
+            dragon_tiger_state_a=api(base,f'/api/v1/games/dragon-tiger/state?player_id={user_b["player_id"]}',auth_token=token_a)['state']; dragon_tiger_state_b=api(base,f'/api/v1/games/dragon-tiger/state?player_id={user_a["player_id"]}',auth_token=token_b)['state']
+            # Require newest-first private settled history isolation for both authenticated users.
+            assert dragon_tiger_state_a['recent_rounds'][0]['round_id']==dragon_tiger_a['round']['round_id'] and dragon_tiger_state_b['recent_rounds'][0]['round_id']==dragon_tiger_b['round']['round_id']
+            # Read both ledgers after Dragon Tiger settlement for exactly-once movement proof.
+            dragon_tiger_ledger_a=api(base,f'/api/v1/players/{user_a["player_id"]}/ledger',auth_token=token_a)['ledger']; dragon_tiger_ledger_b=api(base,f'/api/v1/players/{user_b["player_id"]}/ledger',auth_token=token_b)['ledger']
+            # Select only Dragon Tiger rows for each independently completed round.
+            dragon_tiger_events_a=[row for row in dragon_tiger_ledger_a if row.get('game')=='dragon_tiger' and row.get('round_id')==dragon_tiger_a['round']['round_id']]; dragon_tiger_events_b=[row for row in dragon_tiger_ledger_b if row.get('game')=='dragon_tiger' and row.get('round_id')==dragon_tiger_b['round']['round_id']]
+            # Require one wager debit, at most one settlement credit, and unique deterministic action keys per session.
+            assert sum(row.get('transaction_type')=='DRAGON_TIGER_WAGER_DEBIT' for row in dragon_tiger_events_a)==1 and sum(row.get('transaction_type')=='DRAGON_TIGER_WAGER_DEBIT' for row in dragon_tiger_events_b)==1 and sum(row.get('transaction_type')=='DRAGON_TIGER_SETTLEMENT_CREDIT' for row in dragon_tiger_events_a)<=1 and sum(row.get('transaction_type')=='DRAGON_TIGER_SETTLEMENT_CREDIT' for row in dragon_tiger_events_b)<=1 and len({(row.get('details') or {}).get('idempotency_key') for row in dragon_tiger_events_a})==len(dragon_tiger_events_a) and len({(row.get('details') or {}).get('idempotency_key') for row in dragon_tiger_events_b})==len(dragon_tiger_events_b)
             # Read private game history through each normal-user session.
             history_a=api(base,'/api/v1/casino/history',auth_token=token_a)['history']
             # Read user B's independent history view.
@@ -519,7 +539,7 @@ def run_api_tests():
             # Verify normal users cannot mutate shared bot-controller accounts.
             assert api(base,'/api/v1/bots/bot_roulette_1/enable','POST',{},ok=False,auth_token=token_a)['error']['code']=='FORBIDDEN'
             # Store the durable post-game balance and terms state for restart verification.
-            integrity_state.update({'email':'wallet-a@example.local','password':'wallet-a-password','balance':api(base,'/api/v2/me',auth_token=token_a)['player']['token_balance'],'admin_blocked':len(admin_paths),'token_credit_count':len(credits_after)-len(credits_before),'contract_player':added_a,'mhvp_verified':True,'casino_war_verified':True,'big_six_verified':True,'red_dog_verified':True,'users':[{'email':'wallet-a@example.local','password':'wallet-a-password','player_id':user_a['player_id'],'balance':wallet_a,'roulette_round':roulette_a['round']['round_id'],'slots_round':slot_a['round_id'],'blackjack_round':blackjack_a['round_id'],'baccarat_round':baccarat_a['coup']['round_id'],'keno_round':keno_a['draw']['round_id'],'bingo_session':bingo_a_session['session_id'],'bingo_completed':False,'mhvp_round':mhvp_a['round']['round_id'],'casino_war_round':casino_war_a['round']['round_id'],'big_six_round':big_six_a['round']['round_id'],'red_dog_round':red_dog_a['round']['round_id']},{'email':'wallet-b@example.local','password':'wallet-b-password','player_id':user_b['player_id'],'balance':wallet_b,'roulette_round':roulette_b['round']['round_id'],'slots_round':slot_b['round_id'],'blackjack_round':blackjack_b['round_id'],'baccarat_round':baccarat_b['coup']['round_id'],'keno_round':keno_b['draw']['round_id'],'bingo_session':bingo_b['session']['session_id'],'bingo_completed':True,'mhvp_round':mhvp_b['round']['round_id'],'casino_war_round':casino_war_b['round']['round_id'],'big_six_round':big_six_b['round']['round_id'],'red_dog_round':red_dog_b['round']['round_id']}],'history_game_counts':[len(history_a),len(history_b)]})
+            integrity_state.update({'email':'wallet-a@example.local','password':'wallet-a-password','balance':api(base,'/api/v2/me',auth_token=token_a)['player']['token_balance'],'admin_blocked':len(admin_paths),'token_credit_count':len(credits_after)-len(credits_before),'contract_player':added_a,'mhvp_verified':True,'casino_war_verified':True,'big_six_verified':True,'red_dog_verified':True,'dragon_tiger_verified':True,'users':[{'email':'wallet-a@example.local','password':'wallet-a-password','player_id':user_a['player_id'],'balance':wallet_a,'roulette_round':roulette_a['round']['round_id'],'slots_round':slot_a['round_id'],'blackjack_round':blackjack_a['round_id'],'baccarat_round':baccarat_a['coup']['round_id'],'keno_round':keno_a['draw']['round_id'],'bingo_session':bingo_a_session['session_id'],'bingo_completed':False,'mhvp_round':mhvp_a['round']['round_id'],'casino_war_round':casino_war_a['round']['round_id'],'big_six_round':big_six_a['round']['round_id'],'red_dog_round':red_dog_a['round']['round_id'],'dragon_tiger_round':dragon_tiger_a['round']['round_id']},{'email':'wallet-b@example.local','password':'wallet-b-password','player_id':user_b['player_id'],'balance':wallet_b,'roulette_round':roulette_b['round']['round_id'],'slots_round':slot_b['round_id'],'blackjack_round':blackjack_b['round_id'],'baccarat_round':baccarat_b['coup']['round_id'],'keno_round':keno_b['draw']['round_id'],'bingo_session':bingo_b['session']['session_id'],'bingo_completed':True,'mhvp_round':mhvp_b['round']['round_id'],'casino_war_round':casino_war_b['round']['round_id'],'big_six_round':big_six_b['round']['round_id'],'red_dog_round':red_dog_b['round']['round_id'],'dragon_tiger_round':dragon_tiger_b['round']['round_id']}],'history_game_counts':[len(history_a),len(history_b)]})
         # Execute the real-backend integrity regression as one mapped API case.
         run_case('API-PRIVATE-SESSION-001',['SESSION-003','USER-001','USER-003','USER-005','TOKEN-004','TEST-039'],wallet_auth_integrity)
         # Record Multi-Hand Video Poker session, mode, ledger, and retry coverage under its permanent test id.
@@ -530,6 +550,8 @@ def run_api_tests():
         run_case('API-BIG-SIX-001',['BIG-SIX-001','BIG-SIX-002','BIG-SIX-003'],lambda: assert_condition(integrity_state['big_six_verified'],'Big Six integration evidence missing'))
         # Record Red Dog session, ledger, conflict, and retry coverage under its permanent test id.
         run_case('API-RD-001',['RD-001','RD-002','RD-003'],lambda: assert_condition(integrity_state['red_dog_verified'],'Red Dog integration evidence missing'))
+        # Record Dragon Tiger session, ledger, conflict, and retry coverage under its permanent test id.
+        run_case('API-DT-001',['DT-001','DT-002','DT-003'],lambda: assert_condition(integrity_state['dragon_tiger_verified'],'Dragon Tiger integration evidence missing'))
         # Record exact token credit coverage under the permanent test id referenced by TOKEN-003.
         run_case('API-TOKEN-001',['TOKEN-003','TOKEN-004'],lambda: assert_condition(integrity_state['token_credit_count']==1 and integrity_state['contract_player']['token_balance']==250,'token credit contract mismatch'))
         # Record central Admin authorization coverage under the permanent Admin test id.
@@ -555,7 +577,7 @@ def run_api_tests():
                 # Verify exact balance and accepted terms survived the process restart.
                 assert me['player']['token_balance']==expected['balance'] and me['terms']['accepted'] is True and me['terms']['required'] is False
                 # Read every private game state again after restart.
-                roulette_state=api(base,'/api/v1/games/roulette/state',auth_token=token)['state']; slots_state=api(base,'/api/v1/games/slots/state',auth_token=token)['state']; blackjack_state=api(base,'/api/v1/games/blackjack/state',auth_token=token)['state']; baccarat_state=api(base,'/api/v1/games/baccarat/state',auth_token=token)['state']; keno_state=api(base,'/api/v1/games/keno/state',auth_token=token)['state']; bingo_state=api(base,'/api/v1/games/bingo/state',auth_token=token)['state']; mhvp_state=api(base,'/api/v1/games/multi-hand-video-poker/state',auth_token=token)['state']; casino_war_state=api(base,'/api/v1/games/casino-war/state',auth_token=token)['state']; big_six_state=api(base,'/api/v1/games/big-six-wheel/state',auth_token=token); red_dog_state=api(base,'/api/v1/games/red-dog/state',auth_token=token)['state']
+                roulette_state=api(base,'/api/v1/games/roulette/state',auth_token=token)['state']; slots_state=api(base,'/api/v1/games/slots/state',auth_token=token)['state']; blackjack_state=api(base,'/api/v1/games/blackjack/state',auth_token=token)['state']; baccarat_state=api(base,'/api/v1/games/baccarat/state',auth_token=token)['state']; keno_state=api(base,'/api/v1/games/keno/state',auth_token=token)['state']; bingo_state=api(base,'/api/v1/games/bingo/state',auth_token=token)['state']; mhvp_state=api(base,'/api/v1/games/multi-hand-video-poker/state',auth_token=token)['state']; casino_war_state=api(base,'/api/v1/games/casino-war/state',auth_token=token)['state']; big_six_state=api(base,'/api/v1/games/big-six-wheel/state',auth_token=token); red_dog_state=api(base,'/api/v1/games/red-dog/state',auth_token=token)['state']; dragon_tiger_state=api(base,'/api/v1/games/dragon-tiger/state',auth_token=token)['state']
                 # Verify Roulette, Slots, Blackjack, Baccarat, and Keno identifiers survived under the session-derived player.
                 assert any(row['round_id']==expected['roulette_round'] for row in roulette_state['last_results']) and slots_state['last_spins'][-1]['round_id']==expected['slots_round'] and expected['blackjack_round'] in blackjack_state['rounds'] and any(row['round_id']==expected['baccarat_round'] for row in baccarat_state['last_coups']) and any(row['round_id']==expected['keno_round'] for row in keno_state['last_draws'])
                 # Verify Bingo terminal/refund state survived for the corresponding user.
@@ -568,6 +590,8 @@ def run_api_tests():
                 assert any(row['round_id']==expected['big_six_round'] for row in big_six_state['recent_rounds'])
                 # Verify the settled Red Dog round survived and remains private after restart.
                 assert any(row['round_id']==expected['red_dog_round'] for row in red_dog_state['rounds'])
+                # Verify the settled Dragon Tiger round and shoe metadata survived and remain private after restart.
+                assert any(row['round_id']==expected['dragon_tiger_round'] for row in dragon_tiger_state['recent_rounds']) and dragon_tiger_state['shoe']['shoe_number']>=1
                 # Read restarted private history and ledger views.
                 restarted_history=api(base,'/api/v1/casino/history',auth_token=token)['history']; restarted_ledger=api(base,f'/api/v1/players/{expected["player_id"]}/ledger',auth_token=token)['ledger']
                 # Verify restarted history includes the user's Bingo settlement and never leaks another player.
@@ -575,7 +599,7 @@ def run_api_tests():
             # Verify both users produced persisted private history across the history-producing games.
             assert all(count>0 for count in integrity_state['history_game_counts'])
         # Record the live restart persistence regression under the same integrity requirements.
-        run_case('API-WALLET-RESTART-001',['SESSION-003','USER-001','TOKEN-003','TOKEN-004','TEST-039','MHVP-002','CW-002','BIG-SIX-002','RD-002'],wallet_restart_persistence)
+        run_case('API-WALLET-RESTART-001',['SESSION-003','USER-001','TOKEN-003','TOKEN-004','TEST-039','MHVP-002','CW-002','BIG-SIX-002','RD-002','DT-002'],wallet_restart_persistence)
         # Define the core function used by this module.
         def core():
             # Load the casino state that publishes packaged and game-module version metadata.
@@ -1781,6 +1805,100 @@ def run_browser_tests():
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Execute Red Dog rules, session route, localization, responsive, and visual gates.
                 run_case('BR-RD-001',['RD-001','RD-002','RD-004','RD-005'],red_dog_acceptance)
+                # Define real-backend Dragon Tiger browser, localization, responsive, replay, and visual acceptance coverage.
+                def dragon_tiger_acceptance():
+                    # Open the catalog-generated route and wait for the game-owned readiness selector.
+                    page.get_by_test_id('nav-dragon_tiger').click(); page.get_by_test_id('dragon-tiger-table').wait_for(timeout=5000)
+                    # Wait for the session-bound initial state request to replace the intentional loading controls.
+                    page.wait_for_function("() => document.querySelector('.dt-phase')?.textContent === 'Accepting wagers'",timeout=5000)
+                    # Require the canonical route, complete English title, and initial ready phase.
+                    assert page.url.split('?',1)[0].endswith('/games/dragon_tiger') and page.locator('.dt-header h1').inner_text()=='Dragon Tiger' and page.locator('.dt-phase').inner_text()=='Accepting wagers'
+                    # Define every named viewport required by the Dragon Tiger visual-matrix row.
+                    required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
+                    # Define a helper that captures one registered live state in both supported locales and every governed viewport.
+                    def localized_evidence(prefix,states):
+                        # Iterate through the two complete game and shell locale domains.
+                        for locale in ('en-US','ru-RU'):
+                            # Switch locale through the authenticated shared shell without discarding game state.
+                            page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_function("locale => document.querySelector('[data-testid=\"shell-locale-select\"]')?.value === locale",arg=locale)
+                            # Allow the asynchronous game-domain and persistent-shell rerenders to complete.
+                            page.wait_for_timeout(100)
+                            # Verify the mounted game title belongs to the selected locale.
+                            assert page.locator('.dt-header h1').inner_text()==('Dragon Tiger' if locale=='en-US' else 'Дракон — Тигр')
+                            # Inspect shared-shell and game copy for the Russian acceptance gate.
+                            if locale=='ru-RU':
+                                # Read the persistent shell that remains visible in Dragon Tiger evidence.
+                                shell_copy=page.get_by_test_id('premium-topbar').inner_text()+'\n'+page.get_by_test_id('shell-status').inner_text()
+                                # Reject the exact hard-coded English shell phrases found in isolated evidence.
+                                assert not [phrase for phrase in ('PLAY TOKEN BALANCE','Ledger-backed outcomes','Connected','All games use play tokens only') if phrase.lower() in shell_copy.lower()],shell_copy
+                                # Require localized wallet, ledger, and connection text in the shared shell.
+                                assert all(phrase.lower() in shell_copy.lower() for phrase in ('Баланс игровых токенов','Результаты записываются в журнал','Подключено'))
+                                # Read only the mounted Dragon Tiger surface for locale ownership verification.
+                                russian_copy=page.locator('.dragon-tiger').inner_text()
+                                # Reject representative English game copy from every Russian evidence state.
+                                assert not [phrase for phrase in ('Accepting wagers','Round settled','Deal cards','Deal next round','Table information','Recent rounds','play tokens') if phrase.lower() in russian_copy.lower()],russian_copy
+                            # Capture the current localized state at every exact visual-matrix dimension.
+                            for viewport_id,width,height in required_viewports:
+                                # Resize before horizontal containment and active-route navigation checks.
+                                page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
+                                # Require the complete mounted table to stay visible without page-level horizontal overflow.
+                                assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.get_by_test_id('dragon-tiger-table').is_visible()
+                                # Measure the catalog navigation and its active Dragon Tiger route after responsive layout.
+                                nav_bounds=page.evaluate("() => { const nav=document.querySelector('.casino-nav').getBoundingClientRect(); const active=document.querySelector('[data-testid=\"nav-dragon_tiger\"]').getBoundingClientRect(); return {nav:{left:nav.left,right:nav.right},active:{left:active.left,right:active.right},label:document.querySelector('[data-testid=\"nav-dragon_tiger\"]').textContent.trim()}; }")
+                                # Require the complete localized active label and its bounds to remain inside the visible navigation.
+                                assert nav_bounds['label']==('Dragon Tiger' if locale=='en-US' else 'Дракон и Тигр') and nav_bounds['active']['left']>=nav_bounds['nav']['left']-1 and nav_bounds['active']['right']<=nav_bounds['nav']['right']+1,nav_bounds
+                                # Record self-describing after-pass evidence for this locale, state, and viewport.
+                                game_evidence(f'after-pass-dragon-tiger-{prefix}-{locale.lower()}-{viewport_id}.png','dragon_tiger',states,locale,viewport_id)
+                        # Restore English and primary desktop dimensions for deterministic control labels and actions.
+                        page.get_by_test_id('shell-locale-select').select_option('en-US'); page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(100)
+                    # Capture the ready state in both locales and every required viewport.
+                    localized_evidence('ready',['ready'])
+                    # Execute one real frontend round through the registered session-bound handler.
+                    page.locator('[data-action="deal"]').click(); page.wait_for_function("() => document.querySelector('.dt-phase')?.textContent === 'Round settled'",timeout=5000)
+                    # Capture the real settled table in both locales and every required viewport.
+                    localized_evidence('settled',['settled'])
+                    # Execute and replay one caller-stable public action to prove exactly-once behavior in the real browser session.
+                    replay_result=page.evaluate("""async () => { const request={action_id:'browser-dragon-tiger-replay',bet:'tiger',wager:2}; const call=async()=>{ const response=await fetch('/api/v1/games/dragon-tiger/rounds',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(request)}); const payload=await response.json(); if(!payload.ok) throw new Error(payload.error?.message || 'Dragon Tiger replay failed'); return payload.data; }; const first=await call(); const replay=await call(); return {same:JSON.stringify(first.round)===JSON.stringify(replay.round),replayed:replay.replayed,sameBalance:first.player.balance===replay.player.balance}; }""")
+                    # Require the retry response to preserve the exact result and wallet balance.
+                    assert replay_result=={'same':True,'replayed':True,'sameBalance':True},replay_result
+                    # Reload the game-owned state so the exact replay result is visible in the shared shell.
+                    page.reload(wait_until='networkidle'); page.get_by_test_id('dragon-tiger-table').wait_for(timeout=5000)
+                    # Capture exact-replay evidence from the restored registered backend state.
+                    localized_evidence('exact-replay',['exact_replay'])
+                    # Search bounded real shuffled rounds for the governed Dragon/Tiger half-loss tie state.
+                    tie_round=None
+                    # Retain real entropy while making the approximately one-in-thirteen tie state effectively certain.
+                    for attempt in range(200):
+                        # Submit one public Dragon wager with a unique stable action identity.
+                        candidate=page.evaluate("""async attempt => { const response=await fetch('/api/v1/games/dragon-tiger/rounds',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action_id:`browser-dragon-tiger-tie-${attempt}`,bet:'dragon',wager:2})}); const payload=await response.json(); if(!payload.ok) throw new Error(payload.error?.message || 'Dragon Tiger tie search failed'); return payload.data.round; }""",attempt)
+                        # Retain the first legal tie half-loss result.
+                        if candidate['winner']=='tie' and candidate['outcome']=='half_loss':
+                            # Preserve the governed result for a bounded-search assertion.
+                            tie_round=candidate
+                            # Stop as soon as the required real-backend state exists.
+                            break
+                    # Require the registered shuffled backend to produce the tie state within the bounded search.
+                    assert tie_round is not None,'Dragon Tiger did not produce a tie half-loss within 200 rounds'
+                    # Reload so the newest tie result is mounted through the production state endpoint.
+                    page.reload(wait_until='networkidle'); page.get_by_test_id('dragon-tiger-table').wait_for(timeout=5000)
+                    # Require visible state to match the retained tie and half-return settlement.
+                    assert page.locator('.dt-stage h2').inner_text()=='The cards tie' and tie_round['total_return']==1 and tie_round['net']==-1
+                    # Capture the real tie half-loss in both locales and every required viewport.
+                    localized_evidence('tie-half-loss',['tie_half_loss'])
+                    # Emulate the governed reduced-motion preference on the timer-free settled table.
+                    page.emulate_media(reduced_motion='reduce')
+                    # Capture reduced-motion evidence in both locales and every required viewport.
+                    localized_evidence('reduced-motion',['reduced_motion'])
+                    # Restore the default media preference for downstream browser cases.
+                    page.emulate_media(reduced_motion='no-preference')
+                    # Reload the canonical deep link and require private terminal history to restore.
+                    page.reload(wait_until='networkidle'); page.get_by_test_id('dragon-tiger-table').wait_for(timeout=5000)
+                    # Capture route restoration in both locales and every governed viewport.
+                    localized_evidence('route-restored',['route_restored'])
+                    # Return to the lobby so established downstream browser cases start normally.
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Execute Dragon Tiger rules, session route, localization, replay, responsive, and visual gates.
+                run_case('BR-DT-001',['DT-001','DT-002','DT-004','DT-005'],dragon_tiger_acceptance)
                 # Define route_restoration to prove deep links, reload, Back, and Forward behavior.
                 def route_restoration():
                     # Open Roulette directly through its canonical path using the authenticated browser context.

@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.7.0
+- application: 9.8.0
 - core: 9.4.0
 - ledger: 9.0.2
 - players: 9.1.0
@@ -24,9 +24,10 @@ Historical source baseline: 9.1.0
 - casino_war: 1.0.0
 - big_six_wheel: 1.0.0
 - red_dog: 1.0.0
-- tests: 1.10.0
-- docs: 1.9.0
-- contracts: 1.5.0
+- dragon_tiger: 1.0.0
+- tests: 1.11.0
+- docs: 1.10.0
+- contracts: 1.6.0
 - tooling: 1.3.0
 - commenting_policy: 1.0.0
 
@@ -467,3 +468,8 @@ Historical source baseline: 9.1.0
 - **RD-003** (Red Dog) - PASS: Red Dog ante, optional matching raise, push return, and payout movements use the shared ledger exactly once under stable action identifiers.
 - **RD-004** (Application) - PASS: The Red Dog surface provides complete English and Russian copy and remains responsive, accessible, and timer-clean across required desktop, tablet, and mobile viewports.
 - **RD-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery automatically include Red Dog with requirement, module, version, and visual evidence traceability.
+- **DT-001** (Dragon Tiger) - PASS: The standard-8d Dragon Tiger profile deals Dragon first from an eight-deck shoe, compares ranks ace-low without suit tie-breaks, and applies the documented main-bet returns.
+- **DT-002** (Dragon Tiger) - PASS: Authenticated sessions own isolated reload-safe Dragon Tiger shoe state, settled rounds, and canonical route restoration.
+- **DT-003** (Dragon Tiger) - PASS: Dragon Tiger wager debits and settlement credits use the shared ledger exactly once under stable action identifiers and immutable request fingerprints.
+- **DT-004** (Application) - PASS: The Dragon Tiger surface and persistent shared shell provide complete English and Russian copy and remain responsive, accessible, and reduced-motion safe across required viewports.
+- **DT-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery automatically include Dragon Tiger with requirement, module, version, and visual evidence traceability.

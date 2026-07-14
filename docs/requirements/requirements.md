@@ -8,12 +8,12 @@ This redesigned documentation uses separated architecture views, cleaner Mermaid
 
 ## Executive summary
 
-- Requirements tracked: **435**
-- PASS: **419**
+- Requirements tracked: **440**
+- PASS: **424**
 - PLANNED: **9**
 - SUPERSEDED: **7**
-- Requirements with API/rule tests: **249**
-- Requirements with browser tests: **115**
+- Requirements with API/rule tests: **253**
+- Requirements with browser tests: **119**
 
 ## Auth/MySQL/token foundation addendum
 
@@ -49,7 +49,7 @@ GitHub issue #81 establishes module-owned game descriptors as the single catalog
 | CORE-021 | Module-owned catalog metadata drives backend, frontend, API metadata, and validator discovery. | PASS | API-CATALOG-001 | BR-CATALOG-DISCOVERY-001 |
 | CORE-022 | Direct game links, reload, Back, and Forward restore canonical game routes. | PASS |  | BR-ROUTE-RESTORE-001 |
 | UX-010 | Lobby search and catalog-derived categories remain usable for the 20-game target. | PASS |  | BR-CATALOG-NAV-001 |
-| SESSION-005 | One shared authenticated-player resolver binds every game request before dispatch. | PASS | API-CATALOG-001, API-PRIVATE-SESSION-001, API-MHVP-001, API-CW-001, API-BIG-SIX-001, API-RD-001 |  |
+| SESSION-005 | One shared authenticated-player resolver binds every game request before dispatch. | PASS | API-CATALOG-001, API-PRIVATE-SESSION-001, API-MHVP-001, API-CW-001, API-BIG-SIX-001, API-RD-001, API-DT-001 |  |
 | TEST-042 | Validators, browser discovery, and long suites discover games and drivers from catalog metadata. | PASS | API-CATALOG-001, LONG-SUITE-100 | BR-CATALOG-DISCOVERY-001 |
 
 ## Multi-Hand Video Poker integration addendum
@@ -99,6 +99,18 @@ GitHub issue #77 integrates the isolated issue #84 game slice after the first th
 | RD-003 | Ante, raise, push-return, and payout movements use ledger-only exactly-once action identifiers. | PASS | API-RD-001 |  |
 | RD-004 | English and Russian Red Dog remain usable across all required viewports and visual states. | PASS |  | BR-RD-001 |
 | RD-005 | Catalog, contract, browser, long-suite, requirement, module, version, and visual evidence are traceable. | PASS | API-CATALOG-001, LONG-SUITE-100 | BR-CATALOG-DISCOVERY-001, BR-RD-001 |
+
+## Dragon Tiger integration addendum
+
+GitHub issue #77 integrates the isolated issue #83 game slice after Red Dog. The game keeps its module-owned implementation while the shared lane supplies canonical version registration, catalog and contract traceability, requirements, test discovery, shared-shell localization/navigation corrections, and EN/RU visual evidence.
+
+| ID | Requirement | Status | API tests | Browser tests |
+|---|---|---|---|---|
+| DT-001 | An eight-deck Dragon Tiger profile deals Dragon first, compares ranks ace-low, and applies the documented main-bet returns. | PASS | API-DT-001 | BR-DT-001 |
+| DT-002 | Session-bound Dragon Tiger shoe state and history remain isolated and survive reload, restart, and route restoration. | PASS | API-DT-001, API-WALLET-RESTART-001 | BR-DT-001 |
+| DT-003 | Wager and settlement movements use ledger-only exactly-once action identifiers and immutable request fingerprints. | PASS | API-DT-001 |  |
+| DT-004 | English and Russian Dragon Tiger and shared-shell copy remain usable across all required viewports and visual states. | PASS |  | BR-DT-001 |
+| DT-005 | Catalog, contract, browser, long-suite, requirement, module, version, and visual evidence are traceable. | PASS | API-CATALOG-001, LONG-SUITE-100 | BR-CATALOG-DISCOVERY-001, BR-DT-001 |
 
 ### Superseded wording
 
