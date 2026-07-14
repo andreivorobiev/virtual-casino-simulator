@@ -35,6 +35,9 @@
   "multi_hand_video_poker": [
     "contracts/openapi/multi_hand_video_poker.v1.yaml"
   ],
+  "casino_war": [
+    "contracts/openapi/casino_war.v1.yaml"
+  ],
   "tests": [],
   "docs": [],
   "contracts": [

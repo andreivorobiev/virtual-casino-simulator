@@ -229,6 +229,7 @@ label {
 
 .nav-item {
   display: inline-flex;
+  flex: 0 0 auto;
   gap: 8px;
   align-items: center;
   justify-content: center;
@@ -1933,7 +1934,7 @@ h3 {
 
   .casino-nav {
     display: grid;
-    grid-template-columns: repeat(8, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     overflow: visible;
   }
 
@@ -1944,6 +1945,9 @@ h3 {
     margin-left: 0;
     padding: 0 8px;
     font-size: 12px;
+    line-height: 1.15;
+    text-align: center;
+    white-space: normal;
   }
 
   .top-actions {

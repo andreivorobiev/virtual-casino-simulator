@@ -410,6 +410,32 @@ def run_api_tests():
             mhvp_events_b=[row for row in mhvp_ledger_b if row.get('game')=='multi_hand_video_poker' and row.get('round_id')==mhvp_b['round']['round_id']]
             # Require one aggregate debit and no more than one aggregate credit for each round.
             assert sum(row.get('transaction_type')=='MHVP_WAGER_DEBIT' for row in mhvp_events_a)==1 and sum(row.get('transaction_type')=='MHVP_WAGER_DEBIT' for row in mhvp_events_b)==1 and sum(row.get('transaction_type')=='MHVP_PAYOUT_CREDIT' for row in mhvp_events_a)<=1 and sum(row.get('transaction_type')=='MHVP_PAYOUT_CREDIT' for row in mhvp_events_b)<=1
+            # Deal user A's Casino War round while submitting user B's player id.
+            casino_war_a=api(base,'/api/v1/games/casino-war/rounds','POST',{'player_id':user_b['player_id'],'wager':2,'action_id':'wallet-cw-start-a'},auth_token=token_a)
+            # Replay user A's exact action id so the backend must return the same round without another ante.
+            casino_war_a_replay=api(base,'/api/v1/games/casino-war/rounds','POST',{'player_id':user_b['player_id'],'wager':2,'action_id':'wallet-cw-start-a'},auth_token=token_a)
+            # Deal user B's independent Casino War round while submitting user A's player id.
+            casino_war_b=api(base,'/api/v1/games/casino-war/rounds','POST',{'player_id':user_a['player_id'],'wager':2,'action_id':'wallet-cw-start-b'},auth_token=token_b)
+            # Require authenticated player ownership, distinct rounds, and an idempotent start replay.
+            assert casino_war_a['round']['player_id']==user_a['player_id'] and casino_war_b['round']['player_id']==user_b['player_id'] and casino_war_a['round']['round_id']!=casino_war_b['round']['round_id'] and casino_war_a_replay['round']['round_id']==casino_war_a['round']['round_id'] and casino_war_a_replay['player']['balance']==casino_war_a['player']['balance']
+            # Complete user A's round through surrender when the deterministic live deal produced a tie.
+            if casino_war_a['round']['phase']=='war_decision':
+                # Exercise the public surrender decision with a stable action id.
+                casino_war_a=api(base,f'/api/v1/games/casino-war/rounds/{casino_war_a["round"]["round_id"]}/surrender','POST',{'player_id':user_b['player_id'],'action_id':'wallet-cw-surrender-a'},auth_token=token_a)
+            # Complete user B's round through surrender when its independent deal produced a tie.
+            if casino_war_b['round']['phase']=='war_decision':
+                # Exercise the same decision under user B's independently bound session.
+                casino_war_b=api(base,f'/api/v1/games/casino-war/rounds/{casino_war_b["round"]["round_id"]}/surrender','POST',{'player_id':user_a['player_id'],'action_id':'wallet-cw-surrender-b'},auth_token=token_b)
+            # Read both private Casino War states while submitting the opposite player ids.
+            casino_war_state_a=api(base,f'/api/v1/games/casino-war/state?player_id={user_b["player_id"]}',auth_token=token_a)['state']; casino_war_state_b=api(base,f'/api/v1/games/casino-war/state?player_id={user_a["player_id"]}',auth_token=token_b)['state']
+            # Require terminal settlement and newest-first private round isolation for both sessions.
+            assert casino_war_a['round']['phase']=='settled' and casino_war_b['round']['phase']=='settled' and casino_war_state_a['rounds'][0]['round_id']==casino_war_a['round']['round_id'] and casino_war_state_b['rounds'][0]['round_id']==casino_war_b['round']['round_id']
+            # Read both ledgers after Casino War settlement for exactly-once movement proof.
+            casino_war_ledger_a=api(base,f'/api/v1/players/{user_a["player_id"]}/ledger',auth_token=token_a)['ledger']; casino_war_ledger_b=api(base,f'/api/v1/players/{user_b["player_id"]}/ledger',auth_token=token_b)['ledger']
+            # Select only Casino War rows for each independently completed round.
+            casino_war_events_a=[row for row in casino_war_ledger_a if row.get('game')=='casino_war' and row.get('round_id')==casino_war_a['round']['round_id']]; casino_war_events_b=[row for row in casino_war_ledger_b if row.get('game')=='casino_war' and row.get('round_id')==casino_war_b['round']['round_id']]
+            # Require one ante, unique stable action ids, and complete prepared settlement counts for each user.
+            assert sum(row.get('transaction_type')=='CASINO_WAR_ANTE_DEBIT' for row in casino_war_events_a)==1 and sum(row.get('transaction_type')=='CASINO_WAR_ANTE_DEBIT' for row in casino_war_events_b)==1 and len({(row.get('details') or {}).get('casino_war_action_id') for row in casino_war_events_a})==len(casino_war_events_a) and len({(row.get('details') or {}).get('casino_war_action_id') for row in casino_war_events_b})==len(casino_war_events_b) and casino_war_a['round']['settlement']['complete'] and casino_war_b['round']['settlement']['complete'] and casino_war_a['round']['settlement']['required_actions']==casino_war_a['round']['settlement']['committed_actions'] and casino_war_b['round']['settlement']['required_actions']==casino_war_b['round']['settlement']['committed_actions']
             # Read private game history through each normal-user session.
             history_a=api(base,'/api/v1/casino/history',auth_token=token_a)['history']
             # Read user B's independent history view.
@@ -443,11 +469,13 @@ def run_api_tests():
             # Verify normal users cannot mutate shared bot-controller accounts.
             assert api(base,'/api/v1/bots/bot_roulette_1/enable','POST',{},ok=False,auth_token=token_a)['error']['code']=='FORBIDDEN'
             # Store the durable post-game balance and terms state for restart verification.
-            integrity_state.update({'email':'wallet-a@example.local','password':'wallet-a-password','balance':api(base,'/api/v2/me',auth_token=token_a)['player']['token_balance'],'admin_blocked':len(admin_paths),'token_credit_count':len(credits_after)-len(credits_before),'contract_player':added_a,'mhvp_verified':True,'users':[{'email':'wallet-a@example.local','password':'wallet-a-password','player_id':user_a['player_id'],'balance':wallet_a,'roulette_round':roulette_a['round']['round_id'],'slots_round':slot_a['round_id'],'blackjack_round':blackjack_a['round_id'],'baccarat_round':baccarat_a['coup']['round_id'],'keno_round':keno_a['draw']['round_id'],'bingo_session':bingo_a_session['session_id'],'bingo_completed':False,'mhvp_round':mhvp_a['round']['round_id']},{'email':'wallet-b@example.local','password':'wallet-b-password','player_id':user_b['player_id'],'balance':wallet_b,'roulette_round':roulette_b['round']['round_id'],'slots_round':slot_b['round_id'],'blackjack_round':blackjack_b['round_id'],'baccarat_round':baccarat_b['coup']['round_id'],'keno_round':keno_b['draw']['round_id'],'bingo_session':bingo_b['session']['session_id'],'bingo_completed':True,'mhvp_round':mhvp_b['round']['round_id']}],'history_game_counts':[len(history_a),len(history_b)]})
+            integrity_state.update({'email':'wallet-a@example.local','password':'wallet-a-password','balance':api(base,'/api/v2/me',auth_token=token_a)['player']['token_balance'],'admin_blocked':len(admin_paths),'token_credit_count':len(credits_after)-len(credits_before),'contract_player':added_a,'mhvp_verified':True,'casino_war_verified':True,'users':[{'email':'wallet-a@example.local','password':'wallet-a-password','player_id':user_a['player_id'],'balance':wallet_a,'roulette_round':roulette_a['round']['round_id'],'slots_round':slot_a['round_id'],'blackjack_round':blackjack_a['round_id'],'baccarat_round':baccarat_a['coup']['round_id'],'keno_round':keno_a['draw']['round_id'],'bingo_session':bingo_a_session['session_id'],'bingo_completed':False,'mhvp_round':mhvp_a['round']['round_id'],'casino_war_round':casino_war_a['round']['round_id']},{'email':'wallet-b@example.local','password':'wallet-b-password','player_id':user_b['player_id'],'balance':wallet_b,'roulette_round':roulette_b['round']['round_id'],'slots_round':slot_b['round_id'],'blackjack_round':blackjack_b['round_id'],'baccarat_round':baccarat_b['coup']['round_id'],'keno_round':keno_b['draw']['round_id'],'bingo_session':bingo_b['session']['session_id'],'bingo_completed':True,'mhvp_round':mhvp_b['round']['round_id'],'casino_war_round':casino_war_b['round']['round_id']}],'history_game_counts':[len(history_a),len(history_b)]})
         # Execute the real-backend integrity regression as one mapped API case.
         run_case('API-PRIVATE-SESSION-001',['SESSION-003','USER-001','USER-003','USER-005','TOKEN-004','TEST-039'],wallet_auth_integrity)
         # Record Multi-Hand Video Poker session, mode, ledger, and retry coverage under its permanent test id.
         run_case('API-MHVP-001',['MHVP-001','MHVP-002','MHVP-003'],lambda: assert_condition(integrity_state['mhvp_verified'],'Multi-Hand Video Poker integration evidence missing'))
+        # Record Casino War session, ledger, settlement, and retry coverage under its permanent test id.
+        run_case('API-CW-001',['CW-001','CW-002','CW-003'],lambda: assert_condition(integrity_state['casino_war_verified'],'Casino War integration evidence missing'))
         # Record exact token credit coverage under the permanent test id referenced by TOKEN-003.
         run_case('API-TOKEN-001',['TOKEN-003','TOKEN-004'],lambda: assert_condition(integrity_state['token_credit_count']==1 and integrity_state['contract_player']['token_balance']==250,'token credit contract mismatch'))
         # Record central Admin authorization coverage under the permanent Admin test id.
@@ -473,13 +501,15 @@ def run_api_tests():
                 # Verify exact balance and accepted terms survived the process restart.
                 assert me['player']['token_balance']==expected['balance'] and me['terms']['accepted'] is True and me['terms']['required'] is False
                 # Read every private game state again after restart.
-                roulette_state=api(base,'/api/v1/games/roulette/state',auth_token=token)['state']; slots_state=api(base,'/api/v1/games/slots/state',auth_token=token)['state']; blackjack_state=api(base,'/api/v1/games/blackjack/state',auth_token=token)['state']; baccarat_state=api(base,'/api/v1/games/baccarat/state',auth_token=token)['state']; keno_state=api(base,'/api/v1/games/keno/state',auth_token=token)['state']; bingo_state=api(base,'/api/v1/games/bingo/state',auth_token=token)['state']; mhvp_state=api(base,'/api/v1/games/multi-hand-video-poker/state',auth_token=token)['state']
+                roulette_state=api(base,'/api/v1/games/roulette/state',auth_token=token)['state']; slots_state=api(base,'/api/v1/games/slots/state',auth_token=token)['state']; blackjack_state=api(base,'/api/v1/games/blackjack/state',auth_token=token)['state']; baccarat_state=api(base,'/api/v1/games/baccarat/state',auth_token=token)['state']; keno_state=api(base,'/api/v1/games/keno/state',auth_token=token)['state']; bingo_state=api(base,'/api/v1/games/bingo/state',auth_token=token)['state']; mhvp_state=api(base,'/api/v1/games/multi-hand-video-poker/state',auth_token=token)['state']; casino_war_state=api(base,'/api/v1/games/casino-war/state',auth_token=token)['state']
                 # Verify Roulette, Slots, Blackjack, Baccarat, and Keno identifiers survived under the session-derived player.
                 assert any(row['round_id']==expected['roulette_round'] for row in roulette_state['last_results']) and slots_state['last_spins'][-1]['round_id']==expected['slots_round'] and expected['blackjack_round'] in blackjack_state['rounds'] and any(row['round_id']==expected['baccarat_round'] for row in baccarat_state['last_coups']) and any(row['round_id']==expected['keno_round'] for row in keno_state['last_draws'])
                 # Verify Bingo terminal/refund state survived for the corresponding user.
                 assert (any(row['session_id']==expected['bingo_session'] for row in bingo_state['last_sessions']) if expected['bingo_completed'] else bingo_state['active_session'] is None)
                 # Verify the settled video poker round survived and remains private after restart.
                 assert any(row['round_id']==expected['mhvp_round'] for row in mhvp_state['recent_rounds'])
+                # Verify the settled Casino War round survived and remains private after restart.
+                assert any(row['round_id']==expected['casino_war_round'] for row in casino_war_state['rounds'])
                 # Read restarted private history and ledger views.
                 restarted_history=api(base,'/api/v1/casino/history',auth_token=token)['history']; restarted_ledger=api(base,f'/api/v1/players/{expected["player_id"]}/ledger',auth_token=token)['ledger']
                 # Verify restarted history includes the user's Bingo settlement and never leaks another player.
@@ -487,7 +517,7 @@ def run_api_tests():
             # Verify both users produced persisted private history across the history-producing games.
             assert all(count>0 for count in integrity_state['history_game_counts'])
         # Record the live restart persistence regression under the same integrity requirements.
-        run_case('API-WALLET-RESTART-001',['SESSION-003','USER-001','TOKEN-003','TOKEN-004','TEST-039','MHVP-002'],wallet_restart_persistence)
+        run_case('API-WALLET-RESTART-001',['SESSION-003','USER-001','TOKEN-003','TOKEN-004','TEST-039','MHVP-002','CW-002'],wallet_restart_persistence)
         # Define the core function used by this module.
         def core():
             # Load the casino state that publishes packaged and game-module version metadata.
@@ -1232,7 +1262,7 @@ def run_browser_tests():
                     # Verify the search label and placeholder both use shell i18n instead of English literals.
                     assert page.locator('label[for="catalog-search"]').text_content()=='Поиск игр' and page.get_by_test_id('catalog-search').get_attribute('placeholder')=='Поиск по игре, функции или категории'
                     # Define every catalog identifier and its installed Russian display label.
-                    category_labels={'all':'Все игры','cards':'Карточные','draw':'Розыгрыши','instant':'Быстрые','machine':'Автоматы','numbers':'Числа','poker':'Покер','reels':'Барабаны','roadmaps':'Дорожные карты','social':'Социальные','strategy':'Стратегия','table':'Настольные игры','wheel':'Колесо'}
+                    category_labels={'all':'Все игры','cards':'Карточные','draw':'Розыгрыши','high-card':'Старшая карта','instant':'Быстрые','machine':'Автоматы','numbers':'Числа','poker':'Покер','reels':'Барабаны','roadmaps':'Дорожные карты','social':'Социальные','strategy':'Стратегия','table':'Настольные игры','wheel':'Колесо'}
                     # Verify internal category ids never appear as transformed player-facing labels.
                     for category,label in category_labels.items():
                         # Require the exact localized label for each category discovered from the catalog.
@@ -1403,6 +1433,120 @@ def run_browser_tests():
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Execute real-backend mode, localization, responsive, route, and visual acceptance coverage.
                 run_case('BR-MHVP-001',['MHVP-001','MHVP-002','MHVP-004','MHVP-005'],multi_hand_video_poker_acceptance)
+                # Define real-backend Casino War browser and visual acceptance coverage.
+                def casino_war_acceptance():
+                    # Open the catalog-generated route and wait for its module-owned table selector.
+                    page.get_by_test_id('nav-casino_war').click(); page.get_by_test_id('casino-war-table').wait_for(timeout=5000)
+                    # Require the canonical route and complete English title before interaction.
+                    assert page.url.split('?',1)[0].endswith('/games/casino_war') and page.locator('.cw-header h1').inner_text()=='Casino War'
+                    # Reject representative raw resource identifiers from the initial player-facing surface.
+                    visible_lines={line.strip() for line in page.locator('.casino-war').inner_text().splitlines() if line.strip()}
+                    # Require owned resource keys to remain internal after dynamic domain loading.
+                    assert not ({'controls.deal','controls.war','phase.ready','stage.noRound','tokens.amount'} & visible_lines),visible_lines
+                    # Define every named viewport required by the Casino War visual-matrix row.
+                    required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
+                    # Capture the English accepting-wager state at every required viewport.
+                    for viewport_id,width,height in required_viewports:
+                        # Resize to the exact visual-matrix dimensions before containment checks.
+                        page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(150)
+                        # Require the complete page and mounted table to avoid horizontal overflow.
+                        assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.get_by_test_id('casino-war-table').is_visible()
+                        # Record self-describing English accepting-wager evidence.
+                        game_evidence(f'after-pass-casino-war-accepting-en-{viewport_id}.png','casino_war',['accepting_wager'],'en-US',viewport_id)
+                    # Restore primary desktop dimensions before real-backend deal discovery.
+                    page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(150)
+                    # Track whether a normal initial result has already been captured before the required tie.
+                    initial_result_captured=False
+                    # Search bounded real deals for the naturally occurring tie needed by the decision surface.
+                    tie_found=False
+                    # Deal enough six-deck comparisons that missing a tie is vanishingly unlikely while remaining bounded.
+                    for attempt in range(120):
+                        # Start one real ledger-backed round through the mounted frontend.
+                        page.locator('[data-action="deal"]').click()
+                        # Wait until the rerender exposes either a tie decision or the next-round control.
+                        page.wait_for_function("() => { const war=document.querySelector('[data-action=\"war\"]'); const deal=document.querySelector('[data-action=\"deal\"]'); return Boolean((war && !war.disabled) || (deal && !deal.disabled)); }",timeout=5000)
+                        # Stop on the first naturally dealt initial tie.
+                        if page.locator('[data-action="war"]').count() and page.locator('[data-action="war"]').is_enabled():
+                            # Preserve the successful discovery for the bounded-loop assertion.
+                            tie_found=True
+                            # Leave the tie unresolved so both decision buttons remain evidence-visible.
+                            break
+                        # Capture one ordinary initial result without duplicating the remaining loop attempts.
+                        if not initial_result_captured:
+                            # Record the settled initial comparison before starting another round.
+                            game_evidence('after-pass-casino-war-initial-result-en-desktop_primary.png','casino_war',['initial_result'],'en-US','desktop_primary')
+                            # Mark the matrix state as covered.
+                            initial_result_captured=True
+                    # Require the real backend to produce the decision state within the bounded search.
+                    assert tie_found,'Casino War did not produce a real tie within 120 rounds'
+                    # Capture the English tie-decision state at every required viewport.
+                    for viewport_id,width,height in required_viewports:
+                        # Resize before decision-state containment checks.
+                        page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(150)
+                        # Require both tie actions and page-level containment at this viewport.
+                        assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.locator('[data-action="surrender"]').is_visible() and page.locator('[data-action="war"]').is_visible()
+                        # Record self-describing English war-decision evidence.
+                        game_evidence(f'after-pass-casino-war-decision-en-{viewport_id}.png','casino_war',['war_decision'],'en-US',viewport_id)
+                    # Switch the unresolved real round to Russian without discarding its state.
+                    page.get_by_test_id('shell-locale-select').select_option('ru-RU'); page.wait_for_function("() => document.querySelector('.cw-phase')?.textContent !== 'Decision required'")
+                    # Reject representative English game copy from the Russian mounted surface.
+                    russian_copy=page.locator('.casino-war').inner_text(); english_phrases=['Deal cards','Deal next round','Surrender','Go to war','Table rules','play tokens','Decision required']; assert not [phrase for phrase in english_phrases if phrase.lower() in russian_copy.lower()],russian_copy
+                    # Capture the Russian tie-decision state at every required viewport.
+                    for viewport_id,width,height in required_viewports:
+                        # Resize before localized decision-state containment checks.
+                        page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(150)
+                        # Require both localized actions and page-level containment at this viewport.
+                        assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.locator('[data-action="surrender"]').is_visible() and page.locator('[data-action="war"]').is_visible()
+                        # Record self-describing Russian war-decision evidence.
+                        game_evidence(f'after-pass-casino-war-decision-ru-{viewport_id}.png','casino_war',['war_decision'],'ru-RU',viewport_id)
+                    # Restore primary desktop before committing the ledger-backed war decision.
+                    page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(150)
+                    # Choose war through the real frontend and wait for the terminal next-round control.
+                    page.locator('[data-action="war"]').click(); page.wait_for_function("() => { const deal=document.querySelector('[data-action=\"deal\"]'); return Boolean(deal && !deal.disabled); }",timeout=5000)
+                    # Capture the Russian war result at every required viewport.
+                    for viewport_id,width,height in required_viewports:
+                        # Resize before localized terminal-state containment checks.
+                        page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(150)
+                        # Require the terminal next-round control and page-level containment.
+                        assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.locator('[data-action="deal"]').is_visible()
+                        # Record self-describing Russian war-result evidence.
+                        game_evidence(f'after-pass-casino-war-result-ru-{viewport_id}.png','casino_war',['war_result'],'ru-RU',viewport_id)
+                    # Switch the settled war result back to English for the second locale evidence set.
+                    page.get_by_test_id('shell-locale-select').select_option('en-US'); page.wait_for_function("() => document.querySelector('.cw-phase')?.textContent === 'Round settled'")
+                    # Capture the English war result at every required viewport.
+                    for viewport_id,width,height in required_viewports:
+                        # Resize before English terminal-state containment checks.
+                        page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(150)
+                        # Require the terminal next-round control and page-level containment.
+                        assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.locator('[data-action="deal"]').is_visible()
+                        # Record self-describing English war-result evidence.
+                        game_evidence(f'after-pass-casino-war-result-en-{viewport_id}.png','casino_war',['war_result'],'en-US',viewport_id)
+                    # Reload the canonical deep link and require the settled war round to restore.
+                    page.reload(wait_until='networkidle'); page.get_by_test_id('casino-war-table').wait_for(timeout=5000); page.wait_for_function("() => { const deal=document.querySelector('[data-action=\"deal\"]'); return Boolean(deal && !deal.disabled); }")
+                    # Restore primary desktop and record canonical route-restoration evidence.
+                    page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(150); game_evidence('after-pass-casino-war-route-restored-en-desktop_primary.png','casino_war',['route_restored','war_result'],'en-US','desktop_primary')
+                    # Continue only if the first bounded search tied before producing a normal initial result.
+                    if not initial_result_captured:
+                        # Bound follow-up attempts while resolving any additional ties by surrender.
+                        for attempt in range(40):
+                            # Start the next real round through the restored route.
+                            page.locator('[data-action="deal"]').click(); page.wait_for_function("() => { const war=document.querySelector('[data-action=\"war\"]'); const deal=document.querySelector('[data-action=\"deal\"]'); return Boolean((war && !war.disabled) || (deal && !deal.disabled)); }",timeout=5000)
+                            # Capture and stop when the round settled from the initial comparison.
+                            if page.locator('[data-action="deal"]').count() and page.locator('[data-action="deal"]').is_enabled():
+                                # Record the remaining normal initial-result matrix state.
+                                game_evidence('after-pass-casino-war-initial-result-en-desktop_primary.png','casino_war',['initial_result'],'en-US','desktop_primary')
+                                # Mark the state as covered before leaving the bounded loop.
+                                initial_result_captured=True
+                                # Stop after the first qualifying initial result.
+                                break
+                            # Resolve another natural tie cheaply so the next comparison can begin.
+                            page.locator('[data-action="surrender"]').click(); page.wait_for_function("() => { const deal=document.querySelector('[data-action=\"deal\"]'); return Boolean(deal && !deal.disabled); }",timeout=5000)
+                    # Require ordinary initial-result evidence in addition to the decision and war-result states.
+                    assert initial_result_captured,'Casino War did not produce an initial-result evidence state'
+                    # Return to the lobby so established downstream browser cases start normally.
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Execute real-backend rules, localization, responsive, route, and visual acceptance coverage.
+                run_case('BR-CW-001',['CW-001','CW-002','CW-004','CW-005'],casino_war_acceptance)
                 # Define route_restoration to prove deep links, reload, Back, and Forward behavior.
                 def route_restoration():
                     # Open Roulette directly through its canonical path using the authenticated browser context.

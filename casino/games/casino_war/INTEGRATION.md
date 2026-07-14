@@ -1,8 +1,8 @@
-# Casino War integration handoff for #77
+# Casino War integration record for #77
 
-This branch intentionally does not add `modules/casino_war.json`, because #110's version validator requires the same change to `modules/module-manifest.json`, and the coordinator reserved that aggregate file and all shared registration/discovery files for #77. After #110 merges, the integration owner should add the descriptor and aggregate revision together.
+The #77 integration lane adds `modules/casino_war.json` and its matching aggregate revision together after the isolated game slice is rebased onto the merged catalog baseline. The descriptor below records the accepted catalog contract used by backend, frontend, validators, and long-suite discovery.
 
-## Proposed module descriptor
+## Accepted module descriptor
 
 ```json
 {
@@ -10,13 +10,15 @@ This branch intentionally does not add `modules/casino_war.json`, because #110's
   "version": "1.0.0",
   "paths": [
     "casino/games/casino_war/",
-    "web/games/casino_war.js"
+    "web/games/casino_war.js",
+    "web/i18n/en-US/games/casino_war.json",
+    "web/i18n/ru-RU/games/casino_war.json"
   ],
   "requirements_prefixes": ["CW"],
   "contracts": ["contracts/openapi/casino_war.v1.yaml"],
   "game": {
     "id": "casino_war",
-    "sort_order": 70,
+    "sort_order": 80,
     "route": "/games/casino_war",
     "label": "Casino War",
     "category": "table",
@@ -48,15 +50,15 @@ This branch intentionally does not add `modules/casino_war.json`, because #110's
     }
   },
   "depends_on": ["core", "ledger", "players"],
-  "may_not_depend_on": ["roulette", "slots", "blackjack", "baccarat", "keno", "bingo"]
+  "may_not_depend_on": ["roulette", "slots", "blackjack", "baccarat", "keno", "bingo", "multi_hand_video_poker"]
 }
 ```
 
-The integration owner should confirm final `sort_order`, add `"casino_war": "1.0.0"` to `modules/module-manifest.json`, allocate permanent `CW-*` requirement IDs, and add their mappings to the descriptor and central registry.
+The accepted allocation uses sort order 80, module version 1.0.0, and permanent requirements `CW-001` through `CW-005`. The packaged application remains on the canonical #104 version interface while the compatible shared module revisions advance as reserved by #77.
 
 ## Shared test discovery
 
-Add `tests/game_drivers/casino_war.py` only in the #77 integration lane. Its `play(client, index)` scenario should:
+The #77 lane adds `tests/game_drivers/casino_war.py`. Its `play(client, index)` scenario:
 
 1. Read session-bound state.
 2. Start a round with a unique `action_id` and positive play-token wager.
@@ -64,11 +66,11 @@ Add `tests/game_drivers/casino_war.py` only in the #77 integration lane. Its `pl
 4. Assert the round reaches `settled`, required and committed settlement counts match, and the bound player's ledger contains each `casino_war_action_id` once.
 5. Repeat one command with the same action id and assert the balance and ledger row count do not change.
 
-The shared API and browser runners, long-suite discovery, catalog validator, and shell imports must discover this descriptor; do not add Casino War allowlists to them.
+The shared API and browser runners, long-suite discovery, catalog validator, and shell imports discover this descriptor without Casino War allowlists.
 
 ## Visual matrix row
 
-Add a `casino_war` surface at route `/games/casino_war` with selector `[data-testid='casino-war-table']` and states:
+The visual matrix includes a `casino_war` surface at route `/games/casino_war` with selector `[data-testid='casino-war-table']` and states:
 
 - `accepting_wager`
 - `initial_result`
@@ -78,7 +80,7 @@ Add a `casino_war` surface at route `/games/casino_war` with selector `[data-tes
 
 Required locales are `en-US` and `ru-RU`. Required viewports are `desktop_primary`, `desktop_compact`, `tablet`, and `mobile`. Apply `VIS-COPY-001`, `VIS-TOKEN-002`, `VIS-LAYOUT-001`, `VIS-LAYOUT-002`, `VIS-LAYOUT-003`, `VIS-SCROLL-001`, `VIS-SCROLL-002`, `VIS-HIERARCHY-001`, `VIS-RESPONSIVE-001`, and `VIS-EVIDENCE-001`.
 
-After integration, capture real-backend `after_pass` evidence for at least `accepting_wager`, `war_decision`, and `war_result` in both locales across the allocated matrix viewports. This isolated branch cannot produce valid acceptance images because #110/#77 still own catalog routing and the visual matrix.
+Acceptance captures real-backend `after_pass` evidence for `accepting_wager`, `initial_result`, `war_decision`, `war_result`, and `route_restored`, including both locales and all allocated viewports where applicable.
 
 ## Shared-ledger follow-up
 

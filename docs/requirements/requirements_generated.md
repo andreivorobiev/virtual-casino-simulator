@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.4.0
+- application: 9.5.0
 - core: 9.4.0
 - ledger: 9.0.2
 - players: 9.1.0
@@ -21,9 +21,10 @@ Historical source baseline: 9.1.0
 - keno: 9.2.0
 - bingo: 9.2.0
 - multi_hand_video_poker: 1.0.0
-- tests: 1.7.0
-- docs: 1.6.0
-- contracts: 1.2.0
+- casino_war: 1.0.0
+- tests: 1.8.0
+- docs: 1.7.0
+- contracts: 1.3.0
 - tooling: 1.3.0
 - commenting_policy: 1.0.0
 
@@ -449,3 +450,8 @@ Historical source baseline: 9.1.0
 - **MHVP-003** (Multi-Hand Video Poker) - PASS: Each Multi-Hand Video Poker round uses one aggregate ledger wager debit and at most one aggregate payout credit with idempotent retry recovery.
 - **MHVP-004** (Application) - PASS: The Multi-Hand Video Poker surface provides complete English and Russian copy and remains usable without overflow across required desktop, tablet, and mobile viewports.
 - **MHVP-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery automatically include Multi-Hand Video Poker with requirement, module, version, and visual evidence traceability.
+- **CW-001** (Casino War) - PASS: Casino War compares one player card with one dealer card from a six-deck shoe, offers surrender or war on an initial tie, and awards a second war tie to the player.
+- **CW-002** (Casino War) - PASS: Authenticated sessions own isolated reload-safe Casino War state, tie decisions, recent rounds, and canonical route restoration.
+- **CW-003** (Casino War) - PASS: Casino War ante, optional war wager, surrender return, and settlement movements use the shared ledger exactly once under stable action identifiers.
+- **CW-004** (Application) - PASS: The Casino War surface provides complete English and Russian copy and remains usable without overflow across required desktop, tablet, and mobile viewports.
+- **CW-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery automatically include Casino War with requirement, module, version, and visual evidence traceability.
