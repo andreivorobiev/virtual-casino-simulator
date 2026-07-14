@@ -41,6 +41,9 @@
   "big_six_wheel": [
     "contracts/openapi/big_six_wheel.v1.yaml"
   ],
+  "red_dog": [
+    "contracts/openapi/red_dog.v1.yaml"
+  ],
   "tests": [],
   "docs": [],
   "contracts": [

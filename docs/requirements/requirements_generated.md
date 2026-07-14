@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.6.0
+- application: 9.7.0
 - core: 9.4.0
 - ledger: 9.0.2
 - players: 9.1.0
@@ -23,9 +23,10 @@ Historical source baseline: 9.1.0
 - multi_hand_video_poker: 1.0.0
 - casino_war: 1.0.0
 - big_six_wheel: 1.0.0
-- tests: 1.9.0
-- docs: 1.8.0
-- contracts: 1.4.0
+- red_dog: 1.0.0
+- tests: 1.10.0
+- docs: 1.9.0
+- contracts: 1.5.0
 - tooling: 1.3.0
 - commenting_policy: 1.0.0
 
@@ -461,3 +462,8 @@ Historical source baseline: 9.1.0
 - **BIG-SIX-003** (Big Six Wheel) - PASS: Each Big Six spin uses one aggregate ledger wager debit and at most one settlement credit with request-fingerprint conflict detection and exactly-once retry recovery.
 - **BIG-SIX-004** (Application) - PASS: The Big Six Wheel surface provides complete English and Russian copy, responsive ready/spinning/settled states, and reduced-motion-safe timer lifecycle behavior.
 - **BIG-SIX-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery automatically include Big Six Wheel with requirement, module, version, and visual evidence traceability.
+- **RD-001** (Red Dog) - PASS: Six-deck Red Dog supports consecutive-card pushes, opening-pair handling, spread decisions, and the approved spread and pair payout schedule.
+- **RD-002** (Red Dog) - PASS: Authenticated sessions own isolated reload-safe Red Dog state, active decisions, recent rounds, and canonical route restoration.
+- **RD-003** (Red Dog) - PASS: Red Dog ante, optional matching raise, push return, and payout movements use the shared ledger exactly once under stable action identifiers.
+- **RD-004** (Application) - PASS: The Red Dog surface provides complete English and Russian copy and remains responsive, accessible, and timer-clean across required desktop, tablet, and mobile viewports.
+- **RD-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery automatically include Red Dog with requirement, module, version, and visual evidence traceability.

@@ -6,7 +6,7 @@ Parent epic: #66. Game expansion parent: #73. Catalog foundation: completed issu
 
 ## Purpose
 
-This document gives the #77 integration owner one durable merge order and one shared-file ownership boundary for accepting isolated game pull requests after the catalog foundation. It does not implement game rules and does not make a game pull request ready for review.
+This document gives the #77 integration owner one durable merge order and one shared-file ownership boundary for accepting isolated game pull requests after the catalog foundation. It does not implement game rules; readiness follows only after the released game passes the complete integration gate.
 
 ## Approved intake order
 
@@ -15,8 +15,9 @@ The Product-approved serialized order is:
 1. Pull request #111, Multi-Hand Video Poker for issue #94.
 2. Pull request #113, Casino War for issue #82.
 3. Pull request #112, Big Six Wheel for issue #86.
+4. Pull request #116, Red Dog for issue #84, released after the first three accepted games merged.
 
-All three game pull requests remain draft until the preceding game is accepted, the current branch is rebased onto the resulting `main`, and the game passes the complete integration gate below. A later game must not pre-allocate or edit the shared version values owned by an earlier game.
+Each game pull request remains draft until the preceding game is accepted, the current branch is rebased onto the resulting `main`, and the game passes the complete integration gate below. A later game must not pre-allocate or edit the shared version values owned by an earlier game.
 
 ## Catalog ordering allocation
 
@@ -24,11 +25,11 @@ Existing games retain sort orders 10 through 60. The approved expansion slots ar
 
 | Sort order | Game | Issue | Integration state |
 | ---: | --- | ---: | --- |
-| 70 | Multi-Hand Video Poker | #94 | Draft PR #111 |
-| 80 | Casino War | #82 | Draft PR #113 |
-| 90 | Big Six Wheel | #86 | Draft PR #112 |
+| 70 | Multi-Hand Video Poker | #94 | Merged PR #111 |
+| 80 | Casino War | #82 | Merged PR #113 |
+| 90 | Big Six Wheel | #86 | Merged PR #112 |
 | 100 | Dragon Tiger | future isolated slice | Reserved |
-| 110 | Red Dog | future isolated slice | Reserved |
+| 110 | Red Dog | #84 | Released draft PR #116 |
 | 120 | Hi-Lo | future isolated slice | Reserved |
 | 130 | Scratch Cards | future isolated slice | Reserved |
 | 140 | Sic Bo | future isolated slice | Reserved |
@@ -48,6 +49,7 @@ Permanent game blocks are reserved as follows:
 - `MHVP-001` through `MHVP-005` for game rules, additive API and session binding, ledger and retry safety, EN/RU browser behavior, and discovered test/visual evidence.
 - `CW-001` through `CW-005` for the same five acceptance dimensions for Casino War.
 - `BIG-SIX-001` through `BIG-SIX-005` for the same five acceptance dimensions for Big Six Wheel.
+- `RD-001` through `RD-005` for the same five acceptance dimensions for Red Dog.
 
 New entries begin as `PLANNED`. The integration owner changes an entry to `PASS` only when its mapped real-backend tests and visual evidence have passed. Requirement IDs are never reused or renumbered after allocation.
 
@@ -87,6 +89,7 @@ Each new game begins at module revision `1.0.0`. The packaged application releas
 | #111 Multi-Hand Video Poker | 9.4.0 | 1.7.0 | 1.6.0 | 1.2.0 |
 | #113 Casino War | 9.5.0 | 1.8.0 | 1.7.0 | 1.3.0 |
 | #112 Big Six Wheel | 9.6.0 | 1.9.0 | 1.8.0 | 1.4.0 |
+| #116 Red Dog | 9.7.0 | 1.10.0 | 1.9.0 | 1.5.0 |
 
 These values are reservations, not permission to overwrite a newer value. The integrator must re-read current `main` immediately before each bump.
 
@@ -106,6 +109,7 @@ Required visual states are:
 - Multi-Hand Video Poker: `ready`, `choose_holds`, `settled_3_hands`, `settled_5_hands`, `settled_10_hands`, and `route_restored`.
 - Casino War: `accepting_wager`, `initial_result`, `war_decision`, `war_result`, and `route_restored`.
 - Big Six Wheel: `ready`, `spinning`, `settled`, `reduced_motion`, and `route_restored`.
+- Red Dog: `ready`, `spread_decision`, `pair_settled`, `consecutive_push`, `third_card_settled`, and `route_restored`.
 
 ## Validation and listener gate
 
