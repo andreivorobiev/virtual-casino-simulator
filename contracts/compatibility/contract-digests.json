@@ -7,6 +7,7 @@
   "contracts/openapi/bingo.v1.yaml": "eb402f2638437453ec48fb1a46aaa27c503e4f23063d28226af2fcf14c74a917",
   "contracts/openapi/blackjack.v1.yaml": "05f2ef714085167758194b991efcd8ae28335cca9f5f6834a33417f7e3f22497",
   "contracts/openapi/bots.v1.yaml": "d8e5a6657cbd64479c2c64c98e6c3e43b6b2128cde1ed7df9099145adfdc4c25",
+  "contracts/openapi/casino_war.v1.yaml": "a4f5c8e25148cb8803e3b08574997d4b28f357694c763e8c207658d8012327e8",
   "contracts/openapi/casino.v1.yaml": "3f47a6f4a0274837aa0d3ddcc79b96b6640fc3c1a37dd84cc2b1ef10fbb1fd85",
   "contracts/openapi/keno.v1.yaml": "3d3af7c097f3e82a4082961724cf11797be9a948a38dcb3c1765db3086f54f2d",
   "contracts/openapi/ledger.v1.yaml": "806bc3c22155d2c99d7551c6f97cb9987e3f84297d6055e8dd1e45d341e31ab1",

@@ -1,0 +1,273 @@
+openapi: 3.0.3
+info:
+  title: Virtual Casino Casino War API
+  version: v1
+  description: >-
+    Additive Casino War contract for a session-bound, play-token-only game.
+    The shared router overrides caller player identifiers with the authenticated
+    session binding. Every command requires a replay-safe action_id.
+tags:
+  - name: Casino War
+    description: Deterministic card comparisons and ledger-only settlement.
+paths:
+  /api/v1/games/casino-war/state:
+    get:
+      tags: [Casino War]
+      summary: Read and recover the current player's Casino War state
+      operationId: casinoWarState
+      parameters:
+        - $ref: '#/components/parameters/CompatiblePlayerId'
+      responses:
+        '200':
+          $ref: '#/components/responses/CasinoWarSuccess'
+        '401':
+          $ref: '#/components/responses/ApiError'
+  /api/v1/games/casino-war/rounds:
+    post:
+      tags: [Casino War]
+      summary: Deal one initial Casino War round
+      operationId: casinoWarStartRound
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartRoundRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/CasinoWarSuccess'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+  /api/v1/games/casino-war/rounds/{round_id}/surrender:
+    post:
+      tags: [Casino War]
+      summary: Surrender an initial tie for half the original wager
+      operationId: casinoWarSurrender
+      parameters:
+        - $ref: '#/components/parameters/RoundId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DecisionRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/CasinoWarSuccess'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+  /api/v1/games/casino-war/rounds/{round_id}/war:
+    post:
+      tags: [Casino War]
+      summary: Match the wager and resolve an initial tie through war
+      operationId: casinoWarGoToWar
+      parameters:
+        - $ref: '#/components/parameters/RoundId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DecisionRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/CasinoWarSuccess'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+components:
+  parameters:
+    CompatiblePlayerId:
+      name: player_id
+      in: query
+      required: false
+      description: Compatibility input; the authenticated session binding takes precedence.
+      schema:
+        type: string
+    RoundId:
+      name: round_id
+      in: path
+      required: true
+      schema:
+        type: string
+  responses:
+    CasinoWarSuccess:
+      description: Standard successful API envelope.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CasinoWarEnvelope'
+    ApiError:
+      description: Standard failed API envelope.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+  schemas:
+    ActionId:
+      type: string
+      minLength: 8
+      maxLength: 128
+      pattern: '^[A-Za-z0-9._:-]+$'
+      description: Client-generated idempotency key scoped to exactly one command.
+    StartRoundRequest:
+      type: object
+      required: [action_id, wager]
+      additionalProperties: false
+      properties:
+        action_id:
+          $ref: '#/components/schemas/ActionId'
+        wager:
+          type: number
+          format: double
+          exclusiveMinimum: true
+          minimum: 0
+          description: Positive play-token wager debited through the shared ledger.
+        player_id:
+          type: string
+          description: Compatibility input overridden by the authenticated session binding.
+    DecisionRequest:
+      type: object
+      required: [action_id]
+      additionalProperties: false
+      properties:
+        action_id:
+          $ref: '#/components/schemas/ActionId'
+        player_id:
+          type: string
+          description: Compatibility input overridden by the authenticated session binding.
+    Card:
+      type: object
+      required: [rank, suit, code]
+      properties:
+        rank:
+          type: string
+          enum: ['2', '3', '4', '5', '6', '7', '8', '9', '10', J, Q, K, A]
+        suit:
+          type: string
+          enum: [clubs, diamonds, hearts, spades]
+        code:
+          type: string
+          pattern: '^(10|[2-9JQKA])[CDHS]$'
+    SettlementProgress:
+      type: object
+      required: [required_actions, committed_actions, complete]
+      properties:
+        required_actions:
+          type: integer
+          minimum: 1
+        committed_actions:
+          type: integer
+          minimum: 0
+        complete:
+          type: boolean
+    CasinoWarRound:
+      type: object
+      required: [round_id, player_id, phase, wager, player_card, dealer_card, outcome, payout, settlement]
+      properties:
+        round_id:
+          type: string
+        player_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        phase:
+          type: string
+          enum: [war_decision, ledger_pending, settled]
+        wager:
+          type: number
+        war_wager:
+          type: number
+        player_card:
+          $ref: '#/components/schemas/Card'
+        dealer_card:
+          $ref: '#/components/schemas/Card'
+        burn_cards:
+          type: array
+          items:
+            $ref: '#/components/schemas/Card'
+        war_player_card:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/Card'
+        war_dealer_card:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/Card'
+        outcome:
+          type: string
+          enum: [tie, player_win, dealer_win, surrender, war_win, war_tie_win, war_loss]
+        payout:
+          type: number
+        settlement:
+          $ref: '#/components/schemas/SettlementProgress'
+    CasinoWarState:
+      type: object
+      required: [rules, shoe_count, shoes_dealt, rounds]
+      properties:
+        rules:
+          type: object
+        shoe_id:
+          type: string
+          nullable: true
+        shoe_count:
+          type: integer
+        shoes_dealt:
+          type: integer
+        rounds:
+          type: array
+          items:
+            $ref: '#/components/schemas/CasinoWarRound'
+        active_round:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/CasinoWarRound'
+    CasinoWarData:
+      type: object
+      required: [game, state, player]
+      properties:
+        game:
+          type: string
+          enum: [casino_war]
+        state:
+          $ref: '#/components/schemas/CasinoWarState'
+        round:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/CasinoWarRound'
+        player:
+          type: object
+    CasinoWarEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/CasinoWarData'
+    ErrorBody:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+    ErrorEnvelope:
+      type: object
+      required: [ok, error]
+      properties:
+        ok:
+          type: boolean
+          enum: [false]
+        error:
+          $ref: '#/components/schemas/ErrorBody'

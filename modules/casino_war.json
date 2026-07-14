@@ -1,0 +1,75 @@
+{
+  "module": "casino_war",
+  "version": "1.0.0",
+  "paths": [
+    "casino/games/casino_war/",
+    "web/games/casino_war.js",
+    "web/i18n/en-US/games/casino_war.json",
+    "web/i18n/ru-RU/games/casino_war.json"
+  ],
+  "requirements_prefixes": [
+    "CW"
+  ],
+  "contracts": [
+    "contracts/openapi/casino_war.v1.yaml"
+  ],
+  "game": {
+    "id": "casino_war",
+    "sort_order": 80,
+    "route": "/games/casino_war",
+    "label": "Casino War",
+    "category": "table",
+    "categories": [
+      "table",
+      "cards",
+      "high-card"
+    ],
+    "backend": {
+      "register": "casino.games.casino_war.api:register"
+    },
+    "frontend": {
+      "module": "./games/casino_war.js",
+      "export": "CasinoWarGame",
+      "ready_testid": "casino-war-table",
+      "i18n_domain": "games/casino_war",
+      "i18n_probe": "controls.war"
+    },
+    "tests": {
+      "long_driver": "tests.game_drivers.casino_war:play"
+    },
+    "translations": {
+      "ru-RU": {
+        "label": "Казино Война",
+        "kicker": "Карточный стол",
+        "description": "Сравните карты с дилером, а при ничьей выберите сдачу или войну."
+      }
+    },
+    "lobby": {
+      "featured": false,
+      "wide": false,
+      "art_class": "casino-war-art",
+      "symbol": "⚔",
+      "kicker": "Card table",
+      "description": "A fast high-card table with surrender and war decisions on ties.",
+      "tags": [
+        "Cards",
+        "Decision",
+        "Ledger-backed"
+      ]
+    }
+  },
+  "depends_on": [
+    "core",
+    "ledger",
+    "players"
+  ],
+  "may_not_depend_on": [
+    "roulette",
+    "slots",
+    "blackjack",
+    "baccarat",
+    "keno",
+    "bingo",
+    "multi_hand_video_poker"
+  ]
+}
