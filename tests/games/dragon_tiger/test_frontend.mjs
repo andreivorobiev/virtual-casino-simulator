@@ -64,6 +64,26 @@ assert.doesNotMatch(markup, /Ace of spades|Face-down playing card/);
 const dealingMarkup = frontend.viewMarkup({ snapshot, translate, isDealing: true });
 // Reject the default English hidden-card accessible name.
 assert.doesNotMatch(dealingMarkup, /Face-down playing card/);
+// Render the initial GET race window through the pure loading seam.
+const loadingMarkup = frontend.viewMarkup({ snapshot, translate, isLoading: true });
+// Keep the primary action inert until the session-bound snapshot settles.
+assert.match(loadingMarkup, /data-action="deal" disabled/);
+// Keep every wager target inert so no request payload can change during initial load.
+assert.match(loadingMarkup, /data-bet="dragon"[^>]* disabled/);
+// Keep the amount input inert during the same initial-load window.
+assert.match(loadingMarkup, /id="dt-wager"[^>]* disabled/);
+// Expose localized loading status and action copy instead of claiming wagers are accepted.
+assert.match(loadingMarkup, /RU:phases\.loading/);
+// Preserve a direct runtime guard even if a synthetic click bypasses disabled markup.
+assert.match(source, /if \(initialLoading \|\| dealing\) return/);
+// Render a saved exactly-once request after a simulated POST failure.
+const retryMarkup = frontend.viewMarkup({ snapshot, translate, pending: { action_id: 'dt-retry', bet: 'tiger', wager: 7 } });
+// Keep the retry action enabled so the same action id can reach the server again.
+assert.match(retryMarkup, /data-action="deal">RU:controls\.retry/);
+// Never regress the retry action into an inert button while configuration stays locked.
+assert.doesNotMatch(retryMarkup, /data-action="deal" disabled/);
+// Keep the stage aligned with the immutable pending payload rather than an older settled round.
+assert.match(retryMarkup, /RU:stage\.selectedBet:RU:bets\.tiger/);
 // Verify the shared #96 renderer and stylesheet are consumed.
 assert.match(source, /import \{ renderCard \} from '\.\.\/core\/cards\.js'/);
 // Verify the module never uses the legacy glyph-based money formatter.

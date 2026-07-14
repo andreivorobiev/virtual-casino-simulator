@@ -32,6 +32,8 @@ let selectedBet = 'dragon';
 let wager = 5;
 // Retain request-bound dealing state without allocating a presentation timer.
 let dealing = false;
+// Block player actions until the initial session-bound snapshot resolves.
+let initialLoading = false;
 // Retain the complete unresolved request so retries reuse its action id and payload.
 let pendingAction = null;
 // Retain locale cleanup so unmount releases its subscription.
@@ -158,19 +160,21 @@ function winnerKey(round) {
 }
 
 // Render all route markup through an injectable translation seam.
-export function viewMarkup({ snapshot = gameState, translate = text, selected = selectedBet, wagerValue = wager, isDealing = dealing, pending = pendingAction } = {}) {
+export function viewMarkup({ snapshot = gameState, translate = text, selected = selectedBet, wagerValue = wager, isDealing = dealing, isLoading = initialLoading, pending = pendingAction } = {}) {
   // Resolve the newest completed round once for a consistent frame.
   const round = currentRound(snapshot);
   // Resolve the request-bound or settled player-facing phase.
-  const phase = translate(isDealing ? 'phases.dealing' : round ? 'phases.settled' : 'phases.ready');
+  const phase = translate(isLoading ? 'phases.loading' : isDealing ? 'phases.dealing' : round ? 'phases.settled' : 'phases.ready');
   // Resolve the current winner without exposing its internal enum.
   const result = translate(`outcomes.${winnerKey(round)}`);
   // Disable configuration while a request or unresolved retry owns its payload.
-  const configurationDisabled = isDealing || Boolean(pending);
+  const configurationDisabled = isLoading || isDealing || Boolean(pending);
+  // Keep a saved retry actionable while blocking initial-load and in-flight clicks.
+  const actionDisabled = isLoading || isDealing;
   // Render semantic pressed-state wager buttons with visible selected copy.
   const bets = BETS.map(bet => `<button type="button" class="dt-bet${selected === bet ? ' is-selected' : ''}" data-bet="${bet}" aria-pressed="${selected === bet}"${configurationDisabled ? ' disabled' : ''}>${safe(translate(`bets.${bet}`))}${selected === bet ? `<span class="dt-selected">${safe(translate('bets.selected'))}</span>` : ''}</button>`).join('');
   // Resolve the primary action label for normal, request, and retry states.
-  const actionLabel = translate(isDealing ? 'controls.dealing' : pending ? 'controls.retry' : round ? 'controls.dealNext' : 'controls.deal');
+  const actionLabel = translate(isLoading ? 'controls.loading' : isDealing ? 'controls.dealing' : pending ? 'controls.retry' : round ? 'controls.dealNext' : 'controls.deal');
   // Render the two visible cards or localized face-down placeholders.
   const dragonCard = localizedCard(round?.dragon_card, { hidden: isDealing || !round, translate });
   // Render the opposing card through the same localized primitive adapter.
@@ -186,7 +190,7 @@ export function viewMarkup({ snapshot = gameState, translate = text, selected = 
   // Read server-owned shoe state for the data rail.
   const shoe = snapshot?.shoe || {};
   // Return the complete responsive three-zone route.
-  return `<section class="dragon-tiger" data-testid="dragon-tiger"><header class="dt-header"><div><p class="dt-muted">${safe(translate('eyebrow'))}</p><h1>${safe(translate('title'))}</h1></div><span class="dt-phase" role="status" aria-live="polite">${safe(phase)}</span></header><div class="dt-layout"><section class="dt-panel dt-controls" aria-label="${safe(translate('controls.region'))}"><h2>${safe(translate('controls.title'))}</h2><div class="dt-bets">${bets}</div><label for="dt-wager">${safe(translate('controls.wager'))}</label><input id="dt-wager" type="number" min="0.01" max="1000000" step="0.01" value="${safe(wagerValue)}"${configurationDisabled ? ' disabled' : ''}><button type="button" class="dt-deal" data-action="deal"${isDealing ? ' disabled' : ''}>${safe(actionLabel)}</button><p class="dt-muted">${safe(translate(pending ? 'controls.retryHelp' : 'controls.help'))}</p></section><main class="dt-panel dt-stage" data-testid="dragon-tiger-table" aria-label="${safe(translate('stage.region'))}"><div class="dt-stage-head"><div><p class="dt-muted">${safe(translate('stage.selectedBet', { bet: translate(`bets.${round?.bet || selected}`) }))}</p><h2>${safe(result)}</h2></div><strong>${safe(phase)}</strong></div><div class="dt-hands"><section class="dt-hand" aria-label="${safe(translate('stage.dragonHand'))}"><h3>${safe(translate('bets.dragon'))}</h3>${dragonCard}</section><section class="dt-hand" aria-label="${safe(translate('stage.tigerHand'))}"><h3>${safe(translate('bets.tiger'))}</h3>${tigerCard}</section></div><div class="dt-summary"><div class="dt-stat"><span>${safe(translate('summary.wager'))}</span><strong>${safe(tokenAmount(round?.wager || 0, translate))}</strong></div><div class="dt-stat"><span>${safe(translate('summary.return'))}</span><strong>${safe(tokenAmount(round?.total_return || 0, translate))}</strong></div><div class="dt-stat"><span>${safe(translate('summary.net'))}</span><strong>${safe(tokenAmount(round?.net || 0, translate))}</strong></div></div></main><aside class="dt-panel dt-data" aria-label="${safe(translate('data.region'))}"><h2>${safe(translate('data.title'))}</h2><div class="dt-stat"><span>${safe(translate('data.cardsRemaining'))}</span><strong>${safe(formatNumber(shoe.cards_remaining || 0))}</strong></div><div class="dt-stat"><span>${safe(translate('data.deckCount'))}</span><strong>${safe(formatNumber(rules.deck_count || 0))}</strong></div><p class="dt-muted">${safe(translate('data.rule', { dragon: betRules.dragon?.net_odds ?? 1, tiger: betRules.tiger?.net_odds ?? 1, tie: betRules.tie?.net_odds ?? 11 }))}</p><h3>${safe(translate('history.title'))}</h3><div class="dt-history">${history || `<p class="dt-muted">${safe(translate('history.empty'))}</p>`}</div></aside></div></section>`;
+  return `<section class="dragon-tiger" data-testid="dragon-tiger"><header class="dt-header"><div><p class="dt-muted">${safe(translate('eyebrow'))}</p><h1>${safe(translate('title'))}</h1></div><span class="dt-phase" role="status" aria-live="polite">${safe(phase)}</span></header><div class="dt-layout"><section class="dt-panel dt-controls" aria-label="${safe(translate('controls.region'))}"><h2>${safe(translate('controls.title'))}</h2><div class="dt-bets">${bets}</div><label for="dt-wager">${safe(translate('controls.wager'))}</label><input id="dt-wager" type="number" min="0.01" max="1000000" step="0.01" value="${safe(wagerValue)}"${configurationDisabled ? ' disabled' : ''}><button type="button" class="dt-deal" data-action="deal"${actionDisabled ? ' disabled' : ''}>${safe(actionLabel)}</button><p class="dt-muted">${safe(translate(pending ? 'controls.retryHelp' : 'controls.help'))}</p></section><main class="dt-panel dt-stage" data-testid="dragon-tiger-table" aria-label="${safe(translate('stage.region'))}"><div class="dt-stage-head"><div><p class="dt-muted">${safe(translate('stage.selectedBet', { bet: translate(`bets.${pending?.bet || round?.bet || selected}`) }))}</p><h2>${safe(result)}</h2></div><strong>${safe(phase)}</strong></div><div class="dt-hands"><section class="dt-hand" aria-label="${safe(translate('stage.dragonHand'))}"><h3>${safe(translate('bets.dragon'))}</h3>${dragonCard}</section><section class="dt-hand" aria-label="${safe(translate('stage.tigerHand'))}"><h3>${safe(translate('bets.tiger'))}</h3>${tigerCard}</section></div><div class="dt-summary"><div class="dt-stat"><span>${safe(translate('summary.wager'))}</span><strong>${safe(tokenAmount(round?.wager || 0, translate))}</strong></div><div class="dt-stat"><span>${safe(translate('summary.return'))}</span><strong>${safe(tokenAmount(round?.total_return || 0, translate))}</strong></div><div class="dt-stat"><span>${safe(translate('summary.net'))}</span><strong>${safe(tokenAmount(round?.net || 0, translate))}</strong></div></div></main><aside class="dt-panel dt-data" aria-label="${safe(translate('data.region'))}"><h2>${safe(translate('data.title'))}</h2><div class="dt-stat"><span>${safe(translate('data.cardsRemaining'))}</span><strong>${safe(formatNumber(shoe.cards_remaining || 0))}</strong></div><div class="dt-stat"><span>${safe(translate('data.deckCount'))}</span><strong>${safe(formatNumber(rules.deck_count || 0))}</strong></div><p class="dt-muted">${safe(translate('data.rule', { dragon: betRules.dragon?.net_odds ?? 1, tiger: betRules.tiger?.net_odds ?? 1, tie: betRules.tie?.net_odds ?? 11 }))}</p><h3>${safe(translate('history.title'))}</h3><div class="dt-history">${history || `<p class="dt-muted">${safe(translate('history.empty'))}</p>`}</div></aside></div></section>`;
 }
 
 // Render current state and reconnect semantic controls.
@@ -196,11 +200,11 @@ function render() {
   // Replace the isolated route atomically.
   root.innerHTML = viewMarkup();
   // Bind each wager target to local unsent configuration.
-  root.querySelectorAll('[data-bet]').forEach(button => { button.onclick = () => { if (!dealing && !pendingAction) { selectedBet = button.dataset.bet; render(); } }; });
+  root.querySelectorAll('[data-bet]').forEach(button => { button.onclick = () => { if (!initialLoading && !dealing && !pendingAction) { selectedBet = button.dataset.bet; render(); } }; });
   // Read and bind the wager input created by this render.
   const wagerInput = root.querySelector('#dt-wager');
   // Preserve a positive normalized wager without moving tokens.
-  if (wagerInput) wagerInput.onchange = () => { if (!pendingAction) { wager = Math.min(1000000, Math.max(0.01, Math.round(Number(wagerInput.value || wager || 5) * 100) / 100)); render(); } };
+  if (wagerInput) wagerInput.onchange = () => { if (!initialLoading && !pendingAction) { wager = Math.min(1000000, Math.max(0.01, Math.round(Number(wagerInput.value || wager || 5) * 100) / 100)); render(); } };
   // Bind the one atomic deal action.
   root.querySelector('[data-action="deal"]')?.addEventListener('click', deal);
 }
@@ -208,7 +212,7 @@ function render() {
 // Submit or retry one exactly-once Dragon Tiger round.
 async function deal() {
   // Ignore overlapping clicks while the POST request is active.
-  if (dealing) return;
+  if (initialLoading || dealing) return;
   // Capture one immutable request and retain it through any failed response.
   pendingAction = pendingAction || { action_id: createActionId(), bet: selectedBet, wager };
   // Capture route identity so late completions remain inert.
@@ -269,6 +273,8 @@ export const DragonTigerGame = {
     pendingAction = null;
     // Reset the request-bound phase.
     dealing = false;
+    // Hold every player action until the session-bound GET finishes.
+    initialLoading = true;
     // Install shared and route-local presentation once.
     ensureCardStyles();
     // Install the responsive game presentation.
@@ -279,7 +285,7 @@ export const DragonTigerGame = {
     if (!root || identity !== mountIdentity) return;
     // Subscribe to live locale changes without losing backend state.
     unsubscribeLocale = onLocaleChange(() => render());
-    // Render a localized ready frame while backend state loads.
+    // Render a localized inert loading frame while backend state loads.
     render();
     // Load the authenticated player's reload-safe state.
     try {
@@ -289,6 +295,8 @@ export const DragonTigerGame = {
       if (!root || identity !== mountIdentity) return;
       // Store the documented state and top-level rules.
       gameState = normalizeStatePayload(payload);
+      // Release the initial action guard only after the snapshot is authoritative.
+      initialLoading = false;
       // Render recovered shoe and round history.
       render();
       // Align the shared wallet without misclassifying an already loaded game state.
@@ -302,6 +310,12 @@ export const DragonTigerGame = {
       }
     // Surface a localized load failure while leaving a retry-safe ready frame.
     } catch (_) {
+      // Stop a late rejection from releasing a newer mount's initial-load guard.
+      if (!root || identity !== mountIdentity) return;
+      // Release the guard because the failed GET can no longer overwrite a later action.
+      initialLoading = false;
+      // Re-render one actionable retry-safe frame after the failed snapshot request.
+      render();
       // Notify only while this mount still owns the route.
       if (root && identity === mountIdentity) toast(text('errors.loadFailed'));
     }
@@ -322,5 +336,7 @@ export const DragonTigerGame = {
     pendingAction = null;
     // Release request-bound presentation state; this module owns no timers.
     dealing = false;
+    // Release initial-load presentation state at the session boundary.
+    initialLoading = false;
   },
 };
