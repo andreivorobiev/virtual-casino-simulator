@@ -1,0 +1,394 @@
+openapi: 3.0.3
+info:
+  title: Virtual Casino Deuces Wild Video Poker API
+  version: v1
+  description: >-
+    Additive issue #92 contract for one-hand full-pay Deuces Wild Video Poker.
+    The authenticated request context owns player identity, and every mutating
+    action requires an action_id so identical retries recover one durable action
+    without duplicating a wager, payout, hold change, or draw.
+tags:
+  - name: Deuces Wild Video Poker
+    description: Reload-safe five-card draw with game-local wild-card evaluation and ledger-only settlement.
+
+# Keep this game on new additive v1 paths so existing v1 clients retain their behavior.
+paths:
+  /api/v1/games/deuces-wild-video-poker/state:
+    get:
+      tags: [Deuces Wild Video Poker]
+      operationId: deucesWildVideoPokerState
+      summary: Read the authenticated player's reload-safe game state
+      parameters:
+        - $ref: '#/components/parameters/CompatibilityPlayerId'
+      responses:
+        '200':
+          description: Current player-scoped game state and full-pay schedule
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StateEnvelope'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/v1/games/deuces-wild-video-poker/rounds:
+    post:
+      tags: [Deuces Wild Video Poker]
+      operationId: deucesWildVideoPokerStartRound
+      summary: Deal or replay one exactly-once wagered round
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartRoundRequest'
+      responses:
+        '200':
+          description: New or replayed five-card hand with committed wager evidence
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionEnvelope'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/v1/games/deuces-wild-video-poker/rounds/{round_id}/holds:
+    post:
+      tags: [Deuces Wild Video Poker]
+      operationId: deucesWildVideoPokerSetHolds
+      summary: Persist or replay held-card positions
+      parameters:
+        - $ref: '#/components/parameters/RoundId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HoldsRequest'
+      responses:
+        '200':
+          description: Reload-safe active round with the accepted holds
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionEnvelope'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/v1/games/deuces-wild-video-poker/rounds/{round_id}/draw:
+    post:
+      tags: [Deuces Wild Video Poker]
+      operationId: deucesWildVideoPokerDraw
+      summary: Draw replacements and settle or replay the round exactly once
+      parameters:
+        - $ref: '#/components/parameters/RoundId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DrawRequest'
+      responses:
+        '200':
+          description: Completed full-pay result with optional committed payout evidence
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionEnvelope'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+
+components:
+  parameters:
+    RoundId:
+      name: round_id
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
+        pattern: '^[A-Za-z0-9_-]+$'
+    CompatibilityPlayerId:
+      name: player_id
+      in: query
+      required: false
+      description: Compatibility input that cannot override the authenticated session-bound player.
+      schema:
+        type: string
+  responses:
+    ErrorResponse:
+      description: Standard API error envelope
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+
+  # Every POST action uses the same bounded, log-safe idempotency key shape.
+  schemas:
+    ActionId:
+      type: string
+      minLength: 8
+      maxLength: 128
+      pattern: '^[A-Za-z0-9._:-]+$'
+      description: Client action key; identical retries replay, while conflicting reuse fails closed.
+    StartRoundRequest:
+      type: object
+      additionalProperties: false
+      required: [action_id, wager]
+      properties:
+        action_id:
+          $ref: '#/components/schemas/ActionId'
+        wager:
+          type: number
+          minimum: 0.01
+          maximum: 100000
+        player_id:
+          type: string
+          description: Compatibility input overridden by the authenticated session resolver.
+    HoldsRequest:
+      type: object
+      additionalProperties: false
+      required: [action_id, holds]
+      properties:
+        action_id:
+          $ref: '#/components/schemas/ActionId'
+        holds:
+          type: array
+          uniqueItems: true
+          maxItems: 5
+          items:
+            type: integer
+            minimum: 0
+            maximum: 4
+        player_id:
+          type: string
+          description: Compatibility input overridden by the authenticated session resolver.
+    DrawRequest:
+      type: object
+      additionalProperties: false
+      required: [action_id]
+      properties:
+        action_id:
+          $ref: '#/components/schemas/ActionId'
+        player_id:
+          type: string
+          description: Compatibility input overridden by the authenticated session resolver.
+
+    # Compact codes match the shared #96 card renderer and backend card primitives.
+    CardCode:
+      type: string
+      pattern: '^(10|[2-9JQKA])[CDHS]$'
+    Outcome:
+      type: string
+      enum:
+        - natural_royal_flush
+        - four_deuces
+        - wild_royal_flush
+        - five_of_a_kind
+        - straight_flush
+        - four_of_a_kind
+        - full_house
+        - flush
+        - straight
+        - three_of_a_kind
+        - no_win
+    Paytable:
+      type: object
+      additionalProperties: false
+      required:
+        - natural_royal_flush
+        - four_deuces
+        - wild_royal_flush
+        - five_of_a_kind
+        - straight_flush
+        - four_of_a_kind
+        - full_house
+        - flush
+        - straight
+        - three_of_a_kind
+        - no_win
+      properties:
+        natural_royal_flush: {type: integer, enum: [800]}
+        four_deuces: {type: integer, enum: [200]}
+        wild_royal_flush: {type: integer, enum: [25]}
+        five_of_a_kind: {type: integer, enum: [15]}
+        straight_flush: {type: integer, enum: [9]}
+        four_of_a_kind: {type: integer, enum: [5]}
+        full_house: {type: integer, enum: [3]}
+        flush: {type: integer, enum: [2]}
+        straight: {type: integer, enum: [2]}
+        three_of_a_kind: {type: integer, enum: [1]}
+        no_win: {type: integer, enum: [0]}
+    # Persisted round fields are sufficient to resume holds or replay a completed draw after reload.
+    Round:
+      type: object
+      required:
+        - round_id
+        - player_id
+        - deal_action_id
+        - wager
+        - phase
+        - initial_hand
+        - holds
+        - wager_status
+        - payout_status
+        - created_at
+      properties:
+        round_id:
+          type: string
+        player_id:
+          type: string
+        deal_action_id:
+          $ref: '#/components/schemas/ActionId'
+        draw_action_id:
+          $ref: '#/components/schemas/ActionId'
+        wager:
+          type: number
+          minimum: 0.01
+        phase:
+          type: string
+          enum: [hold, settled]
+        initial_hand:
+          type: array
+          minItems: 5
+          maxItems: 5
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/CardCode'
+        holds:
+          type: array
+          uniqueItems: true
+          maxItems: 5
+          items:
+            type: integer
+            minimum: 0
+            maximum: 4
+        final_hand:
+          type: array
+          minItems: 5
+          maxItems: 5
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/CardCode'
+        result:
+          $ref: '#/components/schemas/Outcome'
+        multiplier:
+          type: integer
+          minimum: 0
+        outcome:
+          type: string
+          enum: [win, push, loss]
+        payout:
+          type: number
+          minimum: 0
+        net:
+          type: number
+        wager_status:
+          type: string
+          enum: [pending, complete]
+        payout_status:
+          type: string
+          enum: [not_ready, pending, complete]
+        wager_ledger_id:
+          type: string
+        payout_ledger_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+    GameState:
+      type: object
+      additionalProperties: false
+      required: [active_round, recent_rounds]
+      properties:
+        active_round:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/Round'
+        recent_rounds:
+          type: array
+          maxItems: 20
+          items:
+            $ref: '#/components/schemas/Round'
+        schema_version:
+          type: integer
+          minimum: 1
+    Player:
+      type: object
+      additionalProperties: true
+    LedgerEvent:
+      type: object
+      nullable: true
+      additionalProperties: true
+    StateData:
+      type: object
+      required: [game, state, player, paytable]
+      properties:
+        game:
+          type: string
+          enum: [deuces_wild_video_poker]
+        state:
+          $ref: '#/components/schemas/GameState'
+        round:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/Round'
+        player:
+          $ref: '#/components/schemas/Player'
+        paytable:
+          $ref: '#/components/schemas/Paytable'
+    ActionData:
+      allOf:
+        - $ref: '#/components/schemas/StateData'
+        - type: object
+          required: [round, replayed]
+          properties:
+            round:
+              $ref: '#/components/schemas/Round'
+            replayed:
+              type: boolean
+            wager:
+              $ref: '#/components/schemas/LedgerEvent'
+            payout:
+              $ref: '#/components/schemas/LedgerEvent'
+
+    # Success and failure schemas preserve the repository-wide public envelope contract.
+    StateEnvelope:
+      type: object
+      additionalProperties: false
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/StateData'
+    ActionEnvelope:
+      type: object
+      additionalProperties: false
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/ActionData'
+    ErrorEnvelope:
+      type: object
+      additionalProperties: false
+      required: [ok, error]
+      properties:
+        ok:
+          type: boolean
+          enum: [false]
+        error:
+          type: object
+          additionalProperties: false
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
