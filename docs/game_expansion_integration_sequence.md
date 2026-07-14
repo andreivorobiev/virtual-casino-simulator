@@ -18,6 +18,10 @@ The Product-approved serialized order is:
 4. Pull request #116, Red Dog for issue #84, released after the first three accepted games merged.
 5. Pull request #127, Dragon Tiger for issue #83, released after Red Dog merged.
 6. Pull request #117, Hi-Lo for issue #85, released after Dragon Tiger merged.
+7. Pull request #118, Three Card Poker for issue #93, released after Hi-Lo merged.
+8. Pull request #115, Jacks or Better Video Poker for issue #91, next after Three Card Poker.
+9. Pull request #119, Deuces Wild Video Poker for issue #92, after Jacks or Better.
+10. Pull request #120, Texas Hold'em Practice Table for issue #95, after the video-poker pair.
 
 Each game pull request remains draft until the preceding game is accepted, the current branch is rebased onto the resulting `main`, and the game passes the complete integration gate below. A later game must not pre-allocate or edit the shared version values owned by an earlier game.
 
@@ -32,15 +36,15 @@ Existing games retain sort orders 10 through 60. The approved expansion slots ar
 | 90 | Big Six Wheel | #86 | Merged PR #112 |
 | 100 | Dragon Tiger | #83 | Merged PR #127 |
 | 110 | Red Dog | #84 | Merged PR #116 |
-| 120 | Hi-Lo | #85 | Released draft PR #117 |
+| 120 | Hi-Lo | #85 | Merged PR #117 |
 | 130 | Scratch Cards | future isolated slice | Reserved |
 | 140 | Sic Bo | future isolated slice | Reserved |
 | 150 | Chuck-a-Luck | future isolated slice | Reserved |
 | 160 | Craps | future isolated slice | Reserved |
-| 170 | Jacks or Better Video Poker | future isolated slice | Reserved |
-| 180 | Deuces Wild Video Poker | future isolated slice | Reserved |
-| 190 | Three Card Poker | future isolated slice | Reserved |
-| 200 | Texas Hold'em Practice Table | future isolated slice | Reserved |
+| 170 | Jacks or Better Video Poker | #91 | Next draft PR #115 |
+| 180 | Deuces Wild Video Poker | #92 | Held draft PR #119 |
+| 190 | Three Card Poker | #93 | Released draft PR #118 |
+| 200 | Texas Hold'em Practice Table | #95 | Held draft PR #120 |
 
 Sort order is catalog presentation metadata, not an authorization to register a placeholder. Only complete game descriptors are loaded.
 
@@ -54,6 +58,7 @@ Permanent game blocks are reserved as follows:
 - `RD-001` through `RD-005` for the same five acceptance dimensions for Red Dog.
 - `DT-001` through `DT-005` for the same five acceptance dimensions for Dragon Tiger.
 - `HILO-001` through `HILO-005` for the same five acceptance dimensions for Hi-Lo.
+- `TCP-001` through `TCP-005` for the same five acceptance dimensions for Three Card Poker.
 
 New entries begin as `PLANNED`. The integration owner changes an entry to `PASS` only when its mapped real-backend tests and visual evidence have passed. Requirement IDs are never reused or renumbered after allocation.
 
@@ -96,6 +101,7 @@ Each new game begins at module revision `1.0.0`. The packaged application releas
 | #116 Red Dog | 9.7.0 | 1.10.0 | 1.9.0 | 1.5.0 |
 | #127 Dragon Tiger | 9.8.0 | 1.11.0 | 1.10.0 | 1.6.0 |
 | #117 Hi-Lo | 9.9.0 | 1.12.0 | 1.11.0 | 1.7.0 |
+| #118 Three Card Poker | 9.10.0 | 1.13.0 | 1.12.0 | 1.8.0 |
 
 These values are reservations, not permission to overwrite a newer value. The integrator must re-read current `main` immediately before each bump.
 
@@ -118,6 +124,7 @@ Required visual states are:
 - Red Dog: `ready`, `spread_decision`, `pair_settled`, `consecutive_push`, `third_card_settled`, and `route_restored`.
 - Dragon Tiger: `ready`, `settled`, `tie_half_loss`, `exact_replay`, `reduced_motion`, and `route_restored`.
 - Hi-Lo: `ready`, `choose_higher_or_lower`, `correct_guess`, `incorrect_guess`, `tie_refund`, `reduced_motion`, and `route_restored`.
+- Three Card Poker: `ready`, `decision`, `player_win`, `dealer_win`, `dealer_not_qualified`, `folded`, `reduced_motion`, and `route_restored`.
 
 ## Validation and listener gate
 

@@ -50,6 +50,9 @@
   "hi_lo": [
     "contracts/openapi/hi_lo.v1.yaml"
   ],
+  "three_card_poker": [
+    "contracts/openapi/three_card_poker.v1.yaml"
+  ],
   "tests": [],
   "docs": [],
   "contracts": [

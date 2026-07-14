@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.9.0
+- application: 9.10.0
 - core: 9.4.0
 - ledger: 9.0.2
 - players: 9.1.0
@@ -26,9 +26,10 @@ Historical source baseline: 9.1.0
 - red_dog: 1.0.0
 - dragon_tiger: 1.0.0
 - hi_lo: 1.0.0
-- tests: 1.12.0
-- docs: 1.11.0
-- contracts: 1.7.0
+- three_card_poker: 1.0.0
+- tests: 1.13.0
+- docs: 1.12.0
+- contracts: 1.8.0
 - tooling: 1.3.0
 - commenting_policy: 1.0.0
 
@@ -479,3 +480,8 @@ Historical source baseline: 9.1.0
 - **HILO-003** (Hi-Lo) - PASS: Hi-Lo wager debits, equal-rank refunds, and winning payouts use the shared ledger exactly once under stable action identifiers and immutable request fingerprints.
 - **HILO-004** (Application) - PASS: The Hi-Lo surface provides complete English and Russian copy and remains responsive, accessible, and reduced-motion safe across required viewports and decision outcomes.
 - **HILO-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery automatically include Hi-Lo with requirement, module, version, and visual evidence traceability.
+- **TCP-001** (Three Card Poker) - PASS: Three Card Poker applies the documented three-card ranking, queen-high dealer qualification, Ante Bonus A, Pair Plus C, and Play or Fold settlement rules.
+- **TCP-002** (Three Card Poker) - PASS: Authenticated sessions own isolated reload-safe Three Card Poker decisions, recent rounds, hidden dealer cards, and canonical route restoration.
+- **TCP-003** (Three Card Poker) - PASS: Ante, Pair Plus, Play, refund, and payout movements use the shared ledger exactly once under stable identifiers and immutable fingerprints.
+- **TCP-004** (Application) - PASS: The Three Card Poker surface provides complete English and Russian copy and remains responsive, accessible, and reduced-motion safe across required viewports and outcomes.
+- **TCP-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Three Card Poker with requirement, module, version, and visual evidence traceability.
