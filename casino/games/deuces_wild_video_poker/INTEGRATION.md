@@ -12,6 +12,7 @@ This document describes the isolated game slice and its future integration needs
 
 ## Isolated descriptor proposal
 
+- The uninstalled `1.0.0` descriptor proposal is preserved at `codex/tasks/artifacts/issue-92-deuces-wild/deuces_wild_video_poker.module.proposal.json`; it stays outside `modules/` so runtime discovery remains owned by #77.
 - Module and game id: `deuces_wild_video_poker`.
 - Initial independent module revision: `1.0.0`.
 - Reserved catalog order: `180`.
@@ -56,14 +57,14 @@ If the accepted layout introduces an intentional paytable or history scroll regi
 
 The isolated worker must leave these files to #77:
 
-1. `modules/module-manifest.json`: add the accepted `deuces_wild_video_poker` revision and recalculate any shared module revisions from the then-current main branch. Without this entry, `scripts/validate_game_catalog.py` reports `catalog game deuces_wild_video_poker has no canonical module revision`, while `scripts/validate_versions.py` reports both `module manifests missing from aggregate manifest: deuces_wild_video_poker` and `configured games missing canonical module revisions: deuces_wild_video_poker`.
+1. `codex/tasks/artifacts/issue-92-deuces-wild/deuces_wild_video_poker.module.proposal.json`, `modules/deuces_wild_video_poker.json`, and `modules/module-manifest.json`: promote the accepted proposal to the installable descriptor path and add its canonical revision in the same #77 integration change, then recalculate any shared module revisions from the then-current main branch.
 2. `docs/requirements/requirements.json`, `docs/requirements/requirements.md`, and `docs/requirements/requirements_generated.md`: allocate the permanent block, map accepted tests, and regenerate rather than hand-edit generated output.
 3. `contracts/compatibility/module-api-matrix.json` and `contracts/compatibility/contract-digests.json`: register the additive contract and its accepted digest.
 4. `tests/visual/visual_matrix.json`: add the proposed row only after the exact states and evidence paths are available.
 5. Shared API/browser runners and long-suite discovery: change them only if catalog-driven discovery is insufficient; otherwise record the game-specific tests and driver evidence without adding a duplicate allowlist.
 6. Shared `application`, `tests`, `docs`, and `contracts` module revisions: compute them at integration time. This proposal reserves no future shared version number.
 
-Because the runtime catalog publishes each descriptor's revision through `modules/module-manifest.json`, the full shared shell and casino catalog cannot provide formal acceptance while that aggregate revision is absent. Focused engine, isolated-router API, frontend, locale-parity, boundary, comment-density, and syntax checks remain valid worker evidence but do not remove this #77 blocker.
+The runtime scans only `modules/*.json`, so the issue-owned proposal remains inert and the shared reset/catalog/long-suite paths do not partially install #92 before #77. Promoting the descriptor without its aggregate revision would make runtime catalog lookup fail; #77 must therefore promote the descriptor and register its revision atomically. Focused engine, isolated-router API, frontend, locale-parity, boundary, comment-density, and syntax checks remain valid worker evidence but do not remove that integration gate.
 
 ## Integration handoff
 
