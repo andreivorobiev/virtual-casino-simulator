@@ -1,0 +1,299 @@
+openapi: 3.0.3
+info:
+  title: Virtual Casino Hi-Lo API
+  version: v1
+  description: >-
+    Additive issue #85 contract for authenticated two-step Hi-Lo play. Deal and guess
+    commands require independent action IDs so retries reuse one round and each wager,
+    refund, or payout movement at most once in the supported local simulator.
+tags:
+  - name: Hi-Lo
+    description: Player-scoped card prediction with ledger-only settlement.
+
+# Define only additive frozen-v1 game endpoints owned by this module.
+paths:
+  /api/v1/games/hi-lo/state:
+    get:
+      tags: [Hi-Lo]
+      operationId: hiLoState
+      summary: Read the authenticated player's reload-safe Hi-Lo state
+      responses:
+        '200':
+          description: Current game state, fixed rules, and bound player
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StateEnvelope'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/v1/games/hi-lo/rounds:
+    post:
+      tags: [Hi-Lo]
+      operationId: hiLoStartRound
+      summary: Deal or replay one wagered opening card
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartRoundRequest'
+      responses:
+        '200':
+          description: Prepared choice round with one committed wager debit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoundEnvelope'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/v1/games/hi-lo/rounds/{round_id}/guesses:
+    post:
+      tags: [Hi-Lo]
+      operationId: hiLoGuess
+      summary: Reveal and settle one higher-or-lower decision
+      parameters:
+        - $ref: '#/components/parameters/RoundId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GuessRequest'
+      responses:
+        '200':
+          description: Settled round with optional refund or payout evidence
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoundEnvelope'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+
+# Reuse standard success/error envelopes while defining game-owned data shapes.
+components:
+  parameters:
+    RoundId:
+      name: round_id
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: '^hilo_[a-f0-9]{24}$'
+  responses:
+    ErrorResponse:
+      description: Standard API error envelope
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+  schemas:
+    ActionId:
+      type: string
+      minLength: 1
+      maxLength: 128
+      pattern: '^[A-Za-z0-9._:-]+$'
+    CardCode:
+      type: string
+      pattern: '^(10|[2-9JQKA])[CDHS]$'
+    StartRoundRequest:
+      type: object
+      additionalProperties: false
+      required: [action_id, wager]
+      properties:
+        action_id:
+          $ref: '#/components/schemas/ActionId'
+        wager:
+          type: number
+          minimum: 0.01
+          maximum: 100000
+        player_id:
+          type: string
+          description: Compatibility input overridden by the authenticated session resolver.
+    GuessRequest:
+      type: object
+      additionalProperties: false
+      required: [action_id, guess]
+      properties:
+        action_id:
+          $ref: '#/components/schemas/ActionId'
+        guess:
+          type: string
+          enum: [higher, lower]
+        player_id:
+          type: string
+          description: Compatibility input overridden by the authenticated session resolver.
+    Round:
+      type: object
+      additionalProperties: false
+      required:
+        - round_id
+        - player_id
+        - start_action_id
+        - wager
+        - phase
+        - current_card
+        - wager_status
+        - settlement_status
+        - created_at
+      properties:
+        round_id:
+          type: string
+          pattern: '^hilo_[a-f0-9]{24}$'
+        player_id:
+          type: string
+        start_action_id:
+          $ref: '#/components/schemas/ActionId'
+        guess_action_id:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/ActionId'
+        wager:
+          type: number
+          minimum: 0.01
+        phase:
+          type: string
+          enum: [choose, settled]
+        current_card:
+          $ref: '#/components/schemas/CardCode'
+        next_card:
+          description: Omitted while phase is choose and published only after settlement.
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/CardCode'
+        guess:
+          description: Null or omitted until the authenticated player commits a decision.
+          type: string
+          nullable: true
+          enum: [higher, lower]
+        outcome:
+          description: Null or omitted until the reveal is settled.
+          type: string
+          nullable: true
+          enum: [correct, tie, incorrect]
+        payout:
+          type: number
+          minimum: 0
+        net:
+          type: number
+          nullable: true
+        wager_status:
+          type: string
+          enum: [pending, complete]
+        settlement_status:
+          type: string
+          enum: [not_ready, pending, complete]
+        wager_ledger_id:
+          type: string
+        settlement_ledger_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+    GameState:
+      type: object
+      required: [active_round, recent_rounds]
+      properties:
+        active_round:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/Round'
+        recent_rounds:
+          type: array
+          maxItems: 20
+          items:
+            $ref: '#/components/schemas/Round'
+    Rules:
+      type: object
+      required: [guesses, ace_high, suits_break_ties, correct_return_multiplier, tie_return_multiplier]
+      properties:
+        guesses:
+          type: array
+          minItems: 2
+          maxItems: 2
+          items:
+            type: string
+            enum: [higher, lower]
+        ace_high:
+          type: boolean
+          enum: [true]
+        suits_break_ties:
+          type: boolean
+          enum: [false]
+        correct_return_multiplier:
+          type: integer
+          enum: [2]
+        tie_return_multiplier:
+          type: integer
+          enum: [1]
+    Player:
+      type: object
+      additionalProperties: true
+    LedgerEvent:
+      type: object
+      nullable: true
+      additionalProperties: true
+    StateData:
+      type: object
+      required: [game, state, player, rules]
+      properties:
+        game:
+          type: string
+          enum: [hi_lo]
+        state:
+          $ref: '#/components/schemas/GameState'
+        player:
+          $ref: '#/components/schemas/Player'
+        rules:
+          $ref: '#/components/schemas/Rules'
+    RoundData:
+      allOf:
+        - $ref: '#/components/schemas/StateData'
+        - type: object
+          required: [round, replayed]
+          properties:
+            round:
+              $ref: '#/components/schemas/Round'
+            wager:
+              $ref: '#/components/schemas/LedgerEvent'
+            settlement:
+              $ref: '#/components/schemas/LedgerEvent'
+            replayed:
+              type: boolean
+    StateEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/StateData'
+    RoundEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/RoundData'
+    ErrorEnvelope:
+      type: object
+      required: [ok, error]
+      properties:
+        ok:
+          type: boolean
+          enum: [false]
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
