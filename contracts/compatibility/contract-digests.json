@@ -15,5 +15,6 @@
   "contracts/openapi/multi_hand_video_poker.v1.yaml": "85b3ef2cd12b03d19b34564b2aeac4fbe0e8dcee7073ffb8350b058d5217983b",
   "contracts/openapi/players.v1.yaml": "b19157f531284418dce4ddacb362657ea80273d27070fcf4f038c9c2bdc9448b",
   "contracts/openapi/roulette.v1.yaml": "3a6056635e0293cca1018bbd89079dcb096dc01b3c6faeb4feacad14620b569d",
+  "contracts/openapi/red_dog.v1.yaml": "2aafc2772419cb500e6d1750673cd16bf7dd466d4be57343fc71484b9643bc95",
   "contracts/openapi/slots.v1.yaml": "e1d9e3b53fb2751809ebf7ae707fbf8d4e987f0c6267ad8fe184eba98b893e62"
 }

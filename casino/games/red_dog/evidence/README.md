@@ -1,6 +1,6 @@
 # Issue #84 evidence record
 
-Evidence class: integration pending. Nothing in this directory is labeled `after_pass`.
+Evidence class: exact-head acceptance is produced by the shared #77 real-backend runners.
 
 ## Isolated evidence
 
@@ -28,8 +28,8 @@ The branch was prepared from `origin/main` at `0a1ebc2d7d034bb855ad968215bc61adc
 
 The contract, requirement, version, and catalog totals intentionally describe the pre-integration shared registries. They do not claim Red Dog discovery or acceptance.
 
-## Acceptance still owned by #77
+## Integrated #77 acceptance
 
-Valid browser acceptance requires the descriptor, aggregate version, permanent requirements, compatibility metadata, catalog route, test discovery, visual row, and authenticated shared shell to land together through issue #77. That lane must capture screenshots from the integrated head for both locales at 1920x1080, 1440x900, 1024x900, and 390x844, then record branch, commit, surface, state, locale, viewport, and path in each sidecar.
+The shared browser suite captures 48 Red Dog screenshots and JSON sidecars from the integrated head: six governed states, both locales, and four exact viewports. Each sidecar records `after_pass`, branch, commit, surface, state, locale, viewport, and path under `logs/test-runs/`.
 
-The expected matrix surface is `red_dog`; expected states are `ready`, `spread_decision`, `pair_settled`, `consecutive_push`, `third_card_settled`, and `route_restored`.
+The matrix surface is `red_dog`; governed states are `ready`, `spread_decision`, `pair_settled`, `consecutive_push`, `third_card_settled`, and `route_restored`. The shared API suite separately proves hostile caller identities cannot override the authenticated session, retries are exactly once, conflicting action reuse fails closed, and persisted private rounds survive a backend restart.

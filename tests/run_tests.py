@@ -458,6 +458,34 @@ def run_api_tests():
             big_six_events_a=[row for row in big_six_ledger_a if row.get('game')=='big_six_wheel' and row.get('round_id')==big_six_a['round']['round_id']]; big_six_events_b=[row for row in big_six_ledger_b if row.get('game')=='big_six_wheel' and row.get('round_id')==big_six_b['round']['round_id']]
             # Require one aggregate debit, one covered-outcome credit, and unique deterministic action keys per user.
             assert sum(row.get('transaction_type')=='BIG_SIX_WAGER_DEBIT' for row in big_six_events_a)==1 and sum(row.get('transaction_type')=='BIG_SIX_WAGER_DEBIT' for row in big_six_events_b)==1 and sum(row.get('transaction_type')=='BIG_SIX_SETTLEMENT_CREDIT' for row in big_six_events_a)==1 and sum(row.get('transaction_type')=='BIG_SIX_SETTLEMENT_CREDIT' for row in big_six_events_b)==1 and len({(row.get('details') or {}).get('idempotency_key') for row in big_six_events_a})==len(big_six_events_a) and len({(row.get('details') or {}).get('idempotency_key') for row in big_six_events_b})==len(big_six_events_b)
+            # Deal user A's Red Dog opening while submitting user B's player id to challenge session binding.
+            red_dog_a=api(base,'/api/v1/games/red-dog/rounds','POST',{'player_id':user_b['player_id'],'wager':2,'action_id':'wallet-red-dog-start-a'},auth_token=token_a)
+            # Replay user A's exact command so the backend must return the same logical round and wallet.
+            red_dog_a_replay=api(base,'/api/v1/games/red-dog/rounds','POST',{'player_id':user_b['player_id'],'wager':2,'action_id':'wallet-red-dog-start-a'},auth_token=token_a)
+            # Reuse the action id with a changed wager so immutable fingerprint validation fails closed.
+            red_dog_conflict=api(base,'/api/v1/games/red-dog/rounds','POST',{'player_id':user_b['player_id'],'wager':3,'action_id':'wallet-red-dog-start-a'},ok=False,auth_token=token_a)
+            # Deal user B's independent Red Dog opening while submitting user A's player id.
+            red_dog_b=api(base,'/api/v1/games/red-dog/rounds','POST',{'player_id':user_a['player_id'],'wager':2,'action_id':'wallet-red-dog-start-b'},auth_token=token_b)
+            # Require authenticated ownership, independent rounds, stable replay, unchanged replay balance, and conflict rejection.
+            assert red_dog_a['round']['player_id']==user_a['player_id'] and red_dog_b['round']['player_id']==user_b['player_id'] and red_dog_a['round']['round_id']!=red_dog_b['round']['round_id'] and red_dog_a_replay['replayed'] is True and red_dog_a_replay['round']['round_id']==red_dog_a['round']['round_id'] and red_dog_a_replay['player']['balance']==red_dog_a['player']['balance'] and red_dog_conflict['error']['code']=='CONFLICT'
+            # Complete user A's normal spread through the no-raise call action when a decision is required.
+            if red_dog_a['round']['phase']=='raise_decision':
+                # Exercise the public call endpoint under the same hostile caller identity.
+                red_dog_a=api(base,f'/api/v1/games/red-dog/rounds/{red_dog_a["round"]["round_id"]}/call','POST',{'player_id':user_b['player_id'],'action_id':'wallet-red-dog-call-a'},auth_token=token_a)
+            # Complete user B's normal spread through the matching raise action when a decision is required.
+            if red_dog_b['round']['phase']=='raise_decision':
+                # Exercise the public raise endpoint under user B's independent session binding.
+                red_dog_b=api(base,f'/api/v1/games/red-dog/rounds/{red_dog_b["round"]["round_id"]}/raise','POST',{'player_id':user_a['player_id'],'action_id':'wallet-red-dog-raise-b'},auth_token=token_b)
+            # Read both private Red Dog states while again submitting the opposite player identities.
+            red_dog_state_a=api(base,f'/api/v1/games/red-dog/state?player_id={user_b["player_id"]}',auth_token=token_a)['state']; red_dog_state_b=api(base,f'/api/v1/games/red-dog/state?player_id={user_a["player_id"]}',auth_token=token_b)['state']
+            # Require terminal settlement and newest-first private history isolation for both users.
+            assert red_dog_a['round']['phase']=='settled' and red_dog_b['round']['phase']=='settled' and red_dog_state_a['rounds'][0]['round_id']==red_dog_a['round']['round_id'] and red_dog_state_b['rounds'][0]['round_id']==red_dog_b['round']['round_id']
+            # Read both ledgers after Red Dog settlement for exactly-once movement proof.
+            red_dog_ledger_a=api(base,f'/api/v1/players/{user_a["player_id"]}/ledger',auth_token=token_a)['ledger']; red_dog_ledger_b=api(base,f'/api/v1/players/{user_b["player_id"]}/ledger',auth_token=token_b)['ledger']
+            # Select only Red Dog rows for each independently completed round.
+            red_dog_events_a=[row for row in red_dog_ledger_a if row.get('game')=='red_dog' and row.get('round_id')==red_dog_a['round']['round_id']]; red_dog_events_b=[row for row in red_dog_ledger_b if row.get('game')=='red_dog' and row.get('round_id')==red_dog_b['round']['round_id']]
+            # Require one ante debit, unique stable ledger action ids, and complete settlement for each session.
+            assert sum(row.get('transaction_type')=='RED_DOG_WAGER_DEBIT' for row in red_dog_events_a)==1 and sum(row.get('transaction_type')=='RED_DOG_WAGER_DEBIT' for row in red_dog_events_b)==1 and len({(row.get('details') or {}).get('red_dog_action_id') for row in red_dog_events_a})==len(red_dog_events_a) and len({(row.get('details') or {}).get('red_dog_action_id') for row in red_dog_events_b})==len(red_dog_events_b) and red_dog_a['round']['settlement']['complete'] and red_dog_b['round']['settlement']['complete'] and red_dog_a['round']['settlement']['required_actions']==red_dog_a['round']['settlement']['committed_actions'] and red_dog_b['round']['settlement']['required_actions']==red_dog_b['round']['settlement']['committed_actions']
             # Read private game history through each normal-user session.
             history_a=api(base,'/api/v1/casino/history',auth_token=token_a)['history']
             # Read user B's independent history view.
@@ -491,7 +519,7 @@ def run_api_tests():
             # Verify normal users cannot mutate shared bot-controller accounts.
             assert api(base,'/api/v1/bots/bot_roulette_1/enable','POST',{},ok=False,auth_token=token_a)['error']['code']=='FORBIDDEN'
             # Store the durable post-game balance and terms state for restart verification.
-            integrity_state.update({'email':'wallet-a@example.local','password':'wallet-a-password','balance':api(base,'/api/v2/me',auth_token=token_a)['player']['token_balance'],'admin_blocked':len(admin_paths),'token_credit_count':len(credits_after)-len(credits_before),'contract_player':added_a,'mhvp_verified':True,'casino_war_verified':True,'big_six_verified':True,'users':[{'email':'wallet-a@example.local','password':'wallet-a-password','player_id':user_a['player_id'],'balance':wallet_a,'roulette_round':roulette_a['round']['round_id'],'slots_round':slot_a['round_id'],'blackjack_round':blackjack_a['round_id'],'baccarat_round':baccarat_a['coup']['round_id'],'keno_round':keno_a['draw']['round_id'],'bingo_session':bingo_a_session['session_id'],'bingo_completed':False,'mhvp_round':mhvp_a['round']['round_id'],'casino_war_round':casino_war_a['round']['round_id'],'big_six_round':big_six_a['round']['round_id']},{'email':'wallet-b@example.local','password':'wallet-b-password','player_id':user_b['player_id'],'balance':wallet_b,'roulette_round':roulette_b['round']['round_id'],'slots_round':slot_b['round_id'],'blackjack_round':blackjack_b['round_id'],'baccarat_round':baccarat_b['coup']['round_id'],'keno_round':keno_b['draw']['round_id'],'bingo_session':bingo_b['session']['session_id'],'bingo_completed':True,'mhvp_round':mhvp_b['round']['round_id'],'casino_war_round':casino_war_b['round']['round_id'],'big_six_round':big_six_b['round']['round_id']}],'history_game_counts':[len(history_a),len(history_b)]})
+            integrity_state.update({'email':'wallet-a@example.local','password':'wallet-a-password','balance':api(base,'/api/v2/me',auth_token=token_a)['player']['token_balance'],'admin_blocked':len(admin_paths),'token_credit_count':len(credits_after)-len(credits_before),'contract_player':added_a,'mhvp_verified':True,'casino_war_verified':True,'big_six_verified':True,'red_dog_verified':True,'users':[{'email':'wallet-a@example.local','password':'wallet-a-password','player_id':user_a['player_id'],'balance':wallet_a,'roulette_round':roulette_a['round']['round_id'],'slots_round':slot_a['round_id'],'blackjack_round':blackjack_a['round_id'],'baccarat_round':baccarat_a['coup']['round_id'],'keno_round':keno_a['draw']['round_id'],'bingo_session':bingo_a_session['session_id'],'bingo_completed':False,'mhvp_round':mhvp_a['round']['round_id'],'casino_war_round':casino_war_a['round']['round_id'],'big_six_round':big_six_a['round']['round_id'],'red_dog_round':red_dog_a['round']['round_id']},{'email':'wallet-b@example.local','password':'wallet-b-password','player_id':user_b['player_id'],'balance':wallet_b,'roulette_round':roulette_b['round']['round_id'],'slots_round':slot_b['round_id'],'blackjack_round':blackjack_b['round_id'],'baccarat_round':baccarat_b['coup']['round_id'],'keno_round':keno_b['draw']['round_id'],'bingo_session':bingo_b['session']['session_id'],'bingo_completed':True,'mhvp_round':mhvp_b['round']['round_id'],'casino_war_round':casino_war_b['round']['round_id'],'big_six_round':big_six_b['round']['round_id'],'red_dog_round':red_dog_b['round']['round_id']}],'history_game_counts':[len(history_a),len(history_b)]})
         # Execute the real-backend integrity regression as one mapped API case.
         run_case('API-PRIVATE-SESSION-001',['SESSION-003','USER-001','USER-003','USER-005','TOKEN-004','TEST-039'],wallet_auth_integrity)
         # Record Multi-Hand Video Poker session, mode, ledger, and retry coverage under its permanent test id.
@@ -500,6 +528,8 @@ def run_api_tests():
         run_case('API-CW-001',['CW-001','CW-002','CW-003'],lambda: assert_condition(integrity_state['casino_war_verified'],'Casino War integration evidence missing'))
         # Record Big Six session, ledger, conflict, and retry coverage under its permanent test id.
         run_case('API-BIG-SIX-001',['BIG-SIX-001','BIG-SIX-002','BIG-SIX-003'],lambda: assert_condition(integrity_state['big_six_verified'],'Big Six integration evidence missing'))
+        # Record Red Dog session, ledger, conflict, and retry coverage under its permanent test id.
+        run_case('API-RD-001',['RD-001','RD-002','RD-003'],lambda: assert_condition(integrity_state['red_dog_verified'],'Red Dog integration evidence missing'))
         # Record exact token credit coverage under the permanent test id referenced by TOKEN-003.
         run_case('API-TOKEN-001',['TOKEN-003','TOKEN-004'],lambda: assert_condition(integrity_state['token_credit_count']==1 and integrity_state['contract_player']['token_balance']==250,'token credit contract mismatch'))
         # Record central Admin authorization coverage under the permanent Admin test id.
@@ -525,7 +555,7 @@ def run_api_tests():
                 # Verify exact balance and accepted terms survived the process restart.
                 assert me['player']['token_balance']==expected['balance'] and me['terms']['accepted'] is True and me['terms']['required'] is False
                 # Read every private game state again after restart.
-                roulette_state=api(base,'/api/v1/games/roulette/state',auth_token=token)['state']; slots_state=api(base,'/api/v1/games/slots/state',auth_token=token)['state']; blackjack_state=api(base,'/api/v1/games/blackjack/state',auth_token=token)['state']; baccarat_state=api(base,'/api/v1/games/baccarat/state',auth_token=token)['state']; keno_state=api(base,'/api/v1/games/keno/state',auth_token=token)['state']; bingo_state=api(base,'/api/v1/games/bingo/state',auth_token=token)['state']; mhvp_state=api(base,'/api/v1/games/multi-hand-video-poker/state',auth_token=token)['state']; casino_war_state=api(base,'/api/v1/games/casino-war/state',auth_token=token)['state']; big_six_state=api(base,'/api/v1/games/big-six-wheel/state',auth_token=token)
+                roulette_state=api(base,'/api/v1/games/roulette/state',auth_token=token)['state']; slots_state=api(base,'/api/v1/games/slots/state',auth_token=token)['state']; blackjack_state=api(base,'/api/v1/games/blackjack/state',auth_token=token)['state']; baccarat_state=api(base,'/api/v1/games/baccarat/state',auth_token=token)['state']; keno_state=api(base,'/api/v1/games/keno/state',auth_token=token)['state']; bingo_state=api(base,'/api/v1/games/bingo/state',auth_token=token)['state']; mhvp_state=api(base,'/api/v1/games/multi-hand-video-poker/state',auth_token=token)['state']; casino_war_state=api(base,'/api/v1/games/casino-war/state',auth_token=token)['state']; big_six_state=api(base,'/api/v1/games/big-six-wheel/state',auth_token=token); red_dog_state=api(base,'/api/v1/games/red-dog/state',auth_token=token)['state']
                 # Verify Roulette, Slots, Blackjack, Baccarat, and Keno identifiers survived under the session-derived player.
                 assert any(row['round_id']==expected['roulette_round'] for row in roulette_state['last_results']) and slots_state['last_spins'][-1]['round_id']==expected['slots_round'] and expected['blackjack_round'] in blackjack_state['rounds'] and any(row['round_id']==expected['baccarat_round'] for row in baccarat_state['last_coups']) and any(row['round_id']==expected['keno_round'] for row in keno_state['last_draws'])
                 # Verify Bingo terminal/refund state survived for the corresponding user.
@@ -536,6 +566,8 @@ def run_api_tests():
                 assert any(row['round_id']==expected['casino_war_round'] for row in casino_war_state['rounds'])
                 # Verify the settled Big Six round survived and remains private after restart.
                 assert any(row['round_id']==expected['big_six_round'] for row in big_six_state['recent_rounds'])
+                # Verify the settled Red Dog round survived and remains private after restart.
+                assert any(row['round_id']==expected['red_dog_round'] for row in red_dog_state['rounds'])
                 # Read restarted private history and ledger views.
                 restarted_history=api(base,'/api/v1/casino/history',auth_token=token)['history']; restarted_ledger=api(base,f'/api/v1/players/{expected["player_id"]}/ledger',auth_token=token)['ledger']
                 # Verify restarted history includes the user's Bingo settlement and never leaks another player.
@@ -543,7 +575,7 @@ def run_api_tests():
             # Verify both users produced persisted private history across the history-producing games.
             assert all(count>0 for count in integrity_state['history_game_counts'])
         # Record the live restart persistence regression under the same integrity requirements.
-        run_case('API-WALLET-RESTART-001',['SESSION-003','USER-001','TOKEN-003','TOKEN-004','TEST-039','MHVP-002','CW-002','BIG-SIX-002'],wallet_restart_persistence)
+        run_case('API-WALLET-RESTART-001',['SESSION-003','USER-001','TOKEN-003','TOKEN-004','TEST-039','MHVP-002','CW-002','BIG-SIX-002','RD-002'],wallet_restart_persistence)
         # Define the core function used by this module.
         def core():
             # Load the casino state that publishes packaged and game-module version metadata.
@@ -1657,6 +1689,98 @@ def run_browser_tests():
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Execute Big Six rules, session route, localization, motion, responsive, and visual gates.
                 run_case('BR-BIG-SIX-001',['BIG-SIX-001','BIG-SIX-002','BIG-SIX-004','BIG-SIX-005'],big_six_acceptance)
+                # Define real-backend Red Dog browser, localization, responsive, state, and visual acceptance coverage.
+                def red_dog_acceptance():
+                    # Open the catalog-generated route and wait for the game-owned readiness selector.
+                    page.get_by_test_id('nav-red_dog').click(); page.get_by_test_id('red-dog-table').wait_for(timeout=5000)
+                    # Require the canonical route, complete English title, and initial ready phase.
+                    assert page.url.split('?',1)[0].endswith('/games/red_dog') and page.locator('.rd-header h1').inner_text()=='Red Dog' and page.locator('.rd-phase').inner_text()=='Accepting wagers'
+                    # Define every named viewport required by the Red Dog visual-matrix row.
+                    required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
+                    # Define a helper that captures one live state in both supported locales and every governed viewport.
+                    def localized_evidence(prefix,states):
+                        # Iterate through the two complete game-owned locale domains.
+                        for locale in ('en-US','ru-RU'):
+                            # Switch locale through the authenticated shared shell without discarding game state.
+                            page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_function("locale => document.querySelector('[data-testid=\"shell-locale-select\"]')?.value === locale",arg=locale)
+                            # Allow the asynchronous game-domain rerender to complete before visible-copy checks.
+                            page.wait_for_timeout(100)
+                            # Reject representative English game copy from every Russian evidence state.
+                            if locale=='ru-RU':
+                                # Read only the mounted Red Dog surface for locale ownership verification.
+                                russian_copy=page.locator('.red-dog').inner_text()
+                                # Name representative visible English resources that must never leak into Russian.
+                                english_phrases=['Accepting wagers','Deal opening cards','Deal next round','Keep wager and draw','Match wager and draw','Table rules','play tokens','Round settled']
+                                # Require the Russian game domain to replace every representative English phrase.
+                                assert not [phrase for phrase in english_phrases if phrase.lower() in russian_copy.lower()],russian_copy
+                            # Capture the current localized state at every exact visual-matrix dimension.
+                            for viewport_id,width,height in required_viewports:
+                                # Resize before horizontal containment and evidence checks.
+                                page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
+                                # Require the complete mounted table to stay visible without page-level horizontal overflow.
+                                assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.get_by_test_id('red-dog-table').is_visible()
+                                # Record self-describing after-pass evidence for this locale, state, and viewport.
+                                game_evidence(f'after-pass-red-dog-{prefix}-{locale.lower()}-{viewport_id}.png','red_dog',states,locale,viewport_id)
+                        # Restore English and primary desktop dimensions for deterministic control labels and actions.
+                        page.get_by_test_id('shell-locale-select').select_option('en-US'); page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(100)
+                    # Capture the ready state in both locales and every required viewport.
+                    localized_evidence('ready',['ready'])
+                    # Track each probabilistic live-backend state required by the visual matrix.
+                    spread_captured=False; pair_captured=False; consecutive_captured=False; third_captured=False
+                    # Bound real shuffled-shoe attempts while retaining a vanishingly small miss probability.
+                    for attempt in range(240):
+                        # Start one real ledger-backed opening from the currently enabled terminal or ready state.
+                        page.locator('[data-action="deal"]').click()
+                        # Wait until either the spread decision or an automatically settled next-round action appears.
+                        page.wait_for_function("() => { const decision=document.querySelector('[data-action=\"raise\"]'); const deal=document.querySelector('[data-action=\"deal\"]'); return Boolean((decision && !decision.disabled) || (deal && !deal.disabled)); }",timeout=5000)
+                        # Read the session-bound public state to classify the real shuffled result without a test seam.
+                        outcome=page.evaluate("async () => (await (await fetch('/api/v1/games/red-dog/state')).json()).data.state.rounds[0].outcome")
+                        # Handle a normal spread before starting another opening.
+                        if page.locator('[data-action="raise"]').count() and page.locator('[data-action="raise"]').is_enabled():
+                            # Capture the unresolved spread decision once in both locales at all viewports.
+                            if not spread_captured:
+                                # Record the complete decision matrix while both public actions remain available.
+                                localized_evidence('spread-decision',['spread_decision'])
+                                # Mark the required decision state complete.
+                                spread_captured=True
+                            # Exercise the matching raise control on the first third-card flow and call thereafter.
+                            decision='raise' if not third_captured else 'call'
+                            # Complete the chosen real frontend action through its session-bound API route.
+                            page.locator(f'[data-action="{decision}"]').click()
+                            # Wait for terminal settlement to restore the next-round action.
+                            page.wait_for_function("() => { const deal=document.querySelector('[data-action=\"deal\"]'); return Boolean(deal && !deal.disabled); }",timeout=5000)
+                            # Capture one terminal third-card result once in both locales and all viewports.
+                            if not third_captured:
+                                # Record the completed third-card matrix after the real matching raise.
+                                localized_evidence('third-card-settled',['third_card_settled'])
+                                # Mark the required third-card terminal state complete.
+                                third_captured=True
+                        # Capture either legal pair terminal outcome under the shared pair-settled matrix state.
+                        elif outcome in ('pair_push','three_of_a_kind') and not pair_captured:
+                            # Record the automatic pair settlement in both locales at all viewports.
+                            localized_evidence('pair-settled',['pair_settled'])
+                            # Mark the pair-state requirement complete.
+                            pair_captured=True
+                        # Capture the no-third-card consecutive push terminal outcome once.
+                        elif outcome=='consecutive_push' and not consecutive_captured:
+                            # Record the automatic consecutive push in both locales at all viewports.
+                            localized_evidence('consecutive-push',['consecutive_push'])
+                            # Mark the consecutive-state requirement complete.
+                            consecutive_captured=True
+                        # Stop the bounded search as soon as every governed live state has evidence.
+                        if spread_captured and pair_captured and consecutive_captured and third_captured:
+                            # Leave the search immediately after the full evidence set is complete.
+                            break
+                    # Require the shuffled real backend to have produced every governed Red Dog state.
+                    assert spread_captured and pair_captured and consecutive_captured and third_captured,'Red Dog did not produce every required live state within 240 rounds'
+                    # Reload the canonical deep link and require private terminal history to restore.
+                    page.reload(wait_until='networkidle'); page.get_by_test_id('red-dog-table').wait_for(timeout=5000); page.wait_for_function("() => { const deal=document.querySelector('[data-action=\"deal\"]'); return Boolean(deal && !deal.disabled); }")
+                    # Capture route restoration in both locales and every governed viewport.
+                    localized_evidence('route-restored',['route_restored'])
+                    # Return to the lobby so established downstream browser cases start normally.
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Execute Red Dog rules, session route, localization, responsive, and visual gates.
+                run_case('BR-RD-001',['RD-001','RD-002','RD-004','RD-005'],red_dog_acceptance)
                 # Define route_restoration to prove deep links, reload, Back, and Forward behavior.
                 def route_restoration():
                     # Open Roulette directly through its canonical path using the authenticated browser context.

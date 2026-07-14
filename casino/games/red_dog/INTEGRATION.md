@@ -1,8 +1,8 @@
-# Red Dog integration handoff for #77
+# Red Dog integration record for #77
 
-This branch intentionally does not add `modules/red_dog.json`. The canonical version interface requires the same integration commit to add `"red_dog": "1.0.0"` to `modules/module-manifest.json`, and issue #77 reserves that aggregate file plus registration, compatibility, requirements, visual-matrix, and shared discovery files. Keeping the descriptor as a proposal prevents this isolated draft from breaking the existing catalog before the integration lane releases it.
+Issue #77 adds `modules/red_dog.json` and `"red_dog": "1.0.0"` to the canonical `modules/module-manifest.json` interface in the same integration commit. The descriptor drives backend registration, frontend routing, compatibility validation, and canonical long-suite discovery without a manual game allowlist.
 
-## Proposed module descriptor
+## Integrated module descriptor
 
 ```json
 {
@@ -31,7 +31,7 @@ This branch intentionally does not add `modules/red_dog.json`. The canonical ver
       "i18n_domain": "games/red_dog",
       "i18n_probe": "controls.raise"
     },
-    "tests": {"long_driver": "casino.games.red_dog.tests.long_driver:play"},
+    "tests": {"long_driver": "tests.game_drivers.red_dog:play"},
     "translations": {
       "ru-RU": {
         "label": "Red Dog",
@@ -50,15 +50,15 @@ This branch intentionally does not add `modules/red_dog.json`. The canonical ver
     }
   },
   "depends_on": ["core", "ledger", "players"],
-  "may_not_depend_on": ["roulette", "slots", "blackjack", "baccarat", "keno", "bingo", "multi_hand_video_poker"]
+  "may_not_depend_on": ["roulette", "slots", "blackjack", "baccarat", "keno", "bingo", "multi_hand_video_poker", "casino_war", "big_six_wheel"]
 }
 ```
 
-The integration owner should confirm sort order 110 against current `main`, add the descriptor and aggregate revision in one commit, and decide whether to retain the game-local driver import or move it to the canonical `tests.game_drivers.red_dog:play` path.
+The accepted allocation uses sort order 110 and the canonical `tests.game_drivers.red_dog:play` path.
 
-## Proposed permanent requirements
+## Permanent requirements
 
-The following identifiers are not allocated until #77 writes the central registry:
+Issue #77 allocates these identifiers in the central registry:
 
 - `RD-001`: Six-deck Red Dog implements consecutive pushes, pair handling, spread decisions, and the regulated payout schedule.
 - `RD-002`: Additive v1 routes resolve only the authenticated player and keep active or recent rounds reload-safe.
@@ -68,7 +68,7 @@ The following identifiers are not allocated until #77 writes the central registr
 
 ## Shared test and catalog discovery
 
-After descriptor registration, the catalog-owned API and browser runners should discover the backend, frontend, contract, readiness selector, and game-local long driver without a Red Dog allowlist. The driver:
+The catalog-owned API, browser, and long-suite runners discover the backend, frontend, contract, readiness selector, and canonical driver without a Red Dog allowlist. The driver:
 
 1. Reads authenticated player state.
 2. Starts a low-wager round with a unique action id.

@@ -1,6 +1,6 @@
-# Red Dog isolated slice
+# Red Dog
 
-This package implements GitHub issue #84 without modifying the shared catalog, router, shell, test runner, requirement registry, aggregate version manifest, compatibility matrix, or visual matrix owned by issue #77.
+This package implements GitHub issue #84. Issue #77 owns its catalog descriptor, canonical long driver, requirement registry, aggregate version manifest, compatibility metadata, visual matrix, and real-backend acceptance coverage.
 
 ## Rules
 
@@ -31,7 +31,7 @@ The route adapter consumes the player identity resolved by the authenticated rou
 
 ## Browser behavior
 
-`web/games/red_dog.js` exports `RedDogGame` for future descriptor discovery. It imports the merged `CARD-002` renderer, installs the shared card stylesheet idempotently, and replaces its default labels with Red Dog-owned EN/RU accessible names. Every visible and ARIA string comes from the paired game dictionaries.
+`web/games/red_dog.js` exports `RedDogGame` for catalog discovery. It imports the merged `CARD-002` renderer, installs the shared card stylesheet idempotently, and replaces its default labels with Red Dog-owned EN/RU accessible names. Every visible and ARIA string comes from the paired game dictionaries.
 
 The layout keeps the three-card table wider than both support rails on desktop and stacks controls, stage, and data below the shared breakpoint. The module owns no animation or autoplay timer. Reduced-motion CSS disables decorative transitions, and `unmount()` releases the locale subscription, retry keys, stylesheet ownership, and state references.
 
@@ -44,7 +44,7 @@ The layout keeps the three-card table wider than both support rails on desktop a
 - Locale behavior: `I18N-001`, `I18N-002`.
 - Stable visual behavior: `UX-001`, `UX-002`, `UX-003`, `UX-006`.
 
-Issue #84 still needs permanent Red Dog requirement IDs allocated by the central requirements owner. `RD-001` through `RD-005` in `INTEGRATION.md` are a proposal only and are not claimed as registered requirements.
+Issue #77 allocates permanent Red Dog requirements `RD-001` through `RD-005` for rules, session binding, ledger safety, EN/RU responsive behavior, and discovered acceptance evidence.
 
 ## Focused validation
 

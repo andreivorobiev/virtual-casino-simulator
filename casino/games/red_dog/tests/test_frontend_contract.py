@@ -126,14 +126,16 @@ class RedDogFrontendContractTests(unittest.TestCase):
         self.assertIn('/api/v1/games/red-dog/rounds", "POST"', driver)
         # Reject private test seeds and force-result controls from the driver.
         self.assertNotIn("force", driver.casefold())
-        # Read the descriptor handoff without installing it prematurely.
+        # Read the descriptor record after controlled shared integration.
         integration = INTEGRATION.read_text(encoding="utf-8")
-        # Require the exact backend registration callable proposal.
+        # Require the exact backend registration callable used by catalog discovery.
         self.assertIn('"backend": {"register": "casino.games.red_dog.api:register"}', integration)
-        # Require the reserved presentation order from the #77 sequence.
+        # Require the accepted presentation order from the #77 sequence.
         self.assertIn('"sort_order": 110', integration)
-        # Require the permanent requirement block to remain explicitly proposed.
-        self.assertIn("not allocated until #77", integration)
+        # Require the canonical shared long-suite driver reference after integration.
+        self.assertIn('"tests": {"long_driver": "tests.game_drivers.red_dog:play"}', integration)
+        # Require the permanent requirement block to identify its central allocation.
+        self.assertIn("Issue #77 allocates these identifiers", integration)
 
 
 # Run this focused module directly when invoked as a script.
