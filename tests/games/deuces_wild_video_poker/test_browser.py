@@ -496,6 +496,8 @@ class DeucesWildVideoPokerDiagnosticBrowserTests(unittest.TestCase):
             self.assertEqual("en-US", page.locator("html").get_attribute("lang"))
             # Verify the owned localized heading is visibly mounted.
             self.assertTrue(page.get_by_role("heading", name=strings["title"], exact=True).is_visible())
+            # Verify the game does not nest a second main landmark inside the diagnostic shell outlet.
+            self.assertEqual(1, page.get_by_role("main").count())
             # Verify the initial phase uses owned English resource copy.
             self.assertEqual(strings["phases.ready"], page.locator(".dwvp-phase").inner_text())
             # Enter an over-limit wager to exercise local validation before action allocation.

@@ -129,8 +129,10 @@ class DeucesWildVideoPokerEngineTests(unittest.TestCase):
             float("-inf"),  # Reject negative infinity before the minimum check.
             -1,  # Reject negative token movement.
             0,  # Reject a zero wager.
-            0.004,  # Reject values that canonicalize below one cent.
-            engine.MAX_WAGER + 0.01,  # Reject values above the maximum after cent rounding.
+            0.004,  # Reject a raw value below the contract minimum.
+            0.009,  # Reject a near-minimum value even though it rounds to one cent.
+            engine.MAX_WAGER + 0.004,  # Reject a near-maximum overflow even though it rounds down.
+            engine.MAX_WAGER + 0.01,  # Reject an unambiguously oversized value.
         )
         # Exercise every invalid wager through the public normalization boundary.
         for value in invalid_values:
@@ -142,8 +144,8 @@ class DeucesWildVideoPokerEngineTests(unittest.TestCase):
                     engine.require_wager(value)
         # Verify fractional token input is canonicalized to ledger cent precision.
         self.assertEqual(1.24, engine.require_wager(1.239))
-        # Verify a value rounding to the minimum cent remains accepted.
-        self.assertEqual(0.01, engine.require_wager(0.009))
+        # Verify the exact documented lower bound remains accepted.
+        self.assertEqual(0.01, engine.require_wager(0.01))
         # Verify the exact documented upper bound remains accepted.
         self.assertEqual(float(engine.MAX_WAGER), engine.require_wager(engine.MAX_WAGER))
 

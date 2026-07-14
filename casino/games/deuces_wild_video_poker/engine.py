@@ -63,26 +63,28 @@ def require_wager(value) -> float:
     if isinstance(value, bool):
         # Keep the diagnostic stable for every non-numeric wager boundary.
         raise ValidationError("wager must be numeric")
-    # Convert numeric input while translating malformed values consistently.
+    # Convert numeric input while retaining its raw contract-bound value.
     try:
-        # Round play-token wagers to the ledger's two-decimal precision.
-        wager = round(float(value), 2)
+        # Preserve the raw number so rounding cannot admit out-of-contract values.
+        raw_wager = float(value)
     # Convert missing, textual, and unsupported values into a public validation error.
     except (TypeError, ValueError):
         # Explain the game-owned field instead of a generic amount field.
         raise ValidationError("wager must be numeric")
     # Reject NaN and infinities because comparisons cannot enforce ledger bounds on them.
-    if not math.isfinite(wager):
+    if not math.isfinite(raw_wager):
         # Keep non-finite JSON-adjacent values outside state and action fingerprints.
         raise ValidationError("wager must be a finite number")
     # Require the smallest non-zero amount accepted by the shared ledger.
-    if wager < 0.01:
+    if raw_wager < 0.01:
         # Reject zero and negative wagers before state or entropy changes.
         raise ValidationError("wager must be at least 0.01")
     # Keep one action inside the shared ledger's conservative local boundary.
-    if wager > MAX_WAGER:
+    if raw_wager > MAX_WAGER:
         # Reject oversized actions without silently clamping token movement.
         raise ValidationError(f"wager must be at most {MAX_WAGER}")
+    # Round an accepted raw wager to the ledger's two-decimal precision.
+    wager = round(raw_wager, 2)
     # Return the canonical amount used by fingerprints, state, and settlement.
     return wager
 

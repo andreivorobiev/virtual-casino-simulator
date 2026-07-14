@@ -12,9 +12,9 @@ This document describes the isolated game slice and its future integration needs
 
 ## Isolated descriptor proposal
 
-- The uninstalled `1.0.0` descriptor proposal is preserved at `codex/tasks/artifacts/issue-92-deuces-wild/deuces_wild_video_poker.module.proposal.json`; it stays outside `modules/` so runtime discovery remains owned by #77.
+- The uninstalled `1.0.1` descriptor proposal is preserved at `codex/tasks/artifacts/issue-92-deuces-wild/deuces_wild_video_poker.module.proposal.json`; it stays outside `modules/` so runtime discovery remains owned by #77.
 - Module and game id: `deuces_wild_video_poker`.
-- Initial independent module revision: `1.0.0`.
+- Proposed independent module revision: `1.0.1`, a compatible patch correction from the initial `1.0.0` draft.
 - Reserved catalog order: `180`.
 - Canonical browser route: `/games/deuces_wild_video_poker`.
 - Additive API root: `/api/v1/games/deuces-wild-video-poker`.

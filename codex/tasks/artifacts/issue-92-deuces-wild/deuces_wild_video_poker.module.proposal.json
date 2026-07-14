@@ -1,6 +1,6 @@
 {
   "module": "deuces_wild_video_poker",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "paths": [
     "casino/games/deuces_wild_video_poker/",
     "web/games/deuces_wild_video_poker.js",

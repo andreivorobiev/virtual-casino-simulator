@@ -5,8 +5,8 @@ import copy
 # Import the standard unit-test runner for dependency-free focused execution.
 import unittest
 
-# Import public conflict and lookup errors for precise privacy and replay assertions.
-from casino.errors import ConflictError, NotFoundError
+# Import public conflict, lookup, and validation errors for precise boundary assertions.
+from casino.errors import ConflictError, NotFoundError, ValidationError
 # Import the current router so tests exercise the shared session-resolution boundary.
 from casino.router import Router
 # Import only the isolated game API and engine owned by issue #92.
@@ -198,6 +198,28 @@ class DeucesWildVideoPokerApiTests(unittest.TestCase):
         self.assertEqual(64, len(details["request_fingerprint"]["deal_plan"]))
         # Verify the hostile caller never receives a persisted state document.
         self.assertNotIn(self.fake.state_key(engine.GAME_ID, "other-player"), self.fake.states)
+
+    # Confirm raw OpenAPI wager bounds fail before state, entropy, or ledger access.
+    def test_contract_wager_bounds_reject_before_state_or_ledger(self):
+        # Probe values that would round into the accepted interval if validated too late.
+        invalid_values = (0.009, engine.MAX_WAGER + 0.004)
+        # Exercise both contract edges through the real registered route.
+        for index, value in enumerate(invalid_values):
+            # Preserve the raw candidate in focused failure diagnostics.
+            with self.subTest(value=value):
+                # Require the public validation error promised by the contract boundary.
+                with self.assertRaises(ValidationError):
+                    # Submit one distinct retry-safe action for the invalid raw wager.
+                    self.call(
+                        "/api/v1/games/deuces-wild-video-poker/rounds",  # Target the deal route.
+                        {"action_id": f"wager-bound-{index:04d}", "wager": value},  # Preserve the raw edge value.
+                    )
+        # Verify rejected contract inputs cannot append any token movement.
+        self.assertEqual([], self.fake.events)
+        # Verify validation occurs before a player-scoped state document is loaded or saved.
+        self.assertEqual({}, self.fake.states)
+        # Verify the ledger-owned wallet remains unchanged after both requests.
+        self.assertEqual(100.0, self.fake.balances["session-player"])
 
     # Confirm one action identity cannot be reused for changed inputs or another command.
     def test_conflicting_retry_and_cross_command_action_reuse_are_rejected(self):

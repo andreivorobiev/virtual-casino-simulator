@@ -30,6 +30,10 @@ function placeholders(value) {
 assert.match(source, /export const DeucesWildVideoPokerGame\b/);
 // Verify the stable browser readiness selector remains on the game root.
 assert.match(source, /data-testid="deuces-wild-video-poker"/);
+// Verify the game cannot nest another main landmark inside the shared shell outlet.
+assert.doesNotMatch(source, /<main\b/);
+// Verify the central game stage remains a localized named region after removing that landmark.
+assert.match(source, /<section class="dwvp-stage" aria-label="\$\{safe\(stageLabel\)\}"/);
 // Verify every localized lookup uses the game-owned resource domain.
 assert.match(source, /const DOMAIN = 'games\/deuces_wild_video_poker'/);
 // Verify mount loads the complete game-owned domain before rendering.

@@ -258,8 +258,10 @@ function render() {
   if (!root) return;
   // Read the active or newest completed round once per render.
   const roundItem = currentRound();
+  // Name the nested game region without introducing a second main landmark.
+  const stageLabel = roundItem?.phase === 'settled' ? text('stage.finalHand') : roundItem ? text('stage.sourceHand') : text('stage.readyTitle');
   // Replace the route outlet atomically so stage and controls cannot drift.
-  root.innerHTML = `${stylesHtml()}<section class="dwvp-shell" data-testid="deuces-wild-video-poker"><header class="dwvp-header"><div><p>${safe(text('eyebrow'))}</p><h1>${safe(text('title'))}</h1></div><span class="dwvp-phase" role="status">${safe(phaseLabel(roundItem))}</span></header><div class="dwvp-layout">${controlsHtml(roundItem)}<main class="dwvp-stage">${stageHtml(roundItem)}</main>${paytableHtml()}</div></section>`;
+  root.innerHTML = `${stylesHtml()}<section class="dwvp-shell" data-testid="deuces-wild-video-poker"><header class="dwvp-header"><div><p>${safe(text('eyebrow'))}</p><h1>${safe(text('title'))}</h1></div><span class="dwvp-phase" role="status">${safe(phaseLabel(roundItem))}</span></header><div class="dwvp-layout">${controlsHtml(roundItem)}<section class="dwvp-stage" aria-label="${safe(stageLabel)}">${stageHtml(roundItem)}</section>${paytableHtml()}</div></section>`;
   // Attach handlers to the newly rendered semantic controls.
   bindEvents();
 }
