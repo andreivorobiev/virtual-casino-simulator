@@ -49,6 +49,56 @@ class InjectedNotReadyService:
         raise api.OperationsNotReadyError({"secret": "raw-token", "path": "C:\\internal", "request_id": "debug-72"})
 
 
+# Simulate a buggy service that returns caller-controlled diagnostics instead of raising.
+class InjectedPayloadService:
+    # Store the hostile or malformed return used by one route test.
+    def __init__(self, payload):
+        # Preserve the exact injected object so the API boundary must validate it.
+        self.payload = payload
+
+    # Return the injected object from liveness without service sanitization.
+    def liveness(self):
+        # Exercise the route's successful-return boundary.
+        return self.payload
+
+    # Return the injected object from readiness without service sanitization.
+    def readiness(self):
+        # Exercise the route's degraded-policy boundary.
+        return self.payload
+
+    # Return the injected object from heartbeat without service sanitization.
+    def heartbeat(self):
+        # Exercise the second dependency route's successful-return boundary.
+        return self.payload
+
+
+# Simulate a string subclass that spoofs allowlist equality while serializing hidden content.
+class SpoofedString(str):
+    # Construct one visible sentinel with a separate value accepted by unsafe comparisons.
+    def __new__(cls, serialized_value, accepted_value):
+        # Create the immutable string content that JSON serialization would expose.
+        instance = super().__new__(cls, serialized_value)
+        # Store the allowlisted value used only by hostile equality methods.
+        instance.accepted_value = accepted_value
+        # Return the configured hostile string instance.
+        return instance
+
+    # Pretend the sentinel equals one allowlisted public enum value.
+    def __eq__(self, other):
+        # Compare the other value against the hidden accepted literal.
+        return other == self.accepted_value
+
+    # Keep inequality consistent with the hostile equality result.
+    def __ne__(self, other):
+        # Invert the spoofed equality result.
+        return not self.__eq__(other)
+
+    # Match hash-based allowlists for the hidden accepted literal.
+    def __hash__(self):
+        # Return the accepted literal's hash instead of the serialized sentinel's hash.
+        return hash(self.accepted_value)
+
+
 # Verify isolated route registration and sanitized error-envelope inputs.
 class OperationsApiTests(unittest.TestCase):
     # Build a fresh local router before every test.
@@ -176,6 +226,130 @@ class OperationsApiTests(unittest.TestCase):
         self.assertNotIn("debug-72", serialized)
         # Verify only the fixed liveness failure context remains.
         self.assertEqual({"probe": "liveness", "component": "backend", "code": "operations_probe_failed"}, error.details)
+
+    # Confirm every route rejects returned diagnostics outside its exact public schema.
+    def test_service_returned_diagnostics_are_rejected_without_leakage(self):
+        # Define one unsafe return for each distinct route policy path.
+        cases = (
+            # Exercise undeclared fields on the liveness response path.
+            ("liveness", {"probe": "liveness", "status": "live", "secret": "SENTINEL-LIVE"}),
+            # Exercise a degraded readiness return that previously reached error details.
+            ("readiness", {"ready": False, "secret": "SENTINEL-READY"}),
+            # Exercise a truthy heartbeat return with an internal path field.
+            ("heartbeat", {"ready": True, "path": "C:\\private\\SENTINEL-HEARTBEAT"}),
+        )
+        # Exercise all three routes without opening a listener.
+        for probe, payload in cases:
+            # Report the probe name if one boundary regresses.
+            with self.subTest(probe=probe):
+                # Use a fresh router so registrations remain isolated per case.
+                router = Router()
+                # Register the hostile successful-return service.
+                api.register(router, service=InjectedPayloadService(payload))
+                # Capture the fixed sanitized failure emitted for the malformed return.
+                with self.assertRaises(CasinoError) as raised:
+                    # Dispatch the exact route through the production router matcher.
+                    router.dispatch("GET", f"/api/v1/operations/{probe}")
+                # Read the converted public error after the assertion context completes.
+                error = raised.exception
+                # Verify every malformed return uses the fixed failure identity.
+                self.assertEqual((api.PROBE_FAILED_CODE, api.PROBE_FAILED_MESSAGE, 503), (error.code, error.message, error.status))
+                # Serialize the complete public error surface for leakage assertions.
+                serialized = json.dumps({"message": error.message, "details": error.details})
+                # Verify no injected sentinel fragment escaped through any endpoint.
+                self.assertNotIn("SENTINEL", serialized)
+                # Verify only the fixed endpoint-specific failure details remain.
+                self.assertEqual({"probe": probe, "component": "backend", "code": "operations_probe_failed"}, error.details)
+
+    # Confirm a malformed real service clock result cannot become public response text.
+    def test_malformed_clock_return_is_rejected_without_leakage(self):
+        # Build the concrete service with a caller-controlled clock return.
+        service = OperationsProbeService(provider_factory=lambda: ReadyProvider(self.temporary_directory.name), clock=lambda: "token=secret C:\\private", build_sha_source=lambda: None)
+        # Register the concrete service in the isolated router.
+        api.register(self.router, service=service)
+        # Capture the fixed sanitizer result from the liveness route.
+        with self.assertRaises(CasinoError) as raised:
+            # Dispatch without constructing storage or opening a listener.
+            self.router.dispatch("GET", "/api/v1/operations/liveness")
+        # Serialize every caller-visible error field.
+        serialized = json.dumps({"message": raised.exception.message, "details": raised.exception.details})
+        # Verify the unsafe clock return was completely discarded.
+        self.assertNotIn("secret", serialized)
+        # Verify internal path content was completely discarded.
+        self.assertNotIn("private", serialized)
+        # Verify the fixed liveness failure remains contract-compatible.
+        self.assertEqual({"probe": "liveness", "component": "backend", "code": "operations_probe_failed"}, raised.exception.details)
+
+    # Confirm hostile string subclasses cannot spoof any returned enum allowlist.
+    def test_spoofed_enum_subclasses_are_rejected_without_leakage(self):
+        # Build one deterministic healthy service for valid payload baselines.
+        ready_service = OperationsProbeService(provider_factory=lambda: ReadyProvider(self.temporary_directory.name), clock=lambda: "2026-07-14T11:05:00.000Z", build_sha_source=lambda: None)
+        # Build one deterministic degraded service for a valid reason baseline.
+        degraded_service = OperationsProbeService(provider_factory=lambda: (_ for _ in ()).throw(RuntimeError("unavailable")), clock=lambda: "2026-07-14T11:06:00.000Z", build_sha_source=lambda: None)
+        # Create a liveness payload whose status serializes a secret sentinel.
+        liveness_status = ready_service.liveness()
+        # Spoof equality with the required live status.
+        liveness_status["status"] = SpoofedString("SENTINEL-STATUS", "live")
+        # Create a healthy dependency payload whose top-level provider serializes a sentinel.
+        top_provider = ready_service.readiness()
+        # Spoof equality with the required JSON provider.
+        top_provider["storage_provider"] = SpoofedString("SENTINEL-PROVIDER", "json")
+        # Create a healthy dependency payload whose nested provider serializes a sentinel.
+        nested_provider = ready_service.readiness()
+        # Spoof equality with the matching top-level JSON provider.
+        nested_provider["checks"]["storage"]["provider"] = SpoofedString("SENTINEL-NESTED-PROVIDER", "json")
+        # Create a healthy dependency payload whose nested status serializes a sentinel.
+        nested_status = ready_service.readiness()
+        # Spoof equality with the required passing storage status.
+        nested_status["checks"]["storage"]["status"] = SpoofedString("SENTINEL-CHECK", "pass")
+        # Create a degraded payload whose public reason code serializes a sentinel.
+        degraded_reason = degraded_service.readiness()
+        # Spoof equality with the stable storage-unavailable reason.
+        degraded_reason["reasons"][0]["code"] = SpoofedString("SENTINEL-REASON", "storage_unavailable")
+        # Exercise every enum-bearing response layer through its real route policy.
+        cases = (
+            # Verify liveness status is rebuilt from an exact built-in string.
+            ("liveness", liveness_status),
+            # Verify the top-level dependency provider rejects subclasses.
+            ("readiness", top_provider),
+            # Verify the nested dependency provider rejects subclasses.
+            ("readiness", nested_provider),
+            # Verify the nested dependency status rejects subclasses.
+            ("readiness", nested_status),
+            # Verify the degraded reason code rejects subclasses.
+            ("readiness", degraded_reason),
+        )
+        # Run all hostile payloads without starting a listener.
+        for probe, payload in cases:
+            # Report both probe and sentinel content when a subcase regresses.
+            with self.subTest(probe=probe, payload=payload):
+                # Use a fresh router so route registrations remain isolated.
+                router = Router()
+                # Register the hostile successful-return service.
+                api.register(router, service=InjectedPayloadService(payload))
+                # Capture the fixed failure that must replace the spoofed return.
+                with self.assertRaises(CasinoError) as raised:
+                    # Dispatch the exact affected route through the production matcher.
+                    router.dispatch("GET", f"/api/v1/operations/{probe}")
+                # Serialize every caller-visible error field.
+                serialized = json.dumps({"message": raised.exception.message, "details": raised.exception.details})
+                # Verify no underlying sentinel content escaped.
+                self.assertNotIn("SENTINEL", serialized)
+                # Verify the result used only the fixed probe-failure details.
+                self.assertEqual({"probe": probe, "component": "backend", "code": "operations_probe_failed"}, raised.exception.details)
+
+    # Confirm shape-valid but impossible timestamps are rejected as probe failures.
+    def test_impossible_timestamp_is_rejected(self):
+        # Build an otherwise valid liveness payload from the concrete service.
+        payload = OperationsProbeService(provider_factory=lambda: ReadyProvider(self.temporary_directory.name), clock=lambda: "9999-99-99T99:99:99Z", build_sha_source=lambda: None).liveness()
+        # Register the malformed successful return through the isolated route.
+        api.register(self.router, service=InjectedPayloadService(payload))
+        # Capture the fixed failure instead of returning an invalid OpenAPI date-time.
+        with self.assertRaises(CasinoError) as raised:
+            # Dispatch the liveness endpoint without opening a listener.
+            self.router.dispatch("GET", "/api/v1/operations/liveness")
+        # Verify the invalid timestamp used only the fixed failure path.
+        self.assertEqual({"probe": "liveness", "component": "backend", "code": "operations_probe_failed"}, raised.exception.details)
 
 
 # Run this focused suite when invoked directly by a worker.
