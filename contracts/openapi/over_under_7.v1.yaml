@@ -1,0 +1,55 @@
+openapi: 3.0.3
+info:
+  title: Over/Under 7 Additive Game API Proposal
+  version: 1.0.0
+  description: >
+    Game-owned additive v1 proposal for an unregistered Over/Under 7 slice.
+    The shared #77 integration lane owns compatibility digest registration.
+paths:
+  /api/v1/games/over-under-7/state:
+    get:
+      summary: Read the authenticated player's Over/Under 7 state.
+      operationId: overUnder7State
+      responses:
+        "200":
+          description: Standard success envelope containing game state, player snapshot, and paytable rules.
+  /api/v1/games/over-under-7/plays:
+    post:
+      summary: Execute or replay one ledger-backed two-dice proposition play.
+      operationId: overUnder7Play
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - action_id
+                - wagers
+              properties:
+                action_id:
+                  type: string
+                  minLength: 1
+                  maxLength: 128
+                  pattern: "^[A-Za-z0-9._:-]+$"
+                wagers:
+                  type: object
+                  additionalProperties: false
+                  minProperties: 1
+                  properties:
+                    under:
+                      type: number
+                      minimum: 0.01
+                    seven:
+                      type: number
+                      minimum: 0.01
+                    over:
+                      type: number
+                      minimum: 0.01
+      responses:
+        "200":
+          description: Standard success envelope containing the settled round, replay flag, ledger evidence, state, player, and rules.
+        "400":
+          description: Standard error envelope for malformed wagers or action ids.
+        "409":
+          description: Standard error envelope for conflicting action-id reuse.
