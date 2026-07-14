@@ -1,0 +1,110 @@
+openapi: 3.0.3
+info:
+  title: Virtual Casino Acey-Deucey API
+  version: 1.0.0-proposal
+  description: >
+    Additive isolated issue #149 contract proposal. Shared registration and compatibility
+    inventory remain blocked on #77.
+tags:
+  - name: Acey-Deucey
+paths:
+  /api/v1/games/acey-deucey/state:
+    get:
+      tags: [Acey-Deucey]
+      summary: Read the authenticated player's Acey-Deucey state
+      responses:
+        '200':
+          description: Standard ok envelope with Acey-Deucey state data
+  /api/v1/games/acey-deucey/rounds:
+    post:
+      tags: [Acey-Deucey]
+      summary: Deal two boundary cards without wallet movement
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActionRequest'
+      responses:
+        '200':
+          description: Standard ok envelope with prepared boundary round data
+  /api/v1/games/acey-deucey/rounds/{round_id}/play:
+    post:
+      tags: [Acey-Deucey]
+      summary: Wager before the third card is revealed
+      parameters:
+        - $ref: '#/components/parameters/RoundId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlayRequest'
+      responses:
+        '200':
+          description: Standard ok envelope with settled play result
+  /api/v1/games/acey-deucey/rounds/{round_id}/pass:
+    post:
+      tags: [Acey-Deucey]
+      summary: Pass a prepared boundary deal without wallet movement
+      parameters:
+        - $ref: '#/components/parameters/RoundId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActionRequest'
+      responses:
+        '200':
+          description: Standard ok envelope with passed round data
+components:
+  parameters:
+    RoundId:
+      name: round_id
+      in: path
+      required: true
+      schema:
+        type: string
+  schemas:
+    ActionRequest:
+      type: object
+      required: [action_id]
+      properties:
+        action_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+    PlayRequest:
+      allOf:
+        - $ref: '#/components/schemas/ActionRequest'
+        - type: object
+          required: [wager]
+          properties:
+            wager:
+              type: number
+              minimum: 0.01
+              maximum: 100000
+    Card:
+      type: object
+      required: [rank, suit, code]
+      properties:
+        rank: {type: string}
+        suit: {type: string}
+        code: {type: string}
+    Round:
+      type: object
+      required: [round_id, player_id, phase, left_card, right_card, inside_rank_count]
+      properties:
+        round_id: {type: string}
+        player_id: {type: string}
+        phase: {type: string, enum: [wager, settled, passed]}
+        left_card: {type: string}
+        right_card: {type: string}
+        third_card: {type: string}
+        inside_rank_count: {type: integer, minimum: 0, maximum: 11}
+        outcome: {type: string, enum: [inside, outside, boundary_tie, passed]}
+        wager: {type: number}
+        payout: {type: number}
+        net: {type: number}
+
