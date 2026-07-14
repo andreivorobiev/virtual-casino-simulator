@@ -1,0 +1,279 @@
+openapi: 3.0.3
+info:
+  title: Virtual Casino Red Dog API
+  version: v1
+  description: >-
+    Additive issue #84 contract for session-bound, play-token-only Red Dog.
+    The authenticated router owns player identity and overrides compatibility
+    player inputs. Every command requires a replay-safe action_id.
+tags:
+  - name: Red Dog
+    description: Deterministic spread decisions with ledger-only settlement.
+paths:
+  /api/v1/games/red-dog/state:
+    get:
+      tags: [Red Dog]
+      summary: Read and recover the authenticated player's Red Dog state
+      operationId: redDogState
+      parameters:
+        - $ref: '#/components/parameters/CompatiblePlayerId'
+      responses:
+        '200':
+          $ref: '#/components/responses/RedDogSuccess'
+        '401':
+          $ref: '#/components/responses/ApiError'
+  /api/v1/games/red-dog/rounds:
+    post:
+      tags: [Red Dog]
+      summary: Deal one replay-safe Red Dog opening
+      operationId: redDogStartRound
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartRoundRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/RedDogSuccess'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+  /api/v1/games/red-dog/rounds/{round_id}/call:
+    post:
+      tags: [Red Dog]
+      summary: Keep the ante and draw the spread card
+      operationId: redDogCall
+      parameters:
+        - $ref: '#/components/parameters/RoundId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DecisionRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/RedDogSuccess'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+  /api/v1/games/red-dog/rounds/{round_id}/raise:
+    post:
+      tags: [Red Dog]
+      summary: Add one matching wager and draw the spread card
+      operationId: redDogRaise
+      parameters:
+        - $ref: '#/components/parameters/RoundId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DecisionRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/RedDogSuccess'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+components:
+  parameters:
+    CompatiblePlayerId:
+      name: player_id
+      in: query
+      required: false
+      description: Compatibility input overridden by the authenticated session binding.
+      schema:
+        type: string
+    RoundId:
+      name: round_id
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: '^[A-Za-z0-9_-]+$'
+  responses:
+    RedDogSuccess:
+      description: Standard successful API envelope.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/RedDogEnvelope'
+    ApiError:
+      description: Standard failed API envelope.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+  schemas:
+    ActionId:
+      type: string
+      minLength: 8
+      maxLength: 128
+      pattern: '^[A-Za-z0-9._:-]+$'
+      description: Client-generated idempotency key scoped to one command and payload.
+    StartRoundRequest:
+      type: object
+      required: [action_id, wager]
+      additionalProperties: false
+      properties:
+        action_id:
+          $ref: '#/components/schemas/ActionId'
+        wager:
+          type: number
+          format: double
+          minimum: 0.01
+          maximum: 100000
+          description: Positive play-token ante debited through the shared ledger.
+        player_id:
+          type: string
+          description: Compatibility input overridden by the authenticated session binding.
+    DecisionRequest:
+      type: object
+      required: [action_id]
+      additionalProperties: false
+      properties:
+        action_id:
+          $ref: '#/components/schemas/ActionId'
+        player_id:
+          type: string
+          description: Compatibility input overridden by the authenticated session binding.
+    Card:
+      type: object
+      required: [rank, suit, code]
+      properties:
+        rank:
+          type: string
+          enum: ['2', '3', '4', '5', '6', '7', '8', '9', '10', J, Q, K, A]
+        suit:
+          type: string
+          enum: [clubs, diamonds, hearts, spades]
+        code:
+          type: string
+          pattern: '^(10|[2-9JQKA])[CDHS]$'
+    SettlementProgress:
+      type: object
+      required: [required_actions, committed_actions, complete]
+      properties:
+        required_actions:
+          type: integer
+          minimum: 1
+        committed_actions:
+          type: integer
+          minimum: 0
+        complete:
+          type: boolean
+    RedDogRound:
+      type: object
+      required: [round_id, player_id, phase, wager, raise_wager, total_wager, first_card, second_card, outcome, payout, settlement]
+      properties:
+        round_id:
+          type: string
+        player_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        phase:
+          type: string
+          enum: [raise_decision, settled]
+        wager:
+          type: number
+        raise_wager:
+          type: number
+        total_wager:
+          type: number
+        first_card:
+          $ref: '#/components/schemas/Card'
+        second_card:
+          $ref: '#/components/schemas/Card'
+        third_card:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/Card'
+        spread:
+          type: integer
+          nullable: true
+          minimum: 1
+          maximum: 11
+        odds:
+          type: integer
+          nullable: true
+          enum: [1, 2, 4, 5, 11]
+        outcome:
+          type: string
+          enum: [spread_pending, consecutive_push, pair_push, three_of_a_kind, spread_win, spread_loss]
+        payout:
+          type: number
+        net:
+          type: number
+        settlement:
+          $ref: '#/components/schemas/SettlementProgress'
+    RedDogState:
+      type: object
+      required: [rules, shoe_count, shoes_dealt, rounds]
+      properties:
+        rules:
+          type: object
+        shoe_id:
+          type: string
+          nullable: true
+        shoe_count:
+          type: integer
+        shoes_dealt:
+          type: integer
+        rounds:
+          type: array
+          items:
+            $ref: '#/components/schemas/RedDogRound'
+        active_round:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/RedDogRound'
+    RedDogData:
+      type: object
+      required: [game, state, player]
+      properties:
+        game:
+          type: string
+          enum: [red_dog]
+        state:
+          $ref: '#/components/schemas/RedDogState'
+        round:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/RedDogRound'
+        player:
+          type: object
+    RedDogEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/RedDogData'
+    ErrorBody:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+    ErrorEnvelope:
+      type: object
+      required: [ok, error]
+      properties:
+        ok:
+          type: boolean
+          enum: [false]
+        error:
+          $ref: '#/components/schemas/ErrorBody'
