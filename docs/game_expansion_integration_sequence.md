@@ -36,6 +36,9 @@ The Product-approved serialized order is:
 22. Pull request #178, Let It Ride for issue #134, merged after Caribbean Stud.
 23. Pull request #179, Casino Hold'em for issue #139, merged after Let It Ride.
 24. Pull request #177, Joker Poker for issue #130, released after Casino Hold'em merged.
+25. Issue #190, storage-enforced action idempotency, merged before funded opponent work.
+26. Issue #189, funded practice-opponent accounts and Admin audit, released after #190.
+27. Pull request #120, Texas Hold'em Practice Table for issue #95, remains held until #189 is accepted.
 
 Each game pull request remains draft until the preceding game is accepted, the current branch is rebased onto the resulting `main`, and the game passes the complete integration gate below. A later game must not pre-allocate or edit the shared version values owned by an earlier game.
 
@@ -158,8 +161,14 @@ Each new game begins at module revision `1.0.0`. The packaged application releas
 | #178 Let It Ride | 9.24.0 | 1.27.0 | 1.26.0 | 1.22.0 |
 | #179 Casino Hold'em | 9.25.0 | 1.28.0 | 1.27.0 | 1.23.0 |
 | #177 Joker Poker | 9.26.0 | 1.29.0 | 1.28.0 | 1.24.0 |
+| #190 Storage action idempotency | 9.27.0 | 1.30.0 | 1.29.0 | 1.24.0 |
+| #189 Funded practice opponents | 9.28.0 | 1.31.0 | 1.30.0 | 1.25.0 |
 
 These values are reservations, not permission to overwrite a newer value. The integrator must re-read current `main` immediately before each bump.
+
+## Funded practice-opponent prerequisite
+
+Issue #189 allocates `bot_1`, `bot_2`, and `bot_3` as the fixed server-managed accounts for the held Texas Hold'em Practice Table. Admin may seed each account once with a storage-enforced funding action. The future #120 controller must reserve each opponent's maximum hand exposure through `casino.core.practice_accounts`, apply automated decisions through the game's existing shared action validator, and return unused escrow plus any payout through distinct storage-enforced credit actions. Every movement retains bot, game, hand, controller action, component, action key, and owning human session context in append-only ledger details. Normal user responses must not expose another session's owner correlation or private hand state.
 
 ## Acceptance evidence matrix
 

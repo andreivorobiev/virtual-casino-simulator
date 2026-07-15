@@ -135,10 +135,33 @@ async function playersBots() {
   const capabilities = data.bot_capabilities || {};
   // Store game options by filtering for bot-supported games.
   const gameOptions = Object.keys(capabilities).filter(game => capabilities[game].supports_bots);
+  // Read the fixed funded-account allocation published by the Admin service.
+  const practiceAccounts = data.practice_opponents || [];
+  // Read append-only practice-opponent ledger activity for audit presentation.
+  const practiceActivity = data.practice_opponent_activity || [];
+  // Map stable controller action ids to localized Admin audit labels.
+  const practiceActionLabels = {
+    fund_account: t('players.actionFund', {}, 'admin'), // Localize one-time account seeding.
+    reserve_stack: t('players.actionReserve', {}, 'admin'), // Localize the maximum hand escrow debit.
+    refund_stack: t('players.actionRefund', {}, 'admin'), // Localize unused escrow return.
+    settle_payout: t('players.actionPayout', {}, 'admin'), // Localize terminal opponent winnings.
+  };
   // Render players and editable bot controller settings.
-  view.innerHTML = `<section class="admin-card"><h3>${safe(t('nav.players', {}, 'admin'))}</h3>${table(['ID', 'Name', 'Type', 'Balance'], (data.players || []).map(player => `<tr><td>${safe(player.player_id)}</td><td>${safe(player.display_name)}</td><td>${safe(player.type)}</td><td>${formatMoney(player.balance)}</td></tr>`))}</section><section class="admin-card"><h3>Bot controllers</h3>${(data.bots || []).map(bot => `<div class="bot-edit" data-bot="${safe(bot.bot_id)}"><div class="row"><b>${safe(bot.display_name)}</b><label><input type="checkbox" class="bot-enabled" ${bot.enabled ? 'checked' : ''}> Enabled</label><span class="badge">${formatMoney(bot.balance)}</span></div>${gameOptions.map(game => `<div class="row"><label>${safe(game)} strategy <select class="bot-strategy" data-game="${safe(game)}">${capabilities[game].strategies.map(strategy => `<option value="${safe(strategy.id)}" ${bot.strategies?.[game] === strategy.id ? 'selected' : ''}>${safe(strategy.label)}</option>`).join('')}</select></label><label>Stake <input class="bot-stake" data-game="${safe(game)}" type="number" min="1" value="${safe(bot.stakes?.[game] || 5)}"></label></div>`).join('')}<button class="save-bot" data-bot="${safe(bot.bot_id)}">Save ${safe(bot.display_name)}</button></div>`).join('')}</section>`;
+  view.innerHTML = `<section class="admin-card"><h3>${safe(t('nav.players', {}, 'admin'))}</h3>${table(['ID', 'Name', 'Type', 'Balance'], (data.players || []).map(player => `<tr><td>${safe(player.player_id)}</td><td>${safe(player.display_name)}</td><td>${safe(player.type)}</td><td>${formatMoney(player.balance)}</td></tr>`))}</section><section class="admin-card"><h3>Bot controllers</h3>${(data.bots || []).map(bot => `<div class="bot-edit" data-bot="${safe(bot.bot_id)}"><div class="row"><b>${safe(bot.display_name)}</b><label><input type="checkbox" class="bot-enabled" ${bot.enabled ? 'checked' : ''}> Enabled</label><span class="badge">${formatMoney(bot.balance)}</span></div>${gameOptions.map(game => `<div class="row"><label>${safe(game)} strategy <select class="bot-strategy" data-game="${safe(game)}">${capabilities[game].strategies.map(strategy => `<option value="${safe(strategy.id)}" ${bot.strategies?.[game] === strategy.id ? 'selected' : ''}>${safe(strategy.label)}</option>`).join('')}</select></label><label>Stake <input class="bot-stake" data-game="${safe(game)}" type="number" min="1" value="${safe(bot.stakes?.[game] || 5)}"></label></div>`).join('')}<button class="save-bot" data-bot="${safe(bot.bot_id)}">Save ${safe(bot.display_name)}</button></div>`).join('')}</section><section class="admin-card" data-testid="practice-opponent-admin"><div class="row"><div><h3>${safe(t('players.practiceTitle', {}, 'admin'))}</h3><p>${safe(t('players.practiceSubtitle', {}, 'admin'))}</p></div><button id="fund_practice_opponents" data-testid="fund-practice-opponents">${safe(t('players.fundPractice', {}, 'admin'))}</button></div>${table([t('players.seat', {}, 'admin'), t('players.account', {}, 'admin'), t('players.policy', {}, 'admin'), t('players.balance', {}, 'admin')], practiceAccounts.map(account => `<tr data-testid="practice-opponent-account"><td>${safe(t('players.opponentSeat', { number: account.seat_id.split('_').pop() }, 'admin'))}</td><td>${safe(account.display_name)} (${safe(account.player_id)})</td><td>${safe(t('players.automaticCaller', {}, 'admin'))}</td><td>${formatNumber(account.balance)} ${safe(t('players.playTokens', {}, 'admin'))}</td></tr>`))}<h3>${safe(t('players.practiceActivity', {}, 'admin'))}</h3>${practiceActivity.length ? table([t('players.time', {}, 'admin'), t('players.account', {}, 'admin'), t('players.round', {}, 'admin'), t('players.action', {}, 'admin'), t('players.amount', {}, 'admin')], practiceActivity.slice().reverse().map(row => `<tr data-testid="practice-opponent-activity"><td>${safe(row.ts)}</td><td>${safe(row.player_id)}</td><td>${safe(row.round_id || '—')}</td><td>${safe(practiceActionLabels[row.details?.controller_action] || humanLabel(row.transaction_type))}</td><td>${formatNumber(row.amount)} ${safe(t('players.playTokens', {}, 'admin'))}</td></tr>`)) : emptyState(t('players.noPracticeActivity', {}, 'admin'), t('players.noPracticeActivityDetail', {}, 'admin'), 'practice-opponent-empty')}</section>`;
   // Bind save buttons after rendering each bot edit card.
   view.querySelectorAll('.save-bot').forEach(button => button.onclick = async () => saveBot(button));
+  // Bind the explicit idempotent funding action after the practice section renders.
+  view.querySelector('#fund_practice_opponents').onclick = fundPracticeOpponents;
+}
+
+// Define fundPracticeOpponents to seed every server-managed wallet through the ledger.
+async function fundPracticeOpponents() {
+  // Submit the fixed issue-scoped game allocation to the protected Admin route.
+  await post('/api/v1/admin/bots/practice-opponents/fund', { game_id: 'texas_holdem_practice_table' });
+  // Show localized completion feedback without exposing ledger internals.
+  toast(t('players.practiceFunded', {}, 'admin'), true);
+  // Reload balances and append-only activity from the backend.
+  await playersBots();
 }
 
 // Define userRows to render Admin user-management rows.

@@ -4692,6 +4692,68 @@
       "notes": "Introduced in v9.1.0."
     },
     {
+      "id": "BOT-009",
+      "module": "Bots",
+      "description": "Server-managed practice opponents are real funded bot player accounts whose escrow, refunds, payouts, and other token movements use the shared ledger.",
+      "status": "PASS",
+      "api_tests": [
+        "API-CONTROL-001",
+        "STORAGE-PRACTICE-OPPONENT-001"
+      ],
+      "browser_tests": [
+        "BR-ADMIN-PRACTICE-OPPONENT-001"
+      ],
+      "implementation_files": [
+        "casino/core/practice_accounts.py",
+        "casino/bots/practice_opponents.py",
+        "casino/bots/api.py"
+      ],
+      "introduced_in": "9.28.0",
+      "changed_in": "9.28.0",
+      "notes": "Introduced for issue #189 as the funded-account prerequisite for held PR #120."
+    },
+    {
+      "id": "BOT-010",
+      "module": "Bots",
+      "description": "Practice-opponent ledger events identify the bot account, game, round, controller action, action key, component, and owning human session context.",
+      "status": "PASS",
+      "api_tests": [
+        "API-CONTROL-001",
+        "STORAGE-PRACTICE-OPPONENT-001"
+      ],
+      "browser_tests": [
+        "BR-ADMIN-PRACTICE-OPPONENT-001"
+      ],
+      "implementation_files": [
+        "casino/core/practice_accounts.py",
+        "casino/bots/practice_opponents.py",
+        "casino/admin.py"
+      ],
+      "introduced_in": "9.28.0",
+      "changed_in": "9.28.0",
+      "notes": "Admin-only activity preserves owner correlation while normal player state remains session-bound."
+    },
+    {
+      "id": "BOT-011",
+      "module": "Bots",
+      "description": "Practice-opponent funding and settlement action keys replay safely across retries, restarts, threads, and processes, while changed reuse fails closed.",
+      "status": "PASS",
+      "api_tests": [
+        "API-CONTROL-001",
+        "STORAGE-PRACTICE-OPPONENT-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/practice_accounts.py",
+        "casino/bots/practice_opponents.py",
+        "casino/core/ledger.py",
+        "casino/core/storage.py"
+      ],
+      "introduced_in": "9.28.0",
+      "changed_in": "9.28.0",
+      "notes": "Consumes the storage-enforced action primitive accepted in issue #190."
+    },
+    {
       "id": "AUDIO-001",
       "module": "Audio",
       "description": "Sound configuration is global and not owned by any game page.",
@@ -5229,6 +5291,29 @@
       "introduced_in": "9.1.0",
       "changed_in": "9.1.0",
       "notes": "Introduced in v9.1.0."
+    },
+    {
+      "id": "ADMIN-023",
+      "module": "Admin",
+      "description": "Admin lists allocated practice-opponent accounts, can idempotently seed their real wallets, and shows their append-only ledger activity.",
+      "status": "PASS",
+      "api_tests": [
+        "API-CONTROL-001",
+        "STORAGE-PRACTICE-OPPONENT-001"
+      ],
+      "browser_tests": [
+        "BR-ADMIN-PRACTICE-OPPONENT-001"
+      ],
+      "implementation_files": [
+        "casino/admin.py",
+        "casino/bots/practice_opponents.py",
+        "web/admin.js",
+        "web/i18n/en-US/admin.json",
+        "web/i18n/ru-RU/admin.json"
+      ],
+      "introduced_in": "9.28.0",
+      "changed_in": "9.28.0",
+      "notes": "The affected visual-matrix surface is admin / players_and_bots in en-US and ru-RU at desktop compact."
     },
     {
       "id": "ROU-051",

@@ -16,7 +16,7 @@ from casino.core.clock import utc_now
 # Import required dependency so this module can use its public functions or constants.
 from casino.core.state_store import read_json
 # Import required dependency so this module can use its public functions or constants.
-from casino.bots import profiles
+from casino.bots import profiles, practice_opponents
 # Import required dependency so this module can use its public functions or constants.
 from casino.errors import NotFoundError, ValidationError
 
@@ -366,6 +366,10 @@ def overview():
         "bots": profiles.list_bots(),
         # Execute this statement as part of the module's documented control flow.
         "bot_capabilities": profiles.capabilities(),
+        # Publish funded practice-account allocation for Admin inspection.
+        "practice_opponents": practice_opponents.list_accounts(),
+        # Publish restart-safe controller ledger activity without private game state.
+        "practice_opponent_activity": practice_opponents.recent_activity(50),
         # Set "autoplay_sessions": autoplay.list_sessions(active_only to the value needed for the next operation.
         "autoplay_sessions": autoplay.list_sessions(active_only=False),
         # Set "recent_ledger": ledger.read_recent(limit to the value needed for the next operation.
@@ -630,4 +634,13 @@ def register(router):
     # Define the admin_bots function used by this module.
     def admin_bots(body, query):
         # Return the computed value to the caller.
-        return {"bots": profiles.list_bots(), "capabilities": profiles.capabilities()}
+        return {"bots": profiles.list_bots(), "capabilities": profiles.capabilities(), "practice_opponents": practice_opponents.list_accounts(), "practice_opponent_activity": practice_opponents.recent_activity(100)}
+
+    # Register the explicit Admin action that seeds real practice-opponent wallets.
+    @router.post(r"/api/v1/admin/bots/practice-opponents/fund")
+    # Fund or replay the fixed server-managed account allocation.
+    def fund_practice_opponents(body, query):
+        # Use the issue-scoped default game unless Admin supplies the same canonical id.
+        game_id = body.get("game_id") or practice_opponents.TEXAS_HOLDEM_PRACTICE_GAME
+        # Return immutable ledger and replay evidence for all three accounts.
+        return {"game_id": game_id, "funding": practice_opponents.fund_accounts(game_id), "practice_opponents": practice_opponents.list_accounts(game_id), "practice_opponent_activity": practice_opponents.recent_activity(100, game_id)}

@@ -1,5 +1,12 @@
 # Virtual Casino Simulator v9.1.0 Release Notes
 
+## Post-release module addendum: funded practice opponents
+
+- Allocates the three named bot player accounts as funded server-managed opponents for the held Texas Hold'em Practice Table proposal.
+- Adds a public core accounting seam for opponent escrow, refunds, payouts, and fixed funding through storage-enforced ledger actions.
+- Adds Admin account allocation, idempotent funding, append-only activity inspection, and EN/RU Players & Bots presentation.
+- Adds restart, conflict, two-owner, 25-process duplicate, API, browser, and Admin evidence for GitHub issue #189 without registering PR #120.
+
 ## Post-release module addendum: storage action idempotency
 
 - Adds `ledger.transact_once`, `debit_once`, and `credit_once` as additive provider-backed primitives for durable money-action identities.

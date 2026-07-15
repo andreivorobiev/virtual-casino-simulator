@@ -129,6 +129,8 @@ def run_storage_tests(include_live=False):
     run_case('STORAGE-JSON-001',['CORE-017','LEDGER-001','LEDGER-007','TEST-030'],storage_tests.run_json_provider_parity)
     # Execute storage-enforced replay, conflict, restart, and cross-process JSON action tests.
     run_case('STORAGE-JSON-IDEMPOTENCY-001',['LEDGER-026','STORAGE-005','STORAGE-006','TEST-043'],storage_tests.run_json_action_idempotency)
+    # Execute funded practice-opponent debit, refund, payout, restart, owner, and process evidence.
+    run_case('STORAGE-PRACTICE-OPPONENT-001',['BOT-009','BOT-010','BOT-011','ADMIN-023','LEDGER-026','STORAGE-005','STORAGE-006'],storage_tests.run_practice_opponent_accounting)
     # Execute the MySQL schema and atomic ledger-provider path test without requiring a live service.
     run_case('STORAGE-MYSQL-001',['CORE-017','LEDGER-001','LEDGER-007','LEDGER-009'],storage_tests.run_mysql_schema_provider_path)
     # Execute the real-service persistence and concurrent-ledger gate only when explicitly requested.
@@ -980,7 +982,13 @@ def run_api_tests():
         # Define the bots_audio_autoplay function used by this module.
         def bots_audio_autoplay():
             # Set bots to the value needed for the next operation.
-            bots=api(base,'/api/v1/bots'); assert bots['bots']; assert bots['capabilities']['roulette']['supports_bots']
+            bots=api(base,'/api/v1/bots'); assert bots['bots']; assert bots['capabilities']['roulette']['supports_bots']; assert len(bots['practice_opponents'])==3
+            # Fund every server-managed practice account through the protected Admin controller.
+            funded=api(base,'/api/v1/admin/bots/practice-opponents/fund','POST',{'game_id':'texas_holdem_practice_table'}); assert len(funded['funding'])==3 and all(row['replayed'] is False for row in funded['funding'])
+            # Replay fixed funding and require the original ledger events without another credit.
+            funded_replay=api(base,'/api/v1/admin/bots/practice-opponents/fund','POST',{'game_id':'texas_holdem_practice_table'}); assert all(row['replayed'] is True for row in funded_replay['funding']) and len(funded_replay['practice_opponent_activity'])==3
+            # Verify the dedicated Admin inspection endpoint publishes allocation and ledger audit rows.
+            admin_bots=api(base,'/api/v1/admin/bots'); assert len(admin_bots['practice_opponents'])==3 and len(admin_bots['practice_opponent_activity'])==3
             # Set elig to the value needed for the next operation.
             elig=api(base,'/api/v1/games/roulette/eligible-bots'); assert isinstance(elig['bots'], list)
             # Call an asynchronous API/helper and wait for the result before continuing.
@@ -996,7 +1004,7 @@ def run_api_tests():
             # Execute this statement as part of the module's documented control flow.
             assert api(base,'/api/v1/admin/autoplay')['sessions']
         # Execute this statement as part of the module's documented control flow.
-        run_case('API-CONTROL-001',['BOT-001','BOT-003','AUDIO-001','AUDIO-002','AUTO-001','AUTO-003'],bots_audio_autoplay)
+        run_case('API-CONTROL-001',['BOT-001','BOT-003','BOT-009','BOT-010','BOT-011','ADMIN-023','AUDIO-001','AUDIO-002','AUTO-001','AUTO-003'],bots_audio_autoplay)
         # Define the roulette function used by this module.
         def roulette():
             # Set p0 to the value needed for the next operation.
@@ -3573,6 +3581,32 @@ def run_browser_tests():
                         assert module_table.locator('tr').filter(has_text=expected['module']).filter(has_text=expected['revision']).count()==1
                 # Execute the mapped Admin dashboard and packaged-release browser regression.
                 run_case('BR-ADMIN-001',['ADMIN-001','ADMIN-003','ADMIN-004','ADMIN-010','ADMIN-014','TEST-023'],admin_dashboard_browser)
+                # Define the funded practice-opponent Admin browser acceptance check.
+                def admin_practice_opponents_browser():
+                    # Open the Players & Bots control-plane surface.
+                    page.get_by_test_id('admin-tab-players').click()
+                    # Wait for the account allocation and funding control to render.
+                    page.get_by_test_id('practice-opponent-admin').wait_for(timeout=5000)
+                    # Require all three server-managed account rows before funding.
+                    assert page.get_by_test_id('practice-opponent-account').count()==3
+                    # Submit funding through the visible Admin controller action.
+                    with page.expect_response(lambda response: response.url.endswith('/api/v1/admin/bots/practice-opponents/fund') and response.request.method=='POST'):
+                        # Click the idempotent funding control.
+                        page.get_by_test_id('fund-practice-opponents').click()
+                    # Wait for append-only funding activity to replace the prior view.
+                    page.get_by_test_id('practice-opponent-activity').first.wait_for(timeout=10000)
+                    # Require one visible ledger row per funded account.
+                    assert page.get_by_test_id('practice-opponent-activity').count()>=3
+                    # Capture the affected Admin matrix row at desktop compact in English.
+                    page.set_viewport_size({'width':1440,'height':900}); page.wait_for_timeout(250)
+                    # Scroll the affected card into view before reading its explicit evidence bounds.
+                    practice_card=page.get_by_test_id('practice-opponent-admin'); practice_card.scroll_into_view_if_needed(); practice_box=practice_card.bounding_box(); assert practice_box
+                    # Capture exactly the tested Admin card without unrelated legacy token presentation.
+                    page.screenshot(path=str(screenshots/'after-pass-admin-practice-opponents-en-desktop-compact.png'),clip=practice_box)
+                    # Restore primary desktop dimensions for following Admin cases.
+                    page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(250)
+                # Execute the Admin allocation, funding, ledger activity, and evidence gate.
+                run_case('BR-ADMIN-PRACTICE-OPPONENT-001',['BOT-009','BOT-010','BOT-011','ADMIN-023','TEST-023'],admin_practice_opponents_browser)
                 # Open Telemetry to verify Admin event presentation uses human labels and polished empty states.
                 page.locator('[data-tab="telemetry"]').click(); page.get_by_text('Application events',exact=True).wait_for(timeout=5000)
                 # Store visible telemetry copy for raw identifier and raw-array regression checks.
@@ -3681,6 +3715,20 @@ def run_browser_tests():
                     page.wait_for_function("() => document.querySelector('[data-testid=\"admin-locale-state\"]')?.textContent?.includes('ru-RU')")
                     # Execute this statement as part of the module's documented control flow.
                     assert 'ru-RU' in page.get_by_test_id('admin-locale-state').inner_text()
+                    # Reopen Players & Bots to verify the affected Admin surface uses Russian resources.
+                    page.get_by_test_id('admin-tab-players').click()
+                    # Wait for the localized practice-opponent heading to render.
+                    page.get_by_text("Тренировочные соперники Texas Hold'em",exact=True).wait_for(timeout=5000)
+                    # Require dynamic controller activity to use Russian rather than English fallback copy.
+                    assert 'Fund Account' not in page.get_by_test_id('practice-opponent-admin').inner_text() and 'Пополнение счёта' in page.get_by_test_id('practice-opponent-admin').inner_text()
+                    # Capture Russian evidence for the affected Admin matrix row.
+                    page.set_viewport_size({'width':1440,'height':900}); page.wait_for_timeout(250)
+                    # Scroll the localized affected card into view before reading its evidence bounds.
+                    practice_card=page.get_by_test_id('practice-opponent-admin'); practice_card.scroll_into_view_if_needed(); practice_box=practice_card.bounding_box(); assert practice_box
+                    # Capture the exact Russian Admin card without unrelated surrounding surfaces.
+                    page.screenshot(path=str(screenshots/'after-pass-admin-practice-opponents-ru-desktop-compact.png'),clip=practice_box)
+                    # Restore primary desktop dimensions before cleanup.
+                    page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(250)
                     # Clear the test preference so later manual sessions start from defaults.
                     page.evaluate("localStorage.removeItem('casino.locale.settings.v1')")
                 # Execute this statement as part of the module's documented control flow.
