@@ -1,0 +1,17 @@
+{
+  "module": "plinko",
+  "version": "1.0.0",
+  "paths": ["casino/games/plinko/", "web/games/plinko.js", "web/i18n/en-US/games/plinko.json", "web/i18n/ru-RU/games/plinko.json"],
+  "requirements_prefixes": ["PLINKO"],
+  "contracts": ["contracts/openapi/plinko.v1.yaml"],
+  "game": {
+    "id": "plinko", "sort_order": 230, "route": "/games/plinko", "label": "Plinko", "category": "arcade", "categories": ["arcade", "reels", "instant"],
+    "backend": {"register": "casino.games.plinko.api:register"},
+    "frontend": {"module": "./games/plinko.js", "export": "PlinkoGame", "ready_testid": "plinko", "i18n_domain": "games/plinko", "i18n_probe": "controls.drop"},
+    "tests": {"long_driver": "tests.game_drivers.plinko:play"},
+    "translations": {"ru-RU": {"label": "Плинко", "kicker": "Доска со штифтами", "description": "Запустите шайбу по зафиксированному сервером пути и получите результат по открытой таблице множителей с расчётом через журнал игровых жетонов.", "tags": ["Аркада", "Множители", "Быстрая игра", "Журнал жетонов"]}},
+    "lobby": {"featured": false, "wide": false, "art_class": "plinko-art", "symbol": "PL", "kicker": "Pegboard drop", "description": "Drop a puck through a committed peg path and settle through transparent play-token multipliers.", "tags": ["Arcade", "Multipliers", "Instant play", "Ledger-backed"]}
+  },
+  "depends_on": ["core", "ledger", "players"],
+  "may_not_depend_on": ["roulette", "slots", "blackjack", "baccarat", "keno", "bingo", "multi_hand_video_poker", "casino_war", "big_six_wheel", "red_dog", "dragon_tiger", "hi_lo", "three_card_poker", "jacks_or_better_video_poker", "deuces_wild_video_poker", "scratch_cards", "sic_bo", "chuck_a_luck", "craps", "crown_and_anchor", "over_under_7"]
+}

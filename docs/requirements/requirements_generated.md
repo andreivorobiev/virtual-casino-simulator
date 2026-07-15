@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.18.0
+- application: 9.19.0
 - core: 9.4.0
 - ledger: 9.0.2
 - players: 9.1.0
@@ -35,9 +35,10 @@ Historical source baseline: 9.1.0
 - craps: 1.0.0
 - crown_and_anchor: 1.0.0
 - over_under_7: 1.0.0
-- tests: 1.21.0
-- docs: 1.20.0
-- contracts: 1.16.0
+- plinko: 1.0.0
+- tests: 1.22.0
+- docs: 1.21.0
+- contracts: 1.17.0
 - tooling: 1.3.0
 - commenting_policy: 1.0.0
 
@@ -533,3 +534,8 @@ Historical source baseline: 9.1.0
 - **OU7-003** (Over/Under 7) - PASS: Aggregate wagers and returned credits use the shared ledger exactly once under durable action identities.
 - **OU7-004** (Application) - PASS: Over/Under 7 supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.
 - **OU7-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Over/Under 7 with requirement, module, version, and visual traceability.
+- **PLINKO-001** (Plinko) - PASS: One server-committed eight-step peg path produces a transparent terminal bucket, multiplier, payout, and net result.
+- **PLINKO-002** (Plinko) - PASS: Authenticated sessions own private reload-safe drops, durable receipts, settled history, and canonical route restoration.
+- **PLINKO-003** (Plinko) - PASS: Wager debits and returned-token credits use the shared ledger exactly once under durable action identities.
+- **PLINKO-004** (Application) - PASS: Plinko supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.
+- **PLINKO-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Plinko with requirement, module, version, and visual traceability.
