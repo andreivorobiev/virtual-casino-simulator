@@ -49,7 +49,7 @@ GitHub issue #81 establishes module-owned game descriptors as the single catalog
 | CORE-021 | Module-owned catalog metadata drives backend, frontend, API metadata, and validator discovery. | PASS | API-CATALOG-001 | BR-CATALOG-DISCOVERY-001 |
 | CORE-022 | Direct game links, reload, Back, and Forward restore canonical game routes. | PASS |  | BR-ROUTE-RESTORE-001 |
 | UX-010 | Lobby search and catalog-derived categories remain usable for the 20-game target. | PASS |  | BR-CATALOG-NAV-001 |
-| SESSION-005 | One shared authenticated-player resolver binds every game request before dispatch. | PASS | API-CATALOG-001, API-PRIVATE-SESSION-001, API-MHVP-001, API-CW-001, API-BIG-SIX-001, API-RD-001, API-DT-001, API-HILO-001, API-TCP-001, API-JOBVP-001, API-DWVP-001, API-SCRATCH-001, API-SIC-BO-001, API-CHUCK-001, API-CRAPS-001, API-CAA-001, API-OU7-001, API-PLINKO-001, API-FAN-TAN-001, API-AB-001, API-AD-001, API-CS-001, API-LIR-001 |  |
+| SESSION-005 | One shared authenticated-player resolver binds every game request before dispatch. | PASS | API-CATALOG-001, API-PRIVATE-SESSION-001, API-MHVP-001, API-CW-001, API-BIG-SIX-001, API-RD-001, API-DT-001, API-HILO-001, API-TCP-001, API-JOBVP-001, API-DWVP-001, API-SCRATCH-001, API-SIC-BO-001, API-CHUCK-001, API-CRAPS-001, API-CAA-001, API-OU7-001, API-PLINKO-001, API-FAN-TAN-001, API-AB-001, API-AD-001, API-CS-001, API-LIR-001, API-CH-001 |  |
 | TEST-042 | Validators, browser discovery, and long suites discover games and drivers from catalog metadata. | PASS | API-CATALOG-001, LONG-SUITE-100 | BR-CATALOG-DISCOVERY-001 |
 
 ## Multi-Hand Video Poker integration addendum
@@ -303,6 +303,18 @@ Issue #134 is integrated through the catalog under shared integration issue #77.
 | LIR-003 | Opening wager debits, pull refunds, and returned-token payout credits use ledger-only durable retry-safe action identities. | PASS | API-LIR-001 |  |
 | LIR-004 | English and Russian play remains responsive, accessible, reduced-motion safe, and timer-clean. | PASS |  | BR-LIR-001 |
 | LIR-005 | Catalog, contract, browser, long-suite, requirement, module, version, and visual evidence are traceable. | PASS | API-CATALOG-001, LONG-SUITE-100 | BR-CATALOG-DISCOVERY-001, BR-LIR-001 |
+
+## Casino Hold'em integration addendum
+
+Issue #139 is integrated through the catalog under shared integration issue #77.
+
+| ID | Requirement | Status | API Tests | Browser Tests |
+| --- | --- | --- | --- | --- |
+| CH-001 | An ante reveals two player cards and a three-card flop before a fold or call of twice the ante, followed by turn, river, dealer qualification at a pair of fours, and transparent best-five-card settlement. | PASS | API-CH-001 | BR-CH-001 |
+| CH-002 | Session-bound rounds, hidden dealer and unrevealed community cards, history, restart state, durable action receipts, and canonical routes remain private and reload-safe. | PASS | API-CH-001, API-WALLET-RESTART-001 | BR-CH-001 |
+| CH-003 | Ante and call debits plus returned-token settlement credits use ledger-only durable retry-safe action identities, while folds add no token movement. | PASS | API-CH-001 |  |
+| CH-004 | English and Russian play remains responsive, accessible, reduced-motion safe, and timer-clean. | PASS |  | BR-CH-001 |
+| CH-005 | Catalog, contract, browser, long-suite, requirement, module, version, and visual evidence are traceable. | PASS | API-CATALOG-001, LONG-SUITE-100 | BR-CATALOG-DISCOVERY-001, BR-CH-001 |
 
 ### Superseded wording
 

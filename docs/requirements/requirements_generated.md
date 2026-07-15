@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.24.0
+- application: 9.25.0
 - core: 9.4.0
 - ledger: 9.0.2
 - players: 9.1.0
@@ -41,9 +41,10 @@ Historical source baseline: 9.1.0
 - acey_deucey: 1.0.0
 - caribbean_stud: 1.0.0
 - let_it_ride: 1.0.0
-- tests: 1.27.0
-- docs: 1.26.0
-- contracts: 1.22.0
+- casino_holdem: 1.0.0
+- tests: 1.28.0
+- docs: 1.27.0
+- contracts: 1.23.0
 - tooling: 1.3.0
 - commenting_policy: 1.0.0
 
@@ -569,3 +570,8 @@ Historical source baseline: 9.1.0
 - **LIR-003** (Let It Ride) - PASS: Opening wager debits, pull refunds, and returned-token payout credits use the shared ledger exactly once under durable action identities.
 - **LIR-004** (Application) - PASS: Let It Ride supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.
 - **LIR-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Let It Ride with requirement, module, version, and visual traceability.
+- **CH-001** (Casino Hold'em) - PASS: An ante reveals two player cards and a three-card flop before a fold or call of twice the ante, followed by turn, river, dealer qualification at a pair of fours, and transparent best-five-card settlement.
+- **CH-002** (Casino Hold'em) - PASS: Authenticated sessions own private reload-safe decision rounds, hidden dealer cards and unrevealed community cards, durable receipts, settled history, and canonical route restoration.
+- **CH-003** (Casino Hold'em) - PASS: Ante and call debits plus returned-token settlement credits use the shared ledger exactly once under durable action identities, while folds add no token movement.
+- **CH-004** (Application) - PASS: Casino Hold'em supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.
+- **CH-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Casino Hold'em with requirement, module, version, and visual traceability.

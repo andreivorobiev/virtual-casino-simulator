@@ -95,6 +95,9 @@
   "let_it_ride": [
     "contracts/openapi/let_it_ride.v1.yaml"
   ],
+  "casino_holdem": [
+    "contracts/openapi/casino_holdem.v1.yaml"
+  ],
   "tests": [],
   "docs": [],
   "contracts": [
