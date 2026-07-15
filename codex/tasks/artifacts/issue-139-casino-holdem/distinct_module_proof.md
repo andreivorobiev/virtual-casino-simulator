@@ -1,6 +1,6 @@
 # Issue #139 Distinct Module Proof
 
-Decision: promote to isolated draft implementation slice.
+Decision: promote the distinct isolated slice through the serialized #77 catalog integration lane.
 
 Evidence:
 
@@ -14,6 +14,6 @@ Evidence:
   - Red Dog resolves spread-based odds between two exposed cards.
   - Baccarat resolves Punto Banco totals with drawing rules, not poker hand ranking.
 - The implementation reuses shared #96 card and poker primitives from `casino.core.cards` and `casino.core.poker`, but imports no existing game package.
-- The descriptor is parked as proposal-only and does not claim catalog count acceptance until #77 integrates shared files.
+- The canonical descriptor is promoted at sort order 290 after #77 integrated permanent requirements, compatibility metadata, discovery tests, versions, and visual evidence.
 
-Countability: distinct and countable pending #77 shared catalog/router/manifest/requirements/visual-matrix/test-discovery integration.
+Countability: distinct and countable after exact-head #77 shared catalog, manifest, requirement, visual, browser, and Long Suite acceptance.

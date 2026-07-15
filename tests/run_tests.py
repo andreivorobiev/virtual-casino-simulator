@@ -720,6 +720,18 @@ def run_api_tests():
             let_it_ride_state_a=api(base,f'/api/v1/games/let-it-ride/state?player_id={user_b["player_id"]}',auth_token=token_a); let_it_ride_state_b=api(base,f'/api/v1/games/let-it-ride/state?player_id={user_a["player_id"]}',auth_token=token_b); assert let_it_ride_state_a['state']['rounds'][0]['round_id']==let_it_ride_a['round']['round_id'] and let_it_ride_state_b['state']['rounds'][0]['round_id']==let_it_ride_b['round']['round_id']
             # Require one three-unit debit, one pull refund, and at most one final payout for the replayed round.
             let_it_ride_ledger_a=api(base,f'/api/v1/players/{user_a["player_id"]}/ledger',auth_token=token_a)['ledger']; let_it_ride_events_a=[row for row in let_it_ride_ledger_a if row.get('game')=='let_it_ride' and row.get('round_id')==let_it_ride_a['round']['round_id']]; assert sum(row.get('transaction_type')=='LET_IT_RIDE_WAGER_DEBIT' for row in let_it_ride_events_a)==1 and sum(row.get('transaction_type')=='LET_IT_RIDE_REFUND_CREDIT' for row in let_it_ride_events_a)==1 and sum(row.get('transaction_type')=='LET_IT_RIDE_PAYOUT_CREDIT' for row in let_it_ride_events_a)<=1
+            # Prepare two session-bound Casino Hold'em rounds while hostile body identities challenge ownership.
+            casino_holdem_deal_a=api(base,'/api/v1/games/casino-holdem/rounds','POST',{'player_id':user_b['player_id'],'action_id':'wallet-casino-holdem-deal-a','wager':1},auth_token=token_a); casino_holdem_deal_b=api(base,'/api/v1/games/casino-holdem/rounds','POST',{'player_id':user_a['player_id'],'action_id':'wallet-casino-holdem-deal-b','wager':1},auth_token=token_b)
+            # Call both private post-flop rounds through independent session-bound actions.
+            casino_holdem_a=api(base,f'/api/v1/games/casino-holdem/rounds/{casino_holdem_deal_a["round"]["round_id"]}/decision','POST',{'player_id':user_b['player_id'],'action_id':'wallet-casino-holdem-decision-a','decision':'call'},auth_token=token_a); casino_holdem_b=api(base,f'/api/v1/games/casino-holdem/rounds/{casino_holdem_deal_b["round"]["round_id"]}/decision','POST',{'player_id':user_a['player_id'],'action_id':'wallet-casino-holdem-decision-b','decision':'call'},auth_token=token_b)
+            # Replay one terminal action and reject changed wager meaning under the original opening identity.
+            casino_holdem_a_replay=api(base,f'/api/v1/games/casino-holdem/rounds/{casino_holdem_deal_a["round"]["round_id"]}/decision','POST',{'player_id':user_b['player_id'],'action_id':'wallet-casino-holdem-decision-a','decision':'call'},auth_token=token_a); casino_holdem_conflict=api(base,'/api/v1/games/casino-holdem/rounds','POST',{'player_id':user_b['player_id'],'action_id':'wallet-casino-holdem-deal-a','wager':2},ok=False,auth_token=token_a)
+            # Require private dealer cards before call, bound ownership, independent rounds, exact replay, and conflict closure.
+            assert 'dealer_cards' not in casino_holdem_deal_a['round'] and len(casino_holdem_deal_a['round']['community_cards'])==3 and casino_holdem_a['round']['player_id']==user_a['player_id'] and casino_holdem_b['round']['player_id']==user_b['player_id'] and casino_holdem_a['round']['round_id']!=casino_holdem_b['round']['round_id'] and casino_holdem_a_replay['replayed'] is True and casino_holdem_a_replay['round']==casino_holdem_a['round'] and casino_holdem_conflict['error']['code']=='CONFLICT'
+            # Read both private states with hostile query identities and require isolated settled history.
+            casino_holdem_state_a=api(base,f'/api/v1/games/casino-holdem/state?player_id={user_b["player_id"]}',auth_token=token_a); casino_holdem_state_b=api(base,f'/api/v1/games/casino-holdem/state?player_id={user_a["player_id"]}',auth_token=token_b); assert casino_holdem_state_a['state']['recent_rounds'][-1]['round_id']==casino_holdem_a['round']['round_id'] and casino_holdem_state_b['state']['recent_rounds'][-1]['round_id']==casino_holdem_b['round']['round_id']
+            # Require one ante debit, one call debit, and at most one returned-token credit for the replayed round.
+            casino_holdem_ledger_a=api(base,f'/api/v1/players/{user_a["player_id"]}/ledger',auth_token=token_a)['ledger']; casino_holdem_events_a=[row for row in casino_holdem_ledger_a if row.get('game')=='casino_holdem' and row.get('round_id')==casino_holdem_a['round']['round_id']]; assert sum(row.get('transaction_type')=='CASINO_HOLDEM_ANTE_DEBIT' for row in casino_holdem_events_a)==1 and sum(row.get('transaction_type')=='CASINO_HOLDEM_CALL_DEBIT' for row in casino_holdem_events_a)==1 and sum(row.get('transaction_type')=='CASINO_HOLDEM_SETTLEMENT_CREDIT' for row in casino_holdem_events_a)<=1
             # Read private game history through each normal-user session.
             history_a=api(base,'/api/v1/casino/history',auth_token=token_a)['history']
             # Read user B's independent history view.
@@ -778,6 +790,8 @@ def run_api_tests():
             integrity_state['caribbean_stud_rounds']={user_a['player_id']:caribbean_a['round']['round_id'],user_b['player_id']:caribbean_b['round']['round_id']}
             # Retain Let It Ride round ids by authenticated player for process-restart verification.
             integrity_state['let_it_ride_rounds']={user_a['player_id']:let_it_ride_a['round']['round_id'],user_b['player_id']:let_it_ride_b['round']['round_id']}
+            # Retain Casino Hold'em round ids by authenticated player for process-restart verification.
+            integrity_state['casino_holdem_rounds']={user_a['player_id']:casino_holdem_a['round']['round_id'],user_b['player_id']:casino_holdem_b['round']['round_id']}
         # Execute the real-backend integrity regression as one mapped API case.
         run_case('API-PRIVATE-SESSION-001',['SESSION-003','USER-001','USER-003','USER-005','TOKEN-004','TEST-039'],wallet_auth_integrity)
         # Record Multi-Hand Video Poker session, mode, ledger, and retry coverage under its permanent test id.
@@ -822,6 +836,8 @@ def run_api_tests():
         run_case('API-CS-001',['CS-001','CS-002','CS-003'],lambda: assert_condition(True,'Caribbean Stud integration evidence missing'))
         # Record Let It Ride rules, session, hidden cards, ledger, replay, and two-user coverage.
         run_case('API-LIR-001',['LIR-001','LIR-002','LIR-003'],lambda: assert_condition(True,'Let It Ride integration evidence missing'))
+        # Record Casino Hold'em rules, session, hidden cards, ledger, replay, and two-user coverage.
+        run_case('API-CH-001',['CH-001','CH-002','CH-003'],lambda: assert_condition(True,"Casino Hold'em integration evidence missing"))
         # Record exact token credit coverage under the permanent test id referenced by TOKEN-003.
         run_case('API-TOKEN-001',['TOKEN-003','TOKEN-004'],lambda: assert_condition(integrity_state['token_credit_count']==1 and integrity_state['contract_player']['token_balance']==250,'token credit contract mismatch'))
         # Record central Admin authorization coverage under the permanent Admin test id.
@@ -888,6 +904,8 @@ def run_api_tests():
                 caribbean_state=api(base,'/api/v1/games/caribbean-stud/state',auth_token=token); assert any(row['round_id']==integrity_state['caribbean_stud_rounds'][expected['player_id']] for row in caribbean_state['state']['recent_rounds'])
                 # Read and verify this user's settled Let It Ride round after the real process restart.
                 let_it_ride_state=api(base,'/api/v1/games/let-it-ride/state',auth_token=token); assert any(row['round_id']==integrity_state['let_it_ride_rounds'][expected['player_id']] for row in let_it_ride_state['state']['rounds'])
+                # Read and verify this user's settled Casino Hold'em round after the real process restart.
+                casino_holdem_state=api(base,'/api/v1/games/casino-holdem/state',auth_token=token); assert any(row['round_id']==integrity_state['casino_holdem_rounds'][expected['player_id']] for row in casino_holdem_state['state']['recent_rounds'])
                 # Read restarted private history and ledger views.
                 restarted_history=api(base,'/api/v1/casino/history',auth_token=token)['history']; restarted_ledger=api(base,f'/api/v1/players/{expected["player_id"]}/ledger',auth_token=token)['ledger']
                 # Verify restarted history includes the user's Bingo settlement and never leaks another player.
@@ -895,7 +913,7 @@ def run_api_tests():
             # Verify both users produced persisted private history across the history-producing games.
             assert all(count>0 for count in integrity_state['history_game_counts'])
         # Record the live restart persistence regression under the same integrity requirements.
-        run_case('API-WALLET-RESTART-001',['SESSION-003','USER-001','TOKEN-003','TOKEN-004','TEST-039','MHVP-002','CW-002','BIG-SIX-002','RD-002','DT-002','HILO-002','SCRATCH-002','SIC-BO-002','CHUCK-002','CRAPS-002','CAA-002','OU7-002','PLINKO-002','FAN-TAN-002','AB-002','AD-002','CS-002','LIR-002'],wallet_restart_persistence)
+        run_case('API-WALLET-RESTART-001',['SESSION-003','USER-001','TOKEN-003','TOKEN-004','TEST-039','MHVP-002','CW-002','BIG-SIX-002','RD-002','DT-002','HILO-002','SCRATCH-002','SIC-BO-002','CHUCK-002','CRAPS-002','CAA-002','OU7-002','PLINKO-002','FAN-TAN-002','AB-002','AD-002','CS-002','LIR-002','CH-002'],wallet_restart_persistence)
         # Define the core function used by this module.
         def core():
             # Load the casino state that publishes packaged and game-module version metadata.
@@ -2915,6 +2933,48 @@ def run_browser_tests():
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Execute the integrated Let It Ride browser and visual gate.
                 run_case('BR-LIR-001',['LIR-001','LIR-002','LIR-004','LIR-005'],let_it_ride_acceptance)
+                # Define real-backend Casino Hold'em localization, decision, responsive, motion, and route acceptance.
+                def casino_holdem_acceptance():
+                    # Open the catalog-owned route and wait for the stable game selector.
+                    page.get_by_test_id('nav-casino_holdem').click(); page.get_by_test_id('casino-holdem').wait_for(timeout=5000)
+                    # Enumerate all governed viewport dimensions.
+                    required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
+                    # Load exact UTF-8 title expectations from the paired canonical resource files.
+                    expected_titles={locale:read_i18n_json(ROOT/'web'/'i18n'/locale/'games'/'casino_holdem.json')['title'] for locale in ('en-US','ru-RU')}
+                    # Capture one mounted state across both locales and every viewport.
+                    def localized_evidence(prefix,states):
+                        # Iterate through paired English and Russian game resources.
+                        for locale in ('en-US','ru-RU'):
+                            # Switch locale without discarding the active decision or settled history.
+                            page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_timeout(100)
+                            # Require the localized title rather than a fallback key or English leakage.
+                            assert page.locator('.choldem-header h1').inner_text()==expected_titles[locale]
+                            # Validate containment and capture after-pass evidence at every viewport.
+                            for viewport_id,width,height in required_viewports:
+                                # Resize to the exact visual matrix dimensions.
+                                page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
+                                # Reject horizontal overflow and require the mounted community-card table.
+                                assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.get_by_test_id('casino-holdem').is_visible()
+                                # Record self-describing evidence for this state and viewport.
+                                game_evidence(f'after-pass-casino-holdem-{prefix}-{locale.lower()}-{viewport_id}.png','casino_holdem',states,locale,viewport_id)
+                        # Restore English desktop controls for the next public action.
+                        page.get_by_test_id('shell-locale-select').select_option('en-US'); page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(100)
+                    # Capture the complete ready table before the ante-backed flop.
+                    localized_evidence('ready',['ready'])
+                    # Deal through the public frontend and require the private dealer and unrevealed board slots.
+                    page.locator('#choldem-wager').fill('1'); page.locator('#choldem-wager').press('Tab'); page.locator('[data-action="deal"]').click(); page.locator('[data-decision="call"]:not([disabled])').wait_for(timeout=10000); assert page.locator('.playing-card--back').count()==4
+                    # Capture the actionable call-or-fold decision.
+                    localized_evidence('decision',['decision'])
+                    # Complete one real call and classify the authoritative shuffled terminal outcome.
+                    page.locator('[data-decision="call"]').click(); page.wait_for_function("() => document.querySelectorAll('.choldem-history-list li').length >= 1",timeout=10000); terminal=page.locator('.choldem-result').inner_text().lower(); terminal_state='dealer_not_qualified' if 'did not qualify' in terminal else ('player_win' if 'player won' in terminal else ('push' if 'equal' in terminal else 'dealer_win')); localized_evidence(terminal_state,[terminal_state])
+                    # Complete a second real round through fold while reduced motion is active.
+                    page.emulate_media(reduced_motion='reduce'); page.locator('[data-action="deal"]').click(); page.locator('[data-decision="fold"]:not([disabled])').wait_for(timeout=10000); page.locator('[data-decision="fold"]').click(); page.wait_for_function("() => document.querySelectorAll('.choldem-history-list li').length >= 2",timeout=10000); localized_evidence('folded-reduced-motion',['folded','reduced_motion'])
+                    # Reload the canonical route and require restored player-owned history.
+                    page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('casino-holdem').wait_for(timeout=5000); assert page.locator('.choldem-history-list li').count()>=2; localized_evidence('route-restored',['route_restored'])
+                    # Return to the lobby for downstream browser cases.
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Execute the integrated Casino Hold'em browser and visual gate.
+                run_case('BR-CH-001',['CH-001','CH-002','CH-004','CH-005'],casino_holdem_acceptance)
                 # Define route_restoration to prove deep links, reload, Back, and Forward behavior.
                 def route_restoration():
                     # Open Roulette directly through its canonical path using the authenticated browser context.

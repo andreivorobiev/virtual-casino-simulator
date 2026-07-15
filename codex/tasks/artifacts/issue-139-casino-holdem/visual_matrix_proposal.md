@@ -1,8 +1,8 @@
-# Issue #139 Visual Matrix Proposal
+# Issue #139 Visual Matrix Promotion
 
-No `tests/visual/visual_matrix.json` changes were made in this isolated worker slice.
+The isolated proposal below is now promoted into `tests/visual/visual_matrix.json` by shared integration issue #77.
 
-Proposed future #77 row:
+Canonical #77 row:
 
 - Surface id: `casino_holdem`
 - Route: `/games/casino_holdem`
@@ -12,4 +12,4 @@ Proposed future #77 row:
 - Viewports: `desktop_primary`, `desktop_compact`, `tablet`, `mobile`
 - Gates: `VIS-COPY-001`, `VIS-TOKEN-002`, `VIS-LAYOUT-001`, `VIS-LAYOUT-002`, `VIS-LAYOUT-003`, `VIS-SCROLL-001`, `VIS-SCROLL-002`, `VIS-HIERARCHY-001`, `VIS-RESPONSIVE-001`, `VIS-EVIDENCE-001`, `VIS-CATALOG-001`
 
-Evidence note: this PR includes no acceptance screenshots and makes no #77 visual-matrix acceptance claim. The frontend module is static-tested for no timers, reduced-motion CSS, responsive control-stage-data order, touch target height, localized card labels, and EN/RU key parity.
+Evidence note: the exact integrated head passes the real-backend browser suite and emits after-pass PNG/JSON evidence for both locales at desktop primary, desktop compact, tablet, and mobile. The frontend remains timer-free, reduced-motion safe, responsive, touch-target compliant, and locale-key paired.

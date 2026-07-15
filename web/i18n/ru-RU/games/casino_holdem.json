@@ -22,7 +22,7 @@
   "eyebrow": "Покер с общими картами против дилера",
   "history.empty": "Завершенные раунды появятся здесь.",
   "history.foldRank": "Пас",
-  "history.listAria": "Последние раунды Casino Hold'em",
+  "history.listAria": "Последние раунды Казино Холдем",
   "history.result": "{outcome}: {rank}",
   "history.roundAria": "Раунд {number}: {outcome}, {rank}",
   "history.title": "Последние раунды",
@@ -75,7 +75,7 @@
   "rules.title": "Профиль правил",
   "stage.decisionBody": "Оцените флоп, затем сделайте колл для терна и ривера или пас по анте.",
   "stage.readyBody": "Выберите анте, чтобы получить две карты игрока и флоп.",
-  "stage.title": "Стол Casino Hold'em",
+  "stage.title": "Стол Казино Холдем",
   "summary.ante": "Анте",
   "summary.call": "Ставка колл",
   "summary.dealer": "Дилер",
@@ -89,6 +89,6 @@
   "suits.D": "бубен",
   "suits.H": "червей",
   "suits.S": "пик",
-  "title": "Casino Hold'em",
+  "title": "Казино Холдем",
   "tokens.amount": "{amount} игровых токенов"
 }

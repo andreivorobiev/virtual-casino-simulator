@@ -1,4 +1,4 @@
-"""Resource and proposal descriptor tests for Casino Hold'em issue #139."""
+"""Resource and canonical descriptor tests for Casino Hold'em issue #139."""
 
 # Import JSON parsing for locale and descriptor validation.
 import json
@@ -7,11 +7,11 @@ from pathlib import Path
 # Import the dependency-free standard test runner.
 import unittest
 
-# Store ROOT so direct test execution can find proposal artifacts.
+# Store ROOT so direct test execution can find canonical artifacts.
 ROOT = Path(__file__).resolve().parents[3]
 
 
-# Verify proposal artifacts and paired locale resources remain integration-ready.
+# Verify canonical artifacts and paired locale resources remain integration-ready.
 class CasinoHoldemResourceTests(unittest.TestCase):
     # Load one repository-relative JSON file.
     def load_json(self, relative_path):
@@ -37,20 +37,20 @@ class CasinoHoldemResourceTests(unittest.TestCase):
             # Verify neither locale is blank.
             self.assertTrue(str(value).strip() and str(russian[key]).strip(), key)
 
-    # Confirm the descriptor proposal is parked outside auto-discovered modules.
-    def test_descriptor_proposal_is_not_autodiscovered(self):
-        # Load the proposal descriptor.
-        descriptor = self.load_json(Path("codex/tasks/artifacts/issue-139-casino-holdem/casino_holdem.module.proposal.json"))
-        # Verify the descriptor is explicitly proposal-only.
-        self.assertTrue(descriptor["proposal_only"])
+    # Confirm the promoted descriptor is discoverable with its permanent allocation.
+    def test_descriptor_is_canonical(self):
+        # Load the canonical descriptor.
+        descriptor = self.load_json(Path("modules/casino_holdem.json"))
+        # Verify the descriptor uses the accepted module revision.
+        self.assertEqual("1.0.0", descriptor["version"])
         # Verify it declares the stable game id.
         self.assertEqual("casino_holdem", descriptor["game"]["id"])
         # Verify it points at the additive OpenAPI contract.
         self.assertIn("contracts/openapi/casino_holdem.v1.yaml", descriptor["contracts"])
-        # Verify no auto-discovered modules descriptor was added.
-        self.assertFalse((ROOT / "modules" / "casino_holdem.json").exists())
-        # Verify the descriptor names #77 as the shared integration blocker.
-        self.assertIn("#77", descriptor["blocked_on"])
+        # Verify #77 allocated the collision-free catalog position.
+        self.assertEqual(290, descriptor["game"]["sort_order"])
+        # Verify the permanent requirement prefix replaces the proposal marker.
+        self.assertEqual(["CH"], descriptor["requirements_prefixes"])
 
 
 # Run this focused suite when invoked directly by a worker.
