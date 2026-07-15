@@ -706,6 +706,20 @@ def run_api_tests():
             caribbean_state_a=api(base,f'/api/v1/games/caribbean-stud/state?player_id={user_b["player_id"]}',auth_token=token_a); caribbean_state_b=api(base,f'/api/v1/games/caribbean-stud/state?player_id={user_a["player_id"]}',auth_token=token_b); assert caribbean_state_a['state']['recent_rounds'][-1]['round_id']==caribbean_a['round']['round_id'] and caribbean_state_b['state']['recent_rounds'][-1]['round_id']==caribbean_b['round']['round_id']
             # Require one ante debit, one call debit, and at most one returned-token credit for the replayed round.
             caribbean_ledger_a=api(base,f'/api/v1/players/{user_a["player_id"]}/ledger',auth_token=token_a)['ledger']; caribbean_events_a=[row for row in caribbean_ledger_a if row.get('game')=='caribbean_stud' and row.get('round_id')==caribbean_a['round']['round_id']]; assert sum(row.get('transaction_type')=='CARIBBEAN_STUD_ANTE_DEBIT' for row in caribbean_events_a)==1 and sum(row.get('transaction_type')=='CARIBBEAN_STUD_CALL_DEBIT' for row in caribbean_events_a)==1 and sum(row.get('transaction_type')=='CARIBBEAN_STUD_SETTLEMENT_CREDIT' for row in caribbean_events_a)<=1
+            # Prepare two session-bound Let It Ride rounds while hostile body identities challenge ownership.
+            let_it_ride_deal_a=api(base,'/api/v1/games/let-it-ride/rounds','POST',{'player_id':user_b['player_id'],'action_id':'wallet-let-it-ride-deal-a','wager':1},auth_token=token_a); let_it_ride_deal_b=api(base,'/api/v1/games/let-it-ride/rounds','POST',{'player_id':user_a['player_id'],'action_id':'wallet-let-it-ride-deal-b','wager':1},auth_token=token_b)
+            # Pull the first eligible unit for each private round and reveal one community card.
+            let_it_ride_first_a=api(base,f'/api/v1/games/let-it-ride/rounds/{let_it_ride_deal_a["round"]["round_id"]}/first-decision','POST',{'player_id':user_b['player_id'],'action_id':'wallet-let-it-ride-first-a','decision':'pull'},auth_token=token_a); let_it_ride_first_b=api(base,f'/api/v1/games/let-it-ride/rounds/{let_it_ride_deal_b["round"]["round_id"]}/first-decision','POST',{'player_id':user_a['player_id'],'action_id':'wallet-let-it-ride-first-b','decision':'pull'},auth_token=token_b)
+            # Let the remaining units ride through each independent terminal settlement.
+            let_it_ride_a=api(base,f'/api/v1/games/let-it-ride/rounds/{let_it_ride_deal_a["round"]["round_id"]}/second-decision','POST',{'player_id':user_b['player_id'],'action_id':'wallet-let-it-ride-second-a','decision':'ride'},auth_token=token_a); let_it_ride_b=api(base,f'/api/v1/games/let-it-ride/rounds/{let_it_ride_deal_b["round"]["round_id"]}/second-decision','POST',{'player_id':user_a['player_id'],'action_id':'wallet-let-it-ride-second-b','decision':'ride'},auth_token=token_b)
+            # Replay one terminal action and reject changed wager meaning under the original opening identity.
+            let_it_ride_a_replay=api(base,f'/api/v1/games/let-it-ride/rounds/{let_it_ride_deal_a["round"]["round_id"]}/second-decision','POST',{'player_id':user_b['player_id'],'action_id':'wallet-let-it-ride-second-a','decision':'ride'},auth_token=token_a); let_it_ride_conflict=api(base,'/api/v1/games/let-it-ride/rounds','POST',{'player_id':user_b['player_id'],'action_id':'wallet-let-it-ride-deal-a','wager':2},ok=False,auth_token=token_a)
+            # Require hidden community cards before decisions, bound ownership, independent rounds, exact replay, and conflict closure.
+            assert let_it_ride_deal_a['round']['community_cards']==[None,None] and let_it_ride_first_a['round']['community_cards'][0] and let_it_ride_first_a['round']['community_cards'][1] is None and let_it_ride_a['round']['player_id']==user_a['player_id'] and let_it_ride_b['round']['player_id']==user_b['player_id'] and let_it_ride_a['round']['round_id']!=let_it_ride_b['round']['round_id'] and let_it_ride_a_replay['replayed'] is True and let_it_ride_a_replay['round']==let_it_ride_a['round'] and let_it_ride_conflict['error']['code']=='CONFLICT'
+            # Read both private states with hostile query identities and require isolated settled history.
+            let_it_ride_state_a=api(base,f'/api/v1/games/let-it-ride/state?player_id={user_b["player_id"]}',auth_token=token_a); let_it_ride_state_b=api(base,f'/api/v1/games/let-it-ride/state?player_id={user_a["player_id"]}',auth_token=token_b); assert let_it_ride_state_a['state']['rounds'][0]['round_id']==let_it_ride_a['round']['round_id'] and let_it_ride_state_b['state']['rounds'][0]['round_id']==let_it_ride_b['round']['round_id']
+            # Require one three-unit debit, one pull refund, and at most one final payout for the replayed round.
+            let_it_ride_ledger_a=api(base,f'/api/v1/players/{user_a["player_id"]}/ledger',auth_token=token_a)['ledger']; let_it_ride_events_a=[row for row in let_it_ride_ledger_a if row.get('game')=='let_it_ride' and row.get('round_id')==let_it_ride_a['round']['round_id']]; assert sum(row.get('transaction_type')=='LET_IT_RIDE_WAGER_DEBIT' for row in let_it_ride_events_a)==1 and sum(row.get('transaction_type')=='LET_IT_RIDE_REFUND_CREDIT' for row in let_it_ride_events_a)==1 and sum(row.get('transaction_type')=='LET_IT_RIDE_PAYOUT_CREDIT' for row in let_it_ride_events_a)<=1
             # Read private game history through each normal-user session.
             history_a=api(base,'/api/v1/casino/history',auth_token=token_a)['history']
             # Read user B's independent history view.
@@ -762,6 +776,8 @@ def run_api_tests():
             integrity_state['acey_deucey_rounds']={user_a['player_id']:acey_deucey_a['round']['round_id'],user_b['player_id']:acey_deucey_b['round']['round_id']}
             # Retain Caribbean Stud round ids by authenticated player for process-restart verification.
             integrity_state['caribbean_stud_rounds']={user_a['player_id']:caribbean_a['round']['round_id'],user_b['player_id']:caribbean_b['round']['round_id']}
+            # Retain Let It Ride round ids by authenticated player for process-restart verification.
+            integrity_state['let_it_ride_rounds']={user_a['player_id']:let_it_ride_a['round']['round_id'],user_b['player_id']:let_it_ride_b['round']['round_id']}
         # Execute the real-backend integrity regression as one mapped API case.
         run_case('API-PRIVATE-SESSION-001',['SESSION-003','USER-001','USER-003','USER-005','TOKEN-004','TEST-039'],wallet_auth_integrity)
         # Record Multi-Hand Video Poker session, mode, ledger, and retry coverage under its permanent test id.
@@ -804,6 +820,8 @@ def run_api_tests():
         run_case('API-AD-001',['AD-001','AD-002','AD-003'],lambda: assert_condition(True,'Acey-Deucey integration evidence missing'))
         # Record Caribbean Stud rules, session, private dealer cards, ledger, replay, and two-user coverage.
         run_case('API-CS-001',['CS-001','CS-002','CS-003'],lambda: assert_condition(True,'Caribbean Stud integration evidence missing'))
+        # Record Let It Ride rules, session, hidden cards, ledger, replay, and two-user coverage.
+        run_case('API-LIR-001',['LIR-001','LIR-002','LIR-003'],lambda: assert_condition(True,'Let It Ride integration evidence missing'))
         # Record exact token credit coverage under the permanent test id referenced by TOKEN-003.
         run_case('API-TOKEN-001',['TOKEN-003','TOKEN-004'],lambda: assert_condition(integrity_state['token_credit_count']==1 and integrity_state['contract_player']['token_balance']==250,'token credit contract mismatch'))
         # Record central Admin authorization coverage under the permanent Admin test id.
@@ -868,6 +886,8 @@ def run_api_tests():
                 acey_deucey_state=api(base,'/api/v1/games/acey-deucey/state',auth_token=token); assert any(row['round_id']==integrity_state['acey_deucey_rounds'][expected['player_id']] for row in acey_deucey_state['state']['recent_rounds'])
                 # Read and verify this user's settled Caribbean Stud round after the real process restart.
                 caribbean_state=api(base,'/api/v1/games/caribbean-stud/state',auth_token=token); assert any(row['round_id']==integrity_state['caribbean_stud_rounds'][expected['player_id']] for row in caribbean_state['state']['recent_rounds'])
+                # Read and verify this user's settled Let It Ride round after the real process restart.
+                let_it_ride_state=api(base,'/api/v1/games/let-it-ride/state',auth_token=token); assert any(row['round_id']==integrity_state['let_it_ride_rounds'][expected['player_id']] for row in let_it_ride_state['state']['rounds'])
                 # Read restarted private history and ledger views.
                 restarted_history=api(base,'/api/v1/casino/history',auth_token=token)['history']; restarted_ledger=api(base,f'/api/v1/players/{expected["player_id"]}/ledger',auth_token=token)['ledger']
                 # Verify restarted history includes the user's Bingo settlement and never leaks another player.
@@ -875,7 +895,7 @@ def run_api_tests():
             # Verify both users produced persisted private history across the history-producing games.
             assert all(count>0 for count in integrity_state['history_game_counts'])
         # Record the live restart persistence regression under the same integrity requirements.
-        run_case('API-WALLET-RESTART-001',['SESSION-003','USER-001','TOKEN-003','TOKEN-004','TEST-039','MHVP-002','CW-002','BIG-SIX-002','RD-002','DT-002','HILO-002','SCRATCH-002','SIC-BO-002','CHUCK-002','CRAPS-002','CAA-002','OU7-002','PLINKO-002','FAN-TAN-002','AB-002','AD-002','CS-002'],wallet_restart_persistence)
+        run_case('API-WALLET-RESTART-001',['SESSION-003','USER-001','TOKEN-003','TOKEN-004','TEST-039','MHVP-002','CW-002','BIG-SIX-002','RD-002','DT-002','HILO-002','SCRATCH-002','SIC-BO-002','CHUCK-002','CRAPS-002','CAA-002','OU7-002','PLINKO-002','FAN-TAN-002','AB-002','AD-002','CS-002','LIR-002'],wallet_restart_persistence)
         # Define the core function used by this module.
         def core():
             # Load the casino state that publishes packaged and game-module version metadata.
@@ -2847,6 +2867,54 @@ def run_browser_tests():
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Execute the integrated Caribbean Stud browser and visual gate.
                 run_case('BR-CS-001',['CS-001','CS-002','CS-004','CS-005'],caribbean_stud_acceptance)
+                # Define real-backend Let It Ride localization, staged decisions, responsive, motion, and route acceptance.
+                def let_it_ride_acceptance():
+                    # Open the catalog-owned route and wait for the stable game selector.
+                    page.get_by_test_id('nav-let_it_ride').click(); page.get_by_test_id('let-it-ride').wait_for(timeout=5000)
+                    # Enumerate all governed viewport dimensions.
+                    required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
+                    # Load exact UTF-8 title expectations from the paired canonical resource files.
+                    expected_titles={locale:read_i18n_json(ROOT/'web'/'i18n'/locale/'games'/'let_it_ride.json')['title'] for locale in ('en-US','ru-RU')}
+                    # Capture one mounted state across both locales and every viewport.
+                    def localized_evidence(prefix,states):
+                        # Iterate through paired English and Russian game resources.
+                        for locale in ('en-US','ru-RU'):
+                            # Switch locale without discarding the active round or settled history.
+                            page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_timeout(100)
+                            # Require the localized game title rather than a fallback key or English leakage.
+                            assert page.locator('.lir-header h1').inner_text()==expected_titles[locale]
+                            # Validate containment and capture after-pass evidence at every viewport.
+                            for viewport_id,width,height in required_viewports:
+                                # Resize to the exact visual matrix dimensions.
+                                page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
+                                # Measure document containment and retain bounded offender diagnostics for any regression.
+                                containment=page.evaluate("() => ({scrollWidth:document.documentElement.scrollWidth,viewportWidth:window.innerWidth,offenders:[...document.querySelectorAll('.let-it-ride *')].filter(node=>node.getBoundingClientRect().right>window.innerWidth+1||node.getBoundingClientRect().left< -1).slice(0,8).map(node=>({tag:node.tagName,className:node.className,right:node.getBoundingClientRect().right,width:node.getBoundingClientRect().width}))})")
+                                # Reject horizontal overflow and require the mounted staged poker table.
+                                assert containment['scrollWidth']<=containment['viewportWidth']+1 and page.get_by_test_id('let-it-ride').is_visible(), (locale,viewport_id,containment)
+                                # Record self-describing evidence for this state and viewport.
+                                game_evidence(f'after-pass-let-it-ride-{prefix}-{locale.lower()}-{viewport_id}.png','let_it_ride',states,locale,viewport_id)
+                        # Restore English desktop controls for the next public action.
+                        page.get_by_test_id('shell-locale-select').select_option('en-US'); page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(100)
+                    # Capture the complete ready table before the three-unit opening wager.
+                    localized_evidence('ready',['ready'])
+                    # Deal through the public frontend and require both community cards to remain hidden.
+                    page.get_by_test_id('let-it-ride-wager').select_option('5'); page.locator('[data-action="deal"]').click(); page.locator('[data-stage="first"]:not([disabled])').first.wait_for(timeout=10000); assert page.locator('.lir-card-empty').count()==2
+                    # Capture the first ride-or-pull decision beat.
+                    localized_evidence('first-decision',['first_decision'])
+                    # Leave the first unit riding and require exactly one community card reveal.
+                    page.locator('[data-stage="first"][data-decision="ride"]').click(); page.locator('[data-stage="second"]:not([disabled])').first.wait_for(timeout=10000); assert page.locator('.lir-card-empty').count()==1
+                    # Capture the second decision beat with the first community card visible.
+                    localized_evidence('second-decision',['second_decision'])
+                    # Pull one eligible unit and require terminal settled history.
+                    page.locator('[data-stage="second"][data-decision="pull"]').click(); page.locator('[data-action="deal"]:not([disabled])').wait_for(timeout=10000); assert page.locator('.lir-history-row').count()>=1; localized_evidence('settled',['settled'])
+                    # Complete another all-ride round under reduced motion and require stable history growth.
+                    page.emulate_media(reduced_motion='reduce'); page.locator('[data-action="deal"]').click(); page.locator('[data-stage="first"]:not([disabled])').first.wait_for(timeout=10000); page.locator('[data-stage="first"][data-decision="ride"]').click(); page.locator('[data-stage="second"]:not([disabled])').first.wait_for(timeout=10000); page.locator('[data-stage="second"][data-decision="ride"]').click(); page.wait_for_function("() => document.querySelectorAll('.lir-history-row').length >= 2",timeout=10000); localized_evidence('reduced-motion',['reduced_motion'])
+                    # Reload the canonical route and require restored player-owned history.
+                    page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('let-it-ride').wait_for(timeout=5000); assert page.locator('.lir-history-row').count()>=2; localized_evidence('route-restored',['route_restored'])
+                    # Return to the lobby for downstream browser cases.
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Execute the integrated Let It Ride browser and visual gate.
+                run_case('BR-LIR-001',['LIR-001','LIR-002','LIR-004','LIR-005'],let_it_ride_acceptance)
                 # Define route_restoration to prove deep links, reload, Back, and Forward behavior.
                 def route_restoration():
                     # Open Roulette directly through its canonical path using the authenticated browser context.

@@ -92,6 +92,9 @@
   "caribbean_stud": [
     "contracts/openapi/caribbean_stud.v1.yaml"
   ],
+  "let_it_ride": [
+    "contracts/openapi/let_it_ride.v1.yaml"
+  ],
   "tests": [],
   "docs": [],
   "contracts": [
