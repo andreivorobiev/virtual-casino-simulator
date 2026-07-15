@@ -1,0 +1,42 @@
+/* Native-only safe-area padding keeps the shared shell clear of notches and system gestures. */
+html[data-mobile-runtime="capacitor"] body {
+  box-sizing: border-box;
+  min-height: 100dvh;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), var(--mobile-keyboard-height, 0px));
+  padding-left: env(safe-area-inset-left, 0px);
+}
+
+/* The native-only status banner remains readable without obscuring the shared wallet or actions. */
+.mobile-native-status {
+  position: sticky;
+  z-index: 10000;
+  top: env(safe-area-inset-top, 0px);
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #d5a42e;
+  background: #211a0d;
+  color: #fff4cf;
+  font: 600 0.95rem/1.35 system-ui, sans-serif;
+  text-align: center;
+}
+
+/* Configuration failures use a stronger treatment because the shared app intentionally stays closed. */
+.mobile-native-status[data-kind="configuration"] {
+  border-color: #ef6a6a;
+  background: #2a1010;
+  color: #ffe8e8;
+}
+
+/* Hidden native status content must not reserve space above the shared application. */
+.mobile-native-status[hidden] {
+  display: none;
+}
+
+/* Keyboard-open state keeps focused fields visible within the dynamic native viewport. */
+html[data-mobile-keyboard="open"] body {
+  min-height: calc(100dvh - var(--mobile-keyboard-height, 0px));
+  scroll-padding-bottom: calc(var(--mobile-keyboard-height, 0px) + 1rem);
+}
