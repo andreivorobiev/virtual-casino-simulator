@@ -1,6 +1,6 @@
 {
   "module": "docs",
-  "version": "1.13.0",
+  "version": "1.14.0",
   "paths": [
     "docs/",
     "CODEX_START_HERE.md",
