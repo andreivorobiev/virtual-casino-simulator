@@ -274,6 +274,8 @@ def run_mysql_schema_provider_path():
     migration_source = inspect.getsource(storage.MySQLStorageProvider.ensure_ready)
     # Verify pre-#190 tables receive columns, namespace backfill, and the unique index.
     assert "ALTER TABLE casino_ledger" in migration_source and "UPDATE casino_ledger SET action_scope" in migration_source and "CREATE UNIQUE INDEX uq_casino_ledger_action" in migration_source
+    # Verify multi-column SHOW INDEX results are fully consumed before the next statement.
+    assert "action_index_rows = cursor.fetchall()" in migration_source
 
 
 # Exercise real MySQL persistence, domain documents, and concurrent ledger locking.

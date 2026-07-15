@@ -852,8 +852,10 @@ class MySQLStorageProvider(StorageProvider):
                 cursor.execute("UPDATE casino_ledger SET action_scope = COALESCE(NULLIF(game, ''), 'core') WHERE action_scope = ''")
                 # Inspect existing indexes before adding the storage uniqueness constraint.
                 cursor.execute("SHOW INDEX FROM casino_ledger WHERE Key_name = 'uq_casino_ledger_action'")
+                # Consume every indexed-column row so mysql.connector has no unread result.
+                action_index_rows = cursor.fetchall()
                 # Add the unique provider index when upgrading a pre-#190 database.
-                if cursor.fetchone() is None:
+                if not action_index_rows:
                     # Enforce one action key per player and game-or-core namespace at storage level.
                     cursor.execute("CREATE UNIQUE INDEX uq_casino_ledger_action ON casino_ledger (player_id, action_scope, action_key)")
                 # Record the active application schema after all compatible tables exist.
