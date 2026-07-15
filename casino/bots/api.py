@@ -1,6 +1,6 @@
 # AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
 # Import required dependency so this module can use its public functions or constants.
-from casino.bots import profiles, controller
+from casino.bots import profiles, controller, practice_opponents
 
 
 # Define the register function used by this module.
@@ -10,7 +10,7 @@ def register(router):
     # Define the list_bots function used by this module.
     def list_bots(body, query):
         # Return the computed value to the caller.
-        return {"bots": profiles.list_bots(), "capabilities": profiles.capabilities()}
+        return {"bots": profiles.list_bots(), "capabilities": profiles.capabilities(), "practice_opponents": practice_opponents.list_accounts()}
 
     # Attach this decorator so the following function is registered with the framework.
     @router.get(r"/api/v1/bots/capabilities")

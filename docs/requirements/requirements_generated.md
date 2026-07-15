@@ -6,14 +6,14 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.27.0
-- core: 9.5.0
+- application: 9.28.0
+- core: 9.6.0
 - ledger: 9.1.0
 - players: 9.1.0
-- bots: 1.0.0
+- bots: 1.1.0
 - autoplay: 1.1.1
 - audio: 9.1.1
-- admin: 1.2.5
+- admin: 1.3.0
 - roulette: 9.3.0
 - slots: 9.1.0
 - blackjack: 9.1.0
@@ -43,9 +43,9 @@ Historical source baseline: 9.1.0
 - let_it_ride: 1.0.0
 - casino_holdem: 1.0.0
 - joker_poker: 1.0.0
-- tests: 1.30.0
-- docs: 1.29.0
-- contracts: 1.24.0
+- tests: 1.31.0
+- docs: 1.30.0
+- contracts: 1.25.0
 - tooling: 1.4.0
 - commenting_policy: 1.0.0
 
@@ -350,6 +350,9 @@ Historical source baseline: 9.1.0
 - **BOT-006** (Bots) - PASS: Bot strategy assignment is visible and editable from Admin.
 - **BOT-007** (Bots) - PASS: Bot actions are logged with bot_id, player_id, game_id, round context, and strategy_id where applicable.
 - **BOT-008** (Bots) - PASS: Unsupported games hide bot controllers rather than showing incompatible bot settings.
+- **BOT-009** (Bots) - PASS: Server-managed practice opponents are real funded bot player accounts whose escrow, refunds, payouts, and other token movements use the shared ledger.
+- **BOT-010** (Bots) - PASS: Practice-opponent ledger events identify the bot account, game, round, controller action, action key, component, and owning human session context.
+- **BOT-011** (Bots) - PASS: Practice-opponent funding and settlement action keys replay safely across retries, restarts, threads, and processes, while changed reuse fails closed.
 - **AUDIO-001** (Audio) - PASS: Sound configuration is global and not owned by any game page.
 - **AUDIO-002** (Audio) - PASS: Full Sound and Voice settings live under /admin.
 - **AUDIO-003** (Audio) - PASS: Game pages may trigger sound events but do not render full sound settings panels.
@@ -381,6 +384,7 @@ Historical source baseline: 9.1.0
 - **ADMIN-020** (Admin) - PASS: Admin Autoplay tab shows sessions and Stop All.
 - **ADMIN-021** (Admin) - PASS: Admin Requirements tab shows requirement coverage.
 - **ADMIN-022** (Admin) - PASS: Admin Tests tab shows latest test results.
+- **ADMIN-023** (Admin) - PASS: Admin lists allocated practice-opponent accounts, can idempotently seed their real wallets, and shows their append-only ledger activity.
 - **ROU-051** (Roulette) - PASS: Roulette wheel must not default to a fake zero result when no spin has occurred.
 - **ROU-052** (Roulette) - PASS: Roulette wheel shows the latest actual spin result after settlement.
 - **ROU-053** (Roulette) - PASS: Roulette wheel selected pocket and backend spin result must match.

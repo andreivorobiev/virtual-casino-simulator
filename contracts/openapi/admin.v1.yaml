@@ -157,6 +157,17 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiEnvelope'
+  /api/v1/admin/bots/practice-opponents/fund:
+    post:
+      summary: Fund or replay the fixed server-managed practice-opponent accounts
+      operationId: admin_POST_api_v1_admin_bots_practice_opponents_fund
+      responses:
+        '200':
+          description: Standard API envelope with account, ledger event, replay, and Admin activity data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
 components:
   schemas:
     ApiEnvelope:

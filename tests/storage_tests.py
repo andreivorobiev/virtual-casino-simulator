@@ -28,6 +28,29 @@ def _json_action_worker(args):
     return event["ledger_id"], replayed
 
 
+# Execute one managed practice-opponent action in a separately spawned process.
+def _practice_opponent_worker(args):
+    # Import services inside the child process so Windows spawn uses clean module state.
+    from casino.bots import practice_opponents
+    # Import storage helpers for isolated provider injection in this process.
+    from casino.core import storage
+
+    # Unpack the serializable packet shared by all duplicate callers.
+    data_root, player_id, action_key = args
+    # Point this child exclusively at the temporary shared JSON store.
+    storage.set_provider_for_tests(storage.JsonStorageProvider(Path(data_root)))
+    # Start protected logic so provider injection is always released.
+    try:
+        # Execute the same controller debit through the production public seam.
+        result = practice_opponents.transact(player_id, 25, "PRACTICE_OPPONENT_ESCROW_DEBIT", action_key, "practice-cross-process", "debit", "reserve_stack", session_owner_id="human-cross-process", component="escrow")
+        # Return immutable proof fields to the parent process.
+        return result["event"]["ledger_id"], result["replayed"]
+    # Always clear process-local provider injection before exit.
+    finally:
+        # Restore normal provider selection for any later child work.
+        storage.set_provider_for_tests(None)
+
+
 # Execute one MySQL action call in a separately spawned process.
 def _mysql_action_worker(index):
     # Import storage inside the child process so each call opens independent connections.
@@ -229,6 +252,99 @@ def run_json_action_idempotency():
         recovered_balance = next(row["balance"] for row in recovered.load_players(players.default_players)["players"] if row["player_id"] == "human")
         # Require one seven-token debit after restart recovery.
         assert recovered_balance == starting_balance - 7
+
+
+# Prove funded practice-opponent accounts settle only through durable ledger actions.
+def run_practice_opponent_accounting():
+    # Import the approved account controller and core storage services lazily.
+    from casino.bots import practice_opponents
+    # Import player defaults and provider injection for isolated evidence.
+    from casino.core import players, storage
+    # Import the standard conflict raised by changed action-key reuse.
+    from casino.errors import ConflictError
+
+    # Create a temporary store so no user-owned runtime data can be touched.
+    with tempfile.TemporaryDirectory() as tmp:
+        # Build the isolated provider path shared by parent and child processes.
+        data_root = Path(tmp) / "practice-data"
+        # Seed canonical human and bot player accounts in the isolated store.
+        provider = storage.JsonStorageProvider(data_root)
+        # Persist defaults before controller reads or ledger actions begin.
+        provider.save_players(players.default_players())
+        # Inject the isolated provider into public services in this process.
+        storage.set_provider_for_tests(provider)
+        # Start protected logic so provider injection is always cleared.
+        try:
+            # Record the human balance to prove controller actions never reach it.
+            human_before = players.get_player("human")["balance"]
+            # Fund all three real bot wallets through fixed ledger identities.
+            first_funding = practice_opponents.fund_accounts()
+            # Replay the same funding request without minting another token.
+            replay_funding = practice_opponents.fund_accounts()
+            # Require one commit then one replay for every allocated account.
+            assert all(not row["replayed"] for row in first_funding) and all(row["replayed"] for row in replay_funding)
+            # Verify each account has its default balance plus one fixed funding credit.
+            assert all(players.get_player(player_id)["balance"] == 105_000 for player_id in practice_opponents.PRACTICE_ACCOUNT_IDS)
+            # Reserve one opponent stack for the first authenticated owner.
+            debit = practice_opponents.transact("bot_1", 50, "PRACTICE_OPPONENT_ESCROW_DEBIT", "practice:human-a:round-1:bot-1:escrow", "round-1", "debit", "reserve_stack", session_owner_id="human-a", component="escrow")
+            # Replay the exact reserve command without a second debit.
+            debit_replay = practice_opponents.transact("bot_1", 50, "PRACTICE_OPPONENT_ESCROW_DEBIT", "practice:human-a:round-1:bot-1:escrow", "round-1", "debit", "reserve_stack", session_owner_id="human-a", component="escrow")
+            # Require immutable event replay and an unchanged bot balance.
+            assert debit_replay["replayed"] is True and debit_replay["event"]["ledger_id"] == debit["event"]["ledger_id"] and players.get_player("bot_1")["balance"] == 104_950
+            # Reject changed amount reuse before another wallet mutation.
+            try:
+                # Attempt to reuse the escrow identity with a different exposure.
+                practice_opponents.transact("bot_1", 55, "PRACTICE_OPPONENT_ESCROW_DEBIT", "practice:human-a:round-1:bot-1:escrow", "round-1", "debit", "reserve_stack", session_owner_id="human-a", component="escrow")
+            # Accept only the storage-enforced semantic conflict.
+            except ConflictError:
+                # Continue after proving the changed request failed closed.
+                pass
+            # Fail if the provider accepted a conflicting settlement identity.
+            else:
+                # Surface missing storage uniqueness as a focused failure.
+                raise AssertionError("Changed practice-opponent action reuse did not conflict")
+            # Credit the unused stack through a distinct refund identity.
+            refund = practice_opponents.transact("bot_1", 20, "PRACTICE_OPPONENT_ESCROW_REFUND", "practice:human-a:round-1:bot-1:refund", "round-1", "credit", "refund_stack", session_owner_id="human-a", component="refund")
+            # Credit a showdown payout through a distinct settlement identity.
+            payout = practice_opponents.transact("bot_1", 80, "PRACTICE_OPPONENT_PAYOUT", "practice:human-a:round-1:bot-1:payout", "round-1", "credit", "settle_payout", session_owner_id="human-a", component="payout")
+            # Require controller audit dimensions on every movement family.
+            for result in (debit, refund, payout):
+                # Read standardized details from the immutable ledger event.
+                details = result["event"]["details"]
+                # Verify bot, game, round, owner, action, and component traceability.
+                assert details["controller_kind"] == "practice_opponent" and details["bot_id"] == "bot_1" and result["event"]["game"] == practice_opponents.TEXAS_HOLDEM_PRACTICE_GAME and result["event"]["round_id"] == "round-1" and details["session_owner_id"] == "human-a" and details["practice_action_key"] and details["component"]
+            # Execute a separate action identity for a second human session owner.
+            second_owner = practice_opponents.transact("bot_1", 10, "PRACTICE_OPPONENT_ESCROW_DEBIT", "practice:human-b:round-2:bot-1:escrow", "round-2", "debit", "reserve_stack", session_owner_id="human-b", component="escrow")
+            # Prove the second owner has independent round and audit identity.
+            assert second_owner["event"]["round_id"] == "round-2" and second_owner["event"]["details"]["session_owner_id"] == "human-b"
+            # Reconstruct the provider to prove restart retains action identities.
+            restarted = storage.JsonStorageProvider(data_root)
+            # Point the service at the reconstructed provider instance.
+            storage.set_provider_for_tests(restarted)
+            # Replay the first debit after provider reconstruction.
+            after_restart = practice_opponents.transact("bot_1", 50, "PRACTICE_OPPONENT_ESCROW_DEBIT", "practice:human-a:round-1:bot-1:escrow", "round-1", "debit", "reserve_stack", session_owner_id="human-a", component="escrow")
+            # Require the original immutable event after restart.
+            assert after_restart["replayed"] is True and after_restart["event"]["ledger_id"] == debit["event"]["ledger_id"]
+            # Build 25 same-action calls for independent operating-system processes.
+            packets = [(str(data_root), "bot_2", "practice:human-cross-process:round:bot-2:escrow") for _ in range(25)]
+            # Execute every duplicate against the same real funded bot account.
+            with ProcessPoolExecutor(max_workers=8) as executor:
+                # Materialize results so every child failure reaches this test.
+                process_results = list(executor.map(_practice_opponent_worker, packets))
+            # Require one ledger id and exactly one new cross-process debit commit.
+            assert len({ledger_id for ledger_id, _ in process_results}) == 1 and sum(1 for _, replayed in process_results if replayed is False) == 1
+            # Restore the reconstructed provider after child processes finish.
+            storage.set_provider_for_tests(storage.JsonStorageProvider(data_root))
+            # Read Admin activity from append-only ledger evidence only.
+            activity = practice_opponents.recent_activity(100)
+            # Require funding, debit, refund, payout, both owners, and cross-process evidence.
+            assert len(activity) == 8 and {row["details"].get("session_owner_id") for row in activity} >= {"human-a", "human-b", "human-cross-process"}
+            # Prove all human wallets remain untouched by opponent funding and settlement.
+            assert players.get_player("human")["balance"] == human_before
+        # Always clear provider injection after isolated accounting evidence.
+        finally:
+            # Restore normal runtime provider selection for later tests.
+            storage.set_provider_for_tests(None)
 
 
 # Define the run_mysql_schema_provider_path function used by the storage test runner.

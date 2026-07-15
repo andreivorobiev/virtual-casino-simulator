@@ -8,11 +8,14 @@
     "contracts/openapi/admin-users.v2.yaml",
     "contracts/openapi/auth.v2.yaml"
   ],
-  "bots": [],
+  "bots": [
+    "contracts/openapi/bots.v1.yaml"
+  ],
   "autoplay": [],
   "audio": [],
   "admin": [
-    "contracts/openapi/admin-users.v2.yaml"
+    "contracts/openapi/admin-users.v2.yaml",
+    "contracts/openapi/admin.v1.yaml"
   ],
   "roulette": [
     "contracts/openapi/roulette.v1.yaml"
