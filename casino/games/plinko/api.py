@@ -1,4 +1,4 @@
-"""Additive v1 route registration for the isolated Plinko proposal."""
+"""Additive v1 route registration for catalog-integrated Plinko."""
 
 # Import the shared authenticated player resolver so session binding always wins.
 from casino.core.request_player import resolve_authenticated_player

@@ -1,6 +1,6 @@
-"""Server-authoritative Plinko rules proposed by GitHub issue #136.
+"""Server-authoritative Plinko rules accepted for GitHub issue #136.
 
-Proposed requirements: PLINKO-001 through PLINKO-005, pending #77 allocation.
+Permanent requirements: PLINKO-001 through PLINKO-005.
 """
 
 # Import hashing so round ids are stable without exposing raw player ids.
@@ -15,7 +15,7 @@ from casino.errors import ConflictError, ValidationError
 
 # Identify every state document, API payload, and ledger event owned by Plinko.
 GAME_ID = "plinko"
-# Fix the proposal rules profile to an eight-row pegboard.
+# Fix the accepted rules profile to an eight-row pegboard.
 ROWS = 8
 # Publish transparent bucket multipliers from left edge to right edge.
 MULTIPLIERS = (0.2, 0.5, 1.0, 1.5, 2.0, 5.0, 2.0, 1.5, 1.0)

@@ -1,4 +1,4 @@
-"""Session isolation and exactly-once service tests for proposed Plinko."""
+"""Session isolation and exactly-once service tests for integrated Plinko."""
 
 # Import deep-copy support so fake persistence matches JSON document boundaries.
 import copy

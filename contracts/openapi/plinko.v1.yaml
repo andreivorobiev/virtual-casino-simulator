@@ -1,15 +1,15 @@
 openapi: 3.0.3
 info:
-  title: Virtual Casino Plinko API Proposal
-  version: v1
+  title: Virtual Casino Plinko API
+  version: 1.0.0
   description: >-
-    Additive issue #136 contract proposal for authenticated, server-authoritative
-    Plinko drops. Shared compatibility registration remains owned by #77.
+    Accepted additive issue #136 contract for authenticated, server-authoritative
+    Plinko drops integrated through the shared #77 catalog lane.
 tags:
   - name: Plinko
     description: Player-scoped pegboard drops with ledger-only settlement.
 
-# Define only additive frozen-v1 game endpoints owned by this proposal.
+# Define only the accepted additive frozen-v1 game endpoints.
 paths:
   /api/v1/games/plinko/state:
     get:

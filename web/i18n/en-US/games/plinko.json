@@ -19,7 +19,7 @@
   "phases.settled": "Bucket {bucket}, {multiplier}x",
   "results.settled": "Committed bucket {bucket} at {multiplier}x returned {payout}.",
   "rules.multipliers": "Every bucket shows its multiplier before play.",
-  "rules.rows": "The proposal profile uses {rows} peg rows.",
+  "rules.rows": "This table uses {rows} peg rows.",
   "rules.serverPath": "The backend commits the left/right path and outcome; animation only replays it.",
   "rules.title": "How Plinko works",
   "stage.bucketAria": "Bucket {bucket}, multiplier {multiplier}",

@@ -1,4 +1,4 @@
-// Statically verify the isolated issue #136 frontend and paired locale resources.
+// Statically verify the catalog-integrated issue #136 frontend and paired locale resources.
 
 // Import strict assertions for dependency-free deterministic failures.
 import assert from 'node:assert/strict';
@@ -49,6 +49,8 @@ assert.match(source, /data-testid="plinko"/);
 assert.doesNotMatch(source, /withCurrentPlayer|currentPlayerPath|player_id/);
 // Verify unresolved drop actions retain one identity until success.
 assert.match(source, /pendingDrop = pendingDrop \|\| \{ actionId: nextActionId\(\), wager \}/);
+// Verify wager blur does not replace the primary action before its click dispatches.
+assert.match(source, /wagerInput\.onchange = \(\) => \{ wager = wagerValue\(wagerInput\.value\); \};/);
 // Verify committed path replay comes from response data instead of client randomness.
 assert.match(source, /data-path=/);
 // Verify no browser randomness is used except action-id generation.

@@ -227,7 +227,7 @@ function bindEvents() {
   // Read the wager control once from the newly rendered rail.
   const wagerInput = root?.querySelector('#plinko-wager');
   // Preserve valid wager edits without moving fake tokens.
-  if (wagerInput) wagerInput.onchange = () => { wager = wagerValue(wagerInput.value); render(); };
+  if (wagerInput) wagerInput.onchange = () => { wager = wagerValue(wagerInput.value); };
   // Read the stable drop action control.
   const dropButton = root?.querySelector('[data-action="drop"]');
   // Prepare or retry the exact same drop identity and immutable wager.

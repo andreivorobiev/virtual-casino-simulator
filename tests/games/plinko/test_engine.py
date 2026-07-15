@@ -1,4 +1,4 @@
-"""Deterministic rule tests for proposed Plinko issue #136."""
+"""Deterministic rule tests for integrated Plinko issue #136."""
 
 # Import the dependency-free standard test runner.
 import unittest

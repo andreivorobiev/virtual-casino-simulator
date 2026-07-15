@@ -1,4 +1,4 @@
-"""Session-bound, ledger-only orchestration for isolated Plinko."""
+"""Session-bound, ledger-only orchestration for catalog-integrated Plinko."""
 
 # Import canonical JSON encoding for semantic action fingerprints.
 import json
