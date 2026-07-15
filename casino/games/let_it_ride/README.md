@@ -2,7 +2,7 @@
 
 Issue: [#134](https://github.com/andreivorobiev/virtual-casino-simulator/issues/134)
 
-This isolated module implements Let It Ride as a staged five-card poker table. The player starts each round with three equal play-token wagers, receives three player cards, then makes two decisions to either pull one eligible wager back or let the remaining wagers ride before the two community cards complete the hand.
+This catalog-integrated module implements Let It Ride as a staged five-card poker table. The player starts each round with three equal play-token wagers, receives three player cards, then makes two decisions to either pull one eligible wager back or let the remaining wagers ride before the two community cards complete the hand.
 
 The engine uses `casino.core.cards` and `casino.core.poker` from #96. A seed exists only as an injected Python test hook; the API never accepts caller-controlled seeds.
 
@@ -28,4 +28,4 @@ Let It Ride is distinct from the existing poker/card modules because its rule nu
 - `POST /api/v1/games/let-it-ride/rounds/{round_id}/first-decision`
 - `POST /api/v1/games/let-it-ride/rounds/{round_id}/second-decision`
 
-The handlers can be registered into an isolated `casino.router.Router` for focused tests. Global registration remains owned by #77.
+The handlers can be registered into an isolated `casino.router.Router` for focused tests and are discovered globally from `modules/let_it_ride.json`.

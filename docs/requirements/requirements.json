@@ -6669,7 +6669,7 @@
       "module": "Core",
       "description": "Every game API request resolves its player through one shared authenticated-session resolver before route dispatch.",
       "status": "PASS",
-      "api_tests": ["API-CATALOG-001", "API-PRIVATE-SESSION-001", "API-MHVP-001", "API-CW-001", "API-BIG-SIX-001", "API-RD-001", "API-DT-001", "API-HILO-001", "API-TCP-001", "API-JOBVP-001", "API-DWVP-001", "API-SCRATCH-001", "API-SIC-BO-001", "API-CHUCK-001", "API-CRAPS-001", "API-CAA-001", "API-OU7-001", "API-PLINKO-001", "API-FAN-TAN-001", "API-AB-001", "API-AD-001", "API-CS-001"],
+      "api_tests": ["API-CATALOG-001", "API-PRIVATE-SESSION-001", "API-MHVP-001", "API-CW-001", "API-BIG-SIX-001", "API-RD-001", "API-DT-001", "API-HILO-001", "API-TCP-001", "API-JOBVP-001", "API-DWVP-001", "API-SCRATCH-001", "API-SIC-BO-001", "API-CHUCK-001", "API-CRAPS-001", "API-CAA-001", "API-OU7-001", "API-PLINKO-001", "API-FAN-TAN-001", "API-AB-001", "API-AD-001", "API-CS-001", "API-LIR-001"],
       "browser_tests": [],
       "implementation_files": ["casino/core/request_player.py", "casino/router.py", "casino/app.py"],
       "introduced_in": "wave0-catalog-governance",
@@ -7302,6 +7302,21 @@
     },
     {
       "id": "CS-005", "module": "Tests", "description": "Catalog, contract, browser, and long-suite discovery include Caribbean Stud with requirement, module, version, and visual traceability.", "status": "PASS", "api_tests": ["API-CATALOG-001", "LONG-SUITE-100"], "browser_tests": ["BR-CATALOG-DISCOVERY-001", "BR-CS-001"], "implementation_files": ["modules/caribbean_stud.json", "modules/module-manifest.json", "contracts/compatibility/module-api-matrix.json", "tests/game_drivers/caribbean_stud.py", "tests/visual/visual_matrix.json", "tests/run_tests.py"], "introduced_in": "game-expansion-caribbean-stud", "changed_in": "game-expansion-caribbean-stud", "notes": "Descriptor sort order 270 and the catalog-discovered long driver are canonical."
+    },
+    {
+      "id": "LIR-001", "module": "Let It Ride", "description": "Three equal base-wager units fund a five-card poker round with three player cards and two staged ride-or-pull decisions before community-card settlement beginning at a pair of tens.", "status": "PASS", "api_tests": ["API-LIR-001"], "browser_tests": ["BR-LIR-001"], "implementation_files": ["casino/games/let_it_ride/engine.py", "web/games/let_it_ride.js"], "introduced_in": "game-expansion-let-it-ride", "changed_in": "game-expansion-let-it-ride", "notes": "Issue #77 allocates the permanent distinct rules requirement for issue #134."
+    },
+    {
+      "id": "LIR-002", "module": "Let It Ride", "description": "Authenticated sessions own private reload-safe decision rounds, hidden community cards, durable receipts, settled history, and canonical route restoration.", "status": "PASS", "api_tests": ["API-LIR-001", "API-WALLET-RESTART-001"], "browser_tests": ["BR-LIR-001"], "implementation_files": ["casino/games/let_it_ride/api.py", "web/app.js", "tests/run_tests.py"], "introduced_in": "game-expansion-let-it-ride", "changed_in": "game-expansion-let-it-ride", "notes": "Session context overrides caller player ids, unrevealed community cards remain private, and committed results survive reload and process restart."
+    },
+    {
+      "id": "LIR-003", "module": "Let It Ride", "description": "Opening wager debits, pull refunds, and returned-token payout credits use the shared ledger exactly once under durable action identities.", "status": "PASS", "api_tests": ["API-LIR-001"], "browser_tests": [], "implementation_files": ["casino/games/let_it_ride/api.py", "casino/core/ledger.py", "tests/games/let_it_ride/test_api.py", "tests/run_tests.py"], "introduced_in": "game-expansion-let-it-ride", "changed_in": "game-expansion-let-it-ride", "notes": "No game code mutates balances directly and conflicting retries fail closed."
+    },
+    {
+      "id": "LIR-004", "module": "Application", "description": "Let It Ride supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.", "status": "PASS", "api_tests": [], "browser_tests": ["BR-LIR-001"], "implementation_files": ["web/games/let_it_ride.js", "web/i18n/en-US/games/let_it_ride.json", "web/i18n/ru-RU/games/let_it_ride.json", "tests/visual/visual_matrix.json", "tests/run_tests.py"], "introduced_in": "game-expansion-let-it-ride", "changed_in": "game-expansion-let-it-ride", "notes": "Evidence covers both locales and every governed viewport."
+    },
+    {
+      "id": "LIR-005", "module": "Tests", "description": "Catalog, contract, browser, and long-suite discovery include Let It Ride with requirement, module, version, and visual traceability.", "status": "PASS", "api_tests": ["API-CATALOG-001", "LONG-SUITE-100"], "browser_tests": ["BR-CATALOG-DISCOVERY-001", "BR-LIR-001"], "implementation_files": ["modules/let_it_ride.json", "modules/module-manifest.json", "contracts/compatibility/module-api-matrix.json", "tests/game_drivers/let_it_ride.py", "tests/visual/visual_matrix.json", "tests/run_tests.py"], "introduced_in": "game-expansion-let-it-ride", "changed_in": "game-expansion-let-it-ride", "notes": "Descriptor sort order 280 and the catalog-discovered long driver are canonical."
     }
   ]
 }

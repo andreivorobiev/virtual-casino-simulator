@@ -1,7 +1,7 @@
 """Deterministic Let It Ride rules without transport or wallet side effects.
 
 Requirements: CARD-001, POKER-001, LEDGER-005, LEDGER-006, LEDGER-007,
-LEDGER-023, SESSION-005, and LIR-PROPOSED-001 through LIR-PROPOSED-004.
+LEDGER-023, SESSION-005, and LIR-001 through LIR-004.
 """
 
 # Import finite-number checks for ledger-compatible wager validation.

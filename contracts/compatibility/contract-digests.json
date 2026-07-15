@@ -26,6 +26,7 @@
   "contracts/openapi/andar_bahar.v1.yaml": "14ea022ed9be9f25896857012de154600dffe271c8cb9bc67d7c401acadfd7df",
   "contracts/openapi/acey_deucey.v1.yaml": "0b9e8fb45e72af5c32220c9fcadc1884e870a1a5b99a018873c785f8385560e1",
   "contracts/openapi/caribbean_stud.v1.yaml": "d8c156229a112212b659a9ed1b07deef2ac189892628988e38e89aed815676cf",
+  "contracts/openapi/let_it_ride.v1.yaml": "089076a95d0fdd4e08fcdae23a7dfe2f22cfd7cc80c1a766bb9ffe383c32b6ae",
   "contracts/openapi/keno.v1.yaml": "3d3af7c097f3e82a4082961724cf11797be9a948a38dcb3c1765db3086f54f2d",
   "contracts/openapi/ledger.v1.yaml": "806bc3c22155d2c99d7551c6f97cb9987e3f84297d6055e8dd1e45d341e31ab1",
   "contracts/openapi/multi_hand_video_poker.v1.yaml": "85b3ef2cd12b03d19b34564b2aeac4fbe0e8dcee7073ffb8350b058d5217983b",

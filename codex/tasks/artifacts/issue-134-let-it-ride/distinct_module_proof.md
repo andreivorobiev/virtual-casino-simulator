@@ -1,6 +1,6 @@
 # Issue #134 Distinct Module Proof
 
-Decision: promote to isolated draft implementation slice.
+Decision: promote through #77 as a canonical distinct game module.
 
 Evidence:
 
@@ -11,6 +11,6 @@ Evidence:
   - Casino War, Dragon Tiger, and Hi-Lo resolve high-card or higher/lower comparisons, not poker rankings.
   - Baccarat and Blackjack have fixed banking/drawing procedures and do not expose two pullback decisions on three equal wagers.
 - The implementation uses shared card and poker primitives from `casino.core.cards` and `casino.core.poker`, but imports no existing game module.
-- The descriptor is parked as proposal-only and does not claim catalog count acceptance until #77 integrates shared files.
+- The canonical descriptor, permanent requirements, central tests, and visual row are integrated by #77 after distinctness and real-backend acceptance passed.
 
 Countability: distinct and countable pending #77 shared catalog/router/manifest/requirements/visual-matrix/test-discovery integration.

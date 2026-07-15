@@ -1,0 +1,17 @@
+{
+  "module": "let_it_ride",
+  "version": "1.0.0",
+  "paths": ["casino/games/let_it_ride/", "web/games/let_it_ride.js", "web/i18n/en-US/games/let_it_ride.json", "web/i18n/ru-RU/games/let_it_ride.json"],
+  "requirements_prefixes": ["LIR"],
+  "contracts": ["contracts/openapi/let_it_ride.v1.yaml"],
+  "game": {
+    "id": "let_it_ride", "sort_order": 280, "route": "/games/let_it_ride", "label": "Let It Ride", "category": "table", "categories": ["table", "cards", "poker", "strategy"],
+    "backend": {"register": "casino.games.let_it_ride.api:register"},
+    "frontend": {"module": "./games/let_it_ride.js", "export": "LetItRideGame", "ready_testid": "let-it-ride", "i18n_domain": "games/let_it_ride", "i18n_probe": "controls.ride"},
+    "tests": {"long_driver": "tests.game_drivers.let_it_ride:play"},
+    "translations": {"ru-RU": {"label": "Лет Ит Райд", "kicker": "Покерный стол", "description": "Начните с трёх равных ставок, забирайте доступные ставки на двух этапах или оставляйте их до финальной покерной комбинации.", "tags": ["Карты", "Покер", "Журнал жетонов"]}},
+    "lobby": {"featured": false, "wide": false, "art_class": "let-it-ride-art", "symbol": "LIR", "kicker": "Staged poker", "description": "Commit three equal play-token wagers, pull back up to two, and settle the remaining units against a five-card poker paytable.", "tags": ["Cards", "Poker", "Ledger-backed"]}
+  },
+  "depends_on": ["core", "ledger", "players"],
+  "may_not_depend_on": ["roulette", "slots", "blackjack", "baccarat", "keno", "bingo", "multi_hand_video_poker", "casino_war", "big_six_wheel", "red_dog", "dragon_tiger", "hi_lo", "three_card_poker", "jacks_or_better_video_poker", "deuces_wild_video_poker", "scratch_cards", "sic_bo", "chuck_a_luck", "craps", "crown_and_anchor", "over_under_7", "plinko", "fan_tan", "andar_bahar", "acey_deucey", "caribbean_stud"]
+}

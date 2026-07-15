@@ -1,4 +1,4 @@
-"""Isolated Let It Ride module for GitHub issue #134."""
+"""Catalog-integrated Let It Ride module for GitHub issue #134."""
 
 # Re-export the stable game identifier for focused tests and integration metadata.
 from casino.games.let_it_ride.engine import GAME_ID

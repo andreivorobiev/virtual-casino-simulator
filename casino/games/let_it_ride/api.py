@@ -1,8 +1,8 @@
 """Session-bound Let It Ride API adapter with replay-safe ledger settlement.
 
 Requirements: CORE-009, CORE-011, CORE-012, SESSION-005, LEDGER-005,
-LEDGER-006, LEDGER-007, LEDGER-009, LEDGER-023, and LIR-PROPOSED-001
-through LIR-PROPOSED-004.
+LEDGER-006, LEDGER-007, LEDGER-009, LEDGER-023, and LIR-001 through
+LIR-003.
 """
 
 # Import detached-copy support so rejected prepared actions restore exact prior state.
@@ -337,7 +337,7 @@ def request_player_id(body: dict, query: dict, context: dict | None = None) -> s
     return require_player_id({"player_id": player_id})
 
 
-# Register isolated additive v1 routes for focused tests and later catalog discovery.
+# Register additive v1 routes for focused tests and catalog discovery.
 def register(router, controller=None):
     # Use the production controller unless an isolated test injects in-memory ports.
     service = controller or LetItRideController()
