@@ -6,9 +6,9 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.26.0
-- core: 9.4.0
-- ledger: 9.0.2
+- application: 9.27.0
+- core: 9.5.0
+- ledger: 9.1.0
 - players: 9.1.0
 - bots: 1.0.0
 - autoplay: 1.1.1
@@ -43,10 +43,10 @@ Historical source baseline: 9.1.0
 - let_it_ride: 1.0.0
 - casino_holdem: 1.0.0
 - joker_poker: 1.0.0
-- tests: 1.29.0
-- docs: 1.28.0
+- tests: 1.30.0
+- docs: 1.29.0
 - contracts: 1.24.0
-- tooling: 1.3.0
+- tooling: 1.4.0
 - commenting_policy: 1.0.0
 
 ## Requirements
@@ -96,6 +96,7 @@ Historical source baseline: 9.1.0
 - **LEDGER-023** (Ledger) - PASS: All game settlement payouts credit after results are known.
 - **LEDGER-024** (Ledger) - PASS: Ledger is visible in the admin console.
 - **LEDGER-025** (Ledger) - PASS: Player balances are visible in the main UI.
+- **LEDGER-026** (Ledger) - PASS: Ledger money actions can reserve a canonical player-and-scope action key, replay the original event for identical semantics, and reject changed key reuse without another balance mutation.
 - **LOG-001** (Logging) - PASS: Application log is written as JSONL.
 - **LOG-002** (Logging) - PASS: Error log is written as JSONL.
 - **LOG-003** (Logging) - PASS: Client/browser log is written as JSONL.
@@ -431,6 +432,8 @@ Historical source baseline: 9.1.0
 - **STORAGE-002** (Storage) - PASS: The storage provider supports users, sessions, terms acceptance, player records, game state, history, settings, and ledger data.
 - **STORAGE-003** (Storage) - PASS: Default local JSON persistence remains available without requiring MySQL configuration.
 - **STORAGE-004** (Storage) - PASS: Runtime storage errors are surfaced through the standard ok/error API envelope.
+- **STORAGE-005** (Storage) - PASS: JSON and MySQL providers enforce one committed ledger action per player, game-or-core scope, and action key inside the wallet persistence boundary.
+- **STORAGE-006** (Storage) - PASS: Committed ledger action identities remain exact-once across process concurrency, restart, and a lost response after durable commit.
 - **MYSQL-001** (MySQL) - PASS: A configured MySQL storage provider can bootstrap the approved schema for fresh private beta deployments.
 - **MYSQL-002** (MySQL) - PASS: Ledger-affecting MySQL writes are atomic so token debits, credits, refunds, and winnings remain consistent.
 - **MYSQL-003** (MySQL) - PASS: MySQL support starts from fresh seed/bootstrap data and does not require importing the existing local JSON data set.
@@ -466,6 +469,7 @@ Historical source baseline: 9.1.0
 - **UX-010** (Application) - PASS: The lobby provides accessible search and catalog-derived category navigation that remains usable for the approved 20-game target.
 - **SESSION-005** (Core) - PASS: Every game API request resolves its player through one shared authenticated-session resolver before route dispatch.
 - **TEST-042** (Tests) - PASS: Validators, generic browser discovery, and long suites load every game and its independently owned driver from catalog metadata without a duplicated game allowlist.
+- **TEST-043** (Tests) - PASS: Storage regression tests prove at least 25 duplicate calls per debit, payout, refund, and settlement family, changed-reuse conflicts, restart replay, lost-response recovery, and two-process MySQL uniqueness.
 - **MHVP-001** (Multi-Hand Video Poker) - PASS: Multi-Hand Video Poker deals one common Jacks-or-Better hand and completes 3, 5, or 10 independent result hands from shared hold positions.
 - **MHVP-002** (Multi-Hand Video Poker) - PASS: Authenticated sessions own isolated reload-safe Multi-Hand Video Poker state, hold selections, recent rounds, and canonical route restoration.
 - **MHVP-003** (Multi-Hand Video Poker) - PASS: Each Multi-Hand Video Poker round uses one aggregate ledger wager debit and at most one aggregate payout credit with idempotent retry recovery.

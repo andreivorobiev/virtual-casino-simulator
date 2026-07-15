@@ -31,8 +31,12 @@ CREATE TABLE IF NOT EXISTS casino_ledger (
   amount DECIMAL(18,2) NOT NULL,
   balance_before DECIMAL(18,2) NOT NULL,
   balance_after DECIMAL(18,2) NOT NULL,
+  action_scope VARCHAR(64) NOT NULL DEFAULT '',
+  action_key VARCHAR(191) NULL,
+  action_fingerprint VARCHAR(128) NULL,
   details_json JSON NOT NULL,
   INDEX idx_casino_ledger_player_sequence (player_id, sequence_id),
+  UNIQUE INDEX uq_casino_ledger_action (player_id, action_scope, action_key),
   CONSTRAINT fk_casino_ledger_player FOREIGN KEY (player_id) REFERENCES casino_players(player_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

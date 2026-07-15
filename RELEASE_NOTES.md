@@ -1,5 +1,13 @@
 # Virtual Casino Simulator v9.1.0 Release Notes
 
+## Post-release module addendum: storage action idempotency
+
+- Adds `ledger.transact_once`, `debit_once`, and `credit_once` as additive provider-backed primitives for durable money-action identities.
+- Enforces exact replay and changed-reuse conflict semantics across the JSON and MySQL providers without changing existing `/api/v1` response contracts.
+- Adds a JSON process lock and recoverable committed-action journal for restart and lost-response safety.
+- Adds nullable MySQL action columns and a unique `(player_id, action_scope, action_key)` index in the same transaction boundary as balance and ledger writes.
+- Adds 25-way duplicate-family, restart, conflict, lost-response, static MySQL, and opt-in live two-process MySQL evidence for GitHub issue #190.
+
 ## Release name
 Control Plane + UX Stabilization Release
 

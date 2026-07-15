@@ -6,17 +6,44 @@ on:
 jobs:
   ci:
     runs-on: ubuntu-latest
+    services:
+      # Provide an isolated disposable database for storage-provider transaction evidence.
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: casino_ci_root_password
+          MYSQL_DATABASE: virtual_casino
+          MYSQL_USER: casino_app
+          MYSQL_PASSWORD: casino_ci_app_password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -pcasino_ci_root_password"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      CASINO_STORAGE_PROVIDER: json
+      CASINO_MYSQL_HOST: 127.0.0.1
+      CASINO_MYSQL_PORT: 3306
+      CASINO_MYSQL_USER: casino_app
+      CASINO_MYSQL_PASSWORD: casino_ci_app_password
+      CASINO_MYSQL_DATABASE: virtual_casino
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - name: Install dev requirements
-        run: python -m pip install -r requirements-dev.txt
+        run: |
+          python -m pip install -r requirements-dev.txt
+          python -m pip install -e ".[mysql]"
       - name: Run checks
         run: |
           python -m py_compile run.py verify_rules.py tests/run_tests.py $(find casino scripts -name "*.py")
           python verify_rules.py
+          python tests/run_tests.py --storage
+          python tests/run_tests.py --mysql-live
           python tests/run_tests.py --api
           python scripts/validate_game_catalog.py
           python scripts/validate_requirements.py

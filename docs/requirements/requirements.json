@@ -647,6 +647,18 @@
       "notes": ""
     },
     {
+      "id": "LEDGER-026",
+      "module": "Ledger",
+      "description": "Ledger money actions can reserve a canonical player-and-scope action key, replay the original event for identical semantics, and reject changed key reuse without another balance mutation.",
+      "status": "PASS",
+      "api_tests": ["STORAGE-JSON-IDEMPOTENCY-001", "STORAGE-MYSQL-LIVE-001"],
+      "browser_tests": [],
+      "implementation_files": ["casino/core/ledger.py", "casino/core/storage.py", "tests/storage_tests.py", "tests/run_tests.py"],
+      "introduced_in": "storage-action-idempotency",
+      "changed_in": "storage-action-idempotency",
+      "notes": "Allocated for GitHub issue #190; storage computes the semantic fingerprint rather than trusting a caller-supplied digest."
+    },
+    {
       "id": "LOG-001",
       "module": "Logging",
       "description": "Application log is written as JSONL.",
@@ -6133,6 +6145,30 @@
       "notes": "Storage failures continue through the application error handler and standard response envelope."
     },
     {
+      "id": "STORAGE-005",
+      "module": "Storage",
+      "description": "JSON and MySQL providers enforce one committed ledger action per player, game-or-core scope, and action key inside the wallet persistence boundary.",
+      "status": "PASS",
+      "api_tests": ["STORAGE-JSON-IDEMPOTENCY-001", "STORAGE-MYSQL-001", "STORAGE-MYSQL-LIVE-001"],
+      "browser_tests": [],
+      "implementation_files": ["casino/core/storage.py", "scripts/mysql_schema.sql", "tests/storage_tests.py", ".github/workflows/ci.yml"],
+      "introduced_in": "storage-action-idempotency",
+      "changed_in": "storage-action-idempotency",
+      "notes": "MySQL commits its unique indexed identity, balance update, and ledger row in one transaction; JSON commits a locked action journal before recoverable compatible-file projection."
+    },
+    {
+      "id": "STORAGE-006",
+      "module": "Storage",
+      "description": "Committed ledger action identities remain exact-once across process concurrency, restart, and a lost response after durable commit.",
+      "status": "PASS",
+      "api_tests": ["STORAGE-JSON-IDEMPOTENCY-001", "STORAGE-MYSQL-LIVE-001"],
+      "browser_tests": [],
+      "implementation_files": ["casino/core/storage.py", "tests/storage_tests.py"],
+      "introduced_in": "storage-action-idempotency",
+      "changed_in": "storage-action-idempotency",
+      "notes": "Historical ledger rows remain compatible with nullable action keys; no unsafe action identity is inferred for pre-#190 events."
+    },
+    {
       "id": "MYSQL-001",
       "module": "MySQL",
       "description": "A configured MySQL storage provider can bootstrap the approved schema for fresh private beta deployments.",
@@ -6687,6 +6723,18 @@
       "introduced_in": "wave0-catalog-governance",
       "changed_in": "wave0-catalog-governance",
       "notes": "Allocated for GitHub issue #81; future games add their own module descriptor and driver rather than editing the shared suite runner."
+    },
+    {
+      "id": "TEST-043",
+      "module": "Tests",
+      "description": "Storage regression tests prove at least 25 duplicate calls per debit, payout, refund, and settlement family, changed-reuse conflicts, restart replay, lost-response recovery, and two-process MySQL uniqueness.",
+      "status": "PASS",
+      "api_tests": ["STORAGE-JSON-IDEMPOTENCY-001", "STORAGE-MYSQL-LIVE-001"],
+      "browser_tests": [],
+      "implementation_files": ["tests/storage_tests.py", "tests/run_tests.py", ".github/workflows/ci.yml"],
+      "introduced_in": "storage-action-idempotency",
+      "changed_in": "storage-action-idempotency",
+      "notes": "Allocated for GitHub issue #190 as the provider primitive gate; hostile-client coverage remains tracked separately by issue #191."
     },
     {
       "id": "MHVP-001",
