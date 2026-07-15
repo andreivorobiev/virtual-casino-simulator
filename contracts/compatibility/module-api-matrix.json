@@ -86,6 +86,9 @@
   "andar_bahar": [
     "contracts/openapi/andar_bahar.v1.yaml"
   ],
+  "acey_deucey": [
+    "contracts/openapi/acey_deucey.v1.yaml"
+  ],
   "tests": [],
   "docs": [],
   "contracts": [

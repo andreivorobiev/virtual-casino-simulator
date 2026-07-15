@@ -6669,7 +6669,7 @@
       "module": "Core",
       "description": "Every game API request resolves its player through one shared authenticated-session resolver before route dispatch.",
       "status": "PASS",
-      "api_tests": ["API-CATALOG-001", "API-PRIVATE-SESSION-001", "API-MHVP-001", "API-CW-001", "API-BIG-SIX-001", "API-RD-001", "API-DT-001", "API-HILO-001", "API-TCP-001", "API-JOBVP-001", "API-DWVP-001", "API-SCRATCH-001", "API-SIC-BO-001", "API-CHUCK-001", "API-CRAPS-001", "API-CAA-001", "API-OU7-001", "API-PLINKO-001", "API-FAN-TAN-001", "API-AB-001"],
+      "api_tests": ["API-CATALOG-001", "API-PRIVATE-SESSION-001", "API-MHVP-001", "API-CW-001", "API-BIG-SIX-001", "API-RD-001", "API-DT-001", "API-HILO-001", "API-TCP-001", "API-JOBVP-001", "API-DWVP-001", "API-SCRATCH-001", "API-SIC-BO-001", "API-CHUCK-001", "API-CRAPS-001", "API-CAA-001", "API-OU7-001", "API-PLINKO-001", "API-FAN-TAN-001", "API-AB-001", "API-AD-001"],
       "browser_tests": [],
       "implementation_files": ["casino/core/request_player.py", "casino/router.py", "casino/app.py"],
       "introduced_in": "wave0-catalog-governance",
@@ -7272,6 +7272,21 @@
     },
     {
       "id": "AB-005", "module": "Tests", "description": "Catalog, contract, browser, and long-suite discovery include Andar Bahar with requirement, module, version, and visual traceability.", "status": "PASS", "api_tests": ["API-CATALOG-001", "LONG-SUITE-100"], "browser_tests": ["BR-CATALOG-DISCOVERY-001", "BR-AB-001"], "implementation_files": ["modules/andar_bahar.json", "modules/module-manifest.json", "contracts/compatibility/module-api-matrix.json", "tests/game_drivers/andar_bahar.py", "tests/visual/visual_matrix.json", "tests/run_tests.py"], "introduced_in": "game-expansion-andar-bahar", "changed_in": "game-expansion-andar-bahar", "notes": "Descriptor sort order 250 and the catalog-discovered long driver are canonical."
+    },
+    {
+      "id": "AD-001", "module": "Acey-Deucey", "description": "Two free exposed boundaries precede a pass or wager decision, and strict inside ranks settle at even money while outside and boundary ties lose.", "status": "PASS", "api_tests": ["API-AD-001"], "browser_tests": ["BR-AD-001"], "implementation_files": ["casino/games/acey_deucey/engine.py", "web/games/acey_deucey.js"], "introduced_in": "game-expansion-acey-deucey", "changed_in": "game-expansion-acey-deucey", "notes": "Issue #77 allocates the permanent distinct rules requirement for issue #149."
+    },
+    {
+      "id": "AD-002", "module": "Acey-Deucey", "description": "Authenticated sessions own private reload-safe prepared rounds, hidden third cards, durable receipts, settled history, and canonical route restoration.", "status": "PASS", "api_tests": ["API-AD-001", "API-WALLET-RESTART-001"], "browser_tests": ["BR-AD-001"], "implementation_files": ["casino/games/acey_deucey/api.py", "casino/games/acey_deucey/service.py", "web/app.js", "tests/run_tests.py"], "introduced_in": "game-expansion-acey-deucey", "changed_in": "game-expansion-acey-deucey", "notes": "Session context overrides caller player ids, prepared cards remain private, and committed results survive reload and process restart."
+    },
+    {
+      "id": "AD-003", "module": "Acey-Deucey", "description": "Free deals and passes move no tokens; wager debits and returned-token credits use the shared ledger exactly once under durable action identities.", "status": "PASS", "api_tests": ["API-AD-001"], "browser_tests": [], "implementation_files": ["casino/games/acey_deucey/service.py", "casino/core/ledger.py", "tests/games/acey_deucey/test_api.py", "tests/run_tests.py"], "introduced_in": "game-expansion-acey-deucey", "changed_in": "game-expansion-acey-deucey", "notes": "No game code mutates balances directly and conflicting retries fail closed."
+    },
+    {
+      "id": "AD-004", "module": "Application", "description": "Acey-Deucey supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.", "status": "PASS", "api_tests": [], "browser_tests": ["BR-AD-001"], "implementation_files": ["web/games/acey_deucey.js", "web/i18n/en-US/games/acey_deucey.json", "web/i18n/ru-RU/games/acey_deucey.json", "tests/visual/visual_matrix.json", "tests/run_tests.py"], "introduced_in": "game-expansion-acey-deucey", "changed_in": "game-expansion-acey-deucey", "notes": "Evidence covers both locales and every governed viewport."
+    },
+    {
+      "id": "AD-005", "module": "Tests", "description": "Catalog, contract, browser, and long-suite discovery include Acey-Deucey with requirement, module, version, and visual traceability.", "status": "PASS", "api_tests": ["API-CATALOG-001", "LONG-SUITE-100"], "browser_tests": ["BR-CATALOG-DISCOVERY-001", "BR-AD-001"], "implementation_files": ["modules/acey_deucey.json", "modules/module-manifest.json", "contracts/compatibility/module-api-matrix.json", "tests/game_drivers/acey_deucey.py", "tests/visual/visual_matrix.json", "tests/run_tests.py"], "introduced_in": "game-expansion-acey-deucey", "changed_in": "game-expansion-acey-deucey", "notes": "Descriptor sort order 260 and the catalog-discovered long driver are canonical."
     }
   ]
 }

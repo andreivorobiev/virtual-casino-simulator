@@ -682,6 +682,18 @@ def run_api_tests():
             andar_bahar_state_a=api(base,f'/api/v1/games/andar-bahar/state?player_id={user_b["player_id"]}',auth_token=token_a); andar_bahar_state_b=api(base,f'/api/v1/games/andar-bahar/state?player_id={user_a["player_id"]}',auth_token=token_b); assert andar_bahar_state_a['state']['recent_rounds'][-1]['round_id']==andar_bahar_a['round']['round_id'] and andar_bahar_state_b['state']['recent_rounds'][-1]['round_id']==andar_bahar_b['round']['round_id']
             # Require exactly one wager debit and at most one returned-token credit for the replayed round.
             andar_bahar_ledger_a=api(base,f'/api/v1/players/{user_a["player_id"]}/ledger',auth_token=token_a)['ledger']; andar_bahar_events_a=[row for row in andar_bahar_ledger_a if row.get('game')=='andar_bahar' and row.get('round_id')==andar_bahar_a['round']['round_id']]; assert sum(row.get('transaction_type')=='ANDAR_BAHAR_WAGER_DEBIT' for row in andar_bahar_events_a)==1 and sum(row.get('transaction_type')=='ANDAR_BAHAR_PAYOUT_CREDIT' for row in andar_bahar_events_a)<=1
+            # Prepare two session-bound Acey-Deucey rounds while hostile body identities challenge ownership.
+            acey_deucey_deal_a=api(base,'/api/v1/games/acey-deucey/rounds','POST',{'player_id':user_b['player_id'],'action_id':'wallet-acey-deucey-deal-a'},auth_token=token_a); acey_deucey_deal_b=api(base,'/api/v1/games/acey-deucey/rounds','POST',{'player_id':user_a['player_id'],'action_id':'wallet-acey-deucey-deal-b'},auth_token=token_b)
+            # Settle each private prepared round through an independent wagered action.
+            acey_deucey_a=api(base,f'/api/v1/games/acey-deucey/rounds/{acey_deucey_deal_a["round"]["round_id"]}/play','POST',{'player_id':user_b['player_id'],'action_id':'wallet-acey-deucey-play-a','wager':1},auth_token=token_a); acey_deucey_b=api(base,f'/api/v1/games/acey-deucey/rounds/{acey_deucey_deal_b["round"]["round_id"]}/play','POST',{'player_id':user_a['player_id'],'action_id':'wallet-acey-deucey-play-b','wager':1},auth_token=token_b)
+            # Replay one exact play and reject changed wager meaning under the same action identity.
+            acey_deucey_a_replay=api(base,f'/api/v1/games/acey-deucey/rounds/{acey_deucey_deal_a["round"]["round_id"]}/play','POST',{'player_id':user_b['player_id'],'action_id':'wallet-acey-deucey-play-a','wager':1},auth_token=token_a); acey_deucey_conflict=api(base,f'/api/v1/games/acey-deucey/rounds/{acey_deucey_deal_a["round"]["round_id"]}/play','POST',{'player_id':user_b['player_id'],'action_id':'wallet-acey-deucey-play-a','wager':2},ok=False,auth_token=token_a)
+            # Require hidden prepared results, bound ownership, independent rounds, exact replay, and conflict closure.
+            assert not acey_deucey_deal_a['round'].get('third_card') and acey_deucey_a['round']['player_id']==user_a['player_id'] and acey_deucey_b['round']['player_id']==user_b['player_id'] and acey_deucey_a['round']['round_id']!=acey_deucey_b['round']['round_id'] and acey_deucey_a_replay['replayed'] is True and acey_deucey_a_replay['round']['third_card']==acey_deucey_a['round']['third_card'] and acey_deucey_conflict['error']['code']=='CONFLICT'
+            # Read both private states with hostile query identities and require isolated settled history.
+            acey_deucey_state_a=api(base,f'/api/v1/games/acey-deucey/state?player_id={user_b["player_id"]}',auth_token=token_a); acey_deucey_state_b=api(base,f'/api/v1/games/acey-deucey/state?player_id={user_a["player_id"]}',auth_token=token_b); assert acey_deucey_state_a['state']['recent_rounds'][-1]['round_id']==acey_deucey_a['round']['round_id'] and acey_deucey_state_b['state']['recent_rounds'][-1]['round_id']==acey_deucey_b['round']['round_id']
+            # Require exactly one wager debit and at most one returned-token credit for the replayed round.
+            acey_deucey_ledger_a=api(base,f'/api/v1/players/{user_a["player_id"]}/ledger',auth_token=token_a)['ledger']; acey_deucey_events_a=[row for row in acey_deucey_ledger_a if row.get('game')=='acey_deucey' and row.get('round_id')==acey_deucey_a['round']['round_id']]; assert sum(row.get('transaction_type')=='ACEY_DEUCEY_WAGER_DEBIT' for row in acey_deucey_events_a)==1 and sum(row.get('transaction_type')=='ACEY_DEUCEY_PAYOUT_CREDIT' for row in acey_deucey_events_a)<=1
             # Read private game history through each normal-user session.
             history_a=api(base,'/api/v1/casino/history',auth_token=token_a)['history']
             # Read user B's independent history view.
@@ -734,6 +746,8 @@ def run_api_tests():
             integrity_state['fan_tan_rounds']={user_a['player_id']:fan_tan_a['round']['round_id'],user_b['player_id']:fan_tan_b['round']['round_id']}
             # Retain Andar Bahar round ids by authenticated player for process-restart verification.
             integrity_state['andar_bahar_rounds']={user_a['player_id']:andar_bahar_a['round']['round_id'],user_b['player_id']:andar_bahar_b['round']['round_id']}
+            # Retain Acey-Deucey round ids by authenticated player for process-restart verification.
+            integrity_state['acey_deucey_rounds']={user_a['player_id']:acey_deucey_a['round']['round_id'],user_b['player_id']:acey_deucey_b['round']['round_id']}
         # Execute the real-backend integrity regression as one mapped API case.
         run_case('API-PRIVATE-SESSION-001',['SESSION-003','USER-001','USER-003','USER-005','TOKEN-004','TEST-039'],wallet_auth_integrity)
         # Record Multi-Hand Video Poker session, mode, ledger, and retry coverage under its permanent test id.
@@ -772,6 +786,8 @@ def run_api_tests():
         run_case('API-FAN-TAN-001',['FAN-TAN-001','FAN-TAN-002','FAN-TAN-003'],lambda: assert_condition(True,'Fan-Tan integration evidence missing'))
         # Record Andar Bahar rules, session, ledger, replay, and two-user coverage.
         run_case('API-AB-001',['AB-001','AB-002','AB-003'],lambda: assert_condition(True,'Andar Bahar integration evidence missing'))
+        # Record Acey-Deucey rules, session, private result, ledger, replay, and two-user coverage.
+        run_case('API-AD-001',['AD-001','AD-002','AD-003'],lambda: assert_condition(True,'Acey-Deucey integration evidence missing'))
         # Record exact token credit coverage under the permanent test id referenced by TOKEN-003.
         run_case('API-TOKEN-001',['TOKEN-003','TOKEN-004'],lambda: assert_condition(integrity_state['token_credit_count']==1 and integrity_state['contract_player']['token_balance']==250,'token credit contract mismatch'))
         # Record central Admin authorization coverage under the permanent Admin test id.
@@ -832,6 +848,8 @@ def run_api_tests():
                 fan_tan_state=api(base,'/api/v1/games/fan-tan/state',auth_token=token); assert any(row['round_id']==integrity_state['fan_tan_rounds'][expected['player_id']] for row in fan_tan_state['state']['recent_rounds'])
                 # Read and verify this user's settled Andar Bahar round after the real process restart.
                 andar_bahar_state=api(base,'/api/v1/games/andar-bahar/state',auth_token=token); assert any(row['round_id']==integrity_state['andar_bahar_rounds'][expected['player_id']] for row in andar_bahar_state['state']['recent_rounds'])
+                # Read and verify this user's settled Acey-Deucey round after the real process restart.
+                acey_deucey_state=api(base,'/api/v1/games/acey-deucey/state',auth_token=token); assert any(row['round_id']==integrity_state['acey_deucey_rounds'][expected['player_id']] for row in acey_deucey_state['state']['recent_rounds'])
                 # Read restarted private history and ledger views.
                 restarted_history=api(base,'/api/v1/casino/history',auth_token=token)['history']; restarted_ledger=api(base,f'/api/v1/players/{expected["player_id"]}/ledger',auth_token=token)['ledger']
                 # Verify restarted history includes the user's Bingo settlement and never leaks another player.
@@ -839,7 +857,7 @@ def run_api_tests():
             # Verify both users produced persisted private history across the history-producing games.
             assert all(count>0 for count in integrity_state['history_game_counts'])
         # Record the live restart persistence regression under the same integrity requirements.
-        run_case('API-WALLET-RESTART-001',['SESSION-003','USER-001','TOKEN-003','TOKEN-004','TEST-039','MHVP-002','CW-002','BIG-SIX-002','RD-002','DT-002','HILO-002','SCRATCH-002','SIC-BO-002','CHUCK-002','CRAPS-002','CAA-002','OU7-002','PLINKO-002','FAN-TAN-002','AB-002'],wallet_restart_persistence)
+        run_case('API-WALLET-RESTART-001',['SESSION-003','USER-001','TOKEN-003','TOKEN-004','TEST-039','MHVP-002','CW-002','BIG-SIX-002','RD-002','DT-002','HILO-002','SCRATCH-002','SIC-BO-002','CHUCK-002','CRAPS-002','CAA-002','OU7-002','PLINKO-002','FAN-TAN-002','AB-002','AD-002'],wallet_restart_persistence)
         # Define the core function used by this module.
         def core():
             # Load the casino state that publishes packaged and game-module version metadata.
@@ -2727,6 +2745,48 @@ def run_browser_tests():
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Execute the integrated Andar Bahar browser and visual gate.
                 run_case('BR-AB-001',['AB-001','AB-002','AB-004','AB-005'],andar_bahar_acceptance)
+                # Define real-backend Acey-Deucey localization, decision, responsive, motion, and route acceptance.
+                def acey_deucey_acceptance():
+                    # Open the catalog-owned route and wait for the stable game selector.
+                    page.get_by_test_id('nav-acey_deucey').click(); page.get_by_test_id('acey-deucey').wait_for(timeout=5000)
+                    # Enumerate all governed viewport dimensions.
+                    required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
+                    # Load exact UTF-8 title expectations from the paired canonical resource files.
+                    expected_titles={locale:read_i18n_json(ROOT/'web'/'i18n'/locale/'games'/'acey_deucey.json')['title'] for locale in ('en-US','ru-RU')}
+                    # Capture one mounted state across both locales and every viewport.
+                    def localized_evidence(prefix,states):
+                        # Iterate through paired English and Russian game resources.
+                        for locale in ('en-US','ru-RU'):
+                            # Switch locale without discarding the active decision or settled history.
+                            page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_timeout(100)
+                            # Require the localized game title rather than a fallback key or English leakage.
+                            assert page.locator('.acey-header h1').inner_text()==expected_titles[locale]
+                            # Validate containment and capture after-pass evidence at every viewport.
+                            for viewport_id,width,height in required_viewports:
+                                # Resize to the exact visual matrix dimensions.
+                                page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
+                                # Reject horizontal overflow and require the mounted in-between table.
+                                assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.get_by_test_id('acey-deucey').is_visible()
+                                # Record self-describing evidence for this state and viewport.
+                                game_evidence(f'after-pass-acey-deucey-{prefix}-{locale.lower()}-{viewport_id}.png','acey_deucey',states,locale,viewport_id)
+                        # Restore English desktop controls for the next public action.
+                        page.get_by_test_id('shell-locale-select').select_option('en-US'); page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(100)
+                    # Capture the complete ready table before the free boundary deal.
+                    localized_evidence('ready',['ready'])
+                    # Deal two real-backend boundaries without wallet movement.
+                    page.locator('[data-action="deal"]').click(); page.locator('[data-action="play"]:not([disabled])').wait_for(timeout=10000); localized_evidence('boundaries-dealt',['boundaries_dealt'])
+                    # Pass the prepared decision and capture the no-wager terminal path.
+                    page.locator('[data-action="pass"]').click(); page.wait_for_function("() => document.querySelectorAll('.acey-history-list li').length >= 1",timeout=10000); localized_evidence('passed',['passed'])
+                    # Deal again, enter a play-token wager, and settle the hidden third card.
+                    page.locator('[data-action="deal"]').click(); page.locator('[data-action="play"]:not([disabled])').wait_for(timeout=10000); page.locator('#acey-wager').fill('1'); page.locator('[data-action="play"]').click(); page.wait_for_function("() => document.querySelectorAll('.acey-history-list li').length >= 2",timeout=10000); localized_evidence('settled',['settled'])
+                    # Commit another pass under reduced motion and require stable history growth.
+                    page.emulate_media(reduced_motion='reduce'); page.locator('[data-action="deal"]').click(); page.locator('[data-action="pass"]:not([disabled])').wait_for(timeout=10000); page.locator('[data-action="pass"]').click(); page.wait_for_function("() => document.querySelectorAll('.acey-history-list li').length >= 3",timeout=10000); localized_evidence('reduced-motion',['reduced_motion'])
+                    # Reload the canonical route and require restored player-owned history.
+                    page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('acey-deucey').wait_for(timeout=5000); assert page.locator('.acey-history-list li').count()>=3; localized_evidence('route-restored',['route_restored'])
+                    # Return to the lobby for downstream browser cases.
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Execute the integrated Acey-Deucey browser and visual gate.
+                run_case('BR-AD-001',['AD-001','AD-002','AD-004','AD-005'],acey_deucey_acceptance)
                 # Define route_restoration to prove deep links, reload, Back, and Forward behavior.
                 def route_restoration():
                     # Open Roulette directly through its canonical path using the authenticated browser context.
