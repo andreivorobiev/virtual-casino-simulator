@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.11.0
+- application: 9.12.0
 - core: 9.4.0
 - ledger: 9.0.2
 - players: 9.1.0
@@ -28,9 +28,10 @@ Historical source baseline: 9.1.0
 - hi_lo: 1.0.0
 - three_card_poker: 1.0.0
 - jacks_or_better_video_poker: 1.0.0
-- tests: 1.14.0
-- docs: 1.13.0
-- contracts: 1.9.0
+- deuces_wild_video_poker: 1.0.1
+- tests: 1.15.0
+- docs: 1.14.0
+- contracts: 1.10.0
 - tooling: 1.3.0
 - commenting_policy: 1.0.0
 
@@ -491,3 +492,8 @@ Historical source baseline: 9.1.0
 - **JOBVP-003** (Jacks or Better Video Poker) - PASS: Wagers and returned credits use the shared ledger exactly once under stable deal and draw action identities.
 - **JOBVP-004** (Application) - PASS: Jacks or Better supplies complete English and Russian copy with responsive, accessible, reduced-motion-safe play across required viewports.
 - **JOBVP-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Jacks or Better with requirement, module, version, and visual traceability.
+- **DWVP-001** (Deuces Wild Video Poker) - PASS: Single-hand full-pay Deuces Wild applies wild-deuce hand ranking and the documented returned-credit paytable.
+- **DWVP-002** (Deuces Wild Video Poker) - PASS: Authenticated sessions own isolated reload-safe active hands, holds, history, and canonical route restoration.
+- **DWVP-003** (Deuces Wild Video Poker) - PASS: Wagers and returned credits use the shared ledger exactly once under stable deal and draw identities.
+- **DWVP-004** (Application) - PASS: Deuces Wild supplies complete English and Russian responsive, accessible, reduced-motion-safe play across required viewports.
+- **DWVP-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Deuces Wild with requirement, module, version, and visual traceability.

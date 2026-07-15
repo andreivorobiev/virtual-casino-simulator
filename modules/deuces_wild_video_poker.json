@@ -1,0 +1,83 @@
+{
+  "module": "deuces_wild_video_poker",
+  "version": "1.0.1",
+  "paths": [
+    "casino/games/deuces_wild_video_poker/",
+    "web/games/deuces_wild_video_poker.js",
+    "web/i18n/en-US/games/deuces_wild_video_poker.json",
+    "web/i18n/ru-RU/games/deuces_wild_video_poker.json"
+  ],
+  "requirements_prefixes": [
+    "DWVP"
+  ],
+  "contracts": [
+    "contracts/openapi/deuces_wild_video_poker.v1.yaml"
+  ],
+  "game": {
+    "id": "deuces_wild_video_poker",
+    "sort_order": 180,
+    "route": "/games/deuces_wild_video_poker",
+    "label": "Deuces Wild Video Poker",
+    "category": "machine",
+    "categories": [
+      "machine",
+      "cards",
+      "poker",
+      "strategy"
+    ],
+    "backend": {
+      "register": "casino.games.deuces_wild_video_poker.api:register"
+    },
+    "frontend": {
+      "module": "./games/deuces_wild_video_poker.js",
+      "export": "DeucesWildVideoPokerGame",
+      "ready_testid": "deuces-wild-video-poker",
+      "i18n_domain": "games/deuces_wild_video_poker",
+      "i18n_probe": "controls.deal"
+    },
+    "tests": {
+      "long_driver": "tests.game_drivers.deuces_wild_video_poker:play"
+    },
+    "translations": {
+      "ru-RU": {
+        "label": "Видеопокер «Дикие двойки»",
+        "kicker": "Автомат",
+        "description": "Пятикарточный видеопокер с обменом карт, дикими двойками и полной таблицей выплат.",
+        "tags": [
+          "Карты",
+          "Стратегия",
+          "Игровые токены",
+          "Дикие двойки"
+        ]
+      }
+    },
+    "lobby": {
+      "featured": false,
+      "wide": false,
+      "art_class": "deuces-wild-video-poker-art",
+      "symbol": "DW",
+      "kicker": "Machine",
+      "description": "Five-card draw with held cards, wild deuces, and the full-pay payout schedule.",
+      "tags": [
+        "Cards",
+        "Strategy",
+        "Ledger-backed",
+        "Wild deuces"
+      ]
+    }
+  },
+  "depends_on": [
+    "core",
+    "ledger",
+    "players"
+  ],
+  "may_not_depend_on": [
+    "roulette",
+    "slots",
+    "blackjack",
+    "baccarat",
+    "keno",
+    "bingo",
+    "multi_hand_video_poker", "casino_war", "big_six_wheel", "red_dog", "dragon_tiger", "hi_lo", "three_card_poker", "jacks_or_better_video_poker"
+  ]
+}

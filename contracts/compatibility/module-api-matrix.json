@@ -56,6 +56,9 @@
   "jacks_or_better_video_poker": [
     "contracts/openapi/jacks_or_better_video_poker.v1.yaml"
   ],
+  "deuces_wild_video_poker": [
+    "contracts/openapi/deuces_wild_video_poker.v1.yaml"
+  ],
   "tests": [],
   "docs": [],
   "contracts": [

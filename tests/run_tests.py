@@ -558,6 +558,18 @@ def run_api_tests():
             assert jobvp_a_done['round']['phase']=='settled' and jobvp_b_done['round']['phase']=='settled' and len(jobvp_a_done['round']['final_hand'])==5 and len(jobvp_b_done['round']['final_hand'])==5 and jobvp_a_done_replay['replayed'] is True and jobvp_a_done_replay['round']==jobvp_a_done['round']
             # Verify the played round contains one wager debit and at most one returned-credit event.
             jobvp_ledger_a=api(base,f'/api/v1/players/{user_a["player_id"]}/ledger',auth_token=token_a)['ledger']; jobvp_events_a=[row for row in jobvp_ledger_a if row.get('game')=='jacks_or_better_video_poker' and row.get('round_id')==jobvp_a['round']['round_id']]; assert sum(row.get('transaction_type')=='JOBVP_WAGER_DEBIT' for row in jobvp_events_a)==1 and sum(row.get('transaction_type')=='JOBVP_PAYOUT_CREDIT' for row in jobvp_events_a)<=1
+            # Deal independent Deuces Wild hands while hostile body identities challenge session binding.
+            dwvp_a=api(base,'/api/v1/games/deuces-wild-video-poker/rounds','POST',{'player_id':user_b['player_id'],'action_id':'wallet-dwvp-deal-a','wager':1},auth_token=token_a); dwvp_b=api(base,'/api/v1/games/deuces-wild-video-poker/rounds','POST',{'player_id':user_a['player_id'],'action_id':'wallet-dwvp-deal-b','wager':1},auth_token=token_b)
+            # Replay one exact deal and reject an altered wager under the immutable action fingerprint.
+            dwvp_a_replay=api(base,'/api/v1/games/deuces-wild-video-poker/rounds','POST',{'player_id':user_b['player_id'],'action_id':'wallet-dwvp-deal-a','wager':1},auth_token=token_a); dwvp_conflict=api(base,'/api/v1/games/deuces-wild-video-poker/rounds','POST',{'player_id':user_b['player_id'],'action_id':'wallet-dwvp-deal-a','wager':2},ok=False,auth_token=token_a)
+            # Require bound ownership, independent rounds, exact replay, and closed conflict behavior.
+            assert dwvp_a['round']['player_id']==user_a['player_id'] and dwvp_b['round']['player_id']==user_b['player_id'] and dwvp_a['round']['round_id']!=dwvp_b['round']['round_id'] and dwvp_a_replay['replayed'] is True and dwvp_conflict['error']['code']=='CONFLICT'
+            # Persist separate hold actions and complete both public draws.
+            api(base,f'/api/v1/games/deuces-wild-video-poker/rounds/{dwvp_a["round"]["round_id"]}/holds','POST',{'player_id':user_b['player_id'],'action_id':'wallet-dwvp-holds-a','holds':[0]},auth_token=token_a); api(base,f'/api/v1/games/deuces-wild-video-poker/rounds/{dwvp_b["round"]["round_id"]}/holds','POST',{'player_id':user_a['player_id'],'action_id':'wallet-dwvp-holds-b','holds':[]},auth_token=token_b); dwvp_a_done=api(base,f'/api/v1/games/deuces-wild-video-poker/rounds/{dwvp_a["round"]["round_id"]}/draw','POST',{'player_id':user_b['player_id'],'action_id':'wallet-dwvp-draw-a'},auth_token=token_a); dwvp_a_done_replay=api(base,f'/api/v1/games/deuces-wild-video-poker/rounds/{dwvp_a["round"]["round_id"]}/draw','POST',{'player_id':user_b['player_id'],'action_id':'wallet-dwvp-draw-a'},auth_token=token_a); dwvp_b_done=api(base,f'/api/v1/games/deuces-wild-video-poker/rounds/{dwvp_b["round"]["round_id"]}/draw','POST',{'player_id':user_a['player_id'],'action_id':'wallet-dwvp-draw-b'},auth_token=token_b)
+            # Require terminal five-card hands and stable settlement replay.
+            assert dwvp_a_done['round']['phase']=='settled' and dwvp_b_done['round']['phase']=='settled' and len(dwvp_a_done['round']['final_hand'])==5 and len(dwvp_b_done['round']['final_hand'])==5 and dwvp_a_done_replay['replayed'] is True and dwvp_a_done_replay['round']==dwvp_a_done['round']
+            # Require one wager debit and at most one payout credit for the replayed round.
+            dwvp_ledger_a=api(base,f'/api/v1/players/{user_a["player_id"]}/ledger',auth_token=token_a)['ledger']; dwvp_events_a=[row for row in dwvp_ledger_a if row.get('game')=='deuces_wild_video_poker' and row.get('round_id')==dwvp_a['round']['round_id']]; assert sum(row.get('transaction_type')=='DWVP_WAGER_DEBIT' for row in dwvp_events_a)==1 and sum(row.get('transaction_type')=='DWVP_PAYOUT_CREDIT' for row in dwvp_events_a)<=1
             # Read private game history through each normal-user session.
             history_a=api(base,'/api/v1/casino/history',auth_token=token_a)['history']
             # Read user B's independent history view.
@@ -610,6 +622,8 @@ def run_api_tests():
         run_case('API-TCP-001',['TCP-001','TCP-002','TCP-003'],lambda: assert_condition(True,'Three Card Poker integration evidence missing'))
         # Record Jacks or Better coverage exercised by the integrated private-session regression.
         run_case('API-JOBVP-001',['JOBVP-001','JOBVP-002','JOBVP-003'],lambda: assert_condition(True,'Jacks or Better integration evidence missing'))
+        # Record Deuces Wild coverage exercised by the integrated private-session regression.
+        run_case('API-DWVP-001',['DWVP-001','DWVP-002','DWVP-003'],lambda: assert_condition(True,'Deuces Wild integration evidence missing'))
         # Record exact token credit coverage under the permanent test id referenced by TOKEN-003.
         run_case('API-TOKEN-001',['TOKEN-003','TOKEN-004'],lambda: assert_condition(integrity_state['token_credit_count']==1 and integrity_state['contract_player']['token_balance']==250,'token credit contract mismatch'))
         # Record central Admin authorization coverage under the permanent Admin test id.
@@ -2131,6 +2145,44 @@ def run_browser_tests():
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Execute the integrated Jacks or Better browser and visual gate.
                 run_case('BR-JOBVP-001',['JOBVP-001','JOBVP-002','JOBVP-004','JOBVP-005'],jacks_or_better_acceptance)
+                # Define real-backend Deuces Wild localization, responsive, hold, draw, and visual acceptance.
+                def deuces_wild_acceptance():
+                    # Open the catalog route and wait for the game-owned readiness selector.
+                    page.get_by_test_id('nav-deuces_wild_video_poker').click(); page.get_by_test_id('deuces-wild-video-poker').wait_for(timeout=5000)
+                    # Define every viewport governed by the visual matrix.
+                    required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
+                    # Capture the mounted state in both locales and every viewport.
+                    def localized_evidence(prefix,states):
+                        # Iterate through English and Russian resource domains.
+                        for locale in ('en-US','ru-RU'):
+                            # Switch locale without discarding the private hand.
+                            page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_timeout(100)
+                            # Require a real localized title instead of a fallback key.
+                            assert page.locator('.dwvp-header h1').inner_text()==('Deuces Wild Video Poker' if locale=='en-US' else 'Видеопокер «Двойки — дикие»')
+                            # Capture exact registered dimensions after containment checks.
+                            for viewport_id,width,height in required_viewports:
+                                # Resize to the governed viewport.
+                                page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
+                                # Reject page overflow and require the complete mounted game.
+                                assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.get_by_test_id('deuces-wild-video-poker').is_visible()
+                                # Record self-describing after-pass evidence.
+                                game_evidence(f'after-pass-deuces-wild-{prefix}-{locale.lower()}-{viewport_id}.png','deuces_wild_video_poker',states,locale,viewport_id)
+                        # Restore English desktop controls for the next action.
+                        page.get_by_test_id('shell-locale-select').select_option('en-US'); page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(100)
+                    # Capture the ready table before wagering.
+                    localized_evidence('ready',['ready'])
+                    # Deal through the frontend and require five selectable cards.
+                    page.locator('[data-action="deal"]').click(); page.wait_for_function("() => document.querySelector('.dwvp-phase')?.textContent === 'Choose cards to hold'",timeout=5000); assert page.locator('.dwvp-card-button').count()==5
+                    # Hold one card and capture the actionable state.
+                    page.locator('.dwvp-card-button').first.click(); localized_evidence('choose-holds',['choose_holds'])
+                    # Draw and capture the real terminal result.
+                    page.locator('[data-action="draw"]').click(); page.get_by_test_id('dwvp-summary').wait_for(timeout=5000); settled_state='winning_hand' if page.locator('.dwvp-phase').inner_text()=='Winning hand' else 'losing_hand'; localized_evidence(settled_state,[settled_state])
+                    # Capture reduced motion and canonical route restoration.
+                    page.emulate_media(reduced_motion='reduce'); localized_evidence('reduced-motion',['reduced_motion']); page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('deuces-wild-video-poker').wait_for(timeout=5000); localized_evidence('route-restored',['route_restored'])
+                    # Return to the lobby for downstream cases.
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Execute the integrated Deuces Wild browser and visual gate.
+                run_case('BR-DWVP-001',['DWVP-001','DWVP-002','DWVP-004','DWVP-005'],deuces_wild_acceptance)
                 # Define route_restoration to prove deep links, reload, Back, and Forward behavior.
                 def route_restoration():
                     # Open Roulette directly through its canonical path using the authenticated browser context.
