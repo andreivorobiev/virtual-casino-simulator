@@ -6669,7 +6669,7 @@
       "module": "Core",
       "description": "Every game API request resolves its player through one shared authenticated-session resolver before route dispatch.",
       "status": "PASS",
-      "api_tests": ["API-CATALOG-001", "API-PRIVATE-SESSION-001", "API-MHVP-001", "API-CW-001", "API-BIG-SIX-001", "API-RD-001", "API-DT-001", "API-HILO-001", "API-TCP-001", "API-JOBVP-001", "API-DWVP-001", "API-SCRATCH-001", "API-SIC-BO-001", "API-CHUCK-001", "API-CRAPS-001"],
+      "api_tests": ["API-CATALOG-001", "API-PRIVATE-SESSION-001", "API-MHVP-001", "API-CW-001", "API-BIG-SIX-001", "API-RD-001", "API-DT-001", "API-HILO-001", "API-TCP-001", "API-JOBVP-001", "API-DWVP-001", "API-SCRATCH-001", "API-SIC-BO-001", "API-CHUCK-001", "API-CRAPS-001", "API-CAA-001"],
       "browser_tests": [],
       "implementation_files": ["casino/core/request_player.py", "casino/router.py", "casino/app.py"],
       "introduced_in": "wave0-catalog-governance",
@@ -7197,6 +7197,21 @@
     },
     {
       "id": "CRAPS-005", "module": "Tests", "description": "Catalog, contract, browser, and long-suite discovery include Craps with requirement, module, version, and visual traceability.", "status": "PASS", "api_tests": ["API-CATALOG-001", "LONG-SUITE-100"], "browser_tests": ["BR-CATALOG-DISCOVERY-001", "BR-CRAPS-001"], "implementation_files": ["modules/craps.json", "modules/module-manifest.json", "contracts/compatibility/module-api-matrix.json", "tests/game_drivers/craps.py", "tests/visual/visual_matrix.json", "tests/run_tests.py"], "introduced_in": "game-expansion-craps", "changed_in": "game-expansion-craps", "notes": "Descriptor sort order 160 and the catalog-discovered long driver are canonical."
+    },
+    {
+      "id": "CAA-001", "module": "Crown and Anchor", "description": "Three server-authoritative symbol dice implement six coverage targets and transparent one-, two-, and three-hit net payouts.", "status": "PASS", "api_tests": ["API-CAA-001"], "browser_tests": ["BR-CAA-001"], "implementation_files": ["casino/games/crown_and_anchor/engine.py", "casino/games/crown_and_anchor/rules.py", "web/games/crown_and_anchor.js"], "introduced_in": "game-expansion-crown-and-anchor", "changed_in": "game-expansion-crown-and-anchor", "notes": "Issue #77 allocates the permanent distinct rules requirement for issue #133."
+    },
+    {
+      "id": "CAA-002", "module": "Crown and Anchor", "description": "Authenticated sessions own private reload-safe rounds, settled history, and canonical route restoration.", "status": "PASS", "api_tests": ["API-CAA-001", "API-WALLET-RESTART-001"], "browser_tests": ["BR-CAA-001"], "implementation_files": ["casino/games/crown_and_anchor/api.py", "casino/games/crown_and_anchor/service.py", "web/app.js", "tests/run_tests.py"], "introduced_in": "game-expansion-crown-and-anchor", "changed_in": "game-expansion-crown-and-anchor", "notes": "Session context overrides caller player ids and committed results survive reload and process restart."
+    },
+    {
+      "id": "CAA-003", "module": "Crown and Anchor", "description": "Aggregate symbol wagers and returned credits use the shared ledger exactly once under durable request identities.", "status": "PASS", "api_tests": ["API-CAA-001"], "browser_tests": [], "implementation_files": ["casino/games/crown_and_anchor/service.py", "casino/core/ledger.py", "tests/games/crown_and_anchor/test_api.py", "tests/run_tests.py"], "introduced_in": "game-expansion-crown-and-anchor", "changed_in": "game-expansion-crown-and-anchor", "notes": "No game code mutates balances directly and conflicting retries fail closed."
+    },
+    {
+      "id": "CAA-004", "module": "Application", "description": "Crown and Anchor supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.", "status": "PASS", "api_tests": [], "browser_tests": ["BR-CAA-001"], "implementation_files": ["web/games/crown_and_anchor.js", "web/i18n/en-US/games/crown_and_anchor.json", "web/i18n/ru-RU/games/crown_and_anchor.json", "tests/visual/visual_matrix.json", "tests/run_tests.py"], "introduced_in": "game-expansion-crown-and-anchor", "changed_in": "game-expansion-crown-and-anchor", "notes": "Evidence covers both locales and every governed viewport."
+    },
+    {
+      "id": "CAA-005", "module": "Tests", "description": "Catalog, contract, browser, and long-suite discovery include Crown and Anchor with requirement, module, version, and visual traceability.", "status": "PASS", "api_tests": ["API-CATALOG-001", "LONG-SUITE-100"], "browser_tests": ["BR-CATALOG-DISCOVERY-001", "BR-CAA-001"], "implementation_files": ["modules/crown_and_anchor.json", "modules/module-manifest.json", "contracts/compatibility/module-api-matrix.json", "tests/game_drivers/crown_and_anchor.py", "tests/visual/visual_matrix.json", "tests/run_tests.py"], "introduced_in": "game-expansion-crown-and-anchor", "changed_in": "game-expansion-crown-and-anchor", "notes": "Descriptor sort order 210 and the catalog-discovered long driver are canonical."
     }
   ]
 }

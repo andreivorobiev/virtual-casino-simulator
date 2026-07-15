@@ -50,4 +50,3 @@ def register(router, service=None):
 
     # Return the service so focused tests can inspect injected adapters.
     return active_service
-

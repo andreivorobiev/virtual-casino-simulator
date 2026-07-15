@@ -169,4 +169,3 @@ def record_round(state: dict, round_row: dict, limit: int = ROUND_HISTORY_LIMIT)
     state["recent_rounds"] = state["recent_rounds"][-limit:]
     # Return the stored row for service code.
     return round_row
-

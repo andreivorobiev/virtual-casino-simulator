@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.16.0
+- application: 9.17.0
 - core: 9.4.0
 - ledger: 9.0.2
 - players: 9.1.0
@@ -33,9 +33,10 @@ Historical source baseline: 9.1.0
 - sic_bo: 1.0.0
 - chuck_a_luck: 1.0.0
 - craps: 1.0.0
-- tests: 1.19.0
-- docs: 1.18.0
-- contracts: 1.14.0
+- crown_and_anchor: 1.0.0
+- tests: 1.20.0
+- docs: 1.19.0
+- contracts: 1.15.0
 - tooling: 1.3.0
 - commenting_policy: 1.0.0
 
@@ -521,3 +522,8 @@ Historical source baseline: 9.1.0
 - **CRAPS-003** (Craps) - PASS: Wagers, payouts, and refunds use the shared ledger exactly once under durable request identities.
 - **CRAPS-004** (Application) - PASS: Craps supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.
 - **CRAPS-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Craps with requirement, module, version, and visual traceability.
+- **CAA-001** (Crown and Anchor) - PASS: Three server-authoritative symbol dice implement six coverage targets and transparent one-, two-, and three-hit net payouts.
+- **CAA-002** (Crown and Anchor) - PASS: Authenticated sessions own private reload-safe rounds, settled history, and canonical route restoration.
+- **CAA-003** (Crown and Anchor) - PASS: Aggregate symbol wagers and returned credits use the shared ledger exactly once under durable request identities.
+- **CAA-004** (Application) - PASS: Crown and Anchor supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.
+- **CAA-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Crown and Anchor with requirement, module, version, and visual traceability.

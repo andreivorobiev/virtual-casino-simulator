@@ -16,4 +16,3 @@ DICE_COUNT = 3
 def symbol_catalog() -> list[dict]:
     # Build one row per legal wager target in canonical table order.
     return [{"id": symbol, "face": index + 1, "paytable": dict(NET_ODDS_BY_HITS)} for index, symbol in enumerate(SYMBOL_ORDER)]
-

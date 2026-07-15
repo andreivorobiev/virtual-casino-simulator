@@ -151,4 +151,3 @@ class CrownAndAnchorService:
         self.state_saver(player_id, state)
         # Return ledger evidence without exposing unrelated player history.
         return {"round": round_row, "replayed": debit_replayed or credit_replayed, "ledger": {"wager": debit_event, "settlement": credit_event}}
-

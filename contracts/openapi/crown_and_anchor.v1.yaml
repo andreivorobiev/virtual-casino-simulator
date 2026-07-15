@@ -3,8 +3,8 @@ openapi: 3.0.3
 info:
   title: Virtual Casino Crown and Anchor API
   version: v1
-  description: Additive session-bound Crown and Anchor contract proposal for issue 133 and integration lane 77.
-# Define only game-owned routes; shared router registration remains with issue 77.
+  description: Additive session-bound Crown and Anchor contract accepted through issues 133 and 77.
+# Define the game-owned routes registered through canonical catalog discovery.
 paths:
   # Expose session-owned reload state and immutable rules metadata.
   /api/v1/games/crown-and-anchor/state:
@@ -28,7 +28,7 @@ paths:
           description: Standard error envelope for invalid wagers or request identity
         '409':
           description: Standard error envelope when one client request identity is reused with different wagers
-# Keep proposal schemas local until issue 77 promotes compatibility metadata.
+# Keep the additive request, round, and envelope schemas explicit for compatibility validation.
 components:
   schemas:
     CrownAndAnchorPlayRequest:
