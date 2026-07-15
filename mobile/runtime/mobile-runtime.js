@@ -93,6 +93,7 @@ function installApiTransport(config) {
       else clearStatus();
       // Return the unchanged response so existing API envelope handling remains authoritative.
       return response;
+    // Handle platform transport failures without exposing diagnostic details to the player.
     } catch (error) {
       // Show a generic availability message without exposing endpoint or exception details.
       showStatus("Backend unavailable. Check the connection and try again.", "backend");
@@ -177,6 +178,7 @@ function installExternalLinkHandling() {
     event.preventDefault();
     // Open the external destination with the platform browser plugin.
     void Browser.open({ url: destination.toString() });
+  // Register the capture handler so external navigation cannot replace the signed WebView first.
   }, true);
 }
 
