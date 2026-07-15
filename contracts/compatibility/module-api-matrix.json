@@ -71,6 +71,9 @@
   "craps": [
     "contracts/openapi/craps.v1.yaml"
   ],
+  "crown_and_anchor": [
+    "contracts/openapi/crown_and_anchor.v1.yaml"
+  ],
   "tests": [],
   "docs": [],
   "contracts": [

@@ -1,0 +1,45 @@
+openapi: 3.0.3
+# Describe the additive issue-133 contract without changing existing v1 operations.
+info:
+  title: Virtual Casino Crown and Anchor API
+  version: v1
+  description: Additive session-bound Crown and Anchor contract accepted through issues 133 and 77.
+# Define the game-owned routes registered through canonical catalog discovery.
+paths:
+  # Expose session-owned reload state and immutable rules metadata.
+  /api/v1/games/crown-and-anchor/state:
+    get:
+      summary: Read the authenticated player's Crown and Anchor rules and recent settled rounds
+      operationId: crown_and_anchor_GET_api_v1_games_crown_and_anchor_state
+      responses:
+        '200':
+          description: Standard success envelope containing game, symbols, paytable, and recent_rounds
+  # Execute one complete debit, dice roll, and optional settlement action.
+  /api/v1/games/crown-and-anchor/rounds:
+    post:
+      summary: Execute or replay one atomic ledger-backed Crown and Anchor round
+      operationId: crown_and_anchor_POST_api_v1_games_crown_and_anchor_rounds
+      requestBody:
+        required: true
+      responses:
+        '200':
+          description: Standard success envelope containing one settled or safely replayed round
+        '400':
+          description: Standard error envelope for invalid wagers or request identity
+        '409':
+          description: Standard error envelope when one client request identity is reused with different wagers
+# Keep the additive request, round, and envelope schemas explicit for compatibility validation.
+components:
+  schemas:
+    CrownAndAnchorPlayRequest:
+      type: object
+      required: [client_request_id, wagers]
+    CrownAndAnchorRound:
+      type: object
+      required: [round_id, client_request_id, player_id, status, wagers, faces, symbols, total_wager, total_return, net, settlements, settled_at]
+    ApiSuccessEnvelope:
+      type: object
+      required: [ok, data]
+    ApiErrorEnvelope:
+      type: object
+      required: [ok, error]

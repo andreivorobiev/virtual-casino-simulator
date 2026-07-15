@@ -19,6 +19,7 @@
   "contracts/openapi/sic_bo.v1.yaml": "0509100e8d4fd9fada5d3dffc102c836ff6829d864592125c96f7a1db6ff5879",
   "contracts/openapi/chuck_a_luck.v1.yaml": "b5a17c7c59e434cfbcb8149ba31b983bbb26103f535be29955c4c38045ba9dd2",
   "contracts/openapi/craps.v1.yaml": "1efe301348e53badaa4c69474847de4b1317bf528b483236b622fff76689469e",
+  "contracts/openapi/crown_and_anchor.v1.yaml": "edf4abb85e91709a9253d06d6d2ec728216c04274146d5afb1c945f71b1eb0fe",
   "contracts/openapi/keno.v1.yaml": "3d3af7c097f3e82a4082961724cf11797be9a948a38dcb3c1765db3086f54f2d",
   "contracts/openapi/ledger.v1.yaml": "806bc3c22155d2c99d7551c6f97cb9987e3f84297d6055e8dd1e45d341e31ab1",
   "contracts/openapi/multi_hand_video_poker.v1.yaml": "85b3ef2cd12b03d19b34564b2aeac4fbe0e8dcee7073ffb8350b058d5217983b",
