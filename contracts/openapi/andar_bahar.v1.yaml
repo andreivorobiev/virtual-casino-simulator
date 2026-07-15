@@ -1,0 +1,267 @@
+openapi: 3.0.3
+info:
+  title: Virtual Casino Andar Bahar API
+  version: v1
+  description: >-
+    Additive frozen-v1 contract for authenticated Andar Bahar play. State and
+    play commands are catalog-registered while session identity and ledger
+    settlement remain shared-core responsibilities.
+tags:
+  - name: Andar Bahar
+    description: Player-scoped rank-match side prediction with ledger-only settlement.
+
+# Define only additive frozen-v1 game endpoints owned by this module.
+paths:
+  /api/v1/games/andar-bahar/state:
+    get:
+      tags: [Andar Bahar]
+      operationId: andarBaharState
+      summary: Read the authenticated player's reload-safe Andar Bahar state
+      responses:
+        '200':
+          description: Current game state, fixed rules, and bound player
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StateEnvelope'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/v1/games/andar-bahar/rounds:
+    post:
+      tags: [Andar Bahar]
+      operationId: andarBaharPlayRound
+      summary: Play or replay one wagered Andar Bahar round
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlayRoundRequest'
+      responses:
+        '200':
+          description: Settled round with wager and optional payout evidence
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoundEnvelope'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+
+# Reuse standard success/error envelopes while defining game-owned data shapes.
+components:
+  responses:
+    ErrorResponse:
+      description: Standard API error envelope
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+  schemas:
+    ActionId:
+      type: string
+      minLength: 1
+      maxLength: 128
+      pattern: '^[A-Za-z0-9._:-]+$'
+    CardCode:
+      type: string
+      pattern: '^(10|[2-9JQKA])[CDHS]$'
+    Side:
+      type: string
+      enum: [andar, bahar]
+    PlayRoundRequest:
+      type: object
+      additionalProperties: false
+      required: [action_id, wager, side]
+      properties:
+        action_id:
+          $ref: '#/components/schemas/ActionId'
+        wager:
+          type: number
+          minimum: 0.01
+          maximum: 100000
+        side:
+          $ref: '#/components/schemas/Side'
+        player_id:
+          type: string
+          description: Compatibility input overridden by the authenticated session resolver.
+    DealtCard:
+      type: object
+      additionalProperties: false
+      required: [side, card, matched]
+      properties:
+        side:
+          $ref: '#/components/schemas/Side'
+        card:
+          $ref: '#/components/schemas/CardCode'
+        matched:
+          type: boolean
+    Round:
+      type: object
+      additionalProperties: false
+      required:
+        - round_id
+        - player_id
+        - action_id
+        - wager
+        - selected_side
+        - phase
+        - match_card
+        - dealt_cards
+        - winning_side
+        - outcome
+        - payout
+        - net
+        - wager_status
+        - settlement_status
+        - created_at
+        - completed_at
+      properties:
+        round_id:
+          type: string
+          pattern: '^andar_bahar_[a-f0-9]{24}$'
+        player_id:
+          type: string
+        action_id:
+          $ref: '#/components/schemas/ActionId'
+        wager:
+          type: number
+          minimum: 0.01
+        selected_side:
+          $ref: '#/components/schemas/Side'
+        phase:
+          type: string
+          enum: [settled]
+        match_card:
+          $ref: '#/components/schemas/CardCode'
+        dealt_cards:
+          type: array
+          minItems: 1
+          maxItems: 51
+          items:
+            $ref: '#/components/schemas/DealtCard'
+        winning_side:
+          $ref: '#/components/schemas/Side'
+        outcome:
+          type: string
+          enum: [win, loss]
+        payout:
+          type: number
+          minimum: 0
+        net:
+          type: number
+        wager_status:
+          type: string
+          enum: [pending, complete]
+        settlement_status:
+          type: string
+          enum: [pending, complete]
+        wager_ledger_id:
+          type: string
+        settlement_ledger_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+    GameState:
+      type: object
+      required: [active_round, recent_rounds]
+      properties:
+        active_round:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/Round'
+        recent_rounds:
+          type: array
+          maxItems: 20
+          items:
+            $ref: '#/components/schemas/Round'
+    Rules:
+      type: object
+      required: [sides, deal_order, match_rank_only, return_multiplier]
+      properties:
+        sides:
+          type: array
+          items:
+            $ref: '#/components/schemas/Side'
+        deal_order:
+          type: array
+          items:
+            $ref: '#/components/schemas/Side'
+        match_rank_only:
+          type: boolean
+          enum: [true]
+        return_multiplier:
+          type: integer
+          enum: [2]
+    Player:
+      type: object
+      additionalProperties: true
+    LedgerEvent:
+      type: object
+      nullable: true
+      additionalProperties: true
+    StateData:
+      type: object
+      required: [game, state, player, rules]
+      properties:
+        game:
+          type: string
+          enum: [andar_bahar]
+        state:
+          $ref: '#/components/schemas/GameState'
+        player:
+          $ref: '#/components/schemas/Player'
+        rules:
+          $ref: '#/components/schemas/Rules'
+    RoundData:
+      allOf:
+        - $ref: '#/components/schemas/StateData'
+        - type: object
+          required: [round, replayed]
+          properties:
+            round:
+              $ref: '#/components/schemas/Round'
+            wager:
+              $ref: '#/components/schemas/LedgerEvent'
+            settlement:
+              $ref: '#/components/schemas/LedgerEvent'
+            replayed:
+              type: boolean
+    StateEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/StateData'
+    RoundEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/RoundData'
+    ErrorEnvelope:
+      type: object
+      required: [ok, error]
+      properties:
+        ok:
+          type: boolean
+          enum: [false]
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object

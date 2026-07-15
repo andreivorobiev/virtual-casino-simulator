@@ -83,6 +83,9 @@
   "fan_tan": [
     "contracts/openapi/fan_tan.v1.yaml"
   ],
+  "andar_bahar": [
+    "contracts/openapi/andar_bahar.v1.yaml"
+  ],
   "tests": [],
   "docs": [],
   "contracts": [

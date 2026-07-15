@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.20.0
+- application: 9.21.0
 - core: 9.4.0
 - ledger: 9.0.2
 - players: 9.1.0
@@ -37,9 +37,10 @@ Historical source baseline: 9.1.0
 - over_under_7: 1.0.0
 - plinko: 1.0.0
 - fan_tan: 1.0.0
-- tests: 1.23.0
-- docs: 1.22.0
-- contracts: 1.18.0
+- andar_bahar: 1.0.0
+- tests: 1.24.0
+- docs: 1.23.0
+- contracts: 1.19.0
 - tooling: 1.3.0
 - commenting_policy: 1.0.0
 
@@ -545,3 +546,8 @@ Historical source baseline: 9.1.0
 - **FAN-TAN-003** (Fan-Tan) - PASS: Aggregate residue wagers and returned-token credits use the shared ledger exactly once under durable action identities.
 - **FAN-TAN-004** (Application) - PASS: Fan-Tan supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.
 - **FAN-TAN-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Fan-Tan with requirement, module, version, and visual traceability.
+- **AB-001** (Andar Bahar) - PASS: A joker or match card sets the rank and alternating Andar/Bahar deals stop at the first matching rank with transparent even-money settlement.
+- **AB-002** (Andar Bahar) - PASS: Authenticated sessions own private reload-safe rounds, durable receipts, settled history, and canonical route restoration.
+- **AB-003** (Andar Bahar) - PASS: Wager debits and returned-token credits use the shared ledger exactly once under durable action identities.
+- **AB-004** (Application) - PASS: Andar Bahar supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.
+- **AB-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Andar Bahar with requirement, module, version, and visual traceability.
