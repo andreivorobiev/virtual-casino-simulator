@@ -25,6 +25,7 @@ The Product-approved serialized order is:
 11. Pull request #123, Scratch Cards for issue #87, released while Texas Hold'em remains held.
 12. Pull request #125, Sic Bo for issue #88, merged after Scratch Cards.
 13. Pull request #126, Chuck-a-Luck for issue #89, released after Sic Bo merged.
+14. Pull request #121, Craps for issue #90, released after Chuck-a-Luck merged.
 
 Each game pull request remains draft until the preceding game is accepted, the current branch is rebased onto the resulting `main`, and the game passes the complete integration gate below. A later game must not pre-allocate or edit the shared version values owned by an earlier game.
 
@@ -42,8 +43,8 @@ Existing games retain sort orders 10 through 60. The approved expansion slots ar
 | 120 | Hi-Lo | #85 | Merged PR #117 |
 | 130 | Scratch Cards | #87 | Merged PR #123 |
 | 140 | Sic Bo | #88 | Merged PR #125 |
-| 150 | Chuck-a-Luck | #89 | Released draft PR #126 |
-| 160 | Craps | future isolated slice | Reserved |
+| 150 | Chuck-a-Luck | #89 | Merged PR #126 |
+| 160 | Craps | #90 | Released draft PR #121 |
 | 170 | Jacks or Better Video Poker | #91 | Merged PR #115 |
 | 180 | Deuces Wild Video Poker | #92 | Merged PR #119 |
 | 190 | Three Card Poker | #93 | Released draft PR #118 |
@@ -67,6 +68,7 @@ Permanent game blocks are reserved as follows:
 - `SCRATCH-001` through `SCRATCH-005` for the same five acceptance dimensions for Scratch Cards.
 - `SIC-BO-001` through `SIC-BO-005` for the same five acceptance dimensions for Sic Bo.
 - `CHUCK-001` through `CHUCK-005` for the same five acceptance dimensions for Chuck-a-Luck.
+- `CRAPS-001` through `CRAPS-005` for the same five acceptance dimensions for Craps.
 
 New entries begin as `PLANNED`. The integration owner changes an entry to `PASS` only when its mapped real-backend tests and visual evidence have passed. Requirement IDs are never reused or renumbered after allocation.
 
@@ -115,6 +117,7 @@ Each new game begins at module revision `1.0.0`. The packaged application releas
 | #123 Scratch Cards | 9.13.0 | 1.16.0 | 1.15.0 | 1.11.0 |
 | #125 Sic Bo | 9.14.0 | 1.17.0 | 1.16.0 | 1.12.0 |
 | #126 Chuck-a-Luck | 9.15.0 | 1.18.0 | 1.17.0 | 1.13.0 |
+| #121 Craps | 9.16.0 | 1.19.0 | 1.18.0 | 1.14.0 |
 
 These values are reservations, not permission to overwrite a newer value. The integrator must re-read current `main` immediately before each bump.
 
@@ -143,6 +146,7 @@ Required visual states are:
 - Scratch Cards: `ready`, `revealing`, `settled_win`, `settled_no_win`, `reduced_motion`, and `route_restored`.
 - Sic Bo: `ready`, `wagers_selected`, `rolling`, `settled`, `reduced_motion`, and `route_restored`.
 - Chuck-a-Luck: `ready`, `rolling`, `settled`, `reduced_motion`, and `route_restored`.
+- Craps: `ready`, `come_out`, `point_active`, `settled`, `reduced_motion`, and `route_restored`.
 
 ## Validation and listener gate
 

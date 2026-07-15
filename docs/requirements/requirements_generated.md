@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.15.0
+- application: 9.16.0
 - core: 9.4.0
 - ledger: 9.0.2
 - players: 9.1.0
@@ -32,9 +32,10 @@ Historical source baseline: 9.1.0
 - scratch_cards: 1.0.1
 - sic_bo: 1.0.0
 - chuck_a_luck: 1.0.0
-- tests: 1.18.0
-- docs: 1.17.0
-- contracts: 1.13.0
+- craps: 1.0.0
+- tests: 1.19.0
+- docs: 1.18.0
+- contracts: 1.14.0
 - tooling: 1.3.0
 - commenting_policy: 1.0.0
 
@@ -515,3 +516,8 @@ Historical source baseline: 9.1.0
 - **CHUCK-003** (Chuck-a-Luck) - PASS: Aggregate wagers and returned credits use the shared ledger exactly once under stable request identities.
 - **CHUCK-004** (Application) - PASS: Chuck-a-Luck supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.
 - **CHUCK-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Chuck-a-Luck with requirement, module, version, and visual traceability.
+- **CRAPS-001** (Craps) - PASS: Pass Line and Don't Pass implement come-out, point, win, loss, and bar-12 refund rules with server-authoritative dice.
+- **CRAPS-002** (Craps) - PASS: Authenticated sessions own private reload-safe rounds, roll actions, recovery state, history, and canonical route restoration.
+- **CRAPS-003** (Craps) - PASS: Wagers, payouts, and refunds use the shared ledger exactly once under durable request identities.
+- **CRAPS-004** (Application) - PASS: Craps supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.
+- **CRAPS-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Craps with requirement, module, version, and visual traceability.

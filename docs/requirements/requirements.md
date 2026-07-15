@@ -8,12 +8,12 @@ This redesigned documentation uses separated architecture views, cleaner Mermaid
 
 ## Executive summary
 
-- Requirements tracked: **475**
-- PASS: **459**
+- Requirements tracked: **480**
+- PASS: **464**
 - PLANNED: **9**
 - SUPERSEDED: **7**
-- Requirements with API/rule tests: **284**
-- Requirements with browser tests: **147**
+- Requirements with API/rule tests: **289**
+- Requirements with browser tests: **151**
 
 ## Auth/MySQL/token foundation addendum
 
@@ -49,7 +49,7 @@ GitHub issue #81 establishes module-owned game descriptors as the single catalog
 | CORE-021 | Module-owned catalog metadata drives backend, frontend, API metadata, and validator discovery. | PASS | API-CATALOG-001 | BR-CATALOG-DISCOVERY-001 |
 | CORE-022 | Direct game links, reload, Back, and Forward restore canonical game routes. | PASS |  | BR-ROUTE-RESTORE-001 |
 | UX-010 | Lobby search and catalog-derived categories remain usable for the 20-game target. | PASS |  | BR-CATALOG-NAV-001 |
-| SESSION-005 | One shared authenticated-player resolver binds every game request before dispatch. | PASS | API-CATALOG-001, API-PRIVATE-SESSION-001, API-MHVP-001, API-CW-001, API-BIG-SIX-001, API-RD-001, API-DT-001, API-HILO-001, API-TCP-001, API-JOBVP-001, API-DWVP-001, API-SCRATCH-001, API-SIC-BO-001, API-CHUCK-001 |  |
+| SESSION-005 | One shared authenticated-player resolver binds every game request before dispatch. | PASS | API-CATALOG-001, API-PRIVATE-SESSION-001, API-MHVP-001, API-CW-001, API-BIG-SIX-001, API-RD-001, API-DT-001, API-HILO-001, API-TCP-001, API-JOBVP-001, API-DWVP-001, API-SCRATCH-001, API-SIC-BO-001, API-CHUCK-001, API-CRAPS-001 |  |
 | TEST-042 | Validators, browser discovery, and long suites discover games and drivers from catalog metadata. | PASS | API-CATALOG-001, LONG-SUITE-100 | BR-CATALOG-DISCOVERY-001 |
 
 ## Multi-Hand Video Poker integration addendum
@@ -195,6 +195,18 @@ GitHub issue #77 integrates issue #89 after Sic Bo and supplies canonical regist
 | CHUCK-003 | Aggregate wagers and returned credits use ledger-only retry-safe request identities. | PASS | API-CHUCK-001 |  |
 | CHUCK-004 | English and Russian play remains responsive, accessible, reduced-motion safe, and timer-clean. | PASS |  | BR-CHUCK-001 |
 | CHUCK-005 | Catalog, contract, browser, long-suite, requirement, module, version, and visual evidence are traceable. | PASS | API-CATALOG-001, LONG-SUITE-100 | BR-CATALOG-DISCOVERY-001, BR-CHUCK-001 |
+
+## Craps integration addendum
+
+GitHub issue #77 integrates issue #90 after Chuck-a-Luck and supplies canonical registration, permanent requirements, test discovery, and EN/RU visual evidence.
+
+| ID | Requirement | Status | API tests | Browser tests |
+|---|---|---|---|---|
+| CRAPS-001 | Pass Line and Don't Pass implement come-out, point, win, loss, and bar-12 refund rules with server-authoritative dice. | PASS | API-CRAPS-001 | BR-CRAPS-001 |
+| CRAPS-002 | Session-bound rounds, roll actions, recovery state, history, and canonical routes remain private and reload-safe. | PASS | API-CRAPS-001, API-WALLET-RESTART-001 | BR-CRAPS-001 |
+| CRAPS-003 | Wagers, payouts, and refunds use ledger-only durable retry-safe request identities. | PASS | API-CRAPS-001 |  |
+| CRAPS-004 | English and Russian play remains responsive, accessible, reduced-motion safe, and timer-clean. | PASS |  | BR-CRAPS-001 |
+| CRAPS-005 | Catalog, contract, browser, long-suite, requirement, module, version, and visual evidence are traceable. | PASS | API-CATALOG-001, LONG-SUITE-100 | BR-CATALOG-DISCOVERY-001, BR-CRAPS-001 |
 
 ### Superseded wording
 

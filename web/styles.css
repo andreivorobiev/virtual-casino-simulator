@@ -1934,7 +1934,7 @@ h3 {
 
   .casino-nav {
     display: grid;
-    grid-template-columns: repeat(10, minmax(0, 1fr));
+    grid-template-columns: repeat(11, minmax(0, 1fr));
     overflow: visible;
   }
 
@@ -1945,7 +1945,7 @@ h3 {
     margin-left: 0;
     padding: 0 8px;
     font-size: 12px;
-    line-height: 1.15;
+    line-height: 1.05;
     text-align: center;
     white-space: normal;
   }

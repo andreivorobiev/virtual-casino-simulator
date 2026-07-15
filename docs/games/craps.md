@@ -61,11 +61,11 @@ The lazy `CrapsGame` module owns its responsive three-zone layout, all game-visi
 
 The intended stage keeps the current point, two dice, primary action, and wager controls visible at the desktop-primary viewport. Tablet and mobile stack controls, stage, and history without horizontal overflow.
 
-## Requirement mapping proposal
+## Permanent requirement mapping
 
-The game descriptor carries the provisional `CRAPS` prefix. Only #77 may allocate these permanent central entries and change them from `PLANNED` to `PASS` after integrated evidence succeeds.
+The canonical integration allocates the permanent `CRAPS` requirement prefix and maps each entry to exact central acceptance evidence.
 
-| Proposed ID | Acceptance dimension | Existing requirements also exercised |
+| Requirement | Acceptance dimension | Existing requirements also exercised |
 | --- | --- | --- |
 | `CRAPS-001` | Pass Line and Don't Pass come-out, point, win, loss, and refund rules | — |
 | `CRAPS-002` | Additive API, authenticated player binding, reload-safe state, and deterministic test seams | `API-001`, `SESSION-005` |
@@ -73,17 +73,16 @@ The game descriptor carries the provisional `CRAPS` prefix. Only #77 may allocat
 | `CRAPS-004` | Complete EN/RU visible and ARIA copy, responsive layout, shared dice presentation, reduced motion, and timer cleanup | `DICE-001`, `I18N-001`, `I18N-002`, `MOTION-001`, `MOTION-002`, `MOTION-003` |
 | `CRAPS-005` | Catalog, contract, long-driver, browser, visual, version, and evidence discovery | `TEST-042` |
 
-## Shared integration handoff for #77
+## Canonical #77 integration
 
-The issue-owned descriptor at `codex/tasks/artifacts/issue-90-craps/craps.module.proposal.json` proposes module version `1.0.0`, route `/games/craps`, catalog sort order `160`, and only existing `table`, `numbers`, and `strategy` categories. It deliberately remains outside auto-discovered `modules/` and does not edit shared catalog, router, shell, test-runner, requirement, compatibility, visual-matrix, or aggregate-version files.
+The canonical descriptor at `modules/craps.json` registers module version `1.0.0`, route `/games/craps`, catalog sort order `160`, and the existing `table`, `numbers`, and `strategy` categories.
 
-#77 must later:
+The accepted shared integration:
 
-- add `craps: 1.0.0` to `modules/module-manifest.json` and recalculate shared application, tests, docs, and contracts revisions from the then-current accepted base;
-- allocate `CRAPS-001` through `CRAPS-005`, update central and generated requirement documents, and map permanent API/browser test IDs;
-- add `contracts/openapi/craps.v1.yaml` to the compatibility module matrix and contract digest inventory;
-- add the visual-matrix `craps` surface with `ready`, `come_out`, `point_active`, `settled`, `reduced_motion`, and `route_restored` states for both locales and all four standard viewports;
-- run real authenticated catalog/API/browser/long-suite acceptance and capture evidence from the exact integrated head;
-- keep the game pull request draft until the coordinator explicitly releases readiness.
+- adds `craps: 1.0.0` to `modules/module-manifest.json` and advances the application, tests, docs, and contracts revisions;
+- maps permanent `CRAPS-001` through `CRAPS-005` entries to central API, restart, browser, and Long Suite gates;
+- registers `contracts/openapi/craps.v1.yaml` in the compatibility module matrix and contract digest inventory;
+- adds the visual-matrix `craps` surface with `ready`, `come_out`, `point_active`, `settled`, `reduced_motion`, and `route_restored` states for both locales and all four standard viewports;
+- exercises two-user isolation, hostile body-player rejection, retry conflict detection, ledger cardinality, restart/replay, and real authenticated browser routing through the shared test runner.
 
-Until #77 promotes the proposal into the shared manifest and catalog, version and catalog validators ignore the issue artifact, and the shared shell cannot honestly be claimed as integrated acceptance.
+Shared registration remains catalog-driven; no bespoke router, shell, or long-suite registry entry is required.
