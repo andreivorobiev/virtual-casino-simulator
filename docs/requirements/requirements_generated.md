@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.10.0
+- application: 9.11.0
 - core: 9.4.0
 - ledger: 9.0.2
 - players: 9.1.0
@@ -27,9 +27,10 @@ Historical source baseline: 9.1.0
 - dragon_tiger: 1.0.0
 - hi_lo: 1.0.0
 - three_card_poker: 1.0.0
-- tests: 1.13.0
-- docs: 1.12.0
-- contracts: 1.8.0
+- jacks_or_better_video_poker: 1.0.0
+- tests: 1.14.0
+- docs: 1.13.0
+- contracts: 1.9.0
 - tooling: 1.3.0
 - commenting_policy: 1.0.0
 
@@ -485,3 +486,8 @@ Historical source baseline: 9.1.0
 - **TCP-003** (Three Card Poker) - PASS: Ante, Pair Plus, Play, refund, and payout movements use the shared ledger exactly once under stable identifiers and immutable fingerprints.
 - **TCP-004** (Application) - PASS: The Three Card Poker surface provides complete English and Russian copy and remains responsive, accessible, and reduced-motion safe across required viewports and outcomes.
 - **TCP-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Three Card Poker with requirement, module, version, and visual evidence traceability.
+- **JOBVP-001** (Jacks or Better Video Poker) - PASS: Single-hand 9/6 Jacks or Better supports one through five coins and the five-coin royal-flush bonus.
+- **JOBVP-002** (Jacks or Better Video Poker) - PASS: Authenticated sessions own isolated reload-safe active hands, holds, completed history, and canonical route restoration.
+- **JOBVP-003** (Jacks or Better Video Poker) - PASS: Wagers and returned credits use the shared ledger exactly once under stable deal and draw action identities.
+- **JOBVP-004** (Application) - PASS: Jacks or Better supplies complete English and Russian copy with responsive, accessible, reduced-motion-safe play across required viewports.
+- **JOBVP-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Jacks or Better with requirement, module, version, and visual traceability.

@@ -572,6 +572,15 @@
       "locales": ["en-US", "ru-RU"],
       "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
       "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
+    },
+    {
+      "id": "jacks_or_better_video_poker",
+      "route": "/games/jacks_or_better_video_poker",
+      "selector": "[data-testid='jacks-or-better-video-poker']",
+      "states": ["ready", "choose_holds", "winning_hand", "losing_hand", "reduced_motion", "route_restored"],
+      "locales": ["en-US", "ru-RU"],
+      "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
+      "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
     }
   ]
 }

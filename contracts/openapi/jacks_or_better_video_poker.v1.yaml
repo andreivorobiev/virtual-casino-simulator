@@ -1,0 +1,397 @@
+openapi: 3.0.3
+info:
+  title: Virtual Casino Jacks or Better Video Poker API
+  version: v1
+  description: >-
+    Additive issue #91 contract for authenticated, session-bound single-hand Jacks or Better
+    Video Poker. The authenticated router owns player identity. Deal and draw actions require
+    action_id values so retries recover one round, one wager debit, and at most one payout credit.
+tags:
+  - name: Jacks or Better Video Poker
+    description: Reload-safe five-card draw poker with ledger-only wager and payout settlement.
+
+# Keep every issue #91 route additive beneath the frozen v1 game namespace.
+paths:
+  /api/v1/games/jacks-or-better-video-poker/state:
+    get:
+      tags: [Jacks or Better Video Poker]
+      operationId: jacksOrBetterVideoPokerState
+      summary: Read the authenticated player's reload-safe game state
+      responses:
+        '200':
+          description: Current player-scoped state, coin choices, and five-column paytable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StateEnvelope'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/v1/games/jacks-or-better-video-poker/rounds:
+    post:
+      tags: [Jacks or Better Video Poker]
+      operationId: jacksOrBetterVideoPokerStartRound
+      summary: Deal or replay one retry-safe wagered hand
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartRoundRequest'
+      responses:
+        '200':
+          description: New or replayed initial hand with committed wager evidence
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoundEnvelope'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/v1/games/jacks-or-better-video-poker/rounds/{round_id}/holds:
+    post:
+      tags: [Jacks or Better Video Poker]
+      operationId: jacksOrBetterVideoPokerSetHolds
+      summary: Persist held positions for the active hand
+      parameters:
+        - $ref: '#/components/parameters/RoundId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HoldsRequest'
+      responses:
+        '200':
+          description: Reload-safe active hand with updated held positions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoundEnvelope'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/v1/games/jacks-or-better-video-poker/rounds/{round_id}/draw:
+    post:
+      tags: [Jacks or Better Video Poker]
+      operationId: jacksOrBetterVideoPokerDraw
+      summary: Draw unheld cards and settle or replay one payout action
+      parameters:
+        - $ref: '#/components/parameters/RoundId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DrawRequest'
+      responses:
+        '200':
+          description: Settled final hand with optional committed payout evidence
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoundEnvelope'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+
+# Define bounded request, game-state, paytable, and standard-envelope shapes.
+components:
+  parameters:
+    RoundId:
+      name: round_id
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: '^[A-Za-z0-9_-]+$'
+  responses:
+    ErrorResponse:
+      description: Standard API error envelope
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+  schemas:
+    ActionId:
+      type: string
+      minLength: 1
+      maxLength: 128
+      pattern: '^[A-Za-z0-9._:-]+$'
+      description: Caller-generated idempotency key scoped to one authenticated player and action kind.
+    StartRoundRequest:
+      type: object
+      additionalProperties: false
+      required: [action_id, coins, coin_value]
+      properties:
+        action_id:
+          $ref: '#/components/schemas/ActionId'
+        coins:
+          type: integer
+          minimum: 1
+          maximum: 5
+          enum: [1, 2, 3, 4, 5]
+        coin_value:
+          type: number
+          minimum: 0.01
+          maximum: 20000
+        player_id:
+          type: string
+          description: Compatibility input overridden by the authenticated session resolver.
+    HoldsRequest:
+      type: object
+      additionalProperties: false
+      required: [holds]
+      properties:
+        holds:
+          type: array
+          uniqueItems: true
+          maxItems: 5
+          items:
+            type: integer
+            minimum: 0
+            maximum: 4
+        player_id:
+          type: string
+          description: Compatibility input overridden by the authenticated session resolver.
+    DrawRequest:
+      type: object
+      additionalProperties: false
+      required: [action_id]
+      properties:
+        action_id:
+          $ref: '#/components/schemas/ActionId'
+        player_id:
+          type: string
+          description: Compatibility input overridden by the authenticated session resolver.
+    CardCode:
+      type: string
+      pattern: '^(10|[2-9JQKA])[CDHS]$'
+    Outcome:
+      type: string
+      enum:
+        - royal_flush
+        - straight_flush
+        - four_of_a_kind
+        - full_house
+        - flush
+        - straight
+        - three_of_a_kind
+        - two_pair
+        - jacks_or_better
+        - no_win
+    CreditRow:
+      type: array
+      minItems: 5
+      maxItems: 5
+      items:
+        type: integer
+        minimum: 0
+      description: Returned-credit values for one through five wagered coins, in order.
+    Paytable:
+      type: object
+      additionalProperties: false
+      required:
+        - royal_flush
+        - straight_flush
+        - four_of_a_kind
+        - full_house
+        - flush
+        - straight
+        - three_of_a_kind
+        - two_pair
+        - jacks_or_better
+        - no_win
+      properties:
+        royal_flush:
+          $ref: '#/components/schemas/CreditRow'
+        straight_flush:
+          $ref: '#/components/schemas/CreditRow'
+        four_of_a_kind:
+          $ref: '#/components/schemas/CreditRow'
+        full_house:
+          $ref: '#/components/schemas/CreditRow'
+        flush:
+          $ref: '#/components/schemas/CreditRow'
+        straight:
+          $ref: '#/components/schemas/CreditRow'
+        three_of_a_kind:
+          $ref: '#/components/schemas/CreditRow'
+        two_pair:
+          $ref: '#/components/schemas/CreditRow'
+        jacks_or_better:
+          $ref: '#/components/schemas/CreditRow'
+        no_win:
+          $ref: '#/components/schemas/CreditRow'
+    Round:
+      type: object
+      required:
+        - round_id
+        - deal_action_id
+        - player_id
+        - coin_value
+        - coins
+        - total_wager
+        - phase
+        - initial_hand
+        - holds
+        - wager_status
+        - payout_status
+        - created_at
+      properties:
+        round_id:
+          type: string
+        deal_action_id:
+          type: string
+          description: Durable server state for the start request's action_id.
+        draw_action_id:
+          type: string
+          nullable: true
+        player_id:
+          type: string
+        coin_value:
+          type: number
+          minimum: 0.01
+          maximum: 20000
+        coins:
+          type: integer
+          enum: [1, 2, 3, 4, 5]
+        total_wager:
+          type: number
+          minimum: 0.01
+        phase:
+          type: string
+          enum: [hold, settled]
+        initial_hand:
+          type: array
+          minItems: 5
+          maxItems: 5
+          items:
+            $ref: '#/components/schemas/CardCode'
+        holds:
+          type: array
+          uniqueItems: true
+          maxItems: 5
+          items:
+            type: integer
+            minimum: 0
+            maximum: 4
+        final_hand:
+          type: array
+          minItems: 5
+          maxItems: 5
+          items:
+            $ref: '#/components/schemas/CardCode'
+        outcome:
+          $ref: '#/components/schemas/Outcome'
+        payout_credits:
+          type: integer
+          minimum: 0
+        total_payout:
+          type: number
+          minimum: 0
+        net:
+          type: number
+        net_result:
+          type: string
+          enum: [win, push, loss]
+        wager_status:
+          type: string
+          enum: [pending, complete]
+        payout_status:
+          type: string
+          enum: [not_ready, pending, complete]
+        wager_ledger_id:
+          type: string
+        payout_ledger_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+    GameState:
+      type: object
+      required: [active_round, recent_rounds]
+      properties:
+        active_round:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/Round'
+        recent_rounds:
+          type: array
+          items:
+            $ref: '#/components/schemas/Round'
+    Player:
+      type: object
+      additionalProperties: true
+    LedgerEvent:
+      type: object
+      nullable: true
+      additionalProperties: true
+    StateData:
+      type: object
+      required: [game, state, player, coin_choices, paytable]
+      properties:
+        game:
+          type: string
+          enum: [jacks_or_better_video_poker]
+        state:
+          $ref: '#/components/schemas/GameState'
+        player:
+          $ref: '#/components/schemas/Player'
+        coin_choices:
+          type: array
+          minItems: 5
+          maxItems: 5
+          items:
+            type: integer
+            enum: [1, 2, 3, 4, 5]
+        paytable:
+          $ref: '#/components/schemas/Paytable'
+    RoundData:
+      allOf:
+        - $ref: '#/components/schemas/StateData'
+        - type: object
+          required: [round]
+          properties:
+            round:
+              $ref: '#/components/schemas/Round'
+            wager:
+              $ref: '#/components/schemas/LedgerEvent'
+            payout:
+              $ref: '#/components/schemas/LedgerEvent'
+            replayed:
+              type: boolean
+    StateEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/StateData'
+    RoundEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/RoundData'
+    ErrorEnvelope:
+      type: object
+      required: [ok, error]
+      properties:
+        ok:
+          type: boolean
+          enum: [false]
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object

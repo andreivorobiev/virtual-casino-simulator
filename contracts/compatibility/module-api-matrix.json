@@ -53,6 +53,9 @@
   "three_card_poker": [
     "contracts/openapi/three_card_poker.v1.yaml"
   ],
+  "jacks_or_better_video_poker": [
+    "contracts/openapi/jacks_or_better_video_poker.v1.yaml"
+  ],
   "tests": [],
   "docs": [],
   "contracts": [
