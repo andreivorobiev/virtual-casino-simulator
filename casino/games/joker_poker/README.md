@@ -2,7 +2,7 @@
 
 Issue: [#130](https://github.com/andreivorobiev/virtual-casino-simulator/issues/130)
 
-This isolated draft freezes a distinct Joker Poker profile: one 53-card deck, one wild joker, one five-card draw hand, Kings-or-Better high-pair qualification, and joker-only paytable rows for five of a kind and wild royal flush. That makes it materially different from Multi-Hand Video Poker, which is Jacks-or-Better, no-joker, and multiplies one common hand across 3, 5, or 10 result lanes.
+This module freezes a distinct Joker Poker profile: one 53-card deck, one wild joker, one five-card draw hand, Kings-or-Better high-pair qualification, and joker-only paytable rows for five of a kind and wild royal flush. That makes it materially different from Multi-Hand Video Poker, which is Jacks-or-Better, no-joker, and multiplies one common hand across 3, 5, or 10 result lanes.
 
 The engine reuses `casino.core.cards` for natural cards and `casino.core.poker` for standard five-card evaluations. Joker substitution and the return table remain game-owned because wild-card rules are not part of the shared standard evaluator.
 
@@ -22,4 +22,4 @@ The engine reuses `casino.core.cards` for natural cards and `casino.core.poker` 
 - `POST /api/v1/games/joker-poker/rounds/{round_id}/holds`
 - `POST /api/v1/games/joker-poker/rounds/{round_id}/draw`
 
-The handlers can be registered into an isolated `casino.router.Router` for focused tests. Shared catalog, global app registration, permanent requirements, and visual matrix integration remain owned by #77.
+The handlers can be registered into an isolated `casino.router.Router` for focused tests. The canonical descriptor, global app registration, permanent requirements, visual matrix, and aggregate discovery coverage are promoted through the #77 integration lane.

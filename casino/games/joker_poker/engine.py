@@ -1,6 +1,6 @@
 """Deterministic single-hand Joker Poker rules for GitHub issue #130.
 
-Requirements used: CARD-001, POKER-001, SESSION-005, and proposed JP-130-001 through JP-130-004.
+Requirements used: CARD-001, POKER-001, SESSION-005, and JP-001 through JP-004.
 """
 
 # Import hashing so one authenticated deal action derives one stable round id.

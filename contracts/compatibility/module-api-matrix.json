@@ -98,6 +98,9 @@
   "casino_holdem": [
     "contracts/openapi/casino_holdem.v1.yaml"
   ],
+  "joker_poker": [
+    "contracts/openapi/joker_poker.v1.yaml"
+  ],
   "tests": [],
   "docs": [],
   "contracts": [

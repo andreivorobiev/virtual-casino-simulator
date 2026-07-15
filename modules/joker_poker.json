@@ -1,0 +1,17 @@
+{
+  "module": "joker_poker",
+  "version": "1.0.0",
+  "paths": ["casino/games/joker_poker/", "web/games/joker_poker.js", "web/i18n/en-US/games/joker_poker.json", "web/i18n/ru-RU/games/joker_poker.json"],
+  "requirements_prefixes": ["JP"],
+  "contracts": ["contracts/openapi/joker_poker.v1.yaml"],
+  "game": {
+    "id": "joker_poker", "sort_order": 300, "route": "/games/joker_poker", "label": "Joker Poker", "category": "machine", "categories": ["machine", "cards", "poker", "strategy"],
+    "backend": {"register": "casino.games.joker_poker.api:register"},
+    "frontend": {"module": "./games/joker_poker.js", "export": "JokerPokerGame", "ready_testid": "joker-poker", "i18n_domain": "games/joker_poker", "i18n_probe": "controls.deal"},
+    "tests": {"long_driver": "tests.game_drivers.joker_poker:play"},
+    "translations": {"ru-RU": {"label": "Джокер-покер", "kicker": "Автомат", "description": "Одноручный видеопокер с диким джокером, квалификацией от королей и отдельной таблицей выплат.", "tags": ["Карты", "Стратегия", "Журнал жетонов", "Дикий джокер"]}},
+    "lobby": {"featured": false, "wide": false, "art_class": "joker-poker-art", "symbol": "JP", "kicker": "Machine", "description": "Single-hand draw poker with one wild joker, Kings-or-Better qualification, and wild-only premium rows.", "tags": ["Cards", "Strategy", "Ledger-backed", "Wild joker"]}
+  },
+  "depends_on": ["core", "ledger", "players"],
+  "may_not_depend_on": ["roulette", "slots", "blackjack", "baccarat", "keno", "bingo", "multi_hand_video_poker", "casino_war", "big_six_wheel", "red_dog", "dragon_tiger", "hi_lo", "three_card_poker", "jacks_or_better_video_poker", "deuces_wild_video_poker", "scratch_cards", "sic_bo", "chuck_a_luck", "craps", "crown_and_anchor", "over_under_7", "plinko", "fan_tan", "andar_bahar", "acey_deucey", "caribbean_stud", "let_it_ride", "casino_holdem"]
+}
