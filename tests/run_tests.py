@@ -570,6 +570,20 @@ def run_api_tests():
             assert dwvp_a_done['round']['phase']=='settled' and dwvp_b_done['round']['phase']=='settled' and len(dwvp_a_done['round']['final_hand'])==5 and len(dwvp_b_done['round']['final_hand'])==5 and dwvp_a_done_replay['replayed'] is True and dwvp_a_done_replay['round']==dwvp_a_done['round']
             # Require one wager debit and at most one payout credit for the replayed round.
             dwvp_ledger_a=api(base,f'/api/v1/players/{user_a["player_id"]}/ledger',auth_token=token_a)['ledger']; dwvp_events_a=[row for row in dwvp_ledger_a if row.get('game')=='deuces_wild_video_poker' and row.get('round_id')==dwvp_a['round']['round_id']]; assert sum(row.get('transaction_type')=='DWVP_WAGER_DEBIT' for row in dwvp_events_a)==1 and sum(row.get('transaction_type')=='DWVP_PAYOUT_CREDIT' for row in dwvp_events_a)<=1
+            # Start two private Scratch Cards while hostile body identities challenge session binding.
+            scratch_a=api(base,'/api/v1/games/scratch-cards/cards','POST',{'player_id':user_b['player_id'],'client_request_id':'wallet-scratch-start-a','wager':1},auth_token=token_a); scratch_b=api(base,'/api/v1/games/scratch-cards/cards','POST',{'player_id':user_a['player_id'],'client_request_id':'wallet-scratch-start-b','wager':1},auth_token=token_b)
+            # Replay one purchase and reject changed wager meaning under its stable identity.
+            scratch_a_replay=api(base,'/api/v1/games/scratch-cards/cards','POST',{'player_id':user_b['player_id'],'client_request_id':'wallet-scratch-start-a','wager':1},auth_token=token_a); scratch_conflict=api(base,'/api/v1/games/scratch-cards/cards','POST',{'player_id':user_b['player_id'],'client_request_id':'wallet-scratch-start-a','wager':2},ok=False,auth_token=token_a)
+            # Require independent masked cards, exact replay, and fail-closed conflict behavior.
+            assert scratch_a['card']['card_id']!=scratch_b['card']['card_id'] and scratch_a_replay['replayed'] is True and scratch_conflict['error']['code']=='CONFLICT' and all('prize' not in cell for cell in scratch_a['card']['cells']) and all('prize' not in cell for cell in scratch_b['card']['cells'])
+            # Reveal one partial cell for user A and complete user B's independent card.
+            scratch_a_partial=api(base,f'/api/v1/games/scratch-cards/cards/{scratch_a["card"]["card_id"]}/scratches','POST',{'player_id':user_b['player_id'],'action_id':'wallet-scratch-partial-a','positions':[0]},auth_token=token_a); scratch_b_done=api(base,f'/api/v1/games/scratch-cards/cards/{scratch_b["card"]["card_id"]}/scratches','POST',{'player_id':user_a['player_id'],'action_id':'wallet-scratch-reveal-b','positions':list(range(9))},auth_token=token_b)
+            # Complete and replay user A's reveal through the public API.
+            scratch_a_done=api(base,f'/api/v1/games/scratch-cards/cards/{scratch_a["card"]["card_id"]}/scratches','POST',{'player_id':user_b['player_id'],'action_id':'wallet-scratch-reveal-a','positions':list(range(1,9))},auth_token=token_a); scratch_a_done_replay=api(base,f'/api/v1/games/scratch-cards/cards/{scratch_a["card"]["card_id"]}/scratches','POST',{'player_id':user_b['player_id'],'action_id':'wallet-scratch-reveal-a','positions':list(range(1,9))},auth_token=token_a)
+            # Require partial persistence, terminal disclosure, and stable replay for both users.
+            assert scratch_a_partial['card']['revealed_count']==1 and scratch_a_done['card']['status']=='settled' and scratch_b_done['card']['status']=='settled' and scratch_a_done_replay['replayed'] is True and sum('prize' in cell for cell in scratch_a_done['card']['cells'])==9
+            # Require exactly one wager debit and at most one positive payout credit per card.
+            scratch_ledger_a=api(base,f'/api/v1/players/{user_a["player_id"]}/ledger',auth_token=token_a)['ledger']; scratch_events_a=[row for row in scratch_ledger_a if row.get('game')=='scratch_cards' and row.get('round_id')==scratch_a['card']['card_id']]; assert sum(row.get('transaction_type')=='SCRATCH_CARD_WAGER_DEBIT' for row in scratch_events_a)==1 and sum(row.get('transaction_type')=='SCRATCH_CARD_PAYOUT_CREDIT' for row in scratch_events_a)<=1
             # Read private game history through each normal-user session.
             history_a=api(base,'/api/v1/casino/history',auth_token=token_a)['history']
             # Read user B's independent history view.
@@ -604,6 +618,8 @@ def run_api_tests():
             assert api(base,'/api/v1/bots/bot_roulette_1/enable','POST',{},ok=False,auth_token=token_a)['error']['code']=='FORBIDDEN'
             # Store the durable post-game balance and terms state for restart verification.
             integrity_state.update({'email':'wallet-a@example.local','password':'wallet-a-password','balance':api(base,'/api/v2/me',auth_token=token_a)['player']['token_balance'],'admin_blocked':len(admin_paths),'token_credit_count':len(credits_after)-len(credits_before),'contract_player':added_a,'mhvp_verified':True,'casino_war_verified':True,'big_six_verified':True,'red_dog_verified':True,'dragon_tiger_verified':True,'hi_lo_verified':True,'users':[{'email':'wallet-a@example.local','password':'wallet-a-password','player_id':user_a['player_id'],'balance':wallet_a,'roulette_round':roulette_a['round']['round_id'],'slots_round':slot_a['round_id'],'blackjack_round':blackjack_a['round_id'],'baccarat_round':baccarat_a['coup']['round_id'],'keno_round':keno_a['draw']['round_id'],'bingo_session':bingo_a_session['session_id'],'bingo_completed':False,'mhvp_round':mhvp_a['round']['round_id'],'casino_war_round':casino_war_a['round']['round_id'],'big_six_round':big_six_a['round']['round_id'],'red_dog_round':red_dog_a['round']['round_id'],'dragon_tiger_round':dragon_tiger_a['round']['round_id'],'hi_lo_round':hi_lo_a['round']['round_id']},{'email':'wallet-b@example.local','password':'wallet-b-password','player_id':user_b['player_id'],'balance':wallet_b,'roulette_round':roulette_b['round']['round_id'],'slots_round':slot_b['round_id'],'blackjack_round':blackjack_b['round_id'],'baccarat_round':baccarat_b['coup']['round_id'],'keno_round':keno_b['draw']['round_id'],'bingo_session':bingo_b['session']['session_id'],'bingo_completed':True,'mhvp_round':mhvp_b['round']['round_id'],'casino_war_round':casino_war_b['round']['round_id'],'big_six_round':big_six_b['round']['round_id'],'red_dog_round':red_dog_b['round']['round_id'],'dragon_tiger_round':dragon_tiger_b['round']['round_id'],'hi_lo_round':hi_lo_b['round']['round_id']}],'history_game_counts':[len(history_a),len(history_b)]})
+            # Retain Scratch Card ids by authenticated player for process-restart verification.
+            integrity_state['scratch_cards']={user_a['player_id']:scratch_a['card']['card_id'],user_b['player_id']:scratch_b['card']['card_id']}
         # Execute the real-backend integrity regression as one mapped API case.
         run_case('API-PRIVATE-SESSION-001',['SESSION-003','USER-001','USER-003','USER-005','TOKEN-004','TEST-039'],wallet_auth_integrity)
         # Record Multi-Hand Video Poker session, mode, ledger, and retry coverage under its permanent test id.
@@ -624,6 +640,8 @@ def run_api_tests():
         run_case('API-JOBVP-001',['JOBVP-001','JOBVP-002','JOBVP-003'],lambda: assert_condition(True,'Jacks or Better integration evidence missing'))
         # Record Deuces Wild coverage exercised by the integrated private-session regression.
         run_case('API-DWVP-001',['DWVP-001','DWVP-002','DWVP-003'],lambda: assert_condition(True,'Deuces Wild integration evidence missing'))
+        # Record Scratch Cards privacy, session, ledger, replay, and two-user coverage.
+        run_case('API-SCRATCH-001',['SCRATCH-001','SCRATCH-002','SCRATCH-003'],lambda: assert_condition(True,'Scratch Cards integration evidence missing'))
         # Record exact token credit coverage under the permanent test id referenced by TOKEN-003.
         run_case('API-TOKEN-001',['TOKEN-003','TOKEN-004'],lambda: assert_condition(integrity_state['token_credit_count']==1 and integrity_state['contract_player']['token_balance']==250,'token credit contract mismatch'))
         # Record central Admin authorization coverage under the permanent Admin test id.
@@ -666,6 +684,8 @@ def run_api_tests():
                 assert any(row['round_id']==expected['dragon_tiger_round'] for row in dragon_tiger_state['recent_rounds']) and dragon_tiger_state['shoe']['shoe_number']>=1
                 # Verify the settled Hi-Lo round survived and remains private after restart.
                 assert any(row['round_id']==expected['hi_lo_round'] for row in hi_lo_state['recent_rounds'])
+                # Read and verify this user's terminal Scratch Card after the real process restart.
+                scratch_state=api(base,'/api/v1/games/scratch-cards/state',auth_token=token); assert scratch_state['current_card']['card_id']==integrity_state['scratch_cards'][expected['player_id']] and scratch_state['current_card']['status']=='settled'
                 # Read restarted private history and ledger views.
                 restarted_history=api(base,'/api/v1/casino/history',auth_token=token)['history']; restarted_ledger=api(base,f'/api/v1/players/{expected["player_id"]}/ledger',auth_token=token)['ledger']
                 # Verify restarted history includes the user's Bingo settlement and never leaks another player.
@@ -673,7 +693,7 @@ def run_api_tests():
             # Verify both users produced persisted private history across the history-producing games.
             assert all(count>0 for count in integrity_state['history_game_counts'])
         # Record the live restart persistence regression under the same integrity requirements.
-        run_case('API-WALLET-RESTART-001',['SESSION-003','USER-001','TOKEN-003','TOKEN-004','TEST-039','MHVP-002','CW-002','BIG-SIX-002','RD-002','DT-002','HILO-002'],wallet_restart_persistence)
+        run_case('API-WALLET-RESTART-001',['SESSION-003','USER-001','TOKEN-003','TOKEN-004','TEST-039','MHVP-002','CW-002','BIG-SIX-002','RD-002','DT-002','HILO-002','SCRATCH-002'],wallet_restart_persistence)
         # Define the core function used by this module.
         def core():
             # Load the casino state that publishes packaged and game-module version metadata.
@@ -2183,6 +2203,44 @@ def run_browser_tests():
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Execute the integrated Deuces Wild browser and visual gate.
                 run_case('BR-DWVP-001',['DWVP-001','DWVP-002','DWVP-004','DWVP-005'],deuces_wild_acceptance)
+                # Define real-backend Scratch Cards localization, reveal, responsive, and route acceptance.
+                def scratch_cards_acceptance():
+                    # Open the catalog-owned route and wait for its stable readiness selector.
+                    page.get_by_test_id('nav-scratch_cards').click(); page.get_by_test_id('scratch-cards').wait_for(timeout=5000)
+                    # Enumerate every governed viewport for both required locales.
+                    required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
+                    # Capture one real mounted state across locales and viewports.
+                    def localized_evidence(prefix,states):
+                        # Iterate through paired English and Russian resources.
+                        for locale in ('en-US','ru-RU'):
+                            # Switch locale without discarding the private card.
+                            page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_timeout(100)
+                            # Require the localized game-owned title rather than a resource key.
+                            assert page.locator('.scratch-header h1').inner_text()==('Scratch Cards' if locale=='en-US' else 'Скретч-карты')
+                            # Validate containment and capture after-pass evidence at each viewport.
+                            for viewport_id,width,height in required_viewports:
+                                # Resize to the governed matrix dimensions.
+                                page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
+                                # Reject horizontal overflow and require the mounted surface.
+                                assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.get_by_test_id('scratch-cards').is_visible()
+                                # Record self-describing evidence for this exact state and viewport.
+                                game_evidence(f'after-pass-scratch-cards-{prefix}-{locale.lower()}-{viewport_id}.png','scratch_cards',states,locale,viewport_id)
+                        # Restore English desktop controls for the next public action.
+                        page.get_by_test_id('shell-locale-select').select_option('en-US'); page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(100)
+                    # Capture the ready surface before wagering.
+                    localized_evidence('ready',['ready'])
+                    # Start one card and require all nine covered cells.
+                    page.locator('[data-action="start"]').click(); page.wait_for_function("() => document.querySelectorAll('.scratch-cell.is-covered').length === 9",timeout=5000)
+                    # Reveal one cell through the mounted real backend and capture partial progress.
+                    page.get_by_test_id('scratch-cell-0').click(); page.wait_for_function("() => document.querySelectorAll('.scratch-cell.is-revealed').length === 1",timeout=5000); localized_evidence('revealing',['revealing'])
+                    # Reveal the remaining cells and classify the actual terminal outcome.
+                    page.locator('[data-action="reveal-all"]').click(); page.wait_for_function("() => document.querySelectorAll('.scratch-cell.is-revealed').length === 9",timeout=5000); settled_state='settled_win' if 'Payout:' in page.locator('.scratch-result').inner_text() else 'settled_no_win'; localized_evidence(settled_state,[settled_state])
+                    # Capture reduced motion and canonical reload restoration.
+                    page.emulate_media(reduced_motion='reduce'); localized_evidence('reduced-motion',['reduced_motion']); page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('scratch-cards').wait_for(timeout=5000); localized_evidence('route-restored',['route_restored'])
+                    # Return to the lobby for downstream browser cases.
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Execute the integrated Scratch Cards browser and visual gate.
+                run_case('BR-SCRATCH-001',['SCRATCH-001','SCRATCH-002','SCRATCH-004','SCRATCH-005'],scratch_cards_acceptance)
                 # Define route_restoration to prove deep links, reload, Back, and Forward behavior.
                 def route_restoration():
                     # Open Roulette directly through its canonical path using the authenticated browser context.

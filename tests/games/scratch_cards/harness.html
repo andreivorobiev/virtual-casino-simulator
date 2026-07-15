@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>#87</title>
+  <style>
+    /* Provide only neutral shell dimensions; the game module owns its complete surface styles. */
+    html,body{min-height:100%;margin:0;background:#07150f;color:#f7f0dc;font-family:system-ui,sans-serif}body{padding:18px;box-sizing:border-box}button,select{font:inherit}#game-root{min-height:calc(100vh - 36px)}#toast{position:fixed;right:12px;bottom:12px;padding:10px;z-index:5}#wallet{position:absolute;inline-size:1px;block-size:1px;overflow:hidden;clip-path:inset(50%)}
+    /* End neutral harness styles without imitating the authenticated shared shell. */
+  </style>
+</head>
+<body>
+  <!-- Keep shared helper outlets present without presenting this harness as integrated-shell evidence. -->
+  <div id="wallet" aria-hidden="true"><span id="balance-label"></span><span id="balance">1000</span></div>
+  <div id="toast" hidden></div>
+  <div id="game-root"></div>
+  <script type="module">
+    // Import shared locale initialization before mounting the isolated lazy game.
+    import { initI18n } from '../../../web/core/i18n.js';
+    // Import the issue-owned game contract under real browser module loading.
+    import { ScratchCardsGame } from '../../../web/games/scratch_cards.js';
+    // Publish one authenticated-shell-shaped player so compatibility helpers stay session-aware.
+    window.CasinoCurrentUser = { user: { id: 'browser-user' }, player: { player_id: 'browser-player', token_balance: 1000 } };
+    // Initialize manifest-driven locale state using the URL locale test seam.
+    await initI18n({ domains: ['common'] });
+    // Mount the isolated surface into the harness route outlet.
+    await ScratchCardsGame.mount(document.getElementById('game-root'));
+    // Publish teardown access for focused lifecycle assertions.
+    window.ScratchCardsHarness = { game: ScratchCardsGame };
+    // Mark asynchronous module, locale, state, and wallet loading complete.
+    document.documentElement.dataset.scratchHarnessReady = 'true';
+  </script>
+</body>
+</html>

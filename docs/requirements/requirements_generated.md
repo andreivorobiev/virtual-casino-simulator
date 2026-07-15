@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.12.0
+- application: 9.13.0
 - core: 9.4.0
 - ledger: 9.0.2
 - players: 9.1.0
@@ -29,9 +29,10 @@ Historical source baseline: 9.1.0
 - three_card_poker: 1.0.0
 - jacks_or_better_video_poker: 1.0.0
 - deuces_wild_video_poker: 1.0.1
-- tests: 1.15.0
-- docs: 1.14.0
-- contracts: 1.10.0
+- scratch_cards: 1.0.1
+- tests: 1.16.0
+- docs: 1.15.0
+- contracts: 1.11.0
 - tooling: 1.3.0
 - commenting_policy: 1.0.0
 
@@ -497,3 +498,8 @@ Historical source baseline: 9.1.0
 - **DWVP-003** (Deuces Wild Video Poker) - PASS: Wagers and returned credits use the shared ledger exactly once under stable deal and draw identities.
 - **DWVP-004** (Application) - PASS: Deuces Wild supplies complete English and Russian responsive, accessible, reduced-motion-safe play across required viewports.
 - **DWVP-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Deuces Wild with requirement, module, version, and visual traceability.
+- **SCRATCH-001** (Scratch Cards) - PASS: One private three-by-three card applies the documented match-three prize profile without exposing covered values.
+- **SCRATCH-002** (Scratch Cards) - PASS: Authenticated sessions own private reload-safe cards, partial reveals, history, and canonical route restoration.
+- **SCRATCH-003** (Scratch Cards) - PASS: Each card uses one ledger wager debit and at most one payout credit under stable retry identities.
+- **SCRATCH-004** (Application) - PASS: Scratch Cards supplies complete English and Russian responsive, accessible, reduced-motion-safe play across required viewports.
+- **SCRATCH-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Scratch Cards with requirement, module, version, and visual traceability.

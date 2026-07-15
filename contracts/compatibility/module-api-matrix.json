@@ -59,6 +59,9 @@
   "deuces_wild_video_poker": [
     "contracts/openapi/deuces_wild_video_poker.v1.yaml"
   ],
+  "scratch_cards": [
+    "contracts/openapi/scratch_cards.v1.yaml"
+  ],
   "tests": [],
   "docs": [],
   "contracts": [

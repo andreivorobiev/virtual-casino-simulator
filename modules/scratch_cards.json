@@ -1,0 +1,17 @@
+{
+  "module": "scratch_cards",
+  "version": "1.0.1",
+  "paths": ["casino/games/scratch_cards/", "web/games/scratch_cards.js", "web/i18n/en-US/games/scratch_cards.json", "web/i18n/ru-RU/games/scratch_cards.json"],
+  "requirements_prefixes": ["SCRATCH"],
+  "contracts": ["contracts/openapi/scratch_cards.v1.yaml"],
+  "game": {
+    "id": "scratch_cards", "sort_order": 130, "route": "/games/scratch_cards", "label": "Scratch Cards", "category": "instant", "categories": ["instant", "machine"],
+    "backend": {"register": "casino.games.scratch_cards.api:register"},
+    "frontend": {"module": "./games/scratch_cards.js", "export": "ScratchCardsGame", "ready_testid": "scratch-cards", "i18n_domain": "games/scratch_cards", "i18n_probe": "controls.start"},
+    "tests": {"long_driver": "tests.game_drivers.scratch_cards:play"},
+    "translations": {"ru-RU": {"label": "Скретч-карты", "kicker": "Мгновенная игра", "description": "Личная сетка три на три с поэтапным открытием, сохранением прогресса и расчётом через журнал игровых токенов.", "tags": ["Мгновенная игра", "Собери три", "Журнал токенов"]}},
+    "lobby": {"featured": false, "wide": false, "art_class": "scratch-cards-art", "symbol": "3", "kicker": "Instant game", "description": "A private three-by-three match-three card with saved reveals and ledger-backed settlement.", "tags": ["Instant game", "Match three", "Ledger-backed"]}
+  },
+  "depends_on": ["core", "ledger", "players"],
+  "may_not_depend_on": ["roulette", "slots", "blackjack", "baccarat", "keno", "bingo", "multi_hand_video_poker", "casino_war", "big_six_wheel", "red_dog", "dragon_tiger", "hi_lo", "three_card_poker", "jacks_or_better_video_poker", "deuces_wild_video_poker"]
+}
