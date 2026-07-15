@@ -26,6 +26,8 @@ Every build requires a JSON configuration file with exactly these public fields:
 
 `backendBaseUrl` must be an HTTPS origin with no credentials, path, query, or fragment. The only HTTP exception is an explicit `allowInsecureLocalDevelopment: true` build targeting `localhost`, `127.0.0.1`, or the Android emulator bridge `10.0.2.2`. Missing, unsafe, malformed, or secret-like configuration fails before the shared app loads. Environment-specific `dist/` and synced native web assets are ignored by Git.
 
+Android enables cleartext transport only in its debug source set so the explicit emulator bridge can work; release builds retain the platform HTTPS default. Android application backup is disabled as a conservative foundation for later secure-session work.
+
 Never put passwords, tokens, signing keys, certificates, private endpoints, or production secrets in these files. Native secure session storage is a later #187 phase and is intentionally not claimed by this foundation.
 
 ## Reproducible commands

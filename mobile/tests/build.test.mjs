@@ -61,3 +61,17 @@ test("native project metadata matches the mobile foundation", async () => {
   // Confirm iOS carries the stable application identifier from Capacitor configuration.
   assert.match(iosProject, /PRODUCT_BUNDLE_IDENTIFIER = io\.github\.andreivorobiev\.virtualcasino;/);
 });
+
+// Verify Android release metadata fails closed while debug keeps the explicit emulator path usable.
+test("Android cleartext and backup settings are build scoped", async () => {
+  // Read the release-bearing main manifest from the committed generated project.
+  const mainManifest = await readFile(path.join(mobileRoot, "android", "app", "src", "main", "AndroidManifest.xml"), "utf8");
+  // Confirm application data backup is disabled before later secure-session work begins.
+  assert.match(mainManifest, /android:allowBackup="false"/);
+  // Confirm the release-bearing manifest never enables cleartext transport.
+  assert.doesNotMatch(mainManifest, /usesCleartextTraffic="true"/);
+  // Read the debug-only manifest used for explicit loopback and emulator development.
+  const debugManifest = await readFile(path.join(mobileRoot, "android", "app", "src", "debug", "AndroidManifest.xml"), "utf8");
+  // Confirm cleartext transport is enabled only in the debug source set.
+  assert.match(debugManifest, /android:usesCleartextTraffic="true"/);
+});
