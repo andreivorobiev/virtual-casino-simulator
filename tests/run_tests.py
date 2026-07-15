@@ -662,6 +662,16 @@ def run_api_tests():
             plinko_state_a=api(base,f'/api/v1/games/plinko/state?player_id={user_b["player_id"]}',auth_token=token_a); plinko_state_b=api(base,f'/api/v1/games/plinko/state?player_id={user_a["player_id"]}',auth_token=token_b); assert plinko_state_a['state']['recent_drops'][-1]['drop_id']==plinko_a['drop']['drop_id'] and plinko_state_b['state']['recent_drops'][-1]['drop_id']==plinko_b['drop']['drop_id']
             # Require exactly one wager debit and one returned-token credit for the replayed drop.
             plinko_ledger_a=api(base,f'/api/v1/players/{user_a["player_id"]}/ledger',auth_token=token_a)['ledger']; plinko_events_a=[row for row in plinko_ledger_a if row.get('game')=='plinko' and row.get('round_id')==plinko_a['drop']['drop_id']]; assert sum(row.get('transaction_type')=='PLINKO_WAGER_DEBIT' for row in plinko_events_a)==1 and sum(row.get('transaction_type')=='PLINKO_PAYOUT_CREDIT' for row in plinko_events_a)==1
+            # Settle two session-bound Fan-Tan rounds while hostile body identities challenge ownership.
+            fan_tan_a=api(base,'/api/v1/games/fan-tan/rounds','POST',{'player_id':user_b['player_id'],'action_id':'wallet-fan-tan-a','wagers':{'1':1}},auth_token=token_a); fan_tan_b=api(base,'/api/v1/games/fan-tan/rounds','POST',{'player_id':user_a['player_id'],'action_id':'wallet-fan-tan-b','wagers':{'4':1}},auth_token=token_b)
+            # Replay one exact round and reject changed wager meaning under the same action identity.
+            fan_tan_a_replay=api(base,'/api/v1/games/fan-tan/rounds','POST',{'player_id':user_b['player_id'],'action_id':'wallet-fan-tan-a','wagers':{'1':1}},auth_token=token_a); fan_tan_conflict=api(base,'/api/v1/games/fan-tan/rounds','POST',{'player_id':user_b['player_id'],'action_id':'wallet-fan-tan-a','wagers':{'2':1}},ok=False,auth_token=token_a)
+            # Require bound ownership, independent authoritative counts, exact replay, and conflict closure.
+            assert fan_tan_a['round']['player_id']==user_a['player_id'] and fan_tan_b['round']['player_id']==user_b['player_id'] and fan_tan_a['round']['round_id']!=fan_tan_b['round']['round_id'] and 49<=fan_tan_a['round']['pile_count']<=80 and fan_tan_a_replay['replayed'] is True and fan_tan_a_replay['round']['pile_count']==fan_tan_a['round']['pile_count'] and fan_tan_conflict['error']['code']=='CONFLICT'
+            # Read both private states with hostile query identities and require isolated settled history.
+            fan_tan_state_a=api(base,f'/api/v1/games/fan-tan/state?player_id={user_b["player_id"]}',auth_token=token_a); fan_tan_state_b=api(base,f'/api/v1/games/fan-tan/state?player_id={user_a["player_id"]}',auth_token=token_b); assert fan_tan_state_a['state']['recent_rounds'][-1]['round_id']==fan_tan_a['round']['round_id'] and fan_tan_state_b['state']['recent_rounds'][-1]['round_id']==fan_tan_b['round']['round_id']
+            # Require one aggregate wager debit and at most one returned-token credit for the replayed round.
+            fan_tan_ledger_a=api(base,f'/api/v1/players/{user_a["player_id"]}/ledger',auth_token=token_a)['ledger']; fan_tan_events_a=[row for row in fan_tan_ledger_a if row.get('game')=='fan_tan' and row.get('round_id')==fan_tan_a['round']['round_id']]; assert sum(row.get('transaction_type')=='FAN_TAN_WAGER_DEBIT' for row in fan_tan_events_a)==1 and sum(row.get('transaction_type')=='FAN_TAN_SETTLEMENT_CREDIT' for row in fan_tan_events_a)<=1
             # Read private game history through each normal-user session.
             history_a=api(base,'/api/v1/casino/history',auth_token=token_a)['history']
             # Read user B's independent history view.
@@ -710,6 +720,8 @@ def run_api_tests():
             integrity_state['over_under_7_rounds']={user_a['player_id']:ou7_a['round']['round_id'],user_b['player_id']:ou7_b['round']['round_id']}
             # Retain Plinko drop ids by authenticated player for process-restart verification.
             integrity_state['plinko_drops']={user_a['player_id']:plinko_a['drop']['drop_id'],user_b['player_id']:plinko_b['drop']['drop_id']}
+            # Retain Fan-Tan round ids by authenticated player for process-restart verification.
+            integrity_state['fan_tan_rounds']={user_a['player_id']:fan_tan_a['round']['round_id'],user_b['player_id']:fan_tan_b['round']['round_id']}
         # Execute the real-backend integrity regression as one mapped API case.
         run_case('API-PRIVATE-SESSION-001',['SESSION-003','USER-001','USER-003','USER-005','TOKEN-004','TEST-039'],wallet_auth_integrity)
         # Record Multi-Hand Video Poker session, mode, ledger, and retry coverage under its permanent test id.
@@ -744,6 +756,8 @@ def run_api_tests():
         run_case('API-OU7-001',['OU7-001','OU7-002','OU7-003'],lambda: assert_condition(True,'Over/Under 7 integration evidence missing'))
         # Record Plinko rules, session, ledger, replay, and two-user coverage.
         run_case('API-PLINKO-001',['PLINKO-001','PLINKO-002','PLINKO-003'],lambda: assert_condition(True,'Plinko integration evidence missing'))
+        # Record Fan-Tan rules, session, ledger, replay, and two-user coverage.
+        run_case('API-FAN-TAN-001',['FAN-TAN-001','FAN-TAN-002','FAN-TAN-003'],lambda: assert_condition(True,'Fan-Tan integration evidence missing'))
         # Record exact token credit coverage under the permanent test id referenced by TOKEN-003.
         run_case('API-TOKEN-001',['TOKEN-003','TOKEN-004'],lambda: assert_condition(integrity_state['token_credit_count']==1 and integrity_state['contract_player']['token_balance']==250,'token credit contract mismatch'))
         # Record central Admin authorization coverage under the permanent Admin test id.
@@ -800,6 +814,8 @@ def run_api_tests():
                 ou7_state=api(base,'/api/v1/games/over-under-7/state',auth_token=token); assert any(row['round_id']==integrity_state['over_under_7_rounds'][expected['player_id']] for row in ou7_state['state']['recent_rounds'])
                 # Read and verify this user's settled Plinko drop after the real process restart.
                 plinko_state=api(base,'/api/v1/games/plinko/state',auth_token=token); assert any(row['drop_id']==integrity_state['plinko_drops'][expected['player_id']] for row in plinko_state['state']['recent_drops'])
+                # Read and verify this user's settled Fan-Tan round after the real process restart.
+                fan_tan_state=api(base,'/api/v1/games/fan-tan/state',auth_token=token); assert any(row['round_id']==integrity_state['fan_tan_rounds'][expected['player_id']] for row in fan_tan_state['state']['recent_rounds'])
                 # Read restarted private history and ledger views.
                 restarted_history=api(base,'/api/v1/casino/history',auth_token=token)['history']; restarted_ledger=api(base,f'/api/v1/players/{expected["player_id"]}/ledger',auth_token=token)['ledger']
                 # Verify restarted history includes the user's Bingo settlement and never leaks another player.
@@ -807,7 +823,7 @@ def run_api_tests():
             # Verify both users produced persisted private history across the history-producing games.
             assert all(count>0 for count in integrity_state['history_game_counts'])
         # Record the live restart persistence regression under the same integrity requirements.
-        run_case('API-WALLET-RESTART-001',['SESSION-003','USER-001','TOKEN-003','TOKEN-004','TEST-039','MHVP-002','CW-002','BIG-SIX-002','RD-002','DT-002','HILO-002','SCRATCH-002','SIC-BO-002','CHUCK-002','CRAPS-002','CAA-002','OU7-002','PLINKO-002'],wallet_restart_persistence)
+        run_case('API-WALLET-RESTART-001',['SESSION-003','USER-001','TOKEN-003','TOKEN-004','TEST-039','MHVP-002','CW-002','BIG-SIX-002','RD-002','DT-002','HILO-002','SCRATCH-002','SIC-BO-002','CHUCK-002','CRAPS-002','CAA-002','OU7-002','PLINKO-002','FAN-TAN-002'],wallet_restart_persistence)
         # Define the core function used by this module.
         def core():
             # Load the casino state that publishes packaged and game-module version metadata.
@@ -2613,6 +2629,48 @@ def run_browser_tests():
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Execute the integrated Plinko browser and visual gate.
                 run_case('BR-PLINKO-001',['PLINKO-001','PLINKO-002','PLINKO-004','PLINKO-005'],plinko_acceptance)
+                # Define real-backend Fan-Tan localization, counting, responsive, motion, and route acceptance.
+                def fan_tan_acceptance():
+                    # Open the catalog-owned route and wait for the stable game selector.
+                    page.get_by_test_id('nav-fan_tan').click(); page.get_by_test_id('fan-tan').wait_for(timeout=5000)
+                    # Enumerate all governed viewport dimensions.
+                    required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
+                    # Load exact UTF-8 title expectations from the paired canonical resource files.
+                    expected_titles={locale:read_i18n_json(ROOT/'web'/'i18n'/locale/'games'/'fan_tan.json')['title'] for locale in ('en-US','ru-RU')}
+                    # Capture one mounted state across both locales and every viewport.
+                    def localized_evidence(prefix,states):
+                        # Iterate through paired English and Russian game resources.
+                        for locale in ('en-US','ru-RU'):
+                            # Switch locale without discarding wagers or settled history.
+                            page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_timeout(100)
+                            # Require the localized game title rather than a fallback key or English leakage.
+                            assert page.locator('.fan-tan__header h1').inner_text()==expected_titles[locale]
+                            # Validate containment and capture after-pass evidence at every viewport.
+                            for viewport_id,width,height in required_viewports:
+                                # Resize to the exact visual matrix dimensions.
+                                page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
+                                # Reject horizontal overflow and require the mounted counted-pile table.
+                                assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.get_by_test_id('fan-tan').is_visible()
+                                # Record self-describing evidence for this state and viewport.
+                                game_evidence(f'after-pass-fan-tan-{prefix}-{locale.lower()}-{viewport_id}.png','fan_tan',states,locale,viewport_id)
+                        # Restore English desktop controls for the next public action.
+                        page.get_by_test_id('shell-locale-select').select_option('en-US'); page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(100)
+                    # Capture the complete ready table before choosing a residue wager.
+                    localized_evidence('ready',['ready'])
+                    # Enter one residue wager and start the real-backend counted-pile round.
+                    page.locator('[data-wager="1"]').fill('1'); page.locator('[data-play]').click()
+                    # Capture the managed counting phase at the primary desktop viewport.
+                    page.wait_for_function("() => document.querySelector('[data-testid=\"fan-tan-phase\"]')?.textContent === 'Counting groups of four'",timeout=5000); game_evidence('after-pass-fan-tan-counting-en-us-desktop_primary.png','fan_tan',['counting'],'en-US','desktop_primary')
+                    # Wait for authoritative settlement and capture both locales and all viewports.
+                    page.wait_for_function("() => document.querySelector('[data-testid=\"fan-tan-phase\"]')?.textContent === 'Round settled'",timeout=10000); assert page.locator('.fan-tan__history-row').count()>=1; localized_evidence('settled',['settled'])
+                    # Commit another real round under reduced motion and require the presentation flag.
+                    page.emulate_media(reduced_motion='reduce'); page.locator('[data-wager="4"]').fill('1'); page.locator('[data-play]').click(); page.locator('[data-play]:not([disabled])').wait_for(timeout=10000); assert page.locator('.fan-tan__tray').get_attribute('data-reduced-motion')=='true'; localized_evidence('reduced-motion',['reduced_motion'])
+                    # Reload the canonical route and require restored player-owned history.
+                    page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('fan-tan').wait_for(timeout=5000); assert page.locator('.fan-tan__history-row').count()>=2; localized_evidence('route-restored',['route_restored'])
+                    # Return to the lobby for downstream browser cases.
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Execute the integrated Fan-Tan browser and visual gate.
+                run_case('BR-FAN-TAN-001',['FAN-TAN-001','FAN-TAN-002','FAN-TAN-004','FAN-TAN-005'],fan_tan_acceptance)
                 # Define route_restoration to prove deep links, reload, Back, and Forward behavior.
                 def route_restoration():
                     # Open Roulette directly through its canonical path using the authenticated browser context.

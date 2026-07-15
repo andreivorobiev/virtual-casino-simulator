@@ -1,4 +1,4 @@
-"""Additive v1 router registration for the isolated Fan-Tan proposal."""
+"""Additive v1 router registration for catalog-integrated Fan-Tan."""
 
 # Import canonical player-id validation used by all existing v1 game handlers.
 from casino.core.validation import require_player_id

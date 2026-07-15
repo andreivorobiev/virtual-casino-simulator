@@ -29,6 +29,7 @@ The Product-approved serialized order is:
 15. Pull request #176, Crown and Anchor for issue #133, merged after Craps while Texas Hold'em remains held.
 16. Pull request #171, Over/Under 7 for issue #135, merged after Crown and Anchor.
 17. Pull request #175, Plinko for issue #136, released after Over/Under 7 merged.
+18. Pull request #174, Fan-Tan for issue #137, released after Plinko merged.
 
 Each game pull request remains draft until the preceding game is accepted, the current branch is rebased onto the resulting `main`, and the game passes the complete integration gate below. A later game must not pre-allocate or edit the shared version values owned by an earlier game.
 
@@ -54,7 +55,8 @@ Existing games retain sort orders 10 through 60. The approved expansion slots ar
 | 200 | Texas Hold'em Practice Table | #95 | Held draft PR #120 |
 | 210 | Crown and Anchor | #133 | Merged PR #176 |
 | 220 | Over/Under 7 | #135 | Merged PR #171 |
-| 230 | Plinko | #136 | Released draft PR #175 |
+| 230 | Plinko | #136 | Merged PR #175 |
+| 240 | Fan-Tan | #137 | Released draft PR #174 |
 
 Sort order is catalog presentation metadata, not an authorization to register a placeholder. Only complete game descriptors are loaded.
 
@@ -78,6 +80,7 @@ Permanent game blocks are reserved as follows:
 - `CAA-001` through `CAA-005` for the same five acceptance dimensions for Crown and Anchor.
 - `OU7-001` through `OU7-005` for the same five acceptance dimensions for Over/Under 7.
 - `PLINKO-001` through `PLINKO-005` for the same five acceptance dimensions for Plinko.
+- `FAN-TAN-001` through `FAN-TAN-005` for the same five acceptance dimensions for Fan-Tan.
 
 New entries begin as `PLANNED`. The integration owner changes an entry to `PASS` only when its mapped real-backend tests and visual evidence have passed. Requirement IDs are never reused or renumbered after allocation.
 
@@ -130,6 +133,7 @@ Each new game begins at module revision `1.0.0`. The packaged application releas
 | #176 Crown and Anchor | 9.17.0 | 1.20.0 | 1.19.0 | 1.15.0 |
 | #171 Over/Under 7 | 9.18.0 | 1.21.0 | 1.20.0 | 1.16.0 |
 | #175 Plinko | 9.19.0 | 1.22.0 | 1.21.0 | 1.17.0 |
+| #174 Fan-Tan | 9.20.0 | 1.23.0 | 1.22.0 | 1.18.0 |
 
 These values are reservations, not permission to overwrite a newer value. The integrator must re-read current `main` immediately before each bump.
 
@@ -162,6 +166,7 @@ Required visual states are:
 - Crown and Anchor: `ready`, `rolling`, `settled`, `reduced_motion`, and `route_restored`.
 - Over/Under 7: `ready`, `rolling`, `settled`, `reduced_motion`, and `route_restored`.
 - Plinko: `ready`, `path_replay`, `settled`, `reduced_motion`, and `route_restored`.
+- Fan-Tan: `ready`, `counting`, `settled`, `reduced_motion`, and `route_restored`.
 
 ## Validation and listener gate
 

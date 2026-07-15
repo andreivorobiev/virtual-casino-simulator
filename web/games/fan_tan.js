@@ -1,4 +1,4 @@
-// Implement the isolated Fan-Tan route for GitHub issue #137.
+// Implement the catalog-integrated Fan-Tan route for GitHub issue #137.
 // Import the standard API helpers so requests retain the shared success/error envelope.
 import { api, post } from '../core/api.js';
 // Import shared UI helpers for safe markup, feedback, and wallet refresh.

@@ -80,6 +80,9 @@
   "plinko": [
     "contracts/openapi/plinko.v1.yaml"
   ],
+  "fan_tan": [
+    "contracts/openapi/fan_tan.v1.yaml"
+  ],
   "tests": [],
   "docs": [],
   "contracts": [

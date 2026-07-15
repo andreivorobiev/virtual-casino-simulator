@@ -3,14 +3,14 @@ info:
   title: Virtual Casino Fan-Tan API
   version: v1
   description: >-
-    Additive proposal contract for authenticated Fan-Tan play. The game counts a
+    Additive frozen-v1 contract for authenticated Fan-Tan play. The game counts a
     pile by repeated groups of four, resolves a residue from one to four, and
     settles all play-token movement through ledger-backed exactly-once actions.
 tags:
   - name: Fan-Tan
     description: Player-scoped counted-pile residue wagering.
 
-# Define only additive frozen-v1 game endpoints owned by this proposal module.
+# Define only additive frozen-v1 game endpoints owned by the Fan-Tan module.
 paths:
   /api/v1/games/fan-tan/state:
     get:
