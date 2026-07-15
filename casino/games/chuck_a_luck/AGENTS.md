@@ -4,7 +4,7 @@ Scope future changes to the isolated `chuck_a_luck` game unless a coordinator ex
 
 ## Rules
 
-- Read the root `AGENTS.md`, the game rules documentation, and `codex/tasks/artifacts/issue-89-chuck-a-luck/chuck_a_luck.module.proposal.json` before editing.
+- Read the root `AGENTS.md`, the game rules documentation, and canonical `modules/chuck_a_luck.json` descriptor before editing.
 - Preserve the three-six-sided-dice profile and the one-through-six wager catalog unless a versioned rule change is approved.
 - Keep game code independent of every other game package.
 - Route every play-token debit and credit through `casino/core/ledger.py`; never mutate balances directly.

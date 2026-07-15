@@ -1,4 +1,4 @@
-# Chuck-a-Luck isolated game slice
+# Chuck-a-Luck game
 
 Issue: [#89](https://github.com/andreivorobiev/virtual-casino-simulator/issues/89)
 
@@ -8,9 +8,9 @@ Shared integration lane: #77
 
 Dice and motion dependency: #97
 
-## Provisional requirement boundary
+## Permanent requirement traceability
 
-This isolated proposal uses the provisional `CHUCK` requirement prefix only. It does not allocate or claim permanent requirement IDs. Issue #77 must allocate permanent mappings for rules and deterministic outcomes, ledger and retry safety, session-bound API behavior, localized responsive browser behavior, and reduced-motion/timer cleanup before integration.
+Issue #77 allocates `CHUCK-001` through `CHUCK-005` for rules and deterministic outcomes, session-bound API and restart behavior, ledger-only retry safety, localized responsive browser behavior, and catalog-discovered test/visual evidence.
 
 ## Rules profile
 
@@ -59,16 +59,15 @@ The game-local frontend and paired `en-US` / `ru-RU` resources provide:
 
 The dice preview, deterministic motion seam, reduced-motion branch, and timer ownership follow the shared primitives established by issue #97.
 
-## Integration handoff for #77
+## Canonical #77 integration
 
-The issue-owned descriptor artifact at `codex/tasks/artifacts/issue-89-chuck-a-luck/chuck_a_luck.module.proposal.json` preserves proposed module version `1.0.0` and reserved sort order `150` without enabling runtime auto-discovery. Integration must:
+The canonical descriptor at `modules/chuck_a_luck.json` registers module version `1.0.0` and sort order `150`. The accepted shared integration:
 
-- promote the proposal artifact to `modules/chuck_a_luck.json` in the same #77 change that adds its canonical revision;
-- add `chuck_a_luck: 1.0.0` to `modules/module-manifest.json`;
-- allocate permanent Chuck-a-Luck API/browser/test requirement IDs and replace the provisional `CHUCK` mapping;
-- register the contract in the shared compatibility or digest inventory;
-- let catalog discovery register `casino.games.chuck_a_luck.api:register`, `ChuckALuckGame`, both locale resources, and `tests.game_drivers.chuck_a_luck:play`;
-- add the `chuck_a_luck` visual-matrix surface with `ready`, `rolling`, `settled`, `reduced_motion`, and `route_restored` states for `en-US` and `ru-RU` at all four required viewports;
-- review the branch-local real-backend `after_pass` set under `docs/evidence/chuck_a_luck/` and recapture canonical rows if shared-shell integration changes the visible result.
+- adds `chuck_a_luck: 1.0.0` to `modules/module-manifest.json`;
+- maps `CHUCK-001` through `CHUCK-005` to the central API, restart, browser, and Long Suite gates;
+- registers the additive OpenAPI contract in the compatibility and digest inventories;
+- lets catalog discovery register `casino.games.chuck_a_luck.api:register`, `ChuckALuckGame`, both locale resources, and `tests.game_drivers.chuck_a_luck:play`;
+- adds the `chuck_a_luck` visual-matrix surface with `ready`, `rolling`, `settled`, `reduced_motion`, and `route_restored` states for `en-US` and `ru-RU` at all four required viewports;
+- preserves the isolated `after_pass` set under `docs/evidence/chuck_a_luck/` and adds canonical real-shell captures through the central browser runner.
 
-No shared catalog, router, configuration, shell, global i18n, test runner, long-suite registry, visual matrix, central requirement registry, generated documentation, compatibility matrix, or aggregate manifest file is changed by this isolated slice.
+Shared registration remains catalog-driven; no bespoke router, shell, or long-suite registry entry is required.

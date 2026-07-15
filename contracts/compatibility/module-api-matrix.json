@@ -65,6 +65,9 @@
   "sic_bo": [
     "contracts/openapi/sic_bo.v1.yaml"
   ],
+  "chuck_a_luck": [
+    "contracts/openapi/chuck_a_luck.v1.yaml"
+  ],
   "tests": [],
   "docs": [],
   "contracts": [

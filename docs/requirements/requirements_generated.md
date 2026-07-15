@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.14.0
+- application: 9.15.0
 - core: 9.4.0
 - ledger: 9.0.2
 - players: 9.1.0
@@ -31,9 +31,10 @@ Historical source baseline: 9.1.0
 - deuces_wild_video_poker: 1.0.1
 - scratch_cards: 1.0.1
 - sic_bo: 1.0.0
-- tests: 1.17.0
-- docs: 1.16.0
-- contracts: 1.12.0
+- chuck_a_luck: 1.0.0
+- tests: 1.18.0
+- docs: 1.17.0
+- contracts: 1.13.0
 - tooling: 1.3.0
 - commenting_policy: 1.0.0
 
@@ -509,3 +510,8 @@ Historical source baseline: 9.1.0
 - **SIC-BO-003** (Sic Bo) - PASS: Aggregate wagers and returned credits use the shared ledger exactly once under stable action identities.
 - **SIC-BO-004** (Application) - PASS: Sic Bo supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.
 - **SIC-BO-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Sic Bo with requirement, module, version, and visual traceability.
+- **CHUCK-001** (Chuck-a-Luck) - PASS: Three server-authoritative dice implement one-through-six face wagers and the documented one-, two-, and three-match payout profile.
+- **CHUCK-002** (Chuck-a-Luck) - PASS: Authenticated sessions own private reload-safe rolls, recovery state, history, and canonical route restoration.
+- **CHUCK-003** (Chuck-a-Luck) - PASS: Aggregate wagers and returned credits use the shared ledger exactly once under stable request identities.
+- **CHUCK-004** (Application) - PASS: Chuck-a-Luck supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.
+- **CHUCK-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Chuck-a-Luck with requirement, module, version, and visual traceability.

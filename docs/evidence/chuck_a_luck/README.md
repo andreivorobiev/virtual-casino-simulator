@@ -26,6 +26,6 @@ There are 28 PNG images and 28 matching JSON sidecars in this directory. Every s
 
 The browser pass also verified standard success envelopes, server dice matching the rendered dice, page-level horizontal containment, minimum primary-action height, real reload restoration, and exact listener cleanup.
 
-## Integration boundary
+## Canonical integration evidence
 
-This evidence proves the isolated game surface, not completion of issue #77. Permanent requirement IDs, the aggregate `modules/module-manifest.json` revision, shared compatibility registration, canonical visual-matrix rows, and any shared-shell catalog follow-up remain owned by #77. Integration should retain these artifacts for comparison and recapture the canonical post-integration rows if shared shell behavior changes.
+This retained set proves the isolated game surface at its recorded source commit. Issue #77 separately promotes the canonical descriptor, permanent `CHUCK-001` through `CHUCK-005` requirements, aggregate manifest revision, compatibility registration, visual-matrix row, and central real-shell captures from the exact integrated head.
