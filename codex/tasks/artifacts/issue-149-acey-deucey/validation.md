@@ -1,10 +1,10 @@
-# Issue #149 validation handoff
+# Issue #149 isolated validation handoff
 
 Branch: `codex/issue-149-acey-deucey`
 
-Proposal descriptor: `codex/tasks/artifacts/issue-149-acey-deucey/acey_deucey.module.proposal.json`
+Canonical descriptor after #77 integration: `modules/acey_deucey.json`
 
-Proposal descriptor SHA-256: `53BE23237E00336B6EEC6EC90E044B72E3AFE4425AC5FC2AA6139025D44B2B4F`
+The isolated command record below is supplemented by exact-head shared API, browser, Long Suite 100, visual, contract, requirement, version, and listener-cleanup evidence in the PR handback.
 
 ## Commands
 
@@ -22,9 +22,8 @@ Proposal descriptor SHA-256: `53BE23237E00336B6EEC6EC90E044B72E3AFE4425AC5FC2AA6
 
 No local listener was started.
 
-## Blockers
+## Shared integration status
 
-- #77 must decide whether this distinct proposal counts toward the shared expansion target.
-- #77 must add `modules/acey_deucey.json`, aggregate manifest/version entries, compatibility digests, permanent requirements, visual-matrix rows, catalog/browser discovery, and long-suite driver coverage.
-- This draft does not claim shared catalog registration, 20-game count acceptance, public release readiness, or production deployment.
-
+- #77 accepts Acey-Deucey as a distinct catalog module at sort order `260`.
+- Permanent requirements `AD-001` through `AD-005` and shared integration metadata are allocated centrally.
+- The pull request remains draft until its exact integrated head passes all gates and receives coordinator acceptance; no deployment claim is made.

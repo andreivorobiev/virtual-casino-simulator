@@ -114,7 +114,6 @@ def create_round(player_id: str, deal_action_id: str, *, left_card: str, right_c
         "created_at": created_at,  # Preserve injected audit time.
     }
 
-
 # Classify the hidden third card against the exposed boundaries.
 def classify_result(left_card, right_card, third_card) -> str:
     # Read strict boundary values after card normalization.
@@ -263,4 +262,3 @@ def public_state(state: dict) -> dict:
         "recent_rounds": [public_round(item) for item in state.get("recent_rounds", [])],  # Sanitize history.
         **({"schema_version": state["schema_version"]} if "schema_version" in state else {}),  # Preserve storage metadata.
     }
-

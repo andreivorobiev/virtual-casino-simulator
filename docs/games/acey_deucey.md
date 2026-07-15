@@ -1,0 +1,24 @@
+# Acey-Deucey
+
+Issue: #149. Parent epic: #66. Game portfolio: #73. Shared integration owner: #77.
+
+Acey-Deucey, also known as In-Between, deals two boundary cards before the player risks play tokens. The player may pass or wager that a private third card will land strictly between the boundary ranks.
+
+## Rules Profile
+
+- One standard deck supplies two exposed boundaries and one prepared private third card.
+- The free deal moves no play tokens.
+- A strict inside rank returns 2x the wager: stake plus even-money winnings.
+- Outside ranks and cards matching either boundary lose the play wager.
+- A pass closes the round without ledger movement.
+- All copy uses toy-simulator play-token language with no cash value.
+
+## Distinct Module Proof
+
+Hi-Lo exposes one card and asks for a higher/lower prediction. Red Dog takes an ante before its six-deck spread, includes pair and consecutive automatic paths, and offers spread-priced raises. Acey-Deucey exposes two boundaries for free and lets the player pass or make one even-money in-between wager before revealing the third card.
+
+## Catalog Integration
+
+The descriptor at `modules/acey_deucey.json` owns module version `1.0.0`, route `/games/acey_deucey`, sort order `260`, paired EN/RU resources, the additive contract, and `tests.game_drivers.acey_deucey:play`. Permanent requirements `AD-001` through `AD-005` map rules, session/restart behavior, ledger safety, browser localization, and catalog-wide evidence.
+
+The visual surface `acey_deucey` covers `ready`, `boundaries_dealt`, `settled`, `passed`, `reduced_motion`, and `route_restored` in both locales at desktop primary, desktop compact, tablet, and mobile viewports. Shared registration remains catalog-driven.

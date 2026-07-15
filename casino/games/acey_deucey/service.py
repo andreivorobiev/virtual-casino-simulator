@@ -265,7 +265,6 @@ class AceyDeuceyService:
             self._save(player_id, state)
             # Return public state without revealing the third card.
             return {"round": engine.public_round(round_state), "replayed": False, **self._payload(player_id, state)}
-
     # Play or replay one wager against an active boundary deal.
     def play(self, player_id: str, round_id: str, request: dict) -> dict:
         # Require a JSON object body.
@@ -387,4 +386,3 @@ class AceyDeuceyService:
             self._save(player_id, state)
             # Return passed state with no ledger proof.
             return {"round": engine.public_round(round_state), "replayed": False, **self._payload(player_id, state)}
-

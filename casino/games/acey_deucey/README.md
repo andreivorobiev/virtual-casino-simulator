@@ -1,6 +1,6 @@
 # Acey-Deucey / In-Between game module
 
-This is the issue #149 isolated draft slice. It intentionally does not edit the shared catalog, router, shell, aggregate manifest, permanent requirements, compatibility matrix, visual matrix, central test discovery, or long-suite registry.
+Issue #149 is catalog-integrated through shared sequencing issue #77. The game remains isolated while its canonical descriptor, requirements, compatibility, visual, and discovered-test metadata live in the shared integration surfaces.
 
 ## Distinctness proof
 
@@ -20,9 +20,8 @@ Acey-Deucey is implemented as a distinct countable proposal from existing Red Do
 - A third card outside the boundaries returns `0x`.
 - Equal or adjacent boundaries have zero inside ranks; the player may pass.
 
-## #77 integration blockers
+## #77 integration
 
-- Add `modules/acey_deucey.json` only through #77.
-- Add aggregate `modules/module-manifest.json` revision only through #77.
-- Add permanent requirements, compatibility-matrix entries, visual-matrix rows, browser acceptance, and long-suite discovery only through #77.
-
+- `modules/acey_deucey.json` owns version `1.0.0`, sort order `260`, and catalog discovery.
+- Permanent requirements `AD-001` through `AD-005` cover rules, private state, ledger actions, localization, and evidence.
+- Compatibility, visual-matrix, browser, restart, and Long Suite 100 evidence are centrally traceable.

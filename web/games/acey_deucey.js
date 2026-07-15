@@ -1,4 +1,4 @@
-// Implement the isolated Acey-Deucey browser module for GitHub issue #149.
+// Implement the catalog-integrated Acey-Deucey browser module for GitHub issue #149.
 
 // Import authenticated envelope-aware API helpers without caller-owned player ids.
 import { api, post } from '../core/api.js';
@@ -223,8 +223,8 @@ function stylesHtml() {
 function bindEvents() {
   // Read the wager input from the current frame.
   const wagerInput = root?.querySelector('#acey-wager');
-  // Preserve valid wager edits locally until play.
-  if (wagerInput) wagerInput.onchange = () => { wager = wagerValue(wagerInput.value); render(); };
+  // Preserve valid wager edits without replacing the focused control before its action click.
+  if (wagerInput) wagerInput.oninput = () => { wager = wagerValue(wagerInput.value); };
   // Bind deal, play, and pass controls through one action dispatcher.
   root?.querySelectorAll('[data-action]').forEach(button => {
     // Prepare the exact retry identity before executing the action.
@@ -414,4 +414,3 @@ export const AceyDeuceyGame = {
     // No timers or global event listeners are owned by this module.
   },
 };
-

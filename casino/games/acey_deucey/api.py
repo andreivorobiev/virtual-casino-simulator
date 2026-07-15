@@ -1,4 +1,4 @@
-"""Additive v1 route registration for isolated Acey-Deucey."""
+"""Additive v1 route registration for catalog-integrated Acey-Deucey."""
 
 # Import the shared authenticated player resolver so session binding wins.
 from casino.core.request_player import resolve_authenticated_player
@@ -49,4 +49,3 @@ def register(router, service=None, *, test_seed=None):
 
     # Return the service for focused tests and diagnostics.
     return game_service
-

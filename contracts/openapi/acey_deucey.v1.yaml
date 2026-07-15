@@ -1,10 +1,11 @@
 openapi: 3.0.3
 info:
   title: Virtual Casino Acey-Deucey API
-  version: 1.0.0-proposal
+  version: v1
   description: >
-    Additive isolated issue #149 contract proposal. Shared registration and compatibility
-    inventory remain blocked on #77.
+    Additive frozen-v1 contract for authenticated Acey-Deucey play. Catalog
+    registration is shared while session identity and ledger settlement remain
+    shared-core responsibilities.
 tags:
   - name: Acey-Deucey
 paths:
@@ -107,4 +108,3 @@ components:
         wager: {type: number}
         payout: {type: number}
         net: {type: number}
-

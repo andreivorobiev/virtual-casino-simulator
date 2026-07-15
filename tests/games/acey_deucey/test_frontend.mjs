@@ -28,4 +28,3 @@ for (const phrase of ['Deal boundaries', 'Play wager', 'Return table', 'Ready to
   // Check every localized value for the prohibited English phrase.
   assert.equal(Object.values(ru).some(value => String(value).includes(phrase)), false, `Russian resource leaked English phrase: ${phrase}`);
 }
-

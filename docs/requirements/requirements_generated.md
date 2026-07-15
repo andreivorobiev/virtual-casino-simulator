@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.21.0
+- application: 9.22.0
 - core: 9.4.0
 - ledger: 9.0.2
 - players: 9.1.0
@@ -38,9 +38,10 @@ Historical source baseline: 9.1.0
 - plinko: 1.0.0
 - fan_tan: 1.0.0
 - andar_bahar: 1.0.0
-- tests: 1.24.0
-- docs: 1.23.0
-- contracts: 1.19.0
+- acey_deucey: 1.0.0
+- tests: 1.25.0
+- docs: 1.24.0
+- contracts: 1.20.0
 - tooling: 1.3.0
 - commenting_policy: 1.0.0
 
@@ -551,3 +552,8 @@ Historical source baseline: 9.1.0
 - **AB-003** (Andar Bahar) - PASS: Wager debits and returned-token credits use the shared ledger exactly once under durable action identities.
 - **AB-004** (Application) - PASS: Andar Bahar supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.
 - **AB-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Andar Bahar with requirement, module, version, and visual traceability.
+- **AD-001** (Acey-Deucey) - PASS: Two free exposed boundaries precede a pass or wager decision, and strict inside ranks settle at even money while outside and boundary ties lose.
+- **AD-002** (Acey-Deucey) - PASS: Authenticated sessions own private reload-safe prepared rounds, hidden third cards, durable receipts, settled history, and canonical route restoration.
+- **AD-003** (Acey-Deucey) - PASS: Free deals and passes move no tokens; wager debits and returned-token credits use the shared ledger exactly once under durable action identities.
+- **AD-004** (Application) - PASS: Acey-Deucey supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.
+- **AD-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Acey-Deucey with requirement, module, version, and visual traceability.

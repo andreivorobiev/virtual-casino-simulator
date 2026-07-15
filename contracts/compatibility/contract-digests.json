@@ -24,6 +24,7 @@
   "contracts/openapi/plinko.v1.yaml": "863912fab67562e68334f3259ffba20a65ad8162ff710b0c7e33f7e281d2b1fd",
   "contracts/openapi/fan_tan.v1.yaml": "397007b7b87da4267731a8d98cbedb3c752e5ffb02be767335feefc42d54e351",
   "contracts/openapi/andar_bahar.v1.yaml": "14ea022ed9be9f25896857012de154600dffe271c8cb9bc67d7c401acadfd7df",
+  "contracts/openapi/acey_deucey.v1.yaml": "0b9e8fb45e72af5c32220c9fcadc1884e870a1a5b99a018873c785f8385560e1",
   "contracts/openapi/keno.v1.yaml": "3d3af7c097f3e82a4082961724cf11797be9a948a38dcb3c1765db3086f54f2d",
   "contracts/openapi/ledger.v1.yaml": "806bc3c22155d2c99d7551c6f97cb9987e3f84297d6055e8dd1e45d341e31ab1",
   "contracts/openapi/multi_hand_video_poker.v1.yaml": "85b3ef2cd12b03d19b34564b2aeac4fbe0e8dcee7073ffb8350b058d5217983b",

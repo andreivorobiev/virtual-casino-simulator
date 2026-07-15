@@ -1,0 +1,17 @@
+{
+  "module": "acey_deucey",
+  "version": "1.0.0",
+  "paths": ["casino/games/acey_deucey/", "web/games/acey_deucey.js", "web/i18n/en-US/games/acey_deucey.json", "web/i18n/ru-RU/games/acey_deucey.json"],
+  "requirements_prefixes": ["AD"],
+  "contracts": ["contracts/openapi/acey_deucey.v1.yaml"],
+  "game": {
+    "id": "acey_deucey", "sort_order": 260, "route": "/games/acey_deucey", "label": "Acey-Deucey", "category": "table", "categories": ["table", "cards", "strategy"],
+    "backend": {"register": "casino.games.acey_deucey.api:register"},
+    "frontend": {"module": "./games/acey_deucey.js", "export": "AceyDeuceyGame", "ready_testid": "acey-deucey", "i18n_domain": "games/acey_deucey", "i18n_probe": "controls.play"},
+    "tests": {"long_driver": "tests.game_drivers.acey_deucey:play"},
+    "translations": {"ru-RU": {"label": "Эйси-Дьюси", "kicker": "Карточный стол «Между»", "description": "Сначала откройте две граничные карты, затем пропустите ход или поставьте на то, что третья карта окажется строго между ними.", "tags": ["Карты", "Решение", "Стратегия", "Журнал жетонов"]}},
+    "lobby": {"featured": false, "wide": false, "art_class": "acey-deucey-art", "symbol": "AD", "kicker": "In-between card table", "description": "See the boundary cards first, then pass or wager on the third card landing strictly inside.", "tags": ["Cards", "Decision", "Strategy", "Ledger-backed"]}
+  },
+  "depends_on": ["core", "ledger", "players"],
+  "may_not_depend_on": ["roulette", "slots", "blackjack", "baccarat", "keno", "bingo", "multi_hand_video_poker", "casino_war", "big_six_wheel", "red_dog", "dragon_tiger", "hi_lo", "three_card_poker", "jacks_or_better_video_poker", "deuces_wild_video_poker", "scratch_cards", "sic_bo", "chuck_a_luck", "craps", "crown_and_anchor", "over_under_7", "plinko", "fan_tan", "andar_bahar"]
+}
