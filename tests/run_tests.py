@@ -127,12 +127,14 @@ def assert_condition(value, message):
 def run_storage_tests(include_live=False):
     # Execute the JSON fallback parity test for provider-backed players, ledger, history, and settings.
     run_case('STORAGE-JSON-001',['CORE-017','LEDGER-001','LEDGER-007','TEST-030'],storage_tests.run_json_provider_parity)
+    # Execute storage-enforced replay, conflict, restart, and cross-process JSON action tests.
+    run_case('STORAGE-JSON-IDEMPOTENCY-001',['LEDGER-026','STORAGE-005','STORAGE-006','TEST-043'],storage_tests.run_json_action_idempotency)
     # Execute the MySQL schema and atomic ledger-provider path test without requiring a live service.
     run_case('STORAGE-MYSQL-001',['CORE-017','LEDGER-001','LEDGER-007','LEDGER-009'],storage_tests.run_mysql_schema_provider_path)
     # Execute the real-service persistence and concurrent-ledger gate only when explicitly requested.
     if include_live:
         # Map the live integration case to the durable storage and MySQL requirements.
-        run_case('STORAGE-MYSQL-LIVE-001',['STORAGE-001','STORAGE-002','STORAGE-003','STORAGE-004','MYSQL-001','MYSQL-002','MYSQL-003','MYSQL-004','TEST-038'],storage_tests.run_mysql_live_provider_path)
+        run_case('STORAGE-MYSQL-LIVE-001',['STORAGE-001','STORAGE-002','STORAGE-003','STORAGE-004','STORAGE-005','STORAGE-006','MYSQL-001','MYSQL-002','MYSQL-003','MYSQL-004','TEST-038','TEST-043'],storage_tests.run_mysql_live_provider_path)
 
 # Define the read_i18n_json function used by this module.
 def read_i18n_json(path):

@@ -26,19 +26,32 @@ This addendum records the durable planning requirements for GitHub epic #34 and 
 | AUTH | Private beta login, bootstrap Admin, protected APIs, Admin-only authorization, and deployment-default hardening. | AUTH-001 through AUTH-006 |
 | SESSION | Session creation, logout, current-user lookup, invalid session rejection, and shared game-player resolution. | SESSION-001 through SESSION-005 |
 | USER | Durable users, bound players, private state, Admin user management, and bot/user separation. | USER-001 through USER-005 |
-| STORAGE | Storage provider abstraction, JSON fallback, covered persisted domains, and envelope errors. | STORAGE-001 through STORAGE-004 |
+| STORAGE | Storage provider abstraction, JSON fallback, covered persisted domains, envelope errors, and storage-enforced action uniqueness. | STORAGE-001 through STORAGE-006 |
 | MYSQL | Fresh MySQL schema bootstrap, atomic ledger writes, fresh-start policy, and JSON fallback. | MYSQL-001 through MYSQL-004 |
 | TERMS | Private beta toy-simulator terms acceptance and terms status exposure. | TERMS-001 through TERMS-004 |
 | LIC | Apache-2.0 source licensing and no-real-money/no-redemption legal posture. | LIC-001 through LIC-003 |
 | TOKEN | Play-token terminology, v2 token language, ledger-backed add-token flows, and private balances. | TOKEN-001 through TOKEN-004 |
 | API | Frozen v1 compatibility with additive v2 auth/current-user/Admin-user envelope contracts. | API-001 through API-002 |
-| TEST | Required auth, storage/MySQL, private-session, copied-deployment, deployment-default, and catalog-driver validation. | TEST-037 through TEST-042 |
+| TEST | Required auth, storage/MySQL, private-session, copied-deployment, deployment-default, catalog-driver, and action-idempotency validation. | TEST-037 through TEST-043 |
 
 ### Deployment-default hardening
 
 Loopback-only developer startup keeps its convenient local bootstrap behavior. Any non-loopback bind automatically requires explicit `CASINO_BOOTSTRAP_ADMIN_EMAIL` and `CASINO_BOOTSTRAP_ADMIN_PASSWORD` settings and rejects the known local defaults before runtime state is created or migrated.
 
 Deployments that bind to loopback but become externally reachable through a tunnel, reverse proxy, hosted platform, or similar network path must also set `CASINO_DEPLOYMENT_MODE` to `deployment`, `production`, or `public`. The startup guard reports configuration key names only and never includes supplied values in diagnostics.
+
+## Storage-enforced action idempotency addendum
+
+GitHub issue #190 adds a provider primitive without integrating or weakening the held Texas Hold'em acceptance lane. A caller supplies a stable action key while storage derives a semantic fingerprint from the signed amount, transaction type, game scope, round, and details. Exact retries return the original immutable ledger event; changed key reuse returns a conflict without another balance mutation.
+
+The JSON provider serializes wallet actions with an operating-system lock, writes a durable action journal as the logical commit, and recovers compatible player and JSONL projections after restart or a lost response. The MySQL provider uses a nullable migration for historical ledger rows and a unique `(player_id, action_scope, action_key)` index committed in the same transaction as balance and ledger writes.
+
+| ID | Requirement | Status | API tests | Browser tests |
+|---|---|---|---|---|
+| LEDGER-026 | Canonical action keys replay identical transactions and reject changed reuse. | PASS | STORAGE-JSON-IDEMPOTENCY-001, STORAGE-MYSQL-LIVE-001 |  |
+| STORAGE-005 | JSON and MySQL enforce action uniqueness inside the wallet persistence boundary. | PASS | STORAGE-JSON-IDEMPOTENCY-001, STORAGE-MYSQL-001, STORAGE-MYSQL-LIVE-001 |  |
+| STORAGE-006 | Action commits remain exact-once across concurrency, restart, and lost response. | PASS | STORAGE-JSON-IDEMPOTENCY-001, STORAGE-MYSQL-LIVE-001 |  |
+| TEST-043 | Provider tests cover 25 duplicates per money-action family and two-process MySQL replay. | PASS | STORAGE-JSON-IDEMPOTENCY-001, STORAGE-MYSQL-LIVE-001 |  |
 
 ## Wave 0 catalog governance addendum
 
@@ -738,6 +751,7 @@ flowchart LR
 | LEDGER-023 | All game settlement payouts credit after results are known. | PASS | API-ROU-001 |  |
 | LEDGER-024 | Ledger is visible in the admin console. | PASS |  |  |
 | LEDGER-025 | Player balances are visible in the main UI. | PASS |  |  |
+| LEDGER-026 | Canonical action keys replay identical transactions and reject changed reuse without another balance mutation. | PASS | STORAGE-JSON-IDEMPOTENCY-001, STORAGE-MYSQL-LIVE-001 |  |
 
 ### Logging
 

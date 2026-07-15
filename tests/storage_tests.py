@@ -2,8 +2,8 @@
 #!/usr/bin/env python3
 # Import required dependency so tests can inspect provider implementation details.
 import inspect
-# Import required dependency so live ledger calls can overlap across connections.
-from concurrent.futures import ThreadPoolExecutor
+# Import required dependency so thread and process ledger calls can overlap safely.
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 # Import required dependency so test data can be written outside the real data directory.
 import tempfile
 # Import required dependency so isolated JSON provider paths are platform-safe.
@@ -11,6 +11,66 @@ from pathlib import Path
 
 # Import required dependency so storage tests can resolve repository files.
 ROOT = Path(__file__).resolve().parents[1]
+
+
+# Execute one JSON action call in a separately spawned process.
+def _json_action_worker(args):
+    # Import storage inside the child process so Windows spawn reconstructs clean module state.
+    from casino.core import storage
+
+    # Unpack the serializable action packet passed by the parent test.
+    data_root, family, amount, action_key = args
+    # Build an independent provider instance pointed at the shared isolated store.
+    provider = storage.JsonStorageProvider(Path(data_root))
+    # Execute the same action identity through a distinct operating-system process.
+    event, replayed = provider.transact_ledger_once("human", amount, f"TEST_{family.upper()}", action_key, "storage", f"round_{family}", {"family": family})
+    # Return only serializable proof fields to the parent process.
+    return event["ledger_id"], replayed
+
+
+# Execute one MySQL action call in a separately spawned process.
+def _mysql_action_worker(index):
+    # Import storage inside the child process so each call opens independent connections.
+    from casino.core import storage
+
+    # Build an independent provider from inherited secret-safe environment configuration.
+    provider = storage.MySQLStorageProvider()
+    # Execute one of 25 duplicate calls against the same durable action identity.
+    event, replayed = provider.transact_ledger_once("human", -3, "MYSQL_IDEMPOTENT_DEBIT", "mysql-action-debit", "storage", "mysql_action_round", {"family": "debit"})
+    # Return proof fields plus the caller index for process-result materialization.
+    return index, event["ledger_id"], replayed
+
+
+# Simulate a process that commits an action journal entry but loses projection and response.
+class _LostResponseJsonProvider:
+    # Initialize a delegating provider subclass lazily to avoid import-time casino state.
+    @staticmethod
+    def build(data_root):  # Build the scoped failure-injecting provider.
+        # Import storage only when the failure-injection test runs.
+        from casino.core import storage
+
+        # Define a scoped provider subclass that fails its first projection.
+        class LostResponseProvider(storage.JsonStorageProvider):
+            # Initialize the provider and one-shot failure marker.
+            def __init__(self, path):
+                # Initialize the normal isolated JSON provider.
+                super().__init__(path)
+                # Fail only the first projection after the durable action commit.
+                self.fail_projection = True
+
+            # Inject a lost response between logical commit and compatible-file projection.
+            def _project_committed_action(self, event):
+                # Branch on the one-shot failure marker.
+                if self.fail_projection:
+                    # Disable failure so same-instance recovery would also be possible.
+                    self.fail_projection = False
+                    # Simulate process termination or a lost response after journal commit.
+                    raise RuntimeError("simulated lost response after action commit")
+                # Delegate later projections to the production recovery implementation.
+                return super()._project_committed_action(event)
+
+        # Return the failure-injecting provider instance.
+        return LostResponseProvider(Path(data_root))
 
 
 # Define the run_json_provider_parity function used by the storage test runner.
@@ -74,6 +134,103 @@ def run_json_provider_parity():
             storage.set_provider_for_tests(None)
 
 
+# Prove JSON action uniqueness across processes, restart, conflict, and lost response.
+def run_json_action_idempotency():
+    # Import public player defaults and storage providers for isolated setup and verification.
+    from casino.core import players, storage
+    # Import the conflict type expected for changed action-key reuse.
+    from casino.errors import ConflictError
+
+    # Create an isolated data root that cannot touch the user-owned runtime store.
+    with tempfile.TemporaryDirectory() as tmp:
+        # Build the provider path shared only by child processes in this test.
+        data_root = Path(tmp) / "data"
+        # Seed the isolated wallet through the production provider shape.
+        provider = storage.JsonStorageProvider(data_root)
+        # Persist default players before concurrent child processes begin.
+        provider.save_players(players.default_players())
+        # Capture the initial fake-money balance for exact-once settlement proof.
+        starting_balance = next(row["balance"] for row in provider.load_players(players.default_players)["players"] if row["player_id"] == "human")
+        # Define debit, payout, refund, and settlement families with distinct signed amounts.
+        families = [("debit", -5, "action-debit"), ("payout", 8, "action-payout"), ("refund", 5, "action-refund"), ("settlement", 2, "action-settlement")]
+        # Build at least 25 simultaneous duplicate calls for every money-action family.
+        packets = [(str(data_root), family, amount, action_key) for family, amount, action_key in families for _ in range(25)]
+        # Execute duplicates through independent processes that share only the storage files.
+        with ProcessPoolExecutor(max_workers=8) as executor:
+            # Materialize every result so process failures surface as test failures.
+            results = list(executor.map(_json_action_worker, packets))
+        # Verify each action family returned exactly one immutable ledger ID.
+        for index, family in enumerate(families):
+            # Slice the 25 results belonging to this family.
+            family_results = results[index * 25:(index + 1) * 25]
+            # Require every duplicate to return the original committed ledger event.
+            assert len({ledger_id for ledger_id, _ in family_results}) == 1
+            # Require exactly one new commit and 24 storage-detected replays.
+            assert sum(1 for _, replayed in family_results if replayed is False) == 1
+        # Reopen the provider to prove restart does not erase action identities.
+        restarted = storage.JsonStorageProvider(data_root)
+        # Replay one action after provider reconstruction.
+        replay_event, replayed = restarted.transact_ledger_once("human", -5, "TEST_DEBIT", "action-debit", "storage", "round_debit", {"family": "debit"})
+        # Verify restart replay returns the original debit event.
+        assert replayed is True and replay_event["ledger_id"] == results[0][0]
+        # Reject the same identity when the signed amount changes.
+        try:
+            # Attempt changed semantic reuse without allowing a second wallet mutation.
+            restarted.transact_ledger_once("human", -6, "TEST_DEBIT", "action-debit", "storage", "round_debit", {"family": "debit"})
+        # Accept only the standard conflict response.
+        except ConflictError:
+            # Record successful conflict enforcement by continuing the test.
+            pass
+        # Fail when changed reuse was incorrectly accepted.
+        else:
+            # Surface the missing conflict gate.
+            raise AssertionError("Changed ledger action reuse did not conflict")
+        # Read the final wallet after all duplicate and conflict attempts.
+        final_state = restarted.load_players(players.default_players)
+        # Extract the human wallet balance.
+        final_balance = next(row["balance"] for row in final_state["players"] if row["player_id"] == "human")
+        # Verify only the four distinct signed actions changed the wallet.
+        assert final_balance == starting_balance + sum(amount for _, amount, _ in families)
+        # Verify only four append-only ledger rows exist despite 101 calls.
+        assert len(restarted.read_ledger_recent("human", 200)) == 4
+        # Start a separate isolated store for lost-response recovery proof.
+        recovery_root = Path(tmp) / "recovery-data"
+        # Seed the recovery wallet through a normal provider.
+        storage.JsonStorageProvider(recovery_root).save_players(players.default_players())
+        # Build the failure-injecting provider that stops after durable action commit.
+        failing = _LostResponseJsonProvider.build(recovery_root)
+        # Execute the action and expect the injected post-commit failure.
+        try:
+            # Commit an action identity before simulating process loss.
+            failing.transact_ledger_once("human", -7, "TEST_LOST_RESPONSE", "lost-response", "storage", "round_lost", {"family": "debit"})
+        # Accept only the injected failure marker.
+        except RuntimeError as exc:
+            # Verify the failure happened at the intended boundary.
+            assert "lost response" in str(exc)
+        # Fail when failure injection did not interrupt projection.
+        else:
+            # Surface the missing crash boundary.
+            raise AssertionError("Lost-response failure injection did not run")
+        # Reconstruct a normal provider to simulate process restart after the lost response.
+        recovered = storage.JsonStorageProvider(recovery_root)
+        # Read wallet state before retry so restart recovery cannot depend on client resubmission.
+        recovered_state = recovered.load_players(players.default_players)
+        # Extract the recovered wallet balance after startup-style state access.
+        recovered_before_retry = next(row["balance"] for row in recovered_state["players"] if row["player_id"] == "human")
+        # Verify ordinary restart state access projects the committed debit exactly once.
+        assert recovered_before_retry == starting_balance - 7
+        # Retry the identical action so startup recovery projects and replays the commit.
+        recovered_event, recovered_replay = recovered.transact_ledger_once("human", -7, "TEST_LOST_RESPONSE", "lost-response", "storage", "round_lost", {"family": "debit"})
+        # Verify the retry was recognized as a replay rather than a second debit.
+        assert recovered_replay is True
+        # Verify recovery produced one ledger row using the original committed event ID.
+        assert recovered.read_ledger_recent("human", 10)[0]["ledger_id"] == recovered_event["ledger_id"]
+        # Verify the recovered wallet changed exactly once.
+        recovered_balance = next(row["balance"] for row in recovered.load_players(players.default_players)["players"] if row["player_id"] == "human")
+        # Require one seven-token debit after restart recovery.
+        assert recovered_balance == starting_balance - 7
+
+
 # Define the run_mysql_schema_provider_path function used by the storage test runner.
 def run_mysql_schema_provider_path():
     # Import storage helpers lazily so this test does not require a MySQL service.
@@ -89,10 +246,16 @@ def run_mysql_schema_provider_path():
     assert "DECIMAL(18,2)" in joined
     # Verify ledger rows depend on player rows through a foreign key.
     assert "FOREIGN KEY (player_id)" in joined
+    # Verify fresh schemas enforce one action key per player and action namespace.
+    assert "action_scope VARCHAR(64)" in joined and "action_key VARCHAR(191)" in joined and "action_fingerprint VARCHAR(128)" in joined
+    # Verify fresh schemas create the canonical unique action index.
+    assert "uq_casino_ledger_action (player_id, action_scope, action_key)" in joined
     # Read the checked-in SQL schema artifact.
     schema_file = (ROOT / "scripts" / "mysql_schema.sql").read_text(encoding="utf-8")
     # Verify the SQL artifact exposes the same table set as the provider schema.
     assert all(table in schema_file for table in ("casino_schema_versions", "casino_players", "casino_ledger", "casino_history", "casino_documents"))
+    # Verify the checked-in schema mirrors action columns and provider uniqueness.
+    assert all(fragment in schema_file for fragment in ("action_scope", "action_key", "action_fingerprint", "uq_casino_ledger_action"))
     # Read the MySQL transaction implementation source.
     source = inspect.getsource(storage.MySQLStorageProvider.transact_ledger)
     # Verify the MySQL ledger path locks the player row before mutating balance.
@@ -101,6 +264,16 @@ def run_mysql_schema_provider_path():
     assert "start_transaction" in source
     # Verify the MySQL ledger path inserts the ledger row before committing.
     assert "INSERT INTO casino_ledger" in source and "connection.commit()" in source
+    # Read the storage-enforced action transaction implementation source.
+    action_source = inspect.getsource(storage.MySQLStorageProvider.transact_ledger_once)
+    # Verify action replay lookup occurs after a wallet row lock in one explicit transaction.
+    assert "FOR UPDATE" in action_source and "action_scope" in action_source and "action_key" in action_source
+    # Verify identity, wallet balance, and ledger event commit in the same provider method.
+    assert "UPDATE casino_players" in action_source and "INSERT INTO casino_ledger" in action_source and "connection.commit()" in action_source
+    # Read additive migration source for existing MySQL databases.
+    migration_source = inspect.getsource(storage.MySQLStorageProvider.ensure_ready)
+    # Verify pre-#190 tables receive columns, namespace backfill, and the unique index.
+    assert "ALTER TABLE casino_ledger" in migration_source and "UPDATE casino_ledger SET action_scope" in migration_source and "CREATE UNIQUE INDEX uq_casino_ledger_action" in migration_source
 
 
 # Exercise real MySQL persistence, domain documents, and concurrent ledger locking.
@@ -142,8 +315,22 @@ def run_mysql_live_provider_path():
         assert players.get_player("human")["balance"] == starting_balance - 20
         # Verify each committed transaction produced one unique append-only ledger event.
         assert len({event["ledger_id"] for event in events}) == 20
+        # Execute 25 duplicate calls through two independent spawned processes.
+        with ProcessPoolExecutor(max_workers=2) as executor:
+            # Materialize every duplicate result so cross-process failures surface.
+            action_results = list(executor.map(_mysql_action_worker, range(25)))
+        # Verify all processes received the same immutable ledger event.
+        assert len({ledger_id for _, ledger_id, _ in action_results}) == 1
+        # Verify the unique action identity committed exactly once across processes.
+        assert sum(1 for _, _, replayed in action_results if replayed is False) == 1
+        # Verify the wallet absorbed only one three-token debit from 25 calls.
+        assert players.get_player("human")["balance"] == starting_balance - 23
         # Rebuild the provider to simulate a fresh application process after restart.
         storage.set_provider_for_tests(storage.MySQLStorageProvider())
+        # Replay the same action after provider reconstruction.
+        restarted_event, restarted_replay = ledger.debit_once("human", 3, "MYSQL_IDEMPOTENT_DEBIT", "mysql-action-debit", "storage", "mysql_action_round", {"family": "debit"})
+        # Verify restart returns the original event without a second balance mutation.
+        assert restarted_replay is True and restarted_event["ledger_id"] == action_results[0][1]
         # Verify the previously issued session still resolves to its persisted user.
         session, reopened_user = auth.authenticate_token(login["session"]["token"])
         # Verify auth identity and session data survived provider reconstruction.

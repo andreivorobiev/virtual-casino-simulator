@@ -1,6 +1,10 @@
 # AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
 # Import annotations so provider type hints can refer to classes declared later.
 from __future__ import annotations
+# Import required dependency so action fingerprints are derived from canonical transaction semantics.
+import hashlib
+# Import required dependency so process-lock helpers can be expressed as context managers.
+from contextlib import contextmanager
 # Import required dependency so this module can use structured configuration values.
 from dataclasses import dataclass
 # Import required dependency so decimal balances from MySQL can be normalized.
@@ -13,6 +17,8 @@ import os
 import shutil
 # Import required dependency so JSON fallback writes remain process-thread atomic.
 import threading
+# Import required dependency so Windows replace retries can wait for transient file-handle release.
+import time
 # Import required dependency so local JSON fallback paths stay platform-safe.
 from pathlib import Path
 # Import required dependency so provider methods can accept default factories.
@@ -25,7 +31,7 @@ from casino.core.clock import utc_now
 # Import required dependency so provider-created ledger rows use stable IDs.
 from casino.core.ids import new_id
 # Import required dependency so storage providers surface existing API errors.
-from casino.errors import InsufficientFundsError, NotFoundError, ValidationError
+from casino.errors import ConflictError, InsufficientFundsError, NotFoundError, ValidationError
 
 # Set _PROVIDER_LOCK to guard lazy provider construction.
 _PROVIDER_LOCK = threading.RLock()
@@ -112,6 +118,11 @@ class StorageProvider:
         # Raise because concrete providers must enforce atomic ledger writes.
         raise NotImplementedError
 
+    # Execute or replay one storage-enforced ledger action identity.
+    def transact_ledger_once(self, player_id: str, amount: float, transaction_type: str, action_key: str, game: str | None = None, round_id: str | None = None, details: dict | None = None) -> tuple[dict, bool]:
+        # Raise because concrete providers must enforce action uniqueness with wallet persistence.
+        raise NotImplementedError
+
     # Read recent ledger events with optional player filtering.
     def read_ledger_recent(self, player_id: str | None = None, limit: int = 100) -> list[dict]:
         # Raise because concrete providers must expose admin and player history.
@@ -163,6 +174,16 @@ class JsonStorageProvider(StorageProvider):
     def ledger_path(self) -> Path:
         # Return the existing ledger file path under the configured data root.
         return self.data_dir / "ledger.jsonl"
+
+    # Return the local committed-action registry path.
+    def ledger_actions_path(self) -> Path:
+        # Return the provider journal that makes action identity durable before projection.
+        return self.data_dir / "ledger_actions.json"
+
+    # Return the cross-process wallet lock path.
+    def ledger_lock_path(self) -> Path:
+        # Return one provider-local lock file shared by all wallet-writing processes.
+        return self.data_dir / ".ledger.lock"
 
     # Return the local CSV history path.
     def history_path(self) -> Path:
@@ -236,12 +257,72 @@ class JsonStorageProvider(StorageProvider):
         with self.lock:
             # Create the target parent directory before writing a temp file.
             path.parent.mkdir(parents=True, exist_ok=True)
-            # Build a temp path next to the target for an atomic replace.
-            tmp = path.with_suffix(path.suffix + ".tmp")
+            # Build a process-and-thread-unique temp path so concurrent writers never share a handle.
+            tmp = path.with_suffix(path.suffix + f".tmp-{os.getpid()}-{threading.get_ident()}")
             # Serialize JSON in the existing pretty/sorted local format.
             tmp.write_text(json.dumps(data, indent=2, sort_keys=True), encoding="utf-8")
-            # Replace the target atomically after the full payload is written.
-            tmp.replace(path)
+            # Retry transient Windows sharing violations while preserving atomic replacement.
+            for attempt in range(20):
+                # Start protected replacement so antivirus or indexer handles can release briefly.
+                try:
+                    # Replace the target atomically after the full payload is written.
+                    tmp.replace(path)
+                    # Stop retrying after the replacement succeeds.
+                    break
+                # Handle only transient permission failures from Windows file sharing.
+                except PermissionError:
+                    # Re-raise the final failure with the original filesystem context.
+                    if attempt == 19:
+                        # Surface the persistent sharing violation to the caller.
+                        raise
+                    # Wait a short bounded interval before retrying the atomic replace.
+                    time.sleep(0.01 * (attempt + 1))
+
+    # Hold one operating-system lock across a JSON wallet transaction.
+    @contextmanager
+    def _ledger_process_lock(self):  # Hold one provider-local operating-system wallet lock.
+        # Ensure the provider directory exists before opening its lock file.
+        self.ensure_ready()
+        # Open a persistent one-byte lock target shared by every provider process.
+        with self.ledger_lock_path().open("a+b") as handle:
+            # Branch to the Windows byte-range locking implementation.
+            if os.name == "nt":
+                # Import the Windows runtime lock API only on Windows.
+                import msvcrt
+                # Ensure the file contains one byte that can be locked.
+                if handle.seek(0, os.SEEK_END) == 0:
+                    # Write the lock byte once for a fresh provider directory.
+                    handle.write(b"0")
+                    # Flush the byte before locking it from another process.
+                    handle.flush()
+                # Seek to the byte range that represents the provider wallet lock.
+                handle.seek(0)
+                # Block until this process exclusively owns the byte range.
+                msvcrt.locking(handle.fileno(), msvcrt.LK_LOCK, 1)
+                # Yield while the caller owns the cross-process wallet lock.
+                try:
+                    # Transfer control to the protected wallet operation.
+                    yield
+                # Always release the byte-range lock after the operation.
+                finally:
+                    # Return to the locked byte before unlocking it.
+                    handle.seek(0)
+                    # Release the byte range for the next process.
+                    msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+            # Use advisory flock on POSIX development and CI hosts.
+            else:
+                # Import POSIX locking only where the module is available.
+                import fcntl
+                # Block until this process exclusively owns the file lock.
+                fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+                # Yield while the caller owns the cross-process wallet lock.
+                try:
+                    # Transfer control to the protected wallet operation.
+                    yield
+                # Always release the advisory lock after the operation.
+                finally:
+                    # Release the file lock for the next process.
+                    fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
 
     # Append a JSONL ledger event to the local ledger file.
     def _append_jsonl(self, path: Path, event: dict) -> None:
@@ -256,8 +337,8 @@ class JsonStorageProvider(StorageProvider):
                 # Write one sorted JSON object per line to preserve current format.
                 handle.write(json.dumps(event, sort_keys=True) + "\n")
 
-    # Load players from the existing JSON document shape.
-    def load_players(self, default_factory: Callable[[], dict]) -> dict:
+    # Load players without acquiring another operating-system wallet lock.
+    def _load_players_document(self, default_factory: Callable[[], dict]) -> dict:
         # Read the players document or build defaults when absent.
         state = self._read_json(self.players_path(), default_factory)
         # Replace invalid payloads with the default player document.
@@ -266,6 +347,17 @@ class JsonStorageProvider(StorageProvider):
             state = default_factory()
         # Return the player document expected by existing callers.
         return state
+
+    # Load players after recovering any committed action projection from a prior process.
+    def load_players(self, default_factory: Callable[[], dict]) -> dict:
+        # Guard recovery and the player read from concurrent local threads.
+        with self.lock:
+            # Guard recovery and the player read from independent processes.
+            with self._ledger_process_lock():
+                # Project any action that committed before a process stopped or lost its response.
+                self._recover_committed_actions()
+                # Return the compatible player document after recovery.
+                return self._load_players_document(default_factory)
 
     # Save players to the existing JSON document shape.
     def save_players(self, state: dict) -> None:
@@ -280,26 +372,156 @@ class JsonStorageProvider(StorageProvider):
     def update_player(self, player_id: str, updater: Callable[[dict], None]) -> dict:
         # Guard read-modify-write with the provider lock.
         with self.lock:
-            # Load the current players document using an empty fallback.
-            state = self.load_players(lambda: {"schema_version": SCHEMA_VERSION, "players": []})
-            # Iterate through players to find the requested row.
-            for player in state["players"]:
-                # Branch when this row matches the requested player ID.
-                if player["player_id"] == player_id:
-                    # Let the caller mutate the player copy in place.
-                    updater(player)
-                    # Normalize balances to two decimal places.
-                    player["balance"] = round(float(player.get("balance", 0)), 2)
-                    # Stamp the update time for downstream admin views.
-                    player["updated_at"] = utc_now()
-                    # Persist the modified player document.
-                    self.save_players(state)
-                    # Return the updated player row to the caller.
-                    return player
+            # Guard the read-modify-write operation from independent processes.
+            with self._ledger_process_lock():
+                # Recover committed ledger actions before applying a later player update.
+                self._recover_committed_actions()
+                # Load the current players document using an empty fallback.
+                state = self._load_players_document(lambda: {"schema_version": SCHEMA_VERSION, "players": []})
+                # Iterate through players to find the requested row.
+                for player in state["players"]:
+                    # Branch when this row matches the requested player ID.
+                    if player["player_id"] == player_id:
+                        # Let the caller mutate the player copy in place.
+                        updater(player)
+                        # Normalize balances to two decimal places.
+                        player["balance"] = round(float(player.get("balance", 0)), 2)
+                        # Stamp the update time for downstream admin views.
+                        player["updated_at"] = utc_now()
+                        # Persist the modified player document.
+                        self.save_players(state)
+                        # Return the updated player row to the caller.
+                        return player
         # Raise a consistent not-found error when no player matched.
         raise NotFoundError(f"Player {player_id} was not found")
 
-    # Execute a ledger transaction and balance update under one JSON lock.
+    # Return the empty committed-action registry shape used by fresh JSON stores.
+    def _empty_action_registry(self) -> dict:
+        # Return a versioned registry with a monotonic recovery order.
+        return {"schema_version": 1, "next_sequence": 1, "actions": {}}
+
+    # Build a deterministic registry key from the canonical storage identity.
+    def _action_identity(self, player_id: str, scope: str, action_key: str) -> str:
+        # Serialize identity fragments so delimiters inside caller keys remain unambiguous.
+        return json.dumps([player_id, scope, action_key], separators=(",", ":"))
+
+    # Read valid ledger rows in their append order for recovery checks.
+    def _ledger_rows(self) -> list[dict]:
+        # Return no rows for a fresh provider directory.
+        if not self.ledger_path().exists():
+            # Avoid opening an absent ledger file.
+            return []
+        # Store valid decoded rows while tolerating unrelated historical corruption behavior.
+        rows = []
+        # Decode every physical JSONL row in append order.
+        for line in self.ledger_path().read_text(encoding="utf-8", errors="replace").splitlines():
+            # Start protected decoding so one malformed historical row does not block recovery.
+            try:
+                # Decode the candidate ledger row.
+                event = json.loads(line)
+            # Skip malformed rows consistently with the public recent-ledger reader.
+            except Exception:
+                # Continue to later append-only rows.
+                continue
+            # Keep dictionary rows that expose a ledger identity.
+            if isinstance(event, dict) and event.get("ledger_id"):
+                # Add the valid event to the recovery view.
+                rows.append(event)
+        # Return all valid rows in commit order.
+        return rows
+
+    # Project one durably committed action into players.json and ledger.jsonl.
+    def _project_committed_action(self, event: dict) -> None:
+        # Read current append-only rows so recovery never duplicates a ledger event.
+        ledger_ids = {row["ledger_id"] for row in self._ledger_rows()}
+        # Stop when both balance and ledger projection already completed earlier.
+        if event["ledger_id"] in ledger_ids:
+            # Treat the ledger row as proof that this action was fully projected.
+            return
+        # Load the current player document without invoking another process lock.
+        state = self._read_json(self.players_path(), lambda: {"schema_version": SCHEMA_VERSION, "players": []})
+        # Find the wallet owned by the committed action.
+        player = next((row for row in state.get("players", []) if row.get("player_id") == event["player_id"]), None)
+        # Fail closed when recovery cannot locate the committed wallet.
+        if player is None:
+            # Preserve the journal for operator recovery instead of discarding money state.
+            raise ConflictError("Committed ledger action references a missing player", {"ledger_id": event["ledger_id"], "player_id": event["player_id"]})
+        # Normalize the currently projected fake-money balance.
+        current_balance = round(float(player.get("balance", 0)), 2)
+        # Apply the committed balance transition when projection stopped before players.json.
+        if current_balance == round(float(event["balance_before"]), 2):
+            # Move the wallet to the committed post-transaction balance exactly once.
+            player["balance"] = round(float(event["balance_after"]), 2)
+            # Stamp recovery as a player update for downstream admin views.
+            player["updated_at"] = utc_now()
+            # Persist the recovered wallet state before appending the missing ledger row.
+            self.save_players(state)
+        # Accept a balance that already reached the committed after-state before a lost response.
+        elif current_balance != round(float(event["balance_after"]), 2):
+            # Reject divergent state because guessing could duplicate or erase later money actions.
+            raise ConflictError("Committed ledger action cannot be recovered from divergent wallet state", {"ledger_id": event["ledger_id"], "balance": current_balance})
+        # Append the original committed event after the wallet transition is durable.
+        self._append_jsonl(self.ledger_path(), event)
+
+    # Recover every journaled action before allowing a later wallet mutation.
+    def _recover_committed_actions(self, registry: dict | None = None) -> dict:
+        # Load the durable registry when the caller did not already read it.
+        registry = registry or self._read_json(self.ledger_actions_path(), self._empty_action_registry)
+        # Normalize malformed registry shapes to a safe empty action map.
+        actions = registry.get("actions", {}) if isinstance(registry, dict) else {}
+        # Track whether recovery completed any previously pending projections.
+        recovered = False
+        # Replay committed transitions in their original monotonic order.
+        for record in sorted(actions.values(), key=lambda item: int(item.get("sequence", 0))):
+            # Skip actions whose compatible files were already projected and acknowledged.
+            if record.get("projected") is True:
+                # Continue without rescanning the append-only ledger for settled actions.
+                continue
+            # Project the recorded immutable event exactly once.
+            self._project_committed_action(record["event"])
+            # Mark projection complete only after both compatible files are durable.
+            record["projected"] = True
+            # Remember that the updated journal must be persisted before releasing the lock.
+            recovered = True
+        # Persist recovered projection markers so steady-state wallet reads remain constant-time.
+        if recovered:
+            # Atomically checkpoint the action journal after successful projection.
+            self._write_json(self.ledger_actions_path(), registry)
+        # Return the registry so the transaction can reuse its in-memory view.
+        return registry
+
+    # Execute a ledger transaction after both thread and process locks are held.
+    def _transact_ledger_locked(self, player_id: str, amount: float, transaction_type: str, game: str | None, round_id: str | None, details: dict | None) -> dict:
+        # Load the player document using an empty fallback for clear not-found errors.
+        state = self._load_players_document(lambda: {"schema_version": SCHEMA_VERSION, "players": []})
+        # Find the requested player in the document.
+        player = next((row for row in state["players"] if row["player_id"] == player_id), None)
+        # Raise a consistent not-found error when no player exists.
+        if player is None:
+            # Raise the same player lookup error shape used by players.get_player.
+            raise NotFoundError(f"Player {player_id} was not found")
+        # Capture the balance before the proposed mutation.
+        before = round(float(player.get("balance", 0)), 2)
+        # Compute the balance after the proposed mutation.
+        after = round(before + amount, 2)
+        # Reject transactions that would overdraw the fake-money wallet.
+        if after < -1e-9:
+            # Raise the existing insufficient-funds error with ledger details.
+            raise InsufficientFundsError(details={"player_id": player_id, "balance": before, "amount": amount, "transaction_type": transaction_type})
+        # Store the new balance on the player row.
+        player["balance"] = after
+        # Stamp the player update time alongside the balance mutation.
+        player["updated_at"] = utc_now()
+        # Build the ledger event before persistence so both stores agree.
+        event = _ledger_event(player_id, amount, transaction_type, before, after, game, round_id, details)
+        # Persist the player document before appending the ledger row under the same lock.
+        self.save_players(state)
+        # Append the ledger event while the compound transaction lock is still held.
+        self._append_jsonl(self.ledger_path(), event)
+        # Return the committed ledger event to the caller.
+        return event
+
+    # Execute a ledger transaction and balance update under thread and process locks.
     def transact_ledger(self, player_id: str, amount: float, transaction_type: str, game: str | None = None, round_id: str | None = None, details: dict | None = None) -> dict:
         # Normalize the transaction amount to the app's fake-money precision.
         amount = round(float(amount), 2)
@@ -307,63 +529,98 @@ class JsonStorageProvider(StorageProvider):
         if amount == 0:
             # Raise a validation error consistent with the previous ledger module.
             raise ValidationError("Ledger transaction amount cannot be zero")
-        # Guard the player update and ledger append with one lock.
+        # Guard the wallet transaction from concurrent threads in this process.
         with self.lock:
-            # Load the player document using an empty fallback for clear not-found errors.
-            state = self.load_players(lambda: {"schema_version": SCHEMA_VERSION, "players": []})
-            # Find the requested player in the document.
-            player = next((row for row in state["players"] if row["player_id"] == player_id), None)
-            # Raise a consistent not-found error when no player exists.
-            if player is None:
-                # Raise the same player lookup error shape used by players.get_player.
-                raise NotFoundError(f"Player {player_id} was not found")
-            # Capture the balance before the proposed mutation.
-            before = round(float(player.get("balance", 0)), 2)
-            # Compute the balance after the proposed mutation.
-            after = round(before + amount, 2)
-            # Reject transactions that would overdraw the fake-money wallet.
-            if after < -1e-9:
-                # Raise the existing insufficient-funds error with ledger details.
-                raise InsufficientFundsError(details={"player_id": player_id, "balance": before, "amount": amount, "transaction_type": transaction_type})
-            # Store the new balance on the player row.
-            player["balance"] = after
-            # Stamp the player update time alongside the balance mutation.
-            player["updated_at"] = utc_now()
-            # Build the ledger event before persistence so both stores agree.
-            event = _ledger_event(player_id, amount, transaction_type, before, after, game, round_id, details)
-            # Persist the player document before appending the ledger row under the same lock.
-            self.save_players(state)
-            # Append the ledger event while the compound transaction lock is still held.
-            self._append_jsonl(self.ledger_path(), event)
-            # Return the committed ledger event to the caller.
-            return event
+            # Guard the wallet transaction from independent application processes.
+            with self._ledger_process_lock():
+                # Recover any earlier committed action before applying a later mutation.
+                self._recover_committed_actions()
+                # Execute the existing compatible transaction inside both locks.
+                return self._transact_ledger_locked(player_id, amount, transaction_type, game, round_id, details)
+
+    # Execute or replay one storage-enforced JSON ledger action identity.
+    def transact_ledger_once(self, player_id: str, amount: float, transaction_type: str, action_key: str, game: str | None = None, round_id: str | None = None, details: dict | None = None) -> tuple[dict, bool]:
+        # Normalize the transaction amount to the app's fake-money precision.
+        amount = round(float(amount), 2)
+        # Reject zero-value ledger rows before touching durable action state.
+        if amount == 0:
+            # Raise the standard ledger validation error.
+            raise ValidationError("Ledger transaction amount cannot be zero")
+        # Normalize the caller-owned identity fragment before storage lookup.
+        action_key = _normalize_action_key(action_key)
+        # Derive the game-or-core namespace used by both storage providers.
+        scope = _action_scope(game)
+        # Derive the semantic digest that distinguishes replay from changed reuse.
+        fingerprint = _action_fingerprint(amount, transaction_type, game, round_id, details)
+        # Build the unambiguous JSON registry key.
+        identity = self._action_identity(player_id, scope, action_key)
+        # Guard the action from concurrent threads in this process.
+        with self.lock:
+            # Guard the action from independent application processes.
+            with self._ledger_process_lock():
+                # Load and recover all committed actions before inspecting wallet state.
+                registry = self._recover_committed_actions()
+                # Read an earlier commit for this identity when a retry arrives.
+                existing = registry.get("actions", {}).get(identity)
+                # Return the original event for an exact semantic replay.
+                if existing is not None:
+                    # Reject changed reuse before returning any prior money result.
+                    _validate_action_replay(existing["event"], fingerprint, action_key)
+                    # Return the original event with an explicit replay marker.
+                    return existing["event"], True
+                # Enrich details with storage-owned audit metadata only after hashing caller semantics.
+                committed_details = _action_details(details, action_key, fingerprint)
+                # Build the candidate wallet transition without persisting it yet.
+                state = self._load_players_document(lambda: {"schema_version": SCHEMA_VERSION, "players": []})
+                # Find the wallet that owns this action identity.
+                player = next((row for row in state["players"] if row["player_id"] == player_id), None)
+                # Reject unknown players before writing the action journal.
+                if player is None:
+                    # Raise the standard player lookup error.
+                    raise NotFoundError(f"Player {player_id} was not found")
+                # Capture the balance before the proposed mutation.
+                before = round(float(player.get("balance", 0)), 2)
+                # Compute the balance after the proposed mutation.
+                after = round(before + amount, 2)
+                # Reject actions that would overdraw the fake-money wallet.
+                if after < -1e-9:
+                    # Raise the standard insufficient-funds error before committing the identity.
+                    raise InsufficientFundsError(details={"player_id": player_id, "balance": before, "amount": amount, "transaction_type": transaction_type})
+                # Build the immutable event returned by every later replay.
+                event = _ledger_event(player_id, amount, transaction_type, before, after, game, round_id, committed_details)
+                # Allocate the next monotonic recovery sequence.
+                sequence = int(registry.get("next_sequence", 1))
+                # Store the action record as the logical commit before projecting balance and JSONL.
+                registry.setdefault("actions", {})[identity] = {"sequence": sequence, "player_id": player_id, "action_scope": scope, "action_key": action_key, "action_fingerprint": fingerprint, "projected": False, "event": event}
+                # Advance the sequence for the next distinct action.
+                registry["next_sequence"] = sequence + 1
+                # Persist the logical commit atomically before any wallet projection.
+                self._write_json(self.ledger_actions_path(), registry)
+                # Project the committed transition into the compatible player and ledger files.
+                self._project_committed_action(event)
+                # Mark the compatible-file projection complete after both writes succeed.
+                registry["actions"][identity]["projected"] = True
+                # Checkpoint the projection marker so later reads skip settled journal entries.
+                self._write_json(self.ledger_actions_path(), registry)
+                # Return the newly committed event with a non-replay marker.
+                return event, False
 
     # Read recent ledger events from the local JSONL file.
     def read_ledger_recent(self, player_id: str | None = None, limit: int = 100) -> list[dict]:
-        # Ensure local directories exist before reading.
-        self.ensure_ready()
-        # Return an empty list when no ledger file exists yet.
-        if not self.ledger_path().exists():
-            # Return no rows for fresh local runs.
-            return []
-        # Store decoded rows in file order.
-        rows = []
-        # Iterate through JSONL rows from disk.
-        for line in self.ledger_path().read_text(encoding="utf-8", errors="replace").splitlines():
-            # Start protected decoding so one bad row does not hide later rows.
-            try:
-                # Parse the ledger row JSON object.
-                event = json.loads(line)
-            # Skip malformed historical rows.
-            except Exception:
-                # Continue reading subsequent ledger rows.
-                continue
-            # Keep rows that match the optional player filter.
-            if player_id is None or event.get("player_id") == player_id:
-                # Add the event to the in-memory result set.
-                rows.append(event)
-        # Return the requested tail of matching rows.
-        return rows[-limit:]
+        # Guard recovery and the ledger read from concurrent local threads.
+        with self.lock:
+            # Guard recovery and the ledger read from independent processes.
+            with self._ledger_process_lock():
+                # Project any action that committed before its process stopped or lost a response.
+                self._recover_committed_actions()
+                # Read all valid append-only rows after recovery.
+                rows = self._ledger_rows()
+                # Apply the optional player filter used by player and Admin history views.
+                if player_id is not None:
+                    # Keep only events owned by the requested player.
+                    rows = [event for event in rows if event.get("player_id") == player_id]
+                # Return the requested tail of matching rows.
+                return rows[-limit:]
 
     # Append a CSV history row using the existing local file format.
     def append_history(self, event: dict) -> None:
@@ -515,8 +772,12 @@ class MySQLStorageProvider(StorageProvider):
               amount DECIMAL(18,2) NOT NULL,
               balance_before DECIMAL(18,2) NOT NULL,
               balance_after DECIMAL(18,2) NOT NULL,
+              action_scope VARCHAR(64) NOT NULL DEFAULT '',
+              action_key VARCHAR(191) NULL,
+              action_fingerprint VARCHAR(128) NULL,
               details_json JSON NOT NULL,
               INDEX idx_casino_ledger_player_sequence (player_id, sequence_id),
+              UNIQUE INDEX uq_casino_ledger_action (player_id, action_scope, action_key),
               CONSTRAINT fk_casino_ledger_player FOREIGN KEY (player_id) REFERENCES casino_players(player_id)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
             """,
@@ -571,6 +832,30 @@ class MySQLStorageProvider(StorageProvider):
                 for statement in self.schema_statements():
                     # Create the table or leave the existing compatible table in place.
                     cursor.execute(statement)
+                # Inspect ledger columns so pre-#190 databases receive an additive migration.
+                cursor.execute("SHOW COLUMNS FROM casino_ledger")
+                # Collect existing column names from tuple rows returned by the default cursor.
+                ledger_columns = {row[0] for row in cursor.fetchall()}
+                # Add the non-null action namespace when upgrading an existing ledger table.
+                if "action_scope" not in ledger_columns:
+                    # Add a compatible default so historical rows remain readable.
+                    cursor.execute("ALTER TABLE casino_ledger ADD COLUMN action_scope VARCHAR(64) NOT NULL DEFAULT '' AFTER balance_after")
+                # Add the nullable action key because historical rows have no safe identity to infer.
+                if "action_key" not in ledger_columns:
+                    # Preserve all existing non-idempotent rows with a null action key.
+                    cursor.execute("ALTER TABLE casino_ledger ADD COLUMN action_key VARCHAR(191) NULL AFTER action_scope")
+                # Add the semantic digest used to reject changed action-key reuse.
+                if "action_fingerprint" not in ledger_columns:
+                    # Preserve historical rows with a null digest because their semantics cannot be reconstructed safely.
+                    cursor.execute("ALTER TABLE casino_ledger ADD COLUMN action_fingerprint VARCHAR(128) NULL AFTER action_key")
+                # Backfill only the safe namespace projection for historical ledger rows.
+                cursor.execute("UPDATE casino_ledger SET action_scope = COALESCE(NULLIF(game, ''), 'core') WHERE action_scope = ''")
+                # Inspect existing indexes before adding the storage uniqueness constraint.
+                cursor.execute("SHOW INDEX FROM casino_ledger WHERE Key_name = 'uq_casino_ledger_action'")
+                # Add the unique provider index when upgrading a pre-#190 database.
+                if cursor.fetchone() is None:
+                    # Enforce one action key per player and game-or-core namespace at storage level.
+                    cursor.execute("CREATE UNIQUE INDEX uq_casino_ledger_action ON casino_ledger (player_id, action_scope, action_key)")
                 # Record the active application schema after all compatible tables exist.
                 cursor.execute(
                     "INSERT INTO casino_schema_versions (component, schema_version, applied_at) VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE schema_version = VALUES(schema_version), applied_at = VALUES(applied_at)",  # Upsert the provider schema marker.
@@ -819,6 +1104,93 @@ class MySQLStorageProvider(StorageProvider):
             # Close the MySQL connection for this operation.
             connection.close()
 
+    # Execute or replay one storage-enforced MySQL ledger action identity.
+    def transact_ledger_once(self, player_id: str, amount: float, transaction_type: str, action_key: str, game: str | None = None, round_id: str | None = None, details: dict | None = None) -> tuple[dict, bool]:
+        # Normalize the transaction amount to the app's fake-money precision.
+        amount = round(float(amount), 2)
+        # Reject zero-value ledger rows before opening a database transaction.
+        if amount == 0:
+            # Raise the standard ledger validation error.
+            raise ValidationError("Ledger transaction amount cannot be zero")
+        # Normalize the indexed action key before using it in SQL.
+        action_key = _normalize_action_key(action_key)
+        # Derive the indexed game-or-core namespace.
+        scope = _action_scope(game)
+        # Derive the semantic digest used for replay conflict checks.
+        fingerprint = _action_fingerprint(amount, transaction_type, game, round_id, details)
+        # Add storage-owned metadata to the committed ledger details.
+        committed_details = _action_details(details, action_key, fingerprint)
+        # Ensure the migrated schema and unique index exist before writing.
+        self.ensure_ready()
+        # Open a connection for the row-locking action transaction.
+        connection = self.connect()
+        # Start protected transaction logic so rollback and close always run.
+        try:
+            # Start one transaction containing identity lookup, balance update, and ledger insertion.
+            connection.start_transaction()
+            # Open a dictionary cursor for player and ledger row mapping.
+            cursor = connection.cursor(dictionary=True)
+            # Lock the player row so independent processes serialize all actions for this wallet.
+            cursor.execute("SELECT player_id, balance FROM casino_players WHERE player_id = %s FOR UPDATE", (player_id,))
+            # Read the locked player row.
+            player_row = cursor.fetchone()
+            # Reject unknown players before identity lookup or mutation.
+            if player_row is None:
+                # Roll back the empty transaction before raising the lookup error.
+                connection.rollback()
+                # Raise the standard player lookup error.
+                raise NotFoundError(f"Player {player_id} was not found")
+            # Read a prior committed event for the same storage action identity.
+            cursor.execute(
+                "SELECT ledger_id, ts, player_id, game, round_id, transaction_type, amount, balance_before, balance_after, details_json FROM casino_ledger WHERE player_id = %s AND action_scope = %s AND action_key = %s",  # Query the unique storage identity inside the wallet transaction.
+                (player_id, scope, action_key),  # Bind the player, namespace, and caller action key.
+            )
+            # Fetch the prior row when this call is a replay.
+            existing_row = cursor.fetchone()
+            # Return the original committed event without another wallet mutation.
+            if existing_row is not None:
+                # Convert the database row into the public ledger event shape.
+                existing_event = _ledger_from_row(existing_row)
+                # Reject changed semantic reuse before returning the prior result.
+                _validate_action_replay(existing_event, fingerprint, action_key)
+                # End the read-only replay transaction and release the player lock.
+                connection.commit()
+                # Return the immutable original event with an explicit replay marker.
+                return existing_event, True
+            # Capture the wallet balance before the new action.
+            before = _money(player_row["balance"])
+            # Compute the wallet balance after the new action.
+            after = round(before + amount, 2)
+            # Reject actions that would overdraw the fake-money wallet.
+            if after < -1e-9:
+                # Roll back before surfacing insufficient funds.
+                connection.rollback()
+                # Raise the standard insufficient-funds error with transaction context.
+                raise InsufficientFundsError(details={"player_id": player_id, "balance": before, "amount": amount, "transaction_type": transaction_type})
+            # Build the immutable event returned by all later replays.
+            event = _ledger_event(player_id, amount, transaction_type, before, after, game, round_id, committed_details)
+            # Update the locked wallet balance inside the action transaction.
+            cursor.execute("UPDATE casino_players SET balance = %s, updated_at = %s WHERE player_id = %s", (after, utc_now(), player_id))
+            # Insert the action identity, semantic digest, and ledger row in the same transaction.
+            cursor.execute(
+                "INSERT INTO casino_ledger (ledger_id, ts, player_id, game, round_id, transaction_type, amount, balance_before, balance_after, action_scope, action_key, action_fingerprint, details_json) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",  # Persist the unique money action with its wallet transition.
+                (event["ledger_id"], event["ts"], event["player_id"], event["game"], event["round_id"], event["transaction_type"], event["amount"], event["balance_before"], event["balance_after"], scope, action_key, fingerprint, json.dumps(event["details"], sort_keys=True)),  # Bind action and ledger fields atomically.
+            )
+            # Commit identity reservation, balance mutation, and append-only event together.
+            connection.commit()
+            # Return the newly committed event with a non-replay marker.
+            return event, False
+        # Roll back any unexpected provider or database failure.
+        except Exception:
+            # Roll back all uncommitted identity, wallet, and ledger changes.
+            connection.rollback()
+            # Re-raise the original exception for standard API mapping.
+            raise
+        # Always close the connection after the action attempt.
+        finally:
+            # Close this operation's MySQL connection.
+            connection.close()
+
     # Read recent ledger events from MySQL.
     def read_ledger_recent(self, player_id: str | None = None, limit: int = 100) -> list[dict]:
         # Ensure schema exists before reading ledger rows.
@@ -951,6 +1323,75 @@ def _money(value: Any) -> float:
         return round(float(value), 2)
     # Return the rounded float equivalent of regular numeric values.
     return round(float(value), 2)
+
+
+# Normalize and validate the caller-owned action key used for storage uniqueness.
+def _normalize_action_key(action_key: str) -> str:
+    # Convert string-compatible values while rejecting absent identities.
+    normalized = str(action_key or "").strip()
+    # Reject empty keys because they would collapse unrelated actions.
+    if not normalized:
+        # Surface the same validation error shape used by other ledger inputs.
+        raise ValidationError("Ledger action key is required")
+    # Bound keys to the indexed MySQL column width shared by both providers.
+    if len(normalized) > 191:
+        # Reject oversized keys before either provider opens a transaction.
+        raise ValidationError("Ledger action key must be 191 characters or fewer")
+    # Return the canonical non-empty identity fragment.
+    return normalized
+
+
+# Return the stable game-or-core namespace used in the unique action identity.
+def _action_scope(game: str | None) -> str:
+    # Keep game identities isolated while reserving a namespace for core wallet actions.
+    return str(game or "core")
+
+
+# Derive a semantic fingerprint so changed reuse cannot replay an earlier mutation.
+def _action_fingerprint(amount: float, transaction_type: str, game: str | None, round_id: str | None, details: dict | None) -> str:
+    # Build the canonical semantic payload without storage-owned metadata.
+    semantic_payload = {
+        # Include the signed fake-money amount in the conflict contract.
+        "amount": round(float(amount), 2),
+        # Include the transaction type so debit and payout meanings cannot collide.
+        "transaction_type": transaction_type,
+        # Include the game namespace selected for the action identity.
+        "game": game,
+        # Include the round or session identifier used for ledger traceability.
+        "round_id": round_id,
+        # Include caller details because changed wager or settlement semantics must conflict.
+        "details": details or {},
+    }
+    # Serialize deterministically so independent processes derive the same digest.
+    canonical = json.dumps(semantic_payload, sort_keys=True, separators=(",", ":"), default=str)
+    # Return a fixed-width digest suitable for JSON and indexed MySQL storage.
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+# Add storage-owned action metadata without mutating the caller's details object.
+def _action_details(details: dict | None, action_key: str, fingerprint: str) -> dict:
+    # Copy caller details so provider metadata never leaks back through shared references.
+    normalized = dict(details or {})
+    # Record the canonical action key for migration, audit, and JSON recovery.
+    normalized["ledger_action_key"] = action_key
+    # Record the semantic digest used to distinguish replay from changed reuse.
+    normalized["ledger_action_fingerprint"] = fingerprint
+    # Return the enriched ledger details payload.
+    return normalized
+
+
+# Validate that a committed action represents an exact semantic replay.
+def _validate_action_replay(event: dict, fingerprint: str, action_key: str) -> None:
+    # Read storage-owned metadata from the committed ledger event.
+    stored_details = event.get("details") if isinstance(event.get("details"), dict) else {}
+    # Reject reused identities whose committed semantic digest differs.
+    if stored_details.get("ledger_action_fingerprint") != fingerprint:
+        # Surface a stable conflict with the action key for API envelope details.
+        raise ConflictError("Ledger action key was reused with different transaction semantics", {"action_key": action_key})
+    # Reject corrupt registry entries whose stored key does not match their identity.
+    if stored_details.get("ledger_action_key") != action_key:
+        # Fail closed rather than replaying an ambiguously indexed money action.
+        raise ConflictError("Ledger action registry is inconsistent", {"action_key": action_key})
 
 
 # Decode a JSON value that may already be decoded by the MySQL driver.
