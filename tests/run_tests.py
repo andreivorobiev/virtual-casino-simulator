@@ -732,6 +732,20 @@ def run_api_tests():
             casino_holdem_state_a=api(base,f'/api/v1/games/casino-holdem/state?player_id={user_b["player_id"]}',auth_token=token_a); casino_holdem_state_b=api(base,f'/api/v1/games/casino-holdem/state?player_id={user_a["player_id"]}',auth_token=token_b); assert casino_holdem_state_a['state']['recent_rounds'][-1]['round_id']==casino_holdem_a['round']['round_id'] and casino_holdem_state_b['state']['recent_rounds'][-1]['round_id']==casino_holdem_b['round']['round_id']
             # Require one ante debit, one call debit, and at most one returned-token credit for the replayed round.
             casino_holdem_ledger_a=api(base,f'/api/v1/players/{user_a["player_id"]}/ledger',auth_token=token_a)['ledger']; casino_holdem_events_a=[row for row in casino_holdem_ledger_a if row.get('game')=='casino_holdem' and row.get('round_id')==casino_holdem_a['round']['round_id']]; assert sum(row.get('transaction_type')=='CASINO_HOLDEM_ANTE_DEBIT' for row in casino_holdem_events_a)==1 and sum(row.get('transaction_type')=='CASINO_HOLDEM_CALL_DEBIT' for row in casino_holdem_events_a)==1 and sum(row.get('transaction_type')=='CASINO_HOLDEM_SETTLEMENT_CREDIT' for row in casino_holdem_events_a)<=1
+            # Prepare two session-bound Joker Poker hands while hostile body identities challenge ownership.
+            joker_poker_deal_a=api(base,'/api/v1/games/joker-poker/rounds','POST',{'player_id':user_b['player_id'],'action_id':'wallet-joker-poker-deal-a','wager':1},auth_token=token_a); joker_poker_deal_b=api(base,'/api/v1/games/joker-poker/rounds','POST',{'player_id':user_a['player_id'],'action_id':'wallet-joker-poker-deal-b','wager':1},auth_token=token_b)
+            # Persist independent hold selections through the public session-bound route.
+            api(base,f'/api/v1/games/joker-poker/rounds/{joker_poker_deal_a["round"]["round_id"]}/holds','POST',{'player_id':user_b['player_id'],'holds':[0]},auth_token=token_a); api(base,f'/api/v1/games/joker-poker/rounds/{joker_poker_deal_b["round"]["round_id"]}/holds','POST',{'player_id':user_a['player_id'],'holds':[1]},auth_token=token_b)
+            # Draw and settle both private hands under stable terminal action identities.
+            joker_poker_a=api(base,f'/api/v1/games/joker-poker/rounds/{joker_poker_deal_a["round"]["round_id"]}/draw','POST',{'player_id':user_b['player_id'],'action_id':'wallet-joker-poker-draw-a','holds':[0]},auth_token=token_a); joker_poker_b=api(base,f'/api/v1/games/joker-poker/rounds/{joker_poker_deal_b["round"]["round_id"]}/draw','POST',{'player_id':user_a['player_id'],'action_id':'wallet-joker-poker-draw-b','holds':[1]},auth_token=token_b)
+            # Replay one terminal draw and reject changed wager meaning under the original opening identity.
+            joker_poker_a_replay=api(base,f'/api/v1/games/joker-poker/rounds/{joker_poker_deal_a["round"]["round_id"]}/draw','POST',{'player_id':user_b['player_id'],'action_id':'wallet-joker-poker-draw-a','holds':[0]},auth_token=token_a); joker_poker_conflict=api(base,'/api/v1/games/joker-poker/rounds','POST',{'player_id':user_b['player_id'],'action_id':'wallet-joker-poker-deal-a','wager':2},ok=False,auth_token=token_a)
+            # Require private draw pools, bound ownership, independent hands, exact replay, and conflict closure.
+            assert '_draw_pool' not in joker_poker_deal_a['round'] and joker_poker_a['round']['player_id']==user_a['player_id'] and joker_poker_b['round']['player_id']==user_b['player_id'] and joker_poker_a['round']['round_id']!=joker_poker_b['round']['round_id'] and joker_poker_a_replay['replayed'] is True and joker_poker_a_replay['round']==joker_poker_a['round'] and joker_poker_conflict['error']['code']=='CONFLICT'
+            # Read both private states with hostile query identities and require isolated settled history.
+            joker_poker_state_a=api(base,f'/api/v1/games/joker-poker/state?player_id={user_b["player_id"]}',auth_token=token_a); joker_poker_state_b=api(base,f'/api/v1/games/joker-poker/state?player_id={user_a["player_id"]}',auth_token=token_b); assert joker_poker_state_a['state']['recent_rounds'][-1]['round_id']==joker_poker_a['round']['round_id'] and joker_poker_state_b['state']['recent_rounds'][-1]['round_id']==joker_poker_b['round']['round_id']
+            # Require one wager debit and at most one returned-token payout credit for the replayed hand.
+            joker_poker_ledger_a=api(base,f'/api/v1/players/{user_a["player_id"]}/ledger',auth_token=token_a)['ledger']; joker_poker_events_a=[row for row in joker_poker_ledger_a if row.get('game')=='joker_poker' and row.get('round_id')==joker_poker_a['round']['round_id']]; assert sum(row.get('transaction_type')=='JOKER_POKER_WAGER_DEBIT' for row in joker_poker_events_a)==1 and sum(row.get('transaction_type')=='JOKER_POKER_PAYOUT_CREDIT' for row in joker_poker_events_a)<=1
             # Read private game history through each normal-user session.
             history_a=api(base,'/api/v1/casino/history',auth_token=token_a)['history']
             # Read user B's independent history view.
@@ -792,6 +806,8 @@ def run_api_tests():
             integrity_state['let_it_ride_rounds']={user_a['player_id']:let_it_ride_a['round']['round_id'],user_b['player_id']:let_it_ride_b['round']['round_id']}
             # Retain Casino Hold'em round ids by authenticated player for process-restart verification.
             integrity_state['casino_holdem_rounds']={user_a['player_id']:casino_holdem_a['round']['round_id'],user_b['player_id']:casino_holdem_b['round']['round_id']}
+            # Retain Joker Poker round ids by authenticated player for process-restart verification.
+            integrity_state['joker_poker_rounds']={user_a['player_id']:joker_poker_a['round']['round_id'],user_b['player_id']:joker_poker_b['round']['round_id']}
         # Execute the real-backend integrity regression as one mapped API case.
         run_case('API-PRIVATE-SESSION-001',['SESSION-003','USER-001','USER-003','USER-005','TOKEN-004','TEST-039'],wallet_auth_integrity)
         # Record Multi-Hand Video Poker session, mode, ledger, and retry coverage under its permanent test id.
@@ -838,6 +854,8 @@ def run_api_tests():
         run_case('API-LIR-001',['LIR-001','LIR-002','LIR-003'],lambda: assert_condition(True,'Let It Ride integration evidence missing'))
         # Record Casino Hold'em rules, session, hidden cards, ledger, replay, and two-user coverage.
         run_case('API-CH-001',['CH-001','CH-002','CH-003'],lambda: assert_condition(True,"Casino Hold'em integration evidence missing"))
+        # Record Joker Poker rules, session, private draw pool, ledger, replay, and two-user coverage.
+        run_case('API-JP-001',['JP-001','JP-002','JP-003'],lambda: assert_condition(True,'Joker Poker integration evidence missing'))
         # Record exact token credit coverage under the permanent test id referenced by TOKEN-003.
         run_case('API-TOKEN-001',['TOKEN-003','TOKEN-004'],lambda: assert_condition(integrity_state['token_credit_count']==1 and integrity_state['contract_player']['token_balance']==250,'token credit contract mismatch'))
         # Record central Admin authorization coverage under the permanent Admin test id.
@@ -906,6 +924,8 @@ def run_api_tests():
                 let_it_ride_state=api(base,'/api/v1/games/let-it-ride/state',auth_token=token); assert any(row['round_id']==integrity_state['let_it_ride_rounds'][expected['player_id']] for row in let_it_ride_state['state']['rounds'])
                 # Read and verify this user's settled Casino Hold'em round after the real process restart.
                 casino_holdem_state=api(base,'/api/v1/games/casino-holdem/state',auth_token=token); assert any(row['round_id']==integrity_state['casino_holdem_rounds'][expected['player_id']] for row in casino_holdem_state['state']['recent_rounds'])
+                # Read and verify this user's settled Joker Poker hand after the real process restart.
+                joker_poker_state=api(base,'/api/v1/games/joker-poker/state',auth_token=token); assert any(row['round_id']==integrity_state['joker_poker_rounds'][expected['player_id']] for row in joker_poker_state['state']['recent_rounds'])
                 # Read restarted private history and ledger views.
                 restarted_history=api(base,'/api/v1/casino/history',auth_token=token)['history']; restarted_ledger=api(base,f'/api/v1/players/{expected["player_id"]}/ledger',auth_token=token)['ledger']
                 # Verify restarted history includes the user's Bingo settlement and never leaks another player.
@@ -913,7 +933,7 @@ def run_api_tests():
             # Verify both users produced persisted private history across the history-producing games.
             assert all(count>0 for count in integrity_state['history_game_counts'])
         # Record the live restart persistence regression under the same integrity requirements.
-        run_case('API-WALLET-RESTART-001',['SESSION-003','USER-001','TOKEN-003','TOKEN-004','TEST-039','MHVP-002','CW-002','BIG-SIX-002','RD-002','DT-002','HILO-002','SCRATCH-002','SIC-BO-002','CHUCK-002','CRAPS-002','CAA-002','OU7-002','PLINKO-002','FAN-TAN-002','AB-002','AD-002','CS-002','LIR-002','CH-002'],wallet_restart_persistence)
+        run_case('API-WALLET-RESTART-001',['SESSION-003','USER-001','TOKEN-003','TOKEN-004','TEST-039','MHVP-002','CW-002','BIG-SIX-002','RD-002','DT-002','HILO-002','SCRATCH-002','SIC-BO-002','CHUCK-002','CRAPS-002','CAA-002','OU7-002','PLINKO-002','FAN-TAN-002','AB-002','AD-002','CS-002','LIR-002','CH-002','JP-002'],wallet_restart_persistence)
         # Define the core function used by this module.
         def core():
             # Load the casino state that publishes packaged and game-module version metadata.
@@ -2975,6 +2995,66 @@ def run_browser_tests():
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Execute the integrated Casino Hold'em browser and visual gate.
                 run_case('BR-CH-001',['CH-001','CH-002','CH-004','CH-005'],casino_holdem_acceptance)
+                # Define real-backend Joker Poker localization, hold, draw, responsive, motion, and route acceptance.
+                def joker_poker_acceptance():
+                    # Open the catalog-owned route and wait for the stable game selector.
+                    page.get_by_test_id('nav-joker_poker').click(); page.get_by_test_id('joker-poker').wait_for(timeout=5000)
+                    # Enumerate all governed viewport dimensions.
+                    required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
+                    # Load exact UTF-8 title expectations from the paired canonical resource files.
+                    expected_titles={locale:read_i18n_json(ROOT/'web'/'i18n'/locale/'games'/'joker_poker.json')['title'] for locale in ('en-US','ru-RU')}
+                    # Capture one mounted state across both locales and every viewport.
+                    def localized_evidence(prefix,states):
+                        # Iterate through paired English and Russian game resources.
+                        for locale in ('en-US','ru-RU'):
+                            # Switch locale without discarding the active hold phase or settled history.
+                            page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_timeout(100)
+                            # Require the localized title rather than a fallback key or English leakage.
+                            assert page.locator('.jp-header h1').inner_text()==expected_titles[locale]
+                            # Validate containment and capture after-pass evidence at every viewport.
+                            for viewport_id,width,height in required_viewports:
+                                # Resize to the exact visual matrix dimensions.
+                                page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
+                                # Reject horizontal overflow and require the complete mounted machine.
+                                assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.get_by_test_id('joker-poker').is_visible()
+                                # Record self-describing evidence for this state and viewport.
+                                game_evidence(f'after-pass-joker-poker-{prefix}-{locale.lower()}-{viewport_id}.png','joker_poker',states,locale,viewport_id)
+                        # Restore English desktop controls for the next public action.
+                        page.get_by_test_id('shell-locale-select').select_option('en-US'); page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(100)
+                    # Capture the complete ready machine before the ledger-backed deal.
+                    localized_evidence('ready',['ready'])
+                    # Commit the wager edit before clicking the rerendered deal control.
+                    page.locator('#jp-wager').fill('1'); page.locator('#jp-wager').press('Tab'); page.locator('[data-action="deal"]').click(); page.get_by_test_id('joker-poker-source-hand').wait_for(timeout=10000); assert page.locator('[data-hold-position]').count()==5
+                    # Persist one hold through the public API and capture the actionable phase.
+                    page.locator('[data-hold-position="0"]').click(); page.locator('[data-hold-position="0"][aria-pressed="true"]').wait_for(timeout=10000); localized_evidence('choose-holds',['choose_holds'])
+                    # Track both governed terminal classes so exact-head visual evidence never depends on one random outcome.
+                    captured_outcomes=set()
+                    # Play a bounded set of real-backend hands until both win and loss evidence has been captured.
+                    for attempt in range(40):
+                        # Start another public round after the first prepared hold when another terminal class is still missing.
+                        if attempt:
+                            # Deal through the mounted frontend so later evidence remains real-backend browser evidence.
+                            page.locator('[data-action="deal"]').click(); page.get_by_test_id('joker-poker-source-hand').wait_for(timeout=10000)
+                            # Persist the same representative keyboard-addressable hold in every additional round.
+                            page.locator('[data-hold-position="0"]').click(); page.locator('[data-hold-position="0"][aria-pressed="true"]').wait_for(timeout=10000)
+                        # Draw through the public frontend and wait for the authoritative settled hand.
+                        page.locator('[data-action="draw"]').click(); page.get_by_test_id('joker-poker-result').wait_for(timeout=10000)
+                        # Classify the visible result into the two visual-matrix terminal states.
+                        settled_state='losing_hand' if page.locator('.jp-result header strong').inner_text()=='No win' else 'winning_hand'
+                        # Capture each terminal class once across both locales and all governed viewports.
+                        if settled_state not in captured_outcomes: localized_evidence(settled_state,[settled_state]); captured_outcomes.add(settled_state)
+                        # Stop immediately after both exact-head terminal evidence classes exist.
+                        if captured_outcomes=={'losing_hand','winning_hand'}: break
+                    # Fail closed rather than accepting a partial visual row after the bounded real-backend attempts.
+                    assert captured_outcomes=={'losing_hand','winning_hand'}, captured_outcomes
+                    # Capture the stable terminal hand under reduced motion.
+                    page.emulate_media(reduced_motion='reduce'); localized_evidence('reduced-motion',['reduced_motion'])
+                    # Reload the canonical route and require restored player-owned history.
+                    page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('joker-poker').wait_for(timeout=5000); assert page.locator('.jp-history-list li').count()>=1; localized_evidence('route-restored',['route_restored'])
+                    # Return to the lobby for downstream browser cases.
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Execute the integrated Joker Poker browser and visual gate.
+                run_case('BR-JP-001',['JP-001','JP-002','JP-004','JP-005'],joker_poker_acceptance)
                 # Define route_restoration to prove deep links, reload, Back, and Forward behavior.
                 def route_restoration():
                     # Open Roulette directly through its canonical path using the authenticated browser context.

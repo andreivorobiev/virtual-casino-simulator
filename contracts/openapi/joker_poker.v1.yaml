@@ -1,0 +1,358 @@
+openapi: 3.0.3
+info:
+  title: Virtual Casino Joker Poker API
+  version: v1
+  description: >-
+    Additive issue #130 contract for session-bound single-hand Joker Poker. The authenticated
+    router owns player identity. Deal and draw actions require action_id values so retries
+    recover one wager debit and at most one payout credit.
+tags:
+  - name: Joker Poker
+    description: One-hand 53-card Joker Poker with one wild joker and ledger-only settlement.
+paths:
+  /api/v1/games/joker-poker/state:
+    get:
+      tags: [Joker Poker]
+      operationId: jokerPokerState
+      summary: Read the authenticated player's reload-safe Joker Poker state
+      responses:
+        '200':
+          description: Current player-scoped game state and rules
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StateEnvelope'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/v1/games/joker-poker/rounds:
+    post:
+      tags: [Joker Poker]
+      operationId: jokerPokerStartRound
+      summary: Start or replay one wagered Joker Poker hand
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartRoundRequest'
+      responses:
+        '200':
+          description: New or replayed source hand with committed wager evidence
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoundEnvelope'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/v1/games/joker-poker/rounds/{round_id}/holds:
+    post:
+      tags: [Joker Poker]
+      operationId: jokerPokerSetHolds
+      summary: Persist held-card positions for the active hand
+      parameters:
+        - $ref: '#/components/parameters/RoundId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HoldsRequest'
+      responses:
+        '200':
+          description: Reload-safe active round with updated holds
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoundEnvelope'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/v1/games/joker-poker/rounds/{round_id}/draw:
+    post:
+      tags: [Joker Poker]
+      operationId: jokerPokerDraw
+      summary: Draw replacement cards and settle one optional payout
+      parameters:
+        - $ref: '#/components/parameters/RoundId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DrawRequest'
+      responses:
+        '200':
+          description: Completed hand with optional committed payout evidence
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoundEnvelope'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+components:
+  parameters:
+    RoundId:
+      name: round_id
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: '^[A-Za-z0-9_-]+$'
+  responses:
+    ErrorResponse:
+      description: Standard API error envelope
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+  schemas:
+    ActionId:
+      type: string
+      minLength: 1
+      maxLength: 128
+      pattern: '^[A-Za-z0-9._:-]+$'
+    StartRoundRequest:
+      type: object
+      additionalProperties: false
+      required: [action_id, wager]
+      properties:
+        action_id:
+          $ref: '#/components/schemas/ActionId'
+        wager:
+          type: number
+          minimum: 0.01
+          maximum: 100000
+        player_id:
+          type: string
+          description: Compatibility input overridden by the authenticated session resolver.
+    HoldsRequest:
+      type: object
+      additionalProperties: false
+      required: [holds]
+      properties:
+        holds:
+          type: array
+          uniqueItems: true
+          maxItems: 5
+          items:
+            type: integer
+            minimum: 0
+            maximum: 4
+        player_id:
+          type: string
+          description: Compatibility input overridden by the authenticated session resolver.
+    DrawRequest:
+      type: object
+      additionalProperties: false
+      required: [action_id]
+      properties:
+        action_id:
+          $ref: '#/components/schemas/ActionId'
+        holds:
+          type: array
+          uniqueItems: true
+          maxItems: 5
+          items:
+            type: integer
+            minimum: 0
+            maximum: 4
+        player_id:
+          type: string
+          description: Compatibility input overridden by the authenticated session resolver.
+    CardCode:
+      type: string
+      pattern: '^((10|[2-9JQKA])[CDHS]|JK)$'
+    Outcome:
+      type: string
+      enum:
+        - natural_royal_flush
+        - five_of_a_kind
+        - wild_royal_flush
+        - straight_flush
+        - four_of_a_kind
+        - full_house
+        - flush
+        - straight
+        - three_of_a_kind
+        - two_pair
+        - kings_or_better
+        - no_win
+    HandResult:
+      type: object
+      required: [cards, outcome, multiplier, payout]
+      properties:
+        cards:
+          type: array
+          minItems: 5
+          maxItems: 5
+          items:
+            $ref: '#/components/schemas/CardCode'
+        outcome:
+          $ref: '#/components/schemas/Outcome'
+        multiplier:
+          type: integer
+          minimum: 0
+        payout:
+          type: number
+          minimum: 0
+        joker_as:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/CardCode'
+    Round:
+      type: object
+      required: [round_id, player_id, start_action_id, wager, phase, initial_hand, holds, wager_status, settlement_status, created_at]
+      properties:
+        round_id:
+          type: string
+        player_id:
+          type: string
+        start_action_id:
+          type: string
+        wager:
+          type: number
+        phase:
+          type: string
+          enum: [hold, settled]
+        initial_hand:
+          type: array
+          minItems: 5
+          maxItems: 5
+          items:
+            $ref: '#/components/schemas/CardCode'
+        holds:
+          type: array
+          uniqueItems: true
+          items:
+            type: integer
+            minimum: 0
+            maximum: 4
+        draw_action_id:
+          nullable: true
+          type: string
+        result:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/HandResult'
+        total_payout:
+          type: number
+        net:
+          nullable: true
+          type: number
+        wager_status:
+          type: string
+          enum: [pending, complete]
+        settlement_status:
+          type: string
+          enum: [not_ready, pending, complete]
+        wager_ledger_id:
+          type: string
+        settlement_ledger_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+    GameState:
+      type: object
+      required: [active_round, recent_rounds]
+      properties:
+        active_round:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/Round'
+        recent_rounds:
+          type: array
+          items:
+            $ref: '#/components/schemas/Round'
+    Rules:
+      type: object
+      required: [deck_size, joker_code, paytable, outcome_order, qualifying_pair]
+      properties:
+        deck_size:
+          type: integer
+          enum: [53]
+        joker_code:
+          type: string
+          enum: [JK]
+        paytable:
+          type: object
+          additionalProperties:
+            type: integer
+        outcome_order:
+          type: array
+          items:
+            $ref: '#/components/schemas/Outcome'
+        qualifying_pair:
+          type: string
+          enum: [kings_or_better]
+    Player:
+      type: object
+      additionalProperties: true
+    LedgerEvent:
+      type: object
+      nullable: true
+      additionalProperties: true
+    StateData:
+      type: object
+      required: [game, state, player, rules]
+      properties:
+        game:
+          type: string
+          enum: [joker_poker]
+        state:
+          $ref: '#/components/schemas/GameState'
+        player:
+          $ref: '#/components/schemas/Player'
+        rules:
+          $ref: '#/components/schemas/Rules'
+    RoundData:
+      allOf:
+        - $ref: '#/components/schemas/StateData'
+        - type: object
+          required: [round]
+          properties:
+            round:
+              $ref: '#/components/schemas/Round'
+            wager:
+              $ref: '#/components/schemas/LedgerEvent'
+            settlement:
+              $ref: '#/components/schemas/LedgerEvent'
+            replayed:
+              type: boolean
+    StateEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/StateData'
+    RoundEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/RoundData'
+    ErrorEnvelope:
+      type: object
+      required: [ok, error]
+      properties:
+        ok:
+          type: boolean
+          enum: [false]
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object

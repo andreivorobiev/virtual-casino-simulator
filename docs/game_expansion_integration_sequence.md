@@ -34,7 +34,8 @@ The Product-approved serialized order is:
 20. Pull request #172, Acey-Deucey for issue #149, released after Andar Bahar merged.
 21. Pull request #180, Caribbean Stud for issue #132, released after Acey-Deucey merged.
 22. Pull request #178, Let It Ride for issue #134, merged after Caribbean Stud.
-23. Pull request #179, Casino Hold'em for issue #139, released after Let It Ride merged.
+23. Pull request #179, Casino Hold'em for issue #139, merged after Let It Ride.
+24. Pull request #177, Joker Poker for issue #130, released after Casino Hold'em merged.
 
 Each game pull request remains draft until the preceding game is accepted, the current branch is rebased onto the resulting `main`, and the game passes the complete integration gate below. A later game must not pre-allocate or edit the shared version values owned by an earlier game.
 
@@ -66,7 +67,8 @@ Existing games retain sort orders 10 through 60. The approved expansion slots ar
 | 260 | Acey-Deucey | #149 | Merged PR #172 |
 | 270 | Caribbean Stud | #132 | Merged PR #180 |
 | 280 | Let It Ride | #134 | Merged PR #178 |
-| 290 | Casino Hold'em | #139 | Released draft PR #179 |
+| 290 | Casino Hold'em | #139 | Merged PR #179 |
+| 300 | Joker Poker | #130 | Released draft PR #177 |
 
 Sort order is catalog presentation metadata, not an authorization to register a placeholder. Only complete game descriptors are loaded.
 
@@ -96,6 +98,7 @@ Permanent game blocks are reserved as follows:
 - `CS-001` through `CS-005` for the same five acceptance dimensions for Caribbean Stud.
 - `LIR-001` through `LIR-005` for the same five acceptance dimensions for Let It Ride.
 - `CH-001` through `CH-005` for the same five acceptance dimensions for Casino Hold'em.
+- `JP-001` through `JP-005` for the same five acceptance dimensions for Joker Poker.
 
 New entries begin as `PLANNED`. The integration owner changes an entry to `PASS` only when its mapped real-backend tests and visual evidence have passed. Requirement IDs are never reused or renumbered after allocation.
 
@@ -154,6 +157,7 @@ Each new game begins at module revision `1.0.0`. The packaged application releas
 | #180 Caribbean Stud | 9.23.0 | 1.26.0 | 1.25.0 | 1.21.0 |
 | #178 Let It Ride | 9.24.0 | 1.27.0 | 1.26.0 | 1.22.0 |
 | #179 Casino Hold'em | 9.25.0 | 1.28.0 | 1.27.0 | 1.23.0 |
+| #177 Joker Poker | 9.26.0 | 1.29.0 | 1.28.0 | 1.24.0 |
 
 These values are reservations, not permission to overwrite a newer value. The integrator must re-read current `main` immediately before each bump.
 
@@ -192,6 +196,7 @@ Required visual states are:
 - Caribbean Stud: `ready`, `decision`, `dealer_not_qualified`, `player_win`, `push`, `dealer_win`, `fold`, `reduced_motion`, and `route_restored`.
 - Let It Ride: `ready`, `first_decision`, `second_decision`, `settled`, `reduced_motion`, and `route_restored`.
 - Casino Hold'em: `ready`, `decision`, `dealer_not_qualified`, `player_win`, `dealer_win`, `push`, `folded`, `reduced_motion`, and `route_restored`.
+- Joker Poker: `ready`, `choose_holds`, `winning_hand`, `losing_hand`, `reduced_motion`, and `route_restored`.
 
 ## Validation and listener gate
 

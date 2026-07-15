@@ -6669,7 +6669,7 @@
       "module": "Core",
       "description": "Every game API request resolves its player through one shared authenticated-session resolver before route dispatch.",
       "status": "PASS",
-      "api_tests": ["API-CATALOG-001", "API-PRIVATE-SESSION-001", "API-MHVP-001", "API-CW-001", "API-BIG-SIX-001", "API-RD-001", "API-DT-001", "API-HILO-001", "API-TCP-001", "API-JOBVP-001", "API-DWVP-001", "API-SCRATCH-001", "API-SIC-BO-001", "API-CHUCK-001", "API-CRAPS-001", "API-CAA-001", "API-OU7-001", "API-PLINKO-001", "API-FAN-TAN-001", "API-AB-001", "API-AD-001", "API-CS-001", "API-LIR-001", "API-CH-001"],
+      "api_tests": ["API-CATALOG-001", "API-PRIVATE-SESSION-001", "API-MHVP-001", "API-CW-001", "API-BIG-SIX-001", "API-RD-001", "API-DT-001", "API-HILO-001", "API-TCP-001", "API-JOBVP-001", "API-DWVP-001", "API-SCRATCH-001", "API-SIC-BO-001", "API-CHUCK-001", "API-CRAPS-001", "API-CAA-001", "API-OU7-001", "API-PLINKO-001", "API-FAN-TAN-001", "API-AB-001", "API-AD-001", "API-CS-001", "API-LIR-001", "API-CH-001", "API-JP-001"],
       "browser_tests": [],
       "implementation_files": ["casino/core/request_player.py", "casino/router.py", "casino/app.py"],
       "introduced_in": "wave0-catalog-governance",
@@ -7332,6 +7332,21 @@
     },
     {
       "id": "CH-005", "module": "Tests", "description": "Catalog, contract, browser, and long-suite discovery include Casino Hold'em with requirement, module, version, and visual traceability.", "status": "PASS", "api_tests": ["API-CATALOG-001", "LONG-SUITE-100"], "browser_tests": ["BR-CATALOG-DISCOVERY-001", "BR-CH-001"], "implementation_files": ["modules/casino_holdem.json", "modules/module-manifest.json", "contracts/compatibility/module-api-matrix.json", "tests/game_drivers/casino_holdem.py", "tests/visual/visual_matrix.json", "tests/run_tests.py"], "introduced_in": "game-expansion-casino-holdem", "changed_in": "game-expansion-casino-holdem", "notes": "Descriptor sort order 290 and the catalog-discovered long driver are canonical."
+    },
+    {
+      "id": "JP-001", "module": "Joker Poker", "description": "A 53-card single-hand draw profile contains exactly one wild joker, reload-safe holds, Kings-or-Better qualification, and distinct natural royal, five-of-a-kind, and wild royal paytable rows.", "status": "PASS", "api_tests": ["API-JP-001"], "browser_tests": ["BR-JP-001"], "implementation_files": ["casino/games/joker_poker/engine.py", "web/games/joker_poker.js"], "introduced_in": "game-expansion-joker-poker", "changed_in": "game-expansion-joker-poker", "notes": "Issue #77 allocates the permanent distinct rules requirement for issue #130."
+    },
+    {
+      "id": "JP-002", "module": "Joker Poker", "description": "Authenticated sessions own private reload-safe source hands, hold selections, durable receipts, settled history, and canonical route restoration.", "status": "PASS", "api_tests": ["API-JP-001", "API-WALLET-RESTART-001"], "browser_tests": ["BR-JP-001"], "implementation_files": ["casino/games/joker_poker/api.py", "casino/games/joker_poker/service.py", "web/app.js", "tests/run_tests.py"], "introduced_in": "game-expansion-joker-poker", "changed_in": "game-expansion-joker-poker", "notes": "Session context overrides caller player ids, unused draw cards remain private, and committed results survive reload and process restart."
+    },
+    {
+      "id": "JP-003", "module": "Joker Poker", "description": "One wager debit and at most one returned-token payout credit use the shared ledger exactly once under durable deal and draw action identities.", "status": "PASS", "api_tests": ["API-JP-001"], "browser_tests": [], "implementation_files": ["casino/games/joker_poker/service.py", "casino/core/ledger.py", "tests/games/joker_poker/test_api.py", "tests/run_tests.py"], "introduced_in": "game-expansion-joker-poker", "changed_in": "game-expansion-joker-poker", "notes": "No game code mutates balances directly and conflicting retries fail closed."
+    },
+    {
+      "id": "JP-004", "module": "Application", "description": "Joker Poker supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.", "status": "PASS", "api_tests": [], "browser_tests": ["BR-JP-001"], "implementation_files": ["web/games/joker_poker.js", "web/i18n/en-US/games/joker_poker.json", "web/i18n/ru-RU/games/joker_poker.json", "tests/visual/visual_matrix.json", "tests/run_tests.py"], "introduced_in": "game-expansion-joker-poker", "changed_in": "game-expansion-joker-poker", "notes": "Evidence covers both locales and every governed viewport."
+    },
+    {
+      "id": "JP-005", "module": "Tests", "description": "Catalog, contract, browser, and long-suite discovery include Joker Poker with requirement, module, version, and visual traceability.", "status": "PASS", "api_tests": ["API-CATALOG-001", "LONG-SUITE-100"], "browser_tests": ["BR-CATALOG-DISCOVERY-001", "BR-JP-001"], "implementation_files": ["modules/joker_poker.json", "modules/module-manifest.json", "contracts/compatibility/module-api-matrix.json", "tests/game_drivers/joker_poker.py", "tests/visual/visual_matrix.json", "tests/run_tests.py"], "introduced_in": "game-expansion-joker-poker", "changed_in": "game-expansion-joker-poker", "notes": "Descriptor sort order 300 and the catalog-discovered long driver are canonical."
     }
   ]
 }
