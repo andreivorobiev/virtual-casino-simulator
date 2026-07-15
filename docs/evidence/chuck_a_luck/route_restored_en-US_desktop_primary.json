@@ -1,0 +1,14 @@
+{
+  "evidence_class": "after_pass",
+  "branch": "codex/game-chuck-a-luck",
+  "commit": "66b36dc78d419b04a3b9783e2ee59f114454a74e",
+  "surface": "chuck_a_luck",
+  "state": "route_restored",
+  "locale": "en-US",
+  "viewport": {
+    "id": "desktop_primary",
+    "width": 1920,
+    "height": 1080
+  },
+  "path": "docs/evidence/chuck_a_luck/route_restored_en-US_desktop_primary.png"
+}

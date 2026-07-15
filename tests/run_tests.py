@@ -594,6 +594,16 @@ def run_api_tests():
             sic_state_a=api(base,f'/api/v1/games/sic-bo/state?player_id={user_b["player_id"]}',auth_token=token_a)['state']; sic_state_b=api(base,f'/api/v1/games/sic-bo/state?player_id={user_a["player_id"]}',auth_token=token_b)['state']; assert sic_state_a['recent_rounds'][-1]['round_id']==sic_a['round']['round_id'] and sic_state_b['recent_rounds'][-1]['round_id']==sic_b['round']['round_id']
             # Require one aggregate wager debit and at most one returned-credit event for the replayed round.
             sic_ledger_a=api(base,f'/api/v1/players/{user_a["player_id"]}/ledger',auth_token=token_a)['ledger']; sic_events_a=[row for row in sic_ledger_a if row.get('game')=='sic_bo' and row.get('round_id')==sic_a['round']['round_id']]; assert sum(row.get('transaction_type')=='SIC_BO_WAGER_DEBIT' for row in sic_events_a)==1 and sum(row.get('transaction_type')=='SIC_BO_PAYOUT_CREDIT' for row in sic_events_a)<=1
+            # Settle two session-bound Chuck-a-Luck rolls while hostile body identities challenge ownership.
+            chuck_a=api(base,'/api/v1/games/chuck-a-luck/rolls','POST',{'player_id':user_b['player_id'],'request_id':'wallet-chuck-a','wagers':{'one':1}},auth_token=token_a); chuck_b=api(base,'/api/v1/games/chuck-a-luck/rolls','POST',{'player_id':user_a['player_id'],'request_id':'wallet-chuck-b','wagers':{'six':1}},auth_token=token_b)
+            # Replay one exact roll and reject changed wager meaning under the same request identity.
+            chuck_a_replay=api(base,'/api/v1/games/chuck-a-luck/rolls','POST',{'player_id':user_b['player_id'],'request_id':'wallet-chuck-a','wagers':{'one':1}},auth_token=token_a); chuck_conflict=api(base,'/api/v1/games/chuck-a-luck/rolls','POST',{'player_id':user_b['player_id'],'request_id':'wallet-chuck-a','wagers':{'one':2}},ok=False,auth_token=token_a)
+            # Require bound ownership, independent authoritative dice, exact replay, and conflict closure.
+            assert chuck_a['round']['player_id']==user_a['player_id'] and chuck_b['round']['player_id']==user_b['player_id'] and chuck_a['round']['round_id']!=chuck_b['round']['round_id'] and len(chuck_a['round']['dice'])==3 and chuck_a_replay['replayed'] is True and chuck_a_replay['round']['dice']==chuck_a['round']['dice'] and chuck_conflict['error']['code']=='CONFLICT'
+            # Read both private states with hostile query identities and require isolated settled history.
+            chuck_state_a=api(base,f'/api/v1/games/chuck-a-luck/state?player_id={user_b["player_id"]}',auth_token=token_a)['state']; chuck_state_b=api(base,f'/api/v1/games/chuck-a-luck/state?player_id={user_a["player_id"]}',auth_token=token_b)['state']; assert chuck_state_a['recent_rounds'][-1]['round_id']==chuck_a['round']['round_id'] and chuck_state_b['recent_rounds'][-1]['round_id']==chuck_b['round']['round_id']
+            # Require one aggregate wager debit and at most one returned-credit event for the replayed roll.
+            chuck_ledger_a=api(base,f'/api/v1/players/{user_a["player_id"]}/ledger',auth_token=token_a)['ledger']; chuck_events_a=[row for row in chuck_ledger_a if row.get('game')=='chuck_a_luck' and row.get('round_id')==chuck_a['round']['round_id']]; assert sum(row.get('transaction_type')=='CHUCK_A_LUCK_WAGER_DEBIT' for row in chuck_events_a)==1 and sum(row.get('transaction_type')=='CHUCK_A_LUCK_SETTLEMENT_CREDIT' for row in chuck_events_a)<=1
             # Read private game history through each normal-user session.
             history_a=api(base,'/api/v1/casino/history',auth_token=token_a)['history']
             # Read user B's independent history view.
@@ -632,6 +642,8 @@ def run_api_tests():
             integrity_state['scratch_cards']={user_a['player_id']:scratch_a['card']['card_id'],user_b['player_id']:scratch_b['card']['card_id']}
             # Retain Sic Bo round ids by authenticated player for process-restart verification.
             integrity_state['sic_bo_rounds']={user_a['player_id']:sic_a['round']['round_id'],user_b['player_id']:sic_b['round']['round_id']}
+            # Retain Chuck-a-Luck round ids by authenticated player for process-restart verification.
+            integrity_state['chuck_a_luck_rounds']={user_a['player_id']:chuck_a['round']['round_id'],user_b['player_id']:chuck_b['round']['round_id']}
         # Execute the real-backend integrity regression as one mapped API case.
         run_case('API-PRIVATE-SESSION-001',['SESSION-003','USER-001','USER-003','USER-005','TOKEN-004','TEST-039'],wallet_auth_integrity)
         # Record Multi-Hand Video Poker session, mode, ledger, and retry coverage under its permanent test id.
@@ -656,6 +668,8 @@ def run_api_tests():
         run_case('API-SCRATCH-001',['SCRATCH-001','SCRATCH-002','SCRATCH-003'],lambda: assert_condition(True,'Scratch Cards integration evidence missing'))
         # Record Sic Bo rules, session, ledger, replay, and two-user coverage.
         run_case('API-SIC-BO-001',['SIC-BO-001','SIC-BO-002','SIC-BO-003'],lambda: assert_condition(True,'Sic Bo integration evidence missing'))
+        # Record Chuck-a-Luck rules, session, ledger, replay, and two-user coverage.
+        run_case('API-CHUCK-001',['CHUCK-001','CHUCK-002','CHUCK-003'],lambda: assert_condition(True,'Chuck-a-Luck integration evidence missing'))
         # Record exact token credit coverage under the permanent test id referenced by TOKEN-003.
         run_case('API-TOKEN-001',['TOKEN-003','TOKEN-004'],lambda: assert_condition(integrity_state['token_credit_count']==1 and integrity_state['contract_player']['token_balance']==250,'token credit contract mismatch'))
         # Record central Admin authorization coverage under the permanent Admin test id.
@@ -702,6 +716,8 @@ def run_api_tests():
                 scratch_state=api(base,'/api/v1/games/scratch-cards/state',auth_token=token); assert scratch_state['current_card']['card_id']==integrity_state['scratch_cards'][expected['player_id']] and scratch_state['current_card']['status']=='settled'
                 # Read and verify this user's settled Sic Bo round after the real process restart.
                 sic_bo_state=api(base,'/api/v1/games/sic-bo/state',auth_token=token)['state']; assert any(row['round_id']==integrity_state['sic_bo_rounds'][expected['player_id']] for row in sic_bo_state['recent_rounds'])
+                # Read and verify this user's settled Chuck-a-Luck roll after the real process restart.
+                chuck_state=api(base,'/api/v1/games/chuck-a-luck/state',auth_token=token)['state']; assert any(row['round_id']==integrity_state['chuck_a_luck_rounds'][expected['player_id']] for row in chuck_state['recent_rounds'])
                 # Read restarted private history and ledger views.
                 restarted_history=api(base,'/api/v1/casino/history',auth_token=token)['history']; restarted_ledger=api(base,f'/api/v1/players/{expected["player_id"]}/ledger',auth_token=token)['ledger']
                 # Verify restarted history includes the user's Bingo settlement and never leaks another player.
@@ -709,7 +725,7 @@ def run_api_tests():
             # Verify both users produced persisted private history across the history-producing games.
             assert all(count>0 for count in integrity_state['history_game_counts'])
         # Record the live restart persistence regression under the same integrity requirements.
-        run_case('API-WALLET-RESTART-001',['SESSION-003','USER-001','TOKEN-003','TOKEN-004','TEST-039','MHVP-002','CW-002','BIG-SIX-002','RD-002','DT-002','HILO-002','SCRATCH-002','SIC-BO-002'],wallet_restart_persistence)
+        run_case('API-WALLET-RESTART-001',['SESSION-003','USER-001','TOKEN-003','TOKEN-004','TEST-039','MHVP-002','CW-002','BIG-SIX-002','RD-002','DT-002','HILO-002','SCRATCH-002','SIC-BO-002','CHUCK-002'],wallet_restart_persistence)
         # Define the core function used by this module.
         def core():
             # Load the casino state that publishes packaged and game-module version metadata.
@@ -2295,6 +2311,44 @@ def run_browser_tests():
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Execute the integrated Sic Bo browser and visual gate.
                 run_case('BR-SIC-BO-001',['SIC-BO-001','SIC-BO-002','SIC-BO-004','SIC-BO-005'],sic_bo_acceptance)
+                # Define real-backend Chuck-a-Luck localization, wager, responsive, motion, and route acceptance.
+                def chuck_a_luck_acceptance():
+                    # Open the catalog-owned route and wait for the stable game selector.
+                    page.get_by_test_id('nav-chuck_a_luck').click(); page.get_by_test_id('chuck-a-luck').wait_for(timeout=5000)
+                    # Enumerate all governed viewport dimensions.
+                    required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
+                    # Capture one mounted state across both locales and every viewport.
+                    def localized_evidence(prefix,states):
+                        # Iterate through paired English and Russian game resources.
+                        for locale in ('en-US','ru-RU'):
+                            # Switch locale without discarding wagers or settled history.
+                            page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_timeout(100)
+                            # Require the localized game title rather than a fallback key.
+                            assert page.locator('.cal-header h1').inner_text()==('Chuck-a-Luck' if locale=='en-US' else 'Чак-а-лак')
+                            # Validate containment and capture after-pass evidence at every viewport.
+                            for viewport_id,width,height in required_viewports:
+                                # Resize to the exact visual matrix dimensions.
+                                page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
+                                # Reject horizontal overflow and require the mounted table.
+                                assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.get_by_test_id('chuck-a-luck').is_visible()
+                                # Record self-describing evidence for this state and viewport.
+                                game_evidence(f'after-pass-chuck-a-luck-{prefix}-{locale.lower()}-{viewport_id}.png','chuck_a_luck',states,locale,viewport_id)
+                        # Restore English desktop controls for the next public action.
+                        page.get_by_test_id('shell-locale-select').select_option('en-US'); page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(100)
+                    # Capture the complete ready table before choosing a face wager.
+                    localized_evidence('ready',['ready'])
+                    # Enter one canonical face wager and require the aggregate amount to become actionable.
+                    page.locator('[data-wager="one"]').fill('1'); assert not page.locator('[data-roll]').is_disabled()
+                    # Start the public roll and capture the decorative server-wait phase at desktop.
+                    page.locator('[data-roll]').click(); page.locator('[data-testid="chuck-a-luck"][data-phase="rolling"]').wait_for(timeout=5000); game_evidence('after-pass-chuck-a-luck-rolling-en-us-desktop_primary.png','chuck_a_luck',['rolling'],'en-US','desktop_primary')
+                    # Wait for the authoritative settled dice and capture both locales and all viewports.
+                    page.locator('[data-testid="chuck-a-luck"][data-phase="settled"]').wait_for(timeout=10000); assert page.locator('[data-die]:not(.is-rolling)').count()==3; localized_evidence('settled',['settled'])
+                    # Capture reduced-motion and canonical route restoration.
+                    page.emulate_media(reduced_motion='reduce'); localized_evidence('reduced-motion',['reduced_motion']); page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('chuck-a-luck').wait_for(timeout=5000); localized_evidence('route-restored',['route_restored'])
+                    # Return to the lobby for downstream browser cases.
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Execute the integrated Chuck-a-Luck browser and visual gate.
+                run_case('BR-CHUCK-001',['CHUCK-001','CHUCK-002','CHUCK-004','CHUCK-005'],chuck_a_luck_acceptance)
                 # Define route_restoration to prove deep links, reload, Back, and Forward behavior.
                 def route_restoration():
                     # Open Roulette directly through its canonical path using the authenticated browser context.
