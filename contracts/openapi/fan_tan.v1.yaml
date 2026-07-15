@@ -1,0 +1,276 @@
+openapi: 3.0.3
+info:
+  title: Virtual Casino Fan-Tan API
+  version: v1
+  description: >-
+    Additive frozen-v1 contract for authenticated Fan-Tan play. The game counts a
+    pile by repeated groups of four, resolves a residue from one to four, and
+    settles all play-token movement through ledger-backed exactly-once actions.
+tags:
+  - name: Fan-Tan
+    description: Player-scoped counted-pile residue wagering.
+
+# Define only additive frozen-v1 game endpoints owned by the Fan-Tan module.
+paths:
+  /api/v1/games/fan-tan/state:
+    get:
+      tags: [Fan-Tan]
+      operationId: fanTanState
+      summary: Read the authenticated player's reload-safe Fan-Tan state
+      responses:
+        '200':
+          description: Current game state, fixed rules, and residue paytable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StateEnvelope'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/v1/games/fan-tan/rounds:
+    post:
+      tags: [Fan-Tan]
+      operationId: fanTanPlayRound
+      summary: Count and settle one idempotent Fan-Tan round
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlayRequest'
+      responses:
+        '200':
+          description: Settled round with optional payout evidence
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoundEnvelope'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+
+# Reuse standard success/error envelopes while defining game-owned data shapes.
+components:
+  responses:
+    ErrorResponse:
+      description: Standard API error envelope
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+  schemas:
+    ActionId:
+      type: string
+      minLength: 1
+      maxLength: 128
+    Residue:
+      type: string
+      enum: ['1', '2', '3', '4']
+    PlayRequest:
+      type: object
+      additionalProperties: false
+      required: [action_id, wagers]
+      properties:
+        action_id:
+          $ref: '#/components/schemas/ActionId'
+        wagers:
+          type: object
+          minProperties: 1
+          additionalProperties: false
+          properties:
+            '1':
+              type: number
+              minimum: 0.01
+              maximum: 1000000
+            '2':
+              type: number
+              minimum: 0.01
+              maximum: 1000000
+            '3':
+              type: number
+              minimum: 0.01
+              maximum: 1000000
+            '4':
+              type: number
+              minimum: 0.01
+              maximum: 1000000
+        player_id:
+          type: string
+          description: Compatibility input overridden by the authenticated session resolver.
+    Outcome:
+      type: object
+      required: [id, residue, net_odds, return_multiplier]
+      properties:
+        id:
+          $ref: '#/components/schemas/Residue'
+        residue:
+          type: integer
+          enum: [1, 2, 3, 4]
+        net_odds:
+          type: integer
+          enum: [3]
+        return_multiplier:
+          type: integer
+          enum: [4]
+    Rules:
+      type: object
+      required: [profile, pile_min, pile_max, group_size, residues, net_odds]
+      properties:
+        profile:
+          type: string
+          enum: [counted-pile-modulo-four]
+        pile_min:
+          type: integer
+          enum: [49]
+        pile_max:
+          type: integer
+          enum: [80]
+        group_size:
+          type: integer
+          enum: [4]
+        residues:
+          type: array
+          minItems: 4
+          maxItems: 4
+          items:
+            $ref: '#/components/schemas/Residue'
+        net_odds:
+          type: integer
+          enum: [3]
+    CountingStep:
+      type: object
+      additionalProperties: true
+    SettlementRow:
+      type: object
+      required: [residue, amount, won, net]
+      properties:
+        residue:
+          $ref: '#/components/schemas/Residue'
+        amount:
+          type: number
+        won:
+          type: boolean
+        net:
+          type: number
+    Round:
+      type: object
+      required: [round_id, action_id, player_id, status, wagers, pile_count, residue, total_wager, total_return, net, settled_at]
+      properties:
+        round_id:
+          type: string
+          pattern: '^ft_[a-f0-9]{24}$'
+        action_id:
+          $ref: '#/components/schemas/ActionId'
+        player_id:
+          type: string
+        status:
+          type: string
+          enum: [settled]
+        wagers:
+          type: object
+          additionalProperties:
+            type: number
+        pile_count:
+          type: integer
+          minimum: 49
+          maximum: 80
+        residue:
+          $ref: '#/components/schemas/Residue'
+        counting_steps:
+          type: array
+          items:
+            $ref: '#/components/schemas/CountingStep'
+        total_wager:
+          type: number
+        total_return:
+          type: number
+        net:
+          type: number
+        settlements:
+          type: array
+          items:
+            $ref: '#/components/schemas/SettlementRow'
+        settled_at:
+          type: string
+          format: date-time
+    GameState:
+      type: object
+      required: [recent_rounds]
+      properties:
+        recent_rounds:
+          type: array
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/Round'
+    StateData:
+      type: object
+      required: [game, state, rules, outcomes]
+      properties:
+        game:
+          type: string
+          enum: [fan_tan]
+        state:
+          $ref: '#/components/schemas/GameState'
+        rules:
+          $ref: '#/components/schemas/Rules'
+        outcomes:
+          type: array
+          minItems: 4
+          maxItems: 4
+          items:
+            $ref: '#/components/schemas/Outcome'
+    LedgerEvent:
+      type: object
+      nullable: true
+      additionalProperties: true
+    RoundData:
+      allOf:
+        - $ref: '#/components/schemas/StateData'
+        - type: object
+          required: [round, replayed, ledger]
+          properties:
+            round:
+              $ref: '#/components/schemas/Round'
+            replayed:
+              type: boolean
+            ledger:
+              type: object
+              required: [wager, settlement]
+              properties:
+                wager:
+                  $ref: '#/components/schemas/LedgerEvent'
+                settlement:
+                  $ref: '#/components/schemas/LedgerEvent'
+    StateEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/StateData'
+    RoundEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/RoundData'
+    ErrorEnvelope:
+      type: object
+      required: [ok, error]
+      properties:
+        ok:
+          type: boolean
+          enum: [false]
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
