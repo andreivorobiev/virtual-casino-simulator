@@ -1,6 +1,6 @@
 # Issue #140 Distinct Module Proof
 
-Decision: promote to isolated draft implementation slice.
+Decision: accepted as a distinct catalog module through issue #77 integration.
 
 Evidence:
 
@@ -11,6 +11,6 @@ Evidence:
   - Dragon Tiger and Casino War resolve direct high-card comparisons.
   - Red Dog resolves spread-based odds between two cards.
 - The implementation uses shared card primitives from `casino.core.cards`, but imports no existing game module.
-- The descriptor is parked as proposal-only and does not claim catalog count acceptance until #77 integrates shared files.
+- The canonical descriptor at `modules/andar_bahar.json` owns catalog registration, route metadata, compatibility, and discovered test evidence.
 
-Countability: distinct and countable pending #77 shared catalog/router/manifest/requirements/visual-matrix/test-discovery integration.
+Countability: distinct and countable with permanent requirements `AB-001` through `AB-005` and catalog sort order `250`.

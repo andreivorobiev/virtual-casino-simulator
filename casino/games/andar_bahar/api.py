@@ -1,4 +1,4 @@
-"""Additive v1 route proposal for the isolated Andar Bahar module."""
+"""Additive v1 route registration for catalog-integrated Andar Bahar."""
 
 # Import the shared authenticated player resolver so session binding always wins.
 from casino.core.request_player import resolve_authenticated_player
@@ -14,7 +14,7 @@ def request_player_id(body: dict, query: dict, context: dict | None = None) -> s
     return resolve_authenticated_player(request_context, body, query)
 
 
-# Register only game-owned routes without touching the shared application router.
+# Register game-owned routes through the catalog-provided shared router.
 def register(router, service=None, *, test_seed=None):
     # Build the production service unless a focused test injects one.
     game_service = service or AndarBaharService(seed_factory=(lambda action_id: f"{test_seed}:{action_id}") if test_seed is not None else None)

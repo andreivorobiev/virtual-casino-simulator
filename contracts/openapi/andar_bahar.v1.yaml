@@ -3,9 +3,9 @@ info:
   title: Virtual Casino Andar Bahar API
   version: v1
   description: >-
-    Additive issue #140 contract proposal for authenticated Andar Bahar play.
-    State and play commands are game-owned and are not wired into the shared
-    catalog or router until #77 performs integration.
+    Additive frozen-v1 contract for authenticated Andar Bahar play. State and
+    play commands are catalog-registered while session identity and ledger
+    settlement remain shared-core responsibilities.
 tags:
   - name: Andar Bahar
     description: Player-scoped rank-match side prediction with ledger-only settlement.

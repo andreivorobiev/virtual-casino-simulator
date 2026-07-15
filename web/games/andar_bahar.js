@@ -1,4 +1,4 @@
-// Implement the isolated Andar Bahar browser module for GitHub issue #140.
+// Implement the catalog-integrated Andar Bahar browser module for GitHub issue #140.
 
 // Import authenticated envelope-aware API helpers without caller-owned player ids.
 import { api, post } from '../core/api.js';
