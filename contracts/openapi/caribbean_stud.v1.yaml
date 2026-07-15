@@ -1,0 +1,390 @@
+openapi: 3.0.3
+# Describe the additive issue-132 surface without changing existing v1 operations.
+info:
+  title: Virtual Casino Caribbean Stud API
+  version: v1
+  description: >-
+    Additive session-bound Caribbean Stud contract for issue 132. Optional caller
+    player identifiers are compatibility inputs overridden by the authenticated session.
+# Group the game-owned operations under one future catalog tag.
+tags:
+  - name: Caribbean Stud
+    description: Ante, call-or-fold, dealer-qualification poker with ledger-only settlement.
+# Define only game-owned routes; shared router registration remains with issue 77.
+paths:
+  # Expose reload-safe state for the authenticated player.
+  /api/v1/games/caribbean-stud/state:
+    get:
+      tags: [Caribbean Stud]
+      summary: Read the authenticated player's Caribbean Stud state and rules
+      operationId: caribbean_stud_GET_api_v1_games_caribbean_stud_state
+      parameters:
+        - $ref: '#/components/parameters/CompatiblePlayerId'
+      responses:
+        '200':
+          $ref: '#/components/responses/CaribbeanStudStateSuccess'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+  # Deal or replay one ante-backed five-card hand.
+  /api/v1/games/caribbean-stud/rounds:
+    post:
+      tags: [Caribbean Stud]
+      summary: Deal or replay one ante-backed Caribbean Stud round
+      operationId: caribbean_stud_POST_api_v1_games_caribbean_stud_rounds
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CaribbeanStudDealRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/CaribbeanStudActionSuccess'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+  # Commit or replay one fixed call wager and showdown.
+  /api/v1/games/caribbean-stud/rounds/{round_id}/call:
+    post:
+      tags: [Caribbean Stud]
+      summary: Call or replay one active Caribbean Stud round
+      operationId: caribbean_stud_POST_api_v1_games_caribbean_stud_round_call
+      parameters:
+        - $ref: '#/components/parameters/RoundId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CaribbeanStudDecisionRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/CaribbeanStudActionSuccess'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+  # Forfeit or replay one active ante without revealing the dealer hand.
+  /api/v1/games/caribbean-stud/rounds/{round_id}/fold:
+    post:
+      tags: [Caribbean Stud]
+      summary: Fold or replay one active Caribbean Stud round
+      operationId: caribbean_stud_POST_api_v1_games_caribbean_stud_round_fold
+      parameters:
+        - $ref: '#/components/parameters/RoundId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CaribbeanStudDecisionRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/CaribbeanStudActionSuccess'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+# Keep request, response, rule, round, and envelope shapes local to this contract.
+components:
+  parameters:
+    # Preserve the optional v1 compatibility input while documenting session precedence.
+    CompatiblePlayerId:
+      name: player_id
+      in: query
+      required: false
+      description: Compatibility input overridden by the authenticated session resolver.
+      schema:
+        type: string
+    # Constrain route ids to the server-derived Caribbean Stud prefix.
+    RoundId:
+      name: round_id
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: '^cs_[a-f0-9]{24}$'
+  responses:
+    # Return the standard success envelope specialized for state reads.
+    CaribbeanStudStateSuccess:
+      description: Standard success envelope containing rules and reload-safe player state.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CaribbeanStudStateEnvelope'
+    # Return the standard success envelope specialized for actions and safe replays.
+    CaribbeanStudActionSuccess:
+      description: Standard success envelope containing an active or terminal round.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CaribbeanStudActionEnvelope'
+    # Preserve the repository-wide failed response envelope.
+    ApiError:
+      description: Standard failed API envelope.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorEnvelope'
+  schemas:
+    # Require one caller-stable identity for each exactly-once action.
+    ActionId:
+      type: string
+      minLength: 1
+      maxLength: 128
+      pattern: '^[A-Za-z0-9._:-]+$'
+      description: Client-generated idempotency key reused only for the same semantic action.
+    # Constrain fake-token wagers to shared ledger precision and bounded local play.
+    TokenAmount:
+      type: number
+      minimum: 0.01
+      maximum: 100000
+      multipleOf: 0.01
+      description: Fake-money play-token amount with no redeemable value.
+    # Accept one ante deal request and optional overridden compatibility identity.
+    CaribbeanStudDealRequest:
+      type: object
+      additionalProperties: false
+      required: [action_id, ante]
+      properties:
+        action_id:
+          $ref: '#/components/schemas/ActionId'
+        ante:
+          $ref: '#/components/schemas/TokenAmount'
+        player_id:
+          type: string
+          description: Compatibility input overridden by the authenticated session resolver.
+    # Accept one call or fold decision identity and optional overridden compatibility identity.
+    CaribbeanStudDecisionRequest:
+      type: object
+      additionalProperties: false
+      required: [action_id]
+      properties:
+        action_id:
+          $ref: '#/components/schemas/ActionId'
+        player_id:
+          type: string
+          description: Compatibility input overridden by the authenticated session resolver.
+    # Reuse compact ASCII cards from the shared card primitive and frontend renderer.
+    CardCode:
+      type: string
+      pattern: '^(10|[2-9JQKA])[CDHS]$'
+    # Describe one evaluated five-card poker hand.
+    PokerRank:
+      type: object
+      additionalProperties: false
+      required: [name, category, tiebreak]
+      properties:
+        name:
+          type: string
+          enum: [high_card, one_pair, two_pair, three_of_a_kind, straight, flush, full_house, four_of_a_kind, straight_flush, royal_flush]
+        category:
+          type: integer
+          minimum: 0
+          maximum: 8
+        tiebreak:
+          type: array
+          items:
+            type: integer
+    # Publish immutable table rules for clients and tests.
+    CaribbeanStudRules:
+      type: object
+      additionalProperties: false
+      required: [dealer_qualification, call_multiplier, call_odds, dealer_upcards]
+      properties:
+        dealer_qualification:
+          type: string
+          enum: [ace_king_or_better]
+        call_multiplier:
+          type: integer
+          enum: [2]
+        dealer_upcards:
+          type: integer
+          enum: [1]
+        call_odds:
+          type: object
+          additionalProperties:
+            type: integer
+    # Describe an active or terminal round returned identically on safe replay.
+    CaribbeanStudRound:
+      type: object
+      additionalProperties: false
+      required: [round_id, player_id, deal_action_id, ante, call_wager, phase, player_hand, dealer_upcard, player_rank, ante_status, call_status, settlement_status, created_at]
+      properties:
+        round_id:
+          type: string
+          pattern: '^cs_[a-f0-9]{24}$'
+        player_id:
+          type: string
+          description: Authenticated session-bound identity; caller values cannot override it.
+        deal_action_id:
+          $ref: '#/components/schemas/ActionId'
+        call_action_id:
+          $ref: '#/components/schemas/ActionId'
+        fold_action_id:
+          $ref: '#/components/schemas/ActionId'
+        ante:
+          $ref: '#/components/schemas/TokenAmount'
+        call_wager:
+          type: number
+          minimum: 0.02
+        phase:
+          type: string
+          enum: [decision, settled]
+        player_hand:
+          type: array
+          minItems: 5
+          maxItems: 5
+          items:
+            $ref: '#/components/schemas/CardCode'
+        dealer_upcard:
+          $ref: '#/components/schemas/CardCode'
+        dealer_hand:
+          description: Omitted until a call showdown; folds never reveal dealer hole cards.
+          type: array
+          minItems: 5
+          maxItems: 5
+          items:
+            $ref: '#/components/schemas/CardCode'
+        player_rank:
+          $ref: '#/components/schemas/PokerRank'
+        dealer_rank:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/PokerRank'
+        dealer_qualifies:
+          type: boolean
+          nullable: true
+        outcome:
+          type: string
+          nullable: true
+          enum: [dealer_not_qualified, player_win, push, dealer_win, fold]
+        payout:
+          type: number
+          minimum: 0
+        net:
+          type: number
+          nullable: true
+        call_odds:
+          type: integer
+        ante_status:
+          type: string
+          enum: [pending, complete]
+        call_status:
+          type: string
+          enum: [not_ready, pending, complete]
+        settlement_status:
+          type: string
+          enum: [not_ready, pending, complete]
+        ante_ledger_id:
+          type: string
+        call_ledger_id:
+          type: string
+        settlement_ledger_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+    # Store only reload-safe public active state and bounded terminal history.
+    CaribbeanStudState:
+      type: object
+      required: [active_round, recent_rounds]
+      properties:
+        active_round:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/CaribbeanStudRound'
+        recent_rounds:
+          type: array
+          maxItems: 20
+          items:
+            $ref: '#/components/schemas/CaribbeanStudRound'
+    # Allow the shared player payload to evolve without freezing unrelated player fields here.
+    Player:
+      type: object
+      additionalProperties: true
+    # Return committed ledger evidence without freezing shared ledger internals.
+    LedgerEvidence:
+      type: object
+      additionalProperties: true
+    # Return the common state keys for both state reads and actions.
+    CaribbeanStudStateData:
+      type: object
+      required: [game, state, player, rules]
+      properties:
+        game:
+          type: string
+          enum: [caribbean_stud]
+        state:
+          $ref: '#/components/schemas/CaribbeanStudState'
+        player:
+          $ref: '#/components/schemas/Player'
+        rules:
+          $ref: '#/components/schemas/CaribbeanStudRules'
+    # Add the action round, ledger evidence, and replay marker to state data.
+    CaribbeanStudActionData:
+      allOf:
+        - $ref: '#/components/schemas/CaribbeanStudStateData'
+        - type: object
+          required: [round, ledger, replayed]
+          properties:
+            round:
+              $ref: '#/components/schemas/CaribbeanStudRound'
+            ledger:
+              $ref: '#/components/schemas/LedgerEvidence'
+            replayed:
+              type: boolean
+    # Preserve the repository-wide success envelope for state reads.
+    CaribbeanStudStateEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/CaribbeanStudStateData'
+    # Preserve the repository-wide success envelope for actions.
+    CaribbeanStudActionEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/CaribbeanStudActionData'
+    # Preserve the repository-wide error envelope for validation, auth, and conflict failures.
+    ApiErrorEnvelope:
+      type: object
+      required: [ok, error]
+      properties:
+        ok:
+          type: boolean
+          enum: [false]
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
