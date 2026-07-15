@@ -1,0 +1,4 @@
+{
+  "environment": "ci",
+  "backendBaseUrl": "https://backend.example.invalid"
+}

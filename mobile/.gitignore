@@ -1,0 +1,25 @@
+# Installed JavaScript dependencies are restored from the pinned pnpm lockfile.
+node_modules/
+
+# Staged web assets contain environment-specific public backend configuration.
+dist/
+
+# Capacitor sync output is reproducible and may contain environment-specific web assets.
+android/app/src/main/assets/public/
+ios/App/App/public/
+
+# Local native IDE, SDK, build, signing, and user state must never enter source control.
+android/.gradle/
+android/local.properties
+android/**/build/
+android/captures/
+android/.idea/
+android/*.iml
+ios/App/Pods/
+ios/App/DerivedData/
+ios/App/*.xcworkspace/xcuserdata/
+ios/App/*.xcodeproj/xcuserdata/
+*.jks
+*.keystore
+*.p12
+*.mobileprovision

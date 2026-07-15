@@ -1,0 +1,16 @@
+{
+  "appId": "io.github.andreivorobiev.virtualcasino",
+  "appName": "Virtual Casino Simulator",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https",
+    "iosScheme": "capacitor"
+  },
+  "plugins": {
+    "Keyboard": {
+      "resize": "native",
+      "resizeOnFullScreen": true
+    }
+  }
+}
