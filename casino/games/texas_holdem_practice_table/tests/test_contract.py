@@ -1,4 +1,4 @@
-"""Static locale, frontend, and OpenAPI checks for the isolated issue #95 slice."""
+"""Static locale, frontend, and OpenAPI checks for integrated issue #95."""
 
 # Import JSON parsing for paired locale verification.
 import json
@@ -105,6 +105,8 @@ class TexasHoldemPracticeTableContractTests(unittest.TestCase):
         self.assertIn("- $ref: '#/components/parameters/CompatiblePlayerId'", contract)
         # Require stale-surface protection in the documented action payload.
         self.assertIn("expected_phase:", contract)
+        # Require the contract to expose funded-opponent settlement without wallet identities.
+        self.assertIn("funded_opponents:", contract)
 
     # Confirm nullable active-hand timestamps agree with the documented schema.
     def test_active_hand_timestamp_matches_nullable_contract(self):

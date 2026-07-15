@@ -6,8 +6,8 @@ info:
   description: >-
     Additive session-bound fixed-ante Texas Hold'em practice contract for issue #95.
     The authenticated router owns human identity. Every command requires an action_id;
-    one opening escrow debit reserves the maximum hand exposure, and terminal refund and
-    payout credits are recovered by unique ledger action details.
+    one opening escrow debit per real human or funded bot wallet reserves maximum hand
+    exposure, and terminal refund and payout credits use storage-enforced action identities.
 # Group the isolated endpoints under one discoverable game tag.
 tags:
   - name: Texas Hold'em Practice Table
@@ -193,6 +193,7 @@ components:
           format: date-time
     Settlement:
       type: object
+      description: Durable reconciliation across the human and all funded opponent wallets.
       required: [required_actions, committed_actions, complete]
       properties:
         required_actions:
@@ -301,11 +302,15 @@ components:
             $ref: '#/components/schemas/Hand'
         rules:
           type: object
-          required: [opponent_count, reserved_bet_units, actions]
+          required: [opponent_count, funded_opponents, reserved_bet_units, actions]
           properties:
             opponent_count:
               type: integer
               enum: [3]
+            funded_opponents:
+              type: boolean
+              enum: [true]
+              description: Every server-managed seat reserves and settles a real bot player wallet.
             reserved_bet_units:
               type: integer
               enum: [5]

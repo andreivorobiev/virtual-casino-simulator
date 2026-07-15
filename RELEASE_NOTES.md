@@ -7,6 +7,12 @@
 - Removes the client-reachable Roulette forced-result seam and verifies hostile attempts receive a server-owned wheel outcome.
 - Adds catalog-wide API drift checks, browser wallet-tamper recovery, permanent `SEC-001` through `SEC-009` requirements, and links to existing two-user, restart, ledger, Admin, concurrency, and Long Suite evidence.
 
+## Post-release module addendum: Texas Hold'em Practice Table
+
+- Registers issue #95 through canonical catalog, contract, requirement, visual, and test-discovery surfaces after the accepted server-authority gate.
+- Moves the authenticated human and all three funded practice opponents through storage-enforced escrow, refund, and payout ledger actions while retaining session-private cards, reload-safe state, and retry receipts.
+- Extends the `SEC-001` through `SEC-009` hostile-client matrix with every Texas Hold'em mutation route and focused raw-API, cross-user, turn, outcome, ledger, replay, restart, Admin, concurrency, refresh, EN/RU, and Long Suite evidence.
+
 ## Post-release module addendum: funded practice opponents
 
 - Allocates the three named bot player accounts as funded server-managed opponents for the held Texas Hold'em Practice Table proposal.

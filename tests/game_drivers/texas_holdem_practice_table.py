@@ -1,4 +1,4 @@
-"""Catalog-ready public-action driver proposal for Texas Hold'em issue #95."""
+"""Catalog-discovered public-action driver for Texas Hold'em issue #95."""
 
 
 # Exercise one complete fixed-limit hand through only documented public routes.
@@ -7,6 +7,8 @@ def play(client, index):
     start_action_id = f"long-thpt-start-{index}"
     # Start one low-cost hand through the session-bound public endpoint.
     started = client.call("/api/v1/games/texas-holdem-practice-table/hands", "POST", {"action_id": start_action_id, "base_wager": 1})
+    # Require the public rules projection to confirm real opponent-wallet settlement.
+    assert started["state"]["rules"]["funded_opponents"] is True, "Texas Hold'em opponents are not ledger backed"
     # Repeat the exact start payload through the real registered route.
     replayed_start = client.call("/api/v1/games/texas-holdem-practice-table/hands", "POST", {"action_id": start_action_id, "base_wager": 1})
     # Verify the retry reused both the logical hand and wallet result.
@@ -38,4 +40,4 @@ def play(client, index):
     # Verify all five community cards were revealed at showdown.
     assert len(hand["community_cards"]) == 5, "Texas Hold'em showdown returned an incomplete board"
     # Verify terminal wallet settlement is explicitly complete.
-    assert hand["settlement"]["complete"], "Texas Hold'em ledger settlement remained pending"
+    assert hand["settlement"]["complete"] and hand["settlement"]["required_actions"] == hand["settlement"]["committed_actions"] and hand["settlement"]["required_actions"] >= 5, "Texas Hold'em ledger settlement remained pending"

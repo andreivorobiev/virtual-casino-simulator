@@ -29,6 +29,7 @@
   "contracts/openapi/let_it_ride.v1.yaml": "089076a95d0fdd4e08fcdae23a7dfe2f22cfd7cc80c1a766bb9ffe383c32b6ae",
   "contracts/openapi/casino_holdem.v1.yaml": "57c468c49fd03ed557aef36c924a742c63b6d164aec3e7a01ff501e7e1f03c21",
   "contracts/openapi/joker_poker.v1.yaml": "84ae12bb90c2880287f49a04a867d09d429d13cfa0ccda0a9780c740c6c50b6b",
+  "contracts/openapi/texas_holdem_practice_table.v1.yaml": "9a8917c2092c17b864c3587ba7fc37d6a6e2a5a3d1b93f1be23dc81d99ea0bc4",
   "contracts/openapi/keno.v1.yaml": "3d3af7c097f3e82a4082961724cf11797be9a948a38dcb3c1765db3086f54f2d",
   "contracts/openapi/ledger.v1.yaml": "806bc3c22155d2c99d7551c6f97cb9987e3f84297d6055e8dd1e45d341e31ab1",
   "contracts/openapi/multi_hand_video_poker.v1.yaml": "85b3ef2cd12b03d19b34564b2aeac4fbe0e8dcee7073ffb8350b058d5217983b",

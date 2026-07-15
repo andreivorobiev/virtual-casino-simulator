@@ -2,7 +2,7 @@
   "application": "9.1.1",
   "source_baseline": "9.1.0",
   "modules": {
-    "application": "9.28.0",
+    "application": "9.29.0",
     "core": "9.6.1",
     "ledger": "9.1.0",
     "players": "9.1.0",
@@ -39,9 +39,10 @@
     "let_it_ride": "1.0.0",
     "casino_holdem": "1.0.0",
     "joker_poker": "1.0.0",
-    "tests": "1.32.0",
-    "docs": "1.31.0",
-    "contracts": "1.26.0",
+    "texas_holdem_practice_table": "1.0.0",
+    "tests": "1.33.0",
+    "docs": "1.32.0",
+    "contracts": "1.27.0",
     "tooling": "1.5.0",
     "commenting_policy": "1.0.0"
   },

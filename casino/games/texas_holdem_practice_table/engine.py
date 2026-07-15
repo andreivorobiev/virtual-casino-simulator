@@ -25,11 +25,13 @@ ACTION_PHASES = ("preflop", "flop", "turn", "river")
 REVEALED_BY_PHASE = {"preflop": 0, "flop": 3, "turn": 4, "river": 5}
 # Reserve one ante plus four possible calls from the wallet at hand start.
 RESERVED_BET_UNITS = 5
-# Define three localized server-managed seats without importing the shared bot plane.
+# Match the one-time funded-account seed accepted for issue #189.
+PRACTICE_ACCOUNT_FUNDING = 100_000.0
+# Define the three localized server-managed seats and their real player wallets.
 PRACTICE_OPPONENTS = (
-    {"seat_id": "opponent_1", "label_key": "opponents.ava", "policy": "practice_call"},  # Seat the first practice opponent.
-    {"seat_id": "opponent_2", "label_key": "opponents.mia", "policy": "practice_call"},  # Seat the second practice opponent.
-    {"seat_id": "opponent_3", "label_key": "opponents.zoe", "policy": "practice_call"},  # Seat the third practice opponent.
+    {"seat_id": "opponent_1", "player_id": "bot_1", "label_key": "opponents.ava", "policy": "practice_call"},  # Seat the first funded practice opponent.
+    {"seat_id": "opponent_2", "player_id": "bot_2", "label_key": "opponents.mia", "policy": "practice_call"},  # Seat the second funded practice opponent.
+    {"seat_id": "opponent_3", "player_id": "bot_3", "label_key": "opponents.zoe", "policy": "practice_call"},  # Seat the third funded practice opponent.
 )
 
 
@@ -64,7 +66,7 @@ def require_base_wager(value) -> float:
 
 
 # Construct one stable ledger instruction without calling wallet code from the engine.
-def ledger_intent(action_id: str, direction: str, amount: float, transaction_type: str, hand: dict, component: str) -> dict:
+def ledger_intent(action_id: str, direction: str, amount: float, transaction_type: str, hand: dict, component: str, seat: dict) -> dict:
     # Return every audit dimension required by the shared ledger policy.
     return {
         "action_id": action_id,  # Preserve the unique retry-safe movement identity.
@@ -73,22 +75,27 @@ def ledger_intent(action_id: str, direction: str, amount: float, transaction_typ
         "transaction_type": transaction_type,  # Preserve the game-specific audit type.
         "game": GAME_ID,  # Identify this module in append-only history.
         "round_id": hand["hand_id"],  # Correlate movement with the complete hand.
-        "player_id": hand["human_player_id"],  # Bind wallet movement to the authenticated human.
+        "player_id": seat["player_id"],  # Bind the movement to the human or funded opponent wallet.
+        "managed_opponent": seat.get("kind") == "server_bot",  # Select the Admin-audited opponent seam when required.
         # Group recovery metadata beneath the established ledger details field.
         "details": {
             "texas_holdem_action_id": action_id,  # Expose the recovery key to ledger scans.
             "component": component,  # Distinguish escrow, refund, and pot payout.
             "base_wager": hand["base_wager"],  # Preserve the fixed-limit unit.
             "reserved_amount": hand["reserved_amount"],  # Preserve the maximum reserved exposure.
+            "seat_id": seat["seat_id"],  # Correlate the wallet movement with stable table order.
+            "controller_policy": seat.get("policy"),  # Preserve the automated policy for Admin audit.
+            "session_owner_id": hand["human_player_id"],  # Retain owner correlation only in server ledger details.
         },
     }
 
 
 # Build one normalized seat with a reserved table stack and opening ante.
-def seat_state(seat_id: str, kind: str, label_key: str, reserved_amount: float, base_wager: float, policy: str | None = None) -> dict:
+def seat_state(seat_id: str, player_id: str, kind: str, label_key: str, reserved_amount: float, base_wager: float, policy: str | None = None) -> dict:
     # Return only serializable seat state so reload preserves every decision.
     return {
         "seat_id": seat_id,  # Identify table order independently of player identity.
+        "player_id": player_id,  # Bind private settlement state to one real ledger wallet.
         "kind": kind,  # Distinguish the authenticated human from practice opponents.
         "label_key": label_key,  # Let the frontend localize every seat name.
         "policy": policy,  # Record the server policy used for automated actions.
@@ -107,11 +114,11 @@ def create_hand(human_player_id: str, base_wager, request_id: str, *, seed=None,
     # Calculate the single ledger escrow debit that covers every possible call.
     reserved_amount = round(wager * RESERVED_BET_UNITS, 2)
     # Build the authenticated human seat first so table order remains deterministic.
-    seats = [seat_state("human", "human", "seats.you", reserved_amount, wager)]
+    seats = [seat_state("human", human_player_id, "human", "seats.you", reserved_amount, wager)]
     # Add every issue-scoped practice opponent without importing another module.
     for opponent in PRACTICE_OPPONENTS:
-        # Give each server-managed seat the same virtual fixed-limit stack.
-        seats.append(seat_state(opponent["seat_id"], "server_bot", opponent["label_key"], reserved_amount, wager, opponent["policy"]))
+        # Give each funded server-managed seat the same fixed-limit reserved stack.
+        seats.append(seat_state(opponent["seat_id"], opponent["player_id"], "server_bot", opponent["label_key"], reserved_amount, wager, opponent["policy"]))
     # Shuffle through the shared primitive with a test-only deterministic seam.
     deck = shuffled_deck(seed=seed)
     # Deal two private cards in standard round-robin table order.
@@ -153,8 +160,14 @@ def create_hand(human_player_id: str, base_wager, request_id: str, *, seed=None,
         "result": None,  # Leave showdown output empty until terminal play.
         "created_at": created_at,  # Preserve the injected audit timestamp.
     }
-    # Prepare one escrow debit that covers the human ante and four possible calls.
-    hand["ledger_intents"].append(ledger_intent(f"thpt:{request_id}:escrow", "debit", reserved_amount, "TEXAS_HOLDEM_ESCROW_DEBIT", hand, "escrow"))
+    # Prepare one escrow debit that covers each seat's ante and four possible calls.
+    for seat in seats:
+        # Keep the authenticated human's historical transaction vocabulary stable.
+        transaction_type = "TEXAS_HOLDEM_ESCROW_DEBIT" if seat["kind"] == "human" else "PRACTICE_OPPONENT_ESCROW_DEBIT"
+        # Use one player-scoped storage action identity per real table wallet.
+        action_id = f"thpt:{request_id}:{seat['seat_id']}:escrow"
+        # Persist every human and managed-opponent reserve before wallet reconciliation.
+        hand["ledger_intents"].append(ledger_intent(action_id, "debit", reserved_amount, transaction_type, hand, "escrow", seat))
     # Return the complete prepared hand for persistence before wallet movement.
     return hand
 
@@ -387,7 +400,7 @@ def settle_hand(hand: dict, *, completed_at: str) -> dict:
         winner_cents = share_cents + (1 if index < remainder else 0)
         # Store the exact two-decimal pot share.
         payouts[winner["seat_id"]] = winner_cents / 100
-    # Resolve the authenticated human seat for wallet settlement.
+    # Resolve the authenticated human seat for player-facing settlement fields.
     human = require_seat(hand, "human")
     # Return any escrow amount not allocated to ante or calls.
     refund = round(human.get("stack", 0), 2)
@@ -406,14 +419,24 @@ def settle_hand(hand: dict, *, completed_at: str) -> dict:
         "human_return": round(refund + payout, 2),  # Summarize all terminal wallet credits.
         "human_net": round(refund + payout - hand["reserved_amount"], 2),  # Compare credits with the opening escrow debit.
     }
-    # Prepare a distinct ledger refund for unused escrow when positive.
-    if refund > 0:
-        # Add one retry-safe refund credit after terminal state is durable.
-        hand["ledger_intents"].append(ledger_intent(f"thpt:{hand['hand_id']}:refund", "credit", refund, "TEXAS_HOLDEM_ESCROW_REFUND_CREDIT", hand, "refund"))
-    # Prepare a distinct ledger pot payout when the human wins any share.
-    if payout > 0:
-        # Add one retry-safe payout credit after any unused escrow refund.
-        hand["ledger_intents"].append(ledger_intent(f"thpt:{hand['hand_id']}:payout", "credit", payout, "TEXAS_HOLDEM_PAYOUT_CREDIT", hand, "payout"))
+    # Reconcile unused escrow and pot shares for every real wallet at the table.
+    for seat in hand.get("seats", []):
+        # Return the portion of this seat's maximum exposure that was never contributed.
+        seat_refund = round(seat.get("stack", 0), 2)
+        # Read this seat's deterministic whole-cent pot share.
+        seat_payout = round(payouts.get(seat["seat_id"], 0), 2)
+        # Select stable human or managed-opponent audit transaction names.
+        refund_type = "TEXAS_HOLDEM_ESCROW_REFUND_CREDIT" if seat["kind"] == "human" else "PRACTICE_OPPONENT_ESCROW_REFUND"
+        # Select stable human or managed-opponent payout transaction names.
+        payout_type = "TEXAS_HOLDEM_PAYOUT_CREDIT" if seat["kind"] == "human" else "PRACTICE_OPPONENT_PAYOUT"
+        # Prepare one distinct refund action only when unused escrow remains.
+        if seat_refund > 0:
+            # Bind the refund identity to the hand and funded seat wallet.
+            hand["ledger_intents"].append(ledger_intent(f"thpt:{hand['hand_id']}:{seat['seat_id']}:refund", "credit", seat_refund, refund_type, hand, "refund", seat))
+        # Prepare one distinct payout action only when this seat won a pot share.
+        if seat_payout > 0:
+            # Bind the payout identity to the hand and funded seat wallet.
+            hand["ledger_intents"].append(ledger_intent(f"thpt:{hand['hand_id']}:{seat['seat_id']}:payout", "credit", seat_payout, payout_type, hand, "payout", seat))
     # Mark settlement pending until the controller reconciles every ledger intent.
     hand["phase"] = "ledger_pending"
     # Clear turn ownership because no further table decision is legal.
@@ -517,6 +540,7 @@ def public_state(state: dict) -> dict:
         # Publish fixed practice-table limits so the frontend can explain gameplay.
         "rules": {
             "opponent_count": len(PRACTICE_OPPONENTS),  # Describe the fixed server-opponent profile.
+            "funded_opponents": True,  # Confirm every automatic seat settles through a real bot wallet.
             "reserved_bet_units": RESERVED_BET_UNITS,  # Explain the maximum opening escrow.
             "actions": ["call", "fold"],  # Publish the narrow practice action vocabulary.
         },

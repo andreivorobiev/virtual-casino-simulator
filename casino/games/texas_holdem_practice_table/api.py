@@ -10,8 +10,8 @@ import re
 # Import a process-local lock for single-server retry serialization.
 import threading
 
-# Import shared ledger and player services without mutating balances directly.
-from casino.core import ledger, players
+# Import shared ledger, player, and managed-account services without direct balance mutation.
+from casino.core import ledger, players, practice_accounts
 # Import the shared clock for persisted hand and action timestamps.
 from casino.core.clock import utc_now
 # Import the shared id generator for ledger-correlated hand identifiers.
@@ -48,6 +48,21 @@ class StateRepository:
 
 # Adapt prepared game intents to the only permitted wallet mutation service.
 class LedgerAdapter:
+    # Ensure the three allocated wallets have their one-time issue #189 funding.
+    def ensure_accounts(self) -> list[dict]:
+        # Collect immutable funding or exact-replay evidence for every fixed seat.
+        results = []
+        # Match the accepted allocation without importing across the game boundary.
+        for opponent in engine.PRACTICE_OPPONENTS:
+            # Reuse the exact funding identity and semantics exposed in Admin.
+            action_key = f"practice:{GAME_ID}:{opponent['player_id']}:funding-v1"
+            # Credit or replay the fixed seed through the public core accounting seam.
+            result = practice_accounts.transact(opponent["player_id"], engine.PRACTICE_ACCOUNT_FUNDING, "PRACTICE_OPPONENT_FUNDED", action_key, GAME_ID, None, "credit", "fund_account", component="initial_funding", details={"seat_id": opponent["seat_id"], "controller_policy": opponent["policy"]})
+            # Retain the immutable event for focused and Admin-audit evidence.
+            results.append(result)
+        # Return all three funding results to the controller boundary.
+        return results
+
     # Find one previously committed movement by its stable game action id.
     def find_action(self, player_id: str, action_id: str):
         # Scan bounded local history newest-first for crash recovery evidence.
@@ -63,14 +78,26 @@ class LedgerAdapter:
 
     # Commit one positive debit or credit intent through casino.core.ledger.
     def transact(self, intent: dict) -> dict:
+        # Route real bot wallets through the Admin-audited practice-account seam.
+        if intent.get("managed_opponent"):
+            # Map terminal components to the stable public controller vocabulary.
+            controller_action = {"escrow": "reserve_stack", "refund": "refund_stack", "payout": "settle_payout"}[intent["details"]["component"]]
+            # Commit or replay the bot movement under the owning human session context.
+            result = practice_accounts.transact(intent["player_id"], intent["amount"], intent["transaction_type"], intent["action_id"], intent["game"], intent["round_id"], intent["direction"], controller_action, session_owner_id=intent["details"]["session_owner_id"], component=intent["details"]["component"], details=intent["details"])
+            # Return the immutable shared ledger event expected by recovery logic.
+            return result["event"]
         # Route opening escrow through the shared insufficient-funds path.
         if intent.get("direction") == "debit":
-            # Return the committed append-only debit event.
-            return ledger.debit(intent["player_id"], intent["amount"], intent["transaction_type"], intent["game"], intent["round_id"], intent["details"])
+            # Commit or replay the human debit inside the storage action transaction.
+            event, _replayed = ledger.debit_once(intent["player_id"], intent["amount"], intent["transaction_type"], intent["action_id"], intent["game"], intent["round_id"], intent["details"])
+            # Return the immutable event while player responses retain request-level replay state.
+            return event
         # Route refund and payout credits through the shared ledger path.
         if intent.get("direction") == "credit":
-            # Return the committed append-only credit event.
-            return ledger.credit(intent["player_id"], intent["amount"], intent["transaction_type"], intent["game"], intent["round_id"], intent["details"])
+            # Commit or replay the human credit inside the storage action transaction.
+            event, _replayed = ledger.credit_once(intent["player_id"], intent["amount"], intent["transaction_type"], intent["action_id"], intent["game"], intent["round_id"], intent["details"])
+            # Return the immutable event while player responses retain request-level replay state.
+            return event
         # Reject malformed engine instructions before wallet code is reached.
         raise ValidationError("Texas Hold'em ledger direction is invalid")
 
@@ -198,6 +225,8 @@ class TexasHoldemPracticeTableController:
         wager = engine.require_base_wager(base_wager)
         # Serialize preparation and reconciliation for duplicate local requests.
         with _ACTION_LOCK:
+            # Ensure every fixed practice opponent has a real funded wallet before reserving exposure.
+            self.ledger.ensure_accounts()
             # Load the latest player-scoped state under the action lock.
             state = self.repository.load(player_id)
             # Recover any earlier prepared movement before accepting a new command.

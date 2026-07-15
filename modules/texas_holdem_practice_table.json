@@ -1,0 +1,17 @@
+{
+  "module": "texas_holdem_practice_table",
+  "version": "1.0.0",
+  "paths": ["casino/games/texas_holdem_practice_table/", "web/games/texas_holdem_practice_table.js", "web/i18n/en-US/games/texas_holdem_practice_table.json", "web/i18n/ru-RU/games/texas_holdem_practice_table.json"],
+  "requirements_prefixes": ["THPT"],
+  "contracts": ["contracts/openapi/texas_holdem_practice_table.v1.yaml"],
+  "game": {
+    "id": "texas_holdem_practice_table", "sort_order": 200, "route": "/games/texas_holdem_practice_table", "label": "Texas Hold'em Practice Table", "category": "table", "categories": ["table", "cards", "poker", "strategy"],
+    "backend": {"register": "casino.games.texas_holdem_practice_table.api:register"},
+    "frontend": {"module": "./games/texas_holdem_practice_table.js", "export": "TexasHoldemPracticeTableGame", "ready_testid": "texas-holdem-practice-table", "i18n_domain": "games/texas_holdem_practice_table", "i18n_probe": "controls.startHand"},
+    "tests": {"long_driver": "tests.game_drivers.texas_holdem_practice_table:play"},
+    "translations": {"ru-RU": {"label": "Тренировочный стол техасского холдема", "kicker": "Покерный стол", "description": "Сыграйте фиксированную партию в техасский холдем против трёх соперников под управлением сервера.", "tags": ["Карты", "Покер", "Стратегия", "Журнал жетонов"]}},
+    "lobby": {"featured": false, "wide": true, "art_class": "texas-holdem-practice-table-art", "symbol": "TH", "kicker": "Poker table", "description": "Fixed-limit Texas Hold'em practice against three funded server-managed opponents.", "tags": ["Cards", "Poker", "Strategy", "Ledger-backed"]}
+  },
+  "depends_on": ["core", "ledger", "players"],
+  "may_not_depend_on": ["roulette", "slots", "blackjack", "baccarat", "keno", "bingo", "multi_hand_video_poker", "casino_war", "big_six_wheel", "red_dog", "dragon_tiger", "hi_lo", "three_card_poker", "jacks_or_better_video_poker", "deuces_wild_video_poker", "scratch_cards", "sic_bo", "chuck_a_luck", "craps", "crown_and_anchor", "over_under_7", "plinko", "fan_tan", "andar_bahar", "acey_deucey", "caribbean_stud", "let_it_ride", "casino_holdem", "joker_poker"]
+}

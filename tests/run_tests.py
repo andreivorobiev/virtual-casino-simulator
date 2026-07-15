@@ -754,6 +754,30 @@ def run_api_tests():
             joker_poker_state_a=api(base,f'/api/v1/games/joker-poker/state?player_id={user_b["player_id"]}',auth_token=token_a); joker_poker_state_b=api(base,f'/api/v1/games/joker-poker/state?player_id={user_a["player_id"]}',auth_token=token_b); assert joker_poker_state_a['state']['recent_rounds'][-1]['round_id']==joker_poker_a['round']['round_id'] and joker_poker_state_b['state']['recent_rounds'][-1]['round_id']==joker_poker_b['round']['round_id']
             # Require one wager debit and at most one returned-token payout credit for the replayed hand.
             joker_poker_ledger_a=api(base,f'/api/v1/players/{user_a["player_id"]}/ledger',auth_token=token_a)['ledger']; joker_poker_events_a=[row for row in joker_poker_ledger_a if row.get('game')=='joker_poker' and row.get('round_id')==joker_poker_a['round']['round_id']]; assert sum(row.get('transaction_type')=='JOKER_POKER_WAGER_DEBIT' for row in joker_poker_events_a)==1 and sum(row.get('transaction_type')=='JOKER_POKER_PAYOUT_CREDIT' for row in joker_poker_events_a)<=1
+            # Start two funded-opponent practice hands while hostile body identities challenge session ownership.
+            thpt_start_a=api(base,'/api/v1/games/texas-holdem-practice-table/hands','POST',{'player_id':user_b['player_id'],'action_id':'wallet-thpt-start-a','base_wager':1},auth_token=token_a); thpt_start_b=api(base,'/api/v1/games/texas-holdem-practice-table/hands','POST',{'player_id':user_a['player_id'],'action_id':'wallet-thpt-start-b','base_wager':1},auth_token=token_b)
+            # Replay one opening command and reject changed wallet exposure under the same storage identity.
+            thpt_start_a_replay=api(base,'/api/v1/games/texas-holdem-practice-table/hands','POST',{'player_id':user_b['player_id'],'action_id':'wallet-thpt-start-a','base_wager':1},auth_token=token_a); thpt_start_conflict=api(base,'/api/v1/games/texas-holdem-practice-table/hands','POST',{'player_id':user_b['player_id'],'action_id':'wallet-thpt-start-a','base_wager':2},ok=False,auth_token=token_a)
+            # Require private opponent cards, exact opening replay, changed-reuse conflict, and distinct session-owned hands.
+            assert all(seat['hole_cards']==['??','??'] for seat in thpt_start_a['hand']['seats'][1:]) and thpt_start_a_replay['replayed'] is True and thpt_start_a_replay['hand']==thpt_start_a['hand'] and thpt_start_conflict['error']['code']=='CONFLICT' and thpt_start_a['hand']['hand_id']!=thpt_start_b['hand']['hand_id']
+            # Advance both independent hands through every fixed-limit public decision street.
+            thpt_a=thpt_start_a; thpt_b=thpt_start_b
+            # Exercise preflop, flop, turn, and river with stable per-session action identities.
+            for street_index,phase in enumerate(('preflop','flop','turn','river')):
+                # Apply user A's call while again submitting user B's hostile identity.
+                thpt_a=api(base,f'/api/v1/games/texas-holdem-practice-table/hands/{thpt_start_a["hand"]["hand_id"]}/actions','POST',{'player_id':user_b['player_id'],'action_id':f'wallet-thpt-call-a-{street_index}','action':'call','expected_phase':phase},auth_token=token_a)
+                # Apply user B's independent call under its own authenticated session.
+                thpt_b=api(base,f'/api/v1/games/texas-holdem-practice-table/hands/{thpt_start_b["hand"]["hand_id"]}/actions','POST',{'player_id':user_a['player_id'],'action_id':f'wallet-thpt-call-b-{street_index}','action':'call','expected_phase':phase},auth_token=token_b)
+            # Replay user A's terminal river decision and reject user B's attempt against user A's private hand.
+            thpt_a_replay=api(base,f'/api/v1/games/texas-holdem-practice-table/hands/{thpt_start_a["hand"]["hand_id"]}/actions','POST',{'player_id':user_b['player_id'],'action_id':'wallet-thpt-call-a-3','action':'call','expected_phase':'river'},auth_token=token_a); thpt_cross=api(base,f'/api/v1/games/texas-holdem-practice-table/hands/{thpt_start_a["hand"]["hand_id"]}/actions','POST',{'player_id':user_a['player_id'],'action_id':'wallet-thpt-cross-b','action':'call','expected_phase':'river'},ok=False,auth_token=token_b)
+            # Require complete four-wallet reconciliation, exact terminal replay, and closed cross-user lookup.
+            assert thpt_a['hand']['phase']=='settled' and thpt_b['hand']['phase']=='settled' and thpt_a['hand']['settlement']['complete'] and thpt_a['hand']['settlement']['required_actions']==thpt_a['hand']['settlement']['committed_actions'] and thpt_a_replay['replayed'] is True and thpt_a_replay['hand']==thpt_a['hand'] and thpt_cross['error']['code']=='NOT_FOUND'
+            # Read both private states with hostile query identities and require isolated settled history.
+            thpt_state_a=api(base,f'/api/v1/games/texas-holdem-practice-table/state?player_id={user_b["player_id"]}',auth_token=token_a); thpt_state_b=api(base,f'/api/v1/games/texas-holdem-practice-table/state?player_id={user_a["player_id"]}',auth_token=token_b); assert thpt_state_a['state']['recent_hands'][0]['hand_id']==thpt_a['hand']['hand_id'] and thpt_state_b['state']['recent_hands'][0]['hand_id']==thpt_b['hand']['hand_id'] and thpt_state_a['state']['rules']['funded_opponents'] is True
+            # Require exactly one storage-enforced human escrow and bounded terminal credits for the replayed hand.
+            thpt_ledger_a=api(base,f'/api/v1/players/{user_a["player_id"]}/ledger',auth_token=token_a)['ledger']; thpt_events_a=[row for row in thpt_ledger_a if row.get('game')=='texas_holdem_practice_table' and row.get('round_id')==thpt_a['hand']['hand_id']]; assert sum(row.get('transaction_type')=='TEXAS_HOLDEM_ESCROW_DEBIT' for row in thpt_events_a)==1 and sum(row.get('transaction_type')=='TEXAS_HOLDEM_ESCROW_REFUND_CREDIT' for row in thpt_events_a)<=1 and sum(row.get('transaction_type')=='TEXAS_HOLDEM_PAYOUT_CREDIT' for row in thpt_events_a)<=1
+            # Read Admin-only opponent activity and require three real escrows with owning-session audit dimensions.
+            thpt_admin=api(base,'/api/v1/admin/bots'); thpt_bot_events=[row for row in thpt_admin['practice_opponent_activity'] if row.get('round_id')==thpt_a['hand']['hand_id']]; assert sum(row.get('transaction_type')=='PRACTICE_OPPONENT_ESCROW_DEBIT' for row in thpt_bot_events)==3 and all((row.get('details') or {}).get('session_owner_id')==user_a['player_id'] and (row.get('details') or {}).get('practice_action_key') for row in thpt_bot_events)
             # Read private game history through each normal-user session.
             history_a=api(base,'/api/v1/casino/history',auth_token=token_a)['history']
             # Read user B's independent history view.
@@ -777,7 +801,7 @@ def run_api_tests():
             # Verify user B cannot mutate user A's server-side autoplay session.
             cross_auto=api(base,'/api/v1/autoplay/stop','POST',{'autoplay_id':auto_a['autoplay_id']},ok=False,auth_token=token_b); assert auto_a['player_id']==user_a['player_id'] and cross_auto['error']['code']=='FORBIDDEN'
             # Enumerate every registered Admin route shape to prove the central role gate fails closed.
-            admin_paths=[('GET','/api/v1/admin/overview'),('GET','/api/v1/admin/dashboard'),('GET','/api/v1/admin/modules'),('GET','/api/v1/admin/requirements'),('GET','/api/v1/admin/game-states'),('GET','/api/v1/admin/users'),('POST','/api/v1/admin/users'),('GET',f'/api/v1/admin/users/{user_b["user_id"]}'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/deactivate'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/reactivate'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/password-reset'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/terms'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/locale'),('GET','/api/v1/admin/logs'),('GET','/api/v1/admin/ledger'),('GET','/api/v1/admin/history'),('GET','/api/v1/admin/test-results'),('GET','/api/v1/admin/audio-settings'),('POST','/api/v1/admin/audio-settings'),('GET','/api/v1/admin/autoplay'),('POST','/api/v1/admin/autoplay/stop-all'),('GET','/api/v1/admin/bots'),('GET','/api/v2/admin/users'),('POST','/api/v2/admin/users'),('GET',f'/api/v2/admin/users/{user_b["user_id"]}'),('PATCH',f'/api/v2/admin/users/{user_b["user_id"]}'),('POST',f'/api/v2/admin/users/{user_b["user_id"]}/password'),('PATCH',f'/api/v2/admin/users/{user_b["user_id"]}/terms'),('GET',f'/api/v2/admin/users/{user_b["user_id"]}/state')]
+            admin_paths=[('GET','/api/v1/admin/overview'),('GET','/api/v1/admin/dashboard'),('GET','/api/v1/admin/modules'),('GET','/api/v1/admin/requirements'),('GET','/api/v1/admin/game-states'),('GET','/api/v1/admin/users'),('POST','/api/v1/admin/users'),('GET',f'/api/v1/admin/users/{user_b["user_id"]}'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/deactivate'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/reactivate'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/password-reset'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/terms'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/locale'),('GET','/api/v1/admin/logs'),('GET','/api/v1/admin/ledger'),('GET','/api/v1/admin/history'),('GET','/api/v1/admin/test-results'),('GET','/api/v1/admin/audio-settings'),('POST','/api/v1/admin/audio-settings'),('GET','/api/v1/admin/autoplay'),('POST','/api/v1/admin/autoplay/stop-all'),('GET','/api/v1/admin/bots'),('POST','/api/v1/admin/bots/practice-opponents/fund'),('GET','/api/v2/admin/users'),('POST','/api/v2/admin/users'),('GET',f'/api/v2/admin/users/{user_b["user_id"]}'),('PATCH',f'/api/v2/admin/users/{user_b["user_id"]}'),('POST',f'/api/v2/admin/users/{user_b["user_id"]}/password'),('PATCH',f'/api/v2/admin/users/{user_b["user_id"]}/terms'),('GET',f'/api/v2/admin/users/{user_b["user_id"]}/state')]
             # Request each Admin endpoint as a normal user and require a forbidden response.
             for method,path in admin_paths:
                 # Send an empty body for mutating routes because authorization must run before validation.
@@ -816,6 +840,8 @@ def run_api_tests():
             integrity_state['casino_holdem_rounds']={user_a['player_id']:casino_holdem_a['round']['round_id'],user_b['player_id']:casino_holdem_b['round']['round_id']}
             # Retain Joker Poker round ids by authenticated player for process-restart verification.
             integrity_state['joker_poker_rounds']={user_a['player_id']:joker_poker_a['round']['round_id'],user_b['player_id']:joker_poker_b['round']['round_id']}
+            # Retain Texas Hold'em hand ids by authenticated player for process-restart verification.
+            integrity_state['texas_holdem_practice_hands']={user_a['player_id']:thpt_a['hand']['hand_id'],user_b['player_id']:thpt_b['hand']['hand_id']}
         # Execute the real-backend integrity regression as one mapped API case.
         run_case('API-PRIVATE-SESSION-001',['SESSION-003','USER-001','USER-003','USER-005','TOKEN-004','TEST-039'],wallet_auth_integrity)
         # Record Multi-Hand Video Poker session, mode, ledger, and retry coverage under its permanent test id.
@@ -864,6 +890,8 @@ def run_api_tests():
         run_case('API-CH-001',['CH-001','CH-002','CH-003'],lambda: assert_condition(True,"Casino Hold'em integration evidence missing"))
         # Record Joker Poker rules, session, private draw pool, ledger, replay, and two-user coverage.
         run_case('API-JP-001',['JP-001','JP-002','JP-003'],lambda: assert_condition(True,'Joker Poker integration evidence missing'))
+        # Record Texas Hold'em rules, session privacy, four-wallet ledger settlement, replay, and two-user coverage.
+        run_case('API-THPT-001',['THPT-001','THPT-002','THPT-003','BOT-009','BOT-010','BOT-011','LEDGER-026'],lambda: assert_condition(True,"Texas Hold'em Practice integration evidence missing"))
         # Record exact token credit coverage under the permanent test id referenced by TOKEN-003.
         run_case('API-TOKEN-001',['TOKEN-003','TOKEN-004'],lambda: assert_condition(integrity_state['token_credit_count']==1 and integrity_state['contract_player']['token_balance']==250,'token credit contract mismatch'))
         # Record central Admin authorization coverage under the permanent Admin test id.
@@ -934,6 +962,8 @@ def run_api_tests():
                 casino_holdem_state=api(base,'/api/v1/games/casino-holdem/state',auth_token=token); assert any(row['round_id']==integrity_state['casino_holdem_rounds'][expected['player_id']] for row in casino_holdem_state['state']['recent_rounds'])
                 # Read and verify this user's settled Joker Poker hand after the real process restart.
                 joker_poker_state=api(base,'/api/v1/games/joker-poker/state',auth_token=token); assert any(row['round_id']==integrity_state['joker_poker_rounds'][expected['player_id']] for row in joker_poker_state['state']['recent_rounds'])
+                # Read and verify this user's settled Texas Hold'em hand after the real process restart.
+                thpt_state=api(base,'/api/v1/games/texas-holdem-practice-table/state',auth_token=token); assert any(row['hand_id']==integrity_state['texas_holdem_practice_hands'][expected['player_id']] for row in thpt_state['state']['recent_hands'])
                 # Read restarted private history and ledger views.
                 restarted_history=api(base,'/api/v1/casino/history',auth_token=token)['history']; restarted_ledger=api(base,f'/api/v1/players/{expected["player_id"]}/ledger',auth_token=token)['ledger']
                 # Verify restarted history includes the user's Bingo settlement and never leaks another player.
@@ -941,7 +971,7 @@ def run_api_tests():
             # Verify both users produced persisted private history across the history-producing games.
             assert all(count>0 for count in integrity_state['history_game_counts'])
         # Record the live restart persistence regression under the same integrity requirements.
-        run_case('API-WALLET-RESTART-001',['SESSION-003','USER-001','TOKEN-003','TOKEN-004','TEST-039','MHVP-002','CW-002','BIG-SIX-002','RD-002','DT-002','HILO-002','SCRATCH-002','SIC-BO-002','CHUCK-002','CRAPS-002','CAA-002','OU7-002','PLINKO-002','FAN-TAN-002','AB-002','AD-002','CS-002','LIR-002','CH-002','JP-002'],wallet_restart_persistence)
+        run_case('API-WALLET-RESTART-001',['SESSION-003','USER-001','TOKEN-003','TOKEN-004','TEST-039','MHVP-002','CW-002','BIG-SIX-002','RD-002','DT-002','HILO-002','SCRATCH-002','SIC-BO-002','CHUCK-002','CRAPS-002','CAA-002','OU7-002','PLINKO-002','FAN-TAN-002','AB-002','AD-002','CS-002','LIR-002','CH-002','JP-002','THPT-002'],wallet_restart_persistence)
         # Define the core function used by this module.
         def core():
             # Load the casino state that publishes packaged and game-module version metadata.
@@ -987,12 +1017,12 @@ def run_api_tests():
         def bots_audio_autoplay():
             # Set bots to the value needed for the next operation.
             bots=api(base,'/api/v1/bots'); assert bots['bots']; assert bots['capabilities']['roulette']['supports_bots']; assert len(bots['practice_opponents'])==3
-            # Fund every server-managed practice account through the protected Admin controller.
-            funded=api(base,'/api/v1/admin/bots/practice-opponents/fund','POST',{'game_id':'texas_holdem_practice_table'}); assert len(funded['funding'])==3 and all(row['replayed'] is False for row in funded['funding'])
+            # Reconcile every server-managed practice account after the game-owned API has already exercised fixed funding.
+            funded=api(base,'/api/v1/admin/bots/practice-opponents/fund','POST',{'game_id':'texas_holdem_practice_table'}); assert len(funded['funding'])==3 and all(row['replayed'] is True for row in funded['funding'])
             # Replay fixed funding and require the original ledger events without another credit.
-            funded_replay=api(base,'/api/v1/admin/bots/practice-opponents/fund','POST',{'game_id':'texas_holdem_practice_table'}); assert all(row['replayed'] is True for row in funded_replay['funding']) and len(funded_replay['practice_opponent_activity'])==3
+            funded_replay=api(base,'/api/v1/admin/bots/practice-opponents/fund','POST',{'game_id':'texas_holdem_practice_table'}); assert all(row['replayed'] is True for row in funded_replay['funding']) and len(funded_replay['practice_opponent_activity'])>=3
             # Verify the dedicated Admin inspection endpoint publishes allocation and ledger audit rows.
-            admin_bots=api(base,'/api/v1/admin/bots'); assert len(admin_bots['practice_opponents'])==3 and len(admin_bots['practice_opponent_activity'])==3
+            admin_bots=api(base,'/api/v1/admin/bots'); assert len(admin_bots['practice_opponents'])==3 and len(admin_bots['practice_opponent_activity'])>=3
             # Set elig to the value needed for the next operation.
             elig=api(base,'/api/v1/games/roulette/eligible-bots'); assert isinstance(elig['bots'], list)
             # Call an asynchronous API/helper and wait for the result before continuing.
@@ -3079,6 +3109,58 @@ def run_browser_tests():
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Execute the integrated Joker Poker browser and visual gate.
                 run_case('BR-JP-001',['JP-001','JP-002','JP-004','JP-005'],joker_poker_acceptance)
+                # Define registered Texas Hold'em localization, streets, settlement, motion, and route acceptance.
+                def texas_holdem_practice_acceptance():
+                    # Open the catalog-owned route and wait for the stable table selector.
+                    page.get_by_test_id('nav-texas_holdem_practice_table').click(); page.get_by_test_id('texas-holdem-practice-table').wait_for(timeout=5000)
+                    # Enumerate all governed viewport dimensions.
+                    required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
+                    # Load exact UTF-8 title expectations from the paired canonical resource files.
+                    expected_titles={locale:read_i18n_json(ROOT/'web'/'i18n'/locale/'games'/'texas_holdem_practice_table.json')['title'] for locale in ('en-US','ru-RU')}
+                    # Capture one authoritative table state across both locales and every viewport.
+                    def localized_evidence(prefix,states):
+                        # Iterate through paired English and Russian game resources.
+                        for locale in ('en-US','ru-RU'):
+                            # Switch locale without discarding the active hand or settled history.
+                            page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_timeout(100)
+                            # Require the localized title rather than a fallback key or English leakage.
+                            assert page.locator('.thpt-header h1').inner_text()==expected_titles[locale]
+                            # Validate containment and capture after-pass evidence at every viewport.
+                            for viewport_id,width,height in required_viewports:
+                                # Resize to the exact visual matrix dimensions.
+                                page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
+                                # Reject horizontal overflow and require the complete mounted table.
+                                assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.get_by_test_id('texas-holdem-practice-table').is_visible()
+                                # Record self-describing evidence for this state and viewport.
+                                game_evidence(f'after-pass-texas-holdem-practice-{prefix}-{locale.lower()}-{viewport_id}.png','texas_holdem_practice_table',states,locale,viewport_id)
+                        # Restore English desktop controls for the next public action.
+                        page.get_by_test_id('shell-locale-select').select_option('en-US'); page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(100)
+                    # Capture the complete ready table before any wallet reservation.
+                    localized_evidence('ready',['ready'])
+                    # Commit one low fixed-limit unit and start through the public browser action.
+                    page.locator('#thpt-wager').fill('1'); page.locator('#thpt-wager').press('Tab'); page.locator('[data-action="start-hand"]').click(); page.locator('[data-action="call"]:not([disabled])').wait_for(timeout=10000)
+                    # Capture private preflop play with redacted funded opponents.
+                    assert all(page.get_by_test_id(f'thpt-seat-opponent_{index}').locator('.playing-card--back').count()==2 for index in (1,2,3)); localized_evidence('preflop-decision',['preflop_decision'])
+                    # Advance and capture flop, turn, and river public decision states.
+                    for prefix,state,card_count in [('flop-decision','flop_decision',3),('turn-decision','turn_decision',4),('river-decision','river_decision',5)]:
+                        # Call through the public control and wait for the authoritative next street.
+                        page.locator('[data-action="call"]:not([disabled])').click(); page.locator('[data-action="call"]:not([disabled])').wait_for(timeout=10000); page.wait_for_function(f"() => document.querySelectorAll('[data-testid=thpt-community-cards] .playing-card').length === {card_count}")
+                        # Capture this exact decision street in both locales and all viewports.
+                        localized_evidence(prefix,[state])
+                    # Complete the river call and wait for fully reconciled four-wallet settlement.
+                    page.locator('[data-action="call"]:not([disabled])').click(); page.get_by_test_id('thpt-result').wait_for(timeout=10000)
+                    # Capture revealed showdown and terminal settlement together.
+                    assert page.locator('[data-testid^="thpt-seat-opponent_"] .playing-card--back').count()==0; localized_evidence('showdown-settled',['showdown','settled'])
+                    # Start a second real hand and exercise the explicit fold path.
+                    page.locator('[data-action="start-hand"]:not([disabled])').click(); page.locator('[data-action="fold"]:not([disabled])').wait_for(timeout=10000); page.locator('[data-action="fold"]:not([disabled])').click(); page.get_by_test_id('thpt-result').wait_for(timeout=10000); localized_evidence('folded',['folded'])
+                    # Capture stable settled presentation with reduced motion enabled.
+                    page.emulate_media(reduced_motion='reduce'); localized_evidence('reduced-motion',['reduced_motion'])
+                    # Reload the canonical route and require restored player-owned settled history.
+                    page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('texas-holdem-practice-table').wait_for(timeout=5000); assert page.get_by_test_id('thpt-result').is_visible(); localized_evidence('route-restored',['route_restored'])
+                    # Return to the lobby for downstream browser cases.
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Execute the integrated Texas Hold'em browser and visual gate while keeping #191 external.
+                run_case('BR-THPT-001',['THPT-001','THPT-002','THPT-004','THPT-005'],texas_holdem_practice_acceptance)
                 # Define route_restoration to prove deep links, reload, Back, and Forward behavior.
                 def route_restoration():
                     # Open Roulette directly through its canonical path using the authenticated browser context.

@@ -31,14 +31,19 @@ class MemoryRepository:
         self.documents[player_id] = copy.deepcopy(state)
 
 
-# Record append-only events and balances through ledger-shaped operations.
+# Record append-only human and funded-opponent events through ledger-shaped operations.
 class RecordingLedger:
     # Initialize one funded session player and no committed events.
     def __init__(self):
         # Retain chronological append-only event rows.
         self.events = []
         # Retain balances only inside this ledger test double.
-        self.balances = {"bound-player": 100.0, "other-player": 100.0}
+        self.balances = {"bound-player": 100.0, "other-player": 100.0, "bot_1": 100_000.0, "bot_2": 100_000.0, "bot_3": 100_000.0}
+
+    # Model the already accepted one-time funded-account prerequisite.
+    def ensure_accounts(self) -> list[dict]:
+        # Keep focused hand assertions independent from the separately tested funding events.
+        return []
 
     # Find one committed action exactly as the production adapter does.
     def find_action(self, player_id: str, action_id: str):
@@ -91,8 +96,10 @@ class TexasHoldemPracticeTableApiTests(unittest.TestCase):
         second = self.start()
         # Verify both responses identify the same deterministic hand.
         self.assertEqual(first["hand"]["hand_id"], second["hand"]["hand_id"])
-        # Verify one five-unit reserve debit exists after replay.
-        self.assertEqual([-10.0], [event["amount"] for event in self.ledger.events])
+        # Verify four real-wallet reserve debits exist after replay.
+        self.assertEqual([-10.0] * 4, [event["amount"] for event in self.ledger.events])
+        # Verify the authenticated human and three fixed bot wallets each reserve once.
+        self.assertEqual(["bound-player", "bot_1", "bot_2", "bot_3"], [event["player_id"] for event in self.ledger.events])
         # Verify replay metadata is explicit for the client.
         self.assertTrue(second["replayed"])
         # Reject the same action id reused for another wallet exposure.
@@ -126,7 +133,7 @@ class TexasHoldemPracticeTableApiTests(unittest.TestCase):
         # Verify replay did not consume another street or table unit.
         self.assertEqual((first["hand"]["community_cards"], first["hand"]["pot"]), (second["hand"]["community_cards"], second["hand"]["pot"]))
         # Verify no wallet movement occurs for already-reserved street calls.
-        self.assertEqual(1, len(self.ledger.events))
+        self.assertEqual(4, len(self.ledger.events))
         # Reject the same action id reused for a different decision.
         with self.assertRaises(ConflictError):
             # Exercise the conflicting fold retry.
@@ -171,8 +178,10 @@ class TexasHoldemPracticeTableApiTests(unittest.TestCase):
         for index, phase in enumerate(engine.ACTION_PHASES):
             # Apply one call and all server-managed opponent actions.
             result = self.controller.act("bound-player", started["hand"]["hand_id"], "call", f"action-call-{index:03d}", phase)
-        # Verify escrow debit and one winning pot credit were committed.
-        self.assertEqual([-5.0, 20.0], [event["amount"] for event in self.ledger.events])
+        # Verify all four escrows and the human's winning pot credit were committed.
+        self.assertEqual([-5.0, -5.0, -5.0, -5.0, 20.0], [event["amount"] for event in self.ledger.events])
+        # Verify the terminal four-wallet settlement conserves the total token supply.
+        self.assertEqual(300_200.0, sum(self.ledger.balances.values()))
         # Verify the terminal hand was archived only after payout reconciliation.
         self.assertEqual("settled", result["hand"]["phase"])
         # Simulate loss of every durable marker after ledger rows committed.
@@ -181,8 +190,8 @@ class TexasHoldemPracticeTableApiTests(unittest.TestCase):
         reloaded = api.TexasHoldemPracticeTableController(self.repository, self.ledger, lambda player_id: {"player_id": player_id, "balance": self.ledger.balances[player_id]}, clock=lambda: "2026-07-14T00:00:01Z", id_factory=lambda prefix: "unused")
         # Trigger append-only recovery through the state endpoint behavior.
         payload = reloaded.state("bound-player")
-        # Verify recovery reused both existing ledger rows.
-        self.assertEqual(2, len(self.ledger.events))
+        # Verify recovery reused all five existing ledger rows.
+        self.assertEqual(5, len(self.ledger.events))
         # Verify the settled hand remains reload-safe and fully reconciled.
         self.assertTrue(payload["state"]["recent_hands"][0]["settlement"]["complete"])
 
@@ -237,8 +246,12 @@ class TexasHoldemPracticeTableApiTests(unittest.TestCase):
         payload = router.dispatch("POST", "/api/v1/games/texas-holdem-practice-table/hands?player_id=other-player", {"player_id": "other-player", "base_wager": 1, "action_id": "action-bound-001"}, {"bound_player_id": "bound-player"})
         # Verify response ownership follows only the authenticated binding.
         self.assertEqual("bound-player", payload["player"]["player_id"])
-        # Verify every wallet movement belongs to the bound human.
-        self.assertTrue(all(event["player_id"] == "bound-player" for event in self.ledger.events))
+        # Verify the hostile caller cannot move the other human wallet.
+        self.assertNotIn("other-player", [event["player_id"] for event in self.ledger.events])
+        # Verify the expected bound human and fixed opponent wallets were reserved.
+        self.assertEqual({"bound-player", "bot_1", "bot_2", "bot_3"}, {event["player_id"] for event in self.ledger.events})
+        # Verify every opponent movement retains Admin-auditable owner and seat dimensions.
+        self.assertTrue(all(event["details"]["session_owner_id"] == "bound-player" and event["details"]["controller_policy"] == "practice_call" for event in self.ledger.events if event["player_id"].startswith("bot_")))
         # Verify active server-opponent cards remain redacted in the route payload.
         self.assertTrue(all(seat["hole_cards"] == ["??", "??"] for seat in payload["hand"]["seats"][1:]))
 
@@ -256,8 +269,8 @@ class TexasHoldemPracticeTableApiTests(unittest.TestCase):
             self.controller.act("other-player", started["hand"]["hand_id"], "call", "action-other-001", "preflop")
         # Verify only the owning player's wallet paid the opening escrow.
         self.assertEqual((95.0, 100.0), (self.ledger.balances["bound-player"], self.ledger.balances["other-player"]))
-        # Verify the append-only movement retained the owning player id.
-        self.assertEqual(["bound-player"], [event["player_id"] for event in self.ledger.events])
+        # Verify the append-only movements retain one human and three funded opponent wallets.
+        self.assertEqual(["bound-player", "bot_1", "bot_2", "bot_3"], [event["player_id"] for event in self.ledger.events])
 
     # Confirm insufficient funds remove a hand when no debit committed.
     def test_insufficient_funds_leave_no_actionable_hand(self):

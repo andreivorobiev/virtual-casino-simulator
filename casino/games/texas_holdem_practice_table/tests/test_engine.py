@@ -79,10 +79,10 @@ class TexasHoldemPracticeTableEngineTests(unittest.TestCase):
         engine.advance_opponents(hand, "action-fold-001", clock=lambda: "2026-07-14T00:00:02Z")
         # Verify the human loses only the two-token opening ante.
         self.assertEqual(("folded", 8.0, -2.0), (hand["result"]["human_outcome"], hand["result"]["human_refund"], hand["result"]["human_net"]))
-        # Verify escrow debit precedes the distinct unused-reserve refund.
-        self.assertEqual(["debit", "credit"], [intent["direction"] for intent in hand["ledger_intents"]])
+        # Verify four real-wallet escrows precede refund and winner payout credits.
+        self.assertEqual(["debit", "debit", "debit", "debit", "credit", "credit"], [intent["direction"] for intent in hand["ledger_intents"]])
         # Verify the refund is correlated with the same hand and unique action detail.
-        refund = hand["ledger_intents"][-1]
+        refund = next(intent for intent in hand["ledger_intents"] if intent["player_id"] == "session-player" and intent["details"]["component"] == "refund")
         # Assert complete ledger audit dimensions on the prepared refund.
         self.assertEqual(("session-player", engine.GAME_ID, "thpt_hand_1", "refund"), (refund["player_id"], refund["game"], refund["round_id"], refund["details"]["component"]))
 
@@ -106,8 +106,10 @@ class TexasHoldemPracticeTableEngineTests(unittest.TestCase):
             self.call_street(hand, index)
         # Verify the shared evaluator identifies the human pair as strongest.
         self.assertEqual(("win", "one_pair", 20.0), (hand["result"]["human_outcome"], hand["result"]["hand_ranks"]["human"]["name"], hand["result"]["human_payout"]))
-        # Verify one distinct pot payout follows the opening escrow debit.
-        self.assertEqual(["TEXAS_HOLDEM_ESCROW_DEBIT", "TEXAS_HOLDEM_PAYOUT_CREDIT"], [intent["transaction_type"] for intent in hand["ledger_intents"]])
+        # Verify all four reserves precede the human's distinct pot payout.
+        self.assertEqual(["TEXAS_HOLDEM_ESCROW_DEBIT", "PRACTICE_OPPONENT_ESCROW_DEBIT", "PRACTICE_OPPONENT_ESCROW_DEBIT", "PRACTICE_OPPONENT_ESCROW_DEBIT", "TEXAS_HOLDEM_PAYOUT_CREDIT"], [intent["transaction_type"] for intent in hand["ledger_intents"]])
+        # Verify every fixed opponent intent names its real funded wallet and owner context.
+        self.assertEqual(["bot_1", "bot_2", "bot_3"], [intent["player_id"] for intent in hand["ledger_intents"] if intent["managed_opponent"]])
 
     # Confirm action ids replay identically and conflicting reuse fails closed.
     def test_action_id_replay_and_invalid_turns_fail_closed(self):
