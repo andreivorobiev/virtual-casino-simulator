@@ -15,6 +15,7 @@
   "contracts/openapi/three_card_poker.v1.yaml": "3ce7261f139361fbedd226f0527e31d9dfff03cbb6e028d75081a6b6ee400ec2",
   "contracts/openapi/jacks_or_better_video_poker.v1.yaml": "f6923416af4171254677872ac8b6cd884981b245913b2c4ac7f090ed1f0ca3c1",
   "contracts/openapi/deuces_wild_video_poker.v1.yaml": "24e9afc2c7e726e11e6d2ab630516d9ce378473cf183662eedf3c4dfcb77423c",
+  "contracts/openapi/scratch_cards.v1.yaml": "0991ee29030bf0e1e17298fc244e7cac12b9e553473384346b2807ae4c82e96a",
   "contracts/openapi/keno.v1.yaml": "3d3af7c097f3e82a4082961724cf11797be9a948a38dcb3c1765db3086f54f2d",
   "contracts/openapi/ledger.v1.yaml": "806bc3c22155d2c99d7551c6f97cb9987e3f84297d6055e8dd1e45d341e31ab1",
   "contracts/openapi/multi_hand_video_poker.v1.yaml": "85b3ef2cd12b03d19b34564b2aeac4fbe0e8dcee7073ffb8350b058d5217983b",

@@ -20,8 +20,9 @@ The Product-approved serialized order is:
 6. Pull request #117, Hi-Lo for issue #85, released after Dragon Tiger merged.
 7. Pull request #118, Three Card Poker for issue #93, released after Hi-Lo merged.
 8. Pull request #115, Jacks or Better Video Poker for issue #91, next after Three Card Poker.
-9. Pull request #119, Deuces Wild Video Poker for issue #92, after Jacks or Better.
-10. Pull request #120, Texas Hold'em Practice Table for issue #95, after the video-poker pair.
+9. Pull request #119, Deuces Wild Video Poker for issue #92, merged after Jacks or Better.
+10. Pull request #120, Texas Hold'em Practice Table for issue #95, held on issues #189 and #190.
+11. Pull request #123, Scratch Cards for issue #87, released while Texas Hold'em remains held.
 
 Each game pull request remains draft until the preceding game is accepted, the current branch is rebased onto the resulting `main`, and the game passes the complete integration gate below. A later game must not pre-allocate or edit the shared version values owned by an earlier game.
 
@@ -37,12 +38,12 @@ Existing games retain sort orders 10 through 60. The approved expansion slots ar
 | 100 | Dragon Tiger | #83 | Merged PR #127 |
 | 110 | Red Dog | #84 | Merged PR #116 |
 | 120 | Hi-Lo | #85 | Merged PR #117 |
-| 130 | Scratch Cards | future isolated slice | Reserved |
+| 130 | Scratch Cards | #87 | Released draft PR #123 |
 | 140 | Sic Bo | future isolated slice | Reserved |
 | 150 | Chuck-a-Luck | future isolated slice | Reserved |
 | 160 | Craps | future isolated slice | Reserved |
 | 170 | Jacks or Better Video Poker | #91 | Merged PR #115 |
-| 180 | Deuces Wild Video Poker | #92 | Released draft PR #119 |
+| 180 | Deuces Wild Video Poker | #92 | Merged PR #119 |
 | 190 | Three Card Poker | #93 | Released draft PR #118 |
 | 200 | Texas Hold'em Practice Table | #95 | Held draft PR #120 |
 
@@ -61,6 +62,7 @@ Permanent game blocks are reserved as follows:
 - `TCP-001` through `TCP-005` for the same five acceptance dimensions for Three Card Poker.
 - `JOBVP-001` through `JOBVP-005` for the same five acceptance dimensions for Jacks or Better Video Poker.
 - `DWVP-001` through `DWVP-005` for the same five acceptance dimensions for Deuces Wild Video Poker.
+- `SCRATCH-001` through `SCRATCH-005` for the same five acceptance dimensions for Scratch Cards.
 
 New entries begin as `PLANNED`. The integration owner changes an entry to `PASS` only when its mapped real-backend tests and visual evidence have passed. Requirement IDs are never reused or renumbered after allocation.
 
@@ -106,6 +108,7 @@ Each new game begins at module revision `1.0.0`. The packaged application releas
 | #118 Three Card Poker | 9.10.0 | 1.13.0 | 1.12.0 | 1.8.0 |
 | #115 Jacks or Better Video Poker | 9.11.0 | 1.14.0 | 1.13.0 | 1.9.0 |
 | #119 Deuces Wild Video Poker | 9.12.0 | 1.15.0 | 1.14.0 | 1.10.0 |
+| #123 Scratch Cards | 9.13.0 | 1.16.0 | 1.15.0 | 1.11.0 |
 
 These values are reservations, not permission to overwrite a newer value. The integrator must re-read current `main` immediately before each bump.
 
@@ -131,6 +134,7 @@ Required visual states are:
 - Three Card Poker: `ready`, `decision`, `player_win`, `dealer_win`, `dealer_not_qualified`, `folded`, `reduced_motion`, and `route_restored`.
 - Jacks or Better Video Poker: `ready`, `choose_holds`, `winning_hand`, `losing_hand`, `reduced_motion`, and `route_restored`.
 - Deuces Wild Video Poker: `ready`, `choose_holds`, `winning_hand`, `losing_hand`, `reduced_motion`, and `route_restored`.
+- Scratch Cards: `ready`, `revealing`, `settled_win`, `settled_no_win`, `reduced_motion`, and `route_restored`.
 
 ## Validation and listener gate
 
