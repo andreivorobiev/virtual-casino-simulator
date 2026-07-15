@@ -74,6 +74,9 @@
   "crown_and_anchor": [
     "contracts/openapi/crown_and_anchor.v1.yaml"
   ],
+  "over_under_7": [
+    "contracts/openapi/over_under_7.v1.yaml"
+  ],
   "tests": [],
   "docs": [],
   "contracts": [
