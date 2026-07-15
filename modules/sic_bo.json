@@ -1,0 +1,17 @@
+{
+  "module": "sic_bo",
+  "version": "1.0.0",
+  "paths": ["casino/games/sic_bo/", "web/games/sic_bo.js", "web/i18n/en-US/games/sic_bo.json", "web/i18n/ru-RU/games/sic_bo.json"],
+  "requirements_prefixes": ["SIC-BO"],
+  "contracts": ["contracts/openapi/sic_bo.v1.yaml"],
+  "game": {
+    "id": "sic_bo", "sort_order": 140, "route": "/games/sic_bo", "label": "Sic Bo", "category": "table", "categories": ["table", "numbers", "strategy"],
+    "backend": {"register": "casino.games.sic_bo.api:register"},
+    "frontend": {"module": "./games/sic_bo.js", "export": "SicBoGame", "ready_testid": "sic-bo-table", "i18n_domain": "games/sic_bo", "i18n_probe": "controls.shake"},
+    "tests": {"long_driver": "tests.game_drivers.sic_bo:play"},
+    "translations": {"ru-RU": {"label": "Сик Бо", "kicker": "Стол с костями", "description": "Три кости, 50 позиций для ставок и расчёт игровых жетонов через журнал.", "tags": ["Кости", "Числа", "Журнал жетонов"]}},
+    "lobby": {"featured": false, "wide": false, "art_class": "sic-bo-art", "symbol": "3D6", "kicker": "Dice table", "description": "Three server-rolled dice, 50 classic betting positions, and retry-safe ledger settlement.", "tags": ["Dice", "Numbers", "Ledger-backed"]}
+  },
+  "depends_on": ["core", "ledger", "players"],
+  "may_not_depend_on": ["roulette", "slots", "blackjack", "baccarat", "keno", "bingo", "multi_hand_video_poker", "casino_war", "big_six_wheel", "red_dog", "dragon_tiger", "hi_lo", "three_card_poker", "jacks_or_better_video_poker", "deuces_wild_video_poker", "scratch_cards"]
+}

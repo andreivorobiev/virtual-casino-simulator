@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.13.0
+- application: 9.14.0
 - core: 9.4.0
 - ledger: 9.0.2
 - players: 9.1.0
@@ -30,9 +30,10 @@ Historical source baseline: 9.1.0
 - jacks_or_better_video_poker: 1.0.0
 - deuces_wild_video_poker: 1.0.1
 - scratch_cards: 1.0.1
-- tests: 1.16.0
-- docs: 1.15.0
-- contracts: 1.11.0
+- sic_bo: 1.0.0
+- tests: 1.17.0
+- docs: 1.16.0
+- contracts: 1.12.0
 - tooling: 1.3.0
 - commenting_policy: 1.0.0
 
@@ -503,3 +504,8 @@ Historical source baseline: 9.1.0
 - **SCRATCH-003** (Scratch Cards) - PASS: Each card uses one ledger wager debit and at most one payout credit under stable retry identities.
 - **SCRATCH-004** (Application) - PASS: Scratch Cards supplies complete English and Russian responsive, accessible, reduced-motion-safe play across required viewports.
 - **SCRATCH-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Scratch Cards with requirement, module, version, and visual traceability.
+- **SIC-BO-001** (Sic Bo) - PASS: Three server-authoritative dice implement all fifty documented Sic Bo wager positions and payout rules.
+- **SIC-BO-002** (Sic Bo) - PASS: Authenticated sessions own private reload-safe rounds, recovery state, history, and canonical route restoration.
+- **SIC-BO-003** (Sic Bo) - PASS: Aggregate wagers and returned credits use the shared ledger exactly once under stable action identities.
+- **SIC-BO-004** (Application) - PASS: Sic Bo supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.
+- **SIC-BO-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Sic Bo with requirement, module, version, and visual traceability.

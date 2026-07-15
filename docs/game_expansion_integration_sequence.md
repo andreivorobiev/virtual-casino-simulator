@@ -39,7 +39,7 @@ Existing games retain sort orders 10 through 60. The approved expansion slots ar
 | 110 | Red Dog | #84 | Merged PR #116 |
 | 120 | Hi-Lo | #85 | Merged PR #117 |
 | 130 | Scratch Cards | #87 | Released draft PR #123 |
-| 140 | Sic Bo | future isolated slice | Reserved |
+| 140 | Sic Bo | #88 | Released draft PR #125 |
 | 150 | Chuck-a-Luck | future isolated slice | Reserved |
 | 160 | Craps | future isolated slice | Reserved |
 | 170 | Jacks or Better Video Poker | #91 | Merged PR #115 |
@@ -63,6 +63,7 @@ Permanent game blocks are reserved as follows:
 - `JOBVP-001` through `JOBVP-005` for the same five acceptance dimensions for Jacks or Better Video Poker.
 - `DWVP-001` through `DWVP-005` for the same five acceptance dimensions for Deuces Wild Video Poker.
 - `SCRATCH-001` through `SCRATCH-005` for the same five acceptance dimensions for Scratch Cards.
+- `SIC-BO-001` through `SIC-BO-005` for the same five acceptance dimensions for Sic Bo.
 
 New entries begin as `PLANNED`. The integration owner changes an entry to `PASS` only when its mapped real-backend tests and visual evidence have passed. Requirement IDs are never reused or renumbered after allocation.
 
@@ -109,6 +110,7 @@ Each new game begins at module revision `1.0.0`. The packaged application releas
 | #115 Jacks or Better Video Poker | 9.11.0 | 1.14.0 | 1.13.0 | 1.9.0 |
 | #119 Deuces Wild Video Poker | 9.12.0 | 1.15.0 | 1.14.0 | 1.10.0 |
 | #123 Scratch Cards | 9.13.0 | 1.16.0 | 1.15.0 | 1.11.0 |
+| #125 Sic Bo | 9.14.0 | 1.17.0 | 1.16.0 | 1.12.0 |
 
 These values are reservations, not permission to overwrite a newer value. The integrator must re-read current `main` immediately before each bump.
 
@@ -135,6 +137,7 @@ Required visual states are:
 - Jacks or Better Video Poker: `ready`, `choose_holds`, `winning_hand`, `losing_hand`, `reduced_motion`, and `route_restored`.
 - Deuces Wild Video Poker: `ready`, `choose_holds`, `winning_hand`, `losing_hand`, `reduced_motion`, and `route_restored`.
 - Scratch Cards: `ready`, `revealing`, `settled_win`, `settled_no_win`, `reduced_motion`, and `route_restored`.
+- Sic Bo: `ready`, `wagers_selected`, `rolling`, `settled`, `reduced_motion`, and `route_restored`.
 
 ## Validation and listener gate
 

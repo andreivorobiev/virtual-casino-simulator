@@ -1934,7 +1934,7 @@ h3 {
 
   .casino-nav {
     display: grid;
-    grid-template-columns: repeat(9, minmax(0, 1fr));
+    grid-template-columns: repeat(10, minmax(0, 1fr));
     overflow: visible;
   }
 

@@ -1,0 +1,259 @@
+openapi: 3.0.3
+# Describe only the additive issue-88 game surface; frozen existing v1 operations stay unchanged.
+info:
+  title: Virtual Casino Sic Bo API
+  version: v1
+  description: >-
+    Additive session-bound Sic Bo contract for issue #88. The authenticated router owns player
+    identity. Round requests require a stable action_id so retries recover one server-authoritative
+    three-die result, one aggregate wager debit, and at most one aggregate returned-credit event.
+tags:
+  - name: Sic Bo
+    description: Complete 50-position play-token table with deterministic test seams and reload-safe settlement.
+paths:
+  # Expose authenticated player state and immutable table metadata.
+  /api/v1/games/sic-bo/state:
+    get:
+      tags: [Sic Bo]
+      operationId: sic_bo_GET_api_v1_games_sic_bo_state
+      summary: Read reload-safe Sic Bo state for the authenticated player
+      responses:
+        '200':
+          description: Standard success envelope containing state, table positions, and current player
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SicBoStateEnvelope'
+        '401':
+          description: Standard error envelope when no authenticated session is available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorEnvelope'
+  # Execute or recover one complete multi-position wager and reveal.
+  /api/v1/games/sic-bo/rounds:
+    post:
+      tags: [Sic Bo]
+      operationId: sic_bo_POST_api_v1_games_sic_bo_rounds
+      summary: Execute or replay one atomic ledger-backed Sic Bo round
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SicBoRoundRequest'
+      responses:
+        '200':
+          description: Standard success envelope containing one settled or safely recovered round
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SicBoRoundEnvelope'
+        '400':
+          description: Standard error envelope for invalid positions, amounts, or action identity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorEnvelope'
+        '409':
+          description: Standard error envelope for conflicting action reuse or an unrecovered active round
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorEnvelope'
+# Keep all game-owned requests, responses, rules, and envelope specializations local to this contract.
+components:
+  schemas:
+    # Require one stable action identity and at least one legal table-position wager.
+    SicBoRoundRequest:
+      type: object
+      additionalProperties: false
+      required: [action_id, wagers]
+      properties:
+        action_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '^[A-Za-z0-9._:-]+$'
+          description: Caller-stable identity reused only when retrying the identical wager snapshot.
+        wagers:
+          type: object
+          minProperties: 1
+          maxProperties: 50
+          additionalProperties:
+            $ref: '#/components/schemas/TokenAmount'
+          description: >-
+            Map of canonical bet IDs from the state endpoint to positive play-token amounts. Unknown
+            IDs are rejected and the aggregate amount cannot exceed 100000 play tokens.
+        player_id:
+          type: string
+          description: Compatibility input overridden by the authenticated session resolver.
+    # Constrain one position amount to the ledger's two-decimal play-token precision.
+    TokenAmount:
+      type: number
+      minimum: 0.01
+      maximum: 10000
+      multipleOf: 0.01
+      description: Toy-simulator play-token amount; never currency or redeemable value.
+    # Describe one of the complete table's fifty machine-readable positions.
+    BetDefinition:
+      type: object
+      required: [id, group, kind]
+      properties:
+        id:
+          type: string
+          pattern: '^(small|big|any_triple|total:(?:[4-9]|1[0-7])|(?:single|double|triple):[1-6]|combo:(?:1:[2-6]|2:[3-6]|3:[4-6]|4:[5-6]|5:6))$'
+        group:
+          type: string
+          enum: [ranges, totals, singles, doubles, triples, combinations]
+        kind:
+          type: string
+          enum: [small, big, total, single, double, triple, any_triple, combo]
+        selection:
+          type: integer
+          minimum: 1
+          maximum: 17
+        values:
+          type: array
+          minItems: 2
+          maxItems: 2
+          items:
+            type: integer
+            minimum: 1
+            maximum: 6
+        net_odds:
+          type: integer
+          minimum: 1
+          maximum: 150
+        variable_odds:
+          type: object
+          additionalProperties:
+            type: integer
+            minimum: 1
+            maximum: 3
+    # Describe one wager's evaluated result without localized display text.
+    BetSettlement:
+      type: object
+      required: [bet_id, amount, won, net_odds, return_amount, net]
+      properties:
+        bet_id: {type: string}
+        amount: {type: number, minimum: 0.01}
+        won: {type: boolean}
+        net_odds: {type: integer, minimum: 0, maximum: 150}
+        return_amount: {type: number, minimum: 0}
+        net: {type: number}
+    # Describe active recovery or immutable settled round state.
+    SicBoRound:
+      type: object
+      required: [round_id, action_id, player_id, request_fingerprint, wagers, phase, wager_status, payout_status, created_at]
+      properties:
+        round_id: {type: string, pattern: '^sb_[a-f0-9]{24}$'}
+        action_id: {type: string}
+        player_id:
+          type: string
+          description: Authenticated session-bound player; caller IDs cannot override it.
+        request_fingerprint: {type: string, pattern: '^[a-f0-9]{64}$'}
+        wagers:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/TokenAmount'
+        phase: {type: string, enum: [prepared, settling, settled]}
+        wager_status: {type: string, enum: [pending, complete]}
+        payout_status: {type: string, enum: [not_ready, pending, complete]}
+        dice:
+          type: array
+          minItems: 3
+          maxItems: 3
+          items: {type: integer, minimum: 1, maximum: 6}
+          description: Omitted from prepared public state until the aggregate wager is committed.
+        total: {type: integer, minimum: 3, maximum: 18}
+        triple: {type: boolean}
+        total_wager: {type: number, minimum: 0.01, maximum: 100000}
+        total_return: {type: number, minimum: 0}
+        net: {type: number}
+        outcome: {type: string, enum: [win, push, loss]}
+        settlements:
+          type: array
+          maxItems: 50
+          items: {$ref: '#/components/schemas/BetSettlement'}
+        wager_ledger_id: {type: string}
+        payout_ledger_id: {type: string}
+        created_at: {type: string, format: date-time}
+        completed_at: {type: string, format: date-time}
+    # Describe player-scoped active recovery and bounded settled history.
+    SicBoGameState:
+      type: object
+      required: [active_round, recent_rounds]
+      properties:
+        active_round:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/SicBoRound'
+        recent_rounds:
+          type: array
+          maxItems: 50
+          items: {$ref: '#/components/schemas/SicBoRound'}
+    # Preserve extensible read-only player response fields.
+    Player:
+      type: object
+      additionalProperties: true
+    # Preserve scoped ledger evidence without freezing shared event extensions.
+    LedgerEvent:
+      type: object
+      nullable: true
+      additionalProperties: true
+    # Describe common data returned by both state and action endpoints.
+    SicBoStateData:
+      type: object
+      required: [game, state, bets, player]
+      properties:
+        game: {type: string, enum: [sic_bo]}
+        state: {$ref: '#/components/schemas/SicBoGameState'}
+        bets:
+          type: array
+          minItems: 50
+          maxItems: 50
+          items: {$ref: '#/components/schemas/BetDefinition'}
+        player: {$ref: '#/components/schemas/Player'}
+    # Extend state data with one action result and scoped ledger proof.
+    SicBoRoundData:
+      allOf:
+        - $ref: '#/components/schemas/SicBoStateData'
+        - type: object
+          required: [round, replayed, ledger]
+          properties:
+            round: {$ref: '#/components/schemas/SicBoRound'}
+            replayed: {type: boolean}
+            ledger:
+              type: object
+              required: [wager, payout]
+              properties:
+                wager: {$ref: '#/components/schemas/LedgerEvent'}
+                payout: {$ref: '#/components/schemas/LedgerEvent'}
+    # Specialize the repository-wide success envelope for state reads.
+    SicBoStateEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok: {type: boolean, enum: [true]}
+        data: {$ref: '#/components/schemas/SicBoStateData'}
+    # Specialize the repository-wide success envelope for round actions.
+    SicBoRoundEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok: {type: boolean, enum: [true]}
+        data: {$ref: '#/components/schemas/SicBoRoundData'}
+    # Preserve the repository-wide standard error envelope.
+    ApiErrorEnvelope:
+      type: object
+      required: [ok, error]
+      properties:
+        ok: {type: boolean, enum: [false]}
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: {type: string}
+            message: {type: string}
+            details: {type: object}
