@@ -584,6 +584,16 @@ def run_api_tests():
             assert scratch_a_partial['card']['revealed_count']==1 and scratch_a_done['card']['status']=='settled' and scratch_b_done['card']['status']=='settled' and scratch_a_done_replay['replayed'] is True and sum('prize' in cell for cell in scratch_a_done['card']['cells'])==9
             # Require exactly one wager debit and at most one positive payout credit per card.
             scratch_ledger_a=api(base,f'/api/v1/players/{user_a["player_id"]}/ledger',auth_token=token_a)['ledger']; scratch_events_a=[row for row in scratch_ledger_a if row.get('game')=='scratch_cards' and row.get('round_id')==scratch_a['card']['card_id']]; assert sum(row.get('transaction_type')=='SCRATCH_CARD_WAGER_DEBIT' for row in scratch_events_a)==1 and sum(row.get('transaction_type')=='SCRATCH_CARD_PAYOUT_CREDIT' for row in scratch_events_a)<=1
+            # Settle two session-bound Sic Bo rounds while hostile body identities challenge ownership.
+            sic_a=api(base,'/api/v1/games/sic-bo/rounds','POST',{'player_id':user_b['player_id'],'action_id':'wallet-sic-bo-a','wagers':{'small':1}},auth_token=token_a); sic_b=api(base,'/api/v1/games/sic-bo/rounds','POST',{'player_id':user_a['player_id'],'action_id':'wallet-sic-bo-b','wagers':{'big':1}},auth_token=token_b)
+            # Replay one exact round and reject changed wager meaning under the same action identity.
+            sic_a_replay=api(base,'/api/v1/games/sic-bo/rounds','POST',{'player_id':user_b['player_id'],'action_id':'wallet-sic-bo-a','wagers':{'small':1}},auth_token=token_a); sic_conflict=api(base,'/api/v1/games/sic-bo/rounds','POST',{'player_id':user_b['player_id'],'action_id':'wallet-sic-bo-a','wagers':{'small':2}},ok=False,auth_token=token_a)
+            # Require bound ownership, independent authoritative dice, exact replay, and conflict closure.
+            assert sic_a['round']['player_id']==user_a['player_id'] and sic_b['round']['player_id']==user_b['player_id'] and sic_a['round']['round_id']!=sic_b['round']['round_id'] and len(sic_a['round']['dice'])==3 and sic_a_replay['replayed'] is True and sic_a_replay['round']['dice']==sic_a['round']['dice'] and sic_conflict['error']['code']=='CONFLICT'
+            # Read both private states with hostile query identities and require isolated settled history.
+            sic_state_a=api(base,f'/api/v1/games/sic-bo/state?player_id={user_b["player_id"]}',auth_token=token_a)['state']; sic_state_b=api(base,f'/api/v1/games/sic-bo/state?player_id={user_a["player_id"]}',auth_token=token_b)['state']; assert sic_state_a['recent_rounds'][-1]['round_id']==sic_a['round']['round_id'] and sic_state_b['recent_rounds'][-1]['round_id']==sic_b['round']['round_id']
+            # Require one aggregate wager debit and at most one returned-credit event for the replayed round.
+            sic_ledger_a=api(base,f'/api/v1/players/{user_a["player_id"]}/ledger',auth_token=token_a)['ledger']; sic_events_a=[row for row in sic_ledger_a if row.get('game')=='sic_bo' and row.get('round_id')==sic_a['round']['round_id']]; assert sum(row.get('transaction_type')=='SIC_BO_WAGER_DEBIT' for row in sic_events_a)==1 and sum(row.get('transaction_type')=='SIC_BO_PAYOUT_CREDIT' for row in sic_events_a)<=1
             # Read private game history through each normal-user session.
             history_a=api(base,'/api/v1/casino/history',auth_token=token_a)['history']
             # Read user B's independent history view.
@@ -620,6 +630,8 @@ def run_api_tests():
             integrity_state.update({'email':'wallet-a@example.local','password':'wallet-a-password','balance':api(base,'/api/v2/me',auth_token=token_a)['player']['token_balance'],'admin_blocked':len(admin_paths),'token_credit_count':len(credits_after)-len(credits_before),'contract_player':added_a,'mhvp_verified':True,'casino_war_verified':True,'big_six_verified':True,'red_dog_verified':True,'dragon_tiger_verified':True,'hi_lo_verified':True,'users':[{'email':'wallet-a@example.local','password':'wallet-a-password','player_id':user_a['player_id'],'balance':wallet_a,'roulette_round':roulette_a['round']['round_id'],'slots_round':slot_a['round_id'],'blackjack_round':blackjack_a['round_id'],'baccarat_round':baccarat_a['coup']['round_id'],'keno_round':keno_a['draw']['round_id'],'bingo_session':bingo_a_session['session_id'],'bingo_completed':False,'mhvp_round':mhvp_a['round']['round_id'],'casino_war_round':casino_war_a['round']['round_id'],'big_six_round':big_six_a['round']['round_id'],'red_dog_round':red_dog_a['round']['round_id'],'dragon_tiger_round':dragon_tiger_a['round']['round_id'],'hi_lo_round':hi_lo_a['round']['round_id']},{'email':'wallet-b@example.local','password':'wallet-b-password','player_id':user_b['player_id'],'balance':wallet_b,'roulette_round':roulette_b['round']['round_id'],'slots_round':slot_b['round_id'],'blackjack_round':blackjack_b['round_id'],'baccarat_round':baccarat_b['coup']['round_id'],'keno_round':keno_b['draw']['round_id'],'bingo_session':bingo_b['session']['session_id'],'bingo_completed':True,'mhvp_round':mhvp_b['round']['round_id'],'casino_war_round':casino_war_b['round']['round_id'],'big_six_round':big_six_b['round']['round_id'],'red_dog_round':red_dog_b['round']['round_id'],'dragon_tiger_round':dragon_tiger_b['round']['round_id'],'hi_lo_round':hi_lo_b['round']['round_id']}],'history_game_counts':[len(history_a),len(history_b)]})
             # Retain Scratch Card ids by authenticated player for process-restart verification.
             integrity_state['scratch_cards']={user_a['player_id']:scratch_a['card']['card_id'],user_b['player_id']:scratch_b['card']['card_id']}
+            # Retain Sic Bo round ids by authenticated player for process-restart verification.
+            integrity_state['sic_bo_rounds']={user_a['player_id']:sic_a['round']['round_id'],user_b['player_id']:sic_b['round']['round_id']}
         # Execute the real-backend integrity regression as one mapped API case.
         run_case('API-PRIVATE-SESSION-001',['SESSION-003','USER-001','USER-003','USER-005','TOKEN-004','TEST-039'],wallet_auth_integrity)
         # Record Multi-Hand Video Poker session, mode, ledger, and retry coverage under its permanent test id.
@@ -642,6 +654,8 @@ def run_api_tests():
         run_case('API-DWVP-001',['DWVP-001','DWVP-002','DWVP-003'],lambda: assert_condition(True,'Deuces Wild integration evidence missing'))
         # Record Scratch Cards privacy, session, ledger, replay, and two-user coverage.
         run_case('API-SCRATCH-001',['SCRATCH-001','SCRATCH-002','SCRATCH-003'],lambda: assert_condition(True,'Scratch Cards integration evidence missing'))
+        # Record Sic Bo rules, session, ledger, replay, and two-user coverage.
+        run_case('API-SIC-BO-001',['SIC-BO-001','SIC-BO-002','SIC-BO-003'],lambda: assert_condition(True,'Sic Bo integration evidence missing'))
         # Record exact token credit coverage under the permanent test id referenced by TOKEN-003.
         run_case('API-TOKEN-001',['TOKEN-003','TOKEN-004'],lambda: assert_condition(integrity_state['token_credit_count']==1 and integrity_state['contract_player']['token_balance']==250,'token credit contract mismatch'))
         # Record central Admin authorization coverage under the permanent Admin test id.
@@ -686,6 +700,8 @@ def run_api_tests():
                 assert any(row['round_id']==expected['hi_lo_round'] for row in hi_lo_state['recent_rounds'])
                 # Read and verify this user's terminal Scratch Card after the real process restart.
                 scratch_state=api(base,'/api/v1/games/scratch-cards/state',auth_token=token); assert scratch_state['current_card']['card_id']==integrity_state['scratch_cards'][expected['player_id']] and scratch_state['current_card']['status']=='settled'
+                # Read and verify this user's settled Sic Bo round after the real process restart.
+                sic_bo_state=api(base,'/api/v1/games/sic-bo/state',auth_token=token)['state']; assert any(row['round_id']==integrity_state['sic_bo_rounds'][expected['player_id']] for row in sic_bo_state['recent_rounds'])
                 # Read restarted private history and ledger views.
                 restarted_history=api(base,'/api/v1/casino/history',auth_token=token)['history']; restarted_ledger=api(base,f'/api/v1/players/{expected["player_id"]}/ledger',auth_token=token)['ledger']
                 # Verify restarted history includes the user's Bingo settlement and never leaks another player.
@@ -693,7 +709,7 @@ def run_api_tests():
             # Verify both users produced persisted private history across the history-producing games.
             assert all(count>0 for count in integrity_state['history_game_counts'])
         # Record the live restart persistence regression under the same integrity requirements.
-        run_case('API-WALLET-RESTART-001',['SESSION-003','USER-001','TOKEN-003','TOKEN-004','TEST-039','MHVP-002','CW-002','BIG-SIX-002','RD-002','DT-002','HILO-002','SCRATCH-002'],wallet_restart_persistence)
+        run_case('API-WALLET-RESTART-001',['SESSION-003','USER-001','TOKEN-003','TOKEN-004','TEST-039','MHVP-002','CW-002','BIG-SIX-002','RD-002','DT-002','HILO-002','SCRATCH-002','SIC-BO-002'],wallet_restart_persistence)
         # Define the core function used by this module.
         def core():
             # Load the casino state that publishes packaged and game-module version metadata.
@@ -2241,6 +2257,44 @@ def run_browser_tests():
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Execute the integrated Scratch Cards browser and visual gate.
                 run_case('BR-SCRATCH-001',['SCRATCH-001','SCRATCH-002','SCRATCH-004','SCRATCH-005'],scratch_cards_acceptance)
+                # Define real-backend Sic Bo localization, wager, responsive, motion, and route acceptance.
+                def sic_bo_acceptance():
+                    # Open the catalog-owned route and wait for the stable game selector.
+                    page.get_by_test_id('nav-sic_bo').click(); page.get_by_test_id('sic-bo-table').wait_for(timeout=5000)
+                    # Enumerate all governed viewport dimensions.
+                    required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
+                    # Capture one mounted state across both locales and every viewport.
+                    def localized_evidence(prefix,states):
+                        # Iterate through paired English and Russian game resources.
+                        for locale in ('en-US','ru-RU'):
+                            # Switch locale without discarding selected wagers or settled history.
+                            page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_timeout(100)
+                            # Require the localized game title rather than a fallback key.
+                            assert page.locator('.sb-header h1').inner_text()==('Sic Bo' if locale=='en-US' else 'Сик Бо')
+                            # Validate containment and capture after-pass evidence at every viewport.
+                            for viewport_id,width,height in required_viewports:
+                                # Resize to the exact visual matrix dimensions.
+                                page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
+                                # Reject horizontal overflow and require the mounted table.
+                                assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.get_by_test_id('sic-bo-table').is_visible()
+                                # Record self-describing evidence for this state and viewport.
+                                game_evidence(f'after-pass-sic-bo-{prefix}-{locale.lower()}-{viewport_id}.png','sic_bo',states,locale,viewport_id)
+                        # Restore English desktop controls for the next public action.
+                        page.get_by_test_id('shell-locale-select').select_option('en-US'); page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(100)
+                    # Capture the complete ready table before selecting a wager.
+                    localized_evidence('ready',['ready'])
+                    # Select one canonical position and capture the visible selected state.
+                    page.locator('[data-bet-id="small"]').click(); assert page.locator('[data-bet-id="small"]').get_attribute('aria-pressed')=='true'; localized_evidence('wagers-selected',['wagers_selected'])
+                    # Start the public round and capture the decorative server-wait phase at desktop.
+                    page.locator('[data-action="shake"]').click(); page.locator('.sb-dice-tray.is-rolling').wait_for(timeout=5000); game_evidence('after-pass-sic-bo-rolling-en-us-desktop_primary.png','sic_bo',['rolling'],'en-US','desktop_primary')
+                    # Wait for the authoritative settled dice and capture both locales and all viewports.
+                    page.wait_for_function("() => document.querySelectorAll('.sb-die:not(.is-rolling)').length === 3 && document.querySelector('.sb-result-grid')",timeout=10000); localized_evidence('settled',['settled'])
+                    # Capture reduced-motion and canonical route restoration.
+                    page.emulate_media(reduced_motion='reduce'); localized_evidence('reduced-motion',['reduced_motion']); page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('sic-bo-table').wait_for(timeout=5000); localized_evidence('route-restored',['route_restored'])
+                    # Return to the lobby for downstream browser cases.
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Execute the integrated Sic Bo browser and visual gate.
+                run_case('BR-SIC-BO-001',['SIC-BO-001','SIC-BO-002','SIC-BO-004','SIC-BO-005'],sic_bo_acceptance)
                 # Define route_restoration to prove deep links, reload, Back, and Forward behavior.
                 def route_restoration():
                     # Open Roulette directly through its canonical path using the authenticated browser context.
