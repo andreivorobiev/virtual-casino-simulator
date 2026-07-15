@@ -68,6 +68,9 @@
   "chuck_a_luck": [
     "contracts/openapi/chuck_a_luck.v1.yaml"
   ],
+  "craps": [
+    "contracts/openapi/craps.v1.yaml"
+  ],
   "tests": [],
   "docs": [],
   "contracts": [

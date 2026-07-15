@@ -2,7 +2,7 @@
   "application": "9.1.1",
   "source_baseline": "9.1.0",
   "modules": {
-    "application": "9.15.0",
+    "application": "9.16.0",
     "core": "9.4.0",
     "ledger": "9.0.2",
     "players": "9.1.0",
@@ -28,9 +28,10 @@
     "scratch_cards": "1.0.1",
     "sic_bo": "1.0.0",
     "chuck_a_luck": "1.0.0",
-    "tests": "1.18.0",
-    "docs": "1.17.0",
-    "contracts": "1.13.0",
+    "craps": "1.0.0",
+    "tests": "1.19.0",
+    "docs": "1.18.0",
+    "contracts": "1.14.0",
     "tooling": "1.3.0",
     "commenting_policy": "1.0.0"
   },

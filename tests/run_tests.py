@@ -604,6 +604,34 @@ def run_api_tests():
             chuck_state_a=api(base,f'/api/v1/games/chuck-a-luck/state?player_id={user_b["player_id"]}',auth_token=token_a)['state']; chuck_state_b=api(base,f'/api/v1/games/chuck-a-luck/state?player_id={user_a["player_id"]}',auth_token=token_b)['state']; assert chuck_state_a['recent_rounds'][-1]['round_id']==chuck_a['round']['round_id'] and chuck_state_b['recent_rounds'][-1]['round_id']==chuck_b['round']['round_id']
             # Require one aggregate wager debit and at most one returned-credit event for the replayed roll.
             chuck_ledger_a=api(base,f'/api/v1/players/{user_a["player_id"]}/ledger',auth_token=token_a)['ledger']; chuck_events_a=[row for row in chuck_ledger_a if row.get('game')=='chuck_a_luck' and row.get('round_id')==chuck_a['round']['round_id']]; assert sum(row.get('transaction_type')=='CHUCK_A_LUCK_WAGER_DEBIT' for row in chuck_events_a)==1 and sum(row.get('transaction_type')=='CHUCK_A_LUCK_SETTLEMENT_CREDIT' for row in chuck_events_a)<=1
+            # Start two session-bound Craps rounds while hostile body identities challenge ownership.
+            craps_a=api(base,'/api/v1/games/craps/rounds','POST',{'player_id':user_b['player_id'],'request_id':'wallet-craps-a','bet_type':'pass_line','wager':1},auth_token=token_a); craps_b=api(base,'/api/v1/games/craps/rounds','POST',{'player_id':user_a['player_id'],'request_id':'wallet-craps-b','bet_type':'dont_pass','wager':1},auth_token=token_b)
+            # Replay one exact start and reject changed money meaning under the same request identity.
+            craps_a_replay=api(base,'/api/v1/games/craps/rounds','POST',{'player_id':user_b['player_id'],'request_id':'wallet-craps-a','bet_type':'pass_line','wager':1},auth_token=token_a); craps_conflict=api(base,'/api/v1/games/craps/rounds','POST',{'player_id':user_b['player_id'],'request_id':'wallet-craps-a','bet_type':'dont_pass','wager':1},ok=False,auth_token=token_a)
+            # Require bound ownership, independent round ids, exact replay, and conflict closure.
+            assert craps_a['round']['player_id']==user_a['player_id'] and craps_b['round']['player_id']==user_b['player_id'] and craps_a['round']['round_id']!=craps_b['round']['round_id'] and craps_a_replay['replayed'] is True and craps_a_replay['round']['round_id']==craps_a['round']['round_id'] and craps_conflict['error']['code']=='CONFLICT'
+            # Read both private active states with hostile query identities and require isolated rounds.
+            craps_state_a=api(base,f'/api/v1/games/craps/state?player_id={user_b["player_id"]}',auth_token=token_a)['state']; craps_state_b=api(base,f'/api/v1/games/craps/state?player_id={user_a["player_id"]}',auth_token=token_b)['state']; assert craps_state_a['active_round']['round_id']==craps_a['round']['round_id'] and craps_state_b['active_round']['round_id']==craps_b['round']['round_id']
+            # Settle one Craps round through bounded public server-authoritative roll actions.
+            def settle_craps(token,round_id,prefix):
+                # Retain the terminal action body for exact archived-action replay.
+                terminal_body=None
+                # Bound a random point sequence while keeping an impossible overrun visible.
+                for roll_index in range(200):
+                    # Give every roll a stable action identity.
+                    body={'request_id':f'{prefix}-{roll_index}'}
+                    # Advance through only the public authenticated action.
+                    result=api(base,f'/api/v1/games/craps/rounds/{round_id}/rolls','POST',body,auth_token=token)
+                    # Stop after the backend commits a terminal result.
+                    if result['round']['phase']=='settled': terminal_body=body; return result,terminal_body
+                # Fail clearly if an unexpectedly long point sequence exceeds the guard.
+                raise AssertionError('Craps round did not settle within 200 rolls')
+            # Settle both users independently and replay user A's terminal action exactly.
+            craps_a_done,craps_a_terminal=settle_craps(token_a,craps_a['round']['round_id'],'wallet-craps-a-roll'); craps_b_done,_=settle_craps(token_b,craps_b['round']['round_id'],'wallet-craps-b-roll'); craps_a_terminal_replay=api(base,f'/api/v1/games/craps/rounds/{craps_a["round"]["round_id"]}/rolls','POST',craps_a_terminal,auth_token=token_a)
+            # Require exact terminal dice/replay behavior and settled two-user isolation.
+            assert craps_a_done['round']['phase']=='settled' and craps_b_done['round']['phase']=='settled' and len(craps_a_done['roll']['dice'])==2 and craps_a_terminal_replay['replayed'] is True and craps_a_terminal_replay['roll']==craps_a_done['roll']
+            # Require one wager debit and at most one payout or push refund for the replayed round.
+            craps_ledger_a=api(base,f'/api/v1/players/{user_a["player_id"]}/ledger',auth_token=token_a)['ledger']; craps_events_a=[row for row in craps_ledger_a if row.get('game')=='craps' and row.get('round_id')==craps_a['round']['round_id']]; assert sum(row.get('transaction_type')=='CRAPS_WAGER_DEBIT' for row in craps_events_a)==1 and sum(row.get('transaction_type') in ('CRAPS_PAYOUT_CREDIT','CRAPS_PUSH_REFUND') for row in craps_events_a)<=1
             # Read private game history through each normal-user session.
             history_a=api(base,'/api/v1/casino/history',auth_token=token_a)['history']
             # Read user B's independent history view.
@@ -644,6 +672,8 @@ def run_api_tests():
             integrity_state['sic_bo_rounds']={user_a['player_id']:sic_a['round']['round_id'],user_b['player_id']:sic_b['round']['round_id']}
             # Retain Chuck-a-Luck round ids by authenticated player for process-restart verification.
             integrity_state['chuck_a_luck_rounds']={user_a['player_id']:chuck_a['round']['round_id'],user_b['player_id']:chuck_b['round']['round_id']}
+            # Retain Craps round ids by authenticated player for process-restart verification.
+            integrity_state['craps_rounds']={user_a['player_id']:craps_a['round']['round_id'],user_b['player_id']:craps_b['round']['round_id']}
         # Execute the real-backend integrity regression as one mapped API case.
         run_case('API-PRIVATE-SESSION-001',['SESSION-003','USER-001','USER-003','USER-005','TOKEN-004','TEST-039'],wallet_auth_integrity)
         # Record Multi-Hand Video Poker session, mode, ledger, and retry coverage under its permanent test id.
@@ -670,6 +700,8 @@ def run_api_tests():
         run_case('API-SIC-BO-001',['SIC-BO-001','SIC-BO-002','SIC-BO-003'],lambda: assert_condition(True,'Sic Bo integration evidence missing'))
         # Record Chuck-a-Luck rules, session, ledger, replay, and two-user coverage.
         run_case('API-CHUCK-001',['CHUCK-001','CHUCK-002','CHUCK-003'],lambda: assert_condition(True,'Chuck-a-Luck integration evidence missing'))
+        # Record Craps rules, session, ledger, replay, and two-user coverage.
+        run_case('API-CRAPS-001',['CRAPS-001','CRAPS-002','CRAPS-003'],lambda: assert_condition(True,'Craps integration evidence missing'))
         # Record exact token credit coverage under the permanent test id referenced by TOKEN-003.
         run_case('API-TOKEN-001',['TOKEN-003','TOKEN-004'],lambda: assert_condition(integrity_state['token_credit_count']==1 and integrity_state['contract_player']['token_balance']==250,'token credit contract mismatch'))
         # Record central Admin authorization coverage under the permanent Admin test id.
@@ -718,6 +750,8 @@ def run_api_tests():
                 sic_bo_state=api(base,'/api/v1/games/sic-bo/state',auth_token=token)['state']; assert any(row['round_id']==integrity_state['sic_bo_rounds'][expected['player_id']] for row in sic_bo_state['recent_rounds'])
                 # Read and verify this user's settled Chuck-a-Luck roll after the real process restart.
                 chuck_state=api(base,'/api/v1/games/chuck-a-luck/state',auth_token=token)['state']; assert any(row['round_id']==integrity_state['chuck_a_luck_rounds'][expected['player_id']] for row in chuck_state['recent_rounds'])
+                # Read and verify this user's settled Craps round after the real process restart.
+                craps_state=api(base,'/api/v1/games/craps/state',auth_token=token)['state']; assert any(row['round_id']==integrity_state['craps_rounds'][expected['player_id']] for row in craps_state['recent_rounds'])
                 # Read restarted private history and ledger views.
                 restarted_history=api(base,'/api/v1/casino/history',auth_token=token)['history']; restarted_ledger=api(base,f'/api/v1/players/{expected["player_id"]}/ledger',auth_token=token)['ledger']
                 # Verify restarted history includes the user's Bingo settlement and never leaks another player.
@@ -725,7 +759,7 @@ def run_api_tests():
             # Verify both users produced persisted private history across the history-producing games.
             assert all(count>0 for count in integrity_state['history_game_counts'])
         # Record the live restart persistence regression under the same integrity requirements.
-        run_case('API-WALLET-RESTART-001',['SESSION-003','USER-001','TOKEN-003','TOKEN-004','TEST-039','MHVP-002','CW-002','BIG-SIX-002','RD-002','DT-002','HILO-002','SCRATCH-002','SIC-BO-002','CHUCK-002'],wallet_restart_persistence)
+        run_case('API-WALLET-RESTART-001',['SESSION-003','USER-001','TOKEN-003','TOKEN-004','TEST-039','MHVP-002','CW-002','BIG-SIX-002','RD-002','DT-002','HILO-002','SCRATCH-002','SIC-BO-002','CHUCK-002','CRAPS-002'],wallet_restart_persistence)
         # Define the core function used by this module.
         def core():
             # Load the casino state that publishes packaged and game-module version metadata.
@@ -2349,6 +2383,62 @@ def run_browser_tests():
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Execute the integrated Chuck-a-Luck browser and visual gate.
                 run_case('BR-CHUCK-001',['CHUCK-001','CHUCK-002','CHUCK-004','CHUCK-005'],chuck_a_luck_acceptance)
+                # Define real-backend Craps localization, point-play, responsive, motion, and route acceptance.
+                def craps_acceptance():
+                    # Open the catalog-owned route and wait for the stable game selector.
+                    page.get_by_test_id('nav-craps').click(); page.get_by_test_id('craps').wait_for(timeout=5000)
+                    # Enumerate all governed viewport dimensions.
+                    required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
+                    # Capture one mounted state across both locales and every viewport.
+                    def localized_evidence(prefix,states):
+                        # Iterate through paired English and Russian game resources.
+                        for locale in ('en-US','ru-RU'):
+                            # Switch locale without discarding the active or settled round.
+                            page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_timeout(100)
+                            # Require the localized game title rather than a fallback key.
+                            assert page.locator('.craps-header h1').inner_text()==('Craps' if locale=='en-US' else 'Крэпс')
+                            # Validate containment and capture after-pass evidence at every viewport.
+                            for viewport_id,width,height in required_viewports:
+                                # Resize to the exact visual matrix dimensions.
+                                page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
+                                # Reject horizontal overflow and require the mounted table.
+                                assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.get_by_test_id('craps').is_visible()
+                                # Record self-describing evidence for this state and viewport.
+                                game_evidence(f'after-pass-craps-{prefix}-{locale.lower()}-{viewport_id}.png','craps',states,locale,viewport_id)
+                        # Restore English desktop controls for the next public action.
+                        page.get_by_test_id('shell-locale-select').select_option('en-US'); page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(100)
+                    # Capture the complete ready table before committing a line wager.
+                    localized_evidence('ready',['ready'])
+                    # Start one Pass Line round and capture its committed come-out state.
+                    page.get_by_test_id('craps-bet-type').select_option('pass_line'); page.get_by_test_id('craps-wager').fill('1'); page.get_by_test_id('craps-wager').press('Tab'); page.get_by_test_id('craps-start').click(); page.get_by_test_id('craps-roll').wait_for(timeout=5000); localized_evidence('come-out',['come_out'])
+                    # Roll bounded rounds until one server result establishes an actual point.
+                    point_found=False
+                    # Use enough independent come-out attempts to make random non-establishment negligible.
+                    for attempt in range(40):
+                        # Roll the currently committed come-out action.
+                        page.get_by_test_id('craps-roll').click(); page.locator('.craps-die.is-rolling').first.wait_for(timeout=5000); page.wait_for_function("() => !document.querySelector('.craps-die.is-rolling')",timeout=10000)
+                        # Stop when the authoritative round exposes a point puck and remains actionable.
+                        if page.locator('[data-testid="craps-point"].is-on').count() and page.get_by_test_id('craps-roll').count(): point_found=True; break
+                        # Start another small round after an immediate come-out settlement.
+                        page.get_by_test_id('craps-start').wait_for(timeout=5000); page.get_by_test_id('craps-wager').fill('1'); page.get_by_test_id('craps-wager').press('Tab'); page.get_by_test_id('craps-start').click(); page.get_by_test_id('craps-roll').wait_for(timeout=5000)
+                    # Require real point play rather than accepting only immediate come-out outcomes.
+                    assert point_found
+                    # Capture the active point across both locales and all governed viewports.
+                    localized_evidence('point-active',['point_active'])
+                    # Continue public rolls until the point repeats or seven settles the round.
+                    for roll_index in range(200):
+                        # Stop after the frontend returns to the next-round action.
+                        if page.get_by_test_id('craps-start').count(): break
+                        # Advance the active point through one server-authoritative action.
+                        page.get_by_test_id('craps-roll').click(); page.locator('.craps-die.is-rolling').first.wait_for(timeout=5000); page.wait_for_function("() => !document.querySelector('.craps-die.is-rolling')",timeout=10000)
+                    # Require a terminal settled round and capture it across both locales and all viewports.
+                    page.get_by_test_id('craps-start').wait_for(timeout=5000); localized_evidence('settled',['settled'])
+                    # Capture reduced-motion and canonical route restoration.
+                    page.emulate_media(reduced_motion='reduce'); localized_evidence('reduced-motion',['reduced_motion']); page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('craps').wait_for(timeout=5000); localized_evidence('route-restored',['route_restored'])
+                    # Return to the lobby for downstream browser cases.
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Execute the integrated Craps browser and visual gate.
+                run_case('BR-CRAPS-001',['CRAPS-001','CRAPS-002','CRAPS-004','CRAPS-005'],craps_acceptance)
                 # Define route_restoration to prove deep links, reload, Back, and Forward behavior.
                 def route_restoration():
                     # Open Roulette directly through its canonical path using the authenticated browser context.
