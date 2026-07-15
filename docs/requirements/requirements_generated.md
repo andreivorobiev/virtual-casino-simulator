@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.17.0
+- application: 9.18.0
 - core: 9.4.0
 - ledger: 9.0.2
 - players: 9.1.0
@@ -34,9 +34,10 @@ Historical source baseline: 9.1.0
 - chuck_a_luck: 1.0.0
 - craps: 1.0.0
 - crown_and_anchor: 1.0.0
-- tests: 1.20.0
-- docs: 1.19.0
-- contracts: 1.15.0
+- over_under_7: 1.0.0
+- tests: 1.21.0
+- docs: 1.20.0
+- contracts: 1.16.0
 - tooling: 1.3.0
 - commenting_policy: 1.0.0
 
@@ -527,3 +528,8 @@ Historical source baseline: 9.1.0
 - **CAA-003** (Crown and Anchor) - PASS: Aggregate symbol wagers and returned credits use the shared ledger exactly once under durable request identities.
 - **CAA-004** (Application) - PASS: Crown and Anchor supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.
 - **CAA-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Crown and Anchor with requirement, module, version, and visual traceability.
+- **OU7-001** (Over/Under 7) - PASS: Two server-authoritative dice implement under-seven, exactly-seven, and over-seven outcomes with transparent net and total-return rules.
+- **OU7-002** (Over/Under 7) - PASS: Authenticated sessions own private reload-safe plays, settled history, and canonical route restoration.
+- **OU7-003** (Over/Under 7) - PASS: Aggregate wagers and returned credits use the shared ledger exactly once under durable action identities.
+- **OU7-004** (Application) - PASS: Over/Under 7 supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.
+- **OU7-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Over/Under 7 with requirement, module, version, and visual traceability.

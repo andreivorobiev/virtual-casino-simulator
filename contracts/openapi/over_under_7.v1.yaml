@@ -1,10 +1,10 @@
 openapi: 3.0.3
 info:
-  title: Over/Under 7 Additive Game API Proposal
+  title: Over/Under 7 Additive Game API
   version: 1.0.0
   description: >
-    Game-owned additive v1 proposal for an unregistered Over/Under 7 slice.
-    The shared #77 integration lane owns compatibility digest registration.
+    Accepted game-owned additive v1 contract for catalog-integrated Over/Under 7.
+    Authenticated session binding owns player identity and all token movement uses the shared ledger.
 paths:
   /api/v1/games/over-under-7/state:
     get:

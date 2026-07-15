@@ -1,0 +1,17 @@
+{
+  "module": "over_under_7",
+  "version": "1.0.0",
+  "paths": ["casino/games/over_under_7/", "web/games/over_under_7.js", "web/i18n/en-US/games/over_under_7.json", "web/i18n/ru-RU/games/over_under_7.json"],
+  "requirements_prefixes": ["OU7"],
+  "contracts": ["contracts/openapi/over_under_7.v1.yaml"],
+  "game": {
+    "id": "over_under_7", "sort_order": 220, "route": "/games/over_under_7", "label": "Over/Under 7", "category": "table", "categories": ["table", "numbers", "instant"],
+    "backend": {"register": "casino.games.over_under_7.api:register"},
+    "frontend": {"module": "./games/over_under_7.js", "export": "OverUnder7Game", "ready_testid": "over-under-7", "i18n_domain": "games/over_under_7", "i18n_probe": "action.play"},
+    "tests": {"long_driver": "tests.game_drivers.over_under_7:play"},
+    "translations": {"ru-RU": {"label": "Больше/меньше 7", "kicker": "Две кости", "description": "Быстрая игра на сумму двух костей: меньше семи, ровно семь или больше семи, с серверным результатом и расчётом через журнал игровых жетонов.", "tags": ["Стол", "Кости", "Числа", "Журнал жетонов"]}},
+    "lobby": {"featured": false, "wide": false, "art_class": "over-under-7-art", "symbol": "2D6", "kicker": "Two-dice total", "description": "Cover totals under seven, exactly seven, or over seven with server-authoritative dice and ledger-backed settlement.", "tags": ["Table", "Dice", "Numbers", "Quick play"]}
+  },
+  "depends_on": ["core", "ledger", "players"],
+  "may_not_depend_on": ["roulette", "slots", "blackjack", "baccarat", "keno", "bingo", "multi_hand_video_poker", "casino_war", "big_six_wheel", "red_dog", "dragon_tiger", "hi_lo", "three_card_poker", "jacks_or_better_video_poker", "deuces_wild_video_poker", "scratch_cards", "sic_bo", "chuck_a_luck", "craps", "crown_and_anchor"]
+}
