@@ -89,6 +89,9 @@
   "acey_deucey": [
     "contracts/openapi/acey_deucey.v1.yaml"
   ],
+  "caribbean_stud": [
+    "contracts/openapi/caribbean_stud.v1.yaml"
+  ],
   "tests": [],
   "docs": [],
   "contracts": [

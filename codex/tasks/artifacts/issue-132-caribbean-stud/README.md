@@ -1,24 +1,24 @@
-# Issue #132 Isolated Draft Evidence
+# Issue #132 Shared Integration Evidence
 
-Branch: `codex/issue-132`
+Integration owner: #77
 
 Game: Caribbean Stud
 
-## Delivered Draft Slice
+## Integrated Slice
 
 - Distinct/countable game proof for Caribbean Stud.
 - Game-local backend package with pure engine, service, and route registration adapter.
 - Session-bound state and exactly-once ledger movements for ante, call, and settlement.
 - Fold decision that forfeits ante without revealing dealer hole cards.
 - Game-local frontend module, EN/RU resources, and focused static UI checks.
-- Additive OpenAPI v1 contract proposal.
-- Module descriptor proposal outside auto-discovered `modules/`.
-- Focused tests and driver proposal under game-specific paths.
+- Frozen additive OpenAPI v1 contract with compatibility digest and matrix ownership.
+- Canonical `modules/caribbean_stud.json` descriptor at sort order 270.
+- Permanent requirements `CS-001` through `CS-005`, generated documentation, visual matrix row, central API/browser/restart coverage, and catalog-discovered Long Suite driver.
 
-## Shared Integration Not Claimed
+## Shared Integration Boundary
 
-This branch intentionally does not edit shared #77-owned files: catalog, router, shell navigation, aggregate manifests, permanent requirements, generated requirements, compatibility matrices, central test discovery, long-suite registry, visual matrix, release/version files, deployment, auth, OCI, or other games.
+Issue #77 promotes only the Caribbean Stud catalog, manifest, requirements, compatibility, visual, test-discovery, version, and documentation surfaces required for acceptance. Deployment, auth, OCI, other games, and the held Texas Hold'em draft remain untouched.
 
 ## Evidence Classification
 
-No screenshot is claimed as `after_pass`. Browser-visible real-backend evidence requires #77 shared registration and visual matrix ownership.
+Acceptance evidence is `after_pass` only when produced by the exact integrated head through the real authenticated backend at the four governed viewports in both English and Russian.

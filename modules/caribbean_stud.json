@@ -1,0 +1,17 @@
+{
+  "module": "caribbean_stud",
+  "version": "1.0.0",
+  "paths": ["casino/games/caribbean_stud/", "web/games/caribbean_stud.js", "web/i18n/en-US/games/caribbean_stud.json", "web/i18n/ru-RU/games/caribbean_stud.json"],
+  "requirements_prefixes": ["CS"],
+  "contracts": ["contracts/openapi/caribbean_stud.v1.yaml"],
+  "game": {
+    "id": "caribbean_stud", "sort_order": 270, "route": "/games/caribbean_stud", "label": "Caribbean Stud", "category": "table", "categories": ["table", "cards", "poker", "strategy"],
+    "backend": {"register": "casino.games.caribbean_stud.api:register"},
+    "frontend": {"module": "./games/caribbean_stud.js", "export": "CaribbeanStudGame", "ready_testid": "caribbean-stud", "i18n_domain": "games/caribbean_stud", "i18n_probe": "controls.deal"},
+    "tests": {"long_driver": "tests.game_drivers.caribbean_stud:play"},
+    "translations": {"ru-RU": {"label": "Карибский стад-покер", "kicker": "Покерный зал", "description": "Анте, пять карт игроку, одна открытая карта дилера и решение сделать колл или пас до проверки квалификации дилера.", "tags": ["Карты", "Покер", "Стратегия", "Журнал жетонов"]}},
+    "lobby": {"featured": false, "wide": false, "art_class": "caribbean-stud-art", "symbol": "CS", "kicker": "Poker room", "description": "Ante, inspect five cards, then call or fold before the dealer reveals and qualifies.", "tags": ["Cards", "Poker", "Strategy", "Ledger-backed"]}
+  },
+  "depends_on": ["core", "ledger", "players"],
+  "may_not_depend_on": ["roulette", "slots", "blackjack", "baccarat", "keno", "bingo", "multi_hand_video_poker", "casino_war", "big_six_wheel", "red_dog", "dragon_tiger", "hi_lo", "three_card_poker", "jacks_or_better_video_poker", "deuces_wild_video_poker", "scratch_cards", "sic_bo", "chuck_a_luck", "craps", "crown_and_anchor", "over_under_7", "plinko", "fan_tan", "andar_bahar", "acey_deucey"]
+}

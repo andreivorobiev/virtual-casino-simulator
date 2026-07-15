@@ -6,9 +6,9 @@ Parents: #66, #73
 
 Shared integration lane: #77
 
-## Draft Scope
+## Integrated Scope
 
-This isolated draft implements a countable Caribbean Stud module without shared catalog or router registration. The game exposes a player-scoped service, additive v1 contract proposal, lazy frontend module, paired EN/RU resources, focused tests, and evidence artifacts. Shared integration remains intentionally blocked for #77.
+Caribbean Stud is catalog-discovered through `modules/caribbean_stud.json`, registered at `/games/caribbean_stud`, and exposed through a frozen additive v1 contract. The integrated module includes a player-scoped service, lazy frontend module, paired EN/RU resources, permanent `CS-001` through `CS-005` requirements, focused and central tests, visual-matrix coverage, and a Long Suite driver.
 
 ## Rules Profile
 
@@ -35,7 +35,7 @@ Each public action has a caller-stable `action_id`. Deal, call, and settlement l
 
 ## Session and API Boundary
 
-The draft routes are:
+The frozen additive v1 routes are:
 
 - `GET /api/v1/games/caribbean-stud/state`
 - `POST /api/v1/games/caribbean-stud/rounds`
@@ -48,6 +48,6 @@ All operations use the standard `{ ok: true, data: ... }` / `{ ok: false, error:
 
 The frontend module is `web/games/caribbean_stud.js`. It uses no game timers, clears locale subscriptions on unmount, respects reduced motion in route-local CSS, uses the shared accessible card renderer, and keeps all visible and ARIA copy in `web/i18n/en-US/games/caribbean_stud.json` and `web/i18n/ru-RU/games/caribbean_stud.json`.
 
-## #77 Integration Blocker
+## #77 Traceability
 
-This branch does not register Caribbean Stud in shared manifests, routing, shell navigation, requirement matrices, compatibility digests, visual matrix rows, long-suite discovery, or release/version files. Those are owned by #77 after the isolated draft is reviewed.
+Shared integration issue #77 owns the canonical descriptor, manifest and independent revisions, permanent requirements and generated docs, compatibility digest/matrix, visual row, central API/browser/restart coverage, and catalog-discovered Long Suite acceptance. The packaged application remains `9.1.1`; this compatible addition advances only the independent source-module revisions.

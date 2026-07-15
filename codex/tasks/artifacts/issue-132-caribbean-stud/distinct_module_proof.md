@@ -19,9 +19,9 @@ The module can be counted as one additional game because it owns:
 - frontend module `web/games/caribbean_stud.js`;
 - paired EN/RU locale domain `games/caribbean_stud`;
 - additive OpenAPI contract `contracts/openapi/caribbean_stud.v1.yaml`;
-- focused tests and driver under `tests/games/caribbean_stud`;
-- descriptor proposal outside auto-discovered `modules/`.
+- focused tests under `tests/games/caribbean_stud` and catalog driver `tests/game_drivers/caribbean_stud.py`;
+- canonical descriptor `modules/caribbean_stud.json`.
 
 ## Boundary
 
-Count acceptance is not claimed in this branch. Shared catalog, router, manifest, requirement, compatibility, visual-matrix, and long-suite registration remain blocked for #77.
+Issue #77 accepts Caribbean Stud as one catalog-counted game only after the canonical descriptor, permanent requirements, compatibility metadata, visual row, real-backend browser coverage, and Long Suite discovery pass on one exact head.

@@ -6669,7 +6669,7 @@
       "module": "Core",
       "description": "Every game API request resolves its player through one shared authenticated-session resolver before route dispatch.",
       "status": "PASS",
-      "api_tests": ["API-CATALOG-001", "API-PRIVATE-SESSION-001", "API-MHVP-001", "API-CW-001", "API-BIG-SIX-001", "API-RD-001", "API-DT-001", "API-HILO-001", "API-TCP-001", "API-JOBVP-001", "API-DWVP-001", "API-SCRATCH-001", "API-SIC-BO-001", "API-CHUCK-001", "API-CRAPS-001", "API-CAA-001", "API-OU7-001", "API-PLINKO-001", "API-FAN-TAN-001", "API-AB-001", "API-AD-001"],
+      "api_tests": ["API-CATALOG-001", "API-PRIVATE-SESSION-001", "API-MHVP-001", "API-CW-001", "API-BIG-SIX-001", "API-RD-001", "API-DT-001", "API-HILO-001", "API-TCP-001", "API-JOBVP-001", "API-DWVP-001", "API-SCRATCH-001", "API-SIC-BO-001", "API-CHUCK-001", "API-CRAPS-001", "API-CAA-001", "API-OU7-001", "API-PLINKO-001", "API-FAN-TAN-001", "API-AB-001", "API-AD-001", "API-CS-001"],
       "browser_tests": [],
       "implementation_files": ["casino/core/request_player.py", "casino/router.py", "casino/app.py"],
       "introduced_in": "wave0-catalog-governance",
@@ -7287,6 +7287,21 @@
     },
     {
       "id": "AD-005", "module": "Tests", "description": "Catalog, contract, browser, and long-suite discovery include Acey-Deucey with requirement, module, version, and visual traceability.", "status": "PASS", "api_tests": ["API-CATALOG-001", "LONG-SUITE-100"], "browser_tests": ["BR-CATALOG-DISCOVERY-001", "BR-AD-001"], "implementation_files": ["modules/acey_deucey.json", "modules/module-manifest.json", "contracts/compatibility/module-api-matrix.json", "tests/game_drivers/acey_deucey.py", "tests/visual/visual_matrix.json", "tests/run_tests.py"], "introduced_in": "game-expansion-acey-deucey", "changed_in": "game-expansion-acey-deucey", "notes": "Descriptor sort order 260 and the catalog-discovered long driver are canonical."
+    },
+    {
+      "id": "CS-001", "module": "Caribbean Stud", "description": "An ante deals five player cards and one dealer upcard before a call of exactly twice the ante or fold decision, followed by ace-king dealer qualification and transparent poker settlement.", "status": "PASS", "api_tests": ["API-CS-001"], "browser_tests": ["BR-CS-001"], "implementation_files": ["casino/games/caribbean_stud/engine.py", "web/games/caribbean_stud.js"], "introduced_in": "game-expansion-caribbean-stud", "changed_in": "game-expansion-caribbean-stud", "notes": "Issue #77 allocates the permanent distinct rules requirement for issue #132."
+    },
+    {
+      "id": "CS-002", "module": "Caribbean Stud", "description": "Authenticated sessions own private reload-safe decision rounds, hidden dealer hole cards, durable receipts, settled history, and canonical route restoration.", "status": "PASS", "api_tests": ["API-CS-001", "API-WALLET-RESTART-001"], "browser_tests": ["BR-CS-001"], "implementation_files": ["casino/games/caribbean_stud/api.py", "casino/games/caribbean_stud/service.py", "web/app.js", "tests/run_tests.py"], "introduced_in": "game-expansion-caribbean-stud", "changed_in": "game-expansion-caribbean-stud", "notes": "Session context overrides caller player ids, dealer hole cards remain private until call, and committed results survive reload and process restart."
+    },
+    {
+      "id": "CS-003", "module": "Caribbean Stud", "description": "Ante and call debits plus returned-token settlement credits use the shared ledger exactly once under durable action identities, while folds add no token movement.", "status": "PASS", "api_tests": ["API-CS-001"], "browser_tests": [], "implementation_files": ["casino/games/caribbean_stud/service.py", "casino/core/ledger.py", "tests/games/caribbean_stud/test_api.py", "tests/run_tests.py"], "introduced_in": "game-expansion-caribbean-stud", "changed_in": "game-expansion-caribbean-stud", "notes": "No game code mutates balances directly and conflicting retries fail closed."
+    },
+    {
+      "id": "CS-004", "module": "Application", "description": "Caribbean Stud supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.", "status": "PASS", "api_tests": [], "browser_tests": ["BR-CS-001"], "implementation_files": ["web/games/caribbean_stud.js", "web/i18n/en-US/games/caribbean_stud.json", "web/i18n/ru-RU/games/caribbean_stud.json", "tests/visual/visual_matrix.json", "tests/run_tests.py"], "introduced_in": "game-expansion-caribbean-stud", "changed_in": "game-expansion-caribbean-stud", "notes": "Evidence covers both locales and every governed viewport."
+    },
+    {
+      "id": "CS-005", "module": "Tests", "description": "Catalog, contract, browser, and long-suite discovery include Caribbean Stud with requirement, module, version, and visual traceability.", "status": "PASS", "api_tests": ["API-CATALOG-001", "LONG-SUITE-100"], "browser_tests": ["BR-CATALOG-DISCOVERY-001", "BR-CS-001"], "implementation_files": ["modules/caribbean_stud.json", "modules/module-manifest.json", "contracts/compatibility/module-api-matrix.json", "tests/game_drivers/caribbean_stud.py", "tests/visual/visual_matrix.json", "tests/run_tests.py"], "introduced_in": "game-expansion-caribbean-stud", "changed_in": "game-expansion-caribbean-stud", "notes": "Descriptor sort order 270 and the catalog-discovered long driver are canonical."
     }
   ]
 }

@@ -1,34 +1,37 @@
-# Issue #132 Focused Validation
+# Issue #132 Shared Integration Validation
 
-Branch: `codex/issue-132`
+Integration owner: #77
 
-Worktree: `C:\Users\andre\OneDrive\Documents\Casino Simulator\.codex-worktrees\issue-132-caribbean-stud`
+Base: `c7f069dc0c0a636d4d27b45fb9f102f7912ec03f`
 
-Validation date: 2026-07-14
+Validation date: 2026-07-15
 
-## Required Pre-Implementation Check
-
-`git status --short` in the dedicated worktree was clean before recreating the implementation files there.
-
-## Focused Checks
+## Focused and Governance Checks
 
 | Command | Result |
 | --- | --- |
-| `python -m unittest tests.games.caribbean_stud.test_engine tests.games.caribbean_stud.test_api tests.games.caribbean_stud.test_resources` | PASS: 15 tests cover rules, dealer qualification, call/fold settlement, session isolation, exact replay, fail-closed ambiguous movement recovery, and EN/RU resource parity. |
-| `node tests/games/caribbean_stud/test_frontend.mjs` | PASS: static frontend/resource checks cover export, API root, retry identity retention, localized card labels, EN/RU parity, reduced motion, timer-free lifecycle, and no caller-owned player identity. |
+| `python -m unittest tests.games.caribbean_stud.test_engine tests.games.caribbean_stud.test_api tests.games.caribbean_stud.test_resources` | PASS: 15 tests cover rules, qualification, call/fold settlement, session isolation, exact replay, recovery, and EN/RU parity. |
+| `node tests/games/caribbean_stud/test_frontend.mjs` | PASS. |
 | `node --check web/games/caribbean_stud.js` | PASS. |
-| `python scripts/validate_contracts.py` | PASS: existing validator reports 8 shared APIs and 13 catalog games; #132 contract remains an additive proposal outside shared registration. |
+| `python scripts/validate_game_catalog.py` | PASS: 26 current games, target 20. |
+| `python scripts/validate_contracts.py` | PASS: 8 shared APIs and 26 catalog games. |
 | `python scripts/validate_module_boundaries.py` | PASS. |
-| `python scripts/validate_requirements.py` | PASS: 450 requirements. |
-| `python scripts/validate_versions.py` | PASS: packaged release 9.1.1 and 26 module revisions. |
-| `python scripts/check_comment_density.py` | PASS: 14333/14344 meaningful lines have nearby comments; only pre-existing prerender warnings outside #132 remain. |
+| `python scripts/validate_requirements.py` | PASS: 515 requirements. |
+| `python scripts/validate_versions.py` | PASS: packaged release 9.1.1 and 39 module revisions. |
+| `python scripts/generate_docs.py --check` | PASS. |
+| `python scripts/check_comment_density.py` | PASS: 100.0 percent; only pre-existing prerender artifact warnings. |
 | `python verify_rules.py` | PASS: 32 rule checks. |
-| `git diff --check` | PASS. |
+| `git diff --check origin/main...HEAD` | PASS. |
 
-## Not Run
+## Real-Backend Evidence
 
-The full API, browser, visual, and long-suite runners were intentionally not run because this isolated draft does not touch shared #77 registration, catalog, router, visual matrix, or central discovery. Real browser evidence and count acceptance remain #77 work.
+- Bootstrap and API/restart suites pass `API-CS-001`, hostile player-id precedence, two-user isolation, hidden dealer cards, exact retry/conflict behavior, ledger event cardinality, and `CS-002` persistence after a real process restart.
+- Browser suite passes `BR-CS-001` with `after_pass` evidence for ready, decision, one authoritative call outcome, fold under reduced motion, and route restoration in `en-US` and `ru-RU` at desktop primary, desktop compact, tablet, and mobile viewports.
+- Long Suite 100 passes 100 of 100 through the catalog-discovered `tests.game_drivers.caribbean_stud:play` driver in a copied deployment.
 
 ## Listener Cleanup
 
-No dev server or listener was started for this slice. Ports `8765` and `8877` were not used.
+- Bootstrap/API listeners: PIDs `88724`, `63576`, `82536`, and `4036` on ports `58994`, `59088`, `56871`, and `58644`; all ports verified closed.
+- Browser listener: PID `29048` on port `64110`; port verified closed.
+- Long Suite listener: PID `88496` on port `63066`; port verified closed and copied deployment removed.
+- Protected ports `8765` and `8877` and user/shared runtime data were not used or modified.

@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.22.0
+- application: 9.23.0
 - core: 9.4.0
 - ledger: 9.0.2
 - players: 9.1.0
@@ -39,9 +39,10 @@ Historical source baseline: 9.1.0
 - fan_tan: 1.0.0
 - andar_bahar: 1.0.0
 - acey_deucey: 1.0.0
-- tests: 1.25.0
-- docs: 1.24.0
-- contracts: 1.20.0
+- caribbean_stud: 1.0.0
+- tests: 1.26.0
+- docs: 1.25.0
+- contracts: 1.21.0
 - tooling: 1.3.0
 - commenting_policy: 1.0.0
 
@@ -557,3 +558,8 @@ Historical source baseline: 9.1.0
 - **AD-003** (Acey-Deucey) - PASS: Free deals and passes move no tokens; wager debits and returned-token credits use the shared ledger exactly once under durable action identities.
 - **AD-004** (Application) - PASS: Acey-Deucey supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.
 - **AD-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Acey-Deucey with requirement, module, version, and visual traceability.
+- **CS-001** (Caribbean Stud) - PASS: An ante deals five player cards and one dealer upcard before a call of exactly twice the ante or fold decision, followed by ace-king dealer qualification and transparent poker settlement.
+- **CS-002** (Caribbean Stud) - PASS: Authenticated sessions own private reload-safe decision rounds, hidden dealer hole cards, durable receipts, settled history, and canonical route restoration.
+- **CS-003** (Caribbean Stud) - PASS: Ante and call debits plus returned-token settlement credits use the shared ledger exactly once under durable action identities, while folds add no token movement.
+- **CS-004** (Application) - PASS: Caribbean Stud supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.
+- **CS-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Caribbean Stud with requirement, module, version, and visual traceability.

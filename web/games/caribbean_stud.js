@@ -234,7 +234,7 @@ function bindEvents() {
   // Read the ante input from the current frame.
   const anteInput = root?.querySelector('#cs-ante');
   // Preserve valid ante edits locally until deal.
-  if (anteInput) anteInput.onchange = () => { ante = anteValue(anteInput.value); render(); };
+  if (anteInput) anteInput.oninput = () => { ante = anteValue(anteInput.value); };
   // Bind deal, call, and fold controls through one action dispatcher.
   root?.querySelectorAll('[data-action]').forEach(button => {
     // Prepare the exact retry identity before executing the action.
