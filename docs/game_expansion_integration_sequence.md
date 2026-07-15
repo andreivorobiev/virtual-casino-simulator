@@ -32,6 +32,7 @@ The Product-approved serialized order is:
 18. Pull request #174, Fan-Tan for issue #137, released after Plinko merged.
 19. Pull request #173, Andar Bahar for issue #140, released after Fan-Tan merged.
 20. Pull request #172, Acey-Deucey for issue #149, released after Andar Bahar merged.
+21. Pull request #180, Caribbean Stud for issue #132, released after Acey-Deucey merged.
 
 Each game pull request remains draft until the preceding game is accepted, the current branch is rebased onto the resulting `main`, and the game passes the complete integration gate below. A later game must not pre-allocate or edit the shared version values owned by an earlier game.
 
@@ -60,7 +61,8 @@ Existing games retain sort orders 10 through 60. The approved expansion slots ar
 | 230 | Plinko | #136 | Merged PR #175 |
 | 240 | Fan-Tan | #137 | Released draft PR #174 |
 | 250 | Andar Bahar | #140 | Released draft PR #173 |
-| 260 | Acey-Deucey | #149 | Released draft PR #172 |
+| 260 | Acey-Deucey | #149 | Merged PR #172 |
+| 270 | Caribbean Stud | #132 | Released draft PR #180 |
 
 Sort order is catalog presentation metadata, not an authorization to register a placeholder. Only complete game descriptors are loaded.
 
@@ -87,6 +89,7 @@ Permanent game blocks are reserved as follows:
 - `FAN-TAN-001` through `FAN-TAN-005` for the same five acceptance dimensions for Fan-Tan.
 - `AB-001` through `AB-005` for the same five acceptance dimensions for Andar Bahar.
 - `AD-001` through `AD-005` for the same five acceptance dimensions for Acey-Deucey.
+- `CS-001` through `CS-005` for the same five acceptance dimensions for Caribbean Stud.
 
 New entries begin as `PLANNED`. The integration owner changes an entry to `PASS` only when its mapped real-backend tests and visual evidence have passed. Requirement IDs are never reused or renumbered after allocation.
 
@@ -142,6 +145,7 @@ Each new game begins at module revision `1.0.0`. The packaged application releas
 | #174 Fan-Tan | 9.20.0 | 1.23.0 | 1.22.0 | 1.18.0 |
 | #173 Andar Bahar | 9.21.0 | 1.24.0 | 1.23.0 | 1.19.0 |
 | #172 Acey-Deucey | 9.22.0 | 1.25.0 | 1.24.0 | 1.20.0 |
+| #180 Caribbean Stud | 9.23.0 | 1.26.0 | 1.25.0 | 1.21.0 |
 
 These values are reservations, not permission to overwrite a newer value. The integrator must re-read current `main` immediately before each bump.
 
@@ -177,6 +181,7 @@ Required visual states are:
 - Fan-Tan: `ready`, `counting`, `settled`, `reduced_motion`, and `route_restored`.
 - Andar Bahar: `ready`, `settled`, `reduced_motion`, and `route_restored`.
 - Acey-Deucey: `ready`, `boundaries_dealt`, `settled`, `passed`, `reduced_motion`, and `route_restored`.
+- Caribbean Stud: `ready`, `decision`, `dealer_not_qualified`, `player_win`, `push`, `dealer_win`, `fold`, `reduced_motion`, and `route_restored`.
 
 ## Validation and listener gate
 

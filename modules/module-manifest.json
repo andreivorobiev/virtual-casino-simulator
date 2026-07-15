@@ -2,7 +2,7 @@
   "application": "9.1.1",
   "source_baseline": "9.1.0",
   "modules": {
-    "application": "9.22.0",
+    "application": "9.23.0",
     "core": "9.4.0",
     "ledger": "9.0.2",
     "players": "9.1.0",
@@ -35,9 +35,10 @@
     "fan_tan": "1.0.0",
     "andar_bahar": "1.0.0",
     "acey_deucey": "1.0.0",
-    "tests": "1.25.0",
-    "docs": "1.24.0",
-    "contracts": "1.20.0",
+    "caribbean_stud": "1.0.0",
+    "tests": "1.26.0",
+    "docs": "1.25.0",
+    "contracts": "1.21.0",
     "tooling": "1.3.0",
     "commenting_policy": "1.0.0"
   },

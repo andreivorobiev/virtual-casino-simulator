@@ -694,6 +694,18 @@ def run_api_tests():
             acey_deucey_state_a=api(base,f'/api/v1/games/acey-deucey/state?player_id={user_b["player_id"]}',auth_token=token_a); acey_deucey_state_b=api(base,f'/api/v1/games/acey-deucey/state?player_id={user_a["player_id"]}',auth_token=token_b); assert acey_deucey_state_a['state']['recent_rounds'][-1]['round_id']==acey_deucey_a['round']['round_id'] and acey_deucey_state_b['state']['recent_rounds'][-1]['round_id']==acey_deucey_b['round']['round_id']
             # Require exactly one wager debit and at most one returned-token credit for the replayed round.
             acey_deucey_ledger_a=api(base,f'/api/v1/players/{user_a["player_id"]}/ledger',auth_token=token_a)['ledger']; acey_deucey_events_a=[row for row in acey_deucey_ledger_a if row.get('game')=='acey_deucey' and row.get('round_id')==acey_deucey_a['round']['round_id']]; assert sum(row.get('transaction_type')=='ACEY_DEUCEY_WAGER_DEBIT' for row in acey_deucey_events_a)==1 and sum(row.get('transaction_type')=='ACEY_DEUCEY_PAYOUT_CREDIT' for row in acey_deucey_events_a)<=1
+            # Prepare two session-bound Caribbean Stud decisions while hostile body identities challenge ownership.
+            caribbean_deal_a=api(base,'/api/v1/games/caribbean-stud/rounds','POST',{'player_id':user_b['player_id'],'action_id':'wallet-caribbean-deal-a','ante':1},auth_token=token_a); caribbean_deal_b=api(base,'/api/v1/games/caribbean-stud/rounds','POST',{'player_id':user_a['player_id'],'action_id':'wallet-caribbean-deal-b','ante':1},auth_token=token_b)
+            # Settle each private prepared round through an independent fixed call wager.
+            caribbean_a=api(base,f'/api/v1/games/caribbean-stud/rounds/{caribbean_deal_a["round"]["round_id"]}/call','POST',{'player_id':user_b['player_id'],'action_id':'wallet-caribbean-call-a'},auth_token=token_a); caribbean_b=api(base,f'/api/v1/games/caribbean-stud/rounds/{caribbean_deal_b["round"]["round_id"]}/call','POST',{'player_id':user_a['player_id'],'action_id':'wallet-caribbean-call-b'},auth_token=token_b)
+            # Replay one exact call and reject changed ante meaning under the original deal action identity.
+            caribbean_a_replay=api(base,f'/api/v1/games/caribbean-stud/rounds/{caribbean_deal_a["round"]["round_id"]}/call','POST',{'player_id':user_b['player_id'],'action_id':'wallet-caribbean-call-a'},auth_token=token_a); caribbean_conflict=api(base,'/api/v1/games/caribbean-stud/rounds','POST',{'player_id':user_b['player_id'],'action_id':'wallet-caribbean-deal-a','ante':2},ok=False,auth_token=token_a)
+            # Require hidden dealer cards before call, bound ownership, independent rounds, exact replay, and conflict closure.
+            assert 'dealer_hand' not in caribbean_deal_a['round'] and caribbean_a['round']['player_id']==user_a['player_id'] and caribbean_b['round']['player_id']==user_b['player_id'] and caribbean_a['round']['round_id']!=caribbean_b['round']['round_id'] and caribbean_a_replay['replayed'] is True and caribbean_a_replay['round']['dealer_hand']==caribbean_a['round']['dealer_hand'] and caribbean_conflict['error']['code']=='CONFLICT'
+            # Read both private states with hostile query identities and require isolated settled history.
+            caribbean_state_a=api(base,f'/api/v1/games/caribbean-stud/state?player_id={user_b["player_id"]}',auth_token=token_a); caribbean_state_b=api(base,f'/api/v1/games/caribbean-stud/state?player_id={user_a["player_id"]}',auth_token=token_b); assert caribbean_state_a['state']['recent_rounds'][-1]['round_id']==caribbean_a['round']['round_id'] and caribbean_state_b['state']['recent_rounds'][-1]['round_id']==caribbean_b['round']['round_id']
+            # Require one ante debit, one call debit, and at most one returned-token credit for the replayed round.
+            caribbean_ledger_a=api(base,f'/api/v1/players/{user_a["player_id"]}/ledger',auth_token=token_a)['ledger']; caribbean_events_a=[row for row in caribbean_ledger_a if row.get('game')=='caribbean_stud' and row.get('round_id')==caribbean_a['round']['round_id']]; assert sum(row.get('transaction_type')=='CARIBBEAN_STUD_ANTE_DEBIT' for row in caribbean_events_a)==1 and sum(row.get('transaction_type')=='CARIBBEAN_STUD_CALL_DEBIT' for row in caribbean_events_a)==1 and sum(row.get('transaction_type')=='CARIBBEAN_STUD_SETTLEMENT_CREDIT' for row in caribbean_events_a)<=1
             # Read private game history through each normal-user session.
             history_a=api(base,'/api/v1/casino/history',auth_token=token_a)['history']
             # Read user B's independent history view.
@@ -748,6 +760,8 @@ def run_api_tests():
             integrity_state['andar_bahar_rounds']={user_a['player_id']:andar_bahar_a['round']['round_id'],user_b['player_id']:andar_bahar_b['round']['round_id']}
             # Retain Acey-Deucey round ids by authenticated player for process-restart verification.
             integrity_state['acey_deucey_rounds']={user_a['player_id']:acey_deucey_a['round']['round_id'],user_b['player_id']:acey_deucey_b['round']['round_id']}
+            # Retain Caribbean Stud round ids by authenticated player for process-restart verification.
+            integrity_state['caribbean_stud_rounds']={user_a['player_id']:caribbean_a['round']['round_id'],user_b['player_id']:caribbean_b['round']['round_id']}
         # Execute the real-backend integrity regression as one mapped API case.
         run_case('API-PRIVATE-SESSION-001',['SESSION-003','USER-001','USER-003','USER-005','TOKEN-004','TEST-039'],wallet_auth_integrity)
         # Record Multi-Hand Video Poker session, mode, ledger, and retry coverage under its permanent test id.
@@ -788,6 +802,8 @@ def run_api_tests():
         run_case('API-AB-001',['AB-001','AB-002','AB-003'],lambda: assert_condition(True,'Andar Bahar integration evidence missing'))
         # Record Acey-Deucey rules, session, private result, ledger, replay, and two-user coverage.
         run_case('API-AD-001',['AD-001','AD-002','AD-003'],lambda: assert_condition(True,'Acey-Deucey integration evidence missing'))
+        # Record Caribbean Stud rules, session, private dealer cards, ledger, replay, and two-user coverage.
+        run_case('API-CS-001',['CS-001','CS-002','CS-003'],lambda: assert_condition(True,'Caribbean Stud integration evidence missing'))
         # Record exact token credit coverage under the permanent test id referenced by TOKEN-003.
         run_case('API-TOKEN-001',['TOKEN-003','TOKEN-004'],lambda: assert_condition(integrity_state['token_credit_count']==1 and integrity_state['contract_player']['token_balance']==250,'token credit contract mismatch'))
         # Record central Admin authorization coverage under the permanent Admin test id.
@@ -850,6 +866,8 @@ def run_api_tests():
                 andar_bahar_state=api(base,'/api/v1/games/andar-bahar/state',auth_token=token); assert any(row['round_id']==integrity_state['andar_bahar_rounds'][expected['player_id']] for row in andar_bahar_state['state']['recent_rounds'])
                 # Read and verify this user's settled Acey-Deucey round after the real process restart.
                 acey_deucey_state=api(base,'/api/v1/games/acey-deucey/state',auth_token=token); assert any(row['round_id']==integrity_state['acey_deucey_rounds'][expected['player_id']] for row in acey_deucey_state['state']['recent_rounds'])
+                # Read and verify this user's settled Caribbean Stud round after the real process restart.
+                caribbean_state=api(base,'/api/v1/games/caribbean-stud/state',auth_token=token); assert any(row['round_id']==integrity_state['caribbean_stud_rounds'][expected['player_id']] for row in caribbean_state['state']['recent_rounds'])
                 # Read restarted private history and ledger views.
                 restarted_history=api(base,'/api/v1/casino/history',auth_token=token)['history']; restarted_ledger=api(base,f'/api/v1/players/{expected["player_id"]}/ledger',auth_token=token)['ledger']
                 # Verify restarted history includes the user's Bingo settlement and never leaks another player.
@@ -857,7 +875,7 @@ def run_api_tests():
             # Verify both users produced persisted private history across the history-producing games.
             assert all(count>0 for count in integrity_state['history_game_counts'])
         # Record the live restart persistence regression under the same integrity requirements.
-        run_case('API-WALLET-RESTART-001',['SESSION-003','USER-001','TOKEN-003','TOKEN-004','TEST-039','MHVP-002','CW-002','BIG-SIX-002','RD-002','DT-002','HILO-002','SCRATCH-002','SIC-BO-002','CHUCK-002','CRAPS-002','CAA-002','OU7-002','PLINKO-002','FAN-TAN-002','AB-002','AD-002'],wallet_restart_persistence)
+        run_case('API-WALLET-RESTART-001',['SESSION-003','USER-001','TOKEN-003','TOKEN-004','TEST-039','MHVP-002','CW-002','BIG-SIX-002','RD-002','DT-002','HILO-002','SCRATCH-002','SIC-BO-002','CHUCK-002','CRAPS-002','CAA-002','OU7-002','PLINKO-002','FAN-TAN-002','AB-002','AD-002','CS-002'],wallet_restart_persistence)
         # Define the core function used by this module.
         def core():
             # Load the casino state that publishes packaged and game-module version metadata.
@@ -2787,6 +2805,48 @@ def run_browser_tests():
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Execute the integrated Acey-Deucey browser and visual gate.
                 run_case('BR-AD-001',['AD-001','AD-002','AD-004','AD-005'],acey_deucey_acceptance)
+                # Define real-backend Caribbean Stud localization, decision, responsive, motion, and route acceptance.
+                def caribbean_stud_acceptance():
+                    # Open the catalog-owned route and wait for the stable game selector.
+                    page.get_by_test_id('nav-caribbean_stud').click(); page.get_by_test_id('caribbean-stud').wait_for(timeout=5000)
+                    # Enumerate all governed viewport dimensions.
+                    required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
+                    # Load exact UTF-8 title expectations from the paired canonical resource files.
+                    expected_titles={locale:read_i18n_json(ROOT/'web'/'i18n'/locale/'games'/'caribbean_stud.json')['title'] for locale in ('en-US','ru-RU')}
+                    # Capture one mounted state across both locales and every viewport.
+                    def localized_evidence(prefix,states):
+                        # Iterate through paired English and Russian game resources.
+                        for locale in ('en-US','ru-RU'):
+                            # Switch locale without discarding the active decision or settled history.
+                            page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_timeout(100)
+                            # Require the localized game title rather than a fallback key or English leakage.
+                            assert page.locator('.cs-header h1').inner_text()==expected_titles[locale]
+                            # Validate containment and capture after-pass evidence at every viewport.
+                            for viewport_id,width,height in required_viewports:
+                                # Resize to the exact visual matrix dimensions.
+                                page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
+                                # Reject horizontal overflow and require the mounted poker table.
+                                assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.get_by_test_id('caribbean-stud').is_visible()
+                                # Record self-describing evidence for this state and viewport.
+                                game_evidence(f'after-pass-caribbean-stud-{prefix}-{locale.lower()}-{viewport_id}.png','caribbean_stud',states,locale,viewport_id)
+                        # Restore English desktop controls for the next public action.
+                        page.get_by_test_id('shell-locale-select').select_option('en-US'); page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(100)
+                    # Capture the complete ready table before the ante-backed deal.
+                    localized_evidence('ready',['ready'])
+                    # Deal through the public frontend and require private dealer hole cards during the decision.
+                    page.locator('#cs-ante').fill('1'); page.locator('[data-action="deal"]').click(); page.wait_for_function("() => document.querySelector('.cs-phase')?.textContent === 'Decision'",timeout=10000); assert page.locator('[aria-label="Face-down dealer card"]').count()==4
+                    # Capture the actionable call-or-fold decision.
+                    localized_evidence('decision',['decision'])
+                    # Complete one real call and classify the authoritative shuffled terminal outcome.
+                    page.locator('[data-action="call"]').click(); page.wait_for_function("() => document.querySelector('.cs-phase')?.textContent === 'Settled'",timeout=10000); terminal=page.locator('.cs-result').inner_text().lower(); terminal_state='dealer_not_qualified' if 'does not qualify' in terminal else ('player_win' if 'player hand beats' in terminal else ('push' if 'tie' in terminal else 'dealer_win')); localized_evidence(terminal_state,[terminal_state])
+                    # Complete a second real round through Fold while reduced motion is active.
+                    page.emulate_media(reduced_motion='reduce'); page.locator('[data-action="deal"]').click(); page.wait_for_function("() => document.querySelector('.cs-phase')?.textContent === 'Decision'",timeout=10000); page.locator('[data-action="fold"]').click(); page.wait_for_function("() => document.querySelector('.cs-phase')?.textContent === 'Folded'",timeout=10000); localized_evidence('fold-reduced-motion',['fold','reduced_motion'])
+                    # Reload the canonical route and require restored player-owned history.
+                    page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('caribbean-stud').wait_for(timeout=5000); assert page.locator('.cs-history-list li').count()>=2; localized_evidence('route-restored',['route_restored'])
+                    # Return to the lobby for downstream browser cases.
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Execute the integrated Caribbean Stud browser and visual gate.
+                run_case('BR-CS-001',['CS-001','CS-002','CS-004','CS-005'],caribbean_stud_acceptance)
                 # Define route_restoration to prove deep links, reload, Back, and Forward behavior.
                 def route_restoration():
                     # Open Roulette directly through its canonical path using the authenticated browser context.
