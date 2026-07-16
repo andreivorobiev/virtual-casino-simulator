@@ -268,10 +268,13 @@ components:
           type: string
     SessionSummary:
       type: object
-      required: [session_id, issued_at, expires_at]
+      required: [session_id, csrf_token, issued_at, expires_at]
       properties:
         session_id:
           type: string
+        csrf_token:
+          type: string
+          description: Per-session anti-CSRF value returned only to the authenticated same-origin client.
         issued_at:
           type: string
           format: date-time

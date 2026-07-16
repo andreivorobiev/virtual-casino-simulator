@@ -6,14 +6,14 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.33.0
-- core: 9.9.0
+- application: 9.34.0
+- core: 9.10.0
 - ledger: 9.1.0
 - players: 9.1.0
 - bots: 1.1.0
 - autoplay: 1.1.1
 - audio: 9.1.1
-- admin: 1.5.0
+- admin: 1.6.0
 - operations: 1.0.0
 - roulette: 9.3.1
 - slots: 9.1.0
@@ -45,10 +45,10 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.0
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.37.0
-- docs: 1.36.0
-- contracts: 1.30.0
-- tooling: 1.8.0
+- tests: 1.38.0
+- docs: 1.37.0
+- contracts: 1.31.0
+- tooling: 1.9.0
 - commenting_policy: 1.0.0
 
 ## Requirements
@@ -621,3 +621,8 @@ Historical source baseline: 9.1.0
 - **TEST-044** (Tests) - PASS: Operations regression evidence covers anonymous and authenticated policy, healthy and degraded dependencies, Admin authorization, EN/RU responsive states, copied deployment, and listener cleanup.
 - **CORE-023** (Core) - PASS: A production WSGI adapter initializes from explicit external runtime configuration, serves the complete same-origin application without invoking the development HTTP server, and is supported only through a fixed-loopback supervised process policy.
 - **TEST-046** (Tests) - PASS: Production-service validation covers listener-free WSGI parity, sanitized probes, authorization propagation, malformed input, fail-closed external configuration, fixed-loopback policy, hardened supervision, clean extracted-release startup, graceful restart, persistence, failure handling, and exact listener closure.
+- **SEC-010** (Core) - PASS: Restricted-preview production requests require exact canonical Host and Origin values, one exact loopback trusted-proxy contract, per-session CSRF proof for every unsafe method, bounded bodies and client windows, hardened response headers, and secret-safe fixed-class security logging.
+- **SESSION-006** (Core) - PASS: Restricted-preview sessions use host-only Secure HttpOnly SameSite cookies, distinct per-session CSRF values, login rotation, bounded retention and lifetime, logout clearing, and revocation after privilege-bearing account changes.
+- **ADMIN-024** (Admin) - PASS: Admin HTML, JavaScript, and API surfaces require an active Admin session during restricted preview, and user privilege or status changes revoke existing sessions.
+- **AUTH-007** (Core) - PASS: Restricted preview exposes local-password login only; public signup and live OAuth authorization, callback, exchange, linking, SDK, and provider transport routes remain absent.
+- **TEST-047** (Tests) - PASS: Permanent restricted-preview evidence covers configuration failure, Host and proxy abuse, Origin and CSRF enforcement, session and privilege rotation, cookie and header policy, Admin and disabled-access boundaries, concurrency, capacity recovery, redacted logging, copied production behavior, and exact listener cleanup.

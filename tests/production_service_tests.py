@@ -39,6 +39,14 @@ class ProductionServiceTests(unittest.TestCase):
         environment["CASINO_BOOTSTRAP_ADMIN_EMAIL"] = "service-probe@example.invalid"
         # Supply a synthetic non-default child credential that is never printed.
         environment["CASINO_BOOTSTRAP_ADMIN_PASSWORD"] = "synthetic-service-probe-password"
+        # Supply the restricted-preview canonical origin through a reserved test domain.
+        environment["CASINO_CANONICAL_ORIGIN"] = "https://casino.example.invalid"
+        # Trust only the exact direct loopback proxy address.
+        environment["CASINO_TRUSTED_PROXY"] = "127.0.0.1"
+        # Enable the explicitly released restricted-preview security stage.
+        environment["CASINO_RESTRICTED_PREVIEW"] = "1"
+        # Use the strongest governed same-origin cookie mode.
+        environment["CASINO_SESSION_SAMESITE"] = "Strict"
         # Prevent child imports from writing bytecode into the exact checkout.
         environment["PYTHONDONTWRITEBYTECODE"] = "1"
         # Return the isolated mapping without changing the parent test process.

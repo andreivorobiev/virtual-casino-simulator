@@ -17,6 +17,9 @@ sys.path.insert(0, str(ROOT))
 # Import the already environment-validated production application under test.
 from casino.wsgi import application
 
+# Preserve the synthetic exact origin configured by the parent test.
+ORIGIN = "https://casino.example.invalid"
+
 
 # Call the WSGI adapter directly without creating any network listener.
 def request(method: str, path: str, body=None, headers=None, content_length=None):
@@ -34,6 +37,8 @@ def request(method: str, path: str, body=None, headers=None, content_length=None
         "QUERY_STRING": query_string,
         # Identify only the direct synthetic loopback peer.
         "REMOTE_ADDR": "127.0.0.1",
+        # Supply the exact configured authority required by the host-only cookie boundary.
+        "HTTP_HOST": "casino.example.invalid",
         # Supply a valid WSGI byte stream for body parsing.
         "wsgi.input": io.BytesIO(payload),
         # Declare the standard WSGI protocol version.
@@ -75,6 +80,16 @@ def request(method: str, path: str, body=None, headers=None, content_length=None
     return response
 
 
+# Extract one named Set-Cookie value from the direct response mapping.
+def response_cookie(response, name):
+    # Read the retained Set-Cookie scalar from this one-cookie bootstrap response.
+    value = response["headers"].get("Set-Cookie", "")
+    # Require the requested cookie to lead the response value.
+    assert value.startswith(name + "=")
+    # Return only the cookie scalar before attributes.
+    return value.split(";", 1)[0].split("=", 1)[1]
+
+
 # Exercise sanitized anonymous liveness and exact response headers.
 health = request("GET", "/healthz")
 # Require a successful HTTP status line.
@@ -90,8 +105,12 @@ health_payload = json.loads(health["body"].decode("utf-8"))
 # Require only the accepted sanitized live status inside the success envelope.
 assert health_payload == {"ok": True, "data": {"status": "live"}}
 
-# Authenticate with the synthetic test-only Admin supplied through the child environment.
-login = request("POST", "/api/v2/auth/login", {"email": "service-probe@example.invalid", "password": "synthetic-service-probe-password"})
+# Bootstrap one anonymous double-submit token through the packaged shell.
+bootstrap = request("GET", "/")
+# Extract the host-only CSRF cookie without using a browser store.
+csrf = response_cookie(bootstrap, "casino_csrf")
+# Authenticate with exact Origin and bootstrap CSRF proof.
+login = request("POST", "/api/v2/auth/login", {"email": "service-probe@example.invalid", "password": "synthetic-service-probe-password"}, headers={"Origin": ORIGIN, "Cookie": f"casino_csrf={csrf}", "X-CSRF-Token": csrf})
 # Require the canonical successful login status.
 assert login["status"] == "200 OK"
 # Extract the synthetic session token only inside this disposable child process.

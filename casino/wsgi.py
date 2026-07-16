@@ -18,9 +18,11 @@ from casino.app import ROUTER
 # Import production runtime and packaged-static configuration.
 from casino.config import APP_VERSION, WEB_DIR, validate_bootstrap_for_startup, validate_production_runtime
 # Import standard application errors for stable public envelopes.
-from casino.errors import CasinoError, ForbiddenError, ValidationError
+from casino.errors import CasinoError, ForbiddenError, RequestTooLargeError, ValidationError
 # Import authentication and application logging through the existing core boundaries.
 from casino.core import auth, logger, players
+# Import the complete restricted-preview request and response policy.
+from casino.core.security import CSRF_COOKIE, RateLimiter, SecurityPolicy, cookie_value, csrf_cookie_header, effective_request, new_csrf_token, response_security_headers, validate_request_integrity
 # Import provider-neutral bootstrap behavior for a fresh external runtime root.
 from casino.core.storage import bootstrap_players
 # Import persistent-directory initialization and legacy local-state migration.
@@ -30,6 +32,30 @@ from casino.core.state_store import ensure_dirs, migrate_from_v7_if_needed
 BODY_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 # Preserve the accepted probe paths outside the versioned API prefix.
 PROBE_PATHS = frozenset({"/healthz", "/readyz"})
+# Enumerate packaged Admin assets that share the Admin API authorization boundary.
+ADMIN_STATIC_PATHS = frozenset({"/admin", "/admin.html", "/admin.js", "/web/admin.js"})
+
+
+# Classify one request for secret-safe diagnostics without retaining path identifiers.
+def _route_class(method: str, path: str) -> str:
+    # Group both accepted probe paths under one bounded class.
+    if path in PROBE_PATHS:
+        # Return no probe name or path value.
+        return "probe"
+    # Group Admin API and packaged Admin assets under their shared authority boundary.
+    if path in ADMIN_STATIC_PATHS or path.startswith("/api/v1/admin/") or path.startswith("/api/v2/admin/"):
+        # Return only the fixed privilege class.
+        return "admin"
+    # Group all remaining versioned API paths without logging resource identifiers.
+    if path.startswith("/api/"):
+        # Return only the fixed API class.
+        return "api"
+    # Treat GET browser routes as packaged or shell-fallback static requests.
+    if method == "GET":
+        # Return only the fixed browser asset class.
+        return "static"
+    # Preserve a final fixed class for malformed non-GET routes.
+    return "unknown"
 
 
 # Convert one WSGI environment into the minimal case-preserving header mapping auth expects.
@@ -59,7 +85,7 @@ def _request_headers(environ: dict) -> dict:
 
 
 # Read one bounded-by-server JSON request body using the WSGI input stream.
-def _request_body(environ: dict, method: str) -> dict:
+def _request_body(environ: dict, method: str, max_body_bytes: int) -> dict:
     # Preserve empty bodies for read-only methods and bodyless mutations.
     if method not in BODY_METHODS:
         # Return a fresh mapping so route handlers may normalize it safely.
@@ -76,6 +102,10 @@ def _request_body(environ: dict, method: str) -> dict:
     if length < 0:
         # Preserve the same bounded public diagnostic used for non-numeric lengths.
         raise ValidationError("Content-Length must be a non-negative integer")
+    # Reject an oversized declaration before reading any client-controlled bytes.
+    if length > max_body_bytes:
+        # Return a fixed 413 response that does not disclose the declared size.
+        raise RequestTooLargeError()
     # Avoid reading from the server stream when no bytes were declared.
     if length == 0:
         # Return the same empty-body representation as the development adapter.
@@ -97,15 +127,13 @@ def _request_body(environ: dict, method: str) -> dict:
 
 
 # Construct one complete WSGI response with deterministic length and cache semantics.
-def _respond(start_response, status: int, payload: bytes, content_type: str, extra_headers=None):
+def _respond(start_response, status: int, payload: bytes, content_type: str, extra_headers=None, effective_scheme="http"):
     # Resolve the registered HTTP phrase or a generic fallback for a custom status.
     phrase = HTTPStatus(status).phrase if status in HTTPStatus._value2member_map_ else "Response"
     # Start with transport headers shared by static and API responses.
-    headers = [("Content-Type", content_type), ("Content-Length", str(len(payload)))]
-    # Prevent API and probe responses from being cached by intermediaries.
-    if content_type.startswith("application/json"):
-        # Match the existing no-store API contract.
-        headers.append(("Cache-Control", "no-store"))
+    headers = [("Content-Type", content_type), ("Content-Length", str(len(payload))), ("Cache-Control", "no-store")]
+    # Add the fixed browser policy, with HSTS only for trusted effective HTTPS requests.
+    headers.extend(response_security_headers(effective_scheme))
     # Append application-owned response headers such as session cookies unchanged.
     headers.extend(list(extra_headers or []))
     # Commit status and headers through the WSGI server before yielding bytes.
@@ -115,19 +143,45 @@ def _respond(start_response, status: int, payload: bytes, content_type: str, ext
 
 
 # Serialize one API envelope with stable formatting for parity with the local adapter.
-def _json_response(start_response, status: int, payload: dict, extra_headers=None):
+def _json_response(start_response, status: int, payload: dict, extra_headers=None, effective_scheme="http"):
     # Encode deterministic JSON bytes without exposing Python object representations.
     raw = json.dumps(payload, indent=2, sort_keys=True).encode("utf-8")
     # Return the response through the shared WSGI header builder.
-    return _respond(start_response, status, raw, "application/json; charset=utf-8", extra_headers)
+    return _respond(start_response, status, raw, "application/json; charset=utf-8", extra_headers, effective_scheme)
 
 
 # Initialize provider-neutral state once during production worker boot.
-def _initialize_runtime() -> None:
+def _validate_restricted_preview_routes() -> None:
+    # Require the public-route allowlist to remain exactly login plus sanitized liveness.
+    if auth.PUBLIC_API_PATHS != {"/api/v2/auth/login", "/healthz"}:
+        # Fail startup rather than allowing compatibility metadata to broaden public access.
+        raise RuntimeError("Restricted preview public routes do not match the accepted allowlist")
+    # Inspect registered method and pattern pairs without invoking any route.
+    for route in ROUTER.routes:
+        # Normalize the pattern only for fixed forbidden-route detection.
+        pattern = str(route.pattern).lower()
+        # Reject any signup or public registration route during restricted preview.
+        if "signup" in pattern or "/register" in pattern:
+            # Keep the diagnostic free of private route or configuration details.
+            raise RuntimeError("Restricted preview does not permit signup routes")
+        # Reject live OAuth action and callback routes while retaining the Admin diagnostic route.
+        if "/auth/oauth/" in pattern and "/admin/" not in pattern:
+            # Fail closed until the separately held public-launch provider gate.
+            raise RuntimeError("Restricted preview does not permit OAuth action routes")
+
+
+# Initialize provider-neutral state and return the validated production security policy.
+def _initialize_runtime() -> SecurityPolicy:
     # Require explicit production mode and mutable roots outside the immutable release.
     validate_production_runtime()
     # Apply the existing public bootstrap guard while the service remains loopback-bound.
     validate_bootstrap_for_startup("127.0.0.1")
+    # Validate bounded session lifetime before any identity or session state is created.
+    auth.validate_session_bounds()
+    # Require the explicit canonical origin, proxy, cookie, body, and rate policy.
+    policy = SecurityPolicy.from_environment()
+    # Prove signup and OAuth remain absent from the live route registry.
+    _validate_restricted_preview_routes()
     # Create only the configured external data and log directories.
     ensure_dirs()
     # Preserve the existing best-effort local JSON migration behavior outside release paths.
@@ -138,18 +192,28 @@ def _initialize_runtime() -> None:
     auth.bootstrap_admin_from_env()
     # Record sanitized process readiness without a host, address, or configuration value.
     logger.info("production_adapter_ready", version=APP_VERSION)
+    # Return the immutable policy for request handling after successful initialization.
+    return policy
 
 
 # Enforce the established authentication and player-resource boundary before route dispatch.
-def _authorize_request(method: str, path: str, body: dict, headers: dict, client: str) -> dict:
+def _authorize_request(method: str, path: str, body: dict, headers: dict, client: str, policy: SecurityPolicy) -> dict:
     # Create the route context without accepting proxy-authored client identity.
-    context = {"headers": headers, "client": client, "response_headers": []}
+    context = {"headers": headers, "client": client, "response_headers": [], "secure_cookie": True, "include_csrf_cookie": True, "session_samesite": policy.same_site}
     # Leave only the centrally declared public API and liveness routes anonymous.
     if auth.is_public_api_path(path):
+        # Require exact Origin plus the bootstrap double-submit token for public login.
+        validate_request_integrity(method, headers, policy)
         # Return the anonymous context before session lookup.
         return context
     # Authenticate the direct request headers through the canonical session service.
     session, user = auth.authenticate_headers(headers)
+    # Require a distinct per-session CSRF secret for every authenticated mutation.
+    validate_request_integrity(method, headers, policy, str(session.get("csrf_token") or ""))
+    # Keep restricted-preview access on manually provisioned local identities only.
+    if str(user.get("identity_provider") or "local").lower() != "local":
+        # Reject linked providers until the separately held public-launch gate.
+        raise ForbiddenError("Local invite access is required")
     # Publish the durable session to context-aware route handlers.
     context["session"] = session
     # Publish the authenticated user to authorization-aware route handlers.
@@ -189,43 +253,39 @@ class CasinoWSGIApplication:
     # Initialize runtime state during worker boot so invalid service configuration fails closed.
     def __init__(self):
         # Complete all provider-neutral startup work before accepting the first request.
-        _initialize_runtime()
+        self.policy = _initialize_runtime()
+        # Create one thread-safe in-worker limiter for non-probe preview traffic.
+        self.rate_limiter = RateLimiter(self.policy)
+        # Isolate bounded probe traffic so public clients cannot consume application allowances.
+        self.probe_rate_limiter = RateLimiter(self.policy)
 
     # Dispatch one API or probe request through the canonical router and envelope policy.
-    def _api(self, environ: dict, start_response, method: str, raw_path: str, path: str):
-        # Create a short correlation id without embedding process, host, or user identity.
-        request_id = os.urandom(4).hex()
-        # Start protected dispatch so all application failures become valid WSGI responses.
-        try:
-            # Decode only mutation bodies declared by the WSGI server.
-            body = _request_body(environ, method)
-            # Convert direct request headers without trusting forwarded client metadata.
-            headers = _request_headers(environ)
-            # Read the direct peer address supplied by the WSGI server.
-            client = str(environ.get("REMOTE_ADDR") or "")
-            # Apply the existing authentication and player-resource boundary.
-            context = _authorize_request(method, path, body, headers, client)
-            # Record only method and application path for bounded request diagnostics.
-            logger.info("api_request", request_id=request_id, method=method, path=raw_path)
-            # Dispatch the request through the single canonical route registry.
-            data = ROUTER.dispatch(method, raw_path, body, context)
-            # Return the standard successful API envelope and application response headers.
-            return _json_response(start_response, 200, {"ok": True, "data": data}, context.get("response_headers"))
-        # Convert every declared application error into its stable public response.
-        except CasinoError as exc:
-            # Record only the bounded application diagnostic already owned by the error type.
-            logger.warning("api_error", request_id=request_id, code=exc.code, message=exc.message, path=raw_path, details=exc.details)
-            # Preserve the current error envelope and status contract.
-            return _json_response(start_response, exc.status, {"ok": False, "error": {"code": exc.code, "message": exc.message, "details": exc.details}})
-        # Prevent unexpected exception text or configuration values from entering HTTP responses.
-        except Exception as exc:
-            # Retain the exception only in the external application log for operator diagnosis.
-            logger.error("api_exception", exc, request_id=request_id, path=raw_path)
-            # Return a generic message plus the bounded request id to the client.
-            return _json_response(start_response, 500, {"ok": False, "error": {"code": "INTERNAL_ERROR", "message": "Internal server error", "details": {"request_id": request_id}}})
+    def _api(self, environ: dict, start_response, method: str, raw_path: str, path: str, client: str, effective_scheme: str):
+        # Decode only mutation bodies within the externally configured bound.
+        body = _request_body(environ, method, self.policy.max_body_bytes)
+        # Convert request headers without assigning forwarding trust here.
+        headers = _request_headers(environ)
+        # Apply authentication, request integrity, invite, and Admin boundaries.
+        context = _authorize_request(method, path, body, headers, client, self.policy)
+        # Dispatch the request through the single canonical route registry.
+        data = ROUTER.dispatch(method, raw_path, body, context)
+        # Return the standard successful envelope with hardened cookies and response policy.
+        return _json_response(start_response, 200, {"ok": True, "data": data}, context.get("response_headers"), effective_scheme)
 
     # Serve one traversal-safe frontend asset from the extracted immutable release.
-    def _static(self, start_response, path: str):
+    def _static(self, environ: dict, start_response, path: str, effective_scheme: str):
+        # Convert request headers once for optional session and Admin checks.
+        headers = _request_headers(environ)
+        # Collect only application-owned cookie response headers.
+        extra_headers = []
+        # Require the same application Admin authority for HTML and JavaScript assets.
+        if path in ADMIN_STATIC_PATHS:
+            # Authenticate the host-only session cookie before reading an Admin asset.
+            session, user = auth.authenticate_headers(headers)
+            # Reject normal invite users before any Admin bytes are read.
+            auth.require_admin(user)
+            # Keep the Admin browser's double-submit value synchronized with its session.
+            extra_headers.append(csrf_cookie_header(session["csrf_token"], self.policy.same_site, True))
         # Map the same-origin application root to its packaged entry document.
         if path in ("", "/"):
             # Select the public frontend shell.
@@ -254,12 +314,36 @@ class CasinoWSGIApplication:
         if not target.is_file():
             # Select only the known packaged entry document.
             target = WEB_DIR / "index.html"
+        # Bootstrap a host-only CSRF cookie on every non-Admin HTML shell response.
+        if target.name == "index.html" and not extra_headers:
+            # Prefer an authenticated session's distinct CSRF value when a valid cookie exists.
+            bootstrap_token = ""
+            # Start protected optional authentication so an expired cookie still reaches login.
+            try:
+                # Authenticate only when the request actually carries a session credential.
+                if auth.extract_cookie_token(headers):
+                    # Resolve the durable session without exposing identity data.
+                    session, _user = auth.authenticate_headers(headers)
+                    # Reuse the current session CSRF value for authenticated browser requests.
+                    bootstrap_token = str(session.get("csrf_token") or "")
+            # Treat invalid or expired optional sessions as anonymous shell requests.
+            except CasinoError:
+                # Leave the bootstrap value empty so a fresh anonymous token is issued.
+                bootstrap_token = ""
+            # Reuse a bounded anonymous double-submit cookie when no session is active.
+            if not bootstrap_token:
+                # Read only the named cookie rather than reflecting the complete Cookie header.
+                existing = cookie_value(headers, CSRF_COOKIE)
+                # Accept only token-url-safe lengths generated by this application.
+                bootstrap_token = existing if 32 <= len(existing) <= 128 else new_csrf_token()
+            # Set or refresh the production Secure host-only double-submit cookie.
+            extra_headers.append(csrf_cookie_header(bootstrap_token, self.policy.same_site, True))
         # Read immutable asset bytes after containment and existence checks.
         content = target.read_bytes()
         # Derive a content type from the packaged asset name with a safe binary fallback.
         content_type = mimetypes.guess_type(str(target))[0] or "application/octet-stream"
         # Return the static asset without adding security policy owned by issue #203.
-        return _respond(start_response, 200, content, content_type)
+        return _respond(start_response, 200, content, content_type, extra_headers, effective_scheme)
 
     # Implement the WSGI callable consumed by the supervised Gunicorn process.
     def __call__(self, environ: dict, start_response):
@@ -271,12 +355,46 @@ class CasinoWSGIApplication:
         query = str(environ.get("QUERY_STRING") or "")
         # Reconstruct the router path exactly once using the WSGI query component.
         raw_path = path + ("?" + query if query else "")
-        # Route APIs, probes, and every non-GET request through application dispatch.
-        if path.startswith("/api/") or path in PROBE_PATHS or method != "GET":
-            # Return the canonical API response iterable.
-            return self._api(environ, start_response, method, raw_path, path)
-        # Serve browser assets only for GET requests outside the API and probe namespaces.
-        return self._static(start_response, path)
+        # Create a short correlation id without embedding process, host, or user identity.
+        request_id = os.urandom(4).hex()
+        # Classify the route before logging so raw client paths never enter diagnostics.
+        route_class = _route_class(method, path)
+        # Default to direct cleartext response policy until effective transport is validated.
+        effective_scheme = "http"
+        # Start protected dispatch so all security failures use stable secret-safe envelopes.
+        try:
+            # Resolve scheme and client only through server metadata and exact proxy policy.
+            effective = effective_request(environ, self.policy)
+            # Preserve trusted effective scheme for HSTS gating on every subsequent response.
+            effective_scheme = effective.scheme
+            # Apply a separate bounded probe policy with rotating client capacity for monitor availability.
+            if path in PROBE_PATHS:
+                # Bound each trusted effective client without consuming application allowances.
+                self.probe_rate_limiter.check(effective.client, rotate_capacity=True)
+            # Bound all application and browser traffic independently from probes.
+            else:
+                # Consume one application allowance keyed only by the trusted effective client.
+                self.rate_limiter.check(effective.client)
+            # Record only method and route class, never path, query, headers, body, or credentials.
+            logger.info("request_accepted", request_id=request_id, method=method, route_class=route_class)
+            # Route APIs, probes, and every non-GET request through application dispatch.
+            if path.startswith("/api/") or path in PROBE_PATHS or method != "GET":
+                # Return the canonical API response iterable.
+                return self._api(environ, start_response, method, raw_path, path, effective.client, effective.scheme)
+            # Serve browser assets only for GET requests outside the API and probe namespaces.
+            return self._static(environ, start_response, path, effective.scheme)
+        # Convert every declared application or security error into its stable public response.
+        except CasinoError as exc:
+            # Record only fixed request metadata and the bounded error code.
+            logger.warning("request_rejected", request_id=request_id, method=method, route_class=route_class, code=exc.code)
+            # Preserve the standard error envelope without request-derived details.
+            return _json_response(start_response, exc.status, {"ok": False, "error": {"code": exc.code, "message": exc.message, "details": {}}}, effective_scheme=effective_scheme)
+        # Prevent unexpected exception text, traceback values, or configuration from entering logs or responses.
+        except Exception:
+            # Record only the bounded correlation and normalized route identity.
+            logger.error("request_exception", request_id=request_id, method=method, route_class=route_class)
+            # Return a generic message plus the bounded request id to the client.
+            return _json_response(start_response, 500, {"ok": False, "error": {"code": "INTERNAL_ERROR", "message": "Internal server error", "details": {"request_id": request_id}}}, effective_scheme=effective_scheme)
 
 
 # Construct the single WSGI application object during Gunicorn worker import.

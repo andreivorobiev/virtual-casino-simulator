@@ -31,6 +31,10 @@ import zipfile
 
 # Reserve the user-owned local ports that this smoke must never bind or stop.
 PROTECTED_PORTS = frozenset({8765, 8877})
+# Use one synthetic reserved-domain origin for every copied-release request.
+CANONICAL_ORIGIN = "https://casino.example.invalid"
+# Preserve its exact authority independently from the private loopback transport URL.
+CANONICAL_AUTHORITY = "casino.example.invalid"
 
 
 # Parse the one immutable application archive supplied by the release driver.
@@ -77,6 +81,14 @@ def service_environment(runtime_root: pathlib.Path, port: int) -> dict:
     environment["CASINO_BOOTSTRAP_ADMIN_EMAIL"] = "service-smoke@example.invalid"
     # Supply a synthetic non-default credential that is never printed or persisted in evidence.
     environment["CASINO_BOOTSTRAP_ADMIN_PASSWORD"] = "synthetic-service-smoke-password"
+    # Supply the restricted-preview exact origin through a reserved test domain.
+    environment["CASINO_CANONICAL_ORIGIN"] = CANONICAL_ORIGIN
+    # Trust only the direct IPv4 loopback proxy peer.
+    environment["CASINO_TRUSTED_PROXY"] = "127.0.0.1"
+    # Enable the explicitly released restricted-preview stage.
+    environment["CASINO_RESTRICTED_PREVIEW"] = "1"
+    # Use the strict governed same-origin cookie mode.
+    environment["CASINO_SESSION_SAMESITE"] = "Strict"
     # Select the safe ephemeral port while the config fixes the listener interface to loopback.
     environment["CASINO_BIND_PORT"] = str(port)
     # Prevent extracted release bytecode writes during smoke execution.
@@ -116,21 +128,49 @@ def extract_release(archive_path: pathlib.Path, destination: pathlib.Path) -> pa
 
 
 # Send one JSON API request and return its decoded standard envelope.
-def api_request(base_url: str, path: str, method="GET", body=None, token=None) -> dict:
+def api_request(base_url: str, path: str, method="GET", body=None, token=None, csrf=None) -> dict:
     # Encode an optional request object as UTF-8 JSON.
     payload = None if body is None else json.dumps(body).encode("utf-8")
     # Start with the accepted request content type.
-    headers = {"Content-Type": "application/json"}
+    headers = {"Content-Type": "application/json", "Host": CANONICAL_AUTHORITY}
     # Add the disposable bearer token only to authenticated smoke requests.
     if token:
         # Keep the token inside the request object and out of diagnostics.
         headers["Authorization"] = f"Bearer {token}"
+    # Attach exact Origin and a distinct CSRF proof to every state-changing request.
+    if method in {"POST", "PUT", "PATCH", "DELETE"}:
+        # Require the caller to supply either a bootstrap or authenticated session CSRF value.
+        if not csrf:
+            # Fail inside the smoke without starting an unsafe mutation.
+            raise RuntimeError("production smoke mutation requires CSRF proof")
+        # Supply the exact configured Origin.
+        headers["Origin"] = CANONICAL_ORIGIN
+        # Supply the explicit CSRF proof header.
+        headers["X-CSRF-Token"] = csrf
+        # Supply the bootstrap double-submit cookie; authenticated requests are validated against session state.
+        headers["Cookie"] = f"casino_csrf={csrf}"
     # Construct the bounded same-origin loopback request.
     request = urllib.request.Request(base_url + path, data=payload, method=method, headers=headers)
     # Open the request with a short timeout so a failed worker cannot stall the gate.
     with urllib.request.urlopen(request, timeout=3) as response:
         # Decode the exact JSON envelope returned by the production process.
         return json.loads(response.read().decode("utf-8"))
+
+
+# Bootstrap one anonymous double-submit token without relying on Secure-cookie storage over loopback HTTP.
+def bootstrap_csrf(base_url: str) -> str:
+    # Request the packaged shell with the exact configured authority.
+    request = urllib.request.Request(base_url + "/", method="GET", headers={"Host": CANONICAL_AUTHORITY})
+    # Open the direct loopback request with the same bounded timeout as API calls.
+    with urllib.request.urlopen(request, timeout=3) as response:
+        # Read the one bootstrap Set-Cookie header without printing it.
+        cookie = response.headers.get("Set-Cookie", "")
+        # Require the expected host-only CSRF cookie.
+        if not cookie.startswith("casino_csrf="):
+            # Fail with a value-free diagnostic.
+            raise RuntimeError("production smoke did not receive a CSRF bootstrap cookie")
+        # Return only the cookie scalar before attributes.
+        return cookie.split(";", 1)[0].split("=", 1)[1]
 
 
 # Wait for sanitized liveness or fail when the tracked process exits or times out.
@@ -310,11 +350,15 @@ def main() -> int:
             # Start the clean extracted release through the supported production command.
             first = start_service(release_root, environment, base_url)
             # Authenticate the synthetic Admin through the production listener.
-            login = api_request(base_url, "/api/v2/auth/login", "POST", {"email": "service-smoke@example.invalid", "password": "synthetic-service-smoke-password"})
+            csrf = bootstrap_csrf(base_url)
+            # Authenticate with the exact bootstrap double-submit proof.
+            login = api_request(base_url, "/api/v2/auth/login", "POST", {"email": "service-smoke@example.invalid", "password": "synthetic-service-smoke-password"}, csrf=csrf)
             # Retain the disposable token only in memory for the mutation request.
             token = login["data"]["session"]["token"]
+            # Retain the distinct per-session CSRF value only in memory.
+            csrf = login["data"]["session"]["csrf_token"]
             # Add a deterministic play-token amount through the authenticated API.
-            updated = api_request(base_url, "/api/v2/me/tokens/add", "POST", {"amount": 7, "reason": "service_restart_smoke"}, token)
+            updated = api_request(base_url, "/api/v2/me/tokens/add", "POST", {"amount": 7, "reason": "service_restart_smoke"}, token, csrf)
             # Capture the resulting persistent balance for post-restart comparison.
             expected_balance = updated["data"]["balance"]
         # Stop the exact first child and prove listener closure on every path.
@@ -330,7 +374,9 @@ def main() -> int:
             # Restart from the same immutable release and external state root.
             second = start_service(release_root, environment, base_url)
             # Reauthenticate after restart so no in-memory session object is required.
-            login = api_request(base_url, "/api/v2/auth/login", "POST", {"email": "service-smoke@example.invalid", "password": "synthetic-service-smoke-password"})
+            csrf = bootstrap_csrf(base_url)
+            # Reauthenticate with a fresh anonymous bootstrap proof after restart.
+            login = api_request(base_url, "/api/v2/auth/login", "POST", {"email": "service-smoke@example.invalid", "password": "synthetic-service-smoke-password"}, csrf=csrf)
             # Retain the new disposable token only inside this process.
             token = login["data"]["session"]["token"]
             # Read the persisted current-user player record after restart.
