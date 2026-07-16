@@ -7,6 +7,8 @@ on:
       - 'web/**'
       - 'casino/**'
       - 'tests/browser/**'
+      - 'tests/progress.py'
+      - 'tests/test_progress.py'
       - 'tests/run_tests.py'
       - 'modules/module-manifest.json'
 jobs:
