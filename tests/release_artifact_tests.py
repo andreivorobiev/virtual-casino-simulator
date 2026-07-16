@@ -45,17 +45,19 @@ class ReleaseArtifactTests(unittest.TestCase):
             "casino/__init__.py": "\"\"\"Fixture package.\"\"\"\n",
             "casino/app.py": "\"\"\"Fixture app.\"\"\"\n\ndef main():\n    # Return without starting a listener.\n    return None\n",
             "casino/config.py": "\"\"\"Fixture config.\"\"\"\n\n# Expose the canonical fixture release.\nAPP_VERSION = \"9.2.0\"\n",
+            "casino/core/recovery.py": "\"\"\"Fixture recovery policy.\"\"\"\n\n# Expose the authenticated chunked recovery format.\nENCRYPTED_STREAM_SCHEMA = \"casino-aes-256-gcm-chunked-v1\"\n",
             "casino/wsgi.py": "\"\"\"Fixture production WSGI adapter.\"\"\"\n\n# Expose a non-listening fixture callable.\ndef application(environ, start_response):\n    # Return a valid empty response for fixture metadata only.\n    start_response('204 No Content', [('Content-Length', '0')])\n    # Yield no response body bytes.\n    return [b'']\n",
             "contracts/compatibility/app-9.2.0.json": "{\"app_version\": \"9.2.0\"}\n",
             "deploy/gunicorn.conf.py": "# Bind the fixture production policy to loopback only.\nbind = '127.0.0.1:8765'\n",
             "deploy/systemd/casino.service": "[Service]\n# Start only the fixture production adapter.\nExecStart=gunicorn casino.wsgi:application\n",
             "modules/module-manifest.json": json.dumps({"application": "9.2.0", "source_baseline": "9.1.0", "modules": {"tooling": "1.7.0"}}) + "\n",
-            "pyproject.toml": "[project]\nname = \"virtual-casino-simulator\"\nversion = \"9.2.0\"\nrequires-python = \">=3.10\"\ndependencies = [\"gunicorn>=23,<24\"]\n\n[project.optional-dependencies]\nmysql = [\"mysql-connector-python>=8.4\"]\n",
+            "pyproject.toml": "[project]\nname = \"virtual-casino-simulator\"\nversion = \"9.2.0\"\nrequires-python = \">=3.10\"\ndependencies = [\"gunicorn>=23,<24\"]\n\n[project.optional-dependencies]\nmysql = [\"mysql-connector-python>=8.4\"]\nrecovery = [\"cryptography>=46,<50\"]\n",
             "run.py": "# Import the fixture application entry point.\nfrom casino.app import main\n",
             "migrations/mysql/0001_initial.json": migration_one,
             "migrations/mysql/0002_action_identity.json": migration_two,
             "migrations/mysql/catalog.json": migration_catalog.replace("0002_upgrade.json", "0002_action_identity.json"),
             "scripts/mysql_migrate.py": "# Fixture deployment-only migration runner.\n",
+            "scripts/recovery.py": "# Fixture encrypted recovery runner.\n",
             "web/app.js": "// Fixture static application bundle.\n",
             "web/index.html": "<!doctype html><title>Fixture</title>\n",
         }
@@ -293,6 +295,8 @@ class ReleaseArtifactTests(unittest.TestCase):
         self.assertEqual((manifest["mysql_schema"]["minimum_version"], manifest["mysql_schema"]["expected_version"]), (2, 2))
         # Require both catalog and ordered migration chain checksums.
         self.assertRegex(manifest["mysql_schema"]["catalog_sha256"], r"^[0-9a-f]{64}$")
+        # Require the copied recovery tooling dependency to be represented in the release SBOM.
+        self.assertIn({"requirement": "cryptography>=46,<50", "scope": "optional:recovery"}, manifest["sbom"]["components"])
 
     # Prove repository workflow text keeps branch builds separate from immutable publication.
     def test_workflow_publication_is_fail_closed(self):
@@ -306,6 +310,12 @@ class ReleaseArtifactTests(unittest.TestCase):
         self.assertIn("github.ref_protected == true", workflow)
         # Require a separately enabled repository-level publication switch.
         self.assertIn("ENABLE_IMMUTABLE_RELEASE_PUBLISH", workflow)
+        # Require both candidate and publication smoke jobs to install the declared recovery extra.
+        self.assertEqual(workflow.count('python -m pip install ".[recovery]"'), 2)
+        # Read the canonical release driver that records exact validation provenance.
+        release_driver = (package_app.ROOT / "scripts" / "make_release.py").read_text(encoding="utf-8")
+        # Require focused #205 recovery evidence before any candidate can be packaged.
+        self.assertIn('"tests.recovery_tests"', release_driver)
         # Reject replacement semantics that would make existing release assets mutable.
         self.assertNotIn("--clobber", workflow)
 

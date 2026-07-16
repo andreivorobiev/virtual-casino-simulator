@@ -7,7 +7,7 @@ Historical source baseline: 9.1.0
 ## Independent module revisions
 
 - application: 9.35.0
-- core: 9.11.0
+- core: 9.12.0
 - ledger: 9.1.0
 - players: 9.1.0
 - bots: 1.1.0
@@ -45,10 +45,10 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.0
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.39.0
-- docs: 1.38.0
+- tests: 1.40.0
+- docs: 1.39.0
 - contracts: 1.31.0
-- tooling: 1.10.0
+- tooling: 1.11.0
 - commenting_policy: 1.0.0
 
 ## Requirements
@@ -629,3 +629,6 @@ Historical source baseline: 9.1.0
 - **MYSQL-005** (MySQL) - PASS: MySQL schema changes use an explicit contiguous checksum-bound migration catalog, a deployment-only identity, a named target lock, proof-gated pre-DDL state, and durable applying or dirty markers that never claim transactional DDL rollback.
 - **STORAGE-007** (Storage) - PASS: The MySQL runtime identity performs application SELECT and DML only, verifies the exact clean migration version and checksums with read-only statements before startup, and fails closed on missing, old, future, gapped, dirty, or altered schema state.
 - **TEST-048** (Tests) - PASS: Migration evidence covers immutable catalogs, full-proof and quiesce HMACs, SELECT-only inspection and dry-run, empty and supported upgrade paths, checksum/gap/future/dirty refusal, metadata and connection failure boundaries, advisory-lock serialization, DDL-free runtime grants, restart persistence, exact recheck, release provenance, and listener cleanup.
+- **MYSQL-006** (MySQL) - PASS: Logical MySQL recovery points are encrypted before leaving the source boundary, bind exact release and #204 schema provenance, and restore only into an independently authorized empty disposable target whose structural schema and representative persistence are verified.
+- **TOOL-004** (Tooling) - PASS: Recovery tooling streams logical output directly into independently authenticated AES-256-GCM chunks, requires destination-owned exact-byte acknowledgements, enforces bounded retention and age alerts, and fails closed with mandatory target quarantine after any partial restore failure.
+- **TEST-049** (Tests) - PASS: Recovery evidence covers exact signed allowlists, independent key roles, chunk and terminal tampering, stale and failed evidence, retention, age, computed RPO/RTO, backup acknowledgement ordering, encrypted staging, clean restore, timeout, partial emission, quarantine, cleanup failure, redaction, packaging, and listener closure.
