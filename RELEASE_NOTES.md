@@ -1,5 +1,12 @@
 # Virtual Casino Simulator v9.1.0 Release Notes
 
+## Post-release module addendum: hostile-client server authority
+
+- Adds a generated compatibility inventory for every state-changing action in all 29 currently registered games, with explicit intent, validation, outcome, storage/ledger, and response owners.
+- Strips client-authored privilege, wallet, RNG, result, payout, hidden-state, and round-control fields before game dispatch while preserving authenticated session precedence.
+- Removes the client-reachable Roulette forced-result seam and verifies hostile attempts receive a server-owned wheel outcome.
+- Adds catalog-wide API drift checks, browser wallet-tamper recovery, permanent `SEC-001` through `SEC-009` requirements, and links to existing two-user, restart, ledger, Admin, concurrency, and Long Suite evidence.
+
 ## Post-release module addendum: funded practice opponents
 
 - Allocates the three named bot player accounts as funded server-managed opponents for the held Texas Hold'em Practice Table proposal.

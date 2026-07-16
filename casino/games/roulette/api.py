@@ -221,7 +221,7 @@ def register(router):
         # Set zero_rule to the value needed for the next operation.
         zero_rule = state.get("zero_rule", "normal")
         # Set settled to the value needed for the next operation.
-        settled = engine.spin_state(state, body.get("force_result"))
+        settled = engine.spin_state(state)
         # Set settlements to the value needed for the next operation.
         settlements = []
         # Iterate through the collection to process each item.
