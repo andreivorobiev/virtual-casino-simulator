@@ -25,6 +25,8 @@ A root-managed environment file at `/etc/casino/casino.env` supplies runtime con
 - unique bootstrap Admin settings;
 - every credential required by the selected provider.
 
+Deployment-only `CASINO_MYSQL_MIGRATION_*` variables are never part of this file. The tracked unit unsets them defensively, and `docs/mysql_migrations.md` requires the operator to load them only for the proof-gated migration command and remove them before application startup.
+
 The environment file is not a release artifact, must never be committed, and should be readable only by the service manager. Secret values must not appear in the unit, process arguments, screenshots, test output, or release evidence.
 
 ## Supervised lifecycle
@@ -49,8 +51,8 @@ The adapter validates explicit production mode, external mutable roots, and non-
 6. protected ports `8765` and `8877` are never selected by the smoke harness;
 7. a configuration missing required external settings fails before worker readiness.
 
-MySQL restart persistence is deliberately deferred until issue #204 provides the explicit migration and DDL-free runtime schema gate. This packet performs no database or schema mutation. Issue #203 adds listener-free security proof without changing that hold.
+Issue #204 supplies the repository-only explicit migration and DDL-free runtime gate documented in `docs/mysql_migrations.md`. Application startup now performs a read-only exact-version and checksum check before bootstrap DML. The disposable MySQL 8.4 matrix proves restart persistence and runtime privilege denial, but this packet still performs no existing database, service, or schema mutation. A live apply remains held until the recovery and cutover gates release a target-specific packet.
 
 ## Application rollback boundary
 
-Rollback selects the retained predecessor by replacing `/opt/casino/current` atomically and restarting the supervised service. It does not edit the retained release, copy mutable data into a release, or change database schema. A rollback that requires schema reversal is prohibited until a separately approved migration and recovery packet supplies that evidence.
+Rollback selects the retained predecessor by replacing `/opt/casino/current` atomically and restarting the supervised service. It does not edit the retained release, copy mutable data into a release, or change database schema. The predecessor manifest must accept the already-applied MySQL migration version. If it does not, rollback is blocked; schema reversal remains prohibited without a separately approved migration and recovery packet.

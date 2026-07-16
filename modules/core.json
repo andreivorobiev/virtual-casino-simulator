@@ -1,6 +1,6 @@
 {
   "module": "core",
-  "version": "9.10.0",
+  "version": "9.11.0",
   "paths": [
     "casino/core/",
     "casino/app.py",
@@ -18,7 +18,9 @@
     "AUTH",
     "OAUTH",
     "SEC",
-    "SESSION"
+    "SESSION",
+    "MYSQL",
+    "STORAGE"
   ],
   "depends_on": []
 }

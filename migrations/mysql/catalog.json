@@ -1,0 +1,19 @@
+{
+  "schema": "casino-mysql-migration-catalog-v1",
+  "minimum_runtime_version": 2,
+  "expected_version": 2,
+  "migrations": [
+    {
+      "version": 1,
+      "name": "initial-storage-schema",
+      "file": "0001_initial.json",
+      "sha256": "f54c288ef95f2df274f6873936969c0d9207ff6f4e1329fe43c3f79cd91e0121"
+    },
+    {
+      "version": 2,
+      "name": "ledger-action-identity",
+      "file": "0002_action_identity.json",
+      "sha256": "c3bf013483a00bddd13cf7a9b3666ea029a0f447e7a04f6dbfa7f9074103c828"
+    }
+  ]
+}

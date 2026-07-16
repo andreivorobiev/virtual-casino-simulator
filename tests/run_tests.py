@@ -24,6 +24,8 @@ from casino import config as casino_config
 from casino.core.request_player import resolve_authenticated_player
 # Import storage tests so provider parity can run without the broad API suite.
 from tests import storage_tests
+# Import listener-free migration policy tests for every storage validation run.
+from tests import mysql_migration_tests
 # Import the current-catalog hostile-client certification entrypoint.
 from tests.server_authority_tests import run_server_authority_tests
 # Import the reusable flushed reporter for TEST-010 browser execution.
@@ -194,7 +196,17 @@ def assert_condition(value, message):
     assert value, message
 
 # Define the run_storage_tests function used by this module.
-def run_storage_tests(include_live=False):
+def run_storage_tests(include_live=False, include_migration_live=False):
+    # Define one focused unittest runner for checksum, proof, failure, and SELECT-only policy.
+    def run_mysql_migration_policy_tests():
+        # Load only the #204 migration test case.
+        suite=unittest.defaultTestLoader.loadTestsFromTestCase(mysql_migration_tests.MySQLMigrationTests)
+        # Execute with concise standard output.
+        result=unittest.TextTestRunner(stream=sys.stdout,verbosity=1).run(suite)
+        # Fail the named central case when any focused assertion failed.
+        if not result.wasSuccessful(): raise AssertionError('MySQL migration policy suite failed')
+    # Map the listener-free policy suite to the permanent migration requirements.
+    run_case('MYSQL-MIGRATION-001',['MYSQL-005','STORAGE-007','TEST-048'],run_mysql_migration_policy_tests)
     # Execute the JSON fallback parity test for provider-backed players, ledger, history, and settings.
     run_case('STORAGE-JSON-001',['CORE-017','LEDGER-001','LEDGER-007','TEST-030'],storage_tests.run_json_provider_parity)
     # Execute storage-enforced replay, conflict, restart, and cross-process JSON action tests.
@@ -207,6 +219,12 @@ def run_storage_tests(include_live=False):
     if include_live:
         # Map the live integration case to the durable storage and MySQL requirements.
         run_case('STORAGE-MYSQL-LIVE-001',['STORAGE-001','STORAGE-002','STORAGE-003','STORAGE-004','STORAGE-005','STORAGE-006','MYSQL-001','MYSQL-002','MYSQL-003','MYSQL-004','TEST-038','TEST-043'],storage_tests.run_mysql_live_provider_path)
+    # Execute the newly created disposable MySQL 8.4 gate only when explicitly requested.
+    if include_migration_live:
+        # Import the service-dependent matrix only after the disposable selector is explicit.
+        from tests.mysql_migration_live import run_mysql_migration_live_matrix
+        # Map clean bootstrap, upgrade, refusal, restart, grants, and lock evidence.
+        run_case('MYSQL-MIGRATION-LIVE-001',['MYSQL-005','STORAGE-007','TEST-048'],run_mysql_migration_live_matrix)
 
 # Define the read_i18n_json function used by this module.
 def read_i18n_json(path):
@@ -4201,6 +4219,8 @@ def main():
     ap.add_argument('--storage',action='store_true')
     # Preserve the existing live MySQL selector.
     ap.add_argument('--mysql-live',action='store_true')
+    # Add the explicit disposable MySQL 8.4 migration selector.
+    ap.add_argument('--mysql-migrations-live',action='store_true')
     # Configure heartbeat cadence while enforcing the public sixty-second maximum below.
     ap.add_argument('--heartbeat-seconds',type=float,default=45.0)
     # Configure the non-failing no-progress warning threshold.
@@ -4216,11 +4236,11 @@ def main():
     # Reject non-positive real suite timeouts.
     if args.timeout_seconds<=0: ap.error('--timeout-seconds must be greater than 0')
     # Branch when the following condition is true.
-    if not args.api and not args.browser and not args.storage and not args.mysql_live: args.api=True
+    if not args.api and not args.browser and not args.storage and not args.mysql_live and not args.mysql_migrations_live: args.api=True
     # Start protected logic so failures can be handled safely.
     try:
         # Branch when the following condition is true.
-        if args.storage or args.mysql_live: run_storage_tests(include_live=args.mysql_live)
+        if args.storage or args.mysql_live or args.mysql_migrations_live: run_storage_tests(include_live=args.mysql_live,include_migration_live=args.mysql_migrations_live)
         # Branch when the following condition is true.
         if args.api: run_api_tests()
         # Branch when the following condition is true.

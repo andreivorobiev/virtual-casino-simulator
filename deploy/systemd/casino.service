@@ -19,6 +19,8 @@ Group=casino
 WorkingDirectory=/opt/casino/current
 # Read secrets and runtime configuration from a root-managed external file.
 EnvironmentFile=/etc/casino/casino.env
+# Remove deployment-only migration target and credential values from the application process.
+UnsetEnvironment=CASINO_MYSQL_MIGRATION_HOST CASINO_MYSQL_MIGRATION_PORT CASINO_MYSQL_MIGRATION_USER CASINO_MYSQL_MIGRATION_PASSWORD CASINO_MYSQL_MIGRATION_DATABASE CASINO_MYSQL_MIGRATION_TARGET_BINDING_KEY
 # Prevent Python cache writes inside the immutable release directory.
 Environment=PYTHONDONTWRITEBYTECODE=1
 # Flush process diagnostics directly to the supervisor-owned stream.

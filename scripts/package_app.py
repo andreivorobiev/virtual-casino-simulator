@@ -40,7 +40,7 @@ ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
 # Accept only full lowercase or uppercase Git object identifiers in provenance.
 COMMIT_RE = re.compile(r"^[0-9a-fA-F]{40}$")
 # Allow only the runtime and audit roots required by the application artifact.
-ALLOWED_PREFIXES = ("casino/", "contracts/", "deploy/", "modules/", "web/")
+ALLOWED_PREFIXES = ("casino/", "contracts/", "deploy/", "migrations/", "modules/", "web/")
 # Allow only deployable top-level files rather than repository governance content.
 ALLOWED_FILES = {
     "ARCHITECTURE.md",
@@ -50,7 +50,7 @@ ALLOWED_FILES = {
     "RELEASE_NOTES.md",
     "pyproject.toml",
     "run.py",
-    "scripts/mysql_schema.sql",
+    "scripts/mysql_migrate.py",
 }
 # Reject runtime, private, generated, test, and local-evidence directories anywhere.
 FORBIDDEN_PARTS = {
@@ -80,7 +80,10 @@ REQUIRED_FILES = {
     "modules/module-manifest.json",
     "pyproject.toml",
     "run.py",
-    "scripts/mysql_schema.sql",
+    "migrations/mysql/0001_initial.json",
+    "migrations/mysql/0002_action_identity.json",
+    "migrations/mysql/catalog.json",
+    "scripts/mysql_migrate.py",
     "web/app.js",
     "web/index.html",
 }
@@ -249,6 +252,63 @@ def project_inventory(root):
     }
 
 
+# Return checksum-verified MySQL schema compatibility for release provenance.
+def mysql_schema_inventory(root):
+    # Resolve the canonical migration catalog inside the selected source tree.
+    catalog_path = root / "migrations" / "mysql" / "catalog.json"
+    # Read exact catalog bytes for release binding.
+    catalog_bytes = catalog_path.read_bytes()
+    # Parse expected/minimum versions and immutable migration rows.
+    catalog = json.loads(catalog_bytes.decode("utf-8"))
+    # Require the reviewed catalog format.
+    if catalog.get("schema") != "casino-mysql-migration-catalog-v1":
+        # Reject an unknown migration provenance format.
+        raise ValueError("MySQL migration catalog format is unsupported")
+    # Parse exact runtime compatibility independently of application schema metadata.
+    expected = int(catalog.get("expected_version", -1))
+    # Parse the minimum compatible MySQL migration version.
+    minimum = int(catalog.get("minimum_runtime_version", -1))
+    # Require the restricted-preview exact-only compatibility window.
+    if expected < 1 or minimum != expected:
+        # Refuse drift between runtime and release schema expectations.
+        raise ValueError("MySQL migration compatibility window is invalid")
+    # Accumulate the exact migration identity chain.
+    rows = []
+    # Verify every catalog row and referenced tracked file.
+    for index, row in enumerate(catalog.get("migrations", []), start=1):
+        # Require contiguous order and exact expected tail.
+        if int(row.get("version", -1)) != index:
+            # Reject gapped release provenance.
+            raise ValueError("MySQL migration catalog is not contiguous")
+        # Accept only one catalog-directory basename matching its numeric version.
+        if not re.fullmatch(rf"{index:04d}_[a-z0-9_]+\.json", str(row.get("file", ""))):
+            # Reject traversal and mismatched file identity.
+            raise ValueError("MySQL migration filename is invalid")
+        # Read exact migration bytes beside the catalog.
+        payload = (catalog_path.parent / str(row.get("file", ""))).read_bytes()
+        # Require the file checksum to match immutable catalog metadata.
+        if row.get("sha256") != sha256_bytes(payload):
+            # Reject edited migration files before packaging.
+            raise ValueError("MySQL migration checksum does not match the catalog")
+        # Retain only version, stable name, and exact checksum.
+        rows.append([index, str(row.get("name", "")), str(row["sha256"])])
+    # Require the expected version to match the final migration exactly.
+    if len(rows) != expected:
+        # Refuse incomplete migration packaging.
+        raise ValueError("MySQL migration catalog tail does not match expected version")
+    # Return a deterministic public schema record with no connection details.
+    return {
+        # Bind exact catalog bytes.
+        "catalog_sha256": sha256_bytes(catalog_bytes),
+        # Record the exact schema expected by this release.
+        "expected_version": expected,
+        # Record the minimum compatible schema independently.
+        "minimum_version": minimum,
+        # Bind the complete ordered migration chain.
+        "migration_chain_sha256": sha256_bytes(json.dumps(rows, separators=(",", ":"), ensure_ascii=True).encode("utf-8")),
+    }
+
+
 # Convert an optional prior manifest into application-only rollback provenance.
 def rollback_provenance(previous_manifest, current_version):
     # Block immutable promotion when no retained prior artifact was supplied.
@@ -342,6 +402,8 @@ def build_release(root, dist, repository_paths, commit_sha, commit_epoch, releas
     project = project_inventory(root)
     # Load the aggregate module manifest used by runtime and release policy.
     modules = json.loads((root / "modules" / "module-manifest.json").read_text(encoding="utf-8"))
+    # Load checksum-verified MySQL schema compatibility for this exact source tree.
+    mysql_schema = mysql_schema_inventory(root)
     # Require package metadata and the canonical packaged release to agree.
     if project["version"] != modules["application"]:
         # Stop before an artifact could carry divergent application versions.
@@ -386,6 +448,7 @@ def build_release(root, dist, repository_paths, commit_sha, commit_epoch, releas
         },
         "files": inventory,
         "modules": modules,
+        "mysql_schema": mysql_schema,
         "promotion": {
             "immutable_publication_eligible": bool(release_tag and rollback["eligible"]),
             "required_event": "published release on a protected canonical version tag",
@@ -507,6 +570,63 @@ def verify_release(archive_path, manifest_path, expected_commit=None, expected_t
             if sha256_bytes(payload) != expected_members[member.filename]["sha256"]:
                 # Detect any substituted packaged file.
                 raise ValueError("release archive member checksum does not match manifest")
+        # Read the already authenticated migration catalog from the archive.
+        catalog_member = f"{ARCHIVE_ROOT}/migrations/mysql/catalog.json"
+        # Parse exact packaged catalog bytes.
+        catalog_bytes = archive.read(catalog_member)
+        # Decode the reviewed migration catalog.
+        catalog = json.loads(catalog_bytes.decode("utf-8"))
+        # Require the accepted catalog format.
+        if catalog.get("schema") != "casino-mysql-migration-catalog-v1":
+            # Reject substituted schema metadata.
+            raise ValueError("release MySQL migration catalog format is unsupported")
+        # Parse packaged exact and minimum versions before trusting manifest values.
+        packaged_expected = int(catalog.get("expected_version", -1))
+        # Parse the independent minimum runtime-compatible version.
+        packaged_minimum = int(catalog.get("minimum_runtime_version", -1))
+        # Require the reviewed exact-only compatibility window.
+        if packaged_expected < 1 or packaged_minimum != packaged_expected:
+            # Reject a coherently re-signed but unsupported compatibility range.
+            raise ValueError("release MySQL migration compatibility window is invalid")
+        # Collect exact packaged migration identities.
+        rows = []
+        # Verify every catalog checksum against authenticated archive bytes.
+        for index, row in enumerate(catalog.get("migrations", []), start=1):
+            # Require contiguous packaged migration versions.
+            if int(row.get("version", -1)) != index:
+                # Reject gapped packaged schema provenance.
+                raise ValueError("release MySQL migration catalog is not contiguous")
+            # Accept only a basename tied to the contiguous numeric version.
+            if not re.fullmatch(rf"{index:04d}_[a-z0-9_]+\.json", str(row.get("file", ""))):
+                # Reject traversal or mismatched migration members.
+                raise ValueError("release MySQL migration filename is invalid")
+            # Read the exact catalog-selected migration member.
+            migration_payload = archive.read(f"{ARCHIVE_ROOT}/migrations/mysql/{row['file']}")
+            # Require catalog and packaged migration checksums to agree.
+            if row.get("sha256") != sha256_bytes(migration_payload):
+                # Reject an internally inconsistent schema artifact.
+                raise ValueError("release MySQL migration checksum is invalid")
+            # Retain the exact ordered migration identity.
+            rows.append([index, str(row.get("name", "")), str(row["sha256"])])
+        # Require the catalog tail to match the expected version exactly.
+        if len(rows) != packaged_expected:
+            # Reject a coherent manifest and catalog with an incomplete tail.
+            raise ValueError("release MySQL migration catalog tail does not match expected version")
+        # Build the schema provenance implied by packaged bytes.
+        packaged_schema = {
+            # Bind exact packaged catalog bytes.
+            "catalog_sha256": sha256_bytes(catalog_bytes),
+            # Preserve the catalog's exact version.
+            "expected_version": packaged_expected,
+            # Preserve the catalog's minimum version.
+            "minimum_version": packaged_minimum,
+            # Bind the complete ordered packaged chain.
+            "migration_chain_sha256": sha256_bytes(json.dumps(rows, separators=(",", ":"), ensure_ascii=True).encode("utf-8")),
+        }
+        # Require the external manifest to match packaged catalog and migrations exactly.
+        if manifest.get("mysql_schema") != packaged_schema:
+            # Reject divergent release schema expectations.
+            raise ValueError("release manifest MySQL schema provenance does not match archive")
         # Run smoke only after every path and byte has been authenticated.
         if smoke:
             # Create a disposable clean target outside the repository and user runtime data.

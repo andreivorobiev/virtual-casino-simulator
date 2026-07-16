@@ -30,6 +30,8 @@ from casino.config import DATA_DIR, DEFAULT_MYSQL_DATABASE, DEFAULT_MYSQL_HOST, 
 from casino.core.clock import utc_now
 # Import required dependency so provider-created ledger rows use stable IDs.
 from casino.core.ids import new_id
+# Import read-only MySQL migration compatibility without exposing deployment credentials.
+from casino.core.mysql_migrations import verify_runtime_compatibility
 # Import required dependency so storage providers surface existing API errors.
 from casino.errors import ConflictError, InsufficientFundsError, NotFoundError, ValidationError
 
@@ -711,9 +713,9 @@ class MySQLStorageProvider(StorageProvider):
     def __init__(self, config: MySQLConfig | None = None) -> None:
         # Store the connection configuration without opening a connection yet.
         self.config = config or MySQLConfig.from_env()
-        # Track whether this process has already verified and versioned the schema.
+        # Track whether this process has completed exact read-only schema compatibility verification.
         self._ready = False
-        # Serialize first-use schema bootstrap across concurrent request threads.
+        # Serialize first-use compatibility verification across concurrent request threads.
         self._ready_lock = threading.RLock()
 
     # Import mysql.connector only when the MySQL provider is selected.
@@ -736,142 +738,29 @@ class MySQLStorageProvider(StorageProvider):
         # Return a new DB-API connection for one provider operation.
         return self._connector().connect(**connection_options)
 
-    # Return the SQL statements that create the provider schema.
-    @staticmethod
-    def schema_statements() -> list[str]:  # Return schema DDL in dependency order.
-        # Return schema statements in dependency order for fresh databases.
-        return [
-            # Create the schema-version table used to prove bootstrap compatibility.
-            """
-            CREATE TABLE IF NOT EXISTS casino_schema_versions (
-              component VARCHAR(64) PRIMARY KEY,
-              schema_version VARCHAR(32) NOT NULL,
-              applied_at VARCHAR(64) NOT NULL
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-            """,
-            # Create the players table that owns wallet balances.
-            """
-            CREATE TABLE IF NOT EXISTS casino_players (
-              player_id VARCHAR(64) PRIMARY KEY,
-              display_name VARCHAR(255) NOT NULL,
-              player_type VARCHAR(32) NOT NULL,
-              balance DECIMAL(18,2) NOT NULL,
-              created_at VARCHAR(64) NOT NULL,
-              updated_at VARCHAR(64) NOT NULL,
-              status VARCHAR(32) NOT NULL
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-            """,
-            # Create the ledger table that stores append-only wallet events.
-            """
-            CREATE TABLE IF NOT EXISTS casino_ledger (
-              sequence_id BIGINT AUTO_INCREMENT PRIMARY KEY,
-              ledger_id VARCHAR(64) NOT NULL UNIQUE,
-              ts VARCHAR(64) NOT NULL,
-              player_id VARCHAR(64) NOT NULL,
-              game VARCHAR(64) NULL,
-              round_id VARCHAR(128) NULL,
-              transaction_type VARCHAR(128) NOT NULL,
-              amount DECIMAL(18,2) NOT NULL,
-              balance_before DECIMAL(18,2) NOT NULL,
-              balance_after DECIMAL(18,2) NOT NULL,
-              action_scope VARCHAR(64) NOT NULL DEFAULT '',
-              action_key VARCHAR(191) NULL,
-              action_fingerprint VARCHAR(128) NULL,
-              details_json JSON NOT NULL,
-              INDEX idx_casino_ledger_player_sequence (player_id, sequence_id),
-              UNIQUE INDEX uq_casino_ledger_action (player_id, action_scope, action_key),
-              CONSTRAINT fk_casino_ledger_player FOREIGN KEY (player_id) REFERENCES casino_players(player_id)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-            """,
-            # Create the history table used by game settlement summaries.
-            """
-            CREATE TABLE IF NOT EXISTS casino_history (
-              sequence_id BIGINT AUTO_INCREMENT PRIMARY KEY,
-              timestamp VARCHAR(64) NOT NULL,
-              game VARCHAR(64) NOT NULL,
-              round_id VARCHAR(128) NOT NULL,
-              player_id VARCHAR(64) NOT NULL,
-              bet_type VARCHAR(128) NOT NULL,
-              bet_label VARCHAR(255) NOT NULL,
-              amount DECIMAL(18,2) NOT NULL,
-              outcome VARCHAR(128) NOT NULL,
-              payout DECIMAL(18,2) NOT NULL,
-              balance_after DECIMAL(18,2) NOT NULL,
-              details_json JSON NOT NULL,
-              schema_version VARCHAR(32) NOT NULL,
-              INDEX idx_casino_history_game_sequence (game, sequence_id)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-            """,
-            # Create a small JSON document table for settings such as audio controls.
-            """
-            CREATE TABLE IF NOT EXISTS casino_documents (
-              document_key VARCHAR(191) PRIMARY KEY,
-              payload_json JSON NOT NULL,
-              updated_at VARCHAR(64) NOT NULL
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-            """,
-        ]
-
-    # Ensure the MySQL schema exists before reads and writes.
+    # Verify the exact MySQL migration state before reads and writes.
     def ensure_ready(self) -> None:
-        # Return immediately after this provider instance has completed bootstrap.
+        # Return immediately after this provider instance has completed a read-only compatibility check.
         if self._ready:
-            # Avoid repeating DDL on every document or game-state operation.
+            # Avoid repeating metadata reads on every document or game-state operation.
             return
-        # Serialize the first schema check so request threads do not race DDL.
+        # Serialize the first schema check so request threads share one verified state.
         with self._ready_lock:
-            # Return when another thread completed bootstrap while this thread waited.
+            # Return when another thread completed verification while this thread waited.
             if self._ready:
-                # Reuse the schema readiness established by the winning thread.
+                # Reuse the schema compatibility established by the winning thread.
                 return
-            # Open a connection for schema creation.
+            # Open a runtime-identity connection for SELECT-only compatibility verification.
             connection = self.connect()
-            # Start protected schema setup so the connection is always closed.
+            # Start protected schema verification so the connection is always closed.
             try:
-                # Open a cursor for DDL statements.
-                cursor = connection.cursor()
-                # Execute each schema statement in dependency order.
-                for statement in self.schema_statements():
-                    # Create the table or leave the existing compatible table in place.
-                    cursor.execute(statement)
-                # Inspect ledger columns so pre-#190 databases receive an additive migration.
-                cursor.execute("SHOW COLUMNS FROM casino_ledger")
-                # Collect existing column names from tuple rows returned by the default cursor.
-                ledger_columns = {row[0] for row in cursor.fetchall()}
-                # Add the non-null action namespace when upgrading an existing ledger table.
-                if "action_scope" not in ledger_columns:
-                    # Add a compatible default so historical rows remain readable.
-                    cursor.execute("ALTER TABLE casino_ledger ADD COLUMN action_scope VARCHAR(64) NOT NULL DEFAULT '' AFTER balance_after")
-                # Add the nullable action key because historical rows have no safe identity to infer.
-                if "action_key" not in ledger_columns:
-                    # Preserve all existing non-idempotent rows with a null action key.
-                    cursor.execute("ALTER TABLE casino_ledger ADD COLUMN action_key VARCHAR(191) NULL AFTER action_scope")
-                # Add the semantic digest used to reject changed action-key reuse.
-                if "action_fingerprint" not in ledger_columns:
-                    # Preserve historical rows with a null digest because their semantics cannot be reconstructed safely.
-                    cursor.execute("ALTER TABLE casino_ledger ADD COLUMN action_fingerprint VARCHAR(128) NULL AFTER action_key")
-                # Backfill only the safe namespace projection for historical ledger rows.
-                cursor.execute("UPDATE casino_ledger SET action_scope = COALESCE(NULLIF(game, ''), 'core') WHERE action_scope = ''")
-                # Inspect existing indexes before adding the storage uniqueness constraint.
-                cursor.execute("SHOW INDEX FROM casino_ledger WHERE Key_name = 'uq_casino_ledger_action'")
-                # Consume every indexed-column row so mysql.connector has no unread result.
-                action_index_rows = cursor.fetchall()
-                # Add the unique provider index when upgrading a pre-#190 database.
-                if not action_index_rows:
-                    # Enforce one action key per player and game-or-core namespace at storage level.
-                    cursor.execute("CREATE UNIQUE INDEX uq_casino_ledger_action ON casino_ledger (player_id, action_scope, action_key)")
-                # Record the active application schema after all compatible tables exist.
-                cursor.execute(
-                    "INSERT INTO casino_schema_versions (component, schema_version, applied_at) VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE schema_version = VALUES(schema_version), applied_at = VALUES(applied_at)",  # Upsert the provider schema marker.
-                    ("casino", SCHEMA_VERSION, utc_now()),  # Bind the stable component and current schema version.
-                )
-                # Commit schema creation before returning to callers.
-                connection.commit()
-                # Mark this provider ready only after the schema transaction commits.
+                # Fail closed on missing, old, future, dirty, gapped, or checksum-mismatched state.
+                verify_runtime_compatibility(connection)
+                # Mark this provider ready only after exact read-only verification.
                 self._ready = True
-            # Always close the connection after schema setup.
+            # Always close the connection after schema verification.
             finally:
-                # Close the MySQL connection for this operation.
+                # Close the runtime connection without issuing DDL or migration-state DML.
                 connection.close()
 
     # Reset MySQL storage tables while preserving the schema.

@@ -40,6 +40,12 @@ Loopback-only developer startup keeps its convenient local bootstrap behavior. A
 
 Deployments that bind to loopback but become externally reachable through a tunnel, reverse proxy, hosted platform, or similar network path must also set `CASINO_DEPLOYMENT_MODE` to `deployment`, `production`, or `public`. The startup guard reports configuration key names only and never includes supplied values in diagnostics.
 
+## MySQL migration and DDL-free runtime addendum
+
+GitHub issue #204 adds permanent requirements `MYSQL-005`, `STORAGE-007`, and `TEST-048`. The canonical checksum-pinned migration catalog, deployment-only runner, HMAC-bound backup/restore preflight, fail-closed applying/dirty state, separate release provenance, DDL-free runtime compatibility check, disposable MySQL 8.4 evidence, and forward-only recovery boundary are documented in `docs/mysql_migrations.md`.
+
+The MySQL migration version remains independent of the application version and JSON document schema constants. Runtime receives only `SELECT`, `INSERT`, `UPDATE`, and `DELETE`; migration credentials and the target-binding key never enter the application service environment. Existing databases, accounts, services, backups, and deployment state remain unchanged until a separately approved cutover packet passes the recovery gate.
+
 ## Storage-enforced action idempotency addendum
 
 GitHub issue #190 adds a provider primitive without integrating or weakening the held Texas Hold'em acceptance lane. A caller supplies a stable action key while storage derives a semantic fingerprint from the signed amount, transaction type, game scope, round, and details. Exact retries return the original immutable ledger event; changed key reuse returns a conflict without another balance mutation.

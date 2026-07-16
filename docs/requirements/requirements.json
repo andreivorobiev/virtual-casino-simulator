@@ -6405,9 +6405,9 @@
       "status": "PASS",
       "api_tests": ["STORAGE-JSON-IDEMPOTENCY-001", "STORAGE-MYSQL-001", "STORAGE-MYSQL-LIVE-001"],
       "browser_tests": [],
-      "implementation_files": ["casino/core/storage.py", "scripts/mysql_schema.sql", "tests/storage_tests.py", ".github/workflows/ci.yml"],
+      "implementation_files": ["casino/core/storage.py", "migrations/mysql/0002_action_identity.json", "tests/storage_tests.py", ".github/workflows/ci.yml"],
       "introduced_in": "storage-action-idempotency",
-      "changed_in": "storage-action-idempotency",
+      "changed_in": "issue-204-mysql-migrations",
       "notes": "MySQL commits its unique indexed identity, balance update, and ledger row in one transaction; JSON commits a locked action journal before recoverable compatible-file projection."
     },
     {
@@ -6433,13 +6433,14 @@
       ],
       "browser_tests": [],
       "implementation_files": [
-        "casino/core/storage.py",
-        "scripts/mysql_schema.sql",
+        "migrations/mysql/0001_initial.json",
+        "casino/core/mysql_migrations.py",
+        "scripts/mysql_migrate.py",
         "tests/storage_tests.py"
       ],
       "introduced_in": "auth-mysql-token-foundation",
-      "changed_in": "auth-mysql-token-foundation",
-      "notes": "Fresh-schema bootstrap and schema-version recording were validated against MySQL Community Server 8.4 LTS."
+      "changed_in": "issue-204-mysql-migrations",
+      "notes": "Fresh-schema bootstrap and schema-version recording use the explicit deployment-only migration runner and are validated against disposable MySQL 8.4."
     },
     {
       "id": "MYSQL-002",
@@ -7730,6 +7731,15 @@
     },
     {
       "id": "TEST-047", "module": "Tests", "description": "Permanent restricted-preview evidence covers configuration failure, Host and proxy abuse, Origin and CSRF enforcement, session and privilege rotation, cookie and header policy, Admin and disabled-access boundaries, concurrency, capacity recovery, redacted logging, copied production behavior, and exact listener cleanup.", "status": "PASS", "api_tests": ["API-SEC-PREVIEW-001", "SERVICE-WSGI-001", "SERVICE-COPIED-001"], "browser_tests": ["BR-SEC-PREVIEW-001"], "implementation_files": ["tests/security/", "tests/production_wsgi_probe.py", "tests/production_service_tests.py", "tests/production_service_smoke.py", "tests/run_tests.py"], "introduced_in": "issue-203-restricted-preview-security", "changed_in": "issue-203-restricted-preview-security", "notes": "Focused WSGI and browser-helper proofs are listener-free; copied-service smoke uses an operating-system-assigned loopback port and excludes 8765 and 8877."
+    },
+    {
+      "id": "MYSQL-005", "module": "MySQL", "description": "MySQL schema changes use an explicit contiguous checksum-bound migration catalog, a deployment-only identity, a named target lock, proof-gated pre-DDL state, and durable applying or dirty markers that never claim transactional DDL rollback.", "status": "PASS", "api_tests": ["MYSQL-MIGRATION-001", "MYSQL-MIGRATION-LIVE-001"], "browser_tests": [], "implementation_files": ["migrations/mysql/", "casino/core/mysql_migrations.py", "scripts/mysql_migrate.py", ".github/workflows/ci.yml"], "introduced_in": "issue-204-mysql-migrations", "changed_in": "issue-204-mysql-migrations", "notes": "Normal apply has no mark-applied or automatic dirty repair path; an interrupted migration requires a new checksum-bound reviewed forward-fix packet."
+    },
+    {
+      "id": "STORAGE-007", "module": "Storage", "description": "The MySQL runtime identity performs application SELECT and DML only, verifies the exact clean migration version and checksums with read-only statements before startup, and fails closed on missing, old, future, gapped, dirty, or altered schema state.", "status": "PASS", "api_tests": ["MYSQL-MIGRATION-001", "MYSQL-MIGRATION-LIVE-001", "STORAGE-MYSQL-LIVE-001"], "browser_tests": [], "implementation_files": ["casino/core/storage.py", "casino/core/mysql_migrations.py", "deploy/systemd/casino.service", "tests/mysql_migration_live.py"], "introduced_in": "issue-204-mysql-migrations", "changed_in": "issue-204-mysql-migrations", "notes": "Migration credentials and the target-binding HMAC key are deployment-only and explicitly excluded from the application service environment."
+    },
+    {
+      "id": "TEST-048", "module": "Tests", "description": "Migration evidence covers immutable catalogs, full-proof and quiesce HMACs, SELECT-only inspection and dry-run, empty and supported upgrade paths, checksum/gap/future/dirty refusal, metadata and connection failure boundaries, advisory-lock serialization, DDL-free runtime grants, restart persistence, exact recheck, release provenance, and listener cleanup.", "status": "PASS", "api_tests": ["MYSQL-MIGRATION-001", "MYSQL-MIGRATION-LIVE-001"], "browser_tests": [], "implementation_files": ["tests/mysql_migration_tests.py", "tests/mysql_migration_live.py", "tests/storage_tests.py", "tests/run_tests.py", "tests/release_artifact_tests.py"], "introduced_in": "issue-204-mysql-migrations", "changed_in": "issue-204-mysql-migrations", "notes": "Live evidence runs only against a newly created ephemeral MySQL 8.4 service with synthetic credentials and removes all test databases and accounts afterward; protected application ports are never selected."
     }
   ]
 }

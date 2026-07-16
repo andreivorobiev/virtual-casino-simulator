@@ -6,8 +6,8 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.34.0
-- core: 9.10.0
+- application: 9.35.0
+- core: 9.11.0
 - ledger: 9.1.0
 - players: 9.1.0
 - bots: 1.1.0
@@ -45,10 +45,10 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.0
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.38.0
-- docs: 1.37.0
+- tests: 1.39.0
+- docs: 1.38.0
 - contracts: 1.31.0
-- tooling: 1.9.0
+- tooling: 1.10.0
 - commenting_policy: 1.0.0
 
 ## Requirements
@@ -626,3 +626,6 @@ Historical source baseline: 9.1.0
 - **ADMIN-024** (Admin) - PASS: Admin HTML, JavaScript, and API surfaces require an active Admin session during restricted preview, and user privilege or status changes revoke existing sessions.
 - **AUTH-007** (Core) - PASS: Restricted preview exposes local-password login only; public signup and live OAuth authorization, callback, exchange, linking, SDK, and provider transport routes remain absent.
 - **TEST-047** (Tests) - PASS: Permanent restricted-preview evidence covers configuration failure, Host and proxy abuse, Origin and CSRF enforcement, session and privilege rotation, cookie and header policy, Admin and disabled-access boundaries, concurrency, capacity recovery, redacted logging, copied production behavior, and exact listener cleanup.
+- **MYSQL-005** (MySQL) - PASS: MySQL schema changes use an explicit contiguous checksum-bound migration catalog, a deployment-only identity, a named target lock, proof-gated pre-DDL state, and durable applying or dirty markers that never claim transactional DDL rollback.
+- **STORAGE-007** (Storage) - PASS: The MySQL runtime identity performs application SELECT and DML only, verifies the exact clean migration version and checksums with read-only statements before startup, and fails closed on missing, old, future, gapped, dirty, or altered schema state.
+- **TEST-048** (Tests) - PASS: Migration evidence covers immutable catalogs, full-proof and quiesce HMACs, SELECT-only inspection and dry-run, empty and supported upgrade paths, checksum/gap/future/dirty refusal, metadata and connection failure boundaries, advisory-lock serialization, DDL-free runtime grants, restart persistence, exact recheck, release provenance, and listener cleanup.

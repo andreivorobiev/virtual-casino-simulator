@@ -7,14 +7,14 @@ Requirement `TOOL-003` defines the repository-only release-artifact and rollback
 `python scripts/make_release.py` validates the exact clean Git checkout and writes three ignored files under `dist/`:
 
 - `virtual_casino_simulator_package.zip` contains only explicitly allowlisted, Git-tracked application files.
-- `release-manifest.json` binds the archive to the full commit SHA, canonical packaged version, optional canonical tag, supported Python range, module revisions, declared dependency/SBOM inputs, every packaged file hash, the archive checksum, completed validation commands, and rollback provenance.
+- `release-manifest.json` binds the archive to the full commit SHA, canonical packaged version, optional canonical tag, supported Python range, module revisions, distinct MySQL expected/minimum migration versions plus catalog/chain checksums, declared dependency/SBOM inputs, every packaged file hash, the archive checksum, completed validation commands, and rollback provenance.
 - `checksums.txt` provides convenience SHA-256 rows for the archive and manifest. The JSON manifest remains the canonical machine-readable provenance record.
 
 The ZIP writer sorts members, fixes their timestamps and modes, and writes exact source bytes with fixed compression settings. The manifest uses the Git commit time as its deterministic provenance timestamp. Equivalent builds from the same clean commit therefore produce identical archive and manifest bytes.
 
 ## Fail-closed packaging boundary
 
-The packager obtains its source inventory from `git ls-files`; it never recursively walks the working directory. Only the runtime Python package, browser assets, module and contract metadata, selected public documentation, package metadata, launch entry point, and checked-in SQL schema are eligible.
+The packager obtains its source inventory from `git ls-files`; it never recursively walks the working directory. Only the runtime Python package, browser assets, module and contract metadata, selected public documentation, package metadata, launch entry point, deployment-only migration runner, and checksum-pinned canonical migration catalog/files are eligible. No parallel checked-in SQL schema snapshot exists to drift from the catalog.
 
 Runtime data, logs, tests, local evidence, caches, environment files, key-like files, local worktrees, and all untracked content are excluded. A credential-like tracked path beneath an otherwise allowed application root causes the build to fail instead of being silently omitted. Symlinks and unsafe archive paths are also rejected.
 
@@ -43,7 +43,7 @@ Release assets are uploaded without replacement semantics. An asset-name collisi
 
 Each publication-eligible manifest records the immediately previous retained release version, commit, archive checksum, and manifest checksum. Before rollback, verify the retained manifest and archive, install the prior archive into a new immutable release directory, run the same clean-copy verification, then atomically repoint the application release selector according to the separately approved deployment procedure.
 
-This gate covers application artifact rollback only. Database or schema rollback is intentionally outside `TOOL-003` and must follow the separately accepted migration and recovery gates. A candidate without a valid prior manifest remains useful for branch validation but is not eligible for immutable publication.
+This gate covers application artifact rollback only. A predecessor may be selected only when its manifest accepts the already-applied MySQL migration version. Database or schema rollback is intentionally outside `TOOL-003` and must follow the separately accepted migration and recovery gates. A candidate without a valid prior manifest remains useful for branch validation but is not eligible for immutable publication.
 
 ## Local commands
 
