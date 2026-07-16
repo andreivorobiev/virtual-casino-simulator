@@ -1,6 +1,8 @@
 {
-  "application": "9.2.0",
+  "app_version": "9.2.0",
   "source_baseline": "9.1.0",
+  "api_compatibility_matrix": "contracts/compatibility/module-api-matrix.json",
+  "release_provenance_requirement": "TOOL-003",
   "modules": {
     "application": "9.32.0",
     "core": "9.8.0",
@@ -47,5 +49,5 @@
     "tooling": "1.7.0",
     "commenting_policy": "1.0.0"
   },
-  "created_at": "2026-07-09T00:00:00.000000Z"
+  "notes": "Reproducible application artifact and rollback provenance release; deployment remains separately gated."
 }
