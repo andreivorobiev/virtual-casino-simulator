@@ -1,0 +1,79 @@
+[Unit]
+# Describe the supervised process without naming a provider, host, or deployment identifier.
+Description=Casino Simulator restricted-preview application service
+# Wait for the local network stack before creating the loopback listener.
+After=network.target
+# Start no more than three failed service attempts in one minute.
+StartLimitIntervalSec=60s
+# Pair the start-limit window with a bounded retry count.
+StartLimitBurst=3
+
+[Service]
+# Keep Gunicorn in the foreground under systemd lifecycle ownership.
+Type=simple
+# Run the application as the dedicated unprivileged service identity.
+User=casino
+# Keep service-created files inside the matching least-privilege group.
+Group=casino
+# Resolve imports and packaged assets through the atomic current-release symlink.
+WorkingDirectory=/opt/casino/current
+# Read secrets and runtime configuration from a root-managed external file.
+EnvironmentFile=/etc/casino/casino.env
+# Prevent Python cache writes inside the immutable release directory.
+Environment=PYTHONDONTWRITEBYTECODE=1
+# Flush process diagnostics directly to the supervisor-owned stream.
+Environment=PYTHONUNBUFFERED=1
+# Select the stable non-secret application port consumed by the loopback-only Gunicorn policy.
+Environment=CASINO_BIND_PORT=8765
+# Fail before process start if the external environment is not present and readable by systemd.
+ExecStartPre=/usr/bin/test -r /etc/casino/casino.env
+# Fail before process start if current is not an atomic release symlink.
+ExecStartPre=/usr/bin/test -L /opt/casino/current
+# Fail before process start if the selected release lacks the production server policy.
+ExecStartPre=/usr/bin/test -f /opt/casino/current/deploy/gunicorn.conf.py
+# Start only the production WSGI adapter through the dedicated virtual environment.
+ExecStart=/opt/casino/venv/bin/gunicorn --config /opt/casino/current/deploy/gunicorn.conf.py casino.wsgi:application
+# Ask Gunicorn to drain in-flight requests and stop its worker gracefully.
+KillSignal=SIGTERM
+# Bound graceful drain before systemd applies its tracked-process fallback.
+TimeoutStopSec=35s
+# Restart only unexpected failures, not operator-requested clean stops.
+Restart=on-failure
+# Avoid a tight failure loop when configuration or a dependency remains unavailable.
+RestartSec=5s
+# Make newly created application files owner-readable only by default.
+UMask=0077
+# Prevent the service and child processes from gaining new privileges.
+NoNewPrivileges=true
+# Isolate temporary files from other services and users.
+PrivateTmp=true
+# Hide physical device nodes that the application does not need.
+PrivateDevices=true
+# Keep system and release files read-only to the service.
+ProtectSystem=strict
+# Deny access to user home directories.
+ProtectHome=true
+# Permit writes only to the separately managed state and log roots.
+ReadWritePaths=/var/lib/casino /var/log/casino
+# Limit sockets to local IPC and IPv4 loopback-capable networking.
+RestrictAddressFamilies=AF_UNIX AF_INET
+# Remove every inherited Linux capability from the unprivileged process.
+CapabilityBoundingSet=
+# Prevent ambient capabilities from crossing the process boundary.
+AmbientCapabilities=
+# Prevent runtime changes to the process execution personality.
+LockPersonality=true
+# Deny set-user-ID and set-group-ID transitions.
+RestrictSUIDSGID=true
+# Allow system calls only for the native application architecture.
+SystemCallArchitectures=native
+# Route process output through journald for external retention and caps.
+StandardOutput=journal
+# Route process errors through the same supervisor-owned log boundary.
+StandardError=journal
+# Use one stable log identifier independent of release directories.
+SyslogIdentifier=casino
+
+[Install]
+# Allow a separately approved host action to enable the service for normal multi-user boot.
+WantedBy=multi-user.target

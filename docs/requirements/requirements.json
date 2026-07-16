@@ -7709,6 +7709,12 @@
     },
     {
       "id": "TEST-044", "module": "Tests", "description": "Operations regression evidence covers anonymous and authenticated policy, healthy and degraded dependencies, Admin authorization, EN/RU responsive states, copied deployment, and listener cleanup.", "status": "PASS", "api_tests": ["API-OPS-001", "LONG-SUITE-100"], "browser_tests": ["BR-OPS-001"], "implementation_files": ["tests/operations/", "tests/run_tests.py", "tests/long_suites.py", "tests/visual/visual_matrix.json"], "introduced_in": "issue-72-operations-foundation", "changed_in": "issue-72-operations-foundation", "notes": "Allocated by GitHub issue #77 for the accepted issue #72 implementation and shared integration gate."
+    },
+    {
+      "id": "CORE-023", "module": "Core", "description": "A production WSGI adapter initializes from explicit external runtime configuration, serves the complete same-origin application without invoking the development HTTP server, and is supported only through a fixed-loopback supervised process policy.", "status": "PASS", "api_tests": ["SERVICE-WSGI-001", "SERVICE-COPIED-001"], "browser_tests": [], "implementation_files": ["casino/wsgi.py", "casino/config.py", "deploy/gunicorn.conf.py", "deploy/systemd/casino.service", "docs/production_service.md"], "introduced_in": "issue-202-production-service", "changed_in": "issue-202-production-service", "notes": "Issue #202 owns the repository-only adapter and lifecycle packet; trusted-proxy, cookie, CSRF, security-header, schema, edge, and host mutation remain outside this requirement."
+    },
+    {
+      "id": "TEST-046", "module": "Tests", "description": "Production-service validation covers listener-free WSGI parity, sanitized probes, authorization propagation, malformed input, fail-closed external configuration, fixed-loopback policy, hardened supervision, clean extracted-release startup, graceful restart, persistence, failure handling, and exact listener closure.", "status": "PASS", "api_tests": ["SERVICE-WSGI-001", "SERVICE-COPIED-001"], "browser_tests": [], "implementation_files": ["tests/production_wsgi_probe.py", "tests/production_service_tests.py", "tests/production_service_smoke.py", "scripts/make_release.py", "scripts/package_app.py"], "introduced_in": "issue-202-production-service", "changed_in": "issue-202-production-service", "notes": "The copied-release process smoke uses an operating-system-assigned IPv4 loopback port, never selects 8765 or 8877, and defers MySQL restart proof until issue #204 releases migrations."
     }
   ]
 }

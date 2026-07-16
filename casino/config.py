@@ -14,14 +14,36 @@ from casino.module_versions import APP_VERSION
 
 # Set ROOT_DIR to the value needed for the next operation.
 ROOT_DIR = Path(__file__).resolve().parents[1]
+# Name the external runtime roots required by the supervised production service.
+DATA_DIR_ENV = "CASINO_DATA_DIR"
+# Keep application logs outside immutable release directories in production.
+LOG_DIR_ENV = "CASINO_LOG_DIR"
+
+# Resolve an optional runtime directory without accepting working-directory-relative state.
+def _runtime_directory(environment_key: str, default: Path) -> Path:
+    # Read only the selected path setting while preserving the existing local default.
+    configured = str(os.environ.get(environment_key, "")).strip()
+    # Return the source-tree default for developer and test runs that do not override it.
+    if not configured:
+        # Resolve the default once so path comparisons are deterministic.
+        return default.resolve()
+    # Expand an operator-owned home alias before absolute-path validation.
+    candidate = Path(configured).expanduser()
+    # Reject relative state roots because a release-symlink change could redirect persistence.
+    if not candidate.is_absolute():
+        # Name only the configuration key so diagnostics cannot disclose a private path value.
+        raise RuntimeError(f"{environment_key} must be an absolute path")
+    # Resolve harmless path aliases while retaining a location that need not exist yet.
+    return candidate.resolve()
+
 # Set WEB_DIR to the value needed for the next operation.
 WEB_DIR = ROOT_DIR / "web"
-# Set DATA_DIR to the value needed for the next operation.
-DATA_DIR = ROOT_DIR / "data"
+# Resolve persistent state from an external environment setting or the local source-tree default.
+DATA_DIR = _runtime_directory(DATA_DIR_ENV, ROOT_DIR / "data")
 # Set GAME_DATA_DIR to the value needed for the next operation.
 GAME_DATA_DIR = DATA_DIR / "games"
-# Set LOG_DIR to the value needed for the next operation.
-LOG_DIR = ROOT_DIR / "logs"
+# Resolve application logs independently so service policy can cap and rotate them outside releases.
+LOG_DIR = _runtime_directory(LOG_DIR_ENV, ROOT_DIR / "logs")
 # Set DOCS_DIR to the value needed for the next operation.
 DOCS_DIR = ROOT_DIR / "docs"
 # Set DEFAULT_HOST to the value needed for the next operation.
@@ -52,6 +74,8 @@ PUBLIC_DEPLOYMENT_MODES = frozenset({"deployment", "production", "public"})
 LOCAL_DEPLOYMENT_MODES = frozenset({"development", "local", "test"})
 # Name the required public bootstrap settings without ever including their values in diagnostics.
 PUBLIC_BOOTSTRAP_ENV_KEYS = ("CASINO_BOOTSTRAP_ADMIN_EMAIL", "CASINO_BOOTSTRAP_ADMIN_PASSWORD")
+# Require both mutable roots to be explicit when the production adapter is selected.
+PRODUCTION_RUNTIME_ENV_KEYS = (DATA_DIR_ENV, LOG_DIR_ENV)
 # Set DEFAULT_STORAGE_PROVIDER to keep local runs on JSON unless explicitly configured.
 DEFAULT_STORAGE_PROVIDER = "json"
 # Set DEFAULT_MYSQL_HOST to the developer-friendly MySQL host default.
@@ -112,6 +136,41 @@ def validate_bootstrap_for_startup(host: str, environ=None) -> None:
     if configured_email.lower() == LOCAL_BOOTSTRAP_ADMIN_EMAIL.lower() or configured_password_sha256 == LOCAL_BOOTSTRAP_ADMIN_PASSWORD_SHA256:
         # Raise a value-free diagnostic that tells the operator which settings need unique deployment values.
         raise RuntimeError("Public deployment rejects local bootstrap defaults; configure unique bootstrap Admin settings")
+
+# Validate immutable-release runtime boundaries before the WSGI application initializes state.
+def validate_production_runtime(environ=None) -> None:
+    # Use the live service environment unless an isolated test supplies a value-only mapping.
+    current_environment = os.environ if environ is None else environ
+    # Require the dedicated adapter to run only under the explicit production deployment mode.
+    if str(current_environment.get(DEPLOYMENT_MODE_ENV, "")).strip().lower() != "production":
+        # Name only the expected mode key without echoing any supplied configuration value.
+        raise RuntimeError(f"{DEPLOYMENT_MODE_ENV} must be production for the production adapter")
+    # Collect missing external roots without reading or reporting their values.
+    missing_keys = [key for key in PRODUCTION_RUNTIME_ENV_KEYS if not str(current_environment.get(key, "")).strip()]
+    # Fail before directory creation when mutable state would otherwise enter an immutable release.
+    if missing_keys:
+        # Report only public environment variable names for safe service diagnostics.
+        raise RuntimeError("Production adapter requires external runtime directories: " + ", ".join(missing_keys))
+    # Validate each configured path independently of module-imported process globals.
+    for key in PRODUCTION_RUNTIME_ENV_KEYS:
+        # Expand an operator home alias before checking absolute-path semantics.
+        candidate = Path(str(current_environment[key]).strip()).expanduser()
+        # Reject release-relative state and logs before any application initialization.
+        if not candidate.is_absolute():
+            # Keep the failure value-free so private host paths never enter logs.
+            raise RuntimeError(f"{key} must be an absolute path")
+        # Resolve the candidate for a stable containment check against the immutable source root.
+        resolved = candidate.resolve()
+        # Start protected containment handling because external roots normally are unrelated paths.
+        try:
+            # Detect any mutable root located inside the extracted immutable release directory.
+            resolved.relative_to(ROOT_DIR.resolve())
+        # Treat unrelated external paths as the required production configuration.
+        except ValueError:
+            # Continue validating the remaining external runtime key.
+            continue
+        # Reject a mutable path nested under the current release without disclosing that path.
+        raise RuntimeError(f"{key} must be outside the immutable application release")
 
 # Set MODULES_DIR to the directory whose independently owned descriptors form the game catalog.
 MODULES_DIR = ROOT_DIR / "modules"

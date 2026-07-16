@@ -8,6 +8,7 @@ version = "9.2.0"
 description = "Local fake-money virtual casino simulator with isolated modules and GitHub/Codex governance."
 license = { text = "Apache-2.0" }
 requires-python = ">=3.10"
+dependencies = ["gunicorn>=23,<24"]
 
 [project.optional-dependencies]
 mysql = ["mysql-connector-python>=8.4"]

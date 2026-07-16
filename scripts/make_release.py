@@ -45,7 +45,11 @@ VALIDATIONS = [
     [sys.executable, "scripts/generate_docs.py", "--check"],
     # Validate deterministic artifact, exclusion, smoke, and rollback behavior.
     [sys.executable, "-m", "unittest", "tests.release_artifact_tests"],
+    # Validate listener-free WSGI parity, fail-closed configuration, and service hardening.
+    [sys.executable, "-m", "unittest", "tests.production_service_tests"],
 ]
+# Define the post-package copied-release lifecycle gate separately because it consumes the built archive.
+COPIED_SERVICE_SMOKE = [sys.executable, "tests/production_service_smoke.py", "--archive", "dist/virtual_casino_simulator_package.zip"]
 
 
 # Render a command without host-specific interpreter paths for deterministic provenance.
@@ -150,6 +154,8 @@ def main():
     for command in VALIDATIONS:
         # Preserve fixed validation order for byte-reproducible JSON output.
         package_command.extend(["--validation", command_label(command)])
+    # Record the copied-release process gate that must pass before candidate checksums are finalized.
+    package_command.extend(["--validation", command_label(COPIED_SERVICE_SMOKE)])
     # Bind the candidate to a canonical release tag only on a release event.
     if args.release_tag is not None:
         # Forward the already validated tag to the deterministic packager.
@@ -160,6 +166,8 @@ def main():
         package_command.extend(["--previous-manifest", str(args.previous_manifest)])
     # Build and listener-free smoke-test the deterministic application artifact.
     run(package_command)
+    # Start the packaged production process on an ephemeral loopback port and prove lifecycle safety.
+    run(COPIED_SERVICE_SMOKE)
     # Collect checksums only for the two canonical release assets.
     asset_names = ["release-manifest.json", "virtual_casino_simulator_package.zip"]
     # Render stable SHA-256 rows in lexical asset-name order.
