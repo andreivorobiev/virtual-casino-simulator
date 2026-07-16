@@ -1,0 +1,48 @@
+{
+  "artifact": "restricted-preview-security",
+  "version": 1,
+  "stage": "restricted-preview",
+  "canonical_origin": "https://casino.andvor.com",
+  "anonymous_routes": [
+    "/api/v2/auth/login",
+    "/healthz"
+  ],
+  "authenticated_routes": [
+    "/readyz"
+  ],
+  "admin_surfaces": [
+    "/admin",
+    "/admin.js",
+    "/api/v2/admin/"
+  ],
+  "disabled_public_actions": [
+    "signup",
+    "oauth_authorize",
+    "oauth_callback",
+    "oauth_exchange",
+    "oauth_link"
+  ],
+  "request_integrity": {
+    "unsafe_methods": ["DELETE", "PATCH", "POST", "PUT"],
+    "origin": "exact",
+    "csrf": "per-session-distinct",
+    "host": "exact-canonical-authority"
+  },
+  "proxy_policy": {
+    "direct_peer": "one-configured-loopback-address",
+    "accepted_headers": ["X-Forwarded-For", "X-Forwarded-Proto"],
+    "forwarded_proto": "https",
+    "reject_lists": true
+  },
+  "cookie_policy": {
+    "host_only": true,
+    "secure": true,
+    "http_only_session": true,
+    "same_site": ["Strict", "Lax"]
+  },
+  "access_policy": {
+    "public_signup": false,
+    "live_oauth": false,
+    "admin_requires_admin_session": true
+  }
+}

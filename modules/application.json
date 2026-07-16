@@ -1,6 +1,6 @@
 {
   "module": "application",
-  "version": "9.33.0",
+  "version": "9.34.0",
   "paths": [
     "run.py",
     "pyproject.toml",
@@ -10,6 +10,7 @@
     "web/app.js",
     "web/styles.css",
     "web/core/i18n.js",
+    "web/core/api.js",
     "web/i18n/"
   ],
   "requirements_prefixes": [

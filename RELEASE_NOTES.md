@@ -1,5 +1,12 @@
 # Virtual Casino Simulator v9.2.0 Release Notes
 
+## Post-release module addendum: restricted-preview security boundary
+
+- Requires exact canonical Host and Origin validation, per-session CSRF proof, host-only Secure session cookies, and one exact loopback trusted-proxy contract for unsafe production requests.
+- Restricts anonymous routes to login and liveness, protects readiness and every Admin surface, keeps public signup and live OAuth absent, and revokes sessions after privilege-bearing account changes.
+- Adds bounded request bodies, sessions, and per-client windows; secret-safe fixed-class security logs; hardened browser request helpers; and fail-closed response security headers.
+- Adds permanent `SEC-010`, `SESSION-006`, `ADMIN-024`, `AUTH-007`, and `TEST-047` traceability with listener-free hostile-request, concurrency, browser-helper, contract, and production-service regression evidence for GitHub issue #203.
+
 ## Reproducible release provenance gate
 
 - Adds deterministic tracked-file application packaging with normalized ZIP metadata and a complete checksum inventory.

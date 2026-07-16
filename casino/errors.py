@@ -55,3 +55,17 @@ class ConflictError(CasinoError):
     def __init__(self, message="Request conflicts with current state", details=None):
         # Execute this statement as part of the module's documented control flow.
         super().__init__("CONFLICT", message, 409, details)
+
+# Define the RequestTooLargeError class for bounded production request bodies.
+class RequestTooLargeError(CasinoError):
+    # Initialize the fixed secret-safe payload-too-large response.
+    def __init__(self, message="Request body is too large", details=None):
+        # Publish HTTP 413 without reflecting the supplied length or body.
+        super().__init__("REQUEST_TOO_LARGE", message, 413, details)
+
+# Define the RateLimitError class for bounded restricted-preview request rates.
+class RateLimitError(CasinoError):
+    # Initialize the fixed secret-safe rate-limit response.
+    def __init__(self, message="Request rate limit exceeded", details=None):
+        # Publish HTTP 429 without exposing client identity or limiter state.
+        super().__init__("RATE_LIMITED", message, 429, details)

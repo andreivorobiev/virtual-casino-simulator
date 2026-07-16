@@ -193,7 +193,8 @@ def build_router() -> Router:
         # Authenticate the normalized email credential through the backend auth service.
         result = auth.login(email, body.get("password", ""), context.get("client", ""))
         # Execute this statement as part of the module's documented control flow.
-        context.setdefault("response_headers", []).append(auth.cookie_header(result["session"]["token"]))
+        # Extend the response with host-only session and production CSRF cookies under context policy.
+        context.setdefault("response_headers", []).extend(auth.session_cookie_headers(result["session"], context.get("session_samesite", "Lax"), bool(context.get("secure_cookie")), bool(context.get("include_csrf_cookie"))))
         # Return the computed value to the caller.
         return result
 
@@ -204,7 +205,8 @@ def build_router() -> Router:
         # Set token to the value needed for the next operation.
         token = auth.extract_bearer_token(context.get("headers", {})) or auth.extract_cookie_token(context.get("headers", {}))
         # Execute this statement as part of the module's documented control flow.
-        context.setdefault("response_headers", []).append(auth.clear_cookie_header())
+        # Expire both session and production CSRF cookies using the same governed attributes.
+        context.setdefault("response_headers", []).extend(auth.clear_cookie_headers(context.get("session_samesite", "Lax"), bool(context.get("secure_cookie")), bool(context.get("include_csrf_cookie"))))
         # Return the computed value to the caller.
         return auth.logout(token)
 

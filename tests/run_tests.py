@@ -313,6 +313,18 @@ def validate_deployment_bootstrap():
 
 # Define the run_api_tests function used by this module.
 def run_api_tests():
+    # Discover and execute every focused restricted-preview security module without opening a listener.
+    def run_restricted_preview_security_tests():
+        # Load the package directory through unittest's standard test discovery.
+        suite = unittest.defaultTestLoader.discover(str(ROOT / 'tests' / 'security'), pattern='test_*.py', top_level_dir=str(ROOT))
+        # Execute the suite with a concise in-process result collector.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused test failed or errored.
+        if not result.wasSuccessful():
+            # Preserve detailed unittest output while keeping the named case diagnostic stable.
+            raise AssertionError('restricted-preview security suite failed')
+    # Record the complete listener-free request, access, session, and browser-helper security proof.
+    run_case('API-SEC-PREVIEW-001',['SEC-010','SESSION-006','ADMIN-024','AUTH-007','TEST-047'],run_restricted_preview_security_tests)
     # Centrally discover all mocked and disabled OAuth tests before any listener starts.
     run_case('OAUTH-MOCK-001',['OAUTH-001','OAUTH-002','OAUTH-003','OAUTH-004','OAUTH-005','TEST-045'],run_oauth_mock_tests)
     # Record focused deployment-default coverage before starting the normal loopback API server.
@@ -391,6 +403,10 @@ def run_api_tests():
             token=login['session']['token']; assert token
             # Verify the published username field remains a compatible alias for the same email credential.
             aliased_login=api(base,'/api/v2/auth/login','POST',{'username':DEFAULT_AUTH_EMAIL,'password':DEFAULT_AUTH_PASSWORD},auth_token=None); assert aliased_login['user']['email']==DEFAULT_AUTH_EMAIL
+            # Require the second login to invalidate its predecessor before selecting the rotated token.
+            assert api(base,'/api/v2/auth/session',ok=False,auth_token=token)['error']['code']=='UNAUTHORIZED'
+            # Continue the compatible auth flow with the sole active replacement session.
+            token=aliased_login['session']['token']; assert token
             # Set session to the value needed for the next operation.
             session=api(base,'/api/v2/auth/session',auth_token=token); assert session['user']['email']==DEFAULT_AUTH_EMAIL
             # Set me to the value needed for the next operation.
@@ -415,6 +431,8 @@ def run_api_tests():
             auth_core.set_user_status(inactive_email,'inactive')
             # Set inactive to the value needed for the next operation.
             inactive=api(base,'/api/v2/auth/login','POST',{'email':inactive_email,'password':'inactive-password'},ok=False,auth_token=None); assert inactive['error']['code']=='FORBIDDEN'
+            # Restore the harness Admin session after the explicit login-rotation and logout proof.
+            login_default_user(base)
         # Execute this statement as part of the module's documented control flow.
         run_case('API-AUTH-001',['AUTH-001','SESSION-001','USER-001','TERMS-001'],auth_backend)
         # Store wallet integrity evidence for the later server-restart persistence check.
@@ -1492,6 +1510,14 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
         login_default_user(base)
         # Create the real normal-user identity used by browser auth, terms, and wallet coverage.
         api(base,'/api/v1/admin/users','POST',{'email':'demo@example.local','password':'password','display_name':'Demo Player','initial_tokens':5000,'terms_accepted':False,'language':'ru-RU','format_locale':'browser'})
+        # Define the listener-free real browser-helper security contract for permanent browser discovery.
+        def browser_security_contract():
+            # Execute the focused wrapper with the active interpreter and no credential output.
+            result=subprocess.run([sys.executable,'-m','unittest','tests.security.test_browser_contract'],cwd=ROOT,capture_output=True,text=True,timeout=30)
+            # Preserve only bounded diagnostic tails if the helper contract fails.
+            if result.returncode != 0: raise AssertionError((result.stderr or result.stdout)[-1200:])
+        # Record exact CSRF attachment and bearer-omission behavior in the browser suite.
+        run_case('BR-SEC-PREVIEW-001',['SEC-010','SESSION-006','ADMIN-024','AUTH-007','TEST-047'],browser_security_contract)
         # Manage this resource with automatic setup and cleanup.
         with sync_playwright() as p:
             
@@ -1525,6 +1551,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
             finally:
                 # Release the isolated backend-login browser context before the existing broad UI suite.
                 real_login_page.close()
+            # Restore the direct API harness Admin session after the browser login rotated its predecessor.
+            login_default_user(base)
             # Set page to the value needed for the next operation.
             page=browser.new_page(viewport={'width':1920,'height':1080})
             # Set console_errors to the value needed for the next operation.

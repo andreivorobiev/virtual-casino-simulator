@@ -218,18 +218,12 @@ def create_admin_user(body):
 
 # Define the set_admin_user_status function used by this module.
 def set_admin_user_status(user_id, status):
-    # Set state to the persisted Admin user registry.
-    state = _load_admin_users()
-    # Set user to the requested account record.
-    user = _user_by_id(state, user_id)
-    # Set user["status"] to the requested active/inactive state.
-    user["status"] = status
-    # Set user["updated_at"] to the current audit timestamp.
-    user["updated_at"] = utc_now()
+    # Load the requested account before applying the canonical auth mutation.
+    current = _user_by_id(_load_admin_users(), user_id)
+    # Update status through auth so privilege changes revoke predecessor sessions.
+    user = auth.update_user_by_id(user_id, lambda record: record.update({"status": status}))
     # Update the linked player status through the public player service.
-    players.update_player(user["player_id"], lambda player: player.update({"status": status}))
-    # Persist the updated account state.
-    _save_admin_users(state)
+    players.update_player(current["player_id"], lambda player: player.update({"status": status}))
     # Return the safe user payload after status change.
     return {"user": _public_admin_user(user)}
 

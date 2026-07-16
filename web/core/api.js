@@ -1,8 +1,27 @@
 // AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
+// Name the production host-only double-submit cookie without storing its value globally.
+const CSRF_COOKIE = 'casino_csrf';
+// Enumerate browser methods that require exact Origin plus CSRF proof.
+const UNSAFE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+
+// Read one named cookie without exposing the complete cookie string to logs or storage.
+function cookieValue(name) {
+  // Find only a cookie segment whose decoded name matches the requested public identifier.
+  const segment = String(document.cookie || '').split(';').map(value => value.trim()).find(value => value.startsWith(`${name}=`));
+  // Return the decoded scalar value or an empty proof when no cookie exists.
+  return segment ? decodeURIComponent(segment.slice(name.length + 1)) : '';
+}
+
 // Export this symbol so other modules can use it through the public module boundary.
 export async function api(path, options = {}) {
+  // Resolve the request method once before applying browser integrity policy.
+  const method = String(options.method || (options.body !== undefined ? 'POST' : 'GET')).toUpperCase();
+  // Build same-origin JSON headers without retaining credentials outside the browser cookie jar.
+  const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+  // Attach the host-only double-submit value to every state-changing browser request.
+  if (UNSAFE_METHODS.has(method)) headers['X-CSRF-Token'] = cookieValue(CSRF_COOKIE);
   // Store init so later code can read or update this value.
-  const init = { method: options.method || (options.body !== undefined ? 'POST' : 'GET'), headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }, credentials: 'include' };
+  const init = { method, headers, credentials: 'include' };
   // Branch when the following condition is true.
   if (options.body !== undefined) init.body = JSON.stringify(options.body);
   // Store res so later code can read or update this value.

@@ -21,6 +21,8 @@ from casino.core.clock import utc_now
 from casino.core.ids import new_id
 # Import required dependency so this module can use its public functions or constants.
 from casino.core.state_store import read_json, write_json
+# Import restricted-preview cookie helpers without coupling the auth store to WSGI.
+from casino.core.security import clear_csrf_cookie_header, csrf_cookie_header, new_csrf_token
 # Import required dependency so this module can use its public functions or constants.
 from casino.errors import ForbiddenError, UnauthorizedError, ValidationError
 
@@ -32,6 +34,12 @@ SESSIONS_PATH = DATA_DIR / "auth" / "sessions.json"
 PASSWORD_ITERATIONS = 120_000
 # Set PUBLIC_API_PATHS to the value needed for the next operation.
 PUBLIC_API_PATHS = {"/api/v2/auth/login", "/healthz"}
+# Bound the accepted session lifetime to the restricted-preview review interval.
+MAX_SESSION_TTL_SECONDS = 86_400
+# Retain at most one thousand active session records across the single-node preview.
+MAX_STORED_SESSIONS = 1_000
+# Enumerate durable account fields whose change invalidates existing privileges.
+PRIVILEGE_FIELDS = ("role", "roles", "status", "password_hash", "password_version")
 
 # Define the utc_datetime function used by this module.
 def utc_datetime() -> datetime:
@@ -266,12 +274,20 @@ def update_user_by_id(user_id: str, updater) -> dict:
     for user in state.get("users", []):
         # Branch when the durable user id matches the request.
         if user.get("user_id") == user_id:
+            # Snapshot only privilege-bearing fields before the caller mutates the account.
+            prior_privileges = tuple(user.get(field) for field in PRIVILEGE_FIELDS)
             # Apply the caller-owned mutation to the canonical record.
             updater(user)
+            # Snapshot the same fields after mutation for an exact privilege-change decision.
+            current_privileges = tuple(user.get(field) for field in PRIVILEGE_FIELDS)
             # Refresh the account audit timestamp after the mutation.
             user["updated_at"] = utc_now()
             # Persist the canonical registry after a successful mutation.
             save_users(state)
+            # Invalidate every predecessor when role, status, or credential authority changed.
+            if current_privileges != prior_privileges:
+                # Force the affected identity to authenticate into a freshly rotated session.
+                revoke_sessions_for_user(user_id)
             # Return the updated durable identity.
             return user
     # Raise a validation error when no canonical identity matches.
@@ -309,12 +325,34 @@ def session_expiry() -> str:
     # Return the computed value to the caller.
     return (utc_datetime() + timedelta(seconds=AUTH_SESSION_TTL_SECONDS)).isoformat(timespec="milliseconds").replace("+00:00", "Z")
 
+# Validate the configured session lifetime before the production worker becomes ready.
+def validate_session_bounds() -> None:
+    # Reject lifetimes too short for a usable session or longer than the reviewed maximum.
+    if AUTH_SESSION_TTL_SECONDS < 300 or AUTH_SESSION_TTL_SECONDS > MAX_SESSION_TTL_SECONDS:
+        # Name only the public setting so supplied values never enter diagnostics.
+        raise RuntimeError("CASINO_SESSION_TTL_SECONDS is outside the supported restricted-preview range")
+
+# Return whether one stored session is active and unexpired without propagating corrupt timestamps.
+def _session_is_active(session: dict, now: datetime) -> bool:
+    # Reject non-active records before parsing their expiry.
+    if session.get("status") != "active":
+        # Exclude revoked and malformed status values from the active registry.
+        return False
+    # Start protected expiry parsing so a damaged record fails closed.
+    try:
+        # Require the durable expiry to be later than the supplied UTC time.
+        return parse_time(str(session.get("expires_at", ""))) > now
+    # Treat missing, malformed, and non-string timestamps as expired.
+    except (TypeError, ValueError):
+        # Avoid retaining a session whose expiration cannot be proven.
+        return False
+
 # Define the prune_sessions function used by this module.
 def prune_sessions(state: dict) -> dict:
     # Set now to the value needed for the next operation.
     now = utc_datetime()
     # Set state["sessions"] to the value needed for the next operation.
-    state["sessions"] = [session for session in state.get("sessions", []) if session.get("status") == "active" and parse_time(session.get("expires_at", "1970-01-01T00:00:00Z")) > now]
+    state["sessions"] = [session for session in state.get("sessions", []) if isinstance(session, dict) and _session_is_active(session, now)][-MAX_STORED_SESSIONS:]
     # Return the computed value to the caller.
     return state
 
@@ -322,10 +360,12 @@ def prune_sessions(state: dict) -> dict:
 def create_session(user: dict, client: str = "") -> dict:
     # Set state to the value needed for the next operation.
     state = prune_sessions(load_sessions())
+    # Remove every active predecessor for this identity before issuing a replacement.
+    state["sessions"] = [session for session in state.get("sessions", []) if session.get("user_id") != user["user_id"]]
     # Set now to the value needed for the next operation.
     now = utc_now()
     # Set session to the value needed for the next operation.
-    session = {"session_id": new_id("session"), "user_id": user["user_id"], "token": secrets.token_urlsafe(32), "status": "active", "created_at": now, "updated_at": now, "expires_at": session_expiry(), "client": client}
+    session = {"session_id": new_id("session"), "user_id": user["user_id"], "token": secrets.token_urlsafe(32), "csrf_token": new_csrf_token(), "status": "active", "created_at": now, "updated_at": now, "expires_at": session_expiry(), "client": client}
     # Execute this statement as part of the module's documented control flow.
     state.setdefault("sessions", []).append(session)
     # Execute this statement as part of the module's documented control flow.
@@ -336,7 +376,7 @@ def create_session(user: dict, client: str = "") -> dict:
 # Define the public_session function used by this module.
 def public_session(session: dict) -> dict:
     # Copy public session metadata without exposing the bearer token.
-    result = {key: value for key, value in session.items() if key != "token"}
+    result = {key: value for key, value in session.items() if key not in {"token", "client"}}
     # Publish the contract's issued_at alias from the durable creation timestamp.
     result["issued_at"] = session.get("issued_at") or session.get("created_at")
     # Return the contract-compatible session summary.
@@ -354,6 +394,10 @@ def login(email: str, password: str, client: str = "") -> dict:
     if user.get("status") != "active":
         # Raise an error so invalid input or state is reported explicitly.
         raise ForbiddenError("User is inactive")
+    # Keep the restricted preview on manually provisioned local identities only.
+    if str(user.get("identity_provider") or "local").lower() != "local":
+        # Reject linked-provider identities until the separately held public-launch gate.
+        raise ForbiddenError("Local invite access is required")
     # Set session to the value needed for the next operation.
     session = create_session(user, client)
     # Build the same canonical current-user payload used by session and shell refreshes.
@@ -383,7 +427,14 @@ def extract_cookie_token(headers) -> str:
         # Return the computed value to the caller.
         return ""
     # Set cookie to the value needed for the next operation.
-    cookie = SimpleCookie(cookie_header)
+    # Start protected parsing so malformed hostile cookies fail as unauthenticated.
+    try:
+        # Parse request cookies without logging or reflecting their raw value.
+        cookie = SimpleCookie(cookie_header)
+    # Treat parser failures as an absent session credential.
+    except Exception:
+        # Return the same sentinel used when no cookie is present.
+        return ""
     # Set morsel to the value needed for the next operation.
     morsel = cookie.get(AUTH_SESSION_COOKIE)
     # Return the computed value to the caller.
@@ -442,6 +493,27 @@ def logout(token: str) -> dict:
     # Return the computed value to the caller.
     return {"logged_out": changed}
 
+# Revoke every active session owned by one account after a privilege change.
+def revoke_sessions_for_user(user_id: str) -> int:
+    # Load the durable registry before applying the account-scoped revocation.
+    state = load_sessions()
+    # Count changed records without retaining any token value.
+    changed = 0
+    # Iterate through stored sessions without comparing caller-supplied credentials.
+    for session in state.get("sessions", []):
+        # Revoke only active records for the selected durable identity.
+        if session.get("user_id") == user_id and session.get("status") == "active":
+            # Mark the predecessor unusable immediately.
+            session["status"] = "revoked"
+            # Record a bounded audit timestamp without user or token data.
+            session["updated_at"] = utc_now()
+            # Count the revoked record for focused tests.
+            changed += 1
+    # Persist the account-scoped revocation result.
+    save_sessions(state)
+    # Return only the number of invalidated predecessors.
+    return changed
+
 # Define the current_user_payload function used by this module.
 def current_user_payload(session: dict, user: dict) -> dict:
     # Set player to the value needed for the next operation.
@@ -461,14 +533,40 @@ def terms_status(user: dict) -> dict:
     return {"required": required, "required_version": "private-beta-1", "accepted": not required, "accepted_version": user.get("terms_accepted_version"), "accepted_at": accepted_at}
 
 # Define the cookie_header function used by this module.
-def cookie_header(token: str) -> tuple[str, str]:
-    # Return the computed value to the caller.
-    return ("Set-Cookie", f"{AUTH_SESSION_COOKIE}={token}; Path=/; HttpOnly; SameSite=Lax")
+def cookie_header(token: str, same_site: str = "Lax", secure: bool = False) -> tuple[str, str]:
+    # Add Secure for every production cookie while preserving local HTTP developer compatibility.
+    secure_attribute = "; Secure" if secure else ""
+    # Omit Domain so the credential remains host-only and bound its lifetime explicitly.
+    return ("Set-Cookie", f"{AUTH_SESSION_COOKIE}={token}; Path=/; Max-Age={AUTH_SESSION_TTL_SECONDS}; HttpOnly{secure_attribute}; SameSite={same_site}")
+
+# Build all session-establishment cookies for browser and compatible API clients.
+def session_cookie_headers(session: dict, same_site: str = "Lax", secure: bool = False, include_csrf: bool = False) -> list[tuple[str, str]]:
+    # Start with the host-only HttpOnly session credential.
+    headers = [cookie_header(session["token"], same_site, secure)]
+    # Add the browser-readable CSRF companion only in the production security boundary.
+    if include_csrf:
+        # Rotate the double-submit value to the newly issued session CSRF token.
+        headers.append(csrf_cookie_header(session["csrf_token"], same_site, secure))
+    # Return a fresh list suitable for response context extension.
+    return headers
 
 # Define the clear_cookie_header function used by this module.
-def clear_cookie_header() -> tuple[str, str]:
-    # Return the computed value to the caller.
-    return ("Set-Cookie", f"{AUTH_SESSION_COOKIE}=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax")
+def clear_cookie_header(same_site: str = "Lax", secure: bool = False) -> tuple[str, str]:
+    # Add Secure consistently with the credential being removed.
+    secure_attribute = "; Secure" if secure else ""
+    # Clear the host-only credential with both Max-Age and an epoch expiry.
+    return ("Set-Cookie", f"{AUTH_SESSION_COOKIE}=; Path=/; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly{secure_attribute}; SameSite={same_site}")
+
+# Build all logout cookie expirations for the production browser boundary.
+def clear_cookie_headers(same_site: str = "Lax", secure: bool = False, include_csrf: bool = False) -> list[tuple[str, str]]:
+    # Start with the authenticated session credential expiration.
+    headers = [clear_cookie_header(same_site, secure)]
+    # Clear the companion double-submit cookie when production set it.
+    if include_csrf:
+        # Prevent stale browser CSRF values from surviving logout.
+        headers.append(clear_csrf_cookie_header(same_site, secure))
+    # Return the complete ordered expiration header set.
+    return headers
 
 # Define the is_public_api_path function used by this module.
 def is_public_api_path(path: str) -> bool:

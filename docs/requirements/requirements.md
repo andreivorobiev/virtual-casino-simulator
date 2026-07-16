@@ -879,6 +879,8 @@ flowchart LR
 
 ### Testing
 
+Restricted-preview hardening adds permanent requirements `SEC-010`, `SESSION-006`, `ADMIN-024`, `AUTH-007`, and `TEST-047`. Their canonical descriptions, implementation paths, and centrally discovered evidence are maintained in `requirements.json` and the generated requirements report.
+
 | ID | Requirement | Status | API tests | Browser tests |
 |---|---|---|---|---|
 | TEST-001 | API test harness starts local server on a free port. | PASS | API-ADMIN-001 |  |
