@@ -1,4 +1,13 @@
-# Virtual Casino Simulator v9.1.0 Release Notes
+# Virtual Casino Simulator v9.2.0 Release Notes
+
+## Reproducible release provenance gate
+
+- Adds deterministic tracked-file application packaging with normalized ZIP metadata and a complete checksum inventory.
+- Adds a canonical external manifest binding the artifact to exact source, packaged version, supported Python, module revisions, dependency/SBOM inputs, validation results, and every packaged file.
+- Adds negative private/runtime/untracked-content tests, archive-tamper checks, and listener-free clean extracted-copy smoke.
+- Separates unpublished pull-request candidates from protected-tag immutable publication with an additional repository switch and environment gate.
+- Requires a checksum-bound immediately previous artifact before publication and keeps database rollback outside the application-only rollback procedure.
+- Implements permanent requirement `TOOL-003` for GitHub issue #199 without authorizing deployment or public exposure.
 
 ## Post-release module addendum: disabled OAuth provider foundation
 

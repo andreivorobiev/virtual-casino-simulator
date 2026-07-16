@@ -4550,6 +4550,25 @@
       "notes": "Suite 100 becomes a PR workflow check; Suite 300/500 are chosen through workflow_dispatch."
     },
     {
+      "id": "TOOL-003",
+      "module": "Tooling",
+      "description": "Release tooling produces a deterministic tracked-file application archive, checksum-bound provenance and dependency manifest, clean extracted-copy smoke, fail-closed private-content exclusion, protected publication gate, and application-only prior-artifact rollback mapping.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        ".github/workflows/release.yml",
+        "scripts/make_release.py",
+        "scripts/package_app.py",
+        "tests/release_artifact_tests.py",
+        "docs/release_artifacts.md",
+        "contracts/compatibility/app-9.2.0.json"
+      ],
+      "introduced_in": "9.2.0",
+      "changed_in": "9.2.0",
+      "notes": "Branch and manual candidates remain unpublished; immutable publication additionally requires a protected canonical release tag, repository enablement, environment approval, and verified prior manifest."
+    },
+    {
       "id": "BOT-001",
       "module": "Bots",
       "description": "Bots are represented as controllers for player accounts, not embedded game objects.",

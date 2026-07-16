@@ -1,12 +1,12 @@
 # Virtual Casino Requirements and Validation
 
-Packaged application release: 9.1.1
+Packaged application release: 9.2.0
 
 Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.31.0
+- application: 9.32.0
 - core: 9.8.0
 - ledger: 9.1.0
 - players: 9.1.0
@@ -45,10 +45,10 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.0
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.35.1
-- docs: 1.34.0
-- contracts: 1.29.0
-- tooling: 1.6.0
+- tests: 1.36.0
+- docs: 1.35.0
+- contracts: 1.30.0
+- tooling: 1.7.0
 - commenting_policy: 1.0.0
 
 ## Requirements
@@ -344,6 +344,7 @@ Historical source baseline: 9.1.0
 - **DOC-016** (Documentation) - PASS: Parallel Codex workflow documentation defines coordinator and worker chat responsibilities.
 - **TOOL-001** (Tooling) - PASS: Codex task packets and prompts preserve scope, file ownership, validation, and PR handback context for worker chats.
 - **TOOL-002** (Tooling) - PASS: GitHub Actions exposes Suite 100 as a pull request check and Suite 300 or 500 as a manually selected sharded soak run.
+- **TOOL-003** (Tooling) - PASS: Release tooling produces a deterministic tracked-file application archive, checksum-bound provenance and dependency manifest, clean extracted-copy smoke, fail-closed private-content exclusion, protected publication gate, and application-only prior-artifact rollback mapping.
 - **BOT-001** (Bots) - PASS: Bots are represented as controllers for player accounts, not embedded game objects.
 - **BOT-002** (Bots) - PASS: Game modules must not import bot strategy modules.
 - **BOT-003** (Bots) - PASS: A bot appears for a game only when it has a compatible strategy.

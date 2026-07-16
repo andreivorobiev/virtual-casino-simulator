@@ -1,24 +1,111 @@
-name: Release
+name: Release Candidate
+
+# Validate unpublished candidates on pull requests and manual runs; reserve publication for release events.
 on:
+  pull_request:
   workflow_dispatch:
     inputs:
       app_version:
-        description: 'Application version to package'
+        description: Canonical packaged application version
         required: true
-jobs:
+        type: string
   release:
+    types:
+      - published
+
+# Prevent two release candidates from sharing the stable workflow artifact name.
+concurrency:
+  group: release-candidate-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-candidate:
+    name: Build unpublished candidate
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      # Check out the exact PR head or canonical release tag rather than a synthetic merge commit.
+      - name: Check out exact source
+        uses: actions/checkout@v4
         with:
-          python-version: '3.11'
-      - name: Install dev requirements
+          fetch-depth: 0
+          ref: ${{ github.event.release.tag_name || github.event.pull_request.head.sha || github.sha }}
+      # Use the deployment-supported Python minor for validation and extracted-copy smoke.
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      # Install only declared validation dependencies; runtime dependencies remain manifest inputs.
+      - name: Install validation requirements
         run: python -m pip install -r requirements-dev.txt
-      - name: Build release artifacts
-        run: python scripts/make_release.py --app-version ${{ github.event.inputs.app_version }}
-      - name: Upload dist artifacts
+      # Fetch the immediately previous immutable manifest only for a release-event candidate.
+      - name: Resolve retained previous release manifest
+        if: github.event_name == 'release'
+        env:
+          CURRENT_TAG: ${{ github.event.release.tag_name }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          previous_tag="$(gh api "repos/${GITHUB_REPOSITORY}/releases?per_page=100" | jq -r --arg current "${CURRENT_TAG}" '[.[] | select(.draft == false and .prerelease == false and .tag_name != $current)][0].tag_name // empty')"
+          test -n "${previous_tag}"
+          mkdir previous
+          gh release download "${previous_tag}" --pattern release-manifest.json --dir previous
+      # Pull requests build and validate a checksum-bound but unpublished candidate.
+      - name: Build pull-request candidate
+        if: github.event_name == 'pull_request'
+        run: python scripts/make_release.py
+      # Manual runs prove that caller input cannot diverge from canonical repository metadata.
+      - name: Build manual candidate
+        if: github.event_name == 'workflow_dispatch'
+        run: python scripts/make_release.py --app-version "${{ inputs.app_version }}"
+      # Release events must bind the canonical protected tag and retained rollback artifact.
+      - name: Build release-event candidate
+        if: github.event_name == 'release'
+        run: python scripts/make_release.py --release-tag "${{ github.event.release.tag_name }}" --previous-manifest previous/release-manifest.json
+      # Store short-lived workflow evidence; this is not an immutable GitHub Release publication.
+      - name: Upload unpublished candidate evidence
         uses: actions/upload-artifact@v4
         with:
-          name: virtual-casino-release
+          name: virtual-casino-release-candidate
           path: dist/
+          if-no-files-found: error
+          retention-days: 7
+
+  publish-immutable-release:
+    name: Publish immutable release assets
+    needs:
+      - build-candidate
+    # Publication requires a release event, a protected ref, and a separately enabled repository switch.
+    if: github.event_name == 'release' && github.event.action == 'published' && github.ref_protected == true && vars.ENABLE_IMMUTABLE_RELEASE_PUBLISH == 'true'
+    runs-on: ubuntu-latest
+    environment: immutable-release
+    permissions:
+      contents: write
+    steps:
+      # Check out the exact protected version tag for independent publication verification.
+      - name: Check out protected release tag
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.release.tag_name }}
+      # Use the supported deployment Python for clean-copy smoke at publication time.
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      # Download only the candidate produced by the read-only build job.
+      - name: Download candidate evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: virtual-casino-release-candidate
+          path: dist
+      # Recheck checksum, exact commit/tag, rollback mapping, inventory, and listener-free smoke.
+      - name: Verify immutable publication eligibility
+        shell: bash
+        run: python scripts/package_app.py --verify-only --archive dist/virtual_casino_simulator_package.zip --manifest dist/release-manifest.json --expected-commit "$(git rev-parse HEAD)" --expected-tag "${{ github.event.release.tag_name }}" --require-rollback
+      # Upload without replacement semantics so an existing asset makes the job fail closed.
+      - name: Publish release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name }}" dist/virtual_casino_simulator_package.zip dist/release-manifest.json dist/checksums.txt
