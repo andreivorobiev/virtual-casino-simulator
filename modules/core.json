@@ -1,9 +1,10 @@
 {
   "module": "core",
-  "version": "9.8.0",
+  "version": "9.9.0",
   "paths": [
     "casino/core/",
     "casino/app.py",
+    "casino/wsgi.py",
     "casino/router.py",
     "casino/errors.py",
     "casino/config.py",

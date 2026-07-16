@@ -6,8 +6,8 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.32.0
-- core: 9.8.0
+- application: 9.33.0
+- core: 9.9.0
 - ledger: 9.1.0
 - players: 9.1.0
 - bots: 1.1.0
@@ -45,10 +45,10 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.0
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.36.0
-- docs: 1.35.0
+- tests: 1.37.0
+- docs: 1.36.0
 - contracts: 1.30.0
-- tooling: 1.7.0
+- tooling: 1.8.0
 - commenting_policy: 1.0.0
 
 ## Requirements
@@ -619,3 +619,5 @@ Historical source baseline: 9.1.0
 - **OPS-004** (Operations) - PASS: Admin presents live, degraded, and client-derived down Operations states in English and Russian with text plus a non-color signal and no raw diagnostics.
 - **OPS-005** (Operations) - PASS: Copied-deployment smoke records the loopback child PID and port, probes anonymous liveness plus authenticated readiness and Admin telemetry, verifies sanitized build provenance, stops the child, and proves the port closed.
 - **TEST-044** (Tests) - PASS: Operations regression evidence covers anonymous and authenticated policy, healthy and degraded dependencies, Admin authorization, EN/RU responsive states, copied deployment, and listener cleanup.
+- **CORE-023** (Core) - PASS: A production WSGI adapter initializes from explicit external runtime configuration, serves the complete same-origin application without invoking the development HTTP server, and is supported only through a fixed-loopback supervised process policy.
+- **TEST-046** (Tests) - PASS: Production-service validation covers listener-free WSGI parity, sanitized probes, authorization propagation, malformed input, fail-closed external configuration, fixed-loopback policy, hardened supervision, clean extracted-release startup, graceful restart, persistence, failure handling, and exact listener closure.

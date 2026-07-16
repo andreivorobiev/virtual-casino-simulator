@@ -40,7 +40,7 @@ ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
 # Accept only full lowercase or uppercase Git object identifiers in provenance.
 COMMIT_RE = re.compile(r"^[0-9a-fA-F]{40}$")
 # Allow only the runtime and audit roots required by the application artifact.
-ALLOWED_PREFIXES = ("casino/", "contracts/", "modules/", "web/")
+ALLOWED_PREFIXES = ("casino/", "contracts/", "deploy/", "modules/", "web/")
 # Allow only deployable top-level files rather than repository governance content.
 ALLOWED_FILES = {
     "ARCHITECTURE.md",
@@ -74,6 +74,9 @@ FORBIDDEN_SUFFIXES = {".key", ".p12", ".pem", ".pfx"}
 REQUIRED_FILES = {
     "casino/__init__.py",
     "casino/app.py",
+    "casino/wsgi.py",
+    "deploy/gunicorn.conf.py",
+    "deploy/systemd/casino.service",
     "modules/module-manifest.json",
     "pyproject.toml",
     "run.py",

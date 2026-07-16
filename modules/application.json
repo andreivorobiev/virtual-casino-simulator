@@ -1,9 +1,10 @@
 {
   "module": "application",
-  "version": "9.32.0",
+  "version": "9.33.0",
   "paths": [
     "run.py",
     "pyproject.toml",
+    "deploy/",
     "README.md",
     "modules/__init__.py",
     "web/app.js",
