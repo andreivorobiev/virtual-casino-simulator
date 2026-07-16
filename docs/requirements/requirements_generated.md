@@ -6,14 +6,14 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.30.0
-- core: 9.7.0
+- application: 9.31.0
+- core: 9.8.0
 - ledger: 9.1.0
 - players: 9.1.0
 - bots: 1.1.0
 - autoplay: 1.1.1
 - audio: 9.1.1
-- admin: 1.4.0
+- admin: 1.5.0
 - operations: 1.0.0
 - roulette: 9.3.1
 - slots: 9.1.0
@@ -45,9 +45,9 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.0
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.34.0
-- docs: 1.33.0
-- contracts: 1.28.0
+- tests: 1.35.0
+- docs: 1.34.0
+- contracts: 1.29.0
 - tooling: 1.6.0
 - commenting_policy: 1.0.0
 
@@ -425,6 +425,13 @@ Historical source baseline: 9.1.0
 - **AUTH-004** (Auth) - PASS: Unauthenticated or inactive-user access returns the standard ok/error API envelope without leaking protected data.
 - **AUTH-005** (Auth) - PASS: Authenticated Admin-only actions require an active user with an Admin role.
 - **AUTH-006** (Auth) - PASS: Non-loopback or explicitly public deployment startup requires explicit bootstrap Admin settings and rejects known local defaults before runtime state is mutated.
+- **OAUTH-001** (OAuth) - PASS: The provider catalog preserves local password login as the sole runtime-available provider while Google and Facebook remain unavailable regardless of inert configuration readiness.
+- **OAUTH-002** (OAuth) - PASS: Admin-only diagnostics expose a fixed allowlist of provider configuration and runtime facts without credential values, tokens, raw claims, authorization URLs, or raw errors and without affecting Operations readiness.
+- **OAUTH-003** (OAuth) - PASS: Pure callback helpers preserve the issue #75 route reservation and fail closed on invalid callback origins, ambiguous parameters, state, nonce, authorization codes, and PKCE values without registering a callback route.
+- **OAUTH-004** (OAuth) - PASS: Injected identity-link logic binds an external provider subject only to an authenticated canonical user, never creates users or links by email, and fails closed on repository ownership or uniqueness drift.
+- **OAUTH-005** (OAuth) - PASS: Mocked Google and Facebook claim normalization retains only bounded allowlisted identity fields and is not treated as live token, signature, issuer, audience, expiry, nonce, or PKCE verification.
+- **OAUTH-006** (Application) - PASS: The English and Russian login gate presents readable native-disabled Google and Facebook controls with no link or handler, while local email/password login behavior remains unchanged.
+- **TEST-045** (Tests) - PASS: OAuth regression evidence centrally discovers service-free mocked tests and covers Admin authorization, secret-safe diagnostics, absent action routes, disabled EN/RU controls, unchanged local login, contracts, and listener cleanup.
 - **SESSION-001** (Session) - PASS: Successful login creates a server-side session represented to clients by a protected session cookie.
 - **SESSION-002** (Session) - PASS: Logout invalidates the current session before returning a standard ok/data envelope.
 - **SESSION-003** (Session) - PASS: Current-user lookup returns user, role, session, terms, locale, and bound player token balance data.

@@ -6009,6 +6009,156 @@
       "notes": "Added for GitHub issue #62; loopback developer startup retains local defaults while public startup fails closed without unique explicit configuration."
     },
     {
+      "id": "OAUTH-001",
+      "module": "OAuth",
+      "description": "The provider catalog preserves local password login as the sole runtime-available provider while Google and Facebook remain unavailable regardless of inert configuration readiness.",
+      "status": "PASS",
+      "api_tests": [
+        "API-OAUTH-001",
+        "OAUTH-MOCK-001"
+      ],
+      "browser_tests": [
+        "BR-OAUTH-001"
+      ],
+      "implementation_files": [
+        "casino/core/oauth/providers/",
+        "casino/core/oauth/configuration.py",
+        "casino/core/oauth/api.py",
+        "casino/app.py"
+      ],
+      "introduced_in": "issue-70-disabled-oauth-foundation",
+      "changed_in": "issue-70-disabled-oauth-foundation",
+      "notes": "GitHub issue #77 integrates only the owner-approved disabled foundation; no provider authorization action or live adapter is registered."
+    },
+    {
+      "id": "OAUTH-002",
+      "module": "OAuth",
+      "description": "Admin-only diagnostics expose a fixed allowlist of provider configuration and runtime facts without credential values, tokens, raw claims, authorization URLs, or raw errors and without affecting Operations readiness.",
+      "status": "PASS",
+      "api_tests": [
+        "API-OAUTH-001",
+        "OAUTH-MOCK-001"
+      ],
+      "browser_tests": [
+        "BR-ADMIN-OAUTH-001"
+      ],
+      "implementation_files": [
+        "casino/core/oauth/configuration.py",
+        "casino/core/oauth/api.py",
+        "casino/app.py",
+        "web/admin.js",
+        "contracts/openapi/auth.v2.yaml"
+      ],
+      "introduced_in": "issue-70-disabled-oauth-foundation",
+      "changed_in": "issue-70-disabled-oauth-foundation",
+      "notes": "The route is GET /api/v2/admin/oauth/providers; /healthz, /readyz, and /api/v2/admin/operations retain their accepted issue #72 schemas."
+    },
+    {
+      "id": "OAUTH-003",
+      "module": "OAuth",
+      "description": "Pure callback helpers preserve the issue #75 route reservation and fail closed on invalid callback origins, ambiguous parameters, state, nonce, authorization codes, and PKCE values without registering a callback route.",
+      "status": "PASS",
+      "api_tests": [
+        "OAUTH-MOCK-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/oauth/callbacks.py",
+        "tests/oauth/test_callbacks.py",
+        "casino/core/oauth/INTEGRATION.md"
+      ],
+      "introduced_in": "issue-70-disabled-oauth-foundation",
+      "changed_in": "issue-70-disabled-oauth-foundation",
+      "notes": "One-time server persistence and callback routing remain deferred behind a separate live-runtime approval and security hardening."
+    },
+    {
+      "id": "OAUTH-004",
+      "module": "OAuth",
+      "description": "Injected identity-link logic binds an external provider subject only to an authenticated canonical user, never creates users or links by email, and fails closed on repository ownership or uniqueness drift.",
+      "status": "PASS",
+      "api_tests": [
+        "OAUTH-MOCK-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/oauth/identity_links.py",
+        "casino/core/oauth/models.py",
+        "tests/oauth/test_identity_links.py"
+      ],
+      "introduced_in": "issue-70-disabled-oauth-foundation",
+      "changed_in": "issue-70-disabled-oauth-foundation",
+      "notes": "Persistent compound uniqueness remains deferred; no JSON, MySQL, signup, user, or player store is mutated by this foundation."
+    },
+    {
+      "id": "OAUTH-005",
+      "module": "OAuth",
+      "description": "Mocked Google and Facebook claim normalization retains only bounded allowlisted identity fields and is not treated as live token, signature, issuer, audience, expiry, nonce, or PKCE verification.",
+      "status": "PASS",
+      "api_tests": [
+        "OAUTH-MOCK-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/oauth/providers/google.py",
+        "casino/core/oauth/providers/facebook.py",
+        "tests/oauth/test_providers.py"
+      ],
+      "introduced_in": "issue-70-disabled-oauth-foundation",
+      "changed_in": "issue-70-disabled-oauth-foundation",
+      "notes": "No provider SDK, HTTP client, token endpoint, or client-supplied verified-identity route exists."
+    },
+    {
+      "id": "OAUTH-006",
+      "module": "Application",
+      "description": "The English and Russian login gate presents readable native-disabled Google and Facebook controls with no link or handler, while local email/password login behavior remains unchanged.",
+      "status": "PASS",
+      "api_tests": [
+        "API-OAUTH-001"
+      ],
+      "browser_tests": [
+        "BR-OAUTH-001",
+        "BR-ADMIN-OAUTH-001",
+        "BR-AUTH-BACKEND-001"
+      ],
+      "implementation_files": [
+        "web/app.js",
+        "web/styles.css",
+        "web/admin.js",
+        "web/i18n/en-US/shell.json",
+        "web/i18n/ru-RU/shell.json",
+        "web/i18n/en-US/admin.json",
+        "web/i18n/ru-RU/admin.json",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-70-disabled-oauth-foundation",
+      "changed_in": "issue-70-disabled-oauth-foundation",
+      "notes": "Browser acceptance proves disabled controls dispatch no provider request and the Admin card never changes Operations health classification."
+    },
+    {
+      "id": "TEST-045",
+      "module": "Tests",
+      "description": "OAuth regression evidence centrally discovers service-free mocked tests and covers Admin authorization, secret-safe diagnostics, absent action routes, disabled EN/RU controls, unchanged local login, contracts, and listener cleanup.",
+      "status": "PASS",
+      "api_tests": [
+        "OAUTH-MOCK-001",
+        "API-OAUTH-001"
+      ],
+      "browser_tests": [
+        "BR-OAUTH-001",
+        "BR-ADMIN-OAUTH-001",
+        "BR-AUTH-BACKEND-001"
+      ],
+      "implementation_files": [
+        "tests/oauth/",
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json",
+        "contracts/compatibility/oauth-disabled-foundation.json"
+      ],
+      "introduced_in": "issue-70-disabled-oauth-foundation",
+      "changed_in": "issue-70-disabled-oauth-foundation",
+      "notes": "GitHub issue #77 allocates the permanent IDs for the owner-approved disabled OAuth foundation."
+    },
+    {
       "id": "SESSION-001",
       "module": "Session",
       "description": "Successful login creates a server-side session represented to clients by a protected session cookie.",

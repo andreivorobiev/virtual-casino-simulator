@@ -88,6 +88,7 @@
       "selector": "[data-testid='login-gate'], [data-testid='terms-gate']",
       "states": [
         "login",
+        "oauth_providers_disabled",
         "terms_required",
         "invalid_credentials"
       ],
@@ -103,7 +104,8 @@
         "VIS-COPY-001",
         "VIS-TOKEN-002",
         "VIS-LAYOUT-003",
-        "VIS-RESPONSIVE-001"
+        "VIS-RESPONSIVE-001",
+        "VIS-EVIDENCE-001"
       ]
     },
     {
@@ -435,6 +437,7 @@
         "users",
         "language",
         "test_results",
+        "operations_oauth_disabled",
         "operations_live",
         "operations_degraded",
         "operations_down"

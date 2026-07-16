@@ -312,13 +312,42 @@ async function telemetry() {
   view.innerHTML = `<div class="admin-split"><section class="admin-card"><h3>Application events</h3>${eventList(app.logs, 'No application events', 'Application activity will appear here as the local service is used.', 'admin-app-events')}</section><section class="admin-card"><h3>Error events</h3>${eventList(errors.logs, 'No error events', 'No server errors have been recorded for the current day.', 'admin-error-events', true)}</section></div><section class="admin-card"><h3>Browser events</h3>${eventList(client.logs, 'No browser events', 'Browser activity will appear here after a client sends telemetry.', 'admin-client-events')}</section>`;
 }
 
+// Render OAuth diagnostics separately so provider configuration cannot change Operations health.
+function oauthDiagnosticsCard(data) {
+  // Keep only the three provider identifiers owned by the disabled OAuth catalog.
+  const providers = Array.isArray(data?.providers) ? data.providers.filter(provider => ['local', 'google', 'facebook'].includes(provider?.provider)) : [];
+  // Render an explicit unavailable state when the independent diagnostic request fails validation.
+  if (providers.length !== 3) return `<section class="admin-card" data-testid="admin-oauth-diagnostics-unavailable"><h2>${safe(t('oauth.title', {}, 'admin'))}</h2><p>${safe(t('oauth.unavailable', {}, 'admin'))}</p></section>`;
+  // Build one allowlisted row per provider without rendering callback URLs or environment details.
+  const rows = providers.map(provider => {
+    // Normalize configuration status so unexpected backend values never become translation keys.
+    const configurationStatus = ['ready', 'disabled', 'misconfigured'].includes(provider.status) ? provider.status : 'unknown';
+    // Derive runtime copy only from the explicit availability boolean.
+    const runtimeStatus = provider.runtime_available === true ? 'available' : 'unavailable';
+    // Return a compact localized row with stable browser-test hooks.
+    return `<tr data-testid="admin-oauth-provider-${safe(provider.provider)}" data-runtime-available="${provider.runtime_available === true}"><td>${safe(t(`oauth.provider.${provider.provider}`, {}, 'admin'))}</td><td>${safe(t(`oauth.configuration.${configurationStatus}`, {}, 'admin'))}</td><td>${safe(t(`oauth.runtime.${runtimeStatus}`, {}, 'admin'))}</td></tr>`;
+  });
+  // Return a separate card so OAuth status never alters live, degraded, or down Operations state.
+  return `<section class="admin-card" data-testid="admin-oauth-diagnostics"><h2>${safe(t('oauth.title', {}, 'admin'))}</h2><p>${safe(t('oauth.subtitle', {}, 'admin'))}</p>${table([t('oauth.field.provider', {}, 'admin'), t('oauth.field.configuration', {}, 'admin'), t('oauth.field.runtime', {}, 'admin')], rows)}</section>`;
+}
+
+// Replace only the independent OAuth card when its separate request settles.
+function replaceOAuthDiagnosticsCard(data) {
+  // Ignore a delayed diagnostic response after the user has left Operations.
+  if (!isActiveTab('operations')) return;
+  // Find either the loading/unavailable placeholder or the prior populated card.
+  const card = view.querySelector('[data-testid^="admin-oauth-diagnostics"]');
+  // Replace the provider card without rerendering or reclassifying Operations health.
+  if (card) card.outerHTML = oauthDiagnosticsCard(data);
+}
+
 // Define operations to render trusted dependency and heartbeat telemetry for Admin users.
 async function operations() {
   // Set localized Operations chrome before the request so transport failures retain context.
   setTitle(t('operations.title', {}, 'admin'), t('operations.subtitle', {}, 'admin'));
   // Start protected loading so transport failure becomes an explicit non-color state.
   try {
-    // Load only the sanitized Admin-authorized Operations payload.
+    // Load only Operations before rendering its live, degraded, or down classification.
     const data = await api('/api/v2/admin/operations');
     // Stop a stale response from replacing a newer Admin tab.
     if (!isActiveTab('operations')) return;
@@ -333,7 +362,9 @@ async function operations() {
     // Format the trusted heartbeat timestamp without exposing raw transport diagnostics.
     const heartbeat = data.last_successful_heartbeat_at ? formatDate(new Date(data.last_successful_heartbeat_at), { dateStyle: 'medium', timeStyle: 'medium' }) : t('operations.unavailable', {}, 'admin');
     // Render live or degraded diagnostics with stable test hooks for EN/RU visual evidence.
-    view.innerHTML = `<section class="admin-card ${data.ready ? '' : 'danger'}" data-testid="admin-operations-${stateKey}"><div class="row"><div><h2>${safe(t(`operations.state.${stateKey}`, {}, 'admin'))}</h2><p>${safe(t(`operations.detail.${stateKey}`, {}, 'admin'))}</p></div><span class="badge" data-testid="admin-operations-state">${safe(t(`operations.symbol.${stateKey}`, {}, 'admin'))} ${safe(t(`operations.state.${stateKey}`, {}, 'admin'))}</span></div>${table([t('operations.field', {}, 'admin'), t('operations.value', {}, 'admin')], [`<tr><td>${safe(t('operations.storage', {}, 'admin'))}</td><td>${safe(providerLabel)}</td></tr>`, `<tr><td>${safe(t('operations.appVersion', {}, 'admin'))}</td><td>${safe(data.build.app_version)}</td></tr>`, `<tr><td>${safe(t('operations.buildSha', {}, 'admin'))}</td><td>${safe(buildSha)}</td></tr>`, `<tr><td>${safe(t('operations.lastHeartbeat', {}, 'admin'))}</td><td>${safe(heartbeat)}</td></tr>`])}${reasonLabels.length ? `<h3>${safe(t('operations.attention', {}, 'admin'))}</h3><ul>${reasonLabels.map(label => `<li>${safe(label)}</li>`).join('')}</ul>` : ''}</section>`;
+    view.innerHTML = `<section class="admin-card ${data.ready ? '' : 'danger'}" data-testid="admin-operations-${stateKey}"><div class="row"><div><h2>${safe(t(`operations.state.${stateKey}`, {}, 'admin'))}</h2><p>${safe(t(`operations.detail.${stateKey}`, {}, 'admin'))}</p></div><span class="badge" data-testid="admin-operations-state">${safe(t(`operations.symbol.${stateKey}`, {}, 'admin'))} ${safe(t(`operations.state.${stateKey}`, {}, 'admin'))}</span></div>${table([t('operations.field', {}, 'admin'), t('operations.value', {}, 'admin')], [`<tr><td>${safe(t('operations.storage', {}, 'admin'))}</td><td>${safe(providerLabel)}</td></tr>`, `<tr><td>${safe(t('operations.appVersion', {}, 'admin'))}</td><td>${safe(data.build.app_version)}</td></tr>`, `<tr><td>${safe(t('operations.buildSha', {}, 'admin'))}</td><td>${safe(buildSha)}</td></tr>`, `<tr><td>${safe(t('operations.lastHeartbeat', {}, 'admin'))}</td><td>${safe(heartbeat)}</td></tr>`])}${reasonLabels.length ? `<h3>${safe(t('operations.attention', {}, 'admin'))}</h3><ul>${reasonLabels.map(label => `<li>${safe(label)}</li>`).join('')}</ul>` : ''}</section>${oauthDiagnosticsCard(null)}`;
+    // Start provider diagnostics only after Operations is visible and handle failure locally.
+    api('/api/v2/admin/oauth/providers').then(replaceOAuthDiagnosticsCard).catch(() => replaceOAuthDiagnosticsCard(null));
   // Convert network or server loss into a client-derived down state without raw error text.
   } catch (error) {
     // Avoid replacing a newer tab after a delayed transport failure.

@@ -1,0 +1,48 @@
+{
+  "issue": "https://github.com/andreivorobiev/virtual-casino-simulator/issues/70",
+  "created_at": "2026-07-16T00:00:00Z",
+  "status": "integrated_disabled_foundation",
+  "v1_compatibility": {
+    "policy": "additive",
+    "notes": "The Admin-only v2 diagnostic route and disabled browser controls do not alter any frozen v1 endpoint, request, response, local-login, ledger, or gameplay behavior."
+  },
+  "endpoints": [
+    "GET /api/v2/admin/oauth/providers"
+  ],
+  "runtime_policy": {
+    "local": "available through the unchanged password login flow",
+    "google": "runtime unavailable regardless of inert configuration readiness",
+    "facebook": "runtime unavailable regardless of inert configuration readiness"
+  },
+  "registered_route_holds": [
+    "no authorization-start route",
+    "no identity-link route",
+    "no callback route",
+    "no code-exchange route",
+    "no provider transport or SDK"
+  ],
+  "diagnostic_allowlist": [
+    "provider and flow identifiers",
+    "configuration and runtime boolean state",
+    "credential-presence booleans without values",
+    "validated callback URL for Admin only",
+    "missing configuration key names",
+    "fixed problem codes"
+  ],
+  "diagnostic_forbidden": [
+    "client ids or secrets",
+    "authorization codes or provider tokens",
+    "state, nonce, PKCE verifier, or raw claims",
+    "authorization URLs",
+    "raw configuration values or exception text"
+  ],
+  "shared_integration_owner": "GitHub issue #77",
+  "live_enablement_blockers": [
+    "explicit owner approval for live provider runtime",
+    "provider applications and externally stored credentials",
+    "exact provider-console callback registration and real callback verification",
+    "atomic one-time flow and identity-link persistence",
+    "owned HTTPS deployment with Secure cookies and CSRF hardening",
+    "public privacy, terms, and data-deletion handling"
+  ]
+}

@@ -1,7 +1,7 @@
 # AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
 #!/usr/bin/env python3
 # Import required dependency so this module can use its public functions or constants.
-import argparse, importlib, json, os, re, socket, subprocess, sys, time, traceback, urllib.request
+import argparse, importlib, io, json, os, re, socket, subprocess, sys, time, traceback, unittest, urllib.request
 # Import required dependency so this module can use its public functions or constants.
 from pathlib import Path
 # Set ROOT to the value needed for the next operation.
@@ -113,6 +113,41 @@ def start_server():
     # Set out to the value needed for the next operation.
     out=proc.stdout.read() if proc.stdout else ''; proc.terminate(); raise RuntimeError('server did not start\n'+out)
 
+# Stop one tracked test child and prove its exact loopback port is closed.
+def stop_server(proc, base):
+    # Parse the known numeric port from the harness-owned loopback base URL.
+    port=int(base.rsplit(':',1)[1])
+    # Reject protected user ports even though the dynamic allocator cannot normally select them.
+    if port in (8765,8877): raise AssertionError(f'refusing to stop protected port {port}')
+    # Ask only the tracked child process to terminate when it is still running.
+    if proc.poll() is None: proc.terminate()
+    # Wait for cooperative shutdown before using the tracked-process force fallback.
+    try: proc.wait(timeout=5)
+    # Handle a child that did not stop within the bounded grace period.
+    except subprocess.TimeoutExpired:
+        # Kill only the exact process object returned by the harness.
+        proc.kill(); proc.wait(timeout=5)
+    # Poll the exact loopback port until the operating system releases the listener.
+    for _ in range(50):
+        # Create a short-lived probe socket without binding or reserving another port.
+        probe=socket.socket()
+        # Bound each connection attempt so cleanup cannot hang the suite.
+        probe.settimeout(.1)
+        # Test only the recorded loopback listener and retain no connection on failure.
+        open_listener=probe.connect_ex(('127.0.0.1',port))==0
+        # Close the probe immediately regardless of listener state.
+        probe.close()
+        # Report exact PID/port closure as soon as no listener accepts connections.
+        if not open_listener:
+            # Emit durable cleanup evidence for the validation handback.
+            print(f'Test server PID {proc.pid} stopped; 127.0.0.1:{port} closed',flush=True)
+            # Return after the tracked child and port are both clean.
+            return
+        # Wait briefly before the next bounded listener probe.
+        time.sleep(.1)
+    # Fail the suite when the tracked port remains open after process cleanup.
+    raise AssertionError(f'tracked test listener remained open on 127.0.0.1:{port}')
+
 # Define the run_case function used by this module.
 def run_case(test_id, reqs, fn):
     # Start protected logic so failures can be handled safely.
@@ -185,6 +220,17 @@ def validate_i18n_resources():
                 # Execute this statement as part of the module's documented control flow.
                 assert i18n_placeholders(translated_value)==i18n_placeholders(source_value), f'{locale}/{domain}/{key} placeholder mismatch'
 
+# Run every service-free OAuth test through central discovery so CI cannot miss the package.
+def run_oauth_mock_tests():
+    # Discover the focused package from the repository root without importing provider SDKs.
+    suite=unittest.defaultTestLoader.discover(str(ROOT/'tests'/'oauth'),pattern='test_*.py',top_level_dir=str(ROOT))
+    # Capture unittest detail so a failure can be reported without printing configuration payloads.
+    output=io.StringIO()
+    # Execute the complete discovered suite once with concise failure collection.
+    result=unittest.TextTestRunner(stream=output,verbosity=1).run(suite)
+    # Fail the mapped central case when any focused test fails or errors.
+    if not result.wasSuccessful(): raise AssertionError(output.getvalue())
+
 # Define the validate_deployment_bootstrap function used to prove fail-closed public startup behavior.
 def validate_deployment_bootstrap():
     # Preserve no-configuration developer startup on the default IPv4 loopback binding.
@@ -234,6 +280,8 @@ def validate_deployment_bootstrap():
 
 # Define the run_api_tests function used by this module.
 def run_api_tests():
+    # Centrally discover all mocked and disabled OAuth tests before any listener starts.
+    run_case('OAUTH-MOCK-001',['OAUTH-001','OAUTH-002','OAUTH-003','OAUTH-004','OAUTH-005','TEST-045'],run_oauth_mock_tests)
     # Record focused deployment-default coverage before starting the normal loopback API server.
     run_case('API-AUTH-DEPLOYMENT-001',['AUTH-006','TEST-041'],validate_deployment_bootstrap)
     # Certify the matrix and shared hostile-client boundary before starting a listener.
@@ -274,6 +322,32 @@ def run_api_tests():
             assert api(base,'/readyz')['ready'] is True
         # Record anonymous/authenticated/degraded/recovery Operations behavior under permanent IDs.
         run_case('API-OPS-001',['OPS-001','OPS-002','OPS-003','OPS-005','TEST-044'],operations_api)
+        # Define the disabled OAuth Admin diagnostic contract against the real loopback backend.
+        def oauth_api():
+            # Require unauthenticated callers to fail before the Admin route can disclose diagnostics.
+            anonymous=api(base,'/api/v2/admin/oauth/providers',ok=False,auth_token=None); assert anonymous['error']['code']=='UNAUTHORIZED'
+            # Read the allowlisted provider diagnostics through the authenticated Admin session.
+            diagnostic=api(base,'/api/v2/admin/oauth/providers')
+            # Require the stable catalog order so UI and contract clients cannot confuse provider rows.
+            assert [provider['provider'] for provider in diagnostic['providers']]==['local','google','facebook']
+            # Define the exact allowlisted schema published by the additive auth v2 contract.
+            allowed_keys={'provider','flow','status','configuration_ready','runtime_available','enabled_requested','client_id_configured','client_secret_configured','callback_url','missing_variables','problems'}
+            # Require every diagnostic row to contain no undeclared or action-bearing fields.
+            assert all(set(provider)==allowed_keys for provider in diagnostic['providers'])
+            # Index the three stable providers for explicit runtime assertions.
+            providers={provider['provider']:provider for provider in diagnostic['providers']}
+            # Preserve local password login as the sole runtime-available provider.
+            assert providers['local']['runtime_available'] is True
+            # Keep both external providers unavailable regardless of environment readiness.
+            assert providers['google']['runtime_available'] is False and providers['facebook']['runtime_available'] is False
+            # Require every held provider action route to remain absent from the application router.
+            for held_path in ('/api/v2/auth/oauth/google/start','/api/v2/auth/oauth/google/callback','/api/v2/auth/oauth/google/link','/api/v2/auth/oauth/google/exchange','/api/v2/auth/oauth/facebook/start','/api/v2/auth/oauth/facebook/callback'):
+                # Dispatch only empty, value-free requests so no callback data can enter logs.
+                missing=api(base,held_path,ok=False); assert missing['error']['code']=='NOT_FOUND'
+            # Confirm OAuth diagnostics never extend the accepted Operations response shape.
+            assert set(api(base,'/api/v2/admin/operations'))=={'schema_version','probe','status','checked_at','last_successful_heartbeat_at','build','ready','storage_provider','checks','reasons'}
+        # Record secret-safe Admin diagnostics, absent action routes, and unchanged readiness under permanent IDs.
+        run_case('API-OAUTH-001',['OAUTH-001','OAUTH-002','OAUTH-006','TEST-045'],oauth_api)
         # Define the auth_backend function used by this module.
         def auth_backend():
             # Set blocked to the value needed for the next operation.
@@ -831,7 +905,7 @@ def run_api_tests():
             # Verify user B cannot mutate user A's server-side autoplay session.
             cross_auto=api(base,'/api/v1/autoplay/stop','POST',{'autoplay_id':auto_a['autoplay_id']},ok=False,auth_token=token_b); assert auto_a['player_id']==user_a['player_id'] and cross_auto['error']['code']=='FORBIDDEN'
             # Enumerate every registered Admin route shape to prove the central role gate fails closed.
-            admin_paths=[('GET','/api/v1/admin/overview'),('GET','/api/v1/admin/dashboard'),('GET','/api/v1/admin/modules'),('GET','/api/v1/admin/requirements'),('GET','/api/v1/admin/game-states'),('GET','/api/v1/admin/users'),('POST','/api/v1/admin/users'),('GET',f'/api/v1/admin/users/{user_b["user_id"]}'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/deactivate'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/reactivate'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/password-reset'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/terms'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/locale'),('GET','/api/v1/admin/logs'),('GET','/api/v1/admin/ledger'),('GET','/api/v1/admin/history'),('GET','/api/v1/admin/test-results'),('GET','/api/v1/admin/audio-settings'),('POST','/api/v1/admin/audio-settings'),('GET','/api/v1/admin/autoplay'),('POST','/api/v1/admin/autoplay/stop-all'),('GET','/api/v1/admin/bots'),('POST','/api/v1/admin/bots/practice-opponents/fund'),('GET','/api/v2/admin/operations'),('GET','/api/v2/admin/users'),('POST','/api/v2/admin/users'),('GET',f'/api/v2/admin/users/{user_b["user_id"]}'),('PATCH',f'/api/v2/admin/users/{user_b["user_id"]}'),('POST',f'/api/v2/admin/users/{user_b["user_id"]}/password'),('PATCH',f'/api/v2/admin/users/{user_b["user_id"]}/terms'),('GET',f'/api/v2/admin/users/{user_b["user_id"]}/state')]
+            admin_paths=[('GET','/api/v1/admin/overview'),('GET','/api/v1/admin/dashboard'),('GET','/api/v1/admin/modules'),('GET','/api/v1/admin/requirements'),('GET','/api/v1/admin/game-states'),('GET','/api/v1/admin/users'),('POST','/api/v1/admin/users'),('GET',f'/api/v1/admin/users/{user_b["user_id"]}'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/deactivate'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/reactivate'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/password-reset'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/terms'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/locale'),('GET','/api/v1/admin/logs'),('GET','/api/v1/admin/ledger'),('GET','/api/v1/admin/history'),('GET','/api/v1/admin/test-results'),('GET','/api/v1/admin/audio-settings'),('POST','/api/v1/admin/audio-settings'),('GET','/api/v1/admin/autoplay'),('POST','/api/v1/admin/autoplay/stop-all'),('GET','/api/v1/admin/bots'),('POST','/api/v1/admin/bots/practice-opponents/fund'),('GET','/api/v2/admin/operations'),('GET','/api/v2/admin/oauth/providers'),('GET','/api/v2/admin/users'),('POST','/api/v2/admin/users'),('GET',f'/api/v2/admin/users/{user_b["user_id"]}'),('PATCH',f'/api/v2/admin/users/{user_b["user_id"]}'),('POST',f'/api/v2/admin/users/{user_b["user_id"]}/password'),('PATCH',f'/api/v2/admin/users/{user_b["user_id"]}/terms'),('GET',f'/api/v2/admin/users/{user_b["user_id"]}/state')]
             # Request each Admin endpoint as a normal user and require a forbidden response.
             for method,path in admin_paths:
                 # Send an empty body for mutating routes because authorization must run before validation.
@@ -930,8 +1004,8 @@ def run_api_tests():
         run_case('API-CONTRACT-V2-001',['API-001','API-002','TOKEN-002'],lambda: assert_condition({'player_id','token_balance','token_label'} <= set(integrity_state['contract_player']),'v2 player summary shape mismatch'))
         # Record canonical terms gate and persistence coverage under its permanent test id.
         run_case('API-TERMS-001',['TERMS-001','TERMS-002','TERMS-003'],lambda: assert_condition(integrity_state['email']=='wallet-a@example.local','terms integrity setup missing'))
-        # Stop the live backend cleanly so persistence is verified across an actual process boundary.
-        proc.terminate(); proc.wait(timeout=5)
+        # Stop and verify the live backend before persistence is tested across a process boundary.
+        stop_server(proc,base)
         # Start a fresh backend process against the same configured provider state.
         proc,base=start_server()
         # Define wallet_restart_persistence to verify canonical identity and ledger state survive restart.
@@ -1346,8 +1420,8 @@ def run_api_tests():
         run_case('API-ADMIN-001',['ADMIN-001','ADMIN-003','ADMIN-004','ADMIN-014','DOC-001','LOG-001','ADMIN-USER-PENDING-035','TERMS-PENDING-035','TOKEN-PENDING-035','I18N-003','TEST-003'],admin)
     # Run cleanup logic regardless of success or failure.
     finally:
-        # Set proc.terminate(); proc.wait(timeout to the value needed for the next operation.
-        proc.terminate(); proc.wait(timeout=5); save_results()
+        # Stop the tracked API child and prove its loopback listener is closed.
+        stop_server(proc,base); save_results()
 
 # Define the run_browser_tests function used by this module.
 def run_browser_tests():
@@ -1397,7 +1471,7 @@ def run_browser_tests():
                 # Wait for the authenticated shell that can only mount after the backend session cookie is accepted.
                 real_login_page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Record the focused real-backend browser login regression coverage.
-                run_case('BR-AUTH-BACKEND-001',['AUTH-001','AUTH-002','SESSION-001'],lambda: real_login_response['ok'] is True and real_login_response['data']['user']['email']==DEFAULT_AUTH_EMAIL and real_login_page.get_by_test_id('lobby').is_visible())
+                run_case('BR-AUTH-BACKEND-001',['AUTH-001','AUTH-002','SESSION-001','OAUTH-006','TEST-045'],lambda: real_login_response['ok'] is True and real_login_response['data']['user']['email']==DEFAULT_AUTH_EMAIL and real_login_page.get_by_test_id('lobby').is_visible())
             # Close the focused page even when its assertions fail.
             finally:
                 # Release the isolated backend-login browser context before the existing broad UI suite.
@@ -1405,13 +1479,15 @@ def run_browser_tests():
             # Set page to the value needed for the next operation.
             page=browser.new_page(viewport={'width':1920,'height':1080})
             # Set console_errors to the value needed for the next operation.
-            console_errors=[]; page_errors=[]; http_errors=[]
+            console_errors=[]; page_errors=[]; http_errors=[]; provider_requests=[]
             # Set page.on('console', lambda msg: console_errors.append(msg.tex to the value needed for the next operation.
             page.on('console', lambda msg: console_errors.append(msg.text) if msg.type=='error' else None)
             # Execute this statement as part of the module's documented control flow.
             page.on('pageerror', lambda err: page_errors.append(str(err)))
             # Capture failing response URLs so authorization regressions are diagnosable.
             page.on('response', lambda response: http_errors.append(f'{response.status} {response.url}') if response.status >= 400 else None)
+            # Record only attempted provider-action traffic so disabled-control assertions remain focused.
+            page.on('request', lambda request: provider_requests.append(request.url) if '/api/v2/auth/oauth/' in request.url or 'accounts.google.com' in request.url or 'facebook.com' in request.url else None)
             # Install an audio probe before navigation so Roulette voice text can be matched to the authoritative result.
             page.add_init_script("window.__casinoAudioEvents=[]; window.__casinoAudioProbe=(event)=>window.__casinoAudioEvents.push(event);")
             # Define the shot function used by this module.
@@ -1561,6 +1637,44 @@ def run_browser_tests():
                 page.goto(base, wait_until='networkidle'); page.get_by_test_id('login-gate').wait_for(timeout=5000)
                 # Capture logged-out login evidence for the frontend auth handback.
                 shot('auth_login_gate.png')
+                # Define disabled OAuth control, localization, no-request, and visual evidence acceptance.
+                def oauth_disabled_browser():
+                    # Define the two governed Auth viewports required by the visual matrix.
+                    viewports={'desktop_primary':{'width':1920,'height':1080},'mobile':{'width':390,'height':844}}
+                    # Exercise the disabled controls in every installed Auth locale.
+                    for locale in ('en-US','ru-RU'):
+                        # Switch the visible login gate through its own localized selector.
+                        page.get_by_test_id('auth-locale-select').select_option(locale)
+                        # Wait for the synchronous gate rerender and active locale state.
+                        page.wait_for_function("locale => window.CasinoI18n && window.CasinoI18n.getLocaleState().locale === locale",arg=locale)
+                        # Select one locale-specific control label as the DOM rerender barrier for evidence.
+                        expected_google={'en-US':'Continue with Google','ru-RU':'Продолжить с Google'}[locale]
+                        # Wait until the visible disabled control contains the active locale's exact copy.
+                        page.wait_for_function("expected => document.querySelector('[data-testid=\"oauth-google\"]')?.textContent.trim() === expected",arg=expected_google)
+                        # Read fresh controls after the locale-triggered DOM replacement.
+                        google=page.get_by_test_id('oauth-google'); facebook=page.get_by_test_id('oauth-facebook')
+                        # Require both semantic controls and their explanation to be visible.
+                        assert google.is_visible() and facebook.is_visible() and page.get_by_test_id('oauth-provider-message').is_visible()
+                        # Require native disabled state plus the redundant accessibility state.
+                        assert google.is_disabled() and facebook.is_disabled() and google.get_attribute('aria-disabled')=='true' and facebook.get_attribute('aria-disabled')=='true'
+                        # Require no navigation or submission target on either held control.
+                        assert google.get_attribute('href') is None and facebook.get_attribute('href') is None and google.get_attribute('formaction') is None and facebook.get_attribute('formaction') is None
+                        # Programmatically invoke both controls to prove no handler, popup, or navigation is attached.
+                        page.evaluate("() => { document.querySelector('[data-testid=\"oauth-google\"]').click(); document.querySelector('[data-testid=\"oauth-facebook\"]').click(); }")
+                        # Require the browser to remain on the local login page with zero provider-action traffic.
+                        assert page.url.rstrip('/')==base and not provider_requests
+                        # Capture exact-head after-pass evidence at both governed viewports.
+                        for viewport_id,viewport in viewports.items():
+                            # Resize to the matrix dimensions before checking layout and capturing evidence.
+                            page.set_viewport_size(viewport); page.wait_for_timeout(150)
+                            # Require neither the document nor the Auth scroll container/card to overflow horizontally.
+                            assert page.evaluate("() => { const screen=document.querySelector('.auth-screen'); const panel=document.querySelector('.auth-panel'); return document.documentElement.scrollWidth <= window.innerWidth + 1 && screen.scrollWidth <= screen.clientWidth + 1 && panel.scrollWidth <= panel.clientWidth + 1; }")
+                            # Write the PNG and metadata sidecar through the shared exact-head evidence helper.
+                            game_evidence(f'after-pass-auth-oauth-providers-disabled-{locale}-{viewport_id}.png','auth',['oauth_providers_disabled'],locale,viewport_id)
+                    # Restore the primary viewport while leaving Russian selected for the existing login flow.
+                    page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(150)
+                # Record provider-disabled EN/RU controls, no-request behavior, and visual evidence.
+                run_case('BR-OAUTH-001',['OAUTH-001','OAUTH-006','TEST-045'],oauth_disabled_browser)
                 # Define the auth_login_gate function used by this module.
                 def auth_login_gate():
                     # Verify the login panel is visible before casino routes mount.
@@ -1571,9 +1685,7 @@ def run_browser_tests():
                     assert page.get_by_test_id('login-terms-check').is_visible()
                 # Execute this statement as part of the module's documented control flow.
                 run_case('BR-AUTH-LOGIN-001',['AUTH-UI-001','TERMS-UI-001'],auth_login_gate)
-                # Switch locale before login to prove auth state preserves the chosen language.
-                page.get_by_test_id('auth-locale-select').select_option('ru-RU')
-                # Wait for the login gate rerender triggered by the locale switch.
+                # Keep the Russian locale selected by the OAuth acceptance loop for login persistence coverage.
                 page.wait_for_function("() => window.CasinoI18n && window.CasinoI18n.getLocaleState().locale === 'ru-RU'")
                 # Wait for the fresh email field to be ready after the locale rerender.
                 page.get_by_test_id('login-email').wait_for(timeout=5000)
@@ -3713,6 +3825,46 @@ def run_browser_tests():
                         assert module_table.locator('tr').filter(has_text=expected['module']).filter(has_text=expected['revision']).count()==1
                 # Execute the mapped Admin dashboard and packaged-release browser regression.
                 run_case('BR-ADMIN-001',['ADMIN-001','ADMIN-003','ADMIN-004','ADMIN-010','ADMIN-014','TEST-023'],admin_dashboard_browser)
+                # Define Admin-only OAuth diagnostics, isolation from Operations, and visual evidence.
+                def admin_oauth_browser():
+                    # Define every governed Admin viewport from the visual matrix.
+                    viewports={'desktop_primary':{'width':1920,'height':1080},'desktop_compact':{'width':1440,'height':900},'tablet':{'width':1024,'height':900}}
+                    # Exercise provider diagnostics in both installed Admin locales.
+                    for locale in ('en-US','ru-RU'):
+                        # Switch locale without persisting a preference outside this disposable test copy.
+                        page.evaluate("async locale => { const i18n = await import('/core/i18n.js'); await i18n.setLocale(locale, { persistLocal: false }); }", locale)
+                        # Open Operations because OAuth diagnostics render as an independent card on that surface.
+                        page.get_by_test_id('admin-tab-operations').click(); page.get_by_test_id('admin-operations-live').wait_for(timeout=5000); page.get_by_test_id('admin-oauth-diagnostics').wait_for(timeout=5000)
+                        # Select locale-owned Admin copy as the dynamic-card rerender barrier for evidence.
+                        expected_heading={'en-US':'Identity providers','ru-RU':'Поставщики входа'}[locale]
+                        # Wait until a fresh provider card renders with the exact active-locale heading.
+                        page.wait_for_function("expected => document.querySelector('[data-testid=\"admin-oauth-diagnostics\"] h2')?.textContent.trim() === expected",arg=expected_heading)
+                        # Require Google and Facebook to remain explicitly runtime-unavailable.
+                        assert page.get_by_test_id('admin-oauth-provider-google').get_attribute('data-runtime-available')=='false' and page.get_by_test_id('admin-oauth-provider-facebook').get_attribute('data-runtime-available')=='false'
+                        # Ensure the rendered Admin card omits callback values and environment key names.
+                        visible_diagnostics=page.get_by_test_id('admin-oauth-diagnostics').inner_text(); assert 'CASINO_' not in visible_diagnostics and 'callback' not in visible_diagnostics.lower()
+                        # Capture the OAuth card in every governed responsive viewport.
+                        for viewport_id,viewport in viewports.items():
+                            # Resize to exact matrix dimensions before visual checks.
+                            page.set_viewport_size(viewport); page.wait_for_timeout(150)
+                            # Scroll the independent provider card into view inside the Admin content pane.
+                            page.get_by_test_id('admin-oauth-diagnostics').scroll_into_view_if_needed()
+                            # Require the document, Admin scroll container, and provider card to avoid horizontal overflow.
+                            assert page.evaluate("() => { const content=document.querySelector('.admin-content'); const card=document.querySelector('[data-testid=\"admin-oauth-diagnostics\"]'); return document.documentElement.scrollWidth <= window.innerWidth + 1 && content.scrollWidth <= content.clientWidth + 1 && card.scrollWidth <= card.clientWidth + 1; }")
+                            # Write after-pass evidence and metadata for the governed Admin state.
+                            game_evidence(f'after-pass-admin-oauth-disabled-{locale}-{viewport_id}.png','admin',['operations_oauth_disabled'],locale,viewport_id)
+                        # Replace only OAuth diagnostics with a standard failure envelope on a successful HTTP response.
+                        page.route('**/api/v2/admin/oauth/providers',lambda route: route.fulfill(status=200,content_type='application/json',body='{"ok":false,"error":{"code":"OAUTH_DIAGNOSTICS_UNAVAILABLE","message":"Unavailable"}}'))
+                        # Refresh and prove Operations remains live while the separate provider card reports unavailable.
+                        page.get_by_test_id('admin-refresh').click(); page.get_by_test_id('admin-operations-live').wait_for(timeout=5000); page.get_by_test_id('admin-oauth-diagnostics-unavailable').wait_for(timeout=5000)
+                        # Remove the focused failure shim before the next locale or Operations acceptance case.
+                        page.unroute('**/api/v2/admin/oauth/providers')
+                        # Refresh once to restore real backend provider diagnostics.
+                        page.get_by_test_id('admin-refresh').click(); page.get_by_test_id('admin-oauth-diagnostics').wait_for(timeout=5000)
+                    # Restore primary desktop dimensions and English for the broader Operations suite.
+                    page.set_viewport_size({'width':1920,'height':1080}); page.evaluate("async () => { const i18n = await import('/core/i18n.js'); await i18n.setLocale('en-US', { persistLocal: false }); }")
+                # Record Admin authorization presentation, runtime-disabled status, isolation, and evidence.
+                run_case('BR-ADMIN-OAUTH-001',['OAUTH-002','OAUTH-006','TEST-045'],admin_oauth_browser)
                 # Define real-backend Operations states, localization, responsive layout, and evidence.
                 def admin_operations_browser():
                     # Cache the isolated backend's primary storage document for reversible degradation.
@@ -3925,8 +4077,8 @@ def run_browser_tests():
             finally: browser.close()
     # Run cleanup logic regardless of success or failure.
     finally:
-        # Set proc.terminate(); proc.wait(timeout to the value needed for the next operation.
-        proc.terminate(); proc.wait(timeout=5); save_results()
+        # Stop the tracked browser child and prove its loopback listener is closed.
+        stop_server(proc,base); save_results()
 
 # Define the main function used by this module.
 def main():
