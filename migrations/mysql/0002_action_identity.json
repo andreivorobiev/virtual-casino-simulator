@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "name": "ledger-action-identity",
+  "description": "Add exact-once ledger action identity columns and their storage uniqueness boundary.",
+  "statements": [
+    "ALTER TABLE casino_ledger ADD COLUMN action_scope VARCHAR(64) NOT NULL DEFAULT '' AFTER balance_after",
+    "ALTER TABLE casino_ledger ADD COLUMN action_key VARCHAR(191) NULL AFTER action_scope",
+    "ALTER TABLE casino_ledger ADD COLUMN action_fingerprint VARCHAR(128) NULL AFTER action_key",
+    "UPDATE casino_ledger SET action_scope = COALESCE(NULLIF(game, ''), 'core') WHERE action_scope = ''",
+    "CREATE UNIQUE INDEX uq_casino_ledger_action ON casino_ledger (player_id, action_scope, action_key)"
+  ]
+}

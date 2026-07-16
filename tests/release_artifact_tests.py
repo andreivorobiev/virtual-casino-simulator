@@ -2,6 +2,8 @@
 
 # Import JSON support for fixture manifests and provenance assertions.
 import json
+# Import hashing for checksum-pinned fixture migration files.
+import hashlib
 # Import portable paths for disposable release source trees.
 import pathlib
 # Import temporary directory support so tests never touch user runtime data.
@@ -27,6 +29,12 @@ class ReleaseArtifactTests(unittest.TestCase):
         self.root = pathlib.Path(self.temporary.name) / "source"
         # Create the fixture root before writing canonical source files.
         self.root.mkdir(parents=True)
+        # Define one exact initial fixture migration.
+        migration_one = json.dumps({"version": 1, "name": "initial", "description": "fixture", "statements": ["CREATE TABLE fixture_one (id INT)"]}, indent=2) + "\n"
+        # Define one exact follow-up fixture migration.
+        migration_two = json.dumps({"version": 2, "name": "upgrade", "description": "fixture", "statements": ["ALTER TABLE fixture_one ADD COLUMN value INT"]}, indent=2) + "\n"
+        # Build the checksum-pinned fixture catalog from exact UTF-8 bytes.
+        migration_catalog = json.dumps({"schema": "casino-mysql-migration-catalog-v1", "minimum_runtime_version": 2, "expected_version": 2, "migrations": [{"version": 1, "name": "initial", "file": "0001_initial.json", "sha256": hashlib.sha256(migration_one.encode("utf-8")).hexdigest()}, {"version": 2, "name": "upgrade", "file": "0002_upgrade.json", "sha256": hashlib.sha256(migration_two.encode("utf-8")).hexdigest()}]}, indent=2) + "\n"
         # Define the minimal required tracked application file inventory.
         self.files = {
             "ARCHITECTURE.md": "# Architecture\n",
@@ -44,7 +52,10 @@ class ReleaseArtifactTests(unittest.TestCase):
             "modules/module-manifest.json": json.dumps({"application": "9.2.0", "source_baseline": "9.1.0", "modules": {"tooling": "1.7.0"}}) + "\n",
             "pyproject.toml": "[project]\nname = \"virtual-casino-simulator\"\nversion = \"9.2.0\"\nrequires-python = \">=3.10\"\ndependencies = [\"gunicorn>=23,<24\"]\n\n[project.optional-dependencies]\nmysql = [\"mysql-connector-python>=8.4\"]\n",
             "run.py": "# Import the fixture application entry point.\nfrom casino.app import main\n",
-            "scripts/mysql_schema.sql": "-- Fixture schema.\n",
+            "migrations/mysql/0001_initial.json": migration_one,
+            "migrations/mysql/0002_action_identity.json": migration_two,
+            "migrations/mysql/catalog.json": migration_catalog.replace("0002_upgrade.json", "0002_action_identity.json"),
+            "scripts/mysql_migrate.py": "# Fixture deployment-only migration runner.\n",
             "web/app.js": "// Fixture static application bundle.\n",
             "web/index.html": "<!doctype html><title>Fixture</title>\n",
         }
@@ -78,6 +89,47 @@ class ReleaseArtifactTests(unittest.TestCase):
             validations=["python tests.release_artifact_tests"],
             previous_manifest=previous_manifest,
         )
+
+    # Rewrite one authenticated archive member and rebind only outer checksum metadata.
+    def rewrite_member_and_rebind_manifest(self, archive_path, manifest_path, member_name, replacement, manifest_mutator=None):
+        # Read every original member and payload before replacing the archive.
+        with zipfile.ZipFile(archive_path, "r") as original:
+            # Preserve normalized ZipInfo records and exact payload bytes.
+            members = [(item, original.read(item.filename)) for item in original.infolist()]
+        # Resolve a sibling rewritten archive path inside the disposable output directory.
+        rewritten = archive_path.with_suffix(".rewritten.zip")
+        # Write every member with original normalized metadata.
+        with zipfile.ZipFile(rewritten, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9, allowZip64=True) as output:
+            # Recreate the full deterministic member sequence.
+            for item, payload in members:
+                # Substitute only the selected authenticated member.
+                content = replacement if item.filename == member_name else payload
+                # Write bytes under preserved normalized metadata.
+                output.writestr(item, content, compress_type=zipfile.ZIP_DEFLATED, compresslevel=9)
+        # Replace only the disposable fixture archive.
+        rewritten.replace(archive_path)
+        # Load the external manifest for outer checksum rebinding.
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        # Update the selected member inventory so verification reaches internal schema checks.
+        for row in manifest["files"]:
+            # Match the rewritten member by canonical archive path.
+            if row["archive_path"] == member_name:
+                # Rebind exact replacement size.
+                row["size"] = len(replacement)
+                # Rebind exact replacement checksum.
+                row["sha256"] = hashlib.sha256(replacement).hexdigest()
+        # Allow one test to model a coherently altered schema manifest.
+        if manifest_mutator is not None:
+            # Apply only the supplied fixture mutation.
+            manifest_mutator(manifest)
+        # Read final rewritten archive bytes.
+        archive_bytes = archive_path.read_bytes()
+        # Rebind outer archive size.
+        manifest["artifact"]["size"] = len(archive_bytes)
+        # Rebind outer archive checksum.
+        manifest["artifact"]["sha256"] = hashlib.sha256(archive_bytes).hexdigest()
+        # Persist canonical external JSON for the negative test.
+        manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
 
     # Prove equal clean source inputs yield equal archive and manifest bytes.
     def test_repeated_builds_are_byte_reproducible(self):
@@ -142,6 +194,63 @@ class ReleaseArtifactTests(unittest.TestCase):
             # Skip smoke because checksum rejection must occur first.
             package_app.verify_release(archive_path, manifest_path, smoke=False)
 
+    # Prove a migration edit fails internal catalog verification even after outer checksums are rebound.
+    def test_packaged_migration_tampering_is_rejected(self):
+        # Build a structurally valid deterministic candidate.
+        archive_path, manifest_path = self.build("migration-tamper")
+        # Select the second packaged migration member.
+        member_name = f"{package_app.ARCHIVE_ROOT}/migrations/mysql/0002_action_identity.json"
+        # Replace its bytes with a syntactically valid but unlisted migration.
+        replacement = json.dumps({"version": 2, "name": "upgrade", "description": "tampered", "statements": ["SELECT 1"]}, indent=2).encode("utf-8") + b"\n"
+        # Rebind outer archive and member inventory only, leaving catalog checksum immutable.
+        self.rewrite_member_and_rebind_manifest(archive_path, manifest_path, member_name, replacement)
+        # Require internal migration checksum refusal.
+        with self.assertRaisesRegex(ValueError, "migration checksum"):
+            # Skip smoke because schema verification must fail first.
+            package_app.verify_release(archive_path, manifest_path, smoke=False)
+
+    # Prove a coherently altered catalog/manifest cannot weaken the exact compatibility window.
+    def test_packaged_catalog_invalid_tail_is_rejected(self):
+        # Build a valid candidate before coherent fixture alteration.
+        archive_path, manifest_path = self.build("catalog-tamper")
+        # Read and alter the packaged catalog to claim version one while retaining two rows.
+        catalog = json.loads(self.files["migrations/mysql/catalog.json"])
+        # Weaken expected and minimum versions coherently.
+        catalog["expected_version"] = 1
+        # Match the weakened minimum to avoid the first window check.
+        catalog["minimum_runtime_version"] = 1
+        # Serialize exact replacement bytes.
+        replacement = (json.dumps(catalog, indent=2) + "\n").encode("utf-8")
+        # Define the maliciously coherent external schema mutation.
+        def mutate_manifest(manifest):
+            # Rebind the external catalog checksum.
+            manifest["mysql_schema"]["catalog_sha256"] = hashlib.sha256(replacement).hexdigest()
+            # Rebind the weakened expected version.
+            manifest["mysql_schema"]["expected_version"] = 1
+            # Rebind the weakened minimum version.
+            manifest["mysql_schema"]["minimum_version"] = 1
+        # Rewrite catalog and outer provenance coherently.
+        self.rewrite_member_and_rebind_manifest(archive_path, manifest_path, f"{package_app.ARCHIVE_ROOT}/migrations/mysql/catalog.json", replacement, mutate_manifest)
+        # Require independent expected-tail enforcement.
+        with self.assertRaisesRegex(ValueError, "tail"):
+            # Verify without smoke so the internal catalog gate is isolated.
+            package_app.verify_release(archive_path, manifest_path, smoke=False)
+
+    # Prove external MySQL schema provenance cannot diverge from unchanged packaged bytes.
+    def test_manifest_mysql_schema_mismatch_is_rejected(self):
+        # Build one valid candidate.
+        archive_path, manifest_path = self.build("manifest-schema-tamper")
+        # Load its external provenance record.
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        # Change only the external expected schema version.
+        manifest["mysql_schema"]["expected_version"] = 1
+        # Persist canonical tampered manifest bytes.
+        manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
+        # Require archive-derived provenance mismatch failure.
+        with self.assertRaisesRegex(ValueError, "does not match archive"):
+            # Verify without smoke so schema comparison is isolated.
+            package_app.verify_release(archive_path, manifest_path, smoke=False)
+
     # Prove a retained prior manifest produces testable application rollback mapping.
     def test_previous_manifest_enables_application_rollback(self):
         # Define a complete synthetic prior release identity without external data.
@@ -180,6 +289,10 @@ class ReleaseArtifactTests(unittest.TestCase):
         manifest = package_app.verify_release(archive_path, manifest_path, expected_commit=self.commit_sha, smoke=True)
         # Require the smoke-verified manifest to retain canonical fixture version identity.
         self.assertEqual(manifest["app_version"], "9.2.0")
+        # Require release provenance to bind exact-only MySQL schema version two.
+        self.assertEqual((manifest["mysql_schema"]["minimum_version"], manifest["mysql_schema"]["expected_version"]), (2, 2))
+        # Require both catalog and ordered migration chain checksums.
+        self.assertRegex(manifest["mysql_schema"]["catalog_sha256"], r"^[0-9a-f]{64}$")
 
     # Prove repository workflow text keeps branch builds separate from immutable publication.
     def test_workflow_publication_is_fail_closed(self):

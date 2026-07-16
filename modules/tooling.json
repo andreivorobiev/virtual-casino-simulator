@@ -1,10 +1,11 @@
 {
   "module": "tooling",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "paths": [
     "scripts/",
     ".github/",
-    "codex/"
+    "codex/",
+    "migrations/"
   ],
   "requirements_prefixes": [
     "TOOL"

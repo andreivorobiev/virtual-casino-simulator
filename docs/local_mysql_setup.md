@@ -15,7 +15,7 @@ Official references:
 
 ## Secret boundary
 
-Generate separate strong root and application passwords. Store them outside the checkout in a current-user-only directory such as `%LOCALAPPDATA%\VirtualCasinoSimulator\secrets`. The application environment file uses these names:
+Generate separate strong administrator, migration, application, and target-binding secrets. Store them outside the checkout in a current-user-only directory such as `%LOCALAPPDATA%\VirtualCasinoSimulator\secrets`. The application environment file contains the runtime values only:
 
 ```text
 CASINO_STORAGE_PROVIDER=mysql
@@ -26,7 +26,7 @@ CASINO_MYSQL_PASSWORD=<generated-app-password>
 CASINO_MYSQL_DATABASE=virtual_casino
 ```
 
-Never pass a password as a command-line argument or copy the real environment file into a deployment. Load it into the process environment immediately before starting the copied deployment. The repository ignores local `.env` files while retaining `.env.example` and `.env.*.example` samples.
+Never pass a password as a command-line argument or copy the real environment file into a deployment. Migration variables are distinct and transient as documented in `mysql_migrations.md`; they must not enter the application environment. Load runtime values immediately before starting the copied deployment. The repository ignores local `.env` files while retaining `.env.example` and `.env.*.example` samples.
 
 ## Server option file
 
@@ -50,17 +50,19 @@ log_bin=OFF
 
 Initialize the data directory without starting a wildcard listener, install the `MySQL84` Windows service with `--defaults-file=<external-option-file>`, and run it under the service account selected by the MSI tooling. Confirm `Get-NetTCPConnection` reports only `127.0.0.1:3306` and `127.0.0.1:33060` before creating accounts.
 
-## Database and least-privilege account
+## Database, migration, and least-privilege accounts
 
-Connect locally as root using a defaults file or standard-input prompt. Create `virtual_casino` with `utf8mb4`, create `casino_app` only for host `127.0.0.1`, and grant only `SELECT`, `INSERT`, `UPDATE`, `DELETE`, `CREATE`, and `REFERENCES` on `virtual_casino.*`. `CREATE` and `REFERENCES` are required because the provider performs idempotent fresh-schema bootstrap including its ledger foreign key. Do not grant global privileges, `GRANT OPTION`, `FILE`, `PROCESS`, `SHUTDOWN`, or user-management privileges.
+Connect locally as an administrator using a defaults file or standard-input prompt. Create the target database with `utf8mb4`, a deployment-only migration account scoped to that database, and a separate runtime account. The migration account exists only for the reviewed migration window. The runtime account receives exactly database-scoped `SELECT`, `INSERT`, `UPDATE`, and `DELETE`; it receives no schema, trigger, index, grant-management, account-management, file, process, shutdown, global, or `GRANT OPTION` privilege.
 
-Load the external application environment, install the optional driver in an isolated environment with `python -m pip install -e ".[mysql]"`, then run:
+Before applying any migration, complete the off-instance backup and clean-target restore proof in `mysql_migrations.md`, keep the source quiesced, load the separate migration variables transiently, and run `status`, proof-validated `dry-run`, then `apply`. Remove every migration variable before starting the application. Runtime startup will fail closed until the target is at the exact clean compatible migration version.
+
+Install the optional driver in an isolated environment with `python -m pip install -e ".[mysql]"`, then use the disposable validation commands only against a newly created test service:
 
 ```powershell
-python tests/run_tests.py --mysql-live
+python tests/run_tests.py --storage --mysql-migrations-live
 ```
 
-The live case resets only the dedicated application database, bootstraps schema and seed players, persists users, sessions, terms state, player records, game state, settings documents, history, autoplay sessions, and bot profiles, and applies concurrent debits to prove row-locking behavior. The service-free `--storage` case separately proves JSON fallback and schema shape.
+The live matrix refuses to run without its explicit disposable marker. It creates and later removes test-suffixed databases and synthetic accounts, applies only the canonical migrations, persists representative runtime state, and applies concurrent debits to prove row locking and restart behavior. Never point this matrix at an existing local or remote database.
 
 ## Restart and exposure proof
 
@@ -68,7 +70,8 @@ After the live case, stop and start the `MySQL84` service, rebuild the applicati
 
 Before handoff, confirm:
 
-- `SHOW GRANTS FOR 'casino_app'@'127.0.0.1'` is database-scoped.
+- `SHOW GRANTS FOR` the runtime account contains only database-scoped `SELECT`, `INSERT`, `UPDATE`, and `DELETE` plus implicit `USAGE`.
+- Actual runtime attempts to `CREATE`, `ALTER`, `DROP`, `INDEX`, `TRIGGER`, and `GRANT` are denied.
 - Ports 3306 and 33060 listen only on `127.0.0.1`.
 - No enabled inbound firewall rule was added for MySQL.
 - `CASINO_STORAGE_PROVIDER` absent still selects JSON and passes `--storage`.

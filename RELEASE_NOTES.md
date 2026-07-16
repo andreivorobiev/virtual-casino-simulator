@@ -1,5 +1,9 @@
 # Virtual Casino Simulator v9.2.0 Release Notes
 
+## Post-release module addendum: explicit MySQL migrations
+
+- Adds the repository-only issue #204 gate with permanent `MYSQL-005`, `STORAGE-007`, and `TEST-048`: checksum-pinned ordered migrations, deployment-only credentials, HMAC-bound recovery preflight, fail-closed dirty state, DDL-free runtime compatibility, disposable MySQL 8.4 evidence, and release schema provenance.
+
 ## Post-release module addendum: restricted-preview security boundary
 
 - Requires exact canonical Host and Origin validation, per-session CSRF proof, host-only Secure session cookies, and one exact loopback trusted-proxy contract for unsafe production requests.

@@ -12,9 +12,7 @@ jobs:
         image: mysql:8.4
         env:
           MYSQL_ROOT_PASSWORD: casino_ci_root_password
-          MYSQL_DATABASE: virtual_casino
-          MYSQL_USER: casino_app
-          MYSQL_PASSWORD: casino_ci_app_password
+          MYSQL_ROOT_HOST: "%"
         ports:
           - 3306:3306
         options: >-
@@ -24,11 +22,27 @@ jobs:
           --health-retries=20
     env:
       CASINO_STORAGE_PROVIDER: json
+      # Mark this job's newly created MySQL service as disposable before migration tests may connect.
+      CASINO_MYSQL_DISPOSABLE_TEST: 1
+      # Supply a synthetic ephemeral administrator only to the isolated live-test harness.
+      CASINO_MYSQL_TEST_ADMIN_HOST: 127.0.0.1
+      CASINO_MYSQL_TEST_ADMIN_PORT: 3306
+      CASINO_MYSQL_TEST_ADMIN_USER: root
+      CASINO_MYSQL_TEST_ADMIN_PASSWORD: casino_ci_root_password
+      # Supply a separate synthetic deployment-only migration identity.
+      CASINO_MYSQL_MIGRATION_HOST: 127.0.0.1
+      CASINO_MYSQL_MIGRATION_PORT: 3306
+      CASINO_MYSQL_MIGRATION_USER: casino_migrator_204
+      CASINO_MYSQL_MIGRATION_PASSWORD: casino_ci_migrator_password
+      CASINO_MYSQL_MIGRATION_DATABASE: casino_base_204
+      # Use a CI-only HMAC key that is distinct from every database password.
+      CASINO_MYSQL_MIGRATION_TARGET_BINDING_KEY: casino_ci_target_binding_key_material_204_only
+      # Supply the DDL-free synthetic runtime identity created by the live matrix.
       CASINO_MYSQL_HOST: 127.0.0.1
       CASINO_MYSQL_PORT: 3306
-      CASINO_MYSQL_USER: casino_app
-      CASINO_MYSQL_PASSWORD: casino_ci_app_password
-      CASINO_MYSQL_DATABASE: virtual_casino
+      CASINO_MYSQL_USER: casino_runtime_204
+      CASINO_MYSQL_PASSWORD: casino_ci_runtime_password
+      CASINO_MYSQL_DATABASE: casino_base_204
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -43,8 +57,7 @@ jobs:
           python -m py_compile run.py verify_rules.py tests/run_tests.py $(find casino scripts -name "*.py")
           python verify_rules.py
           python -m unittest tests.test_progress
-          python tests/run_tests.py --storage
-          python tests/run_tests.py --mysql-live
+          python tests/run_tests.py --storage --mysql-migrations-live
           python tests/run_tests.py --api
           python scripts/validate_game_catalog.py
           python scripts/validate_requirements.py

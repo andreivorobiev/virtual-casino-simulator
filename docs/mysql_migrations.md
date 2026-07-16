@@ -1,0 +1,69 @@
+# MySQL migration and DDL-free runtime gate
+
+Requirements `MYSQL-005`, `STORAGE-007`, and `TEST-048` define the repository-side MySQL schema boundary for restricted preview. This packet does not connect to or mutate an existing database, VM, service environment, backup, provider, listener, DNS, TLS, firewall, or deployment.
+
+## Canonical schema contract
+
+`migrations/mysql/catalog.json` is the only executable schema catalog. It lists contiguous immutable JSON migration files and their exact SHA-256 checksums. Each JSON `statements` element is passed to the driver as one statement; the runner never splits SQL on semicolons or accepts client `DELIMITER` directives.
+
+The restricted-preview release expects MySQL migration version `2` and accepts version `2` only at runtime. This migration version is independent of the application version and the JSON document `SCHEMA_VERSION`. Release packaging includes the catalog and migrations, recomputes every checksum, and writes `mysql_schema.expected_version`, `minimum_version`, `catalog_sha256`, and `migration_chain_sha256` into `release-manifest.json`.
+
+## Identity and environment boundary
+
+The application identity receives database-scoped `SELECT`, `INSERT`, `UPDATE`, and `DELETE` only. It receives no `CREATE`, `ALTER`, `DROP`, `INDEX`, `TRIGGER`, `GRANT OPTION`, account-management, or global privileges. Runtime startup reads the migration state and applied checksums, requires the exact clean compatible version, and performs no schema DDL or migration-state DML.
+
+The deployment-only runner reads a distinct transient environment:
+
+```text
+CASINO_MYSQL_MIGRATION_HOST=<external value>
+CASINO_MYSQL_MIGRATION_PORT=<external value>
+CASINO_MYSQL_MIGRATION_USER=<deployment-only identity>
+CASINO_MYSQL_MIGRATION_PASSWORD=<external secret>
+CASINO_MYSQL_MIGRATION_DATABASE=<external value>
+CASINO_MYSQL_MIGRATION_TARGET_BINDING_KEY=<independent high-entropy external secret>
+```
+
+The binding key must contain at least 32 UTF-8 bytes and must not equal the migration password. It and the migration credentials must be loaded only for the migration command, then removed from the operator session. They must never appear in the application environment file, systemd unit, process arguments, proof file, release artifact, logs, screenshots, issue or PR text, or test output. The tracked service template explicitly unsets all migration-prefixed variables after loading its runtime environment file.
+
+## Backup and clean-restore proof
+
+Any pending apply, including the first migration metadata DDL on an empty target, requires an external `casino-mysql-backup-restore-proof-v1` JSON record. `status` and `check` never require this proof. `dry-run` validates it when work is pending but remains database-read-only.
+
+The proof contains only keyed or checksum identities:
+
+- `target_hmac_sha256` binds normalized target identity using the external binding key; the target values are not persisted;
+- `pre_migration` binds the exact version, finite status, and a structural digest covering columns, indexes, engines, collations, constraints, foreign keys, and migration history/state;
+- `plan` binds the exact from/to versions and complete immutable migration chain;
+- `quiesce` binds the target, pre-state, plan, and quiesced timestamp and declares that the source remains quiesced;
+- `backup` binds a completed off-instance artifact by SHA-256 and completion timestamp;
+- `restore` binds a successful clean-target restore to that exact artifact and structural digest;
+- `proof_hmac_sha256` integrity-protects the complete canonical proof except for the HMAC field itself.
+
+The timestamps must satisfy `quiesced <= backup completed <= restore verified <= apply time <= expiry`, and expiry may be no more than four hours after restore verification. The source must remain quiesced from the recorded boundary until apply completes or fails. Editing any proof section invalidates the complete-proof HMAC. A changed quiesce record also invalidates its separate target/state/plan-bound HMAC.
+
+Issue #205 owns producing an accepted real off-instance backup and clean-target restore record. Repository tests use synthetic proof records only and do not claim that recovery gate is complete.
+
+## Commands
+
+Run the tool from an immutable verified release with migration variables loaded transiently:
+
+```text
+python scripts/mysql_migrate.py status
+python scripts/mysql_migrate.py check
+python scripts/mysql_migrate.py dry-run --backup-proof <external-proof-path>
+python scripts/mysql_migrate.py apply --backup-proof <external-proof-path>
+```
+
+`status`, `check`, and `dry-run` issue only `SELECT` statements and never create migration metadata, acquire advisory locks, or modify application state. Their output is limited to initialized state, numeric versions, finite status, optional applying version, and the public catalog checksum. Target values, credentials, proof paths, SQL, and driver messages are never printed.
+
+`apply` acquires a target-derived MySQL named lock, rechecks the proof-bound state, forces non-autocommit for migration history/state DML, and creates the two minimal metadata tables only after proof acceptance. Before each application migration it commits an `applying` marker. MySQL DDL auto-commits; therefore a failed statement is not described as rolled back. The runner attempts to persist `dirty`, refuses every later normal apply, and requires a separately reviewed checksum-bound forward-fix packet. There is no `mark applied`, checksum override, automatic replay, or arbitrary repair command.
+
+## Upgrade and rollback boundary
+
+The supported matrix is clean empty `0 -> 1 -> 2` and clean version `1 -> 2`. A clean exact version-2 recheck is repeat-safe. Missing metadata with application tables, a partial metadata boundary, gaps, checksum drift, future versions, `applying`, and `dirty` all fail before runtime traffic.
+
+Migration files are forward-only. Application rollback is allowed only when the retained predecessor release manifest accepts the already-applied MySQL version. If the predecessor does not accept it, do not repoint the application release. Schema reversal, manual history edits, destructive down migrations, and data restoration remain prohibited without a separate recovery-reviewed packet. For partial DDL, preserve the dirty evidence and ship an explicit forward fix rather than attempting transactional rollback.
+
+## Disposable validation
+
+The CI matrix creates a new ephemeral MySQL 8.4 service, requires an explicit disposable marker, creates separate synthetic administrator, migrator, and runtime accounts, and uses test-suffixed isolated databases only. It proves empty bootstrap, supported upgrade, exact recheck, proof refusal before metadata DDL, checksum/gap/future/dirty refusal, two-process advisory-lock serialization, restart and runtime DML, `SHOW GRANTS`, and actual denied `CREATE`, `ALTER`, `DROP`, `INDEX`, `TRIGGER`, and `GRANT` attempts. It removes every test database and account afterward. It does not open or use protected application ports `8765` or `8877`, and the ephemeral service is destroyed with the CI job.
