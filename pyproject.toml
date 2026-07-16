@@ -12,6 +12,7 @@ dependencies = ["gunicorn>=23,<24"]
 
 [project.optional-dependencies]
 mysql = ["mysql-connector-python>=8.4"]
+recovery = ["cryptography>=46,<50"]
 
 [tool.setuptools.packages.find]
 include = ["casino*", "modules*"]

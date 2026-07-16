@@ -51,6 +51,7 @@ ALLOWED_FILES = {
     "pyproject.toml",
     "run.py",
     "scripts/mysql_migrate.py",
+    "scripts/recovery.py",
 }
 # Reject runtime, private, generated, test, and local-evidence directories anywhere.
 FORBIDDEN_PARTS = {
@@ -84,6 +85,8 @@ REQUIRED_FILES = {
     "migrations/mysql/0002_action_identity.json",
     "migrations/mysql/catalog.json",
     "scripts/mysql_migrate.py",
+    "scripts/recovery.py",
+    "casino/core/recovery.py",
     "web/app.js",
     "web/index.html",
 }
@@ -483,6 +486,10 @@ def smoke_extracted_copy(extracted_root, expected_version):
         "assert manifest['application'] == __import__('sys').argv[1]; "
         "assert (root / 'web/index.html').is_file(); "
         "from casino import app, config; "
+        "from casino.core import recovery; "
+        "from cryptography.hazmat.primitives.ciphers.aead import AESGCM; "
+        "assert recovery.ENCRYPTED_STREAM_SCHEMA == 'casino-aes-256-gcm-chunked-v1'; "
+        "assert AESGCM is not None; "
         "assert callable(app.main); "
         "assert config.APP_VERSION == __import__('sys').argv[1]"
     )

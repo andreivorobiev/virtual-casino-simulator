@@ -26,6 +26,8 @@ from casino.core.request_player import resolve_authenticated_player
 from tests import storage_tests
 # Import listener-free migration policy tests for every storage validation run.
 from tests import mysql_migration_tests
+# Import listener-free encrypted recovery policy tests for every storage validation run.
+from tests import recovery_tests
 # Import the current-catalog hostile-client certification entrypoint.
 from tests.server_authority_tests import run_server_authority_tests
 # Import the reusable flushed reporter for TEST-010 browser execution.
@@ -197,6 +199,14 @@ def assert_condition(value, message):
 
 # Define the run_storage_tests function used by this module.
 def run_storage_tests(include_live=False, include_migration_live=False):
+    # Define one focused unittest runner for authenticated recovery and clean-target policy.
+    def run_recovery_policy_tests():
+        # Load only the #205 synthetic recovery test case.
+        suite=unittest.defaultTestLoader.loadTestsFromTestCase(recovery_tests.RecoveryEvidenceTests)
+        # Execute with concise standard output.
+        result=unittest.TextTestRunner(stream=sys.stdout,verbosity=1).run(suite)
+        # Fail the named central case when any focused assertion failed.
+        if not result.wasSuccessful(): raise AssertionError('recovery policy suite failed')
     # Define one focused unittest runner for checksum, proof, failure, and SELECT-only policy.
     def run_mysql_migration_policy_tests():
         # Load only the #204 migration test case.
@@ -207,6 +217,8 @@ def run_storage_tests(include_live=False, include_migration_live=False):
         if not result.wasSuccessful(): raise AssertionError('MySQL migration policy suite failed')
     # Map the listener-free policy suite to the permanent migration requirements.
     run_case('MYSQL-MIGRATION-001',['MYSQL-005','STORAGE-007','TEST-048'],run_mysql_migration_policy_tests)
+    # Map the listener-free recovery suite to the permanent recovery requirements.
+    run_case('RECOVERY-POLICY-001',['MYSQL-006','TOOL-004','TEST-049'],run_recovery_policy_tests)
     # Execute the JSON fallback parity test for provider-backed players, ledger, history, and settings.
     run_case('STORAGE-JSON-001',['CORE-017','LEDGER-001','LEDGER-007','TEST-030'],storage_tests.run_json_provider_parity)
     # Execute storage-enforced replay, conflict, restart, and cross-process JSON action tests.

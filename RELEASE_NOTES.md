@@ -1,5 +1,10 @@
 # Virtual Casino Simulator v9.2.0 Release Notes
 
+## Post-release module addendum: encrypted recovery gate
+
+- Adds permanent `MYSQL-006`, `TOOL-004`, and `TEST-049` repository traceability for issue #205: authenticated chunked encryption, independent evidence authorities, bounded retention and recovery-age checks, clean-target restore authorization, and quarantine-on-partial-failure behavior.
+- Keeps provider-current backup evidence, a real encrypted off-instance recovery point, and a real clean-target restore proof as explicit external deployment blockers; this repository packet does not mutate infrastructure or claim those gates completed.
+
 ## Post-release module addendum: explicit MySQL migrations
 
 - Adds the repository-only issue #204 gate with permanent `MYSQL-005`, `STORAGE-007`, and `TEST-048`: checksum-pinned ordered migrations, deployment-only credentials, HMAC-bound recovery preflight, fail-closed dirty state, DDL-free runtime compatibility, disposable MySQL 8.4 evidence, and release schema provenance.

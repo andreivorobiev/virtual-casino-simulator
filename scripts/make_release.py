@@ -43,6 +43,8 @@ VALIDATIONS = [
     [sys.executable, "scripts/validate_versions.py"],
     # Validate generated documentation without mutating the checkout.
     [sys.executable, "scripts/generate_docs.py", "--check"],
+    # Validate encrypted backup, evidence, clean-target restore, and quarantine policy.
+    [sys.executable, "-m", "unittest", "tests.recovery_tests"],
     # Validate deterministic artifact, exclusion, smoke, and rollback behavior.
     [sys.executable, "-m", "unittest", "tests.release_artifact_tests"],
     # Validate listener-free WSGI parity, fail-closed configuration, and service hardening.
