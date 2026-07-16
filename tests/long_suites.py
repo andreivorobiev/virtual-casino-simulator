@@ -23,6 +23,8 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))  # Prefer this checkout over unrelated installed packages.
 # Consume the same canonical game catalog as runtime registration after path setup.
 from casino.config import GAMES
+# Import the same flushed reporter used by the browser suite for TEST-042 scenarios.
+from tests.progress import ProgressReporter
 # Store AUTH_SESSION_COOKIE so browser verification can use the backend session cookie name without importing app code.
 AUTH_SESSION_COOKIE = "casino_session"
 # Use one safe deterministic deployment identifier for copied-environment probe evidence.
@@ -113,11 +115,13 @@ def load_requirement_ids(repo_root):
 
 # Allocate a local port for one deployment server.
 def free_port():
-    sock = socket.socket()  # Create a temporary TCP socket.
-    sock.bind(("127.0.0.1", 0))  # Ask the OS for a free loopback port.
-    port = sock.getsockname()[1]  # Read the assigned port.
-    sock.close()  # Release the temporary socket.
-    return port  # Return the port for the server process.
+    while True:  # Retry only if the OS ever selects a protected user port.
+        sock = socket.socket()  # Create a temporary TCP socket.
+        sock.bind(("127.0.0.1", 0))  # Ask the OS for a free loopback port.
+        port = sock.getsockname()[1]  # Read the assigned port.
+        sock.close()  # Release the temporary socket.
+        if port not in (8765, 8877):  # Preserve both protected user listeners.
+            return port  # Return only a non-reserved port for the server process.
 
 
 # Start the casino server from the selected repository root.
@@ -134,9 +138,32 @@ def start_server(repo_root):
             return proc, client  # Return once the server is ready.
         except Exception:  # Retry transient startup failures until the server is ready.
             time.sleep(0.1)  # Give the server a moment to boot.
-    output = proc.stdout.read() if proc.stdout else ""  # Capture startup output on failure.
-    proc.terminate()  # Stop the failed server process.
+    stop_server(proc, client)  # Stop the failed child and verify its exact loopback port.
+    output = proc.stdout.read() if proc.stdout else ""  # Capture startup output after bounded cleanup.
     raise RuntimeError("server did not start\n" + output[-1200:])  # Surface useful diagnostics.
+
+
+# Stop one tracked long-suite server and prove its exact non-reserved port is closed.
+def stop_server(proc, client):
+    port = int(client.base_url.rsplit(":", 1)[1])  # Parse the recorded numeric child port.
+    if port in (8765, 8877):  # Refuse cleanup against protected user listeners.
+        raise AssertionError(f"refusing to stop protected port {port}")  # Fail closed on invalid ownership.
+    if proc.poll() is None:  # Ask the exact tracked child to stop only while it is alive.
+        proc.terminate()  # Prefer cooperative shutdown for normal and timeout cleanup.
+    try:  # Wait a bounded interval for graceful child termination.
+        proc.wait(timeout=5)  # Reap the tracked process before checking its listener.
+    except subprocess.TimeoutExpired:  # Force only the tracked child after its grace period.
+        proc.kill()  # Kill the exact process object without scanning unrelated listeners.
+        proc.wait(timeout=5)  # Reap the forcibly stopped child.
+    for _ in range(30):  # Allow up to three seconds for loopback port release.
+        with socket.socket() as probe_socket:  # Use one short-lived exact-port probe.
+            probe_socket.settimeout(0.1)  # Bound each connection attempt.
+            listener_closed = probe_socket.connect_ex(("127.0.0.1", port)) != 0  # Treat refusal as closure.
+        if listener_closed:  # Return exact evidence as soon as the listener is absent.
+            print(f"Long-suite server PID {proc.pid} stopped; 127.0.0.1:{port} closed", flush=True)  # Flush cleanup evidence.
+            return {"pid": proc.pid, "host": "127.0.0.1", "port": port, "closed": True}  # Retain artifact evidence.
+        time.sleep(0.1)  # Give the operating system a short release interval.
+    raise AssertionError(f"tracked long-suite listener remained open on 127.0.0.1:{port}")  # Fail closed after cleanup.
 
 
 # Ensure the player has enough fake money to survive long randomized play.
@@ -392,11 +419,20 @@ def parse_args():
     parser.add_argument("--audio-repeats", type=int, default=None, help="Override repeated baccarat audio deals.")  # Tune audio load.
     parser.add_argument("--seed", type=int, default=9011, help="Deterministic random seed.")  # Make runs reproducible.
     parser.add_argument("--json-report", default=None, help="Optional explicit report path.")  # Allow CI artifact placement.
+    parser.add_argument("--heartbeat-seconds", type=float, default=45.0, help="Flushed heartbeat interval, at most 60 seconds.")  # Configure live cadence.
+    parser.add_argument("--stall-seconds", type=float, default=180.0, help="Non-failing no-progress warning threshold.")  # Configure stall warnings.
+    parser.add_argument("--timeout-seconds", type=float, default=7200.0, help="Hard suite wall-clock timeout.")  # Configure real timeout cleanup.
     args = parser.parse_args()  # Parse arguments.
     if args.shard_count < 1:  # Reject impossible sharding setups.
         parser.error("--shard-count must be at least 1")  # Reject invalid shard count.
     if not 0 <= args.shard_index < args.shard_count:  # Keep shard ownership in range.
         parser.error("--shard-index must be between 0 and shard-count - 1")  # Reject invalid shard index.
+    if args.heartbeat_seconds <= 0 or args.heartbeat_seconds > 60:  # Enforce issue #207 heartbeat acceptance.
+        parser.error("--heartbeat-seconds must be greater than 0 and at most 60")  # Reject unsafe cadence.
+    if args.stall_seconds < args.heartbeat_seconds:  # Keep warnings later than the first heartbeat.
+        parser.error("--stall-seconds must be at least --heartbeat-seconds")  # Reject immediately noisy warnings.
+    if args.timeout_seconds <= 0:  # Require a usable real suite deadline.
+        parser.error("--timeout-seconds must be greater than 0")  # Reject disabled or immediate timeouts.
     return args  # Return parsed options.
 
 
@@ -407,15 +443,24 @@ def main():
     suite = SUITES[args.suite]  # Load suite profile.
     total = args.iterations if args.iterations is not None else suite["tests"]  # Determine total logical tests.
     indices = shard_indices(total, args.shard_count, args.shard_index)  # Select this worker's scenario IDs.
-    repo_root, cleanup_target = prepare_deployment(args)  # Prepare local or copied deployment root.
+    progress = ProgressReporter(len(indices), args.heartbeat_seconds, args.stall_seconds, args.timeout_seconds)  # Reuse browser progress semantics.
+    progress.start(f"long-suite-{args.suite}-deployment")  # Flush the initial deployment phase before copying.
+    repo_root = ROOT  # Retain a safe report root if deployment preparation fails.
+    cleanup_target = None  # Track a disposable deployment only after copy preparation succeeds.
     report = {"suite": args.suite, "total_planned_tests": total, "shard_count": args.shard_count, "shard_index": args.shard_index, "local_tests": len(indices), "deployment_root": str(repo_root), "started_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}  # Start report.
     proc = None  # Track server process for cleanup.
+    client = None  # Track the exact loopback client and listener port for cleanup.
     lock_path = None  # Track runtime lock for cleanup.
+    exit_code = None  # Retain the conventional non-zero timeout code when needed.
     try:
+        repo_root, cleanup_target = prepare_deployment(args)  # Prepare local or copied deployment root.
+        report["deployment_root"] = str(repo_root)  # Record the selected disposable or source tree.
+        progress.set_phase(f"long-suite-{args.suite}-server-startup")  # Report the next long-running phase.
         lock_path = acquire_runtime_lock(repo_root)  # Prevent same-tree parallel data races.
         requirement_ids = load_requirement_ids(repo_root)  # Load requirement registry from the deployment tree.
         coverage = CoverageLedger(requirement_ids)  # Start coverage accounting.
         proc, client = start_server(repo_root)  # Launch the deployed app.
+        progress.set_cleanup(lambda: stop_server(proc, client))  # Register exact PID/port timeout cleanup.
         health = client.call("/healthz", auth=False)  # Prove minimal anonymous liveness in the deployed copy.
         readiness = client.call("/readyz")  # Prove trusted readiness through the authenticated deployment session.
         operations = client.call("/api/v2/admin/operations")  # Prove Admin-authorized heartbeat telemetry.
@@ -424,8 +469,16 @@ def main():
         report["operations"] = {"pid": proc.pid, "host": "127.0.0.1", "port": int(client.base_url.rsplit(":", 1)[1]), "health": health, "ready": readiness["ready"], "admin_ready": operations["ready"], "build_sha": operations["build"]["sha"]}  # Record trusted probe and listener identity evidence.
         client.call("/api/v1/casino/reset", "POST", {})  # Start the shard from clean data.
         client.login_default_user()  # Restore the session invalidated by reset.
+        progress.set_phase(f"long-suite-{args.suite}-scenarios")  # Announce named scenario execution.
         for index in indices:  # Execute each scenario assigned to this shard.
-            run_full_casino_scenario(client, index, coverage)  # Run one full-casino test.
+            progress.start_item(f"scenario-{index + 1}-of-{total}")  # Flush the exact scenario start.
+            try:  # Preserve scenario failure semantics while adding a terminal event.
+                run_full_casino_scenario(client, index, coverage)  # Run one full-casino test.
+            except Exception:  # Record the named terminal failure before re-raising.
+                progress.finish_item("FAIL")  # Advance completed counts for the failed execution.
+                raise  # Preserve the original scenario exception and process status.
+            else:  # Record the normal successful scenario terminal event.
+                progress.finish_item("PASS")  # Flush passing status and updated counts.
         min_touches = coverage.min_requirement_touch_count()  # Compute actual requirement touch floor.
         required_touches = min(suite["min_requirement_touches"], len(indices)) if args.iterations is not None else suite["min_requirement_touches"]  # Scale debug runs.
         if min_touches < required_touches:  # Enforce the selected suite coverage floor.
@@ -438,42 +491,44 @@ def main():
         report["scenarios"] = coverage.scenario_results  # Store scenario evidence.
         if not args.skip_browser_audio:  # Run browser audio on full and designated shard checks.
             repeats = args.audio_repeats if args.audio_repeats is not None else suite["audio_repeats"]  # Determine audio repetitions.
+            progress.set_phase(f"long-suite-{args.suite}-browser-audio")  # Report the final browser phase.
             run_browser_audio_verification(client, repeats, report)  # Verify voice/SFX behavior.
         report["status"] = "PASS"  # Mark successful report.
     except Exception as exc:  # Preserve failure details before re-raising.
-        report["status"] = "FAIL"  # Mark failed report.
-        report["error"] = {"message": str(exc), "traceback": traceback.format_exc()}  # Preserve failure detail.
-        raise  # Re-raise for CI.
+        if progress.timed_out:  # Convert cleanup-driven connection failure into timeout status.
+            progress.acknowledge_timeout()  # Prevent a redundant fallback interrupt during artifacts.
+            report["status"] = "FAIL"  # Mark the timed-out artifact as failed.
+            report["error"] = {"message": "long suite exceeded configured timeout", "last_active_reported": True}  # Store sanitized timeout evidence.
+            exit_code = progress.timeout_exit_code  # Return the conventional non-zero timeout status.
+        else:  # Preserve every ordinary long-suite failure exactly as before.
+            report["status"] = "FAIL"  # Mark failed report.
+            report["error"] = {"message": str(exc), "traceback": traceback.format_exc()}  # Preserve failure detail.
+            raise  # Re-raise for CI.
+    except KeyboardInterrupt:  # Convert only reporter-owned interrupts into timeout results.
+        if not progress.timed_out:  # Preserve a user-requested interrupt unchanged.
+            raise  # Re-raise external cancellation without relabeling it.
+        progress.acknowledge_timeout()  # Stop any remaining watchdog grace wait before artifacts.
+        report["status"] = "FAIL"  # Mark the timed-out artifact as failed.
+        report["error"] = {"message": "long suite exceeded configured timeout", "last_active_reported": True}  # Store sanitized timeout evidence.
+        exit_code = progress.timeout_exit_code  # Return the conventional non-zero timeout status.
     finally:
         report_path = Path(args.json_report).resolve() if args.json_report else default_report_path(repo_root, args)  # Resolve report output.
         if proc:  # Stop the server process if it was started.
-            listener_port = int(client.base_url.rsplit(":", 1)[1])  # Retain the exact child port for closure verification.
-            proc.terminate()  # Ask server to stop.
-            try:  # Prefer graceful server shutdown.
-                proc.wait(timeout=5)  # Wait for clean shutdown.
-            except subprocess.TimeoutExpired:  # Force shutdown when graceful stop stalls.
-                proc.kill()  # Force kill a stuck server.
-                proc.wait(timeout=5)  # Wait for forced exit.
-            listener_closed = False  # Start fail-closed until a loopback connection proves refusal.
-            for _ in range(30):  # Allow up to three seconds for Windows to release the child listener.
-                with socket.socket() as probe_socket:  # Use a new short-lived socket for each closure check.
-                    probe_socket.settimeout(0.1)  # Bound each loopback connect attempt.
-                    listener_closed = probe_socket.connect_ex(("127.0.0.1", listener_port)) != 0  # Treat connection refusal as confirmed closure.
-                if listener_closed:  # Stop polling as soon as the exact child port is closed.
-                    break  # Leave the bounded closure loop.
-                time.sleep(0.1)  # Give the operating system a short release interval.
-            report["listener_cleanup"] = {"pid": proc.pid, "host": "127.0.0.1", "port": listener_port, "closed": listener_closed}  # Record exact child cleanup evidence.
-            if not listener_closed:  # Fail the suite if its own listener remained reachable.
+            listener_cleanup = progress.cleanup()  # Reuse timeout cleanup evidence or stop the child now.
+            if listener_cleanup:  # Store exact closure evidence when cleanup succeeded.
+                report["listener_cleanup"] = listener_cleanup  # Preserve PID, host, port, and closure state.
+            if progress.cleanup_error:  # Fail the suite if exact tracked cleanup raised.
                 report["status"] = "FAIL"  # Prevent a false passing report.
-                report["error"] = {"message": "long-suite listener remained open after child shutdown"}  # Use a fixed secret-safe cleanup diagnostic.
+                report["cleanup_error"] = progress.cleanup_error  # Store only the sanitized exception type.
         release_runtime_lock(lock_path)  # Release same-tree runtime protection.
         report["finished_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())  # Stamp finish time after listener cleanup.
         report_path.parent.mkdir(parents=True, exist_ok=True)  # Ensure the report directory exists.
         report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")  # Write final evidence including listener closure.
         if cleanup_target and not args.keep_env:  # Remove disposable deployment copies by default.
             shutil.rmtree(cleanup_target, onerror=clear_readonly_and_retry)  # Delete disposable deployment copy.
+        progress.close("PASS" if report.get("status") == "PASS" else "FAIL")  # Flush the terminal phase after cleanup and artifacts.
     print(f"LONG_SUITE {report['status']} suite={args.suite} local_tests={len(indices)} shard={args.shard_index}/{args.shard_count} report={report_path}")  # Print concise result.
-    return 0 if report["status"] == "PASS" else 1  # Return CI-friendly status.
+    return exit_code if exit_code is not None else 0 if report["status"] == "PASS" else 1  # Return CI-friendly status.
 
 
 # Run the CLI entry point when invoked directly.

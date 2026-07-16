@@ -2,6 +2,8 @@
 #!/usr/bin/env python3
 # Import required dependency so this module can use its public functions or constants.
 import argparse, importlib, io, json, os, re, socket, subprocess, sys, time, traceback, unittest, urllib.request
+# Import source inspection so browser progress totals follow declared run_case calls automatically.
+import inspect
 # Import required dependency so this module can use its public functions or constants.
 from pathlib import Path
 # Set ROOT to the value needed for the next operation.
@@ -24,8 +26,12 @@ from casino.core.request_player import resolve_authenticated_player
 from tests import storage_tests
 # Import the current-catalog hostile-client certification entrypoint.
 from tests.server_authority_tests import run_server_authority_tests
+# Import the reusable flushed reporter for TEST-010 browser execution.
+from tests.progress import ProgressReporter
 # Set RESULTS to the value needed for the next operation.
 RESULTS=[]
+# Track the browser-suite reporter only while named browser cases are executing.
+ACTIVE_PROGRESS=None
 # Set SESSION_TOKEN to the value needed for the next operation.
 SESSION_TOKEN=None
 # Set DEFAULT_AUTH_EMAIL to the value needed for the next operation.
@@ -40,7 +46,7 @@ def record(test_id, reqs, status, message=''):
     # Execute this statement as part of the module's documented control flow.
     RESULTS.append({'test_id':test_id,'requirements':reqs,'status':status,'message':message})
     # Write diagnostic output so the current operation can be inspected.
-    print(f'[{status}] {test_id} {" ".join(reqs)} {message}')
+    print(f'[{status}] {test_id} {" ".join(reqs)} {message}',flush=True)
 
 # Define the save_results function used by this module.
 def save_results():
@@ -53,8 +59,12 @@ def save_results():
 
 # Define the free_port function used by this module.
 def free_port():
-    # Set s to the value needed for the next operation.
-    s=socket.socket(); s.bind(('127.0.0.1',0)); port=s.getsockname()[1]; s.close(); return port
+    # Retry the operating-system allocator if it ever selects a protected user port.
+    while True:
+        # Bind only loopback while asking the operating system for an ephemeral port.
+        s=socket.socket(); s.bind(('127.0.0.1',0)); port=s.getsockname()[1]; s.close()
+        # Return only a non-reserved test listener port.
+        if port not in (8765,8877): return port
 
 # Define the api function used by this module.
 def api(base, path, method='GET', body=None, ok=True, auth_token='__default__'):
@@ -99,7 +109,7 @@ def login_default_user(base):
 # Define the start_server function used by this module.
 def start_server():
     # Set port to the value needed for the next operation.
-    port=free_port(); proc=subprocess.Popen([sys.executable,str(ROOT/'run.py'),'--port',str(port),'--no-browser'],cwd=str(ROOT),stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
+    port=free_port(); proc=subprocess.Popen([sys.executable,str(ROOT/'run.py'),'--host','127.0.0.1','--port',str(port),'--no-browser'],cwd=str(ROOT),stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
     # Set base to the value needed for the next operation.
     base=f'http://127.0.0.1:{port}'
     # Record the isolated listener identity so acceptance handbacks can prove loopback hygiene.
@@ -110,8 +120,10 @@ def start_server():
         try: login_default_user(base); return proc,base
         # Handle the expected failure path for the protected logic.
         except Exception: time.sleep(.1)
+    # Stop and verify the failed startup child before reading its bounded final output.
+    stop_server(proc,base)
     # Set out to the value needed for the next operation.
-    out=proc.stdout.read() if proc.stdout else ''; proc.terminate(); raise RuntimeError('server did not start\n'+out)
+    out=proc.stdout.read() if proc.stdout else ''; raise RuntimeError('server did not start\n'+out[-1200:])
 
 # Stop one tracked test child and prove its exact loopback port is closed.
 def stop_server(proc, base):
@@ -142,7 +154,7 @@ def stop_server(proc, base):
             # Emit durable cleanup evidence for the validation handback.
             print(f'Test server PID {proc.pid} stopped; 127.0.0.1:{port} closed',flush=True)
             # Return after the tracked child and port are both clean.
-            return
+            return {'pid':proc.pid,'host':'127.0.0.1','port':port,'closed':True}
         # Wait briefly before the next bounded listener probe.
         time.sleep(.1)
     # Fail the suite when the tracked port remains open after process cleanup.
@@ -150,10 +162,31 @@ def stop_server(proc, base):
 
 # Define the run_case function used by this module.
 def run_case(test_id, reqs, fn):
+    # Read the active browser reporter without changing API or storage runner behavior.
+    progress=ACTIVE_PROGRESS
+    # Flush the named browser-test start before its body begins.
+    if progress: progress.start_item(test_id)
     # Start protected logic so failures can be handled safely.
-    try: fn(); record(test_id, reqs, 'PASS')
+    try: fn()
     # Handle the expected failure path for the protected logic.
-    except Exception as e: record(test_id, reqs, 'FAIL', str(e)); raise
+    except Exception as e:
+        # Flush the terminal failure before preserving the existing result and exception.
+        if progress: progress.finish_item('FAIL')
+        # Preserve the existing mapped failure record and re-raise semantics.
+        record(test_id, reqs, 'FAIL', str(e)); raise
+    # Record the normal passing path after the test body returns.
+    else:
+        # Flush the terminal pass and advance completed/total counts.
+        if progress: progress.finish_item('PASS')
+        # Preserve the existing mapped PASS result.
+        record(test_id, reqs, 'PASS')
+
+# Count literal BR-prefixed cases from the browser runner so totals cannot drift from discovery.
+def browser_case_total():
+    # Read only the browser runner source from this checkout.
+    source=inspect.getsource(run_browser_tests)
+    # Count every literal named browser run_case without maintaining another allowlist.
+    return len(re.findall(r"\brun_case\(\s*['\"]BR-",source))
 
 # Define assert_condition so concise mapped checks still fail when their predicate is false.
 def assert_condition(value, message):
@@ -1424,19 +1457,35 @@ def run_api_tests():
         stop_server(proc,base); save_results()
 
 # Define the run_browser_tests function used by this module.
-def run_browser_tests():
+def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds=2700.0):
+    # Make the active reporter visible to the existing shared run_case helper.
+    global ACTIVE_PROGRESS
     # Start protected logic so failures can be handled safely.
     try: from playwright.sync_api import sync_playwright
     # Handle the expected failure path for the protected logic.
     except Exception:
         # Write diagnostic output so the current operation can be inspected.
         print('Playwright is not installed. Install with python -m pip install -r requirements-dev.txt and python -m playwright install chromium'); return 2
-    # Set proc,base to the value needed for the next operation.
-    proc,base=start_server(); screenshots=ROOT/'logs'/'test-runs'; screenshots.mkdir(parents=True,exist_ok=True)
+    # Build one reusable reporter with exact named-case totals and configurable CI timing.
+    progress=ProgressReporter(browser_case_total(),heartbeat_seconds,stall_seconds,timeout_seconds)
+    # Start flushed phase and watchdog output before the ephemeral server starts.
+    progress.start('browser-server-startup')
+    # Route existing run_case calls through this reporter only for the browser suite.
+    ACTIVE_PROGRESS=progress
+    # Initialize tracked cleanup state before server startup.
+    proc=None; base=None; status='FAIL'
     # Parse the authoritative visual matrix so browser coverage fails fast on invalid governance data.
     visual_matrix=json.loads((ROOT/'tests'/'visual'/'visual_matrix.json').read_text(encoding='utf-8'))
     # Start protected logic so failures can be handled safely.
     try:
+        # Start one loopback-only ephemeral server and retain its exact PID and port.
+        proc,base=start_server()
+        # Register idempotent timeout/finally cleanup after the exact listener is known.
+        progress.set_cleanup(lambda: stop_server(proc,base))
+        # Transition from startup to the named browser-test phase.
+        progress.set_phase('browser-tests')
+        # Set screenshots to the existing artifact path without changing uploads.
+        screenshots=ROOT/'logs'/'test-runs'; screenshots.mkdir(parents=True,exist_ok=True)
         # Call an asynchronous API/helper and wait for the result before continuing.
         api(base,'/api/v1/casino/reset','POST',{})
         # Call an asynchronous API/helper and wait for the result before continuing.
@@ -4075,15 +4124,69 @@ def run_browser_tests():
                 shot('browser_failure.png'); raise
             # Run cleanup logic regardless of success or failure.
             finally: browser.close()
+        # Mark the suite passing only after every named browser case and browser close succeeds.
+        status='PASS'
+    # Convert cleanup-driven timeout failures into a stable non-zero timeout status.
+    except Exception:
+        # Acknowledge only the reporter-owned deadline before normal finally cleanup.
+        if progress.timed_out:
+            # Prevent a redundant fallback interrupt while artifacts are written.
+            progress.acknowledge_timeout()
+            # Return the conventional timeout code after the finally block completes.
+            return progress.timeout_exit_code
+        # Preserve every non-timeout browser failure unchanged.
+        raise
+    # Convert the watchdog fallback interrupt into a stable non-zero timeout status.
+    except KeyboardInterrupt:
+        # Return the conventional timeout code only for the reporter-owned deadline.
+        if progress.timed_out:
+            # Stop any remaining watchdog grace wait before artifact cleanup.
+            progress.acknowledge_timeout()
+            # Return after the shared finally block closes the tracked listener.
+            return progress.timeout_exit_code
+        # Preserve external user interrupts unchanged.
+        raise
     # Run cleanup logic regardless of success or failure.
     finally:
-        # Stop the tracked browser child and prove its loopback listener is closed.
-        stop_server(proc,base); save_results()
+        # Stop the tracked browser child once and retain its exact closure evidence.
+        progress.cleanup()
+        # Convert cleanup failure into a failed suite without hiding an active exception.
+        if progress.cleanup_error: status='FAIL'
+        # Stop the watchdog and flush the terminal phase result after cleanup.
+        progress.close(status)
+        # Prevent later API or storage cases from inheriting browser instrumentation.
+        ACTIVE_PROGRESS=None
+        # Preserve the existing JSON result artifact path and behavior.
+        save_results()
+    # Return success only when browser execution and tracked listener cleanup both passed.
+    return 0 if status=='PASS' else 1
 
 # Define the main function used by this module.
 def main():
-    # Set ap to the value needed for the next operation.
-    ap=argparse.ArgumentParser(); ap.add_argument('--api',action='store_true'); ap.add_argument('--browser',action='store_true'); ap.add_argument('--storage',action='store_true'); ap.add_argument('--mysql-live',action='store_true'); args=ap.parse_args()
+    # Build the dependency-free command-line parser for existing suite selectors and progress timing.
+    ap=argparse.ArgumentParser()
+    # Preserve the existing API suite selector.
+    ap.add_argument('--api',action='store_true')
+    # Preserve the existing browser suite selector.
+    ap.add_argument('--browser',action='store_true')
+    # Preserve the existing storage suite selector.
+    ap.add_argument('--storage',action='store_true')
+    # Preserve the existing live MySQL selector.
+    ap.add_argument('--mysql-live',action='store_true')
+    # Configure heartbeat cadence while enforcing the public sixty-second maximum below.
+    ap.add_argument('--heartbeat-seconds',type=float,default=45.0)
+    # Configure the non-failing no-progress warning threshold.
+    ap.add_argument('--stall-seconds',type=float,default=180.0)
+    # Configure the real browser-suite wall-clock timeout.
+    ap.add_argument('--timeout-seconds',type=float,default=2700.0)
+    # Parse caller options before running any suite.
+    args=ap.parse_args()
+    # Reject heartbeat intervals outside issue #207 acceptance before starting work.
+    if args.heartbeat_seconds<=0 or args.heartbeat_seconds>60: ap.error('--heartbeat-seconds must be greater than 0 and at most 60')
+    # Reject warning thresholds that would fire before one heartbeat.
+    if args.stall_seconds<args.heartbeat_seconds: ap.error('--stall-seconds must be at least --heartbeat-seconds')
+    # Reject non-positive real suite timeouts.
+    if args.timeout_seconds<=0: ap.error('--timeout-seconds must be greater than 0')
     # Branch when the following condition is true.
     if not args.api and not args.browser and not args.storage and not args.mysql_live: args.api=True
     # Start protected logic so failures can be handled safely.
@@ -4095,10 +4198,12 @@ def main():
         # Branch when the following condition is true.
         if args.browser:
             # Set code to the value needed for the next operation.
-            code=run_browser_tests();
+            code=run_browser_tests(args.heartbeat_seconds,args.stall_seconds,args.timeout_seconds)
             # Branch when the following condition is true.
-            if code: sys.exit(code)
+            if code: return code
     # Run cleanup logic regardless of success or failure.
     finally: save_results()
+    # Return success after all selected suites complete normally.
+    return 0
 # Branch when the following condition is true.
-if __name__=='__main__': main()
+if __name__=='__main__': raise SystemExit(main())
