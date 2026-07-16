@@ -1,6 +1,6 @@
 # Texas Hold'em Practice Table integration handoff for #77
 
-Issue #95 is refreshed on pull request #120 after the accepted issue #190 storage-action primitive and issue #189 funded-opponent account seam. The draft now carries its canonical module descriptor, permanent planned requirements, compatibility metadata, visual row, central API/browser/restart discovery, and catalog long driver.
+Issue #95 is refreshed on pull request #120 after accepted issue #190 storage actions, issue #189 funded opponents, and issue #191 hostile-client certification. The integration carries its canonical module descriptor, permanent requirements, compatibility metadata, server-authority inventory, visual row, central API/browser/restart discovery, and catalog long driver.
 
 ## Canonical catalog identity
 
@@ -17,7 +17,7 @@ Catalog discovery remains descriptor-driven. No game-specific registry, router, 
 
 ## Permanent requirement allocation
 
-`THPT-001` through `THPT-005` cover rules, authenticated privacy/restart, four-wallet settlement, EN/RU browser behavior, and discovered evidence. They remain `PLANNED` because issue #191 is a durable acceptance blocker; this refresh does not claim that certification or count the game toward issue #73.
+`THPT-001` through `THPT-005` cover rules, authenticated privacy/restart, four-wallet settlement, EN/RU browser behavior, and discovered evidence. They map the game-specific acceptance packet to `SEC-001` through `SEC-009` and move to `PASS` with the exact-head certification evidence.
 
 ## Funded opponent settlement
 
@@ -35,7 +35,7 @@ Opponent movements use `casino.core.practice_accounts` and include bot, game, ha
 
 Human and bot money movements consume the issue #190 `debit_once` and `credit_once` storage boundary. Exact action semantics replay the original ledger event, changed key reuse fails closed, and the accepted JSON/MySQL provider evidence covers restart, lost-response, and cross-process uniqueness. Player-scoped hand state is prepared before settlement and recovers committed ledger markers after reload.
 
-The separately owned issue #191 still requires the complete hostile-client and server-authority certification for the then-current catalog, including this game. This draft does not invent that implementation or weaken its raw mutation, cross-user, replay, concurrency, restart, multi-process, and client-tamper matrix.
+The accepted issue #191 framework now inventories every Texas Hold'em mutation action. Shared dispatch strips hostile identity, privilege, wallet, RNG, hidden-state, result, payout, and phase fields before the game handler; the game service still revalidates action identity, ownership, legal phase, wager, and turn. Existing provider tests supply 25-way concurrency, conflict, lost-response, restart, and multi-process evidence for the storage primitives consumed by all four table wallets.
 
 ## Visual matrix
 
@@ -51,9 +51,10 @@ Surface `texas_holdem_practice_table` requires `en-US` and `ru-RU` at desktop pr
 - `settled`
 - `reduced_motion`
 - `route_restored`
+- `client_tamper_refreshed`
 
 Only exact-head `after_pass` evidence from the registered real backend may be used in the pull-request handoff.
 
 ## Acceptance boundary
 
-Pull request #120 remains draft. Do not mark it ready, merge it, close #95, or count Texas Hold'em until issue #191 is separately implemented and accepted for the current catalog and #120 extends and passes the applicable certification matrix. Issues #122 and #124 remain held.
+Pull request #120 becomes eligible for coordinator acceptance only after its exact head passes the regenerated 30-game certification matrix, focused API/storage/browser/restart evidence, Long Suite 100, EN/RU visual review, DCO/diff, and all eight GitHub checks. Issues #122 and #124 remain held until #120 is accepted under the serialized #77 lane.

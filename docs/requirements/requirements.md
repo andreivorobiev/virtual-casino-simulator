@@ -8,12 +8,12 @@ This redesigned documentation uses separated architecture views, cleaner Mermaid
 
 ## Executive summary
 
-- Requirements tracked: **495**
-- PASS: **479**
+- Requirements tracked: **552**
+- PASS: **536**
 - PLANNED: **9**
 - SUPERSEDED: **7**
-- Requirements with API/rule tests: **301**
-- Requirements with browser tests: **163**
+- Requirements with API/rule tests: **346**
+- Requirements with browser tests: **201**
 
 ## Auth/MySQL/token foundation addendum
 
@@ -343,15 +343,15 @@ Issue #130 is integrated through the catalog under shared integration issue #77.
 
 ## Texas Hold'em Practice Table integration addendum
 
-Issue #95 is refreshed through the catalog under shared integration issue #77, but every requirement remains `PLANNED` until the separately owned issue #191 hostile-client certification is implemented, accepted for the current catalog, extended to this game, and passed. This draft does not count the game toward issue #73.
+Issue #95 extends the accepted issue #191 hostile-client certification through the catalog under shared integration issue #77. The permanent requirements map the game-specific raw-API, authority, cross-user, ledger, replay, restart, Admin, client-refresh, EN/RU, and Long Suite evidence to `SEC-001` through `SEC-009`.
 
 | ID | Requirement | Status | API Tests | Browser Tests |
 | --- | --- | --- | --- | --- |
-| THPT-001 | Fixed-limit shared-card play supports one authenticated human and three server-managed opponents through call-or-fold streets and transparent showdown settlement. | PLANNED | API-THPT-001 | BR-THPT-001 |
-| THPT-002 | Session-bound hands, decisions, private cards, history, restart state, compact replay receipts, and canonical routes remain private and reload-safe. | PLANNED | API-THPT-001, API-WALLET-RESTART-001 | BR-THPT-001 |
-| THPT-003 | The human and all funded opponent accounts reserve and settle only through storage-enforced ledger identities with Admin-auditable owner context. | PLANNED | API-THPT-001, STORAGE-PRACTICE-OPPONENT-001 |  |
-| THPT-004 | English and Russian play remains responsive, accessible, reduced-motion safe, timer-clean, and traceable across every governed viewport. | PLANNED |  | BR-THPT-001 |
-| THPT-005 | Catalog, contract, browser, restart, long-suite, funded-opponent, version, visual, and hostile-client certification evidence remains traceable. | PLANNED | API-CATALOG-001, API-THPT-001, LONG-SUITE-100 | BR-CATALOG-DISCOVERY-001, BR-THPT-001 |
+| THPT-001 | Fixed-limit shared-card play supports one authenticated human and three server-managed opponents through call-or-fold streets and transparent showdown settlement. | PASS | API-THPT-001, API-SEC-001 | BR-THPT-001 |
+| THPT-002 | Session-bound hands, decisions, private cards, history, restart state, compact replay receipts, and canonical routes remain private and reload-safe. | PASS | API-THPT-001, API-WALLET-RESTART-001, API-SEC-001 | BR-THPT-001, BR-SEC-001 |
+| THPT-003 | The human and all funded opponent accounts reserve and settle only through storage-enforced ledger identities with Admin-auditable owner context. | PASS | API-THPT-001, STORAGE-PRACTICE-OPPONENT-001, API-SEC-001 |  |
+| THPT-004 | English and Russian play remains responsive, accessible, reduced-motion safe, timer-clean, and traceable across every governed viewport. | PASS |  | BR-THPT-001, BR-SEC-001 |
+| THPT-005 | Catalog, contract, browser, restart, long-suite, funded-opponent, version, visual, and hostile-client certification evidence remains traceable. | PASS | API-CATALOG-001, API-THPT-001, API-SEC-001, LONG-SUITE-100 | BR-CATALOG-DISCOVERY-001, BR-THPT-001, BR-SEC-001 |
 
 ### Superseded wording
 

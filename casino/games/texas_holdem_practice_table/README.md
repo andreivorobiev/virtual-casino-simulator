@@ -53,8 +53,9 @@ Every decision body includes the client-observed `expected_phase`; a delayed or 
 - Fake-token and private-balance language: `TOKEN-001`, `TOKEN-004`.
 - Locale and layout: `I18N-001`, `I18N-002`, `UX-001`, `UX-002`, `UX-003`, `UX-004`, `UX-006`.
 - Isolation, restart, and catalog evidence: `TEST-012`, `TEST-039`, `TEST-042`.
+- Hostile-client and server-authority certification: `SEC-001` through `SEC-009`.
 
-The `THPT-*` entries remain `PLANNED`. They cannot move to `PASS`, and pull request #120 cannot be ready, merged, closed, or counted, until separately owned issue #191 certification is accepted for the current catalog and extended to this game.
+The `THPT-*` entries are `PASS` only on the exact integrated head that regenerates the 30-game authority matrix and passes raw hostile-field canonicalization, session/turn isolation, server-owned cards/outcomes/payouts, ledger/storage authority, replay/conflict/restart/concurrency, Admin boundaries, and authoritative client refresh.
 
 ## Focused validation
 
