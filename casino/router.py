@@ -8,7 +8,7 @@ from urllib.parse import urlparse, parse_qs
 # Import required dependency so this module can use its public functions or constants.
 from casino.errors import NotFoundError
 # Import the shared resolver so every current and future game route is session-bound centrally.
-from casino.core.request_player import resolve_authenticated_player
+from casino.core.request_player import resolve_authenticated_player, sanitize_game_intent
 
 # Define the Route class that groups related behavior.
 class Route:
@@ -96,6 +96,8 @@ class Router:
         query = {k: v[-1] if v else "" for k, v in parse_qs(parsed.query).items()}
         # Apply the shared authenticated-player resolver to every game endpoint before dispatch.
         if path.startswith("/api/v1/games/"):
+            # Remove client-authored outcome, privilege, wallet, and round-control fields before game dispatch.
+            body = sanitize_game_intent(body)
             # Resolve the session-bound player while preserving explicit Admin/test compatibility.
             player_id = resolve_authenticated_player(context, body, query)
             # Replace stale or malicious payload player ids with the resolved identity.

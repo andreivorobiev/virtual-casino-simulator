@@ -10,6 +10,8 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 # Import canonical game descriptors so contract discovery scales with the catalog.
 from casino.config import GAMES
+# Import the deterministic security inventory builder and checked artifact path.
+from scripts.generate_server_authority_matrix import MATRIX_PATH, build_matrix
 # Set CONTRACT_DIR to the value needed for the next operation.
 CONTRACT_DIR = ROOT / "contracts" / "openapi"
 # Set REQUIRED to the value needed for the next operation.
@@ -24,6 +26,18 @@ REQUIRED_V2 = [
 def main():
     # Set errors to the value needed for the next operation.
     errors = []
+    # Load and compare the hostile-client inventory before validating individual contracts.
+    try:
+        # Parse the checked artifact so malformed JSON is reported through the normal validator.
+        authority_matrix = __import__("json").loads(MATRIX_PATH.read_text(encoding="utf-8"))
+        # Require exact catalog and action alignment with current canonical sources.
+        if authority_matrix != build_matrix():
+            # Provide the generator command instead of masking the stale inventory.
+            errors.append("server-authority matrix is stale; run python scripts/generate_server_authority_matrix.py")
+    # Convert missing or malformed matrix failures into one contract diagnostic.
+    except Exception as exc:
+        # Report the exception class and message for a focused repair.
+        errors.append(f"server-authority matrix could not be validated: {type(exc).__name__}: {exc}")
     # Iterate through the collection to process each item.
     for name in REQUIRED:
         # Set path to the value needed for the next operation.

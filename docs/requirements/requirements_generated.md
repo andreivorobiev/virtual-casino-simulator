@@ -7,14 +7,14 @@ Historical source baseline: 9.1.0
 ## Independent module revisions
 
 - application: 9.28.0
-- core: 9.6.0
+- core: 9.6.1
 - ledger: 9.1.0
 - players: 9.1.0
 - bots: 1.1.0
 - autoplay: 1.1.1
 - audio: 9.1.1
 - admin: 1.3.0
-- roulette: 9.3.0
+- roulette: 9.3.1
 - slots: 9.1.0
 - blackjack: 9.1.0
 - baccarat: 9.1.0
@@ -43,10 +43,10 @@ Historical source baseline: 9.1.0
 - let_it_ride: 1.0.0
 - casino_holdem: 1.0.0
 - joker_poker: 1.0.0
-- tests: 1.31.0
-- docs: 1.30.0
-- contracts: 1.25.0
-- tooling: 1.4.0
+- tests: 1.32.0
+- docs: 1.31.0
+- contracts: 1.26.0
+- tooling: 1.5.0
 - commenting_policy: 1.0.0
 
 ## Requirements
@@ -589,3 +589,12 @@ Historical source baseline: 9.1.0
 - **JP-003** (Joker Poker) - PASS: One wager debit and at most one returned-token payout credit use the shared ledger exactly once under durable deal and draw action identities.
 - **JP-004** (Application) - PASS: Joker Poker supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.
 - **JP-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Joker Poker with requirement, module, version, and visual traceability.
+- **SEC-001** (Core) - PASS: Every game route resolves player identity from the authenticated server session and preserves complete cross-user isolation.
+- **SEC-002** (Core) - PASS: Game clients submit bounded intent only; privilege, wallet, RNG, outcome, payout, and round-control fields are removed before dispatch.
+- **SEC-003** (Core) - PASS: Randomness, hidden state, game outcomes, and payouts are selected by server game engines and never by browser or native client payloads.
+- **SEC-004** (Core) - PASS: The server revalidates legal action, round ownership, phase, turn, wager, precision, balance, and game configuration for every catalog action.
+- **SEC-005** (Core) - PASS: Every nonzero game debit, credit, refund, and settlement is server-owned and uses the storage transaction and append-only ledger.
+- **SEC-006** (Core) - PASS: Exact action retries replay the original committed receipt, changed action-key reuse conflicts, and restart or lost-response recovery cannot duplicate value.
+- **SEC-007** (Core) - PASS: At least twenty-five simultaneous duplicate submissions per debit, payout, refund, and settlement family commit at most once across supported storage processes.
+- **SEC-008** (Core) - PASS: Admin and operations authority is enforced by authenticated server routes, and normal players cannot obtain global game, ledger, history, user, or control state.
+- **SEC-009** (Core) - PASS: The certification inventory covers every registered catalog game and action, and an authoritative refresh replaces tampered client wallet presentation without changing server state.

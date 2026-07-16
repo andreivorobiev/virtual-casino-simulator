@@ -22,6 +22,8 @@ from casino import config as casino_config
 from casino.core.request_player import resolve_authenticated_player
 # Import storage tests so provider parity can run without the broad API suite.
 from tests import storage_tests
+# Import the current-catalog hostile-client certification entrypoint.
+from tests.server_authority_tests import run_server_authority_tests
 # Set RESULTS to the value needed for the next operation.
 RESULTS=[]
 # Set SESSION_TOKEN to the value needed for the next operation.
@@ -234,6 +236,8 @@ def validate_deployment_bootstrap():
 def run_api_tests():
     # Record focused deployment-default coverage before starting the normal loopback API server.
     run_case('API-AUTH-DEPLOYMENT-001',['AUTH-006','TEST-041'],validate_deployment_bootstrap)
+    # Certify the matrix and shared hostile-client boundary before starting a listener.
+    run_case('API-SEC-001',[f'SEC-{index:03d}' for index in range(1,10)],run_server_authority_tests)
     # Set proc,base to the value needed for the next operation.
     proc,base=start_server()
     # Start protected logic so failures can be handled safely.
@@ -334,14 +338,14 @@ def run_api_tests():
             cross_bet=api(base,'/api/v1/games/roulette/bets','POST',{'player_id':user_b['player_id'],'amount':10,'bet_type':'straight','covered_numbers':['17'],'label':'17'},auth_token=token_a)['bet']
             # Verify the action used user A and did not debit user B.
             assert cross_bet['player_id']==user_a['player_id'] and api(base,'/api/v2/me',auth_token=token_b)['player']['token_balance']==250
-            # Complete Roulette for user A through the bound session action.
+            # Complete Roulette for user A while attempting to force a server-owned outcome.
             roulette_a=api(base,'/api/v1/games/roulette/spin','POST',{'player_id':user_b['player_id'],'force_result':'17'},auth_token=token_a)
-            # Place user B's own forced-winning Roulette wager while submitting user A's id.
+            # Place user B's own Roulette wager while submitting user A's id.
             roulette_b_bet=api(base,'/api/v1/games/roulette/bets','POST',{'player_id':user_a['player_id'],'amount':10,'bet_type':'straight','covered_numbers':['18'],'label':'18'},auth_token=token_b)['bet']
             # Settle user B's Roulette wager through its authenticated session.
             roulette_b=api(base,'/api/v1/games/roulette/spin','POST',{'player_id':user_a['player_id'],'force_result':'18'},auth_token=token_b)
-            # Verify both Roulette actions used session-derived identities and produced payouts.
-            assert str(roulette_a['round']['result'])=='17' and roulette_b_bet['player_id']==user_b['player_id'] and str(roulette_b['round']['result'])=='18' and any(row['settlement']['credit']>0 for row in roulette_a['settlements'] if row['bet']['player_id']==user_a['player_id']) and any(row['settlement']['credit']>0 for row in roulette_b['settlements'] if row['bet']['player_id']==user_b['player_id'])
+            # Verify both Roulette actions used session-derived identities and returned server-owned wheel outcomes.
+            assert roulette_b_bet['player_id']==user_b['player_id'] and str(roulette_a['round']['result']) in {str(number) for number in range(37)}|{'00'} and str(roulette_b['round']['result']) in {str(number) for number in range(37)}|{'00'} and all(row['bet']['player_id']==user_a['player_id'] for row in roulette_a['settlements']) and all(row['bet']['player_id']==user_b['player_id'] for row in roulette_b['settlements'])
             # Play Slots independently for both users to cover a second game without state leakage.
             slot_a=api(base,'/api/v1/games/slots/spin','POST',{'player_id':user_b['player_id'],'active_lines':1,'line_bet':1},auth_token=token_a)['spin']
             # Play Slots for user B through its own session binding.
@@ -1013,16 +1017,16 @@ def run_api_tests():
             r=api(base,'/api/v1/games/roulette/bets','POST',{'player_id':'human','amount':25,'bet_type':'split','covered_numbers':['17','20']}); assert r['bet']['type']=='split'
             # Set p1 to the value needed for the next operation.
             p1=api(base,'/api/v1/players/human')['player']['balance']; assert round(p0-p1,2)==25
-            # Set api(base,'/api/v1/games/roulette/spin','POST',{'force_result to the value needed for the next operation.
-            api(base,'/api/v1/games/roulette/spin','POST',{'force_result':'17'}); p2=api(base,'/api/v1/players/human')['player']['balance']; assert p2>p1
+            # Attempt to force a result and require the server to return one legal wheel outcome.
+            spin=api(base,'/api/v1/games/roulette/spin','POST',{'force_result':'17'}); p2=api(base,'/api/v1/players/human')['player']['balance']; assert str(spin['round']['result']) in {str(number) for number in range(37)}|{'00'} and p2>=0
             # Set rb to the value needed for the next operation.
             rb=api(base,'/api/v1/games/roulette/rebet','POST',{'player_id':'human'}); assert rb['placed']
             # Call an asynchronous API/helper and wait for the result before continuing.
             api(base,'/api/v1/games/roulette/settings','POST',{'zero_rule':'en_prison'})
             # Call an asynchronous API/helper and wait for the result before continuing.
             api(base,'/api/v1/games/roulette/bets','POST',{'player_id':'human','amount':10,'bet_type':'red','covered_numbers':['1','3','5','7','9','12','14','16','18','19','21','23','25','27','30','32','34','36']})
-            # Set api(base,'/api/v1/games/roulette/spin','POST',{'force_result to the value needed for the next operation.
-            api(base,'/api/v1/games/roulette/spin','POST',{'force_result':'0'}); st=api(base,'/api/v1/games/roulette/state')['state']; assert st['open_round']['bets']
+            # Attempt another forced result and require server-owned settlement plus persisted rules.
+            spin=api(base,'/api/v1/games/roulette/spin','POST',{'force_result':'0'}); st=api(base,'/api/v1/games/roulette/state')['state']; assert str(spin['round']['result']) in {str(number) for number in range(37)}|{'00'} and st['zero_rule']=='en_prison'
         # Execute this statement as part of the module's documented control flow.
         run_case('API-ROU-001',['ROU-010','ROU-011','ROU-030','ROU-032','LEDGER-001'],roulette)
         # Define the slots function used by this module.
@@ -1567,10 +1571,20 @@ def run_browser_tests():
                     assert len([row for row in ledger_after_add if row.get('transaction_type')=='PLAY_TOKENS_ADDED'])==len([row for row in ledger_before_add if row.get('transaction_type')=='PLAY_TOKENS_ADDED'])+1
                 # Execute the real-backend wallet regression with permanent requirement mappings.
                 run_case('BR-TOKEN-001',['TOKEN-001','TOKEN-003','TOKEN-004','SESSION-003'],auth_tokens_real_backend)
-                # Refresh the whole browser document to prove the updated balance is not cached shell state.
+                # Counterfeit the local wallet display and cache to model a fully hostile client surface.
+                page.evaluate("() => { document.querySelector('#balance').textContent='999,999'; localStorage.setItem('casino.hostile.balance','999999'); }")
+                # Require the tampered DOM to differ temporarily without changing the server wallet.
+                assert '999,999' in page.get_by_test_id('premium-wallet').inner_text()
+                # Refresh the whole browser document so authoritative current-user state replaces local tampering.
                 page.reload(wait_until='networkidle'); page.get_by_test_id('lobby').wait_for(timeout=5000)
-                # Verify current-user refresh restores the exact ledger-backed balance.
-                assert '5,250' in page.get_by_test_id('premium-wallet').inner_text()
+                # Define the hostile-client refresh assertion against the real server wallet.
+                def hostile_client_refresh():
+                    # Verify current-user refresh restores the exact ledger-backed balance.
+                    assert '5,250' in page.get_by_test_id('premium-wallet').inner_text()
+                    # Verify the server ignored the unrelated attacker-controlled local cache key.
+                    assert page.evaluate("localStorage.getItem('casino.hostile.balance')") == '999999'
+                # Record browser tamper recovery under the permanent security requirements.
+                run_case('BR-SEC-001',['SEC-002','SEC-003','SEC-009'],hostile_client_refresh)
                 # Store the current route before switching locale from the authenticated shell.
                 route_before_locale=page.get_by_test_id('lobby').is_visible()
                 # Switch back to English through the persistent shell selector.
