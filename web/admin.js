@@ -90,6 +90,8 @@ async function load(tab = 'dashboard') {
     if (tab === 'history') return history();
     // Branch to the telemetry renderer.
     if (tab === 'telemetry') return telemetry();
+    // Branch to the authenticated Operations renderer.
+    if (tab === 'operations') return operations();
     // Branch to the game state renderer.
     if (tab === 'states') return states();
     // Branch to the audio renderer.
@@ -310,6 +312,37 @@ async function telemetry() {
   view.innerHTML = `<div class="admin-split"><section class="admin-card"><h3>Application events</h3>${eventList(app.logs, 'No application events', 'Application activity will appear here as the local service is used.', 'admin-app-events')}</section><section class="admin-card"><h3>Error events</h3>${eventList(errors.logs, 'No error events', 'No server errors have been recorded for the current day.', 'admin-error-events', true)}</section></div><section class="admin-card"><h3>Browser events</h3>${eventList(client.logs, 'No browser events', 'Browser activity will appear here after a client sends telemetry.', 'admin-client-events')}</section>`;
 }
 
+// Define operations to render trusted dependency and heartbeat telemetry for Admin users.
+async function operations() {
+  // Set localized Operations chrome before the request so transport failures retain context.
+  setTitle(t('operations.title', {}, 'admin'), t('operations.subtitle', {}, 'admin'));
+  // Start protected loading so transport failure becomes an explicit non-color state.
+  try {
+    // Load only the sanitized Admin-authorized Operations payload.
+    const data = await api('/api/v2/admin/operations');
+    // Stop a stale response from replacing a newer Admin tab.
+    if (!isActiveTab('operations')) return;
+    // Select readable state copy and a symbol so color is never the only signal.
+    const stateKey = data.ready ? 'live' : 'degraded';
+    // Map fixed provider identifiers to localized operator-facing labels.
+    const providerLabel = t(`operations.provider.${data.storage_provider}`, {}, 'admin');
+    // Map only allowlisted reason codes to localized operator guidance.
+    const reasonLabels = (data.reasons || []).map(reason => t(`operations.reason.${reason.code}`, {}, 'admin'));
+    // Use explicit unavailable copy when optional build provenance or heartbeat state is absent.
+    const buildSha = data.build?.sha || t('operations.unavailable', {}, 'admin');
+    // Format the trusted heartbeat timestamp without exposing raw transport diagnostics.
+    const heartbeat = data.last_successful_heartbeat_at ? formatDate(new Date(data.last_successful_heartbeat_at), { dateStyle: 'medium', timeStyle: 'medium' }) : t('operations.unavailable', {}, 'admin');
+    // Render live or degraded diagnostics with stable test hooks for EN/RU visual evidence.
+    view.innerHTML = `<section class="admin-card ${data.ready ? '' : 'danger'}" data-testid="admin-operations-${stateKey}"><div class="row"><div><h2>${safe(t(`operations.state.${stateKey}`, {}, 'admin'))}</h2><p>${safe(t(`operations.detail.${stateKey}`, {}, 'admin'))}</p></div><span class="badge" data-testid="admin-operations-state">${safe(t(`operations.symbol.${stateKey}`, {}, 'admin'))} ${safe(t(`operations.state.${stateKey}`, {}, 'admin'))}</span></div>${table([t('operations.field', {}, 'admin'), t('operations.value', {}, 'admin')], [`<tr><td>${safe(t('operations.storage', {}, 'admin'))}</td><td>${safe(providerLabel)}</td></tr>`, `<tr><td>${safe(t('operations.appVersion', {}, 'admin'))}</td><td>${safe(data.build.app_version)}</td></tr>`, `<tr><td>${safe(t('operations.buildSha', {}, 'admin'))}</td><td>${safe(buildSha)}</td></tr>`, `<tr><td>${safe(t('operations.lastHeartbeat', {}, 'admin'))}</td><td>${safe(heartbeat)}</td></tr>`])}${reasonLabels.length ? `<h3>${safe(t('operations.attention', {}, 'admin'))}</h3><ul>${reasonLabels.map(label => `<li>${safe(label)}</li>`).join('')}</ul>` : ''}</section>`;
+  // Convert network or server loss into a client-derived down state without raw error text.
+  } catch (error) {
+    // Avoid replacing a newer tab after a delayed transport failure.
+    if (!isActiveTab('operations')) return;
+    // Render a clear symbol and recovery instruction so color is not the only status signal.
+    view.innerHTML = `<section class="admin-card danger" data-testid="admin-operations-down"><h2>${safe(t('operations.symbol.down', {}, 'admin'))} ${safe(t('operations.state.down', {}, 'admin'))}</h2><p>${safe(t('operations.detail.down', {}, 'admin'))}</p></section>`;
+  }
+}
+
 // Define states to show isolated game state files.
 async function states() {
   // Set the existing states title and subtitle.
@@ -506,6 +539,8 @@ async function system() {
   setTitle(t('system.title', {}, 'admin'), t('system.subtitle', {}, 'admin'));
   // Load dashboard overview through the existing Admin endpoint.
   const data = await api('/api/v1/admin/dashboard');
+  // Stop a stale System response from replacing a newer active Admin tab.
+  if (!isActiveTab('system')) return;
   // Render module revisions and raw diagnostics.
   view.innerHTML = `<section class="admin-card"><h3>Module revisions</h3>${table(['Module', 'Revision'], (data.module_revisions || []).map(module => `<tr><td>${safe(module.module)}</td><td>${safe(module.revision)}</td></tr>`))}</section><section class="admin-card"><h3>Raw overview</h3>${pre(data)}</section>`;
 }

@@ -2,10 +2,10 @@ openapi: 3.0.3
 info:
   title: Virtual Casino Operations API
   version: v1
-  description: Additive monitoring endpoints for sanitized process and dependency status.
-# These paths remain isolated until the shared router and public-auth allowlist are integrated by #77.
+  description: Minimal anonymous liveness plus authenticated readiness and Admin telemetry.
+# Only liveness is anonymous; dependency and heartbeat details require trusted session authority.
 paths:
-  /api/v1/operations/liveness:
+  /healthz:
     get:
       summary: Report whether the application process can answer requests
       operationId: operationsLiveness
@@ -23,11 +23,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/LivenessProbeFailureEnvelope'
-  /api/v1/operations/readiness:
+  /readyz:
     get:
       summary: Report sanitized backend and storage readiness
       operationId: operationsReadiness
-      security: []
+      security:
+        - cookieSession: []
       responses:
         '200':
           description: All required dependencies are ready
@@ -43,28 +44,34 @@ paths:
                 oneOf:
                   - $ref: '#/components/schemas/ReadinessNotReadyEnvelope'
                   - $ref: '#/components/schemas/ReadinessProbeFailureEnvelope'
-  /api/v1/operations/heartbeat:
+  /api/v2/admin/operations:
     get:
-      summary: Run a monitoring heartbeat with readiness-equivalent dependency checks
+      summary: Return sanitized dependency and heartbeat telemetry to an Admin user
       operationId: operationsHeartbeat
-      security: []
+      security:
+        - cookieSession: []
       responses:
         '200':
-          description: The heartbeat and all required dependency checks succeeded
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HeartbeatEnvelope'
-        '503':
-          description: A heartbeat dependency is degraded or the probe could not complete
+          description: Current healthy or degraded Admin-authorized diagnostics
           content:
             application/json:
               schema:
                 oneOf:
-                  - $ref: '#/components/schemas/HeartbeatNotReadyEnvelope'
-                  - $ref: '#/components/schemas/HeartbeatProbeFailureEnvelope'
+                  - $ref: '#/components/schemas/HeartbeatEnvelope'
+                  - $ref: '#/components/schemas/HeartbeatDegradedEnvelope'
+        '503':
+          description: The diagnostic probe could not complete safely
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HeartbeatProbeFailureEnvelope'
 # Schemas separate every healthy and degraded state so impossible HTTP and probe combinations are rejected.
 components:
+  securitySchemes:
+    cookieSession:
+      type: apiKey
+      in: cookie
+      name: casino_session
   schemas:
     BuildMetadata:
       type: object
@@ -80,27 +87,12 @@ components:
           nullable: true
     LivenessData:
       type: object
-      required: [schema_version, probe, status, checked_at, last_successful_heartbeat_at, build]
+      required: [status]
       additionalProperties: false
       properties:
-        schema_version:
-          type: integer
-          enum: [1]
-        probe:
-          type: string
-          enum: [liveness]
         status:
           type: string
           enum: [live]
-        checked_at:
-          type: string
-          format: date-time
-        last_successful_heartbeat_at:
-          type: string
-          format: date-time
-          nullable: true
-        build:
-          $ref: '#/components/schemas/BuildMetadata'
     BackendCheck:
       type: object
       required: [status]
@@ -334,6 +326,16 @@ components:
           enum: [true]
         data:
           $ref: '#/components/schemas/HeartbeatLiveData'
+    HeartbeatDegradedEnvelope:
+      type: object
+      required: [ok, data]
+      additionalProperties: false
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/HeartbeatDegradedData'
     ReadinessNotReadyError:
       type: object
       required: [code, message, details]

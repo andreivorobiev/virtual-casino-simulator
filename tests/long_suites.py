@@ -25,6 +25,8 @@ if str(ROOT) not in sys.path:
 from casino.config import GAMES
 # Store AUTH_SESSION_COOKIE so browser verification can use the backend session cookie name without importing app code.
 AUTH_SESSION_COOKIE = "casino_session"
+# Use one safe deterministic deployment identifier for copied-environment probe evidence.
+OPERATIONS_SMOKE_BUILD_SHA = "abcdef0"
 # Store GAME_IDS from the runtime catalog so coverage automatically includes newly integrated games.
 GAME_IDS = tuple(game["id"] for game in GAMES)
 # Store SUITES so suite sizing and minimum coverage expectations stay declarative.
@@ -121,7 +123,8 @@ def free_port():
 # Start the casino server from the selected repository root.
 def start_server(repo_root):
     port = free_port()  # Pick an isolated port for this worker.
-    proc = subprocess.Popen([sys.executable, str(repo_root / "run.py"), "--host", "127.0.0.1", "--port", str(port), "--no-browser"], cwd=str(repo_root), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)  # Launch server.
+    child_environment = {**os.environ, "CASINO_BUILD_SHA": OPERATIONS_SMOKE_BUILD_SHA}  # Publish only sanitized test provenance to the copied child.
+    proc = subprocess.Popen([sys.executable, str(repo_root / "run.py"), "--host", "127.0.0.1", "--port", str(port), "--no-browser"], cwd=str(repo_root), env=child_environment, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)  # Launch server.
     base = f"http://127.0.0.1:{port}"  # Build the base URL.
     print(f"Long-suite server PID {proc.pid} listening on {base}", flush=True)  # Record the isolated listener for exact evidence and cleanup verification.
     client = ApiClient(base)  # Build an API client for readiness checks.
@@ -413,6 +416,12 @@ def main():
         requirement_ids = load_requirement_ids(repo_root)  # Load requirement registry from the deployment tree.
         coverage = CoverageLedger(requirement_ids)  # Start coverage accounting.
         proc, client = start_server(repo_root)  # Launch the deployed app.
+        health = client.call("/healthz", auth=False)  # Prove minimal anonymous liveness in the deployed copy.
+        readiness = client.call("/readyz")  # Prove trusted readiness through the authenticated deployment session.
+        operations = client.call("/api/v2/admin/operations")  # Prove Admin-authorized heartbeat telemetry.
+        assert health == {"status": "live"} and readiness["ready"] is True and operations["ready"] is True, "Operations deployment probes were not healthy"  # Require all policy surfaces.
+        assert operations["build"]["sha"] == OPERATIONS_SMOKE_BUILD_SHA, "Operations build provenance did not match the copied child environment"  # Bind smoke evidence to the configured child value.
+        report["operations"] = {"pid": proc.pid, "host": "127.0.0.1", "port": int(client.base_url.rsplit(":", 1)[1]), "health": health, "ready": readiness["ready"], "admin_ready": operations["ready"], "build_sha": operations["build"]["sha"]}  # Record trusted probe and listener identity evidence.
         client.call("/api/v1/casino/reset", "POST", {})  # Start the shard from clean data.
         client.login_default_user()  # Restore the session invalidated by reset.
         for index in indices:  # Execute each scenario assigned to this shard.
@@ -436,18 +445,31 @@ def main():
         report["error"] = {"message": str(exc), "traceback": traceback.format_exc()}  # Preserve failure detail.
         raise  # Re-raise for CI.
     finally:
-        report["finished_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())  # Stamp finish time.
         report_path = Path(args.json_report).resolve() if args.json_report else default_report_path(repo_root, args)  # Resolve report output.
-        report_path.parent.mkdir(parents=True, exist_ok=True)  # Ensure report directory exists.
-        report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")  # Write JSON evidence.
         if proc:  # Stop the server process if it was started.
+            listener_port = int(client.base_url.rsplit(":", 1)[1])  # Retain the exact child port for closure verification.
             proc.terminate()  # Ask server to stop.
             try:  # Prefer graceful server shutdown.
                 proc.wait(timeout=5)  # Wait for clean shutdown.
             except subprocess.TimeoutExpired:  # Force shutdown when graceful stop stalls.
                 proc.kill()  # Force kill a stuck server.
                 proc.wait(timeout=5)  # Wait for forced exit.
+            listener_closed = False  # Start fail-closed until a loopback connection proves refusal.
+            for _ in range(30):  # Allow up to three seconds for Windows to release the child listener.
+                with socket.socket() as probe_socket:  # Use a new short-lived socket for each closure check.
+                    probe_socket.settimeout(0.1)  # Bound each loopback connect attempt.
+                    listener_closed = probe_socket.connect_ex(("127.0.0.1", listener_port)) != 0  # Treat connection refusal as confirmed closure.
+                if listener_closed:  # Stop polling as soon as the exact child port is closed.
+                    break  # Leave the bounded closure loop.
+                time.sleep(0.1)  # Give the operating system a short release interval.
+            report["listener_cleanup"] = {"pid": proc.pid, "host": "127.0.0.1", "port": listener_port, "closed": listener_closed}  # Record exact child cleanup evidence.
+            if not listener_closed:  # Fail the suite if its own listener remained reachable.
+                report["status"] = "FAIL"  # Prevent a false passing report.
+                report["error"] = {"message": "long-suite listener remained open after child shutdown"}  # Use a fixed secret-safe cleanup diagnostic.
         release_runtime_lock(lock_path)  # Release same-tree runtime protection.
+        report["finished_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())  # Stamp finish time after listener cleanup.
+        report_path.parent.mkdir(parents=True, exist_ok=True)  # Ensure the report directory exists.
+        report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")  # Write final evidence including listener closure.
         if cleanup_target and not args.keep_env:  # Remove disposable deployment copies by default.
             shutil.rmtree(cleanup_target, onerror=clear_readonly_and_retry)  # Delete disposable deployment copy.
     print(f"LONG_SUITE {report['status']} suite={args.suite} local_tests={len(indices)} shard={args.shard_index}/{args.shard_count} report={report_path}")  # Print concise result.

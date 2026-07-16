@@ -434,7 +434,10 @@
         "players_and_bots",
         "users",
         "language",
-        "test_results"
+        "test_results",
+        "operations_live",
+        "operations_degraded",
+        "operations_down"
       ],
       "locales": [
         "en-US",
@@ -452,7 +455,8 @@
         "VIS-SCROLL-001",
         "VIS-SCROLL-002",
         "VIS-HIERARCHY-001",
-        "VIS-RESPONSIVE-001"
+        "VIS-RESPONSIVE-001",
+        "VIS-EVIDENCE-001"
       ]
     },
     {

@@ -13,8 +13,8 @@ ROOT = Path(__file__).resolve().parents[2]
 OPENAPI_PATH = ROOT / "contracts" / "openapi" / "operations.v1.yaml"
 # Point to the isolated compatibility decision record.
 COMPATIBILITY_PATH = ROOT / "contracts" / "compatibility" / "operations-foundation.json"
-# Point to the independently owned Operations module proposal outside shared discovery.
-MODULE_PROPOSAL_PATH = ROOT / "codex" / "tasks" / "artifacts" / "issue-72-operations-foundation" / "operations.module.proposal.json"
+# Point to the promoted Operations descriptor in shared module discovery.
+MODULE_PATH = ROOT / "modules" / "operations.json"
 
 
 # Verify artifacts that central validators cannot discover until #77 integrates them.
@@ -23,16 +23,18 @@ class OperationsContractTests(unittest.TestCase):
     def test_openapi_declares_public_enveloped_probe_paths(self):
         # Read the complete YAML without requiring a third-party parser.
         text = OPENAPI_PATH.read_text(encoding="utf-8")
-        # Verify the established OpenAPI version and all exact additive v1 paths.
+        # Verify the established OpenAPI version and all exact approved paths.
         self.assertIn("openapi: 3.0.3", text)
         # Verify the liveness path is present.
-        self.assertIn("/api/v1/operations/liveness:", text)
+        self.assertIn("/healthz:", text)
         # Verify the readiness path is present.
-        self.assertIn("/api/v1/operations/readiness:", text)
+        self.assertIn("/readyz:", text)
         # Verify the heartbeat path is present.
-        self.assertIn("/api/v1/operations/heartbeat:", text)
-        # Verify every operation is intended to become public through shared auth integration.
-        self.assertEqual(3, text.count("security: []"))
+        self.assertIn("/api/v2/admin/operations:", text)
+        # Verify liveness is the only anonymous Operations surface.
+        self.assertEqual(1, text.count("security: []"))
+        # Verify readiness and Admin diagnostics both require the session security scheme.
+        self.assertEqual(2, text.count("- cookieSession: []"))
         # Verify the degraded contract uses the fixed standard error identity and HTTP status.
         self.assertIn("'503':", text)
         # Verify the error code matches the runtime route policy.
@@ -68,17 +70,19 @@ class OperationsContractTests(unittest.TestCase):
         self.assertIn("raw exception text or class", record["forbidden_diagnostics"])
 
     # Confirm the serialized Operations proposal remains at 1.0.0 outside shared module discovery.
-    def test_module_proposal_is_preserved_outside_shared_registry(self):
-        # Parse the independently owned module proposal from the issue artifact packet.
-        module = json.loads(MODULE_PROPOSAL_PATH.read_text(encoding="utf-8"))
+    def test_module_descriptor_is_promoted_into_shared_registry(self):
+        # Parse the canonical shared Operations module descriptor.
+        module = json.loads(MODULE_PATH.read_text(encoding="utf-8"))
         # Verify module identity, initial revision, and future permanent requirement prefix.
         self.assertEqual(("operations", "1.0.0", ["OPS"]), (module["module"], module["version"], module["requirements_prefixes"]))
-        # Verify the descriptor never claims shared router, shell, or manifest paths.
+        # Verify the descriptor owns only the isolated Operations package.
         self.assertEqual(["casino/operations/"], module["paths"])
         # Verify the new OpenAPI file is the module's declared public contract.
         self.assertEqual(["contracts/openapi/operations.v1.yaml"], module["contracts"])
-        # Verify #77 remains the owner that will promote the proposal into central module discovery.
-        self.assertFalse((ROOT / "modules" / "operations.json").exists())
+        # Verify the aggregate manifest publishes the same initial module revision.
+        manifest = json.loads((ROOT / "modules" / "module-manifest.json").read_text(encoding="utf-8"))
+        # Require descriptor and aggregate revision alignment.
+        self.assertEqual(module["version"], manifest["modules"]["operations"])
 
 
 # Run this focused suite when invoked directly by a worker.

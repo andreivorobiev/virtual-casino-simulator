@@ -1,6 +1,14 @@
 # Issue #72 focused validation
 
-Status: the Operations-owned foundation was refreshed onto main `f8c836163eab3dc92d83e7bf875ee963c11bddcf`. Focused listener-free checks pass; shared integration remains serialized under #77.
+Status: the Operations foundation is promoted through the serialized #77 lane on current protected main. Exact-head results supersede the historical isolated checkpoint when the integrated branch is finalized.
+
+## Integrated exact-tree evidence
+
+- `python scripts/bootstrap_repo.py` — PASS, including API, contracts, module boundaries, 30-game catalog, 558 requirements, 44 module versions, comment density, rules, and bundled-Node syntax checks.
+- `python tests/run_tests.py --browser` — PASS, including `BR-OPS-001`, global console/page/HTTP audit, and 18 `after_pass` Operations images for live/degraded/down across EN/RU and desktop-primary/desktop-compact/tablet.
+- `python tests/long_suites.py --suite 100 --copy-deployment` — PASS, 100 complete 30-game scenarios; copied child PID 31812 used `127.0.0.1:59303`, returned sanitized build SHA `abcdef0`, stopped, and recorded `closed: true`.
+- Independent cleanup verification confirmed API PIDs 39580/59428 and ports 54700/55047 closed, browser PID 61772 and port 57713 closed, and copied-deployment PID 31812 and port 59303 closed.
+- Protected ports 8765 and 8877 and every shared/user runtime or data worktree remained untouched.
 
 ## Reconciled listener-free checks
 

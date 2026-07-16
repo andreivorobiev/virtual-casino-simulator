@@ -2,13 +2,13 @@
 
 Issue: [#72](https://github.com/andreivorobiev/virtual-casino-simulator/issues/72)
 
-This isolated module defines sanitized liveness, readiness, and heartbeat behavior without editing the shared application router, authentication allowlist, Admin UI, aggregate module manifest, requirement registry, or central test runner owned by #77.
+This integrated module defines sanitized liveness, readiness, and Admin heartbeat behavior under the shared #77 route and authorization policy.
 
 ## Public probe contract
 
-- `GET /api/v1/operations/liveness` reports that the current process can answer. It does not construct or query storage.
-- `GET /api/v1/operations/readiness` checks the configured storage provider and returns healthy data or a sanitized `OPERATIONS_NOT_READY` 503.
-- `GET /api/v1/operations/heartbeat` performs the same dependency check with a distinct probe label for monitoring records.
+- `GET /healthz` is anonymous and returns only `{"status":"live"}` inside the standard success envelope. It does not construct storage or disclose metadata.
+- `GET /readyz` requires an authenticated session, checks storage, and returns healthy data or a sanitized `OPERATIONS_NOT_READY` 503.
+- `GET /api/v2/admin/operations` requires Admin authority and returns sanitized healthy or degraded heartbeat telemetry.
 
 A responding healthy process reports `live`. A responding process with a failed required dependency reports `degraded`. Clients must infer `down` from a transport failure or stale heartbeat because a down process cannot return an API response.
 
@@ -38,7 +38,7 @@ Provider and build-source exceptions are consumed by the probe layer, and a fina
 
 ## Requirement and integration state
 
-The focused foundation validates existing `CORE-011`, `CORE-012`, `STORAGE-001`, `STORAGE-003`, `MYSQL-001`, and `TEST-038` boundaries. No permanent `OPS-*` requirements exist on the current base. #77 must allocate those IDs before merge and complete the shared router/auth, module-version, compatibility-discovery, Admin UI/i18n/visual, central test, and copied-deployment smoke integration listed in the issue artifact packet.
+Permanent `OPS-001` through `OPS-005` and `TEST-044` map the integrated route policy, sanitized dependency behavior, heartbeat state, Admin EN/RU presentation, copied-deployment smoke, and listener cleanup.
 
 Focused validation requires no listener:
 

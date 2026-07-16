@@ -8,6 +8,12 @@ Issue: [#72](https://github.com/andreivorobiev/virtual-casino-simulator/issues/7
 
 Shared integration owner: [#77](https://github.com/andreivorobiev/virtual-casino-simulator/issues/77)
 
+## Integrated #77 status
+
+The Operations slice is now promoted through the serialized #77 lane. The approved policy exposes only minimal `/healthz` anonymously, protects `/readyz` with an authenticated session, and protects `/api/v2/admin/operations` with Admin authority. Permanent `OPS-001` through `OPS-005` and `TEST-044`, the canonical descriptor, aggregate versions, contracts, Admin EN/RU UI, visual row, central tests, and copied-deployment smoke are integrated.
+
+The sections below preserve the original isolated handoff rationale; where they conflict with this status, the integrated policy above is authoritative.
+
 ## Delivered isolated slice
 
 - Operations module proposal revision `1.0.0` with no imports from game modules.
@@ -106,4 +112,4 @@ The UI must not display internal field names, resource keys, provider error text
 - The paths are not public until #77 updates the shared auth allowlist.
 - Permanent requirements, contract digest/matrix discovery, central API/browser tests, Admin UI/i18n, visual evidence, and copied-deployment smoke remain unimplemented here.
 
-No listener is required for the isolated validation plan. Port 8765 and the user's active Casino session must remain untouched throughout integration.
+Exact-head validation uses only separately tracked loopback listeners and never uses protected ports 8765 or 8877.

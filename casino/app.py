@@ -40,6 +40,8 @@ from casino.games.registry import catalog_summary, list_games, register_games
 from casino.admin import register as register_admin
 # Import required dependency so this module can use its public functions or constants.
 from casino.bots.api import register as register_bots
+# Import the approved Operations registrar for liveness, readiness, and Admin telemetry.
+from casino.operations import register as register_operations
 # Import required dependency so this module can use its public functions or constants.
 from casino.core import autoplay
 
@@ -328,6 +330,8 @@ def build_router() -> Router:
     register_bots(router)
     # Register every game API from the canonical per-module catalog descriptors.
     register_games(router)
+    # Register Operations probes after game routes and before the Admin API surface.
+    register_operations(router)
     # Execute this statement as part of the module's documented control flow.
     register_admin(router)
     # Return the computed value to the caller.
@@ -458,7 +462,7 @@ class Handler(BaseHTTPRequestHandler):
     # Define the do_GET function used by this module.
     def do_GET(self):
         # Branch when the following condition is true.
-        if urlparse(self.path).path.startswith("/api/"):
+        if urlparse(self.path).path.startswith("/api/") or urlparse(self.path).path in {"/healthz", "/readyz"}:
             # Return the computed value to the caller.
             return self._handle_api()
         # Return the computed value to the caller.

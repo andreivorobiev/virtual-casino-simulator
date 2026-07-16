@@ -119,15 +119,15 @@ class OperationsApiTests(unittest.TestCase):
         # Register only the issue #72 Operations routes.
         registered = api.register(self.router, service=service)
         # Dispatch the storage-independent liveness request.
-        liveness = self.router.dispatch("GET", "/api/v1/operations/liveness")
+        liveness = self.router.dispatch("GET", "/healthz")
         # Dispatch the dependency readiness request.
-        readiness = self.router.dispatch("GET", "/api/v1/operations/readiness")
+        readiness = self.router.dispatch("GET", "/readyz")
         # Dispatch the monitoring heartbeat request.
-        heartbeat = self.router.dispatch("GET", "/api/v1/operations/heartbeat")
+        heartbeat = self.router.dispatch("GET", "/api/v2/admin/operations")
         # Verify registration preserves the injected shared service instance.
         self.assertIs(service, registered)
         # Verify each route keeps its contract probe identity.
-        self.assertEqual(("liveness", "readiness", "heartbeat"), (liveness["probe"], readiness["probe"], heartbeat["probe"]))
+        self.assertEqual(({"status": "live"}, "readiness", "heartbeat"), (liveness, readiness["probe"], heartbeat["probe"]))
         # Verify readiness-equivalent routes return healthy direct-router data.
         self.assertTrue(readiness["ready"] and heartbeat["ready"])
         # Verify the latest successful heartbeat advances across both dependency routes.
@@ -146,7 +146,7 @@ class OperationsApiTests(unittest.TestCase):
         # Capture the standard error object used by the shared HTTP envelope handler.
         with self.assertRaises(CasinoError) as raised:
             # Dispatch the readiness route that must fail with HTTP 503 policy.
-            self.router.dispatch("GET", "/api/v1/operations/readiness")
+            self.router.dispatch("GET", "/readyz")
         # Read the fixed error after the assertion context completes.
         error = raised.exception
         # Verify stable HTTP policy and public error identity.
@@ -171,11 +171,11 @@ class OperationsApiTests(unittest.TestCase):
         # Register the service with a storage-independent liveness path.
         api.register(self.router, service=OperationsProbeService(provider_factory=failing_provider_factory, clock=lambda: "2026-07-14T11:04:00.000Z", build_sha_source=lambda: None))
         # Verify the live process response succeeds without provider construction.
-        self.assertEqual("live", self.router.dispatch("GET", "/api/v1/operations/liveness")["status"])
+        self.assertEqual({"status": "live"}, self.router.dispatch("GET", "/healthz"))
         # Verify no mutating method was registered for monitoring paths.
         with self.assertRaises(NotFoundError):
             # Dispatch a forbidden POST shape through the real router matcher.
-            self.router.dispatch("POST", "/api/v1/operations/liveness")
+            self.router.dispatch("POST", "/healthz")
 
     # Confirm an unexpected clock failure is converted before the global raw-error handler.
     def test_unexpected_probe_failure_raises_fixed_sanitized_503(self):
@@ -183,12 +183,12 @@ class OperationsApiTests(unittest.TestCase):
         def failing_clock():
             # Raise the value that the Operations API boundary must consume.
             raise RuntimeError("password=secret C:\\private\\clock request_id=debug-42")
-        # Register a service whose liveness clock fails unexpectedly.
+        # Register a service whose readiness clock fails unexpectedly.
         api.register(self.router, service=OperationsProbeService(provider_factory=lambda: ReadyProvider(self.temporary_directory.name), clock=failing_clock, build_sha_source=lambda: None))
         # Capture the fixed sanitized Operations failure.
         with self.assertRaises(CasinoError) as raised:
-            # Dispatch liveness through the isolated real router.
-            self.router.dispatch("GET", "/api/v1/operations/liveness")
+            # Dispatch readiness through the isolated real router.
+            self.router.dispatch("GET", "/readyz")
         # Read the public error after conversion.
         error = raised.exception
         # Verify the fixed error identity and status.
@@ -202,7 +202,7 @@ class OperationsApiTests(unittest.TestCase):
         # Verify the request/debug identifier was removed.
         self.assertNotIn("debug-42", serialized)
         # Verify only the fixed backend reason remains.
-        self.assertEqual({"probe": "liveness", "component": "backend", "code": "operations_probe_failed"}, error.details)
+        self.assertEqual({"probe": "readiness", "component": "backend", "code": "operations_probe_failed"}, error.details)
 
     # Confirm an injected service cannot use the importable not-ready type to bypass sanitization.
     def test_service_raised_not_ready_error_is_resanitized(self):
@@ -211,7 +211,7 @@ class OperationsApiTests(unittest.TestCase):
         # Capture the final public error emitted by the liveness boundary.
         with self.assertRaises(CasinoError) as raised:
             # Dispatch the route that must reject the service-owned error identity and details.
-            self.router.dispatch("GET", "/api/v1/operations/liveness")
+            self.router.dispatch("GET", "/healthz")
         # Read the converted public error after the assertion context completes.
         error = raised.exception
         # Verify liveness exposes only its contracted fixed failure identity.
@@ -246,10 +246,12 @@ class OperationsApiTests(unittest.TestCase):
                 router = Router()
                 # Register the hostile successful-return service.
                 api.register(router, service=InjectedPayloadService(payload))
+                # Select the approved route for the probe under test.
+                route = {"liveness": "/healthz", "readiness": "/readyz", "heartbeat": "/api/v2/admin/operations"}[probe]
                 # Capture the fixed sanitized failure emitted for the malformed return.
                 with self.assertRaises(CasinoError) as raised:
                     # Dispatch the exact route through the production router matcher.
-                    router.dispatch("GET", f"/api/v1/operations/{probe}")
+                    router.dispatch("GET", route)
                 # Read the converted public error after the assertion context completes.
                 error = raised.exception
                 # Verify every malformed return uses the fixed failure identity.
@@ -267,18 +269,18 @@ class OperationsApiTests(unittest.TestCase):
         service = OperationsProbeService(provider_factory=lambda: ReadyProvider(self.temporary_directory.name), clock=lambda: "token=secret C:\\private", build_sha_source=lambda: None)
         # Register the concrete service in the isolated router.
         api.register(self.router, service=service)
-        # Capture the fixed sanitizer result from the liveness route.
+        # Capture the fixed sanitizer result from the readiness route.
         with self.assertRaises(CasinoError) as raised:
-            # Dispatch without constructing storage or opening a listener.
-            self.router.dispatch("GET", "/api/v1/operations/liveness")
+            # Dispatch through the dependency-aware path without opening a listener.
+            self.router.dispatch("GET", "/readyz")
         # Serialize every caller-visible error field.
         serialized = json.dumps({"message": raised.exception.message, "details": raised.exception.details})
         # Verify the unsafe clock return was completely discarded.
         self.assertNotIn("secret", serialized)
         # Verify internal path content was completely discarded.
         self.assertNotIn("private", serialized)
-        # Verify the fixed liveness failure remains contract-compatible.
-        self.assertEqual({"probe": "liveness", "component": "backend", "code": "operations_probe_failed"}, raised.exception.details)
+        # Verify the fixed readiness failure remains contract-compatible.
+        self.assertEqual({"probe": "readiness", "component": "backend", "code": "operations_probe_failed"}, raised.exception.details)
 
     # Confirm hostile string subclasses cannot spoof any returned enum allowlist.
     def test_spoofed_enum_subclasses_are_rejected_without_leakage(self):
@@ -327,10 +329,12 @@ class OperationsApiTests(unittest.TestCase):
                 router = Router()
                 # Register the hostile successful-return service.
                 api.register(router, service=InjectedPayloadService(payload))
+                # Select the approved route for the probe under test.
+                route = {"liveness": "/healthz", "readiness": "/readyz", "heartbeat": "/api/v2/admin/operations"}[probe]
                 # Capture the fixed failure that must replace the spoofed return.
                 with self.assertRaises(CasinoError) as raised:
                     # Dispatch the exact affected route through the production matcher.
-                    router.dispatch("GET", f"/api/v1/operations/{probe}")
+                    router.dispatch("GET", route)
                 # Serialize every caller-visible error field.
                 serialized = json.dumps({"message": raised.exception.message, "details": raised.exception.details})
                 # Verify no underlying sentinel content escaped.
@@ -340,16 +344,16 @@ class OperationsApiTests(unittest.TestCase):
 
     # Confirm shape-valid but impossible timestamps are rejected as probe failures.
     def test_impossible_timestamp_is_rejected(self):
-        # Build an otherwise valid liveness payload from the concrete service.
-        payload = OperationsProbeService(provider_factory=lambda: ReadyProvider(self.temporary_directory.name), clock=lambda: "9999-99-99T99:99:99Z", build_sha_source=lambda: None).liveness()
+        # Build an otherwise valid readiness payload from the concrete service.
+        payload = OperationsProbeService(provider_factory=lambda: ReadyProvider(self.temporary_directory.name), clock=lambda: "9999-99-99T99:99:99Z", build_sha_source=lambda: None).readiness()
         # Register the malformed successful return through the isolated route.
         api.register(self.router, service=InjectedPayloadService(payload))
         # Capture the fixed failure instead of returning an invalid OpenAPI date-time.
         with self.assertRaises(CasinoError) as raised:
-            # Dispatch the liveness endpoint without opening a listener.
-            self.router.dispatch("GET", "/api/v1/operations/liveness")
+            # Dispatch the readiness endpoint without opening a listener.
+            self.router.dispatch("GET", "/readyz")
         # Verify the invalid timestamp used only the fixed failure path.
-        self.assertEqual({"probe": "liveness", "component": "backend", "code": "operations_probe_failed"}, raised.exception.details)
+        self.assertEqual({"probe": "readiness", "component": "backend", "code": "operations_probe_failed"}, raised.exception.details)
 
 
 # Run this focused suite when invoked directly by a worker.

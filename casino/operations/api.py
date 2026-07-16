@@ -30,7 +30,7 @@ DEGRADED_REASON_CODES = ("storage_unavailable", "database_unavailable", "storage
 READY_STORAGE_PROVIDERS = ("json", "mysql")
 # Include the safe unknown state only when a dependency is degraded.
 DEGRADED_STORAGE_PROVIDERS = ("json", "mysql", "unknown")
-# Define the exact common response keys required by every Operations probe.
+# Define the exact common response keys required by protected Operations probes.
 COMMON_PAYLOAD_KEYS = frozenset({"schema_version", "probe", "status", "checked_at", "last_successful_heartbeat_at", "build"})
 # Define the exact dependency response keys required by readiness and heartbeat.
 DEPENDENCY_PAYLOAD_KEYS = COMMON_PAYLOAD_KEYS | frozenset({"ready", "storage_provider", "checks", "reasons"})
@@ -134,16 +134,12 @@ def _validated_common_payload(probe: str, payload: dict, expected_keys) -> dict:
 
 # Validate and rebuild one liveness result against its exact public schema.
 def _validated_liveness_payload(payload: dict) -> dict:
-    # Validate the exact liveness keys and shared metadata.
-    result = _validated_common_payload("liveness", payload, COMMON_PAYLOAD_KEYS)
-    # A responding liveness probe may publish only the fixed live status.
-    if result["status"] != "live":
-        # Reject arbitrary or contradictory status strings.
-        raise ValueError("invalid Operations payload")
-    # Rebuild the one accepted liveness status from the module-owned literal.
-    result["status"] = "live"
-    # Return only the rebuilt, allowlisted liveness payload.
-    return result
+    # Require the anonymous response to contain only its fixed process-state field.
+    source = _require_exact_dict(payload, frozenset({"status"}))
+    # Rebuild the one accepted status from the module-owned literal.
+    status = _validated_enum(source["status"], ("live",))
+    # Return no timestamp, build, provider, heartbeat, or dependency detail anonymously.
+    return {"status": status}
 
 
 # Validate and rebuild readiness or heartbeat component checks.
@@ -271,26 +267,26 @@ def register(router, service=None):
     # Create the production service unless a focused test supplies safe dependency doubles.
     operations_service = service or OperationsProbeService()
 
-    # Register the process-only liveness route as an additive v1 endpoint.
-    @router.get(r"/api/v1/operations/liveness")
+    # Register the process-only liveness route as the one anonymous-safe probe.
+    @router.get(r"/healthz")
     # Return liveness without constructing or querying storage.
     def liveness(body, query):
         # Delegate through the final fixed-error boundary.
         return safe_probe("liveness", operations_service.liveness)
 
-    # Register the dependency readiness route as an additive v1 endpoint.
-    @router.get(r"/api/v1/operations/readiness")
+    # Register dependency readiness on an authenticated route outside the frozen v1 API.
+    @router.get(r"/readyz")
     # Return healthy readiness or a sanitized standard 503 error.
     def readiness(body, query):
         # Run service, return validation, and not-ready policy behind one fixed boundary.
         return safe_probe("readiness", operations_service.readiness, require_ready=True)
 
-    # Register the monitoring heartbeat route as an additive v1 endpoint.
-    @router.get(r"/api/v1/operations/heartbeat")
-    # Return a healthy heartbeat or a sanitized standard 503 error.
+    # Register complete heartbeat and dependency telemetry only beneath the Admin boundary.
+    @router.get(r"/api/v2/admin/operations")
+    # Return both healthy and degraded sanitized diagnostics for authenticated operators.
     def heartbeat(body, query):
-        # Run service, return validation, and not-ready policy behind one fixed boundary.
-        return safe_probe("heartbeat", operations_service.heartbeat, require_ready=True)
+        # Let Admin inspect a degraded dependency without converting it to a generic error card.
+        return safe_probe("heartbeat", operations_service.heartbeat)
 
     # Return the service so focused tests and later Admin integration can inspect shared heartbeat state.
     return operations_service

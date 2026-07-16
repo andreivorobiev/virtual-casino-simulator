@@ -123,9 +123,13 @@ class FakeMySQLProvider:
     def __init__(self):
         # Start with no connectivity checks.
         self.connections = []
+        # Retain connection options so the probe timeout remains testable.
+        self.connection_options = []
 
     # Create a fresh fake connection for each check.
-    def connect(self):
+    def connect(self, **options):
+        # Record bounded connector options without opening a real network connection.
+        self.connection_options.append(options)
         # Build one isolated DB-API connection.
         connection = FakeConnection()
         # Retain it for query and cleanup assertions.
@@ -155,10 +159,8 @@ class OperationsProbeServiceTests(unittest.TestCase):
         service = OperationsProbeService(provider_factory=forbidden_provider_factory, clock=lambda: "2026-07-14T10:00:00.000Z", build_sha_source=lambda: "ABCDEF1234567")
         # Execute the process-only liveness probe.
         payload = service.liveness()
-        # Verify canonical version and normalized optional provenance.
-        self.assertEqual({"app_version": APP_VERSION, "sha": "abcdef1234567"}, payload["build"])
-        # Verify the responding process state and initial heartbeat semantics.
-        self.assertEqual(("liveness", "live", None), (payload["probe"], payload["status"], payload["last_successful_heartbeat_at"]))
+        # Verify anonymous liveness contains no build, timestamp, or dependency detail.
+        self.assertEqual({"status": "live"}, payload)
 
     # Confirm malformed or failing SHA sources become unavailable without degrading liveness.
     def test_build_sha_is_strictly_sanitized_and_optional(self):
@@ -213,6 +215,8 @@ class OperationsProbeServiceTests(unittest.TestCase):
         connection = provider.connections[0]
         # Verify the query touched no casino rows and both resources were closed.
         self.assertEqual(("SELECT 1", True, True), (connection.probe_cursor.query, connection.probe_cursor.closed, connection.closed))
+        # Verify the connection attempt uses the approved bounded timeout.
+        self.assertEqual([{"connection_timeout": probes.MYSQL_PROBE_TIMEOUT_SECONDS}], provider.connection_options)
         # Verify the public status identifies only the allowlisted provider.
         self.assertEqual(("mysql", True), (payload["storage_provider"], payload["ready"]))
 

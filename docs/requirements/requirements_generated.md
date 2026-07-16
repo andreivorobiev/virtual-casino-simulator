@@ -6,14 +6,15 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.29.0
-- core: 9.6.1
+- application: 9.30.0
+- core: 9.7.0
 - ledger: 9.1.0
 - players: 9.1.0
 - bots: 1.1.0
 - autoplay: 1.1.1
 - audio: 9.1.1
-- admin: 1.3.0
+- admin: 1.4.0
+- operations: 1.0.0
 - roulette: 9.3.1
 - slots: 9.1.0
 - blackjack: 9.1.0
@@ -44,10 +45,10 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.0
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.33.0
-- docs: 1.32.0
-- contracts: 1.27.0
-- tooling: 1.5.0
+- tests: 1.34.0
+- docs: 1.33.0
+- contracts: 1.28.0
+- tooling: 1.6.0
 - commenting_policy: 1.0.0
 
 ## Requirements
@@ -604,3 +605,9 @@ Historical source baseline: 9.1.0
 - **THPT-003** (Texas Hold'em Practice Table) - PASS: The human and all three funded opponent accounts reserve maximum exposure and receive unused escrow and pot shares only through storage-enforced ledger action identities with Admin-auditable owner context.
 - **THPT-004** (Application) - PASS: Texas Hold'em Practice Table supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play across all governed viewports.
 - **THPT-005** (Tests) - PASS: Catalog, contract, browser, restart, long-suite, funded-opponent, version, requirement, visual, and hostile-client certification evidence remains traceable for Texas Hold'em Practice Table.
+- **OPS-001** (Operations) - PASS: Anonymous liveness reports only a fixed live process state without storage access, build metadata, timestamps, heartbeat state, or dependency diagnostics.
+- **OPS-002** (Operations) - PASS: Authenticated readiness checks configured JSON or MySQL storage with bounded waits and returns only allowlisted provider, component state, and fixed degraded reason codes.
+- **OPS-003** (Operations) - PASS: Successful dependency checks advance a monotonic process-local heartbeat timestamp, while later degradation retains the last successful value and restart resets it.
+- **OPS-004** (Operations) - PASS: Admin presents live, degraded, and client-derived down Operations states in English and Russian with text plus a non-color signal and no raw diagnostics.
+- **OPS-005** (Operations) - PASS: Copied-deployment smoke records the loopback child PID and port, probes anonymous liveness plus authenticated readiness and Admin telemetry, verifies sanitized build provenance, stops the child, and proves the port closed.
+- **TEST-044** (Tests) - PASS: Operations regression evidence covers anonymous and authenticated policy, healthy and degraded dependencies, Admin authorization, EN/RU responsive states, copied deployment, and listener cleanup.

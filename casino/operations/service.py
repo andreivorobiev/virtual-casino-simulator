@@ -54,14 +54,8 @@ class OperationsProbeService:
 
     # Report process liveness without touching storage or any external dependency.
     def liveness(self) -> dict:
-        # Capture one timestamp for a self-consistent liveness response.
-        checked_at = self._clock()
-        # Build the stable common metadata before adding the live process state.
-        payload = self._base_payload("liveness", checked_at)
-        # A responding in-process liveness call is live by definition.
-        payload["status"] = "live"
-        # Return the storage-independent status payload.
-        return payload
+        # Return only the anonymous-safe process state without time, build, or dependency metadata.
+        return {"status": "live"}
 
     # Run the shared dependency check for readiness or heartbeat requests.
     def _dependency_status(self, probe: str) -> dict:

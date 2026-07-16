@@ -15,7 +15,11 @@
   "audio": [],
   "admin": [
     "contracts/openapi/admin-users.v2.yaml",
-    "contracts/openapi/admin.v1.yaml"
+    "contracts/openapi/admin.v1.yaml",
+    "contracts/openapi/operations.v1.yaml"
+  ],
+  "operations": [
+    "contracts/openapi/operations.v1.yaml"
   ],
   "roulette": [
     "contracts/openapi/roulette.v1.yaml"
@@ -111,7 +115,8 @@
   "docs": [],
   "contracts": [
     "contracts/openapi/admin-users.v2.yaml",
-    "contracts/openapi/auth.v2.yaml"
+    "contracts/openapi/auth.v2.yaml",
+    "contracts/openapi/operations.v1.yaml"
   ],
   "tooling": [],
   "commenting_policy": []

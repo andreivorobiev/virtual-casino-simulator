@@ -20,6 +20,8 @@ BUILD_SHA_ENV = "CASINO_BUILD_SHA"
 BUILD_SHA_PATTERN = re.compile(r"^[0-9a-fA-F]{7,40}$")
 # Restrict provider disclosure to the two configured implementations supported by current core storage.
 SUPPORTED_STORAGE_PROVIDERS = frozenset({"json", "mysql"})
+# Bound each monitoring connection attempt so readiness cannot hang indefinitely.
+MYSQL_PROBE_TIMEOUT_SECONDS = 3
 
 
 # Normalize optional deployment provenance without echoing malformed or sensitive input.
@@ -101,7 +103,7 @@ def _probe_mysql(provider) -> None:
     # Protect both resources with deterministic cleanup.
     try:
         # Open a fresh provider-managed connection without inspecting its credential configuration.
-        connection = provider.connect()
+        connection = provider.connect(connection_timeout=MYSQL_PROBE_TIMEOUT_SECONDS)
         # Open a standard cursor for a constant connectivity query.
         cursor = connection.cursor()
         # Execute a read-only constant query that touches no casino data.
