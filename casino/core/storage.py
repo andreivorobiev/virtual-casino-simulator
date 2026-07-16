@@ -730,9 +730,11 @@ class MySQLStorageProvider(StorageProvider):
         return mysql.connector
 
     # Open a new MySQL connection using the configured credentials.
-    def connect(self):
+    def connect(self, **overrides):
+        # Merge bounded caller-owned connector options without changing stored credentials.
+        connection_options = {**self.config.kwargs(), **overrides}
         # Return a new DB-API connection for one provider operation.
-        return self._connector().connect(**self.config.kwargs())
+        return self._connector().connect(**connection_options)
 
     # Return the SQL statements that create the provider schema.
     @staticmethod

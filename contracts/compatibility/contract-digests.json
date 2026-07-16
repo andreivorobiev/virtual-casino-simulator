@@ -33,6 +33,7 @@
   "contracts/openapi/keno.v1.yaml": "3d3af7c097f3e82a4082961724cf11797be9a948a38dcb3c1765db3086f54f2d",
   "contracts/openapi/ledger.v1.yaml": "806bc3c22155d2c99d7551c6f97cb9987e3f84297d6055e8dd1e45d341e31ab1",
   "contracts/openapi/multi_hand_video_poker.v1.yaml": "85b3ef2cd12b03d19b34564b2aeac4fbe0e8dcee7073ffb8350b058d5217983b",
+  "contracts/openapi/operations.v1.yaml": "030f29796e88482794413750698dd7933f74e9c025577f1a81d00d700c52b31a",
   "contracts/openapi/players.v1.yaml": "b19157f531284418dce4ddacb362657ea80273d27070fcf4f038c9c2bdc9448b",
   "contracts/openapi/roulette.v1.yaml": "3a6056635e0293cca1018bbd89079dcb096dc01b3c6faeb4feacad14620b569d",
   "contracts/openapi/red_dog.v1.yaml": "2aafc2772419cb500e6d1750673cd16bf7dd466d4be57343fc71484b9643bc95",

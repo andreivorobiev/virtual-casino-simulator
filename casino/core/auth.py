@@ -31,7 +31,7 @@ SESSIONS_PATH = DATA_DIR / "auth" / "sessions.json"
 # Set PASSWORD_ITERATIONS to the value needed for the next operation.
 PASSWORD_ITERATIONS = 120_000
 # Set PUBLIC_API_PATHS to the value needed for the next operation.
-PUBLIC_API_PATHS = {"/api/v2/auth/login"}
+PUBLIC_API_PATHS = {"/api/v2/auth/login", "/healthz"}
 
 # Define the utc_datetime function used by this module.
 def utc_datetime() -> datetime:

@@ -1,0 +1,46 @@
+{
+  "issue": "https://github.com/andreivorobiev/virtual-casino-simulator/issues/72",
+  "created_at": "2026-07-14T00:00:00Z",
+  "status": "integrated",
+  "v1_compatibility": {
+    "policy": "additive",
+    "notes": "New Operations endpoints do not alter any existing frozen v1 endpoint, request, response, ledger, or gameplay behavior."
+  },
+  "endpoints": [
+    "GET /healthz",
+    "GET /readyz",
+    "GET /api/v2/admin/operations"
+  ],
+  "response_policy": {
+    "healthy": "standard ok/data envelope",
+    "degraded": "readiness uses OPERATIONS_NOT_READY while Admin receives sanitized degraded data",
+    "unexpected": "standard ok/error envelope with OPERATIONS_PROBE_FAILED and fixed backend reason details",
+    "down": "inferred by clients from transport failure or stale heartbeat because a down process cannot answer"
+  },
+  "anonymous_diagnostics": [
+    "fixed live process state"
+  ],
+  "trusted_diagnostics": [
+    "canonical packaged application version",
+    "optional validated hexadecimal build SHA",
+    "allowlisted storage provider name",
+    "component pass/fail state",
+    "fixed degraded reason code",
+    "probe and last-success timestamps"
+  ],
+  "forbidden_diagnostics": [
+    "raw exception text or class",
+    "credentials, tokens, DSNs, hosts, or database names",
+    "internal filesystem paths",
+    "request or debug identifiers"
+  ],
+  "shared_integration_owner": "GitHub issue #77",
+  "shared_integration_required": [
+    "router registration",
+    "liveness-only public authentication allowlist",
+    "permanent OPS requirement allocation",
+    "aggregate module version registration",
+    "contract matrix, digest, and validator discovery",
+    "central API, browser, visual, and copied-deployment smoke coverage"
+  ]
+}

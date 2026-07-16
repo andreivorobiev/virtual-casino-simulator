@@ -248,6 +248,32 @@ def run_api_tests():
         api(base,'/api/v1/casino/reset','POST',{})
         # Call an asynchronous API/helper and wait for the result before continuing.
         login_default_user(base)
+        # Define the Operations probe contract against the real loopback backend.
+        def operations_api():
+            # Require anonymous liveness to expose only the fixed process state.
+            assert api(base,'/healthz',auth_token=None)=={'status':'live'}
+            # Require readiness details to reject an anonymous caller.
+            anonymous_ready=api(base,'/readyz',ok=False,auth_token=None); assert anonymous_ready['error']['code']=='UNAUTHORIZED'
+            # Require the authenticated Admin session to see healthy readiness and telemetry.
+            ready=api(base,'/readyz'); admin_status=api(base,'/api/v2/admin/operations'); assert ready['ready'] is True and admin_status['ready'] is True and ready['storage_provider']=='json'
+            # Resolve only this worktree server's isolated primary storage document.
+            players_path=ROOT/'data'/'players.json'; unavailable_path=ROOT/'data'/'players.operations-test-unavailable.json'
+            # Start a reversible post-start outage without touching shared or user-owned runtime data.
+            players_path.replace(unavailable_path)
+            # Always restore the isolated document even if an acceptance assertion fails.
+            try:
+                # Require protected readiness to return the sanitized not-ready envelope.
+                degraded=api(base,'/readyz',ok=False); assert degraded['error']['code']=='OPERATIONS_NOT_READY' and degraded['error']['details']['status']=='degraded'
+                # Require Admin diagnostics to retain the prior heartbeat without leaking raw errors.
+                admin_degraded=api(base,'/api/v2/admin/operations'); assert admin_degraded['ready'] is False and admin_degraded['last_successful_heartbeat_at']==admin_status['checked_at'] and admin_degraded['reasons']==[{'component':'storage','code':'storage_unavailable'}]
+            # Restore the isolated provider document before later casino tests continue.
+            finally:
+                # Move the test-owned file back to its canonical provider path.
+                unavailable_path.replace(players_path)
+            # Require readiness to recover on the same live backend after storage restoration.
+            assert api(base,'/readyz')['ready'] is True
+        # Record anonymous/authenticated/degraded/recovery Operations behavior under permanent IDs.
+        run_case('API-OPS-001',['OPS-001','OPS-002','OPS-003','OPS-005','TEST-044'],operations_api)
         # Define the auth_backend function used by this module.
         def auth_backend():
             # Set blocked to the value needed for the next operation.
@@ -805,7 +831,7 @@ def run_api_tests():
             # Verify user B cannot mutate user A's server-side autoplay session.
             cross_auto=api(base,'/api/v1/autoplay/stop','POST',{'autoplay_id':auto_a['autoplay_id']},ok=False,auth_token=token_b); assert auto_a['player_id']==user_a['player_id'] and cross_auto['error']['code']=='FORBIDDEN'
             # Enumerate every registered Admin route shape to prove the central role gate fails closed.
-            admin_paths=[('GET','/api/v1/admin/overview'),('GET','/api/v1/admin/dashboard'),('GET','/api/v1/admin/modules'),('GET','/api/v1/admin/requirements'),('GET','/api/v1/admin/game-states'),('GET','/api/v1/admin/users'),('POST','/api/v1/admin/users'),('GET',f'/api/v1/admin/users/{user_b["user_id"]}'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/deactivate'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/reactivate'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/password-reset'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/terms'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/locale'),('GET','/api/v1/admin/logs'),('GET','/api/v1/admin/ledger'),('GET','/api/v1/admin/history'),('GET','/api/v1/admin/test-results'),('GET','/api/v1/admin/audio-settings'),('POST','/api/v1/admin/audio-settings'),('GET','/api/v1/admin/autoplay'),('POST','/api/v1/admin/autoplay/stop-all'),('GET','/api/v1/admin/bots'),('POST','/api/v1/admin/bots/practice-opponents/fund'),('GET','/api/v2/admin/users'),('POST','/api/v2/admin/users'),('GET',f'/api/v2/admin/users/{user_b["user_id"]}'),('PATCH',f'/api/v2/admin/users/{user_b["user_id"]}'),('POST',f'/api/v2/admin/users/{user_b["user_id"]}/password'),('PATCH',f'/api/v2/admin/users/{user_b["user_id"]}/terms'),('GET',f'/api/v2/admin/users/{user_b["user_id"]}/state')]
+            admin_paths=[('GET','/api/v1/admin/overview'),('GET','/api/v1/admin/dashboard'),('GET','/api/v1/admin/modules'),('GET','/api/v1/admin/requirements'),('GET','/api/v1/admin/game-states'),('GET','/api/v1/admin/users'),('POST','/api/v1/admin/users'),('GET',f'/api/v1/admin/users/{user_b["user_id"]}'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/deactivate'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/reactivate'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/password-reset'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/terms'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/locale'),('GET','/api/v1/admin/logs'),('GET','/api/v1/admin/ledger'),('GET','/api/v1/admin/history'),('GET','/api/v1/admin/test-results'),('GET','/api/v1/admin/audio-settings'),('POST','/api/v1/admin/audio-settings'),('GET','/api/v1/admin/autoplay'),('POST','/api/v1/admin/autoplay/stop-all'),('GET','/api/v1/admin/bots'),('POST','/api/v1/admin/bots/practice-opponents/fund'),('GET','/api/v2/admin/operations'),('GET','/api/v2/admin/users'),('POST','/api/v2/admin/users'),('GET',f'/api/v2/admin/users/{user_b["user_id"]}'),('PATCH',f'/api/v2/admin/users/{user_b["user_id"]}'),('POST',f'/api/v2/admin/users/{user_b["user_id"]}/password'),('PATCH',f'/api/v2/admin/users/{user_b["user_id"]}/terms'),('GET',f'/api/v2/admin/users/{user_b["user_id"]}/state')]
             # Request each Admin endpoint as a normal user and require a forbidden response.
             for method,path in admin_paths:
                 # Send an empty body for mutating routes because authorization must run before validation.
@@ -3667,6 +3693,8 @@ def run_browser_tests():
                 def admin_dashboard_browser():
                     # Require the existing Admin navigation to remain available after dashboard load.
                     assert page.get_by_test_id('admin-tab-audio').is_visible()
+                    # Require the authenticated Operations tab to remain in the Admin navigation.
+                    assert page.get_by_test_id('admin-tab-operations').is_visible()
                     # Locate the existing App summary card without changing production markup for the test.
                     app_card=page.locator('#adminView .admin-card').filter(has_text='App')
                     # Require the browser-visible packaged release to match the canonical top-level version.
@@ -3685,6 +3713,56 @@ def run_browser_tests():
                         assert module_table.locator('tr').filter(has_text=expected['module']).filter(has_text=expected['revision']).count()==1
                 # Execute the mapped Admin dashboard and packaged-release browser regression.
                 run_case('BR-ADMIN-001',['ADMIN-001','ADMIN-003','ADMIN-004','ADMIN-010','ADMIN-014','TEST-023'],admin_dashboard_browser)
+                # Define real-backend Operations states, localization, responsive layout, and evidence.
+                def admin_operations_browser():
+                    # Cache the isolated backend's primary storage document for reversible degradation.
+                    players_path=ROOT/'data'/'players.json'; unavailable_path=ROOT/'data'/'players.operations-browser-unavailable.json'
+                    # Define every governed Admin viewport for this Operations surface.
+                    viewports={'desktop-primary':{'width':1920,'height':1080},'desktop-compact':{'width':1440,'height':900},'tablet':{'width':1024,'height':900}}
+                    # Exercise both installed locales on the same authenticated real backend.
+                    for locale in ('en-US','ru-RU'):
+                        # Switch locale in place without changing the user's browser preference outside this test.
+                        page.evaluate("async locale => { const i18n = await import('/core/i18n.js'); await i18n.setLocale(locale, { persistLocal: false }); }", locale)
+                        # Open the Operations tab and wait for healthy real-backend telemetry.
+                        page.get_by_test_id('admin-tab-operations').click(); page.get_by_test_id('admin-operations-live').wait_for(timeout=5000)
+                        # Capture the healthy state at every exact governed viewport.
+                        for viewport_name,viewport in viewports.items():
+                            # Resize to the named visual-matrix dimensions.
+                            page.set_viewport_size(viewport); page.wait_for_timeout(150)
+                            # Save branch-current after-pass evidence for this locale and viewport.
+                            page.screenshot(path=str(screenshots/f'after-pass-admin-operations-live-{locale}-{viewport_name}.png'),full_page=False)
+                        # Remove only the isolated test server's player document to produce a real degraded dependency.
+                        players_path.replace(unavailable_path)
+                        # Always restore storage before continuing to the down-state proof.
+                        try:
+                            # Refresh the active tab and wait for sanitized degraded telemetry.
+                            page.get_by_test_id('admin-refresh').click(); page.get_by_test_id('admin-operations-degraded').wait_for(timeout=5000)
+                            # Capture the degraded state at every governed viewport.
+                            for viewport_name,viewport in viewports.items():
+                                # Resize to the named visual-matrix dimensions.
+                                page.set_viewport_size(viewport); page.wait_for_timeout(150)
+                                # Save degraded after-pass evidence with locale and viewport identity.
+                                page.screenshot(path=str(screenshots/f'after-pass-admin-operations-degraded-{locale}-{viewport_name}.png'),full_page=False)
+                        # Restore the exact provider document before later tests use the backend.
+                        finally:
+                            # Return the test-owned document to its canonical path.
+                            unavailable_path.replace(players_path)
+                        # Replace only the Operations response with a standard unavailable envelope so the client must infer down without browser console noise.
+                        page.route('**/api/v2/admin/operations',lambda route: route.fulfill(status=200,content_type='application/json',body='{"ok":false,"error":{"code":"OPERATIONS_UNREACHABLE","message":"Unavailable"}}'))
+                        # Refresh and wait for the explicit client-derived down presentation.
+                        page.get_by_test_id('admin-refresh').click(); page.get_by_test_id('admin-operations-down').wait_for(timeout=5000)
+                        # Capture the down state at every governed viewport.
+                        for viewport_name,viewport in viewports.items():
+                            # Resize to the named visual-matrix dimensions.
+                            page.set_viewport_size(viewport); page.wait_for_timeout(150)
+                            # Save down-state after-pass evidence for this locale and viewport.
+                            page.screenshot(path=str(screenshots/f'after-pass-admin-operations-down-{locale}-{viewport_name}.png'),full_page=False)
+                        # Remove the focused transport fault before the next locale or Admin feature.
+                        page.unroute('**/api/v2/admin/operations')
+                    # Restore primary desktop dimensions and English for the remaining Admin suite.
+                    page.set_viewport_size({'width':1920,'height':1080}); page.evaluate("async () => { const i18n = await import('/core/i18n.js'); await i18n.setLocale('en-US', { persistLocal: false }); }")
+                # Execute authenticated Operations UI, EN/RU, responsive, degraded, and down gates.
+                run_case('BR-OPS-001',['OPS-004','OPS-005','TEST-044'],admin_operations_browser)
                 # Define the funded practice-opponent Admin browser acceptance check.
                 def admin_practice_opponents_browser():
                     # Open the Players & Bots control-plane surface.

@@ -1,5 +1,11 @@
 # Virtual Casino Simulator v9.1.0 Release Notes
 
+## Post-release module addendum: Operations foundation
+
+- Adds minimal anonymous `/healthz`, authenticated `/readyz`, and Admin-only Operations diagnostics with bounded storage probes and strict secret-safe payload validation.
+- Adds EN/RU live, degraded, and client-derived down Admin states across governed viewports, using text and symbols rather than color alone.
+- Adds permanent `OPS-001` through `OPS-005` and `TEST-044` traceability plus API, browser, copied-deployment, build-provenance, and listener-closure evidence for GitHub issue #72.
+
 ## Post-release module addendum: hostile-client server authority
 
 - Adds a generated compatibility inventory for every state-changing action in all 30 currently registered games, with explicit intent, validation, outcome, storage/ledger, and response owners after Texas Hold'em integration.

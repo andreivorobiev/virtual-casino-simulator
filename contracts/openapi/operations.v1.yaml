@@ -1,0 +1,495 @@
+openapi: 3.0.3
+info:
+  title: Virtual Casino Operations API
+  version: v1
+  description: Minimal anonymous liveness plus authenticated readiness and Admin telemetry.
+# Only liveness is anonymous; dependency and heartbeat details require trusted session authority.
+paths:
+  /healthz:
+    get:
+      summary: Report whether the application process can answer requests
+      operationId: operationsLiveness
+      security: []
+      responses:
+        '200':
+          description: The application process is live
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LivenessEnvelope'
+        '503':
+          description: An unexpected probe failure was converted to a fixed safe error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LivenessProbeFailureEnvelope'
+  /readyz:
+    get:
+      summary: Report sanitized backend and storage readiness
+      operationId: operationsReadiness
+      security:
+        - cookieSession: []
+      responses:
+        '200':
+          description: All required dependencies are ready
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadinessEnvelope'
+        '503':
+          description: A required dependency is degraded or the probe could not complete
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ReadinessNotReadyEnvelope'
+                  - $ref: '#/components/schemas/ReadinessProbeFailureEnvelope'
+  /api/v2/admin/operations:
+    get:
+      summary: Return sanitized dependency and heartbeat telemetry to an Admin user
+      operationId: operationsHeartbeat
+      security:
+        - cookieSession: []
+      responses:
+        '200':
+          description: Current healthy or degraded Admin-authorized diagnostics
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/HeartbeatEnvelope'
+                  - $ref: '#/components/schemas/HeartbeatDegradedEnvelope'
+        '503':
+          description: The diagnostic probe could not complete safely
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HeartbeatProbeFailureEnvelope'
+# Schemas separate every healthy and degraded state so impossible HTTP and probe combinations are rejected.
+components:
+  securitySchemes:
+    cookieSession:
+      type: apiKey
+      in: cookie
+      name: casino_session
+  schemas:
+    BuildMetadata:
+      type: object
+      required: [app_version, sha]
+      additionalProperties: false
+      properties:
+        app_version:
+          type: string
+          pattern: '^\d+\.\d+\.\d+$'
+        sha:
+          type: string
+          pattern: '^[0-9a-f]{7,40}$'
+          nullable: true
+    LivenessData:
+      type: object
+      required: [status]
+      additionalProperties: false
+      properties:
+        status:
+          type: string
+          enum: [live]
+    BackendCheck:
+      type: object
+      required: [status]
+      additionalProperties: false
+      properties:
+        status:
+          type: string
+          enum: [pass]
+    HealthyStorageCheck:
+      type: object
+      required: [status, provider]
+      additionalProperties: false
+      properties:
+        status:
+          type: string
+          enum: [pass]
+        provider:
+          type: string
+          enum: [json, mysql]
+    FailedStorageCheck:
+      type: object
+      required: [status, provider]
+      additionalProperties: false
+      properties:
+        status:
+          type: string
+          enum: [fail]
+        provider:
+          type: string
+          enum: [json, mysql, unknown]
+    HealthyCheckSet:
+      type: object
+      required: [backend, storage]
+      additionalProperties: false
+      properties:
+        backend:
+          $ref: '#/components/schemas/BackendCheck'
+        storage:
+          $ref: '#/components/schemas/HealthyStorageCheck'
+    DegradedCheckSet:
+      type: object
+      required: [backend, storage]
+      additionalProperties: false
+      properties:
+        backend:
+          $ref: '#/components/schemas/BackendCheck'
+        storage:
+          $ref: '#/components/schemas/FailedStorageCheck'
+    DegradedReason:
+      type: object
+      required: [component, code]
+      additionalProperties: false
+      properties:
+        component:
+          type: string
+          enum: [storage]
+        code:
+          type: string
+          enum: [storage_unavailable, database_unavailable, storage_provider_unsupported]
+    ReadinessLiveData:
+      type: object
+      required: [schema_version, probe, status, checked_at, last_successful_heartbeat_at, build, ready, storage_provider, checks, reasons]
+      additionalProperties: false
+      properties:
+        schema_version:
+          type: integer
+          enum: [1]
+        probe:
+          type: string
+          enum: [readiness]
+        status:
+          type: string
+          enum: [live]
+        checked_at:
+          type: string
+          format: date-time
+        last_successful_heartbeat_at:
+          type: string
+          format: date-time
+        build:
+          $ref: '#/components/schemas/BuildMetadata'
+        ready:
+          type: boolean
+          enum: [true]
+        storage_provider:
+          type: string
+          enum: [json, mysql]
+        checks:
+          $ref: '#/components/schemas/HealthyCheckSet'
+        reasons:
+          type: array
+          maxItems: 0
+          items:
+            $ref: '#/components/schemas/DegradedReason'
+    HeartbeatLiveData:
+      type: object
+      required: [schema_version, probe, status, checked_at, last_successful_heartbeat_at, build, ready, storage_provider, checks, reasons]
+      additionalProperties: false
+      properties:
+        schema_version:
+          type: integer
+          enum: [1]
+        probe:
+          type: string
+          enum: [heartbeat]
+        status:
+          type: string
+          enum: [live]
+        checked_at:
+          type: string
+          format: date-time
+        last_successful_heartbeat_at:
+          type: string
+          format: date-time
+        build:
+          $ref: '#/components/schemas/BuildMetadata'
+        ready:
+          type: boolean
+          enum: [true]
+        storage_provider:
+          type: string
+          enum: [json, mysql]
+        checks:
+          $ref: '#/components/schemas/HealthyCheckSet'
+        reasons:
+          type: array
+          maxItems: 0
+          items:
+            $ref: '#/components/schemas/DegradedReason'
+    ReadinessDegradedData:
+      type: object
+      required: [schema_version, probe, status, checked_at, last_successful_heartbeat_at, build, ready, storage_provider, checks, reasons]
+      additionalProperties: false
+      properties:
+        schema_version:
+          type: integer
+          enum: [1]
+        probe:
+          type: string
+          enum: [readiness]
+        status:
+          type: string
+          enum: [degraded]
+        checked_at:
+          type: string
+          format: date-time
+        last_successful_heartbeat_at:
+          type: string
+          format: date-time
+          nullable: true
+        build:
+          $ref: '#/components/schemas/BuildMetadata'
+        ready:
+          type: boolean
+          enum: [false]
+        storage_provider:
+          type: string
+          enum: [json, mysql, unknown]
+        checks:
+          $ref: '#/components/schemas/DegradedCheckSet'
+        reasons:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            $ref: '#/components/schemas/DegradedReason'
+    HeartbeatDegradedData:
+      type: object
+      required: [schema_version, probe, status, checked_at, last_successful_heartbeat_at, build, ready, storage_provider, checks, reasons]
+      additionalProperties: false
+      properties:
+        schema_version:
+          type: integer
+          enum: [1]
+        probe:
+          type: string
+          enum: [heartbeat]
+        status:
+          type: string
+          enum: [degraded]
+        checked_at:
+          type: string
+          format: date-time
+        last_successful_heartbeat_at:
+          type: string
+          format: date-time
+          nullable: true
+        build:
+          $ref: '#/components/schemas/BuildMetadata'
+        ready:
+          type: boolean
+          enum: [false]
+        storage_provider:
+          type: string
+          enum: [json, mysql, unknown]
+        checks:
+          $ref: '#/components/schemas/DegradedCheckSet'
+        reasons:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            $ref: '#/components/schemas/DegradedReason'
+    LivenessEnvelope:
+      type: object
+      required: [ok, data]
+      additionalProperties: false
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/LivenessData'
+    ReadinessEnvelope:
+      type: object
+      required: [ok, data]
+      additionalProperties: false
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/ReadinessLiveData'
+    HeartbeatEnvelope:
+      type: object
+      required: [ok, data]
+      additionalProperties: false
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/HeartbeatLiveData'
+    HeartbeatDegradedEnvelope:
+      type: object
+      required: [ok, data]
+      additionalProperties: false
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/HeartbeatDegradedData'
+    ReadinessNotReadyError:
+      type: object
+      required: [code, message, details]
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          enum: [OPERATIONS_NOT_READY]
+        message:
+          type: string
+          enum: ['Application dependencies are not ready']
+        details:
+          $ref: '#/components/schemas/ReadinessDegradedData'
+    HeartbeatNotReadyError:
+      type: object
+      required: [code, message, details]
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          enum: [OPERATIONS_NOT_READY]
+        message:
+          type: string
+          enum: ['Application dependencies are not ready']
+        details:
+          $ref: '#/components/schemas/HeartbeatDegradedData'
+    ReadinessNotReadyEnvelope:
+      type: object
+      required: [ok, error]
+      additionalProperties: false
+      properties:
+        ok:
+          type: boolean
+          enum: [false]
+        error:
+          $ref: '#/components/schemas/ReadinessNotReadyError'
+    HeartbeatNotReadyEnvelope:
+      type: object
+      required: [ok, error]
+      additionalProperties: false
+      properties:
+        ok:
+          type: boolean
+          enum: [false]
+        error:
+          $ref: '#/components/schemas/HeartbeatNotReadyError'
+    LivenessProbeFailureDetails:
+      type: object
+      required: [probe, component, code]
+      additionalProperties: false
+      properties:
+        probe:
+          type: string
+          enum: [liveness]
+        component:
+          type: string
+          enum: [backend]
+        code:
+          type: string
+          enum: [operations_probe_failed]
+    ReadinessProbeFailureDetails:
+      type: object
+      required: [probe, component, code]
+      additionalProperties: false
+      properties:
+        probe:
+          type: string
+          enum: [readiness]
+        component:
+          type: string
+          enum: [backend]
+        code:
+          type: string
+          enum: [operations_probe_failed]
+    HeartbeatProbeFailureDetails:
+      type: object
+      required: [probe, component, code]
+      additionalProperties: false
+      properties:
+        probe:
+          type: string
+          enum: [heartbeat]
+        component:
+          type: string
+          enum: [backend]
+        code:
+          type: string
+          enum: [operations_probe_failed]
+    LivenessProbeFailureError:
+      type: object
+      required: [code, message, details]
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          enum: [OPERATIONS_PROBE_FAILED]
+        message:
+          type: string
+          enum: ['Operations probe could not be completed']
+        details:
+          $ref: '#/components/schemas/LivenessProbeFailureDetails'
+    ReadinessProbeFailureError:
+      type: object
+      required: [code, message, details]
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          enum: [OPERATIONS_PROBE_FAILED]
+        message:
+          type: string
+          enum: ['Operations probe could not be completed']
+        details:
+          $ref: '#/components/schemas/ReadinessProbeFailureDetails'
+    HeartbeatProbeFailureError:
+      type: object
+      required: [code, message, details]
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          enum: [OPERATIONS_PROBE_FAILED]
+        message:
+          type: string
+          enum: ['Operations probe could not be completed']
+        details:
+          $ref: '#/components/schemas/HeartbeatProbeFailureDetails'
+    LivenessProbeFailureEnvelope:
+      type: object
+      required: [ok, error]
+      additionalProperties: false
+      properties:
+        ok:
+          type: boolean
+          enum: [false]
+        error:
+          $ref: '#/components/schemas/LivenessProbeFailureError'
+    ReadinessProbeFailureEnvelope:
+      type: object
+      required: [ok, error]
+      additionalProperties: false
+      properties:
+        ok:
+          type: boolean
+          enum: [false]
+        error:
+          $ref: '#/components/schemas/ReadinessProbeFailureError'
+    HeartbeatProbeFailureEnvelope:
+      type: object
+      required: [ok, error]
+      additionalProperties: false
+      properties:
+        ok:
+          type: boolean
+          enum: [false]
+        error:
+          $ref: '#/components/schemas/HeartbeatProbeFailureError'

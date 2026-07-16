@@ -21,6 +21,8 @@ REQUIRED_V2 = [
     # Execute this statement as part of the module's documented control flow.
     "auth", "admin-users",
 ]
+# Point to the mixed-surface Operations contract that cannot use the legacy v1-only skeleton rule.
+OPERATIONS_CONTRACT = CONTRACT_DIR / "operations.v1.yaml"
 
 # Define the main function used by this module.
 def main():
@@ -108,6 +110,22 @@ def main():
         if "/api/v2" not in text:
             # Execute this statement as part of the module's documented control flow.
             errors.append(f"{path} does not contain /api/v2 paths")
+    # Validate the promoted Operations contract through its explicit least-privilege route policy.
+    if not OPERATIONS_CONTRACT.exists():
+        # Report the exact missing shared contract.
+        errors.append(f"missing contract: {OPERATIONS_CONTRACT}")
+    # Inspect all policy anchors only when the contract exists.
+    else:
+        # Read the mixed anonymous, authenticated, and Admin contract once.
+        operations_text = OPERATIONS_CONTRACT.read_text(encoding="utf-8")
+        # Require the exact approved routes and one anonymous security declaration.
+        if not all(path in operations_text for path in ("/healthz:", "/readyz:", "/api/v2/admin/operations:")) or operations_text.count("security: []") != 1:
+            # Fail closed when route or anonymous-policy drift occurs.
+            errors.append(f"{OPERATIONS_CONTRACT} does not preserve the approved Operations route policy")
+        # Require readiness and Admin telemetry to use the authenticated cookie scheme.
+        if operations_text.count("- cookieSession: []") != 2:
+            # Report authentication drift without exposing any runtime configuration.
+            errors.append(f"{OPERATIONS_CONTRACT} does not protect readiness and Admin telemetry")
     # Set schema_dir to the value needed for the next operation.
     schema_dir = ROOT / "contracts" / "schemas"
     # Iterate through the collection to process each item.
@@ -127,7 +145,7 @@ def main():
         # Return the computed value to the caller.
         return 1
     # Write diagnostic output so the current operation can be inspected.
-    print(f"Contract validation passed for {len(REQUIRED) + len(REQUIRED_V2)} shared APIs and {len(GAMES)} catalog games.")
+    print(f"Contract validation passed for {len(REQUIRED) + len(REQUIRED_V2) + 1} shared APIs and {len(GAMES)} catalog games.")
     # Return the computed value to the caller.
     return 0
 
