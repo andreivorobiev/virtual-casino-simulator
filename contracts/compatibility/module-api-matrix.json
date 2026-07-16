@@ -104,6 +104,9 @@
   "joker_poker": [
     "contracts/openapi/joker_poker.v1.yaml"
   ],
+  "texas_holdem_practice_table": [
+    "contracts/openapi/texas_holdem_practice_table.v1.yaml"
+  ],
   "tests": [],
   "docs": [],
   "contracts": [

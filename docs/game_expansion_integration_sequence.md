@@ -38,7 +38,7 @@ The Product-approved serialized order is:
 24. Pull request #177, Joker Poker for issue #130, released after Casino Hold'em merged.
 25. Issue #190, storage-enforced action idempotency, merged before funded opponent work.
 26. Issue #189, funded practice-opponent accounts and Admin audit, released after #190.
-27. Pull request #120, Texas Hold'em Practice Table for issue #95, remains held until #189 is accepted.
+27. Pull request #120, Texas Hold'em Practice Table for issue #95, released after #191 merged and refreshed to extend the accepted hostile-client certification.
 
 Each game pull request remains draft until the preceding game is accepted, the current branch is rebased onto the resulting `main`, and the game passes the complete integration gate below. A later game must not pre-allocate or edit the shared version values owned by an earlier game.
 
@@ -61,7 +61,7 @@ Existing games retain sort orders 10 through 60. The approved expansion slots ar
 | 170 | Jacks or Better Video Poker | #91 | Merged PR #115 |
 | 180 | Deuces Wild Video Poker | #92 | Merged PR #119 |
 | 190 | Three Card Poker | #93 | Released draft PR #118 |
-| 200 | Texas Hold'em Practice Table | #95 | Held draft PR #120 |
+| 200 | Texas Hold'em Practice Table | #95 | Released PR #120 extending accepted #191 certification |
 | 210 | Crown and Anchor | #133 | Merged PR #176 |
 | 220 | Over/Under 7 | #135 | Merged PR #171 |
 | 230 | Plinko | #136 | Merged PR #175 |
@@ -102,6 +102,7 @@ Permanent game blocks are reserved as follows:
 - `LIR-001` through `LIR-005` for the same five acceptance dimensions for Let It Ride.
 - `CH-001` through `CH-005` for the same five acceptance dimensions for Casino Hold'em.
 - `JP-001` through `JP-005` for the same five acceptance dimensions for Joker Poker.
+- `THPT-001` through `THPT-005` for rules, session privacy and restart, four-wallet ledger settlement, EN/RU browser behavior, and discovered test/visual/security evidence for Texas Hold'em Practice Table.
 
 New entries begin as `PLANNED`. The integration owner changes an entry to `PASS` only when its mapped real-backend tests and visual evidence have passed. Requirement IDs are never reused or renumbered after allocation.
 
@@ -163,12 +164,18 @@ Each new game begins at module revision `1.0.0`. The packaged application releas
 | #177 Joker Poker | 9.26.0 | 1.29.0 | 1.28.0 | 1.24.0 |
 | #190 Storage action idempotency | 9.27.0 | 1.30.0 | 1.29.0 | 1.24.0 |
 | #189 Funded practice opponents | 9.28.0 | 1.31.0 | 1.30.0 | 1.25.0 |
+| #191 Server authority | 9.28.0 | 1.32.0 | 1.31.0 | 1.26.0 |
+| #120 Texas Hold'em Practice integration | 9.29.0 | 1.33.0 | 1.32.0 | 1.27.0 |
 
 These values are reservations, not permission to overwrite a newer value. The integrator must re-read current `main` immediately before each bump.
 
 ## Funded practice-opponent prerequisite
 
-Issue #189 allocates `bot_1`, `bot_2`, and `bot_3` as the fixed server-managed accounts for the held Texas Hold'em Practice Table. Admin may seed each account once with a storage-enforced funding action. The future #120 controller must reserve each opponent's maximum hand exposure through `casino.core.practice_accounts`, apply automated decisions through the game's existing shared action validator, and return unused escrow plus any payout through distinct storage-enforced credit actions. Every movement retains bot, game, hand, controller action, component, action key, and owning human session context in append-only ledger details. Normal user responses must not expose another session's owner correlation or private hand state.
+Issue #189 allocates `bot_1`, `bot_2`, and `bot_3` as the fixed server-managed accounts for the held Texas Hold'em Practice Table. Admin and the refreshed #120 controller reuse one storage-enforced funding identity per account. The controller reserves each opponent's maximum hand exposure through `casino.core.practice_accounts`, applies automated decisions through the game's existing shared action validator, and returns unused escrow plus any payout through distinct storage-enforced credit actions. Every movement retains bot, game, hand, controller action, component, action key, and owning human session context in append-only ledger details. Normal user responses do not expose account ids, another session's owner correlation, or private hand state.
+
+## Hostile-client certification extension
+
+Issue #191 is accepted in protected main and supplies permanent `SEC-001` through `SEC-009`, the generated per-action inventory, raw hostile-field dispatch probes, two-user and Admin boundaries, provider concurrency/restart evidence, and authoritative browser refresh checks. Pull request #120 extends that exact framework to every Texas Hold'em mutation route and maps its focused game, ledger, replay, restart, browser, and Long Suite evidence into the matrix. The `THPT-*` requirements move to `PASS` only with a green exact-head certification artifact and complete #95 acceptance evidence.
 
 ## Acceptance evidence matrix
 
@@ -206,6 +213,7 @@ Required visual states are:
 - Let It Ride: `ready`, `first_decision`, `second_decision`, `settled`, `reduced_motion`, and `route_restored`.
 - Casino Hold'em: `ready`, `decision`, `dealer_not_qualified`, `player_win`, `dealer_win`, `push`, `folded`, `reduced_motion`, and `route_restored`.
 - Joker Poker: `ready`, `choose_holds`, `winning_hand`, `losing_hand`, `reduced_motion`, and `route_restored`.
+- Texas Hold'em Practice Table: `ready`, `preflop_decision`, `flop_decision`, `turn_decision`, `river_decision`, `showdown`, `folded`, `settled`, `reduced_motion`, and `route_restored`.
 
 ## Validation and listener gate
 

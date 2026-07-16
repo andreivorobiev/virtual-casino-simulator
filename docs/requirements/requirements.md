@@ -8,12 +8,12 @@ This redesigned documentation uses separated architecture views, cleaner Mermaid
 
 ## Executive summary
 
-- Requirements tracked: **495**
-- PASS: **479**
+- Requirements tracked: **552**
+- PASS: **536**
 - PLANNED: **9**
 - SUPERSEDED: **7**
-- Requirements with API/rule tests: **301**
-- Requirements with browser tests: **163**
+- Requirements with API/rule tests: **346**
+- Requirements with browser tests: **201**
 
 ## Auth/MySQL/token foundation addendum
 
@@ -62,7 +62,7 @@ GitHub issue #81 establishes module-owned game descriptors as the single catalog
 | CORE-021 | Module-owned catalog metadata drives backend, frontend, API metadata, and validator discovery. | PASS | API-CATALOG-001 | BR-CATALOG-DISCOVERY-001 |
 | CORE-022 | Direct game links, reload, Back, and Forward restore canonical game routes. | PASS |  | BR-ROUTE-RESTORE-001 |
 | UX-010 | Lobby search and catalog-derived categories remain usable for the 20-game target. | PASS |  | BR-CATALOG-NAV-001 |
-| SESSION-005 | One shared authenticated-player resolver binds every game request before dispatch. | PASS | API-CATALOG-001, API-PRIVATE-SESSION-001, API-MHVP-001, API-CW-001, API-BIG-SIX-001, API-RD-001, API-DT-001, API-HILO-001, API-TCP-001, API-JOBVP-001, API-DWVP-001, API-SCRATCH-001, API-SIC-BO-001, API-CHUCK-001, API-CRAPS-001, API-CAA-001, API-OU7-001, API-PLINKO-001, API-FAN-TAN-001, API-AB-001, API-AD-001, API-CS-001, API-LIR-001, API-CH-001, API-JP-001 |  |
+| SESSION-005 | One shared authenticated-player resolver binds every game request before dispatch. | PASS | API-CATALOG-001, API-PRIVATE-SESSION-001, API-MHVP-001, API-CW-001, API-BIG-SIX-001, API-RD-001, API-DT-001, API-HILO-001, API-TCP-001, API-JOBVP-001, API-DWVP-001, API-SCRATCH-001, API-SIC-BO-001, API-CHUCK-001, API-CRAPS-001, API-CAA-001, API-OU7-001, API-PLINKO-001, API-FAN-TAN-001, API-AB-001, API-AD-001, API-CS-001, API-LIR-001, API-CH-001, API-JP-001, API-THPT-001 |  |
 | TEST-042 | Validators, browser discovery, and long suites discover games and drivers from catalog metadata. | PASS | API-CATALOG-001, LONG-SUITE-100 | BR-CATALOG-DISCOVERY-001 |
 
 ## Multi-Hand Video Poker integration addendum
@@ -340,6 +340,18 @@ Issue #130 is integrated through the catalog under shared integration issue #77.
 | JP-003 | One wager debit and at most one returned-token payout credit use ledger-only durable retry-safe deal and draw identities. | PASS | API-JP-001 |  |
 | JP-004 | English and Russian play remains responsive, accessible, reduced-motion safe, and timer-clean. | PASS |  | BR-JP-001 |
 | JP-005 | Catalog, contract, browser, long-suite, requirement, module, version, and visual evidence are traceable. | PASS | API-CATALOG-001, LONG-SUITE-100 | BR-CATALOG-DISCOVERY-001, BR-JP-001 |
+
+## Texas Hold'em Practice Table integration addendum
+
+Issue #95 extends the accepted issue #191 hostile-client certification through the catalog under shared integration issue #77. The permanent requirements map the game-specific raw-API, authority, cross-user, ledger, replay, restart, Admin, client-refresh, EN/RU, and Long Suite evidence to `SEC-001` through `SEC-009`.
+
+| ID | Requirement | Status | API Tests | Browser Tests |
+| --- | --- | --- | --- | --- |
+| THPT-001 | Fixed-limit shared-card play supports one authenticated human and three server-managed opponents through call-or-fold streets and transparent showdown settlement. | PASS | API-THPT-001, API-SEC-001 | BR-THPT-001 |
+| THPT-002 | Session-bound hands, decisions, private cards, history, restart state, compact replay receipts, and canonical routes remain private and reload-safe. | PASS | API-THPT-001, API-WALLET-RESTART-001, API-SEC-001 | BR-THPT-001, BR-SEC-001 |
+| THPT-003 | The human and all funded opponent accounts reserve and settle only through storage-enforced ledger identities with Admin-auditable owner context. | PASS | API-THPT-001, STORAGE-PRACTICE-OPPONENT-001, API-SEC-001 |  |
+| THPT-004 | English and Russian play remains responsive, accessible, reduced-motion safe, timer-clean, and traceable across every governed viewport. | PASS |  | BR-THPT-001, BR-SEC-001 |
+| THPT-005 | Catalog, contract, browser, restart, long-suite, funded-opponent, version, visual, and hostile-client certification evidence remains traceable. | PASS | API-CATALOG-001, API-THPT-001, API-SEC-001, LONG-SUITE-100 | BR-CATALOG-DISCOVERY-001, BR-THPT-001, BR-SEC-001 |
 
 ### Superseded wording
 
