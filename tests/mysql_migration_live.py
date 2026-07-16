@@ -462,22 +462,28 @@ def run_mysql_migration_live_matrix():
                 # Require no schema or grant-management privilege.
                 assert all(privilege not in grants for privilege in ("CREATE", "ALTER", "DROP", "INDEX", "TRIGGER", "GRANT OPTION"))
                 # Enumerate actual forbidden schema and grant-management attempts.
+                generic_denials = frozenset({1044, 1045, 1142, 1227})
                 denied_statements = (
                     # Attempt table creation.
-                    "CREATE TABLE casino_forbidden_204 (id INT)",
+                    ("CREATE TABLE casino_forbidden_204 (id INT)", generic_denials),
                     # Attempt an additive table change.
-                    "ALTER TABLE casino_documents ADD COLUMN forbidden_204 INT NULL",
+                    ("ALTER TABLE casino_documents ADD COLUMN forbidden_204 INT NULL", generic_denials),
                     # Attempt to drop an application table.
-                    "DROP TABLE casino_documents",
+                    ("DROP TABLE casino_documents", generic_denials),
                     # Attempt a new index.
-                    "CREATE INDEX forbidden_204 ON casino_documents(updated_at)",
-                    # Attempt a trigger.
-                    "CREATE TRIGGER forbidden_204 BEFORE INSERT ON casino_documents FOR EACH ROW SET NEW.updated_at = NEW.updated_at",
+                    ("CREATE INDEX forbidden_204 ON casino_documents(updated_at)", generic_denials),
+                    # MySQL 8.4 with binary logging may reject trigger creation as
+                    # errno 1419 before it reaches the ordinary TRIGGER check.
+                    (
+                        "CREATE TRIGGER forbidden_204 BEFORE INSERT ON casino_documents "
+                        "FOR EACH ROW SET NEW.updated_at = NEW.updated_at",
+                        generic_denials | {1419},
+                    ),
                     # Attempt grant management.
-                    f"GRANT SELECT ON `{base_database}`.* TO '{runtime_user}'@'%'",
+                    (f"GRANT SELECT ON `{base_database}`.* TO '{runtime_user}'@'%'", generic_denials),
                 )
                 # Require every forbidden statement to be denied by privilege enforcement.
-                for statement in denied_statements:
+                for statement, allowed_denials in denied_statements:
                     # Start protected execution for one expected denial.
                     try:
                         # Execute the forbidden operation as the runtime identity.
@@ -485,7 +491,11 @@ def run_mysql_migration_live_matrix():
                     # Accept only connector database errors.
                     except _connector().Error as exc:
                         # Require a privilege-denied server code, not a syntax error.
-                        assert int(getattr(exc, "errno", 0) or 0) in {1044, 1045, 1142, 1227}
+                        errno = int(getattr(exc, "errno", 0) or 0)
+                        assert errno in allowed_denials
+                        # Keep binary-log denial acceptance scoped only to triggers.
+                        if errno == 1419:
+                            assert statement.startswith("CREATE TRIGGER ")
                     # Fail if the runtime identity performed schema or grant management.
                     else:
                         # Surface only the fixed privilege category.
