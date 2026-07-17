@@ -453,6 +453,8 @@ class ReleaseArtifactTests(unittest.TestCase):
         self.assertIn("github.ref == 'refs/heads/main'", predecessor_job)
         self.assertIn("github.ref_protected == true", predecessor_job)
         self.assertIn("github.actor == github.repository_owner", predecessor_job)
+        # Require every gh release command to resolve the repository without ambient checkout state.
+        self.assertIn("GH_REPO: ${{ github.repository }}", predecessor_job)
         self.assertIn(bootstrap_predecessor.PREDECESSOR_COMMIT, predecessor_job)
         self.assertIn('test "${tag_status}" -eq 2', predecessor_job)
         self.assertIn("existing-release-tags.txt", predecessor_job)
