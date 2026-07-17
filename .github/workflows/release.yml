@@ -97,6 +97,7 @@ jobs:
     permissions:
       contents: write
     env:
+      GH_REPO: ${{ github.repository }}
       PREDECESSOR_COMMIT: 832c067596e44375217514c1cf28f9e5352abd4b
       PREDECESSOR_TAG: v9.2.0
       SUCCESSOR_COMMIT: ${{ github.sha }}

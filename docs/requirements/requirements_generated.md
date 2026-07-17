@@ -45,10 +45,10 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.0
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.42.0
-- docs: 1.41.0
+- tests: 1.42.1
+- docs: 1.41.1
 - contracts: 1.32.0
-- tooling: 1.13.0
+- tooling: 1.13.1
 - commenting_policy: 1.0.0
 
 ## Requirements
