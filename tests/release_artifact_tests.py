@@ -61,6 +61,25 @@ class ReleaseArtifactTests(unittest.TestCase):
             "web/app.js": "// Fixture static application bundle.\n",
             "web/index.html": "<!doctype html><title>Fixture</title>\n",
         }
+        # Reuse the exact repository edge sources so the extracted-copy smoke validates the packaged packet itself.
+        for relative_path in (
+            # Copy the non-mutating policy validator and read-only observer.
+            "scripts/edge_gate.py",
+            # Copy the canonical inert edge policy.
+            "deploy/edge/restricted-preview.json",
+            # Copy the reviewed nginx source without rendering its placeholders.
+            "deploy/nginx/casino.conf.template",
+            # Copy the reload-only ACME hook source.
+            "deploy/acme/casino-renewal-hook.sh.template",
+            # Copy the inactive monitor service source.
+            "deploy/systemd/casino-edge-monitor.service.template",
+            # Copy the inactive monitor timer source.
+            "deploy/systemd/casino-edge-monitor.timer.template",
+            # Copy the application-and-edge-only rollback source.
+            "deploy/rollback/casino-edge-rollback.sh.template",
+        ):
+            # Read exact source text from the checkout under test.
+            self.files[relative_path] = (package_app.ROOT / relative_path).read_text(encoding="utf-8")
         # Write every fixture file beneath its canonical repository-relative path.
         for relative_path, contents in self.files.items():
             # Resolve the current fixture file without using host-specific paths in data.

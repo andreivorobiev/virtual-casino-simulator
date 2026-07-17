@@ -28,6 +28,8 @@ from tests import storage_tests
 from tests import mysql_migration_tests
 # Import listener-free encrypted recovery policy tests for every storage validation run.
 from tests import recovery_tests
+# Import listener-free edge policy and sanitized observation tests for the API validation run.
+from tests import edge_gate_tests
 # Import the current-catalog hostile-client certification entrypoint.
 from tests.server_authority_tests import run_server_authority_tests
 # Import the reusable flushed reporter for TEST-010 browser execution.
@@ -343,6 +345,18 @@ def validate_deployment_bootstrap():
 
 # Define the run_api_tests function used by this module.
 def run_api_tests():
+    # Execute the complete non-mutating edge preparation proof before any test listener starts.
+    def run_edge_gate_tests():
+        # Load only the focused TEST-050 unit-test class.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(edge_gate_tests.EdgeGateTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused edge proof failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure text secret-safe.
+            raise AssertionError('restricted-preview edge preparation suite failed')
+    # Record the listener-free edge templates, validator, observation, and rollback proof.
+    run_case('EDGE-PREPARATION-001',['CORE-024','TOOL-005','TEST-050'],run_edge_gate_tests)
     # Discover and execute every focused restricted-preview security module without opening a listener.
     def run_restricted_preview_security_tests():
         # Load the package directory through unittest's standard test discovery.

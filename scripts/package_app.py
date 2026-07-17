@@ -52,6 +52,7 @@ ALLOWED_FILES = {
     "run.py",
     "scripts/mysql_migrate.py",
     "scripts/recovery.py",
+    "scripts/edge_gate.py",
 }
 # Reject runtime, private, generated, test, and local-evidence directories anywhere.
 FORBIDDEN_PARTS = {
@@ -76,8 +77,14 @@ REQUIRED_FILES = {
     "casino/__init__.py",
     "casino/app.py",
     "casino/wsgi.py",
+    "deploy/acme/casino-renewal-hook.sh.template",
+    "deploy/edge/restricted-preview.json",
     "deploy/gunicorn.conf.py",
+    "deploy/nginx/casino.conf.template",
+    "deploy/rollback/casino-edge-rollback.sh.template",
     "deploy/systemd/casino.service",
+    "deploy/systemd/casino-edge-monitor.service.template",
+    "deploy/systemd/casino-edge-monitor.timer.template",
     "modules/module-manifest.json",
     "pyproject.toml",
     "run.py",
@@ -86,6 +93,7 @@ REQUIRED_FILES = {
     "migrations/mysql/catalog.json",
     "scripts/mysql_migrate.py",
     "scripts/recovery.py",
+    "scripts/edge_gate.py",
     "casino/core/recovery.py",
     "web/app.js",
     "web/index.html",
@@ -490,6 +498,8 @@ def smoke_extracted_copy(extracted_root, expected_version):
         "from cryptography.hazmat.primitives.ciphers.aead import AESGCM; "
         "assert recovery.ENCRYPTED_STREAM_SCHEMA == 'casino-aes-256-gcm-chunked-v1'; "
         "assert AESGCM is not None; "
+        "from scripts import edge_gate; "
+        "assert edge_gate.validate_policy()['stage'] == 'repository-preparation-only'; "
         "assert callable(app.main); "
         "assert config.APP_VERSION == __import__('sys').argv[1]"
     )

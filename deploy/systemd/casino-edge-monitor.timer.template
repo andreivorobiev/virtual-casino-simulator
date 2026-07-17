@@ -1,0 +1,15 @@
+[Unit]
+# Define the inactive periodic schedule for the sanitized edge observation job.
+Description=Schedule Casino Simulator restricted-preview edge observation
+
+[Timer]
+# Run five minutes after activation and then every five minutes with a small non-secret jitter.
+OnBootSec=5min
+OnUnitActiveSec=5min
+RandomizedDelaySec=30s
+Persistent=true
+Unit=casino-edge-monitor.service
+
+[Install]
+# Allow a separately approved host action to enable this timer.
+WantedBy=timers.target

@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.35.0
+- application: 9.36.0
 - core: 9.12.1
 - ledger: 9.1.0
 - players: 9.1.0
@@ -45,10 +45,10 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.0
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.40.1
-- docs: 1.39.0
+- tests: 1.41.0
+- docs: 1.40.0
 - contracts: 1.31.0
-- tooling: 1.11.0
+- tooling: 1.12.0
 - commenting_policy: 1.0.0
 
 ## Requirements
@@ -632,3 +632,6 @@ Historical source baseline: 9.1.0
 - **MYSQL-006** (MySQL) - PASS: Logical MySQL recovery points are encrypted before leaving the source boundary, bind exact release and #204 schema provenance, and restore only into an independently authorized empty disposable target whose structural schema and representative persistence are verified.
 - **TOOL-004** (Tooling) - PASS: Recovery tooling streams logical output directly into independently authenticated AES-256-GCM chunks, requires destination-owned exact-byte acknowledgements, enforces bounded retention and age alerts, and fails closed with mandatory target quarantine after any partial restore failure.
 - **TEST-049** (Tests) - PASS: Recovery evidence covers exact signed allowlists, independent key roles, chunk and terminal tampering, stale and failed evidence, retention, age, computed RPO/RTO, backup acknowledgement ordering, encrypted staging, clean restore, timeout, partial emission, quarantine, cleanup failure, redaction, packaging, and listener closure.
+- **CORE-024** (Application) - PASS: A reviewed restricted-preview edge packet binds the complete same-origin application to the exact canonical HTTPS host, proxies only to the supervised IPv4 loopback upstream, preserves restricted enrollment and authenticated operational boundaries, preflights ACME reload and application-edge rollback, and prohibits database rollback.
+- **TOOL-005** (Tooling) - PASS: Edge tooling validates the exact inert policy and templates without network, process, listener, or write activity, and provides an optional read-only HTTPS observer whose output is strictly allowlisted and excludes origins, addresses, paths, headers, bodies, cookies, credentials, and provider identifiers.
+- **TEST-050** (Tests) - PASS: Edge evidence covers exact origin and loopback topology, restricted access, replacement forwarding headers, protected ports, ACME preflight, inert service and rollback templates, traversal refusal, listener-free static validation, pre-network credential refusal, bounded authenticated probes, security headers, certificate age, sanitized output, packaging, and fail-closed negative cases.
