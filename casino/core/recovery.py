@@ -1369,7 +1369,15 @@ def validate_recovery_age(manifest: RecoveryManifest, now: datetime | None = Non
 
 
 # Download exact encrypted bytes into isolated encrypted staging only.
-def download_encrypted_staging(config: RecoveryProcessConfig, keys: RecoveryKeys, manifest: RecoveryManifest, destination, now: datetime | None = None) -> Path:
+def download_encrypted_staging(config: RecoveryProcessConfig, keys: RecoveryKeys, manifest: RecoveryManifest, destination, now: datetime | None = None, started_at: datetime | None = None) -> Path:
+    # Select the signed receipt's earliest acceptable completion time.
+    download_started_at = started_at or now or datetime.now(timezone.utc)
+    # Reject host-local ambiguity before creating encrypted staging.
+    if download_started_at.tzinfo is None:
+        # Preserve UTC-only receipt ordering.
+        raise RecoveryError("Destination download receipt timestamps are invalid")
+    # Normalize the operation start to UTC.
+    download_started_at = download_started_at.astimezone(timezone.utc)
     # Require an existing operator-owned staging directory and never create it implicitly.
     if not config.staging_directory.is_dir():
         # Stop without exposing the path.
@@ -1400,9 +1408,15 @@ def download_encrypted_staging(config: RecoveryProcessConfig, keys: RecoveryKeys
         downloaded_at = _parse_time(receipt.get("downloaded_at"), "Destination download receipt timestamps are invalid")
         # Select the aware decision time.
         current_time = now or datetime.now(timezone.utc)
-        # Reject host-local ambiguity or future receipts.
-        if current_time.tzinfo is None or downloaded_at > current_time.astimezone(timezone.utc):
-            # Refuse invalid receipt timing.
+        # Reject host-local ambiguity before comparing signed receipt ordering.
+        if current_time.tzinfo is None:
+            # Refuse an ambiguous validation boundary.
+            raise RecoveryError("Destination download receipt timestamps are invalid")
+        # Normalize the post-download validation time to UTC.
+        current_time = current_time.astimezone(timezone.utc)
+        # Require receipt completion during this exact download operation.
+        if not download_started_at <= downloaded_at <= current_time:
+            # Refuse stale replay or future receipt timing.
             raise RecoveryError("Destination download receipt timestamps are invalid")
         # Return only the created encrypted staging path.
         return staging_path
@@ -1444,8 +1458,10 @@ def restore_clean_target(config: RecoveryProcessConfig, keys: RecoveryKeys, mani
     if validated_context != {"release_sha": manifest.release_sha, "app_version": manifest.app_version, "mysql_schema_version": manifest.mysql_schema_version, "migration_chain_sha256": manifest.migration_chain_sha256, "source_target_hmac_sha256": manifest.source_target_hmac_sha256}:
         # Refuse wrong-release or wrong-schema restore configuration.
         raise RecoveryError("Recovery context does not match manifest")
-    # Download exact encrypted bytes into isolated encrypted staging only.
-    staging_path = download_encrypted_staging(config, keys, manifest, destination, decision_time)
+    # Preserve deterministic tests only when an explicit decision time was supplied.
+    receipt_validation_time = now
+    # Download exact encrypted bytes while bounding its receipt from preflight through post-download validation.
+    staging_path = download_encrypted_staging(config, keys, manifest, destination, receipt_validation_time, decision_time)
     # Track the restore child only after successful creation.
     process = None
     # Track the whole-stream watchdog after child creation.
