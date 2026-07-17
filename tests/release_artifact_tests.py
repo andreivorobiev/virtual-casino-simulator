@@ -15,6 +15,8 @@ import zipfile
 
 # Import the release implementation under test from the repository scripts namespace.
 from scripts import package_app
+# Import the protected predecessor receipt helper for exact fail-closed recovery tests.
+from scripts import bootstrap_predecessor
 
 
 # Exercise deterministic packaging, exclusion, verification, and rollback behavior.
@@ -44,14 +46,14 @@ class ReleaseArtifactTests(unittest.TestCase):
             "RELEASE_NOTES.md": "# Release\n",
             "casino/__init__.py": "\"\"\"Fixture package.\"\"\"\n",
             "casino/app.py": "\"\"\"Fixture app.\"\"\"\n\ndef main():\n    # Return without starting a listener.\n    return None\n",
-            "casino/config.py": "\"\"\"Fixture config.\"\"\"\n\n# Expose the canonical fixture release.\nAPP_VERSION = \"9.2.0\"\n",
+            "casino/config.py": "\"\"\"Fixture config.\"\"\"\n\n# Expose the canonical fixture release.\nAPP_VERSION = \"9.3.0\"\n",
             "casino/core/recovery.py": "\"\"\"Fixture recovery policy.\"\"\"\n\n# Expose the authenticated chunked recovery format.\nENCRYPTED_STREAM_SCHEMA = \"casino-aes-256-gcm-chunked-v1\"\n",
             "casino/wsgi.py": "\"\"\"Fixture production WSGI adapter.\"\"\"\n\n# Expose a non-listening fixture callable.\ndef application(environ, start_response):\n    # Return a valid empty response for fixture metadata only.\n    start_response('204 No Content', [('Content-Length', '0')])\n    # Yield no response body bytes.\n    return [b'']\n",
-            "contracts/compatibility/app-9.2.0.json": "{\"app_version\": \"9.2.0\"}\n",
+            "contracts/compatibility/app-9.3.0.json": "{\"app_version\": \"9.3.0\"}\n",
             "deploy/gunicorn.conf.py": "# Bind the fixture production policy to loopback only.\nbind = '127.0.0.1:8765'\n",
             "deploy/systemd/casino.service": "[Service]\n# Start only the fixture production adapter.\nExecStart=gunicorn casino.wsgi:application\n",
-            "modules/module-manifest.json": json.dumps({"application": "9.2.0", "source_baseline": "9.1.0", "modules": {"tooling": "1.7.0"}}) + "\n",
-            "pyproject.toml": "[project]\nname = \"virtual-casino-simulator\"\nversion = \"9.2.0\"\nrequires-python = \">=3.10\"\ndependencies = [\"gunicorn>=23,<24\"]\n\n[project.optional-dependencies]\nmysql = [\"mysql-connector-python>=8.4\"]\nrecovery = [\"cryptography>=46,<50\"]\n",
+            "modules/module-manifest.json": json.dumps({"application": "9.3.0", "source_baseline": "9.1.0", "modules": {"tooling": "1.7.0"}}) + "\n",
+            "pyproject.toml": "[project]\nname = \"virtual-casino-simulator\"\nversion = \"9.3.0\"\nrequires-python = \">=3.10\"\ndependencies = [\"gunicorn>=23,<24\"]\n\n[project.optional-dependencies]\nmysql = [\"mysql-connector-python>=8.4\"]\nrecovery = [\"cryptography>=46,<50\"]\n",
             "run.py": "# Import the fixture application entry point.\nfrom casino.app import main\n",
             "migrations/mysql/0001_initial.json": migration_one,
             "migrations/mysql/0002_action_identity.json": migration_two,
@@ -110,6 +112,41 @@ class ReleaseArtifactTests(unittest.TestCase):
             validations=["python tests.release_artifact_tests"],
             previous_manifest=previous_manifest,
         )
+
+    # Create isolated exact predecessor and successor inputs for protected recovery tests.
+    def recovery_inputs(self):
+        # Resolve one disposable recovery root outside every repository runtime directory.
+        recovery_root = pathlib.Path(self.temporary.name) / "recovery"
+        # Create the isolated directory before writing synthetic public artifact bytes.
+        recovery_root.mkdir(parents=True, exist_ok=True)
+        # Resolve the stable predecessor archive filename used by TOOL-003.
+        archive_path = recovery_root / package_app.ARCHIVE_NAME
+        # Write one synthetic archive payload whose exact digest is recorded below.
+        archive_path.write_bytes(b"synthetic predecessor archive\n")
+        # Assemble the minimum exact rebuilt-predecessor provenance accepted by the helper.
+        predecessor = {
+            "app_version": "9.2.0",
+            "artifact": {"name": package_app.ARCHIVE_NAME, "sha256": hashlib.sha256(archive_path.read_bytes()).hexdigest()},
+            "mysql_schema": {"minimum_version": 2, "expected_version": 2},
+            "rollback": {"application_only": True, "database_rollback": "outside-TOOL-003", "eligible": False, "previous": None},
+            "source": {"commit_sha": bootstrap_predecessor.PREDECESSOR_COMMIT, "release_tag": "v9.2.0"},
+        }
+        # Resolve and write the canonical synthetic predecessor manifest.
+        predecessor_path = recovery_root / package_app.MANIFEST_NAME
+        # Preserve stable JSON bytes for receipt checksum assertions.
+        predecessor_path.write_text(json.dumps(predecessor, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
+        # Resolve and write the protected-main successor aggregate identity.
+        successor_path = recovery_root / "successor-manifest.json"
+        # Supply only the packaged release needed by the recovery boundary.
+        successor_path.write_text(json.dumps({"application": "9.3.0"}) + "\n", encoding="utf-8", newline="\n")
+        # Resolve the original two-row predecessor checksum inventory.
+        checksums_path = recovery_root / "checksums.txt"
+        # Render the same lexical row order produced by make_release.py.
+        checksums_path.write_text(f"{hashlib.sha256(predecessor_path.read_bytes()).hexdigest()}  {predecessor_path.name}\n{hashlib.sha256(archive_path.read_bytes()).hexdigest()}  {archive_path.name}\n", encoding="utf-8", newline="\n")
+        # Resolve the absent write-once recovery receipt target.
+        receipt_path = recovery_root / bootstrap_predecessor.RECEIPT_NAME
+        # Return every isolated input required by positive and negative tests.
+        return predecessor_path, successor_path, checksums_path, receipt_path
 
     # Rewrite one authenticated archive member and rebind only outer checksum metadata.
     def rewrite_member_and_rebind_manifest(self, archive_path, manifest_path, member_name, replacement, manifest_mutator=None):
@@ -276,7 +313,7 @@ class ReleaseArtifactTests(unittest.TestCase):
     def test_previous_manifest_enables_application_rollback(self):
         # Define a complete synthetic prior release identity without external data.
         previous = {
-            "app_version": "9.1.1",
+            "app_version": "9.2.0",
             "artifact": {"name": package_app.ARCHIVE_NAME, "sha256": "b" * 64},
             "source": {"commit_sha": "c" * 40},
         }
@@ -285,13 +322,13 @@ class ReleaseArtifactTests(unittest.TestCase):
         # Write canonical prior JSON bytes for manifest-checksum provenance.
         previous_path.write_text(json.dumps(previous, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
         # Build a canonical tagged candidate with the retained prior manifest.
-        archive_path, manifest_path = self.build("rollback", release_tag="v9.2.0", previous_manifest=previous_path)
+        archive_path, manifest_path = self.build("rollback", release_tag="v9.3.0", previous_manifest=previous_path)
         # Verify the artifact with immutable rollback required but without duplicate smoke cost.
         manifest = package_app.verify_release(
             archive_path,
             manifest_path,
             expected_commit=self.commit_sha,
-            expected_tag="v9.2.0",
+            expected_tag="v9.3.0",
             require_rollback=True,
             smoke=False,
         )
@@ -300,7 +337,86 @@ class ReleaseArtifactTests(unittest.TestCase):
         # Require database rollback to remain explicitly outside this tooling gate.
         self.assertEqual(manifest["rollback"]["database_rollback"], "outside-TOOL-003")
         # Require the exact prior packaged version in the checksum-bound pointer.
-        self.assertEqual(manifest["rollback"]["previous"]["app_version"], "9.1.1")
+        self.assertEqual(manifest["rollback"]["previous"]["app_version"], "9.2.0")
+
+    # Prove the current private-invite compatibility record binds the exact safe predecessor boundary.
+    def test_current_release_compatibility_binds_private_invite_predecessor(self):
+        # Load the immutable packaged-release compatibility record governed by TOOL-003.
+        compatibility = json.loads((package_app.ROOT / "contracts" / "compatibility" / "app-9.3.0.json").read_text(encoding="utf-8"))
+        # Require the canonical release and restricted-preview channel identities.
+        self.assertEqual((compatibility["app_version"], compatibility["release_channel"]), ("9.3.0", "restricted-preview-private-invite"))
+        # Require the exact prior packaged release and retained manifest filename.
+        self.assertEqual(compatibility["predecessor"], {"app_version": "9.2.0", "compatibility_record": "contracts/compatibility/app-9.2.0.json", "required_artifact": "release-manifest.json"})
+        # Require application-only rollback while preserving the already-applied MySQL v2 boundary.
+        self.assertEqual(compatibility["rollback"], {"scope": "application-only", "database_rollback": "prohibited", "mysql_expected_schema_version": 2, "requires_retained_predecessor_manifest": True})
+        # Require all broader enrollment surfaces to remain disabled for this release channel.
+        self.assertEqual(compatibility["access_policy"], {"admission": "manual-invite", "public_signup": "disabled", "live_oauth": "disabled"})
+
+    # Prove the protected recovery writes one checksum-bound exact predecessor/successor receipt.
+    def test_protected_predecessor_recovery_receipt_is_exact(self):
+        # Create clean synthetic inputs for the successful recovery boundary.
+        predecessor_path, successor_path, checksums_path, receipt_path = self.recovery_inputs()
+        # Use a distinct exact protected-main SHA as the accepted successor identity.
+        successor_commit = "d" * 40
+        # Create the one-shot recovery assets through the production helper.
+        receipt = bootstrap_predecessor.write_recovery_assets(predecessor_path, successor_path, successor_commit, receipt_path, checksums_path)
+        # Require exact predecessor and successor source identities in the durable receipt.
+        self.assertEqual((receipt["predecessor"]["commit_sha"], receipt["successor"]["commit_sha"]), (bootstrap_predecessor.PREDECESSOR_COMMIT, successor_commit))
+        # Require application-only schema-v2 rollback semantics with database rollback prohibited.
+        self.assertEqual(receipt["rollback"], {"scope": "application-only", "database_rollback": "prohibited", "mysql_expected_schema_version": 2})
+        # Require the created bytes to be represented by exactly one added checksum row.
+        self.assertIn(f"{hashlib.sha256(receipt_path.read_bytes()).hexdigest()}  {receipt_path.name}", checksums_path.read_text(encoding="utf-8").splitlines())
+
+    # Prove a rebuilt candidate from any commit other than the exact pre-bump main is rejected.
+    def test_protected_predecessor_recovery_rejects_wrong_source(self):
+        # Create otherwise valid isolated recovery inputs.
+        predecessor_path, successor_path, _, _ = self.recovery_inputs()
+        # Load and alter only the predecessor source commit.
+        predecessor = json.loads(predecessor_path.read_text(encoding="utf-8"))
+        # Replace the authorized commit with a different full SHA.
+        predecessor["source"]["commit_sha"] = "e" * 40
+        # Persist the syntactically valid but unauthorized manifest.
+        predecessor_path.write_text(json.dumps(predecessor, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
+        # Require refusal before any recovery receipt can be built.
+        with self.assertRaisesRegex(ValueError, "source identity"):
+            # Exercise the exact production provenance validator.
+            bootstrap_predecessor.build_receipt(predecessor_path, successor_path, "d" * 40)
+
+    # Prove bootstrap provenance cannot claim a prior rollback or any database rollback authority.
+    def test_protected_predecessor_recovery_rejects_unsafe_rollback(self):
+        # Create otherwise valid isolated recovery inputs.
+        predecessor_path, successor_path, _, _ = self.recovery_inputs()
+        # Load the synthetic exact predecessor manifest.
+        predecessor = json.loads(predecessor_path.read_text(encoding="utf-8"))
+        # Invent rollback eligibility that the first retained predecessor cannot possess.
+        predecessor["rollback"]["eligible"] = True
+        # Persist the unsafe but syntactically valid predecessor record.
+        predecessor_path.write_text(json.dumps(predecessor, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
+        # Require refusal before receipt or checksum creation.
+        with self.assertRaisesRegex(ValueError, "eligibility boundary"):
+            # Exercise the production bootstrap validator directly.
+            bootstrap_predecessor.build_receipt(predecessor_path, successor_path, "d" * 40)
+
+    # Prove the recovery helper will not replace an existing receipt or accept stale checksums.
+    def test_protected_predecessor_recovery_is_write_once_and_checksum_closed(self):
+        # Create valid isolated recovery inputs.
+        predecessor_path, successor_path, checksums_path, receipt_path = self.recovery_inputs()
+        # Replace the original inventory with a syntactically valid stale digest.
+        checksums_path.write_text(f"{'0' * 64}  {predecessor_path.name}\n", encoding="utf-8", newline="\n")
+        # Require checksum refusal without creating the receipt.
+        with self.assertRaisesRegex(ValueError, "checksum inventory"):
+            # Exercise the production write boundary against stale inputs.
+            bootstrap_predecessor.write_recovery_assets(predecessor_path, successor_path, "d" * 40, receipt_path, checksums_path)
+        # Require the failed attempt to leave the exclusive receipt absent.
+        self.assertFalse(receipt_path.exists())
+        # Create a sentinel receipt to model any prior recovery attempt.
+        receipt_path.write_text("sentinel\n", encoding="utf-8", newline="\n")
+        # Require write-once refusal before inspecting or replacing its bytes.
+        with self.assertRaises(FileExistsError):
+            # Exercise the exact production exclusive-output boundary.
+            bootstrap_predecessor.write_recovery_assets(predecessor_path, successor_path, "d" * 40, receipt_path, checksums_path)
+        # Preserve the existing receipt bytes exactly.
+        self.assertEqual(receipt_path.read_text(encoding="utf-8"), "sentinel\n")
 
     # Prove a fresh extracted copy imports and validates static release identity without a listener.
     def test_clean_extracted_copy_smoke(self):
@@ -309,7 +425,7 @@ class ReleaseArtifactTests(unittest.TestCase):
         # Run the production verifier with its listener-free clean-copy smoke enabled.
         manifest = package_app.verify_release(archive_path, manifest_path, expected_commit=self.commit_sha, smoke=True)
         # Require the smoke-verified manifest to retain canonical fixture version identity.
-        self.assertEqual(manifest["app_version"], "9.2.0")
+        self.assertEqual(manifest["app_version"], "9.3.0")
         # Require release provenance to bind exact-only MySQL schema version two.
         self.assertEqual((manifest["mysql_schema"]["minimum_version"], manifest["mysql_schema"]["expected_version"]), (2, 2))
         # Require both catalog and ordered migration chain checksums.
@@ -331,6 +447,25 @@ class ReleaseArtifactTests(unittest.TestCase):
         self.assertIn("ENABLE_IMMUTABLE_RELEASE_PUBLISH", workflow)
         # Require both candidate and publication smoke jobs to install the declared recovery extra.
         self.assertEqual(workflow.count('python -m pip install ".[recovery]"'), 2)
+        # Isolate the one-time predecessor job from the ordinary immutable publication job.
+        predecessor_job = workflow.split("bootstrap-v9-2-predecessor:", 1)[1].split("publish-immutable-release:", 1)[0]
+        # Require exact protected-main, owner, pre-bump source, and conflict-refusal gates.
+        self.assertIn("github.ref == 'refs/heads/main'", predecessor_job)
+        self.assertIn("github.ref_protected == true", predecessor_job)
+        self.assertIn("github.actor == github.repository_owner", predecessor_job)
+        self.assertIn(bootstrap_predecessor.PREDECESSOR_COMMIT, predecessor_job)
+        self.assertIn('test "${tag_status}" -eq 2', predecessor_job)
+        self.assertIn("existing-release-tags.txt", predecessor_job)
+        # Require actual-byte determinism for the archive, manifest, and checksum inventory.
+        self.assertEqual(predecessor_job.count("cmp predecessor-first/"), 3)
+        # Require one draft create and one verified non-latest publish with no asset overwrite path.
+        self.assertEqual(predecessor_job.count("gh release create"), 1)
+        self.assertEqual(predecessor_job.count("gh release edit"), 1)
+        self.assertGreaterEqual(predecessor_job.count("--latest=false"), 2)
+        self.assertNotIn("gh release upload", predecessor_job)
+        self.assertNotIn("gh release delete", predecessor_job)
+        self.assertNotIn("git push", predecessor_job)
+        self.assertNotIn("--clobber", predecessor_job)
         # Read the canonical release driver that records exact validation provenance.
         release_driver = (package_app.ROOT / "scripts" / "make_release.py").read_text(encoding="utf-8")
         # Require focused #205 recovery evidence before any candidate can be packaged.

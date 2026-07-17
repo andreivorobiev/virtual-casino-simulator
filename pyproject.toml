@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "virtual-casino-simulator"
-version = "9.2.0"
+version = "9.3.0"
 description = "Local fake-money virtual casino simulator with isolated modules and GitHub/Codex governance."
 license = { text = "Apache-2.0" }
 requires-python = ">=3.10"
@@ -22,4 +22,4 @@ modules = ["*.json"]
 
 [tool.virtual_casino]
 source_baseline = "9.1.0"
-release_purpose = "Repository Bootstrap + Codex Migration Payload"
+release_purpose = "Private-Invite Restricted Preview"

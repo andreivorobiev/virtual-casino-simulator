@@ -6,8 +6,20 @@ on:
   workflow_dispatch:
     inputs:
       app_version:
-        description: Canonical packaged application version
+        description: Canonical protected-main successor version
         required: true
+        type: string
+      recovery_action:
+        description: Candidate validation or the one-time protected v9.2.0 predecessor recovery
+        required: true
+        default: candidate
+        type: choice
+        options:
+          - candidate
+          - bootstrap-v9.2.0-predecessor
+      predecessor_commit:
+        description: Exact authorized v9.2.0 pre-bump commit; required only for predecessor recovery
+        required: false
         type: string
   release:
     types:
@@ -21,6 +33,8 @@ concurrency:
 jobs:
   build-candidate:
     name: Build unpublished candidate
+    # Keep ordinary PR/manual candidates unchanged and suppress the special predecessor release event.
+    if: (github.event_name != 'workflow_dispatch' || inputs.recovery_action == 'candidate') && (github.event_name != 'release' || github.event.release.tag_name != 'v9.2.0')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -74,6 +88,133 @@ jobs:
           path: dist/
           if-no-files-found: error
           retention-days: 7
+
+  bootstrap-v9-2-predecessor:
+    name: Publish protected v9.2.0 predecessor
+    # Permit the one-time recovery only when the owner dispatches the accepted workflow from protected main.
+    if: github.event_name == 'workflow_dispatch' && inputs.recovery_action == 'bootstrap-v9.2.0-predecessor' && github.ref == 'refs/heads/main' && github.ref_protected == true && github.actor == github.repository_owner
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      PREDECESSOR_COMMIT: 832c067596e44375217514c1cf28f9e5352abd4b
+      PREDECESSOR_TAG: v9.2.0
+      SUCCESSOR_COMMIT: ${{ github.sha }}
+    steps:
+      # Check out the exact accepted protected-main successor that owns this reviewed workflow.
+      - name: Check out protected-main successor
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.sha }}
+          path: successor
+      # Fail before predecessor work unless every dispatch and successor identity is exact.
+      - name: Verify protected recovery authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${GITHUB_REF}" = "refs/heads/main"
+          test "${{ inputs.app_version }}" = "9.3.0"
+          test "${{ inputs.predecessor_commit }}" = "${PREDECESSOR_COMMIT}"
+          test "$(git -C successor rev-parse HEAD)" = "${SUCCESSOR_COMMIT}"
+          test "${SUCCESSOR_COMMIT}" != "${PREDECESSOR_COMMIT}"
+          python successor/scripts/validate_versions.py
+      # Refuse existing tags or any draft, prerelease, or published Release before building assets.
+      - name: Refuse tag or Release conflicts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          git -C successor ls-remote --exit-code --tags origin "refs/tags/${PREDECESSOR_TAG}" > predecessor-tag-match.txt
+          tag_status=$?
+          set -e
+          test "${tag_status}" -eq 2
+          test ! -s predecessor-tag-match.txt
+          gh api --paginate "repos/${GITHUB_REPOSITORY}/releases?per_page=100" --jq '.[].tag_name' > existing-release-tags.txt
+          if grep -Fxq "${PREDECESSOR_TAG}" existing-release-tags.txt; then
+            exit 1
+          fi
+      # Check out only the exact pre-bump protected-main predecessor in an isolated directory.
+      - name: Check out exact v9.2.0 predecessor
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: 832c067596e44375217514c1cf28f9e5352abd4b
+          path: predecessor
+      # Use the deployment-supported interpreter for both deterministic rebuilds.
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      # Install the predecessor's exact validation and recovery dependencies.
+      - name: Install predecessor validation dependencies
+        run: |
+          python -m pip install -r predecessor/requirements-dev.txt
+          python -m pip install "./predecessor[recovery]"
+      # Build and preserve the first exact tagged predecessor candidate.
+      - name: Build first predecessor candidate
+        working-directory: predecessor
+        run: python scripts/make_release.py --release-tag v9.2.0
+      # Copy only ignored candidate evidence for a second-build byte comparison.
+      - name: Preserve first candidate bytes
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir predecessor-first
+          cp predecessor/dist/virtual_casino_simulator_package.zip predecessor-first/
+          cp predecessor/dist/release-manifest.json predecessor-first/
+          cp predecessor/dist/checksums.txt predecessor-first/
+      # Rebuild from the same exact commit so actual release assets must be byte-identical.
+      - name: Build second predecessor candidate
+        working-directory: predecessor
+        run: python scripts/make_release.py --release-tag v9.2.0
+      # Compare every original predecessor asset and independently verify exact source and tag.
+      - name: Verify deterministic predecessor
+        shell: bash
+        run: |
+          set -euo pipefail
+          cmp predecessor-first/virtual_casino_simulator_package.zip predecessor/dist/virtual_casino_simulator_package.zip
+          cmp predecessor-first/release-manifest.json predecessor/dist/release-manifest.json
+          cmp predecessor-first/checksums.txt predecessor/dist/checksums.txt
+          python predecessor/scripts/package_app.py --verify-only --archive predecessor/dist/virtual_casino_simulator_package.zip --manifest predecessor/dist/release-manifest.json --expected-commit "${PREDECESSOR_COMMIT}" --expected-tag "${PREDECESSOR_TAG}"
+      # Bind the rebuilt predecessor to this exact accepted v9.3.0 protected-main merge.
+      - name: Create checksum-bound recovery receipt
+        run: python successor/scripts/bootstrap_predecessor.py --predecessor-manifest predecessor/dist/release-manifest.json --successor-manifest successor/modules/module-manifest.json --successor-commit "${SUCCESSOR_COMMIT}" --receipt predecessor/dist/predecessor-recovery.json --checksums predecessor/dist/checksums.txt
+      # Create a draft with all assets in one command; no upload, replacement, or deletion path exists.
+      - name: Create non-latest predecessor draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s\n' "Protected TOOL-003 predecessor for v9.3.0 at ${SUCCESSOR_COMMIT}." "Source is exactly ${PREDECESSOR_COMMIT}; rollback is application-only and never rolls back MySQL." > predecessor-release-notes.md
+          gh release create "${PREDECESSOR_TAG}" --target "${PREDECESSOR_COMMIT}" --title "Virtual Casino Simulator v9.2.0 protected predecessor" --notes-file predecessor-release-notes.md --draft --latest=false predecessor/dist/virtual_casino_simulator_package.zip predecessor/dist/release-manifest.json predecessor/dist/checksums.txt predecessor/dist/predecessor-recovery.json
+      # Verify the exact draft identity and complete asset set before making it retained.
+      - name: Verify predecessor draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release view "${PREDECESSOR_TAG}" --json tagName,targetCommitish,isDraft,isPrerelease,assets > predecessor-draft.json
+          jq -e --arg tag "${PREDECESSOR_TAG}" --arg commit "${PREDECESSOR_COMMIT}" '.tagName == $tag and .targetCommitish == $commit and .isDraft == true and .isPrerelease == false and ([.assets[].name] | sort) == (["checksums.txt", "predecessor-recovery.json", "release-manifest.json", "virtual_casino_simulator_package.zip"] | sort)' predecessor-draft.json
+      # Publish the already verified draft as non-latest without replacing any asset.
+      - name: Publish retained non-latest predecessor
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release edit "${PREDECESSOR_TAG}" --draft=false --latest=false
+      # Confirm the retained Release, exact lightweight tag target, and immutable asset names.
+      - name: Verify retained predecessor
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release view "${PREDECESSOR_TAG}" --json tagName,targetCommitish,isDraft,isPrerelease,assets > predecessor-release.json
+          jq -e --arg tag "${PREDECESSOR_TAG}" --arg commit "${PREDECESSOR_COMMIT}" '.tagName == $tag and .targetCommitish == $commit and .isDraft == false and .isPrerelease == false and ([.assets[].name] | sort) == (["checksums.txt", "predecessor-recovery.json", "release-manifest.json", "virtual_casino_simulator_package.zip"] | sort)' predecessor-release.json
+          test "$(git -C successor ls-remote --tags origin "refs/tags/${PREDECESSOR_TAG}" | awk '{print $1}')" = "${PREDECESSOR_COMMIT}"
 
   publish-immutable-release:
     name: Publish immutable release assets

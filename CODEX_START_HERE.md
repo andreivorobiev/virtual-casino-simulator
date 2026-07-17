@@ -14,7 +14,7 @@ This repository is the current GitHub source for the Virtual Casino Simulator. I
 
 ## Version sources
 
-- Packaged application release: `9.2.0`
+- Packaged application release: `9.3.0`
 - Historical source baseline: `9.1.0`
 - Canonical aggregate source: `modules/module-manifest.json`
 - Independent module revisions: the manifest's `modules` object and matching `modules/*.json` files
