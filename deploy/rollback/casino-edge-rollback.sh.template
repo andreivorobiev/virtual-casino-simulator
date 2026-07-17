@@ -1,0 +1,41 @@
+#!/bin/sh
+# Repository-only rollback template for CORE-024; rendering and execution require a separately approved cutover packet.
+set -eu
+
+# Require operator-supplied previous release and reviewed nginx configuration paths without supplying defaults.
+: "$CASINO_PREVIOUS_RELEASE"
+: "$CASINO_PREVIOUS_NGINX_CONFIG"
+: "$CASINO_NGINX_PREFLIGHT_CONFIG"
+
+# Refuse rollback unless all immutable inputs exist and a complete preflight configuration validates independently.
+test -d "$CASINO_PREVIOUS_RELEASE"
+test -f "$CASINO_PREVIOUS_NGINX_CONFIG"
+test -f "$CASINO_NGINX_PREFLIGHT_CONFIG"
+test -L /opt/casino/current
+test -L /etc/nginx/sites-enabled/casino.conf
+nginx -t -c "$CASINO_NGINX_PREFLIGHT_CONFIG"
+
+# Save current link targets so a failed application or edge probe can restore the pre-rollback state.
+CASINO_CURRENT_RELEASE=$(readlink -f /opt/casino/current)
+CASINO_CURRENT_NGINX=$(readlink -f /etc/nginx/sites-enabled/casino.conf)
+
+# Replace the application and edge links only after every candidate preflight has passed.
+ln -sfn "$CASINO_PREVIOUS_RELEASE" /opt/casino/current.next
+mv -Tf /opt/casino/current.next /opt/casino/current
+ln -sfn "$CASINO_PREVIOUS_NGINX_CONFIG" /etc/nginx/sites-enabled/casino.conf.next
+mv -Tf /etc/nginx/sites-enabled/casino.conf.next /etc/nginx/sites-enabled/casino.conf
+
+# Restart the supervised application, reload the validated edge, and require a sanitized post-rollback observation.
+if ! systemctl restart casino || ! systemctl reload nginx || ! /opt/casino/venv/bin/python /opt/casino/current/scripts/edge_gate.py observe --policy /opt/casino/current/deploy/edge/restricted-preview.json; then
+    # Restore both prior links and processes when any post-rollback step does not pass.
+    ln -sfn "$CASINO_CURRENT_RELEASE" /opt/casino/current.next
+    mv -Tf /opt/casino/current.next /opt/casino/current
+    ln -sfn "$CASINO_CURRENT_NGINX" /etc/nginx/sites-enabled/casino.conf.next
+    mv -Tf /etc/nginx/sites-enabled/casino.conf.next /etc/nginx/sites-enabled/casino.conf
+    systemctl restart casino || true
+    systemctl reload nginx || true
+    exit 1
+fi
+
+# Database rollback is intentionally absent; schema recovery remains governed by MYSQL-005, MYSQL-006, and TOOL-004.
+exit 0

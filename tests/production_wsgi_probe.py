@@ -16,6 +16,8 @@ sys.path.insert(0, str(ROOT))
 
 # Import the already environment-validated production application under test.
 from casino.wsgi import application
+# Import the packaged edge observer's exact success-envelope validator.
+from scripts.edge_gate import validated_success_data
 
 # Preserve the synthetic exact origin configured by the parent test.
 ORIGIN = "https://casino.example.invalid"
@@ -104,6 +106,8 @@ assert int(health["headers"]["Content-Length"]) == len(health["body"])
 health_payload = json.loads(health["body"].decode("utf-8"))
 # Require only the accepted sanitized live status inside the success envelope.
 assert health_payload == {"ok": True, "data": {"status": "live"}}
+# Require the edge observer to accept and unwrap the real production liveness envelope.
+assert validated_success_data(health_payload) == {"status": "live"}
 
 # Bootstrap one anonymous double-submit token through the packaged shell.
 bootstrap = request("GET", "/")
@@ -123,6 +127,28 @@ assert current_user["status"] == "200 OK"
 current_payload = json.loads(current_user["body"].decode("utf-8"))
 # Require the current-user route to return the synthetic Admin identity.
 assert current_payload["data"]["user"]["email"] == "service-probe@example.invalid"
+
+# Exercise authenticated readiness through the real production WSGI and API boundary.
+readiness = request("GET", "/readyz", headers={"Authorization": f"Bearer {token}"})
+# Require a successful readiness status before parsing the body.
+assert readiness["status"] == "200 OK"
+# Parse the repository-standard readiness success envelope.
+readiness_payload = json.loads(readiness["body"].decode("utf-8"))
+# Require the packaged edge observer to unwrap the real readiness data object.
+readiness_data = validated_success_data(readiness_payload)
+# Require the synthetic JSON dependency to report ready through the production boundary.
+assert readiness_data["ready"] is True and readiness_data["storage_provider"] == "json"
+
+# Exercise authenticated Admin Operations through the same real production boundary.
+operations = request("GET", "/api/v2/admin/operations", headers={"Authorization": f"Bearer {token}"})
+# Require a successful Admin Operations status before parsing the body.
+assert operations["status"] == "200 OK"
+# Parse the repository-standard Admin Operations success envelope.
+operations_payload = json.loads(operations["body"].decode("utf-8"))
+# Require the packaged edge observer to unwrap the real Admin Operations data object.
+operations_data = validated_success_data(operations_payload)
+# Require the real authenticated operations body to expose the ready state expected by monitoring.
+assert operations_data["ready"] is True
 
 # Send a non-numeric content length through the direct adapter boundary.
 malformed = request("POST", "/api/v2/auth/login", body={}, content_length="not-a-number")

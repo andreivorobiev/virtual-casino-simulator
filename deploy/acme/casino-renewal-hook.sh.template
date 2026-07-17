@@ -1,0 +1,9 @@
+#!/bin/sh
+# Repository-only ACME renewal hook template for CORE-024; installation requires a separate cutover approval.
+set -eu
+
+# Refuse to reload nginx unless the complete active configuration is valid.
+nginx -t
+
+# Reload only after successful validation so a failed renewal hook leaves the current certificate served.
+systemctl reload nginx

@@ -1,0 +1,32 @@
+[Unit]
+# Define the sanitized read-only edge observation job without activating it on any host.
+Description=Casino Simulator restricted-preview edge observation
+After=network-online.target casino.service nginx.service
+Wants=network-online.target
+
+[Service]
+# Run one bounded observation and let the timer own scheduling.
+Type=oneshot
+User=casino-monitor
+Group=casino-monitor
+WorkingDirectory=/opt/casino/current
+EnvironmentFile=/etc/casino/edge-monitor.env
+ExecStartPre=/usr/bin/test -L /opt/casino/current
+ExecStartPre=/usr/bin/test -r /etc/casino/edge-monitor.env
+ExecStart=/opt/casino/venv/bin/python /opt/casino/current/scripts/edge_gate.py observe --policy /opt/casino/current/deploy/edge/restricted-preview.json
+TimeoutStartSec=20s
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+RestrictAddressFamilies=AF_UNIX AF_INET
+CapabilityBoundingSet=
+AmbientCapabilities=
+LockPersonality=true
+RestrictSUIDSGID=true
+SystemCallArchitectures=native
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=casino-edge-monitor
