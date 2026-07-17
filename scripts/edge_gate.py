@@ -229,6 +229,18 @@ def _fetch_json(url, cookie, timeout, maximum_body_bytes):
     return status, response_headers, payload
 
 
+# Validate and unwrap one exact repository-standard success envelope without accepting error or ambiguous shapes.
+def validated_success_data(payload):
+    # Require exactly the two canonical success-envelope fields and no unreviewed top-level metadata.
+    _require(isinstance(payload, dict) and set(payload) == {"ok", "data"}, "endpoint_body")
+    # Require the literal boolean success value rather than a truthy integer or string.
+    _require(payload.get("ok") is True, "endpoint_body")
+    # Require an object data payload because every reviewed operational probe returns named fields.
+    _require(isinstance(payload.get("data"), dict), "endpoint_body")
+    # Return only the validated data object for allowlisted probe-field comparisons.
+    return payload["data"]
+
+
 # Calculate verified certificate lifetime without emitting certificate or network identifiers.
 def _certificate_days_remaining(host, timeout, now_epoch):
     # Build the platform-default trust and hostname-verification context.
@@ -269,10 +281,12 @@ def observe(policy, cookie, fetcher=_fetch_json, certificate_checker=_certificat
         status, headers, payload = fetcher(policy["canonical_origin"] + probe["path"], probe_cookie, monitoring["timeout_seconds"], monitoring["maximum_body_bytes"])
         # Require the exact reviewed HTTP status without accepting redirects.
         _require(status == probe["expected_status"], "endpoint_status")
+        # Validate and unwrap the exact standard success envelope before inspecting operational fields.
+        data = validated_success_data(payload)
         # Require every expected JSON field and value while ignoring approved extra sanitized telemetry.
         for key, expected_value in probe["expected_json"].items():
             # Fail closed if a health, storage, or Admin readiness signal differs.
-            _require(payload.get(key) == expected_value, "endpoint_body")
+            _require(data.get(key) == expected_value, "endpoint_body")
         # Require every #203 security header on each successful edge response.
         for header_name, expected_value in monitoring["required_response_headers"].items():
             # Read the response header in memory without copying it to evidence.

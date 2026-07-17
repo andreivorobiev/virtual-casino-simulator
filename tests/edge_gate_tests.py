@@ -57,18 +57,18 @@ class EdgeGateTests(unittest.TestCase):
         if url.endswith("/healthz"):
             # Prove the secret is not sent to anonymous liveness.
             self.assertIsNone(cookie)
-            # Return only the exact liveness value required by OPS-001.
-            return 200, copy.deepcopy(GREEN_HEADERS), {"status": "live"}
+            # Return the real production success envelope around the exact OPS-001 liveness value.
+            return 200, copy.deepcopy(GREEN_HEADERS), {"ok": True, "data": {"status": "live"}}
         # Require the synthetic cookie for both authenticated operational probes.
         self.assertEqual(cookie, "casino_session=synthetic-monitor-value")
         # Return sanitized MySQL readiness for the authenticated readiness path.
         if url.endswith("/readyz"):
             # Include only allowlisted state plus one permitted extra telemetry field.
-            return 200, copy.deepcopy(GREEN_HEADERS), {"ready": True, "storage_provider": "mysql", "components": {}}
+            return 200, copy.deepcopy(GREEN_HEADERS), {"ok": True, "data": {"ready": True, "storage_provider": "mysql", "components": {}}}
         # Require the only remaining route to be authenticated Admin Operations.
         self.assertTrue(url.endswith("/api/v2/admin/operations"))
         # Return one sanitized Admin readiness record.
-        return 200, copy.deepcopy(GREEN_HEADERS), {"ready": True, "components": {}}
+        return 200, copy.deepcopy(GREEN_HEADERS), {"ok": True, "data": {"ready": True, "components": {}}}
 
     # Prove the complete repository policy passes without opening a listener or client connection.
     def test_static_validation_is_network_and_process_free(self):
@@ -148,6 +148,32 @@ class EdgeGateTests(unittest.TestCase):
         # Prove refusal happened before the first endpoint request.
         fetcher.assert_not_called()
 
+    # Prove only the exact standard success envelope can reach probe-field comparison.
+    def test_success_envelope_fails_closed(self):
+        # Require the canonical two-field success envelope to unwrap its object data.
+        self.assertEqual(edge_gate.validated_success_data({"ok": True, "data": {"status": "live"}}), {"status": "live"})
+        # Enumerate unwrapped, error, false-success, non-object, and ambiguous top-level shapes.
+        malformed = (
+            # Reject the original defect's unwrapped probe body.
+            {"status": "live"},
+            # Reject a standard error envelope.
+            {"ok": False, "error": {"code": "UNAVAILABLE"}},
+            # Reject a false result even when a data object is also present.
+            {"ok": False, "data": {"status": "live"}},
+            # Reject truthy non-boolean success values.
+            {"ok": 1, "data": {"status": "live"}},
+            # Reject a non-object data payload.
+            {"ok": True, "data": ["live"]},
+            # Reject additional top-level fields that could create ambiguous semantics.
+            {"ok": True, "data": {"status": "live"}, "meta": {}},
+        )
+        # Check every malformed case under the same fixed secret-safe failure category.
+        for payload in malformed:
+            # Require fail-closed rejection without reflecting the supplied body.
+            with self.assertRaisesRegex(edge_gate.EdgeGateError, "^endpoint_body$"):
+                # Validate only the current in-memory malformed fixture.
+                edge_gate.validated_success_data(payload)
+
     # Prove the HTTPS client refuses every redirect before authenticated headers can be copied.
     def test_redirects_are_disabled(self):
         # Construct only the standard-library redirect policy without opening a connection.
@@ -220,8 +246,8 @@ class EdgeGateTests(unittest.TestCase):
             if not url.endswith("/readyz"):
                 # Delegate to the deterministic green fixture.
                 return self.green_fetcher(url, cookie, timeout, maximum_body_bytes)
-            # Return only a fixed degraded value that the gate must reject.
-            return 200, copy.deepcopy(GREEN_HEADERS), {"ready": False, "storage_provider": "mysql"}
+            # Return a valid success envelope with a fixed degraded value that the gate must reject.
+            return 200, copy.deepcopy(GREEN_HEADERS), {"ok": True, "data": {"ready": False, "storage_provider": "mysql"}}
 
         # Require the fixed body category without emitting the response.
         with self.assertRaisesRegex(edge_gate.EdgeGateError, "^endpoint_body$"):
