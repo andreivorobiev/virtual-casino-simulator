@@ -1,4 +1,17 @@
-# Virtual Casino Simulator v9.2.0 Release Notes
+# Virtual Casino Simulator v9.3.0 Release Notes
+
+## Private-invite restricted-preview release
+
+- Packages the accepted production WSGI adapter and supervised graceful-service policy from issue #202 with loopback-only application binding and copied-release smoke coverage.
+- Packages hardened sessions, exact Origin and trusted-proxy enforcement, CSRF protection, security headers, bounded requests and sessions, and the Admin/manual-invite boundary from issue #203.
+- Packages the checksum-bound MySQL v2 migration runner, deployment-only DDL boundary, fail-closed migration state, and DDL-free runtime compatibility from issue #204.
+- Packages the authenticated encrypted recovery tooling and clean-target restore gates from issue #205 without embedding recovery objects, credentials, private data, or provider identifiers.
+- Packages the reviewed nginx, ACME, observation, smoke, and application-only rollback preparation from issue #206 without activating an edge, service, listener, certificate, DNS record, or firewall rule.
+- Keeps public signup and live OAuth disabled. Unrestricted public launch remains outside this release under issue #209, and the release artifact does not authorize issue #201 deployment or exposure.
+- Binds packaged release v9.2.0 as the immediate application-only rollback predecessor; database rollback is prohibited and immutable publication still requires its retained, checksum-verified release manifest under `TOOL-003`.
+- Adds the reviewed one-time protected-main recovery for the missing v9.2.0 Release: exact pre-bump commit, two byte-identical rebuilds, checksum-bound v9.3.0 successor receipt, pre-existing tag/Release refusal, non-latest publication, and no clobber, upload-after-create, deletion, direct tag push, or manual local publication path.
+
+## Prior v9.2.0 release record
 
 ## Post-release module addendum: encrypted recovery gate
 

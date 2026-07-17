@@ -1,6 +1,25 @@
 {
-  "application": "9.3.0",
+  "app_version": "9.3.0",
   "source_baseline": "9.1.0",
+  "api_compatibility_matrix": "contracts/compatibility/module-api-matrix.json",
+  "release_provenance_requirement": "TOOL-003",
+  "release_channel": "restricted-preview-private-invite",
+  "access_policy": {
+    "admission": "manual-invite",
+    "public_signup": "disabled",
+    "live_oauth": "disabled"
+  },
+  "predecessor": {
+    "app_version": "9.2.0",
+    "compatibility_record": "contracts/compatibility/app-9.2.0.json",
+    "required_artifact": "release-manifest.json"
+  },
+  "rollback": {
+    "scope": "application-only",
+    "database_rollback": "prohibited",
+    "mysql_expected_schema_version": 2,
+    "requires_retained_predecessor_manifest": true
+  },
   "modules": {
     "application": "9.37.0",
     "core": "9.12.1",
@@ -47,5 +66,5 @@
     "tooling": "1.13.0",
     "commenting_policy": "1.0.0"
   },
-  "created_at": "2026-07-09T00:00:00.000000Z"
+  "notes": "Private-invite restricted-preview release; deployment, edge activation, public signup, live OAuth, and unrestricted public launch remain separately gated."
 }

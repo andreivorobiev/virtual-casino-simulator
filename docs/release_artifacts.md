@@ -39,6 +39,14 @@ Immutable GitHub Release publication is a separate job and remains fail closed u
 
 Release assets are uploaded without replacement semantics. An asset-name collision fails rather than mutating an existing immutable artifact.
 
+## Protected v9.2.0 predecessor recovery
+
+The one-time `bootstrap-v9.2.0-predecessor` workflow-dispatch action exists only to recover the missing predecessor required by v9.3.0. It is eligible only when dispatched by the repository owner from protected `main` after the reviewed v9.3.0 change is merged. The caller must confirm exact pre-bump commit `832c067596e44375217514c1cf28f9e5352abd4b`, while the workflow binds the successor to the exact protected-main dispatch SHA.
+
+The workflow refuses any existing v9.2.0 tag or draft, prerelease, or published Release. It checks out the predecessor by full commit, rebuilds the tagged candidate twice, compares every original asset byte-for-byte, independently verifies the archive and manifest, and creates a checksum-bound recovery receipt naming the exact successor. Only then may it create and verify a draft and publish it as a non-latest retained Release. No upload-after-create, overwrite, clobber, deletion, direct tag push, or non-protected-branch recovery path exists.
+
+The recovered v9.2.0 manifest is intentionally not rollback-eligible itself because no earlier retained artifact exists. It preserves exact MySQL schema-v2 compatibility and explicitly excludes database rollback. Its retained manifest then supplies the application-only predecessor required by the ordinary protected v9.3.0 release-event workflow.
+
 ## Application-only rollback
 
 Each publication-eligible manifest records the immediately previous retained release version, commit, archive checksum, and manifest checksum. Before rollback, verify the retained manifest and archive, install the prior archive into a new immutable release directory, run the same clean-copy verification, then atomically repoint the application release selector according to the separately approved deployment procedure.
@@ -59,8 +67,10 @@ Verify existing assets without rebuilding:
 python scripts/package_app.py --verify-only --archive dist/virtual_casino_simulator_package.zip --manifest dist/release-manifest.json
 ```
 
-Build a canonical tagged candidate with retained rollback provenance:
+Build a canonical tagged v9.3.0 candidate with the retained immediate v9.2.0 rollback manifest:
 
 ```powershell
-python scripts/make_release.py --release-tag v9.2.0 --previous-manifest previous/release-manifest.json
+python scripts/make_release.py --release-tag v9.3.0 --previous-manifest previous/release-manifest.json
 ```
+
+For v9.3.0, `previous/release-manifest.json` must be the checksum-verified retained v9.2.0 release manifest. The resulting pointer authorizes application-artifact rollback only; it neither rolls back MySQL schema version 2 nor permits deployment, edge activation, or public exposure.
