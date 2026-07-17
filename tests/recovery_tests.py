@@ -321,16 +321,18 @@ class FakeDumpProcess:
 # Model a destination adapter over synthetic memory only.
 class SyntheticDestination:
     # Store exact encrypted bytes under independent acknowledgement authority.
-    def __init__(self, artifact):
+    def __init__(self, artifact, downloaded_at="2026-07-16T20:00:00+00:00"):
         # Retain only synthetic encrypted content.
         self.artifact = artifact
+        # Retain one sanitized signed download completion timestamp.
+        self.downloaded_at = downloaded_at
 
     # Download exact encrypted bytes and return a signed receipt.
     def download_artifact(self, target, expected_sha256, expected_size):
         # Stream only encrypted bytes into the provided staging handle.
         target.write(self.artifact)
         # Return independently signed exact download evidence.
-        return recovery.sign_evidence({"schema": "casino-off-instance-download-receipt-v1", "completed": True, "durable": True, "off_instance": True, "encrypted_artifact_sha256": expected_sha256, "encrypted_size": expected_size, "downloaded_at": "2026-07-16T19:55:00+00:00"}, DESTINATION_KEY)
+        return recovery.sign_evidence({"schema": "casino-off-instance-download-receipt-v1", "completed": True, "durable": True, "off_instance": True, "encrypted_artifact_sha256": expected_sha256, "encrypted_size": expected_size, "downloaded_at": self.downloaded_at}, DESTINATION_KEY)
 
 
 # Model upload, exact acknowledgement, and manifest commit over synthetic memory.
@@ -737,6 +739,39 @@ class RecoveryEvidenceTests(unittest.TestCase):
         with self.assertRaisesRegex(recovery.RecoveryError, "age alert"):
             # Evaluate at a deterministic stale time while retention remains active.
             recovery.validate_recovery_age(manifest, datetime(2026, 7, 18, 20, 0, tzinfo=timezone.utc))
+
+    # Prove signed download completion is bounded by this exact operation.
+    def test_download_receipt_timing_is_bounded_by_operation(self):
+        # Build one exact synthetic encrypted recovery point.
+        _plaintext, artifact, _context, manifest_record_value, acknowledgement = encrypted_recovery_bundle()
+        # Validate its signed manifest and destination acknowledgement at preflight.
+        manifest = recovery.validate_recovery_manifest(manifest_record_value, EVIDENCE_KEY, acknowledgement, DESTINATION_KEY, NOW)
+        # Fix a post-download validation boundary after the preflight decision.
+        receipt_validation_time = datetime(2026, 7, 16, 20, 0, 2, tzinfo=timezone.utc)
+        # Create one isolated encrypted-only staging directory.
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            # Resolve the isolated staging directory.
+            staging = Path(temporary_directory)
+            # Configure absolute synthetic wrappers without invoking either process.
+            config = recovery.RecoveryProcessConfig(staging / "dump-wrapper", staging / "restore-wrapper", staging, {}, 30)
+            # Sign valid completion after preflight and before post-download validation.
+            valid_destination = SyntheticDestination(artifact, "2026-07-16T20:00:01+00:00")
+            # Download and validate the exact encrypted artifact.
+            staging_path = recovery.download_encrypted_staging(config, recovery_keys(), manifest, valid_destination, receipt_validation_time, NOW)
+            # Require byte-exact encrypted staging for the valid receipt.
+            self.assertEqual(staging_path.read_bytes(), artifact)
+            # Remove only this test's accepted encrypted staging file.
+            staging_path.unlink()
+            # Exercise signed receipt replay before operation start and future completion after validation.
+            for invalid_timestamp in ("2026-07-16T19:59:59+00:00", "2026-07-16T20:00:03+00:00"):
+                # Create one independently signed invalid timing case.
+                invalid_destination = SyntheticDestination(artifact, invalid_timestamp)
+                # Require stale and future receipts to fail closed identically.
+                with self.assertRaisesRegex(recovery.RecoveryError, "receipt timestamps"):
+                    # Attempt the exact encrypted download under fixed operation boundaries.
+                    recovery.download_encrypted_staging(config, recovery_keys(), manifest, invalid_destination, receipt_validation_time, NOW)
+                # Require rejected encrypted staging cleanup after each failure.
+                self.assertEqual(list(staging.iterdir()), [])
 
     # Prove argv-free restore succeeds and leaves no plaintext or encrypted staging.
     def test_clean_restore_orchestration_success(self):
