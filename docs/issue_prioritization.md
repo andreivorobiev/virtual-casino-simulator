@@ -179,10 +179,10 @@ P4 labels = 0
 Report the total open issues, counts by priority, all changed issues, all label
 changes, unresolved ambiguities, and any owner decision required.
 
-## Copy-ready Claude prompt
+## Copy-ready AI triage prompt
 
 ```text
-You are the product-triage owner for
+You are the product-triage agent for
 https://github.com/andreivorobiev/virtual-casino-simulator.
 
 Follow docs/issue_prioritization.md as the authoritative priority and label

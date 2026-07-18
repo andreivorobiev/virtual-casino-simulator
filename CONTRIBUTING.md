@@ -2,6 +2,10 @@
 
 All work should happen through GitHub issues and pull requests.
 
+Project-wide workflow rules are summarized in
+[`ENGINEERING_PRACTICES.md`](ENGINEERING_PRACTICES.md) and apply equally to human
+and AI-assisted contributions.
+
 ## Issue prioritization
 
 Follow [`docs/issue_prioritization.md`](docs/issue_prioritization.md) when creating,

@@ -12,6 +12,7 @@ GitHub is the source of truth after this payload is pushed. Work must happen thr
 
 ## Issue triage and priority rules
 
+- `ENGINEERING_PRACTICES.md` is the vendor-neutral engineering policy entry point.
 - `docs/issue_prioritization.md` is authoritative for issue priority and label taxonomy.
 - Every open issue must have exactly one of `P1`, `P2`, or `P3`.
 - `P4` must not be created or used.

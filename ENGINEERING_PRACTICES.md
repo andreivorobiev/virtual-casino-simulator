@@ -1,6 +1,14 @@
-# Claude repository instructions
+# Engineering practices
 
-Follow the repository rules in `AGENTS.md` for implementation work.
+These practices apply equally to human contributors and AI-assisted engineering
+tools. No tool or vendor receives a separate source of truth.
+
+## Implementation work
+
+Follow `AGENTS.md` and any more-specific nested `AGENTS.md` before changing
+source, tests, contracts, requirements, or release artifacts.
+
+## Issue triage
 
 For GitHub issue triage, priority assignment, or label cleanup, read and follow
 [`docs/issue_prioritization.md`](docs/issue_prioritization.md) completely before
