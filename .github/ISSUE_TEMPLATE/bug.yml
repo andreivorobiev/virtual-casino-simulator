@@ -1,5 +1,7 @@
 name: Bug report
 description: Create a structured Bug report issue.
+labels:
+  - bug
 body:
   - type: input
     id: module

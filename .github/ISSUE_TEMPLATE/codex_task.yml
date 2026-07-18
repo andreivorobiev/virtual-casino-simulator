@@ -1,5 +1,7 @@
 name: Codex task
 description: Create a structured Codex task issue for a single worker chat.
+labels:
+  - coordination
 body:
   - type: markdown
     attributes:

@@ -2,6 +2,16 @@
 
 All work should happen through GitHub issues and pull requests.
 
+Project-wide workflow rules are summarized in
+[`ENGINEERING_PRACTICES.md`](ENGINEERING_PRACTICES.md) and apply equally to human
+and AI-assisted contributions.
+
+## Issue prioritization
+
+Follow [`docs/issue_prioritization.md`](docs/issue_prioritization.md) when creating,
+triaging, or relabeling issues. Every open issue must have exactly one of `P1`,
+`P2`, or `P3`. The repository does not use `P4`.
+
 ## License and terms boundaries
 
 Contributions to repository source code are expected to be compatible with the Apache License, Version 2.0 in `LICENSE`.
