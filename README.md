@@ -78,6 +78,10 @@ python scripts/check_comment_density.py
 ## Documents
 
 - `CODEX_START_HERE.md`
+- `ENGINEERING_PRACTICES.md`
+- `CLAUDE.md`
+- `docs/engineering_skills.md`
+- `docs/claude_codex_work_division.md`
 - `docs/codex_parallel_workflow.md`
 - `docs/legal/README.md`
 - `docs/legal/terms.md`

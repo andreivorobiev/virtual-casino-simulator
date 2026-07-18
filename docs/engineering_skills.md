@@ -36,7 +36,9 @@ secret, or substitute an ungoverned tool.
 Use a connector, GitHub CLI, or reviewed human workflow that can read issue/PR
 metadata, comments, diffs, reviews, checks, and branch state. Publication must
 support scoped staging, intentional commits, branch pushes, and draft PR creation.
-Never infer merge approval from green checks or a reaction.
+Never infer merge approval from green checks or a reaction. Claude's GitHub
+capability ends at PR composition and revision. Codex alone performs merges
+after verifying every applicable approval and acceptance gate.
 
 ### Browser control and visual inspection
 
@@ -104,6 +106,12 @@ instructions before action. Prefer purpose-built connectors for semantic state
 and local Git for branch/worktree operations. Skill instructions remain
 subordinate to repository scope, safety, and owner authority.
 
+Codex is the default coordinator, shared-file integrator, independent PR
+reviewer, and sole merge executor. Before merging, Codex must inspect the exact
+head, validate dependencies and shared metadata, confirm checks and required
+acceptance evidence, and verify that every owner approval is recorded. Sole
+merge execution does not authorize unchecked self-approval or bypassing gates.
+
 ### Claude
 
 Use Claude Code's repository, GitHub, shell, and browser capabilities as
@@ -112,11 +120,20 @@ contracts, requirements, and specialized policies. Claude-authored issue or PR
 comments must identify that they were written by an AI assistant when repository
 or owner policy requires provenance.
 
+Claude may create and update assigned branches and PRs, run tests, attach
+evidence, and respond to review feedback. Claude must not merge, enable
+auto-merge, push a protected branch, retarget or close a handed-back PR without
+coordination, or treat checks as acceptance. Its terminal action is a complete
+PR or blocked handback to Codex.
+
 ### Humans and other automation
 
-Humans may perform any capability through reviewed local or GitHub workflows.
-Other automation is acceptable only when it produces the same durable inputs,
-respects the same authority boundaries, and emits equivalent reviewable evidence.
+Humans may perform investigation, implementation, review, approval, release, and
+operational capabilities through authorized local or GitHub workflows. Under the
+current owner direction, Codex still executes the repository merge. Other
+automation is acceptable only when it produces the same durable inputs, respects
+the same authority boundaries, emits equivalent reviewable evidence, and stops
+before merge unless the owner changes the merge-executor policy.
 
 ## Coordination between tools
 
@@ -124,6 +141,10 @@ Multiple tools may work concurrently only with explicit file ownership. The
 coordinator records issue, branch, owned files, no-touch files, dependency, and
 expected handback for each worker. Agents consume GitHub state and committed task
 packets, not each other's private memory.
+
+For the default two-agent model, Codex allocates and integrates while Claude
+authors bounded PRs. `docs/claude_codex_work_division.md` defines the allocation
+matrix, capacity limit, PR lifecycle, merge gates, and handback formats.
 
 When one worker has an open PR owning a shared file, the next worker either waits
 or creates a documented stacked branch. It does not create a competing version

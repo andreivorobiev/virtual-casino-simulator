@@ -94,6 +94,14 @@ The coordinator owns allocation, collision prevention, acceptance sequencing,
 and handback consumption. Each worker owns one issue, one branch, one explicit
 file set, and one terminal PR or blocked handback.
 
+The default Claude/Codex allocation is defined in
+`docs/claude_codex_work_division.md`. Claude composes assigned PRs and may revise
+them after review, but it never merges or enables auto-merge. Codex owns
+coordination, shared integration, independent review, dependency sequencing, and
+every repository merge. Codex's sole-merge role identifies the executor; it does
+not replace owner authorization, required review, protected-branch rules,
+exact-head checks, release gates, or deployment approval.
+
 Before editing:
 
 1. Inspect open PRs, branches, worktrees, and recently changed issues.
@@ -135,8 +143,12 @@ workflow.
 - Keep commits intentional and reviewable.
 - Push through the repository remote and open a draft PR unless the owner asks
   for ready-for-review state.
-- Do not push directly to `main`, force-update another worker's branch, merge,
-  or delete a branch/worktree without authority.
+- Do not push directly to `main`, force-update another worker's branch, or delete
+  a branch/worktree without authority.
+- Claude must stop at a complete PR handback and must not merge, squash-merge,
+  rebase-merge, enable auto-merge, or bypass a merge queue.
+- Codex is the only merge executor and must verify the exact head, required
+  checks, reviews, dependencies, evidence, and owner approvals before merging.
 
 Every PR reports its issue, dependencies, owned files, impacted requirements,
 modules, version changes, API/gameplay/data impact, validation, evidence, release
@@ -309,5 +321,6 @@ A change is done only when:
 - UI or operational evidence meets its specialized policy;
 - runtimes and disposable state are cleaned up;
 - the PR contains a complete sanitized handback; and
+- a Claude-authored PR has been handed to Codex without merge or auto-merge; and
 - no required owner decision, review, merge, deployment, or live-verification
   gate is falsely claimed as complete.

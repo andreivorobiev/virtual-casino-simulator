@@ -1,4 +1,4 @@
-# AGENTS.md - Virtual Casino Simulator Codex instructions
+# AGENTS.md - Virtual Casino Simulator repository instructions
 
 These instructions apply to the whole repository unless a nested `AGENTS.md` gives stricter module-specific rules.
 
@@ -17,6 +17,14 @@ GitHub is the source of truth after this payload is pushed. Work must happen thr
 - Every open issue must have exactly one of `P1`, `P2`, or `P3`.
 - `P4` must not be created or used.
 - Priority-only work does not authorize implementation, issue closure, merge, deployment, or provider changes.
+
+## Claude and Codex collaboration
+
+- `CLAUDE.md` is Claude Code's repository adapter; it points back to these instructions and the common vendor-neutral policies.
+- `docs/claude_codex_work_division.md` defines the default two-agent allocation and handback model.
+- Claude may investigate, implement, validate, and create or update pull requests for assigned scope, but Claude must not merge, enable auto-merge, or push protected branches.
+- Codex is the coordinator, shared-integration owner, independent reviewer, and sole executor for every repository merge.
+- Codex merge ownership does not replace required owner approval, protected-branch rules, exact-head validation, independent acceptance, release gates, deployment authority, or any other safety boundary.
 
 ## Required workflow
 

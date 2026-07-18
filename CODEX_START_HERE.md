@@ -8,15 +8,17 @@ contributors, Claude, Codex, and other approved engineering automation.
 
 Before changing repository or GitHub state, read these files in order:
 
-1. `AGENTS.md` and the closest nested `AGENTS.md` for every file in scope.
+1. `AGENTS.md` and the closest nested `AGENTS.md` for every file in scope, plus
+   `CLAUDE.md` when working through Claude Code.
 2. `ENGINEERING_PRACTICES.md` for the common vendor-neutral policy.
 3. `docs/engineering_skills.md` for capability and tool routing.
-4. The assigned GitHub issue, its recent comments, dependencies, and overlapping
+4. `docs/claude_codex_work_division.md` for the Claude-author/Codex-merge model.
+5. The assigned GitHub issue, its recent comments, dependencies, and overlapping
    open pull requests.
-5. `modules/module-manifest.json` and every affected module manifest.
-6. Relevant permanent requirements, contracts, compatibility artifacts, visual
+6. `modules/module-manifest.json` and every affected module manifest.
+7. Relevant permanent requirements, contracts, compatibility artifacts, visual
    matrix rows, and specialized policy documents.
-7. The task packet, branch ownership, validation plan, and PR template.
+8. The task packet, branch ownership, validation plan, and PR template.
 
 GitHub and committed repository artifacts are durable sources of truth. Chat
 history and model memory are not. Open PRs are pending proposals; read them for
@@ -40,6 +42,8 @@ contains pending product fixes and generated requirement/version changes for
 issues #226, #221, and #222. It is not accepted current state until merged.
 Documentation work that shares its generated or version files must stack on its
 accepted head or rebase after it merges.
+Codex is the sole merge executor for both the dependency and this documentation
+stack; Claude may compose follow-up PRs but must not merge them.
 
 ## How to use the catalog
 
@@ -70,9 +74,10 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 
 ### Repository root
 
-- [`AGENTS.md`](AGENTS.md) — AGENTS.md - Virtual Casino Simulator Codex instructions
+- [`AGENTS.md`](AGENTS.md) — AGENTS.md - Virtual Casino Simulator repository instructions
 - [`ARCHITECTURE.md`](ARCHITECTURE.md) — Virtual Casino Simulator v9.1.0 Architecture
 - [`CHANGELOG.md`](CHANGELOG.md) — Changelog
+- [`CLAUDE.md`](CLAUDE.md) — Claude repository adapter
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — Contributing
 - [`ENGINEERING_PRACTICES.md`](ENGINEERING_PRACTICES.md) — Engineering practices
 - [`FIRST_PROMPT_FOR_CODEX.md`](FIRST_PROMPT_FOR_CODEX.md) — First prompt for Codex
@@ -81,7 +86,7 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 
 ### GitHub contribution templates
 
-- [`.github/pull_request_template.md`](.github/pull_request_template.md) — No level-one heading; inspect the file directly
+- [`.github/pull_request_template.md`](.github/pull_request_template.md) — Pull request
 
 ### Casino modules and scoped instructions
 
@@ -132,7 +137,7 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 
 - [`codex/prompts/00_repository_bootstrap.md`](codex/prompts/00_repository_bootstrap.md) — Repository Bootstrap Validation Task
 - [`codex/prompts/01_first_validation_pr.md`](codex/prompts/01_first_validation_pr.md) — First prompt for Codex
-- [`codex/prompts/coordinator.md`](codex/prompts/coordinator.md) — Codex Coordinator Prompt
+- [`codex/prompts/coordinator.md`](codex/prompts/coordinator.md) — Agent coordinator prompt
 - [`codex/prompts/module_admin.md`](codex/prompts/module_admin.md) — Codex task prompt: admin
 - [`codex/prompts/module_audio.md`](codex/prompts/module_audio.md) — Codex task prompt: audio
 - [`codex/prompts/module_autoplay.md`](codex/prompts/module_autoplay.md) — Codex task prompt: autoplay
@@ -148,7 +153,7 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 - [`codex/prompts/module_roulette.md`](codex/prompts/module_roulette.md) — Codex task prompt: roulette
 - [`codex/prompts/module_slots.md`](codex/prompts/module_slots.md) — Codex task prompt: slots
 - [`codex/prompts/module_tests.md`](codex/prompts/module_tests.md) — Codex task prompt: tests
-- [`codex/prompts/worker_task.md`](codex/prompts/worker_task.md) — Codex Worker Task Prompt
+- [`codex/prompts/worker_task.md`](codex/prompts/worker_task.md) — Agent worker task prompt
 - [`codex/REPOSITORY_BOOTSTRAP_TASK.md`](codex/REPOSITORY_BOOTSTRAP_TASK.md) — Repository Bootstrap Validation Task
 - [`codex/tasks/artifacts/current-p1-visual-admin-repair/README.md`](codex/tasks/artifacts/current-p1-visual-admin-repair/README.md) — Current P1 visual and Admin repair evidence
 - [`codex/tasks/artifacts/issue-130-joker-poker/README.md`](codex/tasks/artifacts/issue-130-joker-poker/README.md) — Issue #130 Joker Poker Integration Packet
@@ -217,7 +222,7 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 - [`codex/tasks/premium-redesign-machine-draw-prerenders.md`](codex/tasks/premium-redesign-machine-draw-prerenders.md) — Premium Machine and Draw Game Prerender Task Packet
 - [`codex/tasks/premium-redesign-shell-prerenders.md`](codex/tasks/premium-redesign-shell-prerenders.md) — Premium Shell, Lobby, Admin Prerender Task Packet
 - [`codex/tasks/premium-redesign-table-game-prerenders.md`](codex/tasks/premium-redesign-table-game-prerenders.md) — Premium Table Game Prerender Task Packet
-- [`codex/tasks/TASK_PACKET_TEMPLATE.md`](codex/tasks/TASK_PACKET_TEMPLATE.md) — Codex Task Packet Template
+- [`codex/tasks/TASK_PACKET_TEMPLATE.md`](codex/tasks/TASK_PACKET_TEMPLATE.md) — Agent task packet template
 
 ### Contract-scoped instructions
 
@@ -228,6 +233,7 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 - [`docs/AGENTS.md`](docs/AGENTS.md) — AGENTS.md - docs module
 - [`docs/api_contract_freeze.md`](docs/api_contract_freeze.md) — API contract freeze policy
 - [`docs/card_poker_primitives.md`](docs/card_poker_primitives.md) — Card and poker primitives
+- [`docs/claude_codex_work_division.md`](docs/claude_codex_work_division.md) — Claude and Codex work-division proposal
 - [`docs/codex_parallel_workflow.md`](docs/codex_parallel_workflow.md) — Parallel agent workflow
 - [`docs/commenting_policy.md`](docs/commenting_policy.md) — Commenting policy
 - [`docs/engineering_skills.md`](docs/engineering_skills.md) — Engineering skills and capability routing

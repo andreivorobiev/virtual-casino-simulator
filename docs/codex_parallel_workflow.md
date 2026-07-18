@@ -20,6 +20,10 @@ All workers follow `ENGINEERING_PRACTICES.md` and
 `docs/engineering_skills.md`. Tool-specific convenience never changes authority
 or the definition of done.
 
+The default two-agent allocation and merge boundary are defined in
+`docs/claude_codex_work_division.md`: Claude composes bounded PRs and Codex
+coordinates, reviews, integrates shared files, and performs every merge.
+
 ## Version ownership
 
 Use `modules/module-manifest.json` as the canonical aggregate version source. Its
@@ -36,7 +40,10 @@ release-artifact work. Do not allocate a version already owned by an open PR.
 
 ## Roles
 
-Use one long-lived coordinator and bounded worker tasks.
+Use one long-lived Codex coordinator and bounded worker tasks. Claude is the
+default implementation PR author for assigned module-scoped lanes. Codex may
+also author work when necessary, but remains the sole merge executor and must
+still satisfy required independent review and owner-approval gates.
 
 The coordinator owns:
 
@@ -44,9 +51,11 @@ The coordinator owns:
 - assigning one branch and one file ownership list per worker;
 - preventing simultaneous edits to the same file;
 - sequencing stacked work when the same file must change twice;
-- consuming handbacks and releasing only the next approved dependency; and
+- consuming handbacks and releasing only the next approved dependency;
 - reviewing PR summaries for requirement IDs, module versions, tests, evidence,
-  contracts, and residual decisions.
+  contracts, and residual decisions;
+- independently reviewing the exact PR head and required evidence; and
+- performing every merge with dependency order and expected-head protection.
 
 Each worker owns:
 
@@ -56,6 +65,9 @@ Each worker owns:
 - one module-focused change unless the packet explicitly lists more;
 - the tests and validation named in its packet; and
 - a terminal PR or blocked handback with exact evidence.
+
+Claude workers stop at handback. They never merge, enable auto-merge, push a
+protected branch, or bypass a merge queue.
 
 ## Starting a worker
 
@@ -68,7 +80,9 @@ starting. Include:
 - owned, no-touch, and allowed-adjacent files;
 - API, gameplay, ledger, bot/autoplay, data, security, and deployment impact;
 - required reading, validation, visual rows, evidence, and cleanup; and
-- branch, PR title, dependencies, handback, and stop conditions.
+- branch, PR title, dependencies, handback, and stop conditions;
+- assigned authoring system and Codex as merge executor; and
+- exact head SHA, required owner approval, and merge recommendation fields.
 
 The worker must read root and nested instructions, current GitHub state, module
 manifests, requirements, contracts, and specialized policies itself. Do not ask
@@ -87,7 +101,7 @@ When two changes require the same file, stack them:
 2. Worker B branches from Worker A's exact accepted or coordinator-approved head.
 3. Worker B records the dependency and targets the predecessor branch when
    appropriate.
-4. Worker A merges first.
+4. Codex reviews and merges Worker A first after every applicable gate passes.
 5. Worker B rebases or retargets, recalculates shared versions/generated files,
    reruns validation, and then requests review.
 
@@ -122,7 +136,9 @@ includes:
 - unresolved risks and owner decisions.
 
 Green checks do not authorize merge. The coordinator consumes the handback and
-applies the repository's review and release gates.
+applies the repository's review and release gates. Claude never merges its PR.
+Codex alone verifies the exact head, dependencies, checks, evidence, approvals,
+and unresolved review state, then performs the merge when eligible.
 
 ## Pause and conflict rules
 
