@@ -22,6 +22,8 @@ from casino.core import auth as auth_core
 from casino import config as casino_config
 # Import the shared resolver so session precedence is tested independently of individual game APIs.
 from casino.core.request_player import resolve_authenticated_player
+# Import the isolated game-state writer for deterministic rendered Blackjack settlement setup.
+from casino.core.state_store import save_player_game_state
 # Import storage tests so provider parity can run without the broad API suite.
 from tests import storage_tests
 # Import listener-free migration policy tests for every storage validation run.
@@ -1325,6 +1327,40 @@ def run_api_tests():
             push_state=blackjack_state_with_shoe('QH','AD','KH','AS')
             # Set push_round to the auto-settled push blackjack round.
             push_round=blackjack_engine.new_round(push_state,'human',10); assert push_round['hands'][0]['payout_due']==10
+            # Build the deferred-natural path offered even money against a dealer Ace and non-natural twenty.
+            deferred_state=blackjack_state_with_shoe('9D','AS','KH','AS')
+            # Deal the controlled natural and require settlement to remain deferred for the visible choice.
+            deferred_round=blackjack_engine.new_round(deferred_state,'human',10); assert deferred_round['status']=='player_turn' and deferred_round['hands'][0]['status']=='active'
+            # Decline even money through Stand and require the configured three-to-two return.
+            blackjack_engine.stand(deferred_state,deferred_round['round_id']); assert deferred_round['hands'][0]['status']=='blackjack' and deferred_round['hands'][0]['outcome']=='blackjack' and deferred_round['hands'][0]['payout_due']==25
+            # Start protected logic so a repeated settlement action cannot create another return.
+            try: blackjack_engine.stand(deferred_state,deferred_round['round_id']); raise AssertionError('settled natural accepted a repeated stand')
+            # Require the settled hand to reject another player action.
+            except Exception as exc: assert 'player turn' in str(exc).lower()
+            # Build a dealer draw to a multi-card twenty-one after the player receives a natural.
+            dealer_twenty_one_state=blackjack_state_with_shoe('5C','5D','AS','KH','AS')
+            # Decline even money and prove a two-card natural beats the dealer's three-card twenty-one.
+            dealer_twenty_one_round=blackjack_engine.new_round(dealer_twenty_one_state,'human',10); blackjack_engine.stand(dealer_twenty_one_state,dealer_twenty_one_round['round_id']); assert len(dealer_twenty_one_round['dealer']['cards'])==3 and blackjack_engine.hand_total(dealer_twenty_one_round['dealer']['cards'])['total']==21 and dealer_twenty_one_round['hands'][0]['payout_due']==25
+            # Build a dealer path that must draw twice and bust after the deferred natural.
+            dealer_bust_state=blackjack_state_with_shoe('10H','KC','5D','AS','KH','AS')
+            # Require the same configured natural return when the dealer ultimately busts.
+            dealer_bust_round=blackjack_engine.new_round(dealer_bust_state,'human',10); blackjack_engine.stand(dealer_bust_state,dealer_bust_round['round_id']); assert blackjack_engine.hand_total(dealer_bust_round['dealer']['cards'])['bust'] and dealer_bust_round['hands'][0]['payout_due']==25
+            # Configure the compatible six-to-five table rate on another deferred natural.
+            custom_payout_state=blackjack_state_with_shoe('9D','AS','KH','AS'); custom_payout_state['rules']['blackjack_payout']=1.2
+            # Require the declined-even-money path to honor the configured rate instead of hard-coding three-to-two.
+            custom_payout_round=blackjack_engine.new_round(custom_payout_state,'human',10); blackjack_engine.stand(custom_payout_state,custom_payout_round['round_id']); assert custom_payout_round['hands'][0]['payout_due']==22
+            # Build an ordinary three-card twenty-one against a dealer three-card twenty-one.
+            ordinary_twenty_one_state=blackjack_state_with_shoe('5C')
+            # Store the non-natural hand directly so total-comparison push behavior remains covered.
+            ordinary_twenty_one_round={'dealer':{'cards':['AS','5D'],'hole_card_hidden':True},'hands':[{'cards':['10H','5S','6C'],'bet':10,'status':'stand'}],'status':'player_turn'}
+            # Require ordinary equal totals to remain a push rather than receiving the natural bonus.
+            blackjack_engine.dealer_play(ordinary_twenty_one_state,ordinary_twenty_one_round); assert ordinary_twenty_one_round['hands'][0]['outcome']=='push' and ordinary_twenty_one_round['hands'][0]['payout_due']==10
+            # Build a two-card twenty-one marked as a split hand against dealer twenty.
+            split_twenty_one_state=blackjack_state_with_shoe('5C')
+            # Store the split identity explicitly so it cannot receive the natural payout.
+            split_twenty_one_round={'dealer':{'cards':['10S','QH'],'hole_card_hidden':True},'hands':[{'cards':['AS','KH'],'bet':10,'status':'stand','is_split_hand':True}],'status':'player_turn'}
+            # Require split twenty-one to settle as an ordinary even-money win.
+            blackjack_engine.dealer_play(split_twenty_one_state,split_twenty_one_round); assert split_twenty_one_round['hands'][0]['status']=='settled' and split_twenty_one_round['hands'][0]['outcome']=='win' and split_twenty_one_round['hands'][0]['payout_due']==20
             # Set soft17_state to a table where the dealer must hit soft 17.
             soft17_state=blackjack_state_with_shoe('2C')
             # Set soft17_state rules so dealer soft 17 requires another card.
@@ -1380,7 +1416,7 @@ def run_api_tests():
             # Execute surrender and verify half the wager is due back.
             surrender_round=blackjack_engine.surrender(surrender_state,'bj_surrender'); assert surrender_round['hands'][0]['payout_due']==5
         # Execute this statement as part of the module's documented control flow.
-        run_case('API-BJ-002',['BJ-002','BJ-003','BJ-004','BJ-005','BJ-006','BJ-007','BJ-012','BJ-015','BJ-016','BJ-017','BJ-018','BJ-019','BJ-026'],blackjack_rule_edges)
+        run_case('API-BJ-002',['BJ-002','BJ-003','BJ-004','BJ-005','BJ-006','BJ-007','BJ-012','BJ-015','BJ-016','BJ-017','BJ-018','BJ-019','BJ-026','BJ-031','TEST-054'],blackjack_rule_edges)
         # Define the baccarat function used by this module.
         def baccarat():
             # Call an asynchronous API/helper and wait for the result before continuing.
@@ -3960,18 +3996,62 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(250)
                 # Execute this statement as part of the module's documented control flow.
                 page.get_by_test_id('nav-bingo').click(); page.get_by_test_id('bingo-buy').click(); page.wait_for_function("() => document.querySelector('[data-testid=\"bingo-call\"]') && !document.querySelector('[data-testid=\"bingo-call\"]').disabled"); page.get_by_test_id('bingo-call').click(); page.wait_for_timeout(700); page.evaluate("""async () => { const response = await fetch('/api/v1/games/bingo/auto', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ max_calls: 75 }) }); const payload = await response.json(); if (!payload.ok) throw new Error(payload.error?.message || 'Bingo auto failed'); }"""); page.get_by_test_id('nav-bingo').click(); page.locator('[data-winning-cell="true"]').first.wait_for(timeout=5000); run_case('BR-BINGO-001',['BINGO-017','BINGO-018','BINGO-021','BINGO-022','AUTO-013'],lambda: page.get_by_test_id('bingo-card').is_visible() and page.locator('[data-winning-cell="true"]').first.is_visible() and page.get_by_test_id('bingo-cards-drawer').is_visible() and page.get_by_test_id('autoplay-bingo').is_visible())
+                # Seed one isolated deferred natural so the rendered Stand path is deterministic. (BJ-031, TEST-054)
+                browser_blackjack_state=blackjack_engine.default_state(); browser_blackjack_state['shoe']=['2S']*52+['9D','AS','KH','AS']
+                # Persist only the synthetic browser player's controlled Blackjack shoe before mounting the route.
+                save_player_game_state('blackjack',browser_player_id,browser_blackjack_state)
+                # Read the authoritative wallet and ledger before the visible deal-and-stand sequence.
+                blackjack_balance_before=page.evaluate("async () => (await (await fetch('/api/v2/me', {credentials:'include'})).json()).data.player.token_balance")
+                # Read existing settlement credits so the regression can prove exactly one new round credit.
+                blackjack_ledger_before=page.evaluate("async playerId => (await (await fetch(`/api/v1/players/${playerId}/ledger`, {credentials:'include'})).json()).data.ledger",browser_player_id)
                 # Navigate to Blackjack before checking the premium table surface.
                 page.get_by_test_id('nav-blackjack').click()
                 # Wait for the premium Blackjack shell to mount.
                 page.get_by_test_id('blackjack-premium').wait_for(timeout=5000)
-                # Deal one hand through the public Blackjack action button.
-                page.get_by_test_id('blackjack-deal').click()
+                # Set a visible one-hundred-token stake for an exact three-to-two payout assertion.
+                page.get_by_test_id('blackjack-bet').fill('100')
+                # Observe the real deal response while activating the public Blackjack control.
+                with page.expect_response(lambda response: response.url.endswith('/api/v1/games/blackjack/rounds') and response.request.method == 'POST') as blackjack_deal_info:
+                    # Deal the controlled natural entirely through the rendered button.
+                    page.get_by_test_id('blackjack-deal').click()
                 # Wait for the first player hand lane to render.
                 page.get_by_test_id('blackjack-hand-0').wait_for(timeout=5000)
-                # Capture normal Blackjack browser evidence from the running app.
-                shot('blackjack-normal-hand.png')
+                # Require the deferred natural to expose both the even-money choice and ordinary Stand decline path.
+                page.wait_for_function("() => !document.querySelector('[data-testid=\"blackjack-even-money\"]')?.disabled && !document.querySelector('[data-testid=\"blackjack-stand\"]')?.disabled")
                 # Store the backend round id exposed by the stable test hook.
                 blackjack_round_id=page.get_by_test_id('blackjack-round-id').get_attribute('data-round-id')
+                # Require the rendered round id to match the authoritative deal response.
+                assert blackjack_deal_info.value.json()['data']['round']['round_id']==blackjack_round_id
+                # Observe the real stand response while declining even money through the UI.
+                with page.expect_response(lambda response: response.url.endswith(f'/api/v1/games/blackjack/rounds/{blackjack_round_id}/stand') and response.request.method == 'POST') as blackjack_stand_info:
+                    # Activate the same visible Stand button a player uses.
+                    page.get_by_test_id('blackjack-stand').click()
+                # Wait for the settled round to disable another Stand action after the wallet refresh.
+                page.wait_for_function("() => document.querySelector('[data-testid=\"blackjack-stand\"]')?.disabled === true")
+                # Read the exact settled response returned to the rendered module.
+                blackjack_stand_payload=blackjack_stand_info.value.json()['data']
+                # Read the authoritative wallet and ledger after the visible settlement completes.
+                blackjack_balance_after=page.evaluate("async () => (await (await fetch('/api/v2/me', {credentials:'include'})).json()).data.player.token_balance")
+                # Read post-settlement ledger rows for exact single-credit evidence.
+                blackjack_ledger_after=page.evaluate("async playerId => (await (await fetch(`/api/v1/players/${playerId}/ledger`, {credentials:'include'})).json()).data.ledger",browser_player_id)
+                # Define the rendered natural-payout acceptance assertions against independent wallet and ledger state.
+                def blackjack_natural_payout_browser():
+                    # Read the one player hand returned by the settled Stand action.
+                    hand=blackjack_stand_payload['round']['hands'][0]
+                    # Require natural identity and the configured total return rather than an ordinary win or push.
+                    assert hand['status']=='blackjack' and hand['outcome']=='blackjack' and hand['payout_due']==250
+                    # Require one debit plus the 250-token return to produce the exact 150-token wallet profit.
+                    assert blackjack_balance_after-blackjack_balance_before==150
+                    # Select only credits for this exact controlled round before and after the visible action.
+                    before_credits=[row for row in blackjack_ledger_before if row.get('transaction_type')=='BLACKJACK_SETTLEMENT_CREDIT' and row.get('round_id')==blackjack_round_id]
+                    # Select the matching post-action credit without counting other Blackjack rounds.
+                    after_credits=[row for row in blackjack_ledger_after if row.get('transaction_type')=='BLACKJACK_SETTLEMENT_CREDIT' and row.get('round_id')==blackjack_round_id]
+                    # Require exactly one settlement credit to have been created for the natural.
+                    assert len(before_credits)==0 and len(after_credits)==1 and after_credits[0]['amount']==250
+                # Record exact rendered Stand, wallet, and ledger evidence for the deferred-natural requirement.
+                run_case('BR-BJ-NATURAL-PAYOUT-001',['BJ-005','BJ-031','TEST-054'],blackjack_natural_payout_browser)
+                # Capture after-pass Blackjack evidence from the settled controlled natural.
+                shot('blackjack-natural-after-stand.png')
                 # Define the blackjack_premium function used by this module.
                 def blackjack_premium():
                     # Verify the premium central felt is visible.
