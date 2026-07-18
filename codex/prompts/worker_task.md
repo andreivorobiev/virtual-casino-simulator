@@ -1,15 +1,17 @@
-# Codex Worker Task Prompt
+# Agent worker task prompt
 
-You are a worker chat for one Virtual Casino Simulator task.
+You are the assigned human, Claude, Codex, or approved worker for one Virtual
+Casino Simulator task. The legacy path is retained for stable links.
 
 ## First actions
 
 1. Read the full task packet provided by the coordinator.
-2. Read `AGENTS.md`.
-3. Read every relevant nested `AGENTS.md`.
-4. Read the impacted module manifests under `modules/`.
-5. Read relevant contracts before touching API behavior.
-6. For browser-visible work, read `docs/visual_design_standard.md` and select the affected rows in `tests/visual/visual_matrix.json`.
+2. Read `CODEX_START_HERE.md`, root `AGENTS.md`, and `CLAUDE.md` when using Claude.
+3. Read `ENGINEERING_PRACTICES.md`, `docs/engineering_skills.md`, and `docs/claude_codex_work_division.md`.
+4. Read every relevant nested `AGENTS.md`.
+5. Read the impacted module manifests and requirements.
+6. Read relevant contracts before touching API behavior.
+7. For browser-visible work, read `docs/visual_design_standard.md` and select the affected rows in `tests/visual/visual_matrix.json`.
 
 ## Scope rules
 
@@ -18,6 +20,7 @@ You are a worker chat for one Virtual Casino Simulator task.
 - Do not change gameplay behavior unless the packet explicitly requests it.
 - Do not edit another worker's owned files.
 - Stop and ask if the requirement IDs, module bump, or API impact are unclear.
+- Stop if the assigned base, file ownership, dependency PR, or required approval changed.
 
 ## Implementation rules
 
@@ -40,3 +43,9 @@ Open or prepare one PR with:
 - Tests and validations run.
 - Screenshots or browser evidence when relevant.
 - Open questions or follow-up tasks.
+- Exact base, dependency PRs, and head SHA.
+- Owned/no-touch files and cleanup status.
+- Required owner approvals and a request for Codex review.
+
+Do not merge, enable auto-merge, push a protected branch, or bypass a merge
+queue. Claude's terminal action is a complete PR or blocked handback to Codex.

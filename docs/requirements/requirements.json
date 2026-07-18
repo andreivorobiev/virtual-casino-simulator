@@ -4501,24 +4501,29 @@
     {
       "id": "DOC-016",
       "module": "Documentation",
-      "description": "Parallel Codex workflow documentation defines coordinator and worker chat responsibilities.",
+      "description": "Parallel-agent workflow documentation defines coordinator and worker responsibilities for humans, Claude, Codex, and other automation.",
       "status": "PASS",
       "api_tests": [],
       "browser_tests": [],
       "implementation_files": [
         "docs/codex_parallel_workflow.md",
+        "docs/claude_codex_work_division.md",
+        "docs/engineering_skills.md",
+        "AGENTS.md",
+        "CLAUDE.md",
+        "ENGINEERING_PRACTICES.md",
         "CODEX_START_HERE.md",
         "CONTRIBUTING.md",
         "README.md"
       ],
       "introduced_in": "9.1.1",
-      "changed_in": "9.1.1",
-      "notes": "Introduced for multi-chat coordination."
+      "changed_in": "issue-267-engineering-practices",
+      "notes": "Introduced for multi-chat coordination and generalized in issue #267 so the same ownership, isolation, and handback rules apply regardless of the agent vendor."
     },
     {
       "id": "TOOL-001",
       "module": "Tooling",
-      "description": "Codex task packets and prompts preserve scope, file ownership, validation, and PR handback context for worker chats.",
+      "description": "Agent task packets and pull-request templates preserve author, coordinator, merge executor, scope, file ownership, validation, dependency, exact-head, and handback context.",
       "status": "PASS",
       "api_tests": [],
       "browser_tests": [],
@@ -4530,8 +4535,8 @@
         ".github/pull_request_template.md"
       ],
       "introduced_in": "9.1.1",
-      "changed_in": "9.1.1",
-      "notes": "Introduced for multi-chat coordination."
+      "changed_in": "issue-267-engineering-practices",
+      "notes": "Introduced for multi-chat coordination and generalized in issue #267 for human, Claude, Codex, and other approved authors with Codex-only merge execution."
     },
     {
       "id": "TOOL-002",
@@ -7760,6 +7765,69 @@
     },
     {
       "id": "TEST-050", "module": "Tests", "description": "Edge evidence covers exact origin and loopback topology, restricted access, replacement forwarding headers, protected ports, ACME preflight, inert service and rollback templates, traversal refusal, listener-free static validation, exact success-envelope validation through the production WSGI/API boundary, pre-network credential refusal, bounded authenticated probes, security headers, certificate age, sanitized output, packaging, and fail-closed negative cases.", "status": "PASS", "api_tests": ["EDGE-PREPARATION-001", "SERVICE-WSGI-001"], "browser_tests": [], "implementation_files": ["tests/edge_gate_tests.py", "tests/production_wsgi_probe.py", "tests/run_tests.py", "tests/release_artifact_tests.py", "scripts/package_app.py"], "introduced_in": "issue-206-edge-preparation", "changed_in": "issue-206-edge-preparation", "notes": "All repository evidence is isolated, synthetic, non-mutating, and listener-free; live DNS, TLS, service, firewall, deployment, and public exposure proof remain external cutover gates."
+    },
+    {
+      "id": "DOC-017",
+      "module": "Documentation",
+      "description": "A vendor-neutral root handbook documents the complete engineering practice, required capabilities, authority hierarchy, and current-versus-historical status, while the repository start page links every other Markdown file exactly once.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "ENGINEERING_PRACTICES.md",
+        "CONTRIBUTING.md",
+        "README.md",
+        "docs/claude_codex_work_division.md",
+        "docs/engineering_skills.md",
+        "CODEX_START_HERE.md",
+        "docs/codex_parallel_workflow.md"
+      ],
+      "introduced_in": "issue-267-engineering-practices",
+      "changed_in": "issue-267-engineering-practices",
+      "notes": "The root entry point is universal despite its compatibility filename, and open pull requests remain pending proposals rather than merged authority."
+    },
+    {
+      "id": "TOOL-006",
+      "module": "Tooling",
+      "description": "Documentation generation deterministically inventories every tracked or non-ignored Markdown file, updates the bounded root catalog, and fails check mode when the catalog or generated requirements are stale.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        "scripts/generate_docs.py",
+        "CODEX_START_HERE.md",
+        "docs/requirements/requirements_generated.md"
+      ],
+      "introduced_in": "issue-267-engineering-practices",
+      "changed_in": "issue-267-engineering-practices",
+      "notes": "The generated catalog excludes its own root file, uses repository-relative links, and preserves hand-authored guidance outside explicit marker comments."
+    },
+    {
+      "id": "DOC-018",
+      "module": "Documentation",
+      "description": "The repository defines a durable Claude-author/Codex-merge operating model in which Claude composes assigned pull requests and Codex alone reviews integration gates and executes every merge without bypassing owner authority.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "ENGINEERING_PRACTICES.md",
+        "CONTRIBUTING.md",
+        "docs/claude_codex_work_division.md",
+        "docs/codex_parallel_workflow.md",
+        "docs/engineering_skills.md",
+        "codex/prompts/coordinator.md",
+        "codex/prompts/worker_task.md",
+        "codex/tasks/TASK_PACKET_TEMPLATE.md",
+        ".github/ISSUE_TEMPLATE/codex_task.yml",
+        ".github/pull_request_template.md"
+      ],
+      "introduced_in": "issue-267-engineering-practices",
+      "changed_in": "issue-267-engineering-practices",
+      "notes": "The owner-mandated merge executor is Codex. This allocation does not replace protected-branch rules, exact-head validation, required review, or owner approval."
     }
   ]
 }

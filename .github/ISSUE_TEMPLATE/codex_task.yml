@@ -1,12 +1,28 @@
-name: Codex task
-description: Create a structured Codex task issue for a single worker chat.
+# Retain this legacy filename while exposing one vendor-neutral bounded task form.
+name: Agent task
+description: Create a structured task issue for one human, Claude, Codex, or approved worker.
 labels:
   - coordination
 body:
+  # Explain the durable task model before collecting assignment fields.
   - type: markdown
     attributes:
       value: |
-        Use this for one bounded Codex worker task. The coordinator should fill enough context that a new chat can work without relying on prior chat history.
+        Use this for one bounded worker task. Codex is the coordinator and sole merge executor. The issue must contain enough context for a worker to act without relying on prior chat history.
+  # Identify the system that will author the branch and pull request.
+  - type: dropdown
+    id: authoring_system
+    attributes:
+      label: Authoring system
+      description: Who will compose the pull request?
+      options:
+        - Claude
+        - Codex
+        - Human
+        - Other approved worker
+    validations:
+      required: true
+  # Capture module scope before behavioral requirements.
   - type: input
     id: module
     attributes:
@@ -52,13 +68,16 @@ body:
     id: compatibility
     attributes:
       label: Compatibility impact
-      description: State API, gameplay, ledger, bot, autoplay, and data impact.
+      description: State API, gameplay, ledger, bot, autoplay, data, security, release, and deployment impact.
       placeholder: |
         API contract impact:
         Gameplay impact:
         Ledger impact:
         Bot/autoplay impact:
         Data migration impact:
+        Security/privacy impact:
+        Release impact:
+        Deployment/provider impact:
     validations:
       required: true
   - type: input
@@ -66,7 +85,7 @@ body:
     attributes:
       label: Branch
       description: Expected branch name for this task.
-      placeholder: agent/roulette-ui-history
+      placeholder: claude/267-roulette-ui-history
     validations:
       required: true
   - type: textarea
@@ -75,11 +94,13 @@ body:
       label: Coordination notes
       description: List parallel workers, stacked PR dependencies, or blockers.
       placeholder: |
+        Base branch and commit:
         Parallel workers:
-        Depends on:
+        Dependency PRs and exact heads:
         Blocks:
+        Required owner approval:
     validations:
-      required: false
+      required: true
   - type: textarea
     id: validation
     attributes:
@@ -89,6 +110,22 @@ body:
         Required scripts:
         API tests:
         Browser tests:
+        Visual matrix rows/locales/viewports:
         Manual checks:
+        Cleanup evidence:
+    validations:
+      required: true
+  # Make the terminal author-to-Codex handback explicit.
+  - type: textarea
+    id: handback
+    attributes:
+      label: PR handback required
+      description: Define the exact evidence Claude or another author must hand to Codex without merging.
+      placeholder: |
+        Exact head SHA:
+        Required PR summary:
+        Evidence:
+        Open risks or decisions:
+        Requested next action: Codex review and merge when eligible
     validations:
       required: true
