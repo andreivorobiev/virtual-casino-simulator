@@ -50,7 +50,8 @@ not override current policies.
 Open pull requests are pending proposals, not accepted current state. Read every
 open PR that overlaps the assigned files before branching. Stack work when an
 active PR owns a shared file; do not silently duplicate or overwrite it. Draft
-PR #266 is the pending product lane identified when issue #267 was created.
+PR numbers, exact heads, and dependency order belong in their durable issue and
+PR records so this handbook does not turn transient queue state into policy.
 
 ## Authorization and safety boundary
 

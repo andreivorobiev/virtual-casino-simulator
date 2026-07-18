@@ -35,15 +35,15 @@ The packaged application release changes only through formal release-artifact
 work. Every changed source module updates its independent revision. Never reuse
 or overwrite a version owned by an active PR.
 
-## Pending product work at issue #267 creation
+## Pending-proposal handling
 
-Draft PR [#266](https://github.com/andreivorobiev/virtual-casino-simulator/pull/266)
-contains pending product fixes and generated requirement/version changes for
-issues #226, #221, and #222. It is not accepted current state until merged.
-Documentation work that shares its generated or version files must stack on its
-accepted head or rebase after it merges.
-Codex is the sole merge executor for both the dependency and this documentation
-stack; Claude may compose follow-up PRs but must not merge them.
+Open pull requests are pending proposals, not accepted repository state. Before
+editing shared generated requirements or module metadata, reconcile every
+overlapping PR and choose an explicit dependency order. A later proposal must
+either stack on the reviewed exact head or rebase onto the accepted result and
+recalculate versions from current `main`. Record transient PR numbers, heads,
+and handback state in the affected issue and pull request rather than freezing
+them into this evergreen start page.
 
 ## How to use the catalog
 
