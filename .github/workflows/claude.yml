@@ -1,0 +1,39 @@
+name: Claude
+# Respond to explicit @claude mentions on issues and pull requests via the installed Claude GitHub App.
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  issues:
+    types: [opened, assigned]
+  pull_request_review:
+    types: [submitted]
+jobs:
+  claude:
+    # Only run when a human actually mentions @claude, so no billed run fires on unrelated activity.
+    if: >-
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
+      (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
+    runs-on: ubuntu-latest
+    permissions:
+      # Read-only workflow token; the Claude GitHub App supplies its own write token for comments and PRs.
+      contents: read
+      pull-requests: read
+      issues: read
+      # Allow the action to mint an OIDC token for the Anthropic API exchange.
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Only the tip is needed for @claude context, not the full history.
+          fetch-depth: 1
+      - name: Run Claude Code
+        id: claude
+        uses: anthropics/claude-code-action@v1
+        with:
+          # Secret is set in repo Settings -> Secrets and variables -> Actions; never committed.
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
