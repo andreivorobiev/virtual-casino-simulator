@@ -567,12 +567,14 @@
     {
       "id": "LEDGER-020",
       "module": "Ledger",
-      "description": "Bingo card purchase debits immediately.",
+      "description": "Each accepted visible Bingo card purchase debits immediately and exactly once.",
       "status": "PASS",
       "api_tests": [
         "API-BINGO-001"
       ],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-BINGO-PURCHASE-001"
+      ],
       "implementation_files": [
         "casino/core/ledger.py",
         "casino/core/players.py"
@@ -3543,12 +3545,14 @@
     {
       "id": "BINGO-012",
       "module": "Bingo",
-      "description": "Bingo card purchase debits immediately.",
+      "description": "Each accepted visible Bingo card purchase debits immediately and exactly once; a pending purchase cannot schedule a duplicate.",
       "status": "PASS",
       "api_tests": [
         "API-BINGO-001"
       ],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-BINGO-PURCHASE-001"
+      ],
       "implementation_files": [
         "casino/games/bingo/engine.py",
         "casino/games/bingo/api.py",
@@ -3705,13 +3709,14 @@
     {
       "id": "BINGO-022",
       "module": "Bingo",
-      "description": "Bingo UI shows cards in play.",
+      "description": "Bingo UI shows the authoritative cards in play and a truthful disabled busy boundary while a purchase resolves.",
       "status": "PASS",
       "api_tests": [
         "API-BINGO-001"
       ],
       "browser_tests": [
-        "BR-BINGO-001"
+        "BR-BINGO-001",
+        "BR-BINGO-PURCHASE-001"
       ],
       "implementation_files": [
         "casino/games/bingo/engine.py",

@@ -23,7 +23,7 @@ const PATTERNS = ['line', 'four_corners', 'postage_stamp', 'blackout'];
 // Store the style element id so scoped CSS is injected only once.
 const STYLE_ID = 'premium-bingo-styles';
 // Store scoped CSS for the premium Bingo module without touching shared stylesheet ownership.
-const BINGO_CSS = '.premium-bingo{display:grid;grid-template-rows:auto minmax(0,1fr);gap:14px;height:100%;min-height:0}.premium-bingo-hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(460px,0.78fr);gap:18px;align-items:end}.premium-bingo-kicker{margin:0 0 4px;color:var(--gold);font-weight:900}.premium-bingo-title{margin:0;color:#fff2c2;font-family:var(--font-display);font-size:46px;line-height:1}.premium-bingo-subtitle{max-width:760px;margin:8px 0 0;color:var(--muted)}.premium-bingo-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.premium-bingo-grid{min-height:0}.premium-bingo .control-rail,.premium-bingo .details-drawer{display:grid;align-content:start;gap:12px}.premium-bingo .game-stage{display:grid;grid-template-rows:auto minmax(0,1fr) 138px;gap:12px;padding:16px}.premium-bingo-config{display:grid;grid-template-columns:1fr 1fr;gap:10px}.premium-bingo-field{display:grid;gap:6px;padding:12px;border:1px solid var(--border-soft);border-radius:13px;background:rgba(255,255,255,.04)}.premium-bingo-field span{color:var(--muted);font-size:12px;font-weight:800}.premium-bingo-field input,.premium-bingo-field select{width:100%;min-width:0}.premium-bingo-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}.premium-bingo-status-card{display:grid;gap:10px;padding:12px;border:1px solid var(--border-soft);border-radius:14px;background:rgba(0,0,0,.18)}.premium-bingo-status-row{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center}.premium-bingo-dot{width:10px;height:10px;border-radius:50%;background:var(--ok);box-shadow:0 0 18px var(--ok)}.premium-bingo-dot.is-won{background:#ff6670;box-shadow:0 0 18px #ff6670}.premium-bingo-progress{height:12px;overflow:hidden;border-radius:99px;background:rgba(255,255,255,.09)}.premium-bingo-progress span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#b81724,var(--gold),#fff0b6);transition:width .22s ease}.premium-bingo-stage-head{display:flex;align-items:center;justify-content:space-between;gap:12px}.premium-bingo-stage-title{margin:0;color:#fff2c2;font-family:var(--font-display);font-size:30px}.premium-bingo-card-wrap{display:grid;place-items:center;min-height:0}.premium-bingo .bingo-card{width:min(100%,760px);max-width:760px;min-height:500px;display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:74px repeat(5,minmax(64px,1fr));gap:8px;margin:0 auto;padding:14px;border:1px solid rgba(255,199,83,.78);border-radius:18px;background:rgba(0,0,0,.2);box-shadow:inset 0 0 32px rgba(255,199,83,.08)}.premium-bingo .bingo-head,.premium-bingo .bingo-cell{min-height:0;border-radius:12px}.premium-bingo .bingo-head{color:#1d1100;background:linear-gradient(180deg,#ffe6a0,#c9932f);font-family:var(--font-display);font-size:30px}.premium-bingo .bingo-cell{position:relative;overflow:hidden;color:#fff7df;background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.025));font-size:24px}.premium-bingo .bingo-cell.marked{color:#fff7df;background:linear-gradient(180deg,rgba(255,255,255,.09),rgba(255,255,255,.03))}.premium-bingo .bingo-cell.latest{box-shadow:inset 0 0 0 2px rgba(255,242,194,.5)}.premium-bingo .bingo-cell.win{outline:4px solid #ffe49a;box-shadow:0 0 22px rgba(255,228,154,.72),inset 0 0 24px rgba(255,228,154,.2)}.premium-bingo-cell-value{position:relative;z-index:2}.bingo-daub{position:absolute;inset:50% auto auto 50%;z-index:1;width:48px;height:48px;border:4px solid rgba(255,113,122,.34);border-radius:50%;background:radial-gradient(circle at 35% 30%,rgba(255,105,115,.92),rgba(157,18,31,.88));box-shadow:0 6px 18px rgba(0,0,0,.32);opacity:.78;transform:translate(-50%,-50%) scale(.92);animation:bingoDaubIn .18s ease-out}.premium-bingo-call-bay{display:flex;align-items:center;gap:22px;min-height:138px;padding:16px;border:1px solid var(--border-soft);border-radius:16px;background:rgba(0,0,0,.18)}.premium-bingo-orb{display:grid;place-items:center;flex:0 0 96px;width:96px;height:96px;border-radius:50%;color:#3a1600;background:radial-gradient(circle at 35% 25%,#fff7cf,#e7c45f 70%,#a36f16);box-shadow:0 0 28px rgba(255,220,130,.5);font-size:27px;font-weight:1000}.premium-bingo-orb.is-calling{animation:bingoLatestPulse .8s ease-in-out infinite}.premium-bingo-call-copy{min-width:0}.premium-bingo-call-copy strong{display:block;color:#fff2c2}.premium-bingo-chip-row{display:flex;flex-wrap:wrap;gap:6px;max-height:118px;overflow:auto}.premium-bingo-called-chip{min-width:auto;min-height:28px;padding:4px 10px;border-radius:999px;color:#fff2c2;background:rgba(255,199,83,.11)}.premium-bingo-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;margin:8px 0;padding:11px 12px;border:1px solid var(--border-soft);border-radius:12px;background:rgba(255,255,255,.035)}.premium-bingo-row.is-active{border-color:rgba(255,199,83,.8);background:rgba(255,199,83,.1)}.premium-bingo-row b{color:#fff2c2}.premium-bingo-row small{display:block;color:var(--muted)}.premium-bingo-result-grid{display:grid;gap:6px}.premium-bingo-empty{display:grid;place-items:center;min-height:160px;color:var(--muted);text-align:center}.premium-bingo .tag-row{margin-top:10px}@keyframes bingoDaubIn{from{opacity:0;transform:translate(-50%,-50%) scale(.35)}to{opacity:.78;transform:translate(-50%,-50%) scale(.92)}}@keyframes bingoLatestPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}@media (max-width:1100px){.premium-bingo-hero{grid-template-columns:1fr}.premium-bingo-metrics{grid-template-columns:repeat(4,minmax(0,1fr))}.premium-bingo .game-stage{grid-template-rows:auto auto 138px}.premium-bingo .bingo-card{min-height:430px}}@media (max-width:760px){.premium-bingo{height:auto}.premium-bingo-title{font-size:34px}.premium-bingo-metrics{grid-template-columns:1fr 1fr}.premium-bingo-config,.premium-bingo-actions{grid-template-columns:1fr}.premium-bingo .bingo-card{min-height:330px;grid-template-rows:52px repeat(5,52px);gap:5px;padding:8px}.premium-bingo .bingo-head{font-size:22px}.premium-bingo .bingo-cell{font-size:18px}.bingo-daub{width:36px;height:36px}.premium-bingo-call-bay{align-items:flex-start;min-height:132px}.premium-bingo-orb{flex-basis:72px;width:72px;height:72px;font-size:20px}}';
+const BINGO_CSS = '.premium-bingo{display:grid;grid-template-rows:auto minmax(0,1fr);gap:14px;height:100%;min-height:0}.premium-bingo-hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(460px,0.78fr);gap:18px;align-items:end}.premium-bingo-kicker{margin:0 0 4px;color:var(--gold);font-weight:900}.premium-bingo-title{margin:0;color:#fff2c2;font-family:var(--font-display);font-size:46px;line-height:1}.premium-bingo-subtitle{max-width:760px;margin:8px 0 0;color:var(--muted)}.premium-bingo-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.premium-bingo-grid{min-height:0}.premium-bingo .control-rail,.premium-bingo .details-drawer{display:grid;align-content:start;gap:12px}.premium-bingo .game-stage{display:grid;grid-template-rows:auto minmax(0,1fr) 138px;gap:12px;padding:16px}.premium-bingo-config{display:grid;grid-template-columns:1fr 1fr;gap:10px}.premium-bingo-field{display:grid;gap:6px;padding:12px;border:1px solid var(--border-soft);border-radius:13px;background:rgba(255,255,255,.04)}.premium-bingo-field span{color:var(--muted);font-size:12px;font-weight:800}.premium-bingo-field input,.premium-bingo-field select{width:100%;min-width:0}.premium-bingo-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}.premium-bingo [data-testid="bingo-control-rail"][aria-busy="true"] button:disabled,.premium-bingo [data-testid="bingo-control-rail"][aria-busy="true"] input:disabled,.premium-bingo [data-testid="bingo-control-rail"][aria-busy="true"] select:disabled{opacity:.55;cursor:wait}.premium-bingo-status-card{display:grid;gap:10px;padding:12px;border:1px solid var(--border-soft);border-radius:14px;background:rgba(0,0,0,.18)}.premium-bingo-status-row{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center}.premium-bingo-dot{width:10px;height:10px;border-radius:50%;background:var(--ok);box-shadow:0 0 18px var(--ok)}.premium-bingo-dot.is-won{background:#ff6670;box-shadow:0 0 18px #ff6670}.premium-bingo-progress{height:12px;overflow:hidden;border-radius:99px;background:rgba(255,255,255,.09)}.premium-bingo-progress span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#b81724,var(--gold),#fff0b6);transition:width .22s ease}.premium-bingo-stage-head{display:flex;align-items:center;justify-content:space-between;gap:12px}.premium-bingo-stage-title{margin:0;color:#fff2c2;font-family:var(--font-display);font-size:30px}.premium-bingo-card-wrap{display:grid;place-items:center;min-height:0}.premium-bingo .bingo-card{width:min(100%,760px);max-width:760px;min-height:500px;display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:74px repeat(5,minmax(64px,1fr));gap:8px;margin:0 auto;padding:14px;border:1px solid rgba(255,199,83,.78);border-radius:18px;background:rgba(0,0,0,.2);box-shadow:inset 0 0 32px rgba(255,199,83,.08)}.premium-bingo .bingo-head,.premium-bingo .bingo-cell{min-height:0;border-radius:12px}.premium-bingo .bingo-head{color:#1d1100;background:linear-gradient(180deg,#ffe6a0,#c9932f);font-family:var(--font-display);font-size:30px}.premium-bingo .bingo-cell{position:relative;overflow:hidden;color:#fff7df;background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.025));font-size:24px}.premium-bingo .bingo-cell.marked{color:#fff7df;background:linear-gradient(180deg,rgba(255,255,255,.09),rgba(255,255,255,.03))}.premium-bingo .bingo-cell.latest{box-shadow:inset 0 0 0 2px rgba(255,242,194,.5)}.premium-bingo .bingo-cell.win{outline:4px solid #ffe49a;box-shadow:0 0 22px rgba(255,228,154,.72),inset 0 0 24px rgba(255,228,154,.2)}.premium-bingo-cell-value{position:relative;z-index:2}.bingo-daub{position:absolute;inset:50% auto auto 50%;z-index:1;width:48px;height:48px;border:4px solid rgba(255,113,122,.34);border-radius:50%;background:radial-gradient(circle at 35% 30%,rgba(255,105,115,.92),rgba(157,18,31,.88));box-shadow:0 6px 18px rgba(0,0,0,.32);opacity:.78;transform:translate(-50%,-50%) scale(.92);animation:bingoDaubIn .18s ease-out}.premium-bingo-call-bay{display:flex;align-items:center;gap:22px;min-height:138px;padding:16px;border:1px solid var(--border-soft);border-radius:16px;background:rgba(0,0,0,.18)}.premium-bingo-orb{display:grid;place-items:center;flex:0 0 96px;width:96px;height:96px;border-radius:50%;color:#3a1600;background:radial-gradient(circle at 35% 25%,#fff7cf,#e7c45f 70%,#a36f16);box-shadow:0 0 28px rgba(255,220,130,.5);font-size:27px;font-weight:1000}.premium-bingo-orb.is-calling{animation:bingoLatestPulse .8s ease-in-out infinite}.premium-bingo-call-copy{min-width:0}.premium-bingo-call-copy strong{display:block;color:#fff2c2}.premium-bingo-chip-row{display:flex;flex-wrap:wrap;gap:6px;max-height:118px;overflow:auto}.premium-bingo-called-chip{min-width:auto;min-height:28px;padding:4px 10px;border-radius:999px;color:#fff2c2;background:rgba(255,199,83,.11)}.premium-bingo-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;margin:8px 0;padding:11px 12px;border:1px solid var(--border-soft);border-radius:12px;background:rgba(255,255,255,.035)}.premium-bingo-row.is-active{border-color:rgba(255,199,83,.8);background:rgba(255,199,83,.1)}.premium-bingo-row b{color:#fff2c2}.premium-bingo-row small{display:block;color:var(--muted)}.premium-bingo-result-grid{display:grid;gap:6px}.premium-bingo-empty{display:grid;place-items:center;min-height:160px;color:var(--muted);text-align:center}.premium-bingo .tag-row{margin-top:10px}@keyframes bingoDaubIn{from{opacity:0;transform:translate(-50%,-50%) scale(.35)}to{opacity:.78;transform:translate(-50%,-50%) scale(.92)}}@keyframes bingoLatestPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}@media (max-width:1100px){.premium-bingo-hero{grid-template-columns:1fr}.premium-bingo-metrics{grid-template-columns:repeat(4,minmax(0,1fr))}.premium-bingo .game-stage{grid-template-rows:auto auto 138px}.premium-bingo .bingo-card{min-height:430px}}@media (max-width:760px){.premium-bingo{height:auto}.premium-bingo-title{font-size:34px}.premium-bingo-metrics{grid-template-columns:1fr 1fr}.premium-bingo-config,.premium-bingo-actions{grid-template-columns:1fr}.premium-bingo .bingo-card{min-height:330px;grid-template-rows:52px repeat(5,52px);gap:5px;padding:8px}.premium-bingo .bingo-head{font-size:22px}.premium-bingo .bingo-cell{font-size:18px}.bingo-daub{width:36px;height:36px}.premium-bingo-call-bay{align-items:flex-start;min-height:132px}.premium-bingo-orb{flex-basis:72px;width:72px;height:72px;font-size:20px}}';
 
 // Store the root node supplied by the shell mount contract.
 let root = null;
@@ -39,6 +39,8 @@ let pattern = 'line';
 let botPanelCache = '';
 // Store whether a call request is in flight so the layout can show a fixed busy state.
 let callBusy = false;
+// Store whether a human card purchase is unresolved so duplicate clicks cannot debit twice.
+let purchaseBusy = false;
 // Store the last session returned by a call so won sessions remain visible after active_session clears.
 let displayedSession = null;
 // Store the latest B/I/N/G/O label for the fixed call display.
@@ -241,15 +243,17 @@ function botSummaryHtml(session) {
 // Define controlsHtml to render the left Bingo command rail.
 function controlsHtml(session) {
   // Store whether the call button can start a new atomic call.
-  const canCall = Boolean(state?.active_session) && !callBusy;
+  const canCall = Boolean(state?.active_session) && !callBusy && !purchaseBusy;
   // Store whether a new card can be purchased without conflicting with an active session.
-  const canBuy = !state?.active_session && !callBusy;
+  const canBuy = !state?.active_session && !callBusy && !purchaseBusy;
+  // Disable purchase configuration while its submitted values are being committed.
+  const purchaseDisabled = purchaseBusy ? 'disabled' : '';
   // Store the localized buy button label for first and follow-up cards.
-  const buyLabel = session?.status === 'won' ? tr('control.buyNext') : tr('control.buy');
+  const buyLabel = purchaseBusy ? `${tr('control.buy')}…` : (session?.status === 'won' ? tr('control.buyNext') : tr('control.buy'));
   // Render all supported pattern options from the frozen pattern list.
   const options = PATTERNS.map(value => `<option value="${safe(value)}">${safe(patternLabel(value))}</option>`).join('');
   // Return the complete control rail with fixed sections for status, autoplay, and bots.
-  return `<section class="panel control-rail"><h2>${safe(tr('control.title'))}</h2><div class="premium-bingo-config"><label class="premium-bingo-field"><span>${safe(tr('control.amount'))}</span><input id="bingoAmount" type="number" min="1" value="${safe(amount)}" data-testid="bingo-amount"></label><label class="premium-bingo-field"><span>${safe(tr('control.pattern'))}</span><select id="bingoPattern" data-testid="bingo-pattern">${options}</select></label></div><div class="premium-bingo-actions action-row"><button id="buy" data-testid="bingo-buy" class="gold" ${canBuy ? '' : 'disabled'}>${safe(buyLabel)}</button><button id="call" data-testid="bingo-call" class="primary" ${canCall ? '' : 'disabled'}>${safe(callBusy ? tr('control.calling') : tr('control.call'))}</button></div><button id="reset" data-testid="bingo-reset">${safe(tr('control.reset'))}</button>${statusCardHtml(session)}${botSummaryHtml(session)}<div id="auto"></div><div id="botPanel">${botPanelCache || loadingBotsHtml()}</div></section>`;
+  return `<section class="panel control-rail" data-testid="bingo-control-rail" aria-busy="${purchaseBusy ? 'true' : 'false'}"><h2>${safe(tr('control.title'))}</h2><div class="premium-bingo-config"><label class="premium-bingo-field"><span>${safe(tr('control.amount'))}</span><input id="bingoAmount" type="number" min="1" value="${safe(amount)}" data-testid="bingo-amount" ${purchaseDisabled}></label><label class="premium-bingo-field"><span>${safe(tr('control.pattern'))}</span><select id="bingoPattern" data-testid="bingo-pattern" ${purchaseDisabled}>${options}</select></label></div><div class="premium-bingo-actions action-row"><button id="buy" data-testid="bingo-buy" class="gold" ${canBuy ? '' : 'disabled'}>${safe(buyLabel)}</button><button id="call" data-testid="bingo-call" class="primary" ${canCall ? '' : 'disabled'}>${safe(callBusy ? tr('control.calling') : tr('control.call'))}</button></div><button id="reset" data-testid="bingo-reset" ${purchaseDisabled}>${safe(tr('control.reset'))}</button>${statusCardHtml(session)}${botSummaryHtml(session)}<div id="auto"></div><div id="botPanel">${botPanelCache || loadingBotsHtml()}</div></section>`;
 }
 
 // Define placeholderCardHtml so the game stage keeps its footprint before purchase.
@@ -398,40 +402,88 @@ async function load() {
   await refreshBalance();
 }
 
-// Define buy to purchase the human card and then let compatible bots buy cards.
+// Define syncPurchaseControls to publish purchase state without remounting shared autoplay.
+function syncPurchaseControls() {
+  // Stop when Bingo has been unmounted while a request was still resolving.
+  if (!root) return;
+  // Keep the current Buy control disabled while pending or after a session becomes active.
+  const buyButton = root.querySelector('#buy');
+  // Apply the authoritative purchase availability to the stable current control.
+  if (buyButton) {
+    // Keep the submitted action visible as an in-progress localized label.
+    buyButton.textContent = purchaseBusy ? `${tr('control.buy')}…` : tr('control.buy');
+    // Apply the authoritative purchase availability to the stable current control.
+    buyButton.disabled = purchaseBusy || Boolean(state?.active_session) || callBusy;
+  }
+  // Read the current Call control because a purchase render creates it in a disabled busy state.
+  const callButton = root.querySelector('#call');
+  // Enable Call only after the purchase has resolved into an active authoritative session.
+  if (callButton) callButton.disabled = purchaseBusy || !state?.active_session || callBusy;
+  // Lock the submitted amount and pattern until their request is fully applied.
+  root.querySelectorAll('#bingoAmount, #bingoPattern').forEach(control => { control.disabled = purchaseBusy; });
+  // Prevent a concurrent reset from racing a committed purchase whose response is delayed.
+  const resetButton = root.querySelector('#reset');
+  // Apply the same purchase boundary to the current reset control.
+  if (resetButton) resetButton.disabled = purchaseBusy;
+  // Publish the purchase boundary for assistive technology and deterministic browser tests.
+  root.querySelector('[data-testid="bingo-control-rail"]')?.setAttribute('aria-busy', purchaseBusy ? 'true' : 'false');
+}
+
+// Define buy to purchase one human card and then let compatible bots buy cards.
 async function buy() {
+  // Ignore duplicate manual clicks or autoplay ticks while one purchase remains unresolved.
+  if (purchaseBusy) return;
   // Read the amount from the current input and keep it bounded for the API validator.
   amount = Math.max(1, Number(root.querySelector('#bingoAmount')?.value || amount || 5));
   // Read the pattern from the current select before posting the card purchase.
   pattern = root.querySelector('#bingoPattern')?.value || pattern;
-  // Purchase the human card through the frozen v1 Bingo API.
-  const data = await post('/api/v1/games/bingo/cards', withCurrentPlayer({ amount, pattern }));
-  // Store the immediate state so the human card appears without waiting for bots.
-  state = data.state;
-  // Store the returned active session for rendering.
-  displayedSession = data.session;
-  // Clear the latest call label because a new card has no called balls.
-  lastLabel = '';
-  // Clear latest number so no stale daub is emphasized.
-  lastNumber = null;
-  // Render the purchased card before bot card updates arrive.
-  render();
-  // Let eligible bot controllers purchase cards through their public controller endpoint.
-  await playBotRound('bingo');
-  // Reload state so bot cards appear in the cards-in-play drawer.
-  const refreshed = await api(currentPlayerPath('/api/v1/games/bingo/state'));
-  // Store the refreshed state after bot controller actions.
-  state = refreshed.state;
-  // Keep the active session visible after bot cards are attached.
-  displayedSession = state.active_session || displayedSession;
-  // Render the full session with bot cards and fixed layout.
-  render();
-  // Refresh the shared bot panel after controller actions.
-  await updateBotPanel();
-  // Refresh the wallet after human and bot card purchases settle.
-  await refreshBalance();
-  // Play a short confirmation sound for the purchase action.
-  clickSound(500, .05);
+  // Reserve the purchase boundary synchronously before the first request can yield.
+  purchaseBusy = true;
+  // Disable the stable current controls without recreating autoplay or bot widgets.
+  syncPurchaseControls();
+  // Start protected purchase work so the busy boundary always recovers.
+  try {
+    // Purchase the human card through the frozen v1 Bingo API.
+    const data = await post('/api/v1/games/bingo/cards', withCurrentPlayer({ amount, pattern }));
+    // Store the immediate state so the human card appears without waiting for bots.
+    state = data.state;
+    // Store the returned active session for rendering.
+    displayedSession = data.session;
+    // Clear the latest call label because a new card has no called balls.
+    lastLabel = '';
+    // Clear latest number so no stale daub is emphasized.
+    lastNumber = null;
+    // Render the purchased card before bot card updates arrive.
+    render();
+    // Let eligible bot controllers purchase cards through their public controller endpoint.
+    await playBotRound('bingo');
+    // Reload state so bot cards appear in the cards-in-play drawer.
+    const refreshed = await api(currentPlayerPath('/api/v1/games/bingo/state'));
+    // Store the refreshed state after bot controller actions.
+    state = refreshed.state;
+    // Keep the active session visible after bot cards are attached.
+    displayedSession = state.active_session || displayedSession;
+    // Render the full session with bot cards and fixed layout.
+    render();
+    // Refresh the shared bot panel after controller actions.
+    await updateBotPanel();
+    // Refresh the wallet after human and bot card purchases settle.
+    await refreshBalance();
+    // Play a short confirmation sound for the purchase action.
+    clickSound(500, .05);
+  // Surface a failed purchase and let autoplay stop through its existing error path.
+  } catch (error) {
+    // Show the API failure without changing wallet or game state locally.
+    toast(error.message);
+    // Re-throw after the visible toast so control-plane callers observe the failure.
+    throw error;
+  // Always release the purchase boundary after response application and refreshes finish.
+  } finally {
+    // Mark the purchase as resolved before restoring current control availability.
+    purchaseBusy = false;
+    // Restore controls in place without remounting the shared autoplay widget.
+    syncPurchaseControls();
+  }
 }
 
 // Define call to perform one atomic Bingo ball call.
@@ -517,8 +569,8 @@ function wireControls() {
   root.querySelector('#bingoAmount').onchange = event => { amount = Math.max(1, Number(event.target.value || amount || 5)); };
   // Keep pattern state synchronized when the select changes.
   root.querySelector('#bingoPattern').onchange = event => { pattern = event.target.value; };
-  // Wire the buy-card command to the public card purchase action.
-  root.querySelector('#buy').onclick = buy;
+  // Wire the buy-card command while preventing a handled failure from becoming an unhandled promise.
+  root.querySelector('#buy').onclick = () => buy().catch(() => undefined);
   // Wire the call command to one public ball call.
   root.querySelector('#call').onclick = () => call(true);
   // Wire reset to the public reset endpoint.

@@ -20,7 +20,7 @@ Historical source baseline: 9.1.0
 - blackjack: 9.1.2
 - baccarat: 9.1.1
 - keno: 9.2.0
-- bingo: 9.2.0
+- bingo: 9.2.1
 - multi_hand_video_poker: 1.0.1
 - casino_war: 1.0.0
 - big_six_wheel: 1.0.0
@@ -45,8 +45,8 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.0
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.44.4
-- docs: 1.44.4
+- tests: 1.44.5
+- docs: 1.44.5
 - contracts: 1.32.0
 - tooling: 1.14.0
 - commenting_policy: 1.0.0
@@ -92,7 +92,7 @@ Historical source baseline: 9.1.0
 - **LEDGER-017** (Ledger) - PASS: Baccarat bet cancellation credits refunds.
 - **LEDGER-018** (Ledger) - PASS: Keno ticket purchase debits immediately.
 - **LEDGER-019** (Ledger) - PASS: Keno ticket cancellation credits refunds.
-- **LEDGER-020** (Ledger) - PASS: Bingo card purchase debits immediately.
+- **LEDGER-020** (Ledger) - PASS: Each accepted visible Bingo card purchase debits immediately and exactly once.
 - **LEDGER-021** (Ledger) - PASS: Bingo reset before calls credits refunds.
 - **LEDGER-022** (Ledger) - PASS: Slot spin debits spin cost before settlement.
 - **LEDGER-023** (Ledger) - PASS: All game settlement payouts credit after results are known.
@@ -278,7 +278,7 @@ Historical source baseline: 9.1.0
 - **BINGO-009** (Bingo) - PASS: Bingo supports four-corners pattern.
 - **BINGO-010** (Bingo) - PASS: Bingo supports postage-stamp pattern.
 - **BINGO-011** (Bingo) - PASS: Bingo supports blackout pattern.
-- **BINGO-012** (Bingo) - PASS: Bingo card purchase debits immediately.
+- **BINGO-012** (Bingo) - PASS: Each accepted visible Bingo card purchase debits immediately and exactly once; a pending purchase cannot schedule a duplicate.
 - **BINGO-013** (Bingo) - PASS: Bingo reset before called balls refunds cards.
 - **BINGO-014** (Bingo) - PASS: Bingo reset after called balls logs abandoned session.
 - **BINGO-015** (Bingo) - PASS: Bingo calls unique balls.
@@ -288,7 +288,7 @@ Historical source baseline: 9.1.0
 - **BINGO-019** (Bingo) - PASS: Bingo supports bot cards.
 - **BINGO-020** (Bingo) - PASS: Bingo awards payout to the winning card.
 - **BINGO-021** (Bingo) - PASS: Bingo auto play calls until a winner.
-- **BINGO-022** (Bingo) - PASS: Bingo UI shows cards in play.
+- **BINGO-022** (Bingo) - PASS: Bingo UI shows the authoritative cards in play and a truthful disabled busy boundary while a purchase resolves.
 - **BINGO-023** (Bingo) - PASS: Bingo writes history rows.
 - **BINGO-024** (Bingo) - SUPERSEDED: Bingo remains fake-money only.
 - **ADMIN-001** (Admin) - PASS: Admin console is available at /admin.

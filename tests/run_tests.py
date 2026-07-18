@@ -4127,8 +4127,68 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 page.screenshot(path=str(screenshots/'after-pass-keno-mobile-390x844.png'),full_page=False)
                 # Restore desktop dimensions before the next game evidence run.
                 page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(250)
-                # Execute this statement as part of the module's documented control flow.
-                page.get_by_test_id('nav-bingo').click(); page.get_by_test_id('bingo-buy').click(); page.wait_for_function("() => document.querySelector('[data-testid=\"bingo-call\"]') && !document.querySelector('[data-testid=\"bingo-call\"]').disabled"); page.get_by_test_id('bingo-call').click(); page.wait_for_timeout(700); page.evaluate("""async () => { const response = await fetch('/api/v1/games/bingo/auto', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ max_calls: 75 }) }); const payload = await response.json(); if (!payload.ok) throw new Error(payload.error?.message || 'Bingo auto failed'); }"""); page.get_by_test_id('nav-bingo').click(); page.locator('[data-winning-cell="true"]').first.wait_for(timeout=5000); run_case('BR-BINGO-001',['BINGO-017','BINGO-018','BINGO-021','BINGO-022','AUTO-013'],lambda: page.get_by_test_id('bingo-card').is_visible() and page.locator('[data-winning-cell="true"]').first.is_visible() and page.get_by_test_id('bingo-cards-drawer').is_visible() and page.get_by_test_id('autoplay-bingo').is_visible())
+                # Navigate to Bingo before exercising the real card-purchase mutation boundary.
+                page.get_by_test_id('nav-bingo').click(); page.get_by_test_id('premium-bingo').wait_for(timeout=5000)
+                # Read the current player's ledger before the one visible card purchase.
+                bingo_ledger_before=page.request.get(base+f'/api/v1/players/{browser_player_id}/ledger').json()['data']['ledger']
+                # Store immutable ledger identities because response ordering is not a persistence contract.
+                bingo_ledger_ids_before={row['ledger_id'] for row in bingo_ledger_before}
+                # Hold the first real card response after backend commit so duplicate-click protection is deterministic.
+                page.evaluate("""() => { const originalFetch=window.fetch.bind(window); let firstPurchase=true; window.__bingoPurchaseHeld=false; window.__bingoReleasePurchase=()=>{}; window.__bingoPurchaseRequestCount=0; window.__bingoRestoreFetch=()=>{window.fetch=originalFetch;}; window.fetch=async (...args) => { const input=args[0]; const url=typeof input==='string' ? input : input.url; const init=args[1] || {}; const method=String(init.method || (typeof input==='object' ? input.method : 'GET') || 'GET').toUpperCase(); const responsePromise=originalFetch(...args); if(url.includes('/api/v1/games/bingo/cards') && method==='POST'){ window.__bingoPurchaseRequestCount+=1; if(firstPurchase){ firstPurchase=false; const response=await responsePromise; window.__bingoPurchaseHeld=true; await new Promise(resolve => { window.__bingoReleasePurchase=resolve; }); return response; } } return responsePromise; }; }""")
+                # Buy one card through the current visible player control.
+                page.get_by_test_id('bingo-buy').click()
+                # Wait until the real backend committed while the browser response remains deliberately held.
+                page.wait_for_function('window.__bingoPurchaseHeld === true',timeout=5000)
+                # Read the authoritative state at the controlled stale-response boundary.
+                bingo_pending_state=page.request.get(base+'/api/v1/games/bingo/state').json()['data']['state']
+                # Record the shared busy boundary and semantic control locks during the pending purchase.
+                bingo_pending_controls={'busy':page.get_by_test_id('bingo-control-rail').get_attribute('aria-busy'),'buy_disabled':page.get_by_test_id('bingo-buy').is_disabled(),'buy_text':page.get_by_test_id('bingo-buy').inner_text(),'buy_opacity':page.get_by_test_id('bingo-buy').evaluate('button => Number(getComputedStyle(button).opacity)'),'buy_cursor':page.get_by_test_id('bingo-buy').evaluate('button => getComputedStyle(button).cursor'),'amount_disabled':page.get_by_test_id('bingo-amount').is_disabled(),'pattern_disabled':page.get_by_test_id('bingo-pattern').is_disabled(),'reset_disabled':page.get_by_test_id('bingo-reset').is_disabled()}
+                # Invoke the current disabled semantic button to prove it cannot schedule another request.
+                page.get_by_test_id('bingo-buy').evaluate('button => button.click()')
+                # Allow an incorrect duplicate request enough time to become observable.
+                page.wait_for_timeout(150)
+                # Record the exact request count before releasing the authoritative first response.
+                bingo_pending_request_count=page.evaluate('window.__bingoPurchaseRequestCount')
+                # Release the committed response so state, bots, wallet, and controls can settle normally.
+                page.evaluate('window.__bingoReleasePurchase()')
+                # Wait for the one active card and recovered Call control after purchase completion.
+                page.wait_for_function("() => document.querySelector('[data-testid=\"bingo-control-rail\"]')?.getAttribute('aria-busy') === 'false' && !document.querySelector('[data-testid=\"bingo-call\"]')?.disabled",timeout=5000)
+                # Restore the unwrapped browser fetch function before later suite actions.
+                page.evaluate('window.__bingoRestoreFetch()')
+                # Read the final ledger and authoritative Bingo state after the purchase sequence.
+                bingo_ledger_after=page.request.get(base+f'/api/v1/players/{browser_player_id}/ledger').json()['data']['ledger']; bingo_final_state=page.request.get(base+'/api/v1/games/bingo/state').json()['data']['state']
+                # Isolate only new human Bingo purchase debits by immutable identity.
+                bingo_new_debits=[row for row in bingo_ledger_after if row['ledger_id'] not in bingo_ledger_ids_before and row.get('transaction_type')=='BINGO_CARD_PURCHASED']
+                # Isolate human cards from the authoritative active session after bot purchases finish.
+                bingo_human_cards=[card for card in bingo_final_state['active_session']['cards'] if card['player_id']==browser_player_id]
+                # Define the held-response purchase regression for issue #259.
+                def bingo_purchase_guard():
+                    # Verify the real backend committed exactly one active human card while the response was held.
+                    assert len([card for card in bingo_pending_state['active_session']['cards'] if card['player_id']==browser_player_id])==1
+                    # Verify the control rail truthfully exposes the in-flight purchase boundary.
+                    assert bingo_pending_controls['busy']=='true'
+                    # Verify every control that could duplicate or conflict with the submitted purchase is disabled.
+                    assert all(bingo_pending_controls[key] for key in ('buy_disabled','amount_disabled','pattern_disabled','reset_disabled'))
+                    # Verify the pending purchase has an unmistakable localized label and visual treatment.
+                    assert bingo_pending_controls['buy_text']=='Buy card…' and bingo_pending_controls['buy_opacity']<1 and bingo_pending_controls['buy_cursor']=='wait'
+                    # Verify the disabled second click could not issue another card request.
+                    assert bingo_pending_request_count==1
+                    # Verify exactly one visible purchase produced exactly one debit of the configured amount.
+                    assert len(bingo_new_debits)==1 and bingo_new_debits[0]['amount']==-5
+                    # Verify the authoritative session and visible stage each contain one human card.
+                    assert len(bingo_human_cards)==1 and page.get_by_test_id('bingo-card').count()==1
+                    # Verify the successful purchase recovered the next valid game action.
+                    assert page.get_by_test_id('bingo-call').is_enabled()
+                # Execute the real-browser, real-backend data-integrity regression.
+                run_case('BR-BINGO-PURCHASE-001',['BINGO-012','BINGO-022','LEDGER-020','TEST-010','TEST-012'],bingo_purchase_guard)
+                # Call one ball through the existing visible action before completing the normal Bingo scenario.
+                page.get_by_test_id('bingo-call').click(); page.wait_for_timeout(700)
+                # Complete the session through the existing bounded compatibility helper.
+                page.evaluate("""async () => { const response = await fetch('/api/v1/games/bingo/auto', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ max_calls: 75 }) }); const payload = await response.json(); if (!payload.ok) throw new Error(payload.error?.message || 'Bingo auto failed'); }""")
+                # Remount Bingo and wait for the authoritative completed session to render.
+                page.get_by_test_id('nav-bingo').click(); page.locator('[data-winning-cell="true"]').first.wait_for(timeout=5000)
+                # Preserve the existing premium Bingo acceptance after the new purchase boundary proof.
+                run_case('BR-BINGO-001',['BINGO-017','BINGO-018','BINGO-021','BINGO-022','AUTO-013'],lambda: page.get_by_test_id('bingo-card').is_visible() and page.locator('[data-winning-cell="true"]').first.is_visible() and page.get_by_test_id('bingo-cards-drawer').is_visible() and page.get_by_test_id('autoplay-bingo').is_visible())
                 # Seed one isolated deferred natural so the rendered Stand path is deterministic. (BJ-031, TEST-054)
                 browser_blackjack_state=blackjack_engine.default_state(); browser_blackjack_state['shoe']=['2S']*52+['9D','AS','KH','AS']
                 # Persist only the synthetic browser player's controlled Blackjack shoe before mounting the route.
