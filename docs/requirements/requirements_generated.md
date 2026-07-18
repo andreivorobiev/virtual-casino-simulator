@@ -6,8 +6,8 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.37.0
-- core: 9.12.1
+- application: 9.38.0
+- core: 9.13.0
 - ledger: 9.1.0
 - players: 9.1.0
 - bots: 1.1.0
@@ -15,7 +15,7 @@ Historical source baseline: 9.1.0
 - audio: 9.1.1
 - admin: 1.6.0
 - operations: 1.0.0
-- roulette: 9.3.1
+- roulette: 9.4.0
 - slots: 9.1.0
 - blackjack: 9.1.0
 - baccarat: 9.1.0
@@ -45,7 +45,7 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.0
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.42.1
+- tests: 1.43.0
 - docs: 1.42.0
 - contracts: 1.32.0
 - tooling: 1.14.0
@@ -394,6 +394,7 @@ Historical source baseline: 9.1.0
 - **ROU-054** (Roulette) - PASS: Roulette spin animation starts before settlement display and ends on the result state.
 - **ROU-055** (Roulette) - PASS: Roulette ball indicator uses the selected pocket when a result exists.
 - **ROU-056** (Roulette) - PASS: Roulette sound settings are not rendered on the Roulette page.
+- **ROU-057** (Roulette) - PASS: Every Roulette bet cell carries a stable hit-target identity across re-renders; activating a cell posts the exact bet_type and covered numbers it represents (for example 2nd 12 covers 13-24), verified on the client before the wager posts so a re-render can never map a click to a different betting region.
 - **UX-001** (UX) - PASS: Game stages reserve fixed visual areas during normal gameplay.
 - **UX-002** (UX) - PASS: Action rails remain stable while actions execute.
 - **UX-003** (UX) - PASS: Result messages render in fixed-height regions.
@@ -622,7 +623,8 @@ Historical source baseline: 9.1.0
 - **CORE-023** (Core) - PASS: A production WSGI adapter initializes from explicit external runtime configuration, serves the complete same-origin application without invoking the development HTTP server, and is supported only through a fixed-loopback supervised process policy.
 - **TEST-046** (Tests) - PASS: Production-service validation covers listener-free WSGI parity, sanitized probes, authorization propagation, malformed input, fail-closed external configuration, fixed-loopback policy, hardened supervision, clean extracted-release startup, graceful restart, persistence, failure handling, and exact listener closure.
 - **SEC-010** (Core) - PASS: Restricted-preview production requests require exact canonical Host and Origin values, one exact loopback trusted-proxy contract, per-session CSRF proof for every unsafe method, bounded bodies and client windows, hardened response headers, and secret-safe fixed-class security logging.
-- **SESSION-006** (Core) - PASS: Restricted-preview sessions use host-only Secure HttpOnly SameSite cookies, distinct per-session CSRF values, login rotation, bounded retention and lifetime, logout clearing, and revocation after privilege-bearing account changes.
+- **SESSION-006** (Core) - PASS: Restricted-preview sessions use host-only Secure HttpOnly SameSite cookies, distinct per-session CSRF values, bounded per-user concurrent session retention with least-recently-used eviction, bounded lifetime, logout clearing, and revocation after privilege-bearing account changes.
+- **SESSION-007** (Session) - PASS: Concurrent same-account logins create independent durable sessions that remain valid and never invalidate each other, bounded by a per-user cap with least-recently-used eviction and atomic session persistence that prevents lost writes, returning no 401 or 500 under concurrency.
 - **ADMIN-024** (Admin) - PASS: Admin HTML, JavaScript, and API surfaces require an active Admin session during restricted preview, and user privilege or status changes revoke existing sessions.
 - **AUTH-007** (Core) - PASS: Restricted preview exposes local-password login only; public signup and live OAuth authorization, callback, exchange, linking, SDK, and provider transport routes remain absent.
 - **TEST-047** (Tests) - PASS: Permanent restricted-preview evidence covers configuration failure, Host and proxy abuse, Origin and CSRF enforcement, session and privilege rotation, cookie and header policy, Admin and disabled-access boundaries, concurrency, capacity recovery, redacted logging, copied production behavior, and exact listener cleanup.
@@ -635,6 +637,9 @@ Historical source baseline: 9.1.0
 - **CORE-024** (Application) - PASS: A reviewed restricted-preview edge packet binds the complete same-origin application to the exact canonical HTTPS host, proxies only to the supervised IPv4 loopback upstream, preserves restricted enrollment and authenticated operational boundaries, preflights ACME reload and application-edge rollback, and prohibits database rollback.
 - **TOOL-005** (Tooling) - PASS: Edge tooling validates the exact inert policy and templates without network, process, listener, or write activity, and provides an optional read-only HTTPS observer whose output is strictly allowlisted and excludes origins, addresses, paths, headers, bodies, cookies, credentials, and provider identifiers.
 - **TEST-050** (Tests) - PASS: Edge evidence covers exact origin and loopback topology, restricted access, replacement forwarding headers, protected ports, ACME preflight, inert service and rollback templates, traversal refusal, listener-free static validation, exact success-envelope validation through the production WSGI/API boundary, pre-network credential refusal, bounded authenticated probes, security headers, certificate age, sanitized output, packaging, and fail-closed negative cases.
+- **TEST-051** (Tests) - PASS: Regression tests exercise 1, 3, 30, and 100 concurrent same-account logins asserting every prior session stays valid with no 401 or 500, and prove per-user cap least-recently-used session eviction.
+- **TEST-052** (Tests) - PASS: Browser regression asserts bounded keyboard-accessible shell navigation, full brand readability without truncation, minimum nav-label readability, no page-level horizontal overflow, and every game control's containment and scroll reachability at the 1920, 1440, 1024, and 390 governed viewports.
+- **TEST-053** (Tests) - PASS: Browser regression clicks every Roulette primary betting region plus a representative inside hotspot per covered-number size and asserts the posted bet_type and covered_numbers match the clicked cell's canonical identity, with non-overlapping, non-zero hit geometry.
 - **DOC-017** (Documentation) - PASS: A vendor-neutral root handbook documents the complete engineering practice, required capabilities, authority hierarchy, and current-versus-historical status, while the repository start page links every other Markdown file exactly once.
 - **TOOL-006** (Tooling) - PASS: Documentation generation deterministically inventories every tracked or non-ignored Markdown file, updates the bounded root catalog, and fails check mode when the catalog or generated requirements are stale.
 - **DOC-018** (Documentation) - PASS: The repository defines a durable Claude-author/Codex-merge operating model in which Claude composes assigned pull requests and Codex alone reviews integration gates and executes every merge without bypassing owner authority.

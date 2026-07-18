@@ -1,6 +1,6 @@
 // AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
 // Import required dependency so this module can call frozen Roulette API endpoints.
-import { api, post, del, currentPlayerId, currentPlayerPath, withCurrentPlayer } from '../core/api.js';
+import { api, post, del, currentPlayerId, currentPlayerPath, withCurrentPlayer, logClient } from '../core/api.js';
 // Import shared UI helpers so the Roulette surface matches the premium shell contract.
 import { toast, refreshBalance, safe } from '../core/ui.js';
 // Import autoplay renderer so Roulette keeps using the shared control-plane session behavior.
@@ -274,6 +274,84 @@ function betBy(predicate) {
   return catalog.find(predicate);
 }
 
+// Compare two covered-number lists as unordered string sets so ordering never masks a mismatch. (issue #222)
+function sameCovered(a, b) {
+  // Normalize the first list to a string set for order-independent comparison.
+  const first = new Set((a || []).map(String));
+  // Normalize the second list to a string set for order-independent comparison.
+  const second = new Set((b || []).map(String));
+  // Require identical size and full membership in both directions.
+  return first.size === second.size && [...first].every(value => second.has(value));
+}
+
+// Resolve an even-money or range outside cell to its canonical covered-number set. (issue #222, ROU-030)
+function outsideIdentity(type) {
+  // Build the ordered single-zero pocket list once for every derived outside set.
+  const pockets = Array.from({ length: 36 }, (_, index) => index + 1);
+  // Resolve the red outside cell from the shared red-pocket table.
+  if (type === 'red') return { type: 'red', covered: pockets.filter(number => RED_NUMBERS.has(number)).map(String) };
+  // Resolve the black outside cell as the complement of the red-pocket table.
+  if (type === 'black') return { type: 'black', covered: pockets.filter(number => !RED_NUMBERS.has(number)).map(String) };
+  // Resolve the low outside cell to pockets one through eighteen.
+  if (type === 'low') return { type: 'low', covered: pockets.filter(number => number <= 18).map(String) };
+  // Resolve the high outside cell to pockets nineteen through thirty-six.
+  if (type === 'high') return { type: 'high', covered: pockets.filter(number => number >= 19).map(String) };
+  // Resolve the even outside cell to even pockets.
+  if (type === 'even') return { type: 'even', covered: pockets.filter(number => number % 2 === 0).map(String) };
+  // Resolve the odd outside cell to odd pockets.
+  if (type === 'odd') return { type: 'odd', covered: pockets.filter(number => number % 2 === 1).map(String) };
+  // Return null so an unknown outside type aborts safely.
+  return null;
+}
+
+// Compute the canonical bet identity a clicked board cell must resolve to before any wager posts. (issue #222)
+function expectedIdentity(cellKey) {
+  // Split the stable cell key into its kind and argument.
+  const [kind, arg] = String(cellKey || '').split(':');
+  // Resolve a straight-up number cell to its single covered pocket.
+  if (kind === 'num') return { type: 'straight', covered: [String(arg)] };
+  // Resolve a dozen cell (1..3) to its twelve-number range.
+  if (kind === 'dozen') { const index = Number(arg); return index >= 1 && index <= 3 ? { type: 'dozen', covered: Array.from({ length: 12 }, (_, offset) => String((index - 1) * 12 + offset + 1)) } : null; }
+  // Resolve a column cell (1..3) to its twelve-number arithmetic column.
+  if (kind === 'column') { const column = Number(arg); return column >= 1 && column <= 3 ? { type: 'column', covered: Array.from({ length: 12 }, (_, offset) => String(column + offset * 3)) } : null; }
+  // Resolve an even-money or range outside cell through the shared outside helper.
+  if (kind === 'outside') return outsideIdentity(arg);
+  // Resolve an inside hotspot to its authoritative catalog covered numbers by stable bet id.
+  if (kind === 'spot') { const bet = betBy(entry => entry.id === arg); return bet ? { type: bet.type, covered: (bet.covered_numbers || []).map(String) } : null; }
+  // Return null for an unrecognized cell key so the caller aborts safely.
+  return null;
+}
+
+// Resolve the catalog bet a clicked cell represents while guarding against hit-target drift. (issue #222)
+function resolveCellBet(cellKey) {
+  // Compute the canonical identity the clicked cell must map to.
+  const expected = expectedIdentity(cellKey);
+  // Abort when the cell key is unknown or unavailable this round.
+  if (!expected) return { bet: null, expected: null };
+  // Read the kind so hotspot cells can resolve by their stable catalog id.
+  const [kind, arg] = String(cellKey).split(':');
+  // Resolve inside hotspots directly by their stable catalog id.
+  const bet = kind === 'spot' ? betBy(entry => entry.id === arg) : betBy(entry => entry.type === expected.type && sameCovered(entry.covered_numbers, expected.covered));
+  // Return both the resolved catalog bet and the canonical expectation for assertion.
+  return { bet, expected };
+}
+
+// Build the stable identity attributes every bet cell carries so clicks resolve and verify deterministically. (issue #222)
+function cellAttrs(cellKey, type, covered) {
+  // Emit the stable cell key plus the authoritative type and covered numbers as data attributes.
+  return `data-cell-key="${safe(cellKey)}" data-bet-type="${safe(type)}" data-covered="${safe((covered || []).join(','))}"`;
+}
+
+// Place a wager for one clicked board cell after verifying its canonical hit-target identity. (issue #222)
+function placeBetForCell(button) {
+  // Read the stable cell key embedded on the clicked control.
+  const cellKey = button?.dataset?.cellKey;
+  // Resolve the catalog bet and its canonical expectation from the stable key.
+  const { bet, expected } = resolveCellBet(cellKey);
+  // Place the resolved bet while passing the expectation for the pre-POST assertion.
+  return placeBet(bet, expected, { cellKey, embeddedType: button?.dataset?.betType, embeddedCovered: (button?.dataset?.covered || '').split(',').filter(Boolean) });
+}
+
 // Reset settlement drawer state when the player starts editing a new open round.
 function markBettingPhase() {
   // Put the UI back into betting mode while preserving the last real result.
@@ -281,13 +359,31 @@ function markBettingPhase() {
 }
 
 // Place one documented Roulette bet using the existing public API.
-async function placeBet(bet, amount = chip) {
+async function placeBet(bet, expected = null, source = null, amount = chip) {
   // Branch when a click target no longer maps to a legal catalog bet.
   if (!bet) {
     // Show a localized error without touching wallet or game state.
     toast(rt('errors.betUnavailable'));
     // Stop after reporting the unavailable bet.
     return;
+  }
+  // Verify the resolved wager matches the clicked cell's canonical identity before any POST. (issue #222, ROU-010/011/030)
+  if (expected) {
+    // Detect any drift between the resolved bet and the clicked cell's canonical type or covered numbers.
+    const typeMismatch = bet.type !== expected.type;
+    // Detect covered-number drift so a rebuilt hit target can never post a different region.
+    const coveredMismatch = !sameCovered(bet.covered_numbers, expected.covered);
+    // Detect a rebuilt DOM node whose embedded identity drifted from its own catalog bet.
+    const embeddedMismatch = source && source.embeddedCovered && source.embeddedCovered.length && !sameCovered(bet.covered_numbers, source.embeddedCovered);
+    // Abort the wager when the clicked cell no longer maps to a consistent hit target.
+    if (typeMismatch || coveredMismatch || embeddedMismatch) {
+      // Record the exact mismatch for admin diagnosis without posting a wrong wager.
+      logClient('roulette_bet_target_mismatch', { cell_key: source?.cellKey || null, expected, resolved: { type: bet.type, covered_numbers: bet.covered_numbers }, embedded_covered: source?.embeddedCovered || null });
+      // Show a localized safety error and abort before touching the wallet.
+      toast(rt('errors.betUnavailable'));
+      // Stop so a mismatched hit target can never post the wrong bet.
+      return;
+    }
   }
   // Post the bet through the frozen v1 endpoint.
   const payload = await post('/api/v1/games/roulette/bets', withCurrentPlayer({ amount, bet_type: bet.type, covered_numbers: bet.covered_numbers, label: bet.label }));
@@ -640,8 +736,8 @@ function numberCellHtml(number, x, y, width, height) {
   const resultClass = isResult ? ' result-cell' : '';
   // Store a compact result marker for the winning number.
   const marker = isResult ? `<i class="roulette-result-marker">${text('table.winMarker')}</i>` : '';
-  // Return the absolute table cell with the existing test id and data contract.
-  return `<div class="table-cell ${numberColorClass(number)}${resultClass}" style="left:${x}px;top:${y}px;width:${width}px;height:${height}px"><button type="button" data-testid="roulette-num-${safe(number)}" data-num="${safe(number)}"${disabledWhenSpinning()}>${safe(number)}${marker}</button></div>`;
+  // Return the absolute table cell with its existing test id plus stable hit-target identity attributes. (issue #222)
+  return `<div class="table-cell ${numberColorClass(number)}${resultClass}" style="left:${x}px;top:${y}px;width:${width}px;height:${height}px"><button type="button" data-testid="roulette-num-${safe(number)}" data-num="${safe(number)}" ${cellAttrs(`num:${number}`, 'straight', [number])}${disabledWhenSpinning()}>${safe(number)}${marker}</button></div>`;
 }
 
 // Render the fixed Roulette betting table with inside spots and chips.
@@ -672,13 +768,13 @@ function tableHtml() {
   // Store even-money outside cells with localized labels.
   const outside = [['low', text('bets.low'), 30, 180, 115, 42], ['even', text('bets.even'), 30, 228, 115, 42], ['red', text('bets.red'), 30, 276, 115, 42], ['black', text('bets.black'), 30, 324, 115, 42], ['odd', text('bets.odd'), 30, 372, 115, 42], ['high', text('bets.high'), 30, 420, 115, 42]];
   // Add each outside cell to the board.
-  outside.forEach(([type, label, x, y, width, height]) => { const isResult = uiPhase === 'settled' && type === lastSpinColor; const resultClass = isResult ? ' result-cell' : ''; cells.push(`<div class="outside-cell${resultClass}" style="left:${x}px;top:${y}px;width:${width}px;height:${height}px"><button type="button" data-outside="${type}" data-testid="roulette-outside-${type}"${disabledWhenSpinning()}>${label}</button></div>`); });
+  outside.forEach(([type, label, x, y, width, height]) => { const isResult = uiPhase === 'settled' && type === lastSpinColor; const resultClass = isResult ? ' result-cell' : ''; cells.push(`<div class="outside-cell${resultClass}" style="left:${x}px;top:${y}px;width:${width}px;height:${height}px"><button type="button" data-outside="${type}" data-testid="roulette-outside-${type}" ${cellAttrs(`outside:${type}`, type, (outsideIdentity(type) || {}).covered)}${disabledWhenSpinning()}>${label}</button></div>`); });
   // Add dozen cells below the inside grid.
-  ['1st 12', '2nd 12', '3rd 12'].forEach((label, index) => cells.push(`<div class="outside-cell" style="left:${BOARD.x0 + index * BOARD.cw}px;top:${BOARD.y0 + 12 * BOARD.ch + 8}px;width:${BOARD.cw}px;height:36px"><button type="button" data-dozen="${safe(label)}" data-testid="roulette-dozen-${index + 1}"${disabledWhenSpinning()}>${text(`bets.dozen${index + 1}`)}</button></div>`));
+  ['1st 12', '2nd 12', '3rd 12'].forEach((label, index) => cells.push(`<div class="outside-cell" style="left:${BOARD.x0 + index * BOARD.cw}px;top:${BOARD.y0 + 12 * BOARD.ch + 8}px;width:${BOARD.cw}px;height:36px"><button type="button" data-dozen="${safe(label)}" data-testid="roulette-dozen-${index + 1}" ${cellAttrs(`dozen:${index + 1}`, 'dozen', (expectedIdentity(`dozen:${index + 1}`) || {}).covered)}${disabledWhenSpinning()}>${text(`bets.dozen${index + 1}`)}</button></div>`));
   // Add column cells below the dozen row.
-  ['Column 1', 'Column 2', 'Column 3'].forEach((label, index) => cells.push(`<div class="outside-cell" style="left:${BOARD.x0 + index * BOARD.cw}px;top:${BOARD.y0 + 12 * BOARD.ch + 50}px;width:${BOARD.cw}px;height:36px"><button type="button" data-column="${safe(label)}" data-testid="roulette-column-${index + 1}"${disabledWhenSpinning()}>${text('bets.column')}</button></div>`));
+  ['Column 1', 'Column 2', 'Column 3'].forEach((label, index) => cells.push(`<div class="outside-cell" style="left:${BOARD.x0 + index * BOARD.cw}px;top:${BOARD.y0 + 12 * BOARD.ch + 50}px;width:${BOARD.cw}px;height:36px"><button type="button" data-column="${safe(label)}" data-testid="roulette-column-${index + 1}" ${cellAttrs(`column:${index + 1}`, 'column', (expectedIdentity(`column:${index + 1}`) || {}).covered)}${disabledWhenSpinning()}>${text('bets.column')}</button></div>`));
   // Build inside-bet hotspots from the catalog.
-  const hotspots = catalog.filter(bet => bet.layout_kind !== 'outside' && bet.type !== 'straight').map(bet => { const point = posForBet(bet); return `<button type="button" class="spot" style="left:${point.x - 12}px;top:${point.y - 12}px" title="${safe(bet.label)} ${safe(bet.net_payout)}:1" data-betid="${safe(bet.id)}" data-testid="roulette-spot-${safe(bet.id)}"${disabledWhenSpinning()}></button>`; }).join('');
+  const hotspots = catalog.filter(bet => bet.layout_kind !== 'outside' && bet.type !== 'straight').map(bet => { const point = posForBet(bet); return `<button type="button" class="spot" style="left:${point.x - 12}px;top:${point.y - 12}px" title="${safe(bet.label)} ${safe(bet.net_payout)}:1" data-betid="${safe(bet.id)}" data-testid="roulette-spot-${safe(bet.id)}" ${cellAttrs(`spot:${bet.id}`, bet.type, bet.covered_numbers)}${disabledWhenSpinning()}></button>`; }).join('');
   // Build visible table chips from aggregate human bets.
   const chips = aggregateBets().map(bet => { const point = posForBet(bet); return `<div class="bet-chip" style="left:${point.x - 19}px;top:${point.y - 19}px" title="${safe(bet.label)}">${chipMoney(bet.amount)}</div>`; }).join('');
   // Store dimmed state for spin/reveal.
@@ -741,7 +837,7 @@ function controlRailHtml() {
   // Store the localized shared bot-controller heading for its disclosure control.
   const botsLabel = sharedText('title', BOTS_DOMAIN);
   // Return the complete left rail.
-  return `<section class="panel control-rail" data-testid="roulette-control-rail" tabindex="0" role="region" aria-label="${text('controls.title')}"><h2 class="game-title">${text('controls.title')}</h2><div class="roulette-control-section"><h3>${text('controls.chipStack')}</h3><div class="chip-row">${CHIP_VALUES.map(value => `<button type="button" class="chip ${value === chip ? 'active' : ''}" data-chip="${value}" data-testid="chip-${value}"${disabledWhenSpinning()}>${chipMoney(value)}</button>`).join('')}</div></div><div class="roulette-control-section"><h3>${text('controls.fastBets')}</h3><div class="roulette-fast-grid">${['red', 'black', 'odd', 'even', 'low', 'high'].map(type => `<button type="button" data-outbtn="${type}"${disabledWhenSpinning()}>${text(`bets.${type}`)}</button>`).join('')}</div></div><div class="roulette-secondary-actions roulette-control-section"><button type="button" id="toggleSpots"${disabledWhenSpinning()}>${spotLabel}</button><button type="button" id="rebet"${canRebet ? '' : ' disabled'}>${text('controls.rebet')}</button></div><details class="roulette-advanced" data-testid="roulette-rules-disclosure" data-roulette-disclosure="rules"${disclosureOpen('rules')}><summary>${text('controls.wheel')} · ${text('controls.zeroRule')}</summary><div class="roulette-advanced-body"><div class="roulette-settings"><label>${text('controls.wheel')}<select id="mode" data-testid="roulette-mode"${disabledWhenSpinning()}><option value="single">${text('settings.wheel.single')}</option><option value="double">${text('settings.wheel.double')}</option></select></label><label>${text('controls.zeroRule')}<select id="zero" data-testid="roulette-zero"${disabledWhenSpinning()}><option value="normal">${text('settings.zeroRule.normal')}</option><option value="la_partage">${text('settings.zeroRule.laPartage')}</option><option value="en_prison">${text('settings.zeroRule.enPrison')}</option></select></label></div></div></details><details class="roulette-advanced" data-testid="roulette-racetrack-disclosure" data-roulette-disclosure="racetrack"${disclosureOpen('racetrack')}><summary>${text('controls.racetrack')}</summary><div class="roulette-advanced-body"><div class="roulette-call-grid">${['snake', 'voisins', 'tiers', 'orphelins', 'jeu_zero', 'neighbors', 'final', 'complete'].map(type => `<button type="button" data-call="${type}"${disabledWhenSpinning()}>${text(`callBets.${type}`)}</button>`).join('')}</div><label class="roulette-call-number">${text('controls.callNumber')}<input id="callNumber" class="roulette-call-input" type="text" value="17"${disabledWhenSpinning()}></label></div></details><details class="roulette-advanced" data-testid="roulette-autoplay-disclosure" data-roulette-disclosure="autoplay"${disclosureOpen('autoplay')}><summary>${autoplayLabel}</summary><div id="auto" class="roulette-advanced-body"></div></details><details class="roulette-advanced" data-testid="roulette-bots-disclosure" data-roulette-disclosure="bots"${disclosureOpen('bots')}><summary>${botsLabel}</summary><div id="botPanel" class="roulette-advanced-body">${botPanelCache}</div></details></section>`;
+  return `<section class="panel control-rail" data-testid="roulette-control-rail" tabindex="0" role="region" aria-label="${text('controls.title')}"><h2 class="game-title">${text('controls.title')}</h2><div class="roulette-control-section"><h3>${text('controls.chipStack')}</h3><div class="chip-row">${CHIP_VALUES.map(value => `<button type="button" class="chip ${value === chip ? 'active' : ''}" data-chip="${value}" data-testid="chip-${value}"${disabledWhenSpinning()}>${chipMoney(value)}</button>`).join('')}</div></div><div class="roulette-control-section"><h3>${text('controls.fastBets')}</h3><div class="roulette-fast-grid">${['red', 'black', 'odd', 'even', 'low', 'high'].map(type => `<button type="button" data-outbtn="${type}" ${cellAttrs(`outside:${type}`, type, (outsideIdentity(type) || {}).covered)}${disabledWhenSpinning()}>${text(`bets.${type}`)}</button>`).join('')}</div></div><div class="roulette-secondary-actions roulette-control-section"><button type="button" id="toggleSpots"${disabledWhenSpinning()}>${spotLabel}</button><button type="button" id="rebet"${canRebet ? '' : ' disabled'}>${text('controls.rebet')}</button></div><details class="roulette-advanced" data-testid="roulette-rules-disclosure" data-roulette-disclosure="rules"${disclosureOpen('rules')}><summary>${text('controls.wheel')} · ${text('controls.zeroRule')}</summary><div class="roulette-advanced-body"><div class="roulette-settings"><label>${text('controls.wheel')}<select id="mode" data-testid="roulette-mode"${disabledWhenSpinning()}><option value="single">${text('settings.wheel.single')}</option><option value="double">${text('settings.wheel.double')}</option></select></label><label>${text('controls.zeroRule')}<select id="zero" data-testid="roulette-zero"${disabledWhenSpinning()}><option value="normal">${text('settings.zeroRule.normal')}</option><option value="la_partage">${text('settings.zeroRule.laPartage')}</option><option value="en_prison">${text('settings.zeroRule.enPrison')}</option></select></label></div></div></details><details class="roulette-advanced" data-testid="roulette-racetrack-disclosure" data-roulette-disclosure="racetrack"${disclosureOpen('racetrack')}><summary>${text('controls.racetrack')}</summary><div class="roulette-advanced-body"><div class="roulette-call-grid">${['snake', 'voisins', 'tiers', 'orphelins', 'jeu_zero', 'neighbors', 'final', 'complete'].map(type => `<button type="button" data-call="${type}"${disabledWhenSpinning()}>${text(`callBets.${type}`)}</button>`).join('')}</div><label class="roulette-call-number">${text('controls.callNumber')}<input id="callNumber" class="roulette-call-input" type="text" value="17"${disabledWhenSpinning()}></label></div></details><details class="roulette-advanced" data-testid="roulette-autoplay-disclosure" data-roulette-disclosure="autoplay"${disclosureOpen('autoplay')}><summary>${autoplayLabel}</summary><div id="auto" class="roulette-advanced-body"></div></details><details class="roulette-advanced" data-testid="roulette-bots-disclosure" data-roulette-disclosure="bots"${disclosureOpen('bots')}><summary>${botsLabel}</summary><div id="botPanel" class="roulette-advanced-body">${botPanelCache}</div></details></section>`;
 }
 
 // Render the central wheel and table stage.
@@ -836,18 +932,8 @@ function wireControls() {
   root.querySelector('#zero').onchange = settings;
   // Wire chip buttons while preserving selected chip state.
   root.querySelectorAll('[data-chip]').forEach(button => { button.onclick = () => { chip = Number(button.dataset.chip); render(); updateBotPanel(); }; });
-  // Wire straight-up number cells to catalog bets.
-  root.querySelectorAll('[data-num]').forEach(button => { button.onclick = () => placeBet(betBy(bet => bet.type === 'straight' && bet.covered_numbers[0] === String(button.dataset.num))); });
-  // Wire inside bet hotspots to catalog bets.
-  root.querySelectorAll('[data-betid]').forEach(button => { button.onclick = () => placeBet(betBy(bet => bet.id === button.dataset.betid)); });
-  // Wire table outside cells to catalog bets.
-  root.querySelectorAll('[data-outside]').forEach(button => { button.onclick = () => placeBet(betBy(bet => bet.type === button.dataset.outside)); });
-  // Wire fast outside bet buttons to catalog bets.
-  root.querySelectorAll('[data-outbtn]').forEach(button => { button.onclick = () => placeBet(betBy(bet => bet.type === button.dataset.outbtn)); });
-  // Wire dozen cells to catalog bets.
-  root.querySelectorAll('[data-dozen]').forEach(button => { button.onclick = () => placeBet(betBy(bet => bet.type === 'dozen' && bet.label === button.dataset.dozen)); });
-  // Wire column cells to catalog bets.
-  root.querySelectorAll('[data-column]').forEach(button => { button.onclick = () => placeBet(betBy(bet => bet.type === 'column' && bet.label === button.dataset.column)); });
+  // Wire every bet cell through its stable identity so clicks resolve and verify by canonical covered numbers, not fragile labels. (issue #222)
+  root.querySelectorAll('[data-cell-key]').forEach(button => { button.onclick = () => placeBetForCell(button); });
   // Wire racetrack and call-bet controls to the call-bet endpoint.
   root.querySelectorAll('[data-call]').forEach(button => { button.onclick = () => placeCall(button.dataset.call); });
   // Wire individual bet removal buttons to the clear endpoint.

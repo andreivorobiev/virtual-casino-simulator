@@ -462,8 +462,8 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as e:
             # Set logger.error("api_exception", e, request_id to the value needed for the next operation.
             logger.error("api_exception", e, request_id=request_id, path=self.path)
-            # Execute this statement as part of the module's documented control flow.
-            self._send_json(500, {"ok": False, "error": {"code": "INTERNAL_ERROR", "message": str(e), "details": {"request_id": request_id}}})
+            # Return a sanitized envelope so filesystem paths and exception text never reach the client. (SESSION-007, SEC-010)
+            self._send_json(500, {"ok": False, "error": {"code": "INTERNAL_ERROR", "message": "Internal server error", "details": {"request_id": request_id}}})
 
     # Define the do_GET function used by this module.
     def do_GET(self):

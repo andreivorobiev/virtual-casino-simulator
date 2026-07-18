@@ -171,22 +171,22 @@ session_cookie = next(value for value in header_values(login, "Set-Cookie") if v
 # Require Secure, HttpOnly, Strict, bounded, and no Domain.
 assert "Secure" in session_cookie and "HttpOnly" in session_cookie and "SameSite=Strict" in session_cookie and "Max-Age=" in session_cookie and "Domain=" not in session_cookie
 
-# Rotate login using the current browser CSRF cookie value.
+# Create a second concurrent session using the current browser CSRF cookie value (issue #226).
 rotated_login = request("POST", "/api/v2/auth/login", {"email": "preview-admin@example.invalid", "password": "synthetic-preview-password"}, mutation_headers(first_csrf))
-# Require successful predecessor rotation.
+# Require the second concurrent login to succeed.
 assert rotated_login["status"] == "200 OK"
-# Read the replacement session summary.
+# Read the second concurrent session summary.
 rotated_session = decoded(rotated_login)["data"]["session"]
 # Retain the new disposable bearer.
 admin_token = rotated_session["token"]
 # Retain the new distinct CSRF proof.
 admin_csrf = rotated_session["csrf_token"]
-# Require both credential classes to rotate.
+# Require both credential classes to be independent of the first session.
 assert admin_token != first_token and admin_csrf != first_csrf and admin_token != admin_csrf
-# Prove the predecessor bearer no longer authenticates.
+# Prove the predecessor bearer still authenticates under bounded concurrent sessions (issue #226, SESSION-007).
 old_session = request("GET", "/api/v2/me", headers={"Authorization": f"Bearer {first_token}"})
-# Require the standard invalid-session result.
-assert old_session["status"] == "401 Unauthorized"
+# Require the predecessor session to remain valid.
+assert old_session["status"] == "200 OK"
 # Prove the replacement bearer authenticates current-user reads.
 current = request("GET", "/api/v2/me", headers={"Authorization": f"Bearer {admin_token}"})
 # Require the expected synthetic identity without client metadata.

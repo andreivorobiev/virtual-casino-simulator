@@ -5,8 +5,26 @@ import json
 import shutil
 # Import required dependency so this module can use its public functions or constants.
 import threading
+# Import contextmanager so the cross-process file lock reads as a with-statement.
+from contextlib import contextmanager
 # Import required dependency so this module can use its public functions or constants.
 from pathlib import Path
+# Import POSIX advisory locking when the running platform provides it.
+try:
+    # Bind the POSIX flock interface for cross-process session-file locking.
+    import fcntl
+# Fall back cleanly on platforms without POSIX advisory locks.
+except ImportError:
+    # Signal the absence of POSIX locking so callers degrade to the in-process lock.
+    fcntl = None
+# Import Windows byte-range locking when the running platform provides it.
+try:
+    # Bind the Windows locking interface for cross-process session-file locking.
+    import msvcrt
+# Fall back cleanly on platforms without the Windows locking module.
+except ImportError:
+    # Signal the absence of Windows locking so callers degrade to the in-process lock.
+    msvcrt = None
 # Import required dependency so this module can use its public functions or constants.
 from typing import Any, Callable
 # Import required dependency so this module can use its public functions or constants.
@@ -94,6 +112,97 @@ def write_json(path: Path, data: Any) -> None:
         tmp.write_text(json.dumps(data, indent=2, sort_keys=True), encoding="utf-8")
         # Execute this statement as part of the module's documented control flow.
         tmp.replace(path)
+
+# Hold a best-effort exclusive cross-process lock around a state document's read-modify-write. (SESSION-007, CORE-021)
+@contextmanager
+def _file_lock(path: Path):
+    # Derive a sidecar lock file so the data document itself is never opened for locking.
+    lock_path = path.with_suffix(path.suffix + ".lock")
+    # Create the parent directory so the sidecar lock file can be opened.
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    # Open (or create) the sidecar lock file for the duration of the mutation.
+    handle = open(lock_path, "a+")
+    # Track whether an OS-level lock was actually acquired so release stays symmetric.
+    acquired = False
+    # Start protected acquisition so a platform quirk never breaks session persistence.
+    try:
+        # Acquire an exclusive advisory lock on POSIX systems when available.
+        if fcntl is not None:
+            # Block until the exclusive POSIX lock is held for this process.
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+            # Record that the POSIX lock must be released later.
+            acquired = True
+        # Acquire an exclusive byte-range lock on Windows when available.
+        elif msvcrt is not None:
+            # Seek to the start so the single-byte range lock is deterministic.
+            handle.seek(0)
+            # Block-with-retry until the Windows byte-range lock is held.
+            msvcrt.locking(handle.fileno(), msvcrt.LK_LOCK, 1)
+            # Record that the Windows lock must be released later.
+            acquired = True
+    # Degrade to the in-process lock when OS locking is unavailable under contention.
+    except OSError:
+        # Leave acquired False so the finally block does not attempt an unmatched release.
+        acquired = False
+    # Start the protected critical section guarded by whatever lock was obtained.
+    try:
+        # Yield control to the caller while the mutation runs under the lock.
+        yield
+    # Always release and close so no stale lock or descriptor leaks.
+    finally:
+        # Release the OS-level lock only when one was actually acquired.
+        if acquired:
+            # Start protected release so an unlock failure cannot mask the caller's result.
+            try:
+                # Release the POSIX advisory lock before closing the handle.
+                if fcntl is not None:
+                    # Unlock the POSIX advisory lock held on this descriptor.
+                    fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+                # Release the Windows byte-range lock before closing the handle.
+                elif msvcrt is not None:
+                    # Seek to the same range that was locked before unlocking it.
+                    handle.seek(0)
+                    # Unlock the Windows byte-range lock held on this descriptor.
+                    msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+            # Ignore unlock failures during teardown so results still propagate.
+            except OSError:
+                # Intentionally leave this block empty because the handle is closed next.
+                pass
+        # Always close the sidecar handle even if unlock raised.
+        handle.close()
+
+# Apply an atomic read-modify-write so concurrent callers cannot lose each other's updates. (SESSION-007, CORE-021)
+def update_json(path: Path, mutator: Callable[[Any], Any], default: Any) -> Any:
+    # Resolve the provider document key for persistent files under data/.
+    document_key = _provider_document_key(path)
+    # Route the atomic mutation through the database provider when MySQL is selected.
+    if document_key is not None and storage_provider_name() == "mysql":
+        # Serialize the provider read-modify-write with the shared in-process lock.
+        with _LOCK:
+            # Read the current provider document (or its lazy default) before mutation.
+            current = get_storage_provider().read_document(document_key, default)
+            # Apply the caller-owned mutation to the current document.
+            updated = mutator(current)
+            # Persist the mutated document through the provider's own atomic write.
+            get_storage_provider().write_document(document_key, updated)
+            # Return the persisted document to the caller.
+            return updated
+    # Ensure runtime directories exist before locking a JSON document.
+    ensure_dirs()
+    # Serialize the whole read-modify-write with the shared reentrant in-process lock.
+    with _LOCK:
+        # Create the parent directory so the lock and target files can be written.
+        path.parent.mkdir(parents=True, exist_ok=True)
+        # Hold a best-effort cross-process file lock for the entire mutation.
+        with _file_lock(path):
+            # Read the current on-disk state or the lazy default when absent or corrupt.
+            current = read_json(path, default)
+            # Apply the caller-owned mutation to the current state.
+            updated = mutator(current)
+            # Write the mutated state through the same atomic temp-file replace.
+            write_json(path, updated)
+            # Return the persisted state to the caller.
+            return updated
 
 # Define the append_jsonl function used by this module.
 def append_jsonl(path: Path, event: dict) -> None:

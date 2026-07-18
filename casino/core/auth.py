@@ -20,7 +20,7 @@ from casino.core.clock import utc_now
 # Import required dependency so this module can use its public functions or constants.
 from casino.core.ids import new_id
 # Import required dependency so this module can use its public functions or constants.
-from casino.core.state_store import read_json, write_json
+from casino.core.state_store import read_json, write_json, update_json
 # Import restricted-preview cookie helpers without coupling the auth store to WSGI.
 from casino.core.security import clear_csrf_cookie_header, csrf_cookie_header, new_csrf_token
 # Import required dependency so this module can use its public functions or constants.
@@ -38,6 +38,8 @@ PUBLIC_API_PATHS = {"/api/v2/auth/login", "/healthz"}
 MAX_SESSION_TTL_SECONDS = 86_400
 # Retain at most one thousand active session records across the single-node preview.
 MAX_STORED_SESSIONS = 1_000
+# Retain multiple concurrent sessions per account so simultaneous logins never evict each other. (SESSION-007)
+MAX_SESSIONS_PER_USER = 256
 # Enumerate durable account fields whose change invalidates existing privileges.
 PRIVILEGE_FIELDS = ("role", "roles", "status", "password_hash", "password_version")
 
@@ -356,21 +358,48 @@ def prune_sessions(state: dict) -> dict:
     # Return the computed value to the caller.
     return state
 
+# Evict the least-recently-used active predecessors once one identity exceeds the per-user cap. (SESSION-007)
+def _evict_user_sessions_over_cap(state: dict, user_id: str) -> None:
+    # Collect this identity's active sessions in stored (oldest-first) order.
+    active = [session for session in state.get("sessions", []) if session.get("user_id") == user_id and session.get("status") == "active"]
+    # Compute how many predecessors exceed capacity while leaving room for the new session.
+    overflow = len(active) - (MAX_SESSIONS_PER_USER - 1)
+    # Stop when the identity is already within its retained per-user capacity.
+    if overflow <= 0:
+        # Return without evicting because no predecessor exceeds the cap.
+        return
+    # Order the identity's sessions by last use so the least-recently-used are evicted first.
+    ordered = sorted(active, key=lambda session: (str(session.get("updated_at", "")), str(session.get("created_at", ""))))
+    # Select the exact least-recently-used predecessors that must be evicted.
+    evicted_ids = {session.get("session_id") for session in ordered[:overflow]}
+    # Drop only the evicted predecessors while preserving every other stored session.
+    state["sessions"] = [session for session in state.get("sessions", []) if session.get("session_id") not in evicted_ids]
+
 # Define the create_session function used by this module.
 def create_session(user: dict, client: str = "") -> dict:
-    # Set state to the value needed for the next operation.
-    state = prune_sessions(load_sessions())
-    # Remove every active predecessor for this identity before issuing a replacement.
-    state["sessions"] = [session for session in state.get("sessions", []) if session.get("user_id") != user["user_id"]]
     # Set now to the value needed for the next operation.
     now = utc_now()
-    # Set session to the value needed for the next operation.
+    # Build the durable session record with independent bearer and CSRF material.
     session = {"session_id": new_id("session"), "user_id": user["user_id"], "token": secrets.token_urlsafe(32), "csrf_token": new_csrf_token(), "status": "active", "created_at": now, "updated_at": now, "expires_at": session_expiry(), "client": client}
-    # Execute this statement as part of the module's documented control flow.
-    state.setdefault("sessions", []).append(session)
-    # Execute this statement as part of the module's documented control flow.
-    save_sessions(state)
-    # Return the computed value to the caller.
+    # Define the atomic mutation that preserves concurrent same-user sessions. (SESSION-007)
+    def mutate(state: dict) -> dict:
+        # Normalize malformed persisted state into the canonical sessions container.
+        if not isinstance(state, dict) or "sessions" not in state:
+            # Reset to a fresh default sessions document before mutation.
+            state = default_sessions()
+        # Drop expired records and enforce the global retention cap before adding the replacement.
+        prune_sessions(state)
+        # Enforce the per-user cap by evicting least-recently-used predecessors instead of all of them.
+        _evict_user_sessions_over_cap(state, user["user_id"])
+        # Append the newly issued active session for this identity.
+        state.setdefault("sessions", []).append(session)
+        # Stamp the schema version consistent with save_sessions.
+        state["schema_version"] = SCHEMA_VERSION
+        # Return the mutated state for atomic persistence.
+        return state
+    # Persist the new session atomically so concurrent logins cannot lose each other's writes. (SESSION-007, CORE-021)
+    update_json(SESSIONS_PATH, mutate, default_sessions)
+    # Return the issued session to the caller.
     return session
 
 # Define the public_session function used by this module.
@@ -446,10 +475,8 @@ def authenticate_token(token: str) -> tuple[dict, dict]:
     if not token:
         # Raise an error so invalid input or state is reported explicitly.
         raise UnauthorizedError()
-    # Set state to the value needed for the next operation.
+    # Read a pruned in-memory view without persisting so concurrent logins are not clobbered. (SESSION-007)
     state = prune_sessions(load_sessions())
-    # Execute this statement as part of the module's documented control flow.
-    save_sessions(state)
     # Iterate through the collection to process each item.
     for session in state.get("sessions", []):
         # Branch when the session token matches.
@@ -474,45 +501,61 @@ def authenticate_headers(headers) -> tuple[dict, dict]:
 
 # Define the logout function used by this module.
 def logout(token: str) -> dict:
-    # Set state to the value needed for the next operation.
-    state = load_sessions()
-    # Set changed to the value needed for the next operation.
-    changed = False
-    # Iterate through the collection to process each item.
-    for session in state.get("sessions", []):
-        # Branch when the session token matches.
-        if token and hmac.compare_digest(session.get("token", ""), token):
-            # Set session["status"] to the value needed for the next operation.
-            session["status"] = "revoked"
-            # Set session["updated_at"] to the value needed for the next operation.
-            session["updated_at"] = utc_now()
-            # Set changed to the value needed for the next operation.
-            changed = True
-    # Execute this statement as part of the module's documented control flow.
-    save_sessions(state)
+    # Track whether any stored session matched the supplied bearer token.
+    changed = {"value": False}
+    # Define the atomic revocation that only touches the matching session record. (SESSION-007)
+    def mutate(state: dict) -> dict:
+        # Normalize malformed persisted state into the canonical sessions container.
+        if not isinstance(state, dict) or "sessions" not in state:
+            # Reset to a fresh default sessions document before mutation.
+            state = default_sessions()
+        # Iterate through the collection to process each item.
+        for session in state.get("sessions", []):
+            # Branch when the session token matches.
+            if token and hmac.compare_digest(session.get("token", ""), token):
+                # Set session["status"] to the value needed for the next operation.
+                session["status"] = "revoked"
+                # Set session["updated_at"] to the value needed for the next operation.
+                session["updated_at"] = utc_now()
+                # Record that at least one matching session was revoked.
+                changed["value"] = True
+        # Stamp the schema version consistent with save_sessions.
+        state["schema_version"] = SCHEMA_VERSION
+        # Return the mutated state for atomic persistence.
+        return state
+    # Persist the revocation atomically so a concurrent login is never clobbered. (SESSION-007)
+    update_json(SESSIONS_PATH, mutate, default_sessions)
     # Return the computed value to the caller.
-    return {"logged_out": changed}
+    return {"logged_out": changed["value"]}
 
 # Revoke every active session owned by one account after a privilege change.
 def revoke_sessions_for_user(user_id: str) -> int:
-    # Load the durable registry before applying the account-scoped revocation.
-    state = load_sessions()
     # Count changed records without retaining any token value.
-    changed = 0
-    # Iterate through stored sessions without comparing caller-supplied credentials.
-    for session in state.get("sessions", []):
-        # Revoke only active records for the selected durable identity.
-        if session.get("user_id") == user_id and session.get("status") == "active":
-            # Mark the predecessor unusable immediately.
-            session["status"] = "revoked"
-            # Record a bounded audit timestamp without user or token data.
-            session["updated_at"] = utc_now()
-            # Count the revoked record for focused tests.
-            changed += 1
-    # Persist the account-scoped revocation result.
-    save_sessions(state)
+    changed = {"value": 0}
+    # Define the atomic account-scoped revocation applied under the session-file lock. (SESSION-007, SESSION-006)
+    def mutate(state: dict) -> dict:
+        # Normalize malformed persisted state into the canonical sessions container.
+        if not isinstance(state, dict) or "sessions" not in state:
+            # Reset to a fresh default sessions document before mutation.
+            state = default_sessions()
+        # Iterate through stored sessions without comparing caller-supplied credentials.
+        for session in state.get("sessions", []):
+            # Revoke only active records for the selected durable identity.
+            if session.get("user_id") == user_id and session.get("status") == "active":
+                # Mark the predecessor unusable immediately.
+                session["status"] = "revoked"
+                # Record a bounded audit timestamp without user or token data.
+                session["updated_at"] = utc_now()
+                # Count the revoked record for focused tests.
+                changed["value"] += 1
+        # Stamp the schema version consistent with save_sessions.
+        state["schema_version"] = SCHEMA_VERSION
+        # Return the mutated state for atomic persistence.
+        return state
+    # Persist the account-scoped revocation result atomically.
+    update_json(SESSIONS_PATH, mutate, default_sessions)
     # Return only the number of invalidated predecessors.
-    return changed
+    return changed["value"]
 
 # Define the current_user_payload function used by this module.
 def current_user_payload(session: dict, user: dict) -> dict:

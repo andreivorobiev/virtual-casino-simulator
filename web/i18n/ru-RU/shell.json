@@ -75,5 +75,7 @@
   "wallet.add": "Добавить",
   "wallet.addFakeMoney": "Добавить игровые токены",
   "wallet.addTokens": "Добавить игровые токены",
-  "wallet.balanceLabel": "Баланс игровых токенов"
+  "wallet.balanceLabel": "Баланс игровых токенов",
+  "nav.primaryAria": "Навигация по играм",
+  "nav.gamesArea": "Игровая область"
 }
