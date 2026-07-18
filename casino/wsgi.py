@@ -19,6 +19,8 @@ from casino.app import ROUTER
 from casino.config import APP_VERSION, WEB_DIR, validate_bootstrap_for_startup, validate_production_runtime
 # Import standard application errors for stable public envelopes.
 from casino.errors import CasinoError, ForbiddenError, RequestTooLargeError, ValidationError
+# Import strict JSON-number handling shared with the development HTTP adapter.
+from casino.core.validation import reject_nonfinite_json_constant
 # Import authentication and application logging through the existing core boundaries.
 from casino.core import auth, logger, players
 # Import the complete restricted-preview request and response policy.
@@ -119,7 +121,7 @@ def _request_body(environ: dict, method: str, max_body_bytes: int) -> dict:
     # Start protected parsing so malformed client input reaches existing validation behavior.
     try:
         # Decode UTF-8 JSON into the same route body shape used by casino.app.
-        return json.loads(raw.decode("utf-8"))
+        return json.loads(raw.decode("utf-8"), parse_constant=reject_nonfinite_json_constant)
     # Preserve compatibility with the development adapter's raw-input fallback.
     except (UnicodeDecodeError, json.JSONDecodeError):
         # Decode replacement characters only into request-local data, never logs.

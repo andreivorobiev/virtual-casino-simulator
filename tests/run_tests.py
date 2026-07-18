@@ -32,6 +32,8 @@ from tests import mysql_migration_tests
 from tests import recovery_tests
 # Import listener-free edge policy and sanitized observation tests for the API validation run.
 from tests import edge_gate_tests
+# Import focused non-finite validation and persistence tests for TEST-055.
+from tests import nonfinite_money_tests
 # Import the current-catalog hostile-client certification entrypoint.
 from tests.server_authority_tests import run_server_authority_tests
 # Import the reusable flushed reporter for TEST-010 browser execution.
@@ -102,6 +104,29 @@ def api(base, path, method='GET', body=None, ok=True, auth_token='__default__'):
     if not ok and payload.get('ok'): raise AssertionError('expected failure but got ok')
     # Return the computed value to the caller.
     return payload['data'] if payload.get('ok') else payload
+
+# Send exact JSON bytes so parser-boundary tests can exercise non-standard constants. (CORE-025, TEST-055)
+def raw_api(base, path, raw_body, method='POST', auth_token='__default__'):
+    # Select the current authenticated token unless the caller supplied an override.
+    token=SESSION_TOKEN if auth_token == '__default__' else auth_token
+    # Declare the exact byte payload as JSON without normalizing it through json.dumps.
+    headers={'Content-Type':'application/json'}
+    # Attach bearer authentication when the test targets a protected route.
+    if token:
+        # Preserve the same authorization boundary as the ordinary API helper.
+        headers['Authorization']=f'Bearer {token}'
+    # Build the exact loopback request with caller-owned hostile bytes.
+    request=urllib.request.Request(base + path,data=raw_body,method=method,headers=headers)
+    # Start protected response handling because the expected result is a client error.
+    try:
+        # Parse any unexpected success through the standard JSON decoder.
+        with urllib.request.urlopen(request,timeout=12) as response: payload=json.loads(response.read().decode('utf-8'))
+    # Decode the expected HTTP error response without suppressing its envelope.
+    except urllib.error.HTTPError as error:
+        # Parse only the bounded application response body.
+        payload=json.loads(error.read().decode('utf-8'))
+    # Return the complete envelope so status semantics remain explicit in assertions.
+    return payload
 
 # Define the login_default_user function used by this module.
 def login_default_user(base):
@@ -347,6 +372,16 @@ def validate_deployment_bootstrap():
 
 # Define the run_api_tests function used by this module.
 def run_api_tests():
+    # Run service-free shared validation, ledger, MHVP, and strict JSON persistence evidence.
+    def run_nonfinite_money_unit_tests():
+        # Load only the focused TEST-055 unit-test class.
+        suite=unittest.defaultTestLoader.loadTestsFromTestCase(nonfinite_money_tests.NonfiniteMoneyTests)
+        # Execute the focused suite with concise standard output.
+        result=unittest.TextTestRunner(stream=sys.stdout,verbosity=1).run(suite)
+        # Fail the named central case when any focused assertion fails.
+        if not result.wasSuccessful(): raise AssertionError('non-finite money boundary unit suite failed')
+    # Record the listener-free finite validation and persistence proof.
+    run_case('MONEY-NONFINITE-UNIT-001',['CORE-025','LEDGER-027','MHVP-006','TEST-055'],run_nonfinite_money_unit_tests)
     # Execute the complete non-mutating edge preparation proof before any test listener starts.
     def run_edge_gate_tests():
         # Load only the focused TEST-050 unit-test class.
@@ -383,6 +418,72 @@ def run_api_tests():
     try:
         # Call an asynchronous API/helper and wait for the result before continuing.
         login_default_user(base)
+        # Prove every affected game route rejects decoded and string non-finite wagers without mutation.
+        def nonfinite_money_api():
+            # Read the authenticated wallet identity and finite baseline.
+            current=api(base,'/api/v2/auth/session')
+            # Select the session-owned player for ledger and wallet comparisons.
+            player_id=current['player']['player_id']
+            # Capture the original finite wallet balance.
+            balance_before=current['player']['balance']
+            # Capture every existing ledger row before hostile requests.
+            ledger_before=api(base,f'/api/v1/players/{player_id}/ledger')['ledger']
+            # Snapshot game-state bytes so validation cannot create partial rounds or bets.
+            games_root=ROOT/'data'/'games'
+            # Build a relative-path map for any pre-existing reset fixtures.
+            state_before={str(path.relative_to(games_root)):path.read_bytes() for path in games_root.rglob('*') if path.is_file()}
+            # Define each route and the minimum valid non-wager fields needed after validation.
+            routes=(
+                ('/api/v1/games/roulette/bets','amount',{'bet_type':'red','covered_numbers':[]}),  # Cover Roulette shared amount validation.
+                ('/api/v1/games/blackjack/rounds','bet_amount',{}),  # Cover Blackjack initial wagers.
+                ('/api/v1/games/baccarat/bets','amount',{'bet_type':'player'}),  # Cover Baccarat bets.
+                ('/api/v1/games/keno/tickets','amount',{'spots':[1]}),  # Cover Keno tickets.
+                ('/api/v1/games/slots/spin','line_bet',{'active_lines':1}),  # Cover Slots line bets.
+                ('/api/v1/games/bingo/cards','amount',{'pattern':'line'}),  # Cover Bingo cards.
+                ('/api/v1/games/multi-hand-video-poker/rounds','wager_per_hand',{'request_id':'nonfinite-regression','hand_count':3}),  # Cover the independent MHVP wager helper.
+            )
+            # Exercise string values that pass strict JSON parsing but must fail route validation.
+            for path,field,base_body in routes:
+                # Cover NaN and both infinity spellings accepted by Python float conversion.
+                for value in ('nan','inf','-inf'):
+                    # Copy the valid auxiliary fields for one isolated request.
+                    body=dict(base_body)
+                    # Place the non-finite string into the route's public wager field.
+                    body[field]=value
+                    # Require a standard client validation envelope.
+                    rejected=api(base,path,'POST',body,ok=False)
+                    # Require the stable error code without route execution.
+                    assert rejected['error']['code']=='VALIDATION_ERROR',f'{path} accepted {value}'
+            # Exercise raw JSON constants against every route at the shared parser boundary.
+            for path,field,base_body in routes:
+                # Cover every non-standard numeric token accepted by default json.loads.
+                for constant in ('NaN','Infinity','-Infinity'):
+                    # Serialize only finite auxiliary fields through the strict standard encoder.
+                    members=[f'{json.dumps(key)}:{json.dumps(value,separators=(",",":"))}' for key,value in base_body.items()]
+                    # Append the exact unquoted hostile numeric constant.
+                    members.append(f'{json.dumps(field)}:{constant}')
+                    # Build one exact JSON object without letting json.dumps rewrite the constant.
+                    raw_body=('{' + ','.join(members) + '}').encode('utf-8')
+                    # Require the development adapter to return the standard failure envelope.
+                    rejected=raw_api(base,path,raw_body)
+                    # Require parser rejection before authentication-bound route dispatch.
+                    assert rejected['ok'] is False and rejected['error']['code']=='VALIDATION_ERROR',f'{path} parser accepted {constant}'
+            # Read the wallet after every rejected request.
+            current_after=api(base,'/api/v2/auth/session')
+            # Require the finite balance to remain exactly unchanged.
+            assert current_after['player']['balance']==balance_before
+            # Require no rejected request to append any ledger event.
+            assert api(base,f'/api/v1/players/{player_id}/ledger')['ledger']==ledger_before
+            # Snapshot state again after all validation failures.
+            state_after={str(path.relative_to(games_root)):path.read_bytes() for path in games_root.rglob('*') if path.is_file()}
+            # Require no game state creation or mutation.
+            assert state_after==state_before
+            # Parse the retained player document with non-standard constants forbidden.
+            persisted=json.loads((ROOT/'data'/'players.json').read_text(encoding='utf-8'),parse_constant=lambda value: (_ for _ in ()).throw(AssertionError(f'persisted {value}')))
+            # Require the exact session wallet to remain finite in durable storage.
+            assert next(player['balance'] for player in persisted['players'] if player['player_id']==player_id)==balance_before
+        # Record cross-game API, parser, wallet, ledger, state, and persistence evidence.
+        run_case('API-MONEY-NONFINITE-001',['CORE-025','LEDGER-027','MHVP-006','TEST-055'],nonfinite_money_api)
         # Call an asynchronous API/helper and wait for the result before continuing.
         api(base,'/api/v1/casino/reset','POST',{})
         # Call an asynchronous API/helper and wait for the result before continuing.

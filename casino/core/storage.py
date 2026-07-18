@@ -262,7 +262,7 @@ class JsonStorageProvider(StorageProvider):
             # Build a process-and-thread-unique temp path so concurrent writers never share a handle.
             tmp = path.with_suffix(path.suffix + f".tmp-{os.getpid()}-{threading.get_ident()}")
             # Serialize JSON in the existing pretty/sorted local format.
-            tmp.write_text(json.dumps(data, indent=2, sort_keys=True), encoding="utf-8")
+            tmp.write_text(json.dumps(data, indent=2, sort_keys=True, allow_nan=False), encoding="utf-8")
             # Retry transient Windows sharing violations while preserving atomic replacement.
             for attempt in range(20):
                 # Start protected replacement so antivirus or indexer handles can release briefly.
@@ -337,7 +337,7 @@ class JsonStorageProvider(StorageProvider):
             # Open the file in append mode so prior ledger rows remain intact.
             with path.open("a", encoding="utf-8") as handle:
                 # Write one sorted JSON object per line to preserve current format.
-                handle.write(json.dumps(event, sort_keys=True) + "\n")
+                handle.write(json.dumps(event, sort_keys=True, allow_nan=False) + "\n")
 
     # Load players without acquiring another operating-system wallet lock.
     def _load_players_document(self, default_factory: Callable[[], dict]) -> dict:

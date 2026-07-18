@@ -7978,6 +7978,81 @@
       "introduced_in": "issue-243-blackjack-natural-payout",
       "changed_in": "issue-243-blackjack-natural-payout",
       "notes": "TEST-051 through TEST-053 remain reserved by the active issue #226, #221, and #222 integration lane."
+    },
+    {
+      "id": "CORE-025",
+      "module": "Core",
+      "description": "Development and production HTTP adapters reject non-standard non-finite JSON numbers before route dispatch, while shared client amount validation rejects decoded and string NaN or infinity before rounding and bounds checks.",
+      "status": "PASS",
+      "api_tests": [
+        "MONEY-NONFINITE-UNIT-001",
+        "API-MONEY-NONFINITE-001",
+        "SERVICE-WSGI-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/validation.py",
+        "casino/app.py",
+        "casino/wsgi.py"
+      ],
+      "introduced_in": "issue-241-reject-nonfinite-wagers",
+      "changed_in": "issue-241-reject-nonfinite-wagers",
+      "notes": "The frozen API already defines wager fields as JSON numbers; rejecting NaN and infinities is a compatible enforcement of that existing contract."
+    },
+    {
+      "id": "LEDGER-027",
+      "module": "Ledger",
+      "description": "Every public signed, debit, credit, and idempotent ledger entry point rejects non-finite amounts before selecting a storage provider, and JSON persistence refuses non-standard numeric constants before atomic replacement or append.",
+      "status": "PASS",
+      "api_tests": [
+        "MONEY-NONFINITE-UNIT-001",
+        "API-MONEY-NONFINITE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/ledger.py",
+        "casino/core/storage.py"
+      ],
+      "introduced_in": "issue-241-reject-nonfinite-wagers",
+      "changed_in": "issue-241-reject-nonfinite-wagers",
+      "notes": "Validation occurs before wallet arithmetic, action fingerprinting, provider access, player replacement, or ledger append."
+    },
+    {
+      "id": "MHVP-006",
+      "module": "Multi-Hand Video Poker",
+      "description": "Multi-Hand Video Poker rejects decoded and string non-finite wager-per-hand values before round construction, state persistence, aggregate debit, or payout handling.",
+      "status": "PASS",
+      "api_tests": [
+        "MONEY-NONFINITE-UNIT-001",
+        "API-MONEY-NONFINITE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/multi_hand_video_poker/engine.py"
+      ],
+      "introduced_in": "issue-241-reject-nonfinite-wagers",
+      "changed_in": "issue-241-reject-nonfinite-wagers",
+      "notes": "This closes the independent wager helper that does not use the shared require_amount function."
+    },
+    {
+      "id": "TEST-055",
+      "module": "Tests",
+      "description": "Non-finite money regression evidence covers all six numeric and string NaN or infinity forms, every affected game API, both HTTP adapters, every public ledger entry point, unchanged wallet, ledger, and game state, strict player JSON persistence, and exact loopback listener cleanup.",
+      "status": "PASS",
+      "api_tests": [
+        "MONEY-NONFINITE-UNIT-001",
+        "API-MONEY-NONFINITE-001",
+        "SERVICE-WSGI-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/nonfinite_money_tests.py",
+        "tests/production_wsgi_probe.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-241-reject-nonfinite-wagers",
+      "changed_in": "issue-241-reject-nonfinite-wagers",
+      "notes": "The API matrix executes 42 rejected requests across Roulette, Blackjack, Baccarat, Keno, Slots, Bingo, and Multi-Hand Video Poker without creating state or money events."
     }
   ]
 }
