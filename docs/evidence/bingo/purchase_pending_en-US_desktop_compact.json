@@ -1,0 +1,29 @@
+{
+  "evidence_class": "after_pass",
+  "branch": "codex/259-bingo-purchase-guard",
+  "commit": "12abd967c5d5dda1306c65bae49b3db179216dfb",
+  "surface": "bingo",
+  "states": [
+    "purchase_ready"
+  ],
+  "state_variant": "purchase_pending",
+  "locale": "en-US",
+  "viewport": {
+    "id": "desktop_compact",
+    "width": 1440,
+    "height": 900
+  },
+  "capture_region": "bingo-control-rail",
+  "path": "docs/evidence/bingo/purchase_pending_en-US_desktop_compact.png",
+  "measurements": {
+    "aria_busy": "true",
+    "buy_text": "Buy card…",
+    "buy_disabled": true,
+    "buy_opacity": 0.55,
+    "buy_cursor": "wait",
+    "amount_disabled": true,
+    "pattern_disabled": true,
+    "reset_disabled": true,
+    "request_count": 1
+  }
+}

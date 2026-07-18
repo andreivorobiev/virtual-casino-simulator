@@ -1,0 +1,28 @@
+{
+  "evidence_class": "after_pass",
+  "branch": "codex/259-bingo-purchase-guard",
+  "commit": "12abd967c5d5dda1306c65bae49b3db179216dfb",
+  "surface": "bingo",
+  "states": [
+    "purchase_ready"
+  ],
+  "state_variant": "purchase_recovered",
+  "locale": "en-US",
+  "viewport": {
+    "id": "desktop_compact",
+    "width": 1440,
+    "height": 900
+  },
+  "capture_region": "bingo-control-rail",
+  "path": "docs/evidence/bingo/purchase_recovered_en-US_desktop_compact.png",
+  "measurements": {
+    "aria_busy": "false",
+    "call_enabled": true,
+    "human_cards": 1,
+    "purchase_debits": [
+      -5
+    ],
+    "visible_cards": 1,
+    "request_count": 1
+  }
+}
