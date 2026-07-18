@@ -1,128 +1,158 @@
-# Parallel Codex Workflow
+# Parallel agent workflow
 
-This workflow lets multiple Codex chats work on the Virtual Casino Simulator without losing requirements, module boundaries, or task context.
+This workflow lets humans, Claude, Codex, and other approved workers collaborate
+without losing requirements, module boundaries, or task context. The legacy
+filename is retained for stable links.
 
 ## Source of truth
 
-Do not treat chat history as the source of truth. Use these durable records instead:
+Do not treat chat history or model memory as source of truth. Use:
 
-- GitHub issues for requested work, scope, acceptance criteria, and open questions.
-- `docs/requirements/requirements.json` for permanent requirement IDs.
-- `modules/*.json` for module ownership and version numbers.
-- `contracts/` for API compatibility rules.
-- `codex/tasks/*.md` task packets for worker handoffs.
-- Pull requests for reviewable implementation history and validation evidence.
+- GitHub issues for requested work, scope, acceptance criteria, dependencies,
+  safety boundaries, and open questions;
+- `docs/requirements/requirements.json` for permanent requirement IDs;
+- `modules/*.json` for module ownership and versions;
+- `contracts/` for API compatibility rules;
+- `codex/tasks/*.md` task packets for durable worker handoffs; and
+- pull requests for reviewable implementation history, checks, and evidence.
+
+All workers follow `ENGINEERING_PRACTICES.md` and
+`docs/engineering_skills.md`. Tool-specific convenience never changes authority
+or the definition of done.
 
 ## Version ownership
 
-Use `modules/module-manifest.json` as the canonical aggregate version source. Its top-level `application` value is the packaged application release and changes only when a formal application release artifact is produced. The entries under `modules` are independent source-module revisions and may advance between packaged releases; `modules.application` is an application module revision, not the packaged release.
+Use `modules/module-manifest.json` as the canonical aggregate version source. Its
+top-level `application` value is the packaged application release and changes
+only when a formal application release artifact is produced. Entries under
+`modules` are independent source-module revisions and may advance between
+packaged releases; `modules.application` is an application module revision, not
+the packaged release.
 
-Workers must bump each directly affected module revision in both the aggregate manifest and its matching `modules/<name>.json` file. Ordinary feature and corrective PRs should report packaged-release impact as `None` unless the coordinator explicitly assigns release-artifact work. Runtime, API, browser, Admin, README, and starter-document release displays must stay aligned with the top-level packaged release.
+Workers bump each directly affected module revision in both the aggregate
+manifest and `modules/<name>.json`. Ordinary feature and corrective PRs report
+packaged-release impact as `None` unless the coordinator explicitly assigns
+release-artifact work. Do not allocate a version already owned by an open PR.
 
-## Chat roles
+## Roles
 
-Use one long-lived coordinator chat and many bounded worker chats.
+Use one long-lived coordinator and bounded worker tasks.
 
-The coordinator chat owns:
+The coordinator owns:
 
-- Turning user goals into GitHub issues or task packets.
-- Assigning one branch and one file ownership list per worker.
-- Preventing two chats from editing the same file at the same time.
-- Sequencing stacked work when the same file must change twice.
-- Reviewing PR summaries for requirement IDs, module versions, tests, and contract impact.
+- turning user goals into GitHub issues or task packets;
+- assigning one branch and one file ownership list per worker;
+- preventing simultaneous edits to the same file;
+- sequencing stacked work when the same file must change twice;
+- consuming handbacks and releasing only the next approved dependency; and
+- reviewing PR summaries for requirement IDs, module versions, tests, evidence,
+  contracts, and residual decisions.
 
-Each worker chat owns:
+Each worker owns:
 
-- One issue or task packet.
-- One branch.
-- One module-focused change unless the packet explicitly lists more.
-- The tests and validation named in its packet.
-- A PR handback with evidence and unresolved questions.
+- one issue or task packet;
+- one branch;
+- one explicit file set and no-touch boundary;
+- one module-focused change unless the packet explicitly lists more;
+- the tests and validation named in its packet; and
+- a terminal PR or blocked handback with exact evidence.
 
-## Starting a worker chat
+## Starting a worker
 
-Create or update a task packet before starting a worker. Use `codex/tasks/TASK_PACKET_TEMPLATE.md` and include:
+Create or update a task packet from `codex/tasks/TASK_PACKET_TEMPLATE.md` before
+starting. Include:
 
-- Goal and non-goals.
-- Requirement IDs.
-- Impacted modules.
-- Owned files.
-- Files the worker must not touch.
-- API, gameplay, ledger, bot, and autoplay impact.
-- Required validation.
-- Expected branch and PR title.
+- goal, non-goals, and user-visible outcome;
+- requirement IDs and impacted modules;
+- packaged-release impact and expected module bumps;
+- owned, no-touch, and allowed-adjacent files;
+- API, gameplay, ledger, bot/autoplay, data, security, and deployment impact;
+- required reading, validation, visual rows, evidence, and cleanup; and
+- branch, PR title, dependencies, handback, and stop conditions.
 
-Paste the packet into the new chat along with:
+The worker must read root and nested instructions, current GitHub state, module
+manifests, requirements, contracts, and specialized policies itself. Do not ask
+another agent to summarize instructions that the worker is required to follow.
 
-- "Read `AGENTS.md`, the relevant nested `AGENTS.md`, and module manifests first."
-- "Do not rely on prior chat context."
-- "Stop and ask before expanding beyond the owned files."
+## Parallel ownership
 
-## Working on one game from many chats
+Parallel work is allowed only when file ownership is disjoint. Good layer splits
+include engine/service, API/contracts, frontend, tests, and documentation. Shared
+registration, manifests, requirements, generated docs, compatibility artifacts,
+visual matrices, and release metadata normally have one integration owner.
 
-Parallel work on one game is allowed only when ownership is split by layer.
+When two changes require the same file, stack them:
 
-Game expansion workers must also follow [`game_catalog_governance.md`](game_catalog_governance.md). Each isolated game owns its `modules/<game-id>.json` descriptor and `tests/game_drivers/<game-id>.py` driver; shared registration, shell, validator, and long-suite allowlists must not be reintroduced.
+1. Worker A opens a PR against the accepted base.
+2. Worker B branches from Worker A's exact accepted or coordinator-approved head.
+3. Worker B records the dependency and targets the predecessor branch when
+   appropriate.
+4. Worker A merges first.
+5. Worker B rebases or retargets, recalculates shared versions/generated files,
+   reruns validation, and then requests review.
 
-Good splits:
+Do not open competing PRs, copy commits manually between dirty worktrees, or
+force-update another worker's branch. Preserve active worktrees and user runtime
+data.
 
-- Engine and settlement rules: `casino/games/<game>/`.
-- API route or schema work: game API files plus `contracts/`.
-- Frontend view: `web/games/<game>.js` and related `web/core/` helpers.
-- Tests only: `tests/` files for the game.
-- Documentation only: `docs/` and task packet updates.
+## Game work
 
-Avoid simultaneous edits to the same file. If two changes require the same file, stack them:
+Game expansion follows `docs/game_catalog_governance.md`. Each isolated game owns
+its module descriptor, backend package, frontend module, locale domain, contract,
+focused tests, long driver, and evidence. Shared catalog and integration files
+belong to the serialized integration owner.
 
-1. Worker A opens a PR against the base branch.
-2. Worker B branches from Worker A's branch.
-3. Worker B states the dependency in the PR.
-4. Merge Worker A first, then rebase or retarget Worker B.
+Avoid simultaneous edits to the same game file. If a game is split by layer,
+every worker still names its shared behavioral requirements and integration
+dependency.
 
 ## Branches and PRs
 
-Use short, explicit branch names:
+Use short explicit branch names consistent with `CONTRIBUTING.md`. Every PR
+includes:
 
-- `agent/<module>-<task>`
-- `agent/<game>-engine-<task>`
-- `agent/<game>-ui-<task>`
-- `agent/<game>-tests-<task>`
-- `docs/<workflow-or-release-task>`
+- issue and task packet;
+- base branch and parallel/stacked dependencies;
+- owned and honored no-touch files;
+- requirements added, changed, and validated;
+- impacted modules and independent version bumps;
+- packaged application release impact;
+- API, gameplay, ledger, data, security, and deployment impact;
+- tests, validators, visual rows, evidence, and cleanup; and
+- unresolved risks and owner decisions.
 
-Every PR must include:
+Green checks do not authorize merge. The coordinator consumes the handback and
+applies the repository's review and release gates.
 
-- Requirement IDs added, changed, or validated.
-- Impacted modules.
-- Packaged application release impact.
-- Independent module revision bumps.
-- API contract impact.
-- Gameplay impact.
-- Tests and validations run.
-- Task packet link or issue link.
-- Parallel work dependencies, if any.
+## Pause and conflict rules
 
-## Conflict rules
+Pause a worker when:
 
-The coordinator should pause new workers when:
+- another active worker owns a required file;
+- a requirement ID or module version is missing, reserved, or ambiguous;
+- the base or open-PR dependency changed;
+- a proposed API change could break `/api/v1`;
+- gameplay, ledger, security, deployment, or data scope expands without authority;
+  or
+- required tests or evidence would touch user, live, provider, or production
+  state.
 
-- A worker needs a file already owned by another active worker.
-- A requirement ID is missing or ambiguous.
-- A module version bump conflicts with another active PR.
-- A proposed API change could break `/api/v1`.
-- Gameplay behavior changes without explicit scope.
-
-When in doubt, make the packet smaller and split the work into a follow-up issue.
+When in doubt, reduce scope, create a linked follow-up issue, or request an owner
+decision. Do not solve coordination ambiguity through an unreviewed mutation.
 
 ## Validation ladder
 
-Workers should run the smallest relevant checks while developing, then the PR should finish with the required subset from `AGENTS.md`.
-
-Documentation or tooling-only changes normally require:
+Run the smallest relevant checks during development and the issue's complete
+required subset before handoff. Documentation/tooling-only changes normally run:
 
 ```bash
+python scripts/generate_docs.py --check
 python scripts/validate_requirements.py
 python scripts/validate_versions.py
+python scripts/validate_module_boundaries.py
 python scripts/check_comment_density.py
 ```
 
-Game, API, ledger, bot, or autoplay changes require the module-relevant API/browser/contract checks named in the task packet.
+Game, API, ledger, auth, storage, UI, security, release, or operational changes
+add the specialized API, browser, contract, catalog, long, visual, recovery, and
+deployment checks named by their task packet and policies.
