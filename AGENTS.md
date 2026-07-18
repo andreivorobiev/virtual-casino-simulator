@@ -10,6 +10,13 @@ The Virtual Casino Simulator is a local fake-money browser casino with isolated 
 
 GitHub is the source of truth after this payload is pushed. Work must happen through issues, branches, pull requests, required checks, and release artifacts.
 
+## Issue triage and priority rules
+
+- `docs/issue_prioritization.md` is authoritative for issue priority and label taxonomy.
+- Every open issue must have exactly one of `P1`, `P2`, or `P3`.
+- `P4` must not be created or used.
+- Priority-only work does not authorize implementation, issue closure, merge, deployment, or provider changes.
+
 ## Required workflow
 
 1. Read the relevant requirement IDs before editing.

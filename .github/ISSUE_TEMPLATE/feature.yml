@@ -1,5 +1,7 @@
 name: Feature request
 description: Create a structured Feature request issue.
+labels:
+  - enhancement
 body:
   - type: input
     id: module

@@ -2,6 +2,12 @@
 
 All work should happen through GitHub issues and pull requests.
 
+## Issue prioritization
+
+Follow [`docs/issue_prioritization.md`](docs/issue_prioritization.md) when creating,
+triaging, or relabeling issues. Every open issue must have exactly one of `P1`,
+`P2`, or `P3`. The repository does not use `P4`.
+
 ## License and terms boundaries
 
 Contributions to repository source code are expected to be compatible with the Apache License, Version 2.0 in `LICENSE`.

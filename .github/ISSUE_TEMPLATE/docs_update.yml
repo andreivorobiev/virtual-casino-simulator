@@ -1,5 +1,7 @@
 name: Docs update
 description: Create a structured Docs update issue.
+labels:
+  - documentation
 body:
   - type: input
     id: module
