@@ -115,6 +115,8 @@ class PlinkoApiTests(unittest.TestCase):
         self.assertEqual((1, -7.0), (len(debits), debits[0]["amount"]))
         # Verify the public payload includes committed replay facts.
         self.assertEqual(engine.ROWS, len(first["drop"]["path"]))
+        # Verify rules disclosure exactly matches the server settlement table.
+        self.assertEqual(list(engine.MULTIPLIERS), first["rules"]["multipliers"])
         # Verify the internal request fingerprint stays private.
         self.assertNotIn("request_fingerprint", first["drop"])
         # Read state through a different authenticated session.

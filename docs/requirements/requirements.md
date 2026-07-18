@@ -257,7 +257,7 @@ GitHub issue #77 integrates issue #136 after Over/Under 7 and supplies canonical
 
 | ID | Requirement | Status | API tests | Browser tests |
 |---|---|---|---|---|
-| PLINKO-001 | One server-committed eight-step peg path produces a transparent terminal bucket, multiplier, payout, and net result. | PASS | API-PLINKO-001 | BR-PLINKO-001 |
+| PLINKO-001 | One server-committed eight-step peg path produces a transparent terminal bucket, payout, and net result through the symmetric 5/2/1.5/1/0.2/1/1.5/2/5 table with exact 98.4375% theoretical return. | PASS | API-PLINKO-001 | BR-PLINKO-001 |
 | PLINKO-002 | Session-bound drops, history, restart state, durable action receipts, and canonical routes remain private and reload-safe. | PASS | API-PLINKO-001, API-WALLET-RESTART-001 | BR-PLINKO-001 |
 | PLINKO-003 | Wager debits and returned-token credits use ledger-only durable retry-safe action identities. | PASS | API-PLINKO-001 |  |
 | PLINKO-004 | English and Russian play remains responsive, accessible, reduced-motion safe, and timer-clean. | PASS |  | BR-PLINKO-001 |

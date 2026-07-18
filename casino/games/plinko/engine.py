@@ -17,8 +17,8 @@ from casino.errors import ConflictError, ValidationError
 GAME_ID = "plinko"
 # Fix the accepted rules profile to an eight-row pegboard.
 ROWS = 8
-# Publish transparent bucket multipliers from left edge to right edge.
-MULTIPLIERS = (0.2, 0.5, 1.0, 1.5, 2.0, 5.0, 2.0, 1.5, 1.0)
+# Publish the symmetric 252/256 expected-return profile from left edge to right edge.
+MULTIPLIERS = (5.0, 2.0, 1.5, 1.0, 0.2, 1.0, 1.5, 2.0, 5.0)
 # Bound reload-safe history so one player document remains compact.
 RECENT_DROP_LIMIT = 20
 

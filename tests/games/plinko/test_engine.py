@@ -1,5 +1,7 @@
 """Deterministic rule tests for integrated Plinko issue #136."""
 
+# Import combinations so tests prove the exact eight-row binomial return.
+import math
 # Import the dependency-free standard test runner.
 import unittest
 
@@ -31,7 +33,7 @@ class PlinkoEngineTests(unittest.TestCase):
         # Verify the terminal bucket equals right-bounce count.
         self.assertEqual(3, engine.bucket_for_path(path))
         # Verify the transparent multiplier table is addressed by bucket.
-        self.assertEqual(1.5, engine.multiplier_for_bucket(3))
+        self.assertEqual(1.0, engine.multiplier_for_bucket(3))
 
     # Confirm a created drop stores settlement facts without wallet mutation.
     def test_create_drop_calculates_transparent_payout(self):
@@ -40,9 +42,28 @@ class PlinkoEngineTests(unittest.TestCase):
         # Create the pure drop result with stable audit fields.
         drop = engine.create_drop("session-player", 10, "drop-1", path=path, drop_id="plinko_0123456789abcdef01234567", created_at="2026-07-14T00:00:00Z", request_fingerprint="fingerprint")
         # Verify payout follows wager times multiplier.
-        self.assertEqual((5, 5.0, 50.0, 40.0), (drop["bucket"], drop["multiplier"], drop["payout"], drop["net"]))
+        self.assertEqual((5, 1.0, 10.0, 0.0), (drop["bucket"], drop["multiplier"], drop["payout"], drop["net"]))
         # Verify the committed path is public replay data.
         self.assertEqual(path, drop["path"])
+
+    # Confirm the frozen table is symmetric and has the exact documented house edge.
+    def test_multiplier_profile_is_symmetric_and_below_full_return(self):
+        # Freeze every left-to-right bucket value as permanent rules evidence.
+        expected = (5.0, 2.0, 1.5, 1.0, 0.2, 1.0, 1.5, 2.0, 5.0)
+        # Verify the engine publishes the accepted profile without reordering.
+        self.assertEqual(expected, engine.MULTIPLIERS)
+        # Verify mirrored paths always receive mirrored multipliers.
+        self.assertEqual(expected, tuple(reversed(engine.MULTIPLIERS)))
+        # Calculate each terminal bucket's exact binomial path count.
+        weights = tuple(math.comb(engine.ROWS, bucket) for bucket in range(engine.ROWS + 1))
+        # Verify eight binary peg choices produce 256 equally likely paths.
+        self.assertEqual(256, sum(weights))
+        # Calculate theoretical returned tokens per one-token wager.
+        rtp = sum(weight * multiplier for weight, multiplier in zip(weights, engine.MULTIPLIERS)) / sum(weights)
+        # Prove the documented 252/256 expected return exactly.
+        self.assertEqual(0.984375, rtp)
+        # Prove the server-authoritative profile retains a positive house edge.
+        self.assertLess(rtp, 1.0)
 
     # Confirm malformed wagers and impossible paths fail closed.
     def test_invalid_boundaries_fail_closed(self):
