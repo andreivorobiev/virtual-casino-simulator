@@ -1,9 +1,12 @@
 {
   "module": "docs",
-  "version": "1.41.1",
+  "version": "1.42.0",
   "paths": [
     "docs/",
+    "AGENTS.md",
+    "CLAUDE.md",
     "CODEX_START_HERE.md",
+    "ENGINEERING_PRACTICES.md",
     "ARCHITECTURE.md",
     "RELEASE_NOTES.md",
     "LICENSE",

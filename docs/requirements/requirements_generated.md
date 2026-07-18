@@ -46,9 +46,9 @@ Historical source baseline: 9.1.0
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
 - tests: 1.42.1
-- docs: 1.41.1
+- docs: 1.42.0
 - contracts: 1.32.0
-- tooling: 1.13.1
+- tooling: 1.14.0
 - commenting_policy: 1.0.0
 
 ## Requirements
@@ -341,8 +341,8 @@ Historical source baseline: 9.1.0
 - **DOC-013** (Documentation) - PASS: Release notes are included in the package.
 - **DOC-014** (Documentation) - PASS: Release notes summarize fixed regressions.
 - **DOC-015** (Documentation) - PASS: Known limitations are documented when applicable.
-- **DOC-016** (Documentation) - PASS: Parallel Codex workflow documentation defines coordinator and worker chat responsibilities.
-- **TOOL-001** (Tooling) - PASS: Codex task packets and prompts preserve scope, file ownership, validation, and PR handback context for worker chats.
+- **DOC-016** (Documentation) - PASS: Parallel-agent workflow documentation defines coordinator and worker responsibilities for humans, Claude, Codex, and other automation.
+- **TOOL-001** (Tooling) - PASS: Agent task packets and pull-request templates preserve author, coordinator, merge executor, scope, file ownership, validation, dependency, exact-head, and handback context.
 - **TOOL-002** (Tooling) - PASS: GitHub Actions exposes Suite 100 as a pull request check and Suite 300 or 500 as a manually selected sharded soak run.
 - **TOOL-003** (Tooling) - PASS: Release tooling produces a deterministic tracked-file application archive, checksum-bound provenance and dependency manifest, clean extracted-copy smoke, fail-closed private-content exclusion, protected publication gate, and application-only prior-artifact rollback mapping.
 - **BOT-001** (Bots) - PASS: Bots are represented as controllers for player accounts, not embedded game objects.
@@ -635,3 +635,6 @@ Historical source baseline: 9.1.0
 - **CORE-024** (Application) - PASS: A reviewed restricted-preview edge packet binds the complete same-origin application to the exact canonical HTTPS host, proxies only to the supervised IPv4 loopback upstream, preserves restricted enrollment and authenticated operational boundaries, preflights ACME reload and application-edge rollback, and prohibits database rollback.
 - **TOOL-005** (Tooling) - PASS: Edge tooling validates the exact inert policy and templates without network, process, listener, or write activity, and provides an optional read-only HTTPS observer whose output is strictly allowlisted and excludes origins, addresses, paths, headers, bodies, cookies, credentials, and provider identifiers.
 - **TEST-050** (Tests) - PASS: Edge evidence covers exact origin and loopback topology, restricted access, replacement forwarding headers, protected ports, ACME preflight, inert service and rollback templates, traversal refusal, listener-free static validation, exact success-envelope validation through the production WSGI/API boundary, pre-network credential refusal, bounded authenticated probes, security headers, certificate age, sanitized output, packaging, and fail-closed negative cases.
+- **DOC-017** (Documentation) - PASS: A vendor-neutral root handbook documents the complete engineering practice, required capabilities, authority hierarchy, and current-versus-historical status, while the repository start page links every other Markdown file exactly once.
+- **TOOL-006** (Tooling) - PASS: Documentation generation deterministically inventories every tracked or non-ignored Markdown file, updates the bounded root catalog, and fails check mode when the catalog or generated requirements are stale.
+- **DOC-018** (Documentation) - PASS: The repository defines a durable Claude-author/Codex-merge operating model in which Claude composes assigned pull requests and Codex alone reviews integration gates and executes every merge without bypassing owner authority.
