@@ -581,13 +581,13 @@ flowchart LR
 | BAC-014 | Banker bet pays with 5 percent commission by default. | PASS | API-BAC-001 |  |
 | BAC-015 | Tie bet pays configurable 8:1 default. | PASS | API-BAC-001 |  |
 | BAC-016 | Player/Banker bets push on tie. | PASS | API-BAC-001 |  |
-| BAC-017 | Baccarat bets debit immediately. | PASS | API-BAC-001 |  |
+| BAC-017 | Each accepted Baccarat wager debits exactly once immediately, and pending browser mutations cannot schedule a hidden repeat wager. | PASS | API-BAC-001 | BR-BAC-MUTATION-001 |
 | BAC-018 | Baccarat bet cancellation refunds before deal. | PASS | API-BAC-001 |  |
 | BAC-019 | Baccarat bots can place strategy bets. | PASS | API-BAC-001 |  |
-| BAC-020 | Baccarat UI shows cards, totals, and winner. | PASS |  | BR-BAC-001 |
+| BAC-020 | Baccarat UI shows cards, totals, winner, and a truthful busy boundary while wallet-affecting actions resolve. | PASS |  | BR-BAC-001, BR-BAC-MUTATION-001 |
 | BAC-021 | Baccarat UI shows road history. | PASS |  | BR-BAC-001 |
 | BAC-022 | Baccarat UI shows shoe and burn info. | PASS |  | BR-BAC-001 |
-| BAC-023 | Baccarat auto play repeats selected bet. | PASS |  | BR-BAC-001 |
+| BAC-023 | Baccarat auto play repeats the selected bet only after earlier manual wager mutations resolve. | PASS |  | BR-BAC-001, BR-BAC-MUTATION-001 |
 | BAC-024 | Baccarat writes history rows. | PASS | API-BAC-001 |  |
 
 ### Bingo
@@ -744,13 +744,13 @@ flowchart LR
 
 | ID | Requirement | Status | API tests | Browser tests |
 |---|---|---|---|---|
-| LEDGER-001 | Each player has a persistent fake-money balance. | PASS |  |  |
+| LEDGER-001 | Each player has a persistent fake-money balance. | PASS |  | BR-BAC-MUTATION-001 |
 | LEDGER-002 | Human player exists by default. | PASS |  |  |
 | LEDGER-003 | Three bot players exist by default. | PASS |  |  |
 | LEDGER-004 | Add-money requires a positive amount. | PASS |  |  |
 | LEDGER-005 | All betting debits go through the ledger service. | PASS | API-ROU-001 |  |
 | LEDGER-006 | All payout credits go through the ledger service. | PASS |  |  |
-| LEDGER-007 | Ledger events include player, game, round, transaction type, amount, before, and after balance. | PASS |  |  |
+| LEDGER-007 | Ledger events include player, game, round, transaction type, amount, before, and after balance. | PASS |  | BR-BAC-MUTATION-001 |
 | LEDGER-008 | Ledger is append-only JSONL. | PASS |  |  |
 | LEDGER-009 | Insufficient funds rejects debit transactions. | PASS |  |  |
 | LEDGER-010 | Roulette bet placement debits immediately. | PASS | API-ROU-001 |  |
@@ -759,7 +759,7 @@ flowchart LR
 | LEDGER-013 | Blackjack double down debits separately. | PASS | API-BJ-001 |  |
 | LEDGER-014 | Blackjack split debits separately. | PASS | API-BJ-001 |  |
 | LEDGER-015 | Legal Blackjack insurance debits separately, while revealed or settled phase rejections do not mutate the ledger. | PASS | API-BJ-001, API-BJ-003 |  |
-| LEDGER-016 | Baccarat bet placement debits immediately. | PASS | API-BAC-001 |  |
+| LEDGER-016 | Baccarat bet placement debits immediately and exactly once for each accepted visible wager. | PASS | API-BAC-001 | BR-BAC-MUTATION-001 |
 | LEDGER-017 | Baccarat bet cancellation credits refunds. | PASS | API-BAC-001 |  |
 | LEDGER-018 | Keno ticket purchase debits immediately. | PASS | API-KENO-001 |  |
 | LEDGER-019 | Keno ticket cancellation credits refunds. | PASS | API-KENO-001 |  |

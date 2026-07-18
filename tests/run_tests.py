@@ -4217,12 +4217,70 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.get_by_test_id('nav-baccarat').click()
                 # Wait for the wager setup state to mount.
                 page.get_by_test_id('baccarat-wager-setup').wait_for(timeout=5000)
-                # Place a banker wager through the same public control a player uses.
+                # Read the browser session's canonical player id for exact ledger assertions.
+                baccarat_me=page.request.get(base+'/api/v2/me').json()['data']
+                # Store the authenticated player id without trusting caller-controlled game fields.
+                baccarat_player_id=baccarat_me['player']['player_id']
+                # Count existing Baccarat debits so the regression measures only this visible coup.
+                baccarat_ledger_before=page.request.get(base+f'/api/v1/players/{baccarat_player_id}/ledger').json()['data']['ledger']
+                # Store immutable event ids because the ledger endpoint does not promise append ordering.
+                baccarat_ledger_ids_before={row['ledger_id'] for row in baccarat_ledger_before}
+                # Install a browser-only response hold after the first real wager commits on the backend.
+                page.evaluate("""() => { const originalFetch=window.fetch.bind(window); let firstBet=true; window.__baccaratFirstBetHeld=false; window.__baccaratReleaseFirstBet=()=>{}; window.__baccaratBetRequestCount=0; window.fetch=async (...args) => { const input=args[0]; const url=typeof input==='string' ? input : input.url; const init=args[1] || {}; const method=String(init.method || (typeof input==='object' ? input.method : 'GET') || 'GET').toUpperCase(); const responsePromise=originalFetch(...args); if (url.includes('/api/v1/games/baccarat/bets') && method==='POST') { window.__baccaratBetRequestCount+=1; if (firstBet) { firstBet=false; const response=await responsePromise; window.__baccaratFirstBetHeld=true; await new Promise(resolve => { window.__baccaratReleaseFirstBet=resolve; }); return response; } } return responsePromise; }; }""")
+                # Place a banker wager through the same visible public control a player uses.
                 page.get_by_test_id('baccarat-banker').click()
+                # Wait until the real backend committed while the browser response remains deliberately held.
+                page.wait_for_function('window.__baccaratFirstBetHeld === true',timeout=5000)
+                # Read backend state while the browser is still at the controlled stale-response boundary.
+                baccarat_pending_state=page.request.get(base+'/api/v1/games/baccarat/state').json()['data']['state']
+                # Record the truthful shared busy state before attempting the disabled visible Deal control.
+                baccarat_pending_busy=page.get_by_test_id('baccarat-control-rail').get_attribute('aria-busy')
+                # Record that the visible Deal control is disabled until the committed wager response applies.
+                baccarat_pending_deal_disabled=page.get_by_test_id('baccarat-deal').is_disabled()
+                # Invoke the disabled semantic button to prove it cannot schedule a hidden repeat wager.
+                page.get_by_test_id('baccarat-deal').evaluate('button => button.click()')
+                # Allow any erroneous duplicate request enough time to become observable.
+                page.wait_for_timeout(150)
+                # Record the actual bet-request count after the disabled Deal attempt.
+                baccarat_pending_request_count=page.evaluate('window.__baccaratBetRequestCount')
+                # Release the first committed response so the queue can apply its authoritative open-bet state.
+                page.evaluate('window.__baccaratReleaseFirstBet()')
+                # Wait until the one visible wager appears and the serialized Deal control becomes available.
+                page.wait_for_function("() => !document.querySelector('[data-testid=\"baccarat-deal\"]').disabled && document.querySelector('.bac-drawer-total')?.textContent.includes('25')",timeout=5000)
                 # Deal one coup so the reveal theater and settlement state are exercised.
                 page.get_by_test_id('baccarat-deal').click()
                 # Wait for the post-reveal result state to settle.
                 page.get_by_test_id('baccarat-result').wait_for(timeout=5000)
+                # Read final backend state after the one visible wager settles.
+                baccarat_final_state=page.request.get(base+'/api/v1/games/baccarat/state').json()['data']['state']
+                # Read final ledger rows so exactly one new Baccarat debit is proven.
+                baccarat_ledger_after=page.request.get(base+f'/api/v1/players/{baccarat_player_id}/ledger').json()['data']['ledger']
+                # Isolate new Baccarat wager debits by immutable identity instead of response ordering.
+                baccarat_new_debits=[row for row in baccarat_ledger_after if row['ledger_id'] not in baccarat_ledger_ids_before and row.get('transaction_type')=='BACCARAT_BET_PLACED']
+                # Isolate current-player bets from the final committed coup.
+                baccarat_final_human_bets=[bet for bet in baccarat_final_state['last_coups'][-1]['bets'] if bet['player_id']==baccarat_player_id]
+                # Count visible settlement rows so the drawer cannot hide an extra charged wager.
+                baccarat_visible_settlements=page.locator('.details-drawer .bet-item').count()
+                # Define the deterministic mutation-serialization regression for issue #252.
+                def baccarat_mutation_serialization():
+                    # Verify the first visible click committed exactly one backend open bet.
+                    assert len(baccarat_pending_state['open_bets'])==1
+                    # Verify the entire control rail truthfully advertised the pending mutation.
+                    assert baccarat_pending_busy=='true'
+                    # Verify Deal remained a disabled semantic control at the race boundary.
+                    assert baccarat_pending_deal_disabled
+                    # Verify the disabled Deal attempt could not issue a repeat-wager request.
+                    assert baccarat_pending_request_count==1
+                    # Verify the final coup settled exactly one human wager.
+                    assert len(baccarat_final_human_bets)==1
+                    # Verify exactly one ledger debit was created for the one visible wager.
+                    assert len(baccarat_new_debits)==1 and baccarat_new_debits[0]['amount']==-25
+                    # Verify the result drawer rendered exactly the one charged settlement.
+                    assert baccarat_visible_settlements==1
+                    # Verify the backend contains no phantom open wager after settlement.
+                    assert baccarat_final_state['open_bets']==[]
+                # Execute the issue-owned real-browser and real-backend data-integrity regression.
+                run_case('BR-BAC-MUTATION-001',['BAC-017','BAC-020','BAC-023','LEDGER-001','LEDGER-007','LEDGER-016'],baccarat_mutation_serialization)
                 # Define the Baccarat browser assertion bundle for premium UI requirements.
                 def baccarat_browser():
                     # Assert the fixed Baccarat table is visible.

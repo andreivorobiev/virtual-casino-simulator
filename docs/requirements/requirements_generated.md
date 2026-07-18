@@ -18,7 +18,7 @@ Historical source baseline: 9.1.0
 - roulette: 9.4.0
 - slots: 9.1.0
 - blackjack: 9.1.2
-- baccarat: 9.1.0
+- baccarat: 9.1.1
 - keno: 9.2.0
 - bingo: 9.2.0
 - multi_hand_video_poker: 1.0.1
@@ -45,8 +45,8 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.0
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.44.3
-- docs: 1.44.3
+- tests: 1.44.4
+- docs: 1.44.4
 - contracts: 1.32.0
 - tooling: 1.14.0
 - commenting_policy: 1.0.0
