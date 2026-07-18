@@ -7,8 +7,8 @@ import unittest
 
 # Import the shared router to exercise route binding.
 from casino.router import Router
-# Import public conflict and lookup errors for assertions.
-from casino.errors import ConflictError, NotFoundError
+# Import public conflict, insufficient-funds, and lookup errors for assertions.
+from casino.errors import ConflictError, InsufficientFundsError, NotFoundError
 # Import the isolated route adapter and engine under test.
 from casino.games.acey_deucey import api, engine
 # Import the isolated service orchestration under test.
@@ -63,8 +63,8 @@ class RecordingLedger:
         new_balance = round(self.balances[player_id] + signed_amount, 2)
         # Reject fake overdrafts.
         if new_balance < 0:
-            # Raise the same broad error class the service propagates.
-            raise ConflictError("insufficient fake balance")
+            # Raise the canonical shared insufficient-funds error.
+            raise InsufficientFundsError("Insufficient play-token balance")
         # Commit the fake balance.
         self.balances[player_id] = new_balance
         # Build public ledger fields used by assertions.
@@ -170,6 +170,95 @@ class AceyDeuceyApiTests(unittest.TestCase):
         self.assertEqual(("boundary_tie", "outside"), (tie["round"]["outcome"], outside["round"]["outcome"]))
         # Verify only wager debits exist.
         self.assertEqual([], [event for event in self.ledger.events if event["transaction_type"] == "ACEY_DEUCEY_PAYOUT_CREDIT"])
+
+    # Confirm an overbet restores the original private decision for an affordable retry.
+    def test_insufficient_play_wager_restores_active_round_for_safe_retry(self):
+        # Restrict the authenticated player below the first attempted wager.
+        self.ledger.balances["session-player"] = 5.0
+        # Prepare a deterministic strict-inside result without wallet movement.
+        round_id = self.prepared_round("2H", "AS", "7C", action_id="deal-overbet")
+        # Attempt to reveal the result with an unaffordable wager.
+        with self.assertRaises(InsufficientFundsError):
+            # Exercise the real route and service rollback boundary.
+            self.call(f"/api/v1/games/acey-deucey/rounds/{round_id}/play", {"action_id": "play-overbet", "wager": 10})
+        # Load the persisted document after rollback.
+        restored = self.repository.load("session-player")
+        # Verify the same round remains privately actionable with no terminal history.
+        self.assertEqual((round_id, "wager", [], "7C"), (restored["active_round"]["round_id"], restored["active_round"]["phase"], restored["recent_rounds"], restored["active_round"]["_third_card"]))
+        # Verify the failed play identity and wallet movement were both released.
+        self.assertEqual((False, 5.0, []), ("play-overbet" in restored["action_receipts"], self.ledger.balances["session-player"], self.ledger.events))
+        # Confirm read-only state no longer raises the prior permanent conflict.
+        readable = self.call("/api/v1/games/acey-deucey/state", method="GET")
+        # Verify the hidden result remains private after recovery.
+        self.assertNotIn("third_card", readable["state"]["active_round"])
+        # Retry the released action identity with an affordable wager.
+        settled = self.call(f"/api/v1/games/acey-deucey/rounds/{round_id}/play", {"action_id": "play-overbet", "wager": 5})
+        # Verify the retry settles once and creates one debit plus one inside payout.
+        self.assertEqual(("settled", 2, 10.0), (settled["round"]["phase"], len(self.ledger.events), self.ledger.balances["session-player"]))
+
+    # Confirm reload repairs a legacy save-before-debit terminal row with no ledger proof.
+    def test_reload_restores_legacy_pending_terminal_without_wager_proof(self):
+        # Prepare one deterministic private decision.
+        round_id = self.prepared_round("3H", "KS", "8C", action_id="deal-crash-window")
+        # Load the stored round for a simulated process interruption.
+        state = self.repository.load("session-player")
+        # Resolve the active mutable round.
+        round_state = state["active_round"]
+        # Build the persisted terminal shape used before this recovery fix.
+        play_fingerprint = request_fingerprint({"stage": "play", "round_id": round_id, "wager": 4.0})
+        # Reveal and settle without committing a ledger debit.
+        engine.play_round(round_state, 4, "play-crash-window", completed_at="2026-07-14T00:00:00Z", request_fingerprint=play_fingerprint)
+        # Remove the new rollback field to model an already-stranded legacy document.
+        round_state.pop("_third_card", None)
+        # Archive the pending terminal shape exactly as the old service did.
+        engine.archive_round(state, round_state)
+        # Retain the old durable play receipt without ledger proof.
+        state["action_receipts"]["play-crash-window"] = {"stage": "play", "round_id": round_id, "request_fingerprint": play_fingerprint}
+        # Persist the simulated crash window.
+        self.repository.save("session-player", state)
+        # Reload through the public state endpoint to invoke recovery.
+        recovered = self.call("/api/v1/games/acey-deucey/state", method="GET")
+        # Verify recovery restores the same prepared round and removes terminal history.
+        self.assertEqual((round_id, "wager", []), (recovered["state"]["active_round"]["round_id"], recovered["state"]["active_round"]["phase"], recovered["state"]["recent_rounds"]))
+        # Verify the previously revealed card is private again.
+        self.assertNotIn("third_card", recovered["state"]["active_round"])
+        # Verify no balance movement or uncommitted receipt survives recovery.
+        repaired = self.repository.load("session-player")
+        # Assert the wallet, ledger, receipt, and restored private card all match the free deal.
+        self.assertEqual((100.0, [], False, "8C"), (self.ledger.balances["session-player"], self.ledger.events, "play-crash-window" in repaired["action_receipts"], repaired["active_round"]["_third_card"]))
+
+    # Confirm reload trusts committed debit proof without rollback or a second charge.
+    def test_reload_preserves_pending_terminal_with_committed_wager_proof(self):
+        # Prepare an outside result so only the wager debit needs recovery.
+        round_id = self.prepared_round("3H", "KS", "AC", action_id="deal-committed-window")
+        # Load the prepared document for a simulated post-debit interruption.
+        state = self.repository.load("session-player")
+        # Resolve the active mutable round.
+        round_state = state["active_round"]
+        # Bind the play to its exact round and normalized wager.
+        play_fingerprint = request_fingerprint({"stage": "play", "round_id": round_id, "wager": 4.0})
+        # Build terminal state before applying the matching debit proof.
+        engine.play_round(round_state, 4, "play-committed-window", completed_at="2026-07-14T00:00:00Z", request_fingerprint=play_fingerprint)
+        # Archive the pending terminal shape.
+        engine.archive_round(state, round_state)
+        # Retain its durable semantic receipt.
+        state["action_receipts"]["play-committed-window"] = {"stage": "play", "round_id": round_id, "request_fingerprint": play_fingerprint}
+        # Persist the crash-recoverable terminal state.
+        self.repository.save("session-player", state)
+        # Commit the exact append-only wager movement without saving its state marker.
+        self.ledger.apply_once(player_id="session-player", signed_amount=-4.0, transaction_type="ACEY_DEUCEY_WAGER_DEBIT", round_id=round_id, ledger_action_id="ad:play-committed-window:wager", fingerprint=play_fingerprint, details={"stage": "play_wager", "wager": 4.0, "left_card": "3H", "right_card": "KS"})
+        # Reload through the public route to reconcile the missing marker.
+        recovered = self.call("/api/v1/games/acey-deucey/state", method="GET")
+        # Verify committed terminal state remains archived and never returns active.
+        self.assertEqual((None, "settled", "complete", 96.0), (recovered["state"]["active_round"], recovered["state"]["recent_rounds"][0]["phase"], recovered["state"]["recent_rounds"][0]["wager_status"], self.ledger.balances["session-player"]))
+        # Inspect the repaired private document after proof reconciliation.
+        repaired = self.repository.load("session-player")
+        # Verify obsolete rollback material is discarded after proof becomes authoritative.
+        self.assertNotIn("_third_card", repaired["recent_rounds"][0])
+        # Replay the exact public play request after recovery.
+        replayed = self.call(f"/api/v1/games/acey-deucey/rounds/{round_id}/play", {"action_id": "play-committed-window", "wager": 4})
+        # Verify the same terminal result returns with no second ledger movement.
+        self.assertEqual((True, 1, 96.0), (replayed["replayed"], len(self.ledger.events), self.ledger.balances["session-player"]))
 
     # Confirm pass closes the round without wallet movement or result reveal.
     def test_pass_has_no_ledger_movement_and_no_reveal(self):

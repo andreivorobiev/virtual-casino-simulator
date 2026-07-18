@@ -19,6 +19,8 @@ Hi-Lo exposes one card and asks for a higher/lower prediction. Red Dog takes an 
 
 ## Catalog Integration
 
-The descriptor at `modules/acey_deucey.json` owns module version `1.0.0`, route `/games/acey_deucey`, sort order `260`, paired EN/RU resources, the additive contract, and `tests.game_drivers.acey_deucey:play`. Permanent requirements `AD-001` through `AD-005` map rules, session/restart behavior, ledger safety, browser localization, and catalog-wide evidence.
+The descriptor at `modules/acey_deucey.json` owns module version `1.0.1`, route `/games/acey_deucey`, sort order `260`, paired EN/RU resources, the additive contract, and `tests.game_drivers.acey_deucey:play`. Permanent requirements `AD-001` through `AD-005` map rules, session/restart behavior, ledger safety, browser localization, and catalog-wide evidence.
+
+Play settlement persists deterministic recovery state before the wager debit. If no matching append-only debit proof exists after an insufficient-funds response or process interruption, reload restores the original private boundary decision and releases only the uncommitted play identity. Once debit proof exists, terminal state remains authoritative and payout recovery continues exactly once.
 
 The visual surface `acey_deucey` covers `ready`, `boundaries_dealt`, `settled`, `passed`, `reduced_motion`, and `route_restored` in both locales at desktop primary, desktop compact, tablet, and mobile viewports. Shared registration remains catalog-driven.

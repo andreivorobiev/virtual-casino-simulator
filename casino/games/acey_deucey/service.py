@@ -145,12 +145,18 @@ class AceyDeuceyService:
                 wager_action = f"ad:{round_state['play_action_id']}:wager"
                 # Find append-only wager proof for this player.
                 event = self._ledger.find(player_id, wager_action)
-                # Reject missing proof because the service cannot invent a debit after reveal.
+                # Restore the original private decision when the debit provably never committed.
                 if event is None:
-                    # Fail closed before exposing inconsistent terminal state.
-                    raise ConflictError("Acey-Deucey wager ledger proof is unavailable")
+                    # Roll back the revealed terminal shape without changing the wallet.
+                    engine.restore_uncommitted_play(state, round_state)
+                    # Persist cleanup so every endpoint becomes usable again.
+                    self._save(player_id, state)
+                    # Continue because this history item is now restored as the active round.
+                    continue
                 # Mark the recovered wager complete.
                 round_state["wager_status"] = "complete"
+                # Discard rollback material because append-only proof makes the terminal result authoritative.
+                round_state.pop("_third_card", None)
                 # Store immutable ledger proof id.
                 round_state["wager_ledger_id"] = event.get("ledger_id")
                 # Persist the recovered marker.
@@ -168,6 +174,8 @@ class AceyDeuceyService:
         event, replayed = self._ledger.apply_once(player_id=player_id, signed_amount=-round_state["wager"], transaction_type="ACEY_DEUCEY_WAGER_DEBIT", round_id=round_state["round_id"], ledger_action_id=ledger_action_id, fingerprint=round_state["play_fingerprint"], details={"stage": "play_wager", "wager": round_state["wager"], "left_card": round_state["left_card"], "right_card": round_state["right_card"]})
         # Mark debit completion only after proof exists.
         round_state["wager_status"] = "complete"
+        # Discard private rollback material after the wager is durably committed.
+        round_state.pop("_third_card", None)
         # Store the immutable ledger id for evidence.
         round_state["wager_ledger_id"] = event.get("ledger_id")
         # Persist the marker for reload safety.
@@ -323,10 +331,24 @@ class AceyDeuceyService:
             engine.archive_round(state, round_state)
             # Persist terminal reveal and pending ledger markers.
             self._save(player_id, state)
-            # Apply or recover the required wager debit.
-            wager_event, wager_replayed = self._ensure_wager(player_id, state, round_state)
-            # Apply or recover the optional winning payout.
-            payout_event, payout_replayed = self._ensure_payout(player_id, state, round_state)
+            # Protect rollback so a rejected debit cannot strand terminal state.
+            try:
+                # Apply or recover the required wager debit.
+                wager_event, wager_replayed = self._ensure_wager(player_id, state, round_state)
+                # Apply or recover the optional winning payout.
+                payout_event, payout_replayed = self._ensure_payout(player_id, state, round_state)
+            # Restore only a play proven to have no committed wager movement.
+            except Exception:
+                # Build the exact append-only wager identity beneath this play action.
+                wager_action = f"ad:{action_id}:wager"
+                # Check proof before removing any terminal recovery state.
+                if self._ledger.find(player_id, wager_action) is None:
+                    # Restore the free prepared decision and release the uncommitted receipt.
+                    engine.restore_uncommitted_play(state, round_state)
+                    # Persist rollback before propagating the original ledger error.
+                    self._save(player_id, state)
+                # Preserve committed movements and the original public error.
+                raise
             # Return revealed state and ledger proof.
             return {"round": engine.public_round(round_state), "wager": wager_event, "settlement": payout_event, "replayed": wager_replayed or payout_replayed, **self._payload(player_id, state)}
 
