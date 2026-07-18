@@ -1,0 +1,34 @@
+{
+  "evidence_class": "after_pass",
+  "branch": "codex/252-baccarat-mutation-serialization",
+  "commit": "ef3680a338c07052378a5cc36c10571eb8867717",
+  "surface": "baccarat",
+  "state": "result",
+  "locale": "en-US",
+  "viewport": {
+    "id": "desktop_compact",
+    "width": 1440,
+    "height": 900
+  },
+  "path": "docs/evidence/baccarat/result_en-US_desktop_compact.png",
+  "sha256": "3a8eadcb9cb1d8a7b0d17038ef4ce575825825afaff8f65c255ab0c5b31b6e51",
+  "requirements": [
+    "BAC-017",
+    "BAC-020",
+    "BAC-023",
+    "LEDGER-001",
+    "LEDGER-007",
+    "LEDGER-016"
+  ],
+  "browser_test": "BR-BAC-MUTATION-001",
+  "capture": {
+    "real_backend": true,
+    "storage_provider": "json",
+    "runtime_state": "disposable",
+    "interaction_path": "visible UI controls",
+    "settlement_rows": 1,
+    "document_scroll_width": 1440,
+    "document_client_width": 1440,
+    "control_rail_aria_busy": "false"
+  }
+}
