@@ -6,12 +6,12 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.38.0
+- application: 9.38.1
 - core: 9.13.1
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.0
-- autoplay: 1.1.1
+- autoplay: 1.1.2
 - audio: 9.1.1
 - admin: 1.6.0
 - operations: 1.0.0
@@ -45,8 +45,8 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.0
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.44.5
-- docs: 1.44.5
+- tests: 1.44.6
+- docs: 1.44.6
 - contracts: 1.32.0
 - tooling: 1.14.0
 - commenting_policy: 1.0.0
@@ -365,7 +365,7 @@ Historical source baseline: 9.1.0
 - **AUDIO-006** (Audio) - PASS: Master mute stops new sound effects and voice announcements.
 - **AUDIO-007** (Audio) - PASS: Per-game voice announcements are individually configurable.
 - **AUTO-001** (Autoplay) - PASS: Autoplay is centrally controlled rather than implemented as unrelated game loops.
-- **AUTO-002** (Autoplay) - PASS: Every autoplay run has an autoplay_id.
+- **AUTO-002** (Autoplay) - PASS: Every client autoplay run is registered first and has an autoplay_id; rejected registration schedules no game action.
 - **AUTO-003** (Autoplay) - PASS: Stop prevents any new round or action from starting.
 - **AUTO-004** (Autoplay) - PASS: Stop during an atomic action completes that action safely and schedules no follow-up action.
 - **AUTO-005** (Autoplay) - PASS: Autoplay speed consistently affects inter-round delay.

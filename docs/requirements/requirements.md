@@ -458,9 +458,9 @@ flowchart LR
 | AUDIO-005 | Audio | Voice preview uses the currently selected settings. | PASS | BR-AUDIO-001 |
 | AUDIO-006 | Audio | Master mute stops new sound effects and voice announcements. | PASS |  |
 | AUDIO-007 | Audio | Per-game voice announcements are individually configurable. | PASS |  |
-| AUTO-001 | Autoplay | Autoplay is centrally controlled rather than implemented as unrelated game loops. | PASS | API-CONTROL-001 |
-| AUTO-002 | Autoplay | Every autoplay run has an autoplay_id. | PASS | API-CONTROL-001 |
-| AUTO-003 | Autoplay | Stop prevents any new round or action from starting. | PASS | API-CONTROL-001, BR-AUTO-ROU-001 |
+| AUTO-001 | Autoplay | Autoplay is centrally controlled rather than implemented as unrelated game loops. | PASS | API-CONTROL-001, BR-AUTO-START-FAIL-001 |
+| AUTO-002 | Autoplay | Every client autoplay run is registered first and has an autoplay_id; rejected registration schedules no game action. | PASS | API-CONTROL-001, BR-AUTO-START-FAIL-001 |
+| AUTO-003 | Autoplay | Stop prevents any new round or action from starting. | PASS | API-CONTROL-001, BR-AUTO-START-FAIL-001, BR-AUTO-ROU-001 |
 | AUTO-004 | Autoplay | Stop during an atomic action completes that action safely and schedules no follow-up action. | PASS |  |
 | AUTO-005 | Autoplay | Autoplay speed consistently affects inter-round delay. | PASS |  |
 | AUTO-006 | Autoplay | Autoplay logs start, stop, tick, completion, and error status through the server session store. | PASS |  |
@@ -494,7 +494,7 @@ flowchart LR
 | UX-004 | UX | Long history, stats, paytables, and logs use internal scroll areas. | PASS |  |
 | UX-005 | UX | Autoplay status changes do not resize the main game stage. | PASS |  |
 | UX-006 | UX | Animations prefer transform/opacity and avoid layout-changing motion. | PASS |  |
-| TEST-025 | Tests | Browser tests use stable data-testid selectors for autoplay and admin controls. | PASS | BR-AUTO-ROU-001, BR-AUDIO-001 |
+| TEST-025 | Tests | Browser tests use stable data-testid selectors for autoplay and admin controls. | PASS | BR-AUTO-START-FAIL-001, BR-AUTO-ROU-001, BR-AUDIO-001 |
 | TEST-026 | Tests | Browser tests verify Roulette autoplay stop behavior. | PASS | BR-AUTO-ROU-001, BR-AUDIO-001 |
 | TEST-027 | Tests | API tests verify bot controller endpoints. | PASS | API-CONTROL-001 |
 | TEST-028 | Tests | API tests verify persisted audio settings. | PASS | API-CONTROL-001 |
@@ -546,9 +546,9 @@ flowchart LR
 
 | ID | Requirement | Status | API tests | Browser tests |
 |---|---|---|---|---|
-| AUTO-001 | Autoplay is centrally controlled rather than implemented as unrelated game loops. | PASS | API-CONTROL-001 |  |
-| AUTO-002 | Every autoplay run has an autoplay_id. | PASS | API-CONTROL-001 |  |
-| AUTO-003 | Stop prevents any new round or action from starting. | PASS | API-CONTROL-001 | BR-AUTO-ROU-001 |
+| AUTO-001 | Autoplay is centrally controlled rather than implemented as unrelated game loops. | PASS | API-CONTROL-001 | BR-AUTO-START-FAIL-001 |
+| AUTO-002 | Every client autoplay run is registered first and has an autoplay_id; rejected registration schedules no game action. | PASS | API-CONTROL-001 | BR-AUTO-START-FAIL-001 |
+| AUTO-003 | Stop prevents any new round or action from starting. | PASS | API-CONTROL-001 | BR-AUTO-START-FAIL-001, BR-AUTO-ROU-001 |
 | AUTO-004 | Stop during an atomic action completes that action safely and schedules no follow-up action. | PASS |  |  |
 | AUTO-005 | Autoplay speed consistently affects inter-round delay. | PASS |  |  |
 | AUTO-006 | Autoplay logs start, stop, tick, completion, and error status through the server session store. | PASS |  |  |
@@ -918,7 +918,7 @@ Restricted-preview hardening adds permanent requirements `SEC-010`, `SESSION-006
 
 | ID | Requirement | Status | API tests | Browser tests |
 |---|---|---|---|---|
-| TEST-025 | Browser tests use stable data-testid selectors for autoplay and admin controls. | PASS |  | BR-AUTO-ROU-001, BR-AUDIO-001 |
+| TEST-025 | Browser tests use stable data-testid selectors for autoplay and admin controls. | PASS |  | BR-AUTO-START-FAIL-001, BR-AUTO-ROU-001, BR-AUDIO-001 |
 | TEST-026 | Browser tests verify Roulette autoplay stop behavior. | PASS |  | BR-AUTO-ROU-001, BR-AUDIO-001 |
 | TEST-027 | API tests verify bot controller endpoints. | PASS | API-CONTROL-001 |  |
 | TEST-028 | API tests verify persisted audio settings. | PASS | API-CONTROL-001 |  |

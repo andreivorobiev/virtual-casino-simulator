@@ -5,6 +5,7 @@
   "actions.refresh": "Refresh",
   "actions.reset": "Reset",
   "actions.save": "Save",
+  "errors.autoplayStartFailed": "Auto play could not start. No automatic action was placed.",
   "money.balance": "Tokens: {amount}",
   "status.loading": "Loading...",
   "status.off": "Off"
