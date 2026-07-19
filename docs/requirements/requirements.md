@@ -68,6 +68,7 @@ GitHub issue #81 establishes module-owned game descriptors as the single catalog
 | CORE-021 | Module-owned catalog metadata drives backend, frontend, API metadata, and validator discovery. | PASS | API-CATALOG-001 | BR-CATALOG-DISCOVERY-001 |
 | CORE-022 | Direct game links, reload, Back, and Forward restore canonical game routes. | PASS |  | BR-ROUTE-RESTORE-001 |
 | UX-010 | Lobby search and catalog-derived categories remain usable for the 20-game target. | PASS |  | BR-CATALOG-NAV-001 |
+| UX-011 | Game loading and module-error panels use catalog display labels instead of raw internal route identifiers. | PASS |  | BR-CATALOG-DISCOVERY-001 |
 | SESSION-005 | One shared authenticated-player resolver binds every game request before dispatch. | PASS | API-CATALOG-001, API-PRIVATE-SESSION-001, API-MHVP-001, API-CW-001, API-BIG-SIX-001, API-RD-001, API-DT-001, API-HILO-001, API-TCP-001, API-JOBVP-001, API-DWVP-001, API-SCRATCH-001, API-SIC-BO-001, API-CHUCK-001, API-CRAPS-001, API-CAA-001, API-OU7-001, API-PLINKO-001, API-FAN-TAN-001, API-AB-001, API-AD-001, API-CS-001, API-LIR-001, API-CH-001, API-JP-001, API-THPT-001 |  |
 | TEST-042 | Validators, browser discovery, and long suites discover games and drivers from catalog metadata. | PASS | API-CATALOG-001, LONG-SUITE-100 | BR-CATALOG-DISCOVERY-001 |
 
