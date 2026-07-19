@@ -10,6 +10,12 @@ Requirement `CORE-023` defines the repository-side production process for the re
 - A future edge proxy may send same-origin requests to this loopback listener only after the separate edge gate is approved.
 - The adapter trusts forwarding metadata only from the one configured loopback peer under the exact paired-header policy in `docs/restricted_preview_security.md`. Issue #203 supplies repository policy and tests only; it does not install or configure that proxy.
 
+## Static asset cache contract
+
+Requirement `CORE-026` defines one cache policy for the local development/test adapter and the production WSGI adapter: every HTML, CSS, localization, image, and lazy JavaScript response carries `Cache-Control: no-store`. API and liveness responses retain the same existing no-store behavior from `CORE-013`.
+
+The policy intentionally favors current-source correctness over browser reuse for this private simulator. A document reload must obtain the exact current `web/index.html` bytes, and a later lazy game import must obtain the exact current module bytes from the same checkout or immutable release. `BR-STATIC-CACHE-001` exercises the development adapter through Chromium with a real reload and repeated lazy-module fetches. `SERVICE-WSGI-001` exercises the production adapter directly without opening a listener. Neither adapter may introduce a different static cache policy independently.
+
 ## Immutable release layout
 
 Each verified artifact is extracted to `/opt/casino/releases/<release-sha>`. The `/opt/casino/current` path is an atomic symlink to exactly one retained release, and the virtual environment is kept separately at `/opt/casino/venv`. Release directories are read-only to the `casino` service identity.
@@ -41,7 +47,7 @@ The adapter validates explicit production mode, external mutable roots, and non-
 
 ## Candidate validation
 
-`TEST-046` exercises the WSGI adapter directly without a socket and runs the packaged production command from a clean extracted release on an operating-system-assigned loopback port. The copied-release smoke proves:
+`TEST-046` and `TEST-068` exercise the WSGI adapter directly without a socket and run the packaged production command from a clean extracted release on an operating-system-assigned loopback port. The copied-release smoke proves:
 
 1. non-loopback configuration is absent from the supported invocation;
 2. liveness succeeds without diagnostic detail;

@@ -1942,7 +1942,27 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
             # Start protected logic so failures can be handled safely.
             try:
                 # Navigate to the casino while unauthenticated to verify the login gate.
-                page.goto(base, wait_until='networkidle'); page.get_by_test_id('login-gate').wait_for(timeout=5000)
+                initial_shell_response=page.goto(base, wait_until='networkidle'); page.get_by_test_id('login-gate').wait_for(timeout=5000)
+                # Define development-adapter HTML and lazy-module cache parity through a real browser reload. (CORE-026, TEST-068)
+                def static_cache_parity():
+                    # Require the first browser navigation to return the shared no-store contract.
+                    assert initial_shell_response and initial_shell_response.headers.get('cache-control')=='no-store'
+                    # Require the first navigation body to match this checkout's exact HTML bytes.
+                    assert initial_shell_response.body()==(ROOT/'web'/'index.html').read_bytes()
+                    # Reload through the browser so document caching cannot be hidden by a direct HTTP helper.
+                    reloaded_shell_response=page.reload(wait_until='networkidle')
+                    # Require the reloaded document to retain the same explicit cache contract and current bytes.
+                    assert reloaded_shell_response and reloaded_shell_response.headers.get('cache-control')=='no-store' and reloaded_shell_response.body()==(ROOT/'web'/'index.html').read_bytes()
+                    # Read the exact lazy module source once for two browser-owned fetch comparisons.
+                    expected_module_source=(ROOT/'web'/'games'/'big_six_wheel.js').read_text(encoding='utf-8')
+                    # Fetch the lazy route module twice with ordinary browser cache behavior.
+                    module_evidence=page.evaluate("""async expectedSource => { const evidence=[]; for(let attempt=0;attempt<2;attempt+=1){ const response=await fetch('/games/big_six_wheel.js'); const source=await response.text(); evidence.push({ ok:response.ok, cacheControl:response.headers.get('cache-control'), sourceMatches:source===expectedSource }); } return evidence; }""",expected_module_source)
+                    # Require both lazy-module responses to be successful, uncached by policy, and exact-current.
+                    assert len(module_evidence)==2 and all(item=={'ok':True,'cacheControl':'no-store','sourceMatches':True} for item in module_evidence)
+                    # Require the reload to restore the visible anonymous shell before later Auth cases continue.
+                    page.get_by_test_id('login-gate').wait_for(timeout=5000)
+                # Record exact HTML and lazy JavaScript parity through the supported development browser adapter.
+                run_case('BR-STATIC-CACHE-001',['CORE-026','TEST-068'],static_cache_parity)
                 # Capture logged-out login evidence for the frontend auth handback.
                 shot('auth_login_gate.png')
                 # Define disabled OAuth control, localization, no-request, and visual evidence acceptance.

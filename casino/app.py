@@ -51,6 +51,8 @@ from casino.core import autoplay
 
 # Keep development and browser-test Admin static protection aligned with the production WSGI adapter. (AUTH-008)
 ADMIN_STATIC_PATHS = frozenset({"/admin", "/admin.html", "/admin.js", "/web/admin.js"})
+# Define one cache contract consumed by both supported HTTP adapters. (CORE-026)
+CACHE_CONTROL_NO_STORE = "no-store"
 
 # Define the build_router function used by this module.
 def build_router() -> Router:
@@ -395,7 +397,7 @@ class Handler(BaseHTTPRequestHandler):
         # Execute this statement as part of the module's documented control flow.
         self.send_header("Content-Length", str(len(raw)))
         # Execute this statement as part of the module's documented control flow.
-        self.send_header("Cache-Control", "no-store")
+        self.send_header("Cache-Control", CACHE_CONTROL_NO_STORE)
         # Iterate through the collection to process each item.
         for name, value in extra_headers or []:
             # Execute this statement as part of the module's documented control flow.
@@ -552,6 +554,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", ctype)
         # Execute this statement as part of the module's documented control flow.
         self.send_header("Content-Length", str(len(content)))
+        # Prevent HTML and lazy JavaScript from surviving a source or route reload. (CORE-026)
+        self.send_header("Cache-Control", CACHE_CONTROL_NO_STORE)
         # Execute this statement as part of the module's documented control flow.
         self.end_headers()
         # Execute this statement as part of the module's documented control flow.
