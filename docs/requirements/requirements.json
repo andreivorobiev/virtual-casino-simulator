@@ -8656,6 +8656,60 @@
       "introduced_in": "issue-319-slots-payline-alignment",
       "changed_in": "issue-319-slots-payline-alignment",
       "notes": "Issue #319 evidence paths are logs/test-runs/after-pass-slots-paylines-*.png with matching VIS-EVIDENCE-001 JSON sidecars generated from the exact tested head."
+    },
+    {
+      "id": "GUEST-001",
+      "module": "Core",
+      "description": "An account-free guest trial mints one isolated, non-privileged guest principal (role guest only, never admin or an existing player) with a fresh temporary wallet and a browser-session cookie holding no durable credential, capped to a configurable absolute lifetime; ending the trial revokes the session and identity with no recovery path. Guest creation is server-authoritative and cannot select role, player, balance, or expiry.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-GUEST-TRIAL-001"
+      ],
+      "implementation_files": [
+        "casino/config.py",
+        "casino/core/auth.py",
+        "casino/wsgi.py",
+        "casino/app.py",
+        "web/core/api.js"
+      ],
+      "introduced_in": "issue-317-guest-trials",
+      "changed_in": "issue-317-guest-trials",
+      "notes": "Issue #317: WIN of a disposable guest principal within the restricted-preview boundary; the public-route guard adds only /api/v2/auth/guest."
+    },
+    {
+      "id": "GUEST-002",
+      "module": "Application",
+      "description": "The login screen presents a 'Try without an account' entry that starts a disposable guest session without email, password, or OAuth and lands the visitor in the shell; the persistent control relabels to End trial for a guest and ends the trial with no recovery. Player-facing copy discloses the free, non-cashable, temporary nature in en-US and ru-RU.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-GUEST-TRIAL-001"
+      ],
+      "implementation_files": [
+        "web/app.js",
+        "web/i18n/en-US/shell.json",
+        "web/i18n/ru-RU/shell.json"
+      ],
+      "introduced_in": "issue-317-guest-trials",
+      "changed_in": "issue-317-guest-trials",
+      "notes": "Issue #317: login-screen CTA plus the guest End-trial shell affordance."
+    },
+    {
+      "id": "TEST-080",
+      "module": "Tests",
+      "description": "Browser evidence verifies the account-free guest flow: the login-screen entry starts an isolated non-admin guest session (fresh 5000-token wallet, no credential), a guest cannot reach an Admin endpoint, and End trial returns the login gate with no cookie able to resume the ended trial.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-GUEST-TRIAL-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-317-guest-trials",
+      "changed_in": "issue-317-guest-trials",
+      "notes": "Issue #317 disposable guest-trial browser proof (isolation, non-admin, no recovery)."
     }
   ]
 }

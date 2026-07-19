@@ -1770,6 +1770,44 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
             finally:
                 # Release the isolated backend-login browser context before the existing broad UI suite.
                 real_login_page.close()
+            # Open an isolated page so the account-free guest button establishes its own disposable backend session. (issue #317)
+            guest_page=browser.new_page(viewport={'width':1920,'height':1080})
+            # Start protected guest verification so the isolated page always closes before the broad suite.
+            try:
+                # Navigate without a seeded cookie so the real backend returns the login gate.
+                guest_page.goto(base, wait_until='networkidle'); guest_page.get_by_test_id('login-gate').wait_for(timeout=5000)
+                # Require the account-free entry to be present on the login surface.
+                assert guest_page.get_by_test_id('guest-trial-button').is_visible()
+                # Observe the real backend guest-creation response while starting the trial with no credentials.
+                with guest_page.expect_response(lambda response: response.url.endswith('/api/v2/auth/guest') and response.request.method == 'POST') as guest_response_info:
+                    # Start the disposable trial through the visible no-login control.
+                    guest_page.get_by_test_id('guest-trial-button').click()
+                # Store the real guest payload proving the backend issued an isolated non-admin principal.
+                guest_payload=guest_response_info.value.json()
+                # Wait for the authenticated shell that can only mount after the guest session cookie is accepted.
+                guest_page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Read the authoritative guest wallet balance directly from the session endpoint.
+                guest_balance=guest_page.evaluate("async () => (await (await fetch('/api/v2/me', {credentials:'include'})).json()).data.player.token_balance")
+                # Read the persistent control's guest marker set by the shell affordance.
+                guest_marker=guest_page.locator('#logout-btn').get_attribute('data-guest-trial')
+                # Confirm a guest cannot reach an Admin-only endpoint through its own browser session.
+                guest_admin_status=guest_page.evaluate("async () => (await fetch('/api/v1/admin/overview', {credentials:'include'})).status")
+                # End the trial through the same visible control and observe the no-recovery backend response.
+                with guest_page.expect_response(lambda response: response.url.endswith('/api/v2/auth/guest/end') and response.request.method == 'POST') as guest_end_info:
+                    # Click the End-trial affordance on the persistent control.
+                    guest_page.locator('#logout-btn').click()
+                # Store the end acknowledgement for the assertion.
+                guest_end_payload=guest_end_info.value.json()
+                # Require the login gate to return immediately after ending the trial.
+                guest_page.get_by_test_id('login-gate').wait_for(timeout=5000)
+                # Reload the page to prove no cookie can resume the ended guest trial.
+                guest_page.goto(base, wait_until='networkidle'); guest_page.get_by_test_id('login-gate').wait_for(timeout=5000)
+                # Record the account-free disposable guest-trial regression: isolated non-admin principal, temporary wallet, and no recovery after End trial.
+                run_case('BR-GUEST-TRIAL-001',['GUEST-001','GUEST-002','TEST-080'],lambda: guest_payload['ok'] is True and guest_payload['data']['user'].get('role')=='guest' and 'guest' in (guest_payload['data']['user'].get('roles') or []) and guest_payload['data']['user'].get('email') in (None,'') and guest_balance==5000.0 and guest_marker=='true' and guest_admin_status in (401,403) and guest_end_payload['ok'] is True and guest_page.get_by_test_id('login-gate').is_visible())
+            # Close the focused guest page even when its assertions fail.
+            finally:
+                # Release the isolated guest browser context before the existing broad UI suite.
+                guest_page.close()
             # Refresh the direct API harness Admin session after the browser login added a concurrent session (issue #226).
             login_default_user(base)
             # Set page to the value needed for the next operation.

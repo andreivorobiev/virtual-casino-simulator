@@ -6,8 +6,8 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.39.0
-- core: 9.13.3
+- application: 9.39.5
+- core: 9.13.4
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.0
@@ -45,8 +45,8 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.0
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.45.2
-- docs: 1.45.2
+- tests: 1.45.8
+- docs: 1.45.8
 - contracts: 1.33.0
 - tooling: 1.14.0
 - commenting_policy: 1.0.0
@@ -686,3 +686,6 @@ Historical source baseline: 9.1.0
 - **TEST-073** (Tests) - PASS: Browser evidence verifies that placing a Roulette bet debits the shared wallet, navigating away refunds the stake back to the pre-wager balance, and reopening the table shows no lingering open-bet chip.
 - **SLOT-029** (Slots) - PASS: The Slots result renders every authoritative winning payline as a labelled, non-color-only SVG path whose five points are recalculated from the live reel-cell centers, remain within one CSS pixel after responsive resize, locale rerender, zoom, and route recovery, and preserve visible symbol identity in normal and reduced-motion modes.
 - **TEST-077** (Tests) - PASS: Deterministic browser evidence derives all twenty paths and payouts from the production Slots engine, restores a simultaneous-win outcome through the normal state loader, verifies every transformed SVG point within one CSS pixel of its authoritative cell, checks result/history identity, multi-win distinction, symbol visibility, zoom, reduced motion, and captures EN/RU after-pass evidence at all four governed viewports.
+- **GUEST-001** (Core) - PASS: An account-free guest trial mints one isolated, non-privileged guest principal (role guest only, never admin or an existing player) with a fresh temporary wallet and a browser-session cookie holding no durable credential, capped to a configurable absolute lifetime; ending the trial revokes the session and identity with no recovery path. Guest creation is server-authoritative and cannot select role, player, balance, or expiry.
+- **GUEST-002** (Application) - PASS: The login screen presents a 'Try without an account' entry that starts a disposable guest session without email, password, or OAuth and lands the visitor in the shell; the persistent control relabels to End trial for a guest and ends the trial with no recovery. Player-facing copy discloses the free, non-cashable, temporary nature in en-US and ru-RU.
+- **TEST-080** (Tests) - PASS: Browser evidence verifies the account-free guest flow: the login-screen entry starts an isolated non-admin guest session (fresh 5000-token wallet, no credential), a guest cannot reach an Admin endpoint, and End trial returns the login gate with no cookie able to resume the ended trial.

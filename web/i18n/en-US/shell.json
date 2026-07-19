@@ -81,7 +81,7 @@
   "nav.primaryAria": "Games navigation",
   "nav.gamesArea": "Game area",
   "auth.guestCta": "Try without an account",
-  "auth.guestInfo": "Free play-token trial. No account. No cash value. This trial is temporary and cannot be recovered after it ends.",
+  "auth.guestInfo": "Free play-token trial. No account. No cash value.",
   "guest.badge": "Guest trial",
   "guest.endTrial": "End trial"
 }
