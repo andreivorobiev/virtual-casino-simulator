@@ -11,7 +11,7 @@ import { createMotionTimerScope } from '../../web/core/motion.js';
 // Provide the minimal browser global assigned by imported shared frontend helpers.
 globalThis.window = {};
 // Import pure Big Six presentation helpers after the browser global exists.
-const { BigSixWheelGame, createClientRequestId, rotationForIndex, scheduleSettlement, viewMarkup } = await import('../../web/games/big_six_wheel.js');
+const { BigSixWheelGame, createClientRequestId, MIN_SPIN_REVOLUTIONS, rotationForIndex, scheduleSettlement, viewMarkup, WHEEL_SIZE } = await import('../../web/games/big_six_wheel.js');
 
 // Verify the catalog-declared module export and deterministic rotation model.
 test('issue 86 frontend exposes stable module and wheel geometry', () => {
@@ -23,6 +23,55 @@ test('issue 86 frontend exposes stable module and wheel geometry', () => {
   assert.ok(Math.abs((rotationForIndex(17) - rotationForIndex(18)) - (360 / 54)) < 1e-9);
   // Reject API data outside the canonical wheel.
   assert.throws(() => rotationForIndex(54), /resultIndex/);
+});
+
+// Verify repeated spins retain clockwise progress and exact server-selected alignment.
+test('issue 223 repeated wheel targets never reverse, freeze, or misalign', () => {
+  // Start from the same neutral transform used by a first-time route mount.
+  let currentAngle = 0;
+  // Exercise more than the issue's minimum consecutive-spin acceptance count.
+  for (let spinIndex = 0; spinIndex < 120; spinIndex += 1) {
+    // Walk a nontrivial deterministic result pattern across every wheel segment.
+    const resultIndex = ((spinIndex * 17) + 11) % WHEEL_SIZE;
+    // Calculate the next cumulative transform from the previous settled target.
+    const targetAngle = rotationForIndex(resultIndex, MIN_SPIN_REVOLUTIONS, currentAngle);
+    // Require at least the configured complete turns of forward progress on every spin.
+    assert.ok(targetAngle - currentAngle >= (MIN_SPIN_REVOLUTIONS * 360) - 1e-9);
+    // Calculate the canonical selected-segment orientation below the fixed pointer.
+    const expectedLanding = (360 - ((resultIndex + 0.5) * (360 / WHEEL_SIZE))) % 360;
+    // Normalize the cumulative transform without discarding its forward-motion history.
+    const actualLanding = ((targetAngle % 360) + 360) % 360;
+    // Require the final pointer orientation to match the server-selected segment center.
+    assert.ok(Math.abs(actualLanding - expectedLanding) < 1e-8);
+    // Carry the settled target into the next spin so absolute-reset regressions fail.
+    currentAngle = targetAngle;
+  }
+});
+
+// Verify scheduling calculates its target from the caller's current wheel transform.
+test('issue 223 settlement scheduling preserves cumulative motion context', () => {
+  // Create deterministic lifecycle-owned timing without a browser dependency.
+  const clock = createFakeClock();
+  // Build a normal-motion scope using the fake clock.
+  const scope = createMotionTimerScope({ setTimeoutFn: clock.setTimeoutFn, clearTimeoutFn: clock.clearTimeoutFn, lifecycleTarget: null, reducedMotion: false });
+  // Seed the helper with a transform from an earlier settled spin.
+  const currentAngle = rotationForIndex(7);
+  // Track whether presentation remains hidden until its configured duration.
+  let settled = false;
+  // Schedule a different result from the prior cumulative target.
+  const presentation = scheduleSettlement({ timerScope: scope, resultIndex: 41, currentAngle, onSettled: () => { settled = true; } });
+  // Require another full forward presentation rather than an absolute-angle reset.
+  assert.ok(presentation.angle - currentAngle >= (MIN_SPIN_REVOLUTIONS * 360) - 1e-9);
+  // Keep the authoritative result hidden immediately after scheduling.
+  assert.equal(settled, false);
+  // Advance to just before the declared animation duration.
+  clock.advance(1399);
+  // Require result presentation to remain hidden while motion is active.
+  assert.equal(settled, false);
+  // Advance through the final millisecond of the animation contract.
+  clock.advance(1);
+  // Reveal the result only after the declared motion duration completes.
+  assert.equal(settled, true);
 });
 
 // Verify secure client identities retain one readable game prefix.
