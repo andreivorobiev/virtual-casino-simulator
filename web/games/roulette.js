@@ -905,7 +905,7 @@ function drawerHtml() {
   // Store the phase badge.
   const badge = uiPhase === 'spinning' ? text('phase.spinning') : uiPhase === 'settled' ? text('phase.settled') : text('phase.betting');
   // Store the slip rows for open bets or settlement rows for settled results.
-  const rows = settlementMode ? lastSettlements.map(row => `<div class="bet-item"><span>${safe(row.label)}</span><b>${safe(outcomeLabel(row.outcome))}</b></div>`).join('') : bets.map(bet => `<div class="bet-item"><span>${safe(bet.label)}</span><b class="money">${tokenMoney(bet.amount)}</b><button type="button" class="danger" data-clear="${safe(bet.bet_id)}"${disabledWhenSpinning()}>${text('controls.remove')}</button></div>`).join('');
+  const rows = settlementMode ? lastSettlements.map(row => `<div class="bet-item"><span>${safe(row.label)}</span><b>${safe(outcomeLabel(row.outcome))}</b></div>`).join('') : bets.map(bet => `<div class="bet-item"><span>${safe(bet.label)}</span><b class="money">${tokenMoney(bet.amount)}</b><button type="button" class="danger" data-clear="${safe(bet.bet_id)}"${(spinBusy || uiPhase !== 'betting') ? ' disabled' : ''}>${text('controls.remove')}</button></div>`).join('');
   // Store the metric label.
   const metricLabel = uiPhase === 'spinning' ? text('betSlip.lockedTotal') : settlementMode ? text('settlement.humanNet') : text('betSlip.openTotal');
   // Store the metric value.
