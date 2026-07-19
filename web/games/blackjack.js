@@ -540,12 +540,22 @@ function handReturn(hand) {
   return Number(hand?.payout_due || 0);
 }
 
+// Define insuranceNet so settlement reflects the insurance side bet's stake and payout. (issue #260)
+function insuranceNet(roundItem) {
+  // Read the settled insurance side bet, absent on rounds where insurance was not taken.
+  const insurance = roundItem?.insurance;
+  // Return no movement when the round carried no insurance wager.
+  if (!insurance) return 0;
+  // Return the credited insurance payout minus the debited insurance stake.
+  return Number(insurance.payout || 0) - Number(insurance.amount || 0);
+}
+
 // Define netSettlement so the drawer can show a compact settled outcome.
 function netSettlement(roundItem) {
   // Store total returns from all hands.
   const returns = (roundItem?.hands || []).reduce((sum, hand) => sum + handReturn(hand), 0);
-  // Return net against visible hand wagers.
-  return returns - totalWager(roundItem);
+  // Return net against visible hand wagers plus the insurance side bet net so the row matches the wallet. (issue #260)
+  return returns - totalWager(roundItem) + insuranceNet(roundItem);
 }
 
 // Define actionButtonHtml so the action rail always uses one stable button grid.
