@@ -1,6 +1,6 @@
 {
   "module": "roulette",
-  "version": "9.3.1",
+  "version": "9.4.0",
   "paths": [
     "casino/games/roulette/",
     "web/games/roulette.js"
@@ -18,12 +18,45 @@
     "route": "/games/roulette",
     "label": "Roulette",
     "category": "table",
-    "categories": ["table", "wheel", "strategy"],
-    "backend": {"register": "casino.games.roulette.api:register"},
-    "frontend": {"module": "./games/roulette.js", "export": "RouletteGame", "ready_testid": "roulette-wheel", "i18n_domain": "games/roulette", "i18n_probe": "stats.rolls"},
-    "tests": {"long_driver": "tests.game_drivers.roulette:play"},
-    "translations": {"ru-RU": {"label": "Рулетка", "kicker": "Избранное", "description": "Классическое колесо с внутренними и внешними ставками, особыми ставками, ботами, правилами зеро и статистикой."}},
-    "lobby": {"featured": true, "wide": false, "art_class": "roulette-art", "symbol": "&#9679;", "kicker": "Featured", "description": "Classic wheel with inside and outside bets, racetrack specials, bots, zero rules, and last-1000 stats.", "tags": ["Bots", "Autoplay", "Stats", "Ledger-backed"]}
+    "categories": [
+      "table",
+      "wheel",
+      "strategy"
+    ],
+    "backend": {
+      "register": "casino.games.roulette.api:register"
+    },
+    "frontend": {
+      "module": "./games/roulette.js",
+      "export": "RouletteGame",
+      "ready_testid": "roulette-wheel",
+      "i18n_domain": "games/roulette",
+      "i18n_probe": "stats.rolls"
+    },
+    "tests": {
+      "long_driver": "tests.game_drivers.roulette:play"
+    },
+    "translations": {
+      "ru-RU": {
+        "label": "\u0420\u0443\u043b\u0435\u0442\u043a\u0430",
+        "kicker": "\u0418\u0437\u0431\u0440\u0430\u043d\u043d\u043e\u0435",
+        "description": "\u041a\u043b\u0430\u0441\u0441\u0438\u0447\u0435\u0441\u043a\u043e\u0435 \u043a\u043e\u043b\u0435\u0441\u043e \u0441 \u0432\u043d\u0443\u0442\u0440\u0435\u043d\u043d\u0438\u043c\u0438 \u0438 \u0432\u043d\u0435\u0448\u043d\u0438\u043c\u0438 \u0441\u0442\u0430\u0432\u043a\u0430\u043c\u0438, \u043e\u0441\u043e\u0431\u044b\u043c\u0438 \u0441\u0442\u0430\u0432\u043a\u0430\u043c\u0438, \u0431\u043e\u0442\u0430\u043c\u0438, \u043f\u0440\u0430\u0432\u0438\u043b\u0430\u043c\u0438 \u0437\u0435\u0440\u043e \u0438 \u0441\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043a\u043e\u0439."
+      }
+    },
+    "lobby": {
+      "featured": true,
+      "wide": false,
+      "art_class": "roulette-art",
+      "symbol": "&#9679;",
+      "kicker": "Featured",
+      "description": "Classic wheel with inside and outside bets, racetrack specials, bots, zero rules, and last-1000 stats.",
+      "tags": [
+        "Bots",
+        "Autoplay",
+        "Stats",
+        "Ledger-backed"
+      ]
+    }
   },
   "depends_on": [
     "core",

@@ -184,12 +184,14 @@ label {
 .brand-copy strong,
 .brand strong {
   display: block;
-  overflow: hidden;
+  /* Show the full product name at every governed width instead of ellipsis-clipping it. (issue #221, UX-007) */
+  overflow: visible;
   color: #fff2c2;
   font-size: 21px;
   line-height: 1.15;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  /* Allow the brand to wrap rather than truncate so the mark stays readable when the column is narrow. */
+  text-overflow: clip;
+  white-space: normal;
 }
 
 .brand-copy span,
@@ -205,13 +207,27 @@ label {
   align-items: center;
   min-width: 0;
   padding: 4px;
+  /* Bound the primary menu to its column as one horizontal scroll region instead of an unbounded cram. (issue #221, CORE-006) */
   overflow-x: auto;
+  overflow-y: hidden;
   border: 1px solid rgba(255, 215, 128, 0.18);
   border-radius: 24px;
   background: rgba(2, 16, 11, 0.72);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
   scrollbar-color: rgba(255, 217, 130, 0.52) transparent;
   scrollbar-width: thin;
+}
+
+/* Give the keyboard-focusable primary menu a visible focus indicator. (issue #221, accessibility) */
+.casino-nav:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+/* Give every route control a visible keyboard focus indicator so the bounded menu is fully accessible. */
+.nav-item:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: -3px;
 }
 
 .casino-nav::-webkit-scrollbar {
@@ -528,6 +544,44 @@ label {
 
 .game-screen {
   padding: 18px 22px 70px;
+}
+
+/* Make the game route outlet a single bounded vertical scroll region so no control is clipped by a
+   fixed-height, hidden-overflow ancestor at 1920/1440/1024/390. (issue #221, CORE-015, UX-004) */
+#view.screen.game-screen {
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* Keep the outlet scroll keyboard-driven with a stable landing offset below the sticky chrome. */
+  scroll-padding-top: 12px;
+  scrollbar-color: rgba(255, 217, 130, 0.42) transparent;
+  scrollbar-width: thin;
+}
+
+/* Style the outlet scrollbar to match the shared thin themed scrollbar. */
+#view.screen.game-screen::-webkit-scrollbar {
+  width: 8px;
+}
+
+/* Keep the outlet scrollbar track transparent within the premium chrome. */
+#view.screen.game-screen::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Render the outlet scrollbar thumb with the shared gold treatment. */
+#view.screen.game-screen::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(255, 217, 130, 0.42);
+}
+
+/* Give the keyboard-focusable game outlet a visible focus indicator when it owns the scroll. */
+#view.screen.game-screen:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: -4px;
+}
+
+/* Preserve Roulette's tested desktop three-panel table layout while other game routes use the outlet scroll. */
+#view.screen.game-screen:has(.roulette-premium) {
+  overflow: hidden;
 }
 
 /* Premium lobby hero, trust rail, and game-card gallery. */
@@ -1971,22 +2025,25 @@ h3 {
     display: none;
   }
 
+  /* Keep the compact-desktop menu a bounded horizontal scroll rail with readable labels
+     instead of a 16-column cram that clipped long game names. (issue #221, CORE-006) */
   .casino-nav {
-    display: grid;
-    grid-template-columns: repeat(16, minmax(0, 1fr));
-    overflow: visible;
+    display: flex;
+    overflow-x: auto;
+    overflow-y: hidden;
   }
 
   .nav-item,
   .nav-item.admin {
-    min-width: 0;
+    /* Keep every route control sized to its full label so no name is truncated at compact desktop. */
+    flex: 0 0 auto;
+    min-width: 96px;
     min-height: 46px;
     margin-left: 0;
-    padding: 0 8px;
-    font-size: 12px;
-    line-height: 1.05;
-    text-align: center;
-    white-space: normal;
+    padding: 0 14px;
+    font-size: 13px;
+    line-height: 1.1;
+    white-space: nowrap;
   }
 
   .top-actions {

@@ -207,24 +207,82 @@ class SessionSecurityTests(unittest.TestCase):
         # Delete the disposable root and all synthetic records.
         self.temporary.cleanup()
 
-    # Rotate login sessions and invalidate privilege-bearing predecessors.
-    def test_session_and_privilege_rotation_invalidate_predecessors(self):
+    # Retain concurrent same-account sessions and revoke every predecessor on a privilege change. (SESSION-007, SESSION-006, issue #226)
+    def test_concurrent_sessions_retained_and_privilege_change_revokes_all(self):
         # Seed one synthetic local identity without creating player state.
         user = {"user_id": "user-preview", "email": "invite@example.invalid", "status": "active", "role": "player", "roles": ["player"], "password_hash": "hash", "identity_provider": "local"}
         # Persist the isolated identity registry.
         auth.save_users({"users": [user]})
         # Create the first session and retain only its token-shaped values for comparison.
         first = auth.create_session(user, "192.0.2.1")
-        # Create a replacement session for the same identity.
+        # Create a second session for the same identity without evicting the first.
         second = auth.create_session(user, "192.0.2.2")
-        # Require independent bearer and CSRF material on every rotation.
+        # Require independent bearer and CSRF material on every issued session.
         self.assertNotEqual((first["token"], first["csrf_token"]), (second["token"], second["csrf_token"]))
-        # Require the predecessor token to be absent from active durable state.
-        self.assertEqual([session["token"] for session in auth.load_sessions()["sessions"]], [second["token"]])
+        # Require both concurrent sessions to remain present in durable active state.
+        self.assertEqual({session["token"] for session in auth.load_sessions()["sessions"] if session.get("status") == "active"}, {first["token"], second["token"]})
+        # Require the predecessor to keep authenticating after the newer login (issue #226).
+        self.assertEqual(auth.authenticate_token(first["token"])[1]["user_id"], user["user_id"])
+        # Require the newer session to authenticate independently of the predecessor.
+        self.assertEqual(auth.authenticate_token(second["token"])[1]["user_id"], user["user_id"])
         # Promote the account through the canonical privilege mutation seam.
         auth.update_user_by_id(user["user_id"], lambda record: record.update({"role": "admin", "roles": ["admin"]}))
         # Require every active session to be revoked after the privilege change.
         self.assertEqual([session for session in auth.load_sessions()["sessions"] if session.get("status") == "active"], [])
+
+    # Prove concurrent same-account logins keep every prior session valid with no 401/500. (SESSION-007, TEST-051, issue #226)
+    def test_concurrent_same_user_logins_keep_prior_sessions_valid(self):
+        # Seed one synthetic local identity resolvable by the token authenticator.
+        user = {"user_id": "user-concurrent", "email": "concurrent@example.invalid", "status": "active", "role": "player", "roles": ["player"], "password_hash": "hash", "identity_provider": "local"}
+        # Persist the isolated identity registry.
+        auth.save_users({"users": [user]})
+        # Exercise the exact concurrency scales named by the regression requirement.
+        for scale in (1, 3, 30, 100):
+            # Reset durable session state so each scale starts from an empty registry.
+            auth.save_sessions(auth.default_sessions())
+            # Issue the scale's logins concurrently to reproduce the reported write race.
+            with concurrent.futures.ThreadPoolExecutor(max_workers=min(scale, 32)) as pool:
+                # Create one session per concurrent worker for this identity.
+                sessions = list(pool.map(lambda index: auth.create_session(user, f"192.0.2.{index % 250}"), range(scale)))
+            # Collect every issued bearer token for validity assertions.
+            tokens = [session["token"] for session in sessions]
+            # Require the atomic writer to lose no session under concurrency (all tokens unique).
+            self.assertEqual(len(set(tokens)), scale, f"lost sessions at scale {scale}")
+            # Require durable active state to retain exactly one session per concurrent login.
+            active = [session for session in auth.load_sessions()["sessions"] if session.get("status") == "active"]
+            # Confirm no prior session was invalidated by a later concurrent login.
+            self.assertEqual(len(active), scale, f"prior sessions invalidated at scale {scale}")
+            # Require every issued token to authenticate without a 401 or raised 500.
+            for token in tokens:
+                # Resolve the session and its active identity for each concurrent token.
+                resolved_session, resolved_user = auth.authenticate_token(token)
+                # Confirm the token resolves to the seeded identity.
+                self.assertEqual(resolved_user["user_id"], user["user_id"])
+                # Confirm the resolved session remains active.
+                self.assertEqual(resolved_session["status"], "active")
+
+    # Prove the per-user cap evicts only least-recently-used predecessors. (SESSION-007, TEST-051)
+    def test_per_user_session_cap_evicts_least_recently_used(self):
+        # Seed one synthetic local identity for the bounded-retention proof.
+        user = {"user_id": "user-capped", "email": "capped@example.invalid", "status": "active", "role": "player", "roles": ["player"], "password_hash": "hash", "identity_provider": "local"}
+        # Persist the isolated identity registry.
+        auth.save_users({"users": [user]})
+        # Shrink the per-user cap for a fast, deterministic eviction proof.
+        with mock.patch.object(auth, "MAX_SESSIONS_PER_USER", 3):
+            # Create more sessions than the reduced cap to force eviction.
+            issued = [auth.create_session(user, f"198.51.100.{index}") for index in range(5)]
+            # Read the surviving active sessions after cap enforcement.
+            active = [session for session in auth.load_sessions()["sessions"] if session.get("status") == "active"]
+            # Require the identity to retain exactly the reduced per-user cap.
+            self.assertEqual(len(active), 3)
+            # Require the survivors to be the three most recently issued sessions.
+            self.assertEqual({session["token"] for session in active}, {session["token"] for session in issued[-3:]})
+            # Require the two least-recently-used predecessors to be evicted entirely.
+            surviving_tokens = {session["token"] for session in active}
+            # Confirm neither evicted predecessor still authenticates.
+            for evicted in issued[:2]:
+                # Require each evicted token to be absent from surviving active state.
+                self.assertNotIn(evicted["token"], surviving_tokens)
 
     # Publish the distinct CSRF proof intentionally while keeping bearer and client data private.
     def test_public_session_exposes_only_distinct_compatible_csrf_material(self):

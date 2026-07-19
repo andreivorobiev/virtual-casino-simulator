@@ -339,6 +339,25 @@ function renderNav() {
   items.push(`<button data-admin="true" class="nav-item admin" data-testid="nav-admin">${safe(t('nav.admin', {}, 'shell'))}</button>`);
   // Replace the nav contents atomically so active state cannot drift.
   nav.innerHTML = items.join('');
+  // Expose the bounded menu as one keyboard-focusable horizontal scroll region. (issue #221, CORE-006)
+  nav.tabIndex = 0;
+  // Identify the menu as a navigable group with a localized accessible name.
+  nav.setAttribute('role', 'group');
+  // Name the menu so assistive technology announces the bounded games navigation.
+  nav.setAttribute('aria-label', safe(t('nav.primaryAria', {}, 'shell') || 'Games navigation'));
+  // Let keyboard users pan the bounded menu without a pointer using arrow and edge keys.
+  nav.onkeydown = event => {
+    // Read the current bounded-menu viewport width for one-page horizontal steps.
+    const step = Math.max(160, nav.clientWidth * 0.8);
+    // Scroll one step right on ArrowRight so later games become visible.
+    if (event.key === 'ArrowRight') { nav.scrollLeft += step; event.preventDefault(); }
+    // Scroll one step left on ArrowLeft so earlier games become visible.
+    else if (event.key === 'ArrowLeft') { nav.scrollLeft -= step; event.preventDefault(); }
+    // Jump to the first route on Home for fast reachability.
+    else if (event.key === 'Home') { nav.scrollLeft = 0; event.preventDefault(); }
+    // Jump to the last route on End for fast reachability.
+    else if (event.key === 'End') { nav.scrollLeft = nav.scrollWidth; event.preventDefault(); }
+  };
   // Reveal the active route immediately after each catalog or locale render.
   revealActiveNav();
   // Wire every app route button to the shared navigate function.
@@ -521,6 +540,8 @@ export async function navigate(route, options = {}) {
       gameRailObserver?.disconnect();
       // Apply the lobby screen class contract for responsive shell styling.
       view.className = 'screen lobby-screen';
+      // Drop the game-outlet scroll-region semantics so the lobby uses natural document flow.
+      view.removeAttribute('tabindex'); view.removeAttribute('role'); view.removeAttribute('aria-label');
       // Render lobby markup and catalog controls from the cached API state.
       renderLobby(view);
       // Stop after lobby render because no game module is mounted.
@@ -528,6 +549,8 @@ export async function navigate(route, options = {}) {
     }
     // Apply the game screen class contract before mounting a game module.
     view.className = 'screen game-screen';
+    // Make the bounded game outlet a keyboard-focusable scroll region so every control stays reachable. (issue #221)
+    view.tabIndex = 0; view.setAttribute('role', 'region'); view.setAttribute('aria-label', safe(t('nav.gamesArea', {}, 'shell') || 'Game area'));
     // Render a premium loading panel while the dynamic game module loads.
     view.innerHTML = `<div class="panel loading-panel"><h2>Loading ${safe(targetRoute)}...</h2></div>`;
     // Resolve the descriptor for the selected game route.

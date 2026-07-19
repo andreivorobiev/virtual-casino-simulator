@@ -447,10 +447,14 @@ def run_api_tests():
             token=login['session']['token']; assert token
             # Verify the published username field remains a compatible alias for the same email credential.
             aliased_login=api(base,'/api/v2/auth/login','POST',{'username':DEFAULT_AUTH_EMAIL,'password':DEFAULT_AUTH_PASSWORD},auth_token=None); assert aliased_login['user']['email']==DEFAULT_AUTH_EMAIL
-            # Require the second login to invalidate its predecessor before selecting the rotated token.
-            assert api(base,'/api/v2/auth/session',ok=False,auth_token=token)['error']['code']=='UNAUTHORIZED'
-            # Continue the compatible auth flow with the sole active replacement session.
-            token=aliased_login['session']['token']; assert token
+            # Require concurrent same-account logins to retain independent valid sessions (issue #226, SESSION-007).
+            assert api(base,'/api/v2/auth/session',auth_token=token)['user']['email']==DEFAULT_AUTH_EMAIL
+            # Select the second concurrent session token while its predecessor stays valid.
+            second_token=aliased_login['session']['token']; assert second_token and second_token!=token
+            # Require the second concurrent session to authenticate independently of the first.
+            assert api(base,'/api/v2/auth/session',auth_token=second_token)['user']['email']==DEFAULT_AUTH_EMAIL
+            # Continue the compatible auth flow using the most recent session token.
+            token=second_token
             # Set session to the value needed for the next operation.
             session=api(base,'/api/v2/auth/session',auth_token=token); assert session['user']['email']==DEFAULT_AUTH_EMAIL
             # Set me to the value needed for the next operation.
@@ -475,10 +479,10 @@ def run_api_tests():
             auth_core.set_user_status(inactive_email,'inactive')
             # Set inactive to the value needed for the next operation.
             inactive=api(base,'/api/v2/auth/login','POST',{'email':inactive_email,'password':'inactive-password'},ok=False,auth_token=None); assert inactive['error']['code']=='FORBIDDEN'
-            # Restore the harness Admin session after the explicit login-rotation and logout proof.
+            # Refresh the harness Admin session after the concurrent-session and logout proof (issue #226).
             login_default_user(base)
         # Execute this statement as part of the module's documented control flow.
-        run_case('API-AUTH-001',['AUTH-001','SESSION-001','USER-001','TERMS-001'],auth_backend)
+        run_case('API-AUTH-001',['AUTH-001','SESSION-001','SESSION-007','USER-001','TERMS-001'],auth_backend)
         # Store wallet integrity evidence for the later server-restart persistence check.
         integrity_state={}
         # Define wallet_auth_integrity to exercise canonical users, authorization, and token movement through the live backend.
@@ -1595,7 +1599,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
             finally:
                 # Release the isolated backend-login browser context before the existing broad UI suite.
                 real_login_page.close()
-            # Restore the direct API harness Admin session after the browser login rotated its predecessor.
+            # Refresh the direct API harness Admin session after the browser login added a concurrent session (issue #226).
             login_default_user(base)
             # Set page to the value needed for the next operation.
             page=browser.new_page(viewport={'width':1920,'height':1080})
@@ -2092,6 +2096,76 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Execute catalog-driven frontend driver discovery for all current games.
                 run_case('BR-CATALOG-DISCOVERY-001',['CORE-021','TEST-042'],catalog_route_discovery)
+                # Store the browser audit that proves every game control is reachable inside a scroll region at one viewport. (issue #221)
+                nav_reach_script=r"""(rootSel) => {
+                  // Resolve the mounted game root or fall back to the shared route outlet.
+                  const root = document.querySelector(rootSel) || document.getElementById('view');
+                  // Collect every interactive control the player must be able to operate.
+                  const controls = [...root.querySelectorAll('button, input, select, [role=button], a[href]')];
+                  // Track controls that cannot be brought fully into the viewport.
+                  const unreachable = [];
+                  // Inspect each control after scrolling it into the bounded scroll region.
+                  for (const el of controls) {
+                    // Read the resolved style so hidden controls are excluded from reachability.
+                    const cs = getComputedStyle(el);
+                    // Skip controls that are intentionally not displayed in the current phase.
+                    if (cs.display === 'none' || cs.visibility === 'hidden') continue;
+                    // Skip detached controls that have no layout box in this phase.
+                    if (el.offsetParent === null && cs.position !== 'fixed') continue;
+                    // Scroll the control into the center of any bounded scroll ancestor and the outlet.
+                    el.scrollIntoView({block:'center', inline:'center'});
+                    // Measure the control after scrolling to prove it is not clipped by a hidden-overflow ancestor.
+                    const r = el.getBoundingClientRect();
+                    // Require a real layout box and full containment within the current viewport.
+                    const ok = r.width > 0 && r.height > 0 && r.top >= -2 && r.bottom <= window.innerHeight + 2 && r.left >= -2 && r.right <= window.innerWidth + 2;
+                    // Record any control that remains clipped or off-screen after scrolling.
+                    if (!ok) unreachable.push((el.getAttribute('data-testid') || el.className || el.tagName));
+                  }
+                  // Return the audited count and any unreachable controls for the assertion.
+                  return {count: controls.length, unreachable};
+                }"""
+                # Define the bounded-nav, brand, and control-containment regression required by issue #221.
+                def shell_nav_containment():
+                    # Exercise every governed matrix viewport for the shell and the four previously clipped games.
+                    for width,height,viewport_id in [(1920,1080,'desktop_primary'),(1440,900,'desktop_compact'),(1024,900,'tablet'),(390,844,'mobile')]:
+                        # Apply the governed viewport before measuring shell and game layout.
+                        page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(150)
+                        # Return to the lobby so the shell chrome is measured in a stable state.
+                        page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                        # Require no page-level horizontal overflow at any governed viewport.
+                        assert page.evaluate("() => document.documentElement.scrollWidth - window.innerWidth") <= 2, f'horizontal overflow at {viewport_id}'
+                        # Read the brand title text and its horizontal clip amount for the truncation assertion.
+                        brand=page.evaluate("() => { const el=document.getElementById('shell-brand-title'); return {text:el.textContent.trim(), clip: el.scrollWidth - el.clientWidth}; }")
+                        # Require the full product name with no ellipsis truncation at every width.
+                        assert brand['text']=='Virtual Casino Simulator' and brand['clip'] <= 1, f'brand truncated at {viewport_id}: {brand}'
+                        # Read each primary-menu label width and its per-label clip for the readability assertion.
+                        nav_items=page.evaluate("() => [...document.querySelectorAll('#main-nav .nav-item')].map(el=>({t:el.textContent.trim(), w:Math.round(el.getBoundingClientRect().width), clip: el.scrollWidth-el.clientWidth}))")
+                        # Require every route label to stay readable (minimum touch width) and unclipped.
+                        assert all(item['w'] >= 42 and item['clip'] <= 2 for item in nav_items), f'nav label unreadable/clipped at {viewport_id}'
+                        # Prove each control the issue named remains reachable via a scroll region at this viewport.
+                        for game_id,ready_testid in [('bingo','premium-bingo'),('blackjack','blackjack-premium'),('sic_bo','sic-bo-table'),('chuck_a_luck','chuck-a-luck')]:
+                            # Open the game through its bounded-menu route control.
+                            page.get_by_test_id(f'nav-{game_id}').click(); page.get_by_test_id(ready_testid).wait_for(timeout=5000)
+                            # Settle any mount animation before measuring control containment.
+                            page.wait_for_timeout(200)
+                            # Require no page-level horizontal overflow while the game is mounted.
+                            assert page.evaluate("() => document.documentElement.scrollWidth - window.innerWidth") <= 2, f'{game_id} horizontal overflow at {viewport_id}'
+                            # Audit every interactive control for scroll reachability inside the bounded outlet.
+                            reach=page.evaluate(nav_reach_script, f'[data-testid="{ready_testid}"]')
+                            # Require every audited control to be reachable and never clipped by a hidden-overflow ancestor.
+                            assert not reach['unreachable'], f'{game_id} controls unreachable at {viewport_id}: {reach["unreachable"][:5]}'
+                            # Return to the lobby before the next audited game.
+                            page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    # Capture bounded compact-desktop shell evidence for the affected surface.
+                    page.set_viewport_size({'width':1440,'height':900}); page.wait_for_timeout(150)
+                    # Store one after-pass compact shell screenshot for review.
+                    shot('after-pass-shell-nav-bounded-compact.png')
+                    # Restore desktop primary dimensions before later game interaction coverage runs.
+                    page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(200)
+                    # Return to the lobby so subsequent cases start from the shared shell.
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Record bounded keyboard-accessible navigation, brand readability, and control containment across governed viewports.
+                run_case('BR-SHELL-NAV-001',['CORE-006','CORE-007','CORE-015','UX-007','UX-009','SIC-BO-004','CHUCK-004','TEST-052'],shell_nav_containment)
                 # Define real-backend Multi-Hand Video Poker browser and visual acceptance coverage.
                 def multi_hand_video_poker_acceptance():
                     # Open the catalog-generated route and wait for its module-owned readiness selector.
@@ -3450,6 +3524,72 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 run_case('BR-ROUTE-RESTORE-001',['CORE-022','MOTION-002'],route_restoration)
                 # Open Roulette and wait for the premium vector wheel to mount.
                 page.get_by_test_id('nav-roulette').click(); page.get_by_test_id('roulette-wheel').wait_for()
+                # Define the exhaustive hit-target integrity and geometry regression required by issue #222.
+                def roulette_hit_target_integrity():
+                    # Select the smallest chip so exhaustive region coverage cannot deplete the wallet.
+                    page.get_by_test_id('chip-1').click()
+                    # Read every bet cell's stable identity and hit geometry from the mounted board.
+                    cells=page.evaluate("() => [...document.querySelectorAll('[data-cell-key]')].map(el => { const r=el.getBoundingClientRect(); return {key:el.getAttribute('data-cell-key'), type:el.getAttribute('data-bet-type'), covered:(el.getAttribute('data-covered')||'').split(',').filter(Boolean), x:r.left, y:r.top, w:r.width, h:r.height}; })")
+                    # Require a populated board so an empty catalog cannot pass this regression silently.
+                    assert cells, 'no roulette bet cells rendered'
+                    # Require every bet cell to expose a non-zero hit region.
+                    assert all(cell['w']>0 and cell['h']>0 for cell in cells), 'zero-area roulette hit region'
+                    # Require every bet cell to declare a non-empty covered-number set.
+                    assert all(cell['covered'] for cell in cells), 'roulette cell missing covered numbers'
+                    # Collect the non-spot primary grid cells for a pairwise no-overlap geometry check.
+                    grid=[cell for cell in cells if not cell['key'].startswith('spot:')]
+                    # Require primary grid hit regions to never overlap beyond a one-pixel seam.
+                    for outer in range(len(grid)):
+                        # Compare each primary grid cell against every later grid cell exactly once.
+                        for inner in range(outer+1, len(grid)):
+                            # Read the two candidate hit regions.
+                            first=grid[outer]; second=grid[inner]
+                            # Measure the horizontal overlap between the two regions.
+                            overlap_x=max(0, min(first['x']+first['w'], second['x']+second['w']) - max(first['x'], second['x']))
+                            # Measure the vertical overlap between the two regions.
+                            overlap_y=max(0, min(first['y']+first['h'], second['y']+second['h']) - max(first['y'], second['y']))
+                            # Require the overlap area to stay within an anti-aliasing seam.
+                            assert overlap_x*overlap_y <= 2, f"overlapping roulette regions {first['key']} and {second['key']}"
+                    # Build the click set from every primary grid region plus one hotspot per covered-number size.
+                    click_keys=[cell['key'] for cell in grid]
+                    # Track the hotspot covered-number sizes already sampled.
+                    seen_sizes=set()
+                    # Sample split, street, corner, line, and basket hotspots exactly once per size.
+                    for cell in cells:
+                        # Include the first hotspot seen for each distinct covered-number size.
+                        if cell['key'].startswith('spot:') and len(cell['covered']) not in seen_sizes:
+                            # Record the size and queue this representative hotspot for a real click.
+                            seen_sizes.add(len(cell['covered'])); click_keys.append(cell['key'])
+                    # Index each cell's canonical identity for post-click verification.
+                    identity={cell['key']:cell for cell in cells}
+                    # Click every selected region and require the posted wager to match the clicked cell exactly.
+                    for key in click_keys:
+                        # Build the stable selector for this hit target.
+                        selector=f'[data-cell-key="{key}"]'
+                        # Capture the exact wager POST triggered by activating this cell.
+                        with page.expect_request(lambda request: request.url.endswith('/api/v1/games/roulette/bets') and request.method=='POST', timeout=5000) as request_info:
+                            # Activate the cell semantically so intentionally-stacked corner spots cannot intercept the pointer.
+                            page.dispatch_event(selector, 'click')
+                        # Read the posted bet body for identity verification.
+                        body=request_info.value.post_data_json
+                        # Require the posted bet type to match the clicked cell's canonical type.
+                        assert body['bet_type']==identity[key]['type'], f"{key}: posted {body['bet_type']} != {identity[key]['type']}"
+                        # Require the posted covered numbers to match the clicked cell's canonical set.
+                        assert {str(number) for number in body['covered_numbers']}=={str(number) for number in identity[key]['covered']}, f"{key}: covered mismatch"
+                        # Settle the board rerender before activating the next hit target.
+                        page.wait_for_timeout(25)
+                    # Capture the exact "2nd 12" wager the issue reported as mismatched.
+                    with page.expect_request(lambda request: request.url.endswith('/api/v1/games/roulette/bets') and request.method=='POST', timeout=5000) as second_dozen_info:
+                        # Activate the reported second-dozen hit target directly.
+                        page.dispatch_event('[data-cell-key="dozen:2"]', 'click')
+                    # Read the second-dozen wager body.
+                    second_dozen=second_dozen_info.value.post_data_json
+                    # Require "2nd 12" to post the dozen covering exactly 13 through 24.
+                    assert second_dozen['bet_type']=='dozen' and {str(number) for number in second_dozen['covered_numbers']}=={str(number) for number in range(13,25)}, '2nd 12 did not post the 13-24 dozen'
+                    # Refund every audit wager so the board returns to its pre-audit betting state.
+                    page.locator('#clear').click(); page.wait_for_timeout(150)
+                # Record the exhaustive Roulette hit-target integrity and geometry regression.
+                run_case('BR-ROU-HITMAP-001',['ROU-005','ROU-013','ROU-014','ROU-015','ROU-016','ROU-017','ROU-044','ROU-045','ROU-057','TEST-053'],roulette_hit_target_integrity)
                 # Define the raw Roulette resource keys reported as visible regressions.
                 roulette_visible_keys={'header.kicker','title','controls.title','controls.spin','settlement.title','scoreboard.title'}
                 # Define a focused rendered-text assertion for raw Roulette key leakage.
@@ -3679,9 +3819,9 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 # Verify the desktop-compact route has no page-level horizontal overflow.
                 assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1')
                 # Read compact navigation and Roulette measurements for actionable fold diagnostics.
-                compact_diagnostics=page.evaluate("() => { const ids=['nav-lobby','nav-roulette','nav-slots','nav-keno','nav-bingo','nav-blackjack','nav-baccarat','nav-admin']; const nav=document.querySelector('.casino-nav').getBoundingClientRect(); const items=ids.map(id => document.querySelector(`[data-testid=\"${id}\"]`)?.getBoundingClientRect().toJSON()); const stage=document.querySelector('[data-testid=\"roulette-premium-stage\"]')?.getBoundingClientRect().toJSON(); const wheel=document.querySelector('[data-testid=\"roulette-wheel\"]')?.getBoundingClientRect().toJSON(); const table=document.querySelector('[data-testid=\"roulette-table\"]')?.getBoundingClientRect().toJSON(); const spin=document.querySelector('[data-testid=\"roulette-spin\"]')?.getBoundingClientRect().toJSON(); return {nav,items,stage,wheel,table,spin,height:innerHeight}; }")
-                # Verify every desktop navigation item is fully visible inside the shared navigation surface.
-                assert all(item and item['left'] >= compact_diagnostics['nav']['left'] - 1 and item['right'] <= compact_diagnostics['nav']['right'] + 1 for item in compact_diagnostics['items']), compact_diagnostics
+                compact_diagnostics=page.evaluate("() => { const ids=['nav-lobby','nav-roulette','nav-slots','nav-keno','nav-bingo','nav-blackjack','nav-baccarat','nav-admin']; const navEl=document.querySelector('.casino-nav'); const nav=navEl.getBoundingClientRect().toJSON(); const items=ids.map(id => document.querySelector(`[data-testid=\"${id}\"]`)?.getBoundingClientRect().toJSON()); const visibleItems=items.filter(item => item && item.right >= nav.left - 1 && item.left <= nav.right + 1); const active=document.querySelector('[data-testid=\"nav-roulette\"]')?.getBoundingClientRect().toJSON(); const stage=document.querySelector('[data-testid=\"roulette-premium-stage\"]')?.getBoundingClientRect().toJSON(); const wheel=document.querySelector('[data-testid=\"roulette-wheel\"]')?.getBoundingClientRect().toJSON(); const table=document.querySelector('[data-testid=\"roulette-table\"]')?.getBoundingClientRect().toJSON(); const spin=document.querySelector('[data-testid=\"roulette-spin\"]')?.getBoundingClientRect().toJSON(); const navStyle=getComputedStyle(navEl); return {nav,items,visibleItems,active,stage,wheel,table,spin,height:innerHeight,width:innerWidth,navClientWidth:navEl.clientWidth,navScrollWidth:navEl.scrollWidth,navOverflowX:navStyle.overflowX}; }")
+                # Verify compact desktop navigation is bounded to the viewport while long catalogs scroll inside the shared rail.
+                assert compact_diagnostics['nav']['left'] >= -1 and compact_diagnostics['nav']['right'] <= compact_diagnostics['width'] + 1 and compact_diagnostics['navOverflowX'] in ('auto','scroll') and compact_diagnostics['navScrollWidth'] >= compact_diagnostics['navClientWidth'] and compact_diagnostics['active'] and compact_diagnostics['active']['left'] >= compact_diagnostics['nav']['left'] - 1 and compact_diagnostics['active']['right'] <= compact_diagnostics['nav']['right'] + 1 and len(compact_diagnostics['visibleItems']) >= 2, compact_diagnostics
                 # Verify the full Roulette stage and primary action remain above the 1440 by 900 fold.
                 assert all(compact_diagnostics[key] and compact_diagnostics[key]['bottom'] <= compact_diagnostics['height'] + 1 for key in ('stage','wheel','table','spin')), compact_diagnostics
                 # Verify player-facing Roulette copy does not expose an internal round identifier.
@@ -3691,9 +3831,9 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 # Resize to the evaluator's second compact desktop viewport.
                 page.set_viewport_size({'width':1366,'height':768}); page.wait_for_timeout(350)
                 # Read the second compact viewport measurements after responsive compression.
-                compact_1366=page.evaluate("() => { const nav=document.querySelector('.casino-nav').getBoundingClientRect(); const items=[...document.querySelectorAll('.casino-nav .nav-item')].map(item => item.getBoundingClientRect().toJSON()); const ids=['roulette-premium-stage','roulette-wheel','roulette-table','roulette-spin']; const boxes=Object.fromEntries(ids.map(id => [id,document.querySelector(`[data-testid=\"${id}\"]`)?.getBoundingClientRect().toJSON()])); return {nav,items,boxes,width:innerWidth,height:innerHeight,scrollWidth:document.documentElement.scrollWidth}; }")
-                # Verify navigation, page width, stage, wheel, table, and Spin all remain fully usable at 1366 by 768.
-                assert compact_1366['scrollWidth'] <= compact_1366['width'] + 1 and all(item['left'] >= compact_1366['nav']['left'] - 1 and item['right'] <= compact_1366['nav']['right'] + 1 for item in compact_1366['items']) and all(box and box['bottom'] <= compact_1366['height'] - 54 for box in compact_1366['boxes'].values()), compact_1366
+                compact_1366=page.evaluate("() => { const navEl=document.querySelector('.casino-nav'); const nav=navEl.getBoundingClientRect().toJSON(); const items=[...document.querySelectorAll('.casino-nav .nav-item')].map(item => item.getBoundingClientRect().toJSON()); const visibleItems=items.filter(item => item && item.right >= nav.left - 1 && item.left <= nav.right + 1); const active=document.querySelector('[data-testid=\"nav-roulette\"]')?.getBoundingClientRect().toJSON(); const ids=['roulette-premium-stage','roulette-wheel','roulette-table','roulette-spin']; const boxes=Object.fromEntries(ids.map(id => [id,document.querySelector(`[data-testid=\"${id}\"]`)?.getBoundingClientRect().toJSON()])); const navStyle=getComputedStyle(navEl); return {nav,items,visibleItems,active,boxes,width:innerWidth,height:innerHeight,scrollWidth:document.documentElement.scrollWidth,navClientWidth:navEl.clientWidth,navScrollWidth:navEl.scrollWidth,navOverflowX:navStyle.overflowX}; }")
+                # Verify navigation is a bounded scroll rail and the Roulette stage, wheel, table, and Spin remain above the 1366 by 768 fold.
+                assert compact_1366['scrollWidth'] <= compact_1366['width'] + 1 and compact_1366['nav']['left'] >= -1 and compact_1366['nav']['right'] <= compact_1366['width'] + 1 and compact_1366['navOverflowX'] in ('auto','scroll') and compact_1366['navScrollWidth'] >= compact_1366['navClientWidth'] and compact_1366['active'] and compact_1366['active']['left'] >= compact_1366['nav']['left'] - 1 and compact_1366['active']['right'] <= compact_1366['nav']['right'] + 1 and len(compact_1366['visibleItems']) >= 2 and all(box and box['bottom'] <= compact_1366['height'] - 54 for box in compact_1366['boxes'].values()), compact_1366
                 # Capture the evaluator-sized compact desktop acceptance evidence.
                 page.screenshot(path=str(screenshots/'after-pass-roulette-1366x768.png'),full_page=False)
                 # Resize to a narrow responsive viewport for Roulette-specific overflow verification.

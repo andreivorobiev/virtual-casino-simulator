@@ -5436,6 +5436,22 @@
       "notes": "Introduced in v9.1.0."
     },
     {
+      "id": "ROU-057",
+      "module": "Roulette",
+      "description": "Every Roulette bet cell carries a stable hit-target identity across re-renders; activating a cell posts the exact bet_type and covered numbers it represents (for example 2nd 12 covers 13-24), verified on the client before the wager posts so a re-render can never map a click to a different betting region.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-ROU-HITMAP-001"
+      ],
+      "implementation_files": [
+        "web/games/roulette.js"
+      ],
+      "introduced_in": "issue-222-roulette-hit-target",
+      "changed_in": "issue-222-roulette-hit-target",
+      "notes": "Resolves issue #222: the '2nd 12'/inside-trio hit-target mismatch caused by full-innerHTML re-renders churning bet-cell nodes."
+    },
+    {
       "id": "UX-001",
       "module": "UX",
       "description": "Game stages reserve fixed visual areas during normal gameplay.",
@@ -7728,7 +7744,45 @@
       "id": "SEC-010", "module": "Core", "description": "Restricted-preview production requests require exact canonical Host and Origin values, one exact loopback trusted-proxy contract, per-session CSRF proof for every unsafe method, bounded bodies and client windows, hardened response headers, and secret-safe fixed-class security logging.", "status": "PASS", "api_tests": ["API-SEC-PREVIEW-001", "SERVICE-WSGI-001"], "browser_tests": ["BR-SEC-PREVIEW-001"], "implementation_files": ["casino/core/security.py", "casino/wsgi.py", "scripts/validate_contracts.py", "contracts/compatibility/restricted-preview-security.json", "docs/restricted_preview_security.md"], "introduced_in": "issue-203-restricted-preview-security", "changed_in": "issue-203-restricted-preview-security", "notes": "Repository policy and tests only; DNS, TLS, proxy, firewall, service, credentials, and public exposure remain held by issue #201."
     },
     {
-      "id": "SESSION-006", "module": "Core", "description": "Restricted-preview sessions use host-only Secure HttpOnly SameSite cookies, distinct per-session CSRF values, login rotation, bounded retention and lifetime, logout clearing, and revocation after privilege-bearing account changes.", "status": "PASS", "api_tests": ["API-SEC-PREVIEW-001", "SERVICE-WSGI-001"], "browser_tests": ["BR-SEC-PREVIEW-001"], "implementation_files": ["casino/core/auth.py", "casino/app.py", "casino/wsgi.py", "web/core/api.js"], "introduced_in": "issue-203-restricted-preview-security", "changed_in": "issue-203-restricted-preview-security", "notes": "The CSRF value is intentionally distinct from the bearer-compatible session identifier and is never logged."
+      "id": "SESSION-006",
+      "module": "Core",
+      "description": "Restricted-preview sessions use host-only Secure HttpOnly SameSite cookies, distinct per-session CSRF values, bounded per-user concurrent session retention with least-recently-used eviction, bounded lifetime, logout clearing, and revocation after privilege-bearing account changes.",
+      "status": "PASS",
+      "api_tests": [
+        "API-SEC-PREVIEW-001",
+        "SERVICE-WSGI-001"
+      ],
+      "browser_tests": [
+        "BR-SEC-PREVIEW-001"
+      ],
+      "implementation_files": [
+        "casino/core/auth.py",
+        "casino/app.py",
+        "casino/wsgi.py",
+        "web/core/api.js",
+        "casino/core/state_store.py"
+      ],
+      "introduced_in": "issue-203-restricted-preview-security",
+      "changed_in": "issue-226-concurrent-sessions",
+      "notes": "The CSRF value is intentionally distinct from the bearer-compatible session identifier and is never logged. Superseded the earlier single-session login-rotation behavior in favor of bounded concurrent sessions per SESSION-007 (issue #226)."
+    },
+    {
+      "id": "SESSION-007",
+      "module": "Session",
+      "description": "Concurrent same-account logins create independent durable sessions that remain valid and never invalidate each other, bounded by a per-user cap with least-recently-used eviction and atomic session persistence that prevents lost writes, returning no 401 or 500 under concurrency.",
+      "status": "PASS",
+      "api_tests": [
+        "API-AUTH-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/auth.py",
+        "casino/core/state_store.py",
+        "casino/app.py"
+      ],
+      "introduced_in": "issue-226-concurrent-sessions",
+      "changed_in": "issue-226-concurrent-sessions",
+      "notes": "Introduced by issue #226 to replace single-session login rotation; concurrent UI sessions no longer evict one another and session-file writes are atomic under a shared lock."
     },
     {
       "id": "ADMIN-024", "module": "Admin", "description": "Admin HTML, JavaScript, and API surfaces require an active Admin session during restricted preview, and user privilege or status changes revoke existing sessions.", "status": "PASS", "api_tests": ["API-SEC-PREVIEW-001", "API-ADMIN-USERS-001"], "browser_tests": ["BR-SEC-PREVIEW-001"], "implementation_files": ["casino/wsgi.py", "casino/admin.py", "web/admin.html", "web/admin.js"], "introduced_in": "issue-203-restricted-preview-security", "changed_in": "issue-203-restricted-preview-security", "notes": "Manual invitation is the only approved enrollment path at this stage."
@@ -7765,6 +7819,60 @@
     },
     {
       "id": "TEST-050", "module": "Tests", "description": "Edge evidence covers exact origin and loopback topology, restricted access, replacement forwarding headers, protected ports, ACME preflight, inert service and rollback templates, traversal refusal, listener-free static validation, exact success-envelope validation through the production WSGI/API boundary, pre-network credential refusal, bounded authenticated probes, security headers, certificate age, sanitized output, packaging, and fail-closed negative cases.", "status": "PASS", "api_tests": ["EDGE-PREPARATION-001", "SERVICE-WSGI-001"], "browser_tests": [], "implementation_files": ["tests/edge_gate_tests.py", "tests/production_wsgi_probe.py", "tests/run_tests.py", "tests/release_artifact_tests.py", "scripts/package_app.py"], "introduced_in": "issue-206-edge-preparation", "changed_in": "issue-206-edge-preparation", "notes": "All repository evidence is isolated, synthetic, non-mutating, and listener-free; live DNS, TLS, service, firewall, deployment, and public exposure proof remain external cutover gates."
+    },
+    {
+      "id": "TEST-051",
+      "module": "Tests",
+      "description": "Regression tests exercise 1, 3, 30, and 100 concurrent same-account logins asserting every prior session stays valid with no 401 or 500, and prove per-user cap least-recently-used session eviction.",
+      "status": "PASS",
+      "api_tests": [
+        "API-AUTH-001",
+        "API-SEC-PREVIEW-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/security/test_policy.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-226-concurrent-sessions",
+      "changed_in": "issue-226-concurrent-sessions",
+      "notes": "Concurrency is exercised in-process against the atomic session writer; scales map directly to the issue #226 acceptance table."
+    },
+    {
+      "id": "TEST-052",
+      "module": "Tests",
+      "description": "Browser regression asserts bounded keyboard-accessible shell navigation, full brand readability without truncation, minimum nav-label readability, no page-level horizontal overflow, and every game control's containment and scroll reachability at the 1920, 1440, 1024, and 390 governed viewports.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-SHELL-NAV-001"
+      ],
+      "implementation_files": [
+        "web/styles.css",
+        "web/app.js",
+        "web/index.html",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-221-nav-accessibility",
+      "changed_in": "issue-221-nav-accessibility",
+      "notes": "Covers the independent 30-game x 4-viewport audit defects in issue #221: brand truncation, 32-item nav cram, and controls clipped by hidden-overflow ancestors."
+    },
+    {
+      "id": "TEST-053",
+      "module": "Tests",
+      "description": "Browser regression clicks every Roulette primary betting region plus a representative inside hotspot per covered-number size and asserts the posted bet_type and covered_numbers match the clicked cell's canonical identity, with non-overlapping, non-zero hit geometry.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-ROU-HITMAP-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py",
+        "web/games/roulette.js"
+      ],
+      "introduced_in": "issue-222-roulette-hit-target",
+      "changed_in": "issue-222-roulette-hit-target",
+      "notes": "Covers the issue #222 acceptance that every wager target maps to the same identity across UI, API payload, and no zero-area or overlapping hit regions."
     },
     {
       "id": "DOC-017",

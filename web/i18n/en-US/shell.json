@@ -75,5 +75,7 @@
   "wallet.add": "Add",
   "wallet.addFakeMoney": "Add play tokens",
   "wallet.addTokens": "Add play tokens",
-  "wallet.balanceLabel": "Play token balance"
+  "wallet.balanceLabel": "Play token balance",
+  "nav.primaryAria": "Games navigation",
+  "nav.gamesArea": "Game area"
 }
