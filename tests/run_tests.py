@@ -2226,8 +2226,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     assert page.get_by_text('Midnight Ledger Casino').is_visible()
                     # Verify the Roulette card still exposes its route action.
                     assert page.get_by_test_id('open-roulette').is_visible()
-                    # Verify the catalog advertises the approved expansion capacity.
-                    assert 'ready for 20' in page.get_by_test_id('catalog-capacity').inner_text()
+                    # Verify the catalog advertises one authoritative game count with no contradictory roadmap target. (issue #235)
+                    assert page.get_by_test_id('catalog-capacity').inner_text()==f'{len(casino_config.GAMES)} available'
                     # Load the paired shell copy so localized lobby expectations stay sourced from canonical resources. (issue #236)
                     lobby_shell_copy={loc:read_i18n_json(ROOT/'web'/'i18n'/loc/'shell.json') for loc in ('en-US','ru-RU')}
                     # Prove the Play buttons and hero eyebrow render the localized strings, capturing EN/RU evidence without raw resource keys.
@@ -2263,7 +2263,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Confirm the English lobby copy is restored for downstream browser cases.
                     assert_lobby_localized('en-US')
                 # Execute this statement as part of the module's documented control flow.
-                run_case('BR-LOBBY-001',['CORE-005','CORE-006','UX-008','I18N-004','TEST-069'],premium_lobby)
+                run_case('BR-LOBBY-001',['CORE-005','CORE-006','UX-008','I18N-004','TEST-069','UX-012','TEST-072'],premium_lobby)
                 # Define catalog_navigation to cover search and category facets from module metadata.
                 def catalog_navigation():
                     # Filter by a game label through the visible search control.
@@ -2302,8 +2302,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         assert page.locator(f'[data-catalog-category="{category}"]').inner_text()==label
                     # Verify catalog region, categories, and gallery accessible names are localized.
                     assert page.get_by_test_id('catalog-region').get_attribute('aria-label')=='Найти игру' and page.get_by_test_id('catalog-categories').get_attribute('aria-label')=='Категории игр' and page.get_by_test_id('game-gallery').get_attribute('aria-label')=='Игры'
-                    # Verify localized capacity copy includes both current and approved target counts.
-                    assert page.get_by_test_id('catalog-capacity').inner_text()==f'Доступно: {len(casino_config.GAMES)} · каталог рассчитан на 20'
+                    # Verify localized capacity copy shows one authoritative game count with no contradictory roadmap target. (issue #235)
+                    assert page.get_by_test_id('catalog-capacity').inner_text()==f'Доступно: {len(casino_config.GAMES)}'
                     # Select a localized category before exercising the no-result state.
                     page.locator('[data-catalog-category="table"]').click()
                     # Enter a Russian query with no matches so the localized empty state becomes visible.
@@ -2353,7 +2353,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Wait for English catalog controls before the next browser case starts.
                     page.wait_for_function("() => document.querySelector('[data-testid=\"catalog-search\"]')?.placeholder === 'Search by game, feature, or category'")
                 # Execute Russian copy, category-label, containment, and keyboard-focus acceptance coverage.
-                run_case('BR-CATALOG-I18N-RU-001',['UX-010','I18N-001'],catalog_ru_acceptance)
+                run_case('BR-CATALOG-I18N-RU-001',['UX-010','I18N-001','UX-012','TEST-072'],catalog_ru_acceptance)
                 # Capture the polished desktop lobby and shared topbar for review evidence.
                 shot('after-pass-shell-lobby-desktop.png')
                 # Resize the browser to the compact desktop viewport before responsive checks.

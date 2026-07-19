@@ -8588,6 +8588,42 @@
       "introduced_in": "issue-284-283-auth-visual-conformance",
       "changed_in": "issue-284-283-auth-visual-conformance",
       "notes": "Issue #284/#283 auth short-viewport fit and terms touch-target browser proof."
+    },
+    {
+      "id": "UX-012",
+      "module": "Application",
+      "description": "The lobby capacity line shows a single authoritative game count (the same catalog size the nav and gallery render) with no contradictory roadmap target clause, in both en-US and ru-RU.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-LOBBY-001",
+        "BR-CATALOG-I18N-RU-001"
+      ],
+      "implementation_files": [
+        "web/app.js",
+        "web/i18n/en-US/shell.json",
+        "web/i18n/ru-RU/shell.json"
+      ],
+      "introduced_in": "issue-235-single-lobby-count",
+      "changed_in": "issue-235-single-lobby-count",
+      "notes": "Issue #235: removed the 'catalog ready for {target}' clause that contradicted the live count when current>target."
+    },
+    {
+      "id": "TEST-072",
+      "module": "Tests",
+      "description": "Browser evidence verifies the lobby capacity line renders exactly one authoritative game count in en-US ('{n} available') and ru-RU ('Доступно: {n}'), with no roadmap-target clause and no English leakage in Russian.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-LOBBY-001",
+        "BR-CATALOG-I18N-RU-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-235-single-lobby-count",
+      "changed_in": "issue-235-single-lobby-count",
+      "notes": "Issue #235 single-count lobby capacity browser proof (both locales)."
     }
   ]
 }
