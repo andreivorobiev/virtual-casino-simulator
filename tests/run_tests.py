@@ -3541,6 +3541,10 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         page.get_by_test_id('shell-locale-select').select_option('en-US'); page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(100)
                     # Capture the complete ready table before the ante-backed deal.
                     localized_evidence('ready',['ready'])
+                    # Read the English return-table panel before any deal mutates the round. (CS-006, TEST-063)
+                    caribbean_stud_paytable_text=page.locator('.cs-data').inner_text()
+                    # Require the strongest and weakest published raise odds to be visible with localized hand labels.
+                    assert 'Raise payout schedule' in caribbean_stud_paytable_text and 'Royal flush' in caribbean_stud_paytable_text and '100:1' in caribbean_stud_paytable_text and 'High card' in caribbean_stud_paytable_text and '1:1' in caribbean_stud_paytable_text
                     # Deal through the public frontend and require private dealer hole cards during the decision.
                     page.locator('#cs-ante').fill('1'); page.locator('[data-action="deal"]').click(); page.wait_for_function("() => document.querySelector('.cs-phase')?.textContent === 'Decision'",timeout=10000); assert page.locator('[aria-label="Face-down dealer card"]').count()==4
                     # Capture the actionable call-or-fold decision.
@@ -3554,7 +3558,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Return to the lobby for downstream browser cases.
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Execute the integrated Caribbean Stud browser and visual gate.
-                run_case('BR-CS-001',['CS-001','CS-002','CS-004','CS-005'],caribbean_stud_acceptance)
+                run_case('BR-CS-001',['CS-001','CS-002','CS-004','CS-005','CS-006','TEST-063'],caribbean_stud_acceptance)
                 # Define real-backend Let It Ride localization, staged decisions, responsive, motion, and route acceptance.
                 def let_it_ride_acceptance():
                     # Open the catalog-owned route and wait for the stable game selector.
