@@ -608,6 +608,8 @@ async function init() {
       await refreshShellState({ quiet: true });
       // Close the wallet popover after a successful token addition.
       document.querySelector('.wallet-menu')?.removeAttribute('open');
+      // Clear the amount so an accidental second click cannot silently re-add the same top-up. (issue #247)
+      document.getElementById('add-token-amount').value = '';
       // Show positive feedback for the completed token action.
       toast(t('toast.tokensAdded', { amount: tokens(amount) }, 'shell'), true);
     // Handle validation or API errors from the wallet action.

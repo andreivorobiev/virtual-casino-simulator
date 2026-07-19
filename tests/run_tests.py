@@ -2047,10 +2047,12 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 def auth_tokens_real_backend():
                     # Verify the backend response and shell show the same updated canonical balance.
                     assert token_add_info.value.json()['data']['token_balance']==5250.5 and page.locator('#balance').inner_text()=='5,250.50'
+                    # Verify the successful add-token flow clears the field before the wallet can be reopened and clicked again. (TOKEN-005)
+                    assert page.locator('#add-token-amount').input_value()==''
                     # Verify exactly one visible wallet action produced exactly one ledger credit.
                     assert len([row for row in ledger_after_add if row.get('transaction_type')=='PLAY_TOKENS_ADDED'])==len([row for row in ledger_before_add if row.get('transaction_type')=='PLAY_TOKENS_ADDED'])+1
                 # Execute the real-backend wallet regression with permanent requirement mappings.
-                run_case('BR-TOKEN-001',['TOKEN-001','TOKEN-003','TOKEN-004','SESSION-003'],auth_tokens_real_backend)
+                run_case('BR-TOKEN-001',['TOKEN-001','TOKEN-003','TOKEN-004','TOKEN-005','SESSION-003'],auth_tokens_real_backend)
                 # Counterfeit the local wallet display and cache to model a fully hostile client surface.
                 page.evaluate("() => { document.querySelector('#balance').textContent='999,999'; localStorage.setItem('casino.hostile.balance','999999'); }")
                 # Require the tampered DOM to differ temporarily without changing the server wallet.
