@@ -59,6 +59,7 @@
   "status.drawingLead": "Розыгрыш: открыто {count} из {total} шаров.",
   "status.drawingSummary": "Видимые совпадения: {catches}.",
   "status.resultLead": "Итог: {catches} совпадений в билете на {spots} чисел.",
+  "status.resultLeadOne": "Итог: {catches} совпадение в билете на {spots} чисел.",
   "status.resultSummary": "Выплата {payout}; итог {net} после списания билета.",
   "status.selectedLead": "Выбрано:",
   "status.selectedSummary": "{spots}.",

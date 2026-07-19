@@ -19,7 +19,7 @@ Historical source baseline: 9.1.0
 - slots: 9.1.2
 - blackjack: 9.1.3
 - baccarat: 9.1.2
-- keno: 9.2.1
+- keno: 9.2.2
 - bingo: 9.2.1
 - multi_hand_video_poker: 1.0.1
 - casino_war: 1.0.0
@@ -271,6 +271,7 @@ Historical source baseline: 9.1.0
 - **KENO-021** (Keno) - SUPERSEDED: Keno remains fake-money only.
 - **KENO-022** (Keno) - PASS: Keno browser tests avoid ambiguous text selectors.
 - **KENO-023** (Keno) - PASS: Keno history rows constrain long draw IDs so they do not overlap the result summary.
+- **KENO-024** (Keno) - PASS: Keno result copy uses the singular catch noun when a completed ticket catches exactly one number.
 - **BINGO-001** (Bingo) - PASS: Bingo uses 75-ball American rules.
 - **BINGO-002** (Bingo) - PASS: Bingo card has B column 1-15.
 - **BINGO-003** (Bingo) - PASS: Bingo card has I column 16-30.
@@ -670,3 +671,4 @@ Historical source baseline: 9.1.0
 - **TEST-063** (Tests) - PASS: Browser evidence verifies Caribbean Stud's return-table panel includes the visible raise payout schedule sourced from published rules.
 - **TEST-064** (Tests) - PASS: Browser evidence verifies Slots renders cabinet readiness and win state as a status pill rather than a disabled primary-looking action.
 - **TEST-065** (Tests) - PASS: Browser qualification proves Big Six cumulative animation continuity, server-result pointer alignment, hidden results and atomic control locks, lifecycle recovery, slow-device and reduced-motion behavior, production static-asset cache safety, and scroll reachability across every governed viewport.
+- **TEST-066** (Tests) - PASS: Browser evidence verifies Keno singular result copy for exactly one caught number.

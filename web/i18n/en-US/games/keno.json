@@ -59,6 +59,7 @@
   "status.drawingLead": "Drawing: {count} of {total} balls revealed.",
   "status.drawingSummary": "Visible catches: {catches}.",
   "status.resultLead": "Result: {catches} catches on a {spots}-spot ticket.",
+  "status.resultLeadOne": "Result: {catches} catch on a {spots}-spot ticket.",
   "status.resultSummary": "Payout {payout}; net {net} after the ticket debit.",
   "status.selectedLead": "Selected:",
   "status.selectedSummary": "{spots}.",
