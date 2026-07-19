@@ -8098,6 +8098,23 @@
       "introduced_in": "issue-244-blackjack-insurance-phase",
       "changed_in": "issue-244-blackjack-insurance-phase",
       "notes": "The deterministic real-HTTP matrix proves both status and hole-card guards execute before insurance ledger mutation while one legal dealer-Ace control still debits exactly once."
+    },
+    {
+      "id": "TEST-058",
+      "module": "Tests",
+      "description": "Browser validation covers immediate Slots line-bet correction, localized feedback, accessibility state, visible-cost synchronization, exact manual and autoplay payloads, real completed round behavior, responsive containment, and governed visual evidence.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-SLOT-LINE-BET-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-248-slots-line-bet",
+      "changed_in": "issue-248-slots-line-bet",
+      "notes": "Focused control evidence covers en-US and ru-RU at desktop_compact and mobile from the tested head without accepting unrelated full-page defects."
     }
   ]
 }

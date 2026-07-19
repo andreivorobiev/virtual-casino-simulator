@@ -180,6 +180,7 @@
         "spinning",
         "win",
         "bonus",
+        "invalid_line_bet",
         "route_restored"
       ],
       "locales": [

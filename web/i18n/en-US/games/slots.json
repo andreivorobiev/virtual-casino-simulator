@@ -24,6 +24,7 @@
   "controls.useFreeSpin": "Use free spin",
   "controls.wait": "Wait",
   "controls.winState": "Win",
+  "errors.lineBetMinimum": "Line bet must be a whole number of at least 1. Reset to 1.",
   "errors.spinFailed": "Slots spin failed.",
   "feature.freeSpins": "{count} banked for upcoming spins",
   "feature.freeSpinsTitle": "Free spins",

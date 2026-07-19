@@ -16,7 +16,7 @@ Historical source baseline: 9.1.0
 - admin: 1.6.0
 - operations: 1.0.0
 - roulette: 9.4.0
-- slots: 9.1.0
+- slots: 9.1.1
 - blackjack: 9.1.2
 - baccarat: 9.1.1
 - keno: 9.2.0
@@ -45,8 +45,8 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.0
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.44.7
-- docs: 1.44.7
+- tests: 1.44.8
+- docs: 1.44.8
 - contracts: 1.32.0
 - tooling: 1.14.0
 - commenting_policy: 1.0.0
@@ -650,3 +650,4 @@ Historical source baseline: 9.1.0
 - **MHVP-006** (Multi-Hand Video Poker) - PASS: Multi-Hand Video Poker rejects decoded and string non-finite wager-per-hand values before round construction, state persistence, aggregate debit, or payout handling.
 - **TEST-055** (Tests) - PASS: Non-finite money regression evidence covers all six numeric and string NaN or infinity forms, every affected game API, both HTTP adapters, every public ledger entry point, unchanged wallet, ledger, and game state, strict player JSON persistence, and exact loopback listener cleanup.
 - **TEST-056** (Tests) - PASS: Blackjack insurance phase regression evidence covers settled and exposed-round conflicts, unchanged wallet, ledger, and round state on rejection, preserved legal insurance debit behavior, and exact loopback listener cleanup.
+- **TEST-058** (Tests) - PASS: Browser validation covers immediate Slots line-bet correction, localized feedback, accessibility state, visible-cost synchronization, exact manual and autoplay payloads, real completed round behavior, responsive containment, and governed visual evidence.

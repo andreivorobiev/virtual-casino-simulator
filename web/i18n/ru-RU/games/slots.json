@@ -24,6 +24,7 @@
   "controls.useFreeSpin": "Использовать фриспин",
   "controls.wait": "Ждите",
   "controls.winState": "Выигрыш",
+  "errors.lineBetMinimum": "Ставка на линию должна быть целым числом не меньше 1. Значение сброшено на 1.",
   "errors.spinFailed": "Спин слотов не удался.",
   "feature.freeSpins": "{count} в банке для следующих спинов",
   "feature.freeSpinsTitle": "Фриспины",

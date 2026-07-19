@@ -2131,6 +2131,26 @@
       ]
     },
     {
+      "id": "SLOT-027",
+      "module": "Slots",
+      "description": "Slots line-bet input immediately corrects invalid values with localized visible feedback and keeps round cost, autoplay configuration, and spin payloads synchronized.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-SLOT-LINE-BET-001",
+        "BR-SLOT-001"
+      ],
+      "implementation_files": [
+        "web/games/slots.js",
+        "web/i18n/en-US/games/slots.json",
+        "web/i18n/ru-RU/games/slots.json",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-248-slots-line-bet",
+      "changed_in": "issue-248-slots-line-bet",
+      "notes": "The invalid spelling never emits a wager request; the next corrected real UI spin uses the same value shown to the player."
+    },
+    {
       "id": "BJ-001",
       "module": "Blackjack",
       "description": "Blackjack deals two player cards and two dealer cards.",
@@ -6433,6 +6453,23 @@
       "introduced_in": "auth-mysql-token-foundation",
       "changed_in": "auth-mysql-token-foundation",
       "notes": "Planned by GitHub epic #34 and child issue #35; runtime implementation is intentionally out of scope for the requirements/contracts worker."
+    },
+    {
+      "id": "TEST-058",
+      "module": "Tests",
+      "description": "Browser validation covers immediate Slots line-bet correction, localized feedback, accessibility state, visible-cost synchronization, exact manual and autoplay payloads, real completed round behavior, responsive containment, and governed visual evidence.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-SLOT-LINE-BET-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-248-slots-line-bet",
+      "changed_in": "issue-248-slots-line-bet",
+      "notes": "Focused control evidence covers en-US and ru-RU at desktop_compact and mobile from the tested head without accepting unrelated full-page defects."
     }
   ]
 }
