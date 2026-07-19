@@ -40,13 +40,13 @@ Historical source baseline: 9.1.0
 - fan_tan: 1.0.0
 - andar_bahar: 1.0.0
 - acey_deucey: 1.0.1
-- caribbean_stud: 1.0.0
+- caribbean_stud: 1.0.1
 - let_it_ride: 1.0.0
 - casino_holdem: 1.0.0
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.44.16
-- docs: 1.44.16
+- tests: 1.44.17
+- docs: 1.44.17
 - contracts: 1.32.0
 - tooling: 1.14.0
 - commenting_policy: 1.0.0
@@ -593,6 +593,7 @@ Historical source baseline: 9.1.0
 - **CS-003** (Caribbean Stud) - PASS: Ante and call debits plus returned-token settlement credits use the shared ledger exactly once under durable action identities, while folds add no token movement.
 - **CS-004** (Application) - PASS: Caribbean Stud supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.
 - **CS-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Caribbean Stud with requirement, module, version, and visual traceability.
+- **CS-006** (Caribbean Stud) - PASS: Caribbean Stud displays the server-published raise payout schedule in the return-table panel before play.
 - **LIR-001** (Let It Ride) - PASS: Three equal base-wager units fund a five-card poker round with three player cards and two staged ride-or-pull decisions before community-card settlement beginning at a pair of tens.
 - **LIR-002** (Let It Ride) - PASS: Authenticated sessions own private reload-safe decision rounds, hidden community cards, durable receipts, settled history, and canonical route restoration.
 - **LIR-003** (Let It Ride) - PASS: Opening wager debits, pull refunds, and returned-token payout credits use the shared ledger exactly once under durable action identities.
@@ -664,3 +665,4 @@ Historical source baseline: 9.1.0
 - **TEST-060** (Tests) - PASS: Browser and API validation proves that normal players never receive the Admin navigation affordance after locale rerender or route restoration, direct Admin access remains forbidden, and authenticated Admin users retain responsive keyboard access with governed visual evidence.
 - **TEST-061** (Tests) - PASS: Browser evidence verifies Roulette disables bet-slip Remove controls while a real spin has locked the current wager set.
 - **TEST-062** (Tests) - PASS: Browser evidence verifies Baccarat's initial shoe drawer shows the configured full shoe capacity instead of zero before the first deal.
+- **TEST-063** (Tests) - PASS: Browser evidence verifies Caribbean Stud's return-table panel includes the visible raise payout schedule sourced from published rules.

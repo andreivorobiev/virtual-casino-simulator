@@ -13,6 +13,7 @@
   "controls.retryHelp": "A network retry is reserved for this action.",
   "controls.title": "Table controls",
   "data.title": "Rules and history",
+  "paytable.title": "Raise payout schedule",
   "errors.actionFailed": "The table action did not complete.",
   "errors.conflict": "That action belongs to a different round state.",
   "errors.insufficientTokens": "The player does not have enough play tokens.",
