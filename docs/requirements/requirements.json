@@ -2624,6 +2624,23 @@
       "notes": "Dealer naturals still push; ordinary non-natural 21 versus 21 remains a push."
     },
     {
+      "id": "BJ-032",
+      "module": "Blackjack",
+      "description": "Blackjack settlement Net display includes insurance side-bet stake and payout movement.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-BJ-INSURANCE-NET-001"
+      ],
+      "implementation_files": [
+        "web/games/blackjack.js",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-260-blackjack-insurance-net",
+      "changed_in": "issue-260-blackjack-insurance-net",
+      "notes": "Synthetic browser evidence renders a settled dealer-blackjack insurance round whose Net row would be wrong if insurance stake and payout were excluded."
+    },
+    {
       "id": "BAC-001",
       "module": "Baccarat",
       "description": "Baccarat implements Punto Banco Player/Banker/Tie betting.",
@@ -8098,6 +8115,22 @@
       "introduced_in": "issue-244-blackjack-insurance-phase",
       "changed_in": "issue-244-blackjack-insurance-phase",
       "notes": "The deterministic real-HTTP matrix proves both status and hole-card guards execute before insurance ledger mutation while one legal dealer-Ace control still debits exactly once."
+    },
+    {
+      "id": "TEST-057",
+      "module": "Tests",
+      "description": "Browser evidence verifies Blackjack settlement Net display includes insurance side-bet stake and payout movement.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-BJ-INSURANCE-NET-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-260-blackjack-insurance-net",
+      "changed_in": "issue-260-blackjack-insurance-net",
+      "notes": "The browser harness remounts a settled insured Blackjack round and asserts the rendered Net row includes the insurance stake and payout."
     },
     {
       "id": "TEST-058",

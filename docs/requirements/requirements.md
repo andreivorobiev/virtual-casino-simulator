@@ -653,6 +653,8 @@ flowchart LR
 | BJ-028 | Blackjack UI renders dealer and player hands. | PASS |  | BR-BJ-001 |
 | BJ-029 | Blackjack UI exposes action buttons. | PASS |  | BR-BJ-001 |
 | BJ-030 | Blackjack writes history rows on settlement. | PASS |  |  |
+| BJ-031 | A two-card natural that declines even money pays the configured blackjack rate and beats every dealer non-natural total, including multi-card 21. | PASS | API-BJ-002 | BR-BJ-NATURAL-PAYOUT-001 |
+| BJ-032 | Blackjack settlement Net display includes insurance side-bet stake and payout movement. | PASS |  | BR-BJ-INSURANCE-NET-001 |
 
 ### Bots
 
