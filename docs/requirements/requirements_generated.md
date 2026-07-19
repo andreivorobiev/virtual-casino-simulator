@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.38.5
+- application: 9.38.6
 - core: 9.13.3
 - ledger: 9.1.1
 - players: 9.1.0
@@ -676,3 +676,5 @@ Historical source baseline: 9.1.0
 - **TEST-068** (Tests) - PASS: Cache-parity evidence covers exact current HTML and lazy JavaScript bytes, a real development-browser reload with repeated ordinary-cache fetches, direct production WSGI responses, and existing exact listener cleanup.
 - **OU7-006** (Application) - PASS: The Over/Under 7 wager list and paytable present a single payout convention (net odds), so each proposition's advertised odds match across both surfaces and the retired total-return multiplier copy is no longer shown.
 - **TEST-067** (Tests) - PASS: Browser evidence in both locales verifies the Over/Under 7 wager list and paytable share the net-odds convention with matching numeric odds and no unresolved placeholders, rejecting the former total-return multiplier copy.
+- **I18N-004** (Application) - PASS: The lobby Play buttons and hero eyebrow render localized shell strings from the active locale (no hardcoded English), so they participate in in-place language switching.
+- **TEST-069** (Tests) - PASS: Browser evidence proves the lobby renders localized Play buttons and hero eyebrow in en-US, switches to ru-RU through the visible control with all Play buttons and the eyebrow localized and no raw resource keys, and returns to en-US symmetrically.
