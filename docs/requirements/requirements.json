@@ -5534,6 +5534,22 @@
       "notes": "Resolves issue #222: the '2nd 12'/inside-trio hit-target mismatch caused by full-innerHTML re-renders churning bet-cell nodes."
     },
     {
+      "id": "ROU-058",
+      "module": "Roulette",
+      "description": "Roulette's spinning settlement card shows player-facing spin progress copy instead of an internal layout/debug note.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-ROU-SPINNING-COPY-001"
+      ],
+      "implementation_files": [
+        "web/games/roulette.js"
+      ],
+      "introduced_in": "issue-234-roulette-debug-text",
+      "changed_in": "issue-234-roulette-debug-text",
+      "notes": "The browser harness checks the real spinning-state settlement card before settlement to reject the old layout-reservation copy."
+    },
+    {
       "id": "UX-001",
       "module": "UX",
       "description": "Game stages reserve fixed visual areas during normal gameplay.",
@@ -8199,6 +8215,22 @@
       "introduced_in": "issue-248-slots-line-bet",
       "changed_in": "issue-248-slots-line-bet",
       "notes": "Focused control evidence covers en-US and ru-RU at desktop_compact and mobile from the tested head without accepting unrelated full-page defects."
+    },
+    {
+      "id": "TEST-059",
+      "module": "Tests",
+      "description": "Browser evidence verifies Roulette's spinning settlement card uses player-facing progress copy and does not leak the old layout/debug text.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-ROU-SPINNING-COPY-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-234-roulette-debug-text",
+      "changed_in": "issue-234-roulette-debug-text",
+      "notes": "The existing Roulette browser flow asserts the live spinning card copy before waiting for the settled result."
     }
   ]
 }
