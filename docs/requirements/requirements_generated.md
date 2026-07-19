@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.38.6
+- application: 9.38.7
 - core: 9.13.3
 - ledger: 9.1.1
 - players: 9.1.0
@@ -680,3 +680,5 @@ Historical source baseline: 9.1.0
 - **TEST-069** (Tests) - PASS: Browser evidence proves the lobby renders localized Play buttons and hero eyebrow in en-US, switches to ru-RU through the visible control with all Play buttons and the eyebrow localized and no raw resource keys, and returns to en-US symmetrically.
 - **LEDGER-028** (Ledger) - PASS: Each idempotent game view binds its client idempotency identity to an immutable wager payload and the authenticated player, retains it across an ambiguous lost response so a retry replays the identical identity and body and settles exactly once, and clears it on definitive rejection, authoritative reconciliation, remount, or player change.
 - **TEST-070** (Tests) - PASS: Browser regression proves the lost-response idempotency guarantee: after the backend commits and the client sees a simulated lost response, a retry through the visible control resends the identical idempotency identity and immutable wager body, and the ledger records exactly one wager debit for the intended play.
+- **AUTH-UI-002** (Application) - PASS: The login screen fits without page scroll at the short 1280x720 desktop viewport, and the required terms acceptance control presents an enlarged (>=42px) touch target.
+- **TEST-071** (Tests) - PASS: Browser evidence verifies the login gate fits without page overflow at 1280x720 with the sign-in submit control on screen, and that the terms acceptance row meets the enlarged touch-target height.
