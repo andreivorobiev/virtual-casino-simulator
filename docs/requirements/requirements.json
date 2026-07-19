@@ -2202,16 +2202,21 @@
     {
       "id": "BJ-005",
       "module": "Blackjack",
-      "description": "Natural blackjack pays configured blackjack payout.",
+      "description": "Natural blackjack pays the configured blackjack payout whether it settles immediately or after the player declines even money.",
       "status": "PASS",
-      "api_tests": [],
-      "browser_tests": [],
+      "api_tests": [
+        "API-BJ-002"
+      ],
+      "browser_tests": [
+        "BR-BJ-NATURAL-PAYOUT-001"
+      ],
       "implementation_files": [
         "casino/games/blackjack/engine.py",
         "casino/games/blackjack/api.py",
         "web/games/blackjack.js"
       ],
-      "notes": ""
+      "changed_in": "issue-243-blackjack-natural-payout",
+      "notes": "Deferred naturals are settled through the same configured payout calculation after the dealer completes play."
     },
     {
       "id": "BJ-006",
@@ -2584,6 +2589,25 @@
         "web/games/blackjack.js"
       ],
       "notes": ""
+    },
+    {
+      "id": "BJ-031",
+      "module": "Blackjack",
+      "description": "A two-card natural that declines even money pays the configured blackjack rate and beats every dealer non-natural total, including multi-card 21.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BJ-002"
+      ],
+      "browser_tests": [
+        "BR-BJ-NATURAL-PAYOUT-001"
+      ],
+      "implementation_files": [
+        "casino/games/blackjack/engine.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-243-blackjack-natural-payout",
+      "changed_in": "issue-243-blackjack-natural-payout",
+      "notes": "Dealer naturals still push; ordinary non-natural 21 versus 21 remains a push."
     },
     {
       "id": "BAC-001",
@@ -7936,6 +7960,24 @@
       "introduced_in": "issue-267-engineering-practices",
       "changed_in": "issue-267-engineering-practices",
       "notes": "The owner-mandated merge executor is Codex. This allocation does not replace protected-branch rules, exact-head validation, required review, or owner approval."
+    },
+    {
+      "id": "TEST-054",
+      "module": "Tests",
+      "description": "Blackjack natural-payout regression evidence covers deterministic engine and API outcomes, the rendered decline-even-money path, wallet and ledger accounting, configured payout variants, dealer multi-card 21, split-hand exclusion, and repeat-settlement refusal.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BJ-002"
+      ],
+      "browser_tests": [
+        "BR-BJ-NATURAL-PAYOUT-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-243-blackjack-natural-payout",
+      "changed_in": "issue-243-blackjack-natural-payout",
+      "notes": "TEST-051 through TEST-053 remain reserved by the active issue #226, #221, and #222 integration lane."
     }
   ]
 }

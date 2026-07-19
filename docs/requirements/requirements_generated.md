@@ -17,7 +17,7 @@ Historical source baseline: 9.1.0
 - operations: 1.0.0
 - roulette: 9.4.0
 - slots: 9.1.0
-- blackjack: 9.1.0
+- blackjack: 9.1.1
 - baccarat: 9.1.0
 - keno: 9.2.0
 - bingo: 9.2.0
@@ -46,7 +46,7 @@ Historical source baseline: 9.1.0
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
 - tests: 1.43.0
-- docs: 1.42.0
+- docs: 1.43.0
 - contracts: 1.32.0
 - tooling: 1.14.0
 - commenting_policy: 1.0.0
@@ -194,7 +194,7 @@ Historical source baseline: 9.1.0
 - **BJ-002** (Blackjack) - PASS: Dealer hole card is hidden in public state.
 - **BJ-003** (Blackjack) - PASS: Aces can count as 1 or 11.
 - **BJ-004** (Blackjack) - PASS: Soft totals are computed correctly for multi-ace hands.
-- **BJ-005** (Blackjack) - PASS: Natural blackjack pays configured blackjack payout.
+- **BJ-005** (Blackjack) - PASS: Natural blackjack pays the configured blackjack payout whether it settles immediately or after the player declines even money.
 - **BJ-006** (Blackjack) - PASS: Push returns the stake.
 - **BJ-007** (Blackjack) - PASS: Dealer stands or hits soft 17 according to setting.
 - **BJ-008** (Blackjack) - PASS: Player can hit during active hand.
@@ -220,6 +220,7 @@ Historical source baseline: 9.1.0
 - **BJ-028** (Blackjack) - PASS: Blackjack UI renders dealer and player hands.
 - **BJ-029** (Blackjack) - PASS: Blackjack UI exposes action buttons.
 - **BJ-030** (Blackjack) - PASS: Blackjack writes history rows on settlement.
+- **BJ-031** (Blackjack) - PASS: A two-card natural that declines even money pays the configured blackjack rate and beats every dealer non-natural total, including multi-card 21.
 - **BAC-001** (Baccarat) - PASS: Baccarat implements Punto Banco Player/Banker/Tie betting.
 - **BAC-002** (Baccarat) - PASS: Baccarat uses configurable 6 or 8 deck shoe.
 - **BAC-003** (Baccarat) - PASS: Baccarat uses persistent shoe state.
@@ -643,3 +644,4 @@ Historical source baseline: 9.1.0
 - **DOC-017** (Documentation) - PASS: A vendor-neutral root handbook documents the complete engineering practice, required capabilities, authority hierarchy, and current-versus-historical status, while the repository start page links every other Markdown file exactly once.
 - **TOOL-006** (Tooling) - PASS: Documentation generation deterministically inventories every tracked or non-ignored Markdown file, updates the bounded root catalog, and fails check mode when the catalog or generated requirements are stale.
 - **DOC-018** (Documentation) - PASS: The repository defines a durable Claude-author/Codex-merge operating model in which Claude composes assigned pull requests and Codex alone reviews integration gates and executes every merge without bypassing owner authority.
+- **TEST-054** (Tests) - PASS: Blackjack natural-payout regression evidence covers deterministic engine and API outcomes, the rendered decline-even-money path, wallet and ledger accounting, configured payout variants, dealer multi-card 21, split-hand exclusion, and repeat-settlement refusal.

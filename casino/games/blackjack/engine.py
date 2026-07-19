@@ -62,6 +62,13 @@ def default_state():
     # Return the computed value to the caller.
     return {"rules": {"decks":6, "dealer_hits_soft_17": False, "blackjack_payout": 1.5, "max_split_hands": 4, "double_after_split": True, "late_surrender": True, "split_aces_one_card": True}, "shoe": [], "rounds": {}}
 
+# Compute the total stake return for one natural at the configured table rate. (BJ-005, BJ-031)
+def natural_payout_due(state, bet) -> float:
+    # Read the compatible table setting while preserving the historical three-to-two default.
+    payout_rate = float(state.get("rules", {}).get("blackjack_payout", 1.5))
+    # Return the original stake plus the configured natural profit at ledger precision.
+    return round(float(bet) * (1 + payout_rate), 2)
+
 # Define the draw function used by this module.
 def draw(state):
     # Set decks to the value needed for the next operation.
@@ -127,7 +134,7 @@ def auto_blackjacks(state, rnd):
         # Branch when the prior condition failed and this condition is true.
         elif hand["blackjack"]:
             # Set h["status"] to the value needed for the next operation.
-            h["status"] = "blackjack"; h["outcome"] = "blackjack"; h["payout_due"] = round(h["bet"]*(1+float(state["rules"].get("blackjack_payout",1.5))),2)
+            h["status"] = "blackjack"; h["outcome"] = "blackjack"; h["payout_due"] = natural_payout_due(state, h["bet"])
         # Handle the fallback branch when prior conditions did not match.
         else:
             # Set h["status"] to the value needed for the next operation.
@@ -340,10 +347,16 @@ def dealer_play(state, rnd):
             continue
         # Set ht to the value needed for the next operation.
         ht = hand_total(h["cards"])
+        # Distinguish an opening natural from a two-card twenty-one produced by a split.
+        is_natural = ht["blackjack"] and not h.get("is_split_hand", False)
         # Branch when the following condition is true.
         if ht["bust"]:
             # Set h["outcome"] to the value needed for the next operation.
             h["outcome"]="bust"; h["payout_due"] = 0
+        # Settle a deferred natural before ordinary dealer bust and total comparison. (BJ-031)
+        elif is_natural:
+            # Preserve the natural outcome and configured rate after even money is declined.
+            h["outcome"]="blackjack"; h["payout_due"] = natural_payout_due(state, h["bet"])
         # Branch when the prior condition failed and this condition is true.
         elif dealer_total["bust"]:
             # Set h["outcome"] to the value needed for the next operation.
@@ -360,8 +373,8 @@ def dealer_play(state, rnd):
         else:
             # Set h["outcome"] to the value needed for the next operation.
             h["outcome"]="push"; h["payout_due"] = float(h["bet"])
-        # Set h["status"] to the value needed for the next operation.
-        h["status"] = "settled"
+        # Preserve the natural hand status while ordinary comparison outcomes become settled.
+        h["status"] = "blackjack" if is_natural else "settled"
     # Set rnd["status"] to the value needed for the next operation.
     rnd["status"] = "settled_pending_credit"
     # Return the computed value to the caller.
