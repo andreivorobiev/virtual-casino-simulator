@@ -403,6 +403,7 @@
         "ready",
         "spinning",
         "settled",
+        "motion_qualified",
         "reduced_motion",
         "route_restored"
       ],

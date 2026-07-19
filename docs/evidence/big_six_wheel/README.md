@@ -11,7 +11,8 @@ Generated acceptance matrix:
 | `big_six_wheel` | `ready` | en-US, ru-RU | desktop primary, desktop compact, tablet, mobile | Full controls, wheel, paytable, and no horizontal overflow |
 | `big_six_wheel` | `spinning` | en-US desktop primary; ru-RU desktop primary and mobile | Required active-state locale and mobile proof, stable stage, disabled duplicate action, timer ownership |
 | `big_six_wheel` | `settled` | en-US, ru-RU | desktop primary, desktop compact, tablet, mobile | Backend result, wallet refresh, localized net result |
+| `big_six_wheel` | `motion_qualified` | en-US, ru-RU | desktop primary, desktop compact, tablet, mobile | 100 consecutive real UI spins per viewport, cumulative target and server-index alignment, live frame/timing continuity, hidden result, locked wagers, lifecycle suspension/recovery, resize, slow CPU, and paired top/stage/lower visual review |
 | `big_six_wheel` | `reduced_motion` | en-US | desktop primary, mobile | Zero-delay reveal, explicit reduced-motion marker, and no lingering transform animation |
 | `big_six_wheel` | `route_restored` | en-US | desktop primary | Canonical deep-link reload with persisted player-owned history |
 
-The browser gate also rejects representative English leakage from the Russian route and requires horizontal containment at every named viewport.
+The standard browser gate also rejects representative English leakage from the Russian route and requires horizontal containment at every named viewport. The long `BR-BIG-SIX-MOTION-SOAK-001` gate adds 400 unique authenticated UI settlements, production WSGI cache-safe source reload, at least 12 live transition samples and three observed revolutions per normal spin, control hit testing, and exact cleanup. Browser artifacts are acceptance evidence only when their summary commit matches the tested head and all three viewport checkpoints have been inspected directly.

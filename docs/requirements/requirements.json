@@ -7358,14 +7358,14 @@
     {
       "id": "BIG-SIX-004",
       "module": "Application",
-      "description": "The Big Six Wheel surface provides complete English and Russian copy, responsive ready/spinning/settled states, and reduced-motion-safe timer lifecycle behavior.",
+      "description": "The Big Six Wheel surface provides complete English and Russian copy, responsive ready/spinning/settled states, cumulative forward wheel motion, delayed result reveal, and reduced-motion-safe timer lifecycle behavior.",
       "status": "PASS",
       "api_tests": [],
       "browser_tests": ["BR-BIG-SIX-001"],
       "implementation_files": ["web/games/big_six_wheel.js", "web/i18n/en-US/games/big_six_wheel.json", "web/i18n/ru-RU/games/big_six_wheel.json", "tests/visual/visual_matrix.json", "tests/run_tests.py"],
       "introduced_in": "game-expansion-big-six",
-      "changed_in": "game-expansion-big-six",
-      "notes": "Acceptance evidence covers both locales, all four named viewports, active and settled play, reduced motion, and canonical route restoration."
+      "changed_in": "issue-223-big-six-motion",
+      "notes": "Acceptance evidence covers both locales, all four named viewports, active and settled play, cumulative pointer alignment, reduced motion, and canonical route restoration."
     },
     {
       "id": "BIG-SIX-005",
@@ -7378,6 +7378,18 @@
       "introduced_in": "game-expansion-big-six",
       "changed_in": "game-expansion-big-six",
       "notes": "The descriptor uses sort order 90 and the normalized tests.game_drivers.big_six_wheel:play driver reference reserved by issue #77."
+    },
+    {
+      "id": "BIG-SIX-006",
+      "module": "Big Six Wheel",
+      "description": "Every normal Big Six spin advances cumulatively through at least six clockwise turns, keeps the authoritative outcome hidden and wager controls locked until presentation settles, and lands the fixed pointer on the server-selected segment without snap, reset, reverse, or stale lifecycle state.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": ["BR-BIG-SIX-001", "BR-BIG-SIX-MOTION-SOAK-001"],
+      "implementation_files": ["web/games/big_six_wheel.js", "tests/unit/big_six_wheel_frontend.test.mjs", "tests/browser/big_six_wheel_motion_soak.py", "tests/browser/big_six_wheel_wsgi_asset_probe.py", "tests/run_tests.py"],
+      "introduced_in": "issue-223-big-six-motion",
+      "changed_in": "issue-223-big-six-motion",
+      "notes": "The exact-head long gate performs 100 consecutive real UI spins at each governed viewport, covers EN/RU, resize, background/foreground lifecycle suspension, four-times CPU throttling, reduced motion, cache-safe production asset reload, scroll reachability, and paired top/stage/lower visual review."
     },
     {
       "id": "RD-001",
@@ -8368,6 +8380,18 @@
       "introduced_in": "issue-239-slots-status-pill",
       "changed_in": "issue-239-slots-status-pill",
       "notes": "The integrated Slots browser flow rejects a primary button inside the cabinet footer and requires the replacement role=status pill."
+    },
+    {
+      "id": "TEST-065",
+      "module": "Tests",
+      "description": "Browser qualification proves Big Six cumulative animation continuity, server-result pointer alignment, hidden results and atomic control locks, lifecycle recovery, slow-device and reduced-motion behavior, production static-asset cache safety, and scroll reachability across every governed viewport.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": ["BR-BIG-SIX-001", "BR-BIG-SIX-MOTION-SOAK-001"],
+      "implementation_files": ["tests/run_tests.py", "tests/unit/big_six_wheel_frontend.test.mjs", "tests/browser/big_six_wheel_motion_soak.py", "tests/browser/big_six_wheel_wsgi_asset_probe.py", "tests/visual/visual_matrix.json"],
+      "introduced_in": "issue-223-big-six-motion",
+      "changed_in": "issue-223-big-six-motion",
+      "notes": "The standalone long gate requires 400 unique authenticated UI settlements, at least 12 live transition samples per normal spin, at least three visible revolutions after observation begins, exact cumulative target and server-index alignment, and direct visual review of top, stage, and lower scroll positions."
     }
   ]
 }

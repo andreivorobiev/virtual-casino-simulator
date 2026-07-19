@@ -40,15 +40,25 @@ Game code never writes balances directly. Insufficient funds, balance mutation, 
 
 The game follows the frozen v1 handler shape and consumes the shared authenticated request context before compatible body or query values. Normal-user session identity therefore wins over hostile caller input. All state documents, ledger lookups, and response history are scoped to that resolved player.
 
-## Shared integration through #77
+## Motion reliability remediation through #223
 
-The integrated descriptor remains version `1.0.0` and the shared lane:
+Version `1.0.1` preserves the game and API contract while correcting the browser presentation lifecycle:
 
-- registers `big_six_wheel: 1.0.0` in the aggregate manifest at catalog sort order 90;
-- maps permanent `BIG-SIX-001` through `BIG-SIX-005` requirements to API, browser, long-suite, and visual evidence;
-- registers the additive contract in the shared digest and compatibility inventories;
-- discovers the backend, lazy frontend, and `tests.game_drivers.big_six_wheel:play` from the module descriptor;
-- governs `ready`, `spinning`, `settled`, `reduced_motion`, and `route_restored` visual states for both locales and all four required viewports;
-- requires real-backend `after_pass` screenshots and exact-head evidence before PR acceptance.
+- each target is calculated from the prior cumulative angle and advances through at least six complete clockwise turns;
+- the painted wheel element receives its target in place, after a committed start frame, instead of being replaced at its final transform;
+- the server-authoritative round stays hidden while the wheel moves, wager controls stay locked, and settlement publishes exactly once after presentation;
+- reduced motion settles without decorative delay, while resize, locale change, route teardown, background/foreground suspension, and slow-device rendering retain safe ownership;
+- the responsive layout stacks before the governed compact-desktop surface becomes cramped.
 
-The game implementation remains isolated from every other game package; only the #77 lane owns these shared integration records.
+The integrated descriptor and shared lane now:
+
+- register `big_six_wheel: 1.0.1` in the aggregate manifest at catalog sort order 90;
+- map permanent `BIG-SIX-001` through `BIG-SIX-006` requirements to API, browser, long-suite, motion-soak, and visual evidence;
+- register the additive contract in the shared digest and compatibility inventories;
+- discover the backend, lazy frontend, and `tests.game_drivers.big_six_wheel:play` from the module descriptor;
+- govern `ready`, `spinning`, `settled`, `motion_qualified`, `reduced_motion`, and `route_restored` visual states for both locales and all four required viewports;
+- require real-backend `after_pass` screenshots and exact-head evidence before PR acceptance.
+
+The standalone `tests/browser/big_six_wheel_motion_soak.py` gate performs 100 consecutive authenticated UI spins at each governed viewport. It records live Chromium transform progress and timestamps, checks exact server-selected segment alignment, cycles locale during motion, resizes during motion, freezes and restores one live page, applies four-times CPU throttling, verifies production WSGI `no-store` asset behavior, checks reduced motion, and proves controls and terminal data are scroll-reachable and not covered. Output contains only aggregate timings, counts, one-way uniqueness evidence, and top/stage/lower screenshots; synthetic runtime state is deleted after exact PID and port closure.
+
+Development-server static cache parity discovered during this work is tracked separately by issue #310. Production WSGI cache safety remains a required #223 qualification gate. The game implementation remains isolated from every other game package.
