@@ -37,7 +37,7 @@ Historical source baseline: 9.1.0
 - crown_and_anchor: 1.0.1
 - over_under_7: 1.0.2
 - plinko: 1.0.1
-- fan_tan: 1.0.2
+- fan_tan: 1.0.3
 - andar_bahar: 1.0.0
 - acey_deucey: 1.0.1
 - caribbean_stud: 1.0.1
@@ -45,8 +45,8 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.0
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.45.0
-- docs: 1.45.0
+- tests: 1.45.2
+- docs: 1.45.2
 - contracts: 1.33.0
 - tooling: 1.14.0
 - commenting_policy: 1.0.0
@@ -682,3 +682,6 @@ Historical source baseline: 9.1.0
 - **TEST-070** (Tests) - PASS: Browser regression proves the lost-response idempotency guarantee: after the backend commits and the client sees a simulated lost response, a retry through the visible control resends the identical idempotency identity and immutable wager body, and the ledger records exactly one wager debit for the intended play.
 - **AUTH-UI-002** (Application) - PASS: The login screen fits without page scroll at the short 1280x720 desktop viewport, and the required terms acceptance control presents an enlarged (>=42px) touch target.
 - **TEST-071** (Tests) - PASS: Browser evidence verifies the login gate fits without page overflow at 1280x720 with the sign-in submit control on screen, and that the terms acceptance row meets the enlarged touch-target height.
+- **FAN-TAN-006** (Fan-Tan) - PASS: A correct Fan-Tan residue pick pays 3-to-1 gross with a configurable house commission (default 5%) retained on the winnings only; the original stake always returns in full, so a one-token win returns 3.85 total (1 stake + 2.85 net) and the house edge is positive rather than ~0%.
+- **FAN-TAN-007** (Application) - PASS: The Fan-Tan wager list and paytable disclose the house commission on winnings and the commission-adjusted total return in both en-US and ru-RU, so the price is transparent rather than implying a fair 3-to-1 net.
+- **TEST-074** (Tests) - PASS: Deterministic API evidence verifies the Fan-Tan commission settlement (a winning token returns 3.85 total / 2.85 net, a loss forfeits only the stake, positive house edge) and browser evidence verifies the wager list and paytable disclose the 5% commission and 3.85x total return.

@@ -11,7 +11,7 @@ import math
 # Import project-standard domain errors for invalid or conflicting requests.
 from casino.errors import ConflictError, ValidationError
 # Import the immutable local Fan-Tan profile.
-from casino.games.fan_tan.rules import GAME_ID, MAX_PILE_COUNT, MIN_PILE_COUNT, NET_ODDS, RESIDUES, outcome_catalog, rules_summary
+from casino.games.fan_tan.rules import GAME_ID, MAX_PILE_COUNT, MIN_PILE_COUNT, NET_ODDS, RESIDUES, WIN_COMMISSION, outcome_catalog, rules_summary
 
 # Store the two-decimal token precision used by the shared ledger.
 TOKEN_QUANTUM = Decimal("0.01")
@@ -121,12 +121,14 @@ def settle(wagers: dict[str, float], pile_count: int) -> dict:
     total_wager = sum((Decimal(str(amount)) for amount in wagers.values()), Decimal("0"))
     # Read the winning stake or zero when the player did not cover this residue.
     winning_stake = Decimal(str(wagers.get(residue, 0.0)))
-    # Return stake plus net winnings for the covered residue only.
-    total_return = winning_stake * Decimal(NET_ODDS + 1)
-    # Build one stable per-wager result row for UI and focused assertions.
-    settlements = [{"residue": target, "amount": amount, "won": target == residue, "net": float((Decimal(str(amount)) * Decimal(NET_ODDS)) if target == residue else -Decimal(str(amount)))} for target, amount in wagers.items()]
-    # Return all values rounded to the shared ledger precision.
-    return {"pile_count": pile_count, "residue": residue, "net_odds": NET_ODDS, "counting_steps": counting_steps(pile_count), "total_wager": float(total_wager.quantize(TOKEN_QUANTUM)), "total_return": float(total_return.quantize(TOKEN_QUANTUM)), "net": float((total_return - total_wager).quantize(TOKEN_QUANTUM)), "settlements": settlements}
+    # Apply the configurable house commission to the winnings only, never to the returned stake. (issue #256)
+    net_win_odds = Decimal(NET_ODDS) * (Decimal("1") - Decimal(str(WIN_COMMISSION)))
+    # Return the stake in full plus the commission-adjusted net winnings for the covered residue only.
+    total_return = winning_stake + winning_stake * net_win_odds
+    # Build one stable per-wager result row for UI and focused assertions, netting winners after the commission.
+    settlements = [{"residue": target, "amount": amount, "won": target == residue, "net": float((Decimal(str(amount)) * net_win_odds) if target == residue else -Decimal(str(amount)))} for target, amount in wagers.items()]
+    # Return all values rounded to the shared ledger precision while disclosing the applied commission.
+    return {"pile_count": pile_count, "residue": residue, "net_odds": NET_ODDS, "win_commission": WIN_COMMISSION, "counting_steps": counting_steps(pile_count), "total_wager": float(total_wager.quantize(TOKEN_QUANTUM)), "total_return": float(total_return.quantize(TOKEN_QUANTUM)), "net": float((total_return - total_wager).quantize(TOKEN_QUANTUM)), "settlements": settlements}
 
 
 # Build a new empty player-owned state document.

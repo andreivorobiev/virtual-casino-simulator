@@ -181,13 +181,13 @@ function tokenAmount(value, translate = tx) {
 // Return localized markup for every residue wager input.
 function wagerControlsHtml(translate = tx) {
   // Render controls from backend metadata while retaining stable residue ordering.
-  return (gameState.outcomes || []).map(outcome => `<label class="fan-tan__bet"><span>${safe(translate('residue.label', { residue: outcome.residue }))} <small>${safe(translate('odds.net', { odds: outcome.net_odds }))}</small></span><input type="number" min="0" step="1" inputmode="decimal" data-wager="${safe(outcome.id)}" value="${safe(activeWagers()[outcome.id] || '')}" aria-label="${safe(translate('wager.input', { residue: outcome.residue }))}"></label>`).join('');
+  return (gameState.outcomes || []).map(outcome => `<label class="fan-tan__bet"><span>${safe(translate('residue.label', { residue: outcome.residue }))} <small>${safe(translate('odds.net', { odds: outcome.net_odds, commission: outcome.win_commission_pct }))}</small></span><input type="number" min="0" step="1" inputmode="decimal" data-wager="${safe(outcome.id)}" value="${safe(activeWagers()[outcome.id] || '')}" aria-label="${safe(translate('wager.input', { residue: outcome.residue }))}"></label>`).join('');
 }
 
 // Return localized paytable rows from the immutable backend catalog.
 function paytableHtml(translate = tx) {
   // Show net odds and return multiplier so the simulator profile is explicit.
-  return (gameState.outcomes || []).map(outcome => `<div class="fan-tan__payrow"><span>${safe(translate('residue.label', { residue: outcome.residue }))}</span><span>${safe(translate('paytable.row', { odds: outcome.net_odds, multiplier: outcome.return_multiplier }))}</span></div>`).join('');
+  return (gameState.outcomes || []).map(outcome => `<div class="fan-tan__payrow"><span>${safe(translate('residue.label', { residue: outcome.residue }))}</span><span>${safe(translate('paytable.row', { odds: outcome.net_odds, commission: outcome.win_commission_pct, multiplier: outcome.return_multiplier }))}</span></div>`).join('');
 }
 
 // Return bounded recent-round rows with no nested controls.

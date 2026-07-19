@@ -8589,6 +8589,61 @@
       "introduced_in": "issue-284-283-auth-visual-conformance",
       "changed_in": "issue-284-283-auth-visual-conformance",
       "notes": "Issue #284/#283 auth short-viewport fit and terms touch-target browser proof."
+    },
+    {
+      "id": "FAN-TAN-006",
+      "module": "Fan-Tan",
+      "description": "A correct Fan-Tan residue pick pays 3-to-1 gross with a configurable house commission (default 5%) retained on the winnings only; the original stake always returns in full, so a one-token win returns 3.85 total (1 stake + 2.85 net) and the house edge is positive rather than ~0%.",
+      "status": "PASS",
+      "api_tests": [
+        "API-FAN-TAN-COMMISSION-001"
+      ],
+      "browser_tests": [
+        "BR-FAN-TAN-001"
+      ],
+      "implementation_files": [
+        "casino/games/fan_tan/rules.py",
+        "casino/games/fan_tan/engine.py"
+      ],
+      "introduced_in": "issue-256-fan-tan-commission",
+      "changed_in": "issue-256-fan-tan-commission",
+      "notes": "Issue #256: WIN_COMMISSION is the single configurable source; settlement applies it to winnings only and the round payload discloses win_commission."
+    },
+    {
+      "id": "FAN-TAN-007",
+      "module": "Application",
+      "description": "The Fan-Tan wager list and paytable disclose the house commission on winnings and the commission-adjusted total return in both en-US and ru-RU, so the price is transparent rather than implying a fair 3-to-1 net.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-FAN-TAN-001"
+      ],
+      "implementation_files": [
+        "web/games/fan_tan.js",
+        "web/i18n/en-US/games/fan_tan.json",
+        "web/i18n/ru-RU/games/fan_tan.json"
+      ],
+      "introduced_in": "issue-256-fan-tan-commission",
+      "changed_in": "issue-256-fan-tan-commission",
+      "notes": "Issue #256: the odds hint and paytable row render win_commission_pct and return_multiplier from the backend catalog."
+    },
+    {
+      "id": "TEST-074",
+      "module": "Tests",
+      "description": "Deterministic API evidence verifies the Fan-Tan commission settlement (a winning token returns 3.85 total / 2.85 net, a loss forfeits only the stake, positive house edge) and browser evidence verifies the wager list and paytable disclose the 5% commission and 3.85x total return.",
+      "status": "PASS",
+      "api_tests": [
+        "API-FAN-TAN-COMMISSION-001"
+      ],
+      "browser_tests": [
+        "BR-FAN-TAN-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-256-fan-tan-commission",
+      "changed_in": "issue-256-fan-tan-commission",
+      "notes": "Issue #256 Fan-Tan commission settlement + disclosure proof."
     }
   ]
 }

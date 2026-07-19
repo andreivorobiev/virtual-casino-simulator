@@ -1184,6 +1184,24 @@ def run_api_tests():
         run_case('API-PLINKO-001',['PLINKO-001','PLINKO-002','PLINKO-003'],lambda: assert_condition(True,'Plinko integration evidence missing'))
         # Record Fan-Tan rules, session, ledger, replay, and two-user coverage.
         run_case('API-FAN-TAN-001',['FAN-TAN-001','FAN-TAN-002','FAN-TAN-003'],lambda: assert_condition(True,'Fan-Tan integration evidence missing'))
+        # Verify the Fan-Tan house commission math and disclosure so a correct residue no longer pays a fair ~0%-edge price. (issue #256)
+        def fan_tan_commission_math():
+            # Import the Fan-Tan rules and engine to check the commission-adjusted settlement deterministically.
+            from casino.games.fan_tan import rules as ft_rules, engine as ft_engine
+            # The published catalog discloses the configurable commission and the commission-adjusted return.
+            row=ft_rules.outcome_catalog()[0]
+            assert row['win_commission']==0.05 and row['win_commission_pct']==5 and row['net_win_odds']==2.85 and row['return_multiplier']==3.85
+            # A one-token winning residue returns the stake in full plus 2.85 net winnings for 3.85 total.
+            win_pile=next(pc for pc in range(ft_rules.MIN_PILE_COUNT,ft_rules.MAX_PILE_COUNT+1) if ft_engine.residue_for_count(pc)=='1')
+            win=ft_engine.settle({'1':1.0},win_pile)
+            assert win['total_return']==3.85 and win['net']==2.85 and win['win_commission']==0.05 and win['settlements'][0]['net']==2.85
+            # A losing residue forfeits only the stake with no commission interaction.
+            lose_pile=next(pc for pc in range(ft_rules.MIN_PILE_COUNT,ft_rules.MAX_PILE_COUNT+1) if ft_engine.residue_for_count(pc)!='1')
+            assert ft_engine.settle({'1':1.0},lose_pile)['total_return']==0.0
+            # The commission yields a positive house edge across four equally likely residues instead of the prior ~0%.
+            assert (0.25*row['net_win_odds'])-0.75 < -0.001
+        # Record the Fan-Tan commission settlement and disclosure proof.
+        run_case('API-FAN-TAN-COMMISSION-001',['FAN-TAN-006','TEST-074'],fan_tan_commission_math)
         # Record Andar Bahar rules, session, ledger, replay, and two-user coverage.
         run_case('API-AB-001',['AB-001','AB-002','AB-003'],lambda: assert_condition(True,'Andar Bahar integration evidence missing'))
         # Record Acey-Deucey rules, session, private result, ledger, replay, and two-user coverage.
@@ -3532,6 +3550,12 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         page.get_by_test_id('shell-locale-select').select_option('en-US'); page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(100)
                     # Capture the complete ready table before choosing a residue wager.
                     localized_evidence('ready',['ready'])
+                    # Disclose the house commission on winnings in both the wager list and the paytable so the ~0% house edge is corrected transparently. (issue #256)
+                    fan_tan_payrows=' '.join(page.locator('.fan-tan__payrow').all_inner_texts())
+                    # The paytable must disclose the commission percent and the commission-adjusted total return multiplier.
+                    assert '5%' in fan_tan_payrows and '3.85x' in fan_tan_payrows
+                    # The wager-list odds hint must also disclose the commission instead of implying a fair 3:1 net price.
+                    assert '5%' in page.locator('.fan-tan__bet small').first.inner_text()
                     # Enter one residue wager and start the real-backend counted-pile round.
                     page.locator('[data-wager="1"]').fill('1'); page.locator('[data-play]').click()
                     # Capture the managed counting phase at the primary desktop viewport.
@@ -3545,7 +3569,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Return to the lobby for downstream browser cases.
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Execute the integrated Fan-Tan browser and visual gate.
-                run_case('BR-FAN-TAN-001',['FAN-TAN-001','FAN-TAN-002','FAN-TAN-004','FAN-TAN-005'],fan_tan_acceptance)
+                run_case('BR-FAN-TAN-001',['FAN-TAN-001','FAN-TAN-002','FAN-TAN-004','FAN-TAN-005','FAN-TAN-006','TEST-074'],fan_tan_acceptance)
                 # Define the lost-response idempotency regression proving a retry replays one identity and body with exactly one debit. (issue #261)
                 def fan_tan_lost_response_idempotency():
                     # Open the Fan-Tan route and wait for the stable game surface.
