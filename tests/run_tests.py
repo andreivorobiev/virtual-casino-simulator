@@ -3377,6 +3377,16 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_timeout(100)
                             # Require the localized game title rather than a fallback key or English leakage.
                             assert page.locator('.ou7-header h1').inner_text()==expected_titles[locale]
+                            # Prove the wager list and paytable share one canonical net-odds convention with matching numbers. (issue #255)
+                            ou7_net_suffix=read_i18n_json(ROOT/'web'/'i18n'/locale/'games'/'over_under_7.json')['odds.net'].split('{odds}')[1]
+                            ou7_payrows=[cell.strip() for cell in page.locator('.ou7-payrow').all_inner_texts()]
+                            ou7_betrows=[cell.strip() for cell in page.locator('.ou7-bet').all_inner_texts()]
+                            # Require rendered rows on both surfaces and reject unresolved localization placeholders.
+                            assert ou7_payrows and ou7_betrows and all('{' not in cell for cell in ou7_payrows+ou7_betrows)
+                            # Every paytable row must advertise the net convention drawn from the paired resource file, retiring the total-return multiplier copy.
+                            assert all(ou7_net_suffix in cell for cell in ou7_payrows)
+                            # The net odds numbers on the paytable must match the wager-list odds exactly across the localized surfaces.
+                            assert re.findall(r'(\d+):1',' '.join(ou7_payrows)) and sorted(re.findall(r'(\d+):1',' '.join(ou7_payrows)))==sorted(re.findall(r'(\d+):1',' '.join(ou7_betrows)))
                             # Validate containment and capture after-pass evidence at every viewport.
                             for viewport_id,width,height in required_viewports:
                                 # Resize to the exact visual matrix dimensions.
@@ -3402,7 +3412,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Return to the lobby for downstream browser cases.
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Execute the integrated Over/Under 7 browser and visual gate.
-                run_case('BR-OU7-001',['OU7-001','OU7-002','OU7-004','OU7-005'],over_under_7_acceptance)
+                run_case('BR-OU7-001',['OU7-001','OU7-002','OU7-004','OU7-005','OU7-006','TEST-067'],over_under_7_acceptance)
                 # Define real-backend Plinko localization, drop, responsive, motion, and route acceptance.
                 def plinko_acceptance():
                     # Open the catalog-owned route and wait for the stable game selector.

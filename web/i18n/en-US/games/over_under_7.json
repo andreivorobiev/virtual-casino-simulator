@@ -16,7 +16,7 @@
   "outcome.over": "Over 7",
   "outcome.seven": "Exactly 7",
   "outcome.under": "Under 7",
-  "paytable.row": "Totals {totals}; returns {return}x stake",
+  "paytable.row": "Totals {totals}; pays {odds}:1 net",
   "paytable.title": "Return table",
   "phase.ready": "Accepting wagers",
   "phase.rolling": "Rolling dice",

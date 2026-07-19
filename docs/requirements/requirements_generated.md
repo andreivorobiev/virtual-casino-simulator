@@ -35,7 +35,7 @@ Historical source baseline: 9.1.0
 - chuck_a_luck: 1.0.0
 - craps: 1.0.0
 - crown_and_anchor: 1.0.0
-- over_under_7: 1.0.0
+- over_under_7: 1.0.1
 - plinko: 1.0.1
 - fan_tan: 1.0.0
 - andar_bahar: 1.0.0
@@ -674,3 +674,5 @@ Historical source baseline: 9.1.0
 - **TEST-066** (Tests) - PASS: Browser evidence verifies Keno singular result copy for exactly one caught number.
 - **CORE-026** (Core) - PASS: Development/test and production HTTP adapters apply one no-store cache contract to HTML and static assets so browser reloads and lazy imports obtain exact current source without weakening existing API cache safety.
 - **TEST-068** (Tests) - PASS: Cache-parity evidence covers exact current HTML and lazy JavaScript bytes, a real development-browser reload with repeated ordinary-cache fetches, direct production WSGI responses, and existing exact listener cleanup.
+- **OU7-006** (Application) - PASS: The Over/Under 7 wager list and paytable present a single payout convention (net odds), so each proposition's advertised odds match across both surfaces and the retired total-return multiplier copy is no longer shown.
+- **TEST-067** (Tests) - PASS: Browser evidence in both locales verifies the Over/Under 7 wager list and paytable share the net-odds convention with matching numeric odds and no unresolved placeholders, rejecting the former total-return multiplier copy.

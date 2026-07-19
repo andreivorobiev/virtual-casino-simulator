@@ -16,7 +16,7 @@
   "outcome.over": "Больше 7",
   "outcome.seven": "Ровно 7",
   "outcome.under": "Меньше 7",
-  "paytable.row": "Суммы {totals}; возврат {return}x ставки",
+  "paytable.row": "Суммы {totals}; выплата {odds}:1 чистыми",
   "paytable.title": "Таблица возврата",
   "phase.ready": "Прием ставок",
   "phase.rolling": "Бросок костей",

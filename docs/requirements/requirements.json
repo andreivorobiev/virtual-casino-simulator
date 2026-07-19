@@ -8451,6 +8451,40 @@
       "introduced_in": "issue-310-static-cache-parity",
       "changed_in": "issue-310-static-cache-parity",
       "notes": "The browser gate exercises the supported development adapter; the listener-free service probe exercises the production adapter with the same exact source and header assertions."
+    },
+    {
+      "id": "OU7-006",
+      "module": "Application",
+      "description": "The Over/Under 7 wager list and paytable present a single payout convention (net odds), so each proposition's advertised odds match across both surfaces and the retired total-return multiplier copy is no longer shown.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-OU7-001"
+      ],
+      "implementation_files": [
+        "web/games/over_under_7.js",
+        "web/i18n/en-US/games/over_under_7.json",
+        "web/i18n/ru-RU/games/over_under_7.json"
+      ],
+      "introduced_in": "issue-255-over-under-7-payout-convention",
+      "changed_in": "issue-255-over-under-7-payout-convention",
+      "notes": "Issue #255: paytable rows now render net odds sourced from the same backend field the wager list uses, unifying the two conventions."
+    },
+    {
+      "id": "TEST-067",
+      "module": "Tests",
+      "description": "Browser evidence in both locales verifies the Over/Under 7 wager list and paytable share the net-odds convention with matching numeric odds and no unresolved placeholders, rejecting the former total-return multiplier copy.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-OU7-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-255-over-under-7-payout-convention",
+      "changed_in": "issue-255-over-under-7-payout-convention",
+      "notes": "Issue #255 localized browser proof for the single Over/Under 7 payout convention."
     }
   ]
 }
