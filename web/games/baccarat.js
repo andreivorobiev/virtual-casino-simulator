@@ -40,8 +40,12 @@ let lastSettlements = [];
 let phase = 'setup';
 // Store bot panel markup so rerenders do not flash empty bot content.
 let botPanelCache = '';
-// Store in-flight deal status so repeated clicks do not start duplicate atomic actions.
-let dealBusy = false;
+// Serialize every wallet-affecting browser mutation so responses cannot overwrite newer state.
+let mutationQueue = Promise.resolve();
+// Count queued or active mutations so all related controls share one truthful busy boundary.
+let pendingMutationCount = 0;
+// Track whether one deal is already queued so rapid clicks cannot schedule another coup.
+let dealQueued = false;
 // Store the reveal timeout so unmount or another deal can clear pending visual work.
 let revealTimer = null;
 // Store the locale unsubscribe callback so language switching does not leak listeners.
@@ -193,26 +197,77 @@ function headerHtml() {
   return `<div class="bac-header"><div><p class="bac-kicker">${safe(text('kicker'))}</p><h2 class="bac-title">${safe(text('title'))}</h2></div>${statusPillsHtml()}</div>`;
 }
 
+// Define mutationsBusy to expose one truthful in-flight state to all Baccarat controls.
+function mutationsBusy() {
+  // Return true while any queued or active wallet-affecting operation remains unresolved.
+  return pendingMutationCount > 0;
+}
+
+// Define syncMutationControls to update only stable controls without remounting autoplay.
+function syncMutationControls() {
+  // Stop when the Baccarat surface is not currently mounted.
+  if (!root) return;
+  // Read the serialized mutation state once for every stable control update.
+  const busy = mutationsBusy();
+  // Lock wager, clear, and deal actions during mutations or reveal theater.
+  root.querySelectorAll('[data-bet], [data-clear], #deal').forEach(control => { control.disabled = busy || phase === 'revealing'; });
+  // Lock configuration controls only while a wallet-affecting mutation is unresolved.
+  root.querySelectorAll('[data-chip], #repeatBet').forEach(control => { control.disabled = busy; });
+  // Publish the shared busy state on the control rail for assistive technology.
+  root.querySelector('[data-testid="baccarat-control-rail"]')?.setAttribute('aria-busy', busy ? 'true' : 'false');
+  // Publish the same busy state on the central game stage.
+  root.querySelector('[data-testid="baccarat-table"]')?.setAttribute('aria-busy', busy ? 'true' : 'false');
+  // Read the stable Deal control so its localized label matches its actual availability.
+  const dealButton = root.querySelector('#deal');
+  // Update the Deal label without replacing the control or its event handler.
+  if (dealButton) dealButton.textContent = busy || phase === 'revealing' ? text('controls.dealLocked') : phase === 'result' ? text('controls.dealNext') : text('controls.deal');
+}
+
+// Define enqueueMutation to serialize wager, refund, and deal responses in invocation order.
+function enqueueMutation(operation) {
+  // Count the operation before synchronizing controls so a second action cannot race it.
+  pendingMutationCount += 1;
+  // Update stable controls synchronously without recreating the shared autoplay widget.
+  syncMutationControls();
+  // Start this operation only after every earlier mutation has fully applied its response.
+  const scheduled = mutationQueue.then(operation);
+  // Keep the private queue usable after an operation rejects while preserving caller errors.
+  mutationQueue = scheduled.catch(() => undefined);
+  // Return the caller-visible result with guaranteed busy-state cleanup.
+  return scheduled.finally(() => {
+    // Release exactly this queued mutation from the shared busy count.
+    pendingMutationCount = Math.max(0, pendingMutationCount - 1);
+    // Restore mounted control availability without replacing autoplay or bot nodes.
+    syncMutationControls();
+  });
+}
+
 // Define chipControlsHtml to render stable chip buttons.
 function chipControlsHtml() {
+  // Disable chip changes while a wager, clear, or deal mutation is unresolved.
+  const disabled = mutationsBusy() ? ' disabled' : '';
   // Return chip buttons using the shared chip visual primitive.
-  return `<div class="bac-chip-row">${CHIP_VALUES.map(value => `<button class="chip ${chip === value ? 'active' : ''}" data-chip="${value}" data-testid="baccarat-chip-${value}" aria-label="${safe(text('controls.chip', { amount: amountText(value) }))}">${amountText(value).replace('.00', '')}</button>`).join('')}</div>`;
+  return `<div class="bac-chip-row">${CHIP_VALUES.map(value => `<button class="chip ${chip === value ? 'active' : ''}" data-chip="${value}" data-testid="baccarat-chip-${value}" aria-label="${safe(text('controls.chip', { amount: amountText(value) }))}"${disabled}>${amountText(value).replace('.00', '')}</button>`).join('')}</div>`;
 }
 
 // Define repeatSelectHtml to render the standing wager selector.
 function repeatSelectHtml() {
+  // Disable standing-wager changes while the current mutation sequence is unresolved.
+  const disabled = mutationsBusy() ? ' disabled' : '';
   // Return the repeat bet menu used by Deal and autoplay.
-  return `<label>${safe(text('controls.repeatBet'))}<select id="repeatBet" data-testid="baccarat-repeat-bet">${BET_TYPES.map(type => `<option value="${type}" ${repeatBet === type ? 'selected' : ''}>${safe(betLabel(type))}</option>`).join('')}</select></label>`;
+  return `<label>${safe(text('controls.repeatBet'))}<select id="repeatBet" data-testid="baccarat-repeat-bet"${disabled}>${BET_TYPES.map(type => `<option value="${type}" ${repeatBet === type ? 'selected' : ''}>${safe(betLabel(type))}</option>`).join('')}</select></label>`;
 }
 
 // Define railHtml to render the fixed left action rail.
 function railHtml() {
+  // Read the shared mutation boundary once for labels, accessibility, and disabled controls.
+  const busy = mutationsBusy();
   // Store the deal button label based on the current visual phase.
-  const dealLabel = phase === 'result' ? text('controls.dealNext') : phase === 'revealing' ? text('controls.dealLocked') : text('controls.deal');
+  const dealLabel = busy ? text('controls.dealLocked') : phase === 'result' ? text('controls.dealNext') : phase === 'revealing' ? text('controls.dealLocked') : text('controls.deal');
   // Store disabled state so reveal animation cannot start another deal.
-  const disabled = phase === 'revealing' || dealBusy ? ' disabled' : '';
+  const disabled = phase === 'revealing' || busy ? ' disabled' : '';
   // Return the control rail with chips, bet zones, autoplay, and bots in fixed slots.
-  return `<section class="panel control-rail"><h2 class="game-title">${safe(text('rail.title'))}</h2><h3>${safe(text('rail.chips'))}</h3>${chipControlsHtml()}<div class="bac-rail-card"><h3>${safe(text('controls.wagerZones'))}</h3><div class="bac-repeat-grid">${BET_TYPES.map(type => `<button data-bet="${type}" data-testid="baccarat-${type}" class="gold"${disabled}>${safe(betLabel(type))}</button>`).join('')}</div>${repeatSelectHtml()}<button id="deal" data-testid="baccarat-deal" class="primary bac-deal-button"${disabled}>${safe(dealLabel)}</button></div><div class="bac-rail-card" id="botPanel">${botPanelCache || `<p class="muted">${safe(text('bot.loading'))}</p>`}</div><div class="bac-rail-card" id="auto"></div></section>`;
+  return `<section class="panel control-rail" data-testid="baccarat-control-rail" aria-busy="${busy ? 'true' : 'false'}"><h2 class="game-title">${safe(text('rail.title'))}</h2><h3>${safe(text('rail.chips'))}</h3>${chipControlsHtml()}<div class="bac-rail-card"><h3>${safe(text('controls.wagerZones'))}</h3><div class="bac-repeat-grid">${BET_TYPES.map(type => `<button data-bet="${type}" data-testid="baccarat-${type}" class="gold"${disabled}>${safe(betLabel(type))}</button>`).join('')}</div>${repeatSelectHtml()}<button id="deal" data-testid="baccarat-deal" class="primary bac-deal-button"${disabled}>${safe(dealLabel)}</button></div><div class="bac-rail-card" id="botPanel">${botPanelCache || `<p class="muted">${safe(text('bot.loading'))}</p>`}</div><div class="bac-rail-card" id="auto"></div></section>`;
 }
 
 // Define handPanelHtml to render one side of the Baccarat tableau.
@@ -250,7 +305,7 @@ function wagerZoneHtml(type) {
   // Store the lost class after settlement.
   const lostClass = phase === 'result' && lastCoup && lastCoup.winner !== type ? ' lost' : '';
   // Store disabled state while reveal is running.
-  const disabled = phase === 'revealing' || dealBusy ? ' disabled' : '';
+  const disabled = phase === 'revealing' || mutationsBusy() ? ' disabled' : '';
   // Return the large wager zone with a stable chip badge slot.
   return `<button class="bac-wager-zone ${type}${winnerClass}${lostClass}" data-bet="${type}" data-testid="baccarat-zone-${type}"${disabled}><span>${safe(wagerZoneTitle(type))}</span>${total > 0 ? `<span class="bac-zone-chip" data-testid="baccarat-zone-amount-${type}">${amountText(total).replace('.00', '')}</span>` : ''}</button>`;
 }
@@ -288,7 +343,7 @@ function stageBadge() {
 // Define boardHtml to render the fixed center table.
 function boardHtml() {
   // Return the card theater and wager zones without changing their layout between phases.
-  return `<section class="panel game-stage" data-testid="baccarat-table"><div class="bac-stage-head"><div><div class="bac-coup-label">${safe(coupLabel())}</div><h2 class="bac-stage-title">${safe(stageTitle())}</h2></div><div class="bac-stage-badge">${safe(stageBadge())}</div></div><div class="bac-board" data-testid="${phase === 'revealing' ? 'baccarat-card-reveal' : phase === 'result' ? 'baccarat-result' : 'baccarat-wager-setup'}"><div class="bac-hand-grid">${handPanelHtml('player')}${handPanelHtml('banker')}</div><div class="bac-wager-grid">${TABLE_BET_TYPES.map(type => wagerZoneHtml(type)).join('')}</div></div></section>`;
+  return `<section class="panel game-stage" data-testid="baccarat-table" aria-busy="${mutationsBusy() ? 'true' : 'false'}"><div class="bac-stage-head"><div><div class="bac-coup-label">${safe(coupLabel())}</div><h2 class="bac-stage-title">${safe(stageTitle())}</h2></div><div class="bac-stage-badge">${safe(stageBadge())}</div></div><div class="bac-board" data-testid="${phase === 'revealing' ? 'baccarat-card-reveal' : phase === 'result' ? 'baccarat-result' : 'baccarat-wager-setup'}"><div class="bac-hand-grid">${handPanelHtml('player')}${handPanelHtml('banker')}</div><div class="bac-wager-grid">${TABLE_BET_TYPES.map(type => wagerZoneHtml(type)).join('')}</div></div></section>`;
 }
 
 // Define betRowsHtml to render wager rows in the drawer.
@@ -296,7 +351,7 @@ function betRowsHtml(bets, locked = false) {
   // Return an empty state when there are no human wagers for this phase.
   if (!bets.length) return `<p class="muted">${safe(text('bets.empty'))}</p>`;
   // Return each wager with cancel controls only while bets remain open.
-  return bets.map(bet => `<div class="bet-item"><span>${safe(betLabel(bet.type))}</span><b class="money">${amountText(bet.amount)}</b>${locked ? `<span class="badge">${safe(text('bets.locked'))}</span>` : `<button class="danger" data-clear="${safe(bet.bet_id)}" aria-label="${safe(text('controls.clearBet', { bet: betLabel(bet.type) }))}">&times;</button>`}</div>`).join('');
+  return bets.map(bet => `<div class="bet-item"><span>${safe(betLabel(bet.type))}</span><b class="money">${amountText(bet.amount)}</b>${locked ? `<span class="badge">${safe(text('bets.locked'))}</span>` : `<button class="danger" data-clear="${safe(bet.bet_id)}" aria-label="${safe(text('controls.clearBet', { bet: betLabel(bet.type) }))}"${mutationsBusy() ? ' disabled' : ''}>&times;</button>`}</div>`).join('');
 }
 
 // Define revealEntries to render the existing dealt cards as a reveal log.
@@ -445,8 +500,8 @@ async function updateBotPanel() {
   if (panel) panel.innerHTML = botPanelCache;
 }
 
-// Define placeBet to add a v1 Baccarat wager without changing ledger behavior.
-async function placeBet(type, { rerender = true } = {}) {
+// Define placeBetNow to add one v1 Baccarat wager inside the serialized mutation boundary.
+async function placeBetNow(type, { rerender = true } = {}) {
   // Store the repeat bet so Deal and autoplay reuse the latest intentional wager.
   repeatBet = type;
   // Post the bet through the existing v1 endpoint.
@@ -469,8 +524,14 @@ async function placeBet(type, { rerender = true } = {}) {
   clickSound(520, .05);
 }
 
-// Define clearBet to refund an open human Baccarat wager through v1.
-async function clearBet(id) {
+// Define placeBet to queue a manual wager behind any earlier wallet-affecting operation.
+function placeBet(type, options = {}) {
+  // Serialize the real request and its state application so later Deal logic sees the result.
+  return enqueueMutation(() => placeBetNow(type, options));
+}
+
+// Define clearBetNow to refund one open wager inside the serialized mutation boundary.
+async function clearBetNow(id) {
   // Delete the open bet through the existing v1 endpoint.
   const payload = await del(`/api/v1/games/baccarat/bets/${id}`, withCurrentPlayer());
   // Store the updated public state returned by the API.
@@ -485,6 +546,12 @@ async function clearBet(id) {
   await updateBotPanel();
   // Refresh the shared wallet because cancellation credits immediately.
   await refreshBalance();
+}
+
+// Define clearBet to queue a refund behind any earlier wager or deal mutation.
+function clearBet(id) {
+  // Serialize the refund request so its response cannot resurrect superseded state.
+  return enqueueMutation(() => clearBetNow(id));
 }
 
 // Define finishRevealLater to transition from reveal theater to result state.
@@ -504,16 +571,12 @@ function finishRevealLater(show) {
   }, show ? 1050 : 280); // Use a shorter reveal delay during autoplay ticks.
 }
 
-// Define deal to run one Baccarat coup using only public game and bot actions.
-async function deal(show = true) {
-  // Ignore duplicate deal clicks while a coup is already starting.
-  if (dealBusy) return;
-  // Mark the deal as busy before any async work can be repeated.
-  dealBusy = true;
+// Define dealNow to run one Baccarat coup after every earlier mutation has applied.
+async function dealNow(show = true) {
   // Start protected logic so the button recovers after API errors.
   try {
     // Place the selected standing wager when the human has no open bet.
-    if (humanBets(state?.open_bets || []).length === 0) await placeBet(repeatBet, { rerender: false });
+    if (humanBets(state?.open_bets || []).length === 0) await placeBetNow(repeatBet, { rerender: false });
     // Let eligible bot controllers act through their public control plane.
     await playBotRound('baccarat');
     // Deal the coup through the frozen v1 Baccarat endpoint.
@@ -544,11 +607,20 @@ async function deal(show = true) {
   } catch (error) {
     // Display the API error while preserving the mounted Baccarat view.
     toast(error.message || text('errors.dealFailed'));
-  // Always release the busy flag after the atomic action attempt.
-  } finally {
-    // Mark the deal as no longer busy.
-    dealBusy = false;
   }
+}
+
+// Define deal to queue one coup and reject duplicate scheduling until it finishes.
+function deal(show = true) {
+  // Ignore a second Deal or autoplay tick while the first coup is queued or active.
+  if (dealQueued) return Promise.resolve();
+  // Reserve the deal slot before enqueueing so rapid invocations cannot append another coup.
+  dealQueued = true;
+  // Serialize Deal behind pending manual wagers, then always release its duplicate guard.
+  return enqueueMutation(() => dealNow(show)).finally(() => {
+    // Allow the next coup only after this queued deal and its response have completed.
+    dealQueued = false;
+  });
 }
 
 // Define bindEvents to attach handlers after every render.
