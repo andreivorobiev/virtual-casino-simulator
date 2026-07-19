@@ -18,7 +18,7 @@ Historical source baseline: 9.1.0
 - roulette: 9.4.2
 - slots: 9.1.1
 - blackjack: 9.1.3
-- baccarat: 9.1.1
+- baccarat: 9.1.2
 - keno: 9.2.1
 - bingo: 9.2.1
 - multi_hand_video_poker: 1.0.1
@@ -45,8 +45,8 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.0
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.44.15
-- docs: 1.44.15
+- tests: 1.44.16
+- docs: 1.44.16
 - contracts: 1.32.0
 - tooling: 1.14.0
 - commenting_policy: 1.0.0
@@ -246,6 +246,7 @@ Historical source baseline: 9.1.0
 - **BAC-022** (Baccarat) - PASS: Baccarat UI shows shoe and burn info.
 - **BAC-023** (Baccarat) - PASS: Baccarat auto play repeats selected bet.
 - **BAC-024** (Baccarat) - PASS: Baccarat writes history rows.
+- **BAC-025** (Baccarat) - PASS: Baccarat's fresh shoe panel shows the configured full shoe capacity before the lazily built shoe receives its first deal.
 - **KENO-001** (Keno) - PASS: Keno supports numbers 1 through 80.
 - **KENO-002** (Keno) - PASS: Keno allows selecting 1 to 20 spots.
 - **KENO-003** (Keno) - PASS: Keno draws 20 unique numbers.
@@ -662,3 +663,4 @@ Historical source baseline: 9.1.0
 - **TEST-059** (Tests) - PASS: Browser evidence verifies Roulette's spinning settlement card uses player-facing progress copy and does not leak the old layout/debug text.
 - **TEST-060** (Tests) - PASS: Browser and API validation proves that normal players never receive the Admin navigation affordance after locale rerender or route restoration, direct Admin access remains forbidden, and authenticated Admin users retain responsive keyboard access with governed visual evidence.
 - **TEST-061** (Tests) - PASS: Browser evidence verifies Roulette disables bet-slip Remove controls while a real spin has locked the current wager set.
+- **TEST-062** (Tests) - PASS: Browser evidence verifies Baccarat's initial shoe drawer shows the configured full shoe capacity instead of zero before the first deal.

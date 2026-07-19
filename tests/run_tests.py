@@ -4537,6 +4537,14 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.get_by_test_id('nav-baccarat').click()
                 # Wait for the wager setup state to mount.
                 page.get_by_test_id('baccarat-wager-setup').wait_for(timeout=5000)
+                # Read the fresh shoe summary before any wager/deal builds the lazy backend shoe. (BAC-025, TEST-062)
+                baccarat_initial_shoe_text=page.get_by_test_id('baccarat-shoe-summary').inner_text()
+                # Define the focused fresh-shoe display regression for issue #249.
+                def baccarat_fresh_shoe_count():
+                    # Require the visible initial drawer to show the full configured eight-deck capacity, never a zero-card lazy-shoe placeholder.
+                    assert ('416 cards' in baccarat_initial_shoe_text or 'карт: 416' in baccarat_initial_shoe_text) and '0 cards' not in baccarat_initial_shoe_text and 'карт: 0' not in baccarat_initial_shoe_text
+                # Execute the browser assertion before later Baccarat actions mutate the shoe.
+                run_case('BR-BAC-FRESH-SHOE-001',['BAC-025','TEST-062'],baccarat_fresh_shoe_count)
                 # Read the browser session's canonical player id for exact ledger assertions.
                 baccarat_me=page.request.get(base+'/api/v2/me').json()['data']
                 # Store the authenticated player id without trusting caller-controlled game fields.

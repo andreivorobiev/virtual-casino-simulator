@@ -3025,6 +3025,22 @@
       "notes": ""
     },
     {
+      "id": "BAC-025",
+      "module": "Baccarat",
+      "description": "Baccarat's fresh shoe panel shows the configured full shoe capacity before the lazily built shoe receives its first deal.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-BAC-FRESH-SHOE-001"
+      ],
+      "implementation_files": [
+        "web/games/baccarat.js"
+      ],
+      "introduced_in": "issue-249-baccarat-shoe-count",
+      "changed_in": "issue-249-baccarat-shoe-count",
+      "notes": "The browser assertion reads the first mounted wager-setup drawer before any wager or deal can create the backend shoe."
+    },
+    {
       "id": "KENO-001",
       "module": "Keno",
       "description": "Keno supports numbers 1 through 80.",
@@ -8285,6 +8301,22 @@
       "introduced_in": "issue-240-roulette-remove-lock",
       "changed_in": "issue-240-roulette-remove-lock",
       "notes": "The existing Roulette browser flow checks the live bet-slip button state during the spinning phase before settlement replaces open wagers."
+    },
+    {
+      "id": "TEST-062",
+      "module": "Tests",
+      "description": "Browser evidence verifies Baccarat's initial shoe drawer shows the configured full shoe capacity instead of zero before the first deal.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-BAC-FRESH-SHOE-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-249-baccarat-shoe-count",
+      "changed_in": "issue-249-baccarat-shoe-count",
+      "notes": "The existing Baccarat browser flow captures the fresh drawer text immediately after the authenticated mount and before any mutation."
     }
   ]
 }
