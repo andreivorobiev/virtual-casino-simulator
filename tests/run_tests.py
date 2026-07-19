@@ -4427,6 +4427,22 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 run_case('BR-BJ-I18N-001',['I18N-002','BJ-028'],blackjack_i18n)
                 # Restore English for later browser assertions that use fixed English text.
                 page.evaluate("""async () => { const i18n = await import('/core/i18n.js'); await i18n.setLocale('en-US', { persistLocal: false }); }""")
+                # Build a settled insurance fixture whose visible Net would be wrong without the insurance movement. (BJ-032, TEST-057)
+                browser_blackjack_insurance_state=blackjack_engine.default_state()
+                # Create a dealer-blackjack outcome where a 100-token hand loss plus a 50-token insurance stake and 150-token insurance return nets zero.
+                browser_blackjack_insurance_round={'round_id':'bj_insurance_net_display','player_id':browser_player_id,'status':'settled','dealer':{'cards':['AS','KH'],'hole_card_hidden':False},'hands':[{'hand_id':'hand_insurance_net_display','cards':['9C','8D'],'bet':100,'status':'loss','outcome':'dealer_blackjack','payout_due':0,'credited':True,'actions':[]}],'active_hand_index':0,'insurance':{'amount':50,'dealer_blackjack':True,'payout':150},'even_money':None,'settlements':[]}
+                # Persist only the synthetic insured round for the browser player before remounting Blackjack.
+                browser_blackjack_insurance_state['rounds']={browser_blackjack_insurance_round['round_id']:browser_blackjack_insurance_round}; save_player_game_state('blackjack',browser_player_id,browser_blackjack_insurance_state)
+                # Leave and re-enter Blackjack so the route reloads the persisted insured settlement fixture.
+                page.get_by_test_id('nav-baccarat').click(); page.get_by_test_id('baccarat-wager-setup').wait_for(timeout=5000); page.get_by_test_id('nav-blackjack').click(); page.get_by_test_id('blackjack-premium').wait_for(timeout=5000)
+                # Read the localized Net value from the rendered settlement drawer without adding a test-only selector.
+                blackjack_insurance_net_text=page.evaluate("""() => { const rows = Array.from(document.querySelectorAll('[data-testid="blackjack-drawer"] .mini-stat')); const net = rows.map(row => ({ label: row.querySelector('span')?.textContent?.trim(), value: row.querySelector('strong')?.textContent?.trim() })).find(row => row.label === 'Net'); return net?.value || ''; }""")
+                # Define the blackjack_insurance_net_browser function used by this display regression.
+                def blackjack_insurance_net_browser():
+                    # Require the visible Net to include insurance stake and payout, producing a zero-profit settled row instead of a 100-token loss.
+                    assert blackjack_insurance_net_text.startswith('+') and '0' in blackjack_insurance_net_text
+                # Execute the browser regression for the insurance-inclusive Blackjack Net display.
+                run_case('BR-BJ-INSURANCE-NET-001',['BJ-032','LEDGER-015','TEST-057'],blackjack_insurance_net_browser)
                 # Navigate to Baccarat before asserting the premium table surfaces.
                 with page.expect_response(lambda response: response.url.endswith('/api/v2/me') and response.request.method == 'GET'):
                     # Click Baccarat and wait for its final mount-time wallet refresh response.
