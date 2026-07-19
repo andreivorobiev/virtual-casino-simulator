@@ -1,17 +1,94 @@
 {
   "module": "crown_and_anchor",
-  "version": "1.0.0",
-  "paths": ["casino/games/crown_and_anchor/", "web/games/crown_and_anchor.js", "web/i18n/en-US/games/crown_and_anchor.json", "web/i18n/ru-RU/games/crown_and_anchor.json"],
-  "requirements_prefixes": ["CAA"],
-  "contracts": ["contracts/openapi/crown_and_anchor.v1.yaml"],
+  "version": "1.0.1",
+  "paths": [
+    "casino/games/crown_and_anchor/",
+    "web/games/crown_and_anchor.js",
+    "web/i18n/en-US/games/crown_and_anchor.json",
+    "web/i18n/ru-RU/games/crown_and_anchor.json"
+  ],
+  "requirements_prefixes": [
+    "CAA"
+  ],
+  "contracts": [
+    "contracts/openapi/crown_and_anchor.v1.yaml"
+  ],
   "game": {
-    "id": "crown_and_anchor", "sort_order": 210, "route": "/games/crown_and_anchor", "label": "Crown and Anchor", "category": "table", "categories": ["table", "instant", "strategy"],
-    "backend": {"register": "casino.games.crown_and_anchor.api:register"},
-    "frontend": {"module": "./games/crown_and_anchor.js", "export": "CrownAndAnchorGame", "ready_testid": "crown-and-anchor", "i18n_domain": "games/crown_and_anchor", "i18n_probe": "action.play"},
-    "tests": {"long_driver": "tests.game_drivers.crown_and_anchor:play"},
-    "translations": {"ru-RU": {"label": "Корона и якорь", "kicker": "Символьные кости", "description": "Три символьные кости со ставками на шесть знаков, серверным результатом и расчётом через журнал игровых жетонов.", "tags": ["Стол", "Кости", "Стратегия", "Журнал жетонов"]}},
-    "lobby": {"featured": false, "wide": false, "art_class": "crown-and-anchor-art", "symbol": "3D6", "kicker": "Symbol dice", "description": "Cover six heraldic symbols across three server-authoritative dice with ledger-backed settlement.", "tags": ["Table", "Dice", "Strategy", "Ledger-backed"]}
+    "id": "crown_and_anchor",
+    "sort_order": 210,
+    "route": "/games/crown_and_anchor",
+    "label": "Crown and Anchor",
+    "category": "table",
+    "categories": [
+      "table",
+      "instant",
+      "strategy"
+    ],
+    "backend": {
+      "register": "casino.games.crown_and_anchor.api:register"
+    },
+    "frontend": {
+      "module": "./games/crown_and_anchor.js",
+      "export": "CrownAndAnchorGame",
+      "ready_testid": "crown-and-anchor",
+      "i18n_domain": "games/crown_and_anchor",
+      "i18n_probe": "action.play"
+    },
+    "tests": {
+      "long_driver": "tests.game_drivers.crown_and_anchor:play"
+    },
+    "translations": {
+      "ru-RU": {
+        "label": "\u041a\u043e\u0440\u043e\u043d\u0430 \u0438 \u044f\u043a\u043e\u0440\u044c",
+        "kicker": "\u0421\u0438\u043c\u0432\u043e\u043b\u044c\u043d\u044b\u0435 \u043a\u043e\u0441\u0442\u0438",
+        "description": "\u0422\u0440\u0438 \u0441\u0438\u043c\u0432\u043e\u043b\u044c\u043d\u044b\u0435 \u043a\u043e\u0441\u0442\u0438 \u0441\u043e \u0441\u0442\u0430\u0432\u043a\u0430\u043c\u0438 \u043d\u0430 \u0448\u0435\u0441\u0442\u044c \u0437\u043d\u0430\u043a\u043e\u0432, \u0441\u0435\u0440\u0432\u0435\u0440\u043d\u044b\u043c \u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442\u043e\u043c \u0438 \u0440\u0430\u0441\u0447\u0451\u0442\u043e\u043c \u0447\u0435\u0440\u0435\u0437 \u0436\u0443\u0440\u043d\u0430\u043b \u0438\u0433\u0440\u043e\u0432\u044b\u0445 \u0436\u0435\u0442\u043e\u043d\u043e\u0432.",
+        "tags": [
+          "\u0421\u0442\u043e\u043b",
+          "\u041a\u043e\u0441\u0442\u0438",
+          "\u0421\u0442\u0440\u0430\u0442\u0435\u0433\u0438\u044f",
+          "\u0416\u0443\u0440\u043d\u0430\u043b \u0436\u0435\u0442\u043e\u043d\u043e\u0432"
+        ]
+      }
+    },
+    "lobby": {
+      "featured": false,
+      "wide": false,
+      "art_class": "crown-and-anchor-art",
+      "symbol": "3D6",
+      "kicker": "Symbol dice",
+      "description": "Cover six heraldic symbols across three server-authoritative dice with ledger-backed settlement.",
+      "tags": [
+        "Table",
+        "Dice",
+        "Strategy",
+        "Ledger-backed"
+      ]
+    }
   },
-  "depends_on": ["core", "ledger", "players"],
-  "may_not_depend_on": ["roulette", "slots", "blackjack", "baccarat", "keno", "bingo", "multi_hand_video_poker", "casino_war", "big_six_wheel", "red_dog", "dragon_tiger", "hi_lo", "three_card_poker", "jacks_or_better_video_poker", "deuces_wild_video_poker", "scratch_cards", "sic_bo", "chuck_a_luck", "craps"]
+  "depends_on": [
+    "core",
+    "ledger",
+    "players"
+  ],
+  "may_not_depend_on": [
+    "roulette",
+    "slots",
+    "blackjack",
+    "baccarat",
+    "keno",
+    "bingo",
+    "multi_hand_video_poker",
+    "casino_war",
+    "big_six_wheel",
+    "red_dog",
+    "dragon_tiger",
+    "hi_lo",
+    "three_card_poker",
+    "jacks_or_better_video_poker",
+    "deuces_wild_video_poker",
+    "scratch_cards",
+    "sic_bo",
+    "chuck_a_luck",
+    "craps"
+  ]
 }

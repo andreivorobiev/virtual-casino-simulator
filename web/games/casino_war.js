@@ -64,6 +64,70 @@ function newActionId() {
   return `browser-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
 }
 
+// Retain unresolved idempotency identities per command across ambiguous failures, each bound to its immutable payload and owner. (issue #261)
+const pendingCommands = new Map();
+
+// Read the authenticated player id from the shared shell session without trusting caller-controlled fields.
+function sessionPlayerId() {
+  // Return the current-user player id published by the shell, or null before authentication resolves.
+  return globalThis.CasinoCurrentUser?.player?.player_id || null;
+}
+
+// Return a stable canonical signature for one command payload so changed intent is detectable.
+function commandSignature(payload) {
+  // Serialize sorted entries so equivalent payloads always produce one identical signature.
+  return JSON.stringify(Object.keys(payload || {}).sort().map(key => [key, payload[key]]));
+}
+
+// Report whether a structured API error definitively resolves the pending command so it is safe to discard.
+function isDefinitiveRejection(error) {
+  // Treat validation, balance, auth, route, and conflict errors as non-ambiguous server responses.
+  return ['VALIDATION_ERROR', 'INSUFFICIENT_FUNDS', 'UNAUTHORIZED', 'FORBIDDEN', 'NOT_FOUND', 'CONFLICT'].includes(error?.code);
+}
+
+// Resolve the frozen retry entry for one command, reusing its identity only for the identical player and immutable payload. (issue #261)
+function resolveCommand(commandKey, payload) {
+  // Read the authenticated player that would own this command.
+  const playerId = sessionPlayerId();
+  // Read any unresolved entry retained for this command key.
+  const existing = pendingCommands.get(commandKey);
+  // Reuse the retained identity only when the same player resubmits the exact same immutable payload after an ambiguous failure.
+  if (existing && existing.playerId === playerId && commandSignature(existing.payload) === commandSignature(payload)) return existing;
+  // Mint a fresh identity for a new intent bound to the immutable payload and owner before any network work.
+  const entry = { actionId: newActionId(), payload: Object.freeze({ ...payload }), playerId };
+  // Retain the entry so a retry after a lost response replays the identical identity and body.
+  pendingCommands.set(commandKey, entry);
+  // Return the frozen retry entry to the caller.
+  return entry;
+}
+
+// Clear one command's unresolved identity after the backend proves its outcome.
+function clearCommand(commandKey) {
+  // Remove only the acknowledged command's retry entry.
+  pendingCommands.delete(commandKey);
+}
+
+// Reconcile all unresolved command identities against the authoritative ledger and current ownership. (issue #261)
+function reconcileCommands() {
+  // Read the authoritative committed action ledger from the current public state.
+  const ledgerActions = state?.ledger_actions || {};
+  // Read the current authenticated player for ownership checks.
+  const playerId = sessionPlayerId();
+  // Inspect every retained command entry against authoritative state.
+  for (const [key, entry] of [...pendingCommands.entries()]) {
+    // Clear an identity already committed to the authoritative ledger.
+    if (entry.actionId in ledgerActions) { pendingCommands.delete(key); continue; }
+    // Clear an identity owned by a different authenticated player in this tab.
+    if (entry.playerId && playerId && entry.playerId !== playerId) pendingCommands.delete(key);
+  }
+}
+
+// Release every unresolved retry identity on teardown so a later mount or session cannot inherit one. (issue #261)
+function clearAllCommands() {
+  // Remove all retained command entries.
+  pendingCommands.clear();
+}
+
 // Return the newest actionable or settled round for the center stage.
 function currentRound() {
   // Prefer the explicit active round and then newest retained history.
@@ -180,16 +244,20 @@ function render() {
 async function deal() {
   // Ignore repeated clicks while a command is in flight.
   if (busy) return;
-  // Read the selected wager before the busy render disables the control.
-  const wager = Number(root?.querySelector('[data-testid="casino-war-wager"]')?.value || WAGERS[0]);
+  // Read the selected wager, locking to the frozen pending snapshot after an ambiguous failure so a retry cannot change the charged amount. (issue #261)
+  const wager = pendingCommands.get('deal')?.payload.wager ?? Number(root?.querySelector('[data-testid="casino-war-wager"]')?.value || WAGERS[0]);
   // Lock controls for the atomic request.
   busy = true;
   // Reflect the busy state without starting an animation timer.
   render();
   // Run the API command and restore controls on every path.
   try {
-    // Send the current session player, wager, and client idempotency key.
-    const payload = await post(`${API_ROOT}/rounds`, withCurrentPlayer({ wager, action_id: newActionId() }));
+    // Resolve the frozen deal retry entry so a retry replays the exact same identity and wager. (issue #261)
+    const command = resolveCommand('deal', { wager });
+    // Send the current session player, the frozen wager, and the retained client idempotency key.
+    const payload = await post(`${API_ROOT}/rounds`, withCurrentPlayer({ wager: command.payload.wager, action_id: command.actionId }));
+    // Clear the retained identity only after the server has confirmed this deal.
+    clearCommand('deal');
     // Store the returned player-scoped public state.
     state = payload.state;
     // Refresh the shell wallet after ledger debit and optional credit.
@@ -198,6 +266,8 @@ async function deal() {
   } catch (error) {
     // Show the server-provided domain message without adding frontend fallback copy.
     toast(error.message);
+    // Discard the pending deal identity only when the server definitively resolved it; retain it after an ambiguous failure for a safe replay. (issue #261)
+    if (isDefinitiveRejection(error)) clearCommand('deal');
   // Always release the click lock.
   } finally {
     // Re-enable phase-appropriate controls.
@@ -221,8 +291,14 @@ async function decide(decision) {
   render();
   // Run the selected decision and restore controls on every path.
   try {
-    // Post the replay-safe decision to the round-specific endpoint.
-    const payload = await post(`${API_ROOT}/rounds/${encodeURIComponent(roundItem.round_id)}/${decision}`, withCurrentPlayer({ action_id: newActionId() }));
+    // Key the retry entry per round and decision so distinct decisions never share an identity. (issue #261)
+    const decisionKey = `${roundItem.round_id}:${decision}`;
+    // Resolve the frozen decision retry entry bound to this exact round, decision, and player.
+    const command = resolveCommand(decisionKey, { round_id: roundItem.round_id, decision });
+    // Post the replay-safe decision to the round-specific endpoint with its retained identity.
+    const payload = await post(`${API_ROOT}/rounds/${encodeURIComponent(roundItem.round_id)}/${decision}`, withCurrentPlayer({ action_id: command.actionId }));
+    // Clear the retained identity only after the server has confirmed this decision.
+    clearCommand(decisionKey);
     // Store the terminal public state.
     state = payload.state;
     // Refresh the shared wallet after surrender credit or war settlement.
@@ -231,6 +307,8 @@ async function decide(decision) {
   } catch (error) {
     // Show the server-provided domain message without hard-coded fallback copy.
     toast(error.message);
+    // Discard the pending decision identity only when the server definitively resolved it; retain it after an ambiguous failure for a safe replay. (issue #261)
+    if (isDefinitiveRejection(error)) clearCommand(`${roundItem.round_id}:${decision}`);
   // Always release the click lock.
   } finally {
     // Re-enable controls for the resulting phase.
@@ -268,6 +346,8 @@ export const CasinoWarGame = {
     const payload = await api(currentPlayerPath(`${API_ROOT}/state`));
     // Store the public state for initial rendering.
     state = payload.state;
+    // Reconcile any unresolved retry identities against the authoritative ledger and current ownership on mount. (issue #261)
+    reconcileCommands();
     // Render the table only after localized copy is ready.
     render();
     // Align the persistent wallet with any recovered ledger action.
@@ -281,6 +361,8 @@ export const CasinoWarGame = {
     unsubscribeLocale = null;
     // Clear state so another user's later mount cannot reuse prior data.
     state = null;
+    // Release every unresolved retry identity so a later mount or a different session cannot inherit one. (issue #261)
+    clearAllCommands();
     // Release the DOM reference; this module owns no timers to cancel.
     root = null;
     // Release any in-flight visual lock for a future mount.

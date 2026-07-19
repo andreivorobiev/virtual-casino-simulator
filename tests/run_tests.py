@@ -3531,6 +3531,36 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Execute the integrated Fan-Tan browser and visual gate.
                 run_case('BR-FAN-TAN-001',['FAN-TAN-001','FAN-TAN-002','FAN-TAN-004','FAN-TAN-005'],fan_tan_acceptance)
+                # Define the lost-response idempotency regression proving a retry replays one identity and body with exactly one debit. (issue #261)
+                def fan_tan_lost_response_idempotency():
+                    # Open the Fan-Tan route and wait for the stable game surface.
+                    page.get_by_test_id('nav-fan_tan').click(); page.get_by_test_id('fan-tan').wait_for(timeout=5000)
+                    # Read the authenticated player id for exact ledger assertions.
+                    ft_me=page.request.get(base+'/api/v2/me').json()['data']; ft_player=ft_me['player']['player_id']
+                    # Count existing Fan-Tan wager debits so the regression measures only this intended round.
+                    ft_before=page.request.get(base+f'/api/v1/players/{ft_player}/ledger').json()['data']['ledger']; ft_debits_before=sum(1 for r in ft_before if r.get('game')=='fan_tan' and r.get('transaction_type')=='FAN_TAN_WAGER_DEBIT')
+                    # Install a fetch wrapper that records round request bodies and simulates one lost response after the backend commits.
+                    page.evaluate("""() => { const original=window.fetch.bind(window); let firstHeld=false; window.__ftRequests=[]; window.fetch=async (...args)=>{ const input=args[0]; const url=typeof input==='string'?input:input.url; const init=args[1]||{}; const method=String(init.method||(typeof input==='object'?input.method:'GET')||'GET').toUpperCase(); if(url.includes('/api/v1/games/fan-tan/rounds')&&method==='POST'){ let body=null; try{ body=JSON.parse(init.body); }catch(_){} window.__ftRequests.push(body); if(!firstHeld){ firstHeld=true; try{ await original(...args); }catch(_){} throw new TypeError('simulated lost response'); } } return original(...args); }; }""")
+                    # Set a residue wager through the visible control.
+                    page.locator('[data-wager="1"]').fill('5')
+                    # Submit the play; the backend commits while the browser sees a simulated lost response.
+                    page.locator('[data-play]').click()
+                    # Wait for the ambiguous-failure recovery to re-enable the play control.
+                    page.locator('[data-play]:not([disabled])').wait_for(timeout=10000)
+                    # Retry the play through the same visible control; the wager stays locked to the pending snapshot.
+                    page.locator('[data-play]').click()
+                    # Wait for settlement to complete and the control to re-enable.
+                    page.locator('[data-play]:not([disabled])').wait_for(timeout=10000)
+                    # Read both captured round request bodies.
+                    ft_reqs=page.evaluate('window.__ftRequests')
+                    # Prove the retry reused the exact same idempotency identity and immutable wager body.
+                    assert len(ft_reqs)>=2 and ft_reqs[0]['action_id']==ft_reqs[1]['action_id'] and ft_reqs[0]['wagers']==ft_reqs[1]['wagers']
+                    # Prove the intended round was charged exactly once despite the lost-response retry.
+                    ft_after=page.request.get(base+f'/api/v1/players/{ft_player}/ledger').json()['data']['ledger']; ft_debits_after=sum(1 for r in ft_after if r.get('game')=='fan_tan' and r.get('transaction_type')=='FAN_TAN_WAGER_DEBIT'); assert ft_debits_after==ft_debits_before+1
+                    # Return to the lobby for downstream browser cases.
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Execute the lost-response idempotency regression for Fan-Tan. (issue #261)
+                run_case('BR-FAN-TAN-IDEMPOTENCY-001',['LEDGER-028','TEST-070'],fan_tan_lost_response_idempotency)
                 # Define real-backend Andar Bahar localization, responsive, motion, and route acceptance.
                 def andar_bahar_acceptance():
                     # Open the catalog-owned route and wait for the stable game selector.
