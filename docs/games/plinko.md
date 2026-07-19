@@ -8,7 +8,9 @@ Plinko is distinct because its server-authoritative outcome is an eight-step lef
 
 - Each drop accepts one play-token wager and a stable `action_id`.
 - The backend commits eight left/right decisions and derives the bucket from the number of right decisions.
-- The published multiplier table determines returned play tokens and net result.
+- The symmetric left-to-right multiplier table is `5, 2, 1.5, 1, 0.2, 1, 1.5, 2, 5`.
+- The eight-row binomial path weights give that table an exact `252 / 256 = 98.4375%` theoretical return and `1.5625%` house edge.
+- The published multiplier determines returned play tokens and net result.
 - Exact retries return the committed drop without duplicate ledger movement; conflicting reuse fails closed.
 - Authenticated session context overrides caller-supplied player identifiers.
 
@@ -16,6 +18,6 @@ All wager debits and returned-token credits use `casino.core.ledger`. Plinko nev
 
 ## Canonical integration
 
-The descriptor at `modules/plinko.json` owns module version `1.0.0`, route `/games/plinko`, sort order `230`, paired EN/RU resources, the additive contract, and `tests.game_drivers.plinko:play`. Permanent requirements `PLINKO-001` through `PLINKO-005` map rules, session/restart behavior, ledger safety, browser localization, and catalog-wide evidence.
+The descriptor at `modules/plinko.json` owns module version `1.0.1`, route `/games/plinko`, sort order `230`, paired EN/RU resources, the additive contract, and `tests.game_drivers.plinko:play`. Permanent requirements `PLINKO-001` through `PLINKO-005` map rules, session/restart behavior, ledger safety, browser localization, and catalog-wide evidence.
 
 The visual surface `plinko` covers `ready`, `path_replay`, `settled`, `reduced_motion`, and `route_restored` in both locales at desktop primary, desktop compact, tablet, and mobile viewports. Shared registration remains catalog-driven; no bespoke router, shell, or long-suite allowlist is required.

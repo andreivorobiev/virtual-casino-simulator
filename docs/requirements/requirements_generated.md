@@ -36,7 +36,7 @@ Historical source baseline: 9.1.0
 - craps: 1.0.0
 - crown_and_anchor: 1.0.0
 - over_under_7: 1.0.0
-- plinko: 1.0.0
+- plinko: 1.0.1
 - fan_tan: 1.0.0
 - andar_bahar: 1.0.0
 - acey_deucey: 1.0.1
@@ -45,8 +45,8 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.0
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.44.2
-- docs: 1.44.2
+- tests: 1.44.3
+- docs: 1.44.3
 - contracts: 1.32.0
 - tooling: 1.14.0
 - commenting_policy: 1.0.0
