@@ -2372,8 +2372,17 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1')
                     # Verify the featured game card remains visible after responsive stacking.
                     assert page.get_by_test_id('card-roulette').is_visible()
+                    # Verify the lobby outlet owns a bounded vertical scroll so cards below the fold are reachable rather than clipped by the fixed-height ancestor. (issue #318)
+                    assert page.evaluate("() => { const el=document.querySelector('#view.screen.lobby-screen'); return !!el && getComputedStyle(el).overflowY==='auto'; }")
+                    # Scroll the final catalog card into view through the lobby outlet; without the outlet scroll this cannot reach the clipped card.
+                    last_card=page.locator('[data-testid^="card-"]').last
+                    last_card.scroll_into_view_if_needed(); page.wait_for_timeout(120)
+                    # Require the final card and its Play control to land fully within the viewport, not hidden behind the fixed shell.
+                    last_card_box=last_card.bounding_box()
+                    assert last_card_box and last_card_box['y'] >= 0 and (last_card_box['y'] + last_card_box['height']) <= 844 + 1
+                    assert last_card.is_visible() and page.locator('[data-testid^="open-"]').last.is_visible()
                 # Execute this statement as part of the module's documented control flow.
-                run_case('BR-LOBBY-RESP-001',['CORE-015','UX-009'],responsive_lobby)
+                run_case('BR-LOBBY-RESP-001',['CORE-015','UX-009','UX-013','TEST-076'],responsive_lobby)
                 # Capture the narrow stacked shell so mobile top-action behavior can be reviewed.
                 shot('after-pass-shell-lobby-mobile.png')
                 # Restore desktop dimensions before existing game interaction coverage runs.

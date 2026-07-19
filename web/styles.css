@@ -588,6 +588,39 @@ label {
   overflow: hidden;
 }
 
+/* Make the lobby outlet a single bounded vertical scroll region so every catalog card below the fold is
+   reachable at 1920/1440/1024/390, mirroring the game outlet's fixed-height-ancestor scroll fix. (issue #318, CORE-015, UX-009) */
+#view.screen.lobby-screen {
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* Keep the outlet scroll keyboard-driven with a stable landing offset below the sticky chrome. */
+  scroll-padding-top: 12px;
+  scrollbar-color: rgba(255, 217, 130, 0.42) transparent;
+  scrollbar-width: thin;
+}
+
+/* Match the shared thin themed scrollbar used by the game outlet. */
+#view.screen.lobby-screen::-webkit-scrollbar {
+  width: 8px;
+}
+
+/* Keep the lobby outlet scrollbar track transparent within the premium chrome. */
+#view.screen.lobby-screen::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Render the lobby outlet scrollbar thumb with the shared gold treatment. */
+#view.screen.lobby-screen::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(255, 217, 130, 0.42);
+}
+
+/* Give the keyboard-focusable lobby outlet a visible focus indicator when it owns the scroll. */
+#view.screen.lobby-screen:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: -4px;
+}
+
 /* Premium lobby hero, trust rail, and game-card gallery. */
 .lobby {
   display: grid;

@@ -8589,6 +8589,38 @@
       "introduced_in": "issue-284-283-auth-visual-conformance",
       "changed_in": "issue-284-283-auth-visual-conformance",
       "notes": "Issue #284/#283 auth short-viewport fit and terms touch-target browser proof."
+    },
+    {
+      "id": "UX-013",
+      "module": "UX",
+      "description": "The lobby route outlet is a single bounded vertical scroll region, so every filtered catalog card and its Play control is reachable below the fold at 1920x1080, 1440x900, 1024x900, and 390x844 without page-level horizontal overflow and without content hidden behind the fixed shell chrome.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-LOBBY-RESP-001"
+      ],
+      "implementation_files": [
+        "web/styles.css"
+      ],
+      "introduced_in": "issue-318-lobby-catalog-scroll",
+      "changed_in": "issue-318-lobby-catalog-scroll",
+      "notes": "Issue #318: the lobby outlet gains the same fixed-height-ancestor overflow-y:auto scroll fix the game outlet already had (#221)."
+    },
+    {
+      "id": "TEST-076",
+      "module": "Tests",
+      "description": "Browser evidence verifies the lobby outlet owns a bounded vertical scroll and that the final catalog card and its Play control can be scrolled into view fully within the viewport, proving cards below the fold are reachable rather than clipped.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-LOBBY-RESP-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-318-lobby-catalog-scroll",
+      "changed_in": "issue-318-lobby-catalog-scroll",
+      "notes": "Issue #318 lobby below-fold reachability browser proof."
     }
   ]
 }
