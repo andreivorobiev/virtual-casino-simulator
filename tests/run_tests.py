@@ -3998,6 +3998,47 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.locator('#clear').click(); page.wait_for_timeout(150)
                 # Record the exhaustive Roulette hit-target integrity and geometry regression.
                 run_case('BR-ROU-HITMAP-001',['ROU-005','ROU-013','ROU-014','ROU-015','ROU-016','ROU-017','ROU-044','ROU-045','ROU-057','TEST-053'],roulette_hit_target_integrity)
+                # Prove leaving Roulette with an open, un-spun bet refunds the stake rather than stranding it. (issue #246)
+                def roulette_refund_on_leave():
+                    # Read the authoritative current-user token balance straight from the session endpoint so the assertion never depends on shell DOM refresh timing. (issue #246)
+                    def me_balance():
+                        # Fetch the canonical /me play-token balance for the authenticated browser session.
+                        return float(page.evaluate("async () => (await (await fetch('/api/v2/me', {credentials:'include'})).json()).data.player.token_balance"))
+                    # Poll the authoritative balance until an in-flight prior clear/refund settles, then capture a stable pre-wager baseline.
+                    def wait_balance(predicate):
+                        # Bound the poll so a genuinely stuck balance fails fast instead of hanging the suite.
+                        deadline=time.time()+6
+                        # Re-read the authoritative balance until the predicate holds or the deadline passes.
+                        while not predicate(me_balance()) and time.time()<deadline: page.wait_for_timeout(150)
+                        # Return the final authoritative balance for the caller's assertion.
+                        return me_balance()
+                    # Capture a stable pre-wager baseline once two authoritative reads a beat apart agree, so a prior async refund cannot leave a mid-flight value.
+                    refund_balance_before=me_balance()
+                    # Re-read until the balance stops moving or the settle window elapses.
+                    _settle_deadline=time.time()+6
+                    while time.time()<_settle_deadline:
+                        # Pause one short beat before comparing the next authoritative read.
+                        page.wait_for_timeout(200)
+                        # Read the authoritative balance again to detect any in-flight settlement.
+                        _current=me_balance()
+                        # Stop once two consecutive reads agree; otherwise adopt the newer value and keep settling.
+                        if abs(_current-refund_balance_before)<0.005: break
+                        # Adopt the moving value as the new candidate baseline.
+                        refund_balance_before=_current
+                    # Place one straight bet through the visible board and wait for the table chip to confirm the wager rendered.
+                    page.get_by_test_id('roulette-num-17').click(); page.locator('.bet-chip').first.wait_for(timeout=3000)
+                    # Require the open bet to have debited the authoritative balance before leaving the table.
+                    assert wait_balance(lambda value: value < refund_balance_before-0.005) < refund_balance_before-0.005
+                    # Leave the table without spinning by navigating back to the lobby, which unmounts Roulette and fires the refund.
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    # Require the authoritative balance to return to the pre-wager amount because the open bet was refunded on leave.
+                    assert abs(wait_balance(lambda value: abs(value-refund_balance_before)<0.005)-refund_balance_before)<0.005
+                    # Reopen Roulette and require the refunded round to start with no lingering open-bet chips.
+                    page.get_by_test_id('nav-roulette').click(); page.get_by_test_id('roulette-wheel').wait_for(timeout=5000)
+                    # Require no open-bet chip to remain after the refund so the next round starts clean.
+                    assert page.locator('.bet-chip').count()==0
+                # Record the refund-on-leave wallet-correctness regression before the standard betting acceptance continues.
+                run_case('BR-ROU-REFUND-001',['ROU-060','TEST-073'],roulette_refund_on_leave)
                 # Define the raw Roulette resource keys reported as visible regressions.
                 roulette_visible_keys={'header.kicker','title','controls.title','controls.spin','settlement.title','scoreboard.title'}
                 # Define a focused rendered-text assertion for raw Roulette key leakage.
