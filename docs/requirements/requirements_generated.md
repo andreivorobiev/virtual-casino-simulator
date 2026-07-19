@@ -46,7 +46,7 @@ Historical source baseline: 9.1.0
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
 - tests: 1.44.21
-- docs: 1.44.21
+- docs: 1.44.22
 - contracts: 1.32.0
 - tooling: 1.14.0
 - commenting_policy: 1.0.0
