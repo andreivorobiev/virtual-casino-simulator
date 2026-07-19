@@ -642,15 +642,20 @@
     {
       "id": "LEDGER-025",
       "module": "Ledger",
-      "description": "Player balances are visible in the main UI.",
+      "description": "Player balances are visible in the main UI, and the shared wallet preserves the same exact two-decimal value shown by game scoreboards.",
       "status": "PASS",
       "api_tests": [],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-TOKEN-FRACTION-001"
+      ],
       "implementation_files": [
         "casino/core/ledger.py",
-        "casino/core/players.py"
+        "casino/core/players.py",
+        "web/core/ui.js",
+        "tests/run_tests.py"
       ],
-      "notes": ""
+      "changed_in": "9.3.0",
+      "notes": "Issue #258 adds real-browser proof that the shared wallet and Roulette scoreboard agree on a fractional authoritative balance."
     },
     {
       "id": "LEDGER-026",
@@ -5615,7 +5620,8 @@
       "status": "PASS",
       "api_tests": [],
       "browser_tests": [
-        "BR-SHELL-001"
+        "BR-SHELL-001",
+        "BR-TOKEN-FRACTION-001"
       ],
       "implementation_files": [
         "web/index.html",
@@ -5626,8 +5632,8 @@
         "web/assets/slot-machine.png"
       ],
       "introduced_in": "9.1.2",
-      "changed_in": "9.1.2",
-      "notes": "Introduced for the premium shared shell foundation."
+      "changed_in": "9.3.0",
+      "notes": "The premium wallet retains exact two-decimal play-token precision instead of rounding fractional balances."
     },
     {
       "id": "UX-008",
@@ -6676,14 +6682,17 @@
       "status": "PLANNED",
       "api_tests": [],
       "browser_tests": [
-        "BR-TOKEN-001"
+        "BR-TOKEN-001",
+        "BR-TOKEN-FRACTION-001"
       ],
       "implementation_files": [
-        "codex/tasks/auth-mysql-token-token-model.md"
+        "codex/tasks/auth-mysql-token-token-model.md",
+        "web/core/ui.js",
+        "tests/run_tests.py"
       ],
       "introduced_in": "auth-mysql-token-foundation",
-      "changed_in": "auth-mysql-token-foundation",
-      "notes": "Planned by GitHub epic #34 and child issue #35; runtime implementation is intentionally out of scope for the requirements/contracts worker."
+      "changed_in": "9.3.0",
+      "notes": "The fractional-balance display slice is implemented and browser-covered; the broader terminology program retains PLANNED status."
     },
     {
       "id": "TOKEN-002",
