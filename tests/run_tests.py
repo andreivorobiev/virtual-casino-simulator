@@ -4007,6 +4007,14 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     assert ('Spin in progress' in roulette_spinning_settlement_text or 'Спин выполняется' in roulette_spinning_settlement_text) and 'No layout resize' not in roulette_spinning_settlement_text and 'Макет не меняет размер' not in roulette_spinning_settlement_text
                 # Record the focused Roulette spinning-copy browser assertion.
                 run_case('BR-ROU-SPINNING-COPY-001',['ROU-058','TEST-059'],roulette_spinning_settlement_copy)
+                # Read the open bet-slip Remove button while the spin has locked the current wager set. (ROU-059, TEST-061)
+                roulette_locked_remove_disabled=page.locator('[data-testid="roulette-bet-slip"] [data-clear]').first.is_disabled()
+                # Define the focused locked-wager Remove-button regression for issue #240.
+                def roulette_locked_remove_button():
+                    # Require the Remove action to be inert while the spin is resolving the already committed wager.
+                    assert roulette_locked_remove_disabled
+                # Record the focused Roulette locked-wager remove-control browser assertion.
+                run_case('BR-ROU-LOCKED-REMOVE-001',['ROU-059','TEST-061'],roulette_locked_remove_button)
                 # Capture the locked spinning state before the backend result is presented.
                 viewport_shot('roulette-premium-spinning.png')
                 # Wait for the fixed result region to reach the settled phase.

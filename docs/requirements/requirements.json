@@ -5550,6 +5550,22 @@
       "notes": "The browser harness checks the real spinning-state settlement card before settlement to reject the old layout-reservation copy."
     },
     {
+      "id": "ROU-059",
+      "module": "Roulette",
+      "description": "Roulette disables bet-slip Remove controls whenever a spin has locked the current wager set.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-ROU-LOCKED-REMOVE-001"
+      ],
+      "implementation_files": [
+        "web/games/roulette.js"
+      ],
+      "introduced_in": "issue-240-roulette-remove-lock",
+      "changed_in": "issue-240-roulette-remove-lock",
+      "notes": "The browser harness places a real wager, starts a real spin, and asserts the still-rendered slip Remove action is disabled while the round is locked."
+    },
+    {
       "id": "UX-001",
       "module": "UX",
       "description": "Game stages reserve fixed visual areas during normal gameplay.",
@@ -8253,6 +8269,22 @@
       "introduced_in": "issue-251-admin-nav-gate",
       "changed_in": "issue-251-admin-nav-gate",
       "notes": "Real normal-player and Admin sessions cover en-US and ru-RU at desktop_primary and mobile, plus direct HTML and API authorization and keyboard route entry."
+    },
+    {
+      "id": "TEST-061",
+      "module": "Tests",
+      "description": "Browser evidence verifies Roulette disables bet-slip Remove controls while a real spin has locked the current wager set.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-ROU-LOCKED-REMOVE-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-240-roulette-remove-lock",
+      "changed_in": "issue-240-roulette-remove-lock",
+      "notes": "The existing Roulette browser flow checks the live bet-slip button state during the spinning phase before settlement replaces open wagers."
     }
   ]
 }
