@@ -586,8 +586,41 @@ function bindChrome() {
   document.getElementById('backToCasino').onclick = () => location.href = '/';
 }
 
+// Inject Admin-scoped responsive styles so mobile viewports collapse the desktop sidebar and stack cards. (issue #281)
+function injectResponsiveAdminStyles() {
+  // Avoid inserting the responsive rules more than once across locale rerenders.
+  if (document.getElementById('admin-responsive-styles')) return;
+  // Create a dedicated style element owned by the Admin module.
+  const style = document.createElement('style');
+  // Identify the injected style so repeated calls stay idempotent.
+  style.id = 'admin-responsive-styles';
+  // Define a mobile breakpoint that unclips Admin and stacks its desktop three-zone composition. (issue #281)
+  style.textContent = '@media (max-width:900px){' +
+    // Collapse the fixed 280px sidebar column so the main content is no longer squeezed to a strip.
+    '.admin-shell{grid-template-columns:1fr;height:auto;min-height:100vh;}' +
+    // Turn the vertical sidebar into a horizontal tab rail that wraps rather than using a native scrollbar.
+    '.admin-sidebar{flex-direction:row;flex-wrap:wrap;gap:6px;border-right:0;border-bottom:1px solid rgba(255,255,255,.12);}' +
+    // Keep the brand and each tab from shrinking so labels stay readable in the horizontal rail.
+    '.admin-sidebar>*{flex:0 0 auto;white-space:nowrap;}' +
+    // Hide the sidebar divider that only makes sense in the vertical desktop layout.
+    '.admin-sidebar hr{display:none;}' +
+    // Stop the main region from clipping content so the page can scroll to every card.
+    '.admin-main{overflow:visible;}' +
+    // Let the content region grow with the document instead of owning a nested clip.
+    '.admin-content{overflow:visible;padding:12px;}' +
+    // Stack dashboard metric cards into a single readable column.
+    '.admin-card-grid{grid-template-columns:1fr;}' +
+    // Stack any two-column or three-column Admin panels on narrow screens.
+    '.admin-split,.three-col{grid-template-columns:1fr;}' +
+  '}';
+  // Attach the responsive rules after the shared stylesheet so they win the cascade without editing styles.css.
+  document.head.appendChild(style);
+}
+
 // Define start to initialize i18n before the first Admin render.
 async function start() {
+  // Ensure Admin is usable at mobile viewports before the first render. (issue #281)
+  injectResponsiveAdminStyles();
   // Load common and Admin dictionaries before rendering text.
   await initI18n({ domains: ['admin'] });
   // Apply declarative translations to static Admin chrome.
