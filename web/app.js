@@ -62,6 +62,12 @@ function descriptorFromCatalog(game) {
   return { id: game.id, route: game.route || `/games/${game.id}`, label: localized.label || game.label, category: game.category, categories: game.categories || [game.category], path: game.frontend?.module, exportName: game.frontend?.export, readyTestId: game.frontend?.ready_testid, i18nDomain: game.frontend?.i18n_domain, i18nProbe: game.frontend?.i18n_probe, featured: lobby.featured === true, wide: lobby.wide === true, artClass: lobby.art_class || '', symbol: lobby.symbol || '', kicker: localized.kicker || lobby.kicker || game.category, description: localized.description || lobby.description || '', tags: localized.tags || lobby.tags || [] };
 }
 
+// Resolve a human-readable game title for status panels, falling back to the raw route. (issue #254)
+function routeLabel(route) {
+  // Return the catalog display label when the route names a known game, else the raw route slug.
+  return gameDescriptors.find(game => game.id === route)?.label || route;
+}
+
 // Resolve the route represented by the current browser location for reload and history restoration.
 function routeFromLocation() {
   // Match canonical reloadable game paths without accepting nested or ambiguous segments.
@@ -552,7 +558,7 @@ export async function navigate(route, options = {}) {
     // Make the bounded game outlet a keyboard-focusable scroll region so every control stays reachable. (issue #221)
     view.tabIndex = 0; view.setAttribute('role', 'region'); view.setAttribute('aria-label', safe(t('nav.gamesArea', {}, 'shell') || 'Game area'));
     // Render a premium loading panel while the dynamic game module loads.
-    view.innerHTML = `<div class="panel loading-panel"><h2>Loading ${safe(targetRoute)}...</h2></div>`;
+    view.innerHTML = `<div class="panel loading-panel"><h2>Loading ${safe(routeLabel(targetRoute))}...</h2></div>`;
     // Resolve the descriptor for the selected game route.
     const desc = gameDescriptors.find(game => game.id === targetRoute);
     // Load the game class through the module registry.
@@ -574,7 +580,7 @@ export async function navigate(route, options = {}) {
     // Keep the route outlet in game-screen mode so the error panel has premium shell padding.
     view.className = 'screen game-screen';
     // Render a friendly error state with a lobby recovery action.
-    view.innerHTML = `<div class="panel loading-panel"><h2>Could not load ${safe(targetRoute)}</h2><p class="status">${safe(err.message)}</p><button data-route="lobby">Back to lobby</button></div>`;
+    view.innerHTML = `<div class="panel loading-panel"><h2>Could not load ${safe(routeLabel(targetRoute))}</h2><p class="status">${safe(err.message)}</p><button data-route="lobby">Back to lobby</button></div>`;
     // Wire the fallback button without relying on the top navigation.
     view.querySelector('[data-route="lobby"]')?.addEventListener('click', () => navigate('lobby'));
   }
