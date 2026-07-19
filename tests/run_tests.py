@@ -4401,8 +4401,22 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     assert abs(keno_selection_box['width']-keno_progress_box['width'])<2
                     # Verify the board height remains stable from selection to final result.
                     assert abs(keno_selection_box['height']-keno_result_box['height'])<2
+                    # Resolve the browser shell's active player id before seeding focused evidence.
+                    keno_singular_player=page.evaluate("() => { const shellPlayer = window.CasinoCurrentUser?.player || window.CasinoCurrentPlayer || {}; return shellPlayer.player_id || window.CasinoCurrentUser?.player_id || localStorage.getItem('casino.currentPlayerId') || 'human'; }")
+                    # Seed deterministic one-catch Keno state so singular copy is proven without relying on a random draw.
+                    keno_singular_state={'open_tickets':[],'last_draws':[{'round_id':'keno-singular-copy','timestamp':'2026-07-19T00:00:00Z','drawn':list(range(1,21)),'results':[{'ticket':{'ticket_id':'keno-one-catch','player_id':keno_singular_player,'spots':[1],'amount':1,'source':'browser-test','created_at':'2026-07-19T00:00:00Z'},'catches':[1],'catch_count':1,'multiplier':3,'payout':3}]}]}
+                    # Persist the focused state through the same test data store used by the browser server.
+                    save_player_game_state('keno',keno_singular_player,keno_singular_state)
+                    # Select English before reload so the copy assertion checks the exact reported wording.
+                    page.get_by_test_id('shell-locale-select').select_option('en-US')
+                    # Reload the route so the visible browser client renders the persisted one-catch result.
+                    page.reload(); page.get_by_test_id('keno-premium-hero').wait_for(timeout=5000)
+                    # Read the visible result copy after the route reload.
+                    keno_singular_result=page.get_by_test_id('keno-result').inner_text()
+                    # Require singular English copy and reject the reported plural grammar defect.
+                    assert '1 catch on a 1-spot ticket' in keno_singular_result and '1 catches' not in keno_singular_result
                 # Execute this statement as part of the module's documented control flow.
-                run_case('BR-KENO-001',['KENO-009','KENO-010','KENO-011','KENO-012','KENO-013','KENO-014','KENO-015','KENO-018','KENO-020','KENO-021','KENO-022','KENO-023','AUTO-012','UX-007','UX-009'],premium_keno)
+                run_case('BR-KENO-001',['KENO-009','KENO-010','KENO-011','KENO-012','KENO-013','KENO-014','KENO-015','KENO-018','KENO-020','KENO-021','KENO-022','KENO-023','KENO-024','TEST-066','AUTO-012','UX-007','UX-009'],premium_keno)
                 # Resize to the governed mobile viewport for Keno containment coverage.
                 page.set_viewport_size({'width':390,'height':844}); page.wait_for_timeout(300)
                 # Read page and intended board-scroll widths at the exact evaluator viewport.

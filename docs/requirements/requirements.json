@@ -3438,6 +3438,25 @@
       "notes": "Browser evidence verifies the history row text column uses hidden overflow, ellipsis, nowrap, and min-width containment."
     },
     {
+      "id": "KENO-024",
+      "module": "Keno",
+      "description": "Keno result copy uses the singular catch noun when a completed ticket catches exactly one number.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-KENO-001"
+      ],
+      "implementation_files": [
+        "web/games/keno.js",
+        "web/i18n/en-US/games/keno.json",
+        "web/i18n/ru-RU/games/keno.json",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-237-keno-singular-catch",
+      "changed_in": "issue-237-keno-singular-catch",
+      "notes": "The browser harness seeds a deterministic one-spot, one-catch result and verifies the rendered English lead says 1 catch, not 1 catches."
+    },
+    {
       "id": "BINGO-001",
       "module": "Bingo",
       "description": "Bingo uses 75-ball American rules.",
@@ -8392,6 +8411,22 @@
       "introduced_in": "issue-223-big-six-motion",
       "changed_in": "issue-223-big-six-motion",
       "notes": "The standalone long gate requires 400 unique authenticated UI settlements, at least 12 live transition samples per normal spin, at least three visible revolutions after observation begins, exact cumulative target and server-index alignment, and direct visual review of top, stage, and lower scroll positions."
+    },
+    {
+      "id": "TEST-066",
+      "module": "Tests",
+      "description": "Browser evidence verifies Keno singular result copy for exactly one caught number.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-KENO-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-237-keno-singular-catch",
+      "changed_in": "issue-237-keno-singular-catch",
+      "notes": "The integrated Keno browser flow seeds deterministic persisted state for a one-catch ticket and checks the rendered result lead."
     }
   ]
 }

@@ -621,8 +621,10 @@ function resultCopyHtml() {
   if (result) {
     // Store net outcome after the already-debited ticket amount.
     const net = Number(result.payout || 0) - Number(result.ticket?.amount || 0);
+    // Select the singular lead copy for a one-catch ticket so the count agrees with the noun. (issue #237)
+    const leadKey = result.catch_count === 1 ? 'status.resultLeadOne' : 'status.resultLead';
     // Return the completed result summary.
-    return `<div class="result-box fixed-result keno-result-copy" data-testid="keno-result"><strong>${safe(tx('status.resultLead', { catches: result.catch_count, spots: result.ticket.spots.length }))}</strong> ${safe(tx('status.resultSummary', { payout: moneyText(result.payout), net: moneyText(net) }))}</div>`;
+    return `<div class="result-box fixed-result keno-result-copy" data-testid="keno-result"><strong>${safe(tx(leadKey, { catches: result.catch_count, spots: result.ticket.spots.length }))}</strong> ${safe(tx('status.resultSummary', { payout: moneyText(result.payout), net: moneyText(net) }))}</div>`;
   }
   // Return the selected-ticket summary or empty selection prompt.
   return `<div class="result-box fixed-result keno-result-copy" data-testid="keno-result"><strong>${safe(tx('status.selectedLead'))}</strong> ${safe(spots.length ? tx('status.selectedSummary', { spots: spots.join(', ') }) : tx('status.noSelection'))}</div>`;

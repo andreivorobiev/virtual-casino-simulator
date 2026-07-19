@@ -1,9 +1,11 @@
 {
   "module": "keno",
-  "version": "9.2.1",
+  "version": "9.2.2",
   "paths": [
     "casino/games/keno/",
-    "web/games/keno.js"
+    "web/games/keno.js",
+    "web/i18n/en-US/games/keno.json",
+    "web/i18n/ru-RU/games/keno.json"
   ],
   "requirements_prefixes": [
     "KENO"
