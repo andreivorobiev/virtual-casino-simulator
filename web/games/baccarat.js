@@ -418,8 +418,10 @@ function settlementRowsHtml() {
 function shoeHtml() {
   // Store burn information from public state or the visible coup.
   const burn = state?.burn || lastCoup?.burn || {};
-  // Store remaining card count from the visible coup or current state.
-  const remaining = displayCoup()?.shoe_remaining ?? state?.shoe_count ?? 0;
+  // Store the nominal full shoe so a fresh, not-yet-built (lazily dealt) shoe reads its true capacity instead of 0. (issue #249)
+  const fullShoe = (state?.rules?.decks || 8) * 52;
+  // Store remaining card count from the visible coup, the live state, or the full fresh shoe before the first deal.
+  const remaining = displayCoup()?.shoe_remaining ?? (state?.shoe_count || fullShoe);
   // Store cut threshold from rules when available.
   const cut = state?.rules?.cut_cards_remaining || 14;
   // Return the shoe summary with no hidden gameplay behavior.
