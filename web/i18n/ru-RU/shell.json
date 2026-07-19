@@ -35,6 +35,8 @@
   "catalog.empty": "Игры по заданным фильтрам не найдены.",
   "catalog.galleryAria": "Игры",
   "catalog.capacity": "Доступно: {current} · каталог рассчитан на {target}",
+  "catalog.play": "Играть",
+  "lobby.chooseTable": "Выберите свой стол",
   "catalog.searchLabel": "Поиск игр",
   "catalog.searchPlaceholder": "Поиск по игре, функции или категории",
   "games.baccarat.description": "Punto Banco с burn/cut, ставками Player/Banker/Tie, ботами и историей дорог.",
