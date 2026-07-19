@@ -74,6 +74,78 @@ export function createActionId(randomUUID = globalThis.crypto?.randomUUID?.bind(
   return `ft-${randomUUID()}`;
 }
 
+// Retain one unresolved idempotency identity across an ambiguous request failure. (issue #261)
+let pendingRequestId = null;
+// Retain the exact immutable wager payload paired with the unresolved identity so a retry cannot resend a different body. (issue #261)
+let pendingPayload = null;
+// Retain the authenticated player that owned the unresolved identity so a later session cannot inherit it. (issue #261)
+let pendingPlayerId = null;
+
+// Read the authenticated player id from the shared shell session without trusting caller-controlled fields.
+function sessionPlayerId() {
+  // Return the current-user player id published by the shell, or null before authentication resolves.
+  return globalThis.CasinoCurrentUser?.player?.player_id || null;
+}
+
+// Return a stable canonical signature for one wager map so changed intent is detectable.
+function wagerSignature(source = {}) {
+  // Sort keys so equivalent wager maps always produce one identical signature.
+  return JSON.stringify(Object.keys(source || {}).sort().map(key => [key, source[key]]));
+}
+
+// Report whether a structured API error definitively resolves the pending action so it is safe to discard.
+function isDefinitiveRejection(error) {
+  // Treat validation, balance, auth, route, and conflict errors as non-ambiguous server responses.
+  return ['VALIDATION_ERROR', 'INSUFFICIENT_FUNDS', 'UNAUTHORIZED', 'FORBIDDEN', 'NOT_FOUND', 'CONFLICT'].includes(error?.code);
+}
+
+// Clear the unresolved request only after the backend proves its outcome or ownership changes.
+function clearPendingRequest() {
+  // Release the browser action identity.
+  pendingRequestId = null;
+  // Release the immutable wager snapshot.
+  pendingPayload = null;
+  // Release the authenticated owner paired with the action.
+  pendingPlayerId = null;
+}
+
+// Resolve the idempotency payload for one play, reusing the retained identity only for the identical player and wagers. (issue #261)
+function resolvePlayPayload(wagerMap) {
+  // Read the authenticated player that would own this action.
+  const playerId = sessionPlayerId();
+  // Reuse the frozen identity only when the same player resubmits the exact same immutable wager map after an ambiguous failure.
+  if (pendingPayload && pendingPlayerId && pendingPlayerId === playerId && wagerSignature(pendingPayload.wagers) === wagerSignature(wagerMap)) {
+    // Return the retained frozen payload for a safe exactly-once replay.
+    return pendingPayload;
+  }
+  // Mint a fresh identity for a new intent before any network work.
+  pendingRequestId = createActionId();
+  // Bind the authenticated owner so a later session cannot inherit this identity.
+  pendingPlayerId = playerId;
+  // Freeze the exact request body so a retry can never resend a different wager map.
+  pendingPayload = Object.freeze({ action_id: pendingRequestId, wagers: Object.freeze({ ...wagerMap }) });
+  // Return the frozen payload for the request.
+  return pendingPayload;
+}
+
+// Reconcile an unresolved identity against authoritative history and current ownership. (issue #261)
+function reconcilePendingRequest() {
+  // Read only authoritative recent settlements echoed with their action id from the current state payload.
+  const recentRounds = gameState.state?.recent_rounds || [];
+  // Clear a pending identity already proven settled by server history.
+  if (pendingRequestId && recentRounds.some(round => round?.action_id === pendingRequestId)) {
+    // Treat authoritative reconciliation as acknowledgement of the committed round.
+    clearPendingRequest();
+    // Stop after clearing the resolved identity.
+    return;
+  }
+  // Clear a pending identity that belongs to a different authenticated player in this tab.
+  if (pendingPlayerId && sessionPlayerId() && pendingPlayerId !== sessionPlayerId()) {
+    // Remove cross-session retry ownership without resending it.
+    clearPendingRequest();
+  }
+}
+
 // Schedule the counting reveal through a caller-owned reduced-motion timer scope.
 export function scheduleCount({ timerScope, onSettled, duration = COUNT_DURATION_MS }) {
   // Require the shared timer-scope interface rather than allocating an unmanaged timer.
@@ -109,7 +181,7 @@ function tokenAmount(value, translate = tx) {
 // Return localized markup for every residue wager input.
 function wagerControlsHtml(translate = tx) {
   // Render controls from backend metadata while retaining stable residue ordering.
-  return (gameState.outcomes || []).map(outcome => `<label class="fan-tan__bet"><span>${safe(translate('residue.label', { residue: outcome.residue }))} <small>${safe(translate('odds.net', { odds: outcome.net_odds }))}</small></span><input type="number" min="0" step="1" inputmode="decimal" data-wager="${safe(outcome.id)}" value="${safe(wagers[outcome.id] || '')}" aria-label="${safe(translate('wager.input', { residue: outcome.residue }))}"></label>`).join('');
+  return (gameState.outcomes || []).map(outcome => `<label class="fan-tan__bet"><span>${safe(translate('residue.label', { residue: outcome.residue }))} <small>${safe(translate('odds.net', { odds: outcome.net_odds }))}</small></span><input type="number" min="0" step="1" inputmode="decimal" data-wager="${safe(outcome.id)}" value="${safe(activeWagers()[outcome.id] || '')}" aria-label="${safe(translate('wager.input', { residue: outcome.residue }))}"></label>`).join('');
 }
 
 // Return localized paytable rows from the immutable backend catalog.
@@ -163,9 +235,17 @@ function render() {
 }
 
 // Load session-bound state from the additive v1 game endpoint.
+// Return the wager map currently in effect, locking to the immutable pending snapshot after an ambiguous failure. (issue #261)
+function activeWagers() {
+  // Prefer the frozen pending payload so a retry cannot submit a changed intent under the same identity.
+  return pendingPayload?.wagers || wagers;
+}
+
 async function load() {
   // Fetch only the authenticated player's state; shared routing supplies the binding.
   gameState = await api('/api/v1/games/fan-tan/state');
+  // Reconcile any unresolved retry identity against authoritative history and current ownership before rendering. (issue #261)
+  reconcilePendingRequest();
   // Restore the latest real result without inventing a default residue.
   latestRound = gameState.state?.recent_rounds?.length ? gameState.state.recent_rounds[gameState.state.recent_rounds.length - 1] : null;
   // Render after rules and history resources are available.
@@ -176,8 +256,8 @@ async function load() {
 async function play() {
   // Ignore duplicate clicks while the existing action identity is in flight.
   if (playPending) return;
-  // Require at least one positive local wager before contacting the ledger endpoint.
-  if (!Object.keys(wagers).length) {
+  // Require at least one positive wager (locked to the pending snapshot after an ambiguous failure) before contacting the ledger endpoint. (issue #261)
+  if (!Object.keys(activeWagers()).length) {
     // Show localized player guidance in the reserved error region.
     root.querySelector('[data-error]').textContent = tx('error.wagerRequired');
     // Stop without creating an idempotency identity or ledger request.
@@ -197,8 +277,12 @@ async function play() {
   const activeScope = motionScope;
   // Start protected API work so failures restore controls without leaked timers.
   try {
-    // Send a stable action identity and the complete wager map in one request.
-    const response = await post('/api/v1/games/fan-tan/rounds', { action_id: createActionId(), wagers });
+    // Resolve the frozen idempotency payload so a retry replays the exact same identity and immutable body. (issue #261)
+    const command = resolvePlayPayload(activeWagers());
+    // Send the retained action identity with its frozen wager snapshot, never the live mutable controls.
+    const response = await post('/api/v1/games/fan-tan/rounds', { action_id: command.action_id, wagers: command.wagers });
+    // Clear the retained identity only after the server has confirmed this round.
+    clearPendingRequest();
     // Stop presentation when shell navigation unmounted or replaced this route during the request.
     if (root !== mountedRoot || motionScope !== activeScope) return;
     // Store the authoritative settlement before starting decorative presentation.
@@ -213,6 +297,8 @@ async function play() {
   } catch (error) {
     // Ignore late failures after navigation because teardown already restored route ownership.
     if (root !== mountedRoot || motionScope !== activeScope) return;
+    // Discard the pending identity only when the server definitively resolved it; retain it after an ambiguous failure for a safe replay. (issue #261)
+    if (isDefinitiveRejection(error)) clearPendingRequest();
     // Restore the ready phase after a failed atomic request.
     phase = 'phase.ready';
     // Re-enable controls for a corrected request.
@@ -259,5 +345,7 @@ export const FanTanGame = {
     root = null;
     // Reset the in-flight guard because teardown cancelled presentation.
     playPending = false;
+    // Release any unresolved retry identity so a later mount or a different session cannot inherit it; remount reloads authoritative state. (issue #261)
+    clearPendingRequest();
   },
 };

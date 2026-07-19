@@ -22,8 +22,8 @@ Historical source baseline: 9.1.0
 - keno: 9.2.2
 - bingo: 9.2.1
 - multi_hand_video_poker: 1.0.1
-- casino_war: 1.0.0
-- big_six_wheel: 1.0.1
+- casino_war: 1.0.1
+- big_six_wheel: 1.0.2
 - red_dog: 1.0.0
 - dragon_tiger: 1.0.0
 - hi_lo: 1.0.0
@@ -34,10 +34,10 @@ Historical source baseline: 9.1.0
 - sic_bo: 1.0.0
 - chuck_a_luck: 1.0.0
 - craps: 1.0.0
-- crown_and_anchor: 1.0.0
-- over_under_7: 1.0.1
+- crown_and_anchor: 1.0.1
+- over_under_7: 1.0.2
 - plinko: 1.0.1
-- fan_tan: 1.0.0
+- fan_tan: 1.0.2
 - andar_bahar: 1.0.0
 - acey_deucey: 1.0.1
 - caribbean_stud: 1.0.1
@@ -45,8 +45,8 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.0
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.44.20
-- docs: 1.44.20
+- tests: 1.44.21
+- docs: 1.44.21
 - contracts: 1.32.0
 - tooling: 1.14.0
 - commenting_policy: 1.0.0
@@ -678,3 +678,5 @@ Historical source baseline: 9.1.0
 - **TEST-067** (Tests) - PASS: Browser evidence in both locales verifies the Over/Under 7 wager list and paytable share the net-odds convention with matching numeric odds and no unresolved placeholders, rejecting the former total-return multiplier copy.
 - **I18N-004** (Application) - PASS: The lobby Play buttons and hero eyebrow render localized shell strings from the active locale (no hardcoded English), so they participate in in-place language switching.
 - **TEST-069** (Tests) - PASS: Browser evidence proves the lobby renders localized Play buttons and hero eyebrow in en-US, switches to ru-RU through the visible control with all Play buttons and the eyebrow localized and no raw resource keys, and returns to en-US symmetrically.
+- **LEDGER-028** (Ledger) - PASS: Each idempotent game view binds its client idempotency identity to an immutable wager payload and the authenticated player, retains it across an ambiguous lost response so a retry replays the identical identity and body and settles exactly once, and clears it on definitive rejection, authoritative reconciliation, remount, or player change.
+- **TEST-070** (Tests) - PASS: Browser regression proves the lost-response idempotency guarantee: after the backend commits and the client sees a simulated lost response, a retry through the visible control resends the identical idempotency identity and immutable wager body, and the ledger records exactly one wager debit for the intended play.

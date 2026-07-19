@@ -1,17 +1,97 @@
 {
   "module": "fan_tan",
-  "version": "1.0.0",
-  "paths": ["casino/games/fan_tan/", "web/games/fan_tan.js", "web/i18n/en-US/games/fan_tan.json", "web/i18n/ru-RU/games/fan_tan.json"],
-  "requirements_prefixes": ["FAN-TAN"],
-  "contracts": ["contracts/openapi/fan_tan.v1.yaml"],
+  "version": "1.0.2",
+  "paths": [
+    "casino/games/fan_tan/",
+    "web/games/fan_tan.js",
+    "web/i18n/en-US/games/fan_tan.json",
+    "web/i18n/ru-RU/games/fan_tan.json"
+  ],
+  "requirements_prefixes": [
+    "FAN-TAN"
+  ],
+  "contracts": [
+    "contracts/openapi/fan_tan.v1.yaml"
+  ],
   "game": {
-    "id": "fan_tan", "sort_order": 240, "route": "/games/fan_tan", "label": "Fan-Tan", "category": "table", "categories": ["table", "numbers", "strategy"],
-    "backend": {"register": "casino.games.fan_tan.api:register"},
-    "frontend": {"module": "./games/fan_tan.js", "export": "FanTanGame", "ready_testid": "fan-tan", "i18n_domain": "games/fan_tan", "i18n_probe": "action.play"},
-    "tests": {"long_driver": "tests.game_drivers.fan_tan:play"},
-    "translations": {"ru-RU": {"label": "Фан-Тан", "kicker": "Подсчёт по четыре", "description": "Сделайте ставки на итоговый остаток при подсчёте закрытой кучки группами по четыре с расчётом через журнал игровых жетонов.", "tags": ["Стол", "Числа", "Стратегия", "Журнал жетонов"]}},
-    "lobby": {"featured": false, "wide": false, "art_class": "fan-tan-art", "symbol": "FT", "kicker": "Counted-pile classic", "description": "Bet on the final residue as a server-authoritative covered pile is counted in groups of four.", "tags": ["Table", "Numbers", "Strategy", "Ledger-backed"]}
+    "id": "fan_tan",
+    "sort_order": 240,
+    "route": "/games/fan_tan",
+    "label": "Fan-Tan",
+    "category": "table",
+    "categories": [
+      "table",
+      "numbers",
+      "strategy"
+    ],
+    "backend": {
+      "register": "casino.games.fan_tan.api:register"
+    },
+    "frontend": {
+      "module": "./games/fan_tan.js",
+      "export": "FanTanGame",
+      "ready_testid": "fan-tan",
+      "i18n_domain": "games/fan_tan",
+      "i18n_probe": "action.play"
+    },
+    "tests": {
+      "long_driver": "tests.game_drivers.fan_tan:play"
+    },
+    "translations": {
+      "ru-RU": {
+        "label": "\u0424\u0430\u043d-\u0422\u0430\u043d",
+        "kicker": "\u041f\u043e\u0434\u0441\u0447\u0451\u0442 \u043f\u043e \u0447\u0435\u0442\u044b\u0440\u0435",
+        "description": "\u0421\u0434\u0435\u043b\u0430\u0439\u0442\u0435 \u0441\u0442\u0430\u0432\u043a\u0438 \u043d\u0430 \u0438\u0442\u043e\u0433\u043e\u0432\u044b\u0439 \u043e\u0441\u0442\u0430\u0442\u043e\u043a \u043f\u0440\u0438 \u043f\u043e\u0434\u0441\u0447\u0451\u0442\u0435 \u0437\u0430\u043a\u0440\u044b\u0442\u043e\u0439 \u043a\u0443\u0447\u043a\u0438 \u0433\u0440\u0443\u043f\u043f\u0430\u043c\u0438 \u043f\u043e \u0447\u0435\u0442\u044b\u0440\u0435 \u0441 \u0440\u0430\u0441\u0447\u0451\u0442\u043e\u043c \u0447\u0435\u0440\u0435\u0437 \u0436\u0443\u0440\u043d\u0430\u043b \u0438\u0433\u0440\u043e\u0432\u044b\u0445 \u0436\u0435\u0442\u043e\u043d\u043e\u0432.",
+        "tags": [
+          "\u0421\u0442\u043e\u043b",
+          "\u0427\u0438\u0441\u043b\u0430",
+          "\u0421\u0442\u0440\u0430\u0442\u0435\u0433\u0438\u044f",
+          "\u0416\u0443\u0440\u043d\u0430\u043b \u0436\u0435\u0442\u043e\u043d\u043e\u0432"
+        ]
+      }
+    },
+    "lobby": {
+      "featured": false,
+      "wide": false,
+      "art_class": "fan-tan-art",
+      "symbol": "FT",
+      "kicker": "Counted-pile classic",
+      "description": "Bet on the final residue as a server-authoritative covered pile is counted in groups of four.",
+      "tags": [
+        "Table",
+        "Numbers",
+        "Strategy",
+        "Ledger-backed"
+      ]
+    }
   },
-  "depends_on": ["core", "ledger", "players"],
-  "may_not_depend_on": ["roulette", "slots", "blackjack", "baccarat", "keno", "bingo", "multi_hand_video_poker", "casino_war", "big_six_wheel", "red_dog", "dragon_tiger", "hi_lo", "three_card_poker", "jacks_or_better_video_poker", "deuces_wild_video_poker", "scratch_cards", "sic_bo", "chuck_a_luck", "craps", "crown_and_anchor", "over_under_7", "plinko"]
+  "depends_on": [
+    "core",
+    "ledger",
+    "players"
+  ],
+  "may_not_depend_on": [
+    "roulette",
+    "slots",
+    "blackjack",
+    "baccarat",
+    "keno",
+    "bingo",
+    "multi_hand_video_poker",
+    "casino_war",
+    "big_six_wheel",
+    "red_dog",
+    "dragon_tiger",
+    "hi_lo",
+    "three_card_poker",
+    "jacks_or_better_video_poker",
+    "deuces_wild_video_poker",
+    "scratch_cards",
+    "sic_bo",
+    "chuck_a_luck",
+    "craps",
+    "crown_and_anchor",
+    "over_under_7",
+    "plinko"
+  ]
 }

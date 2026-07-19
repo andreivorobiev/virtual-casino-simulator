@@ -8519,6 +8519,43 @@
       "introduced_in": "issue-236-lobby-play-eyebrow-localization",
       "changed_in": "issue-236-lobby-play-eyebrow-localization",
       "notes": "Issue #236 localized lobby Play/eyebrow browser proof."
+    },
+    {
+      "id": "LEDGER-028",
+      "module": "Ledger",
+      "description": "Each idempotent game view binds its client idempotency identity to an immutable wager payload and the authenticated player, retains it across an ambiguous lost response so a retry replays the identical identity and body and settles exactly once, and clears it on definitive rejection, authoritative reconciliation, remount, or player change.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-FAN-TAN-IDEMPOTENCY-001"
+      ],
+      "implementation_files": [
+        "web/games/fan_tan.js",
+        "web/games/big_six_wheel.js",
+        "web/games/crown_and_anchor.js",
+        "web/games/over_under_7.js",
+        "web/games/casino_war.js",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-261-idempotency-retry-keys",
+      "changed_in": "issue-261-idempotency-retry-keys",
+      "notes": "Issue #261: the identical immutable-payload and player-scoped retention pattern is applied across Fan-Tan, Big Six Wheel, Crown and Anchor, Over/Under 7, and Casino War deal and decide actions."
+    },
+    {
+      "id": "TEST-070",
+      "module": "Tests",
+      "description": "Browser regression proves the lost-response idempotency guarantee: after the backend commits and the client sees a simulated lost response, a retry through the visible control resends the identical idempotency identity and immutable wager body, and the ledger records exactly one wager debit for the intended play.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-FAN-TAN-IDEMPOTENCY-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-261-idempotency-retry-keys",
+      "changed_in": "issue-261-idempotency-retry-keys",
+      "notes": "Issue #261 lost-response exactly-once browser evidence for the retained-identity retry pattern."
     }
   ]
 }
