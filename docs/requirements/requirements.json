@@ -8485,6 +8485,40 @@
       "introduced_in": "issue-255-over-under-7-payout-convention",
       "changed_in": "issue-255-over-under-7-payout-convention",
       "notes": "Issue #255 localized browser proof for the single Over/Under 7 payout convention."
+    },
+    {
+      "id": "I18N-004",
+      "module": "Application",
+      "description": "The lobby Play buttons and hero eyebrow render localized shell strings from the active locale (no hardcoded English), so they participate in in-place language switching.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-LOBBY-001"
+      ],
+      "implementation_files": [
+        "web/app.js",
+        "web/i18n/en-US/shell.json",
+        "web/i18n/ru-RU/shell.json"
+      ],
+      "introduced_in": "issue-236-lobby-play-eyebrow-localization",
+      "changed_in": "issue-236-lobby-play-eyebrow-localization",
+      "notes": "Issue #236 (partial): remaining catalog/trust-rail localization stays open on #236."
+    },
+    {
+      "id": "TEST-069",
+      "module": "Tests",
+      "description": "Browser evidence proves the lobby renders localized Play buttons and hero eyebrow in en-US, switches to ru-RU through the visible control with all Play buttons and the eyebrow localized and no raw resource keys, and returns to en-US symmetrically.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-LOBBY-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-236-lobby-play-eyebrow-localization",
+      "changed_in": "issue-236-lobby-play-eyebrow-localization",
+      "notes": "Issue #236 localized lobby Play/eyebrow browser proof."
     }
   ]
 }

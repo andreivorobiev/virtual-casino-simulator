@@ -35,6 +35,8 @@
   "catalog.empty": "No games match these filters.",
   "catalog.galleryAria": "Games",
   "catalog.capacity": "{current} available · catalog ready for {target}",
+  "catalog.play": "Play",
+  "lobby.chooseTable": "Choose your table",
   "catalog.searchLabel": "Search games",
   "catalog.searchPlaceholder": "Search by game, feature, or category",
   "games.baccarat.description": "Punto Banco shoe with burn/cut behavior, Player/Banker/Tie bets, bots, and road history.",

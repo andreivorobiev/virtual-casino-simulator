@@ -2213,8 +2213,42 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     assert page.get_by_test_id('open-roulette').is_visible()
                     # Verify the catalog advertises the approved expansion capacity.
                     assert 'ready for 20' in page.get_by_test_id('catalog-capacity').inner_text()
+                    # Load the paired shell copy so localized lobby expectations stay sourced from canonical resources. (issue #236)
+                    lobby_shell_copy={loc:read_i18n_json(ROOT/'web'/'i18n'/loc/'shell.json') for loc in ('en-US','ru-RU')}
+                    # Prove the Play buttons and hero eyebrow render the localized strings, capturing EN/RU evidence without raw resource keys.
+                    def assert_lobby_localized(loc):
+                        # Resolve the canonical Play label and hero eyebrow phrase for this locale.
+                        play=lobby_shell_copy[loc]['catalog.play']; eyebrow=lobby_shell_copy[loc]['lobby.chooseTable']
+                        # Stabilize on the primary desktop viewport before reading the localized lobby copy.
+                        page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(80)
+                        # Read every catalog Play button label from the rendered cards.
+                        play_labels=[cell.strip() for cell in page.locator('.play-button').all_inner_texts()]
+                        # Require one Play button per game, each showing the localized label with no raw dotted resource keys.
+                        assert play_labels and all(play in label for label in play_labels) and all('catalog.play' not in label and 'lobby.chooseTable' not in label for label in play_labels)
+                        # Require the hero eyebrow to render the localized phrase rather than a hardcoded or key string.
+                        assert page.locator('.lobby-hero .eyebrow').inner_text().strip()==eyebrow
+                        # Capture governed after-pass evidence at the required desktop and mobile viewports and prove the cards stay reachable and unclipped.
+                        for viewport_id,width,height in (('desktop_primary',1920,1080),('mobile',390,844)):
+                            # Resize to the exact governed dimensions for this evidence capture.
+                            page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(80)
+                            # Reject horizontal overflow and require the localized Play control to remain visible.
+                            assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.locator('.play-button').first.is_visible()
+                            # Record self-describing localized lobby evidence for this locale and viewport.
+                            game_evidence(f'after-pass-shell-lobby-i18n-{loc.lower()}-{viewport_id}.png','shell_lobby',['authenticated'],loc,viewport_id)
+                        # Restore the primary desktop viewport before the next locale assertion.
+                        page.set_viewport_size({'width':1920,'height':1080})
+                    # Prove the English baseline renders localized lobby strings.
+                    assert_lobby_localized('en-US')
+                    # Switch to Russian through the visible shell control and prove the same surfaces localize symmetrically.
+                    page.get_by_test_id('shell-locale-select').select_option('ru-RU'); page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'ru-RU'")
+                    # Assert the Russian lobby localizes the Play buttons and hero eyebrow.
+                    assert_lobby_localized('ru-RU')
+                    # Return to English through the visible control and prove the localized strings switch back symmetrically.
+                    page.get_by_test_id('shell-locale-select').select_option('en-US'); page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'en-US'")
+                    # Confirm the English lobby copy is restored for downstream browser cases.
+                    assert_lobby_localized('en-US')
                 # Execute this statement as part of the module's documented control flow.
-                run_case('BR-LOBBY-001',['CORE-005','CORE-006','UX-008'],premium_lobby)
+                run_case('BR-LOBBY-001',['CORE-005','CORE-006','UX-008','I18N-004','TEST-069'],premium_lobby)
                 # Define catalog_navigation to cover search and category facets from module metadata.
                 def catalog_navigation():
                     # Filter by a game label through the visible search control.
