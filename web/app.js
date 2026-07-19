@@ -341,8 +341,8 @@ function renderNav() {
   const items = [`<button data-route="lobby" class="nav-item ${active === 'lobby' ? 'active' : ''}" data-testid="nav-lobby"><span class="nav-icon" aria-hidden="true">&#8962;</span>${safe(t('nav.lobby', {}, 'shell'))}</button>`];
   // Add one button per game so every game remains equally reachable.
   gameDescriptors.forEach(game => items.push(`<button data-route="${game.id}" class="nav-item ${active === game.id ? 'active' : ''}" data-testid="nav-${game.id}">${safe(game.label)}</button>`));
-  // Add the Admin route as a normal top-level shell affordance.
-  items.push(`<button data-admin="true" class="nav-item admin" data-testid="nav-admin">${safe(t('nav.admin', {}, 'shell'))}</button>`);
+  // Expose the Admin affordance only when the authenticated current-user contract carries the Admin role. (AUTH-008)
+  if (currentSession?.user?.role === 'admin') items.push(`<button data-admin="true" class="nav-item admin" data-testid="nav-admin">${safe(t('nav.admin', {}, 'shell'))}</button>`);
   // Replace the nav contents atomically so active state cannot drift.
   nav.innerHTML = items.join('');
   // Expose the bounded menu as one keyboard-focusable horizontal scroll region. (issue #221, CORE-006)
@@ -368,8 +368,10 @@ function renderNav() {
   revealActiveNav();
   // Wire every app route button to the shared navigate function.
   nav.querySelectorAll('[data-route]').forEach(button => { button.onclick = () => navigate(button.dataset.route); });
-  // Wire the Admin button to the existing dedicated Admin page.
-  nav.querySelector('[data-admin]').onclick = () => { location.href = '/admin'; };
+  // Read the optional Admin button after role-aware navigation rendering.
+  const adminButton = nav.querySelector('[data-admin]');
+  // Wire the protected Admin page only when the authenticated role exposed its affordance. (AUTH-008)
+  if (adminButton) adminButton.onclick = () => { location.href = '/admin'; };
 }
 
 // Render one status tile for the lobby trust rail.

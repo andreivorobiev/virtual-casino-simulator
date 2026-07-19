@@ -49,6 +49,9 @@ from casino.operations import register as register_operations
 # Import required dependency so this module can use its public functions or constants.
 from casino.core import autoplay
 
+# Keep development and browser-test Admin static protection aligned with the production WSGI adapter. (AUTH-008)
+ADMIN_STATIC_PATHS = frozenset({"/admin", "/admin.html", "/admin.js", "/web/admin.js"})
+
 # Define the build_router function used by this module.
 def build_router() -> Router:
     # Set router to the value needed for the next operation.
@@ -497,6 +500,20 @@ class Handler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         # Set path to the value needed for the next operation.
         path = parsed.path
+        # Enforce Admin authorization before reading any dedicated Admin HTML or JavaScript bytes. (AUTH-008)
+        if path in ADMIN_STATIC_PATHS:
+            # Start protected authentication so static authorization failures use the standard envelope.
+            try:
+                # Resolve the active browser session from the same cookie contract used by APIs.
+                _session, user = auth.authenticate_headers(self.headers)
+                # Reject normal players before the filesystem target is selected or read.
+                auth.require_admin(user)
+            # Convert missing, expired, or non-Admin sessions into the canonical public error response.
+            except CasinoError as error:
+                # Return no Admin bytes while preserving the standard failure-envelope contract.
+                self._send_json(error.status, {"ok": False, "error": {"code": error.code, "message": error.message, "details": error.details}})
+                # Stop static routing after the authorization boundary returns its response.
+                return
         # Branch when the following condition is true.
         if path in ("/", ""):
             # Set path to the value needed for the next operation.

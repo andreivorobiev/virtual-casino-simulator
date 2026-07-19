@@ -6,8 +6,8 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.38.4
-- core: 9.13.1
+- application: 9.38.5
+- core: 9.13.2
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.0
@@ -45,8 +45,8 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.0
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.44.13
-- docs: 1.44.13
+- tests: 1.44.14
+- docs: 1.44.14
 - contracts: 1.32.0
 - tooling: 1.14.0
 - commenting_policy: 1.0.0
@@ -633,6 +633,7 @@ Historical source baseline: 9.1.0
 - **SESSION-007** (Session) - PASS: Concurrent same-account logins create independent durable sessions that remain valid and never invalidate each other, bounded by a per-user cap with least-recently-used eviction and atomic session persistence that prevents lost writes, returning no 401 or 500 under concurrency.
 - **ADMIN-024** (Admin) - PASS: Admin HTML, JavaScript, and API surfaces require an active Admin session during restricted preview, and user privilege or status changes revoke existing sessions.
 - **AUTH-007** (Core) - PASS: Restricted preview exposes local-password login only; public signup and live OAuth authorization, callback, exchange, linking, SDK, and provider transport routes remain absent.
+- **AUTH-008** (Core) - PASS: The authenticated shared shell renders and keyboard-wires Admin navigation only for an authenticated Admin user; normal-player locale rerenders and restored game routes never expose the affordance, while direct Admin HTML and API access remain server-enforced.
 - **TEST-047** (Tests) - PASS: Permanent restricted-preview evidence covers configuration failure, Host and proxy abuse, Origin and CSRF enforcement, session and privilege rotation, cookie and header policy, Admin and disabled-access boundaries, concurrency, capacity recovery, redacted logging, copied production behavior, and exact listener cleanup.
 - **MYSQL-005** (MySQL) - PASS: MySQL schema changes use an explicit contiguous checksum-bound migration catalog, a deployment-only identity, a named target lock, proof-gated pre-DDL state, and durable applying or dirty markers that never claim transactional DDL rollback.
 - **STORAGE-007** (Storage) - PASS: The MySQL runtime identity performs application SELECT and DML only, verifies the exact clean migration version and checksums with read-only statements before startup, and fails closed on missing, old, future, gapped, dirty, or altered schema state.
@@ -658,3 +659,4 @@ Historical source baseline: 9.1.0
 - **TEST-057** (Tests) - PASS: Browser evidence verifies Blackjack settlement Net display includes insurance side-bet stake and payout movement.
 - **TEST-058** (Tests) - PASS: Browser validation covers immediate Slots line-bet correction, localized feedback, accessibility state, visible-cost synchronization, exact manual and autoplay payloads, real completed round behavior, responsive containment, and governed visual evidence.
 - **TEST-059** (Tests) - PASS: Browser evidence verifies Roulette's spinning settlement card uses player-facing progress copy and does not leak the old layout/debug text.
+- **TEST-060** (Tests) - PASS: Browser and API validation proves that normal players never receive the Admin navigation affordance after locale rerender or route restoration, direct Admin access remains forbidden, and authenticated Admin users retain responsive keyboard access with governed visual evidence.
