@@ -262,6 +262,10 @@ def register(router):
         state = load_player_game_state(GAME_ID, player_id, engine.default_state)
         # Set rnd to the value needed for the next operation.
         rnd = engine.get_round(state, round_id)
+        # Reject insurance once player action has ended or the dealer hole card is exposed. (BJ-020, LEDGER-015)
+        if rnd.get("status") != "player_turn" or not rnd.get("dealer", {}).get("hole_card_hidden"):
+            # Raise before any ledger mutation so revealed or settled rounds cannot create risk-free insurance returns.
+            raise ConflictError("Insurance is only available before the dealer hole card is revealed")
         # Branch when the following condition is true.
         if rnd.get("insurance"):
             # Raise an error so invalid input or state is reported explicitly.

@@ -642,7 +642,7 @@ flowchart LR
 | BJ-017 | Split aces one-card rule is enforced. | PASS |  |  |
 | BJ-018 | Late surrender setting is enforced. | PASS |  |  |
 | BJ-019 | Surrender credits half the wager. | PASS |  |  |
-| BJ-020 | Insurance is available only against dealer Ace. | PASS | API-BJ-001 |  |
+| BJ-020 | Insurance is available only during player turn against a visible dealer Ace while the dealer hole card remains hidden. | PASS | API-BJ-001, API-BJ-003 |  |
 | BJ-021 | Insurance cannot be bought more than once. | PASS | API-BJ-001 |  |
 | BJ-022 | Insurance maximum is half original wager. | PASS |  |  |
 | BJ-023 | Even money is available with player blackjack against dealer Ace. | PASS |  |  |
@@ -758,7 +758,7 @@ flowchart LR
 | LEDGER-012 | Blackjack initial deal debits immediately. | PASS | API-BJ-001 |  |
 | LEDGER-013 | Blackjack double down debits separately. | PASS | API-BJ-001 |  |
 | LEDGER-014 | Blackjack split debits separately. | PASS | API-BJ-001 |  |
-| LEDGER-015 | Blackjack insurance debits separately. | PASS | API-BJ-001 |  |
+| LEDGER-015 | Legal Blackjack insurance debits separately, while revealed or settled phase rejections do not mutate the ledger. | PASS | API-BJ-001, API-BJ-003 |  |
 | LEDGER-016 | Baccarat bet placement debits immediately. | PASS | API-BAC-001 |  |
 | LEDGER-017 | Baccarat bet cancellation credits refunds. | PASS | API-BAC-001 |  |
 | LEDGER-018 | Keno ticket purchase debits immediately. | PASS | API-KENO-001 |  |

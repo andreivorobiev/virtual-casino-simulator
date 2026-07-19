@@ -17,7 +17,7 @@ Historical source baseline: 9.1.0
 - operations: 1.0.0
 - roulette: 9.4.0
 - slots: 9.1.0
-- blackjack: 9.1.1
+- blackjack: 9.1.2
 - baccarat: 9.1.0
 - keno: 9.2.0
 - bingo: 9.2.0
@@ -45,8 +45,8 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.0
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.44.0
-- docs: 1.44.0
+- tests: 1.44.1
+- docs: 1.44.1
 - contracts: 1.32.0
 - tooling: 1.14.0
 - commenting_policy: 1.0.0
@@ -87,7 +87,7 @@ Historical source baseline: 9.1.0
 - **LEDGER-012** (Ledger) - PASS: Blackjack initial deal debits immediately.
 - **LEDGER-013** (Ledger) - PASS: Blackjack double down debits separately.
 - **LEDGER-014** (Ledger) - PASS: Blackjack split debits separately.
-- **LEDGER-015** (Ledger) - PASS: Blackjack insurance debits separately.
+- **LEDGER-015** (Ledger) - PASS: Legal Blackjack insurance debits separately, while revealed or settled phase rejections do not mutate the ledger.
 - **LEDGER-016** (Ledger) - PASS: Baccarat bet placement debits immediately.
 - **LEDGER-017** (Ledger) - PASS: Baccarat bet cancellation credits refunds.
 - **LEDGER-018** (Ledger) - PASS: Keno ticket purchase debits immediately.
@@ -209,7 +209,7 @@ Historical source baseline: 9.1.0
 - **BJ-017** (Blackjack) - PASS: Split aces one-card rule is enforced.
 - **BJ-018** (Blackjack) - PASS: Late surrender setting is enforced.
 - **BJ-019** (Blackjack) - PASS: Surrender credits half the wager.
-- **BJ-020** (Blackjack) - PASS: Insurance is available only against dealer Ace.
+- **BJ-020** (Blackjack) - PASS: Insurance is available only during player turn against a visible dealer Ace while the dealer hole card remains hidden.
 - **BJ-021** (Blackjack) - PASS: Insurance cannot be bought more than once.
 - **BJ-022** (Blackjack) - PASS: Insurance maximum is half original wager.
 - **BJ-023** (Blackjack) - PASS: Even money is available with player blackjack against dealer Ace.

@@ -488,17 +488,19 @@
     {
       "id": "LEDGER-015",
       "module": "Ledger",
-      "description": "Blackjack insurance debits separately.",
+      "description": "Legal Blackjack insurance debits separately, while revealed or settled phase rejections do not mutate the ledger.",
       "status": "PASS",
       "api_tests": [
-        "API-BJ-001"
+        "API-BJ-001",
+        "API-BJ-003"
       ],
       "browser_tests": [],
       "implementation_files": [
         "casino/core/ledger.py",
         "casino/core/players.py"
       ],
-      "notes": ""
+      "changed_in": "issue-244-blackjack-insurance-phase",
+      "notes": "Issue #244 verifies through real HTTP that rejected revealed or settled insurance attempts append no ledger event."
     },
     {
       "id": "LEDGER-016",
@@ -2425,10 +2427,11 @@
     {
       "id": "BJ-020",
       "module": "Blackjack",
-      "description": "Insurance is available only against dealer Ace.",
+      "description": "Insurance is available only during player turn against a visible dealer Ace while the dealer hole card remains hidden.",
       "status": "PASS",
       "api_tests": [
-        "API-BJ-001"
+        "API-BJ-001",
+        "API-BJ-003"
       ],
       "browser_tests": [],
       "implementation_files": [
@@ -2436,7 +2439,8 @@
         "casino/games/blackjack/api.py",
         "web/games/blackjack.js"
       ],
-      "notes": ""
+      "changed_in": "issue-244-blackjack-insurance-phase",
+      "notes": "Issue #244 adds a pre-debit phase guard and real-HTTP regression for revealed and settled rounds."
     },
     {
       "id": "BJ-021",
