@@ -87,7 +87,7 @@ button.danger {
 
 input,
 select {
-  min-height: 40px;
+  min-height: 42px;
   padding: 8px 10px;
   border: 1px solid var(--border-soft);
   border-radius: 10px;
@@ -732,10 +732,9 @@ label {
 
 .catalog-categories {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   min-width: 0;
-  overflow-x: auto;
-  scrollbar-width: thin;
 }
 
 .catalog-category {
@@ -2397,6 +2396,17 @@ h3 {
 
   .status-bar .status-item:nth-child(1) {
     display: none;
+  }
+
+  .status-bar {
+    gap: 12px;
+    padding: 0 14px;
+  }
+
+  .status-item > span:last-child {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .trust-rail {

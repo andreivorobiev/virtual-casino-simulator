@@ -6,17 +6,17 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.38.7
+- application: 9.38.8
 - core: 9.13.3
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.0
 - autoplay: 1.1.2
 - audio: 9.1.1
-- admin: 1.6.0
+- admin: 1.6.1
 - operations: 1.0.0
-- roulette: 9.4.2
-- slots: 9.1.2
+- roulette: 9.4.3
+- slots: 9.1.3
 - blackjack: 9.1.3
 - baccarat: 9.1.2
 - keno: 9.2.2
