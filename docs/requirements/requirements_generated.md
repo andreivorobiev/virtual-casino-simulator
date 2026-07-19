@@ -19,7 +19,7 @@ Historical source baseline: 9.1.0
 - slots: 9.1.1
 - blackjack: 9.1.3
 - baccarat: 9.1.1
-- keno: 9.2.0
+- keno: 9.2.1
 - bingo: 9.2.1
 - multi_hand_video_poker: 1.0.1
 - casino_war: 1.0.0
@@ -45,8 +45,8 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.0
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.44.9
-- docs: 1.44.9
+- tests: 1.44.10
+- docs: 1.44.10
 - contracts: 1.32.0
 - tooling: 1.14.0
 - commenting_policy: 1.0.0
@@ -268,6 +268,7 @@ Historical source baseline: 9.1.0
 - **KENO-020** (Keno) - PASS: Keno writes history rows.
 - **KENO-021** (Keno) - SUPERSEDED: Keno remains fake-money only.
 - **KENO-022** (Keno) - PASS: Keno browser tests avoid ambiguous text selectors.
+- **KENO-023** (Keno) - PASS: Keno history rows constrain long draw IDs so they do not overlap the result summary.
 - **BINGO-001** (Bingo) - PASS: Bingo uses 75-ball American rules.
 - **BINGO-002** (Bingo) - PASS: Bingo card has B column 1-15.
 - **BINGO-003** (Bingo) - PASS: Bingo card has I column 16-30.

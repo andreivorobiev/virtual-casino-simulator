@@ -4265,12 +4265,16 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     assert page.get_by_test_id('keno-paytable-comparison').is_visible(); assert page.get_by_test_id('keno-paytable-active').is_visible()
                     # Verify ticket, bot, autoplay, and history surfaces remain mounted.
                     assert page.get_by_test_id('keno-ticket-drawer').is_visible(); assert page.get_by_test_id('keno-bot-panel').is_visible(); assert page.get_by_test_id('autoplay-keno').is_visible(); assert page.get_by_test_id('keno-history').is_visible()
+                    # Read the rendered history id text style so the overlap fix is verified in the live browser. (KENO-023)
+                    keno_history_text_style=page.evaluate("""() => { const span = document.querySelector('[data-testid="keno-history"] .keno-history-row span'); if (!span) return null; const style = getComputedStyle(span); return { minWidth: style.minWidth, overflow: style.overflow, textOverflow: style.textOverflow, whiteSpace: style.whiteSpace }; }""")
+                    # Require long draw IDs to stay inside their grid track instead of crossing the summary column.
+                    assert keno_history_text_style and keno_history_text_style['minWidth']=='0px' and keno_history_text_style['overflow']=='hidden' and keno_history_text_style['textOverflow']=='ellipsis' and keno_history_text_style['whiteSpace']=='nowrap'
                     # Verify the board width remains stable from selection to draw progress.
                     assert abs(keno_selection_box['width']-keno_progress_box['width'])<2
                     # Verify the board height remains stable from selection to final result.
                     assert abs(keno_selection_box['height']-keno_result_box['height'])<2
                 # Execute this statement as part of the module's documented control flow.
-                run_case('BR-KENO-001',['KENO-009','KENO-010','KENO-011','KENO-012','KENO-013','KENO-014','KENO-015','KENO-018','KENO-020','KENO-021','KENO-022','AUTO-012','UX-007','UX-009'],premium_keno)
+                run_case('BR-KENO-001',['KENO-009','KENO-010','KENO-011','KENO-012','KENO-013','KENO-014','KENO-015','KENO-018','KENO-020','KENO-021','KENO-022','KENO-023','AUTO-012','UX-007','UX-009'],premium_keno)
                 # Resize to the governed mobile viewport for Keno containment coverage.
                 page.set_viewport_size({'width':390,'height':844}); page.wait_for_timeout(300)
                 # Read page and intended board-scroll widths at the exact evaluator viewport.

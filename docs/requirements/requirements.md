@@ -741,6 +741,7 @@ flowchart LR
 | KENO-020 | Keno writes history rows. | PASS | API-KENO-001 | BR-KENO-001 |
 | KENO-021 | Keno remains fake-money only. | PASS |  | BR-KENO-001 |
 | KENO-022 | Keno browser tests avoid ambiguous text selectors. | PASS |  | BR-KENO-001 |
+| KENO-023 | Keno history rows constrain long draw IDs so they do not overlap the result summary. | PASS |  | BR-KENO-001 |
 
 ### Ledger
 

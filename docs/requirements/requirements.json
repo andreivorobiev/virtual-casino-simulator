@@ -3389,6 +3389,23 @@
       "notes": ""
     },
     {
+      "id": "KENO-023",
+      "module": "Keno",
+      "description": "Keno history rows constrain long draw IDs so they do not overlap the result summary.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-KENO-001"
+      ],
+      "implementation_files": [
+        "web/games/keno.js",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-238-keno-history-overflow",
+      "changed_in": "issue-238-keno-history-overflow",
+      "notes": "Browser evidence verifies the history row text column uses hidden overflow, ellipsis, nowrap, and min-width containment."
+    },
+    {
       "id": "BINGO-001",
       "module": "Bingo",
       "description": "Bingo uses 75-ball American rules.",
