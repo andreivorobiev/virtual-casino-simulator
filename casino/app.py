@@ -28,6 +28,8 @@ from casino.config import DEFAULT_HOST, DEFAULT_PORT, WEB_DIR, DATA_DIR, APP_VER
 from casino.router import Router
 # Import required dependency so this module can use its public functions or constants.
 from casino.errors import CasinoError, ForbiddenError, ValidationError
+# Import strict JSON-number handling shared with the production WSGI adapter.
+from casino.core.validation import reject_nonfinite_json_constant
 # Import required dependency so this module can use its public functions or constants.
 from casino.core.state_store import ensure_dirs, migrate_from_v7_if_needed
 # Import required dependency so this module can bootstrap whichever storage provider is configured.
@@ -373,9 +375,9 @@ class Handler(BaseHTTPRequestHandler):
         # Start protected logic so failures can be handled safely.
         try:
             # Return the computed value to the caller.
-            return json.loads(raw.decode("utf-8"))
+            return json.loads(raw.decode("utf-8"), parse_constant=reject_nonfinite_json_constant)
         # Handle the expected failure path for the protected logic.
-        except Exception:
+        except (UnicodeDecodeError, json.JSONDecodeError):
             # Return the computed value to the caller.
             return {"_raw": raw.decode("utf-8", errors="replace")}
 

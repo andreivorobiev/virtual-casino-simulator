@@ -7,8 +7,8 @@ Historical source baseline: 9.1.0
 ## Independent module revisions
 
 - application: 9.38.0
-- core: 9.13.0
-- ledger: 9.1.0
+- core: 9.13.1
+- ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.0
 - autoplay: 1.1.1
@@ -21,7 +21,7 @@ Historical source baseline: 9.1.0
 - baccarat: 9.1.0
 - keno: 9.2.0
 - bingo: 9.2.0
-- multi_hand_video_poker: 1.0.0
+- multi_hand_video_poker: 1.0.1
 - casino_war: 1.0.0
 - big_six_wheel: 1.0.0
 - red_dog: 1.0.0
@@ -45,8 +45,8 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.0
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.43.0
-- docs: 1.43.0
+- tests: 1.44.0
+- docs: 1.44.0
 - contracts: 1.32.0
 - tooling: 1.14.0
 - commenting_policy: 1.0.0
@@ -645,3 +645,7 @@ Historical source baseline: 9.1.0
 - **TOOL-006** (Tooling) - PASS: Documentation generation deterministically inventories every tracked or non-ignored Markdown file, updates the bounded root catalog, and fails check mode when the catalog or generated requirements are stale.
 - **DOC-018** (Documentation) - PASS: The repository defines a durable Claude-author/Codex-merge operating model in which Claude composes assigned pull requests and Codex alone reviews integration gates and executes every merge without bypassing owner authority.
 - **TEST-054** (Tests) - PASS: Blackjack natural-payout regression evidence covers deterministic engine and API outcomes, the rendered decline-even-money path, wallet and ledger accounting, configured payout variants, dealer multi-card 21, split-hand exclusion, and repeat-settlement refusal.
+- **CORE-025** (Core) - PASS: Development and production HTTP adapters reject non-standard non-finite JSON numbers before route dispatch, while shared client amount validation rejects decoded and string NaN or infinity before rounding and bounds checks.
+- **LEDGER-027** (Ledger) - PASS: Every public signed, debit, credit, and idempotent ledger entry point rejects non-finite amounts before selecting a storage provider, and JSON persistence refuses non-standard numeric constants before atomic replacement or append.
+- **MHVP-006** (Multi-Hand Video Poker) - PASS: Multi-Hand Video Poker rejects decoded and string non-finite wager-per-hand values before round construction, state persistence, aggregate debit, or payout handling.
+- **TEST-055** (Tests) - PASS: Non-finite money regression evidence covers all six numeric and string NaN or infinity forms, every affected game API, both HTTP adapters, every public ledger entry point, unchanged wallet, ledger, and game state, strict player JSON persistence, and exact loopback listener cleanup.

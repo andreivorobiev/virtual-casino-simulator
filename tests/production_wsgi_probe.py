@@ -24,9 +24,9 @@ ORIGIN = "https://casino.example.invalid"
 
 
 # Call the WSGI adapter directly without creating any network listener.
-def request(method: str, path: str, body=None, headers=None, content_length=None):
-    # Encode a supplied JSON body exactly once for the WSGI input stream.
-    payload = b"" if body is None else json.dumps(body).encode("utf-8")
+def request(method: str, path: str, body=None, headers=None, content_length=None, raw_body: bytes | None = None):
+    # Prefer exact hostile bytes when a parser-boundary test supplies them.
+    payload = raw_body if raw_body is not None else (b"" if body is None else json.dumps(body).encode("utf-8"))
     # Split the application path from its optional query string.
     path_info, _, query_string = path.partition("?")
     # Build the minimum standards-compliant WSGI environment for one direct request.
@@ -57,7 +57,7 @@ def request(method: str, path: str, body=None, headers=None, content_length=None
         "wsgi.url_scheme": "http",
     }
     # Add a content type only when the request carries a JSON body.
-    if body is not None:
+    if body is not None or raw_body is not None:
         # Match the API's declared JSON request media type.
         environ["CONTENT_TYPE"] = "application/json"
     # Use an explicit test value when malformed length behavior is under test.
@@ -160,6 +160,17 @@ malformed_payload = json.loads(malformed["body"].decode("utf-8"))
 assert malformed_payload["error"]["code"] == "VALIDATION_ERROR"
 # Ensure the malformed value never appears in the response body.
 assert b"not-a-number" not in malformed["body"]
+
+# Send a non-standard NaN token through the production JSON parser boundary. (CORE-025, TEST-055)
+nonfinite = request("POST", "/api/v1/games/roulette/bets", headers={"Authorization": f"Bearer {token}"}, raw_body=b'{"amount":NaN,"bet_type":"red","covered_numbers":[]}')
+# Require the parser to reject before route handling or wallet access.
+assert nonfinite["status"] == "400 Bad Request"
+# Parse the standard error envelope returned by the WSGI application.
+nonfinite_payload = json.loads(nonfinite["body"].decode("utf-8"))
+# Require the shared validation code and fixed non-reflective diagnostic.
+assert nonfinite_payload["error"]["code"] == "VALIDATION_ERROR" and nonfinite_payload["error"]["message"] == "JSON numbers must be finite"
+# Ensure the hostile numeric spelling is not reflected in the public response.
+assert b"NaN" not in nonfinite["body"]
 
 # Serve the packaged frontend through the same direct adapter without a listener.
 frontend = request("GET", "/")

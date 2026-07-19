@@ -1,56 +1,62 @@
 # AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
 # Import required dependency so this module can use the configured storage provider.
 from casino.core.storage import get_storage_provider
+# Import the shared finite-number boundary before storage provider access.
+from casino.core.validation import require_finite_number
 # Import required dependency so this module can use its public functions or constants.
 from casino.errors import ValidationError
 
+
+# Normalize one signed ledger amount before any provider or wallet access. (LEDGER-027)
+def _normalize_amount(amount) -> float:
+    # Convert and reject NaN or infinity before applying ledger precision.
+    normalized = round(require_finite_number(amount, field="Ledger transaction amount"), 2)
+    # Reject zero-value events so every ledger row has financial meaning.
+    if normalized == 0:
+        # Preserve the established public validation diagnostic.
+        raise ValidationError("Ledger transaction amount cannot be zero")
+    # Return the finite signed amount used by every public entry point.
+    return normalized
+
 # Define the transact function used by this module.
 def transact(player_id: str, amount: float, transaction_type: str, game: str | None = None, round_id: str | None = None, details: dict | None = None) -> dict:
-    # Set amount to the value needed for the next operation.
-    amount = round(float(amount), 2)
-    # Branch when the following condition is true.
-    if amount == 0:
-        # Raise an error so invalid input or state is reported explicitly.
-        raise ValidationError("Ledger transaction amount cannot be zero")
+    # Normalize the finite signed amount before selecting a storage provider. (LEDGER-027)
+    amount = _normalize_amount(amount)
     # Return the provider-managed ledger event so balance and event writes are atomic where supported.
     return get_storage_provider().transact_ledger(player_id, amount, transaction_type, game, round_id, details)
 
 # Execute or replay one storage-enforced money action identity.
 def transact_once(player_id: str, amount: float, transaction_type: str, action_key: str, game: str | None = None, round_id: str | None = None, details: dict | None = None) -> tuple[dict, bool]:
-    # Normalize the amount before the provider computes its semantic fingerprint.
-    amount = round(float(amount), 2)
-    # Reject zero-value actions before opening a storage transaction.
-    if amount == 0:
-        # Raise the standard ledger validation error.
-        raise ValidationError("Ledger transaction amount cannot be zero")
+    # Normalize the finite signed amount before selecting a storage provider. (LEDGER-027)
+    amount = _normalize_amount(amount)
     # Return the provider-owned event and replay marker from one atomic action transaction.
     return get_storage_provider().transact_ledger_once(player_id, amount, transaction_type, action_key, game, round_id, details)
 
 # Define the debit function used by this module.
 def debit(player_id: str, amount: float, transaction_type: str, game: str | None = None, round_id: str | None = None, details: dict | None = None) -> dict:
-    # Set amount to the value needed for the next operation.
-    amount = abs(float(amount))
+    # Normalize the finite magnitude before applying the debit sign. (LEDGER-027)
+    amount = abs(_normalize_amount(amount))
     # Return the computed value to the caller.
     return transact(player_id, -amount, transaction_type, game, round_id, details)
 
 # Debit or replay one storage-enforced money action identity.
 def debit_once(player_id: str, amount: float, transaction_type: str, action_key: str, game: str | None = None, round_id: str | None = None, details: dict | None = None) -> tuple[dict, bool]:
-    # Normalize caller input to a positive magnitude before applying debit sign.
-    amount = abs(float(amount))
+    # Normalize the finite magnitude before applying the debit sign. (LEDGER-027)
+    amount = abs(_normalize_amount(amount))
     # Execute the action with a negative signed amount.
     return transact_once(player_id, -amount, transaction_type, action_key, game, round_id, details)
 
 # Define the credit function used by this module.
 def credit(player_id: str, amount: float, transaction_type: str, game: str | None = None, round_id: str | None = None, details: dict | None = None) -> dict:
-    # Set amount to the value needed for the next operation.
-    amount = abs(float(amount))
+    # Normalize the finite magnitude before applying credit semantics. (LEDGER-027)
+    amount = abs(_normalize_amount(amount))
     # Return the computed value to the caller.
     return transact(player_id, amount, transaction_type, game, round_id, details)
 
 # Credit or replay one storage-enforced money action identity.
 def credit_once(player_id: str, amount: float, transaction_type: str, action_key: str, game: str | None = None, round_id: str | None = None, details: dict | None = None) -> tuple[dict, bool]:
-    # Normalize caller input to a positive magnitude before applying credit sign.
-    amount = abs(float(amount))
+    # Normalize the finite magnitude before applying credit semantics. (LEDGER-027)
+    amount = abs(_normalize_amount(amount))
     # Execute the action with a positive signed amount.
     return transact_once(player_id, amount, transaction_type, action_key, game, round_id, details)
 

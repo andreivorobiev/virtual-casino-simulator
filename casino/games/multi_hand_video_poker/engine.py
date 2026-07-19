@@ -10,6 +10,8 @@ import random
 from casino.core.cards import create_deck, shuffle_cards
 # Import the shared standard five-card evaluator from the merged #96 lane.
 from casino.core.poker import RANK_VALUES, evaluate_five
+# Import shared finite-number validation for the game-local wager field.
+from casino.core.validation import require_finite_number
 # Import the game-local validation error shape used by API callers.
 from casino.errors import ConflictError, ValidationError
 
@@ -64,14 +66,8 @@ def require_hand_count(value) -> int:
 
 # Normalize the wager applied independently to every generated hand.
 def require_wager_per_hand(value) -> float:
-    # Convert incoming numbers while rejecting missing or malformed values.
-    try:
-        # Round play-token wagers to the ledger's two-decimal precision.
-        wager = round(float(value), 2)
-    # Convert all parsing failures into the public validation error shape.
-    except (TypeError, ValueError):
-        # Explain the game-specific wager field instead of a generic amount field.
-        raise ValidationError("wager_per_hand must be numeric")
+    # Convert and reject non-finite inputs before rounding or bounds checks. (MHVP-006)
+    wager = round(require_finite_number(value, field="wager_per_hand"), 2)
     # Require a positive ledger-compatible wager.
     if wager < 0.01:
         # Match the ledger's minimum non-zero transaction precision.
