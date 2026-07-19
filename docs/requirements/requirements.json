@@ -4695,11 +4695,12 @@
         "tests/release_artifact_tests.py",
         "docs/release_artifacts.md",
         "contracts/compatibility/app-9.2.0.json",
-        "contracts/compatibility/app-9.3.0.json"
+        "contracts/compatibility/app-9.3.0.json",
+        "contracts/compatibility/app-9.4.0.json"
       ],
       "introduced_in": "9.2.0",
-      "changed_in": "9.3.0",
-      "notes": "Branch and ordinary manual candidates remain unpublished. A one-time owner-dispatched protected-main recovery may rebuild exact pre-bump commit 832c067596e44375217514c1cf28f9e5352abd4b twice and create a non-latest v9.2.0 predecessor only when no tag or Release exists; it has no overwrite or deletion path. Normal v9.3.0 publication still requires the verified retained predecessor manifest and the protected release gates. Rollback is application-only and never reverses the MySQL schema."
+      "changed_in": "9.4.0",
+      "notes": "Branch and ordinary manual candidates remain unpublished. The historical one-time owner-dispatched recovery created the retained v9.2.0 predecessor without overwrite or deletion paths. Normal v9.4.0 publication requires the verified retained v9.3.0 predecessor manifest and the protected release gates. Rollback is application-only and never reverses the MySQL schema."
     },
     {
       "id": "BOT-001",

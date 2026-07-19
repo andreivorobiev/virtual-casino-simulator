@@ -1,6 +1,6 @@
 # Virtual Casino Simulator
 
-Packaged application release: `9.3.0`
+Packaged application release: `9.4.0`
 
 Historical source baseline: `9.1.0`
 
@@ -8,7 +8,7 @@ Local play-token browser casino simulator with Roulette, Slots, Blackjack, Bacca
 
 ## Current repository status
 
-This repository has advanced beyond the original v9.1.1 bootstrap snapshot. Packaged release v9.3.0 assembles the accepted production adapter, restricted-preview security, explicit migration, encrypted recovery, and inert edge-preparation gates for manual-invite testing. Deployment and public exposure remain separately gated, while independently versioned modules continue to record compatible source changes. Current module revisions and requirement status are recorded in the canonical manifests and generated requirements document.
+This repository has advanced beyond the original v9.1.1 bootstrap snapshot. Packaged release v9.4.0 retains the accepted private-invite production, security, migration, recovery, and edge gates while adding the compatible gameplay-correctness, retry-safety, responsive-interface, localization, and static-cache improvements merged after v9.3.0. Deployment and public exposure remain separately gated, while independently versioned modules continue to record compatible source changes. Current module revisions and requirement status are recorded in the canonical manifests and generated requirements document.
 
 ## Version sources
 

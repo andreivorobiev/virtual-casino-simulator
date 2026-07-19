@@ -45,7 +45,7 @@ The one-time `bootstrap-v9.2.0-predecessor` workflow-dispatch action exists only
 
 The workflow refuses any existing v9.2.0 tag or draft, prerelease, or published Release. It checks out the predecessor by full commit, rebuilds the tagged candidate twice, compares every original asset byte-for-byte, independently verifies the archive and manifest, and creates a checksum-bound recovery receipt naming the exact successor. Only then may it create and verify a draft and publish it as a non-latest retained Release. No upload-after-create, overwrite, clobber, deletion, direct tag push, or non-protected-branch recovery path exists.
 
-The recovered v9.2.0 manifest is intentionally not rollback-eligible itself because no earlier retained artifact exists. It preserves exact MySQL schema-v2 compatibility and explicitly excludes database rollback. Its retained manifest then supplies the application-only predecessor required by the ordinary protected v9.3.0 release-event workflow.
+The recovered v9.2.0 manifest is intentionally not rollback-eligible itself because no earlier retained artifact exists. It preserves exact MySQL schema-v2 compatibility and explicitly excludes database rollback. Its retained manifest supplied the application-only predecessor for v9.3.0; each later ordinary protected release consumes the retained manifest for its immediate predecessor.
 
 ## Application-only rollback
 
@@ -67,10 +67,10 @@ Verify existing assets without rebuilding:
 python scripts/package_app.py --verify-only --archive dist/virtual_casino_simulator_package.zip --manifest dist/release-manifest.json
 ```
 
-Build a canonical tagged v9.3.0 candidate with the retained immediate v9.2.0 rollback manifest:
+Build a canonical tagged v9.4.0 candidate with the retained immediate v9.3.0 rollback manifest:
 
 ```powershell
-python scripts/make_release.py --release-tag v9.3.0 --previous-manifest previous/release-manifest.json
+python scripts/make_release.py --release-tag v9.4.0 --previous-manifest previous/release-manifest.json
 ```
 
-For v9.3.0, `previous/release-manifest.json` must be the checksum-verified retained v9.2.0 release manifest. The resulting pointer authorizes application-artifact rollback only; it neither rolls back MySQL schema version 2 nor permits deployment, edge activation, or public exposure.
+For v9.4.0, `previous/release-manifest.json` must be the checksum-verified retained v9.3.0 release manifest. The resulting pointer authorizes application-artifact rollback only; it neither rolls back MySQL schema version 2 nor permits deployment, edge activation, or public exposure. The protected v9.2.0 predecessor-recovery path remains a historical, one-time bootstrap control and is not used for ordinary v9.4.0 publication.
