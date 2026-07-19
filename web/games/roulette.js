@@ -885,7 +885,7 @@ function historyPillsHtml(stats) {
 // Render the settlement or pending drawer card.
 function settlementCardHtml() {
   // Branch while a spin is waiting for the pocket reveal.
-  if (uiPhase === 'spinning') return `<div class="roulette-settlement-card" data-testid="roulette-settlement-card"><b>${text('settlement.waiting')}</b><span>${text('settlement.noResize')}</span></div>`;
+  if (uiPhase === 'spinning') return `<div class="roulette-settlement-card" data-testid="roulette-settlement-card"><b>${text('settlement.waiting')}</b><span>${text('status.spinning')}</span></div>`;
   // Branch after a settled spin.
   if (uiPhase === 'settled') return `<div class="roulette-settlement-card" data-testid="roulette-settlement-card"><b>${text('settlement.humanNet')}</b><span>${signedTokenMoney(lastHumanNet)}</span></div>`;
   // Return an empty string when the bet slip owns the drawer.

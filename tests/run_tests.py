@@ -3965,6 +3965,14 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 assert 'spinning' in (page.get_by_test_id('roulette-rotor').get_attribute('class') or '')
                 # Verify the ball is still in its animated reveal phase.
                 assert 'spinning' in (page.get_by_test_id('roulette-ball').get_attribute('class') or '')
+                # Read the spinning-state settlement card before the timed settlement rerender can replace it. (ROU-058, TEST-059)
+                roulette_spinning_settlement_text=page.get_by_test_id('roulette-settlement-card').inner_text()
+                # Define the player-facing spinning copy regression for issue #234.
+                def roulette_spinning_settlement_copy():
+                    # Require the live card to show localized progress language instead of the old layout/debug note.
+                    assert ('Spin in progress' in roulette_spinning_settlement_text or 'Спин выполняется' in roulette_spinning_settlement_text) and 'No layout resize' not in roulette_spinning_settlement_text and 'Макет не меняет размер' not in roulette_spinning_settlement_text
+                # Record the focused Roulette spinning-copy browser assertion.
+                run_case('BR-ROU-SPINNING-COPY-001',['ROU-058','TEST-059'],roulette_spinning_settlement_copy)
                 # Capture the locked spinning state before the backend result is presented.
                 viewport_shot('roulette-premium-spinning.png')
                 # Wait for the fixed result region to reach the settled phase.

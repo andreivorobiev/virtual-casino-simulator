@@ -15,7 +15,7 @@ Historical source baseline: 9.1.0
 - audio: 9.1.1
 - admin: 1.6.0
 - operations: 1.0.0
-- roulette: 9.4.0
+- roulette: 9.4.1
 - slots: 9.1.1
 - blackjack: 9.1.3
 - baccarat: 9.1.1
@@ -45,8 +45,8 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.0
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.44.12
-- docs: 1.44.12
+- tests: 1.44.13
+- docs: 1.44.13
 - contracts: 1.32.0
 - tooling: 1.14.0
 - commenting_policy: 1.0.0
@@ -398,6 +398,7 @@ Historical source baseline: 9.1.0
 - **ROU-055** (Roulette) - PASS: Roulette ball indicator uses the selected pocket when a result exists.
 - **ROU-056** (Roulette) - PASS: Roulette sound settings are not rendered on the Roulette page.
 - **ROU-057** (Roulette) - PASS: Every Roulette bet cell carries a stable hit-target identity across re-renders; activating a cell posts the exact bet_type and covered numbers it represents (for example 2nd 12 covers 13-24), verified on the client before the wager posts so a re-render can never map a click to a different betting region.
+- **ROU-058** (Roulette) - PASS: Roulette's spinning settlement card shows player-facing spin progress copy instead of an internal layout/debug note.
 - **UX-001** (UX) - PASS: Game stages reserve fixed visual areas during normal gameplay.
 - **UX-002** (UX) - PASS: Action rails remain stable while actions execute.
 - **UX-003** (UX) - PASS: Result messages render in fixed-height regions.
@@ -656,3 +657,4 @@ Historical source baseline: 9.1.0
 - **TEST-056** (Tests) - PASS: Blackjack insurance phase regression evidence covers settled and exposed-round conflicts, unchanged wallet, ledger, and round state on rejection, preserved legal insurance debit behavior, and exact loopback listener cleanup.
 - **TEST-057** (Tests) - PASS: Browser evidence verifies Blackjack settlement Net display includes insurance side-bet stake and payout movement.
 - **TEST-058** (Tests) - PASS: Browser validation covers immediate Slots line-bet correction, localized feedback, accessibility state, visible-cost synchronization, exact manual and autoplay payloads, real completed round behavior, responsive containment, and governed visual evidence.
+- **TEST-059** (Tests) - PASS: Browser evidence verifies Roulette's spinning settlement card uses player-facing progress copy and does not leak the old layout/debug text.
