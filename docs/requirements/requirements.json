@@ -4945,31 +4945,37 @@
       "api_tests": [
         "API-CONTROL-001"
       ],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-AUTO-START-FAIL-001"
+      ],
       "implementation_files": [
         "casino/core/autoplay.py",
         "web/core/autoplay.js"
       ],
       "introduced_in": "9.1.0",
-      "changed_in": "9.1.0",
-      "notes": "Introduced in v9.1.0."
+      "changed_in": "9.3.0",
+      "notes": "A rejected server registration returns the shared client controller to idle before any game tick can start."
     },
     {
       "id": "AUTO-002",
       "module": "Autoplay",
-      "description": "Every autoplay run has an autoplay_id.",
+      "description": "Every client autoplay run is registered first and has an autoplay_id; rejected registration schedules no game action.",
       "status": "PASS",
       "api_tests": [
         "API-CONTROL-001"
       ],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-AUTO-START-FAIL-001"
+      ],
       "implementation_files": [
         "casino/core/autoplay.py",
-        "web/core/autoplay.js"
+        "web/core/autoplay.js",
+        "web/i18n/en-US/common.json",
+        "web/i18n/ru-RU/common.json"
       ],
       "introduced_in": "9.1.0",
-      "changed_in": "9.1.0",
-      "notes": "Introduced in v9.1.0."
+      "changed_in": "9.3.0",
+      "notes": "Server registration is a hard authority gate before client ticks begin."
     },
     {
       "id": "AUTO-003",
@@ -4980,6 +4986,7 @@
         "API-CONTROL-001"
       ],
       "browser_tests": [
+        "BR-AUTO-START-FAIL-001",
         "BR-AUTO-ROU-001"
       ],
       "implementation_files": [
@@ -4987,8 +4994,8 @@
         "web/core/autoplay.js"
       ],
       "introduced_in": "9.1.0",
-      "changed_in": "9.1.0",
-      "notes": "Introduced in v9.1.0."
+      "changed_in": "9.3.0",
+      "notes": "Rejected starts and requested stops both prevent the next atomic game action."
     },
     {
       "id": "AUTO-004",
@@ -5730,6 +5737,7 @@
       "status": "PASS",
       "api_tests": [],
       "browser_tests": [
+        "BR-AUTO-START-FAIL-001",
         "BR-AUTO-ROU-001",
         "BR-AUDIO-001"
       ],
@@ -5739,8 +5747,8 @@
         "web/admin.js"
       ],
       "introduced_in": "9.1.0",
-      "changed_in": "9.1.0",
-      "notes": "Introduced in v9.1.0."
+      "changed_in": "9.3.0",
+      "notes": "The rejected-start regression uses current shared autoplay controls and stable selectors."
     },
     {
       "id": "TEST-026",

@@ -3957,6 +3957,64 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 page.evaluate("""async () => { const i18n = await import('/core/i18n.js'); await i18n.setLocale('en-US', { persistLocal: false }); }""")
                 # Expand autoplay through its player-facing disclosure control.
                 page.get_by_test_id('roulette-autoplay-disclosure').locator('summary').click()
+                # Track only Roulette mutations that would prove a rejected autoplay start still reached a game action.
+                rejected_autoplay_mutations=[]
+                # Observe request methods and URLs without reading credentials or wager payloads.
+                page.on('request',lambda request: rejected_autoplay_mutations.append(request.url) if request.method=='POST' and ('/api/v1/games/roulette/bets' in request.url or '/api/v1/games/roulette/spin' in request.url) else None)
+                # Count the exact number of client registration attempts handled by the controlled rejection.
+                rejected_autoplay_starts={'count':0}
+                # Define one standard server rejection for the shared autoplay start endpoint.
+                def reject_autoplay_start(route):
+                    # Count the visible Start action before returning the controlled error envelope.
+                    rejected_autoplay_starts['count']+=1
+                    # Reject registration without letting the backend create an autoplay session.
+                    route.fulfill(status=503,content_type='application/json',body='{"ok":false,"error":{"code":"AUTOPLAY_START_REJECTED","message":"Rejected for browser regression","details":{}}}')
+                # Install the rejection only for this one focused control-plane scenario.
+                page.route('**/api/v1/autoplay/start',reject_autoplay_start)
+                # Record the authoritative wallet and Roulette state before the rejected registration.
+                rejected_autoplay_balance_before=page.evaluate("async () => (await (await fetch('/api/v2/me')).json()).data.player.token_balance")
+                # Read the current Roulette state through the authenticated browser session.
+                rejected_autoplay_state_before=page.evaluate("async () => (await (await fetch('/api/v1/games/roulette/state')).json()).data.state")
+                # Record error-list boundaries so only the controlled 503 transport observation is removed later.
+                rejected_autoplay_console_index=len(console_errors); rejected_autoplay_http_index=len(http_errors); rejected_autoplay_page_error_index=len(page_errors)
+                # Select multiple fast ticks so an incorrect loop becomes observable within a bounded wait.
+                page.get_by_test_id('roulette-auto-rounds').fill('3'); page.get_by_test_id('roulette-auto-speed').select_option('fast')
+                # Attempt autoplay through the current visible shared Start action.
+                page.get_by_test_id('roulette-auto-start').click()
+                # Wait for the localized player-facing failure rather than relying on transport timing alone.
+                page.wait_for_function("() => { const toast=document.querySelector('#toast'); return toast && !toast.hidden && toast.textContent.includes('No automatic action was placed'); }",timeout=5000)
+                # Allow enough time for several incorrect fast ticks to become observable.
+                page.wait_for_timeout(900)
+                # Record the authoritative wallet and state after the client has recovered to idle.
+                rejected_autoplay_balance_after=page.evaluate("async () => (await (await fetch('/api/v2/me')).json()).data.player.token_balance")
+                # Read state again so a hidden wager or spin cannot escape the request assertion.
+                rejected_autoplay_state_after=page.evaluate("async () => (await (await fetch('/api/v1/games/roulette/state')).json()).data.state")
+                # Read the currently mounted shared control state after rejection.
+                rejected_autoplay_ui={'badge':page.get_by_test_id('autoplay-roulette').locator('.badge').inner_text(),'start_enabled':page.get_by_test_id('roulette-auto-start').is_enabled(),'stop_disabled':page.get_by_test_id('roulette-auto-stop').is_disabled(),'toast':page.locator('#toast').inner_text()}
+                # Retain only console, HTTP, and JavaScript errors produced by this controlled scenario.
+                rejected_autoplay_console=console_errors[rejected_autoplay_console_index:]; rejected_autoplay_http=http_errors[rejected_autoplay_http_index:]; rejected_autoplay_page_errors=page_errors[rejected_autoplay_page_error_index:]
+                # Remove the focused route before proving a subsequent normal server-registered start.
+                page.unroute('**/api/v1/autoplay/start',reject_autoplay_start)
+                # Remove only the expected controlled 503 observations from suite-wide unexpected-error accounting.
+                del console_errors[rejected_autoplay_console_index:]; del http_errors[rejected_autoplay_http_index:]
+                # Define the rejected-start authority regression for issue #257.
+                def autoplay_start_rejection():
+                    # Verify one visible Start produced exactly one registration attempt.
+                    assert rejected_autoplay_starts['count']==1
+                    # Verify no Roulette wager or spin began without a server autoplay id.
+                    assert rejected_autoplay_mutations==[]
+                    # Verify wallet and complete game state remained unchanged during the failed start.
+                    assert rejected_autoplay_balance_after==rejected_autoplay_balance_before and rejected_autoplay_state_after==rejected_autoplay_state_before
+                    # Verify the shared widget returned to truthful idle controls.
+                    assert rejected_autoplay_ui['badge']=='Off' and rejected_autoplay_ui['start_enabled'] and rejected_autoplay_ui['stop_disabled']
+                    # Verify the player received sanitized localized failure copy.
+                    assert rejected_autoplay_ui['toast']=='Auto play could not start. No automatic action was placed.'
+                    # Verify no unhandled JavaScript error occurred; only the controlled failed-resource line may reach console.
+                    assert rejected_autoplay_page_errors==[] and all('Failed to load resource' in value for value in rejected_autoplay_console)
+                    # Verify the only failed network response was the controlled registration rejection.
+                    assert len(rejected_autoplay_http)==1 and rejected_autoplay_http[0].startswith('503 ') and rejected_autoplay_http[0].endswith('/api/v1/autoplay/start')
+                # Execute the real-browser server-authority regression before the existing successful start/stop proof.
+                run_case('BR-AUTO-START-FAIL-001',['AUTO-001','AUTO-002','AUTO-003','TEST-025'],autoplay_start_rejection)
                 # Start and stop Roulette autoplay through the shared control-plane widget.
                 page.get_by_test_id('roulette-auto-rounds').fill('5'); page.get_by_test_id('roulette-auto-start').click()
                 # Wait for the committed autoplay spin to enter its visible atomic action before requesting stop.

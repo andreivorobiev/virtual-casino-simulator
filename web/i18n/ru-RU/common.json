@@ -5,6 +5,7 @@
   "actions.refresh": "Обновить",
   "actions.reset": "Сбросить",
   "actions.save": "Сохранить",
+  "errors.autoplayStartFailed": "Не удалось запустить автоигру. Автоматические действия не выполнялись.",
   "money.balance": "Токены: {amount}",
   "status.loading": "Загрузка...",
   "status.off": "Выкл."
