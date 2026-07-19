@@ -218,6 +218,28 @@ def build_router() -> Router:
         return auth.logout(token)
 
     # Attach this decorator so the following function is registered with the framework.
+    @router.post(r"/api/v2/auth/guest")
+    # Start one account-free disposable guest trial from the login surface. (issue #317)
+    def auth_guest(body, query, context):
+        # Create one isolated, non-privileged guest principal, temporary wallet, and browser session.
+        guest = auth.create_guest(context.get("client", ""))
+        # Set a browser-session cookie with no durable credential so closing the browser drops the trial.
+        context.setdefault("response_headers", []).extend(auth.guest_cookie_headers(guest["session"], context.get("session_samesite", "Lax"), bool(context.get("secure_cookie")), bool(context.get("include_csrf_cookie"))))
+        # Return the same current-user payload shape the shell already consumes for registered logins.
+        return auth.current_user_payload(guest["session"], guest["user"])
+
+    # Attach this decorator so the following function is registered with the framework.
+    @router.post(r"/api/v2/auth/guest/end")
+    # Irreversibly end the authenticated guest's own trial. (issue #317)
+    def auth_guest_end(body, query, context):
+        # End only the authenticated guest principal, revoking every resumable credential and state pointer.
+        auth.end_guest_trial(context.get("user") or {})
+        # Expire the guest session cookie so the browser stops presenting it.
+        context.setdefault("response_headers", []).extend(auth.clear_cookie_headers(context.get("session_samesite", "Lax"), bool(context.get("secure_cookie")), bool(context.get("include_csrf_cookie"))))
+        # Return a simple ended acknowledgement with no recoverable material.
+        return {"ended": True}
+
+    # Attach this decorator so the following function is registered with the framework.
     @router.get(r"/api/v2/auth/session")
     # Define the auth_session function used by this module.
     def auth_session(body, query, context):

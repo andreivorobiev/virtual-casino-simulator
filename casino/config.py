@@ -56,6 +56,14 @@ SCHEMA_VERSION = "v9_1"
 AUTH_SESSION_COOKIE = "casino_session"
 # Set AUTH_SESSION_TTL_SECONDS to the value needed for the next operation.
 AUTH_SESSION_TTL_SECONDS = int(os.environ.get("CASINO_SESSION_TTL_SECONDS", "86400"))
+# Enable the account-free disposable guest trial entry within the restricted-preview boundary; configuration-driven per owner-approved #317.
+GUEST_TRIALS_ENABLED = os.environ.get("CASINO_GUEST_TRIALS_ENABLED", "true").strip().lower() in ("1", "true", "yes", "on")
+# Grant each new guest trial this many free, non-cashable play tokens.
+GUEST_STARTING_BALANCE = float(os.environ.get("CASINO_GUEST_STARTING_BALANCE", "5000"))
+# End a guest trial after this many seconds without a server-observed action.
+GUEST_INACTIVITY_SECONDS = int(os.environ.get("CASINO_GUEST_INACTIVITY_SECONDS", "1800"))
+# Cap the absolute lifetime of any guest trial regardless of activity.
+GUEST_LIFETIME_SECONDS = int(os.environ.get("CASINO_GUEST_LIFETIME_SECONDS", "14400"))
 # Preserve the developer-only bootstrap email so public startup can reject the local identity default.
 LOCAL_BOOTSTRAP_ADMIN_EMAIL = "admin@example.local"
 # Preserve only a digest of the developer credential so validation never needs another plaintext copy.

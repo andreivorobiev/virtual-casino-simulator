@@ -12,7 +12,7 @@ from datetime import datetime, timedelta, timezone
 # Import required dependency so this module can use its public functions or constants.
 from http.cookies import SimpleCookie
 # Import required dependency so this module can use its public functions or constants.
-from casino.config import AUTH_BOOTSTRAP_ADMIN_DISPLAY_NAME, AUTH_BOOTSTRAP_ADMIN_EMAIL, AUTH_BOOTSTRAP_ADMIN_PASSWORD, AUTH_SESSION_COOKIE, AUTH_SESSION_TTL_SECONDS, DATA_DIR, SCHEMA_VERSION
+from casino.config import AUTH_BOOTSTRAP_ADMIN_DISPLAY_NAME, AUTH_BOOTSTRAP_ADMIN_EMAIL, AUTH_BOOTSTRAP_ADMIN_PASSWORD, AUTH_SESSION_COOKIE, AUTH_SESSION_TTL_SECONDS, DATA_DIR, GUEST_INACTIVITY_SECONDS, GUEST_LIFETIME_SECONDS, GUEST_STARTING_BALANCE, GUEST_TRIALS_ENABLED, SCHEMA_VERSION
 # Import required dependency so this module can use its public functions or constants.
 from casino.core import players
 # Import required dependency so this module can use its public functions or constants.
@@ -33,7 +33,7 @@ SESSIONS_PATH = DATA_DIR / "auth" / "sessions.json"
 # Set PASSWORD_ITERATIONS to the value needed for the next operation.
 PASSWORD_ITERATIONS = 120_000
 # Set PUBLIC_API_PATHS to the value needed for the next operation.
-PUBLIC_API_PATHS = {"/api/v2/auth/login", "/healthz"}
+PUBLIC_API_PATHS = {"/api/v2/auth/login", "/api/v2/auth/guest", "/healthz"}
 # Bound the accepted session lifetime to the restricted-preview review interval.
 MAX_SESSION_TTL_SECONDS = 86_400
 # Retain at most one thousand active session records across the single-node preview.
@@ -225,6 +225,98 @@ def create_user(email: str, password: str, display_name: str, role: str = "playe
     save_users(state)
     # Return the computed value to the caller.
     return user
+
+# Report whether an identity record is a disposable guest-trial principal. (issue #317)
+def is_guest(user: dict) -> bool:
+    # Recognize a guest only by the dedicated role and provider so admin or player authority is never inferred.
+    return bool(user) and "guest" in roles_for_user(user) and str(user.get("identity_provider") or "").lower() == "guest"
+
+# Compute the absolute-lifetime expiry for a new guest trial in the shared session timestamp format. (issue #317)
+def guest_session_expiry() -> str:
+    # Cap the guest at the configured absolute lifetime regardless of activity.
+    return (utc_datetime() + timedelta(seconds=GUEST_LIFETIME_SECONDS)).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+
+# Create one isolated, disposable guest-trial principal, wallet, and browser session. (issue #317)
+def create_guest(client: str = "") -> dict:
+    # Fail closed when the configuration-driven account-free entry is disabled.
+    if not GUEST_TRIALS_ENABLED:
+        # Never mint a guest principal outside the enabled restricted-preview entry.
+        raise ForbiddenError("Guest trials are not available")
+    # Seed a brand-new isolated player wallet with the configured non-cashable starting balance.
+    guest_player = players.create_player("Guest trial", "guest", GUEST_STARTING_BALANCE)
+    # Capture the creation instant for the record and analytics bounds.
+    now = utc_now()
+    # Resolve the absolute-lifetime expiry the session must not outlive.
+    expires_at = guest_session_expiry()
+    # Build a credential-free guest identity bound only to its own fresh player and holding the non-privileged guest role.
+    user = {"user_id": new_id("guest"), "email": None, "username": None, "display_name": "Guest trial", "role": "guest", "roles": ["guest"], "status": "active", "player_id": guest_player["player_id"], "password_hash": "", "terms_required": False, "terms_accepted_at": now, "locale": "en-US", "language": "en-US", "created_at": now, "updated_at": now, "identity_provider": "guest", "guest": True, "guest_expires_at": expires_at}
+    # Persist the guest identity through the same atomic user store as registered accounts.
+    def add_user(state: dict) -> dict:
+        # Normalize malformed state before appending the new guest identity.
+        if not isinstance(state, dict) or "users" not in state:
+            state = default_users()
+        # Append the credential-free guest identity.
+        state.setdefault("users", []).append(user)
+        # Return the mutated user document for atomic persistence.
+        return state
+    update_json(USERS_PATH, add_user, default_users)
+    # Issue a browser session for the guest identity.
+    session = create_session(user, client)
+    # Tighten the persisted session expiry from the registered-user TTL down to the guest lifetime cap.
+    def cap_expiry(state: dict) -> dict:
+        # Apply the guest lifetime to only this session record.
+        for stored in state.get("sessions", []):
+            # Match the freshly issued guest session by id.
+            if stored.get("session_id") == session["session_id"]:
+                # Overwrite its expiry with the guest lifetime bound.
+                stored["expires_at"] = expires_at
+        # Return the mutated session document for atomic persistence.
+        return state
+    update_json(SESSIONS_PATH, cap_expiry, default_sessions)
+    # Reflect the capped expiry on the returned session copy for the caller.
+    session["expires_at"] = expires_at
+    # Return the guest principal and its session to the endpoint layer.
+    return {"user": user, "session": session}
+
+# Irreversibly end a guest trial so no cookie can restore its wallet, game state, history, or identity. (issue #317)
+def end_guest_trial(user: dict) -> None:
+    # Ignore any non-guest caller so a registered identity can never be revoked here.
+    if not is_guest(user):
+        # Return without action for non-guest principals.
+        return
+    # Remove every session belonging to the guest so the browser cookie stops resolving immediately.
+    def revoke_sessions(state: dict) -> dict:
+        # Drop the guest's sessions entirely, leaving no resumable credential.
+        state["sessions"] = [stored for stored in state.get("sessions", []) if stored.get("user_id") != user["user_id"]]
+        # Return the mutated session document for atomic persistence.
+        return state
+    update_json(SESSIONS_PATH, revoke_sessions, default_sessions)
+    # Disable the guest identity so any stale token fails closed even before pruning.
+    def disable_user(state: dict) -> dict:
+        # Mark the guest identity ended without reusing it for any future authentication.
+        for stored in state.get("users", []):
+            # Match the guest identity by id.
+            if stored.get("user_id") == user["user_id"]:
+                # End the identity so its token can never resolve again.
+                stored["status"] = "ended"
+                # Stamp the update time for analytics and audit.
+                stored["updated_at"] = utc_now()
+        # Return the mutated user document for atomic persistence.
+        return state
+    update_json(USERS_PATH, disable_user, default_users)
+
+# Build the guest browser-session cookie so closing the browser drops the disposable trial. (issue #317)
+def guest_cookie_headers(session: dict, same_site: str = "Lax", secure: bool = False, include_csrf: bool = False) -> list[tuple[str, str]]:
+    # Add Secure for the production boundary while preserving local HTTP developer compatibility.
+    secure_attribute = "; Secure" if secure else ""
+    # Omit Max-Age and Expires so the credential is a browser-session cookie cleared when the browser closes.
+    headers = [("Set-Cookie", f"{AUTH_SESSION_COOKIE}={session['token']}; Path=/; HttpOnly{secure_attribute}; SameSite={same_site}")]
+    # Add the browser-readable CSRF companion only in the production security boundary.
+    if include_csrf:
+        # Rotate the double-submit value to the guest session CSRF token.
+        headers.append(csrf_cookie_header(session["csrf_token"], same_site, secure))
+    # Return the guest session cookie set for response context extension.
+    return headers
 
 # Define the set_user_status function used by this module.
 def set_user_status(email: str, status: str) -> dict:
