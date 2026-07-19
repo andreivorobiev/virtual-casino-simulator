@@ -8556,6 +8556,38 @@
       "introduced_in": "issue-261-idempotency-retry-keys",
       "changed_in": "issue-261-idempotency-retry-keys",
       "notes": "Issue #261 lost-response exactly-once browser evidence for the retained-identity retry pattern."
+    },
+    {
+      "id": "AUTH-UI-002",
+      "module": "Application",
+      "description": "The login screen fits without page scroll at the short 1280x720 desktop viewport, and the required terms acceptance control presents an enlarged (>=42px) touch target.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-AUTH-LOGIN-001"
+      ],
+      "implementation_files": [
+        "web/styles.css"
+      ],
+      "introduced_in": "issue-284-283-auth-visual-conformance",
+      "changed_in": "issue-284-283-auth-visual-conformance",
+      "notes": "Issue #284 (sign-in fit) plus the bounded #283 auth terms control; the broader #283 touch-target reconciliation stays open."
+    },
+    {
+      "id": "TEST-071",
+      "module": "Tests",
+      "description": "Browser evidence verifies the login gate fits without page overflow at 1280x720 with the sign-in submit control on screen, and that the terms acceptance row meets the enlarged touch-target height.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-AUTH-LOGIN-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-284-283-auth-visual-conformance",
+      "changed_in": "issue-284-283-auth-visual-conformance",
+      "notes": "Issue #284/#283 auth short-viewport fit and terms touch-target browser proof."
     }
   ]
 }

@@ -481,7 +481,8 @@ label {
   display: grid;
   grid-template-columns: auto 1fr;
   gap: 10px;
-  align-items: start;
+  align-items: center;
+  min-height: 42px;
   color: #ddd4b7;
   font-size: 14px;
   letter-spacing: 0;
@@ -489,8 +490,11 @@ label {
 }
 
 .check-row input {
+  width: 20px;
+  height: 20px;
   min-height: 0;
-  margin-top: 2px;
+  margin-top: 0;
+  accent-color: var(--gold);
 }
 
 .auth-message {
@@ -1820,6 +1824,26 @@ h3 {
 .scrollbox {
   max-height: 210px;
   overflow: auto;
+}
+
+/* Short-viewport auth: tighten the sign-in panel so its full content fits without page scroll (e.g. 1280x720). (issue #284) */
+@media (max-height: 760px) {
+  .auth-screen {
+    padding: 14px;
+  }
+
+  .auth-panel {
+    gap: 10px;
+    padding: 18px;
+  }
+
+  .auth-panel h1 {
+    font-size: 28px;
+  }
+
+  .auth-form {
+    gap: 10px;
+  }
 }
 
 /* Desktop rails own intentional scrolling so nested lists do not create competing primary scroll areas. */

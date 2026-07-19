@@ -2011,8 +2011,23 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     assert not page.get_by_test_id('premium-topbar').is_visible()
                     # Verify the required toy-simulator terms checkbox is visible.
                     assert page.get_by_test_id('login-terms-check').is_visible()
+                    # Verify the bounded auth terms control now meets the enlarged touch-target height. (issue #283, auth control)
+                    terms_row_height=page.evaluate("() => { const box=document.querySelector('[data-testid=\"login-terms-check\"]'); const row=box?box.closest('.check-row'):null; return row?row.getBoundingClientRect().height:0; }")
+                    # Require the clickable terms row to reach at least the governed 42px target.
+                    assert terms_row_height >= 42
+                    # Constrain the browser to the short 1280x720 desktop viewport called out by the defect. (issue #284)
+                    page.set_viewport_size({'width':1280,'height':720}); page.wait_for_timeout(150)
+                    # Require the login gate to remain visible with no page-level vertical or horizontal overflow at the short height.
+                    assert page.get_by_test_id('login-gate').is_visible() and page.evaluate("() => document.documentElement.scrollHeight <= window.innerHeight + 1 && document.documentElement.scrollWidth <= window.innerWidth + 1")
+                    # Require the primary sign-in submit control to stay fully within the short viewport instead of overflowing below the fold.
+                    submit_box=page.get_by_test_id('login-submit').bounding_box()
+                    assert submit_box and (submit_box['y'] + submit_box['height']) <= 720 + 1
+                    # Capture short-viewport sign-in fit evidence for the auth handback.
+                    shot('after-pass-auth-signin-fit-1280x720.png')
+                    # Restore the primary viewport for downstream auth coverage.
+                    page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(150)
                 # Execute this statement as part of the module's documented control flow.
-                run_case('BR-AUTH-LOGIN-001',['AUTH-UI-001','TERMS-UI-001'],auth_login_gate)
+                run_case('BR-AUTH-LOGIN-001',['AUTH-UI-001','TERMS-UI-001','AUTH-UI-002','TEST-071'],auth_login_gate)
                 # Keep the Russian locale selected by the OAuth acceptance loop for login persistence coverage.
                 page.wait_for_function("() => window.CasinoI18n && window.CasinoI18n.getLocaleState().locale === 'ru-RU'")
                 # Wait for the fresh email field to be ready after the locale rerender.
