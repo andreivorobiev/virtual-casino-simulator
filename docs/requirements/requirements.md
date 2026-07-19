@@ -30,7 +30,7 @@ This addendum records the durable planning requirements for GitHub epic #34 and 
 | MYSQL | Fresh MySQL schema bootstrap, atomic ledger writes, fresh-start policy, and JSON fallback. | MYSQL-001 through MYSQL-004 |
 | TERMS | Private beta toy-simulator terms acceptance and terms status exposure. | TERMS-001 through TERMS-004 |
 | LIC | Apache-2.0 source licensing and no-real-money/no-redemption legal posture. | LIC-001 through LIC-003 |
-| TOKEN | Play-token terminology, v2 token language, ledger-backed add-token flows, and private balances. | TOKEN-001 through TOKEN-004 |
+| TOKEN | Play-token terminology, v2 token language, ledger-backed add-token flows, and private balances. | TOKEN-001 through TOKEN-005 |
 | API | Frozen v1 compatibility with additive v2 auth/current-user/Admin-user envelope contracts. | API-001 through API-002 |
 | TEST | Required auth, storage/MySQL, private-session, copied-deployment, deployment-default, catalog-driver, and action-idempotency validation. | TEST-037 through TEST-043 |
 

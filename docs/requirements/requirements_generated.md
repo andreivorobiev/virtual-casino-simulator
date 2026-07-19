@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.38.2
+- application: 9.38.3
 - core: 9.13.1
 - ledger: 9.1.1
 - players: 9.1.0
@@ -45,8 +45,8 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.0
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.44.10
-- docs: 1.44.10
+- tests: 1.44.11
+- docs: 1.44.11
 - contracts: 1.32.0
 - tooling: 1.14.0
 - commenting_policy: 1.0.0
@@ -467,6 +467,7 @@ Historical source baseline: 9.1.0
 - **TOKEN-002** (Tokens) - PASS: New v2 APIs may use token terminology while v1 wire fields remain compatible for existing clients.
 - **TOKEN-003** (Tokens) - PASS: Add-token flows are ledger-backed play-token credits and never payment, deposit, or purchase flows.
 - **TOKEN-004** (Tokens) - PASS: Token balances are scoped to the authenticated user's bound player and remain private from other non-Admin users.
+- **TOKEN-005** (Tokens) - PASS: Successful Add play tokens actions clear the amount field so reopening the wallet cannot repeat the same top-up by accident.
 - **API-001** (API) - PASS: The frozen /api/v1 compatibility surface remains available while auth, current-user, and Admin user-management additions use /api/v2.
 - **API-002** (API) - PASS: v2 auth, current-user, terms, token, and Admin user-management responses use the standard ok/data or ok/error envelope.
 - **TEST-037** (Tests) - PASS: API tests cover login, logout, current-user lookup, unauthorized access, bootstrap Admin, inactive users, and terms status.
