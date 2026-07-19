@@ -4297,6 +4297,10 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     assert page.get_by_test_id('slot-grid').is_visible()
                     # Verify the fixed result region is present after a real spin.
                     assert page.get_by_test_id('slots-result').is_visible()
+                    # Locate the cabinet footer's read-only state indicator.
+                    slots_state_pill=page.locator('.slots-cabinet-footer .slots-state-pill')
+                    # Require the read-only state to render as status instead of a primary button.
+                    assert slots_state_pill.count()==1 and slots_state_pill.get_attribute('role')=='status' and page.locator('.slots-cabinet-footer button.primary').count()==0
                     # Verify recent spins are shown in the right drawer.
                     assert page.get_by_test_id('slots-recent-spins').is_visible()
                     # Verify the Slots bot capability panel is reserved.
@@ -4316,7 +4320,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Verify the premium Slots route avoids page-level horizontal overflow.
                     assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1')
                 # Execute this statement as part of the module's documented control flow.
-                run_case('BR-SLOT-001',['SLOT-020','SLOT-021','SLOT-022','SLOT-023','SLOT-024','SLOT-025','SLOT-026','SLOT-027','AUTO-010','LEDGER-025','UX-007','UX-009'],premium_slots)
+                run_case('BR-SLOT-001',['SLOT-020','SLOT-021','SLOT-022','SLOT-023','SLOT-024','SLOT-025','SLOT-026','SLOT-027','SLOT-028','TEST-064','AUTO-010','LEDGER-025','UX-007','UX-009'],premium_slots)
                 # Navigate to Keno and wait for the premium route shell to mount.
                 page.get_by_test_id('nav-keno').click(); page.get_by_test_id('keno-premium-hero').wait_for(timeout=5000)
                 # Select ten deterministic spots so paytable comparison has a stable row.

@@ -16,7 +16,7 @@ Historical source baseline: 9.1.0
 - admin: 1.6.0
 - operations: 1.0.0
 - roulette: 9.4.2
-- slots: 9.1.1
+- slots: 9.1.2
 - blackjack: 9.1.3
 - baccarat: 9.1.2
 - keno: 9.2.1
@@ -45,8 +45,8 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.0
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.44.17
-- docs: 1.44.17
+- tests: 1.44.18
+- docs: 1.44.18
 - contracts: 1.32.0
 - tooling: 1.14.0
 - commenting_policy: 1.0.0
@@ -190,6 +190,7 @@ Historical source baseline: 9.1.0
 - **SLOT-024** (Slots) - PASS: Slots speed control supports slow/medium/fast.
 - **SLOT-025** (Slots) - PASS: Slots sounds play during spin.
 - **SLOT-026** (Slots) - SUPERSEDED: Slots remains fake-money only.
+- **SLOT-028** (Slots) - PASS: Slots displays read-only cabinet readiness and win state as non-interactive status instead of a primary action button.
 - **BJ-001** (Blackjack) - PASS: Blackjack deals two player cards and two dealer cards.
 - **BJ-002** (Blackjack) - PASS: Dealer hole card is hidden in public state.
 - **BJ-003** (Blackjack) - PASS: Aces can count as 1 or 11.
@@ -666,3 +667,4 @@ Historical source baseline: 9.1.0
 - **TEST-061** (Tests) - PASS: Browser evidence verifies Roulette disables bet-slip Remove controls while a real spin has locked the current wager set.
 - **TEST-062** (Tests) - PASS: Browser evidence verifies Baccarat's initial shoe drawer shows the configured full shoe capacity instead of zero before the first deal.
 - **TEST-063** (Tests) - PASS: Browser evidence verifies Caribbean Stud's return-table panel includes the visible raise payout schedule sourced from published rules.
+- **TEST-064** (Tests) - PASS: Browser evidence verifies Slots renders cabinet readiness and win state as a status pill rather than a disabled primary-looking action.
