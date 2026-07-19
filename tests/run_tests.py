@@ -34,6 +34,8 @@ from tests import recovery_tests
 from tests import edge_gate_tests
 # Import focused non-finite validation and persistence tests for TEST-055.
 from tests import nonfinite_money_tests
+# Import exact-source 50,000-cycle harness proofs for TEST-072.
+from tests.unit import ui_50000_tests
 # Import the current-catalog hostile-client certification entrypoint.
 from tests.server_authority_tests import run_server_authority_tests
 # Import the reusable flushed reporter for TEST-010 browser execution.
@@ -372,6 +374,16 @@ def validate_deployment_bootstrap():
 
 # Define the run_api_tests function used by this module.
 def run_api_tests():
+    # Execute the listener-free TEST-072 allocation, classification, and resume-policy proofs.
+    def run_ui_50000_harness_tests():
+        # Load only the focused #227 harness test class.
+        suite=unittest.defaultTestLoader.loadTestsFromTestCase(ui_50000_tests.UI50000HarnessTests)
+        # Execute the focused suite with concise standard output.
+        result=unittest.TextTestRunner(stream=sys.stdout,verbosity=1).run(suite)
+        # Fail the named central case when any focused assertion fails.
+        if not result.wasSuccessful(): raise AssertionError('50,000-cycle UI harness unit suite failed')
+    # Record the exact-source allocation, control-classification, and safe-resume proof.
+    run_case('UI-50000-HARNESS-001',['TEST-042','TEST-047','TEST-072'],run_ui_50000_harness_tests)
     # Run service-free shared validation, ledger, MHVP, and strict JSON persistence evidence.
     def run_nonfinite_money_unit_tests():
         # Load only the focused TEST-055 unit-test class.

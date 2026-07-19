@@ -1,0 +1,984 @@
+#!/usr/bin/env python3
+"""Run TEST-042/TEST-047/TEST-072 real-browser UI cycles across every catalog game."""
+
+import argparse  # Parse total-cycle, parallelism, timeout, and artifact options.
+import asyncio  # Coordinate bounded independent game shards and browser actions.
+import json  # Persist sanitized per-shard and aggregate qualification evidence.
+import math  # Calculate deterministic nearest-rank latency percentiles.
+import os  # Resolve the disposable runtime parent and process-scoped run identity.
+import shutil  # Copy and remove isolated runtime trees.
+import subprocess  # Launch shard-owned loopback servers without an undrained output pipe.
+import sys  # Prefer the current checkout when importing Casino modules.
+import time  # Measure browser-visible latency and timestamp the run.
+import traceback  # Retain local-only diagnostics for unexpected harness failures.
+from collections import Counter  # Aggregate control, error, and coverage counts.
+from contextvars import ContextVar  # Isolate control namespaces across concurrent browser shards.
+from pathlib import Path  # Handle source, report, deployment, and screenshot paths.
+
+# Resolve this clean checkout before importing project-owned packages.
+ROOT = Path(__file__).resolve().parents[1]
+# Ensure the checked-out branch wins over any globally installed Casino package.
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))  # Put this source snapshot first on the import path.
+
+from casino.config import GAMES  # Discover all registered games from canonical metadata.
+from tests.long_suites import OPERATIONS_SMOKE_BUILD_SHA, ApiClient, clear_readonly_and_retry, free_port, stop_server  # Reuse governed API and exact cleanup controls.
+
+# Preserve catalog order for deterministic game quotas and global cycle IDs.
+GAME_IDS = tuple(game["id"] for game in GAMES)
+# Read module-owned ready selectors so catalog additions cannot silently skip readiness.
+READY_TEST_IDS = {game["id"]: game["frontend"]["ready_testid"] for game in GAMES}
+# Apply the authoritative governed viewport inventory to distributed visual evidence.
+VIEWPORTS = (
+    {"id": "desktop_primary", "width": 1920, "height": 1080},
+    {"id": "desktop_compact", "width": 1440, "height": 900},
+    {"id": "tablet", "width": 1024, "height": 900},
+    {"id": "mobile", "width": 390, "height": 844},
+)
+# Bound ordinary UI actions tightly enough for a long failure-tolerant qualification.
+ACTION_TIMEOUT_MS = 15_000
+# Give initial page, authentication, and module loads more room than repeated cycles.
+SETUP_TIMEOUT_MS = 20_000
+# Require the issue-owned activation floor for every ordinarily reachable eligible control.
+CONTROL_ACTIVATION_FLOOR = 100
+# Map shared autoplay games to a visible post-atomic-action readiness control.
+AUTOPLAY_SETTLED_SELECTORS = {
+    "roulette": ['[data-testid="roulette-spin"]'],  # Require the wheel to accept the next manual spin.
+    "slots": ['[data-testid="slots-spin"]'],  # Require the cabinet to accept the next manual spin.
+    "keno": ['[data-testid="keno-new-ticket"]', "#quick5"],  # Require result replay or fresh selection readiness.
+    "bingo": ['[data-testid="bingo-buy"]', '[data-testid="bingo-call"]', '[data-testid="bingo-reset"]'],  # Require a stable session action.
+    "baccarat": ['[data-testid="baccarat-deal"]'],  # Require the card reveal and settlement theater to finish.
+}
+# Keep every shard and aggregate artifact mapped to the same permanent requirements.
+REQUIREMENT_IDS = ("AUTH-001", "AUTH-002", "SESSION-001", "SESSION-005", "TEST-042", "TEST-047", "TEST-072", "CORE-021")
+# Keep each asynchronous shard's control identities scoped to auth, shell, or one game.
+CONTROL_NAMESPACE = ContextVar("ui_50000_control_namespace", default="unscoped")
+
+
+# Convert one exception into a bounded single-line local diagnostic.
+def safe_error(exc):
+    message = str(exc).replace("\r", " ").replace("\n", " ").strip()  # Collapse multiline browser call logs.
+    home = str(Path.home())  # Resolve the current private host profile prefix once.
+    message = message.replace(home.replace("\\", "\\\\"), "<user-home>").replace(home, "<user-home>")  # Remove literal and escaped private profile prefixes.
+    return (message or exc.__class__.__name__)[:500]  # Bound artifacts while preserving the actionable prefix.
+
+
+# Return one nearest-rank percentile from a numeric sample.
+def percentile(values, percent):
+    if not values:  # Keep missing latency samples explicit.
+        return None  # Avoid fabricating a zero-second result.
+    ordered = sorted(float(value) for value in values)  # Sort a defensive numeric copy.
+    rank = max(0, min(len(ordered) - 1, math.ceil((percent / 100) * len(ordered)) - 1))  # Clamp the nearest-rank index.
+    return round(ordered[rank], 4)  # Preserve useful local timing precision.
+
+
+# Summarize one latency sample for the terminal report.
+def latency_summary(values):
+    return {  # Return compact count and tail evidence.
+        "count": len(values),  # Record the number of measured successful cycles.
+        "p50_seconds": percentile(values, 50),  # Record median latency.
+        "p95_seconds": percentile(values, 95),  # Record common tail latency.
+        "p99_seconds": percentile(values, 99),  # Record near-worst latency.
+        "max_seconds": round(max(values), 4) if values else None,  # Record the observed maximum.
+    }
+
+
+# Resolve the immutable source commit so reports from another checkout cannot be resumed.
+def resolve_source_commit(repo_root=ROOT):
+    completed = subprocess.run(["git", "rev-parse", "HEAD"], cwd=str(repo_root), capture_output=True, text=True, timeout=10, check=False)  # Ask Git for this checkout's exact commit without modifying it.
+    commit = completed.stdout.strip().lower()  # Normalize the public hexadecimal identity.
+    if completed.returncode != 0 or len(commit) != 40 or any(character not in "0123456789abcdef" for character in commit):  # Reject missing, abbreviated, or malformed provenance.
+        raise RuntimeError("unable to resolve exact source commit")  # Fail before starting any browser or listener.
+    status = subprocess.run(["git", "status", "--porcelain", "--untracked-files=all"], cwd=str(repo_root), capture_output=True, text=True, timeout=10, check=False)  # Verify the runtime copy will match the recorded commit byte-for-byte.
+    if status.returncode != 0 or status.stdout.strip():  # Reject tracked or untracked source drift while ignoring repository-defined evidence paths.
+        raise RuntimeError("source checkout must be clean before qualification")  # Prevent a dirty harness or application from claiming committed provenance.
+    return commit  # Return the immutable full source identity.
+
+
+# Prefix one rendered-control signature with its owning surface to prevent cross-game collisions.
+def qualify_control_signature(signature, namespace=None):
+    owner = namespace or CONTROL_NAMESPACE.get()  # Read the task-local surface unless a unit test supplies one explicitly.
+    return f"{owner}::{signature}"  # Preserve the raw selector while adding stable module ownership.
+
+
+# Classify whether one namespaced signature belongs to the #227 gameplay/navigation floor.
+def control_eligibility(signature):
+    namespace, separator, raw_signature = signature.partition("::")  # Split only the harness-owned namespace prefix.
+    if not separator or namespace == "unscoped":  # Reject identities that escaped surface ownership.
+        return False, "missing surface ownership"  # Keep malformed evidence explicit and excluded.
+    if namespace == "auth":  # Keep credential and terms controls outside repeated gameplay counts.
+        return False, "authentication lifecycle control"  # Record why login is exercised once per isolated shard.
+    if namespace == "shell":  # Admit only the visible game-routing controls from the persistent shell.
+        eligible_navigation = raw_signature.startswith("button[data-testid=nav-") or raw_signature.startswith("button[data-testid=open-")  # Recognize dynamic catalog navigation identities.
+        return (True, "catalog navigation control") if eligible_navigation else (False, "non-gameplay shell control")  # Classify settings, logout, and utility controls explicitly.
+    if namespace in GAME_IDS:  # Treat every rendered actionable control inside a registered game root as eligible.
+        return True, "registered game control"  # Require coverage or evidence for the module-owned control.
+    return False, "unknown surface ownership"  # Exclude only with an explicit malformed/unknown reason.
+
+
+# Produce mutually exclusive acceptance classifications for every discovered or activated control.
+def classify_control_coverage(seen_counts, activated_counts, minimum=CONTROL_ACTIVATION_FLOOR):
+    classifications = {"exercised": {}, "intentionally_unavailable": {}, "failed": {}, "excluded": {}}  # Keep acceptance and diagnostic classes separate.
+    signatures = sorted(set(seen_counts).union(activated_counts))  # Classify the complete discovered-and-activated identity set.
+    for signature in signatures:  # Assign every identity exactly once.
+        seen = int(seen_counts.get(signature, 0))  # Read distinct rendered-state observations.
+        activated = int(activated_counts.get(signature, 0))  # Read successful UI dispatches.
+        opportunities = max(seen, activated)  # Never claim fewer opportunities than successful activations.
+        eligible, reason = control_eligibility(signature)  # Apply the durable surface policy.
+        evidence = {"seen": seen, "activated": activated, "opportunities": opportunities, "reason": reason}  # Preserve bounded numeric evidence.
+        if not eligible:  # Keep non-gameplay lifecycle controls visible without diluting the floor.
+            classifications["excluded"][signature] = evidence  # Record the exact exclusion and reason.
+        elif activated >= minimum:  # Accept controls that meet the literal requested activation floor.
+            classifications["exercised"][signature] = evidence  # Preserve passing coverage evidence.
+        elif opportunities < minimum and activated > 0:  # Accept a genuinely rare conditional control only after at least one real UI activation.
+            evidence["reason"] = "fewer than minimum reachable opportunities; exercised in sampled conditional states"  # Explain why the literal floor was impossible while preserving actual-use proof.
+            classifications["intentionally_unavailable"][signature] = evidence  # Preserve the allowed conditional classification.
+        else:  # Fail controls that were skipped, partially exercised, or ordinarily reachable below the floor.
+            evidence["shortfall"] = max(0, minimum - activated)  # Quantify the exact remaining activation deficit.
+            classifications["failed"][signature] = evidence  # Keep red evidence actionable.
+    classifications["classified_count"] = len(signatures)  # Prove complete classification accounting.
+    classifications["eligible_count"] = sum(len(classifications[name]) for name in ("exercised", "intentionally_unavailable", "failed"))  # Count all eligible signatures once.
+    return classifications  # Return deterministic machine-readable coverage evidence.
+
+
+# Start one disposable loopback server without a finite stdout pipe that could stall a 50,000-cycle run.
+def start_ui_server(repo_root):
+    port = free_port()  # Allocate one non-reserved loopback port through the governed helper.
+    child_environment = {**os.environ, "CASINO_BUILD_SHA": OPERATIONS_SMOKE_BUILD_SHA}  # Publish sanitized test provenance to the disposable runtime.
+    command = [sys.executable, str(repo_root / "run.py"), "--host", "127.0.0.1", "--port", str(port), "--no-browser"]  # Bind only the tracked local test server.
+    proc = subprocess.Popen(command, cwd=str(repo_root), env=child_environment, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)  # Discard verbose request logs so their pipe cannot block the server.
+    client = ApiClient(f"http://127.0.0.1:{port}")  # Build the readiness and evidence client for this exact listener.
+    for _ in range(200):  # Poll readiness for up to twenty seconds on busy catalog starts.
+        try:  # Accept readiness only after public authentication succeeds.
+            client.login_default_user()  # Probe the real login endpoint without exposing the credential.
+            return proc, client  # Return only the tracked ready process and client.
+        except Exception:  # Retry transient startup states within the bounded interval.
+            time.sleep(0.1)  # Give the local child a short boot interval.
+    stop_server(proc, client)  # Stop and verify closure of only the failed tracked child.
+    raise RuntimeError("disposable UI server did not become ready")  # Fail setup without leaking raw server output.
+
+
+# Resolve a stable selector-like signature from one rendered form control.
+async def control_signature(locator):
+    expression = """node => { const tag = node.tagName.toLowerCase(); if (node.hasAttribute('data-clear')) return `${tag}[data-clear]`; if (node.hasAttribute('data-remove-bet')) return `${tag}[data-remove-bet]`; const attrs = ['data-testid','data-action','data-decision','data-guess','data-side','data-bet-id','data-betid','data-num','data-dozen','data-column','data-outside','data-outbtn','data-call','data-wager','data-chip','data-hand-count','data-coin-count','data-hold-position','data-play','data-spin','data-roll']; for (const attr of attrs) { if (node.hasAttribute(attr)) return `${tag}[${attr}=${node.getAttribute(attr)}]`; } if (node.id) return `${tag}#${node.id}`; const label = node.getAttribute('aria-label') || node.textContent || node.getAttribute('name') || node.type || 'control'; return `${tag}:${label.trim().replace(/\\s+/g,' ').slice(0,80)}`; }"""  # Prefer stable metadata and collapse dynamic ticket ids into semantic remove actions.
+    return qualify_control_signature(await locator.evaluate(expression))  # Read DOM metadata and bind it to the task-local surface.
+
+
+# Inventory visible enabled controls on the current authenticated surface.
+async def inventory_controls(page, seen_counts):
+    namespace = CONTROL_NAMESPACE.get()  # Read the task-local owning surface.
+    root_selector = "#view" if namespace in READY_TEST_IDS else None  # Scan the complete game outlet while excluding persistent shell controls.
+    expression = """rootSelector => { const root = rootSelector ? document.querySelector(rootSelector) : document; if (!root) return []; const attrs = ['data-testid','data-action','data-decision','data-guess','data-side','data-bet-id','data-betid','data-num','data-dozen','data-column','data-outside','data-outbtn','data-call','data-wager','data-chip','data-hand-count','data-coin-count','data-hold-position','data-play','data-spin','data-roll']; return [...root.querySelectorAll('button,input,select,summary')].filter(node => !node.disabled && node.getClientRects().length).map(node => { const tag = node.tagName.toLowerCase(); if (node.hasAttribute('data-clear')) return `${tag}[data-clear]`; if (node.hasAttribute('data-remove-bet')) return `${tag}[data-remove-bet]`; for (const attr of attrs) { if (node.hasAttribute(attr)) return `${tag}[${attr}=${node.getAttribute(attr)}]`; } if (node.id) return `${tag}#${node.id}`; const label = node.getAttribute('aria-label') || node.textContent || node.getAttribute('name') || node.type || 'control'; return `${tag}:${label.trim().replace(/\\s+/g,' ').slice(0,80)}`; }); }"""  # Discover rendered controls only within the owned game root or current shell/auth surface.
+    for signature in await page.evaluate(expression, root_selector):  # Visit every stable signature on this owned UI state.
+        seen_counts[qualify_control_signature(signature, namespace)] += 1  # Count namespaced observations for later classification.
+
+
+# Return whether a locator currently resolves to one visible enabled control.
+async def locator_ready(locator):
+    return bool(await locator.count() and await locator.first.is_visible() and await locator.first.is_enabled())  # Require real actionability.
+
+
+# Wait until any selector in caller priority order becomes visible and enabled.
+async def wait_any_enabled(page, selectors, timeout_ms=ACTION_TIMEOUT_MS):
+    expression = """selectors => selectors.some(selector => { const node = document.querySelector(selector); return Boolean(node && !node.disabled && node.getClientRects().length); })"""  # Poll rendered actionability without clicking.
+    try:  # Add the bounded selector intent to otherwise generic Playwright timeout evidence.
+        await page.wait_for_function(expression, arg=selectors, timeout=timeout_ms)  # Wait through asynchronous rerenders.
+    except Exception as exc:  # Convert framework-only timeouts into actionable control-state evidence.
+        raise AssertionError(f"enabled control timeout: {selectors}") from exc  # Preserve only public selector identities.
+    for selector in selectors:  # Preserve caller priority when several actions are ready.
+        locator = page.locator(selector).first  # Re-resolve against the current DOM.
+        if await locator_ready(locator):  # Require one visible enabled target.
+            return selector  # Return the actionable selector.
+    raise AssertionError(f"enabled control disappeared: {selectors}")  # Fail a racy state transition explicitly.
+
+
+# Click a locator through Playwright's real pointer path and record its signature.
+async def click_locator(locator, activated_counts, timeout_ms=ACTION_TIMEOUT_MS):
+    await locator.wait_for(state="visible", timeout=timeout_ms)  # Require the control to render.
+    if not await locator.is_enabled():  # Refuse disabled programmatic activation.
+        raise AssertionError("rendered control was disabled")  # Preserve actual UI semantics.
+    signature = await control_signature(locator)  # Capture the stable control identity before rerender.
+    await locator.click(timeout=timeout_ms)  # Use a real actionability-checked pointer click.
+    activated_counts[signature] += 1  # Count only successfully dispatched UI activations.
+    return signature  # Return the activated signature for state-specific logic.
+
+
+# Click one selector and record the rendered control signature.
+async def click_control(page, selector, activated_counts, timeout_ms=ACTION_TIMEOUT_MS):
+    await wait_any_enabled(page, [selector], timeout_ms)  # Wait for the requested public action.
+    return await click_locator(page.locator(selector).first, activated_counts, timeout_ms)  # Dispatch through the DOM.
+
+
+# Fill one rendered input and record it as a control activation.
+async def fill_control(locator, value, activated_counts, timeout_ms=ACTION_TIMEOUT_MS):
+    await locator.wait_for(state="visible", timeout=timeout_ms)  # Require the input to render.
+    if not await locator.is_enabled():  # Respect disabled configuration states.
+        raise AssertionError("rendered input was disabled")  # Refuse hidden backdoor changes.
+    signature = await control_signature(locator)  # Capture stable input identity.
+    await locator.fill(str(value), timeout=timeout_ms)  # Enter the synthetic value through the form control.
+    activated_counts[signature] += 1  # Count the successful UI edit.
+    return signature  # Return the input signature for evidence.
+
+
+# Select one option through the rendered select control and record its stable identity.
+async def select_control(locator, value, activated_counts, timeout_ms=ACTION_TIMEOUT_MS):
+    await locator.wait_for(state="visible", timeout=timeout_ms)  # Require the select to render.
+    if not await locator.is_enabled():  # Respect phase-owned configuration locking.
+        raise AssertionError("rendered select was disabled")  # Refuse a hidden programmatic mutation.
+    signature = await control_signature(locator)  # Capture identity before a change-triggered rerender.
+    await locator.select_option(str(value), timeout=timeout_ms)  # Change the value through the public form control.
+    activated_counts[signature] += 1  # Count only a successful rendered selection.
+    return signature  # Return the configuration identity for evidence.
+
+
+# Exercise disclosures plus one rotating visible configuration field without bypassing the UI.
+async def exercise_configuration_controls(page, ordinal, activated_counts):
+    game_id = CONTROL_NAMESPACE.get()  # Bind discovery to the current registered game surface.
+    if game_id not in READY_TEST_IDS:  # Refuse accidental configuration attribution outside a registered game.
+        return  # Preserve auth and shell ownership boundaries.
+    root = page.locator("#view").first  # Cover the complete game outlet while excluding persistent shell controls.
+    summaries = await enabled_locators(root, "summary")  # Discover module-owned disclosure controls.
+    for summary in summaries:  # Leave every disclosure open while counting its actual toggle action.
+        details_open = await summary.evaluate("node => Boolean(node.parentElement?.open)")  # Read the semantic details state.
+        if details_open:  # Exercise an already-open disclosure without changing its terminal state.
+            await click_locator(summary, activated_counts)  # Close it through the rendered summary.
+            await click_locator(summary, activated_counts)  # Reopen it for nested-control discovery.
+        else:  # Open a collapsed disclosure through the real control.
+            await click_locator(summary, activated_counts)  # Expose its configuration descendants.
+    configurations = await enabled_locators(root, "input:not([type=hidden]),select")  # Discover visible editable controls after disclosures open.
+    if not configurations:  # Allow games whose full interaction surface is button-only.
+        return  # Preserve the game-specific strategy as the only action path.
+    target = configurations[ordinal % len(configurations)]  # Rotate the field budget across every visible configuration identity.
+    tag_name = await target.evaluate("node => node.tagName.toLowerCase()")  # Select the correct public interaction for this field type.
+    if tag_name == "select":  # Rotate to another enabled option when possible.
+        option_values = await target.evaluate("node => [...node.options].filter(option => !option.disabled).map(option => option.value)")  # Read rendered option values only.
+        current_value = await target.input_value()  # Preserve the current option for deterministic rotation.
+        next_index = (option_values.index(current_value) + 1) % len(option_values) if option_values else 0  # Advance safely through the real option list.
+        await select_control(target, option_values[next_index], activated_counts)  # Dispatch the change through the select element.
+        return  # Avoid using the now possibly rerendered locator.
+    input_type = (await target.get_attribute("type") or "text").lower()  # Resolve checkbox and text-like semantics.
+    if input_type in {"checkbox", "radio"}:  # Use a real click for binary configuration controls.
+        await click_locator(target, activated_counts)  # Change the rendered binary setting.
+        return  # Let the game-specific save action persist it when applicable.
+    current_value = await target.input_value()  # Reuse a valid bounded value for text and numeric inputs.
+    if not current_value:  # Supply a safe value only when the rendered field is empty.
+        current_value = await target.get_attribute("min") or "1"  # Respect a declared minimum before using the neutral fallback.
+    await fill_control(target, current_value, activated_counts)  # Exercise the field through real keyboard-style form input.
+
+
+# Exercise shared autoplay start and stop exactly within the first one hundred assigned cycles.
+async def exercise_autoplay_controls(page, ordinal, activated_counts):
+    if ordinal >= CONTROL_ACTIVATION_FLOOR:  # Bound control-plane work to the literal requested activation floor.
+        return  # Keep the remaining game cycles focused on gameplay distribution.
+    game_id = CONTROL_NAMESPACE.get()  # Bind the shared widget lookup to the current module root.
+    if game_id not in READY_TEST_IDS:  # Refuse accidental lifecycle work outside a registered game.
+        return  # Preserve auth and shell ownership boundaries.
+    root = page.locator("#view").first  # Search the complete game outlet while excluding persistent shell controls.
+    start = root.locator('[data-testid$="-auto-start"]').first  # Resolve the current game-owned shared Start control.
+    if not await locator_ready(start):  # Skip modules that intentionally do not expose shared autoplay.
+        return  # Preserve their manual-only contract.
+    rounds = root.locator('[data-testid$="-auto-rounds"]').first  # Resolve the shared round-limit input.
+    if await locator_ready(rounds):  # Keep the session alive long enough to expose Stop.
+        await fill_control(rounds, "1000", activated_counts)  # Enter a bounded synthetic-only high limit through the UI.
+    await click_locator(start, activated_counts)  # Start through the same rendered control a player uses.
+    stop_selector = '[data-testid$="-auto-stop"]'  # Address the paired module-owned Stop control.
+    await wait_any_enabled(page, [stop_selector], SETUP_TIMEOUT_MS)  # Require truthful running state after server registration.
+    await click_control(page, stop_selector, activated_counts, SETUP_TIMEOUT_MS)  # Request stop through the rendered control.
+    await wait_any_enabled(page, ['[data-testid$="-auto-start"]'], SETUP_TIMEOUT_MS)  # Require the committed atomic action to finish and return idle.
+    settled_selectors = AUTOPLAY_SETTLED_SELECTORS.get(game_id)  # Resolve the module's public next-action boundary.
+    if settled_selectors:  # Wait beyond the control-plane flag for any already-committed game action.
+        await page.wait_for_timeout(75)  # Let the already-started action publish its busy/phase transition before readiness polling.
+        await wait_any_enabled(page, settled_selectors, SETUP_TIMEOUT_MS)  # Prevent the manual cycle from racing the final autoplay render.
+
+
+# Click one terminal action and require it to become ready for another round.
+async def terminal_action(page, selector, activated_counts):
+    await click_control(page, selector, activated_counts)  # Start the public UI-owned atomic action.
+    await page.wait_for_timeout(5)  # Allow the busy-state rerender to replace the control.
+    await wait_any_enabled(page, [selector])  # Require terminal next-round readiness.
+
+
+# Return all visible enabled locators matching a selector after a decision rerender.
+async def enabled_locators(page, selector):
+    ready = []  # Preserve DOM order for deterministic cycling.
+    locator = page.locator(selector)  # Resolve the candidate collection.
+    for index in range(await locator.count()):  # Inspect each currently rendered candidate.
+        item = locator.nth(index)  # Bind one stable indexed locator.
+        if await item.is_visible() and await item.is_enabled():  # Retain only real actions.
+            ready.append(item)  # Add the actionable locator.
+    return ready  # Return the current decision set.
+
+
+# Fill exactly one rotating wager input and clear other compatible wager fields.
+async def rotate_wager_inputs(page, ordinal, activated_counts):
+    inputs = page.locator("[data-wager]")  # Discover module-owned outcome inputs.
+    count = await inputs.count()  # Count selectable wager outcomes.
+    if count < 1:  # Refuse silent zero-control coverage.
+        raise AssertionError("no rendered wager inputs")  # Preserve the missing-control defect.
+    for index in range(count):  # Clear all persisted outcome values before this play.
+        item = inputs.nth(index)  # Bind one current input.
+        if await item.is_visible() and await item.is_enabled():  # Edit only actionable inputs.
+            await fill_control(item, "0", activated_counts)  # Remove the previous wager through the UI.
+    target = inputs.nth(ordinal % count)  # Rotate coverage across every rendered outcome.
+    await fill_control(target, "1", activated_counts)  # Place one bounded synthetic-token wager.
+
+
+# Navigate from the authenticated shell to one game through visible UI controls.
+async def navigate_to_game(page, game_id, activated_counts, ordinal=None):
+    CONTROL_NAMESPACE.set("shell")  # Attribute persistent navigation actions to the shared shell.
+    await click_control(page, '[data-testid="nav-lobby"]', activated_counts, SETUP_TIMEOUT_MS)  # Return through the persistent top navigation.
+    await page.get_by_test_id("lobby").wait_for(state="visible", timeout=SETUP_TIMEOUT_MS)  # Require the catalog surface.
+    entry_selector = f'[data-testid="nav-{game_id}"]' if ordinal is not None and ordinal % 10 == 0 else f'[data-testid="open-{game_id}"]'  # Route at least one hundred full-run cycles through each top-nav game button.
+    await click_control(page, entry_selector, activated_counts, SETUP_TIMEOUT_MS)  # Enter through the assigned rendered navigation control.
+    await page.get_by_test_id(READY_TEST_IDS[game_id]).wait_for(state="visible", timeout=SETUP_TIMEOUT_MS)  # Require module readiness.
+    CONTROL_NAMESPACE.set(game_id)  # Attribute all subsequent controls to the entered game module.
+
+
+# Complete one terminal game play using only rendered controls.
+async def play_game_ui(page, game_id, ordinal, seen_counts, activated_counts):
+    await inventory_controls(page, seen_counts)  # Discover ready-state controls before the play.
+    await exercise_configuration_controls(page, ordinal, activated_counts)  # Cover visible fields and disclosures before the game locks them.
+    await exercise_autoplay_controls(page, ordinal, activated_counts)  # Cover shared Start/Stop without leaving background play active.
+    if game_id == "roulette":  # Exercise several table regions and one complete spin.
+        chips = await enabled_locators(page, "[data-chip]")  # Discover every visible chip denomination.
+        if chips:  # Rotate the selected wager unit across the complete chip stack.
+            await click_locator(chips[ordinal % len(chips)], activated_counts)  # Exercise one denomination through the rendered control.
+        spot_toggle = page.locator("#toggleSpots").first  # Resolve the table-hit-region visibility control.
+        if await locator_ready(spot_toggle):  # Preserve its prior state while still exercising the button.
+            await click_locator(spot_toggle, activated_counts)  # Toggle the complex wager hit regions once.
+            await click_locator(spot_toggle, activated_counts)  # Restore them for deterministic pointer coverage.
+        rebet = page.locator("#rebet").first  # Resolve the prior-round template action.
+        if 1 <= ordinal <= CONTROL_ACTIVATION_FLOOR and await locator_ready(rebet):  # Exercise exactly one hundred reachable rebet opportunities.
+            await click_locator(rebet, activated_counts)  # Reapply the prior template through the visible control.
+        numbers = await enabled_locators(page, '[data-testid^="roulette-num-"]')  # Discover straight-up targets.
+        if not numbers:  # Require the visible number grid.
+            raise AssertionError("Roulette number targets unavailable")  # Preserve a wagering-surface failure.
+        for offset in range(min(3, len(numbers))):  # Touch three rotating number targets per spin.
+            await click_locator(numbers[(ordinal * 3 + offset) % len(numbers)], activated_counts)  # Exercise pointer mapping through the DOM.
+        specials = await enabled_locators(page, "[data-dozen],[data-column],[data-outside],[data-outbtn],[data-betid],[data-call]")  # Discover table, fast, hotspot, and racetrack wagers.
+        for offset in range(min(12, len(specials))):  # Exceed one hundred activations for every complex target within Roulette's fixed full-run quota.
+            await click_locator(specials[(ordinal * 12 + offset) % len(specials)], activated_counts)  # Exercise the actual rendered hit region.
+        await inventory_controls(page, seen_counts)  # Discover contextual removal actions after the wager slip is populated.
+        remove_buttons = await enabled_locators(page, "[data-clear]")  # Discover contextual bet-removal buttons after wager placement.
+        if remove_buttons:  # Exercise one semantic remove action without emptying the complete slip.
+            await click_locator(remove_buttons[ordinal % len(remove_buttons)], activated_counts)  # Remove one rendered bet through the drawer.
+        await click_control(page, "#clear", activated_counts)  # Exercise full bet clearing before the terminal spin.
+        replacement_numbers = await enabled_locators(page, '[data-testid^="roulette-num-"]')  # Re-resolve number targets after the clear rerender.
+        if not replacement_numbers:  # Require a playable table after clearing.
+            raise AssertionError("Roulette number targets unavailable after clear")  # Preserve a broken reset state.
+        await click_locator(replacement_numbers[ordinal % len(replacement_numbers)], activated_counts)  # Leave one bounded wager for settlement.
+        await terminal_action(page, '[data-testid="roulette-spin"]', activated_counts)  # Spin and require settlement.
+    elif game_id == "slots":  # Exercise one complete slot spin.
+        await terminal_action(page, '[data-testid="slots-spin"]', activated_counts)  # Use the cabinet's visible spin control.
+    elif game_id == "keno":  # Exercise ticket selection, purchase, drawing, and reset.
+        new_ticket = page.get_by_test_id("keno-new-ticket")  # Resolve a persisted result-state reset.
+        if await locator_ready(new_ticket):  # Normalize a restored prior draw before selecting numbers.
+            await click_locator(new_ticket, activated_counts)  # Start a fresh ticket through the UI.
+        mode = ordinal % 16  # Reserve one hundred-plus cycles for each quick-pick and clear-selection action.
+        if mode == 0:  # Exercise the five-spot quick pick.
+            await click_control(page, "#quick5", activated_counts)  # Select five numbers through the visible helper.
+        elif mode == 1:  # Exercise the ten-spot quick pick.
+            await click_control(page, "#quick10", activated_counts)  # Select ten numbers through the visible helper.
+        else:  # Cover every individual number cell above the one-hundred activation floor.
+            number_set = page.locator('[data-testid^="keno-num-"]')  # Discover all eighty rendered number targets including scroll-reachable cells.
+            number_count = await number_set.count()  # Count the complete DOM board before pointer actionability checks.
+            if number_count != 80:  # Reject an incomplete board without confusing off-viewport cells with missing controls.
+                raise AssertionError(f"Keno number board exposed {number_count} of 80 controls")  # Preserve the exact catalog defect.
+            for offset in range(7):  # Seven selections across fourteen of sixteen cycles exceed one hundred per number.
+                await click_locator(number_set.nth((ordinal * 7 + offset) % number_count), activated_counts)  # Let Playwright scroll each complete-board target into view before clicking.
+            if mode == 2:  # Exercise clearing a draft selection without changing the terminal cycle contract.
+                await click_control(page, "#clearSel", activated_counts)  # Clear the current draft through the visible control.
+                refreshed_numbers = page.locator('[data-testid^="keno-num-"]')  # Re-resolve the complete board after the selection rerender.
+                for offset in range(5):  # Restore a legal bounded ticket through individual cells.
+                    await click_locator(refreshed_numbers.nth((ordinal * 5 + offset) % number_count), activated_counts)  # Rebuild the draft visibly.
+        await click_control(page, '[data-testid="keno-buy"]', activated_counts)  # Buy the synthetic ticket.
+        if mode == 3:  # Reserve one hundred-plus cycles for the purchased-ticket refund action.
+            await inventory_controls(page, seen_counts)  # Discover the conditional purchased-ticket cancellation control.
+            await click_control(page, '[data-testid="keno-clear-ticket"]', activated_counts)  # Cancel the open ticket through its rendered drawer button.
+            await click_control(page, '[data-testid="keno-buy"]', activated_counts)  # Repurchase the preserved draft before drawing.
+        await click_control(page, '[data-testid="keno-draw"]', activated_counts)  # Draw the purchased ticket.
+        await wait_any_enabled(page, ['[data-testid="keno-new-ticket"]'])  # Require the terminal result mode after the draw animation.
+    elif game_id == "bingo":  # Exercise buy, call, and terminal reset/refund.
+        await click_control(page, '[data-testid="bingo-reset"]', activated_counts)  # Normalize any autoplay-committed session and exercise the visible reset path.
+        await wait_any_enabled(page, ['[data-testid="bingo-buy"]'])  # Require a fresh card-purchase state after normalization.
+        await click_control(page, '[data-testid="bingo-buy"]', activated_counts)  # Buy one synthetic card.
+        await click_control(page, '[data-testid="bingo-call"]', activated_counts)  # Call one ball through the UI.
+        await click_control(page, '[data-testid="bingo-reset"]', activated_counts)  # End the bounded session visibly.
+        await wait_any_enabled(page, ['[data-testid="bingo-buy"]'])  # Require a fresh purchase state.
+    elif game_id == "blackjack":  # Exercise deals and available conditional decisions.
+        save_rules = page.locator("#saveRules").first  # Resolve the rendered table-rule persistence action.
+        if ordinal < CONTROL_ACTIVATION_FLOOR and await locator_ready(save_rules):  # Meet the literal button floor without excessive rule writes.
+            await click_locator(save_rules, activated_counts)  # Persist the currently rendered synthetic table rules.
+            await wait_any_enabled(page, ['[data-testid="blackjack-deal"]'], SETUP_TIMEOUT_MS)  # Require the table to remain deal-ready.
+        await click_control(page, '[data-testid="blackjack-deal"]', activated_counts)  # Deal a public hand.
+        for step in range(24):  # Bound split, insurance, and hit decision sequences.
+            choice = await wait_any_enabled(page, ['[data-testid="blackjack-deal"]', '[data-testid="blackjack-hit"]', '[data-testid="blackjack-stand"]', '[data-testid="blackjack-double"]', '[data-testid="blackjack-split"]', '[data-testid="blackjack-surrender"]', '[data-testid="blackjack-insurance"]', '[data-testid="blackjack-even-money"]'])  # Wait through deal and decision rerenders.
+            if choice == '[data-testid="blackjack-deal"]':  # Detect terminal next-hand readiness.
+                break  # Preserve one completed round.
+            await inventory_controls(page, seen_counts)  # Discover every legal mutually exclusive decision before choosing one.
+            actions = await enabled_locators(page, '[data-testid^="blackjack-"][data-action]')  # Discover current legal actions.
+            if not actions:  # Require progress from every nonterminal state.
+                raise AssertionError("Blackjack decision state exposed no legal action")  # Preserve a stranded hand.
+            await click_locator(actions[(ordinal + step) % len(actions)], activated_counts)  # Rotate across legal conditional controls.
+            await page.wait_for_timeout(5)  # Allow the next decision or settlement rerender.
+        else:  # Reject unbounded or cycling Blackjack state.
+            raise AssertionError("Blackjack UI did not settle within 24 decisions")  # Preserve a terminal-state failure.
+    elif game_id == "baccarat":  # Exercise rotating chip sizes, wager zones, and a coup.
+        chips = await enabled_locators(page, "[data-chip]")  # Discover visible chip controls.
+        if chips:  # Rotate chip coverage when the rail exposes chips.
+            await click_locator(chips[ordinal % len(chips)], activated_counts)  # Select the wager unit visibly.
+        bets = await enabled_locators(page, "[data-bet]")  # Discover both compact rail bets and the large table wager zones.
+        if not bets:  # Require at least one rendered Baccarat wager action.
+            raise AssertionError("Baccarat wager controls unavailable")  # Preserve a missing betting-surface defect.
+        await click_locator(bets[ordinal % len(bets)], activated_counts)  # Rotate across every independently actionable wager button.
+        await wait_any_enabled(page, ["[data-clear]"])  # Require the asynchronous wager debit to publish its removable drawer row.
+        await inventory_controls(page, seen_counts)  # Discover the contextual open-bet clear action.
+        await click_control(page, "[data-clear]", activated_counts)  # Refund the selected open bet through the visible drawer.
+        await wait_any_enabled(page, ["[data-bet]"])  # Require the wagering surface to unlock after the refund.
+        refreshed_bets = await enabled_locators(page, "[data-bet]")  # Re-resolve wager buttons after the clear rerender.
+        await click_locator(refreshed_bets[ordinal % len(refreshed_bets)], activated_counts)  # Restore one bounded wager for the coup.
+        await terminal_action(page, '[data-testid="baccarat-deal"]', activated_counts)  # Deal and settle the coup.
+    elif game_id in {"multi_hand_video_poker", "jacks_or_better_video_poker", "deuces_wild_video_poker", "joker_poker"}:  # Exercise draw-poker families.
+        modes = await enabled_locators(page, "[data-hand-count],[data-coin-count]")  # Discover pre-deal mode/coin controls.
+        if modes:  # Rotate configuration coverage before the hand locks.
+            await click_locator(modes[ordinal % len(modes)], activated_counts)  # Select a rendered compatible mode.
+        await click_control(page, '[data-action="deal"]', activated_counts)  # Deal the source hand.
+        await inventory_controls(page, seen_counts)  # Discover every card-hold control in the live decision state.
+        holds = await enabled_locators(page, "[data-hold-position]")  # Discover five card-hold controls.
+        if holds:  # Exercise at least one hold per hand.
+            await click_locator(holds[ordinal % len(holds)], activated_counts)  # Toggle a rotating card hold.
+        await click_control(page, '[data-action="draw"]', activated_counts)  # Draw and settle the hand.
+        await wait_any_enabled(page, ['[data-action="deal"]'])  # Require next-hand readiness.
+    elif game_id == "casino_war":  # Exercise deal and tie decisions when available.
+        await click_control(page, '[data-action="deal"]', activated_counts)  # Deal one card per side.
+        choice = await wait_any_enabled(page, ['[data-action="surrender"]', '[data-action="war"]', '[data-action="deal"]'])  # Detect tie or settlement.
+        if choice != '[data-action="deal"]':  # Resolve only an active tie decision.
+            await inventory_controls(page, seen_counts)  # Record both mutually exclusive tie actions when the rare state appears.
+            tie_choice = '[data-action="war"]' if ordinal % 2 and await locator_ready(page.locator('[data-action="war"]').first) else '[data-action="surrender"]'  # Alternate War and surrender.
+            await click_control(page, tie_choice, activated_counts)  # Resolve through the rendered decision.
+            await wait_any_enabled(page, ['[data-action="deal"]'])  # Require terminal next-deal state.
+    elif game_id in {"big_six_wheel", "crown_and_anchor", "fan_tan", "over_under_7", "chuck_a_luck"}:  # Exercise rotating wager-input games.
+        await rotate_wager_inputs(page, ordinal, activated_counts)  # Select one catalog outcome visibly.
+        action = {"big_six_wheel": "[data-spin]", "crown_and_anchor": "[data-play]", "fan_tan": "[data-play]", "over_under_7": "[data-play]", "chuck_a_luck": "[data-roll]"}[game_id]  # Resolve the module action.
+        await terminal_action(page, action, activated_counts)  # Play and require next-round readiness.
+    elif game_id == "dragon_tiger":  # Exercise rotating Dragon, Tiger, and tie wagers.
+        await wait_any_enabled(page, ["[data-bet]"])  # Wait for asynchronous table data to enable the visible wager rail.
+        bets = await enabled_locators(page, "[data-bet]")  # Discover the table's wager controls.
+        if not bets:  # Require a visible wager surface.
+            raise AssertionError("Dragon Tiger wager controls unavailable")  # Preserve a missing game action.
+        await click_locator(bets[ordinal % len(bets)], activated_counts)  # Select a rotating outcome.
+        await terminal_action(page, '[data-action="deal"]', activated_counts)  # Deal and settle the round.
+    elif game_id == "red_dog":  # Exercise deal and alternating call/raise decisions.
+        await click_control(page, '[data-action="deal"]', activated_counts)  # Deal the initial spread.
+        choice = await wait_any_enabled(page, ['[data-action="call"]', '[data-action="raise"]', '[data-action="deal"]'])  # Detect decision or automatic result.
+        if choice != '[data-action="deal"]':  # Resolve an active spread decision.
+            await inventory_controls(page, seen_counts)  # Discover both legal spread decisions before selecting one.
+            decision = '[data-action="raise"]' if ordinal % 2 and await locator_ready(page.locator('[data-action="raise"]').first) else '[data-action="call"]'  # Alternate legal decisions.
+            await click_control(page, decision, activated_counts)  # Complete the spread visibly.
+            await wait_any_enabled(page, ['[data-action="deal"]'])  # Require terminal next-round state.
+    elif game_id == "hi_lo":  # Exercise both Higher and Lower predictions.
+        await click_control(page, '[data-action="deal"]', activated_counts)  # Deal the reference card.
+        await inventory_controls(page, seen_counts)  # Discover both prediction controls in their actionable state.
+        await click_control(page, f'[data-guess="{"higher" if ordinal % 2 == 0 else "lower"}"]', activated_counts)  # Make a rotating visible prediction.
+        await wait_any_enabled(page, ['[data-action="deal"]'])  # Require terminal next-round readiness.
+    elif game_id == "scratch_cards":  # Exercise purchase and reveal-all settlement.
+        await click_control(page, '[data-action="start"]', activated_counts)  # Buy one synthetic card.
+        await wait_any_enabled(page, ['[data-testid^="scratch-cell-"]'])  # Require the asynchronous purchase to publish actionable covered cells.
+        await inventory_controls(page, seen_counts)  # Discover all covered scratch cells before revealing one.
+        cells = await enabled_locators(page, '[data-testid^="scratch-cell-"]')  # Discover every covered scratch position.
+        if not cells:  # Reject a purchased card without rendered reveal targets.
+            raise AssertionError("Scratch Card exposed no covered cells")  # Preserve the missing gameplay surface.
+        await click_locator(cells[ordinal % len(cells)], activated_counts)  # Reveal one rotating position so every cell exceeds one hundred uses.
+        await page.wait_for_function("() => document.querySelectorAll('.scratch-cell.is-revealed').length >= 1", timeout=SETUP_TIMEOUT_MS)  # Require the single-cell reveal to render before starting the terminal action.
+        await click_control(page, '[data-action="reveal-all"]', activated_counts)  # Reveal every cell through the public control.
+        await page.wait_for_function("() => document.querySelectorAll('.scratch-cell.is-revealed').length === 9", timeout=SETUP_TIMEOUT_MS)  # Require all nine authorized values to render after settlement.
+        await wait_any_enabled(page, ['[data-action="start"]'])  # Require a fresh-card state.
+    elif game_id == "sic_bo":  # Exercise rotating selections across the full bet board.
+        bets = page.locator("[data-bet-id]")  # Discover every catalog wager button.
+        count = await bets.count()  # Count the full rendered board.
+        if count < 1:  # Refuse a missing board.
+            raise AssertionError("Sic Bo bet board unavailable")  # Preserve the visual/action failure.
+        for offset in range(min(4, count)):  # Place four bounded rotating wagers per shake.
+            await click_locator(bets.nth((ordinal * 4 + offset) % count), activated_counts)  # Exercise distinct visible bet targets.
+        await inventory_controls(page, seen_counts)  # Discover contextual wager-removal and clear actions on the populated slip.
+        remove_buttons = await enabled_locators(page, "[data-remove-bet]")  # Discover selected-wager removal actions in the slip.
+        if remove_buttons:  # Exercise one semantic removal on every cycle.
+            await click_locator(remove_buttons[ordinal % len(remove_buttons)], activated_counts)  # Remove a rendered wager through the UI.
+        clear = page.locator('[data-action="clear"]').first  # Resolve the complete selection-clear action.
+        if ordinal < CONTROL_ACTIVATION_FLOOR and await locator_ready(clear):  # Exercise the button exactly through its requested floor.
+            await click_locator(clear, activated_counts)  # Clear the selected slip visibly.
+            refreshed_bets = page.locator("[data-bet-id]")  # Re-resolve the board after the clear state change.
+            refreshed_count = await refreshed_bets.count()  # Count the rebuilt board before selecting a replacement.
+            await click_locator(refreshed_bets.nth(ordinal % refreshed_count), activated_counts)  # Restore one wager for settlement.
+        await terminal_action(page, '[data-action="shake"]', activated_counts)  # Roll and settle the selected wagers.
+    elif game_id == "craps":  # Exercise one complete Pass Line round.
+        await click_control(page, '[data-testid="craps-start"]', activated_counts)  # Commit the line wager through the UI.
+        for _ in range(50):  # Bound exceptionally long point sequences.
+            choice = await wait_any_enabled(page, ['[data-testid="craps-roll"]', '[data-testid="craps-start"]'])  # Detect roll or settlement.
+            if choice == '[data-testid="craps-start"]':  # Stop at next-round readiness.
+                break  # Preserve one complete round.
+            await click_control(page, choice, activated_counts)  # Roll through the visible control.
+        else:  # Reject an unbounded point sequence.
+            raise AssertionError("Craps UI did not settle within 50 rolls")  # Preserve the failing state.
+    elif game_id == "three_card_poker":  # Exercise deal and alternating Play/Fold decisions.
+        await click_control(page, '[data-action="deal"]', activated_counts)  # Deal the three-card hand.
+        await inventory_controls(page, seen_counts)  # Discover both terminal decision buttons before choosing one.
+        await click_control(page, '[data-action="play"]' if ordinal % 2 else '[data-action="fold"]', activated_counts)  # Alternate terminal decisions.
+        await wait_any_enabled(page, ['[data-action="deal"]'])  # Require next-hand readiness.
+    elif game_id == "texas_holdem_practice_table":  # Exercise folds and complete call-through hands.
+        await click_control(page, '[data-action="start-hand"]', activated_counts)  # Start the practice hand.
+        opening = await wait_any_enabled(page, ['[data-action="call"]', '[data-action="fold"]', '[data-action="start-hand"]'])  # Wait for the preflop decision or an automatic terminal result.
+        if opening == '[data-action="start-hand"]':  # Accept a rare automatically settled hand.
+            await inventory_controls(page, seen_counts)  # Preserve the terminal control state before leaving the branch.
+            return  # Complete the UI cycle without inventing another action.
+        await inventory_controls(page, seen_counts)  # Discover Call and Fold together in the opening decision state.
+        if ordinal % 2 == 0:  # Cover the immediate fold path.
+            await click_control(page, '[data-action="fold"]', activated_counts)  # Fold through the rendered decision.
+        else:  # Cover every call street to terminal showdown.
+            for _ in range(5):  # Bound preflop through river decisions.
+                choice = await wait_any_enabled(page, ['[data-action="call"]', '[data-action="start-hand"]'])  # Wait for the next street or terminal showdown rerender.
+                if choice == '[data-action="start-hand"]':  # Detect terminal next-hand readiness.
+                    break  # Preserve the completed hand.
+                await inventory_controls(page, seen_counts)  # Record the live street action before advancing it.
+                await click_control(page, choice, activated_counts)  # Call the current street visibly.
+            else:  # Reject a stranded practice hand.
+                raise AssertionError("Texas Hold'em practice hand did not settle")  # Preserve the terminal-state failure.
+        await wait_any_enabled(page, ['[data-action="start-hand"]'])  # Require the next-hand state.
+    elif game_id == "andar_bahar":  # Exercise both table sides.
+        await click_control(page, f'[data-side="{"andar" if ordinal % 2 == 0 else "bahar"}"]', activated_counts)  # Select a rotating side.
+        await terminal_action(page, '[data-action="play"]', activated_counts)  # Deal and settle the round.
+    elif game_id == "acey_deucey":  # Exercise pass and play when legally available.
+        await click_control(page, '[data-action="deal"]', activated_counts)  # Deal the boundary cards.
+        choice = await wait_any_enabled(page, ['[data-action="play"]', '[data-action="pass"]', '[data-action="deal"]'])  # Wait for a decision or an automatically terminal pair/consecutive deal.
+        if choice == '[data-action="deal"]':  # Accept a round that settled without a player decision.
+            await inventory_controls(page, seen_counts)  # Preserve terminal controls for coverage accounting.
+            return  # Complete the UI cycle without fabricating a decision.
+        await inventory_controls(page, seen_counts)  # Discover both legal Acey-Deucey decisions before choosing one.
+        decisions = await enabled_locators(page, '[data-action="play"],[data-action="pass"]')  # Discover legal terminal decisions.
+        if not decisions:  # Require one visible choice.
+            raise AssertionError("Acey-Deucey exposed no decision")  # Preserve a stranded round.
+        await click_locator(decisions[ordinal % len(decisions)], activated_counts)  # Rotate across legal choices.
+        await wait_any_enabled(page, ['[data-action="deal"]'])  # Require next-round readiness.
+    elif game_id == "caribbean_stud":  # Exercise call and fold decisions.
+        await click_control(page, '[data-action="deal"]', activated_counts)  # Deal the five-card hand.
+        await inventory_controls(page, seen_counts)  # Discover Call and Fold in their live decision state.
+        await click_control(page, '[data-action="call"]' if ordinal % 2 else '[data-action="fold"]', activated_counts)  # Alternate decisions.
+        await wait_any_enabled(page, ['[data-action="deal"]'])  # Require next-hand readiness.
+    elif game_id == "let_it_ride":  # Exercise both Pull and Ride at both stages.
+        await click_control(page, '[data-action="deal"]', activated_counts)  # Deal the initial hand.
+        for stage in range(3):  # Bound two decisions plus terminal observation.
+            choice = await wait_any_enabled(page, ['[data-action="deal"]', '[data-decision="ride"]', '[data-decision="pull"]'])  # Wait through each decision or settlement rerender.
+            if choice == '[data-action="deal"]':  # Detect terminal next-hand state.
+                break  # Preserve the settled hand.
+            await inventory_controls(page, seen_counts)  # Discover Pull and Ride at every live decision stage.
+            decision = '[data-decision="ride"]' if (ordinal + stage) % 2 else '[data-decision="pull"]'  # Rotate both decisions.
+            await click_control(page, decision, activated_counts)  # Resolve the current stage through the UI.
+        else:  # Reject an unbounded decision sequence.
+            raise AssertionError("Let It Ride UI did not settle")  # Preserve the failing state.
+    elif game_id == "casino_holdem":  # Exercise call and fold decisions.
+        await click_control(page, '[data-action="deal"]', activated_counts)  # Deal the Hold'em hand.
+        await inventory_controls(page, seen_counts)  # Discover both legal Hold'em decisions before choosing one.
+        await click_control(page, '[data-decision="call"]' if ordinal % 2 else '[data-decision="fold"]', activated_counts)  # Alternate terminal decisions.
+        await wait_any_enabled(page, ['[data-action="deal"]'])  # Require next-hand readiness.
+    elif game_id == "plinko":  # Exercise one complete Plinko drop.
+        await terminal_action(page, '[data-action="drop"]', activated_counts)  # Drop and settle through the visible control.
+    else:  # Refuse silent catalog omissions.
+        raise AssertionError(f"no UI cycle strategy for catalog game {game_id}")  # Force an explicit strategy for every game.
+    await inventory_controls(page, seen_counts)  # Discover terminal and conditional-state controls after the play.
+
+
+# Attach credential-free diagnostics to one test-owned browser page.
+def attach_page_diagnostics(page, diagnostics):
+    state = {"anonymous_probe_seen": False, "anonymous_console_seen": False}  # Track the expected pre-login identity probe signals.
+
+    def on_console(message):  # Capture browser console errors only.
+        if message.type == "error":  # Ignore ordinary application information.
+            expected_probe = str(message.text) == "Failed to load resource: the server responded with a status of 401 (Unauthorized)" and not state["anonymous_console_seen"]  # Recognize Chromium's expected anonymous current-user probe.
+            if expected_probe:  # Exclude exactly one bootstrap console diagnostic per session.
+                state["anonymous_console_seen"] = True  # Ensure later unauthorized resource failures remain visible.
+                return  # Preserve only unexpected console errors.
+            diagnostics["console_errors"][str(message.text)[:300]] += 1  # Group bounded public console messages.
+
+    def on_page_error(error):  # Capture uncaught JavaScript errors.
+        diagnostics["page_errors"][safe_error(error)] += 1  # Group bounded local-only diagnostics.
+
+    def on_response(response):  # Capture unexpected API failures observed by the browser.
+        if "/api/" not in response.url or response.status < 400:  # Ignore assets and successful API traffic.
+            return  # Preserve only protected-request failures.
+        path = "/" + response.url.split("/", 3)[-1].split("?", 1)[0]  # Strip origin and query data.
+        expected_probe = response.request.method == "GET" and path == "/api/v2/me" and response.status == 401 and not state["anonymous_probe_seen"]  # Recognize anonymous bootstrap.
+        if expected_probe:  # Exclude the expected pre-login response.
+            state["anonymous_probe_seen"] = True  # Ensure later current-user failures remain visible.
+            return  # Preserve only unexpected failures.
+        diagnostics["http_failures"][f"{response.status} {response.request.method} {path}"] += 1  # Group sanitized route evidence.
+
+    page.on("console", on_console)  # Observe console errors without changing behavior.
+    page.on("pageerror", on_page_error)  # Observe uncaught page exceptions.
+    page.on("response", on_response)  # Observe failed browser-owned API requests.
+
+
+# Inspect one rendered game for overflow, truncation, and clipped enabled controls.
+async def geometry_scan(page):
+    expression = r"""() => { const viewport = { width: innerWidth, height: innerHeight }; const originalScroll = { x: scrollX, y: scrollY }; const documentOverflowX = Math.max(document.documentElement.scrollWidth, document.body.scrollWidth) - innerWidth; const brand = document.querySelector('.brand-text,.brand-name,[data-testid="premium-brand"]'); const brandTruncated = Boolean(brand && brand.scrollWidth > brand.clientWidth + 1); const clipped = []; const scrollReachable = []; const occluded = []; const controls = [...document.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled),summary')]; for (const node of controls) { if (!node.getClientRects().length || node.offsetParent === null || getComputedStyle(node).visibility === 'hidden' || (node.tagName !== 'SUMMARY' && node.closest('details:not([open])'))) continue; const sig = String(node.getAttribute('data-testid') || node.getAttribute('data-action') || node.getAttribute('data-bet-id') || node.id || node.getAttribute('aria-label') || node.textContent || node.tagName).trim().replace(/\s+/g,' ').slice(0,100); let targetRect = node.getBoundingClientRect(); let ancestor = node.parentElement; let reachableByScroller = false; let inaccessible = false; while (ancestor && ancestor !== document.body) { const style = getComputedStyle(ancestor); const ancestorRect = ancestor.getBoundingClientRect(); const outsideY = targetRect.bottom > ancestorRect.bottom + 4 || targetRect.top < ancestorRect.top - 4; const outsideX = targetRect.right > ancestorRect.right + 4 || targetRect.left < ancestorRect.left - 4; const overflowY = style.overflowY === 'visible' ? style.overflow : style.overflowY; const overflowX = style.overflowX === 'visible' ? style.overflow : style.overflowX; const scrollableY = ['auto','scroll'].includes(overflowY) && ancestor.scrollHeight > ancestor.clientHeight + 1; const scrollableX = ['auto','scroll'].includes(overflowX) && ancestor.scrollWidth > ancestor.clientWidth + 1; if ((outsideY && scrollableY) || (outsideX && scrollableX)) { reachableByScroller = true; targetRect = ancestorRect; } else if ((outsideY && ['hidden','clip'].includes(overflowY)) || (outsideX && ['hidden','clip'].includes(overflowX))) { inaccessible = true; break; } ancestor = ancestor.parentElement; } if (inaccessible) clipped.push(sig); else if (reachableByScroller) scrollReachable.push(sig); node.scrollIntoView({ block: 'center', inline: 'center' }); const actionRect = node.getBoundingClientRect(); const x = Math.max(0, Math.min(innerWidth - 1, actionRect.left + actionRect.width / 2)); const y = Math.max(0, Math.min(innerHeight - 1, actionRect.top + actionRect.height / 2)); const top = document.elementFromPoint(x, y); const labelOwnsNode = Boolean(top?.closest('label')?.contains(node)); if (top && top !== node && !node.contains(top) && !labelOwnsNode) occluded.push(sig); } scrollTo(originalScroll.x, originalScroll.y); return { viewport, document_overflow_x_px: Math.max(0, Math.round(documentOverflowX)), brand_truncated: brandTruncated, clipped_enabled_control_count: clipped.length, clipped_enabled_controls: [...new Set(clipped)].slice(0,100), scroll_reachable_enabled_control_count: scrollReachable.length, scroll_reachable_enabled_controls: [...new Set(scrollReachable)].slice(0,100), occluded_enabled_control_count: occluded.length, occluded_enabled_controls: [...new Set(occluded)].slice(0,100) }; }"""  # Distinguish unreachable clipping and overlay occlusion from visible controls reachable through intentional horizontal or vertical scroll surfaces while tolerating transform-only bleed.
+    return await page.evaluate(expression)  # Return sanitized geometry findings.
+
+
+# Create one isolated disposable runtime copy outside the source checkout.
+def prepare_deployment(args, run_id, shard_label):
+    parent = Path(args.deployment_root).expanduser().resolve()  # Resolve the harness-owned temporary parent.
+    source = ROOT.resolve()  # Resolve the frozen source snapshot.
+    if str(parent).lower().startswith(str(source).lower()):  # Prevent recursive copies into the worktree.
+        raise RuntimeError("deployment root must not be inside the source checkout")  # Fail before mutation.
+    parent.mkdir(parents=True, exist_ok=True)  # Create the disposable parent.
+    target = parent / f"casino-ui-50k-{run_id}-{shard_label}"  # Give each worker one isolated runtime.
+    ignored = shutil.ignore_patterns(".git", "codex", "logs", "__pycache__", "*.pyc")  # Exclude repository metadata, prior evidence, and caches that the runtime never reads.
+    shutil.copytree(source, target, ignore=ignored)  # Copy the exact application source into the isolated disposable runtime.
+    return target  # Return the shard-owned runtime tree.
+
+
+# Provision one high-balance synthetic user through the Admin boundary.
+def create_synthetic_user(client, shard_label, run_id, locale):
+    email = f"ui-50k-{run_id}-{shard_label}@example.test"  # Use a non-routable synthetic identifier.
+    password = f"Ui50k-{run_id}-{shard_label}-Only"  # Generate a local-only shard credential.
+    payload = {"email": email, "password": password, "display_name": f"UI 50k {shard_label}", "initial_tokens": 1_000_000, "terms_accepted": True, "language": locale, "format_locale": locale}  # Provide ample fake tokens for bounded play.
+    created = client.call("/api/v1/admin/users", "POST", payload)  # Provision through the documented Admin API.
+    return {"email": email, "password": password, "user_id": created["user"]["user_id"], "player_id": created["user"]["player_id"]}  # Retain in-memory credentials and canonical IDs only.
+
+
+# Log one synthetic user in through the rendered authentication form.
+async def login_through_ui(page, base_url, user, locale, activated_counts):
+    CONTROL_NAMESPACE.set("auth")  # Attribute the one-time rendered login controls to authentication lifecycle evidence.
+    await page.goto(base_url, wait_until="domcontentloaded", timeout=SETUP_TIMEOUT_MS)  # Load the public login UI.
+    locale_select = page.get_by_test_id("auth-locale-select")  # Resolve the auth language selector.
+    await locale_select.select_option(locale, timeout=SETUP_TIMEOUT_MS)  # Select the shard locale through the UI.
+    activated_counts[await control_signature(locale_select)] += 1  # Count the visible locale change.
+    await fill_control(page.get_by_test_id("login-email"), user["email"], activated_counts, SETUP_TIMEOUT_MS)  # Enter the synthetic email after the locale rerender.
+    await fill_control(page.get_by_test_id("login-password"), user["password"], activated_counts, SETUP_TIMEOUT_MS)  # Enter the local-only password after the locale rerender.
+    terms = page.get_by_test_id("login-terms-check")  # Resolve the fake-money acknowledgement.
+    await terms.check(timeout=SETUP_TIMEOUT_MS)  # Accept simulator terms through the form.
+    activated_counts[await control_signature(terms)] += 1  # Count the successful checkbox activation.
+    async with page.expect_response(lambda response: response.url.endswith("/api/v2/auth/login") and response.request.method == "POST", timeout=SETUP_TIMEOUT_MS) as response_info:  # Observe the form-owned login request.
+        await click_locator(page.get_by_test_id("login-submit"), activated_counts, SETUP_TIMEOUT_MS)  # Submit through the rendered button.
+    response = await response_info.value  # Resolve the authentication response.
+    if response.status >= 400:  # Fail promptly on rejected login.
+        raise AssertionError(f"UI login endpoint returned HTTP {response.status}")  # Preserve status without credentials.
+    await page.get_by_test_id("lobby").wait_for(state="visible", timeout=SETUP_TIMEOUT_MS)  # Require the authenticated catalog.
+    browser_identity = await page.evaluate("window.CasinoCurrentUser?.user?.email || ''")  # Read the UI-bound identity only.
+    if str(browser_identity).lower() != user["email"].lower():  # Detect session leakage or incorrect binding.
+        raise AssertionError("browser identity did not match the synthetic shard user")  # Fail without exposing identity values.
+    CONTROL_NAMESPACE.set("shell")  # Attribute the authenticated lobby and subsequent navigation to the shared shell.
+
+
+# Save one JSON artifact atomically enough for local test review.
+def write_json(path, payload):
+    path.parent.mkdir(parents=True, exist_ok=True)  # Ensure the artifact parent exists.
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")  # Persist readable machine evidence.
+
+
+# Execute every assigned UI cycle for one isolated catalog game.
+async def run_game_shard(playwright, semaphore, args, game_id, game_index, replica_index, quota, cycle_start, run_id, source_commit):
+    async with semaphore:  # Bound simultaneous browsers, servers, and file-backed runtimes.
+        locale = "en-US" if game_index % 2 == 0 else "ru-RU"  # Distribute the two implemented locales deterministically.
+        report = {"game": game_id, "game_index": game_index, "replica_index": replica_index, "locale": locale, "quota": quota, "global_cycle_start": cycle_start, "global_cycle_end": cycle_start + quota - 1, "source_commit": source_commit, "attempted": 0, "attempted_actions": 0, "completed": 0, "failed": 0, "failed_attempts": 0, "status": "FAIL", "requirements": list(REQUIREMENT_IDS)}  # Start fail-closed shard evidence bound to the exact source.
+        seen_counts = Counter()  # Count actionable controls observed across states.
+        activated_counts = Counter()  # Count controls activated through the browser UI.
+        failure_counts = Counter()  # Group repeated UI failure signatures.
+        failure_first_cycle = {}  # Preserve the first global cycle for each failure class.
+        diagnostics = {"console_errors": Counter(), "page_errors": Counter(), "http_failures": Counter()}  # Collect browser-owned failure signals.
+        latencies = []  # Record successful full-cycle latency.
+        deployment = None  # Track the shard-owned runtime copy.
+        proc = None  # Track the exact loopback server process.
+        client = None  # Track the Admin evidence client and base URL.
+        browser = None  # Track the test-owned Chromium process.
+        context = None  # Track the isolated cookie/session context.
+        user = None  # Track canonical synthetic account IDs for isolation evidence.
+        screenshot_root = Path(args.evidence_root).expanduser().resolve()  # Resolve local visual evidence root.
+        shard_label = f"{game_id}-r{replica_index}"  # Create a unique worker label without changing the canonical game identity.
+        shard_report_path = Path(args.shard_report_root).expanduser().resolve() / f"{game_index:02d}-{shard_label}.json"  # Resolve the per-worker JSON artifact.
+        try:  # Preserve one terminal report across setup, cycles, evidence, and cleanup.
+            deployment = prepare_deployment(args, run_id, shard_label)  # Create the isolated protected-source runtime.
+            proc, client = start_ui_server(deployment)  # Start one tracked loopback-only Casino server without log-pipe backpressure.
+            client.call("/api/v1/casino/reset", "POST", {})  # Reset only the disposable shard data.
+            client.login_default_user()  # Restore the Admin evidence session after reset.
+            operations = client.call("/api/v2/admin/operations")  # Bind the shard to readiness and build evidence.
+            if not operations.get("ready"):  # Refuse testing a degraded runtime.
+                raise AssertionError("operations readiness was not green before UI cycles")  # Preserve the failing gate.
+            user = create_synthetic_user(client, shard_label, run_id, locale)  # Provision one isolated high-balance player.
+            browser = await playwright.chromium.launch(headless=not args.headed)  # Launch one real Chromium process.
+            context = await browser.new_context(viewport={"width": 1920, "height": 1080}, reduced_motion="reduce")  # Use stable desktop soak geometry and reduced motion.
+            page = await context.new_page()  # Give this game shard one real browser page.
+            attach_page_diagnostics(page, diagnostics)  # Observe browser errors without changing behavior.
+            await login_through_ui(page, client.base_url, user, locale, activated_counts)  # Authenticate through the real form.
+            await inventory_controls(page, seen_counts)  # Discover the authenticated lobby and shell controls.
+            for ordinal in range(quota):  # Complete every assigned global UI cycle or exhaust its bounded retry evidence.
+                global_cycle = cycle_start + ordinal  # Resolve the globally unique test ID.
+                report["attempted"] += 1  # Count each unique assigned cycle ID exactly once.
+                cycle_completed = False  # Keep the cycle fail closed until a terminal UI state is observed.
+                for attempt_number in range(1, args.max_attempts_per_cycle + 1):  # Retry only the same global cycle within a strict bound.
+                    report["attempted_actions"] += 1  # Count every real browser play attempt, including recovery attempts.
+                    started = time.perf_counter()  # Start end-to-end navigation and gameplay timing.
+                    try:  # Continue after bounded product failures so exact completion can still be measured.
+                        await navigate_to_game(page, game_id, activated_counts, ordinal)  # Navigate visibly while rotating this shard's game-local route coverage.
+                        await play_game_ui(page, game_id, ordinal, seen_counts, activated_counts)  # Complete one rendered-control play using the game-local coverage schedule.
+                        latencies.append(time.perf_counter() - started)  # Record successful full-cycle latency.
+                        report["completed"] += 1  # Count only the first terminal completion for this global cycle.
+                        cycle_completed = True  # Prevent any duplicate completion for this ID.
+                        break  # Advance to the next unique global cycle.
+                    except Exception as exc:  # Classify a product or route failure without aborting the shard.
+                        signature = safe_error(exc)  # Bound and normalize the failure class.
+                        failure_counts[signature] += 1  # Count repeated occurrences.
+                        failure_first_cycle.setdefault(signature, global_cycle)  # Preserve the first deterministic reproduction ID.
+                        report["failed_attempts"] += 1  # Count the failed browser action separately from completed-cycle accounting.
+                        if failure_counts[signature] == 1:  # Capture only one screenshot per distinct failure class.
+                            path = screenshot_root / "before_failure" / f"{game_index:02d}-{shard_label}-{len(failure_first_cycle):02d}.png"  # Resolve sanitized failure evidence.
+                            path.parent.mkdir(parents=True, exist_ok=True)  # Ensure the evidence directory exists.
+                            await page.screenshot(path=str(path), full_page=True)  # Capture the failing visible state.
+                        try:  # Recover through a public page reload without mutating server state directly.
+                            await page.reload(wait_until="domcontentloaded", timeout=SETUP_TIMEOUT_MS)  # Rebuild the current route and session shell.
+                            await page.locator("body").wait_for(state="visible", timeout=SETUP_TIMEOUT_MS)  # Require only a reconstructed document before retry.
+                        except Exception:  # Let the next bounded retry use navigation recovery from the current document.
+                            pass  # Preserve the original failure rather than replacing it with recovery noise.
+                if not cycle_completed:  # Preserve a cycle that never reached a terminal UI state.
+                    report["failed"] += 1  # Count one uncompleted global cycle after all bounded attempts.
+                if (ordinal + 1) % args.progress_every == 0 or ordinal + 1 == quota:  # Emit bounded progress for long monitoring.
+                    print(f"UI50K game={game_id} replica={replica_index} assigned={ordinal + 1}/{quota} actions={report['attempted_actions']} completed={report['completed']} uncompleted={report['failed']} failed_attempts={report['failed_attempts']}", flush=True)  # Report only sanitized counts.
+            state = client.call(f"/api/v2/admin/users/{user['user_id']}/state")  # Read canonical post-run user state.
+            report["isolation"] = {"player_match": state["player_id"] == user["player_id"], "nonnegative_balance": float(state["token_balance"]) >= 0, "ledger_events": int(state["recent_ledger_count"])}  # Store sanitized identity/wallet invariants.
+            try:  # Capture one representative terminal surface even when some cycles failed.
+                await navigate_to_game(page, game_id, activated_counts)  # Re-enter the game through visible navigation.
+            except Exception:  # Preserve the current failing page if route recovery is unavailable.
+                pass  # Let the screenshot and geometry scan document the actual state.
+            report["visuals"] = []  # Preserve one geometry result and screenshot reference per governed viewport.
+            for viewport in VIEWPORTS:  # Inspect every registered game at desktop, compact desktop, tablet, and mobile widths.
+                await page.set_viewport_size({"width": viewport["width"], "height": viewport["height"]})  # Apply the complete governed visual matrix row.
+                artifact_name = f"{game_index:02d}-{shard_label}-{viewport['id']}-{locale}.png"  # Build a sanitized stable filename without a private host path.
+                evidence_path = screenshot_root / "representative" / artifact_name  # Resolve the representative evidence path.
+                evidence_path.parent.mkdir(parents=True, exist_ok=True)  # Ensure the evidence directory exists.
+                await page.screenshot(path=str(evidence_path), full_page=True)  # Save reviewable UI evidence.
+                report["visuals"].append({"viewport": viewport, "geometry": await geometry_scan(page), "artifact": f"representative/{artifact_name}", "evidence_class": "after_failure_recovery" if failure_counts else "after_pass"})  # Store automated geometry evidence without private paths or mislabeled recovered failures.
+            post_operations = client.call("/api/v2/admin/operations")  # Recheck readiness after the complete shard.
+            report["operations_ready_after"] = bool(post_operations.get("ready"))  # Preserve post-load readiness.
+            report["status"] = "PASS" if report["completed"] == quota and not report["failed"] and not failure_counts and report["isolation"]["player_match"] and report["isolation"]["nonnegative_balance"] and report["isolation"]["ledger_events"] > 0 and report["operations_ready_after"] and not diagnostics["console_errors"] and not diagnostics["page_errors"] and not diagnostics["http_failures"] else "FAIL"  # Evaluate every gameplay, identity, readiness, and browser-diagnostic shard gate.
+        except Exception as exc:  # Capture fatal setup, browser, or evidence failures.
+            report["fatal_error"] = {"message": safe_error(exc), "traceback_summary": safe_error(traceback.format_exc())}  # Preserve a bounded sanitized traceback summary.
+            report["failed"] = max(report["failed"], quota - report["completed"])  # Account for all uncompleted assigned tests.
+            report["status"] = "FAIL"  # Keep the shard fail closed.
+        finally:  # Close only test-owned resources and always persist the shard report.
+            if context is not None:  # Close the isolated session context when created.
+                await context.close()  # Revoke cookies and release its page.
+            if browser is not None:  # Close the shard-owned Chromium process when launched.
+                await browser.close()  # Release the browser process and children.
+            if proc is not None and client is not None:  # Stop only this shard's tracked server.
+                try:  # Preserve cleanup failure as a release-gate failure.
+                    report["listener_cleanup"] = stop_server(proc, client)  # Verify the exact loopback listener closed.
+                except Exception as cleanup_exc:  # Record failed cleanup without touching unrelated runtimes.
+                    report["listener_cleanup"] = {"closed": False, "error": safe_error(cleanup_exc)}  # Preserve bounded cleanup evidence.
+                    report["status"] = "FAIL"  # Refuse a passing shard with unverified cleanup.
+            if deployment is not None and deployment.exists() and not args.keep_deployments:  # Remove only this shard-owned runtime.
+                shutil.rmtree(deployment, onerror=clear_readonly_and_retry)  # Clean synthetic data after listener closure.
+            report["control_seen_counts"] = dict(sorted(seen_counts.items()))  # Persist deterministic control discovery.
+            report["control_activated_counts"] = dict(sorted(activated_counts.items()))  # Persist deterministic UI activation coverage.
+            report["failure_counts"] = dict(failure_counts.most_common())  # Persist grouped product failures.
+            report["failure_first_cycle"] = failure_first_cycle  # Preserve deterministic first reproduction IDs.
+            report["latency"] = latency_summary(latencies)  # Persist successful-cycle performance evidence.
+            report["browser_diagnostics"] = {name: dict(counter.most_common()) for name, counter in diagnostics.items()}  # Persist grouped browser signals.
+            write_json(shard_report_path, report)  # Save the terminal per-game artifact.
+        return report  # Return the sanitized shard evidence to the aggregate controller.
+
+
+# Parse repeatable smoke, catalog, and full qualification options.
+def parse_args():
+    parser = argparse.ArgumentParser(description="Run real-browser UI cycles across every registered Casino game.")  # Create the CLI parser.
+    parser.add_argument("--total-cycles", type=int, default=50_000, help="Exact total UI cycle attempts distributed across selected games.")  # Configure smoke or full volume.
+    parser.add_argument("--parallel", type=int, default=4, help="Maximum isolated game shards active together.")  # Bound local CPU, memory, and listeners.
+    parser.add_argument("--only-games", default="", help="Optional comma-separated catalog game IDs for focused rehearsal.")  # Enable bounded strategy debugging.
+    parser.add_argument("--deployment-root", default=str(Path(os.environ.get("TEMP", str(ROOT))) / "casino-ui-50000"), help="Parent for disposable runtime copies.")  # Keep runtime writes outside OneDrive.
+    parser.add_argument("--report", default=str(ROOT / "logs" / "test-runs" / "ui_50000.json"), help="Aggregate JSON report path.")  # Configure terminal evidence.
+    parser.add_argument("--shard-report-root", default=str(ROOT / "logs" / "test-runs" / "ui_50000_shards"), help="Per-game JSON artifact directory.")  # Preserve recoverable shard handbacks.
+    parser.add_argument("--evidence-root", default=str(ROOT / "logs" / "test-runs" / "ui_50000_visual"), help="Representative and failure screenshot directory.")  # Configure visual evidence.
+    parser.add_argument("--progress-every", type=int, default=250, help="Progress interval within each game shard.")  # Keep long-run monitoring bounded.
+    parser.add_argument("--roulette-replicas", type=int, default=4, help="Independent Roulette workers that share its exact assigned quota.")  # Parallelize the interaction-dense Roulette board.
+    parser.add_argument("--replicate-games", default="", help="Optional comma-separated non-Roulette game IDs to split across extra workers.")  # Accelerate safe resumption of unfinished game ranges.
+    parser.add_argument("--game-replicas", type=int, default=4, help="Worker count for each game selected by --replicate-games.")  # Bound resumed per-game parallelism.
+    parser.add_argument("--resume-shards", action="store_true", help="Reuse complete compatible terminal reports from --shard-report-root.")  # Preserve verified work across bounded controller runs.
+    parser.add_argument("--max-attempts-per-cycle", type=int, default=3, help="Maximum UI recovery attempts for one unique global cycle ID.")  # Bound retries while preserving exact completed-cycle evidence.
+    parser.add_argument("--headed", action="store_true", help="Show test browsers for focused debugging only.")  # Keep long qualification headless.
+    parser.add_argument("--keep-deployments", action="store_true", help="Preserve disposable runtimes for explicit local debugging.")  # Allow opt-in post-failure inspection.
+    args = parser.parse_args()  # Parse caller options.
+    if args.total_cycles < 1:  # Reject an empty test run.
+        parser.error("--total-cycles must be at least 1")  # Require real UI work.
+    if args.parallel < 1:  # Reject disabled concurrency.
+        parser.error("--parallel must be at least 1")  # Preserve forward progress.
+    if args.progress_every < 1:  # Reject an invalid progress divisor.
+        parser.error("--progress-every must be at least 1")  # Preserve bounded monitoring.
+    if args.roulette_replicas < 1:  # Reject a disabled Roulette allocation.
+        parser.error("--roulette-replicas must be at least 1")  # Preserve complete game coverage.
+    if args.game_replicas < 1:  # Reject disabled resumed game allocation.
+        parser.error("--game-replicas must be at least 1")  # Preserve forward progress.
+    if args.max_attempts_per_cycle < 1:  # Reject a retry policy that cannot attempt a cycle.
+        parser.error("--max-attempts-per-cycle must be at least 1")  # Preserve real UI execution.
+    return args  # Return validated options.
+
+
+# Resolve and validate the selected catalog subset.
+def selected_games(args):
+    if not args.only_games.strip():  # Default to the complete installed catalog.
+        return list(GAME_IDS)  # Preserve canonical order.
+    requested = [item.strip() for item in args.only_games.split(",") if item.strip()]  # Parse explicit focused IDs.
+    unknown = [game_id for game_id in requested if game_id not in GAME_IDS]  # Reject typos and stale catalog entries.
+    if unknown:  # Fail before starting runtime resources.
+        raise ValueError(f"unknown game IDs: {unknown}")  # Preserve actionable caller evidence.
+    return requested  # Return the validated focused catalog order.
+
+
+# Allocate exact deterministic quotas and contiguous global cycle ranges.
+def allocate_cycles(game_ids, total_cycles, roulette_replicas, replicated_games, game_replicas):
+    if total_cycles < len(game_ids):  # Require at least one real cycle per selected game.
+        raise ValueError("total cycles must be at least the selected game count")  # Prevent silent zero-coverage games.
+    base, remainder = divmod(total_cycles, len(game_ids))  # Divide evenly with a deterministic prefix remainder.
+    allocations = []  # Preserve game, quota, and global offset together.
+    offset = 0  # Start global IDs at zero.
+    for index, game_id in enumerate(game_ids):  # Allocate every selected catalog game.
+        quota = base + (1 if index < remainder else 0)  # Give the prefix one extra cycle until the remainder is exhausted.
+        requested_replicas = roulette_replicas if game_id == "roulette" else game_replicas if game_id in replicated_games else 1  # Resolve explicitly parallelized game ranges.
+        replica_count = min(quota, requested_replicas)  # Never create an empty worker.
+        replica_base, replica_remainder = divmod(quota, replica_count)  # Divide its exact game quota without dropping cycles.
+        for replica_index in range(replica_count):  # Allocate each independent browser/account/runtime worker.
+            replica_quota = replica_base + (1 if replica_index < replica_remainder else 0)  # Distribute the remainder deterministically.
+            allocations.append((game_id, GAME_IDS.index(game_id), replica_index, replica_quota, offset))  # Bind game, replica, quota, and contiguous range.
+            offset += replica_quota  # Advance to the next unique global cycle ID.
+    if offset != total_cycles:  # Defend exact accounting before browser work.
+        raise AssertionError("cycle allocation did not equal requested total")  # Preserve the arithmetic gate.
+    return allocations  # Return deterministic shard work.
+
+
+# Convert a timeout-cancelled shard into one aggregate-safe failure record.
+async def run_bounded_shard(playwright, semaphore, args, allocation, run_id, source_commit):
+    game_id, game_index, replica_index, quota, cycle_start = allocation  # Unpack the deterministic shard assignment.
+    try:  # Bound each game without stranding its cleanup finally block.
+        return await run_game_shard(playwright, semaphore, args, game_id, game_index, replica_index, quota, cycle_start, run_id, source_commit)  # Execute the exact-source isolated shard.
+    except Exception as exc:  # Preserve unexpected controller-level failures.
+        return {"game": game_id, "game_index": game_index, "replica_index": replica_index, "quota": quota, "global_cycle_start": cycle_start, "global_cycle_end": cycle_start + quota - 1, "source_commit": source_commit, "attempted": 0, "attempted_actions": 0, "completed": 0, "failed": quota, "failed_attempts": quota, "status": "FAIL", "controller_error": safe_error(exc), "listener_cleanup": {"closed": False}, "control_seen_counts": {}, "control_activated_counts": {}, "failure_counts": {safe_error(exc): quota}, "browser_diagnostics": {"console_errors": {}, "page_errors": {}, "http_failures": {}}}  # Return a fully accounted exact-source fail-closed record.
+
+
+# Reuse only complete compatible worker handbacks from an earlier bounded controller run.
+def partition_resume_allocations(args, allocations, source_commit):
+    if not args.resume_shards:  # Default to a fresh run when resumption was not requested.
+        return [], allocations  # Schedule every deterministic allocation.
+    root = Path(args.shard_report_root).expanduser().resolve()  # Resolve the caller-selected terminal report root.
+    resumed = []  # Retain only fully verified compatible reports.
+    pending = []  # Schedule missing or incompatible allocations from scratch.
+    for allocation in allocations:  # Inspect each deterministic game/replica range.
+        game_id, game_index, replica_index, quota, cycle_start = allocation  # Unpack the expected identity and range.
+        path = root / f"{game_index:02d}-{game_id}-r{replica_index}.json"  # Resolve the worker's terminal filename.
+        if not path.exists():  # Treat absent reports as unfinished work.
+            pending.append(allocation)  # Schedule the complete assigned range.
+            continue  # Inspect the next allocation.
+        try:  # Reject corrupt or partial evidence without aborting safe resumption.
+            report = json.loads(path.read_text(encoding="utf-8"))  # Read the candidate terminal report.
+        except Exception:  # Treat unreadable JSON as incomplete evidence.
+            pending.append(allocation)  # Rerun the complete assigned range.
+            continue  # Inspect the next allocation.
+        compatible = report.get("source_commit") == source_commit and report.get("game") == game_id and report.get("game_index") == game_index and report.get("replica_index") == replica_index and report.get("quota") == quota and report.get("global_cycle_start") == cycle_start and report.get("global_cycle_end") == cycle_start + quota - 1  # Require exact source and deterministic assignment identity.
+        terminal = report.get("attempted") == quota and report.get("listener_cleanup", {}).get("closed") is True and report.get("isolation", {}).get("player_match") and report.get("isolation", {}).get("nonnegative_balance")  # Require full attempts, cleanup, and account isolation.
+        if compatible and terminal:  # Reuse only a complete safe-boundary handback.
+            resumed.append(report)  # Preserve its failures as formal evidence.
+        else:  # Rerun incomplete or incompatible work from its full range.
+            pending.append(allocation)  # Schedule one fresh isolated worker.
+    return resumed, pending  # Return immutable evidence and remaining work separately.
+
+
+# Execute bounded game shards and build one terminal qualification report.
+async def run_all(args):
+    from playwright.async_api import async_playwright  # Load Playwright only for the explicit UI command.
+
+    game_ids = selected_games(args)  # Resolve the complete or focused catalog subset.
+    source_commit = resolve_source_commit()  # Freeze the exact checkout identity before any resume or runtime work.
+    replicated_games = {item.strip() for item in args.replicate_games.split(",") if item.strip()}  # Parse explicit additional replica targets.
+    unknown_replicas = replicated_games.difference(game_ids)  # Reject out-of-scope or misspelled replica targets.
+    if unknown_replicas:  # Fail before starting local resources.
+        raise ValueError(f"replicate-games not selected: {sorted(unknown_replicas)}")  # Preserve an actionable caller error.
+    allocations = allocate_cycles(game_ids, args.total_cycles, args.roulette_replicas, replicated_games, args.game_replicas)  # Allocate exact quotas, replicas, and global IDs.
+    resumed_results, pending_allocations = partition_resume_allocations(args, allocations, source_commit)  # Reuse only exact-source compatible safe-boundary handbacks.
+    run_id = f"{int(time.time())}-{os.getpid()}"  # Create a collision-resistant local-only runtime identity.
+    report = {"status": "FAIL", "requested_cycles": args.total_cycles, "selected_games": game_ids, "selected_game_count": len(game_ids), "registered_game_count": len(GAME_IDS), "worker_count": len(allocations), "resumed_worker_count": len(resumed_results), "pending_worker_count": len(pending_allocations), "roulette_replicas": args.roulette_replicas if "roulette" in game_ids else 0, "replicated_games": sorted(replicated_games), "parallel_limit": args.parallel, "source_commit": source_commit, "started_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "requirements": list(REQUIREMENT_IDS)}  # Start the exact-source aggregate artifact fail closed.
+    semaphore = asyncio.Semaphore(args.parallel)  # Bound active browsers, servers, and disposable runtimes.
+    async with async_playwright() as playwright:  # Own the shared Playwright driver lifecycle.
+        tasks = [asyncio.create_task(run_bounded_shard(playwright, semaphore, args, allocation, run_id, source_commit)) for allocation in pending_allocations]  # Queue only missing exact-source deterministic workers.
+        fresh_results = await asyncio.gather(*tasks)  # Wait for every newly terminal shard handback.
+    results = resumed_results + fresh_results  # Combine earlier safe boundaries with fresh terminal evidence.
+    seen_counts = Counter()  # Aggregate discovered control states.
+    activated_counts = Counter()  # Aggregate real DOM activations.
+    failure_counts = Counter()  # Aggregate product/harness failure classes.
+    console_errors = Counter()  # Aggregate browser console errors.
+    page_errors = Counter()  # Aggregate uncaught JavaScript errors.
+    http_failures = Counter()  # Aggregate failed browser API requests.
+    for result in results:  # Merge every terminal game artifact.
+        seen_counts.update(result.get("control_seen_counts", {}))  # Merge discovered controls.
+        activated_counts.update(result.get("control_activated_counts", {}))  # Merge successful activations.
+        failure_counts.update(result.get("failure_counts", {}))  # Merge failed cycle classes.
+        diagnostics = result.get("browser_diagnostics", {})  # Read grouped browser signals.
+        console_errors.update(diagnostics.get("console_errors", {}))  # Merge console errors.
+        page_errors.update(diagnostics.get("page_errors", {}))  # Merge uncaught page errors.
+        http_failures.update(diagnostics.get("http_failures", {}))  # Merge protected-request failures.
+    assigned_ids = []  # Verify global range uniqueness without retaining per-cycle payloads.
+    for result in results:  # Reconstruct each deterministic assigned range.
+        assigned_ids.extend(range(result["global_cycle_start"], result["global_cycle_end"] + 1))  # Add assigned IDs for overlap/gap checks.
+    unique_ids = set(assigned_ids)  # Deduplicate the reconstructed assignment.
+    expected_ids = set(range(args.total_cycles))  # Build the exact requested global ID set.
+    control_coverage = classify_control_coverage(seen_counts, activated_counts)  # Classify every discovered or activated control under the durable eligibility policy.
+    failed_controls = control_coverage["failed"]  # Keep the red eligible-control evidence explicit for the aggregate gate.
+    game_counts = {}  # Aggregate replicated workers back into canonical game outcomes.
+    for result in sorted(results, key=lambda item: (item["game_index"], item.get("replica_index", 0))):  # Preserve game and replica order.
+        item = game_counts.setdefault(result["game"], {"quota": 0, "attempted": 0, "attempted_actions": 0, "completed": 0, "failed": 0, "failed_attempts": 0, "status": "PASS", "worker_latencies": []})  # Start one canonical game record.
+        item["quota"] += result["quota"]  # Sum the exact assigned game quota.
+        item["attempted"] += result.get("attempted", 0)  # Sum real browser attempts across replicas.
+        item["attempted_actions"] += result.get("attempted_actions", 0)  # Sum retry-inclusive UI actions across replicas.
+        item["completed"] += result.get("completed", 0)  # Sum terminal completed plays across replicas.
+        item["failed"] += result.get("failed", 0)  # Sum failed plays across replicas.
+        item["failed_attempts"] += result.get("failed_attempts", 0)  # Sum retry-level failures across replicas.
+        item["status"] = "FAIL" if result.get("status", "FAIL") != "PASS" else item["status"]  # Fail the game if any worker fails.
+        item["worker_latencies"].append(result.get("latency", {}))  # Preserve each independent worker's timing summary.
+    visual_failures = []  # Collect geometry failures across distributed governed viewports.
+    for result in results:  # Inspect each shard's complete visual handback.
+        for visual in result.get("visuals", []):  # Evaluate every governed viewport independently.
+            geometry = visual.get("geometry", {})  # Read automated geometry evidence when available.
+            if geometry.get("document_overflow_x_px", 0) > 0 or geometry.get("brand_truncated") or geometry.get("clipped_enabled_control_count", 0) > 0 or geometry.get("occluded_enabled_control_count", 0) > 0:  # Detect governed overflow, clipping, branding, and overlay failures.
+                visual_failures.append({"game": result["game"], "viewport": visual.get("viewport", {}), "geometry": geometry})  # Preserve sanitized defect evidence.
+    attempted = sum(result.get("attempted", 0) for result in results)  # Count actual browser test attempts.
+    attempted_actions = sum(result.get("attempted_actions", 0) for result in results)  # Count retry-inclusive rendered UI actions.
+    completed = sum(result.get("completed", 0) for result in results)  # Count terminal successful UI cycles.
+    failed = sum(result.get("failed", 0) for result in results)  # Count failed or uncompleted cycles.
+    failed_attempts = sum(result.get("failed_attempts", 0) for result in results)  # Count every failed rendered UI attempt.
+    cleanup_ok = all(result.get("listener_cleanup", {}).get("closed") is True for result in results)  # Require every tracked listener to close.
+    isolation_ok = all(result.get("isolation", {}).get("player_match") and result.get("isolation", {}).get("nonnegative_balance") for result in results)  # Require canonical user isolation.
+    ranges_ok = len(assigned_ids) == args.total_cycles and len(unique_ids) == args.total_cycles and unique_ids == expected_ids  # Require no duplicate or missing global IDs.
+    control_coverage.update({"discovered_signatures": len(seen_counts), "activated_signatures": len(activated_counts), "minimum_required_activations": CONTROL_ACTIVATION_FLOOR, "activated_counts": dict(sorted(activated_counts.items()))})  # Add aggregate inventory totals to the complete classifications.
+    report.update({"attempted_cycles": attempted, "attempted_actions": attempted_actions, "completed_cycles": completed, "failed_cycles": failed, "failed_attempts": failed_attempts, "assignment": {"range_count": len(assigned_ids), "unique_count": len(unique_ids), "no_gaps_or_duplicates": ranges_ok}, "game_counts": game_counts, "control_coverage": control_coverage, "failure_counts": dict(failure_counts.most_common()), "browser_diagnostics": {"console_errors": dict(console_errors.most_common()), "page_errors": dict(page_errors.most_common()), "http_failures": dict(http_failures.most_common())}, "visual_failures": visual_failures, "isolation_ok": isolation_ok, "listener_cleanup_ok": cleanup_ok, "shards": results})  # Store complete aggregate evidence.
+    full_catalog = not args.only_games.strip() and len(game_ids) == len(GAME_IDS)  # Detect the formal full-catalog command.
+    minimum_game_cycles = min((item["completed"] for item in game_counts.values()), default=0)  # Record the successful per-game floor.
+    report["minimum_completed_per_game"] = minimum_game_cycles  # Preserve distribution evidence.
+    classification_complete = control_coverage["classified_count"] == len(set(seen_counts).union(activated_counts))  # Prove every observed identity has exactly one class.
+    gates = [attempted == args.total_cycles, completed == args.total_cycles, failed == 0, ranges_ok, cleanup_ok, isolation_ok, not failure_counts, not console_errors, not page_errors, not http_failures, not visual_failures, classification_complete, not failed_controls]  # Evaluate every universal qualification gate.
+    if full_catalog:  # Enforce the formal #227 per-game floor only on the complete command.
+        gates.append(minimum_game_cycles >= args.total_cycles // len(GAME_IDS))  # Require the deterministic minimum allocation.
+    report["status"] = "PASS" if all(gates) else "FAIL"  # Mark the aggregate only after every gate passes.
+    report["finished_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())  # Record terminal report time.
+    write_json(Path(args.report).expanduser().resolve(), report)  # Persist the aggregate machine-readable artifact.
+    print(f"UI50000 {report['status']} assigned={attempted} actions={attempted_actions} completed={completed} uncompleted={failed} failed_attempts={failed_attempts} games={len(game_ids)} failed_controls={len(failed_controls)} report={Path(args.report).expanduser().resolve()}", flush=True)  # Emit one concise terminal handback.
+    return 0 if report["status"] == "PASS" else 1  # Return the release qualification status.
+
+
+# Run the command-line entry point without import-time side effects.
+def main():
+    args = parse_args()  # Read the requested cycle volume and runtime bounds.
+    try:  # Convert caller/configuration failures into a nonzero terminal result.
+        return asyncio.run(run_all(args))  # Execute the complete browser qualification.
+    except Exception as exc:  # Preserve one concise controller failure.
+        print(f"UI50000 FAIL controller={safe_error(exc)}", flush=True)  # Exclude credentials, sessions, and raw logs.
+        return 1  # Fail closed.
+
+
+# Enter only when launched as the UI qualification command.
+if __name__ == "__main__":
+    raise SystemExit(main())  # Exit with the aggregate qualification status.

@@ -8589,6 +8589,24 @@
       "introduced_in": "issue-284-283-auth-visual-conformance",
       "changed_in": "issue-284-283-auth-visual-conformance",
       "notes": "Issue #284/#283 auth short-viewport fit and terms touch-target browser proof."
+    },
+    {
+      "id": "TEST-072",
+      "module": "Tests",
+      "description": "The reusable full-catalog real-browser qualification refuses dirty source, binds every shard and resume handback to one exact source commit, assigns exactly 50,000 unique completed-cycle identities with the required per-game floor, classifies every namespaced eligible control as exercised at least 100 times, opportunity-limited with real UI activation evidence, or failed with numeric evidence, captures browser and all-governed-viewport visual failures, and verifies isolated runtime cleanup.",
+      "status": "PLANNED",
+      "api_tests": [
+        "UI-50000-HARNESS-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/ui_50000.py",
+        "tests/unit/ui_50000_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-227-ui-50000-rerun",
+      "changed_in": "issue-227-ui-50000-rerun",
+      "notes": "Issue #227 current-main rerun; requirement remains PLANNED until the exact 50,000-cycle formal evidence and human visual review reach terminal acceptance."
     }
   ]
 }

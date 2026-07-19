@@ -45,8 +45,8 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.0
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.45.0
-- docs: 1.45.0
+- tests: 1.46.0
+- docs: 1.46.0
 - contracts: 1.33.0
 - tooling: 1.14.0
 - commenting_policy: 1.0.0
@@ -682,3 +682,4 @@ Historical source baseline: 9.1.0
 - **TEST-070** (Tests) - PASS: Browser regression proves the lost-response idempotency guarantee: after the backend commits and the client sees a simulated lost response, a retry through the visible control resends the identical idempotency identity and immutable wager body, and the ledger records exactly one wager debit for the intended play.
 - **AUTH-UI-002** (Application) - PASS: The login screen fits without page scroll at the short 1280x720 desktop viewport, and the required terms acceptance control presents an enlarged (>=42px) touch target.
 - **TEST-071** (Tests) - PASS: Browser evidence verifies the login gate fits without page overflow at 1280x720 with the sign-in submit control on screen, and that the terms acceptance row meets the enlarged touch-target height.
+- **TEST-072** (Tests) - PLANNED: The reusable full-catalog real-browser qualification refuses dirty source, binds every shard and resume handback to one exact source commit, assigns exactly 50,000 unique completed-cycle identities with the required per-game floor, classifies every namespaced eligible control as exercised at least 100 times, opportunity-limited with real UI activation evidence, or failed with numeric evidence, captures browser and all-governed-viewport visual failures, and verifies isolated runtime cleanup.
