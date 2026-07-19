@@ -16,6 +16,8 @@ import { speak, clickSound, reelSound } from '../core/voice.js';
 const DOMAIN = 'games/slots';
 // Store PAYLINE_OPTIONS so the UI exposes exactly the engine-supported line counts.
 const PAYLINE_OPTIONS = [1, 3, 5, 9, 20];
+// Store MIN_LINE_BET so input correction, round cost, autoplay, and spin payloads share one floor.
+const MIN_LINE_BET = 1;
 // Store DEFAULT_GRID so the cabinet remains populated before the first API result.
 const DEFAULT_GRID = [['BELL', 'CHERRY', 'SEVEN', 'BAR', 'WILD'], ['BAR', 'WILD', 'CHERRY', 'BELL', 'SEVEN'], ['LEMON', 'BAR', 'SCATTER', 'CHERRY', 'BELL']];
 // Store SPINNING_GRID so the in-progress state can animate without changing cabinet dimensions.
@@ -36,6 +38,10 @@ let spinning = false;
 let selectedLines = 20;
 // Store selectedLineBet so rerenders do not reset the visible line-bet setup.
 let selectedLineBet = 1;
+// Store lineBetFeedbackKey so localized validation feedback survives locale and layout rerenders.
+let lineBetFeedbackKey = '';
+// Store autoplayPlan by reference so input edits update the plan already owned by the control plane.
+const autoplayPlan = { type: 'repeat_current_spin', active_lines: selectedLines, line_bet: selectedLineBet };
 // Store botInfo so the panel can truthfully reserve Slots bot capability space.
 let botInfo = null;
 // Store localeUnsubscribe so the module can detach its i18n listener on route unmount.
@@ -55,6 +61,14 @@ function currentGrid() { return spinning ? SPINNING_GRID : (lastSpin?.grid || la
 function freeSpinCount() { return Number(state?.free_spins || lastSpin?.free_spins_remaining || 0); }
 // Define roundCost to show the exact cost implied by the current visible controls.
 function roundCost() { return freeSpinCount() > 0 ? 0 : selectedLines * selectedLineBet; }
+// Define syncAutoplayPlan to keep control-plane configuration aligned with visible Slots controls.
+function syncAutoplayPlan() { autoplayPlan.active_lines = selectedLines; autoplayPlan.line_bet = selectedLineBet; }
+// Define updateRoundCost to refresh the mounted cost without replacing the focused input.
+function updateRoundCost() { const output = root?.querySelector('[data-testid="slots-round-cost"]'); if (output) output.textContent = fm(roundCost()); }
+// Define renderLineBetFeedback to expose validation state to sighted and assistive-technology users.
+function renderLineBetFeedback(input, invalid) { const feedback = root?.querySelector('[data-testid="slots-line-bet-feedback"]'); input?.setAttribute('aria-invalid', invalid ? 'true' : 'false'); if (feedback) { feedback.textContent = lineBetFeedbackKey ? tx(lineBetFeedbackKey) : ''; feedback.classList.toggle('error', invalid); } }
+// Define acceptLineBetInput to reject unsafe spellings immediately and synchronize every consumer.
+function acceptLineBetInput(input) { const candidate = Number(input?.value); const invalid = !input || input.value === '' || !Number.isFinite(candidate) || !Number.isInteger(candidate) || candidate < MIN_LINE_BET || Boolean(input.validity?.stepMismatch); selectedLineBet = invalid ? MIN_LINE_BET : candidate; lineBetFeedbackKey = invalid ? 'errors.lineBetMinimum' : ''; if (invalid) input.value = String(MIN_LINE_BET); syncAutoplayPlan(); updateRoundCost(); renderLineBetFeedback(input, invalid); return !invalid; }
 // Define firstLineWin to find the first payline win that can drive the overlay.
 function firstLineWin() { return (lastSpin?.wins || []).find(win => Array.isArray(win.line)) || null; }
 // Define scatterWin to find a scatter/free-spin result when present.
@@ -81,6 +95,8 @@ function primaryStatus() { if (spinning) return tx('status.spinning'); if (scatt
 function resultSummary() { if (spinning) return `<b>${safe(tx('result.accepted'))}</b> ${safe(tx('result.acceptedDetail', { cost: fm(roundCost()) }))}`; if (!lastSpin) return `<b>${safe(tx('result.ready'))}</b> ${safe(tx('result.readyDetail'))}`; const wins = (lastSpin.wins || []).map(win => win.kind === 'scatter' ? tx('result.scatterWin', { count: fn(win.scatter_count), amount: fm(win.payout) }) : tx('result.lineWin', { line: fn(Number(win.line_index || 0) + 1), count: fn(win.count), symbol: symbolLabel(win.symbol), amount: fm(win.payout) })); const visibleWins = wins.slice(0, 3).map(item => safe(item)).join('<br>'); const moreWins = wins.length > 3 ? `<br>${safe(tx('result.moreWins', { count: fn(wins.length - 3) }))}` : ''; const detail = wins.length ? `${visibleWins}${moreWins}` : safe(tx('result.noWin')); return `<b>${safe(tx('result.complete'))}</b> ${safe(tx('result.costPayout', { cost: fm(lastSpin.cost), payout: fm(lastSpin.payout) }))}<br>${detail}`; }
 // Define styleHtml to scope Slots-only premium styling without touching shared CSS.
 function styleHtml() { return `<style>.slots-premium{--slots-gold:#ffd978;--slots-red:#c82032;--slots-ink:#03120d;gap:14px}.slots-control,.slots-stage,.slots-drawer{border-color:rgba(255,217,120,.5);background:linear-gradient(150deg,rgba(5,25,18,.94),rgba(2,12,9,.88))}.slots-title{display:grid;gap:4px;margin-bottom:14px}.slots-title .eyebrow{color:var(--slots-gold);font-weight:900}.slots-title h2{font-size:34px;margin:0}.slots-metric-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}.slots-metric{min-height:78px;padding:12px;border:1px solid var(--border-soft);border-radius:12px;background:rgba(255,255,255,.04)}.slots-metric span{display:block;color:var(--muted);font-size:12px;font-weight:800}.slots-metric b{display:block;margin-top:6px;color:#fff2c2;font-size:22px}.slots-spin-button{width:100%;min-height:52px;margin-bottom:14px}.slots-plan{display:grid;gap:10px;min-height:186px;padding:12px;border:1px solid rgba(255,217,120,.32);border-radius:14px;background:rgba(255,217,120,.06)}.slots-status-row{display:flex;justify-content:space-between;gap:10px;align-items:center}.slots-dot{width:11px;height:11px;border-radius:50%;background:#86f2aa;box-shadow:0 0 16px #86f2aa}.slots-auto-mount .autoplay{margin:0;border-radius:12px;background:rgba(0,0,0,.12)}.slots-stage{display:grid;grid-template-rows:auto minmax(0,1fr) 122px;gap:14px;overflow:hidden}.slots-stage-top{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;min-height:54px;padding:12px 18px;border:1px solid rgba(255,217,120,.38);border-radius:14px;background:rgba(255,217,120,.08)}.slots-chip-row{display:flex;gap:10px;flex-wrap:wrap}.slots-chip{min-width:128px;padding:9px 12px;border:1px solid rgba(255,217,120,.35);border-radius:12px;background:rgba(0,0,0,.22)}.slots-chip b{display:block;color:#fff2c2}.slots-cabinet{position:relative;display:grid;grid-template-rows:minmax(0,1fr) auto;min-height:550px;padding:28px 40px;border:2px solid rgba(255,217,120,.72);border-radius:24px;background:linear-gradient(180deg,rgba(11,48,34,.96),rgba(5,27,20,.96));box-shadow:inset 0 0 0 8px rgba(255,217,120,.08),0 24px 70px rgba(0,0,0,.4)}.slots-reel-window{position:relative;align-self:center;min-height:340px;padding:18px;border:2px solid rgba(255,217,120,.45);border-radius:18px;background:#06140f;overflow:hidden}.slots-reel-grid{display:grid;grid-template-columns:repeat(5,minmax(72px,1fr));grid-template-rows:repeat(3,96px);gap:10px;height:100%}.slots-symbol{position:relative;display:grid;place-items:center;min-width:0;border:1px solid rgba(113,77,18,.42);border-radius:12px;color:#2a1300;background:linear-gradient(180deg,#fff9e9,#f1d990);font-family:var(--font-display);font-size:34px;font-weight:1000;line-height:1;text-align:center;box-shadow:inset 0 -8px 18px rgba(113,77,18,.14);transition:box-shadow .2s,transform .2s}.slots-symbol.symbol-SEVEN{color:#a70e1d}.slots-symbol.symbol-BELL,.slots-symbol.symbol-BAR{color:#9c6500}.slots-symbol.spinning{color:transparent;background:repeating-linear-gradient(180deg,#fff8de 0 16px,#c82032 16px 28px,#063f2d 28px 42px,#ffd978 42px 58px);filter:blur(.6px);animation:slotsReelBlur .18s linear infinite}.slots-symbol.win{outline:3px solid #fff1a5;box-shadow:0 0 0 5px rgba(255,217,120,.24),0 0 28px rgba(255,217,120,.76),inset 0 -8px 18px rgba(113,77,18,.16)}.slots-payline{position:absolute;inset:18px;pointer-events:none}.slots-lever{position:absolute;right:26px;bottom:32px;width:42px;height:128px;border-radius:999px;background:linear-gradient(180deg,#ffd978,#b47a20);box-shadow:0 10px 24px rgba(0,0,0,.38)}.slots-cabinet-footer{display:grid;grid-template-columns:1fr 150px;gap:16px;align-items:center;min-height:82px;padding-right:72px}.slots-result{min-height:122px;padding:18px;border:1px solid rgba(255,255,255,.12);border-radius:14px;background:rgba(0,0,0,.22);overflow:auto}.slots-drawer{display:grid;grid-template-rows:auto auto minmax(0,1fr) auto;gap:12px}.slots-card-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.slots-card{min-height:76px;padding:11px;border:1px solid rgba(255,255,255,.14);border-radius:12px;background:rgba(255,255,255,.04)}.slots-card.active{border-color:var(--slots-gold);background:rgba(255,217,120,.1)}.slots-card b{display:block;color:var(--slots-gold)}.slots-history{display:grid;gap:8px;min-height:220px;max-height:280px;overflow:auto}.slots-history-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;min-height:48px;padding:10px 12px;border:1px solid rgba(255,255,255,.14);border-radius:12px;background:rgba(0,0,0,.17)}.slots-history-row.active{border-color:var(--slots-gold);background:rgba(255,217,120,.1)}.slots-bot-panel{min-height:88px;padding:12px;border:1px solid rgba(255,217,120,.26);border-radius:12px;background:rgba(0,0,0,.16)}@keyframes slotsReelBlur{from{transform:translateY(-4px)}to{transform:translateY(4px)}}@media(max-width:1180px){.slots-premium.three-col{grid-template-columns:1fr;overflow:auto}.slots-stage{min-height:790px}.slots-cabinet{min-height:520px}.slots-reel-grid{grid-template-rows:repeat(3,82px)}}@media(max-width:640px){.slots-cabinet{padding:18px 16px}.slots-reel-grid{grid-template-columns:repeat(5,minmax(48px,1fr));grid-template-rows:repeat(3,64px);gap:7px}.slots-stage{min-height:690px}.slots-cabinet-footer{grid-template-columns:1fr;padding-right:0}.slots-lever{display:none}.slots-card-grid,.slots-metric-grid{grid-template-columns:1fr}}</style>`; }
+// Define validationStyleHtml to reserve readable inline validation feedback without shifting controls.
+function validationStyleHtml() { return `<style>.slots-field-message{display:block;min-height:28px;padding-top:4px;color:var(--muted);font-size:11px;font-weight:800;line-height:1.25}.slots-field-message.error{color:#ffaaa9}</style>`; }
 // Define paylineOverlayHtml to draw non-bonus win lines as an overlay rather than moving cells.
 function paylineOverlayHtml() { const win = firstLineWin(); if (!win || spinning || scatterWin()) return ''; const points = win.line.map((row, col) => `${10 + col * 20},${16.7 + row * 33.3}`).join(' '); return `<svg class="slots-payline" viewBox="0 0 100 100" preserveAspectRatio="none" data-testid="slots-payline"><polyline points="${points}" fill="none" stroke="#fff1a5" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`; }
 // Define reelGridHtml to render exactly five reels by three rows in every state.
@@ -94,20 +110,86 @@ function recentSpinsHtml() { const pending = spinning ? `<div class="slots-histo
 // Define botPanelHtml to reserve bot status without enabling unsupported Slots bot actions.
 function botPanelHtml() { if (!botInfo) return `<div class="slots-bot-panel" data-testid="slots-bot-panel"><b>${safe(tx('bots.title'))}</b><p class="muted">${safe(tx('bots.loading'))}</p></div>`; if (!botInfo.capabilities?.supports_bots) return `<div class="slots-bot-panel" data-testid="slots-bot-panel"><b>${safe(tx('bots.title'))}</b><p class="muted">${safe(tx('bots.unavailable'))}</p></div>`; const rows = (botInfo.bots || []).map(bot => `<div class="slots-history-row"><span>${safe(bot.display_name || bot.bot_id)}</span><b>${safe(bot.strategy_id || tx('bots.noStrategy'))}</b></div>`).join(''); return `<div class="slots-bot-panel" data-testid="slots-bot-panel"><b>${safe(tx('bots.title'))}</b>${rows || `<p class="muted">${safe(tx('bots.empty'))}</p>`}</div>`; }
 // Define controlRailHtml to render controls, status, autoplay, and bot context.
-function controlRailHtml() { const lineOptions = PAYLINE_OPTIONS.map(count => `<option value="${count}" ${selectedLines === count ? 'selected' : ''}>${safe(fn(count))}</option>`).join(''); return `<section class="panel slots-control"><div class="slots-title"><span class="eyebrow">${safe(tx('kicker'))}</span><h2>${safe(tx('title'))}</h2></div><div class="slots-metric-grid"><label class="slots-metric">${safe(tx('controls.paylines'))}<select id="lines" data-testid="slots-lines">${lineOptions}</select></label><label class="slots-metric">${safe(tx('controls.lineBet'))}<input id="lineBet" data-testid="slots-line-bet" type="number" min="1" step="1" value="${safe(selectedLineBet)}"></label></div><button id="spin" data-testid="slots-spin" class="primary slots-spin-button" ${spinning ? 'disabled' : ''}>${safe(spinButtonLabel())}</button><div class="slots-plan"><div class="slots-status-row"><span class="slots-dot"></span><b>${safe(primaryStatus())}</b></div><p class="muted">${safe(tx('autoplay.description'))}</p><div id="auto" class="slots-auto-mount"></div></div><div class="slots-metric-grid"><div class="slots-metric"><span>${safe(tx('metrics.roundCost'))}</span><b>${safe(fm(roundCost()))}</b></div><div class="slots-metric"><span>${safe(tx('metrics.freeSpins'))}</span><b>${safe(fn(freeSpinCount()))}</b></div></div>${botPanelHtml()}</section>`; }
+function controlRailHtml() {
+  // Build the supported line-count options from the module-owned catalog.
+  const lineOptions = PAYLINE_OPTIONS.map(count => `<option value="${count}" ${selectedLines === count ? 'selected' : ''}>${safe(fn(count))}</option>`).join('');
+  // Resolve the current localized validation message for the reserved live region.
+  const lineBetFeedback = lineBetFeedbackKey ? tx(lineBetFeedbackKey) : '';
+  // Render controls with an explicit validation relationship and synchronized round-cost output.
+  return `<section class="panel slots-control"><div class="slots-title"><span class="eyebrow">${safe(tx('kicker'))}</span><h2>${safe(tx('title'))}</h2></div><div class="slots-metric-grid"><label class="slots-metric">${safe(tx('controls.paylines'))}<select id="lines" data-testid="slots-lines">${lineOptions}</select></label><label class="slots-metric">${safe(tx('controls.lineBet'))}<input id="lineBet" data-testid="slots-line-bet" type="number" min="${MIN_LINE_BET}" step="1" value="${safe(selectedLineBet)}" aria-invalid="${lineBetFeedbackKey ? 'true' : 'false'}" aria-describedby="slots-line-bet-feedback"><span id="slots-line-bet-feedback" class="slots-field-message ${lineBetFeedbackKey ? 'error' : ''}" role="status" aria-live="polite" data-testid="slots-line-bet-feedback">${safe(lineBetFeedback)}</span></label></div><button id="spin" data-testid="slots-spin" class="primary slots-spin-button" ${spinning ? 'disabled' : ''}>${safe(spinButtonLabel())}</button><div class="slots-plan"><div class="slots-status-row"><span class="slots-dot"></span><b>${safe(primaryStatus())}</b></div><p class="muted">${safe(tx('autoplay.description'))}</p><div id="auto" class="slots-auto-mount"></div></div><div class="slots-metric-grid"><div class="slots-metric"><span>${safe(tx('metrics.roundCost'))}</span><b data-testid="slots-round-cost">${safe(fm(roundCost()))}</b></div><div class="slots-metric"><span>${safe(tx('metrics.freeSpins'))}</span><b>${safe(fn(freeSpinCount()))}</b></div></div>${botPanelHtml()}</section>`;
+}
 // Define stageHtml to render the fixed cabinet, payline overlay, and result reservation.
 function stageHtml() { return `<section class="panel slots-stage"><div class="slots-stage-top"><div><b>${safe(tx('cabinet.name'))}</b><p class="muted">${safe(tx('cabinet.subtitle'))}</p></div><strong>${safe(winHeadline())}</strong></div><div class="slots-cabinet" data-testid="slots-cabinet">${reelGridHtml()}<div class="slots-cabinet-footer"><p class="muted">${safe(cabinetNote())}</p><button class="primary" disabled>${safe(spinning ? tx('controls.wait') : (lastSpin?.payout > 0 ? tx('controls.winState') : tx('controls.readyState')))}</button></div><div class="slots-lever" aria-hidden="true"></div></div><div class="slots-result result-box" data-testid="slots-result">${resultSummary()}</div></section>`; }
 // Define drawerHtml to render paytable/recent-spin details without affecting cabinet size.
 function drawerHtml() { return `<section class="panel slots-drawer">${isBonusContext() ? featureSummaryHtml() : paytableHtml()}${recentSpinsHtml()}</section>`; }
 // Define render to replace the Slots view atomically with the premium layout.
-function render() { if (!root) return; root.innerHTML = `${styleHtml()}<div class="game-layout three-col stable-game slots-premium" data-testid="slots-premium">${controlRailHtml()}${stageHtml()}${drawerHtml()}</div>`; bindControls(); }
+function render() { if (!root) return; root.innerHTML = `${styleHtml()}${validationStyleHtml()}<div class="game-layout three-col stable-game slots-premium" data-testid="slots-premium">${controlRailHtml()}${stageHtml()}${drawerHtml()}</div>`; bindControls(); }
 // Define bindControls to wire the freshly-rendered controls to current state.
-function bindControls() { root.querySelector('#lines').onchange = event => { selectedLines = Number(event.target.value || selectedLines); render(); }; root.querySelector('#lineBet').onchange = event => { selectedLineBet = Math.max(1, Number(event.target.value || selectedLineBet)); render(); }; root.querySelector('#spin').onclick = () => spin(true); autoBox = renderAutoplay({ id: 'slots', plan: { type: 'repeat_current_spin', active_lines: selectedLines, line_bet: selectedLineBet }, onTick: async () => spin(false) }); root.querySelector('#auto').append(autoBox); }
+function bindControls() {
+  // Rebuild the view after a supported payline count changes so all cost summaries stay aligned.
+  root.querySelector('#lines').onchange = event => { selectedLines = Number(event.target.value || selectedLines); syncAutoplayPlan(); render(); };
+  // Validate every typed line-bet edit immediately instead of waiting for Spin.
+  root.querySelector('#lineBet').oninput = event => { acceptLineBetInput(event.target); };
+  // Recheck committed edits for keyboard and assistive-technology change events.
+  root.querySelector('#lineBet').onchange = event => { acceptLineBetInput(event.target); };
+  // Start one manual spin through the same guarded public action used before this fix.
+  root.querySelector('#spin').onclick = () => spin(true);
+  // Mount autoplay with the shared plan reference updated by every visible control edit.
+  autoBox = renderAutoplay({ id: 'slots', plan: autoplayPlan, onTick: async () => spin(false) });
+  // Attach the shared autoplay control plane to its reserved Slots panel.
+  root.querySelector('#auto').append(autoBox);
+}
 // Define updateBotPanel to load bot capabilities through the documented bot API.
 async function updateBotPanel() { botInfo = await eligibleBots('slots'); if (root) render(); }
 // Define load to initialize resources, state, bot status, and the first render.
-async function load() { await initI18n({ domains: [DOMAIN] }); await loadI18nDomain(DOMAIN); const data = await api(currentPlayerPath('/api/v1/games/slots/state')); state = data.state; config = data.config; lastSpin = latestStoredSpin(); if (lastSpin?.active_lines) selectedLines = Number(lastSpin.active_lines); if (lastSpin?.line_bet) selectedLineBet = Number(lastSpin.line_bet); render(); updateBotPanel(); await refreshBalance(); }
+async function load() { await initI18n({ domains: [DOMAIN] }); await loadI18nDomain(DOMAIN); const data = await api(currentPlayerPath('/api/v1/games/slots/state')); state = data.state; config = data.config; lastSpin = latestStoredSpin(); if (lastSpin?.active_lines) selectedLines = Number(lastSpin.active_lines); if (lastSpin?.line_bet) selectedLineBet = Number(lastSpin.line_bet); syncAutoplayPlan(); render(); updateBotPanel(); await refreshBalance(); }
 // Define spin to run one Slots action through the existing public endpoint.
-async function spin(show = true) { if (spinning) return; selectedLines = Number(root.querySelector('#lines')?.value || selectedLines); selectedLineBet = Math.max(1, Number(root.querySelector('#lineBet')?.value || selectedLineBet)); spinning = true; reelSound(show ? 900 : 240); render(); try { const data = await post('/api/v1/games/slots/spin', withCurrentPlayer({ active_lines: selectedLines, line_bet: selectedLineBet })); await new Promise(resolve => setTimeout(resolve, show ? 900 : 180)); state = data.state; config = data.config; lastSpin = data.spin; spinning = false; render(); await refreshBalance(); clickSound(data.spin.payout > 0 ? 860 : 260, .08); if (show && data.spin.payout > 0) speak(tx('voice.paid', { amount: fn(data.spin.payout) }), 'slots'); } catch (error) { spinning = false; render(); toast(error.message || tx('errors.spinFailed')); } }
+async function spin(show = true) {
+  // Ignore duplicate manual or autoplay starts while the current spin is committed.
+  if (spinning) return;
+  // Read the supported payline count from the mounted control before building the payload.
+  selectedLines = Number(root.querySelector('#lines')?.value || selectedLines);
+  // Reuse the immediate validator so a stale or scripted invalid spelling cannot reach the API.
+  acceptLineBetInput(root.querySelector('#lineBet'));
+  // Synchronize the shared autoplay plan before the public action begins.
+  syncAutoplayPlan();
+  // Enter the fixed in-progress cabinet state only after controls are safe.
+  spinning = true;
+  // Play the existing bounded reel sound for human or autoplay pacing.
+  reelSound(show ? 900 : 240);
+  // Render the committed in-progress state before waiting on the backend.
+  render();
+  // Start protected API handling so failures restore an actionable screen.
+  try {
+    // Submit exactly the corrected values currently represented by the visible controls.
+    const data = await post('/api/v1/games/slots/spin', withCurrentPlayer({ active_lines: selectedLines, line_bet: selectedLineBet }));
+    // Preserve the existing reel-animation delay before revealing the authoritative result.
+    await new Promise(resolve => setTimeout(resolve, show ? 900 : 180));
+    // Adopt authoritative game state returned by the frozen Slots API envelope.
+    state = data.state;
+    // Adopt the matching configuration returned by the backend.
+    config = data.config;
+    // Store the completed spin for result, win, and history presentation.
+    lastSpin = data.spin;
+    // Leave the in-progress state before the settled rerender.
+    spinning = false;
+    // Render the authoritative result with corrected controls retained.
+    render();
+    // Reconcile the shared current-user wallet after settlement.
+    await refreshBalance();
+    // Preserve the existing result sound treatment.
+    clickSound(data.spin.payout > 0 ? 860 : 260, .08);
+    // Announce a human-visible payout through the existing voice policy.
+    if (show && data.spin.payout > 0) speak(tx('voice.paid', { amount: fn(data.spin.payout) }), 'slots');
+  // Handle the documented public-action failure path.
+  } catch (error) {
+    // Restore actionable controls after a failed spin.
+    spinning = false;
+    // Rerender the safe corrected input state.
+    render();
+    // Show localized fallback feedback without exposing backend internals.
+    toast(error.message || tx('errors.spinFailed'));
+  }
+}
 // Export this symbol so the shared app shell can mount the Slots route.
 export const SlotsGame = { id: 'slots', label: 'Slots', async mount(node) { root = node; localeUnsubscribe = onLocaleChange(() => render()); await load(); }, unmount() { if (autoBox?._stop) autoBox._stop(); if (localeUnsubscribe) localeUnsubscribe(); localeUnsubscribe = null; root = null; } };

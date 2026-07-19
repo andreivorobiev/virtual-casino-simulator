@@ -1820,6 +1820,20 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 metadata={'evidence_class':'after_pass','branch':evidence_branch,'commit':evidence_commit,'surface':surface,'states':states,'locale':locale,'viewport':{'id':viewport_id,**viewport},'path':str(target.relative_to(ROOT)).replace('\\','/'),'focused_control':focused}
                 # Write a UTF-8 sidecar next to the image so the evidence remains self-describing.
                 target.with_suffix('.json').write_text(json.dumps(metadata,indent=2,ensure_ascii=False),encoding='utf-8')
+            # Capture one bounded interaction region without misrepresenting unrelated full-page defects as accepted.
+            def region_evidence(name, selector, surface, states, locale, viewport_id):
+                # Resolve the PNG target under the standard browser test artifact directory.
+                target=screenshots/name
+                # Capture only the named interaction region so the artifact proves the behavior under review.
+                page.locator(selector).screenshot(path=str(target),animations='disabled',style='#toast, .status-bar { visibility: hidden !important; }')
+                # Record the active viewport dimensions alongside the named visual-matrix viewport.
+                viewport=page.viewport_size
+                # Record the current focus target so keyboard state remains auditable after the run.
+                focused=page.evaluate("() => document.activeElement?.getAttribute('data-testid') || document.activeElement?.getAttribute('data-action') || ''")
+                # Build the complete after-pass metadata and disclose the intentionally bounded region.
+                metadata={'evidence_class':'after_pass','branch':evidence_branch,'commit':evidence_commit,'surface':surface,'states':states,'locale':locale,'viewport':{'id':viewport_id,**viewport},'path':str(target.relative_to(ROOT)).replace('\\','/'),'focused_control':focused,'region_selector':selector}
+                # Write a UTF-8 sidecar next to the image so the focused evidence remains self-describing.
+                target.with_suffix('.json').write_text(json.dumps(metadata,indent=2,ensure_ascii=False),encoding='utf-8')
             # Store browser JavaScript that audits visible player-facing strings and localized attributes.
             route_i18n_audit_script=r"""async ({ domain, interpolationKey }) => {
               // Read the public runtime state after the requested route has mounted.
@@ -4095,6 +4109,82 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 idle_box=page.get_by_test_id('slots-cabinet').bounding_box()
                 # Store the idle result box so the reserved payout region can be compared.
                 idle_result_box=page.get_by_test_id('slots-result').bounding_box()
+                # Define the focused line-bet regression using real visible controls and backend requests.
+                def slots_line_bet_validation():
+                    # Track only Slots spin requests so input edits can prove they never move tokens by themselves.
+                    observed_spin_requests=[]
+                    # Define the request observer before the invalid value is typed.
+                    def observe_slots_spin(request):
+                        # Retain only public Slots spin posts for this focused validation.
+                        if request.method=='POST' and request.url.endswith('/api/v1/games/slots/spin'): observed_spin_requests.append(request)
+                    # Attach the bounded observer for the duration of this focused case.
+                    page.on('request',observe_slots_spin)
+                    # Select the real browser-visible line-bet input.
+                    line_bet=page.get_by_test_id('slots-line-bet')
+                    # Type the reported negative value through the normal input event path.
+                    line_bet.fill('-5'); page.wait_for_function("() => document.querySelector('[data-testid=\"slots-line-bet\"]')?.value === '1'")
+                    # Require immediate correction, machine-readable invalid state, localized feedback, and zero requests.
+                    assert line_bet.get_attribute('aria-invalid')=='true' and page.get_by_test_id('slots-line-bet-feedback').text_content().strip()=='Line bet must be a whole number of at least 1. Reset to 1.' and not observed_spin_requests
+                    # Type a valid replacement to prove the error clears and visible cost updates before any spin.
+                    line_bet.fill('3'); page.wait_for_timeout(50)
+                    # Require the valid state and the twenty-line cost implied by the visible controls.
+                    assert line_bet.get_attribute('aria-invalid')=='false' and page.get_by_test_id('slots-line-bet-feedback').inner_text()=='' and '60' in page.get_by_test_id('slots-round-cost').inner_text() and not observed_spin_requests
+                    # Re-enter the reported invalid value so governed evidence records the correction feedback.
+                    line_bet.fill('-5'); page.wait_for_function("() => document.querySelector('[data-testid=\"slots-line-bet\"]')?.getAttribute('aria-invalid') === 'true'")
+                    # Define the localized feedback required in each governed locale.
+                    localized_feedback={'en-US':'Line bet must be a whole number of at least 1. Reset to 1.','ru-RU':'Ставка на линию должна быть целым числом не меньше 1. Значение сброшено на 1.'}
+                    # Define the affected compact and mobile visual-matrix viewports.
+                    validation_viewports={'desktop_compact':{'width':1440,'height':900},'mobile':{'width':390,'height':844}}
+                    # Exercise localized invalid-input presentation without losing corrected state.
+                    for locale,expected_feedback in localized_feedback.items():
+                        # Change locale through the shared visible shell control.
+                        page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_function("expected => document.querySelector('[data-testid=\"slots-line-bet-feedback\"]')?.textContent.trim() === expected",arg=expected_feedback)
+                        # Capture and measure every affected viewport for the active locale.
+                        for viewport_id,viewport in validation_viewports.items():
+                            # Resize to the exact governed dimensions before containment checks.
+                            page.set_viewport_size(viewport); page.wait_for_timeout(150)
+                            # Measure the corrected input and feedback against page-level containment.
+                            validation_geometry=page.evaluate("""() => { const input=document.querySelector('[data-testid="slots-line-bet"]').getBoundingClientRect(); const feedback=document.querySelector('[data-testid="slots-line-bet-feedback"]').getBoundingClientRect(); return {documentWidth:document.documentElement.scrollWidth,viewportWidth:window.innerWidth,input:{left:input.left,right:input.right},feedback:{left:feedback.left,right:feedback.right,height:feedback.height}}; }""")
+                            # Reject horizontal overflow, clipped controls, or a collapsed live-feedback reservation.
+                            assert validation_geometry['documentWidth']<=validation_geometry['viewportWidth']+1 and validation_geometry['input']['left']>=-1 and validation_geometry['input']['right']<=validation_geometry['viewportWidth']+1 and validation_geometry['feedback']['left']>=-1 and validation_geometry['feedback']['right']<=validation_geometry['viewportWidth']+1 and validation_geometry['feedback']['height']>=20,validation_geometry
+                            # Record focused after-pass evidence without accepting unrelated nav or reel defects.
+                            region_evidence(f'after-pass-slots-control-invalid-line-bet-{locale}-{viewport_id}.png','.slots-control','slots',['invalid_line_bet'],locale,viewport_id)
+                    # Restore English and primary desktop dimensions before the real corrected spin.
+                    page.get_by_test_id('shell-locale-select').select_option('en-US'); page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_function("() => document.querySelector('[data-testid=\"slots-line-bet-feedback\"]')?.textContent.trim() === 'Line bet must be a whole number of at least 1. Reset to 1.'")
+                    # Submit one corrected spin and capture the exact public request emitted by the visible button.
+                    with page.expect_request(lambda request: request.method=='POST' and request.url.endswith('/api/v1/games/slots/spin')) as corrected_request_info: page.get_by_test_id('slots-spin').click()
+                    # Read the frozen endpoint payload after Playwright observes the real request.
+                    corrected_payload=corrected_request_info.value.post_data_json
+                    # Wait for a completed real round rather than accepting request emission alone.
+                    page.wait_for_function("() => !document.querySelector('[data-testid=\"slots-spin\"]')?.disabled && document.querySelector('[data-testid=\"slots-result\"]')?.textContent.includes('Result.')",timeout=5000)
+                    # Require one corrected whole-token line bet and an authoritative completed result.
+                    assert corrected_payload['line_bet']==1 and corrected_payload['active_lines']==20 and observed_spin_requests and page.get_by_test_id('slots-result').is_visible()
+                    # Limit the visible autoplay control to one round so its corrected plan can be inspected safely.
+                    page.get_by_test_id('slots-auto-rounds').fill('1')
+                    # Define one deterministic control-plane response while leaving the real Slots action unmocked.
+                    def fulfill_slots_autoplay_probe(route):
+                        # Return the standard API envelope expected by start, status, tick, and finish calls.
+                        route.fulfill(status=200,content_type='application/json',body=json.dumps({'ok':True,'data':{'session':{'autoplay_id':'slots-plan-probe','status':'running','stop_requested':False}}}))
+                    # Stub only autoplay control-plane traffic so plan inspection produces no false network failure.
+                    page.route('**/api/v1/autoplay/**',fulfill_slots_autoplay_probe)
+                    # Start autoplay through its visible control and capture the exact synchronized plan.
+                    with page.expect_request(lambda request: request.method=='POST' and request.url.endswith('/api/v1/autoplay/start')) as autoplay_request_info: page.get_by_test_id('slots-auto-start').click()
+                    # Read the request body emitted by the shared autoplay control plane.
+                    autoplay_payload=autoplay_request_info.value.post_data_json
+                    # Require the corrected visible value to reach the autoplay plan unchanged.
+                    assert autoplay_payload['plan']['active_lines']==20 and autoplay_payload['plan']['line_bet']==1
+                    # Wait for the one locally committed autoplay action to settle and return the controls to Off.
+                    page.wait_for_function("() => !document.querySelector('[data-testid=\"slots-spin\"]')?.disabled && document.querySelector('[data-testid=\"autoplay-slots\"] .badge')?.textContent === 'Off'",timeout=5000)
+                    # Clear the synthetic session identifier so later route-unmount cleanup stays listener-free.
+                    page.evaluate("() => { const session=window.__casinoAutoplaySessions?.get('slots'); if(session) session.serverId=null; }")
+                    # Remove the bounded control-plane stub before any later autoplay coverage.
+                    page.unroute('**/api/v1/autoplay/**',fulfill_slots_autoplay_probe)
+                    # Detach the observer so later game traffic cannot affect this completed case.
+                    page.remove_listener('request',observe_slots_spin)
+                # Record immediate feedback, synchronization, localization, evidence, and real request coverage.
+                run_case('BR-SLOT-LINE-BET-001',['SLOT-027','TEST-058','UX-009'],slots_line_bet_validation)
+                # Refresh idle boxes after the focused real spin so the existing animation comparison uses one baseline.
+                idle_box=page.get_by_test_id('slots-cabinet').bounding_box(); idle_result_box=page.get_by_test_id('slots-result').bounding_box()
                 # Start one real spin through the browser-visible control.
                 page.get_by_test_id('slots-spin').click()
                 # Pause during the in-progress animation window before the API result reveal.
@@ -4138,7 +4228,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Verify the premium Slots route avoids page-level horizontal overflow.
                     assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1')
                 # Execute this statement as part of the module's documented control flow.
-                run_case('BR-SLOT-001',['SLOT-020','SLOT-021','SLOT-022','SLOT-023','SLOT-024','SLOT-025','SLOT-026','AUTO-010','LEDGER-025','UX-007','UX-009'],premium_slots)
+                run_case('BR-SLOT-001',['SLOT-020','SLOT-021','SLOT-022','SLOT-023','SLOT-024','SLOT-025','SLOT-026','SLOT-027','AUTO-010','LEDGER-025','UX-007','UX-009'],premium_slots)
                 # Navigate to Keno and wait for the premium route shell to mount.
                 page.get_by_test_id('nav-keno').click(); page.get_by_test_id('keno-premium-hero').wait_for(timeout=5000)
                 # Select ten deterministic spots so paytable comparison has a stable row.
