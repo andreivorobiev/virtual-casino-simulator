@@ -117,8 +117,8 @@ function wagerControlsHtml(translate = tx) {
 
 // Return localized paytable disclosure rows.
 function paytableHtml(translate = tx) {
-  // Show winning totals and total return so rules are transparent.
-  return (gameState.rules?.paytable || []).map(row => `<div class="ou7-payrow"><span>${safe(translate(`outcome.${row.id}`))}</span><span>${safe(translate('paytable.row', { totals: row.winning_totals.join(', '), return: row.total_return_multiplier }))}</span></div>`).join('');
+  // Show winning totals and net odds so the wager list and return table use one convention. (issue #255)
+  return (gameState.rules?.paytable || []).map(row => `<div class="ou7-payrow"><span>${safe(translate(`outcome.${row.id}`))}</span><span>${safe(translate('paytable.row', { totals: row.winning_totals.join(', '), odds: row.net_odds }))}</span></div>`).join('');
 }
 
 // Return bounded recent-round history.
