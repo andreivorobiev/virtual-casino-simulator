@@ -111,7 +111,7 @@ assert validated_success_data(health_payload) == {"status": "live"}
 
 # Bootstrap one anonymous double-submit token through the packaged shell.
 bootstrap = request("GET", "/")
-# Require the shared cache contract on the production HTML shell. (CORE-026, TEST-066)
+# Require the shared cache contract on the production HTML shell. (CORE-026, TEST-068)
 assert bootstrap["headers"]["Cache-Control"] == "no-store"
 # Require the adapter to return the exact current packaged HTML bytes.
 assert bootstrap["body"] == (ROOT / "web" / "index.html").read_bytes()
