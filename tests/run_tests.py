@@ -1431,7 +1431,7 @@ def run_api_tests():
             # Require the valid dealer-Ace path to retain its historical one-debit behavior and persisted insurance state.
             assert legal_result['round']['insurance']['amount']==5 and legal_balance==balance_before-5 and len(legal_ledger)==len(ledger_before)+1
         # Execute the insurance phase regression under the game, ledger, and API-test requirements.
-        run_case('API-BJ-003',['BJ-020','LEDGER-015','TEST-003'],blackjack_insurance_phase_guard)
+        run_case('API-BJ-003',['BJ-020','LEDGER-015','TEST-056'],blackjack_insurance_phase_guard)
         # Define the blackjack_state_with_shoe function used by this module.
         def blackjack_state_with_shoe(*cards):
             # Set state to the default blackjack state for deterministic rule checks.
