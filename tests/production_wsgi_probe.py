@@ -111,6 +111,16 @@ assert validated_success_data(health_payload) == {"status": "live"}
 
 # Bootstrap one anonymous double-submit token through the packaged shell.
 bootstrap = request("GET", "/")
+# Require the shared cache contract on the production HTML shell. (CORE-026, TEST-068)
+assert bootstrap["headers"]["Cache-Control"] == "no-store"
+# Require the adapter to return the exact current packaged HTML bytes.
+assert bootstrap["body"] == (ROOT / "web" / "index.html").read_bytes()
+# Request one lazy game module through the same listener-free production adapter.
+lazy_module = request("GET", "/games/big_six_wheel.js")
+# Require the shared cache contract on lazy JavaScript as well as HTML.
+assert lazy_module["headers"]["Cache-Control"] == "no-store"
+# Require the lazy response to match the exact module bytes in this checkout.
+assert lazy_module["body"] == (ROOT / "web" / "games" / "big_six_wheel.js").read_bytes()
 # Extract the host-only CSRF cookie without using a browser store.
 csrf = response_cookie(bootstrap, "casino_csrf")
 # Authenticate with exact Origin and bootstrap CSRF proof.
@@ -178,5 +188,7 @@ frontend = request("GET", "/")
 assert frontend["status"] == "200 OK"
 # Require non-empty packaged frontend bytes.
 assert frontend["body"]
+# Require the documented cache policy on the repeated shell response.
+assert frontend["headers"]["Cache-Control"] == "no-store"
 # Require the declared static length to match returned bytes.
 assert int(frontend["headers"]["Content-Length"]) == len(frontend["body"])

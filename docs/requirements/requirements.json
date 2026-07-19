@@ -8427,6 +8427,30 @@
       "introduced_in": "issue-237-keno-singular-catch",
       "changed_in": "issue-237-keno-singular-catch",
       "notes": "The integrated Keno browser flow seeds deterministic persisted state for a one-catch ticket and checks the rendered result lead."
+    },
+    {
+      "id": "CORE-026",
+      "module": "Core",
+      "description": "Development/test and production HTTP adapters apply one no-store cache contract to HTML and static assets so browser reloads and lazy imports obtain exact current source without weakening existing API cache safety.",
+      "status": "PASS",
+      "api_tests": ["SERVICE-WSGI-001"],
+      "browser_tests": ["BR-STATIC-CACHE-001"],
+      "implementation_files": ["casino/app.py", "casino/wsgi.py", "docs/production_service.md"],
+      "introduced_in": "issue-310-static-cache-parity",
+      "changed_in": "issue-310-static-cache-parity",
+      "notes": "The shared no-store scalar governs API, document, and asset responses in both supported adapters; no production behavior is weakened and no listener is required for production proof."
+    },
+    {
+      "id": "TEST-068",
+      "module": "Tests",
+      "description": "Cache-parity evidence covers exact current HTML and lazy JavaScript bytes, a real development-browser reload with repeated ordinary-cache fetches, direct production WSGI responses, and existing exact listener cleanup.",
+      "status": "PASS",
+      "api_tests": ["SERVICE-WSGI-001"],
+      "browser_tests": ["BR-STATIC-CACHE-001"],
+      "implementation_files": ["tests/run_tests.py", "tests/production_wsgi_probe.py"],
+      "introduced_in": "issue-310-static-cache-parity",
+      "changed_in": "issue-310-static-cache-parity",
+      "notes": "The browser gate exercises the supported development adapter; the listener-free service probe exercises the production adapter with the same exact source and header assertions."
     }
   ]
 }

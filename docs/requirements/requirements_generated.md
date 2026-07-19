@@ -7,7 +7,7 @@ Historical source baseline: 9.1.0
 ## Independent module revisions
 
 - application: 9.38.5
-- core: 9.13.2
+- core: 9.13.3
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.0
@@ -45,8 +45,8 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.0
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.44.19
-- docs: 1.44.19
+- tests: 1.44.20
+- docs: 1.44.20
 - contracts: 1.32.0
 - tooling: 1.14.0
 - commenting_policy: 1.0.0
@@ -672,3 +672,5 @@ Historical source baseline: 9.1.0
 - **TEST-064** (Tests) - PASS: Browser evidence verifies Slots renders cabinet readiness and win state as a status pill rather than a disabled primary-looking action.
 - **TEST-065** (Tests) - PASS: Browser qualification proves Big Six cumulative animation continuity, server-result pointer alignment, hidden results and atomic control locks, lifecycle recovery, slow-device and reduced-motion behavior, production static-asset cache safety, and scroll reachability across every governed viewport.
 - **TEST-066** (Tests) - PASS: Browser evidence verifies Keno singular result copy for exactly one caught number.
+- **CORE-026** (Core) - PASS: Development/test and production HTTP adapters apply one no-store cache contract to HTML and static assets so browser reloads and lazy imports obtain exact current source without weakening existing API cache safety.
+- **TEST-068** (Tests) - PASS: Cache-parity evidence covers exact current HTML and lazy JavaScript bytes, a real development-browser reload with repeated ordinary-cache fetches, direct production WSGI responses, and existing exact listener cleanup.

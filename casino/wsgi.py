@@ -13,8 +13,8 @@ from http import HTTPStatus
 # Import portable paths for traversal-safe static asset resolution.
 from pathlib import Path
 
-# Reuse the canonical route registry without starting casino.app's development server.
-from casino.app import ROUTER
+# Reuse the canonical route registry and cache contract without starting casino.app's development server.
+from casino.app import CACHE_CONTROL_NO_STORE, ROUTER
 # Import production runtime and packaged-static configuration.
 from casino.config import APP_VERSION, WEB_DIR, validate_bootstrap_for_startup, validate_production_runtime
 # Import standard application errors for stable public envelopes.
@@ -133,7 +133,7 @@ def _respond(start_response, status: int, payload: bytes, content_type: str, ext
     # Resolve the registered HTTP phrase or a generic fallback for a custom status.
     phrase = HTTPStatus(status).phrase if status in HTTPStatus._value2member_map_ else "Response"
     # Start with transport headers shared by static and API responses.
-    headers = [("Content-Type", content_type), ("Content-Length", str(len(payload))), ("Cache-Control", "no-store")]
+    headers = [("Content-Type", content_type), ("Content-Length", str(len(payload))), ("Cache-Control", CACHE_CONTROL_NO_STORE)]
     # Add the fixed browser policy, with HSTS only for trusted effective HTTPS requests.
     headers.extend(response_security_headers(effective_scheme))
     # Append application-owned response headers such as session cookies unchanged.
