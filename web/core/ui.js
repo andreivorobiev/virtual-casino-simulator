@@ -3,8 +3,8 @@
 import { api, post, currentPlayerId, withCurrentPlayer } from './api.js';
 // Export this symbol so other modules can display play-token amounts consistently.
 export const money = n => `◈${Number(n || 0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}`;
-// Export this symbol so wallet values stay legible without relying on a replacement-looking glyph.
-export const tokenAmount = n => Number(n || 0).toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:0});
+// Export this symbol so wallet values preserve the ledger's exact two-decimal token precision without relying on a replacement-looking glyph.
+export const tokenAmount = n => Number(n || 0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
 // Export this symbol so auth-aware shell code can render play tokens without real-money currency marks.
 export const tokens = n => tokenAmount(n);
 // Export this symbol so other modules can use it through the public module boundary.

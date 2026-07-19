@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.38.1
+- application: 9.38.2
 - core: 9.13.1
 - ledger: 9.1.1
 - players: 9.1.0
@@ -45,8 +45,8 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.0
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.44.6
-- docs: 1.44.6
+- tests: 1.44.7
+- docs: 1.44.7
 - contracts: 1.32.0
 - tooling: 1.14.0
 - commenting_policy: 1.0.0
@@ -97,7 +97,7 @@ Historical source baseline: 9.1.0
 - **LEDGER-022** (Ledger) - PASS: Slot spin debits spin cost before settlement.
 - **LEDGER-023** (Ledger) - PASS: All game settlement payouts credit after results are known.
 - **LEDGER-024** (Ledger) - PASS: Ledger is visible in the admin console.
-- **LEDGER-025** (Ledger) - PASS: Player balances are visible in the main UI.
+- **LEDGER-025** (Ledger) - PASS: Player balances are visible in the main UI, and the shared wallet preserves the same exact two-decimal value shown by game scoreboards.
 - **LEDGER-026** (Ledger) - PASS: Ledger money actions can reserve a canonical player-and-scope action key, replay the original event for identical semantics, and reject changed key reuse without another balance mutation.
 - **LOG-001** (Logging) - PASS: Application log is written as JSONL.
 - **LOG-002** (Logging) - PASS: Error log is written as JSONL.

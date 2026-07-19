@@ -768,7 +768,7 @@ flowchart LR
 | LEDGER-022 | Slot spin debits spin cost before settlement. | PASS | API-SLOT-001 |  |
 | LEDGER-023 | All game settlement payouts credit after results are known. | PASS | API-ROU-001 |  |
 | LEDGER-024 | Ledger is visible in the admin console. | PASS |  |  |
-| LEDGER-025 | Player balances are visible in the main UI. | PASS |  |  |
+| LEDGER-025 | Player balances are visible in the main UI, and the shared wallet preserves the same exact two-decimal value shown by game scoreboards. | PASS |  | BR-TOKEN-FRACTION-001 |
 | LEDGER-026 | Canonical action keys replay identical transactions and reject changed reuse without another balance mutation. | PASS | STORAGE-JSON-IDEMPOTENCY-001, STORAGE-MYSQL-LIVE-001 |  |
 
 ### Logging

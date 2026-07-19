@@ -2008,7 +2008,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Verify the premium topbar is visible after login and terms acceptance.
                     assert page.get_by_test_id('premium-topbar').is_visible()
                     # Verify the current-user wallet shows the numeric balance without a replacement-looking glyph.
-                    assert '5,000' in page.get_by_test_id('premium-wallet').inner_text() and '◈' not in page.get_by_test_id('premium-wallet').inner_text()
+                    assert page.locator('#balance').inner_text()=='5,000.00' and '◈' not in page.get_by_test_id('premium-wallet').inner_text()
                     # Verify the chosen locale survived login and terms acceptance.
                     assert page.get_by_test_id('shell-locale-select').input_value()=='ru-RU'
                 # Execute this statement as part of the module's documented control flow.
@@ -2020,19 +2020,19 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 # Read the real ledger before the visible token-add action.
                 ledger_before_add=page.evaluate("async playerId => (await (await fetch(`/api/v1/players/${playerId}/ledger`, {credentials:'include'})).json()).data.ledger",browser_player_id)
                 # Fill the add-token amount through the browser-visible token control.
-                page.get_by_test_id('add-tokens').wait_for(timeout=5000); page.locator('#add-token-amount').fill('250')
+                page.get_by_test_id('add-tokens').wait_for(timeout=5000); page.locator('#add-token-amount').fill('250.50')
                 # Observe the real token-add API response while submitting the wallet control.
                 with page.expect_response(lambda response: response.url.endswith('/api/v2/me/tokens/add') and response.request.method == 'POST') as token_add_info:
                     # Submit the visible token-add request.
                     page.get_by_test_id('add-tokens').click()
                 # Wait until the wallet reflects the real ledger-backed token addition.
-                page.wait_for_function("() => document.querySelector('[data-testid=\"premium-wallet\"]')?.textContent?.includes('5,250')")
+                page.wait_for_function("() => document.querySelector('#balance')?.textContent === '5,250.50'")
                 # Read the real ledger after the visible token-add action.
                 ledger_after_add=page.evaluate("async playerId => (await (await fetch(`/api/v1/players/${playerId}/ledger`, {credentials:'include'})).json()).data.ledger",browser_player_id)
                 # Define auth_tokens_real_backend for exact wallet and ledger assertions.
                 def auth_tokens_real_backend():
                     # Verify the backend response and shell show the same updated canonical balance.
-                    assert token_add_info.value.json()['data']['token_balance']==5250 and '5,250' in page.get_by_test_id('premium-wallet').inner_text()
+                    assert token_add_info.value.json()['data']['token_balance']==5250.5 and page.locator('#balance').inner_text()=='5,250.50'
                     # Verify exactly one visible wallet action produced exactly one ledger credit.
                     assert len([row for row in ledger_after_add if row.get('transaction_type')=='PLAY_TOKENS_ADDED'])==len([row for row in ledger_before_add if row.get('transaction_type')=='PLAY_TOKENS_ADDED'])+1
                 # Execute the real-backend wallet regression with permanent requirement mappings.
@@ -2046,7 +2046,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 # Define the hostile-client refresh assertion against the real server wallet.
                 def hostile_client_refresh():
                     # Verify current-user refresh restores the exact ledger-backed balance.
-                    assert '5,250' in page.get_by_test_id('premium-wallet').inner_text()
+                    assert page.locator('#balance').inner_text()=='5,250.50'
                     # Verify the server ignored the unrelated attacker-controlled local cache key.
                     assert page.evaluate("localStorage.getItem('casino.hostile.balance')") == '999999'
                 # Record browser tamper recovery under the permanent security requirements.
@@ -2058,7 +2058,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 # Wait for the runtime locale state to reflect the shell switch.
                 page.wait_for_function("() => window.CasinoI18n && window.CasinoI18n.getLocaleState().locale === 'en-US'")
                 # Execute this statement as part of the module's documented control flow.
-                run_case('BR-AUTH-LOCALE-001',['I18N-003','AUTH-UI-001'],lambda: route_before_locale and page.get_by_test_id('lobby').is_visible() and '5,250' in page.get_by_test_id('premium-wallet').inner_text())
+                run_case('BR-AUTH-LOCALE-001',['I18N-003','AUTH-UI-001'],lambda: route_before_locale and page.get_by_test_id('lobby').is_visible() and page.locator('#balance').inner_text()=='5,250.50')
                 # Logout through the shell control to verify the browser returns to the login gate.
                 page.get_by_test_id('logout').click(); page.get_by_test_id('login-gate').wait_for(timeout=5000)
                 # Execute this statement as part of the module's documented control flow.
@@ -2071,8 +2071,16 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 page.get_by_test_id('nav-roulette').click(); page.get_by_test_id('roulette-wheel').wait_for(timeout=5000)
                 # Read the live current-user balance while Roulette is mounted.
                 roulette_me_balance=page.evaluate("async () => (await (await fetch('/api/v2/me', {credentials:'include'})).json()).data.player.token_balance")
-                # Verify login, current-user lookup, shell, and Roulette share one exact balance.
-                assert roulette_me_balance==5250 and '5,250' in page.get_by_test_id('premium-wallet').inner_text()
+                # Define the fractional_wallet_consistency regression against the authenticated shell and mounted game scoreboard.
+                def fractional_wallet_consistency():
+                    # Verify the current-user API retains the deterministic fractional token fixture.
+                    assert roulette_me_balance==5250.5
+                    # Verify the shared wallet presents the exact two-decimal value instead of rounded whole tokens.
+                    assert page.locator('#balance').inner_text()=='5,250.50' and page.locator('#balance').inner_text()!='5,251'
+                    # Verify Roulette presents the same exact authoritative balance on the mounted game surface.
+                    assert '5,250.50 play tokens' in page.get_by_test_id('roulette-scoreboard').inner_text()
+                # Execute the fractional wallet consistency regression under the shared shell and balance requirements.
+                run_case('BR-TOKEN-FRACTION-001',['UX-007','LEDGER-025','TOKEN-001'],fractional_wallet_consistency)
                 # Return to the lobby before the existing shell and lobby checks continue.
                 page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Define the premium_shell function used by this module.
@@ -2084,7 +2092,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Verify the shared wallet remains visible for the current user's token balance.
                     assert page.get_by_test_id('premium-wallet').is_visible()
                     # Verify the wallet relies on its PLAY medallion and legible value instead of a replacement-looking glyph.
-                    assert '5,250' in page.get_by_test_id('premium-wallet').inner_text() and '◈' not in page.get_by_test_id('premium-wallet').inner_text()
+                    assert page.locator('#balance').inner_text()=='5,250.50' and '◈' not in page.get_by_test_id('premium-wallet').inner_text()
                     # Verify the wallet label uses authenticated token-balance terminology.
                     assert 'token balance' in page.get_by_test_id('premium-wallet').inner_text().lower()
                     # Read the wallet label position so the visual hierarchy can be checked without pixel snapshots.
