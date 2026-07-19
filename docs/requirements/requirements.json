@@ -9358,6 +9358,25 @@
       "introduced_in": "issue-330-transactional-mail",
       "changed_in": "issue-330-transactional-mail",
       "notes": "Browser evidence is generated only by exact-head GitHub Actions; no local Playwright, Chromium, provider, or live network run is authorized."
+    },
+    {
+      "id": "TEST-092",
+      "module": "Tests",
+      "description": "An exact-source browser qualification executes exactly 50,000 completed UI cycles across every catalog game, assigns at least 1,666 cycles to each game, exercises every eligible game control at least 100 times or records an approved ineligible classification, captures all four governed viewports for human review, and rejects unexplained failures, incomplete ranges, source drift, or cleanup residue.",
+      "status": "PLANNED",
+      "api_tests": [
+        "UI-50000-HARNESS-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/ui_50000.py",
+        "tests/unit/ui_50000_tests.py",
+        "tests/run_tests.py",
+        ".github/workflows/ui-50000.yml"
+      ],
+      "introduced_in": "issue-227-ui-50000-ci-replacement",
+      "changed_in": "issue-227-ui-50000-ci-replacement",
+      "notes": "The formal qualification runs only on approved non-local GitHub Actions workers; local Playwright, Chromium, and heavy-load execution remain prohibited."
     }
   ]
 }
