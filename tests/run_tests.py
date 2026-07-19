@@ -1400,6 +1400,38 @@ def run_api_tests():
             api(base,'/api/v1/games/blackjack/rounds','POST',{'player_id':'human','bet_amount':10},ok=False)
         # Execute this statement as part of the module's documented control flow.
         run_case('API-BJ-001',['BJ-010','BJ-011','BJ-020'],blackjack)
+        # Define blackjack_insurance_phase_guard to prove revealed rounds cannot mutate the wallet through insurance.
+        def blackjack_insurance_phase_guard():
+            # Start from the canonical table rules so the persisted fixture remains compatible with the public state endpoint.
+            insurance_state=blackjack_engine.default_state()
+            # Build a completed dealer-natural round whose result and hole card are already public.
+            settled_round={'round_id':'bj_insurance_settled','player_id':'human','status':'settled','dealer':{'cards':['AS','KH'],'hole_card_hidden':False},'hands':[{'hand_id':'hand_insurance_settled','cards':['9C','8D'],'bet':10,'status':'loss','outcome':'dealer_blackjack','payout_due':0,'credited':True,'actions':[]}],'active_hand_index':0,'insurance':None,'even_money':None,'settlements':[]}
+            # Build a defensive exposed-player-turn fixture so the hole-card predicate is tested independently of status.
+            exposed_turn_round={'round_id':'bj_insurance_exposed_turn','player_id':'human','status':'player_turn','dealer':{'cards':['AS','QH'],'hole_card_hidden':False},'hands':[{'hand_id':'hand_insurance_exposed_turn','cards':['9S','7D'],'bet':10,'status':'active','actions':[]}],'active_hand_index':0,'insurance':None,'even_money':None,'settlements':[]}
+            # Build a legal hidden-hole dealer-Ace control so the new guard cannot disable valid insurance.
+            legal_round={'round_id':'bj_insurance_legal','player_id':'human','status':'player_turn','dealer':{'cards':['AS','9H'],'hole_card_hidden':True},'hands':[{'hand_id':'hand_insurance_legal','cards':['8S','7C'],'bet':10,'status':'active','actions':[]}],'active_hand_index':0,'insurance':None,'even_money':None,'settlements':[]}
+            # Persist all deterministic fixtures through the production game-state provider before exercising real HTTP routes.
+            insurance_state['rounds']={settled_round['round_id']:settled_round,exposed_turn_round['round_id']:exposed_turn_round,legal_round['round_id']:legal_round}; save_player_game_state('blackjack','human',insurance_state)
+            # Snapshot the authoritative player balance and ledger before either rejected request.
+            balance_before=api(base,'/api/v1/players/human')['player']['balance']; ledger_before=api(base,'/api/v1/players/human/ledger')['ledger']
+            # Attempt insurance after completed settlement and require the standard conflict envelope.
+            settled_rejection=api(base,f"/api/v1/games/blackjack/rounds/{settled_round['round_id']}/insurance",'POST',{'player_id':'human','amount':5},ok=False)
+            # Attempt insurance while the status claims player turn but the dealer hole card is already exposed.
+            exposed_rejection=api(base,f"/api/v1/games/blackjack/rounds/{exposed_turn_round['round_id']}/insurance",'POST',{'player_id':'human','amount':5},ok=False)
+            # Read back every authoritative surface after both rejected mutation attempts.
+            balance_after=api(base,'/api/v1/players/human')['player']['balance']; ledger_after=api(base,'/api/v1/players/human/ledger')['ledger']; state_after=api(base,'/api/v1/games/blackjack/state')['state']
+            # Require both phase violations to be conflicts without any balance or append-only ledger mutation.
+            assert settled_rejection['error']['code']=='CONFLICT' and exposed_rejection['error']['code']=='CONFLICT' and balance_after==balance_before and len(ledger_after)==len(ledger_before)
+            # Require both persisted rounds to remain free of insurance after the hostile requests.
+            assert state_after['rounds'][settled_round['round_id']]['insurance'] is None and state_after['rounds'][exposed_turn_round['round_id']]['insurance'] is None
+            # Purchase legal insurance through the same public endpoint after proving both rejected attempts were inert.
+            legal_result=api(base,f"/api/v1/games/blackjack/rounds/{legal_round['round_id']}/insurance",'POST',{'player_id':'human','amount':5})
+            # Read the authoritative wallet and ledger after the legal non-winning insurance debit.
+            legal_balance=api(base,'/api/v1/players/human')['player']['balance']; legal_ledger=api(base,'/api/v1/players/human/ledger')['ledger']
+            # Require the valid dealer-Ace path to retain its historical one-debit behavior and persisted insurance state.
+            assert legal_result['round']['insurance']['amount']==5 and legal_balance==balance_before-5 and len(legal_ledger)==len(ledger_before)+1
+        # Execute the insurance phase regression under the game, ledger, and API-test requirements.
+        run_case('API-BJ-003',['BJ-020','LEDGER-015','TEST-056'],blackjack_insurance_phase_guard)
         # Define the blackjack_state_with_shoe function used by this module.
         def blackjack_state_with_shoe(*cards):
             # Set state to the default blackjack state for deterministic rule checks.
