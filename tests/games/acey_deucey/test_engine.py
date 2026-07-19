@@ -29,18 +29,22 @@ class AceyDeuceyEngineTests(unittest.TestCase):
         # Verify adjacent ranks also have no strict inside possibilities.
         self.assertEqual(0, engine.inside_rank_count("7H", "8S"))
 
-    # Confirm playing a prepared round reveals the third card and pays only inside.
-    def test_play_round_payout_table_and_private_card_cleanup(self):
+    # Confirm play reveals the result publicly while retaining private rollback material.
+    def test_play_round_payout_table_and_private_recovery_card(self):
         # Create a prepared reload-safe round with a hidden inside result.
         round_state = engine.create_round("player-1", "deal-1", left_card="2H", right_card="AS", third_card="7C", round_id="round-1", created_at="2026-07-14T00:00:00Z", request_fingerprint="deal-fp")
         # Settle the round through the pure play transition.
         settled = engine.play_round(round_state, 5, "play-1", completed_at="2026-07-14T00:00:01Z", request_fingerprint="play-fp")
         # Verify the returned stake plus even-money profit.
         self.assertEqual(("inside", 10.0, 5.0), (settled["outcome"], settled["payout"], settled["net"]))
-        # Verify the private card is removed from public terminal state.
-        self.assertNotIn("_third_card", settled)
+        # Verify the private recovery card survives until service-level debit proof exists.
+        self.assertEqual("7C", settled["_third_card"])
         # Verify the revealed third card is public after play.
         self.assertEqual("7C", settled["third_card"])
+        # Sanitize the terminal round through the public projection.
+        public = engine.public_round(settled)
+        # Verify rollback material never appears in the browser/API payload.
+        self.assertNotIn("_third_card", public)
 
     # Confirm invalid wagers never reach ledger orchestration.
     def test_wager_validation_rejects_invalid_values(self):

@@ -166,8 +166,8 @@ def play_round(round_state: dict, wager, play_action_id: str, *, completed_at: s
     round_state["wager"] = amount
     # Publish the formerly hidden third card.
     round_state["third_card"] = coerce_card(third_card).code
-    # Remove the private representation from terminal state.
-    round_state.pop("_third_card", None)
+    # Retain the private representation until wager proof exists so a pre-debit crash can restore the prepared round.
+    round_state["_third_card"] = coerce_card(third_card).code
     # Store the stable outcome key.
     round_state["outcome"] = outcome
     # Store the returned-token total.
@@ -184,6 +184,62 @@ def play_round(round_state: dict, wager, play_action_id: str, *, completed_at: s
     round_state["completed_at"] = completed_at
     # Return the mutable round for persistence.
     return round_state
+
+
+# Restore one revealed play whose wager debit provably never committed.
+def restore_uncommitted_play(state: dict, round_state: dict) -> None:
+    # Read the prepared card from the new recovery field or a legacy revealed-only terminal row.
+    third_card = round_state.get("_third_card") or round_state.get("third_card")
+    # Refuse destructive cleanup when deterministic prepared state is unavailable.
+    if not third_card:
+        # Fail closed instead of replacing the original result card.
+        raise ConflictError("Acey-Deucey result card is unavailable for wager recovery")
+    # Read the round identity before moving it out of terminal history.
+    round_id = round_state.get("round_id")
+    # Read the uncommitted play identity so only its receipt is released.
+    play_action_id = round_state.get("play_action_id")
+    # Inspect any active decision before restoring this prepared round.
+    active = state.get("active_round")
+    # Reject conflicting state instead of overwriting another prepared round.
+    if active is not None and active.get("round_id") != round_id:
+        # Preserve both documents for explicit operator recovery.
+        raise ConflictError("Acey-Deucey active round conflicts with wager recovery")
+    # Restore the private deterministic card used by the original free deal.
+    round_state["_third_card"] = coerce_card(third_card).code
+    # Remove the revealed representation because no wager paid to expose it.
+    round_state.pop("third_card", None)
+    # Return the round to its original wager decision phase.
+    round_state["phase"] = "wager"
+    # Release the uncommitted play action identity.
+    round_state["play_action_id"] = None
+    # Release its semantic retry fingerprint.
+    round_state["play_fingerprint"] = None
+    # Restore the pre-play zero wager value.
+    round_state["wager"] = 0.0
+    # Clear the uncommitted rule outcome.
+    round_state["outcome"] = None
+    # Clear the uncommitted returned-token total.
+    round_state["payout"] = 0.0
+    # Clear the uncommitted net result.
+    round_state["net"] = 0.0
+    # Mark that no wager movement is ready.
+    round_state["wager_status"] = "not_ready"
+    # Mark that no payout movement is ready.
+    round_state["settlement_status"] = "not_ready"
+    # Remove a terminal timestamp that no longer describes the restored decision.
+    round_state.pop("completed_at", None)
+    # Remove any stale wager proof marker from the uncommitted shape.
+    round_state.pop("wager_ledger_id", None)
+    # Remove any stale payout proof marker from the uncommitted shape.
+    round_state.pop("settlement_ledger_id", None)
+    # Remove the non-funded terminal copy from bounded history.
+    state["recent_rounds"] = [item for item in state.get("recent_rounds", []) if item.get("round_id") != round_id]
+    # Restore the original round to the active decision slot.
+    state["active_round"] = round_state
+    # Release only the play receipt when no ledger movement owns it.
+    if play_action_id:
+        # Permit a safe retry with the same action identity after funds recover.
+        state.setdefault("action_receipts", {}).pop(play_action_id, None)
 
 
 # Close one prepared round without wallet movement.
