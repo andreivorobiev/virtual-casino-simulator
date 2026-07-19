@@ -54,6 +54,10 @@ export const currentUser = () => api('/api/v2/me');
 export const login = body => post('/api/v2/auth/login', body);
 // Export this symbol so the shell can end the current authenticated browser session.
 export const logout = () => post('/api/v2/auth/logout', {});
+// Start one account-free disposable guest trial from the login surface. (issue #317)
+export const guestTrial = () => post('/api/v2/auth/guest', {});
+// Irreversibly end the current guest trial with no recovery path. (issue #317)
+export const endGuestTrial = () => post('/api/v2/auth/guest/end', {});
 // Export this symbol so the shell can acknowledge the private beta toy-simulator terms.
 export const acceptTerms = body => post('/api/v2/auth/terms/accept', body);
 // Export this symbol so the shell can request ledger-backed token additions for the current user.

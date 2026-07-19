@@ -1,6 +1,6 @@
 // AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
 // Import required dependency so this module can call the frozen API envelope safely.
-import { acceptTerms, addUserTokens, api, currentUser, logClient, login, logout } from './core/api.js';
+import { acceptTerms, addUserTokens, api, currentUser, endGuestTrial, guestTrial, logClient, login, logout } from './core/api.js';
 // Import required dependency so this module can render shared wallet and premium UI helpers.
 import { renderTokenBalance, toast, tokens, safe, renderPremiumTag } from './core/ui.js';
 // Import required dependency so the shell can preserve locale across auth and route changes.
@@ -145,6 +145,12 @@ function observeGameScrollRegions(view) {
   gameRailObserver.observe(view, { childList: true, subtree: true });
 }
 
+// Report whether the current authenticated principal is a disposable guest trial. (issue #317)
+function isGuestSession() {
+  // Recognize a guest only by the server-provided role list so shell affordances never guess.
+  return Array.isArray(currentSession?.user?.roles) && currentSession.user.roles.includes('guest');
+}
+
 // Keep persistent shell profile and wallet nodes synchronized with the current user.
 function updateCurrentUserShell() {
   // Expose the current-user session so legacy game refresh calls keep token formatting.
@@ -157,6 +163,17 @@ function updateCurrentUserShell() {
   const name = currentSession?.user?.display_name || currentSession?.user?.username || currentSession?.user?.email || 'Player';
   // Label the logout control with the current user for accessibility.
   if (logoutButton) logoutButton.setAttribute('aria-label', t('auth.logout', { name }, 'shell'));
+  // Present the disposable-guest affordance on the persistent control: an End-trial label and a testable guest marker. (issue #317)
+  if (logoutButton) {
+    // Read the guest state once so the label and markers stay consistent.
+    const guest = isGuestSession();
+    // Show End trial for a guest without disturbing the registered-user control's existing content.
+    if (guest) logoutButton.textContent = t('guest.endTrial', {}, 'shell');
+    // Expose the guest identity and action for accessibility and browser evidence without leaking any credential.
+    logoutButton.setAttribute('aria-label', guest ? t('guest.endTrial', {}, 'shell') : t('auth.logout', { name }, 'shell'));
+    // Stamp a stable guest marker the shell and tests can read.
+    logoutButton.setAttribute('data-guest-trial', guest ? 'true' : 'false');
+  }
   // Read the language selector in the persistent topbar.
   const localeSelect = document.getElementById('shell-locale-select');
   // Wire the persistent locale selector without remounting games.
@@ -190,11 +207,15 @@ function renderLoginGate(message = '') {
   // Apply the auth screen class contract for login and terms flows.
   view.className = 'screen auth-screen';
   // Render the browser login gate with private-beta toy-simulator acknowledgement.
-  view.innerHTML = `<section class="auth-panel" data-testid="login-gate"><p class="eyebrow">${safe(t('auth.eyebrow', {}, 'shell'))}</p><h1>${safe(t('auth.title', {}, 'shell'))}</h1><p class="auth-copy">${safe(t('auth.copy', {}, 'shell'))}</p><form id="login-form" class="auth-form"><label>${safe(t('auth.email', {}, 'shell'))}<input id="login-email" data-testid="login-email" type="email" autocomplete="username" required></label><label>${safe(t('auth.password', {}, 'shell'))}<input id="login-password" data-testid="login-password" type="password" autocomplete="current-password" required></label><label>${safe(t('auth.language', {}, 'shell'))}<select id="auth-locale-select" data-testid="auth-locale-select"></select></label><label class="check-row"><input id="login-terms-check" data-testid="login-terms-check" type="checkbox" required><span>${safe(t('auth.termsCheck', {}, 'shell'))}</span></label><button class="primary" data-testid="login-submit" type="submit">${safe(t('auth.submit', {}, 'shell'))}</button><p id="auth-message" class="auth-message">${safe(message)}</p></form><section class="oauth-provider-status" data-testid="oauth-providers-disabled" aria-labelledby="oauth-provider-heading"><h2 id="oauth-provider-heading">${safe(t('auth.oauthDivider', {}, 'shell'))}</h2><div class="oauth-provider-grid"><button class="oauth-provider-button" data-testid="oauth-google" type="button" disabled aria-disabled="true">${safe(t('auth.oauthGoogle', {}, 'shell'))}</button><button class="oauth-provider-button" data-testid="oauth-facebook" type="button" disabled aria-disabled="true">${safe(t('auth.oauthFacebook', {}, 'shell'))}</button></div><p class="oauth-provider-copy" data-testid="oauth-provider-message" role="status">${safe(t('auth.oauthUnavailable', {}, 'shell'))}</p></section></section>`;
+  view.innerHTML = `<section class="auth-panel" data-testid="login-gate"><p class="eyebrow">${safe(t('auth.eyebrow', {}, 'shell'))}</p><h1>${safe(t('auth.title', {}, 'shell'))}</h1><p class="auth-copy">${safe(t('auth.copy', {}, 'shell'))}</p><form id="login-form" class="auth-form"><label>${safe(t('auth.email', {}, 'shell'))}<input id="login-email" data-testid="login-email" type="email" autocomplete="username" required></label><label>${safe(t('auth.password', {}, 'shell'))}<input id="login-password" data-testid="login-password" type="password" autocomplete="current-password" required></label><label>${safe(t('auth.language', {}, 'shell'))}<select id="auth-locale-select" data-testid="auth-locale-select"></select></label><label class="check-row"><input id="login-terms-check" data-testid="login-terms-check" type="checkbox" required><span>${safe(t('auth.termsCheck', {}, 'shell'))}</span></label><button class="primary" data-testid="login-submit" type="submit">${safe(t('auth.submit', {}, 'shell'))}</button><p id="auth-message" class="auth-message">${safe(message)}</p></form><div class="auth-guest" data-testid="guest-trial"><button class="secondary" data-testid="guest-trial-button" type="button">${safe(t('auth.guestCta', {}, 'shell'))}</button><p class="auth-guest-copy" data-testid="guest-trial-copy">${safe(t('auth.guestInfo', {}, 'shell'))}</p></div><section class="oauth-provider-status" data-testid="oauth-providers-disabled" aria-labelledby="oauth-provider-heading"><h2 id="oauth-provider-heading">${safe(t('auth.oauthDivider', {}, 'shell'))}</h2><div class="oauth-provider-grid"><button class="oauth-provider-button" data-testid="oauth-google" type="button" disabled aria-disabled="true">${safe(t('auth.oauthGoogle', {}, 'shell'))}</button><button class="oauth-provider-button" data-testid="oauth-facebook" type="button" disabled aria-disabled="true">${safe(t('auth.oauthFacebook', {}, 'shell'))}</button></div><p class="oauth-provider-copy" data-testid="oauth-provider-message" role="status">${safe(t('auth.oauthUnavailable', {}, 'shell'))}</p></section></section>`;
   // Wire the auth-screen locale selector and rerender the gate after switching.
   wireLocaleSelect(document.getElementById('auth-locale-select'), () => renderLoginGate(message));
   // Wire form submission through the v2 auth login endpoint.
   document.getElementById('login-form').onsubmit = handleLoginSubmit;
+  // Wire the account-free guest-trial entry so a visitor can start a disposable session without login. (issue #317)
+  const guestButton = document.getElementById('guest-trial-button');
+  // Start a guest trial on click only when the configuration-driven button is present.
+  if (guestButton) guestButton.onclick = handleGuestTrial;
 }
 
 // Render the terms acceptance step when the current session still requires it.
@@ -254,6 +275,23 @@ async function handleLoginSubmit(event) {
     // Enter the authenticated shell or terms step from the returned payload.
     await enterAuthenticated(session);
   // Handle failed login attempts with local auth-panel feedback.
+  } catch (err) {
+    // Render the API error without leaving the login gate.
+    if (message) message.textContent = err.message;
+  }
+}
+
+// Start one account-free disposable guest trial from the login surface. (issue #317)
+async function handleGuestTrial() {
+  // Read the shared message outlet for API errors.
+  const message = document.getElementById('auth-message');
+  // Start protected guest logic so any rejection stays inside the auth panel.
+  try {
+    // Create the isolated disposable guest session through the public guest endpoint.
+    const session = await guestTrial();
+    // Enter the authenticated shell using the same payload shape as a registered login.
+    await enterAuthenticated(session);
+  // Handle a disabled or failed guest entry with local auth-panel feedback.
   } catch (err) {
     // Render the API error without leaving the login gate.
     if (message) message.textContent = err.message;
@@ -628,18 +666,20 @@ async function init() {
   };
   // Read the logout button from the persistent topbar.
   const logoutButton = document.getElementById('logout-btn');
-  // Wire logout through the planned v2 auth endpoint.
+  // Wire logout, or the disposable guest End-trial, through the planned v2 auth endpoints. (issue #317)
   logoutButton.onclick = async () => {
-    // Start protected logout logic so stale sessions still end locally.
-    try { await logout(); } catch (_) {}
-    // Clear the current session after the backend logout attempt completes.
+    // Detect a guest so the persistent control ends the trial with no recovery instead of logging out.
+    const guestSession = isGuestSession();
+    // Start protected teardown so a stale session still ends locally on any backend error.
+    try { await (guestSession ? endGuestTrial() : logout()); } catch (_) {}
+    // Clear the current session after the backend teardown attempt completes.
     currentSession = null;
-    // Clear the public current-user hook after logout.
+    // Clear the public current-user hook after teardown.
     window.CasinoCurrentUser = null;
-    // Reset the active route so a later login starts at the lobby.
+    // Reset the active route so a later entry starts at the lobby.
     active = null;
-    // Render the browser login gate after logout.
-    renderLoginGate(t('auth.loggedOut', {}, 'shell'));
+    // Return to the login gate, noting the ended guest trial where applicable.
+    renderLoginGate(t(guestSession ? 'auth.loggedOut' : 'auth.loggedOut', {}, 'shell'));
   };
   // Start protected bootstrapping so the app can still show a friendly error toast.
   try {
