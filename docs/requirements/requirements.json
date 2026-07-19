@@ -2153,6 +2153,22 @@
       ]
     },
     {
+      "id": "SLOT-028",
+      "module": "Slots",
+      "description": "Slots displays read-only cabinet readiness and win state as non-interactive status instead of a primary action button.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-SLOT-001"
+      ],
+      "implementation_files": [
+        "web/games/slots.js"
+      ],
+      "introduced_in": "issue-239-slots-status-pill",
+      "changed_in": "issue-239-slots-status-pill",
+      "notes": "The cabinet footer status uses a role=status pill so read-only state no longer looks like a disabled primary command."
+    },
+    {
       "id": "BJ-001",
       "module": "Blackjack",
       "description": "Blackjack deals two player cards and two dealer cards.",
@@ -8336,6 +8352,22 @@
       "introduced_in": "issue-253-caribbean-stud-paytable",
       "changed_in": "issue-253-caribbean-stud-paytable",
       "notes": "The integrated Caribbean Stud browser flow checks representative top and bottom paytable rows before the first ante-backed deal."
+    },
+    {
+      "id": "TEST-064",
+      "module": "Tests",
+      "description": "Browser evidence verifies Slots renders cabinet readiness and win state as a status pill rather than a disabled primary-looking action.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-SLOT-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-239-slots-status-pill",
+      "changed_in": "issue-239-slots-status-pill",
+      "notes": "The integrated Slots browser flow rejects a primary button inside the cabinet footer and requires the replacement role=status pill."
     }
   ]
 }
