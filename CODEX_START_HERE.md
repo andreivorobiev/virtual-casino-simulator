@@ -236,6 +236,9 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 - [`docs/claude_codex_work_division.md`](docs/claude_codex_work_division.md) — Claude and Codex work-division proposal
 - [`docs/codex_parallel_workflow.md`](docs/codex_parallel_workflow.md) — Parallel agent workflow
 - [`docs/commenting_policy.md`](docs/commenting_policy.md) — Commenting policy
+- [`docs/drafts/ux_design_guidelines_review.md`](docs/drafts/ux_design_guidelines_review.md) — UX design guidelines review packet
+- [`docs/drafts/ux_visual_assessment_prompt.md`](docs/drafts/ux_visual_assessment_prompt.md) — UX and visual conformance assessment prompt
+- [`docs/drafts/visual_design_guidelines_review.md`](docs/drafts/visual_design_guidelines_review.md) — Visual design guidelines review packet
 - [`docs/engineering_skills.md`](docs/engineering_skills.md) — Engineering skills and capability routing
 - [`docs/evidence/baccarat/README.md`](docs/evidence/baccarat/README.md) — Baccarat mutation-serialization evidence
 - [`docs/evidence/big_six_wheel/README.md`](docs/evidence/big_six_wheel/README.md) — Big Six Wheel evidence status
