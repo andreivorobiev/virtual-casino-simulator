@@ -605,7 +605,7 @@ flowchart LR
 | BINGO-009 | Bingo supports four-corners pattern. | PASS | API-BINGO-001 |  |
 | BINGO-010 | Bingo supports postage-stamp pattern. | PASS | API-BINGO-001 |  |
 | BINGO-011 | Bingo supports blackout pattern. | PASS | API-BINGO-001 |  |
-| BINGO-012 | Bingo card purchase debits immediately. | PASS | API-BINGO-001 |  |
+| BINGO-012 | Each accepted visible Bingo card purchase debits immediately and exactly once; a pending purchase cannot schedule a duplicate. | PASS | API-BINGO-001 | BR-BINGO-PURCHASE-001 |
 | BINGO-013 | Bingo reset before called balls refunds cards. | PASS | API-BINGO-001 |  |
 | BINGO-014 | Bingo reset after called balls logs abandoned session. | PASS | API-BINGO-001 |  |
 | BINGO-015 | Bingo calls unique balls. | PASS | API-BINGO-001 |  |
@@ -615,7 +615,7 @@ flowchart LR
 | BINGO-019 | Bingo supports bot cards. | PASS | API-BINGO-001 |  |
 | BINGO-020 | Bingo awards payout to the winning card. | PASS | API-BINGO-001 |  |
 | BINGO-021 | Bingo auto play calls until a winner. | PASS | API-BINGO-001 | BR-BINGO-001 |
-| BINGO-022 | Bingo UI shows cards in play. | PASS | API-BINGO-001 | BR-BINGO-001 |
+| BINGO-022 | Bingo UI shows the authoritative cards in play and a truthful disabled busy boundary while a purchase resolves. | PASS | API-BINGO-001 | BR-BINGO-001, BR-BINGO-PURCHASE-001 |
 | BINGO-023 | Bingo writes history rows. | PASS | API-BINGO-001 |  |
 | BINGO-024 | Bingo remains fake-money only. | PASS | API-BINGO-001 |  |
 
@@ -763,7 +763,7 @@ flowchart LR
 | LEDGER-017 | Baccarat bet cancellation credits refunds. | PASS | API-BAC-001 |  |
 | LEDGER-018 | Keno ticket purchase debits immediately. | PASS | API-KENO-001 |  |
 | LEDGER-019 | Keno ticket cancellation credits refunds. | PASS | API-KENO-001 |  |
-| LEDGER-020 | Bingo card purchase debits immediately. | PASS | API-BINGO-001 |  |
+| LEDGER-020 | Each accepted visible Bingo card purchase debits immediately and exactly once. | PASS | API-BINGO-001 | BR-BINGO-PURCHASE-001 |
 | LEDGER-021 | Bingo reset before calls credits refunds. | PASS | API-BINGO-001 |  |
 | LEDGER-022 | Slot spin debits spin cost before settlement. | PASS | API-SLOT-001 |  |
 | LEDGER-023 | All game settlement payouts credit after results are known. | PASS | API-ROU-001 |  |
