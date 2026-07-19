@@ -2619,6 +2619,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.get_by_test_id('nav-big_six_wheel').click(); page.get_by_test_id('big-six-wheel').wait_for(timeout=5000)
                     # Require the canonical route, English title, and ready phase from the live backend mount.
                     assert page.url.split('?',1)[0].endswith('/games/big_six_wheel') and page.locator('.big-six-wheel__header h1').inner_text()=='Big Six Wheel' and page.get_by_test_id('big-six-wheel-phase').inner_text()=='Accepting wagers'
+                    # Read the initial cumulative target before the first real motion-qualified spin.
+                    initial_big_six_target=page.locator('[data-wheel]').evaluate("node => Number.parseFloat(node.style.getPropertyValue('--wheel-angle'))")
                     # Define every named viewport required by the Big Six visual-matrix row.
                     required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
                     # Capture the English ready surface and containment at every required viewport.
@@ -2631,11 +2633,45 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         game_evidence(f'after-pass-big-six-ready-en-{viewport_id}.png','big_six_wheel',['ready'],'en-US',viewport_id)
                     # Restore primary desktop and enter a positive real-backend wager.
                     page.set_viewport_size({'width':1920,'height':1080}); page.locator('[data-wager="one"]').fill('1')
-                    # Start one ledger-backed spin and require the timer-owned active state before settlement.
-                    page.locator('[data-spin]').click(); page.wait_for_function("() => document.querySelector('[data-testid=\"big-six-wheel-phase\"]')?.textContent === 'Spinning'",timeout=5000)
+                    # Start one ledger-backed spin while observing its authoritative server-selected segment.
+                    with page.expect_response(lambda response: response.url.endswith('/api/v1/games/big-six-wheel/spins') and response.request.method=='POST') as first_big_six_response_info:
+                        # Activate the same visible control used by players.
+                        page.locator('[data-spin]').click()
+                    # Require the timer-owned active state and cumulative six-turn target before settlement.
+                    page.wait_for_function("minimum => Number.parseFloat(document.querySelector('[data-wheel]')?.style.getPropertyValue('--wheel-angle')) >= minimum",arg=initial_big_six_target+(6*360),timeout=5000)
+                    # Decode the first standard response envelope for independent pointer-alignment proof.
+                    first_big_six_round=first_big_six_response_info.value.json()['data']['round']
+                    # Read the cumulative target mutated on the already-painted wheel element.
+                    first_big_six_target=page.locator('[data-wheel]').evaluate("node => Number.parseFloat(node.style.getPropertyValue('--wheel-angle'))")
+                    # Calculate the canonical segment-center orientation from server-owned result data.
+                    first_big_six_landing=(360-((first_big_six_round['result_index']+0.5)*(360/54)))%360
+                    # Require exact forward target continuity and final server-index alignment.
+                    assert first_big_six_target-initial_big_six_target>=6*360-1e-6 and abs((first_big_six_target%360)-first_big_six_landing)<1e-6
+                    # Require the outcome to remain hidden and every wager control to remain locked during motion.
+                    assert page.locator('[data-spin]').is_disabled() and all(control.is_disabled() for control in page.locator('[data-wager]').all()) and page.locator('.big-six-wheel__hub').inner_text().strip()==page.locator('[data-spin]').inner_text().strip()
+                    # Sample the composited wheel twice so a target teleport cannot satisfy the active state.
+                    first_big_six_frame=page.locator('[data-wheel]').evaluate("node => getComputedStyle(node).transform"); page.wait_for_timeout(100); second_big_six_frame=page.locator('[data-wheel]').evaluate("node => getComputedStyle(node).transform")
+                    # Require real browser interpolation between the two active presentation frames.
+                    assert first_big_six_frame!='none' and second_big_six_frame!='none' and first_big_six_frame!=second_big_six_frame
                     # Capture the active normal-motion state while the route-owned timer is pending.
                     game_evidence('after-pass-big-six-spinning-en-desktop_primary.png','big_six_wheel',['spinning'],'en-US','desktop_primary')
                     # Wait for the scheduled settlement to restore an enabled action.
+                    page.wait_for_function("() => document.querySelector('[data-testid=\"big-six-wheel-phase\"]')?.textContent === 'Settled' && !document.querySelector('[data-spin]')?.disabled",timeout=5000)
+                    # Start a second consecutive spin to reject absolute-angle reset and reverse regressions.
+                    with page.expect_response(lambda response: response.url.endswith('/api/v1/games/big-six-wheel/spins') and response.request.method=='POST') as second_big_six_response_info:
+                        # Reuse the retained positive wager through the visible action.
+                        page.locator('[data-spin]').click()
+                    # Require another complete forward target from the prior settled angle.
+                    page.wait_for_function("minimum => Number.parseFloat(document.querySelector('[data-wheel]')?.style.getPropertyValue('--wheel-angle')) >= minimum",arg=first_big_six_target+(6*360),timeout=5000)
+                    # Decode the second authoritative result for independent alignment proof.
+                    second_big_six_round=second_big_six_response_info.value.json()['data']['round']
+                    # Read the second cumulative target without discarding its rotation history.
+                    second_big_six_target=page.locator('[data-wheel]').evaluate("node => Number.parseFloat(node.style.getPropertyValue('--wheel-angle'))")
+                    # Calculate the second server-selected segment center below the pointer.
+                    second_big_six_landing=(360-((second_big_six_round['result_index']+0.5)*(360/54)))%360
+                    # Reject reset, reverse, freeze, or server-index disagreement on the consecutive action.
+                    assert second_big_six_target-first_big_six_target>=6*360-1e-6 and abs((second_big_six_target%360)-second_big_six_landing)<1e-6
+                    # Wait for the second presentation to restore controls before terminal evidence begins.
                     page.wait_for_function("() => document.querySelector('[data-testid=\"big-six-wheel-phase\"]')?.textContent === 'Settled' && !document.querySelector('[data-spin]')?.disabled",timeout=5000)
                     # Capture the settled English surface at every required viewport.
                     for viewport_id,width,height in required_viewports:
@@ -2696,7 +2732,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Return to the lobby so established downstream browser cases start normally.
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Execute Big Six rules, session route, localization, motion, responsive, and visual gates.
-                run_case('BR-BIG-SIX-001',['BIG-SIX-001','BIG-SIX-002','BIG-SIX-004','BIG-SIX-005'],big_six_acceptance)
+                run_case('BR-BIG-SIX-001',['BIG-SIX-001','BIG-SIX-002','BIG-SIX-004','BIG-SIX-005','BIG-SIX-006','TEST-065'],big_six_acceptance)
                 # Define real-backend Red Dog browser, localization, responsive, state, and visual acceptance coverage.
                 def red_dog_acceptance():
                     # Open the catalog-generated route and wait for the game-owned readiness selector.

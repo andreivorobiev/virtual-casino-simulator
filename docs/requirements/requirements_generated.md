@@ -23,7 +23,7 @@ Historical source baseline: 9.1.0
 - bingo: 9.2.1
 - multi_hand_video_poker: 1.0.1
 - casino_war: 1.0.0
-- big_six_wheel: 1.0.0
+- big_six_wheel: 1.0.1
 - red_dog: 1.0.0
 - dragon_tiger: 1.0.0
 - hi_lo: 1.0.0
@@ -45,8 +45,8 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.0
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.44.18
-- docs: 1.44.18
+- tests: 1.44.19
+- docs: 1.44.19
 - contracts: 1.32.0
 - tooling: 1.14.0
 - commenting_policy: 1.0.0
@@ -507,8 +507,9 @@ Historical source baseline: 9.1.0
 - **BIG-SIX-001** (Big Six Wheel) - PASS: Big Six Wheel exposes the approved 54-segment profile, seven wager targets, deterministic result seam, and documented net payout table through its engine and browser surface.
 - **BIG-SIX-002** (Big Six Wheel) - PASS: Authenticated sessions own isolated reload-safe Big Six Wheel state, recent settlements, and canonical route restoration.
 - **BIG-SIX-003** (Big Six Wheel) - PASS: Each Big Six spin uses one aggregate ledger wager debit and at most one settlement credit with request-fingerprint conflict detection and exactly-once retry recovery.
-- **BIG-SIX-004** (Application) - PASS: The Big Six Wheel surface provides complete English and Russian copy, responsive ready/spinning/settled states, and reduced-motion-safe timer lifecycle behavior.
+- **BIG-SIX-004** (Application) - PASS: The Big Six Wheel surface provides complete English and Russian copy, responsive ready/spinning/settled states, cumulative forward wheel motion, delayed result reveal, and reduced-motion-safe timer lifecycle behavior.
 - **BIG-SIX-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery automatically include Big Six Wheel with requirement, module, version, and visual evidence traceability.
+- **BIG-SIX-006** (Big Six Wheel) - PASS: Every normal Big Six spin advances cumulatively through at least six clockwise turns, keeps the authoritative outcome hidden and wager controls locked until presentation settles, and lands the fixed pointer on the server-selected segment without snap, reset, reverse, or stale lifecycle state.
 - **RD-001** (Red Dog) - PASS: Six-deck Red Dog supports consecutive-card pushes, opening-pair handling, spread decisions, and the approved spread and pair payout schedule.
 - **RD-002** (Red Dog) - PASS: Authenticated sessions own isolated reload-safe Red Dog state, active decisions, recent rounds, and canonical route restoration.
 - **RD-003** (Red Dog) - PASS: Red Dog ante, optional matching raise, push return, and payout movements use the shared ledger exactly once under stable action identifiers.
@@ -668,3 +669,4 @@ Historical source baseline: 9.1.0
 - **TEST-062** (Tests) - PASS: Browser evidence verifies Baccarat's initial shoe drawer shows the configured full shoe capacity instead of zero before the first deal.
 - **TEST-063** (Tests) - PASS: Browser evidence verifies Caribbean Stud's return-table panel includes the visible raise payout schedule sourced from published rules.
 - **TEST-064** (Tests) - PASS: Browser evidence verifies Slots renders cabinet readiness and win state as a status pill rather than a disabled primary-looking action.
+- **TEST-065** (Tests) - PASS: Browser qualification proves Big Six cumulative animation continuity, server-result pointer alignment, hidden results and atomic control locks, lifecycle recovery, slow-device and reduced-motion behavior, production static-asset cache safety, and scroll reachability across every governed viewport.
