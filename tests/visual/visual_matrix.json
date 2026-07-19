@@ -118,7 +118,9 @@
         "wallet_open",
         "token_added",
         "search_filtered",
-        "category_filtered"
+        "category_filtered",
+        "admin_nav_hidden_player",
+        "admin_nav_visible_admin"
       ],
       "locales": [
         "en-US",

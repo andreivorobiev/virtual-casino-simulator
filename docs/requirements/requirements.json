@@ -7928,6 +7928,9 @@
       "id": "AUTH-007", "module": "Core", "description": "Restricted preview exposes local-password login only; public signup and live OAuth authorization, callback, exchange, linking, SDK, and provider transport routes remain absent.", "status": "PASS", "api_tests": ["API-SEC-PREVIEW-001", "OAUTH-MOCK-001"], "browser_tests": ["BR-SEC-PREVIEW-001"], "implementation_files": ["casino/wsgi.py", "casino/core/auth.py", "casino/app.py", "contracts/compatibility/oauth-disabled-foundation.json", "contracts/compatibility/restricted-preview-security.json"], "introduced_in": "issue-203-restricted-preview-security", "changed_in": "issue-203-restricted-preview-security", "notes": "The unrestricted provider launch remains a separately held gate."
     },
     {
+      "id": "AUTH-008", "module": "Core", "description": "The authenticated shared shell renders and keyboard-wires Admin navigation only for an authenticated Admin user; normal-player locale rerenders and restored game routes never expose the affordance, while direct Admin HTML and API access remain server-enforced.", "status": "PASS", "api_tests": ["API-ADMIN-USERS-001"], "browser_tests": ["BR-ADMIN-NAV-AUTH-001"], "implementation_files": ["web/app.js", "casino/app.py", "casino/wsgi.py", "casino/admin.py"], "introduced_in": "issue-251-admin-nav-gate", "changed_in": "issue-251-admin-nav-gate", "notes": "Hiding the shell affordance is presentation hardening; both runtime adapters enforce direct Admin HTML, JavaScript, and API authorization as the security boundary."
+    },
+    {
       "id": "TEST-047", "module": "Tests", "description": "Permanent restricted-preview evidence covers configuration failure, Host and proxy abuse, Origin and CSRF enforcement, session and privilege rotation, cookie and header policy, Admin and disabled-access boundaries, concurrency, capacity recovery, redacted logging, copied production behavior, and exact listener cleanup.", "status": "PASS", "api_tests": ["API-SEC-PREVIEW-001", "SERVICE-WSGI-001", "SERVICE-COPIED-001"], "browser_tests": ["BR-SEC-PREVIEW-001"], "implementation_files": ["tests/security/", "tests/production_wsgi_probe.py", "tests/production_service_tests.py", "tests/production_service_smoke.py", "tests/run_tests.py"], "introduced_in": "issue-203-restricted-preview-security", "changed_in": "issue-203-restricted-preview-security", "notes": "Focused WSGI and browser-helper proofs are listener-free; copied-service smoke uses an operating-system-assigned loopback port and excludes 8765 and 8877."
     },
     {
@@ -8231,6 +8234,25 @@
       "introduced_in": "issue-234-roulette-debug-text",
       "changed_in": "issue-234-roulette-debug-text",
       "notes": "The existing Roulette browser flow asserts the live spinning card copy before waiting for the settled result."
+    },
+    {
+      "id": "TEST-060",
+      "module": "Tests",
+      "description": "Browser and API validation proves that normal players never receive the Admin navigation affordance after locale rerender or route restoration, direct Admin access remains forbidden, and authenticated Admin users retain responsive keyboard access with governed visual evidence.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ADMIN-USERS-001"
+      ],
+      "browser_tests": [
+        "BR-ADMIN-NAV-AUTH-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-251-admin-nav-gate",
+      "changed_in": "issue-251-admin-nav-gate",
+      "notes": "Real normal-player and Admin sessions cover en-US and ru-RU at desktop_primary and mobile, plus direct HTML and API authorization and keyboard route entry."
     }
   ]
 }

@@ -1201,7 +1201,7 @@ def run_api_tests():
         # Record exact token credit coverage under the permanent test id referenced by TOKEN-003.
         run_case('API-TOKEN-001',['TOKEN-003','TOKEN-004'],lambda: assert_condition(integrity_state['token_credit_count']==1 and integrity_state['contract_player']['token_balance']==250,'token credit contract mismatch'))
         # Record central Admin authorization coverage under the permanent Admin test id.
-        run_case('API-ADMIN-USERS-001',['AUTH-005','USER-002','USER-004'],lambda: assert_condition(integrity_state['admin_blocked']>20,'Admin route gate coverage incomplete'))
+        run_case('API-ADMIN-USERS-001',['AUTH-005','AUTH-008','USER-002','USER-004','TEST-060'],lambda: assert_condition(integrity_state['admin_blocked']>20,'Admin route gate coverage incomplete'))
         # Record v2 envelope/player shape coverage under the permanent contract test id.
         run_case('API-CONTRACT-V2-001',['API-001','API-002','TOKEN-002'],lambda: assert_condition({'player_id','token_balance','token_label'} <= set(integrity_state['contract_player']),'v2 player summary shape mismatch'))
         # Record canonical terms gate and persistence coverage under its permanent test id.
@@ -2081,6 +2081,40 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 run_case('BR-AUTH-LOGOUT-001',['AUTH-UI-001'],lambda: page.get_by_test_id('login-gate').is_visible() and not page.get_by_test_id('premium-topbar').is_visible())
                 # Re-login after logout so the existing browser suite can continue authenticated.
                 page.get_by_test_id('login-email').fill('demo@example.local'); page.get_by_test_id('login-password').fill('password'); page.get_by_test_id('login-terms-check').check(); page.get_by_test_id('login-submit').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Store the normal-player shell results so the later Admin session can complete one two-role acceptance case.
+                normal_admin_nav_results=[]
+                # Define the governed shell viewports needed to prove responsive Admin-affordance absence.
+                admin_nav_viewports={'desktop_primary':{'width':1920,'height':1080},'mobile':{'width':390,'height':844}}
+                # Exercise the role-aware shell through both installed player-facing locales.
+                for admin_nav_locale in ('en-US','ru-RU'):
+                    # Rerender the authenticated shell through the visible locale control.
+                    page.get_by_test_id('shell-locale-select').select_option(admin_nav_locale)
+                    # Wait until the locale runtime confirms the requested shell rerender.
+                    page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale",arg=admin_nav_locale)
+                    # Inspect the complete responsive matrix reserved for this focused authorization surface.
+                    for admin_nav_viewport_id,admin_nav_viewport in admin_nav_viewports.items():
+                        # Resize to the exact governed viewport before checking reachability and containment.
+                        page.set_viewport_size(admin_nav_viewport); page.wait_for_timeout(150)
+                        # Record absence and page containment without treating hidden markup as an acceptable gate.
+                        normal_admin_nav_results.append({'locale':admin_nav_locale,'viewport':admin_nav_viewport_id,'count':page.get_by_test_id('nav-admin').count(),'contained':page.evaluate("() => document.documentElement.scrollWidth <= window.innerWidth + 1")})
+                        # Capture self-describing after-pass evidence for the normal-player hidden state.
+                        game_evidence(f'after-pass-shell-admin-nav-hidden-player-{admin_nav_locale}-{admin_nav_viewport_id}.png','shell_lobby',['authenticated','admin_nav_hidden_player'],admin_nav_locale,admin_nav_viewport_id)
+                # Restore the default locale and primary viewport before exercising route restoration.
+                page.set_viewport_size({'width':1920,'height':1080}); page.get_by_test_id('shell-locale-select').select_option('en-US'); page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'en-US'")
+                # Navigate to a game through the real shell before reloading its restored route.
+                page.get_by_test_id('nav-roulette').click(); page.get_by_test_id('roulette-wheel').wait_for(timeout=5000)
+                # Reload the real game route so the shell is reconstructed from current-user state.
+                page.reload(wait_until='networkidle'); page.get_by_test_id('roulette-wheel').wait_for(timeout=5000)
+                # Record that a restored normal-player game route still omits the Admin affordance.
+                normal_admin_nav_route_restored=page.get_by_test_id('nav-admin').count()==0
+                # Return to the lobby before direct authorization checks and the broad game suite continue.
+                page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Request protected Admin HTML through same-origin browser fetch so the active Secure session cookie is authoritative.
+                normal_admin_html_result=page.evaluate("""async () => { const response=await fetch('/admin',{credentials:'include'}); const text=await response.text(); return {status:response.status,contains_admin_view:text.includes('adminView')}; }""")
+                # Request protected Admin JavaScript through the same browser session before any source bytes can load.
+                normal_admin_js_result=page.evaluate("""async () => { const response=await fetch('/admin.js',{credentials:'include'}); const text=await response.text(); return {status:response.status,contains_admin_view:text.includes('adminView')}; }""")
+                # Request one protected Admin API endpoint through the same normal-player browser session.
+                normal_admin_api_result=page.evaluate("""async () => { const response=await fetch('/api/v1/admin/overview',{credentials:'include'}); return {status:response.status,body:await response.json()}; }""")
                 # Clear expected unauthenticated /me failures produced by the login and logout gates.
                 console_errors.clear(); http_errors.clear()
                 # Navigate to Roulette to verify the same current-user wallet persists on a game surface.
@@ -4609,8 +4643,64 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 admin_browser_login=page.request.post(base+'/api/v2/auth/login',data={'email':DEFAULT_AUTH_EMAIL,'password':DEFAULT_AUTH_PASSWORD})
                 # Verify the browser context received a successful Admin login response.
                 assert admin_browser_login.json()['ok'] is True
-                # Set page.goto(base+'/admin', wait_until to the value needed for the next operation.
-                page.goto(base+'/admin', wait_until='networkidle')
+                # Load the normal shared shell first so Admin navigation is exercised as a user-visible affordance.
+                page.goto(base,wait_until='networkidle'); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Store the Admin shell results for the combined two-role authorization assertion.
+                admin_nav_results=[]
+                # Exercise the Admin affordance through both installed locales and focused responsive viewports.
+                for admin_nav_locale in ('en-US','ru-RU'):
+                    # Rerender the authenticated Admin shell through the visible locale control.
+                    page.get_by_test_id('shell-locale-select').select_option(admin_nav_locale)
+                    # Wait until the locale runtime confirms the requested Admin shell rerender.
+                    page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale",arg=admin_nav_locale)
+                    # Inspect the same governed viewports used for the normal-player absence proof.
+                    for admin_nav_viewport_id,admin_nav_viewport in admin_nav_viewports.items():
+                        # Resize to the exact governed viewport before inspecting the role-owned control.
+                        page.set_viewport_size(admin_nav_viewport); page.wait_for_timeout(150)
+                        # Read the one expected Admin affordance before moving the bounded navigation to its trailing edge.
+                        admin_nav_button=page.get_by_test_id('nav-admin')
+                        # Scroll the intentional horizontal menu itself so evidence visibly includes the late Admin route.
+                        page.locator('#main-nav').evaluate("nav => { nav.scrollLeft=nav.scrollWidth; }"); page.wait_for_timeout(100)
+                        # Prove the Admin control is inside the visible bounded-menu viewport rather than merely present offscreen.
+                        admin_nav_in_view=page.evaluate("""() => { const nav=document.querySelector('#main-nav'); const button=document.querySelector('[data-testid="nav-admin"]'); const navRect=nav.getBoundingClientRect(); const buttonRect=button.getBoundingClientRect(); return buttonRect.left >= navRect.left - 1 && buttonRect.right <= navRect.right + 1; }""")
+                        # Record exact presence, viewport visibility, and page containment for this locale and viewport.
+                        admin_nav_results.append({'locale':admin_nav_locale,'viewport':admin_nav_viewport_id,'count':admin_nav_button.count(),'visible':admin_nav_button.is_visible(),'in_view':admin_nav_in_view,'contained':page.evaluate("() => document.documentElement.scrollWidth <= window.innerWidth + 1")})
+                        # Capture focused evidence before full-page rasterization can reset the nested menu scroll position.
+                        region_evidence(f'after-pass-shell-admin-nav-visible-admin-{admin_nav_locale}-{admin_nav_viewport_id}.png','#main-nav','shell_lobby',['authenticated','admin_nav_visible_admin'],admin_nav_locale,admin_nav_viewport_id)
+                        # Capture separate full-page context for responsive containment without mislabeling its reset menu position.
+                        game_evidence(f'after-pass-shell-admin-nav-context-admin-{admin_nav_locale}-{admin_nav_viewport_id}.png','shell_lobby',['authenticated'],admin_nav_locale,admin_nav_viewport_id)
+                # Restore the default locale and primary viewport before keyboard activation.
+                page.set_viewport_size({'width':1920,'height':1080}); page.get_by_test_id('shell-locale-select').select_option('en-US'); page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'en-US'")
+                # Focus the visible role-owned route without a pointer.
+                page.get_by_test_id('nav-admin').focus()
+                # Record the focused control before its native Enter activation changes documents.
+                admin_nav_focused=page.evaluate("() => document.activeElement?.getAttribute('data-testid')")
+                # Activate the Admin route using the button's native keyboard contract.
+                page.get_by_test_id('nav-admin').press('Enter'); page.wait_for_url('**/admin'); page.get_by_test_id('admin-tab-audio').wait_for(timeout=5000)
+                # Verify the Admin browser session can still read a protected API after route entry using its same-origin cookie.
+                admin_api_result=page.evaluate("""async () => { const response=await fetch('/api/v1/admin/overview',{credentials:'include'}); return {status:response.status,body:await response.json()}; }""")
+                # Capture the destination surface reached through the keyboard-owned shell affordance.
+                game_evidence('after-pass-admin-dashboard-keyboard-entry-en-US-desktop_primary.png','admin',['dashboard'], 'en-US','desktop_primary')
+                # Define one permanent acceptance case spanning normal-player presentation, server authority, and Admin access.
+                def admin_navigation_authorization():
+                    # Require every normal-player locale and viewport to contain no Admin markup at all.
+                    assert len(normal_admin_nav_results)==4 and all(result['count']==0 and result['contained'] for result in normal_admin_nav_results)
+                    # Require route restoration to preserve the normal-player presentation boundary.
+                    assert normal_admin_nav_route_restored
+                    # Require protected Admin HTML to deny the normal player before returning any Admin document marker.
+                    assert normal_admin_html_result['status']==403 and normal_admin_html_result['contains_admin_view'] is False
+                    # Require protected Admin JavaScript to deny the normal player before returning any source marker.
+                    assert normal_admin_js_result['status']==403 and normal_admin_js_result['contains_admin_view'] is False
+                    # Require the protected Admin API to preserve the standard forbidden envelope for the normal player.
+                    assert normal_admin_api_result['status']==403 and normal_admin_api_result['body']['ok'] is False and normal_admin_api_result['body']['error']['code']=='FORBIDDEN'
+                    # Require every Admin locale and viewport to expose exactly one visible, contained affordance.
+                    assert len(admin_nav_results)==4 and all(result['count']==1 and result['visible'] and result['in_view'] and result['contained'] for result in admin_nav_results)
+                    # Require native keyboard focus and activation to reach the dedicated Admin document.
+                    assert admin_nav_focused=='nav-admin' and page.url.rstrip('/').endswith('/admin')
+                    # Require the authenticated Admin session to retain protected API authority after navigation.
+                    assert admin_api_result['status']==200 and admin_api_result['body']['ok'] is True
+                # Execute the complete issue-owned role-aware Admin navigation regression.
+                run_case('BR-ADMIN-NAV-AUTH-001',['ADMIN-001','AUTH-005','AUTH-008','TEST-060'],admin_navigation_authorization)
                 # Define the Admin dashboard version check mapped to its existing browser requirement coverage.
                 def admin_dashboard_browser():
                     # Require the existing Admin navigation to remain available after dashboard load.

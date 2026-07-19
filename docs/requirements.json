@@ -6470,6 +6470,25 @@
       "introduced_in": "issue-248-slots-line-bet",
       "changed_in": "issue-248-slots-line-bet",
       "notes": "Focused control evidence covers en-US and ru-RU at desktop_compact and mobile from the tested head without accepting unrelated full-page defects."
+    },
+    {
+      "id": "TEST-060",
+      "module": "Tests",
+      "description": "Browser and API validation proves that normal players never receive the Admin navigation affordance after locale rerender or route restoration, direct Admin access remains forbidden, and authenticated Admin users retain responsive keyboard access with governed visual evidence.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ADMIN-USERS-001"
+      ],
+      "browser_tests": [
+        "BR-ADMIN-NAV-AUTH-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-251-admin-nav-gate",
+      "changed_in": "issue-251-admin-nav-gate",
+      "notes": "Real normal-player and Admin sessions cover en-US and ru-RU at desktop_primary and mobile, plus direct HTML and API authorization and keyboard route entry."
     }
   ]
 }
