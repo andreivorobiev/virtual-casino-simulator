@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.38.3
+- application: 9.38.4
 - core: 9.13.1
 - ledger: 9.1.1
 - players: 9.1.0
@@ -45,8 +45,8 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.0
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.44.11
-- docs: 1.44.11
+- tests: 1.44.12
+- docs: 1.44.12
 - contracts: 1.32.0
 - tooling: 1.14.0
 - commenting_policy: 1.0.0
@@ -486,6 +486,7 @@ Historical source baseline: 9.1.0
 - **CORE-021** (Core) - PASS: Module-owned game catalog metadata drives backend registration, frontend lazy routes, public additive metadata, and validator discovery from one source.
 - **CORE-022** (Core) - PASS: Canonical game routes restore the active game across direct deep links, reload, and browser Back and Forward navigation.
 - **UX-010** (Application) - PASS: The lobby provides accessible search and catalog-derived category navigation that remains usable for the approved 20-game target.
+- **UX-011** (Application) - PASS: Game loading and module-error panels use catalog display labels instead of raw internal route identifiers.
 - **SESSION-005** (Core) - PASS: Every game API request resolves its player through one shared authenticated-session resolver before route dispatch.
 - **TEST-042** (Tests) - PASS: Validators, generic browser discovery, and long suites load every game and its independently owned driver from catalog metadata without a duplicated game allowlist.
 - **TEST-043** (Tests) - PASS: Storage regression tests prove at least 25 duplicate calls per debit, payout, refund, and settlement family, changed-reuse conflicts, restart replay, lost-response recovery, and two-process MySQL uniqueness.

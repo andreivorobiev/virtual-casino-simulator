@@ -2277,6 +2277,38 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(250)
                 # Define catalog_route_discovery to mount every frontend driver from catalog metadata.
                 def catalog_route_discovery():
+                    # Select a catalog game with a route id that differs from its display label for loader-copy coverage. (UX-011)
+                    loading_game=next(game for game in casino_config.GAMES if game['id']=='andar_bahar')
+                    # Store the intercepted module route so the test can release it after reading the loading panel.
+                    held_loading_route={'route':None}
+                    # Define hold_loading_module to pause one first-time module import at the real network boundary.
+                    def hold_loading_module(route):
+                        # Preserve the Playwright route object so the visible loading state can be inspected before import completion.
+                        held_loading_route['route']=route
+                    # Hold only the selected module request so the rest of the browser suite remains real-backend.
+                    page.route('**/games/andar_bahar.js',hold_loading_module)
+                    # Navigate through the normal shell button to render the loading panel before the dynamic import resolves.
+                    page.get_by_test_id('nav-andar_bahar').click()
+                    # Wait until the route import is paused, proving the loading panel is still on screen.
+                    page.wait_for_function("() => document.querySelector('.loading-panel h2')?.textContent.includes('Loading') && document.querySelector('.loading-panel h2')?.textContent.includes('Andar Bahar')")
+                    # Read the player-facing loading panel copy for the route-label assertion.
+                    loading_panel_copy=page.locator('.loading-panel h2').inner_text()
+                    # Require the display label and reject the raw internal slug.
+                    assert 'Andar Bahar' in loading_panel_copy and 'andar_bahar' not in loading_panel_copy
+                    # Bound the wait for Playwright to hand the paused module request back to Python.
+                    loading_route_deadline=time.time()+5
+                    # Wait briefly for the held route object so the request can be released deliberately.
+                    while held_loading_route['route'] is None and time.time()<loading_route_deadline:
+                        # Sleep in short intervals so a missing route fails quickly instead of hanging the suite.
+                        time.sleep(0.05)
+                    # Require the route hold to be active before releasing the dynamic import.
+                    assert held_loading_route['route'] is not None
+                    # Release the held module request so the selected route can finish mounting normally.
+                    held_loading_route['route'].continue_()
+                    # Wait for the selected module's declared ready selector before removing the route handler.
+                    page.get_by_test_id(loading_game['frontend']['ready_testid']).wait_for(timeout=5000)
+                    # Remove the one-shot import hold before the generic catalog route walk.
+                    page.unroute('**/games/andar_bahar.js',hold_loading_module)
                     # Visit every catalog game through its generated shell navigation control.
                     for game in casino_config.GAMES:
                         # Navigate through the generic catalog-owned test id.
@@ -2288,7 +2320,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Return to the lobby after generic discovery coverage.
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Execute catalog-driven frontend driver discovery for all current games.
-                run_case('BR-CATALOG-DISCOVERY-001',['CORE-021','TEST-042'],catalog_route_discovery)
+                run_case('BR-CATALOG-DISCOVERY-001',['CORE-021','TEST-042','UX-011'],catalog_route_discovery)
                 # Store the browser audit that proves every game control is reachable inside a scroll region at one viewport. (issue #221)
                 nav_reach_script=r"""(rootSel) => {
                   // Resolve the mounted game root or fall back to the shared route outlet.

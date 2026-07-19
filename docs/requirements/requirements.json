@@ -7083,6 +7083,23 @@
       "notes": "Allocated for GitHub issue #81; filters derive category identifiers from game-owned descriptors without per-game shell edits, while shell resources provide localized display labels and accessible catalog-control copy."
     },
     {
+      "id": "UX-011",
+      "module": "Application",
+      "description": "Game loading and module-error panels use catalog display labels instead of raw internal route identifiers.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-CATALOG-DISCOVERY-001"
+      ],
+      "implementation_files": [
+        "web/app.js",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-254-loading-display-name",
+      "changed_in": "issue-254-loading-display-name",
+      "notes": "Browser evidence holds one first-time game module import long enough to assert the loading panel renders Andar Bahar rather than the andar_bahar route id."
+    },
+    {
       "id": "SESSION-005",
       "module": "Core",
       "description": "Every game API request resolves its player through one shared authenticated-session resolver before route dispatch.",
