@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.39.0
+- application: 9.39.3
 - core: 9.13.3
 - ledger: 9.1.1
 - players: 9.1.0
@@ -16,7 +16,7 @@ Historical source baseline: 9.1.0
 - admin: 1.6.1
 - operations: 1.0.0
 - roulette: 9.4.4
-- slots: 9.1.3
+- slots: 9.1.4
 - blackjack: 9.1.3
 - baccarat: 9.1.2
 - keno: 9.2.3
@@ -682,7 +682,13 @@ Historical source baseline: 9.1.0
 - **TEST-070** (Tests) - PASS: Browser regression proves the lost-response idempotency guarantee: after the backend commits and the client sees a simulated lost response, a retry through the visible control resends the identical idempotency identity and immutable wager body, and the ledger records exactly one wager debit for the intended play.
 - **AUTH-UI-002** (Application) - PASS: The login screen fits without page scroll at the short 1280x720 desktop viewport, and the required terms acceptance control presents an enlarged (>=42px) touch target.
 - **TEST-071** (Tests) - PASS: Browser evidence verifies the login gate fits without page overflow at 1280x720 with the sign-in submit control on screen, and that the terms acceptance row meets the enlarged touch-target height.
+- **UX-012** (Application) - PASS: The lobby capacity line shows a single authoritative game count (the same catalog size the nav and gallery render) with no contradictory roadmap target clause, in both en-US and ru-RU.
+- **TEST-072** (Tests) - PASS: Browser evidence at all four governed viewports verifies the lobby capacity line renders exactly one authoritative game count in en-US ('{n} available') and ru-RU ('Доступно: {n}'), with no roadmap-target clause, no English leakage in Russian, and named after-pass evidence.
 - **ROU-060** (Roulette) - PASS: Leaving the Roulette table with open, un-spun bets refunds each staked amount through the documented clear endpoint, so navigating away never strands an already-debited stake and the reopened round starts with no lingering bet.
 - **TEST-073** (Tests) - PASS: Browser evidence verifies that placing a Roulette bet debits the shared wallet, navigating away refunds the stake back to the pre-wager balance, and reopening the table shows no lingering open-bet chip.
-- **KENO-025** (Keno) - PASS: All 80 Keno number cells, including the outer rows and columns, keep their complete borders, focus rings, selection outlines, and result treatments visible inside the board's scroll region; the board's clip boundary carries enough internal padding that no edge treatment is cut off, and keyboard focus scrolling reveals edge cells.
-- **TEST-078** (Tests) - PASS: Browser geometry evidence verifies each corner Keno cell, with the real drawn-outline treatment and keyboard focus applied, clears the board scroll container's clip boundary on every edge, with no page-level horizontal overflow.
+- **SLOT-029** (Slots) - PASS: The Slots result renders every authoritative winning payline as a labelled, non-color-only SVG path whose five points are recalculated from the live reel-cell centers, remain within one CSS pixel after responsive resize, locale rerender, zoom, and route recovery, and preserve visible symbol identity in normal and reduced-motion modes.
+- **TEST-077** (Tests) - PASS: Deterministic browser evidence derives all twenty paths and payouts from the production Slots engine, restores a simultaneous-win outcome through the normal state loader, verifies every transformed SVG point within one CSS pixel of its authoritative cell, checks result/history identity, multi-win distinction, symbol visibility, zoom, reduced motion, and captures EN/RU after-pass evidence at all four governed viewports.
+- **UX-013** (UX) - PASS: The lobby route outlet is one bounded, keyboard-focusable vertical scroll region with a localized accessible name, visible focus and themed scroll affordances, wheel and touch panning, and native Page Down and End behavior, so every filtered catalog card and Play control remains reachable at 1920x1080, 1440x900, 1024x900, and 390x844 without page-level horizontal overflow or fixed-chrome overlap.
+- **TEST-076** (Tests) - PASS: Browser evidence in English and Russian at all four governed viewports verifies the focused lobby region, themed affordance, no scroll trap or horizontal overflow, Page Down, End, wheel, and touch scrolling, final-card and Play-control reachability for unfiltered, category-filtered, search-filtered, and empty states, and exact-head after-pass evidence sidecars.
+- **KENO-025** (Keno) - PASS: All 80 Keno number cells, including every outer row and column, keep their borders, numerals, keyboard focus rings, selection outlines, and drawn, caught, latest, and disabled treatments visible inside the board scroll region at every governed viewport.
+- **TEST-078** (Tests) - PASS: Browser geometry and after-pass evidence in English and Russian at 1920x1080, 1440x900, 1024x900, and 390x844 verifies corner-cell containment, keyboard focus visibility and reveal, idle, selected, final-draw, caught, latest, and disabled treatments, minimum touch targets, and no page-level horizontal overflow.
