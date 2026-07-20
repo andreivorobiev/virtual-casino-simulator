@@ -90,5 +90,7 @@
   "suits.H": "червей",
   "suits.S": "пик",
   "title": "Казино Холдем",
-  "tokens.amount": "{amount} игровых токенов"
+  "tokens.amount": "{amount} игровых токенов",
+  "paytable.title": "Таблица выплат анте",
+  "paytable.net": "{net}:1"
 }

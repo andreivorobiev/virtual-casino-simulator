@@ -336,8 +336,10 @@ export function formatNumber(value, options = {}) {
 
 // Export formatMoney as the play-token amount formatter for UI display only.
 export function formatMoney(value, options = {}) {
-  // Return a token-marked numeric value without changing ledger semantics.
-  return `◈${new Intl.NumberFormat(formatLocale || activeLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2, ...options }).format(Number(value || 0))}`;
+  // Resolve a full localized play-token label so the decorative mark never solely carries meaning. (UX-017)
+  const unit = String(activeLocale || '').toLowerCase().startsWith('ru') ? 'игровых токенов' : 'play tokens';
+  // Return a token-marked, unit-labeled numeric value without changing ledger semantics.
+  return `◈${new Intl.NumberFormat(formatLocale || activeLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2, ...options }).format(Number(value || 0))} ${unit}`;
 }
 
 // Export formatDate as the locale-aware date/time formatter.

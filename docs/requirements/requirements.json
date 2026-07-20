@@ -8662,6 +8662,45 @@
       "notes": "Issue #246 refund-on-leave wallet-correctness browser proof."
     },
     {
+      "id": "UX-014",
+      "module": "UX",
+      "description": "The player-facing brand block and document title present the product name and the play-tokens-only/no-cash-value safety cue without internal version, validation-stage, build, commit, environment, or debug metadata, in en-US and ru-RU across authenticated, unauthenticated guest, and restricted-preview login states at every governed viewport; exact build provenance remains available through the status/diagnostics surfaces rather than the brand block.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-SHELL-BRAND-001",
+        "BR-SHELL-BRAND-GUEST-001"
+      ],
+      "implementation_files": [
+        "web/index.html",
+        "web/styles.css",
+        "web/i18n/en-US/shell.json",
+        "web/i18n/ru-RU/shell.json",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-321-shell-version-copy",
+      "changed_in": "issue-321-shell-version-copy",
+      "notes": "Issue #321: 'v9 validation release' is removed from the brand subtitle and page title; the subtitle reserves its two-line footprint so header height stays locale-invariant; the restricted-preview guest state keeps the authenticated topbar absent; the status-rail APP version chip is retained for #287 provenance."
+    },
+    {
+      "id": "TEST-079",
+      "module": "Tests",
+      "description": "Browser evidence verifies, in en-US and ru-RU at 1920x1080, 1440x900, 1024x900, and 390x844, that authenticated lobby and Roulette headers render the canonical brand and safety cue without metadata or clipping, while unauthenticated guests in restricted preview receive a metadata-free title and login surface with no protected topbar.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-SHELL-BRAND-001",
+        "BR-SHELL-BRAND-GUEST-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-321-shell-version-copy",
+      "changed_in": "issue-321-shell-version-copy",
+      "notes": "Issue #321 exact-head evidence paths are logs/test-runs/after-pass-shell-brand-*.png and logs/test-runs/after-pass-roulette-brand-*.png with matching VIS-EVIDENCE-001 sidecars."
+    },
+    {
       "id": "SLOT-029",
       "module": "Slots",
       "description": "The Slots result renders every authoritative winning payline as a labelled, non-color-only SVG path whose five points are recalculated from the live reel-cell centers, remain within one CSS pixel after responsive resize, locale rerender, zoom, and route recovery, and preserve visible symbol identity in normal and reduced-motion modes.",
@@ -8731,12 +8770,179 @@
       "notes": "Issue #318 evidence paths are logs/test-runs/after-pass-shell-lobby-scroll-*.png with matching VIS-EVIDENCE-001 JSON sidecars generated from the exact tested head."
     },
     {
-      "id": "UX-015",
-      "module": "UX",
-      "description": "The adopted touch-target floor is 42 CSS pixels for primary and high-frequency controls (exceeding the WCAG 2.2 AA 24px target-size minimum, with 44px recommended for new surfaces), small visual controls satisfy it through an enlarged clickable parent row, and visible shell primaries (navigation items, locale selector, logout, catalog search and categories, wallet top-up) meet the floor.",
+      "id": "ROU-061",
+      "module": "Roulette",
+      "description": "Every visible Roulette wagering surface registers correctly labeled bets with no silent no-ops: all 38 straight pockets show their pocket number, every FAST BETS shortcut and grid outside cell shows its canonical outside label even on repeat clicks, all dozen and column cells plus every inside/special marker type show their exact catalog labels, and each racetrack/call control renders every authoritative component label returned for that activation.",
       "status": "PASS",
       "api_tests": [],
       "browser_tests": [
+        "BR-ROU-SLIP-AUDIT-001"
+      ],
+      "implementation_files": [
+        "web/games/roulette.js",
+        "casino/games/roulette/rules.py"
+      ],
+      "introduced_in": "issue-250-slip-label-audit",
+      "changed_in": "issue-250-slip-label-audit",
+      "notes": "Issues #230/#231/#233/#250: the audited behavior is served by the shared resolveCellBet identity plumbing; this requirement pins it with an exhaustive per-type regression."
+    },
+    {
+      "id": "TEST-082",
+      "module": "Tests",
+      "description": "Browser evidence audits all 38 straight pockets, all six FAST BETS shortcuts including a repeat click, all six grid outside cells, every dozen and column cell, one representative of every inside/special marker type, and all eight racetrack/call controls; direct targets must add exactly one correctly labeled row, call controls must match every authoritative response component, and each audited group must finish with a clean refunded slip.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-ROU-SLIP-AUDIT-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-250-slip-label-audit",
+      "changed_in": "issue-250-slip-label-audit",
+      "notes": "Issues #230/#231/#233/#250 exhaustive direct-surface and racetrack/call-control slip-label reliability audit."
+    },
+    {
+      "id": "KENO-025",
+      "module": "Keno",
+      "description": "All 80 Keno number cells, including every outer row and column, keep their borders, numerals, keyboard focus rings, selection outlines, and drawn, caught, latest, and disabled treatments visible inside the board scroll region at every governed viewport.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-KENO-EDGE-001"
+      ],
+      "implementation_files": [
+        "web/games/keno.js"
+      ],
+      "introduced_in": "issue-320-keno-edge-clipping",
+      "changed_in": "issue-320-keno-edge-clipping",
+      "notes": "Issue #320 gives the clip container explicit border-box clearance and scroll padding for outlines, focus rings, transforms, and the largest result glow while preserving intentional keyboard/touch scrolling."
+    },
+    {
+      "id": "TEST-078",
+      "module": "Tests",
+      "description": "Browser geometry and after-pass evidence in English and Russian at 1920x1080, 1440x900, 1024x900, and 390x844 verifies corner-cell containment, keyboard focus visibility and reveal, idle, selected, final-draw, caught, latest, and disabled treatments, minimum touch targets, and no page-level horizontal overflow.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-KENO-EDGE-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-320-keno-edge-clipping",
+      "changed_in": "issue-320-keno-edge-clipping",
+      "notes": "Issue #320 evidence paths are logs/test-runs/after-pass-keno-edge-*.png with matching VIS-EVIDENCE-001 JSON sidecars generated from the exact tested head."
+    },
+    {
+      "id": "CH-006",
+      "module": "Casino Hold'em",
+      "description": "The Casino Hold'em data rail displays the server-owned ante payout schedule (royal flush 100:1 through the even-money band at 1:1) in both en-US and ru-RU, sourced from the published ante_return_multipliers rules payload rather than duplicated client constants.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-CH-001"
+      ],
+      "implementation_files": [
+        "web/games/casino_holdem.js",
+        "web/i18n/en-US/games/casino_holdem.json",
+        "web/i18n/ru-RU/games/casino_holdem.json"
+      ],
+      "introduced_in": "issue-253-holdem-paytable",
+      "changed_in": "issue-253-holdem-paytable",
+      "notes": "Issue #253 (Casino Hold'em half): mirrors the merged Caribbean Stud disclosure; the schedule renders only when the server publishes it."
+    },
+    {
+      "id": "TEST-084",
+      "module": "Tests",
+      "description": "Browser evidence verifies in English and Russian at all four governed viewports that the Casino Hold'em data rail shows all ten server-published ante payout rows, including the strongest royal-flush 100:1 and weakest high-card 1:1 net returns, before the first ante-backed deal and throughout governed play states.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-CH-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py",
+        "tests/games/casino_holdem/test_resources.py"
+      ],
+      "introduced_in": "issue-253-holdem-paytable",
+      "changed_in": "issue-253-holdem-paytable",
+      "notes": "Issue #253 exact-head after-pass evidence paths are logs/test-runs/after-pass-casino-holdem-*.png with matching VIS-EVIDENCE-001 sidecars."
+    },
+    {
+      "id": "UX-016",
+      "module": "UX",
+      "description": "The fixed status footer contains all of its visible localized segments without pairwise overlap or spill outside the bar at every governed viewport in en-US and ru-RU, so Russian copy expansion cannot cram or collide the ledger note and connection status.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-LOBBY-RESP-001"
+      ],
+      "implementation_files": [
+        "web/styles.css"
+      ],
+      "introduced_in": "issue-285-ru-footer-containment",
+      "changed_in": "issue-285-ru-footer-containment",
+      "notes": "Issue #285: the merged mobile status-bar ellipsis/hiding rules provide the behavior; this requirement pins it with locale-by-viewport geometry evidence."
+    },
+    {
+      "id": "TEST-085",
+      "module": "Tests",
+      "description": "Browser geometry evidence verifies, for each governed locale and viewport, that every visible status-footer segment stays inside the bar and no two segments intersect.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-LOBBY-RESP-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-285-ru-footer-containment",
+      "changed_in": "issue-285-ru-footer-containment",
+      "notes": "Issue #285 exact-head footer proof is stored at logs/test-runs/after-pass-shell-status-footer-*.png with matching sidecars that record the accepted geometry for both locales at every governed viewport."
+    },
+    {
+      "id": "UX-017",
+      "module": "Application",
+      "description": "Every in-game play-token amount rendered by the shared money formatters includes a full localized unit label—play tokens in en-US and игровых токенов in ru-RU—while the diamond mark remains decorative and never solely carries the value's meaning.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-MONEY-LABEL-001"
+      ],
+      "implementation_files": [
+        "web/core/i18n.js",
+        "web/core/ui.js"
+      ],
+      "introduced_in": "issue-286-labeled-money",
+      "changed_in": "issue-286-labeled-money",
+      "notes": "Issue #286 applies the repository visual standard's play-token terminology to both shared in-game formatters without changing ledger values or settlement semantics."
+    },
+    {
+      "id": "TEST-086",
+      "module": "Tests",
+      "description": "Browser acceptance verifies both shared money formatters and real Slots amount surfaces use the full localized play-token label without clipping or page-level horizontal overflow in en-US and ru-RU at all four governed viewports.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-MONEY-LABEL-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-286-labeled-money",
+      "changed_in": "issue-286-labeled-money",
+      "notes": "Issue #286 exact-head proof is stored at logs/test-runs/after-pass-labeled-money-slots-*.png with matching VIS-EVIDENCE-001 sidecars for both locales at every governed viewport."
+    },
+    {
+      "id": "UX-018",
+      "module": "UX",
+      "description": "Primary and high-frequency controls use a required minimum hit size of 42 CSS pixels, with 44 CSS pixels recommended where new layouts allow; small visual controls such as checkboxes may satisfy the floor through an enlarged clickable parent row.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-TOUCH-TARGET-AUTH-001",
         "BR-TOUCH-TARGET-001"
       ],
       "implementation_files": [
@@ -8745,15 +8951,16 @@
       ],
       "introduced_in": "issue-283-touch-target-floor",
       "changed_in": "issue-283-touch-target-floor",
-      "notes": "Issue #283: codifies the 42-versus-44 resolution already shipped by the remediated controls; auth-surface targets are separately pinned by AUTH-UI evidence."
+      "notes": "Issue #283 codifies owner-approved Option A and the 42px behavior already shipped by the scoped Auth, shell, and Slots remediations."
     },
     {
-      "id": "TEST-083",
+      "id": "TEST-087",
       "module": "Tests",
-      "description": "Browser evidence sweeps every visible primary shell control (navigation items, locale selector, logout, catalog search, category buttons, wallet top-up summary) and requires each hit height to meet the adopted 42px floor, naming any offender.",
+      "description": "Exact-head browser geometry verifies Auth controls and the enlarged terms row, authenticated shell primaries, and Slots wager/autoplay controls meet the 42px floor without page-level horizontal overflow in en-US and ru-RU at all four governed viewports.",
       "status": "PASS",
       "api_tests": [],
       "browser_tests": [
+        "BR-TOUCH-TARGET-AUTH-001",
         "BR-TOUCH-TARGET-001"
       ],
       "implementation_files": [
@@ -8761,7 +8968,7 @@
       ],
       "introduced_in": "issue-283-touch-target-floor",
       "changed_in": "issue-283-touch-target-floor",
-      "notes": "Issue #283 adopted-floor enforcement sweep."
+      "notes": "Issue #283 after-pass evidence is stored at logs/test-runs/after-pass-touch-target-auth-*.png, after-pass-touch-target-shell-*.png, and after-pass-touch-target-slots-*.png with matching VIS-EVIDENCE-001 sidecars."
     }
   ]
 }

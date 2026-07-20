@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.39.3
+- application: 9.39.5
 - core: 9.13.3
 - ledger: 9.1.1
 - players: 9.1.0
@@ -15,11 +15,11 @@ Historical source baseline: 9.1.0
 - audio: 9.1.1
 - admin: 1.6.1
 - operations: 1.0.0
-- roulette: 9.4.4
+- roulette: 9.4.5
 - slots: 9.1.4
 - blackjack: 9.1.3
 - baccarat: 9.1.2
-- keno: 9.2.2
+- keno: 9.2.3
 - bingo: 9.2.1
 - multi_hand_video_poker: 1.0.1
 - casino_war: 1.0.1
@@ -42,11 +42,11 @@ Historical source baseline: 9.1.0
 - acey_deucey: 1.0.1
 - caribbean_stud: 1.0.1
 - let_it_ride: 1.0.0
-- casino_holdem: 1.0.0
+- casino_holdem: 1.0.1
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.45.10
-- docs: 1.45.10
+- tests: 1.45.13
+- docs: 1.45.13
 - contracts: 1.33.0
 - tooling: 1.14.0
 - commenting_policy: 1.0.0
@@ -686,9 +686,21 @@ Historical source baseline: 9.1.0
 - **TEST-072** (Tests) - PASS: Browser evidence at all four governed viewports verifies the lobby capacity line renders exactly one authoritative game count in en-US ('{n} available') and ru-RU ('Доступно: {n}'), with no roadmap-target clause, no English leakage in Russian, and named after-pass evidence.
 - **ROU-060** (Roulette) - PASS: Leaving the Roulette table with open, un-spun bets refunds each staked amount through the documented clear endpoint, so navigating away never strands an already-debited stake and the reopened round starts with no lingering bet.
 - **TEST-073** (Tests) - PASS: Browser evidence verifies that placing a Roulette bet debits the shared wallet, navigating away refunds the stake back to the pre-wager balance, and reopening the table shows no lingering open-bet chip.
+- **UX-014** (UX) - PASS: The player-facing brand block and document title present the product name and the play-tokens-only/no-cash-value safety cue without internal version, validation-stage, build, commit, environment, or debug metadata, in en-US and ru-RU across authenticated, unauthenticated guest, and restricted-preview login states at every governed viewport; exact build provenance remains available through the status/diagnostics surfaces rather than the brand block.
+- **TEST-079** (Tests) - PASS: Browser evidence verifies, in en-US and ru-RU at 1920x1080, 1440x900, 1024x900, and 390x844, that authenticated lobby and Roulette headers render the canonical brand and safety cue without metadata or clipping, while unauthenticated guests in restricted preview receive a metadata-free title and login surface with no protected topbar.
 - **SLOT-029** (Slots) - PASS: The Slots result renders every authoritative winning payline as a labelled, non-color-only SVG path whose five points are recalculated from the live reel-cell centers, remain within one CSS pixel after responsive resize, locale rerender, zoom, and route recovery, and preserve visible symbol identity in normal and reduced-motion modes.
 - **TEST-077** (Tests) - PASS: Deterministic browser evidence derives all twenty paths and payouts from the production Slots engine, restores a simultaneous-win outcome through the normal state loader, verifies every transformed SVG point within one CSS pixel of its authoritative cell, checks result/history identity, multi-win distinction, symbol visibility, zoom, reduced motion, and captures EN/RU after-pass evidence at all four governed viewports.
 - **UX-013** (UX) - PASS: The lobby route outlet is one bounded, keyboard-focusable vertical scroll region with a localized accessible name, visible focus and themed scroll affordances, wheel and touch panning, and native Page Down and End behavior, so every filtered catalog card and Play control remains reachable at 1920x1080, 1440x900, 1024x900, and 390x844 without page-level horizontal overflow or fixed-chrome overlap.
 - **TEST-076** (Tests) - PASS: Browser evidence in English and Russian at all four governed viewports verifies the focused lobby region, themed affordance, no scroll trap or horizontal overflow, Page Down, End, wheel, and touch scrolling, final-card and Play-control reachability for unfiltered, category-filtered, search-filtered, and empty states, and exact-head after-pass evidence sidecars.
-- **UX-015** (UX) - PASS: The adopted touch-target floor is 42 CSS pixels for primary and high-frequency controls (exceeding the WCAG 2.2 AA 24px target-size minimum, with 44px recommended for new surfaces), small visual controls satisfy it through an enlarged clickable parent row, and visible shell primaries (navigation items, locale selector, logout, catalog search and categories, wallet top-up) meet the floor.
-- **TEST-083** (Tests) - PASS: Browser evidence sweeps every visible primary shell control (navigation items, locale selector, logout, catalog search, category buttons, wallet top-up summary) and requires each hit height to meet the adopted 42px floor, naming any offender.
+- **ROU-061** (Roulette) - PASS: Every visible Roulette wagering surface registers correctly labeled bets with no silent no-ops: all 38 straight pockets show their pocket number, every FAST BETS shortcut and grid outside cell shows its canonical outside label even on repeat clicks, all dozen and column cells plus every inside/special marker type show their exact catalog labels, and each racetrack/call control renders every authoritative component label returned for that activation.
+- **TEST-082** (Tests) - PASS: Browser evidence audits all 38 straight pockets, all six FAST BETS shortcuts including a repeat click, all six grid outside cells, every dozen and column cell, one representative of every inside/special marker type, and all eight racetrack/call controls; direct targets must add exactly one correctly labeled row, call controls must match every authoritative response component, and each audited group must finish with a clean refunded slip.
+- **KENO-025** (Keno) - PASS: All 80 Keno number cells, including every outer row and column, keep their borders, numerals, keyboard focus rings, selection outlines, and drawn, caught, latest, and disabled treatments visible inside the board scroll region at every governed viewport.
+- **TEST-078** (Tests) - PASS: Browser geometry and after-pass evidence in English and Russian at 1920x1080, 1440x900, 1024x900, and 390x844 verifies corner-cell containment, keyboard focus visibility and reveal, idle, selected, final-draw, caught, latest, and disabled treatments, minimum touch targets, and no page-level horizontal overflow.
+- **CH-006** (Casino Hold'em) - PASS: The Casino Hold'em data rail displays the server-owned ante payout schedule (royal flush 100:1 through the even-money band at 1:1) in both en-US and ru-RU, sourced from the published ante_return_multipliers rules payload rather than duplicated client constants.
+- **TEST-084** (Tests) - PASS: Browser evidence verifies in English and Russian at all four governed viewports that the Casino Hold'em data rail shows all ten server-published ante payout rows, including the strongest royal-flush 100:1 and weakest high-card 1:1 net returns, before the first ante-backed deal and throughout governed play states.
+- **UX-016** (UX) - PASS: The fixed status footer contains all of its visible localized segments without pairwise overlap or spill outside the bar at every governed viewport in en-US and ru-RU, so Russian copy expansion cannot cram or collide the ledger note and connection status.
+- **TEST-085** (Tests) - PASS: Browser geometry evidence verifies, for each governed locale and viewport, that every visible status-footer segment stays inside the bar and no two segments intersect.
+- **UX-017** (Application) - PASS: Every in-game play-token amount rendered by the shared money formatters includes a full localized unit label—play tokens in en-US and игровых токенов in ru-RU—while the diamond mark remains decorative and never solely carries the value's meaning.
+- **TEST-086** (Tests) - PASS: Browser acceptance verifies both shared money formatters and real Slots amount surfaces use the full localized play-token label without clipping or page-level horizontal overflow in en-US and ru-RU at all four governed viewports.
+- **UX-018** (UX) - PASS: Primary and high-frequency controls use a required minimum hit size of 42 CSS pixels, with 44 CSS pixels recommended where new layouts allow; small visual controls such as checkboxes may satisfy the floor through an enlarged clickable parent row.
+- **TEST-087** (Tests) - PASS: Exact-head browser geometry verifies Auth controls and the enlarged terms row, authenticated shell primaries, and Slots wager/autoplay controls meet the 42px floor without page-level horizontal overflow in en-US and ru-RU at all four governed viewports.
