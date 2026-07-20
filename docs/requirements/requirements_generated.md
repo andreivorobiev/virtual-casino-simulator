@@ -7,7 +7,7 @@ Historical source baseline: 9.1.0
 ## Independent module revisions
 
 - application: 9.39.4
-- core: 9.13.3
+- core: 9.13.4
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.0
@@ -45,8 +45,8 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.0
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.45.7
-- docs: 1.45.7
+- tests: 1.45.16
+- docs: 1.45.16
 - contracts: 1.33.0
 - tooling: 1.14.0
 - commenting_policy: 1.0.0
@@ -694,3 +694,5 @@ Historical source baseline: 9.1.0
 - **TEST-076** (Tests) - PASS: Browser evidence in English and Russian at all four governed viewports verifies the focused lobby region, themed affordance, no scroll trap or horizontal overflow, Page Down, End, wheel, and touch scrolling, final-card and Play-control reachability for unfiltered, category-filtered, search-filtered, and empty states, and exact-head after-pass evidence sidecars.
 - **KENO-025** (Keno) - PASS: All 80 Keno number cells, including every outer row and column, keep their borders, numerals, keyboard focus rings, selection outlines, and drawn, caught, latest, and disabled treatments visible inside the board scroll region at every governed viewport.
 - **TEST-078** (Tests) - PASS: Browser geometry and after-pass evidence in English and Russian at 1920x1080, 1440x900, 1024x900, and 390x844 verifies corner-cell containment, keyboard focus visibility and reveal, idle, selected, final-draw, caught, latest, and disabled treatments, minimum touch targets, and no page-level horizontal overflow.
+- **UX-017** (Core) - PASS: Shared play-token formatters pair the decorative token mark with a visible localized unit label ('tokens' / 'ток.'), so no in-game amount relies on the glyph alone to carry value, per the visual design standard's wallet-and-token presentation rules.
+- **TEST-086** (Tests) - PASS: Browser evidence collects every token-marked amount on a mounted game surface and requires each one to carry the visible unit label, so a glyph-only amount fails the run.

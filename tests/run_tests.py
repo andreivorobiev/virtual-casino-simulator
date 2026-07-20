@@ -1979,6 +1979,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         page.get_by_test_id('auth-locale-select').select_option(brand_locale); page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale",arg=brand_locale)
                         # Read the exact safety acknowledgement from the locale-owned shell resource.
                         expected_safety=read_i18n_json(ROOT/'web'/'i18n'/brand_locale/'shell.json')['auth.termsCheck']
+                        # Wait for the asynchronous login-gate rerender to publish the localized terms copy before asserting, since the locale state updates before afterChange re-renders.
+                        page.wait_for_function("expected => document.querySelector('label.check-row')?.innerText.includes(expected)", arg=expected_safety, timeout=5000)
                         # Require the guest surface to preserve the full fake-money/play-token safety wording.
                         assert expected_safety in page.locator('label.check-row').inner_text()
                         # Require the protected authenticated topbar, wallet, and diagnostics provenance to remain absent for guests.
@@ -4719,6 +4721,14 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 slots_evidence_text=page.get_by_test_id('slots-premium').inner_text()
                 # Verify the after-pass game evidence contains user-facing copy rather than internal resource identifiers.
                 assert 'controls.' not in slots_evidence_text and 'status.' not in slots_evidence_text and 'slots.' not in slots_evidence_text
+                # Require in-game amounts to pair the decorative token mark with a visible unit label so the glyph never solely carries a value. (issue #286)
+                def slots_labeled_amounts():
+                    # Collect every marked amount with its optional unit from the mounted game surface.
+                    marked_amounts=re.findall(r'◈[\d.,]+(?: tokens)?', slots_evidence_text)
+                    # Require marked amounts to exist and every one of them to carry the visible unit label.
+                    assert marked_amounts and all(item.endswith(' tokens') for item in marked_amounts), marked_amounts[:6]
+                # Execute the labeled in-game amount regression.
+                run_case('BR-MONEY-LABEL-001',['UX-017','TEST-086'],slots_labeled_amounts)
                 # Store the idle cabinet box so spin/result states can be compared.
                 idle_box=page.get_by_test_id('slots-cabinet').bounding_box()
                 # Store the idle result box so the reserved payout region can be compared.
