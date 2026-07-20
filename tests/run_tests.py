@@ -1,7 +1,9 @@
 # AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
 #!/usr/bin/env python3
 # Import required dependency so this module can use its public functions or constants.
-import argparse, importlib, io, json, os, re, socket, subprocess, sys, time, traceback, unittest, urllib.request
+import argparse, hashlib, importlib, io, json, os, re, socket, subprocess, sys, tempfile, threading, time, traceback, unittest, urllib.request
+# Import date arithmetic for fixed-window Guest Trials retention tests.
+from datetime import datetime, timedelta, timezone
 # Import source inspection so browser progress totals follow declared run_case calls automatically.
 import inspect
 # Import required dependency so this module can use its public functions or constants.
@@ -18,14 +20,22 @@ sys.path.insert(0, str(ROOT))
 from casino.games.blackjack import api as blackjack_api, engine as blackjack_engine
 # Import Slots rules so deterministic browser evidence is derived from the authoritative twenty-payline table.
 from casino.games.slots import engine as slots_engine
+# Import the canonical catalog so guest compatibility is proved for every released game state route.
+from casino.games.registry import list_games as list_catalog_games
 # Import auth helpers so API tests can seed users through the backend storage seam.
 from casino.core import auth as auth_core
+# Import autoplay state so guest teardown can prove no control-plane action survives.
+from casino.core import autoplay as autoplay_core
+# Import the de-identified guest telemetry service for listener-free privacy and retention tests.
+from casino.core import guest_analytics
 # Import configuration helpers so startup hardening can be tested without launching a public listener.
 from casino import config as casino_config
 # Import the shared resolver so session precedence is tested independently of individual game APIs.
 from casino.core.request_player import resolve_authenticated_player
-# Import the isolated game-state writer for deterministic rendered Blackjack settlement setup.
-from casino.core.state_store import save_player_game_state
+# Import isolated state writers for deterministic game and Guest Trials browser setup.
+from casino.core.state_store import save_player_game_state, write_json
+# Import stable public error classes for focused guest authorization assertions.
+from casino.errors import ForbiddenError, RateLimitError, UnauthorizedError, ValidationError
 # Import storage tests so provider parity can run without the broad API suite.
 from tests import storage_tests
 # Import listener-free migration policy tests for every storage validation run.
@@ -79,11 +89,13 @@ def free_port():
         if port not in (8765,8877): return port
 
 # Define the api function used by this module.
-def api(base, path, method='GET', body=None, ok=True, auth_token='__default__'):
+def api(base, path, method='GET', body=None, ok=True, auth_token='__default__', extra_headers=None):
     # Set data to the value needed for the next operation.
     data = None if body is None else json.dumps(body).encode('utf-8')
     # Set headers to the value needed for the next operation.
     headers={'Content-Type':'application/json'}
+    # Merge caller-provided test headers without changing authentication defaults.
+    headers.update(extra_headers or {})
     # Set token to the value needed for the next operation.
     token=SESSION_TOKEN if auth_token == '__default__' else auth_token
     # Branch when a caller wants an authenticated request.
@@ -372,6 +384,446 @@ def validate_deployment_bootstrap():
         # Raise a value-free assertion when an unsafe deployment case bypasses the guard.
         raise AssertionError('unsafe public bootstrap configuration was accepted')
 
+# Prove disposable guest consent, isolation, browser binding, authorization, and irreversible teardown. (issue #317)
+def validate_guest_lifecycle():
+    # Capture the active-user count so rejected consent can be proven side-effect free.
+    active_before=sum(1 for user in auth_core.load_users().get('users',[]) if auth_core.is_guest(user) and user.get('status')=='active')
+    # Start protected validation so the required rejection is explicit.
+    try:
+        # Attempt creation without affirmative current-version terms.
+        auth_core.create_guest('focused-test',False,'private-beta-1','en-US','desktop')
+    # Accept only the published validation failure.
+    except ValidationError:
+        # Continue after the expected fail-closed result.
+        pass
+    # Fail if missing consent unexpectedly created a principal.
+    else:
+        # Raise a stable assertion without including runtime data.
+        raise AssertionError('guest creation accepted missing consent')
+    # Prove rejected consent did not create an active guest identity.
+    assert sum(1 for user in auth_core.load_users().get('users',[]) if auth_core.is_guest(user) and user.get('status')=='active')==active_before
+    # Create one valid guest through the same service used by the v2 endpoint.
+    guest=auth_core.create_guest('focused-test',True,'private-beta-1','ru-RU','mobile')
+    # Read the server-authoritative identity, session, and raw one-time browser proof.
+    user,session,nonce=guest['user'],guest['session'],guest['browser_nonce']
+    # Prove the disposable principal has no Admin authority, credential, or caller-selected wallet.
+    assert auth_core.is_guest(user) and not auth_core.is_admin(user) and not user.get('password_hash')
+    # Prove the wallet is a fresh isolated 5,000-play-token balance.
+    assert auth_core.current_user_payload(session,user)['player']['token_balance']==5000.0
+    # Prove exact consent metadata and supported locale are stored server-side.
+    assert user.get('terms_accepted_version')=='private-beta-1' and user.get('terms_acceptance_source')=='guest_entry' and user.get('locale')=='ru-RU'
+    # Read the matching durable session before any teardown.
+    stored_session=next(row for row in auth_core.load_sessions().get('sessions',[]) if row.get('session_id')==session.get('session_id'))
+    # Prove only the nonce digest is stored and the raw proof is absent from persisted session JSON.
+    assert stored_session.get('guest_browser_nonce_hash')==hashlib.sha256(nonce.encode('utf-8')).hexdigest() and nonce not in json.dumps(stored_session)
+    # Prove the correct browser context authenticates and refreshes activity.
+    authenticated_session,authenticated_user=auth_core.authenticate_token(session['token'],nonce)
+    # Confirm the resolved principal and session are the original isolated pair.
+    assert authenticated_session['session_id']==session['session_id'] and authenticated_user['user_id']==user['user_id']
+    # Preserve the configured per-session action ceiling before exercising its atomic boundary.
+    original_action_limit=auth_core.GUEST_MAX_ACTIONS
+    # Start protected action-limit validation so module configuration is always restored.
+    try:
+        # Set a one-action ceiling for the isolated focused session.
+        auth_core.GUEST_MAX_ACTIONS=1
+        # Consume the only allowed mutation attempt.
+        assert auth_core.consume_guest_action(authenticated_session,authenticated_user)==1
+        # Attempt a second mutation under the same disposable session.
+        try:
+            # Require the bounded service to fail closed before gameplay starts.
+            auth_core.consume_guest_action(authenticated_session,authenticated_user)
+        # Accept only the standard sanitized rate-limit response.
+        except RateLimitError:
+            # Continue after observing the per-session resource ceiling.
+            pass
+        # Fail if the second anonymous mutation obtains another allowance.
+        else:
+            # Raise a stable assertion without exposing the configured ceiling.
+            raise AssertionError('guest action limit was not enforced')
+    # Restore the configured action ceiling even when focused assertions fail.
+    finally:
+        # Return the auth service to its configured resource policy.
+        auth_core.GUEST_MAX_ACTIONS=original_action_limit
+    # Preserve the configured capacity before exercising its fail-closed boundary.
+    original_capacity=auth_core.GUEST_MAX_ACTIVE
+    # Start protected capacity validation so module configuration is always restored.
+    try:
+        # Set the capacity to the exact number of currently active guests.
+        auth_core.GUEST_MAX_ACTIVE=sum(1 for stored in auth_core.load_users().get('users',[]) if auth_core.is_guest(stored) and stored.get('status')=='active')
+        # Attempt one excess creation at the active-principal boundary.
+        try:
+            # Supply otherwise valid input so capacity is the only failing gate.
+            auth_core.create_guest('focused-capacity-test',True,'private-beta-1','en-US','desktop')
+        # Accept only the published forbidden result.
+        except ForbiddenError:
+            # Continue after observing the bounded-capacity rejection.
+            pass
+        # Fail if an excess anonymous principal is created.
+        else:
+            # Raise a stable capacity assertion without runtime counts.
+            raise AssertionError('guest capacity limit was not enforced')
+    # Restore configuration even when capacity assertions fail.
+    finally:
+        # Return the auth service to its configured active-principal cap.
+        auth_core.GUEST_MAX_ACTIVE=original_capacity
+    # Preserve the configured capacity before exercising simultaneous creation at one remaining slot.
+    original_capacity=auth_core.GUEST_MAX_ACTIVE
+    # Collect only success/failure categories and successful principals, never credentials in diagnostics.
+    concurrent_results=[]
+    # Synchronize both contenders so the user-store capacity decision is genuinely concurrent.
+    creation_barrier=threading.Barrier(2)
+    # Define one anonymous creation contender for the focused single-slot race.
+    def create_concurrently(client):
+        # Wait until both contenders are ready before entering the atomic capacity path.
+        creation_barrier.wait(timeout=5)
+        # Attempt an otherwise valid guest creation.
+        try:
+            # Retain the successful guest only for canonical teardown below.
+            concurrent_results.append(('created',auth_core.create_guest(client,True,'private-beta-1','en-US','desktop')))
+        # Record the exact bounded-capacity rejection without leaking state.
+        except ForbiddenError:
+            # Preserve only the outcome category needed by the assertion.
+            concurrent_results.append(('blocked',None))
+    # Start protected concurrent validation so capacity and created guests are always restored.
+    try:
+        # Allow exactly one more active guest beyond the current baseline.
+        auth_core.GUEST_MAX_ACTIVE=sum(1 for stored in auth_core.load_users().get('users',[]) if auth_core.is_guest(stored) and stored.get('status')=='active')+1
+        # Create two competing threads for the one remaining anonymous slot.
+        contenders=[threading.Thread(target=create_concurrently,args=(f'focused-race-{index}',)) for index in range(2)]
+        # Start both contenders before waiting for either result.
+        for contender in contenders: contender.start()
+        # Require both bounded operations to terminate without a hung lock.
+        for contender in contenders: contender.join(timeout=10)
+        # Prove exactly one atomic creation and one capacity rejection occurred.
+        assert sorted(result[0] for result in concurrent_results)==['blocked','created'] and all(not contender.is_alive() for contender in contenders)
+    # Restore capacity and revoke the successful disposable principal even when the race assertion fails.
+    finally:
+        # Return the auth service to its configured limit.
+        auth_core.GUEST_MAX_ACTIVE=original_capacity
+        # End only successfully created race principals.
+        for outcome,created_guest in concurrent_results:
+            # Apply canonical teardown when this contender obtained the one slot.
+            if outcome=='created': auth_core.end_guest_trial(created_guest['user'],'revoked')
+    # Prove central Admin authorization rejects the guest principal.
+    try:
+        # Apply the exact Admin guard used by both API versions.
+        auth_core.require_admin(user)
+    # Accept only the published forbidden result.
+    except ForbiddenError:
+        # Continue after the expected non-Admin rejection.
+        pass
+    # Fail if any guest gains Admin authority.
+    else:
+        # Raise a stable assertion without identity detail.
+        raise AssertionError('guest principal passed the Admin guard')
+    # Prove a cookie/token without the browser proof is not resumable and triggers irreversible teardown.
+    try:
+        # Attempt contextless authentication with the otherwise valid bearer token.
+        auth_core.authenticate_token(session['token'],'')
+    # Accept only the standard unauthenticated result.
+    except UnauthorizedError:
+        # Continue after observing the required context-loss rejection.
+        pass
+    # Fail if cookie-only replay resumes the guest.
+    else:
+        # Raise a stable assertion without credential material.
+        raise AssertionError('guest resumed without browser-context proof')
+    # Read the terminal identity and wallet after context loss.
+    ended_user=auth_core.find_user_by_id(user['user_id'])
+    # Prove identity and play-token wallet are irreversibly revoked.
+    assert ended_user.get('status')=='ended' and auth_core.current_user_payload(session,ended_user)['player']['status']=='ended' and auth_core.current_user_payload(session,ended_user)['player']['token_balance']==0.0
+    # Create a separate guest for inactivity-boundary enforcement.
+    inactive_guest=auth_core.create_guest('focused-inactivity-test',True,'private-beta-1','en-US','desktop')
+    # Calculate a server timestamp older than the configured inactivity window.
+    inactive_at=(datetime.now(timezone.utc)-timedelta(seconds=auth_core.GUEST_INACTIVITY_SECONDS+1)).isoformat(timespec='milliseconds').replace('+00:00','Z')
+    # Define the atomic session-age mutation.
+    def age_inactive_session(state):
+        # Find only the focused inactivity session.
+        for stored in state.get('sessions',[]):
+            # Match by opaque session id without copying its credential.
+            if stored.get('session_id')==inactive_guest['session']['session_id']:
+                # Move the server-observed activity marker past the inactivity boundary.
+                stored['updated_at']=inactive_at
+        # Return the mutated sessions document.
+        return state
+    # Persist the focused inactivity condition atomically.
+    auth_core.update_json(auth_core.SESSIONS_PATH,age_inactive_session,auth_core.default_sessions)
+    # Prove the old session cannot authenticate even with its correct browser proof.
+    try:
+        # Attempt authentication at the inactivity boundary.
+        auth_core.authenticate_token(inactive_guest['session']['token'],inactive_guest['browser_nonce'])
+    # Accept only the standard terminal unauthenticated result.
+    except UnauthorizedError:
+        # Continue after observing inactivity teardown.
+        pass
+    # Fail if inactivity does not end the trial.
+    else:
+        # Raise a stable assertion without timestamps or credentials.
+        raise AssertionError('inactive guest session remained resumable')
+    # Prove inactivity used the standard irreversible identity and wallet teardown.
+    assert auth_core.find_user_by_id(inactive_guest['user']['user_id']).get('status')=='ended'
+    # Create a separate guest for absolute-lifetime enforcement.
+    absolute_guest=auth_core.create_guest('focused-absolute-test',True,'private-beta-1','en-US','desktop')
+    # Calculate a server timestamp already beyond the absolute lifetime.
+    expired_at=(datetime.now(timezone.utc)-timedelta(seconds=1)).isoformat(timespec='milliseconds').replace('+00:00','Z')
+    # Define the atomic guest-expiry mutation.
+    def expire_guest_user(state):
+        # Find only the focused absolute-lifetime identity.
+        for stored in state.get('users',[]):
+            # Match by opaque user id without changing any authority field.
+            if stored.get('user_id')==absolute_guest['user']['user_id']:
+                # Move only the server-owned absolute expiry into the past.
+                stored['guest_expires_at']=expired_at
+        # Return the mutated user document.
+        return state
+    # Persist the focused absolute-expiry condition atomically.
+    auth_core.update_json(auth_core.USERS_PATH,expire_guest_user,auth_core.default_users)
+    # Prove the expired identity cannot authenticate with otherwise valid proofs.
+    try:
+        # Attempt authentication beyond the absolute lifetime.
+        auth_core.authenticate_token(absolute_guest['session']['token'],absolute_guest['browser_nonce'])
+    # Accept only the standard terminal unauthenticated result.
+    except UnauthorizedError:
+        # Continue after observing absolute-expiry teardown.
+        pass
+    # Fail if absolute expiry does not end the trial.
+    else:
+        # Raise a stable assertion without timestamps or credentials.
+        raise AssertionError('absolute-expiry guest remained resumable')
+    # Prove the absolute-lifetime path used canonical teardown.
+    assert auth_core.find_user_by_id(absolute_guest['user']['user_id']).get('status')=='ended'
+    # Create a final guest for explicit End semantics independent of browser-proof failure.
+    explicit_guest=auth_core.create_guest('focused-explicit-end-test',True,'private-beta-1','en-US','desktop')
+    # Start one guest-owned control-plane session to prove teardown prevents later atomic actions.
+    explicit_autoplay=autoplay_core.start('slots',explicit_guest['user']['player_id'],'medium',5,{}, {})
+    # End it through the canonical explicit lifecycle service.
+    auth_core.end_guest_trial(explicit_guest['user'],'ended')
+    # Prove explicit End revokes both identity and isolated play-token wallet.
+    assert auth_core.find_user_by_id(explicit_guest['user']['user_id']).get('status')=='ended' and auth_core.current_user_payload(explicit_guest['session'],auth_core.find_user_by_id(explicit_guest['user']['user_id']))['player']['token_balance']==0.0
+    # Prove no guest-owned autoplay registration remains able to start another atomic game action.
+    assert autoplay_core.get_session(explicit_autoplay['autoplay_id'])['status']=='stopped' and autoplay_core.get_session(explicit_autoplay['autoplay_id'])['stop_requested'] is True
+
+# Prove guest analytics dimensions, milestones, privacy, and fixed retention windows. (issue #317)
+def validate_guest_analytics():
+    # Preserve the repository runtime path before using an isolated temporary telemetry document.
+    original_path=guest_analytics.TRIALS_PATH
+    # Create a temporary directory that is removed automatically after assertions.
+    with tempfile.TemporaryDirectory() as temporary_directory:
+        # Redirect only the analytics service to isolated focused-test state.
+        guest_analytics.TRIALS_PATH=Path(temporary_directory)/'guest_trials.json'
+        # Start protected assertions so the canonical runtime path is always restored.
+        try:
+            # Create one de-identified row with allowlisted dimensions.
+            analytics_id=guest_analytics.record_started('ru-RU','mobile')
+            # Record authenticated lobby reach without client-authored navigation data.
+            guest_analytics.record_event(analytics_id,'lobby_reached')
+            # Record a surface open with a coarse latency bucket and no request or response payloads.
+            guest_analytics.record_event(analytics_id,'game_open','slots',latency_ms=45)
+            # Increment a server-classified completed round with authoritative fake-token aggregates.
+            guest_analytics.record_event(analytics_id,'game_action','slots',action='spin',latency_ms=125,wagered=5,returned=8,round_started=True,round_completed=True)
+            # Record one sanitized validation failure without message, request, or response content.
+            guest_analytics.record_event(analytics_id,'game_error','slots',action='spin',latency_ms=12,error_category='VALIDATION_ERROR')
+            # Open a second catalog game so the full journey funnel reaches its seventh stage.
+            guest_analytics.record_event(analytics_id,'game_open','roulette',latency_ms=60)
+            # Close the row through a bounded lifecycle reason.
+            guest_analytics.record_ended(analytics_id,'ended',ending_balance=5003)
+            # Read the raw isolated state through the service's atomic reader.
+            state=guest_analytics.read_json(guest_analytics.TRIALS_PATH,guest_analytics.default_trials)
+            # Serialize only for forbidden-field name checks, never for output.
+            serialized=json.dumps(state).lower()
+            # Prove no identity, credential, browser, or network field can enter telemetry.
+            for forbidden in ('auth_token','browser_nonce','csrf_token','email','ip','player_id','session_id','user_id','user_agent'):
+                # Require the forbidden key to be absent from the complete telemetry document.
+                assert forbidden not in serialized
+            # Read the single raw row and verify bounded dimensions and milestones.
+            row=state['trials'][0]
+            # Prove locale/device/game/counter semantics without identity linkage.
+            assert row['analytics_id']==analytics_id and row['locale']=='ru-RU' and row['device']=='mobile' and row['engaged'] is True and row['rounds_started']==1 and row['rounds_completed']==1 and row['games']['slots']['rounds_completed']==1
+            # Prove the full journey, fake-token, error, latency, and bounded timeline semantics.
+            assert row['milestones']['lobby_reached'] and row['milestones']['second_game_opened'] and row['milestones']['trial_terminal'] and row['milestones']['account_cta_viewed'] and row['wagered']==5.0 and row['returned']==8.0 and row['net']==3.0 and row['ending_balance']==5003.0 and row['errors']==1 and row['error_categories']=={'VALIDATION_ERROR':1} and len(row['events'])<=guest_analytics.MAX_TIMELINE_EVENTS
+            # Read a fully filtered Admin summary from the isolated analytics state.
+            summary=guest_analytics.summary(locale='ru-RU',device='mobile',status='ended',game='slots',completed='yes',error_category='VALIDATION_ERROR')
+            # Prove nine-stage funnel, rates, product metrics, per-game counters, and filter echoing.
+            assert summary['funnel']['landing_viewed']==1 and summary['funnel']['account_cta_viewed']==1 and summary['funnel_rates']['first_round_completed']==100.0 and summary['metrics']['wagered']==5.0 and summary['metrics']['returned']==8.0 and summary['metrics']['net']==3.0 and summary['metrics']['fake_tokens_only'] is True and summary['games'][0]['rounds_started']==1 and summary['games'][0]['errors']==1 and summary['filters']['game']=='slots'
+            # Calculate a timestamp outside the thirty-day raw window but inside aggregate retention.
+            aged=(datetime.now(timezone.utc)-timedelta(days=31)).isoformat(timespec='milliseconds').replace('+00:00','Z')
+            # Define an atomic age mutation for the isolated row.
+            def age_row(document):
+                # Move only server timestamps required by retention classification.
+                document['trials'][0].update({'started_at':aged,'last_event_at':aged,'ended_at':aged})
+                # Return the mutated isolated document.
+                return document
+            # Persist the aged row atomically.
+            guest_analytics.update_json(guest_analytics.TRIALS_PATH,age_row,guest_analytics.default_trials)
+            # Apply fixed retention and capture identifier-free counts.
+            cleanup=guest_analytics.cleanup()
+            # Read the cleaned isolated state.
+            cleaned=guest_analytics.read_json(guest_analytics.TRIALS_PATH,guest_analytics.default_trials)
+            # Prove the raw row was removed, one daily aggregate remains, and cleanup health is populated.
+            assert cleanup['raw_removed']==1 and cleaned['trials']==[] and len(cleaned['daily'])==1 and cleaned['cleanup']['last_success_at']
+            # Define a malformed aggregate date that exercises failure visibility without identity data.
+            def poison_aggregate(document):
+                # Replace the daily collection with one invalid date and bounded counters.
+                document['daily']=[{'date':'invalid','started':1,'engaged':0,'rounds_completed':0,'ended':0}]
+                # Return the malformed isolated document for the focused failure path.
+                return document
+            # Persist the failure fixture inside the temporary telemetry file only.
+            guest_analytics.update_json(guest_analytics.TRIALS_PATH,poison_aggregate,guest_analytics.default_trials)
+            # Start protected cleanup so the required failure cannot be mistaken for success.
+            try:
+                # Apply retention to the malformed date and require parsing to fail.
+                guest_analytics.cleanup()
+            # Accept the standard value failure while checking its separately persisted health marker.
+            except ValueError:
+                # Continue after the cleanup service rejected the malformed retained aggregate.
+                pass
+            # Fail when malformed retention data is silently accepted.
+            else:
+                # Raise a stable diagnostic without copying source data.
+                raise AssertionError('guest cleanup failure was reported as success')
+            # Read the failure-marked state without exposing its local path.
+            failed_cleanup=guest_analytics.read_json(guest_analytics.TRIALS_PATH,guest_analytics.default_trials)['cleanup']
+            # Prove Admin health can observe a timestamp and fixed sanitized category, never exception text.
+            assert failed_cleanup['last_failure_at'] and failed_cleanup['last_error']=='cleanup_failed'
+            # Define a repair that removes only the temporary malformed aggregate fixture.
+            def repair_aggregate(document):
+                # Restore the aggregate collection to a valid empty value.
+                document['daily']=[]
+                # Return the repaired isolated document.
+                return document
+            # Repair the isolated document before verifying recovery semantics.
+            guest_analytics.update_json(guest_analytics.TRIALS_PATH,repair_aggregate,guest_analytics.default_trials)
+            # Run one successful cleanup to clear the current error while retaining failure history.
+            guest_analytics.cleanup()
+            # Read the recovered health state.
+            recovered_cleanup=guest_analytics.read_json(guest_analytics.TRIALS_PATH,guest_analytics.default_trials)['cleanup']
+            # Prove recovery is observable and the last failure timestamp remains available.
+            assert recovered_cleanup['last_success_at'] and recovered_cleanup['last_failure_at']==failed_cleanup['last_failure_at'] and recovered_cleanup['last_error'] is None
+        # Restore the canonical runtime analytics path even when an assertion fails.
+        finally:
+            # Return the module to its original runtime state.
+            guest_analytics.TRIALS_PATH=original_path
+
+# Prove the additive v2 guest contracts and restricted-preview compatibility boundary. (issue #317)
+def validate_guest_contracts():
+    # Read both OpenAPI contracts as UTF-8 source for exact route assertions.
+    auth_contract=(ROOT/'contracts'/'openapi'/'auth.v2.yaml').read_text(encoding='utf-8')
+    # Read the Admin contract independently so missing files fail this focused case.
+    admin_contract=(ROOT/'contracts'/'openapi'/'guest-trials.v2.yaml').read_text(encoding='utf-8')
+    # Parse the restricted-preview compatibility policies.
+    security_contract=json.loads((ROOT/'contracts'/'compatibility'/'restricted-preview-security.json').read_text(encoding='utf-8'))
+    # Parse the guest-specific lifecycle and privacy contract.
+    guest_contract=json.loads((ROOT/'contracts'/'compatibility'/'guest-trials-restricted-preview.json').read_text(encoding='utf-8'))
+    # Prove public creation and both authenticated lifecycle routes are explicitly published.
+    assert all(route in auth_contract for route in ('/auth/guest:','/auth/guest/end:','/auth/guest/depart:','GuestBrowserNonce'))
+    # Prove the complete Admin summary/list/detail/cleanup route family is published under v2.
+    assert all(route in admin_contract for route in ('/admin/guest-trials:','/admin/guest-trials/sessions:','/admin/guest-trials/sessions/{analytics_id}:','/admin/guest-trials/cleanup:'))
+    # Prove the full filters, journey, fake-token, action/error/latency, and bounded timeline schemas are published.
+    assert all(term in admin_contract for term in ('GameFilter','CompletedFilter','ErrorCategoryFilter','SinceFilter','UntilFilter','account_cta_selected','ProductMetrics','fake_tokens_only','action_categories','error_categories','latency_buckets','maxItems: 80'))
+    # Prove the anonymous allowlist adds only the approved guest-create route.
+    assert security_contract['anonymous_routes']==['/api/v2/auth/login','/api/v2/auth/guest','/healthz']
+    # Prove launch stays held and retention/forbidden fields remain exact.
+    assert guest_contract['public_launch_authorized'] is False and guest_contract['wallet']['add_tokens_allowed'] is False and guest_contract['lifecycle']['autoplay_stopped_on_end'] is True and guest_contract['entry']['max_game_actions_per_session']==1000 and guest_contract['entry']['max_concurrent_autoplay_sessions']==1 and guest_contract['admin_telemetry']['raw_retention_days']==30 and guest_contract['admin_telemetry']['aggregate_retention_days']==400 and guest_contract['admin_telemetry']['cleanup_failure_visible'] is True and guest_contract['admin_telemetry']['timeline_event_limit']==80 and guest_contract['admin_telemetry']['responsive_error_cohort_minimum']==5 and guest_contract['admin_telemetry']['export_allowed'] is False and 'browser_nonce' in guest_contract['admin_telemetry']['forbidden_fields']
+    # Parse the exact digest freeze map.
+    digests=json.loads((ROOT/'contracts'/'compatibility'/'contract-digests.json').read_text(encoding='utf-8'))
+    # Verify both changed v2 contracts match their frozen exact bytes.
+    for path in ('contracts/openapi/auth.v2.yaml','contracts/openapi/guest-trials.v2.yaml'):
+        # Compare the tracked SHA-256 to the current contract bytes.
+        assert digests[path]==hashlib.sha256((ROOT/path).read_bytes()).hexdigest()
+
+# Prove the live local adapters enforce guest and Admin v2 boundaries with exact envelopes. (issue #317)
+def validate_guest_admin_api(base):
+    # Attempt anonymous creation with a caller-authored balance outside the exact v2 request contract.
+    hostile_creation=api(base,'/api/v2/auth/guest','POST',{'accepted':True,'terms_version':'private-beta-1','locale':'en-US','device':'desktop','balance':999999},ok=False,auth_token=None)
+    # Prove unsupported identity or wallet fields fail before a guest principal is minted.
+    assert hostile_creation['error']['code']=='VALIDATION_ERROR'
+    # Attempt guest-only teardown through the current registered Admin session.
+    registered_end=api(base,'/api/v2/auth/guest/end','POST',{},ok=False)
+    # Prove guest lifecycle routes cannot change or impersonate a registered-session logout.
+    assert registered_end['error']['code']=='FORBIDDEN'
+    # Create one isolated guest through the canonical service so the test can retain its bearer token safely in-process.
+    guest=auth_core.create_guest('focused-api-test',True,'private-beta-1','en-US','desktop')
+    # Read the opaque token and one-time context proof only into local test variables.
+    token,nonce=guest['session']['token'],guest['browser_nonce']
+    # Build the required guest-only browser proof header.
+    guest_headers={'X-Guest-Browser-Nonce':nonce}
+    # Start protected assertions so the guest is always irreversibly ended.
+    try:
+        # Prove the guest can read its bound current-user state through the shared protected adapter.
+        current=api(base,'/api/v2/me',auth_token=token,extra_headers=guest_headers)
+        # Require the non-Admin guest principal and isolated wallet shape.
+        assert current['user']['principal_type']=='guest' and current['player']['token_balance']==5000.0
+        # Open Slots through the normal guest-bound game state route.
+        guest_state=api(base,'/api/v1/games/slots/state',auth_token=token,extra_headers=guest_headers)
+        # Prove server identity replacement returns only the guest-bound wallet.
+        assert guest_state['player']['player_id']==guest['user']['player_id']
+        # Read every released catalog game's canonical state through the same guest-bound public action.
+        guest_catalog_states=[api(base,f"/api/v1/games/{game['id'].replace('_','-')}/state",auth_token=token,extra_headers=guest_headers) for game in list_catalog_games()]
+        # Prove the complete current catalog accepts the dedicated guest principal without a game-specific bypass.
+        assert len(guest_catalog_states)==len(list_catalog_games()) and all(isinstance(state,dict) for state in guest_catalog_states)
+        # Submit one invalid action so error categories are server-derived and sanitized.
+        invalid_spin=api(base,'/api/v1/games/slots/spin','POST',{'active_lines':2,'line_bet':1},ok=False,auth_token=token,extra_headers=guest_headers)
+        # Require the published validation category without depending on message text.
+        assert invalid_spin['error']['code']=='VALIDATION_ERROR'
+        # Submit one valid authoritative spin through the released game action.
+        valid_spin=api(base,'/api/v1/games/slots/spin','POST',{'active_lines':1,'line_bet':1},auth_token=token,extra_headers=guest_headers)
+        # Prove the real game module returned one terminal round and guest-bound player state.
+        assert valid_spin['spin']['round_id'] and valid_spin['player']['player_id']==guest['user']['player_id']
+        # Preserve the authoritative post-spin balance before testing the forbidden top-up path.
+        balance_after_spin=valid_spin['player']['balance']
+        # Attempt a guest autoplay registration with a hostile cross-player id and excessive round count.
+        guest_autoplay=api(base,'/api/v1/autoplay/start','POST',{'game_id':'slots','player_id':'human','round_limit':999,'speed':'medium'},auth_token=token,extra_headers=guest_headers)['session']
+        # Prove the server binds the guest wallet and clamps the disposable resource ceiling.
+        assert guest_autoplay['player_id']==guest['user']['player_id'] and guest_autoplay['round_limit']==casino_config.GUEST_AUTOPLAY_MAX_ROUNDS
+        # Attempt a second concurrent guest autoplay registration.
+        duplicate_autoplay=api(base,'/api/v1/autoplay/start','POST',{'game_id':'slots','round_limit':1,'speed':'medium'},ok=False,auth_token=token,extra_headers=guest_headers)
+        # Require the standard conflict result rather than another resource registration.
+        assert duplicate_autoplay['error']['code']=='CONFLICT'
+        # Attempt the registered-user-only play-token credit route with valid guest proofs.
+        top_up=api(base,'/api/v2/me/tokens/add','POST',{'amount':1},ok=False,auth_token=token,extra_headers=guest_headers)
+        # Prove the disposable starting grant cannot be increased through the normal shell endpoint.
+        assert top_up['error']['code']=='FORBIDDEN' and api(base,'/api/v2/me',auth_token=token,extra_headers=guest_headers)['player']['token_balance']==balance_after_spin
+        # Prove the same guest cannot reach the Admin v2 summary.
+        denied=api(base,'/api/v2/admin/guest-trials',ok=False,auth_token=token,extra_headers=guest_headers)
+        # Require the central forbidden envelope rather than an empty or partial Admin response.
+        assert denied['error']['code']=='FORBIDDEN'
+        # Read the Admin summary through the existing authenticated Admin session.
+        admin_summary=api(base,'/api/v2/admin/guest-trials')['guest_trials']
+        # Require funnel, game, recent, cleanup, and filter surfaces from the v2 contract.
+        assert all(key in admin_summary for key in ('funnel','funnel_rates','metrics','games','recent','cleanup','filters')) and admin_summary['funnel']['lobby_reached']>=1 and admin_summary['metrics']['fake_tokens_only'] is True
+        # Apply the complete game, completion, and sanitized error filters through the v2 contract.
+        filtered_summary=api(base,'/api/v2/admin/guest-trials?game=slots&completed=yes&error_category=VALIDATION_ERROR')['guest_trials']
+        # Require authoritative ledger aggregates, game metrics, and exact filter echoing.
+        assert filtered_summary['started_total']>=1 and filtered_summary['metrics']['wagered']>=1 and filtered_summary['games'][0]['game']=='slots' and filtered_summary['games'][0]['errors']>=1 and filtered_summary['filters']['completed']=='yes' and filtered_summary['filters']['error_category']=='VALIDATION_ERROR'
+        # Reject malformed bounded-time filters instead of silently widening the Admin result.
+        invalid_time=api(base,'/api/v2/admin/guest-trials?since=not-a-time',ok=False)
+        # Require the standard validation envelope without reflecting query content.
+        assert invalid_time['error']['code']=='VALIDATION_ERROR'
+        # Find the test guest's de-identified analytics row without using auth or player identifiers.
+        analytics_id=guest['user']['guest_analytics_id']
+        # Read the explicit list route through Admin authorization.
+        sessions=api(base,'/api/v2/admin/guest-trials/sessions?limit=100')['sessions']
+        # Require the unrelated analytics id to be discoverable in the retained Admin list.
+        assert any(row.get('analytics_id')==analytics_id for row in sessions)
+        # Read the exact analytics-only detail route.
+        detail=api(base,f'/api/v2/admin/guest-trials/sessions/{analytics_id}')['guest_trial']
+        # Serialize only for forbidden-field assertions and never print the result.
+        detail_text=json.dumps(detail).lower()
+        # Prove the detail is de-identified and carries only the expected analytics key.
+        assert detail['analytics_id']==analytics_id and all(field not in detail_text for field in ('auth_token','browser_nonce','csrf_token','email','player_id','session_id','user_id','user_agent'))
+        # Apply fixed retention through the Admin-only v2 route.
+        cleanup=api(base,'/api/v2/admin/guest-trials/cleanup','POST',{})['cleanup']
+        # Require identifier-free completion fields.
+        assert cleanup['raw_removed']>=0 and cleanup['aggregate_removed']>=0 and cleanup['completed_at']
+    # End the disposable test guest even when an Admin assertion fails.
+    finally:
+        # Use canonical teardown rather than deleting shared runtime files.
+        auth_core.end_guest_trial(guest['user'],'revoked')
+    # Prove the ended bearer and browser proof cannot resume the trial.
+    ended=api(base,'/api/v2/me',ok=False,auth_token=token,extra_headers=guest_headers)
+    # Require a terminal authentication or inactive-identity error envelope.
+    assert ended['error']['code'] in ('FORBIDDEN','UNAUTHORIZED')
+
 # Define the run_api_tests function used by this module.
 def run_api_tests():
     # Run service-free shared validation, ledger, MHVP, and strict JSON persistence evidence.
@@ -414,12 +866,20 @@ def run_api_tests():
     run_case('API-AUTH-DEPLOYMENT-001',['AUTH-006','TEST-041'],validate_deployment_bootstrap)
     # Certify the matrix and shared hostile-client boundary before starting a listener.
     run_case('API-SEC-001',[f'SEC-{index:03d}' for index in range(1,10)],run_server_authority_tests)
+    # Record listener-free disposable-principal lifecycle and browser-binding proof.
+    run_case('API-GUEST-LIFECYCLE-001',['GUEST-001','GUEST-002','GUEST-006','TEST-080'],validate_guest_lifecycle)
+    # Record listener-free telemetry privacy, milestones, and retention proof.
+    run_case('API-GUEST-ANALYTICS-001',['GUEST-003','TEST-088'],validate_guest_analytics)
+    # Record exact additive v2 and restricted-preview compatibility contract proof.
+    run_case('API-GUEST-CONTRACT-001',['GUEST-005','TEST-088'],validate_guest_contracts)
     # Set proc,base to the value needed for the next operation.
     proc,base=start_server()
     # Start protected logic so failures can be handled safely.
     try:
         # Call an asynchronous API/helper and wait for the result before continuing.
         login_default_user(base)
+        # Record live guest protected-route, Admin denial, Admin reporting, detail, cleanup, and no-resumption proof.
+        run_case('API-ADMIN-GUEST-001',['GUEST-001','GUEST-003','GUEST-004','GUEST-006','TEST-080','TEST-088'],lambda: validate_guest_admin_api(base))
         # Prove every affected game route rejects decoded and string non-finite wagers without mutation.
         def nonfinite_money_api():
             # Read the authenticated wallet identity and finite baseline.
@@ -1770,6 +2230,146 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
             finally:
                 # Release the isolated backend-login browser context before the existing broad UI suite.
                 real_login_page.close()
+            # Define exact visual-matrix viewports for disposable guest entry and lifecycle evidence. (issue #317)
+            guest_viewports={'desktop_primary':{'width':1920,'height':1080},'desktop_compact':{'width':1440,'height':900},'tablet':{'width':1024,'height':900},'mobile':{'width':390,'height':844}}
+            # Read exact source identity once for focused guest evidence sidecars.
+            guest_evidence_commit=subprocess.check_output(['git','rev-parse','HEAD'],cwd=str(ROOT),text=True).strip()
+            # Prefer the CI head ref while retaining a safe detached fallback.
+            guest_evidence_branch=os.environ.get('GITHUB_HEAD_REF') or subprocess.check_output(['git','branch','--show-current'],cwd=str(ROOT),text=True).strip() or 'detached'
+            # Capture one complete guest surface with VIS-EVIDENCE-001 metadata.
+            def guest_evidence(guest_page,name,surface,states,locale,viewport_id):
+                # Resolve the standard artifact path beneath the browser-test output directory.
+                target=screenshots/name
+                # Capture the complete responsive surface without transient toast content.
+                guest_page.screenshot(path=str(target),full_page=True,animations='disabled',style='#toast { visibility: hidden !important; }')
+                # Read the exact active viewport dimensions for the sidecar.
+                viewport=guest_page.viewport_size
+                # Read the focused control so keyboard acceptance remains auditable.
+                focused=guest_page.evaluate("() => document.activeElement?.getAttribute('data-testid') || ''")
+                # Build exact-head after-pass metadata for the named visual-matrix row.
+                metadata={'evidence_class':'after_pass','branch':guest_evidence_branch,'commit':guest_evidence_commit,'surface':surface,'states':states,'locale':locale,'viewport':{'id':viewport_id,**viewport},'path':str(target.relative_to(ROOT)).replace('\\','/'),'focused_control':focused}
+                # Write the self-describing UTF-8 sidecar next to the image.
+                target.with_suffix('.json').write_text(json.dumps(metadata,indent=2,ensure_ascii=False),encoding='utf-8')
+            # Collect one result row per locale and governed viewport.
+            guest_results=[]
+            # Exercise both installed locales through their browser-visible selector.
+            for guest_locale in ('en-US','ru-RU'):
+                # Exercise every governed viewport from the visual matrix.
+                for guest_viewport_id,guest_viewport in guest_viewports.items():
+                    # Create a fresh browser context so no account or guest credential can leak between cases.
+                    guest_context=browser.new_context(viewport=guest_viewport,reduced_motion='reduce')
+                    # Open the account-free entry surface inside the isolated context.
+                    guest_page=guest_context.new_page()
+                    # Start protected guest verification so context and temporary credentials always close.
+                    try:
+                        # Navigate without a seeded cookie so the real backend returns the login gate.
+                        guest_page.goto(base,wait_until='networkidle'); guest_page.get_by_test_id('login-gate').wait_for(timeout=5000)
+                        # Select the tested locale through the browser-visible login control.
+                        guest_page.get_by_test_id('auth-locale-select').select_option(guest_locale)
+                        # Wait until translated disposable terms copy replaces the prior locale.
+                        guest_page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale",arg=guest_locale)
+                        # Prove a button click without affirmative consent creates no session or route transition.
+                        guest_page.get_by_test_id('guest-trial-button').click(); guest_page.wait_for_timeout(100)
+                        # Require the localized validation message and unchanged login surface.
+                        assert guest_page.get_by_test_id('login-gate').is_visible() and guest_page.locator('#auth-message').inner_text().strip()
+                        # Focus the consent row for visible keyboard-state evidence.
+                        guest_page.get_by_test_id('login-terms-check').focus()
+                        # Require the complete login surface to stay inside the page viewport.
+                        assert guest_page.evaluate("() => document.documentElement.scrollWidth <= window.innerWidth + 1")
+                        # Capture localized unaccepted-consent and disclosure evidence.
+                        guest_evidence(guest_page,f'after-pass-guest-auth-unaccepted-{guest_locale}-{guest_viewport_id}.png','auth',['guest','guest_terms_unaccepted','guest_disclosure'],guest_locale,guest_viewport_id)
+                        # Accept the visible versioned terms through the native checkbox.
+                        guest_page.get_by_test_id('login-terms-check').check()
+                        # Capture the explicit accepted state separately from the required unaccepted state.
+                        guest_evidence(guest_page,f'after-pass-guest-auth-accepted-{guest_locale}-{guest_viewport_id}.png','auth',['guest','guest_terms_accepted','guest_disclosure'],guest_locale,guest_viewport_id)
+                        # Observe real guest creation after affirmative consent.
+                        with guest_page.expect_response(lambda response: response.url.endswith('/api/v2/auth/guest') and response.request.method=='POST') as guest_response_info:
+                            # Start the disposable session through the visible account-free action.
+                            guest_page.get_by_test_id('guest-trial-button').click()
+                        # Store the real standard envelope for principal and wallet assertions.
+                        guest_payload=guest_response_info.value.json()
+                        # Wait for the authenticated lobby after sessionStorage has captured the one-time proof.
+                        guest_page.get_by_test_id('lobby').wait_for(timeout=5000)
+                        # Read current-user state through the frontend helper that attaches the browser proof.
+                        guest_current=guest_page.evaluate("async () => (await import('/core/api.js')).currentUser()")
+                        # Prove the guest cannot access the centrally protected Admin API with its valid proof.
+                        guest_admin_code=guest_page.evaluate("async () => { try { await (await import('/core/api.js')).api('/api/v2/admin/guest-trials'); return 'ALLOWED'; } catch (error) { return error.code; } }")
+                        # Read the persistent guest marker and localized End control.
+                        guest_marker=guest_page.locator('#logout-btn').get_attribute('data-guest-trial')
+                        # Require the registered-user token-credit menu to be absent from the guest experience.
+                        guest_wallet_top_up_hidden=guest_page.locator('.wallet-menu').is_hidden()
+                        # Require the active shell to keep its exact expiry and no-recovery disclosure visible.
+                        guest_expiry_notice=guest_page.get_by_test_id('guest-trial-notice').is_visible() and bool(guest_page.get_by_test_id('guest-trial-notice').inner_text().strip())
+                        # Open one released catalog game through the same visible action used by registered players.
+                        guest_page.get_by_test_id('open-slots').click(); guest_page.get_by_test_id('slots-premium').wait_for(timeout=5000)
+                        # Record that a real game module mounted under the guest-bound player identity with reduced motion active.
+                        guest_game_entered=guest_page.get_by_test_id('slots-premium').is_visible() and guest_page.evaluate("() => matchMedia('(prefers-reduced-motion: reduce)').matches")
+                        # Return through the shared navigation before exercising same-context refresh.
+                        guest_page.get_by_test_id('nav-lobby').click(); guest_page.get_by_test_id('lobby').wait_for(timeout=5000)
+                        # Reload inside the same browser context to prove refresh preserves sessionStorage and access.
+                        guest_page.reload(wait_until='networkidle'); guest_page.get_by_test_id('lobby').wait_for(timeout=5000)
+                        # Require no responsive page spill after the same-context reload.
+                        assert guest_page.evaluate("() => document.documentElement.scrollWidth <= window.innerWidth + 1")
+                        # Focus the irreversible lifecycle control for keyboard evidence.
+                        guest_page.locator('#logout-btn').focus()
+                        # Capture localized active and same-context-refresh evidence.
+                        guest_evidence(guest_page,f'after-pass-guest-shell-active-{guest_locale}-{guest_viewport_id}.png','shell_lobby',['guest_trial_active','guest_trial_expiry_warning','guest_trial_top_up_unavailable','guest_trial_same_context_refresh','guest_trial_reduced_motion'],guest_locale,guest_viewport_id)
+                        # Capture the primary desktop shell at an explicit 200 percent CSS zoom with an equivalent half-width layout viewport.
+                        if guest_viewport_id=='desktop_primary':
+                            # Apply the established repository zoom technique while constraining layout width to the effective browser-zoom viewport.
+                            guest_page.evaluate("() => { document.body.style.zoom='200%'; document.body.style.width='50%'; }"); guest_page.wait_for_timeout(100)
+                            # Require the expiry disclosure and irreversible lifecycle control to remain visible at 200 percent zoom.
+                            assert guest_page.get_by_test_id('guest-trial-notice').is_visible() and guest_page.locator('#logout-btn').is_visible()
+                            # Capture the localized zoom acceptance separately from the normal responsive viewport matrix.
+                            guest_evidence(guest_page,f'after-pass-guest-shell-zoom-200-{guest_locale}-{guest_viewport_id}.png','shell_lobby',['guest_trial_active','guest_trial_zoom_200'],guest_locale,guest_viewport_id)
+                            # Restore the normal CSS viewport before ending the disposable trial.
+                            guest_page.evaluate("() => { document.body.style.zoom=''; document.body.style.width=''; }")
+                        # End the trial through the visible control and observe the canonical backend response.
+                        with guest_page.expect_response(lambda response: response.url.endswith('/api/v2/auth/guest/end') and response.request.method=='POST') as guest_end_info:
+                            # Activate the focused native button by keyboard.
+                            guest_page.locator('#logout-btn').press('Enter')
+                        # Store the identifier-free teardown acknowledgement.
+                        guest_end_payload=guest_end_info.value.json()
+                        # Require immediate return to the login gate.
+                        guest_page.get_by_test_id('login-gate').wait_for(timeout=5000)
+                        # Reload to prove the explicitly ended trial cannot recover.
+                        guest_page.reload(wait_until='networkidle'); guest_page.get_by_test_id('login-gate').wait_for(timeout=5000)
+                        # Capture the localized terminal redirect after the disposable session is irreversibly revoked.
+                        guest_evidence(guest_page,f'after-pass-guest-auth-ended-{guest_locale}-{guest_viewport_id}.png','auth',['guest_trial_ended'],guest_locale,guest_viewport_id)
+                        # Record the complete result without retaining any credential or raw browser proof.
+                        guest_results.append({'locale':guest_locale,'viewport':guest_viewport_id,'created':guest_payload['ok'] is True,'role':guest_payload['data']['user'].get('role'),'balance':guest_current['player']['token_balance'],'marker':guest_marker,'top_up_hidden':guest_wallet_top_up_hidden,'expiry_notice':guest_expiry_notice,'game_entered':guest_game_entered,'admin_code':guest_admin_code,'ended':guest_end_payload['ok'] is True,'contained':guest_page.evaluate("() => document.documentElement.scrollWidth <= window.innerWidth + 1")})
+                    # Close the entire isolated context even if one viewport fails.
+                    finally:
+                        # Destroy its cookies and sessionStorage without touching other browser work.
+                        guest_context.close()
+            # Prove browser-context loss makes a preserved cookie non-resumable in both locales. (issue #317)
+            guest_close_results=[]
+            # Run one primary-viewport close proof per locale because layout is already covered above.
+            for guest_locale in ('en-US','ru-RU'):
+                # Create the original browser context that owns sessionStorage proof material.
+                original_context=browser.new_context(viewport=guest_viewports['desktop_primary'])
+                # Open the disposable entry surface.
+                original_page=original_context.new_page()
+                # Navigate, localize, consent, and create the guest session.
+                original_page.goto(base,wait_until='networkidle'); original_page.get_by_test_id('auth-locale-select').select_option(guest_locale); original_page.get_by_test_id('login-terms-check').check(); original_page.get_by_test_id('guest-trial-button').click(); original_page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Preserve only browser cookies to simulate browser restart without sessionStorage.
+                preserved_cookies=original_context.cookies()
+                # Close the original context so its browser proof is destroyed.
+                original_context.close()
+                # Create a distinct replacement context and restore only the cookie jar.
+                replacement_context=browser.new_context(viewport=guest_viewports['desktop_primary'])
+                # Install the preserved cookies without any sessionStorage proof.
+                replacement_context.add_cookies(preserved_cookies)
+                # Open a new page and allow the shell's current-user request to fail closed.
+                replacement_page=replacement_context.new_page(); replacement_page.goto(base,wait_until='networkidle'); replacement_page.get_by_test_id('login-gate').wait_for(timeout=5000)
+                # Record the no-recovery result without retaining cookie values.
+                guest_close_results.append(replacement_page.get_by_test_id('login-gate').is_visible())
+                # Destroy the replacement context and its now-revoked cookie.
+                replacement_context.close()
+            # Record the full locale, viewport, consent, lifecycle, authorization, refresh, and browser-close matrix.
+            run_case('BR-GUEST-TRIAL-001',['GUEST-001','GUEST-002','GUEST-006','TEST-081'],lambda: len(guest_results)==8 and all(result['created'] and result['role']=='guest' and result['balance']==5000.0 and result['marker']=='true' and result['top_up_hidden'] and result['expiry_notice'] and result['game_entered'] and result['admin_code']=='FORBIDDEN' and result['ended'] and result['contained'] for result in guest_results) and all(guest_close_results))
+            # Record the separately named same-context refresh and browser-context loss acceptance.
+            run_case('BR-GUEST-REFRESH-001',['GUEST-002','TEST-081'],lambda: len(guest_results)==8 and all(result['ended'] for result in guest_results) and all(guest_close_results))
             # Refresh the direct API harness Admin session after the browser login added a concurrent session (issue #226).
             login_default_user(base)
             # Set page to the value needed for the next operation.
@@ -5799,6 +6399,179 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.get_by_test_id('admin-tab-language').click(); page.get_by_test_id('admin-language-select').wait_for(timeout=5000)
                 # Execute this statement as part of the module's documented control flow.
                 run_case('BR-ADMIN-USERS-001',['ADMIN-USER-PENDING-035','TERMS-PENDING-035','TOKEN-PENDING-035','I18N-003'],admin_users_browser)
+                # Prove the Admin Guest Trials section reports de-identified account-free telemetry. (issue #317)
+                def admin_guest_trials_browser():
+                    # Define every governed Admin viewport, including the issue-required mobile state.
+                    guest_admin_viewports={'desktop_primary':{'width':1920,'height':1080},'desktop_compact':{'width':1440,'height':900},'tablet':{'width':1024,'height':900},'mobile':{'width':390,'height':844}}
+                    # Snapshot the test runtime telemetry so empty-state evidence can remain isolated and reversible.
+                    original_analytics=guest_analytics.read_json(guest_analytics.TRIALS_PATH,guest_analytics.default_trials)
+                    # Start with the canonical empty document for exact empty, loading, and error evidence.
+                    write_json(guest_analytics.TRIALS_PATH,guest_analytics.default_trials())
+                    # Track seeded principals for canonical teardown after populated-state evidence.
+                    seeded_guests=[]
+                    # Start protected Admin verification so seeded principals always end.
+                    try:
+                        # Exercise every locale and viewport before any analytics row exists.
+                        for locale in ('en-US','ru-RU'):
+                            # Switch the Admin runtime so loading, error, and empty states use real localized copy.
+                            page.evaluate("async locale => { const i18n=await import('/core/i18n.js'); await i18n.setLocale(locale,{persistLocal:false}); }",locale)
+                            # Capture each asynchronous state at every governed Admin viewport.
+                            for viewport_id,viewport in guest_admin_viewports.items():
+                                # Resize before the request starts so evidence proves state-specific containment.
+                                page.set_viewport_size(viewport)
+                                # Hold the summary request unresolved while the production loading state remains mounted.
+                                pending_routes=[]
+                                # Match only the Guest Trials summary request, never its detail or cleanup endpoints.
+                                summary_pattern='**/api/v2/admin/guest-trials?*'
+                                # Retain the intercepted route without continuing it until loading evidence is captured.
+                                page.route(summary_pattern,lambda route: pending_routes.append(route))
+                                # Open Guest Trials through the visible sidebar action.
+                                page.get_by_test_id('admin-tab-guests').click(); page.get_by_test_id('admin-guest-loading').wait_for(timeout=5000)
+                                # Require the explicit loading state to remain horizontally contained.
+                                assert page.evaluate("() => document.documentElement.scrollWidth <= window.innerWidth + 1") and pending_routes
+                                # Capture exact-head localized loading evidence.
+                                game_evidence(f'after-pass-admin-guest-loading-{locale}-{viewport_id}.png','admin',['guest_trials_loading'],locale,viewport_id)
+                                # Release the one held request and remove its interceptor before observing the empty response.
+                                pending_routes.pop(0).continue_(); page.unroute(summary_pattern); page.get_by_test_id('admin-guest-empty').wait_for(timeout=5000)
+                                # Capture the genuine zero-row Admin surface.
+                                game_evidence(f'after-pass-admin-guest-empty-{locale}-{viewport_id}.png','admin',['guest_trials_empty'],locale,viewport_id)
+                                # Record diagnostics boundaries so the intentional failure probe cannot pollute suite-wide error accounting.
+                                guest_error_console_index=len(console_errors); guest_error_http_index=len(http_errors); guest_error_page_index=len(page_errors)
+                                # Fail the next summary request with a sanitized standard error response.
+                                page.route(summary_pattern,lambda route: route.fulfill(status=503,content_type='application/json',body='{"ok":false,"error":{"code":"UNAVAILABLE","message":"Unavailable"}}'))
+                                # Reload the current Guest Trials tab through its visible control.
+                                page.get_by_test_id('admin-tab-guests').click(); page.get_by_test_id('admin-load-error').wait_for(timeout=5000)
+                                # Require the recovery state to remain contained without raw response details.
+                                assert page.evaluate("() => document.documentElement.scrollWidth <= window.innerWidth + 1") and 'UNAVAILABLE' not in page.get_by_test_id('admin-load-error').inner_text()
+                                # Capture exact-head localized error evidence before removing the interceptor.
+                                game_evidence(f'after-pass-admin-guest-error-{locale}-{viewport_id}.png','admin',['guest_trials_error'],locale,viewport_id)
+                                # Retain only the diagnostics produced by this controlled error-state request.
+                                guest_expected_console=console_errors[guest_error_console_index:]; guest_expected_http=http_errors[guest_error_http_index:]; guest_expected_page=page_errors[guest_error_page_index:]
+                                # Require no unhandled JavaScript error and only the browser's standard failed-resource console line.
+                                assert guest_expected_page==[] and all('Failed to load resource' in value for value in guest_expected_console)
+                                # Require exactly the controlled Guest Trials summary rejection before consuming it from global accounting.
+                                assert len(guest_expected_http)==1 and guest_expected_http[0].startswith('503 ') and '/api/v2/admin/guest-trials?' in guest_expected_http[0]
+                                # Remove only the verified controlled diagnostics so unexpected errors elsewhere still fail the suite.
+                                del console_errors[guest_error_console_index:]; del http_errors[guest_error_http_index:]
+                                # Restore normal routing for populated evidence.
+                                page.unroute(summary_pattern)
+                        # Seed one safe analytics row per locale through the canonical guest service.
+                        seeded_guests=[auth_core.create_guest('admin-browser-test',True,'private-beta-1',locale,'desktop') for locale in ('en-US','ru-RU')]
+                        # Add game-open and completed-round counters without storing request or response payloads.
+                        for seeded_guest in seeded_guests:
+                            # Record authenticated lobby reach for the named journey funnel.
+                            guest_analytics.record_event(seeded_guest['user']['guest_analytics_id'],'lobby_reached')
+                            # Record one visible game-engagement aggregate for the Admin table.
+                            guest_analytics.record_event(seeded_guest['user']['guest_analytics_id'],'game_open','slots',latency_ms=25)
+                            # Record one server-classified completion and fake-token aggregate for the funnel and game metrics.
+                            guest_analytics.record_event(seeded_guest['user']['guest_analytics_id'],'game_action','slots',action='spin',latency_ms=125,wagered=1,returned=2,round_started=True,round_completed=True)
+                            # Record one sanitized validation category for the complete error filter without request text.
+                            guest_analytics.record_event(seeded_guest['user']['guest_analytics_id'],'game_error','slots',action='spin',latency_ms=20,error_category='VALIDATION_ERROR')
+                        # Collect one responsive result per locale and viewport.
+                        admin_guest_results=[]
+                        # Exercise both installed Admin locales.
+                        for locale in ('en-US','ru-RU'):
+                            # Switch the Admin runtime without persisting beyond the disposable browser copy.
+                            page.evaluate("async locale => { const i18n=await import('/core/i18n.js'); await i18n.setLocale(locale,{persistLocal:false}); }",locale)
+                            # Open the dedicated Guest Trials section through its visible sidebar tab.
+                            page.get_by_test_id('admin-tab-guests').click(); page.get_by_test_id('admin-guest-summary').wait_for(timeout=5000)
+                            # Filter to the active locale and desktop-class seeded row.
+                            with page.expect_response(lambda response: '/api/v2/admin/guest-trials?' in response.url and f'locale={locale}' in response.url):
+                                # Select the active locale filter through its native control.
+                                page.locator('#guest-filter-locale').select_option(locale)
+                            # Wait for the filtered funnel to replace the prior content.
+                            page.get_by_test_id('admin-guest-summary').wait_for(timeout=5000)
+                            # Filter to the seeded device class through the visible control.
+                            with page.expect_response(lambda response: '/api/v2/admin/guest-trials?' in response.url and 'device=desktop' in response.url):
+                                # Select the seeded coarse device class through its native control.
+                                page.locator('#guest-filter-device').select_option('desktop')
+                            # Wait for the device-filtered funnel to replace the prior content.
+                            page.get_by_test_id('admin-guest-summary').wait_for(timeout=5000)
+                            # Apply the bounded thirty-day time range through its visible shortcut.
+                            with page.expect_response(lambda response: '/api/v2/admin/guest-trials?' in response.url and 'since=' in response.url):
+                                # Select the recent-window filter.
+                                page.locator('#guest-filter-range').select_option('30')
+                            # Apply the registered game filter.
+                            with page.expect_response(lambda response: '/api/v2/admin/guest-trials?' in response.url and 'game=slots' in response.url):
+                                # Select the seeded catalog game.
+                                page.locator('#guest-filter-game').select_option('slots')
+                            # Apply the first-round-completed filter.
+                            with page.expect_response(lambda response: '/api/v2/admin/guest-trials?' in response.url and 'completed=yes' in response.url):
+                                # Select the affirmative completion state.
+                                page.locator('#guest-filter-completed').select_option('yes')
+                            # Apply the sanitized server-error filter.
+                            with page.expect_response(lambda response: '/api/v2/admin/guest-trials?' in response.url and 'error_category=VALIDATION_ERROR' in response.url):
+                                # Select the seeded validation category.
+                                page.locator('#guest-filter-error_category').select_option('VALIDATION_ERROR')
+                            # Require the complete funnel and game-engagement sections.
+                            assert int(page.get_by_test_id('admin-guest-started').inner_text().replace(',','').replace('\xa0',''))>=1
+                            # Require the engaged and completed-round milestones to include the seeded row.
+                            assert int(page.get_by_test_id('admin-guest-engaged').inner_text().replace(',','').replace('\xa0',''))>=1 and int(page.get_by_test_id('admin-guest-completed').inner_text().replace(',','').replace('\xa0',''))>=1
+                            # Require all named funnel rows, detailed game metrics, and fake-token summary cards.
+                            assert page.get_by_test_id('admin-guest-funnel').locator('tbody tr, tr').count()>=10 and page.get_by_test_id('admin-guest-game-detail').is_visible() and '1' in page.get_by_test_id('admin-guest-summary').inner_text()
+                            # Require one analytics-only row and open its bounded detail.
+                            guest_first_row=page.get_by_test_id('admin-guest-row').first; guest_first_row.wait_for(timeout=5000)
+                            # Read the visible row for identifier privacy checks.
+                            guest_row_text=guest_first_row.inner_text()
+                            # Require no email or raw auth/player/session identifier pattern.
+                            assert 'gtrial_' in guest_row_text and '@' not in guest_row_text and 'player_' not in guest_row_text.lower() and 'session_' not in guest_row_text.lower() and 'user_' not in guest_row_text.lower()
+                            # Open the analytics-only detail through the keyboard-focusable action.
+                            guest_first_row.locator('.guest-detail-button').focus(); guest_first_row.locator('.guest-detail-button').press('Enter'); page.wait_for_function("() => document.querySelector('[data-testid=\"admin-guest-detail\"] dd')?.textContent.includes('gtrial_')")
+                            # Require the allowlisted server event timeline to render without a raw session replay.
+                            page.get_by_test_id('admin-guest-timeline').wait_for(timeout=5000); assert page.get_by_test_id('admin-guest-timeline').locator('tr').count()>=2
+                            # Focus the wide recent table region and exercise native End-key scrolling.
+                            recent_region=page.get_by_test_id('admin-guest-recent'); recent_region.focus(); recent_region.press('End')
+                            # Require the cleanup health surface and run its fixed server cleanup action once per locale.
+                            page.get_by_test_id('admin-guest-cleanup-status').wait_for(timeout=5000)
+                            with page.expect_response(lambda response: response.url.endswith('/api/v2/admin/guest-trials/cleanup') and response.request.method=='POST'):
+                                # Activate the protected cleanup control through the visible Admin surface.
+                                page.get_by_test_id('admin-guest-cleanup').click()
+                            # Wait for the refreshed Guest Trials funnel after cleanup.
+                            page.get_by_test_id('admin-guest-summary').wait_for(timeout=5000)
+                            # Exercise every exact governed viewport for this locale.
+                            for viewport_id,viewport in guest_admin_viewports.items():
+                                # Resize the complete Admin document before containment inspection.
+                                page.set_viewport_size(viewport); page.wait_for_timeout(150)
+                                # Reopen Guest Trials because mobile navigation and refresh can move focus only, never state.
+                                page.get_by_test_id('admin-tab-guests').click(); page.get_by_test_id('admin-guest-summary').wait_for(timeout=5000)
+                                # Reopen the bounded de-identified detail so each viewport artifact actually contains its claimed timeline state.
+                                page.get_by_test_id('admin-guest-row').first.locator('.guest-detail-button').click(); page.get_by_test_id('admin-guest-timeline').wait_for(timeout=5000)
+                                # Require page containment plus intentional horizontal containment on table regions.
+                                contained=page.evaluate("() => document.documentElement.scrollWidth <= window.innerWidth + 1 && [...document.querySelectorAll('[data-testid=\"admin-guest-funnel\"], [data-testid=\"admin-guest-games\"], [data-testid=\"admin-guest-game-detail\"], [data-testid=\"admin-guest-recent\"]')].every(region => region.scrollWidth >= region.clientWidth)")
+                                # Require every filter and action to meet the approved 42 CSS-pixel floor.
+                                targets=page.locator('[data-testid="admin-guest-filters"] select, [data-testid="admin-guest-filters"] button, .guest-detail-button')
+                                # Inspect all rendered Guest Trials interactive controls.
+                                target_floor=all((targets.nth(index).bounding_box() or {}).get('height',0)>=41.5 for index in range(targets.count()))
+                                # Focus the table region for visible keyboard evidence.
+                                page.get_by_test_id('admin-guest-recent').focus()
+                                # Capture exact-head EN/RU responsive funnel, games, filters, detail, cleanup, and keyboard evidence.
+                                game_evidence(f'after-pass-admin-guest-trials-{locale}-{viewport_id}.png','admin',['guest_trials_funnel','guest_trials_nine_stage_funnel','guest_trials_metrics','guest_trials_fake_tokens','guest_trials_games','guest_trials_filters','guest_trials_detail','guest_trials_timeline','guest_trials_cleanup_status','guest_trials_keyboard_scroll'],locale,viewport_id)
+                                # Record explicit reduced-motion and 200 percent zoom acceptance once per locale at the primary desktop viewport.
+                                if viewport_id=='desktop_primary':
+                                    # Emulate the operating-system reduced-motion preference on the populated Admin surface.
+                                    page.emulate_media(reduced_motion='reduce'); assert page.evaluate("() => matchMedia('(prefers-reduced-motion: reduce)').matches")
+                                    # Capture reduced-motion evidence with the complete populated state still visible.
+                                    game_evidence(f'after-pass-admin-guest-reduced-motion-{locale}-{viewport_id}.png','admin',['guest_trials_funnel','guest_trials_reduced_motion'],locale,viewport_id)
+                                    # Apply 200 percent CSS zoom with the equivalent half-width layout constraint.
+                                    page.evaluate("() => { document.body.style.zoom='200%'; document.body.style.width='50%'; }"); page.wait_for_timeout(100)
+                                    # Require the funnel and cleanup health to remain visible at the zoomed scale.
+                                    assert page.get_by_test_id('admin-guest-summary').is_visible() and page.get_by_test_id('admin-guest-cleanup-status').is_visible()
+                                    # Capture localized 200 percent zoom evidence independently from the viewport matrix.
+                                    game_evidence(f'after-pass-admin-guest-zoom-200-{locale}-{viewport_id}.png','admin',['guest_trials_funnel','guest_trials_zoom_200'],locale,viewport_id)
+                                    # Restore normal zoom and motion before the next viewport or unrelated Admin case.
+                                    page.evaluate("() => { document.body.style.zoom=''; document.body.style.width=''; }"); page.emulate_media(reduced_motion='no-preference')
+                                # Record responsive containment and target-floor result.
+                                admin_guest_results.append({'locale':locale,'viewport':viewport_id,'contained':contained,'target_floor':target_floor})
+                        # Require exactly both locales by all four viewports with complete containment and accessible targets.
+                        assert len(admin_guest_results)==8 and all(result['contained'] and result['target_floor'] for result in admin_guest_results)
+                    # Irreversibly end seeded principals regardless of browser assertion outcome.
+                    finally:
+                        # Revoke each disposable identity and wallet through canonical lifecycle teardown.
+                        for seeded_guest in seeded_guests: auth_core.end_guest_trial(seeded_guest['user'],'revoked')
+                        # Restore the exact pre-test de-identified telemetry document after every success or failure.
+                        write_json(guest_analytics.TRIALS_PATH,original_analytics)
+                # Execute the de-identified Guest Trials Admin regression.
+                run_case('BR-ADMIN-GUEST-001',['GUEST-003','GUEST-004','GUEST-005','TEST-081'],admin_guest_trials_browser)
                 # Execute this statement as part of the module's documented control flow.
                 page.get_by_test_id('admin-tab-audio').click(); page.get_by_test_id('admin-save-audio').wait_for(timeout=5000)
                 # Execute this statement as part of the module's documented control flow.

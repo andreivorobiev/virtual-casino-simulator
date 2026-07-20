@@ -1,0 +1,649 @@
+openapi: 3.0.3
+info:
+  title: Virtual Casino restricted-preview Guest Trials Admin API
+  version: v2
+  description: Admin-only, de-identified guest-trial funnel, engagement, lifecycle, detail, and retention telemetry. This repository contract does not authorize unrestricted public launch.
+servers:
+  - url: /api/v2
+paths:
+  # Summary includes only low-cardinality dimensions and analytics-only identifiers.
+  /admin/guest-trials:
+    get:
+      summary: Read filtered de-identified guest-trial funnel and game engagement.
+      operationId: guest_trials_v2_summary
+      security:
+        - cookieSession: []
+      parameters:
+        - $ref: '#/components/parameters/LocaleFilter'
+        - $ref: '#/components/parameters/DeviceFilter'
+        - $ref: '#/components/parameters/StatusFilter'
+        - $ref: '#/components/parameters/GameFilter'
+        - $ref: '#/components/parameters/CompletedFilter'
+        - $ref: '#/components/parameters/ErrorCategoryFilter'
+        - $ref: '#/components/parameters/SinceFilter'
+        - $ref: '#/components/parameters/UntilFilter'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Standard API envelope carrying the Guest Trials Admin summary.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SummaryEnvelope'
+        '401':
+          description: Standard error envelope for an unauthenticated request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          description: Standard error envelope for an authenticated non-Admin request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '400':
+          description: Standard error envelope for an invalid bounded filter.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  # List and detail never accept auth, player, session, email, or network identifiers.
+  /admin/guest-trials/sessions:
+    get:
+      summary: List retained de-identified guest-trial analytics rows.
+      operationId: guest_trials_v2_sessions
+      security:
+        - cookieSession: []
+      parameters:
+        - $ref: '#/components/parameters/LocaleFilter'
+        - $ref: '#/components/parameters/DeviceFilter'
+        - $ref: '#/components/parameters/StatusFilter'
+        - $ref: '#/components/parameters/GameFilter'
+        - $ref: '#/components/parameters/CompletedFilter'
+        - $ref: '#/components/parameters/ErrorCategoryFilter'
+        - $ref: '#/components/parameters/SinceFilter'
+        - $ref: '#/components/parameters/UntilFilter'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Standard API envelope carrying retained analytics rows.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionsEnvelope'
+        '401':
+          description: Standard error envelope for an unauthenticated request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          description: Standard error envelope for an authenticated non-Admin request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '400':
+          description: Standard error envelope for an invalid bounded filter.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /admin/guest-trials/sessions/{analytics_id}:
+    get:
+      summary: Read one retained de-identified guest-trial analytics row.
+      operationId: guest_trials_v2_session_detail
+      security:
+        - cookieSession: []
+      parameters:
+        - name: analytics_id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^gtrial_[A-Za-z0-9_-]+$'
+      responses:
+        '200':
+          description: Standard API envelope carrying one analytics-only row.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailEnvelope'
+        '404':
+          description: The row is absent or outside the raw retention window.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '401':
+          description: Standard error envelope for an unauthenticated request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          description: Standard error envelope for an authenticated non-Admin request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  # Cleanup is idempotent and uses fixed server retention; callers cannot choose paths or cutoffs.
+  /admin/guest-trials/cleanup:
+    post:
+      summary: Apply the fixed thirty-day raw and thirteen-month aggregate retention policy.
+      operationId: guest_trials_v2_cleanup
+      security:
+        - cookieSession: []
+      responses:
+        '200':
+          description: Standard API envelope carrying identifier-free cleanup counts.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CleanupEnvelope'
+        '401':
+          description: Standard error envelope for an unauthenticated request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          description: Standard error envelope for an authenticated non-Admin request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+components:
+  securitySchemes:
+    cookieSession:
+      type: apiKey
+      in: cookie
+      name: casino_session
+  parameters:
+    LocaleFilter:
+      name: locale
+      in: query
+      required: false
+      schema:
+        type: string
+        enum: [en-US, ru-RU]
+    DeviceFilter:
+      name: device
+      in: query
+      required: false
+      schema:
+        type: string
+        enum: [desktop, tablet, mobile, unknown]
+    StatusFilter:
+      name: status
+      in: query
+      required: false
+      schema:
+        type: string
+        enum: [active, ended, expired]
+    GameFilter:
+      name: game
+      in: query
+      required: false
+      schema:
+        type: string
+        pattern: '^[a-z0-9_-]{1,64}$'
+    CompletedFilter:
+      name: completed
+      in: query
+      required: false
+      schema:
+        type: string
+        enum: [yes, no]
+    ErrorCategoryFilter:
+      name: error_category
+      in: query
+      required: false
+      schema:
+        $ref: '#/components/schemas/ErrorCategory'
+    SinceFilter:
+      name: since
+      in: query
+      required: false
+      schema:
+        type: string
+        format: date-time
+    UntilFilter:
+      name: until
+      in: query
+      required: false
+      schema:
+        type: string
+        format: date-time
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 25
+  schemas:
+    ErrorCategory:
+      type: string
+      enum: [VALIDATION_ERROR, INSUFFICIENT_FUNDS, CONFLICT, FORBIDDEN, NOT_FOUND, RATE_LIMITED, SERVER_ERROR]
+    LatencyBucket:
+      type: string
+      enum: [under_100ms, 100_499ms, 500_1999ms, 2000ms_plus]
+    CategoryCounts:
+      type: object
+      additionalProperties:
+        type: integer
+        minimum: 0
+    Milestones:
+      type: object
+      additionalProperties: false
+      required: [landing_viewed, trial_started, lobby_reached, first_game_opened, first_action_accepted, first_round_completed, second_game_opened, trial_terminal, account_cta_viewed, account_cta_selected]
+      properties:
+        landing_viewed: { type: boolean }
+        trial_started: { type: boolean }
+        lobby_reached: { type: boolean }
+        first_game_opened: { type: boolean }
+        first_action_accepted: { type: boolean }
+        first_round_completed: { type: boolean }
+        second_game_opened: { type: boolean }
+        trial_terminal: { type: boolean }
+        account_cta_viewed: { type: boolean }
+        account_cta_selected: { type: boolean }
+    TimelineEvent:
+      type: object
+      additionalProperties: false
+      required: [at, event]
+      properties:
+        at:
+          type: string
+          format: date-time
+        event:
+          type: string
+          enum: [trial_started, activity, lobby_reached, game_open, game_action, game_error, round_started, round_completed, account_cta_viewed, account_cta_selected, trial_terminal]
+        game:
+          type: string
+          pattern: '^[a-z0-9_-]{1,64}$'
+        action_category:
+          type: string
+          maxLength: 32
+        error_category:
+          $ref: '#/components/schemas/ErrorCategory'
+        latency_bucket:
+          $ref: '#/components/schemas/LatencyBucket'
+        reason:
+          type: string
+          enum: [ended, expired, inactive, browser_closed, revoked]
+    GameCounters:
+      type: object
+      additionalProperties: false
+      required: [opens, actions, rounds_started, rounds_completed, rounds_abandoned, errors, wagered, returned, net, first_action_ms, action_categories, error_categories, latency_buckets]
+      properties:
+        opens:
+          type: integer
+          minimum: 0
+        actions:
+          type: integer
+          minimum: 0
+        rounds_started:
+          type: integer
+          minimum: 0
+        rounds_completed:
+          type: integer
+          minimum: 0
+        rounds_abandoned:
+          type: integer
+          minimum: 0
+        errors:
+          type: integer
+          minimum: 0
+        wagered:
+          type: number
+          minimum: 0
+        returned:
+          type: number
+          minimum: 0
+        net:
+          type: number
+        first_action_ms:
+          type: integer
+          minimum: 0
+          nullable: true
+        action_categories:
+          $ref: '#/components/schemas/CategoryCounts'
+        error_categories:
+          $ref: '#/components/schemas/CategoryCounts'
+        latency_buckets:
+          $ref: '#/components/schemas/CategoryCounts'
+    TrialRow:
+      type: object
+      additionalProperties: false
+      required: [analytics_id, started_at, last_event_at, locale, device, entry_surface, starting_balance, ending_balance, engaged, rounds_started, rounds_completed, rounds_abandoned, actions, errors, wagered, returned, net, error_categories, latency_buckets, milestones, games, events]
+      properties:
+        analytics_id:
+          type: string
+          pattern: '^gtrial_[A-Za-z0-9_-]+$'
+        started_at:
+          type: string
+          format: date-time
+        last_event_at:
+          type: string
+          format: date-time
+        ended_at:
+          type: string
+          format: date-time
+          nullable: true
+        end_reason:
+          type: string
+          enum: [ended, expired, inactive, browser_closed, revoked]
+          nullable: true
+        duration_seconds:
+          type: integer
+          minimum: 0
+          nullable: true
+        locale:
+          type: string
+          enum: [en-US, ru-RU]
+        device:
+          type: string
+          enum: [desktop, tablet, mobile, unknown]
+        entry_surface:
+          type: string
+          enum: [auth]
+        starting_balance:
+          type: number
+          minimum: 0
+        ending_balance:
+          type: number
+          minimum: 0
+          nullable: true
+        engaged:
+          type: boolean
+        rounds_started:
+          type: integer
+          minimum: 0
+        rounds_completed:
+          type: integer
+          minimum: 0
+        rounds_abandoned:
+          type: integer
+          minimum: 0
+        actions:
+          type: integer
+          minimum: 0
+        errors:
+          type: integer
+          minimum: 0
+        wagered:
+          type: number
+          minimum: 0
+        returned:
+          type: number
+          minimum: 0
+        net:
+          type: number
+        error_categories:
+          $ref: '#/components/schemas/CategoryCounts'
+        latency_buckets:
+          $ref: '#/components/schemas/CategoryCounts'
+        milestones:
+          $ref: '#/components/schemas/Milestones'
+        games:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/GameCounters'
+        events:
+          type: array
+          maxItems: 80
+          items:
+            $ref: '#/components/schemas/TimelineEvent'
+    Funnel:
+      type: object
+      additionalProperties: false
+      required: [landing_viewed, trial_started, lobby_reached, first_game_opened, first_action_accepted, first_round_completed, second_game_opened, trial_terminal, account_cta_viewed, account_cta_selected, started, engaged, completed_round]
+      properties:
+        landing_viewed: { type: integer, minimum: 0 }
+        trial_started: { type: integer, minimum: 0 }
+        lobby_reached: { type: integer, minimum: 0 }
+        first_game_opened: { type: integer, minimum: 0 }
+        first_action_accepted: { type: integer, minimum: 0 }
+        first_round_completed: { type: integer, minimum: 0 }
+        second_game_opened: { type: integer, minimum: 0 }
+        trial_terminal: { type: integer, minimum: 0 }
+        account_cta_viewed: { type: integer, minimum: 0 }
+        account_cta_selected: { type: integer, minimum: 0 }
+        started:
+          type: integer
+          minimum: 0
+        engaged:
+          type: integer
+          minimum: 0
+        completed_round:
+          type: integer
+          minimum: 0
+    FunnelRates:
+      type: object
+      additionalProperties:
+        type: number
+        minimum: 0
+        maximum: 100
+    ProductMetrics:
+      type: object
+      additionalProperties: false
+      required: [average_duration_seconds, median_duration_seconds, average_games_per_trial, average_rounds_per_trial, error_free_rate_percent, request_count, wagered, returned, net, fake_tokens_only]
+      properties:
+        average_duration_seconds: { type: number, minimum: 0 }
+        median_duration_seconds: { type: number, minimum: 0 }
+        average_games_per_trial: { type: number, minimum: 0 }
+        average_rounds_per_trial: { type: number, minimum: 0 }
+        error_free_rate_percent: { type: number, minimum: 0, maximum: 100 }
+        request_count: { type: integer, minimum: 0 }
+        wagered: { type: number, minimum: 0 }
+        returned: { type: number, minimum: 0 }
+        net: { type: number }
+        fake_tokens_only: { type: boolean, enum: [true] }
+    GameSummary:
+      type: object
+      additionalProperties: false
+      required: [game, trials, opens, actions, rounds_started, rounds_completed, rounds_abandoned, errors, wagered, returned, net, median_first_action_ms, action_categories, error_categories, latency_buckets, locale_errors, device_errors]
+      properties:
+        game:
+          type: string
+        trials:
+          type: integer
+          minimum: 0
+        opens:
+          type: integer
+          minimum: 0
+        actions:
+          type: integer
+          minimum: 0
+        rounds_started:
+          type: integer
+          minimum: 0
+        rounds_completed:
+          type: integer
+          minimum: 0
+        rounds_abandoned:
+          type: integer
+          minimum: 0
+        errors:
+          type: integer
+          minimum: 0
+        wagered:
+          type: number
+          minimum: 0
+        returned:
+          type: number
+          minimum: 0
+        net:
+          type: number
+        median_first_action_ms:
+          type: number
+          minimum: 0
+        action_categories:
+          $ref: '#/components/schemas/CategoryCounts'
+        error_categories:
+          $ref: '#/components/schemas/CategoryCounts'
+        latency_buckets:
+          $ref: '#/components/schemas/CategoryCounts'
+        locale_errors:
+          $ref: '#/components/schemas/CategoryCounts'
+        device_errors:
+          $ref: '#/components/schemas/CategoryCounts'
+    CleanupStatus:
+      type: object
+      additionalProperties: false
+      required: [raw_retention_days, aggregate_retention_days]
+      properties:
+        last_success_at:
+          type: string
+          format: date-time
+          nullable: true
+        last_failure_at:
+          type: string
+          format: date-time
+          nullable: true
+        last_error:
+          type: string
+          enum: [cleanup_failed]
+          nullable: true
+        raw_retention_days:
+          type: integer
+          enum: [30]
+        aggregate_retention_days:
+          type: integer
+          enum: [400]
+    FilterEcho:
+      type: object
+      additionalProperties: false
+      required: [locale, device, status, game, completed, error_category, since, until]
+      properties:
+        locale: { type: string }
+        device: { type: string }
+        status: { type: string }
+        game: { type: string }
+        completed: { type: string }
+        error_category: { type: string }
+        since: { type: string }
+        until: { type: string }
+    SummaryData:
+      type: object
+      required: [guest_trials]
+      properties:
+        guest_trials:
+          type: object
+          required: [started_total, active_now, ended_total, expired_total, active_window_seconds, funnel, funnel_rates, metrics, games, recent, daily, cleanup, filters]
+          properties:
+            started_total:
+              type: integer
+            active_now:
+              type: integer
+            ended_total:
+              type: integer
+            expired_total:
+              type: integer
+            active_window_seconds:
+              type: integer
+            funnel:
+              $ref: '#/components/schemas/Funnel'
+            funnel_rates:
+              $ref: '#/components/schemas/FunnelRates'
+            metrics:
+              $ref: '#/components/schemas/ProductMetrics'
+            games:
+              type: array
+              items:
+                $ref: '#/components/schemas/GameSummary'
+            recent:
+              type: array
+              items:
+                $ref: '#/components/schemas/TrialRow'
+            daily:
+              type: array
+              items:
+                type: object
+            cleanup:
+              $ref: '#/components/schemas/CleanupStatus'
+            filters:
+              $ref: '#/components/schemas/FilterEcho'
+    SummaryEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/SummaryData'
+    SessionsEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          required: [sessions, filters]
+          properties:
+            sessions:
+              type: array
+              items:
+                $ref: '#/components/schemas/TrialRow'
+            filters:
+              $ref: '#/components/schemas/FilterEcho'
+    DetailEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          required: [guest_trial]
+          properties:
+            guest_trial:
+              $ref: '#/components/schemas/TrialRow'
+    CleanupEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          required: [cleanup]
+          properties:
+            cleanup:
+              type: object
+              required: [raw_removed, aggregate_removed, completed_at]
+              properties:
+                raw_removed:
+                  type: integer
+                  minimum: 0
+                aggregate_removed:
+                  type: integer
+                  minimum: 0
+                completed_at:
+                  type: string
+                  format: date-time
+    ErrorEnvelope:
+      type: object
+      required: [ok, error]
+      properties:
+        ok:
+          type: boolean
+          enum: [false]
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string

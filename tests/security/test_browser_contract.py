@@ -1,4 +1,4 @@
-"""Browser-client CSRF contract wrapper for TEST-047."""
+"""Browser-client CSRF and guest context-proof contract wrapper for TEST-047 and TEST-080."""
 
 # Import executable discovery for local and CI Node runtimes.
 import shutil
@@ -16,7 +16,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[2]
 # Validate browser request-integrity behavior through the tracked JavaScript helper.
 class BrowserSecurityContractTests(unittest.TestCase):
     # Send state-changing and read-only requests through the real API module.
-    def test_browser_helper_attaches_only_csrf_proof(self):
+    def test_browser_helper_attaches_only_scoped_integrity_proofs(self):
         # Discover Node from PATH before considering the bundled Windows runtime.
         node = shutil.which("node")
         # Resolve the bundled runtime used by the desktop workspace when PATH is minimal.

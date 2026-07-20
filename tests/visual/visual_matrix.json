@@ -89,6 +89,10 @@
       "states": [
         "login",
         "guest",
+        "guest_terms_unaccepted",
+        "guest_terms_accepted",
+        "guest_disclosure",
+        "guest_trial_ended",
         "restricted_preview",
         "oauth_providers_disabled",
         "terms_required",
@@ -127,7 +131,13 @@
         "search_filtered",
         "category_filtered",
         "admin_nav_hidden_player",
-        "admin_nav_visible_admin"
+        "admin_nav_visible_admin",
+        "guest_trial_active",
+        "guest_trial_expiry_warning",
+        "guest_trial_top_up_unavailable",
+        "guest_trial_same_context_refresh",
+        "guest_trial_reduced_motion",
+        "guest_trial_zoom_200"
       ],
       "locales": [
         "en-US",
@@ -454,6 +464,21 @@
         "dashboard",
         "players_and_bots",
         "users",
+        "guest_trials_empty",
+        "guest_trials_loading",
+        "guest_trials_error",
+        "guest_trials_funnel",
+        "guest_trials_nine_stage_funnel",
+        "guest_trials_metrics",
+        "guest_trials_fake_tokens",
+        "guest_trials_games",
+        "guest_trials_filters",
+        "guest_trials_detail",
+        "guest_trials_timeline",
+        "guest_trials_cleanup_status",
+        "guest_trials_keyboard_scroll",
+        "guest_trials_reduced_motion",
+        "guest_trials_zoom_200",
         "language",
         "test_results",
         "operations_oauth_disabled",
@@ -468,7 +493,8 @@
       "viewports": [
         "desktop_primary",
         "desktop_compact",
-        "tablet"
+        "tablet",
+        "mobile"
       ],
       "gates": [
         "VIS-COPY-001",

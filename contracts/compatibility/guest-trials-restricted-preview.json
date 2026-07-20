@@ -1,0 +1,60 @@
+{
+  "artifact": "guest-trials-restricted-preview",
+  "version": 2,
+  "stage": "restricted-preview",
+  "public_launch_authorized": false,
+  "principal": {
+    "role": "guest",
+    "admin": false,
+    "credentials": false,
+    "recovery": false,
+    "registered_account_conversion": false
+  },
+  "entry": {
+    "terms_version": "private-beta-1",
+    "explicit_acceptance_required": true,
+    "starting_play_tokens": 5000,
+    "cash_value": false,
+    "max_active_principals": 100,
+    "max_game_actions_per_session": 1000,
+    "max_autoplay_rounds": 25,
+    "max_concurrent_autoplay_sessions": 1
+  },
+  "lifecycle": {
+    "inactivity_seconds": 1800,
+    "absolute_lifetime_seconds": 14400,
+    "browser_context_proof": "sessionStorage-only raw nonce; server stores SHA-256 digest",
+    "browser_close_recovery": false,
+    "same_context_reload": true,
+    "explicit_end_irreversible": true,
+    "wallet_revoked_on_end": true,
+    "autoplay_stopped_on_end": true
+  },
+  "wallet": {
+    "starting_play_tokens_fixed": 5000,
+    "add_tokens_allowed": false,
+    "purchase_allowed": false,
+    "deposit_allowed": false,
+    "transfer_allowed": false,
+    "recovery_allowed": false
+  },
+  "admin_telemetry": {
+    "admin_only": true,
+    "raw_retention_days": 30,
+    "aggregate_retention_days": 400,
+    "cleanup_failure_visible": true,
+    "allowed_dimensions": ["analytics_id", "locale", "device", "game", "lifecycle_reason", "timestamps", "milestones", "action_category", "error_category", "latency_bucket", "fake_token_aggregates", "aggregate_counters"],
+    "funnel_stages": ["landing_viewed", "trial_started", "lobby_reached", "first_game_opened", "first_action_accepted", "first_round_completed", "second_game_opened", "trial_terminal", "account_cta_viewed", "account_cta_selected"],
+    "filters": ["since", "until", "status", "game", "locale", "device", "completed", "error_category", "limit"],
+    "timeline_event_limit": 80,
+    "responsive_error_cohort_minimum": 5,
+    "fake_tokens_only": true,
+    "export_allowed": false,
+    "forbidden_fields": ["auth_token", "browser_nonce", "csrf_token", "email", "ip", "player_id", "session_id", "user_id", "user_agent"]
+  },
+  "compatibility": {
+    "api_v1_frozen": true,
+    "guest_auth_contract": "contracts/openapi/auth.v2.yaml",
+    "guest_admin_contract": "contracts/openapi/guest-trials.v2.yaml"
+  }
+}

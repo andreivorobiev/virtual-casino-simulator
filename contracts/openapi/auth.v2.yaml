@@ -6,6 +6,90 @@ info:
 servers:
   - url: /api/v2
 paths:
+  # Guest entry is repository-only restricted-preview behavior and does not authorize public launch.
+  /auth/guest:
+    post:
+      summary: Create a disposable account-free guest trial after explicit current-version terms acceptance.
+      operationId: auth_v2_guest_create
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GuestTrialRequest'
+      responses:
+        '200':
+          description: Standard API envelope carrying the guest principal and one-time browser-context proof.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GuestAuthEnvelope'
+        '400':
+          description: Current guest-trial terms were not explicitly accepted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          description: Guest trials are disabled or the bounded guest capacity is full.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /auth/guest/end:
+    post:
+      summary: Irreversibly end the authenticated guest trial and revoke resumable state.
+      operationId: auth_v2_guest_end
+      security:
+        - cookieSession: []
+      parameters:
+        - $ref: '#/components/parameters/GuestBrowserNonce'
+      responses:
+        '200':
+          description: Standard API envelope confirming irreversible guest teardown.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GuestLifecycleEnvelope'
+        '401':
+          description: Guest credential or browser-context proof is absent, expired, or not resumable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          description: The authenticated principal is not a guest trial.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /auth/guest/depart:
+    post:
+      summary: Record a best-effort guest page departure while allowing same-context reload.
+      operationId: auth_v2_guest_depart
+      security:
+        - cookieSession: []
+      parameters:
+        - $ref: '#/components/parameters/GuestBrowserNonce'
+      responses:
+        '200':
+          description: Standard API envelope confirming the lifecycle marker.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GuestLifecycleEnvelope'
+        '401':
+          description: Guest credential or browser-context proof is absent, expired, or not resumable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          description: The authenticated principal is not a guest trial.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
   /admin/oauth/providers:
     get:
       summary: Inspect disabled OAuth provider configuration through the Admin role gate.
@@ -126,7 +210,8 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
   /me/tokens/add:
     post:
-      summary: Request a ledger-backed play-token credit for the authenticated user's bound player.
+      summary: Request a ledger-backed play-token credit for an authenticated registered user's bound player.
+      description: Guest-trial principals are forbidden because their disposable 5,000-token grant cannot be increased, purchased, deposited, transferred, or restored.
       operationId: auth_v2_add_current_user_tokens
       security:
         - cookieSession: []
@@ -143,13 +228,45 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlayerEnvelope'
+        '403':
+          description: Guest-trial principals cannot increase their temporary wallet balance.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
 components:
+  parameters:
+    GuestBrowserNonce:
+      name: X-Guest-Browser-Nonce
+      in: header
+      required: true
+      description: One-time browser-context proof kept only in sessionStorage and required with a guest cookie.
+      schema:
+        type: string
+        minLength: 32
   securitySchemes:
     cookieSession:
       type: apiKey
       in: cookie
       name: casino_session
   schemas:
+    GuestTrialRequest:
+      type: object
+      required: [accepted, terms_version, locale, device]
+      additionalProperties: false
+      properties:
+        accepted:
+          type: boolean
+          enum: [true]
+        terms_version:
+          type: string
+          enum: [private-beta-1]
+        locale:
+          type: string
+          enum: [en-US, ru-RU]
+        device:
+          type: string
+          enum: [desktop, tablet, mobile, unknown]
     LoginRequest:
       type: object
       required: [username, password]
@@ -189,6 +306,16 @@ components:
           $ref: '#/components/schemas/SessionSummary'
         terms:
           $ref: '#/components/schemas/TermsStatus'
+    GuestCurrentUser:
+      allOf:
+        - $ref: '#/components/schemas/CurrentUser'
+        - type: object
+          required: [guest_browser_nonce]
+          properties:
+            guest_browser_nonce:
+              type: string
+              minLength: 32
+              description: Returned once at creation and never persisted by the server in recoverable form.
     OAuthProviderDiagnostic:
       type: object
       required: [provider, flow, status, configuration_ready, runtime_available, enabled_requested, client_id_configured, client_secret_configured, callback_url, missing_variables, problems]
@@ -305,6 +432,32 @@ components:
           enum: [true]
         data:
           $ref: '#/components/schemas/CurrentUser'
+    GuestAuthEnvelope:
+      type: object
+      required: [ok, data]
+      additionalProperties: false
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/GuestCurrentUser'
+    GuestLifecycleEnvelope:
+      type: object
+      required: [ok, data]
+      additionalProperties: false
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          additionalProperties: false
+          properties:
+            ended:
+              type: boolean
+            departed:
+              type: boolean
     CurrentUserEnvelope:
       type: object
       required: [ok, data]

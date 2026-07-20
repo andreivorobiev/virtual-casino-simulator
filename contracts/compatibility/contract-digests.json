@@ -1,7 +1,7 @@
 {
   "contracts/openapi/admin-users.v2.yaml": "fdb52a0bea081d964c32689a1f788ab3d6fe9ad4f9badca5a7114c3bcd885b56",
   "contracts/openapi/admin.v1.yaml": "bb85dc4742cca424fb0c83cedb99f969395fe08e28fe72330a6fcc89d065de24",
-  "contracts/openapi/auth.v2.yaml": "c700c2cd544efa1a69a93a0df2c3edaeb946728d5548af3c5f9619e2831ec8f4",
+  "contracts/openapi/auth.v2.yaml": "e2013268eb18e86ad43dc0c3c5ecb5f99dd5944334eacfa1fe238b348a88af9c",
   "contracts/openapi/autoplay.v1.yaml": "435d7bf8d4a278e6b56634695f8fcfcb9648f1d8b7297c942ebc6c5c97c0d552",
   "contracts/openapi/baccarat.v1.yaml": "738da72771628936fb2305331a01b810befbd26413f38d8901036cac4f372b48",
   "contracts/openapi/bingo.v1.yaml": "eb402f2638437453ec48fb1a46aaa27c503e4f23063d28226af2fcf14c74a917",
@@ -12,6 +12,7 @@
   "contracts/openapi/casino.v1.yaml": "3f47a6f4a0274837aa0d3ddcc79b96b6640fc3c1a37dd84cc2b1ef10fbb1fd85",
   "contracts/openapi/dragon_tiger.v1.yaml": "c520a70fe7c4235bec5456cceb8c286723cd9a9f81d21c7159e4542b7d082300",
   "contracts/openapi/hi_lo.v1.yaml": "7bc59bd68c15ca048b408105f459514ec39ec7ce13bffe9ff6ed14069414820f",
+  "contracts/openapi/guest-trials.v2.yaml": "8a03a5b60dcf630e7bab6dcefe03d1a79ff89ccb6531a278f6d66550f6b831f0",
   "contracts/openapi/three_card_poker.v1.yaml": "3ce7261f139361fbedd226f0527e31d9dfff03cbb6e028d75081a6b6ee400ec2",
   "contracts/openapi/jacks_or_better_video_poker.v1.yaml": "f6923416af4171254677872ac8b6cd884981b245913b2c4ac7f090ed1f0ca3c1",
   "contracts/openapi/deuces_wild_video_poker.v1.yaml": "24e9afc2c7e726e11e6d2ab630516d9ce378473cf183662eedf3c4dfcb77423c",

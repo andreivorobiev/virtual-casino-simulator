@@ -56,6 +56,22 @@ SCHEMA_VERSION = "v9_1"
 AUTH_SESSION_COOKIE = "casino_session"
 # Set AUTH_SESSION_TTL_SECONDS to the value needed for the next operation.
 AUTH_SESSION_TTL_SECONDS = int(os.environ.get("CASINO_SESSION_TTL_SECONDS", "86400"))
+# Enable the account-free disposable guest trial entry within the restricted-preview boundary; configuration-driven per owner-approved #317.
+GUEST_TRIALS_ENABLED = os.environ.get("CASINO_GUEST_TRIALS_ENABLED", "true").strip().lower() in ("1", "true", "yes", "on")
+# Grant each new guest trial this many free, non-cashable play tokens.
+GUEST_STARTING_BALANCE = float(os.environ.get("CASINO_GUEST_STARTING_BALANCE", "5000"))
+# End a guest trial after this many seconds without a server-observed action.
+GUEST_INACTIVITY_SECONDS = int(os.environ.get("CASINO_GUEST_INACTIVITY_SECONDS", "1800"))
+# Cap the absolute lifetime of any guest trial regardless of activity.
+GUEST_LIFETIME_SECONDS = int(os.environ.get("CASINO_GUEST_LIFETIME_SECONDS", "14400"))
+# Bound simultaneous disposable principals so anonymous entry cannot exhaust preview storage.
+GUEST_MAX_ACTIVE = int(os.environ.get("CASINO_GUEST_MAX_ACTIVE", "100"))
+# Bound accepted game mutations in one disposable session so anonymous traffic cannot grow state indefinitely.
+GUEST_MAX_ACTIONS = int(os.environ.get("CASINO_GUEST_MAX_ACTIONS", "1000"))
+# Bound one guest autoplay registration to a conservative number of rounds.
+GUEST_AUTOPLAY_MAX_ROUNDS = int(os.environ.get("CASINO_GUEST_AUTOPLAY_MAX_ROUNDS", "25"))
+# Publish the exact private-preview terms revision a guest must explicitly accept before creation.
+GUEST_TERMS_VERSION = os.environ.get("CASINO_GUEST_TERMS_VERSION", "private-beta-1").strip()
 # Preserve the developer-only bootstrap email so public startup can reject the local identity default.
 LOCAL_BOOTSTRAP_ADMIN_EMAIL = "admin@example.local"
 # Preserve only a digest of the developer credential so validation never needs another plaintext copy.
