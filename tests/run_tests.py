@@ -5068,7 +5068,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Capture the exact wager POST triggered by activating this cell.
                         with page.expect_request(lambda request: request.url.endswith('/api/v1/games/roulette/bets') and request.method=='POST', timeout=5000) as request_info:
                             # Activate the cell through Playwright's real actionability-checked pointer path. (issue #348)
-                            page.locator(selector).click()
+                            page.get_by_test_id('roulette-table').locator(selector).click()
                         # Read the posted bet body for identity verification.
                         body=request_info.value.post_data_json
                         # Require the posted bet type to match the clicked cell's canonical type.
