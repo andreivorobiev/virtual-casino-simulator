@@ -4051,8 +4051,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.get_by_test_id('nav-casino_holdem').click(); page.get_by_test_id('casino-holdem').wait_for(timeout=5000)
                     # Enumerate all governed viewport dimensions.
                     required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
-                    # Load exact UTF-8 title expectations from the paired canonical resource files.
-                    expected_titles={locale:read_i18n_json(ROOT/'web'/'i18n'/locale/'games'/'casino_holdem.json')['title'] for locale in ('en-US','ru-RU')}
+                    # Load exact UTF-8 copy expectations from the paired canonical resource files.
+                    holdem_resources={locale:read_i18n_json(ROOT/'web'/'i18n'/locale/'games'/'casino_holdem.json') for locale in ('en-US','ru-RU')}
                     # Capture one mounted state across both locales and every viewport.
                     def localized_evidence(prefix,states):
                         # Iterate through paired English and Russian game resources.
@@ -4060,13 +4060,17 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             # Switch locale without discarding the active decision or settled history.
                             page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_timeout(100)
                             # Require the localized title rather than a fallback key or English leakage.
-                            assert page.locator('.choldem-header h1').inner_text()==expected_titles[locale]
+                            assert page.locator('.choldem-header h1').inner_text()==holdem_resources[locale]['title']
+                            # Read all ten rendered schedule rows after the locale rerender. (issue #253)
+                            paytable=page.get_by_test_id('choldem-paytable'); paytable_labels=paytable.locator('li span').all_inner_texts(); paytable_odds=paytable.locator('li strong').all_inner_texts()
+                            # Require the localized title, strongest and weakest labels, complete row count, and server-derived net odds.
+                            assert paytable.locator('h2').inner_text()==holdem_resources[locale]['paytable.title'] and len(paytable_labels)==10 and len(paytable_odds)==10 and paytable_labels[0]==holdem_resources[locale]['ranksMade.royal_flush'] and paytable_odds[0]=='100:1' and paytable_labels[-1]==holdem_resources[locale]['ranksMade.high_card'] and paytable_odds[-1]=='1:1'
                             # Validate containment and capture after-pass evidence at every viewport.
                             for viewport_id,width,height in required_viewports:
                                 # Resize to the exact visual matrix dimensions.
                                 page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
                                 # Reject horizontal overflow and require the mounted community-card table.
-                                assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.get_by_test_id('casino-holdem').is_visible()
+                                assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.get_by_test_id('casino-holdem').is_visible() and paytable.is_visible()
                                 # Record self-describing evidence for this state and viewport.
                                 game_evidence(f'after-pass-casino-holdem-{prefix}-{locale.lower()}-{viewport_id}.png','casino_holdem',states,locale,viewport_id)
                         # Restore English desktop controls for the next public action.
@@ -4086,7 +4090,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Return to the lobby for downstream browser cases.
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Execute the integrated Casino Hold'em browser and visual gate.
-                run_case('BR-CH-001',['CH-001','CH-002','CH-004','CH-005'],casino_holdem_acceptance)
+                run_case('BR-CH-001',['CH-001','CH-002','CH-004','CH-005','CH-006','TEST-084'],casino_holdem_acceptance)
                 # Define real-backend Joker Poker localization, hold, draw, responsive, motion, and route acceptance.
                 def joker_poker_acceptance():
                     # Open the catalog-owned route and wait for the stable game selector.

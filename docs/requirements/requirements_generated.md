@@ -42,11 +42,11 @@ Historical source baseline: 9.1.0
 - acey_deucey: 1.0.1
 - caribbean_stud: 1.0.1
 - let_it_ride: 1.0.0
-- casino_holdem: 1.0.0
+- casino_holdem: 1.0.1
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.45.9
-- docs: 1.45.9
+- tests: 1.45.10
+- docs: 1.45.10
 - contracts: 1.33.0
 - tooling: 1.14.0
 - commenting_policy: 1.0.0
@@ -696,3 +696,5 @@ Historical source baseline: 9.1.0
 - **TEST-082** (Tests) - PASS: Browser evidence audits all 38 straight pockets, all six FAST BETS shortcuts including a repeat click, all six grid outside cells, every dozen and column cell, one representative of every inside/special marker type, and all eight racetrack/call controls; direct targets must add exactly one correctly labeled row, call controls must match every authoritative response component, and each audited group must finish with a clean refunded slip.
 - **KENO-025** (Keno) - PASS: All 80 Keno number cells, including every outer row and column, keep their borders, numerals, keyboard focus rings, selection outlines, and drawn, caught, latest, and disabled treatments visible inside the board scroll region at every governed viewport.
 - **TEST-078** (Tests) - PASS: Browser geometry and after-pass evidence in English and Russian at 1920x1080, 1440x900, 1024x900, and 390x844 verifies corner-cell containment, keyboard focus visibility and reveal, idle, selected, final-draw, caught, latest, and disabled treatments, minimum touch targets, and no page-level horizontal overflow.
+- **CH-006** (Casino Hold'em) - PASS: The Casino Hold'em data rail displays the server-owned ante payout schedule (royal flush 100:1 through the even-money band at 1:1) in both en-US and ru-RU, sourced from the published ante_return_multipliers rules payload rather than duplicated client constants.
+- **TEST-084** (Tests) - PASS: Browser evidence verifies in English and Russian at all four governed viewports that the Casino Hold'em data rail shows all ten server-published ante payout rows, including the strongest royal-flush 100:1 and weakest high-card 1:1 net returns, before the first ante-backed deal and throughout governed play states.
