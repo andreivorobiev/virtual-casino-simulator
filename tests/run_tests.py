@@ -32,8 +32,8 @@ from casino.core import guest_analytics
 from casino import config as casino_config
 # Import the shared resolver so session precedence is tested independently of individual game APIs.
 from casino.core.request_player import resolve_authenticated_player
-# Import the isolated game-state writer for deterministic rendered Blackjack settlement setup.
-from casino.core.state_store import save_player_game_state
+# Import isolated state writers for deterministic game and Guest Trials browser setup.
+from casino.core.state_store import save_player_game_state, write_json
 # Import stable public error classes for focused guest authorization assertions.
 from casino.errors import ForbiddenError, RateLimitError, UnauthorizedError, ValidationError
 # Import storage tests so provider parity can run without the broad API suite.
@@ -6406,7 +6406,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Snapshot the test runtime telemetry so empty-state evidence can remain isolated and reversible.
                     original_analytics=guest_analytics.read_json(guest_analytics.TRIALS_PATH,guest_analytics.default_trials)
                     # Start with the canonical empty document for exact empty, loading, and error evidence.
-                    guest_analytics.write_json(guest_analytics.TRIALS_PATH,guest_analytics.default_trials())
+                    write_json(guest_analytics.TRIALS_PATH,guest_analytics.default_trials())
                     # Track seeded principals for canonical teardown after populated-state evidence.
                     seeded_guests=[]
                     # Start protected Admin verification so seeded principals always end.
@@ -6559,7 +6559,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Revoke each disposable identity and wallet through canonical lifecycle teardown.
                         for seeded_guest in seeded_guests: auth_core.end_guest_trial(seeded_guest['user'],'revoked')
                         # Restore the exact pre-test de-identified telemetry document after every success or failure.
-                        guest_analytics.write_json(guest_analytics.TRIALS_PATH,original_analytics)
+                        write_json(guest_analytics.TRIALS_PATH,original_analytics)
                 # Execute the de-identified Guest Trials Admin regression.
                 run_case('BR-ADMIN-GUEST-001',['GUEST-003','GUEST-004','GUEST-005','TEST-081'],admin_guest_trials_browser)
                 # Execute this statement as part of the module's documented control flow.
