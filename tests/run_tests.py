@@ -4773,6 +4773,42 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 slots_evidence_text=page.get_by_test_id('slots-premium').inner_text()
                 # Verify the after-pass game evidence contains user-facing copy rather than internal resource identifiers.
                 assert 'controls.' not in slots_evidence_text and 'status.' not in slots_evidence_text and 'slots.' not in slots_evidence_text
+                # Define the cross-formatter, localized, responsive play-token label acceptance case. (issue #286)
+                def labeled_play_token_amounts():
+                    # Read all governed dimensions from the authoritative visual matrix instead of duplicating them.
+                    money_viewports={entry['id']:{'width':entry['width'],'height':entry['height']} for entry in visual_matrix['viewports']}
+                    # Require the matrix to expose the complete issue-mandated desktop, tablet, and mobile set.
+                    assert set(money_viewports)=={'desktop_primary','desktop_compact','tablet','mobile'}
+                    # Bind each governed locale to the full play-token terminology required by the visual standard.
+                    localized_units={'en-US':'play tokens','ru-RU':'игровых токенов'}
+                    # Exercise the shared formatters and the real Slots surface in both governed locales.
+                    for locale,expected_unit in localized_units.items():
+                        # Switch through the player-visible shell control so the mounted Slots route follows the real locale path.
+                        page.get_by_test_id('shell-locale-select').select_option(locale)
+                        # Wait for the shared runtime and the visible round-cost amount to finish rerendering.
+                        page.wait_for_function("expected => window.CasinoI18n?.getLocaleState().locale === expected.locale && document.querySelector('[data-testid=\"slots-round-cost\"]')?.textContent.trim().endsWith(expected.unit)",arg={'locale':locale,'unit':expected_unit})
+                        # Invoke both public shared helpers through their browser module boundary at the active locale.
+                        formatter_values=page.evaluate("""async () => { const i18n=await import('/core/i18n.js'); const ui=await import('/core/ui.js'); return {formatMoney:i18n.formatMoney(1234.5),money:ui.money(1234.5)}; }""")
+                        # Require both helpers to preserve the decorative diamond while adding the exact full localized label.
+                        assert all(value.startswith('◈') and value.endswith(f' {expected_unit}') for value in formatter_values.values()), formatter_values
+                        # Prevent either locale from accepting the other locale's wording by coincidence.
+                        assert ('play tokens' not in ' '.join(formatter_values.values())) if locale=='ru-RU' else ('игровых токенов' not in ' '.join(formatter_values.values()))
+                        # Exercise every governed viewport for responsive copy and geometry acceptance.
+                        for viewport_id,viewport in money_viewports.items():
+                            # Resize the real route and allow responsive layout and localized copy to settle.
+                            page.set_viewport_size(viewport); page.wait_for_timeout(150)
+                            # Audit leaf-level visible play-token amounts so parent container text cannot mask clipping.
+                            amount_diagnostics=page.evaluate("""expectedUnit => { const root=document.querySelector('[data-testid="slots-premium"]'); const nodes=[...root.querySelectorAll('*')].filter(element => [...element.childNodes].some(node => node.nodeType===Node.TEXT_NODE && node.textContent.includes('◈'))); const amounts=nodes.map(element => { const rect=element.getBoundingClientRect(); const style=getComputedStyle(element); return {text:element.textContent.trim(),left:rect.left,right:rect.right,width:rect.width,clientWidth:element.clientWidth,scrollWidth:element.scrollWidth,display:style.display,visibility:style.visibility,opacity:Number(style.opacity)}; }).filter(entry => entry.display!=='none' && entry.visibility!=='hidden' && entry.opacity>0 && entry.width>0); return {amounts,pageWidth:document.documentElement.scrollWidth,viewportWidth:innerWidth,allLabeled:amounts.every(entry => entry.text.endsWith(expectedUnit)),contained:amounts.every(entry => entry.left>=-1 && entry.right<=innerWidth+1 && entry.scrollWidth<=entry.clientWidth+1)}; }""",expected_unit)
+                            # Require at least one real amount and reject missing labels, element clipping, and page overflow.
+                            assert amount_diagnostics['amounts'] and amount_diagnostics['allLabeled'] and amount_diagnostics['contained'] and amount_diagnostics['pageWidth']<=amount_diagnostics['viewportWidth']+1, amount_diagnostics
+                            # Capture exact-head after-pass evidence for this locale and governed viewport.
+                            game_evidence(f'after-pass-labeled-money-slots-{locale.lower()}-{viewport_id}.png','slots',['idle','labeled_play_token_amounts'],locale,viewport_id)
+                    # Restore the default locale and primary desktop dimensions for the existing Slots regression sequence.
+                    page.get_by_test_id('shell-locale-select').select_option('en-US'); page.set_viewport_size(money_viewports['desktop_primary'])
+                    # Wait for the restored visible amount before handing the route to later Slots cases.
+                    page.wait_for_function("() => document.querySelector('[data-testid=\"slots-round-cost\"]')?.textContent.trim().endsWith('play tokens')")
+                # Execute the issue-mapped shared formatter and real Slots acceptance regression.
+                run_case('BR-MONEY-LABEL-001',['UX-017','TEST-086'],labeled_play_token_amounts)
                 # Store the idle cabinet box so spin/result states can be compared.
                 idle_box=page.get_by_test_id('slots-cabinet').bounding_box()
                 # Store the idle result box so the reserved payout region can be compared.

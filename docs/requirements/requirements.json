@@ -8901,6 +8901,39 @@
       "introduced_in": "issue-285-ru-footer-containment",
       "changed_in": "issue-285-ru-footer-containment",
       "notes": "Issue #285 exact-head footer proof is stored at logs/test-runs/after-pass-shell-status-footer-*.png with matching sidecars that record the accepted geometry for both locales at every governed viewport."
+    },
+    {
+      "id": "UX-017",
+      "module": "Application",
+      "description": "Every in-game play-token amount rendered by the shared money formatters includes a full localized unit label—play tokens in en-US and игровых токенов in ru-RU—while the diamond mark remains decorative and never solely carries the value's meaning.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-MONEY-LABEL-001"
+      ],
+      "implementation_files": [
+        "web/core/i18n.js",
+        "web/core/ui.js"
+      ],
+      "introduced_in": "issue-286-labeled-money",
+      "changed_in": "issue-286-labeled-money",
+      "notes": "Issue #286 applies the repository visual standard's play-token terminology to both shared in-game formatters without changing ledger values or settlement semantics."
+    },
+    {
+      "id": "TEST-086",
+      "module": "Tests",
+      "description": "Browser acceptance verifies both shared money formatters and real Slots amount surfaces use the full localized play-token label without clipping or page-level horizontal overflow in en-US and ru-RU at all four governed viewports.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-MONEY-LABEL-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-286-labeled-money",
+      "changed_in": "issue-286-labeled-money",
+      "notes": "Issue #286 exact-head proof is stored at logs/test-runs/after-pass-labeled-money-slots-*.png with matching VIS-EVIDENCE-001 sidecars for both locales at every governed viewport."
     }
   ]
 }
