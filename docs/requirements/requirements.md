@@ -31,14 +31,21 @@ This addendum records the durable planning requirements for GitHub epic #34 and 
 | TERMS | Private beta toy-simulator terms acceptance and terms status exposure. | TERMS-001 through TERMS-004 |
 | LIC | Apache-2.0 source licensing and no-real-money/no-redemption legal posture. | LIC-001 through LIC-003 |
 | TOKEN | Play-token terminology, v2 token language, ledger-backed add-token flows, and private balances. | TOKEN-001 through TOKEN-005 |
+| OTT | Inert purpose-bound one-time-token lifecycle, keyed data minimization, generic errors, and JSON/MySQL exactly-once persistence. | OTT-001 through OTT-002 |
 | API | Frozen v1 compatibility with additive v2 auth/current-user/Admin-user envelope contracts. | API-001 through API-002 |
 | TEST | Required auth, storage/MySQL, private-session, copied-deployment, deployment-default, catalog-driver, and action-idempotency validation. | TEST-037 through TEST-043 |
 
 ### Deployment-default hardening
 
-Loopback-only developer startup keeps its convenient local bootstrap behavior. Any non-loopback bind automatically requires explicit `CASINO_BOOTSTRAP_ADMIN_EMAIL` and `CASINO_BOOTSTRAP_ADMIN_PASSWORD` settings and rejects the known local defaults before runtime state is created or migrated.
+Loopback-only developer startup keeps its convenient local bootstrap behavior. Any non-loopback bind automatically requires explicit `CASINO_BOOTSTRAP_ADMIN_EMAIL`, `CASINO_BOOTSTRAP_ADMIN_PASSWORD`, and `CASINO_TOKEN_DIGEST_KEY` settings and rejects the known local defaults before runtime state is created or migrated. The external token digest key must contain at least 32 bytes and is never included in diagnostics.
 
 Deployments that bind to loopback but become externally reachable through a tunnel, reverse proxy, hosted platform, or similar network path must also set `CASINO_DEPLOYMENT_MODE` to `deployment`, `production`, or `public`. The startup guard reports configuration key names only and never includes supplied values in diagnostics.
+
+## One-time-token infrastructure addendum
+
+GitHub issue #331 adds inert requirements `OTT-001`, `OTT-002`, and `TEST-089`. The token library publishes no route and does not authorize signup, invitation delivery, email verification, password recovery, magic-link login, mail, OAuth, deployment, or public exposure. Repository merge of the foundation remains subject to the separate durable owner approval recorded for the issue.
+
+The service returns a 256-bit bearer only in the issuance receipt and persists domain-separated HMAC-SHA256 verifiers for bearer, subject, and optional session binding. JSON consumption retains the cross-process sidecar lock; MySQL document mutation materializes and locks one canonical row inside a single transaction before applying read-modify-write. Every consume rejection uses the same `invalid_token` public reason, while sanitized audit events may retain only an allowlisted internal class and opaque identifiers. The component-only v2 contract deliberately has an empty path map; future consumers must separately prove exact callback parsing, active-subject policy, initiation rate limits, CSRF/origin integrity, safe redirects, enumeration resistance, and approved delivery.
 
 ## MySQL migration and DDL-free runtime addendum
 
@@ -890,6 +897,10 @@ flowchart LR
 ### Testing
 
 Restricted-preview hardening adds permanent requirements `SEC-010`, `SESSION-006`, `ADMIN-024`, `AUTH-007`, and `TEST-047`. Their canonical descriptions, implementation paths, and centrally discovered evidence are maintained in `requirements.json` and the generated requirements report.
+
+## Disabled transactional-mail foundation
+
+Issue #330 adds permanent requirements `MAIL-001` through `MAIL-006` and `TEST-090`. The repository-owned feature remains disabled by default, and the separate provider/network release gate remains held by default. The only published API surface is secret-free Admin readiness under `/api/v2`; no signup, invitation, recovery, magic-link, bounce, provider callback, or send route is created. Workroom #23 authorizes repository merge of this inert foundation only and does not authorize provider accounts, credentials, DNS or email-authentication records, live delivery, deployment, billing, public signup, or public exposure.
 
 | ID | Requirement | Status | API tests | Browser tests |
 |---|---|---|---|---|

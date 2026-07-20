@@ -349,6 +349,21 @@ label {
   white-space: nowrap;
 }
 
+/* Keep the disposable lifecycle boundary visible beside the temporary wallet without widening the shell. (issue #317) */
+.guest-trial-notice {
+  grid-column: 1 / -1;
+  max-width: 260px;
+  color: #ffe59a;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.wallet-pill.guest-trial-wallet {
+  grid-template-rows: auto auto auto;
+  min-width: 245px;
+}
+
 .wallet-menu {
   position: relative;
 }
@@ -428,6 +443,14 @@ label {
   height: 8px;
   border-radius: 50%;
   background: #fff2c2;
+}
+
+/* Size the irreversible guest action by its localized label instead of the registered-user glyph box. (issue #317) */
+.profile-dot[data-guest-trial="true"] {
+  width: auto;
+  min-width: 92px;
+  padding: 0 12px;
+  white-space: nowrap;
 }
 
 .screen {
@@ -1894,22 +1917,59 @@ h3 {
 }
 
 /* Short-viewport auth: tighten the sign-in panel so its full content fits without page scroll (e.g. 1280x720). (issue #284) */
+/* Keep the account-free guest entry compact so the login panel still fits short viewports. (issue #317) */
+.auth-guest {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+  text-align: center;
+}
+
+.auth-guest .secondary {
+  width: 100%;
+  min-height: 42px;
+}
+
+.auth-guest-copy {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.3;
+  color: var(--muted, #b9b09a);
+}
+
 @media (max-height: 760px) {
+  /* Top-align and fix the height so any overflow scrolls inside the screen (base overflow:auto), never growing the page, while the submit stays above the fold. (issue #317) */
   .auth-screen {
-    padding: 14px;
+    align-items: start;
+    height: 100vh;
+    padding: 10px;
   }
 
   .auth-panel {
-    gap: 10px;
-    padding: 18px;
+    gap: 8px;
+    padding: 14px;
   }
 
   .auth-panel h1 {
-    font-size: 28px;
+    font-size: 26px;
   }
 
   .auth-form {
-    gap: 10px;
+    gap: 8px;
+  }
+
+  .auth-guest {
+    margin-top: 4px;
+    gap: 3px;
+  }
+
+  .auth-guest .secondary {
+    min-height: 40px;
+  }
+
+  /* Reclaim vertical space at short heights; the fake-money disclosure is re-shown when the trial CTA is selected. (issue #317) */
+  .auth-guest-copy {
+    display: none;
   }
 }
 
@@ -2023,6 +2083,61 @@ h3 {
 .admin-card h2 {
   margin: 6px 0 0;
   color: var(--gold);
+}
+
+/* Guest Trials controls use bounded low-cardinality filters and keyboard-scrollable tables. */
+.guest-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(150px, 1fr)) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.guest-filter-grid label {
+  display: grid;
+  gap: 6px;
+}
+
+.guest-filter-grid select,
+.guest-filter-grid button,
+.guest-detail-button {
+  min-height: 42px;
+}
+
+.guest-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(120px, 1fr));
+  gap: 12px;
+}
+
+.guest-detail-grid div {
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: 10px;
+}
+
+.guest-detail-grid dd {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+}
+
+[data-testid="admin-guest-funnel"],
+[data-testid="admin-guest-games"],
+[data-testid="admin-guest-game-detail"],
+[data-testid="admin-guest-recent"],
+[data-testid="admin-guest-timeline"] {
+  overflow-x: auto;
+  scrollbar-color: rgba(255, 217, 130, .42) transparent;
+}
+
+[data-testid="admin-guest-recent"] .mini-table {
+  min-width: 860px;
+}
+
+/* Keep the complete game analytics and event timeline readable inside intentional scroll regions. */
+[data-testid="admin-guest-game-detail"] .mini-table,
+[data-testid="admin-guest-timeline"] .mini-table {
+  min-width: 1180px;
 }
 
 .admin-split {
@@ -2212,6 +2327,10 @@ h3 {
     grid-template-columns: 1fr;
   }
 
+  .guest-filter-grid {
+    grid-template-columns: repeat(2, minmax(150px, 1fr));
+  }
+
   .three-col {
     grid-template-columns: 288px minmax(0, 1fr) 300px;
   }
@@ -2224,6 +2343,68 @@ h3 {
 
   .roulette-stage {
     grid-template-columns: 260px minmax(0, 1fr);
+  }
+}
+
+/* Admin remains usable at the governed phone viewport, including Guest Trials evidence. */
+@media (max-width: 700px) {
+  .admin-body {
+    overflow: auto;
+  }
+
+  .admin-shell {
+    display: block;
+    height: auto;
+    min-height: 100vh;
+  }
+
+  .admin-sidebar {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    flex-direction: row;
+    padding: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-right: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, .12);
+  }
+
+  .admin-sidebar button {
+    flex: 0 0 auto;
+    min-height: 42px;
+  }
+
+  .admin-brand,
+  .admin-sidebar hr {
+    display: none;
+  }
+
+  .admin-main {
+    display: block;
+    overflow: visible;
+  }
+
+  .admin-top {
+    align-items: flex-start;
+    gap: 10px;
+    min-height: 0;
+    padding: 12px;
+  }
+
+  .admin-top h1 {
+    font-size: 24px;
+  }
+
+  .admin-content {
+    padding: 10px;
+    overflow: visible;
+  }
+
+  .admin-card-grid,
+  .guest-filter-grid,
+  .guest-detail-grid {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -2269,6 +2450,12 @@ h3 {
 
   .wallet-pill {
     justify-content: space-between;
+  }
+
+  .wallet-pill.guest-trial-wallet,
+  .guest-trial-notice {
+    max-width: none;
+    min-width: 0;
   }
 
   .screen {
@@ -2427,6 +2614,11 @@ h3 {
     grid-template-columns: minmax(0, 1fr) 46px 46px;
   }
 
+  /* Remove the hidden top-up track and give the localized End-trial action an intrinsic column. (issue #317) */
+  .guest-trial-active .top-actions {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
   .wallet-pill {
     min-width: 0;
   }
@@ -2439,6 +2631,11 @@ h3 {
   .profile-dot {
     grid-column: 3;
     grid-row: 1;
+  }
+
+  /* Place the guest action in the second live track so it cannot spill beyond the mobile viewport. */
+  .guest-trial-active .profile-dot {
+    grid-column: 2;
   }
 
   .shell-locale {

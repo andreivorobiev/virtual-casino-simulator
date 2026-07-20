@@ -79,5 +79,13 @@
   "wallet.addTokens": "Add play tokens",
   "wallet.balanceLabel": "Play token balance",
   "nav.primaryAria": "Games navigation",
-  "nav.gamesArea": "Game area"
+  "nav.gamesArea": "Game area",
+  "auth.guestCta": "Try without an account",
+  "auth.guestInfo": "Disposable restricted-preview trial with 5,000 free simulator tokens and no cash value. They cannot be purchased, deposited, withdrawn, redeemed, transferred, sold, exchanged, or converted and never produce money, prizes, goods, services, or credits. Accept the private-beta terms above. The trial ends after 30 minutes of inactivity, four hours, or browser-session closure and cannot be recovered.",
+  "auth.guestTermsRequired": "Accept the private-beta terms before starting a guest trial.",
+  "auth.guestEnded": "Trial ended and cannot be recovered. Sign in or start a new guest trial.",
+  "guest.badge": "Guest trial",
+  "guest.endTrial": "End trial",
+  "guest.balanceLabel": "Guest trial · temporary play tokens",
+  "guest.expiryWarning": "Ends after 30 min inactivity, 4 hours, or browser close. No recovery or top-up."
 }

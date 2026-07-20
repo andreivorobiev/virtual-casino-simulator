@@ -22,7 +22,15 @@ Every `POST`, `PUT`, `PATCH`, and `DELETE` requires both the exact configured Or
 
 ## Restricted access
 
-Anonymous application access is limited to `/healthz` and `/api/v2/auth/login`. Readiness remains authenticated. Admin HTML, JavaScript, and APIs require an active Admin session. Public signup and live OAuth authorization, callback, exchange, and linking remain absent. Manual invitation and local-password access are the only approved enrollment and login path for this stage.
+Anonymous application access is limited to `/healthz`, `/api/v2/auth/login`, and the owner-approved repository-only `/api/v2/auth/guest` disposable-trial entry. Readiness remains authenticated. Admin HTML, JavaScript, and APIs require an active Admin session. Public signup and live OAuth authorization, callback, exchange, and linking remain absent. Manual invitation and local-password access remain the only account enrollment and registered-login path for this stage; a guest is never a registered account and cannot be recovered or converted.
+
+## Disposable guest-trial boundary
+
+Guest creation requires an affirmative `private-beta-1` terms acceptance and creates a new non-Admin guest principal with an isolated 5,000-play-token wallet. The service limits active guest principals, permits at most 1,000 state-changing game attempts per disposable session, clamps one concurrent guest autoplay registration to 25 rounds, ends guests after 30 minutes of server-observed inactivity or four hours absolute lifetime, and revokes the wallet, sessions, identity, and guest-owned autoplay on explicit End. The cookie is a browser-session cookie; a separate one-time context proof is retained only in browser `sessionStorage`, while the server stores only its SHA-256 digest. A cookie without that proof cannot restore the trial after browser-context loss. A `pagehide` marker makes departure observable while the same browser context can still reload.
+
+Guest analytics are Admin-only and contain no user, player, auth-session, cookie, browser-proof, email, network, or user-agent identifier. Raw rows retain only an unrelated analytics id, timestamps, bounded lifecycle reason, locale, coarse device class, game slug, the named journey milestones, allowlisted server event/action/error categories, coarse latency buckets, fake-token-only wager/return/net totals, and aggregate counters for 30 days; daily aggregates are retained for 400 days. Admin filters are limited to time bounds, lifecycle, catalog game, locale, coarse device, first-round completion, sanitized error category, and list limit. Locale/device error breakdowns require a cohort of at least five, timelines retain at most 80 allowlisted rows, no export is provided, and fixed server cleanup cutoffs cannot be widened or redirected by an API caller. The v2 guest and Admin contracts plus `contracts/compatibility/guest-trials-restricted-preview.json` are authoritative.
+
+This scope changes no deployment, DNS, TLS, firewall, provider, billing, or public-exposure state and does not authorize unrestricted launch under issue #209.
 
 ## Response, bounds, and logs
 

@@ -211,3 +211,30 @@ def stop_all() -> list[dict]:
             s["stop_requested"] = True; s["status"] = "stop_requested"; s["updated_at"] = utc_now(); s.setdefault("events", []).append({"ts": utc_now(), "event":"stop_all_requested"}); out.append(s)
     # Execute this statement as part of the module's documented control flow.
     save_state(st); return out
+
+# Irreversibly stop every active control-plane session owned by one disposable player. (issue #317)
+def stop_for_player(player_id: str) -> list[dict]:
+    # Load the bounded autoplay registry before applying the player-scoped teardown.
+    state = load_state()
+    # Collect changed sessions for focused lifecycle evidence without exposing other players.
+    stopped = []
+    # Inspect every retained session because one guest may have used multiple compatible games.
+    for session in state.get("sessions", []):
+        # Ignore other players and already-terminal autoplay records.
+        if session.get("player_id") != player_id or session.get("status") not in ("starting", "running", "pause_requested", "paused", "stop_requested"):
+            # Continue without mutating unrelated or completed control-plane state.
+            continue
+        # Prevent any new atomic action from starting after guest teardown.
+        session["stop_requested"] = True
+        # Mark the server registration terminal because the owning principal can never authenticate again.
+        session["status"] = "stopped"
+        # Record one bounded lifecycle event without credentials or analytics identifiers.
+        session.setdefault("events", []).append({"ts": utc_now(), "event": "player_session_ended"})
+        # Refresh the server-owned activity marker for Admin diagnostics.
+        session["updated_at"] = utc_now()
+        # Return only the changed session objects to the trusted lifecycle caller.
+        stopped.append(session)
+    # Persist once so multiple active sessions end atomically within the local provider boundary.
+    save_state(state)
+    # Return the changed rows for focused tests and no public response.
+    return stopped

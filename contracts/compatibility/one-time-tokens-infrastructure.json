@@ -1,0 +1,87 @@
+{
+  "artifact": "one-time-tokens-infrastructure",
+  "version": 2,
+  "stage": "inert-foundation",
+  "authorization": {
+    "repository_merge_requires_separate_owner_approval": true,
+    "consumer_routes_authorized": false,
+    "signup_authorized": false,
+    "recovery_authorized": false,
+    "mail_authorized": false,
+    "oauth_authorized": false,
+    "deployment_authorized": false,
+    "public_exposure_authorized": false
+  },
+  "purposes": [
+    "invitation",
+    "email_verification",
+    "password_reset",
+    "magic_link"
+  ],
+  "purpose_policies": {
+    "invitation": {
+      "default_ttl_seconds": 604800,
+      "subject_semantics": "intended invite recipient",
+      "session_binding": "optional",
+      "consumer_envelope": "future v2 invitation flow only"
+    },
+    "email_verification": {
+      "default_ttl_seconds": 86400,
+      "subject_semantics": "existing account awaiting verification",
+      "session_binding": "optional",
+      "consumer_envelope": "future v2 verification flow only"
+    },
+    "password_reset": {
+      "default_ttl_seconds": 3600,
+      "subject_semantics": "active existing account",
+      "session_binding": "optional",
+      "consumer_envelope": "future v2 recovery flow only"
+    },
+    "magic_link": {
+      "default_ttl_seconds": 900,
+      "subject_semantics": "active existing account",
+      "session_binding": "optional",
+      "consumer_envelope": "future separately approved v2 magic-link flow only"
+    }
+  },
+  "persistence": {
+    "bearer_storage": "domain-separated HMAC-SHA256 only",
+    "subject_storage": "domain-separated HMAC-SHA256 only",
+    "session_storage": "domain-separated HMAC-SHA256 only when bound",
+    "digest_key": "external and at least 32 bytes; known local default rejected for public startup",
+    "json_atomicity": "cross-process sidecar file lock around read-modify-write",
+    "mysql_atomicity": "single transaction with canonical-row materialization and SELECT FOR UPDATE",
+    "active_uniqueness": "one active record per purpose and subject",
+    "reissue": "revoke prior active records and append replacement in one mutation"
+  },
+  "lifecycle": {
+    "exactly_once": true,
+    "strict_subject_binding": true,
+    "optional_session_binding_enforced_when_present": true,
+    "inactive_subject_attestation_required_from_consumer": true,
+    "attempt_budget_bounded": true,
+    "purpose_ttl_may_only_be_shortened": true,
+    "revocation": true,
+    "retention_cleanup": "terminal rows only after fixed retention; malformed rows preserved"
+  },
+  "public_errors": {
+    "consume_reason": "invalid_token",
+    "request_reason": "invalid_request",
+    "state_specific_reason_exposed": false
+  },
+  "future_consumer_requirements": {
+    "api_version": "v2 only",
+    "ambiguous_or_duplicate_callback_parameters": "reject before token service invocation",
+    "inactive_user": "pass subject_active=false and fail closed",
+    "initiation_rate_limit": "mandatory and separately tested",
+    "csrf_and_origin": "mandatory exact server-side validation for cookie-authenticated mutation",
+    "redirects": "server-owned relative allowlist only",
+    "enumeration": "identical initiation and consumption envelopes",
+    "delivery": "separate approved mail/provider implementation only"
+  },
+  "compatibility": {
+    "api_v1_frozen": true,
+    "component_contract": "contracts/openapi/one-time-tokens.v2.yaml",
+    "published_paths": []
+  }
+}

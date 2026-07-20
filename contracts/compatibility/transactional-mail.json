@@ -1,0 +1,69 @@
+{
+  "artifact": "transactional-mail",
+  "version": 2,
+  "stage": "disabled-foundation",
+  "authorization": {
+    "repository_merge_approved_in_workroom_issue": 23,
+    "disabled_infrastructure_authorized": true,
+    "admin_readiness_authorized": true,
+    "consumer_routes_authorized": false,
+    "live_provider_delivery_authorized": false,
+    "provider_account_changes_authorized": false,
+    "credentials_authorized": false,
+    "dns_or_email_auth_changes_authorized": false,
+    "deployment_authorized": false,
+    "public_signup_or_exposure_authorized": false
+  },
+  "purposes": [
+    "invitation",
+    "email_verification",
+    "password_reset",
+    "magic_link"
+  ],
+  "release_gates": {
+    "repository_feature_default": false,
+    "network_release_default": false,
+    "both_required_for_provider_access": true,
+    "provider": "postmark-adapter-inert-until-release",
+    "canonical_origin": "fixed HTTPS origin and purpose-owned paths only",
+    "sender_identity": "mailbox must match separately verified sending domain"
+  },
+  "persistence": {
+    "recipient": "keyed HMAC-SHA256 only",
+    "bearer_token": "keyed HMAC-SHA256 only",
+    "idempotency_key": "keyed HMAC-SHA256 only",
+    "tokened_url": "never persisted",
+    "provider_response": "never persisted or logged",
+    "json_atomicity": "cross-process sidecar lock around read-modify-write",
+    "mysql_atomicity": "single transaction with canonical-row materialization and SELECT FOR UPDATE",
+    "malformed_state": "preserved unchanged for operator recovery"
+  },
+  "delivery_lifecycle": {
+    "caller_idempotency_required": true,
+    "changed_meaning_rejected": true,
+    "one_atomic_transport_claim_per_attempt": true,
+    "known_nonaccepted_failure": "bounded exponential retry",
+    "ambiguous_result": "uncertain and never automatically retried",
+    "rate_limit": "bounded keyed-recipient window",
+    "bounce_and_complaint": "internal suppression event only; no public webhook",
+    "retention": "bounded terminal metadata cleanup"
+  },
+  "templates": {
+    "locales": [
+      "en-US",
+      "ru-RU"
+    ],
+    "alternatives": [
+      "plain-text",
+      "semantic HTML"
+    ],
+    "caller_controlled_redirects": false
+  },
+  "compatibility": {
+    "api_v1_frozen": true,
+    "admin_contract": "contracts/openapi/transactional-mail.v2.yaml",
+    "published_paths": [
+      "/api/v2/admin/mail/readiness"
+    ]
+  }
+}

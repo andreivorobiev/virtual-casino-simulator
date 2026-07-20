@@ -6,14 +6,14 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.39.5
-- core: 9.13.4
+- application: 9.41.0
+- core: 9.16.0
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.0
-- autoplay: 1.1.2
+- autoplay: 1.1.3
 - audio: 9.1.1
-- admin: 1.6.1
+- admin: 1.8.0
 - operations: 1.0.0
 - roulette: 9.4.5
 - slots: 9.1.4
@@ -45,10 +45,10 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.1
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.45.16
-- docs: 1.45.16
-- contracts: 1.33.0
-- tooling: 1.14.0
+- tests: 1.48.0
+- docs: 1.48.0
+- contracts: 1.36.0
+- tooling: 1.16.0
 - commenting_policy: 1.0.0
 
 ## Requirements
@@ -702,6 +702,24 @@ Historical source baseline: 9.1.0
 - **TEST-085** (Tests) - PASS: Browser geometry evidence verifies, for each governed locale and viewport, that every visible status-footer segment stays inside the bar and no two segments intersect.
 - **UX-017** (Application) - PASS: Every in-game play-token amount rendered by the shared money formatters includes a full localized unit label—play tokens in en-US and игровых токенов in ru-RU—while the diamond mark remains decorative and never solely carries the value's meaning.
 - **TEST-086** (Tests) - PASS: Browser acceptance verifies both shared money formatters and real Slots amount surfaces use the full localized play-token label without clipping or page-level horizontal overflow in en-US and ru-RU at all four governed viewports.
-- **MAIL-001** (Core) - PASS: A provider-neutral transactional mail boundary builds enrollment and recovery messages for a fixed purpose allowlist, generates browser links from the configured canonical HTTPS origin, rejects open-redirect and host-spoof link paths, and routes through a pluggable transport whose disabled default captures messages locally and never touches the network; a Postmark transport exists but stays inert until the deployment is configured, enabled, and released. Delivery is disabled by default and misconfiguration fails closed.
-- **MAIL-002** (Core) - PASS: The mail boundary never exposes sensitive material: the persisted outbox stores only keyed recipient and token digests plus a token-free canonical link, the deliverable tokened link is returned only in the transient send receipt, readiness reports boolean configuration state without secrets, and no API key, recipient address, raw token, or provider response appears in storage, results, errors, or audit logs (which carry only delivery id, purpose, provider, and status).
-- **TEST-090** (Tests) - PASS: Listener-free API-suite evidence verifies the mail boundary is disabled by default, builds canonical HTTPS links while rejecting open redirects, captures a purpose-bound message locally with a token-free stored link, returns the deliverable tokened link only in the receipt, and stores no raw recipient, token, or password.
+- **OTT-001** (Core) - PASS: Purpose-bound one-time tokens use 256-bit operating-system randomness, domain-separated HMAC-SHA256 verifiers under an external key whose known local default is rejected for public startup, strict purpose and subject binding plus enforced optional session binding, one active record per purpose and subject, atomic reissue, and exactly-once consumption under the JSON cross-process file lock or one MySQL canonical-row transaction with SELECT FOR UPDATE.
+- **OTT-002** (Core) - PASS: One-time-token consumers receive only generic invalid_request or invalid_token errors across malformed, cross-purpose, subject/session mismatch, inactive-subject, replay, expiry, revocation, and exhausted-attempt cases; raw bearer, subject, and session values never enter persistence, results, errors, or audit events, frozen v1 remains unchanged, and the inert v2 component and compatibility contracts require future consumers to reject ambiguous callbacks and enforce bounded initiation, exact CSRF/origin checks, safe redirects, active subjects, and separate delivery approval.
+- **UX-018** (UX) - PASS: Primary and high-frequency controls use a required minimum hit size of 42 CSS pixels, with 44 CSS pixels recommended where new layouts allow; small visual controls such as checkboxes may satisfy the floor through an enlarged clickable parent row.
+- **TEST-089** (Tests) - PASS: Listener-free and MySQL-live evidence verifies the one-time-token lifecycle: deterministic issue and consume, generic rejection, strict purpose, subject, and session binding, replay, expiry, revocation, bounded attempts, retention, atomic reissue, cross-process exactly-once consumption, and absence of raw bearer, subject, session, or digest material from public results and audit events.
+- **TEST-087** (Tests) - PASS: Exact-head browser geometry verifies Auth controls and the enlarged terms row, authenticated shell primaries, and Slots wager/autoplay controls meet the 42px floor without page-level horizontal overflow in en-US and ru-RU at all four governed viewports.
+- **GUEST-001** (Core) - PASS: Restricted-preview guest entry requires explicit acceptance of private-beta-1 terms, creates one isolated non-Admin guest principal and fresh fixed 5,000-play-token wallet with no add-token path, enforces configurable active-principal, per-session game-action, single-autoplay, autoplay-round, inactivity, and absolute-lifetime limits, and never accepts caller-authored role, player, balance, expiry, or credential fields.
+- **GUEST-002** (Application) - PASS: The en-US and ru-RU login surface discloses disposable play-token-only guest terms and requires affirmative consent; the one-time browser-context proof is kept only in sessionStorage, a session cookie alone cannot resume the trial after browser-context loss, same-context refresh remains supported, End trial irreversibly revokes session, identity, wallet, and guest-owned autoplay state, and the guest shell remains usable with reduced motion and at 200 percent zoom.
+- **GUEST-003** (Core) - PASS: Guest telemetry stores only an unrelated analytics id, server timestamps, bounded lifecycle reason, locale, coarse device class, registered game slug, named journey milestones, allowlisted action/error categories, coarse latency buckets, fake-token-only aggregates, and bounded event/counter summaries; it never stores user, player, auth-session, cookie, browser-proof, email, network, or user-agent identifiers, retains raw rows for 30 days and daily aggregates for 400 days, and exposes sanitized cleanup success and failure health.
+- **GUEST-004** (Admin) - PASS: The centrally Admin-gated Guest Trials v2 surface provides the named nine-stage funnel; duration, games-per-trial, rounds-per-trial, error-free, and fake-token-only totals; complete per-game engagement, round, error, latency, and action-category metrics; time, lifecycle, game, locale, device, completion, and error filters; bounded recent rows and allowlisted drill-down; and retention health in en-US and ru-RU, including keyboard-scrollable tables, the governed mobile viewport, reduced motion, and 200 percent zoom.
+- **GUEST-005** (Contracts) - PASS: Guest creation, lifecycle, browser proof, Admin summary/list/detail/cleanup, standard envelopes, restricted-preview access, retention, and forbidden analytics fields are published as additive v2 OpenAPI and compatibility contracts while /api/v1 remains frozen.
+- **GUEST-006** (Security) - PASS: Guest principals may access restricted-preview player routes through the same central player binding and CSRF policy as invited users, can never access Admin routes or shared bot mutation, cannot resume without the originating browser proof, and do not authorize signup, OAuth, deployment, provider, DNS, public exposure, or unrestricted launch.
+- **TEST-080** (Tests) - PASS: Focused API tests prove consent rejection creates no state, server-authoritative guest creation, 5,000-token isolation, non-Admin authorization, CSRF and browser-proof enforcement, same-context activity, inactivity and absolute expiry, atomic concurrent capacity, per-session game-action and autoplay bounds, complete-catalog guest state access, irreversible explicit end, wallet and autoplay revocation, and cookie-only non-resumption.
+- **TEST-081** (Tests) - PASS: Exact-head browser evidence verifies guest consent, disclosed temporary/no-cash terms, start, refresh preservation, real game-module entry, End trial, no recovery, and the Admin funnel, games, filters, detail, cleanup health, de-identification, keyboard access, reduced motion, 200 percent zoom, and no horizontal overflow in en-US and ru-RU at 1920x1080, 1440x900, 1024x900, and 390x844.
+- **TEST-088** (Tests) - PASS: Contract and telemetry tests prove the additive v2 paths, full filters, nine-stage funnel, fake-token/game/action/error/latency aggregates, bounded event drill-down, privacy threshold, envelopes, v1 freeze, Admin-only enforcement, allowlisted low-cardinality dimensions, no forbidden identifiers, fixed 30-day raw and 400-day aggregate retention, safe detail lookup, and sanitized cleanup failure plus recovery status.
+- **MAIL-001** (Core) - PASS: Transactional mail supports only invitation, email verification, password reset, and magic-link purposes; builds fixed-path links from one canonical HTTPS origin; rejects caller-controlled redirects; and keeps provider/network access unreachable unless both the repository feature gate and an independent release gate are enabled.
+- **MAIL-002** (Security) - PASS: Durable mail state, receipts, diagnostics, errors, and logs exclude raw recipients, bearer tokens, tokened URLs, caller idempotency keys, credentials, and provider responses; persistence uses independent keyed HMAC-SHA256 digests, public startup rejects the known digest-key default, and structurally malformed state is preserved for operator recovery.
+- **MAIL-003** (Admin) - PASS: An Admin-only additive v2 readiness route and Operations card distinguish disabled, misconfigured, release-held, ready, and unavailable mail states and expose only fixed booleans, reason codes, and aggregate lifecycle/suppression counts; no consumer send, callback, bounce, signup, or recovery route is published.
+- **MAIL-004** (Core) - PASS: Every submission requires caller idempotency; changed-meaning reuse conflicts; JSON and MySQL perform one atomic delivery claim per attempt; known non-accepted failures use bounded exponential retry; ambiguous results become uncertain and never auto-retry; and per-recipient rate limits, internal bounce/complaint suppression, attempt ceilings, and terminal retention cleanup are enforced.
+- **MAIL-005** (Application) - PASS: Every authorized purpose has matching en-US and ru-RU subjects plus plain-text and semantic HTML alternatives whose action link has meaningful text and whose fixed content is safely escaped.
+- **MAIL-006** (Docs) - PASS: The transactional-mail runbook documents disabled defaults, separate release authority, sender/domain and SPF/DKIM/DMARC posture, canonical-origin and OAuth callback coordination, domain-move revalidation, bounded smoke evidence, rollback, suppression review, and the prohibition on treating repository merge as live authorization.
+- **TEST-090** (Tests) - PASS: Provider-free unit and API tests prove dual-gate inaccessibility, raw-value exclusion, public digest-key hardening, atomic caller idempotency, changed-meaning conflict, bounded retry, ambiguous-result freezing, rate limits, suppression, retention, malformed-state preservation, bilingual templates, Admin-only contract shape, absent consumer routes, and real MySQL cross-process single-claim behavior; exact-head browser evidence covers disabled, misconfigured, release-held, and suppression-summary states in en-US and ru-RU at all four governed viewports.

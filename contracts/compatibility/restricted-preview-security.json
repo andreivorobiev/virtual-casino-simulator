@@ -5,6 +5,7 @@
   "canonical_origin": "https://casino.andvor.com",
   "anonymous_routes": [
     "/api/v2/auth/login",
+    "/api/v2/auth/guest",
     "/healthz"
   ],
   "authenticated_routes": [
@@ -43,6 +44,9 @@
   "access_policy": {
     "public_signup": false,
     "live_oauth": false,
-    "admin_requires_admin_session": true
+    "admin_requires_admin_session": true,
+    "guest_trials_restricted_preview_only": true,
+    "guest_browser_context_proof_required": true,
+    "guest_admin_telemetry_deidentified": true
   }
 }
