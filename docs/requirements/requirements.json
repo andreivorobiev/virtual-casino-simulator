@@ -8770,6 +8770,39 @@
       "notes": "Issue #318 evidence paths are logs/test-runs/after-pass-shell-lobby-scroll-*.png with matching VIS-EVIDENCE-001 JSON sidecars generated from the exact tested head."
     },
     {
+      "id": "ROU-061",
+      "module": "Roulette",
+      "description": "Every visible Roulette wagering surface registers correctly labeled bets with no silent no-ops: all 38 straight pockets show their pocket number, every FAST BETS shortcut and grid outside cell shows its canonical outside label even on repeat clicks, all dozen and column cells plus every inside/special marker type show their exact catalog labels, and each racetrack/call control renders every authoritative component label returned for that activation.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-ROU-SLIP-AUDIT-001"
+      ],
+      "implementation_files": [
+        "web/games/roulette.js",
+        "casino/games/roulette/rules.py"
+      ],
+      "introduced_in": "issue-250-slip-label-audit",
+      "changed_in": "issue-250-slip-label-audit",
+      "notes": "Issues #230/#231/#233/#250: the audited behavior is served by the shared resolveCellBet identity plumbing; this requirement pins it with an exhaustive per-type regression."
+    },
+    {
+      "id": "TEST-082",
+      "module": "Tests",
+      "description": "Browser evidence audits all 38 straight pockets, all six FAST BETS shortcuts including a repeat click, all six grid outside cells, every dozen and column cell, one representative of every inside/special marker type, and all eight racetrack/call controls; direct targets must add exactly one correctly labeled row, call controls must match every authoritative response component, and each audited group must finish with a clean refunded slip.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-ROU-SLIP-AUDIT-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-250-slip-label-audit",
+      "changed_in": "issue-250-slip-label-audit",
+      "notes": "Issues #230/#231/#233/#250 exhaustive direct-surface and racetrack/call-control slip-label reliability audit."
+    },
+    {
       "id": "KENO-025",
       "module": "Keno",
       "description": "All 80 Keno number cells, including every outer row and column, keep their borders, numerals, keyboard focus rings, selection outlines, and drawn, caught, latest, and disabled treatments visible inside the board scroll region at every governed viewport.",
