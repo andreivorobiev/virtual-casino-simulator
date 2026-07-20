@@ -2414,16 +2414,24 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             assert region_box and region_box['height']>=80,region_box
                             # Place the gesture inside the horizontal center of the bounded region.
                             touch_x=region_box['x']+(region_box['width']/2)
-                            # Start near the visible region bottom while remaining above its edge.
-                            touch_start_y=region_box['y']+region_box['height']-20
+                            # Anchor the gesture inside the region's visible client box, clear of the lower edge and any fixed overlay.
+                            touch_start_y=region_box['y']+min(region_box['height'],lobby_metrics()['clientHeight'])*0.75
+                            # Record what actually owns the gesture start point so a zero-movement failure identifies the interceptor.
+                            touch_target_diag=page.evaluate("point => { const el=document.elementFromPoint(point.x,point.y); return el ? {tag:el.tagName,testid:el.dataset?.testid||null,cls:String(el.className).slice(0,60),touchAction:getComputedStyle(el).touchAction} : null; }",{'x':touch_x,'y':touch_start_y})
                             # End near the region top so every gesture advances by most of one viewport.
-                            touch_end_y=region_box['y']+20
-                            # Allow enough native pans to reach the longest all-games catalog without hard-coding its height.
-                            for _ in range(24):
+                            touch_end_y=region_box['y']+8
+                            # Track per-gesture progress so a genuinely dead pan still fails loudly instead of spinning.
+                            touch_last_offset=-1.0
+                            # Allow enough native pans for the tallest localized catalog while requiring forward progress each gesture.
+                            for _ in range(60):
                                 # Stop once native panning reaches the region's maximum scroll offset.
                                 touch_position=lobby_metrics()
                                 # Leave the loop when the remaining scroll distance is within layout rounding tolerance.
                                 if touch_position['scrollHeight']-touch_position['clientHeight']-touch_position['scrollTop']<=2: break
+                                # Require every gesture after the first to advance the offset so a dead pan fails with its interceptor named.
+                                assert touch_last_offset<0 or touch_position['scrollTop']>touch_last_offset,{'start_target':touch_target_diag,'stalled_at':touch_position['scrollTop']}
+                                # Record the offset this gesture must improve upon.
+                                touch_last_offset=touch_position['scrollTop']
                                 # Begin one real touch contact inside the visible region.
                                 touch_session.send('Input.dispatchTouchEvent',{'type':'touchStart','touchPoints':[{'x':touch_x,'y':touch_start_y,'id':0,'radiusX':1,'radiusY':1,'force':1}]})
                                 # Send progressive moves so Chromium recognizes a pan rather than a synthetic teleport.
@@ -2432,10 +2440,15 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                     touch_y=touch_start_y+((touch_end_y-touch_start_y)*step/6)
                                     # Dispatch the current touch move while retaining one stable contact identity.
                                     touch_session.send('Input.dispatchTouchEvent',{'type':'touchMove','touchPoints':[{'x':touch_x,'y':touch_y,'id':0,'radiusX':1,'radiusY':1,'force':1}]})
+                                    # Space the moves so the gesture has real duration; a zero-duration burst is classified as a tap on fast dispatch paths and pans nothing.
+                                    page.wait_for_timeout(12)
                                 # Release the contact so native scroll state commits before the next gesture.
                                 touch_session.send('Input.dispatchTouchEvent',{'type':'touchEnd','touchPoints':[]})
                                 # Wait briefly for compositor-driven scrolling to update the DOM scroll offset.
                                 page.wait_for_timeout(60)
+                            # Require the native gestures to have moved the region, naming the start-point owner and scroll semantics on failure.
+                            touch_final=lobby_metrics()
+                            assert touch_final['scrollTop']>0,{'start_target':touch_target_diag,'metrics':{key:touch_final[key] for key in ('scrollTop','scrollHeight','clientHeight','touchAction','overflowY','overscrollY')}}
                             # Prove native touch panning reached the final catalog action.
                             assert_last_action_reachable()
                         # Release temporary touch configuration after the scoped proof.
@@ -4237,6 +4250,53 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     assert page.locator('.bet-chip').count()==0
                 # Record the refund-on-leave wallet-correctness regression before the standard betting acceptance continues.
                 run_case('BR-ROU-REFUND-001',['ROU-060','TEST-073'],roulette_refund_on_leave)
+                # Audit slip labels for straight, fast-bet, grid-outside, and every inside/special bet type with no silent no-ops. (issues #230 #231 #233 #250)
+                def roulette_slip_label_audit():
+                    # Place one bet through the given target and require exactly one new, correctly labeled slip entry.
+                    def place_and_check(selector, expected_label, use_dispatch=False):
+                        # Count the existing slip rows so a silent no-op is detectable.
+                        rows_before=page.locator('.bet-item').count()
+                        # Click the visible control, or dispatch for hotspot markers that may be toggled hidden.
+                        if use_dispatch:
+                            page.dispatch_event(selector,'click')
+                        else:
+                            page.locator(selector).first.click()
+                        # Require the slip to gain exactly one row instead of failing silently. (issue #233)
+                        page.wait_for_function("n => document.querySelectorAll('.bet-item').length === n", arg=rows_before+1, timeout=5000)
+                        # Read the newest slip label and require the exact catalog wording. (issues #230 #250)
+                        newest_label=page.locator('.bet-item').last.locator('span').first.inner_text().strip()
+                        assert newest_label==expected_label, (selector, newest_label, expected_label)
+                    # Clear any open bets so the audit starts and ends with an empty refunded slip.
+                    def clear_slip():
+                        # Skip when the slip is already empty because the clear control disables itself.
+                        if page.locator('.bet-item').count():
+                            # Clear through the visible refund control and wait for the empty slip.
+                            page.locator('#clear').click(); page.wait_for_function("() => document.querySelectorAll('.bet-item').length === 0", timeout=5000)
+                    # Start from a clean slip after the preceding hit-map case.
+                    clear_slip()
+                    # Straight bets show their pocket number, including zero, never a color label. (issue #230)
+                    place_and_check('[data-testid="roulette-num-17"]','17')
+                    place_and_check('[data-testid="roulette-num-0"]','0')
+                    # Every FAST BETS shortcut places exactly one correctly typed bet, including repeat clicks. (issue #231)
+                    for fast_type,fast_label in (('red','Red'),('red','Red'),('odd','Odd'),('black','Black'),('even','Even'),('low','1-18'),('high','19-36')):
+                        place_and_check(f'[data-outbtn="{fast_type}"]',fast_label)
+                    # The equivalent grid outside cells register the same labels through the board surface. (issue #233)
+                    for grid_type,grid_label in (('red','Red'),('black','Black'),('odd','Odd'),('even','Even'),('low','1-18'),('high','19-36')):
+                        place_and_check(f'[data-testid="roulette-outside-{grid_type}"]',grid_label)
+                    # Dozens and columns register their canonical range labels through their stable cell keys.
+                    place_and_check('[data-cell-key="dozen:2"]','2nd 12',use_dispatch=True)
+                    place_and_check('[data-cell-key="column:1"]','Column 1',use_dispatch=True)
+                    # Enumerate one representative hotspot per inside/special type straight from the rendered catalog markers. (issue #250)
+                    inside_targets=page.evaluate("() => { const seen={}; for (const spot of document.querySelectorAll('.spot')) { const type=spot.dataset.betType; if (!seen[type]) seen[type]={key:spot.dataset.cellKey,label:spot.title.replace(/ \\d+:1$/,'')}; } return Object.entries(seen).map(([type,info]) => ({type,key:info.key,label:info.label})); }")
+                    # Require the board to expose every governed inside and special bet type as a marker.
+                    assert {target['type'] for target in inside_targets} >= {'split','street','line','corner','zero_split','trio','top_line','snake'}, inside_targets
+                    # Place one bet per inside/special type and require its exact catalog label on the slip.
+                    for target in inside_targets:
+                        place_and_check(f"[data-cell-key=\"{target['key']}\"]",target['label'],use_dispatch=True)
+                    # Return every audited stake to the wallet through the refund control.
+                    clear_slip()
+                # Execute the exhaustive slip-label and reliability audit.
+                run_case('BR-ROU-SLIP-AUDIT-001',['ROU-061','TEST-082'],roulette_slip_label_audit)
                 # Define the raw Roulette resource keys reported as visible regressions.
                 roulette_visible_keys={'header.kicker','title','controls.title','controls.spin','settlement.title','scoreboard.title'}
                 # Define a focused rendered-text assertion for raw Roulette key leakage.
