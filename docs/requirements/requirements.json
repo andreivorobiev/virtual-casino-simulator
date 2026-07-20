@@ -8729,6 +8729,39 @@
       "introduced_in": "issue-318-lobby-catalog-scroll",
       "changed_in": "issue-318-lobby-catalog-scroll",
       "notes": "Issue #318 evidence paths are logs/test-runs/after-pass-shell-lobby-scroll-*.png with matching VIS-EVIDENCE-001 JSON sidecars generated from the exact tested head."
+    },
+    {
+      "id": "ROU-061",
+      "module": "Roulette",
+      "description": "Every visible wagering surface registers exactly one correctly labeled bet per activation with no silent no-ops: straight number cells (including zero) show their pocket number, FAST BETS shortcuts and grid outside cells show their canonical outside labels even on repeat clicks, and every inside/special bet type (split, street, line, corner, zero split, trio, top line, snake, dozens, columns) shows its exact catalog label on the bet slip.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-ROU-SLIP-AUDIT-001"
+      ],
+      "implementation_files": [
+        "web/games/roulette.js",
+        "casino/games/roulette/rules.py"
+      ],
+      "introduced_in": "issue-250-slip-label-audit",
+      "changed_in": "issue-250-slip-label-audit",
+      "notes": "Issues #230/#231/#233/#250: the audited behavior is served by the shared resolveCellBet identity plumbing; this requirement pins it with an exhaustive per-type regression."
+    },
+    {
+      "id": "TEST-082",
+      "module": "Tests",
+      "description": "Browser evidence audits the bet slip across straight (17 and 0), all six FAST BETS shortcuts including a repeat click, all six grid outside cells, dozens, columns, and one representative of every inside/special bet type, requiring exactly one new correctly labeled slip entry per activation and a clean refunded slip afterward.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-ROU-SLIP-AUDIT-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-250-slip-label-audit",
+      "changed_in": "issue-250-slip-label-audit",
+      "notes": "Issues #230/#231/#233/#250 exhaustive slip-label and reliability audit."
     }
   ]
 }

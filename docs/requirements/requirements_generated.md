@@ -15,7 +15,7 @@ Historical source baseline: 9.1.0
 - audio: 9.1.1
 - admin: 1.6.1
 - operations: 1.0.0
-- roulette: 9.4.4
+- roulette: 9.4.5
 - slots: 9.1.4
 - blackjack: 9.1.3
 - baccarat: 9.1.2
@@ -45,8 +45,8 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.0
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.45.5
-- docs: 1.45.5
+- tests: 1.45.9
+- docs: 1.45.9
 - contracts: 1.33.0
 - tooling: 1.14.0
 - commenting_policy: 1.0.0
@@ -690,3 +690,5 @@ Historical source baseline: 9.1.0
 - **TEST-077** (Tests) - PASS: Deterministic browser evidence derives all twenty paths and payouts from the production Slots engine, restores a simultaneous-win outcome through the normal state loader, verifies every transformed SVG point within one CSS pixel of its authoritative cell, checks result/history identity, multi-win distinction, symbol visibility, zoom, reduced motion, and captures EN/RU after-pass evidence at all four governed viewports.
 - **UX-013** (UX) - PASS: The lobby route outlet is one bounded, keyboard-focusable vertical scroll region with a localized accessible name, visible focus and themed scroll affordances, wheel and touch panning, and native Page Down and End behavior, so every filtered catalog card and Play control remains reachable at 1920x1080, 1440x900, 1024x900, and 390x844 without page-level horizontal overflow or fixed-chrome overlap.
 - **TEST-076** (Tests) - PASS: Browser evidence in English and Russian at all four governed viewports verifies the focused lobby region, themed affordance, no scroll trap or horizontal overflow, Page Down, End, wheel, and touch scrolling, final-card and Play-control reachability for unfiltered, category-filtered, search-filtered, and empty states, and exact-head after-pass evidence sidecars.
+- **ROU-061** (Roulette) - PASS: Every visible wagering surface registers exactly one correctly labeled bet per activation with no silent no-ops: straight number cells (including zero) show their pocket number, FAST BETS shortcuts and grid outside cells show their canonical outside labels even on repeat clicks, and every inside/special bet type (split, street, line, corner, zero split, trio, top line, snake, dozens, columns) shows its exact catalog label on the bet slip.
+- **TEST-082** (Tests) - PASS: Browser evidence audits the bet slip across straight (17 and 0), all six FAST BETS shortcuts including a repeat click, all six grid outside cells, dozens, columns, and one representative of every inside/special bet type, requiring exactly one new correctly labeled slip entry per activation and a clean refunded slip afterward.
