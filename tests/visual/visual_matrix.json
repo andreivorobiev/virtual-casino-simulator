@@ -116,6 +116,7 @@
         "authenticated",
         "catalog_scrolled",
         "keyboard_focused_scroll_region",
+        "single_authoritative_count",
         "wallet_closed",
         "wallet_open",
         "token_added",

@@ -8591,6 +8591,45 @@
       "notes": "Issue #284/#283 auth short-viewport fit and terms touch-target browser proof."
     },
     {
+      "id": "UX-012",
+      "module": "Application",
+      "description": "The lobby capacity line shows a single authoritative game count (the same catalog size the nav and gallery render) with no contradictory roadmap target clause, in both en-US and ru-RU.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-LOBBY-001",
+        "BR-CATALOG-I18N-RU-001",
+        "BR-LOBBY-RESP-001"
+      ],
+      "implementation_files": [
+        "web/app.js",
+        "web/i18n/en-US/shell.json",
+        "web/i18n/ru-RU/shell.json"
+      ],
+      "introduced_in": "issue-235-single-lobby-count",
+      "changed_in": "issue-235-single-lobby-count",
+      "notes": "Issue #235: removed the 'catalog ready for {target}' clause that contradicted the live count when current>target."
+    },
+    {
+      "id": "TEST-072",
+      "module": "Tests",
+      "description": "Browser evidence at all four governed viewports verifies the lobby capacity line renders exactly one authoritative game count in en-US ('{n} available') and ru-RU ('Доступно: {n}'), with no roadmap-target clause, no English leakage in Russian, and named after-pass evidence.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-LOBBY-001",
+        "BR-CATALOG-I18N-RU-001",
+        "BR-LOBBY-RESP-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-235-single-lobby-count",
+      "changed_in": "issue-235-single-lobby-count",
+      "notes": "Issue #235 evidence paths are logs/test-runs/after-pass-shell-lobby-single-count-*.png with matching VIS-EVIDENCE-001 JSON sidecars for both locales at every governed viewport."
+    },
+    {
       "id": "ROU-060",
       "module": "Roulette",
       "description": "Leaving the Roulette table with open, un-spun bets refunds each staked amount through the documented clear endpoint, so navigating away never strands an already-debited stake and the reopened round starts with no lingering bet.",
