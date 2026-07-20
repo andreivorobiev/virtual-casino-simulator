@@ -1860,6 +1860,20 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 metadata={'evidence_class':'after_pass','branch':evidence_branch,'commit':evidence_commit,'surface':surface,'states':states,'locale':locale,'viewport':{'id':viewport_id,**viewport},'path':str(target.relative_to(ROOT)).replace('\\','/'),'focused_control':focused}
                 # Write a UTF-8 sidecar next to the image so the evidence remains self-describing.
                 target.with_suffix('.json').write_text(json.dumps(metadata,indent=2,ensure_ascii=False),encoding='utf-8')
+            # Capture the visible status-footer region together with the exact accepted geometry diagnostics. (UX-016, TEST-085)
+            def footer_evidence(name, states, locale, viewport_id, geometry):
+                # Resolve the PNG target under the standard browser test artifact directory.
+                target=screenshots/name
+                # Capture the governed footer itself without the generic shell helper's intentional status-bar suppression.
+                page.get_by_test_id('shell-status').screenshot(path=str(target),animations='disabled',style='#toast { visibility: hidden !important; }')
+                # Record the active viewport dimensions alongside the named visual-matrix viewport.
+                viewport=page.viewport_size
+                # Record the current focus target so the bounded artifact remains self-describing.
+                focused=page.evaluate("() => document.activeElement?.getAttribute('data-testid') || ''")
+                # Bind the footer crop, locale, viewport, and passing geometry to one after-pass evidence sidecar.
+                metadata={'evidence_class':'after_pass','branch':evidence_branch,'commit':evidence_commit,'surface':'shell_lobby','states':states,'locale':locale,'viewport':{'id':viewport_id,**viewport},'path':str(target.relative_to(ROOT)).replace('\\','/'),'focused_control':focused,'region_selector':'[data-testid="shell-status"]','geometry':geometry}
+                # Write the exact geometry proof next to its visible footer image for independent artifact audit.
+                target.with_suffix('.json').write_text(json.dumps(metadata,indent=2,ensure_ascii=False),encoding='utf-8')
             # Capture one bounded interaction region without misrepresenting unrelated full-page defects as accepted.
             def region_evidence(name, selector, surface, states, locale, viewport_id):
                 # Resolve the PNG target under the standard browser test artifact directory.
@@ -2005,6 +2019,34 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 run_case('BR-STATIC-CACHE-001',['CORE-026','TEST-068'],static_cache_parity)
                 # Capture logged-out login evidence for the frontend auth handback.
                 shot('auth_login_gate.png')
+                # Prove the restricted-preview guest surface keeps protected brand chrome absent and metadata out of the public title. (issue #321)
+                def guest_restricted_brand_copy():
+                    # Enumerate every governed viewport because the issue requires the shared entry surface at all four sizes.
+                    brand_viewports={entry['id']:{'width':entry['width'],'height':entry['height']} for entry in visual_matrix['viewports']}
+                    # Require the public document title to be the exact approved product name with no release suffix.
+                    assert page.title()=='Virtual Casino Simulator'
+                    # Exercise the unauthenticated restricted-preview entry state in both installed locales.
+                    for brand_locale in ('en-US','ru-RU'):
+                        # Switch through the visible guest locale control and wait for the canonical locale state.
+                        page.get_by_test_id('auth-locale-select').select_option(brand_locale); page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale",arg=brand_locale)
+                        # Read the exact safety acknowledgement from the locale-owned shell resource.
+                        expected_safety=read_i18n_json(ROOT/'web'/'i18n'/brand_locale/'shell.json')['auth.termsCheck']
+                        # Require the guest surface to preserve the full fake-money/play-token safety wording.
+                        assert expected_safety in page.locator('label.check-row').inner_text()
+                        # Require the protected authenticated topbar, wallet, and diagnostics provenance to remain absent for guests.
+                        assert not page.get_by_test_id('premium-topbar').is_visible() and not page.get_by_test_id('premium-wallet').is_visible() and not page.get_by_test_id('shell-status').is_visible()
+                        # Capture exact-head restricted-preview guest evidence at every governed viewport.
+                        for viewport_id,viewport in brand_viewports.items():
+                            # Resize to the exact named visual-matrix viewport before geometry assertions.
+                            page.set_viewport_size(viewport); page.wait_for_timeout(100)
+                            # Reject page or login-panel horizontal overflow while requiring the current login state to remain visible.
+                            assert page.get_by_test_id('login-gate').is_visible() and page.evaluate("() => { const panel=document.querySelector('[data-testid=\"login-gate\"]'); return document.documentElement.scrollWidth <= window.innerWidth + 1 && panel.scrollWidth <= panel.clientWidth + 1; }")
+                            # Record self-describing after-pass evidence for both the guest and restricted-preview state identifiers.
+                            game_evidence(f'after-pass-shell-brand-guest-restricted-preview-{brand_locale.lower()}-{viewport_id}.png','auth',['login','guest','restricted_preview'],brand_locale,viewport_id)
+                    # Restore the primary desktop viewport while keeping Russian selected for the existing authentication flow.
+                    page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(100)
+                # Record guest/restricted-preview title, access-boundary, safety-copy, locale, and viewport acceptance.
+                run_case('BR-SHELL-BRAND-GUEST-001',['UX-014','TEST-079'],guest_restricted_brand_copy)
                 # Define disabled OAuth control, localization, no-request, and visual evidence acceptance.
                 def oauth_disabled_browser():
                     # Define the two governed Auth viewports required by the visual matrix.
@@ -2043,6 +2085,38 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(150)
                 # Record provider-disabled EN/RU controls, no-request behavior, and visual evidence.
                 run_case('BR-OAUTH-001',['OAUTH-001','OAUTH-006','TEST-045'],oauth_disabled_browser)
+                # Define exact geometry acceptance for every primary Auth hit target. (issue #283)
+                def auth_touch_target_floor():
+                    # Read every governed viewport from the authoritative visual matrix.
+                    touch_viewports={entry['id']:{'width':entry['width'],'height':entry['height']} for entry in visual_matrix['viewports']}
+                    # Require the complete desktop, tablet, and mobile viewport set.
+                    assert set(touch_viewports)=={'desktop_primary','desktop_compact','tablet','mobile'}
+                    # Name each login control and use the clickable parent row for the small checkbox glyph.
+                    auth_targets=[{'name':'email','selector':'[data-testid="login-email"]'},{'name':'password','selector':'[data-testid="login-password"]'},{'name':'locale','selector':'[data-testid="auth-locale-select"]'},{'name':'terms-row','selector':'[data-testid="login-terms-check"]','closest':'.check-row'},{'name':'submit','selector':'[data-testid="login-submit"]'},{'name':'google','selector':'[data-testid="oauth-google"]'},{'name':'facebook','selector':'[data-testid="oauth-facebook"]'}]
+                    # Exercise the real localized Auth surface in both governed locales.
+                    for locale in ('en-US','ru-RU'):
+                        # Switch through the visible locale control so the whole gate rerenders normally.
+                        page.get_by_test_id('auth-locale-select').select_option(locale)
+                        # Wait for the active locale and replacement DOM to settle.
+                        page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale && document.querySelector('[data-testid=\"login-email\"]')",arg=locale)
+                        # Measure and capture every governed viewport for this locale.
+                        for viewport_id,viewport in touch_viewports.items():
+                            # Apply the exact visual-matrix dimensions before reading hit geometry.
+                            page.set_viewport_size(viewport); page.wait_for_timeout(120)
+                            # Resolve each semantic target, substituting the permitted enlarged parent when configured.
+                            diagnostics=page.evaluate("""specs => specs.map(spec => { let element=document.querySelector(spec.selector); if(spec.closest) element=element?.closest(spec.closest); if(!element) return {name:spec.name,missing:true}; const rect=element.getBoundingClientRect(); const style=getComputedStyle(element); return {name:spec.name,width:rect.width,height:rect.height,display:style.display,visibility:style.visibility}; })""",auth_targets)
+                            # Require every named target to exist visibly and meet the two-dimensional 42px hit floor.
+                            assert len(diagnostics)==len(auth_targets) and all(not item.get('missing') and item['display']!='none' and item['visibility']!='hidden' and item['width']>=41.5 and item['height']>=41.5 for item in diagnostics),diagnostics
+                            # Reject page-level or panel-level horizontal overflow at the accepted geometry.
+                            assert page.evaluate("() => { const panel=document.querySelector('[data-testid=\"login-gate\"]'); return document.documentElement.scrollWidth<=window.innerWidth+1 && panel.scrollWidth<=panel.clientWidth+1; }")
+                            # Capture self-describing Auth proof for this locale and viewport.
+                            game_evidence(f'after-pass-touch-target-auth-{locale.lower()}-{viewport_id}.png','auth',['login','restricted_preview','touch_target_floor'],locale,viewport_id)
+                    # Restore Russian and the primary desktop size expected by the existing authentication flow.
+                    page.set_viewport_size(touch_viewports['desktop_primary']); page.get_by_test_id('auth-locale-select').select_option('ru-RU')
+                    # Wait for the restored Russian gate before handing off to the login case.
+                    page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'ru-RU' && document.querySelector('[data-testid=\"login-email\"]')")
+                # Execute Auth touch-target acceptance under the adopted governance requirements.
+                run_case('BR-TOUCH-TARGET-AUTH-001',['UX-018','TEST-087'],auth_touch_target_floor)
                 # Define the auth_login_gate function used by this module.
                 def auth_login_gate():
                     # Verify the login panel is visible before casino routes mount.
@@ -2236,6 +2310,112 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     assert page.get_by_test_id('nav-baccarat').is_visible()
                 # Execute this statement as part of the module's documented control flow.
                 run_case('BR-SHELL-001',['UX-007','CORE-006','LEDGER-025','TOKEN-001','TOKEN-002'],premium_shell)
+                # Define governed touch-target acceptance for authenticated shell and Slots controls. (issue #283)
+                def shell_and_slots_touch_target_floor():
+                    # Read the exact responsive dimensions from the visual matrix.
+                    touch_viewports={entry['id']:{'width':entry['width'],'height':entry['height']} for entry in visual_matrix['viewports']}
+                    # Name every shell selector covered by the owner-approved floor.
+                    shell_selectors=['.nav-item','#shell-locale-select','#logout-btn','#catalog-search','.catalog-category','#wallet-menu-summary']
+                    # Name the reported Slots wager and autoplay controls plus the primary action.
+                    slots_selectors=['[data-testid="slots-lines"]','[data-testid="slots-line-bet"]','[data-testid="slots-spin"]','[data-testid="slots-auto-speed"]','[data-testid="slots-auto-rounds"]','[data-testid="slots-auto-start"]','[data-testid="slots-auto-stop"]']
+                    # Exercise both installed player-facing locales on the real authenticated route.
+                    for locale in ('en-US','ru-RU'):
+                        # Switch the mounted shell through its visible locale selector.
+                        page.get_by_test_id('shell-locale-select').select_option(locale)
+                        # Wait for the lobby and locale runtime to finish rerendering.
+                        page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale && document.querySelector('[data-testid=\"lobby\"]')",arg=locale)
+                        # Measure every required viewport in this locale.
+                        for viewport_id,viewport in touch_viewports.items():
+                            # Apply the exact governed viewport before auditing shell controls.
+                            page.set_viewport_size(viewport); page.wait_for_timeout(120)
+                            # Measure every rendered match while preserving the selector that owns it.
+                            shell_diagnostics=page.evaluate("""selectors => { const records=[]; for(const selector of selectors){ for(const element of document.querySelectorAll(selector)){ const rect=element.getBoundingClientRect(); const style=getComputedStyle(element); if(style.display==='none'||style.visibility==='hidden'||(rect.width===0&&rect.height===0)) continue; records.push({selector,testid:element.dataset.testid||'',width:rect.width,height:rect.height}); } } return records; }""",shell_selectors)
+                            # Require every selector to resolve and every live target to meet the 42px width and height floor.
+                            assert {item['selector'] for item in shell_diagnostics}==set(shell_selectors) and all(item['width']>=41.5 and item['height']>=41.5 for item in shell_diagnostics),shell_diagnostics
+                            # Reject shell page-level horizontal overflow before collecting after-pass proof.
+                            assert page.evaluate("() => document.documentElement.scrollWidth<=window.innerWidth+1")
+                            # Capture authenticated Lobby proof for the exact locale and viewport.
+                            game_evidence(f'after-pass-touch-target-shell-{locale.lower()}-{viewport_id}.png','shell_lobby',['authenticated','touch_target_floor'],locale,viewport_id)
+                            # Open the affected Slots surface through the real bounded navigation.
+                            page.get_by_test_id('nav-slots').click(); page.get_by_test_id('slot-grid').wait_for(timeout=5000)
+                            # Measure every named Slots control, including disabled Stop, by its real layout box.
+                            slots_diagnostics=page.evaluate("""selectors => selectors.map(selector => { const element=document.querySelector(selector); if(!element) return {selector,missing:true}; const rect=element.getBoundingClientRect(); const style=getComputedStyle(element); return {selector,width:rect.width,height:rect.height,display:style.display,visibility:style.visibility}; })""",slots_selectors)
+                            # Require all Slots wager, autoplay, and action controls to meet the adopted floor.
+                            assert len(slots_diagnostics)==len(slots_selectors) and all(not item.get('missing') and item['display']!='none' and item['visibility']!='hidden' and item['width']>=41.5 and item['height']>=41.5 for item in slots_diagnostics),slots_diagnostics
+                            # Reject game-level horizontal overflow at the current governed dimensions.
+                            assert page.evaluate("() => document.documentElement.scrollWidth<=window.innerWidth+1")
+                            # Capture the affected game surface in its idle touch-target state.
+                            game_evidence(f'after-pass-touch-target-slots-{locale.lower()}-{viewport_id}.png','slots',['idle','touch_target_floor'],locale,viewport_id)
+                            # Return to the stable Lobby surface before the next viewport or locale.
+                            page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    # Restore the default locale and primary viewport for downstream shell acceptance.
+                    page.set_viewport_size(touch_viewports['desktop_primary']); page.get_by_test_id('shell-locale-select').select_option('en-US')
+                    # Wait for the restored English Lobby before the next case begins.
+                    page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'en-US' && document.querySelector('[data-testid=\"lobby\"]')")
+                # Execute authenticated shell and affected-game touch-target acceptance.
+                run_case('BR-TOUCH-TARGET-001',['UX-018','TEST-087'],shell_and_slots_touch_target_floor)
+                # Prove the player-facing brand block carries no internal version or release-stage metadata in either locale. (issue #321)
+                def shell_brand_copy():
+                    # Enumerate internal metadata tokens that must never appear in the player brand block.
+                    forbidden=re.compile(r'v\d|\bbuild\b|\bcommit\b|\bdebug\b|\benvironment\b|\bstaging\b|validation release|релиз|сборк|проверочн|отлад',re.IGNORECASE)
+                    # Enumerate all required visual-matrix viewport dimensions from their single governed source.
+                    brand_viewports={entry['id']:{'width':entry['width'],'height':entry['height']} for entry in visual_matrix['viewports']}
+                    # Retain each locale/viewport header height so locale switching cannot silently shift the game stage.
+                    header_heights={}
+                    # Require the document title to present the exact approved product name without metadata.
+                    assert page.title()=='Virtual Casino Simulator' and not forbidden.search(page.title())
+                    # Check the localized authenticated brand block in both installed locales.
+                    for brand_locale in ('en-US','ru-RU'):
+                        # Switch the shell locale through the visible control and wait for the runtime to settle.
+                        page.get_by_test_id('shell-locale-select').select_option(brand_locale); page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale",arg=brand_locale)
+                        # Read the exact canonical subtitle for this locale from the paired resource file.
+                        expected_subtitle=read_i18n_json(ROOT/'web'/'i18n'/brand_locale/'shell.json')['brand.subtitle']
+                        # Wait for the asynchronous locale rerender to publish the exact canonical subtitle, which also proves resource-key-free equality.
+                        page.wait_for_function("expected => document.querySelector('#shell-brand-subtitle')?.textContent.trim() === expected", arg=expected_subtitle, timeout=5000)
+                        # Read the settled rendered player-facing brand subtitle for the metadata checks.
+                        rendered_subtitle=page.locator('#shell-brand-subtitle').inner_text().strip()
+                        # Require the approved product name to remain exact and resource-key-free.
+                        assert page.locator('#shell-brand-title').inner_text().strip()=='Virtual Casino Simulator'
+                        # Require the subtitle to keep the play-token safety cue while carrying no version metadata.
+                        assert not forbidden.search(rendered_subtitle), rendered_subtitle
+                        # Require the play-token cue to remain present in the locale's own words.
+                        assert ('token' in rendered_subtitle.lower()) or ('токен' in rendered_subtitle.lower()), rendered_subtitle
+                        # Require the separately approved diagnostics rail to retain a concrete semantic version for #287 provenance.
+                        assert re.fullmatch(r'v\d+\.\d+\.\d+',page.locator('#status-version').inner_text().strip())
+                        # Prove the lobby header remains readable, contained, and unclipped at every governed viewport.
+                        for viewport_id,viewport in brand_viewports.items():
+                            # Resize to the exact matrix viewport and let responsive layout settle before measuring.
+                            page.set_viewport_size(viewport); page.wait_for_timeout(100)
+                            # Audit the complete brand lockup against its topbar and viewport bounds.
+                            brand_geometry=page.evaluate("""() => { const topbar=document.querySelector('[data-testid=\"premium-topbar\"]'); const lockup=document.querySelector('.brand-lockup'); const title=document.querySelector('#shell-brand-title'); const subtitle=document.querySelector('#shell-brand-subtitle'); const topbarBox=topbar.getBoundingClientRect(); const lockupBox=lockup.getBoundingClientRect(); return { topbarHeight:topbarBox.height, contained:lockupBox.left >= topbarBox.left - 1 && lockupBox.right <= topbarBox.right + 1 && lockupBox.top >= topbarBox.top - 1 && lockupBox.bottom <= topbarBox.bottom + 1, viewportContained:lockupBox.left >= -1 && lockupBox.right <= window.innerWidth + 1, titleUnclipped:title.scrollWidth <= title.clientWidth + 1 && title.scrollHeight <= title.clientHeight + 1, subtitleUnclipped:subtitle.scrollWidth <= subtitle.clientWidth + 1 && subtitle.scrollHeight <= subtitle.clientHeight + 1, pageNoOverflow:document.documentElement.scrollWidth <= window.innerWidth + 1 }; }""")
+                            # Require every geometry and overflow invariant to pass before evidence can be accepted.
+                            assert brand_geometry['contained'] and brand_geometry['viewportContained'] and brand_geometry['titleUnclipped'] and brand_geometry['subtitleUnclipped'] and brand_geometry['pageNoOverflow'],brand_geometry
+                            # Record the topbar height for the later cross-locale stability comparison.
+                            header_heights[(brand_locale,viewport_id)]=brand_geometry['topbarHeight']
+                            # Capture exact-head authenticated lobby evidence with a self-describing sidecar.
+                            game_evidence(f'after-pass-shell-brand-authenticated-{brand_locale.lower()}-{viewport_id}.png','shell_lobby',['authenticated'],brand_locale,viewport_id)
+                        # Open one representative affected game so shared-shell evidence is not limited to the lobby.
+                        page.get_by_test_id('nav-roulette').click(); page.get_by_test_id('roulette-premium').wait_for(timeout=5000)
+                        # Capture the same authenticated header across the representative game at all governed sizes.
+                        for viewport_id,viewport in brand_viewports.items():
+                            # Resize to the exact governed viewport before the shared-shell overflow check.
+                            page.set_viewport_size(viewport); page.wait_for_timeout(100)
+                            # Reject page-level horizontal overflow and require the shared brand lockup to remain visible above Roulette.
+                            assert page.locator('.brand-lockup').is_visible() and page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1')
+                            # Record one affected game surface alongside the shared lobby acceptance evidence.
+                            game_evidence(f'after-pass-roulette-brand-{brand_locale.lower()}-{viewport_id}.png','roulette',['betting'],brand_locale,viewport_id)
+                        # Return to the lobby before switching locale so the next evidence set starts from the canonical shell route.
+                        page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    # Compare matching viewport heights so EN/RU switching cannot move the game stage.
+                    for viewport_id in brand_viewports:
+                        # Allow only sub-pixel rounding while rejecting a locale-dependent topbar height change.
+                        assert abs(header_heights[('en-US',viewport_id)]-header_heights[('ru-RU',viewport_id)]) <= 1,(viewport_id,header_heights)
+                    # Restore the English locale for downstream shell coverage.
+                    page.get_by_test_id('shell-locale-select').select_option('en-US'); page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'en-US'")
+                    # Restore the primary desktop viewport for downstream shell interactions.
+                    page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(100)
+                # Execute the version-free brand copy regression.
+                run_case('BR-SHELL-BRAND-001',['UX-014','TEST-079'],shell_brand_copy)
                 # Open the wallet popover through the token top-up control.
                 page.locator('summary[aria-label="Add play tokens"]').click()
                 # Set a deterministic token top-up amount for the wallet terminology check.
@@ -2266,8 +2446,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     assert page.get_by_text('Midnight Ledger Casino').is_visible()
                     # Verify the Roulette card still exposes its route action.
                     assert page.get_by_test_id('open-roulette').is_visible()
-                    # Verify the catalog advertises the approved expansion capacity.
-                    assert 'ready for 20' in page.get_by_test_id('catalog-capacity').inner_text()
+                    # Verify the catalog advertises one authoritative game count with no contradictory roadmap target. (issue #235)
+                    assert page.get_by_test_id('catalog-capacity').inner_text()==f'{len(casino_config.GAMES)} available'
                     # Load the paired shell copy so localized lobby expectations stay sourced from canonical resources. (issue #236)
                     lobby_shell_copy={loc:read_i18n_json(ROOT/'web'/'i18n'/loc/'shell.json') for loc in ('en-US','ru-RU')}
                     # Prove the Play buttons and hero eyebrow render the localized strings, capturing EN/RU evidence without raw resource keys.
@@ -2303,7 +2483,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Confirm the English lobby copy is restored for downstream browser cases.
                     assert_lobby_localized('en-US')
                 # Execute this statement as part of the module's documented control flow.
-                run_case('BR-LOBBY-001',['CORE-005','CORE-006','UX-008','I18N-004','TEST-069'],premium_lobby)
+                run_case('BR-LOBBY-001',['CORE-005','CORE-006','UX-008','I18N-004','TEST-069','UX-012','TEST-072'],premium_lobby)
                 # Define catalog_navigation to cover search and category facets from module metadata.
                 def catalog_navigation():
                     # Filter by a game label through the visible search control.
@@ -2342,8 +2522,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         assert page.locator(f'[data-catalog-category="{category}"]').inner_text()==label
                     # Verify catalog region, categories, and gallery accessible names are localized.
                     assert page.get_by_test_id('catalog-region').get_attribute('aria-label')=='Найти игру' and page.get_by_test_id('catalog-categories').get_attribute('aria-label')=='Категории игр' and page.get_by_test_id('game-gallery').get_attribute('aria-label')=='Игры'
-                    # Verify localized capacity copy includes both current and approved target counts.
-                    assert page.get_by_test_id('catalog-capacity').inner_text()==f'Доступно: {len(casino_config.GAMES)} · каталог рассчитан на 20'
+                    # Verify localized capacity copy shows one authoritative game count with no contradictory roadmap target. (issue #235)
+                    assert page.get_by_test_id('catalog-capacity').inner_text()==f'Доступно: {len(casino_config.GAMES)}'
                     # Select a localized category before exercising the no-result state.
                     page.locator('[data-catalog-category="table"]').click()
                     # Enter a Russian query with no matches so the localized empty state becomes visible.
@@ -2393,31 +2573,238 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Wait for English catalog controls before the next browser case starts.
                     page.wait_for_function("() => document.querySelector('[data-testid=\"catalog-search\"]')?.placeholder === 'Search by game, feature, or category'")
                 # Execute Russian copy, category-label, containment, and keyboard-focus acceptance coverage.
-                run_case('BR-CATALOG-I18N-RU-001',['UX-010','I18N-001'],catalog_ru_acceptance)
+                run_case('BR-CATALOG-I18N-RU-001',['UX-010','I18N-001','UX-012','TEST-072'],catalog_ru_acceptance)
                 # Capture the polished desktop lobby and shared topbar for review evidence.
                 shot('after-pass-shell-lobby-desktop.png')
-                # Resize the browser to the compact desktop viewport before responsive checks.
-                page.set_viewport_size({'width':1440,'height':900}); page.wait_for_timeout(250)
-                # Define the responsive_lobby function used by this module.
+                # Define the complete lobby-scroll acceptance matrix requested by issue #318.
                 def responsive_lobby():
-                    # Verify compact desktop preserves the complete wallet and avoids page-level horizontal overflow.
-                    assert page.get_by_test_id('premium-wallet').is_visible() and page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1')
-                    # Capture the compact desktop shell for visual-matrix evidence.
-                    shot('after-pass-shell-lobby-compact.png')
-                    # Resize to the approved mobile viewport inside the same responsive matrix case.
-                    page.set_viewport_size({'width':390,'height':844}); page.wait_for_timeout(250)
-                    # Verify the stacked topbar remains visible on a narrow viewport.
-                    assert page.get_by_test_id('premium-topbar').is_visible()
-                    # Verify the lobby does not introduce page-level horizontal overflow.
-                    assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1')
-                    # Verify the featured game card remains visible after responsive stacking.
-                    assert page.get_by_test_id('card-roulette').is_visible()
-                # Execute this statement as part of the module's documented control flow.
-                run_case('BR-LOBBY-RESP-001',['CORE-015','UX-009'],responsive_lobby)
-                # Capture the narrow stacked shell so mobile top-action behavior can be reviewed.
-                shot('after-pass-shell-lobby-mobile.png')
-                # Restore desktop dimensions before existing game interaction coverage runs.
-                page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(250)
+                    # Name every governed viewport so behavior and evidence share the visual-matrix identifiers.
+                    governed_viewports=(('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844))
+                    # Name both required locales so scroll semantics survive localized shell rerenders.
+                    governed_locales=('en-US','ru-RU')
+                    # Read the stable locator for the intentional route-outlet scroll region.
+                    lobby_region=page.get_by_test_id('lobby-scroll-region')
+                    # Define a focused metrics probe for containment, accessibility, and affordance assertions.
+                    def lobby_metrics():
+                        # Read layout and computed-style facts from the live browser instead of duplicating CSS constants.
+                        return page.evaluate("""() => { const region=document.querySelector('[data-testid="lobby-scroll-region"]'); const footer=document.querySelector('[data-testid="shell-status"]'); const rect=region.getBoundingClientRect(); const footerRect=footer.getBoundingClientRect(); const style=getComputedStyle(region); return {clientHeight:region.clientHeight,scrollHeight:region.scrollHeight,scrollTop:region.scrollTop,clientWidth:region.clientWidth,scrollWidth:region.scrollWidth,role:region.getAttribute('role'),label:region.getAttribute('aria-label'),tabIndex:region.tabIndex,overflowY:style.overflowY,overflowX:style.overflowX,scrollbarWidth:style.scrollbarWidth,touchAction:style.touchAction,overscrollY:style.overscrollBehaviorY,outlineStyle:style.outlineStyle,outlineWidth:parseFloat(style.outlineWidth)||0,top:rect.top,bottom:rect.bottom,footerTop:footerRect.top,viewportHeight:innerHeight,documentWidth:document.documentElement.scrollWidth,viewportWidth:innerWidth,focused:document.activeElement===region}; }""")
+                    # Define one assertion that proves the last card and its Play control are fully inside the bounded region.
+                    def assert_last_action_reachable():
+                        # Compare live rectangles so visibility cannot pass while fixed chrome clips the action.
+                        reachability=page.evaluate("""() => { const region=document.querySelector('[data-testid="lobby-scroll-region"]'); const cards=[...document.querySelectorAll('[data-testid^="card-"]')]; const plays=[...document.querySelectorAll('[data-testid^="open-"]')]; if (!cards.length || !plays.length) return {reachable:false}; const regionRect=region.getBoundingClientRect(); const cardRect=cards.at(-1).getBoundingClientRect(); const playRect=plays.at(-1).getBoundingClientRect(); return {reachable:cardRect.top>=regionRect.top-1 && cardRect.bottom<=regionRect.bottom+1 && playRect.top>=regionRect.top-1 && playRect.bottom<=regionRect.bottom+1,cardBottom:cardRect.bottom,playBottom:playRect.bottom,regionBottom:regionRect.bottom}; }""")
+                        # Reject partial visibility, footer overlap, and Play controls clipped below the outlet edge.
+                        assert reachability['reachable'],reachability
+                    # Reset the intentional region to its first catalog row before exercising a new input mode.
+                    def reset_lobby_scroll():
+                        # Set the scroll offset synchronously so each modality must create its own movement.
+                        lobby_region.evaluate('(region) => { region.scrollTop = 0; }')
+                        # Wait one frame so geometry reads cannot observe the previous smooth-scroll position.
+                        page.wait_for_timeout(40)
+                    # Send the native End key and wait for Chromium's compositor scroll to reach its real boundary.
+                    def keyboard_end_to_boundary():
+                        # Focus the persistent region so the key cannot target the document or a filter control.
+                        lobby_region.focus()
+                        # Send the real End key rather than assigning the final offset in script.
+                        page.keyboard.press('End')
+                        # Wait until native keyboard scrolling reaches the maximum offset, allowing compositor animation time.
+                        page.wait_for_function("() => { const region=document.querySelector('[data-testid=\"lobby-scroll-region\"]'); return region.scrollHeight-region.clientHeight-region.scrollTop<=2; }",timeout=2500)
+                    # Drive a real Chromium touch gesture against the focused region without enabling touch for unrelated cases.
+                    def touch_scroll_to_end():
+                        # Open a scoped DevTools session for native touch-event injection on the existing authenticated page.
+                        touch_session=page.context.new_cdp_session(page)
+                        # Enable one emulated touch point only for this interaction proof.
+                        touch_session.send('Emulation.setTouchEmulationEnabled',{'enabled':True,'maxTouchPoints':1})
+                        # Guarantee touch emulation and the session are released even when reachability fails.
+                        try:
+                            # Reset the region so the gesture must move the catalog from its top edge.
+                            reset_lobby_scroll()
+                            # Read the current region rectangle after responsive header and footer layout settles.
+                            region_box=lobby_region.bounding_box()
+                            # Require enough visible region height to perform a meaningful upward pan.
+                            assert region_box and region_box['height']>=80,region_box
+                            # Place the gesture inside the horizontal center of the bounded region.
+                            touch_x=region_box['x']+(region_box['width']/2)
+                            # Anchor the gesture inside the region's visible client box, clear of the lower edge and any fixed overlay.
+                            touch_start_y=region_box['y']+min(region_box['height'],lobby_metrics()['clientHeight'])*0.75
+                            # Record what actually owns the gesture start point so a zero-movement failure identifies the interceptor.
+                            touch_target_diag=page.evaluate("point => { const el=document.elementFromPoint(point.x,point.y); return el ? {tag:el.tagName,testid:el.dataset?.testid||null,cls:String(el.className).slice(0,60),touchAction:getComputedStyle(el).touchAction} : null; }",{'x':touch_x,'y':touch_start_y})
+                            # End near the region top so every gesture advances by most of one viewport.
+                            touch_end_y=region_box['y']+8
+                            # Track per-gesture progress so a genuinely dead pan still fails loudly instead of spinning.
+                            touch_last_offset=-1.0
+                            # Allow enough native pans for the tallest localized catalog while requiring forward progress each gesture.
+                            for _ in range(60):
+                                # Stop once native panning reaches the region's maximum scroll offset.
+                                touch_position=lobby_metrics()
+                                # Leave the loop when the remaining scroll distance is within layout rounding tolerance.
+                                if touch_position['scrollHeight']-touch_position['clientHeight']-touch_position['scrollTop']<=2: break
+                                # Require every gesture after the first to advance the offset so a dead pan fails with its interceptor named.
+                                assert touch_last_offset<0 or touch_position['scrollTop']>touch_last_offset,{'start_target':touch_target_diag,'stalled_at':touch_position['scrollTop']}
+                                # Record the offset this gesture must improve upon.
+                                touch_last_offset=touch_position['scrollTop']
+                                # Begin one real touch contact inside the visible region.
+                                touch_session.send('Input.dispatchTouchEvent',{'type':'touchStart','touchPoints':[{'x':touch_x,'y':touch_start_y,'id':0,'radiusX':1,'radiusY':1,'force':1}]})
+                                # Send progressive moves so Chromium recognizes a pan rather than a synthetic teleport.
+                                for step in range(1,7):
+                                    # Interpolate the finger position across six native touch moves.
+                                    touch_y=touch_start_y+((touch_end_y-touch_start_y)*step/6)
+                                    # Dispatch the current touch move while retaining one stable contact identity.
+                                    touch_session.send('Input.dispatchTouchEvent',{'type':'touchMove','touchPoints':[{'x':touch_x,'y':touch_y,'id':0,'radiusX':1,'radiusY':1,'force':1}]})
+                                    # Space the moves so the gesture has real duration; a zero-duration burst is classified as a tap on fast dispatch paths and pans nothing.
+                                    page.wait_for_timeout(12)
+                                # Release the contact so native scroll state commits before the next gesture.
+                                touch_session.send('Input.dispatchTouchEvent',{'type':'touchEnd','touchPoints':[]})
+                                # Wait briefly for compositor-driven scrolling to update the DOM scroll offset.
+                                page.wait_for_timeout(60)
+                            # Require the native gestures to have moved the region, naming the start-point owner and scroll semantics on failure.
+                            touch_final=lobby_metrics()
+                            assert touch_final['scrollTop']>0,{'start_target':touch_target_diag,'metrics':{key:touch_final[key] for key in ('scrollTop','scrollHeight','clientHeight','touchAction','overflowY','overscrollY')}}
+                            # Prove native touch panning reached the final catalog action.
+                            assert_last_action_reachable()
+                        # Release temporary touch configuration after the scoped proof.
+                        finally:
+                            # Disable touch emulation before mouse and keyboard coverage continues.
+                            touch_session.send('Emulation.setTouchEmulationEnabled',{'enabled':False})
+                            # Detach the scoped DevTools session without closing the shared browser page.
+                            touch_session.detach()
+                    # Exercise both locales at every governed viewport without substituting generic snapshots for behavior.
+                    for locale in governed_locales:
+                        # Switch through the visible shell locale control so the lobby rerenders through production code.
+                        page.get_by_test_id('shell-locale-select').select_option(locale)
+                        # Wait until the runtime locale state and localized lobby semantics agree.
+                        page.wait_for_function('(locale) => window.CasinoI18n?.getLocaleState().locale === locale',arg=locale)
+                        # Exercise each governed viewport under the active localized shell.
+                        for viewport_id,width,height in governed_viewports:
+                            # Resize to the exact visual-matrix dimensions before testing bounded containment.
+                            page.set_viewport_size({'width':width,'height':height})
+                            # Wait for responsive shell geometry and the flex-contained region to settle.
+                            page.wait_for_timeout(180)
+                            # Clear search through the visible control before restoring the complete catalog.
+                            page.get_by_test_id('catalog-search').fill('')
+                            # Restore the all-games category through its real catalog control.
+                            page.locator('[data-catalog-category="all"]').click()
+                            # Reset any scroll retained by the persistent route-outlet element.
+                            reset_lobby_scroll()
+                            # Resolve the one approved localized count string for this locale and installed catalog. (issue #235)
+                            expected_capacity=f'{len(casino_config.GAMES)} available' if locale=='en-US' else f'Доступно: {len(casino_config.GAMES)}'
+                            # Fail closed unless the fixed status footer and every expected visible localized segment are contained and pairwise disjoint. (issue #285)
+                            footer_geometry=page.evaluate("""() => { const bar=document.querySelector('[data-testid="shell-status"]'); if (!bar) return {ok:false,reason:'missing_status_bar'}; const barRect=bar.getBoundingClientRect(); const items=[...bar.querySelectorAll('.status-item')].map((item,index) => { const rect=item.getBoundingClientRect(); return {index,left:rect.left,right:rect.right,top:rect.top,bottom:rect.bottom,width:rect.width,height:rect.height}; }).filter(item => item.width>0 && item.height>0); const spill=items.some(item => item.left < barRect.left-1 || item.right > barRect.right+1 || item.top < barRect.top-1 || item.bottom > barRect.bottom+1); const collisions=[]; for (let a=0;a<items.length;a+=1) for (let b=a+1;b<items.length;b+=1) { const first=items[a],second=items[b]; if (first.left < second.right-1 && second.left < first.right-1 && first.top < second.bottom-1 && second.top < first.bottom-1) collisions.push([first.index,second.index]); } return {ok:barRect.width>0 && barRect.height>0 && items.length>=2 && !spill && collisions.length===0,bar:{width:barRect.width,height:barRect.height},visibleItems:items,spill,collisions}; }""")
+                            # Surface exact geometry diagnostics when localized copy spills or visible status segments collide.
+                            assert footer_geometry['ok'],footer_geometry
+                            # Capture named bounded footer evidence whose sidecar preserves the passing geometry for this exact locale and viewport.
+                            footer_evidence(f'after-pass-shell-status-footer-{locale.lower()}-{viewport_id}.png',['authenticated','status_footer_contained','geometry_verified'],locale,viewport_id,footer_geometry)
+                            # Require exact single-count copy so neither retired roadmap clause nor a second count can enter evidence.
+                            assert page.get_by_test_id('catalog-capacity').inner_text()==expected_capacity
+                            # Bring the capacity line into the bounded outlet before capturing the governed copy state.
+                            page.get_by_test_id('catalog-capacity').scroll_into_view_if_needed()
+                            # Focus the named scroll region so the acceptance image also proves its visible keyboard boundary.
+                            lobby_region.focus()
+                            # Capture named EN/RU after-pass evidence for the single-count state at every governed viewport.
+                            game_evidence(f'after-pass-shell-lobby-single-count-{locale.lower()}-{viewport_id}.png','shell_lobby',['authenticated','single_authoritative_count','keyboard_focused_scroll_region'],locale,viewport_id)
+                            # Restore the outlet top so the following Page Down interaction starts from a deterministic boundary.
+                            reset_lobby_scroll()
+                            # Enter the region from the final visible header control using the real Tab order.
+                            page.get_by_test_id('logout').focus()
+                            # Advance keyboard focus from shell chrome into the next tabbable main region.
+                            page.keyboard.press('Tab')
+                            # Press Page Down while the focused region owns keyboard scrolling.
+                            page.keyboard.press('PageDown')
+                            # Wait for native keyboard scrolling to update the region offset and focus ring.
+                            page.wait_for_timeout(100)
+                            # Read exact semantics, containment, and focus presentation after the keyboard action.
+                            metrics=lobby_metrics()
+                            # Resolve only the navigation button's localized text node, excluding its aria-hidden home icon.
+                            expected_label=page.get_by_test_id('nav-lobby').evaluate("(button) => [...button.childNodes].filter((node) => node.nodeType === Node.TEXT_NODE).map((node) => node.textContent).join('').trim()")
+                            # Require one named, keyboard-focusable region with native vertical scrolling and no horizontal outlet overflow.
+                            assert metrics['role']=='region' and metrics['label']==expected_label and metrics['tabIndex']==0 and metrics['overflowY']=='auto' and metrics['overflowX']=='hidden',metrics
+                            # Require a genuinely bounded overflow surface whose bottom ends above the in-flow status rail.
+                            assert metrics['scrollHeight']>metrics['clientHeight']+1 and metrics['clientHeight']>0 and metrics['bottom']<=metrics['footerTop']+1,metrics
+                            # Reject page-level and region-level horizontal overflow at this locale and viewport.
+                            assert metrics['documentWidth']<=metrics['viewportWidth']+1 and metrics['scrollWidth']<=metrics['clientWidth']+1,metrics
+                            # Require the declared wheel/touch containment and stable themed scrollbar affordance.
+                            assert metrics['scrollbarWidth']=='thin' and metrics['touchAction']=='pan-y' and metrics['overscrollY']=='contain',metrics
+                            # Prove Tab reached the region, Page Down moved it, and the focused region shows a visible outline.
+                            assert metrics['focused'] and metrics['scrollTop']>0 and metrics['outlineStyle']!='none' and metrics['outlineWidth']>=2,metrics
+                            # Reset before proving the native End key reaches the final all-games action directly.
+                            reset_lobby_scroll()
+                            # Use native End behavior and wait for the compositor to reach the real scroll boundary.
+                            keyboard_end_to_boundary()
+                            # Require the final all-games card and Play action to be fully visible above the footer.
+                            assert_last_action_reachable()
+                            # Reset before proving a wheel gesture independently moves the same region.
+                            reset_lobby_scroll()
+                            # Hover the region so the real wheel event targets the intentional scroll owner.
+                            lobby_region.hover()
+                            # Send repeated large wheel deltas until the longest catalog reaches its end.
+                            for _ in range(8): page.mouse.wheel(0,2000)
+                            # Wait for compositor wheel scrolling to settle before reading rectangles.
+                            page.wait_for_timeout(120)
+                            # Require the wheel path to reveal the same final enabled action.
+                            assert_last_action_reachable()
+                            # Prove native touch panning at touch-oriented tablet and mobile viewports.
+                            if viewport_id in ('tablet','mobile'): touch_scroll_to_end()
+                            # Read every installed category identifier from the production catalog controls.
+                            category_ids=page.locator('[data-catalog-category]').evaluate_all('(buttons) => buttons.map((button) => button.dataset.catalogCategory)')
+                            # Prove the last enabled action remains reachable for every category-filtered state.
+                            for category_id in category_ids:
+                                # Return to the catalog controls before selecting the next production category.
+                                reset_lobby_scroll()
+                                # Select the current category through its visible localized button.
+                                page.locator(f'[data-catalog-category="{category_id}"]').click()
+                                # Use native End behavior and wait for the current category's real scroll boundary.
+                                keyboard_end_to_boundary()
+                                # Require the final category card and Play control to remain fully reachable.
+                                assert_last_action_reachable()
+                            # Restore all games before capturing the primary scrolled state.
+                            reset_lobby_scroll()
+                            # Select the unfiltered catalog state through the visible control.
+                            page.locator('[data-catalog-category="all"]').click()
+                            # Reach the final all-games action through native End behavior before recording evidence.
+                            keyboard_end_to_boundary()
+                            # Capture EN/RU after-pass evidence for the focused and fully scrolled catalog at this viewport.
+                            game_evidence(f'after-pass-shell-lobby-scroll-{locale.lower()}-{viewport_id}.png','shell_lobby',['authenticated','catalog_scrolled','keyboard_focused_scroll_region'],locale,viewport_id)
+                            # Return to the catalog controls before entering a multi-result search state.
+                            reset_lobby_scroll()
+                            # Enter a stable metadata-backed query that matches the installed poker category in both locales.
+                            page.get_by_test_id('catalog-search').fill('poker')
+                            # Require a real non-empty filtered result set before testing its last action.
+                            assert page.locator('[data-testid^="card-"]').count()>1
+                            # Reach the search result set's final action through native End behavior on the scroll owner.
+                            keyboard_end_to_boundary()
+                            # Require the last search result and Play control to remain fully visible.
+                            assert_last_action_reachable()
+                            # Capture the governed search-filtered after-pass state at this locale and viewport.
+                            game_evidence(f'after-pass-shell-lobby-scroll-search-{locale.lower()}-{viewport_id}.png','shell_lobby',['search_filtered','catalog_scrolled','keyboard_focused_scroll_region'],locale,viewport_id)
+                            # Return to the catalog controls before proving the empty search state has no trapped scroll content.
+                            reset_lobby_scroll()
+                            # Enter an impossible query through the visible search field.
+                            page.get_by_test_id('catalog-search').fill('__no_catalog_match__')
+                            # Require the localized empty state and zero stale game cards.
+                            assert page.get_by_test_id('catalog-empty').is_visible() and page.locator('[data-testid^="card-"]').count()==0
+                            # Clear the query before the representative category evidence state.
+                            page.get_by_test_id('catalog-search').fill('')
+                            # Select the table category as a visible representative after every category passed behavior checks.
+                            page.locator('[data-catalog-category="table"]').click()
+                            # Reach the representative category's last action through the same native End helper.
+                            keyboard_end_to_boundary()
+                            # Require the representative category's final action to remain fully visible.
+                            assert_last_action_reachable()
+                            # Capture the governed category-filtered after-pass state at this locale and viewport.
+                            game_evidence(f'after-pass-shell-lobby-scroll-category-{locale.lower()}-{viewport_id}.png','shell_lobby',['category_filtered','catalog_scrolled','keyboard_focused_scroll_region'],locale,viewport_id)
+                    # Restore the canonical English locale for downstream game cases.
+                    page.get_by_test_id('shell-locale-select').select_option('en-US')
+                    # Wait for the English lobby rerender before restoring desktop dimensions.
+                    page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'en-US'")
+                    # Restore the primary desktop viewport expected by subsequent browser cases.
+                    page.set_viewport_size({'width':1920,'height':1080})
+                    # Restore the complete catalog so later route-discovery coverage starts from its normal state.
+                    page.get_by_test_id('catalog-search').fill('')
+                    # Restore the all-games category through the current English control.
+                    page.locator('[data-catalog-category="all"]').click()
+                    # Return the persistent route outlet to its top edge for the next browser case.
+                    reset_lobby_scroll()
+                # Execute the full locale, viewport, state, and interaction matrix under the permanent requirement mapping.
+                run_case('BR-LOBBY-RESP-001',['CORE-015','UX-009','UX-012','UX-013','TEST-072','TEST-076','UX-016','TEST-085'],responsive_lobby)
                 # Define catalog_route_discovery to mount every frontend driver from catalog metadata.
                 def catalog_route_discovery():
                     # Select a catalog game with a route id that differs from its display label for loader-copy coverage. (UX-011)
@@ -3798,8 +4185,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.get_by_test_id('nav-casino_holdem').click(); page.get_by_test_id('casino-holdem').wait_for(timeout=5000)
                     # Enumerate all governed viewport dimensions.
                     required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
-                    # Load exact UTF-8 title expectations from the paired canonical resource files.
-                    expected_titles={locale:read_i18n_json(ROOT/'web'/'i18n'/locale/'games'/'casino_holdem.json')['title'] for locale in ('en-US','ru-RU')}
+                    # Load exact UTF-8 copy expectations from the paired canonical resource files.
+                    holdem_resources={locale:read_i18n_json(ROOT/'web'/'i18n'/locale/'games'/'casino_holdem.json') for locale in ('en-US','ru-RU')}
                     # Capture one mounted state across both locales and every viewport.
                     def localized_evidence(prefix,states):
                         # Iterate through paired English and Russian game resources.
@@ -3807,13 +4194,17 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             # Switch locale without discarding the active decision or settled history.
                             page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_timeout(100)
                             # Require the localized title rather than a fallback key or English leakage.
-                            assert page.locator('.choldem-header h1').inner_text()==expected_titles[locale]
+                            assert page.locator('.choldem-header h1').inner_text()==holdem_resources[locale]['title']
+                            # Read all ten rendered schedule rows after the locale rerender. (issue #253)
+                            paytable=page.get_by_test_id('choldem-paytable'); paytable_labels=paytable.locator('li span').all_inner_texts(); paytable_odds=paytable.locator('li strong').all_inner_texts()
+                            # Require the localized title, strongest and weakest labels, complete row count, and server-derived net odds.
+                            assert paytable.locator('h2').inner_text()==holdem_resources[locale]['paytable.title'] and len(paytable_labels)==10 and len(paytable_odds)==10 and paytable_labels[0]==holdem_resources[locale]['ranksMade.royal_flush'] and paytable_odds[0]=='100:1' and paytable_labels[-1]==holdem_resources[locale]['ranksMade.high_card'] and paytable_odds[-1]=='1:1'
                             # Validate containment and capture after-pass evidence at every viewport.
                             for viewport_id,width,height in required_viewports:
                                 # Resize to the exact visual matrix dimensions.
                                 page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
                                 # Reject horizontal overflow and require the mounted community-card table.
-                                assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.get_by_test_id('casino-holdem').is_visible()
+                                assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.get_by_test_id('casino-holdem').is_visible() and paytable.is_visible()
                                 # Record self-describing evidence for this state and viewport.
                                 game_evidence(f'after-pass-casino-holdem-{prefix}-{locale.lower()}-{viewport_id}.png','casino_holdem',states,locale,viewport_id)
                         # Restore English desktop controls for the next public action.
@@ -3833,7 +4224,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Return to the lobby for downstream browser cases.
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Execute the integrated Casino Hold'em browser and visual gate.
-                run_case('BR-CH-001',['CH-001','CH-002','CH-004','CH-005'],casino_holdem_acceptance)
+                run_case('BR-CH-001',['CH-001','CH-002','CH-004','CH-005','CH-006','TEST-084'],casino_holdem_acceptance)
                 # Define real-backend Joker Poker localization, hold, draw, responsive, motion, and route acceptance.
                 def joker_poker_acceptance():
                     # Open the catalog-owned route and wait for the stable game selector.
@@ -4079,6 +4470,83 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     assert page.locator('.bet-chip').count()==0
                 # Record the refund-on-leave wallet-correctness regression before the standard betting acceptance continues.
                 run_case('BR-ROU-REFUND-001',['ROU-060','TEST-073'],roulette_refund_on_leave)
+                # Audit slip labels for straight, fast-bet, grid-outside, and every inside/special bet type with no silent no-ops. (issues #230 #231 #233 #250)
+                def roulette_slip_label_audit():
+                    # Place one bet through the given target and require exactly one new, correctly labeled slip entry.
+                    def place_and_check(selector, expected_label, use_dispatch=False):
+                        # Count the existing slip rows so a silent no-op is detectable.
+                        rows_before=page.locator('.bet-item').count()
+                        # Click the visible control, or dispatch for hotspot markers that may be toggled hidden.
+                        if use_dispatch:
+                            page.dispatch_event(selector,'click')
+                        else:
+                            page.locator(selector).first.click()
+                        # Require the slip to gain exactly one row instead of failing silently. (issue #233)
+                        page.wait_for_function("n => document.querySelectorAll('.bet-item').length === n", arg=rows_before+1, timeout=5000)
+                        # Read the newest slip label and require the exact catalog wording. (issues #230 #250)
+                        newest_label=page.locator('.bet-item').last.locator('span').first.inner_text().strip()
+                        assert newest_label==expected_label, (selector, newest_label, expected_label)
+                    # Clear any open bets so the audit starts and ends with an empty refunded slip.
+                    def clear_slip():
+                        # Skip when the slip is already empty because the clear control disables itself.
+                        if page.locator('.bet-item').count():
+                            # Clear through the visible refund control and wait for the empty slip.
+                            page.locator('#clear').click(); page.wait_for_function("() => document.querySelectorAll('.bet-item').length === 0", timeout=5000)
+                    # Start from a clean slip after the preceding hit-map case.
+                    clear_slip()
+                    # Audit every American-wheel straight pocket so zero, double zero, and all 1-36 labels are authoritative. (issues #230 #250)
+                    for pocket in ['0','00']+[str(number) for number in range(1,37)]:
+                        # Require this exact visible pocket to add its number instead of a color or empty label.
+                        place_and_check(f'[data-testid="roulette-num-{pocket}"]',pocket)
+                    # Every FAST BETS shortcut places exactly one correctly typed bet, including repeat clicks. (issue #231)
+                    for fast_type,fast_label in (('red','Red'),('red','Red'),('odd','Odd'),('black','Black'),('even','Even'),('low','1-18'),('high','19-36')):
+                        place_and_check(f'[data-outbtn="{fast_type}"]',fast_label)
+                    # The equivalent grid outside cells register the same labels through the board surface. (issue #233)
+                    for grid_type,grid_label in (('red','Red'),('black','Black'),('odd','Odd'),('even','Even'),('low','1-18'),('high','19-36')):
+                        place_and_check(f'[data-testid="roulette-outside-{grid_type}"]',grid_label)
+                    # Audit every dozen cell through its stable catalog identity and canonical ordinal label.
+                    for dozen,dozen_label in ((1,'1st 12'),(2,'2nd 12'),(3,'3rd 12')):
+                        # Dispatch against the fixed-board hit target so scaled layouts do not alter identity coverage.
+                        place_and_check(f'[data-cell-key="dozen:{dozen}"]',dozen_label,use_dispatch=True)
+                    # Audit every column cell through its stable catalog identity and canonical label.
+                    for column in (1,2,3):
+                        # Dispatch against the fixed-board hit target so every governed column is exercised.
+                        place_and_check(f'[data-cell-key="column:{column}"]',f'Column {column}',use_dispatch=True)
+                    # Enumerate one representative hotspot per inside/special type straight from the rendered catalog markers. (issue #250)
+                    inside_targets=page.evaluate("() => { const seen={}; for (const spot of document.querySelectorAll('.spot')) { const type=spot.dataset.betType; if (!seen[type]) seen[type]={key:spot.dataset.cellKey,label:spot.title.replace(/ \\d+:1$/,'')}; } return Object.entries(seen).map(([type,info]) => ({type,key:info.key,label:info.label})); }")
+                    # Require the board to expose every governed inside and special bet type as a marker.
+                    assert {target['type'] for target in inside_targets} >= {'split','street','line','corner','zero_split','trio','top_line','snake'}, inside_targets
+                    # Place one bet per inside/special type and require its exact catalog label on the slip.
+                    for target in inside_targets:
+                        place_and_check(f"[data-cell-key=\"{target['key']}\"]",target['label'],use_dispatch=True)
+                    # Return all direct-surface audit stakes before exercising multi-component call bets.
+                    clear_slip()
+                    # Open the racetrack disclosure through its visible summary control.
+                    page.get_by_test_id('roulette-racetrack-disclosure').locator('summary').click()
+                    # Exercise every visible racetrack, neighbor, final, and complete-number control. (issue #250)
+                    for call_type in ('snake','voisins','tiers','orphelins','jeu_zero','neighbors','final','complete'):
+                        # Capture the authoritative component list returned for this exact visible activation.
+                        with page.expect_response(lambda response: response.url.endswith('/api/v1/games/roulette/call-bet') and response.request.method=='POST') as call_response_info:
+                            # Activate the visible call-bet button instead of bypassing the player interaction path.
+                            page.locator(f'[data-call="{call_type}"]').click()
+                        # Read the standard response envelope after the route has accepted the activation.
+                        call_payload=call_response_info.value.json()['data']
+                        # Derive the exact expected slip labels from the server-authoritative placed components.
+                        expected_call_labels=[component['label'] for component in call_payload['placed']]
+                        # Reject silent no-ops even when a call type legitimately expands to several rows.
+                        assert expected_call_labels, call_type
+                        # Wait until the rerendered slip contains every returned component and no extra row.
+                        page.wait_for_function("n => document.querySelectorAll('.bet-item').length === n",arg=len(expected_call_labels),timeout=5000)
+                        # Read every rendered component label in stable response order.
+                        actual_call_labels=[label.strip() for label in page.locator('.bet-item span').all_inner_texts()]
+                        # Require the visible slip to match the exact authoritative label sequence.
+                        assert actual_call_labels==expected_call_labels,(call_type,actual_call_labels,expected_call_labels)
+                        # Refund this call group before the next control so row counts and wallet capacity stay isolated.
+                        clear_slip()
+                    # Restore the advanced racetrack disclosure to its governed collapsed baseline for downstream layout acceptance.
+                    page.get_by_test_id('roulette-racetrack-disclosure').locator('summary').click()
+                # Execute the exhaustive slip-label and reliability audit.
+                run_case('BR-ROU-SLIP-AUDIT-001',['ROU-061','TEST-082'],roulette_slip_label_audit)
                 # Define the raw Roulette resource keys reported as visible regressions.
                 roulette_visible_keys={'header.kicker','title','controls.title','controls.spin','settlement.title','scoreboard.title'}
                 # Define a focused rendered-text assertion for raw Roulette key leakage.
@@ -4419,6 +4887,42 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 slots_evidence_text=page.get_by_test_id('slots-premium').inner_text()
                 # Verify the after-pass game evidence contains user-facing copy rather than internal resource identifiers.
                 assert 'controls.' not in slots_evidence_text and 'status.' not in slots_evidence_text and 'slots.' not in slots_evidence_text
+                # Define the cross-formatter, localized, responsive play-token label acceptance case. (issue #286)
+                def labeled_play_token_amounts():
+                    # Read all governed dimensions from the authoritative visual matrix instead of duplicating them.
+                    money_viewports={entry['id']:{'width':entry['width'],'height':entry['height']} for entry in visual_matrix['viewports']}
+                    # Require the matrix to expose the complete issue-mandated desktop, tablet, and mobile set.
+                    assert set(money_viewports)=={'desktop_primary','desktop_compact','tablet','mobile'}
+                    # Bind each governed locale to the full play-token terminology required by the visual standard.
+                    localized_units={'en-US':'play tokens','ru-RU':'игровых токенов'}
+                    # Exercise the shared formatters and the real Slots surface in both governed locales.
+                    for locale,expected_unit in localized_units.items():
+                        # Switch through the player-visible shell control so the mounted Slots route follows the real locale path.
+                        page.get_by_test_id('shell-locale-select').select_option(locale)
+                        # Wait for the shared runtime and the visible round-cost amount to finish rerendering.
+                        page.wait_for_function("expected => window.CasinoI18n?.getLocaleState().locale === expected.locale && document.querySelector('[data-testid=\"slots-round-cost\"]')?.textContent.trim().endsWith(expected.unit)",arg={'locale':locale,'unit':expected_unit})
+                        # Invoke both public shared helpers through their browser module boundary at the active locale.
+                        formatter_values=page.evaluate("""async () => { const i18n=await import('/core/i18n.js'); const ui=await import('/core/ui.js'); return {formatMoney:i18n.formatMoney(1234.5),money:ui.money(1234.5)}; }""")
+                        # Require both helpers to preserve the decorative diamond while adding the exact full localized label.
+                        assert all(value.startswith('◈') and value.endswith(f' {expected_unit}') for value in formatter_values.values()), formatter_values
+                        # Prevent either locale from accepting the other locale's wording by coincidence.
+                        assert ('play tokens' not in ' '.join(formatter_values.values())) if locale=='ru-RU' else ('игровых токенов' not in ' '.join(formatter_values.values()))
+                        # Exercise every governed viewport for responsive copy and geometry acceptance.
+                        for viewport_id,viewport in money_viewports.items():
+                            # Resize the real route and allow responsive layout and localized copy to settle.
+                            page.set_viewport_size(viewport); page.wait_for_timeout(150)
+                            # Audit leaf-level visible play-token amounts so parent container text cannot mask clipping.
+                            amount_diagnostics=page.evaluate("""expectedUnit => { const root=document.querySelector('[data-testid="slots-premium"]'); const nodes=[...root.querySelectorAll('*')].filter(element => [...element.childNodes].some(node => node.nodeType===Node.TEXT_NODE && node.textContent.includes('◈'))); const amounts=nodes.map(element => { const rect=element.getBoundingClientRect(); const style=getComputedStyle(element); return {text:element.textContent.trim(),left:rect.left,right:rect.right,width:rect.width,clientWidth:element.clientWidth,scrollWidth:element.scrollWidth,display:style.display,visibility:style.visibility,opacity:Number(style.opacity)}; }).filter(entry => entry.display!=='none' && entry.visibility!=='hidden' && entry.opacity>0 && entry.width>0); return {amounts,pageWidth:document.documentElement.scrollWidth,viewportWidth:innerWidth,allLabeled:amounts.every(entry => entry.text.endsWith(expectedUnit)),contained:amounts.every(entry => entry.left>=-1 && entry.right<=innerWidth+1 && entry.scrollWidth<=entry.clientWidth+1)}; }""",expected_unit)
+                            # Require at least one real amount and reject missing labels, element clipping, and page overflow.
+                            assert amount_diagnostics['amounts'] and amount_diagnostics['allLabeled'] and amount_diagnostics['contained'] and amount_diagnostics['pageWidth']<=amount_diagnostics['viewportWidth']+1, amount_diagnostics
+                            # Capture exact-head after-pass evidence for this locale and governed viewport.
+                            game_evidence(f'after-pass-labeled-money-slots-{locale.lower()}-{viewport_id}.png','slots',['idle','labeled_play_token_amounts'],locale,viewport_id)
+                    # Restore the default locale and primary desktop dimensions for the existing Slots regression sequence.
+                    page.get_by_test_id('shell-locale-select').select_option('en-US'); page.set_viewport_size(money_viewports['desktop_primary'])
+                    # Wait for the restored visible amount before handing the route to later Slots cases.
+                    page.wait_for_function("() => document.querySelector('[data-testid=\"slots-round-cost\"]')?.textContent.trim().endsWith('play tokens')")
+                # Execute the issue-mapped shared formatter and real Slots acceptance regression.
+                run_case('BR-MONEY-LABEL-001',['UX-017','TEST-086'],labeled_play_token_amounts)
                 # Store the idle cabinet box so spin/result states can be compared.
                 idle_box=page.get_by_test_id('slots-cabinet').bounding_box()
                 # Store the idle result box so the reserved payout region can be compared.
@@ -4625,10 +5129,84 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 run_case('BR-SLOT-001',['SLOT-020','SLOT-021','SLOT-022','SLOT-023','SLOT-024','SLOT-025','SLOT-026','SLOT-027','SLOT-028','TEST-064','AUTO-010','LEDGER-025','UX-007','UX-009'],premium_slots)
                 # Navigate to Keno and wait for the premium route shell to mount.
                 page.get_by_test_id('nav-keno').click(); page.get_by_test_id('keno-premium-hero').wait_for(timeout=5000)
+                # Prove edge number cells and their state treatments stay inside the visible board bounds instead of being clipped. (issue #320)
+                def keno_edge_containment():
+                    # Resolve the authenticated player whose disposable Keno state drives deterministic edge evidence.
+                    edge_player=page.evaluate("() => { const shellPlayer = window.CasinoCurrentUser?.player || window.CasinoCurrentPlayer || {}; return shellPlayer.player_id || window.CasinoCurrentUser?.player_id || localStorage.getItem('casino.currentPlayerId') || 'human'; }")
+                    # Define the exact governed viewport matrix from the visual standard.
+                    edge_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
+                    # Keep the idle state free of prior tickets and draws before each locale/viewport capture.
+                    empty_edge_state={'open_tickets':[],'last_draws':[]}
+                    # Build one legitimate one-catch final draw with the latest result on bottom-right cell 80.
+                    edge_draw=[2,3,4,5,6,7,8,9,11,12,13,14,15,16,17,18,19,20,21,80]
+                    # Reuse the existing one-spot Keno multiplier so evidence state agrees with the published paytable.
+                    final_edge_state={'open_tickets':[],'last_draws':[{'round_id':'keno-edge-final','timestamp':'2026-07-20T00:00:00Z','drawn':edge_draw,'results':[{'ticket':{'ticket_id':'keno-edge-catch','player_id':edge_player,'spots':[80],'amount':1,'source':'browser-test','created_at':'2026-07-20T00:00:00Z'},'catches':[80],'catch_count':1,'multiplier':3,'payout':3}]}]}
+                    # Exercise both installed player-facing locales.
+                    for edge_locale in ('en-US','ru-RU'):
+                        # Exercise every governed viewport without substituting an approximate breakpoint.
+                        for edge_viewport_id,edge_width,edge_height in edge_viewports:
+                            # Start this matrix cell from an authoritative empty persisted state.
+                            save_player_game_state('keno',edge_player,empty_edge_state)
+                            # Apply the exact viewport before route reconstruction and geometry sampling.
+                            page.set_viewport_size({'width':edge_width,'height':edge_height})
+                            # Reload the canonical game route so local selection state is empty and backend state is current.
+                            page.reload(wait_until='networkidle'); page.get_by_test_id('keno-premium-hero').wait_for(timeout=5000)
+                            # Switch through the real shell control so visible copy and accessible names use the requested locale.
+                            page.get_by_test_id('shell-locale-select').select_option(edge_locale)
+                            # Wait for the locale runtime to confirm the completed in-place rerender.
+                            page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale",arg=edge_locale)
+                            # Require real localized title copy instead of a raw resource key or blank fallback.
+                            edge_title=page.locator('.keno-hero-title').inner_text(); assert edge_title.strip() and 'phase.' not in edge_title
+                            # Probe every corner under the combined selected, drawn, caught, latest, disabled, and focus treatment.
+                            edge_probe=page.evaluate("""() => { const scroll=document.querySelector('[data-testid="keno-board-scroll"]'); const results=[]; for (const number of [1,10,71,80]) { const cell=document.querySelector(`[data-testid="keno-num-${number}"]`); const originalClass=cell.className; const originalDisabled=cell.disabled; const originalAnimation=cell.style.animation; const originalTransition=cell.style.transition; scroll.scrollLeft=number%10===0?scroll.scrollWidth:0; cell.classList.add('selected','drawn','catch','latest'); cell.style.animation='none'; cell.style.transition='none'; cell.focus({preventScroll:true}); const focusedStyle=getComputedStyle(cell); const focusOutlineWidth=parseFloat(focusedStyle.outlineWidth)||0; const focusVisible=cell.matches(':focus-visible'); cell.disabled=true; const box=cell.getBoundingClientRect(); const clip=scroll.getBoundingClientRect(); const style=getComputedStyle(cell); results.push({number,top:box.top-clip.top,left:box.left-clip.left,right:clip.right-box.right,bottom:clip.bottom-box.bottom,width:box.width,height:box.height,outlineWidth:parseFloat(style.outlineWidth)||0,focusOutlineWidth,focusVisible,boxShadow:style.boxShadow,transform:style.transform,disabled:cell.disabled,opacity:style.opacity,text:cell.textContent.trim()}); cell.disabled=originalDisabled; cell.className=originalClass; cell.style.animation=originalAnimation; cell.style.transition=originalTransition; cell.blur(); } scroll.scrollLeft=0; return results; }""")
+                            # Require every corner's full worst-case visual reach to remain inside the clip boundary.
+                            for probe in edge_probe:
+                                # Keep the 22px glow, transformed edge, and outlines inside a conservative 26px visual clearance.
+                                assert min(probe['top'],probe['left'],probe['right'],probe['bottom']) >= 26, edge_probe
+                                # Preserve the governed minimum touch target and visible numeric identity at every corner.
+                                assert probe['width']>=42 and probe['height']>=42 and probe['text']==str(probe['number']), edge_probe
+                                # Verify the production result and disabled treatments were active during the geometry sample.
+                                assert probe['outlineWidth']>=2 and probe['boxShadow']!='none' and probe['transform']!='none' and probe['disabled'] and probe['opacity']=='1', edge_probe
+                            # Audit every clipping ancestor so passing board-local geometry cannot hide a compact-desktop panel crop.
+                            edge_clipping_ancestors=page.evaluate("""() => { const board=document.querySelector('[data-testid="keno-board-scroll"]'); const boardRect=board.getBoundingClientRect(); const blockers=[]; for (let ancestor=board.parentElement; ancestor; ancestor=ancestor.parentElement) { const style=getComputedStyle(ancestor); const paintContained=style.contain.split(/\\s+/).includes('paint'); const clipsX=paintContained||['hidden','clip'].includes(style.overflowX); const clipsY=paintContained||['hidden','clip'].includes(style.overflowY); if (!clipsX && !clipsY) continue; const rect=ancestor.getBoundingClientRect(); if ((clipsX && (boardRect.left<rect.left-1 || boardRect.right>rect.right+1)) || (clipsY && (boardRect.top<rect.top-1 || boardRect.bottom>rect.bottom+1))) blockers.push({tag:ancestor.tagName,className:ancestor.className,testid:ancestor.getAttribute('data-testid'),contain:style.contain,overflowX:style.overflowX,overflowY:style.overflowY,board:{top:boardRect.top,right:boardRect.right,bottom:boardRect.bottom,left:boardRect.left},ancestor:{top:rect.top,right:rect.right,bottom:rect.bottom,left:rect.left}}); } return blockers; }""")
+                            # Reject any hidden or clip ancestor that cuts the board before the governed game-outlet scroller can reveal it.
+                            assert not edge_clipping_ancestors,edge_clipping_ancestors
+                            # Keep the document itself contained while the board owns any intentional horizontal overflow.
+                            assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1')
+                            # Bring the bounded game surface into view before capturing the real idle state.
+                            page.locator('.keno-premium').scroll_into_view_if_needed()
+                            # Record self-describing idle evidence for this exact locale and viewport.
+                            region_evidence(f'after-pass-keno-edge-idle-{edge_locale.lower()}-{edge_viewport_id}.png','.keno-premium','keno',['edge_idle'],edge_locale,edge_viewport_id)
+                            # Select all four corner cells through the same public controls used by a player.
+                            for edge_number in (1,10,71,80): page.get_by_test_id(f'keno-num-{edge_number}').click()
+                            # Start keyboard traversal from the named board region so the first corner receives true focus-visible state.
+                            page.get_by_test_id('keno-board-scroll').focus(); page.keyboard.press('Tab')
+                            # Read the actual keyboard focus style rather than inferring accessibility from source text.
+                            focus_probe=page.evaluate("() => { const active=document.activeElement; const style=getComputedStyle(active); return {testid:active?.getAttribute('data-testid'),focusVisible:active?.matches(':focus-visible')||false,outlineWidth:parseFloat(style.outlineWidth)||0,outlineOffset:parseFloat(style.outlineOffset)||0,scrollLeft:document.querySelector('[data-testid=\"keno-board-scroll\"]')?.scrollLeft||0}; }")
+                            # Require the top-left edge target to be keyboard-revealed with the explicit visible focus ring.
+                            assert focus_probe['testid']=='keno-num-1' and focus_probe['focusVisible'] and focus_probe['outlineWidth']>=3 and focus_probe['outlineOffset']>=3 and focus_probe['scrollLeft']<=1, focus_probe
+                            # Require every intended corner selection to survive rerenders before evidence capture.
+                            assert all(page.get_by_test_id(f'keno-num-{edge_number}').get_attribute('aria-pressed')=='true' for edge_number in (1,10,71,80))
+                            # Record selected and focus-visible evidence from the real public controls.
+                            region_evidence(f'after-pass-keno-edge-selected-focus-{edge_locale.lower()}-{edge_viewport_id}.png','.keno-premium','keno',['edge_selected_focus_visible'],edge_locale,edge_viewport_id)
+                            # Persist one deterministic final draw so caught/latest state does not depend on random outcomes.
+                            save_player_game_state('keno',edge_player,final_edge_state)
+                            # Reconstruct the route from authoritative history and wait for all twenty final balls.
+                            page.reload(wait_until='networkidle'); page.get_by_test_id('keno-premium-hero').wait_for(timeout=5000); page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale",arg=edge_locale); page.wait_for_function("() => document.querySelectorAll('[data-testid=\"keno-drawn-ball\"]').length === 20",timeout=5000)
+                            # Require the seeded result to render every draw plus the caught/latest bottom-right edge cell.
+                            assert page.locator('.keno-num.drawn').count()==20 and page.locator('.keno-num.catch').count()==1 and page.get_by_test_id('keno-num-80').evaluate("cell => cell.classList.contains('catch') && cell.classList.contains('latest')")
+                            # Reveal the right edge through the intended board scroller before final-state capture.
+                            page.get_by_test_id('keno-board-scroll').evaluate('scroll => { scroll.scrollLeft=scroll.scrollWidth; }')
+                            # Record final-draw and caught/latest evidence for this exact locale and viewport.
+                            region_evidence(f'after-pass-keno-edge-final-caught-{edge_locale.lower()}-{edge_viewport_id}.png','.keno-premium','keno',['edge_final_caught'],edge_locale,edge_viewport_id)
+                    # Restore an empty English desktop route so the existing real-draw regression remains independent.
+                    save_player_game_state('keno',edge_player,empty_edge_state); page.set_viewport_size({'width':1920,'height':1080}); page.reload(wait_until='networkidle'); page.get_by_test_id('keno-premium-hero').wait_for(timeout=5000); page.get_by_test_id('shell-locale-select').select_option('en-US'); page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'en-US'")
+                # Execute the Keno edge-containment geometry regression.
+                run_case('BR-KENO-EDGE-001',['KENO-025','TEST-078'],keno_edge_containment)
                 # Select ten deterministic spots so paytable comparison has a stable row.
                 for spot in [3,8,12,17,24,31,44,55,63,72]: page.get_by_test_id(f'keno-num-{spot}').click()
                 # Store the spot-selection board box for stability assertions.
-                keno_selection_box=page.get_by_test_id('keno-grid').bounding_box()
+                keno_selection_box=page.evaluate("() => { const box=document.querySelector('[data-testid=\"keno-grid\"]')?.getBoundingClientRect(); return box&&box.width>0&&box.height>0?{width:box.width,height:box.height}:null; }"); assert keno_selection_box
                 # Capture the approved spot-selection evidence state.
                 shot('keno_spot_selection.png')
                 # Start the draw through the same human action used in normal play.
@@ -4636,13 +5214,13 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 # Wait until the animated draw rail shows a partial reveal.
                 page.wait_for_function("""() => { const count = document.querySelectorAll('[data-testid="keno-drawn-ball"]').length; return count >= 8 && count < 20; }""", timeout=3000)
                 # Store the draw-progress board box for stability assertions.
-                keno_progress_box=page.get_by_test_id('keno-grid').bounding_box()
+                keno_progress_box=page.evaluate("() => { const box=document.querySelector('[data-testid=\"keno-grid\"]')?.getBoundingClientRect(); return box&&box.width>0&&box.height>0?{width:box.width,height:box.height}:null; }"); assert keno_progress_box
                 # Capture the approved draw-progress evidence state.
                 shot('keno_draw_progress.png')
                 # Wait for the full Keno draw and comparison drawer to finish rendering.
                 page.wait_for_function("""() => document.querySelectorAll('[data-testid="keno-drawn-ball"]').length === 20""", timeout=5000); page.get_by_test_id('keno-paytable-comparison').wait_for(timeout=5000)
                 # Store the final-result board box for stability assertions.
-                keno_result_box=page.get_by_test_id('keno-grid').bounding_box()
+                keno_result_box=page.evaluate("() => { const box=document.querySelector('[data-testid=\"keno-grid\"]')?.getBoundingClientRect(); return box&&box.width>0&&box.height>0?{width:box.width,height:box.height}:null; }"); assert keno_result_box
                 # Capture the approved result and paytable-comparison evidence state.
                 shot('keno_result_paytable_comparison.png')
                 # Define the premium_keno function used by this module.

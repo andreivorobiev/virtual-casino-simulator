@@ -66,7 +66,9 @@ Status chips must be concise and subordinate to the title. They must not overlap
 
 ## Responsive behavior
 
-Desktop uses the three-zone composition when the center stage can remain dominant. Below the shared breakpoint, panels stack in control, stage, data order unless a game-specific user journey documents another order. Touch targets remain at least 42 CSS pixels for primary controls. Text, chips, and tables wrap without clipping, and the wallet remains complete rather than collapsing into an unexplained symbol.
+Desktop uses the three-zone composition when the center stage can remain dominant. Below the shared breakpoint, panels stack in control, stage, data order unless a game-specific user journey documents another order. Text, chips, and tables wrap without clipping, and the wallet remains complete rather than collapsing into an unexplained symbol.
+
+Adopted touch-target decision (issue #283): the minimum hit size for primary and high-frequency controls is 42 CSS pixels, which exceeds the WCAG 2.2 AA target-size minimum of 24 CSS pixels; 44 CSS pixels is recommended for newly designed surfaces where layout allows. This resolves the 42-versus-44 conflict between this standard and the draft guidelines in favor of the shipped 42-pixel floor that all remediated controls already meet. Small visual controls such as checkboxes satisfy the minimum through an enlarged clickable parent row rather than by inflating the glyph.
 
 ## Accessibility and interaction
 
