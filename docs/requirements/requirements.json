@@ -9372,7 +9372,7 @@
         "tests/ui_50000.py",
         "tests/unit/ui_50000_tests.py",
         "tests/run_tests.py",
-        ".github/workflows/ui-50000.yml"
+        ".github/workflows/browser-tests.yml"
       ],
       "introduced_in": "issue-227-ui-50000-ci-replacement",
       "changed_in": "issue-227-ui-50000-ci-replacement",

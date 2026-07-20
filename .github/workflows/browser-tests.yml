@@ -1,6 +1,12 @@
 name: Browser Tests
 on:
   workflow_dispatch:
+    inputs:
+      formal_ui_50000:
+        description: 'Run the authorized exact-source 50,000-cycle qualification'
+        required: true
+        default: false
+        type: boolean
   pull_request:
     # Run browser coverage when UI/runtime code, its harness, or canonical version input changes.
     paths:
@@ -31,3 +37,120 @@ jobs:
         with:
           name: browser-test-artifacts
           path: logs/test-runs/
+
+  # Distribute the formal issue #227 workload only when the explicit dispatch input is true.
+  formal_ui_workers:
+    name: Formal UI worker ${{ matrix.allocation_index }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.formal_ui_50000 == true }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      max-parallel: 20
+      matrix:
+        allocation_index:
+          - 0
+          - 1
+          - 2
+          - 3
+          - 4
+          - 5
+          - 6
+          - 7
+          - 8
+          - 9
+          - 10
+          - 11
+          - 12
+          - 13
+          - 14
+          - 15
+          - 16
+          - 17
+          - 18
+          - 19
+          - 20
+          - 21
+          - 22
+          - 23
+          - 24
+          - 25
+          - 26
+          - 27
+          - 28
+          - 29
+          - 30
+          - 31
+          - 32
+    steps:
+      # Pin every worker to the exact workflow-dispatch commit.
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dev requirements
+        run: python -m pip install -r requirements-dev.txt
+      - name: Install Playwright Chromium
+        run: python -m playwright install chromium
+      - name: Run immutable UI allocation
+        run: >-
+          python tests/ui_50000.py
+          --total-cycles 50000
+          --allocation-index "${{ matrix.allocation_index }}"
+          --parallel 1
+          --deployment-root "${RUNNER_TEMP}/casino-ui-50000-${{ matrix.allocation_index }}"
+          --report "logs/test-runs/ui_50000_worker-${{ matrix.allocation_index }}.json"
+          --shard-report-root "logs/test-runs/ui_50000_shards"
+          --evidence-root "logs/test-runs/ui_50000_visual"
+          --progress-every 100
+          --max-attempts-per-cycle 2
+      - name: Upload terminal worker evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-50000-worker-${{ matrix.allocation_index }}
+          path: |
+            logs/test-runs/ui_50000_worker-${{ matrix.allocation_index }}.json
+            logs/test-runs/ui_50000_shards/
+            logs/test-runs/ui_50000_visual/
+          if-no-files-found: warn
+          retention-days: 7
+
+  # Aggregate every terminal worker even when one worker honestly fails.
+  formal_ui_aggregate:
+    name: Formal UI exact aggregate
+    if: ${{ always() && github.event_name == 'workflow_dispatch' && inputs.formal_ui_50000 == true }}
+    needs: formal_ui_workers
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      # Check out the same exact source before accepting downloaded shard provenance.
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dev requirements
+        run: python -m pip install -r requirements-dev.txt
+      - name: Download every terminal worker artifact
+        uses: actions/download-artifact@v4
+        with:
+          pattern: ui-50000-worker-*
+          path: logs/test-runs
+          merge-multiple: true
+      - name: Verify exact 50000-cycle aggregate
+        run: >-
+          python tests/ui_50000.py
+          --aggregate-only
+          --total-cycles 50000
+          --source-commit "${{ github.sha }}"
+          --report "logs/test-runs/ui_50000.json"
+          --shard-report-root "logs/test-runs/ui_50000_shards"
+          --evidence-root "logs/test-runs/ui_50000_visual"
+      - name: Upload terminal qualification bundle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-50000-terminal-${{ github.sha }}
+          path: logs/test-runs/
+          if-no-files-found: warn
+          retention-days: 14
