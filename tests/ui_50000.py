@@ -311,6 +311,18 @@ async def terminal_action(page, selector, activated_counts):
     await wait_any_enabled(page, [selector])  # Require terminal next-round readiness.
 
 
+# Spin Roulette only after observing its explicit resolving transition and later next-round readiness.
+async def roulette_terminal_action(page, activated_counts):
+    selector = '[data-testid="roulette-spin"]'  # Reuse the public primary-action identity for click and readiness evidence.
+    await click_control(page, selector, activated_counts)  # Start the real pointer-owned spin through the rendered control.
+    resolving_expression = """() => { const result = document.querySelector('[data-testid=\"roulette-result-region\"]'); const spin = document.querySelector('[data-testid=\"roulette-spin\"]'); return Boolean(result?.dataset.phase === 'spinning' && spin?.disabled); }"""  # Require the committed disabled resolving render before polling for the next round.
+    try:  # Convert framework-only timing failures into one stable Roulette transition diagnostic.
+        await page.wait_for_function(resolving_expression, timeout=ACTION_TIMEOUT_MS)  # Prevent the pre-click enabled node from satisfying terminal readiness during its replacement race.
+    except Exception as exc:  # Preserve a missing busy transition as an actionable product or harness failure.
+        raise AssertionError("Roulette spin did not enter resolving state") from exc  # Expose only the public state contract in terminal evidence.
+    await wait_any_enabled(page, [selector])  # Accept the cycle only after settlement returns a genuinely enabled fresh-spin control.
+
+
 # Return all visible enabled locators matching a selector after a decision rerender.
 async def enabled_locators(page, selector):
     ready = []  # Preserve DOM order for deterministic cycling.
@@ -382,7 +394,7 @@ async def play_game_ui(page, game_id, ordinal, seen_counts, activated_counts):
         if not replacement_numbers:  # Require a playable table after clearing.
             raise AssertionError("Roulette number targets unavailable after clear")  # Preserve a broken reset state.
         await click_locator(replacement_numbers[ordinal % len(replacement_numbers)], activated_counts)  # Leave one bounded wager for settlement.
-        await terminal_action(page, '[data-testid="roulette-spin"]', activated_counts)  # Spin and require settlement.
+        await roulette_terminal_action(page, activated_counts)  # Observe the disabled resolving render before requiring a settled fresh-spin state.
     elif game_id == "slots":  # Exercise one complete slot spin.
         await terminal_action(page, '[data-testid="slots-spin"]', activated_counts)  # Use the cabinet's visible spin control.
     elif game_id == "keno":  # Exercise ticket selection, purchase, drawing, and reset.

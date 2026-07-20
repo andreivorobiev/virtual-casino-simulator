@@ -64,6 +64,35 @@ class UI50000HarnessTests(unittest.TestCase):
         self.assertIn("auth::input[data-testid=login-email]", result["excluded"])  # Keep one-time authentication outside gameplay counts.
         self.assertEqual(result["classified_count"], 4)  # Require complete mutually exclusive accounting.
 
+    # Prove Roulette cannot mistake its pre-click enabled node for post-settlement readiness.
+    def test_roulette_terminal_action_observes_resolving_before_ready(self):
+        events = []  # Record the browser-free synchronization order.
+
+        class FakePage:  # Provide only the page method owned by the transition helper.
+            async def wait_for_function(self, expression, timeout):
+                events.append("resolving")  # Record the explicit busy-state observation between click and readiness.
+                self.expression = expression  # Preserve the browser predicate for semantic assertions.
+                self.timeout = timeout  # Preserve the governed action bound for semantic assertions.
+
+        async def fake_click_control(_page, selector, _activated_counts, timeout_ms=ui_50000.ACTION_TIMEOUT_MS):
+            self.assertEqual(selector, '[data-testid="roulette-spin"]')  # Require the public Roulette control identity.
+            self.assertEqual(timeout_ms, ui_50000.ACTION_TIMEOUT_MS)  # Preserve the default bounded pointer action.
+            events.append("click")  # Record the real-action boundary before the busy-state wait.
+
+        async def fake_wait_any_enabled(_page, selectors, timeout_ms=ui_50000.ACTION_TIMEOUT_MS):
+            self.assertEqual(selectors, ['[data-testid="roulette-spin"]'])  # Require the same control to define fresh-round readiness.
+            self.assertEqual(timeout_ms, ui_50000.ACTION_TIMEOUT_MS)  # Preserve the default bounded settlement wait.
+            events.append("ready")  # Record terminal readiness only after the resolving observation.
+            return selectors[0]  # Model one genuinely enabled post-settlement control.
+
+        page = FakePage()  # Create one browser-free transition recorder.
+        with mock.patch.object(ui_50000, "click_control", side_effect=fake_click_control), mock.patch.object(ui_50000, "wait_any_enabled", side_effect=fake_wait_any_enabled):  # Isolate synchronization order from Playwright.
+            asyncio.run(ui_50000.roulette_terminal_action(page, Counter()))  # Exercise the helper without launching a browser.
+        self.assertEqual(events, ["click", "resolving", "ready"])  # Reject any return to readiness before the disabled resolving state.
+        self.assertIn("roulette-result-region", page.expression)  # Bind the predicate to the visible phase contract.
+        self.assertIn("spin?.disabled", page.expression)  # Require the public button to be non-actionable during resolution.
+        self.assertEqual(page.timeout, ui_50000.ACTION_TIMEOUT_MS)  # Keep transition observation inside the governed action timeout.
+
     # Prove a terminal shard from another source commit is rerun instead of silently resumed.
     def test_resume_requires_exact_source_commit(self):
         allocation = ("roulette", ui_50000.GAME_IDS.index("roulette"), 0, 5, 0)  # Build one deterministic shard identity.
