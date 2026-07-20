@@ -4,6 +4,8 @@
 import inspect
 # Import required dependency so thread and process ledger calls can overlap safely.
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+# Import environment access so live provider routing can be scoped and restored safely.
+import os
 # Import required dependency so test data can be written outside the real data directory.
 import tempfile
 # Import required dependency so isolated JSON provider paths are platform-safe.
@@ -79,6 +81,10 @@ def _mysql_token_consume_worker(arguments):
 
     # Unpack the synthetic race packet without printing any ephemeral value.
     index, token, subject = arguments
+    # Preserve the inherited workflow selector so this child restores it before exit.
+    previous_provider_name = os.environ.get("CASINO_STORAGE_PROVIDER")
+    # Route state_store through the independent MySQL provider for this bounded worker.
+    os.environ["CASINO_STORAGE_PROVIDER"] = "mysql"
     # Inject an independent MySQL provider because process-local test injection is not inherited.
     storage.set_provider_for_tests(storage.MySQLStorageProvider())
     # Start protected consumption so provider injection is always released.
@@ -108,6 +114,14 @@ def _mysql_token_consume_worker(arguments):
     finally:
         # Restore normal provider selection in this spawned process.
         storage.set_provider_for_tests(None)
+        # Restore an inherited selector exactly when one existed.
+        if previous_provider_name is not None:
+            # Replace the bounded MySQL selector with the inherited value.
+            os.environ["CASINO_STORAGE_PROVIDER"] = previous_provider_name
+        # Remove the temporary selector when the parent process had none.
+        else:
+            # Delete only the worker-owned environment entry.
+            os.environ.pop("CASINO_STORAGE_PROVIDER", None)
 
 
 # Simulate a process that commits an action journal entry but loses projection and response.
@@ -495,28 +509,44 @@ def run_mysql_live_provider_path():
         assert sum(1 for _, _, replayed in action_results if replayed is False) == 1
         # Verify the wallet absorbed only one three-token debit from 25 calls.
         assert players.get_player("human")["balance"] == starting_balance - 23
-        # Build the inert token service over the canonical provider-routed authentication document.
-        token_service = one_time_tokens.TokenService(store_path=DATA_DIR / "auth" / "one_time_tokens.json", digest_key=MYSQL_TOKEN_TEST_KEY, audit_sink=lambda level, event, fields: None)
-        # Issue one ephemeral bearer for the cross-process exactly-once race.
-        token_receipt = token_service.issue("password_reset", "mysql-token-subject@example.invalid")
-        # Build twelve bounded independent process packets without writing ephemeral values to evidence.
-        token_packets = [(index, token_receipt["token"], "mysql-token-subject@example.invalid") for index in range(12)]
-        # Execute the same consume operation through independent MySQL connections and processes.
-        with ProcessPoolExecutor(max_workers=4) as executor:
-            # Materialize every result so child failures surface in the live integration gate.
-            token_results = list(executor.map(_mysql_token_consume_worker, token_packets))
-        # Require exactly one successful consume across all independent processes.
-        assert sum(1 for _, won, _ in token_results if won) == 1
-        # Require every successful observation to name the issued opaque record.
-        assert {token_id for _, won, token_id in token_results if won} == {token_receipt["token_id"]}
-        # Read the provider document after the race for durable state minimization evidence.
-        token_document = provider.read_document("auth/one_time_tokens.json", one_time_tokens.default_tokens)
-        # Serialize only isolated in-memory state for raw-material absence assertions.
-        token_document_text = __import__("json").dumps(token_document, sort_keys=True)
-        # Require no raw bearer or subject value in the durable MySQL document.
-        assert token_receipt["token"] not in token_document_text and "mysql-token-subject@example.invalid" not in token_document_text
-        # Require exactly one consumed timestamp for the issued opaque record.
-        assert sum(1 for row in token_document.get("tokens", []) if row.get("token_id") == token_receipt["token_id"] and row.get("consumed_at")) == 1
+        # Preserve the workflow's default provider selector around the focused token proof.
+        previous_provider_name = os.environ.get("CASINO_STORAGE_PROVIDER")
+        # Route parent issue and read operations through the injected MySQL provider.
+        os.environ["CASINO_STORAGE_PROVIDER"] = "mysql"
+        # Start protected live evidence so the workflow selector is always restored.
+        try:
+            # Build the inert token service over the canonical provider-routed authentication document.
+            token_service = one_time_tokens.TokenService(store_path=DATA_DIR / "auth" / "one_time_tokens.json", digest_key=MYSQL_TOKEN_TEST_KEY, audit_sink=lambda level, event, fields: None)
+            # Issue one ephemeral bearer for the cross-process exactly-once race.
+            token_receipt = token_service.issue("password_reset", "mysql-token-subject@example.invalid")
+            # Build twelve bounded independent process packets without writing ephemeral values to evidence.
+            token_packets = [(index, token_receipt["token"], "mysql-token-subject@example.invalid") for index in range(12)]
+            # Execute the same consume operation through independent MySQL connections and processes.
+            with ProcessPoolExecutor(max_workers=4) as executor:
+                # Materialize every result so child failures surface in the live integration gate.
+                token_results = list(executor.map(_mysql_token_consume_worker, token_packets))
+            # Require exactly one successful consume across all independent processes.
+            assert sum(1 for _, won, _ in token_results if won) == 1
+            # Require every successful observation to name the issued opaque record.
+            assert {token_id for _, won, token_id in token_results if won} == {token_receipt["token_id"]}
+            # Read the provider document after the race for durable state minimization evidence.
+            token_document = provider.read_document("auth/one_time_tokens.json", one_time_tokens.default_tokens)
+            # Serialize only isolated in-memory state for raw-material absence assertions.
+            token_document_text = __import__("json").dumps(token_document, sort_keys=True)
+            # Require no raw bearer or subject value in the durable MySQL document.
+            assert token_receipt["token"] not in token_document_text and "mysql-token-subject@example.invalid" not in token_document_text
+            # Require exactly one consumed timestamp for the issued opaque record.
+            assert sum(1 for row in token_document.get("tokens", []) if row.get("token_id") == token_receipt["token_id"] and row.get("consumed_at")) == 1
+        # Always restore the workflow provider selector after the scoped proof.
+        finally:
+            # Restore an inherited selector exactly when one existed.
+            if previous_provider_name is not None:
+                # Replace the bounded MySQL selector with the inherited value.
+                os.environ["CASINO_STORAGE_PROVIDER"] = previous_provider_name
+            # Remove the temporary selector when the parent environment had none.
+            else:
+                # Delete only the test-owned environment entry.
+                os.environ.pop("CASINO_STORAGE_PROVIDER", None)
         # Rebuild the provider to simulate a fresh application process after restart.
         storage.set_provider_for_tests(storage.MySQLStorageProvider())
         # Replay the same action after provider reconstruction.
