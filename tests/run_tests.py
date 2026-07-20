@@ -2253,7 +2253,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Require the play-token cue to remain present in the locale's own words.
                         assert ('token' in rendered_subtitle.lower()) or ('токен' in rendered_subtitle.lower()), rendered_subtitle
                         # Require the separately approved diagnostics rail to retain a concrete semantic version for #287 provenance.
-                        assert re.fullmatch(r'\d+\.\d+\.\d+',page.locator('#status-version').inner_text().strip())
+                        assert re.fullmatch(r'v\d+\.\d+\.\d+',page.locator('#status-version').inner_text().strip())
                         # Prove the lobby header remains readable, contained, and unclipped at every governed viewport.
                         for viewport_id,viewport in brand_viewports.items():
                             # Resize to the exact matrix viewport and let responsive layout settle before measuring.
