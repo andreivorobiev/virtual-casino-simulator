@@ -12,7 +12,7 @@ from casino.config import DATA_DIR, GAME_DATA_DIR, LOG_DIR, DOCS_DIR, APP_VERSIO
 # Import required dependency so this module can use its public functions or constants.
 from casino.module_versions import list_module_revisions
 # Import required dependency so this module can use its public functions or constants.
-from casino.core import auth, players, ledger, history, logger, autoplay, settings
+from casino.core import auth, players, ledger, history, logger, autoplay, feedback, settings
 # Import the de-identified guest-trial telemetry for the Admin Guest Trials section. (issue #317)
 from casino.core import guest_analytics
 # Import required dependency so this module can use its public functions or constants.
@@ -482,6 +482,34 @@ def register(router):
     def admin_dashboard(body, query):
         # Return the computed value to the caller.
         return overview()
+
+    # Register the additive v2 Admin problem-report inbox. (ADMIN-025, issue #349)
+    @router.get(r"/api/v2/admin/feedback/reports")
+    # Return attachment-free summaries with optional governed filters.
+    def admin_feedback_reports_v2(body, query):
+        # Delegate validation and newest-first ordering to the feedback service.
+        return {"reports": feedback.list_reports(query), "priorities": sorted(feedback.ALLOWED_PRIORITIES), "statuses": sorted(feedback.ALLOWED_STATUSES), "categories": sorted(feedback.ALLOWED_CATEGORIES)}
+
+    # Register one Admin report detail route with server-sanitized image evidence.
+    @router.get(r"/api/v2/admin/feedback/reports/(?P<report_id>report_[A-Za-z0-9_-]+)")
+    # Return one canonical internal report after the central Admin authorization gate.
+    def admin_feedback_report_detail_v2(body, query, report_id):
+        # Keep evidence and reporter linkage inside the Admin surface.
+        return {"report": feedback.detail(report_id)}
+
+    # Register the partial Admin triage update route.
+    @router.patch(r"/api/v2/admin/feedback/reports/(?P<report_id>report_[A-Za-z0-9_-]+)")
+    # Apply governed priority, lifecycle, notes, and an optional reviewed GitHub link.
+    def admin_feedback_report_update_v2(body, query, report_id):
+        # Return the complete updated report for immediate Admin rerendering.
+        return {"report": feedback.update(report_id, body)}
+
+    # Register an explicit safe GitHub-draft preparation action without external mutation.
+    @router.post(r"/api/v2/admin/feedback/reports/(?P<report_id>report_[A-Za-z0-9_-]+)/github-draft")
+    # Generate a reporter-free issue draft for Admin review and manual publication.
+    def admin_feedback_github_draft_v2(body, query, report_id):
+        # Return only title, body, and governed repository labels.
+        return {"draft": feedback.github_draft(report_id)}
 
     # Attach the v2 Admin summary route required for additive guest-trial reporting.
     @router.get(r"/api/v2/admin/guest-trials")

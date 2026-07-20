@@ -6,14 +6,14 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.41.0
-- core: 9.16.0
+- application: 9.41.1
+- core: 9.16.1
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.0
 - autoplay: 1.1.3
 - audio: 9.1.1
-- admin: 1.8.0
+- admin: 1.8.1
 - operations: 1.0.0
 - roulette: 9.4.5
 - slots: 9.1.4
@@ -45,9 +45,9 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.1
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.48.0
-- docs: 1.48.0
-- contracts: 1.36.0
+- tests: 1.48.1
+- docs: 1.48.1
+- contracts: 1.36.1
 - tooling: 1.16.0
 - commenting_policy: 1.0.0
 
@@ -723,3 +723,9 @@ Historical source baseline: 9.1.0
 - **MAIL-005** (Application) - PASS: Every authorized purpose has matching en-US and ru-RU subjects plus plain-text and semantic HTML alternatives whose action link has meaningful text and whose fixed content is safely escaped.
 - **MAIL-006** (Docs) - PASS: The transactional-mail runbook documents disabled defaults, separate release authority, sender/domain and SPF/DKIM/DMARC posture, canonical-origin and OAuth callback coordination, domain-move revalidation, bounded smoke evidence, rollback, suppression review, and the prohibition on treating repository merge as live authorization.
 - **TEST-090** (Tests) - PASS: Provider-free unit and API tests prove dual-gate inaccessibility, raw-value exclusion, public digest-key hardening, atomic caller idempotency, changed-meaning conflict, bounded retry, ambiguous-result freezing, rate limits, suppression, retention, malformed-state preservation, bilingual templates, Admin-only contract shape, absent consumer routes, and real MySQL cross-process single-claim behavior; exact-head browser evidence covers disabled, misconfigured, release-held, and suppression-summary states in en-US and ru-RU at all four governed viewports.
+- **CORE-027** (Core) - PASS: A registered authenticated user can submit one retry-safe problem report through the additive v2 API with bounded category, summary, actual behavior, expected behavior, privacy-reduced route and environment context, and up to three screenshots; guest and anonymous submission remain outside this release.
+- **ADMIN-025** (Admin) - PASS: The Admin problem-report inbox lists attachment-free summaries, filters by governed priority, status, and category, provides internal detail and evidence review, preserves reports through non-destructive lifecycle states, and prepares a reporter-free GitHub draft plus reviewed repository-issue linkage without automatic publication.
+- **SEC-011** (Security) - PASS: Problem-report screenshots are strictly base64 decoded, limited by count, bytes, pixels, and dimensions, decoded only as PNG, JPEG, or WebP, re-encoded to metadata-free JPEG, stored only in Admin detail documents, and excluded from list and GitHub-draft responses; diagnostic context excludes cookies, credentials, raw URLs, wallet contents, and wager data.
+- **I18N-005** (Application) - PASS: Player reporting and Admin problem-report triage provide complete en-US and ru-RU labels, instructions, privacy disclosure, status, validation, filter, detail, and GitHub-draft copy with no visible resource keys after locale changes.
+- **UX-019** (Application) - PASS: The report affordance and native modal remain keyboard-operable, focus-visible, scroll-contained, touch-sized, and free of page-level horizontal overflow at desktop, compact desktop, tablet, and mobile viewports; screenshot previews are removable and diagnostic disclosure is inspectable before submission.
+- **TEST-091** (Tests) - PASS: Provider-neutral API tests prove report idempotency, registered-user scope, P4 rejection, route minimization, metadata stripping, attachment-free listings, triage, linkage, and reporter-free GitHub drafts; browser tests prove player and Admin flows, EN/RU localization, keyboard access, screenshot previews, and responsive containment against the visual matrix.

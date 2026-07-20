@@ -1,0 +1,227 @@
+openapi: 3.0.3
+info:
+  title: Virtual Casino problem-report API
+  version: v2
+  description: Authenticated registered-player submission and Admin-only internal triage for metadata-stripped problem reports. Guest and anonymous submission are not enabled by this contract.
+servers:
+  - url: /api/v2
+paths:
+  /feedback/reports:
+    post:
+      summary: Submit one retry-safe registered-player problem report.
+      operationId: feedback_v2_submit
+      security:
+        - cookieSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportSubmission'
+      responses:
+        '200':
+          description: Standard success envelope containing a stable internal reference.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubmissionEnvelope'
+        '400':
+          description: Validation failure or guest-account restriction.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '401':
+          description: Authentication is required.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /admin/feedback/reports:
+    get:
+      summary: List attachment-free internal report summaries.
+      operationId: feedback_v2_admin_list
+      security:
+        - cookieSession: []
+      parameters:
+        - in: query
+          name: priority
+          schema:
+            type: string
+            enum: [P1, P2, P3]
+        - in: query
+          name: status
+          schema:
+            $ref: '#/components/schemas/Status'
+        - in: query
+          name: category
+          schema:
+            $ref: '#/components/schemas/Category'
+      responses:
+        '200':
+          description: Standard success envelope containing report summaries and filter taxonomies.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportListEnvelope'
+        '401':
+          description: Authentication is required.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          description: Admin role is required.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /admin/feedback/reports/{report_id}:
+    parameters:
+      - $ref: '#/components/parameters/ReportId'
+    get:
+      summary: Read one internal report with normalized screenshot evidence.
+      operationId: feedback_v2_admin_detail
+      security:
+        - cookieSession: []
+      responses:
+        '200':
+          description: Standard success envelope containing canonical internal report detail.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportDetailEnvelope'
+        '404':
+          description: Report reference was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+    patch:
+      summary: Update governed Admin triage fields without deleting report history.
+      operationId: feedback_v2_admin_update
+      security:
+        - cookieSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TriageUpdate'
+      responses:
+        '200':
+          description: Standard success envelope containing updated canonical detail.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportDetailEnvelope'
+  /admin/feedback/reports/{report_id}/github-draft:
+    parameters:
+      - $ref: '#/components/parameters/ReportId'
+    post:
+      summary: Prepare a reporter-free GitHub issue draft without external publication.
+      operationId: feedback_v2_admin_github_draft
+      security:
+        - cookieSession: []
+      responses:
+        '200':
+          description: Standard success envelope containing title, Markdown body, and governed labels.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DraftEnvelope'
+components:
+  securitySchemes:
+    cookieSession:
+      type: apiKey
+      in: cookie
+      name: casino_session
+  parameters:
+    ReportId:
+      in: path
+      name: report_id
+      required: true
+      schema:
+        type: string
+        pattern: '^report_[A-Za-z0-9_-]+$'
+  schemas:
+    Category:
+      type: string
+      enum: [bug, visual, accessibility, performance, content, other]
+    Status:
+      type: string
+      enum: [new, triaged, linked, resolved, duplicate, rejected]
+    DiagnosticContext:
+      type: object
+      additionalProperties: false
+      required: [route, locale, viewport_width, viewport_height, browser_family, os_family, reduced_motion]
+      properties:
+        route: { type: string, maxLength: 181 }
+        locale: { type: string, enum: [en-US, ru-RU] }
+        viewport_width: { type: integer, minimum: 0, maximum: 8000 }
+        viewport_height: { type: integer, minimum: 0, maximum: 8000 }
+        browser_family: { type: string, enum: [Chrome, Edge, Firefox, Safari, Other] }
+        os_family: { type: string, enum: [Android, iOS, Linux, macOS, Windows, Other] }
+        reduced_motion: { type: boolean }
+    AttachmentSubmission:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: string
+          description: Client-compressed PNG, JPEG, or WebP as strict base64 or an image data URL. The server decodes and re-encodes it before persistence.
+          maxLength: 275000
+    ReportSubmission:
+      type: object
+      additionalProperties: false
+      required: [idempotency_key, category, summary, actual, expected, context]
+      properties:
+        idempotency_key: { type: string, minLength: 16, maxLength: 100, pattern: '^[A-Za-z0-9_-]+$' }
+        category: { $ref: '#/components/schemas/Category' }
+        summary: { type: string, minLength: 5, maxLength: 140 }
+        actual: { type: string, minLength: 5, maxLength: 4000 }
+        expected: { type: string, minLength: 5, maxLength: 2000 }
+        attachments:
+          type: array
+          maxItems: 3
+          items: { $ref: '#/components/schemas/AttachmentSubmission' }
+        context: { $ref: '#/components/schemas/DiagnosticContext' }
+    TriageUpdate:
+      type: object
+      additionalProperties: false
+      properties:
+        priority: { type: string, enum: [P1, P2, P3] }
+        status: { $ref: '#/components/schemas/Status' }
+        admin_notes: { type: string, maxLength: 4000 }
+        github_issue_url: { type: string, maxLength: 300 }
+    ErrorEnvelope:
+      type: object
+      required: [ok, error]
+      properties:
+        ok: { type: boolean, enum: [false] }
+        error: { type: object }
+    SubmissionEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok: { type: boolean, enum: [true] }
+        data: { type: object }
+    ReportListEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok: { type: boolean, enum: [true] }
+        data: { type: object }
+    ReportDetailEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok: { type: boolean, enum: [true] }
+        data: { type: object }
+    DraftEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok: { type: boolean, enum: [true] }
+        data: { type: object }

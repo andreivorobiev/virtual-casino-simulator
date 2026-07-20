@@ -1,7 +1,7 @@
 # AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
 #!/usr/bin/env python3
 # Import required dependency so this module can use its public functions or constants.
-import argparse, hashlib, importlib, io, json, os, re, socket, subprocess, sys, tempfile, threading, time, traceback, unittest, urllib.request
+import argparse, base64, hashlib, importlib, io, json, os, re, socket, subprocess, sys, tempfile, threading, time, traceback, unittest, urllib.request
 # Import date arithmetic for fixed-window Guest Trials retention tests.
 from datetime import datetime, timedelta, timezone
 # Import source inspection so browser progress totals follow declared run_case calls automatically.
@@ -924,6 +924,23 @@ def run_api_tests():
             raise AssertionError('transactional-mail infrastructure suite failed')
     # Record the complete listener-free transactional-mail platform proof.
     run_case('API-MAIL-001',['MAIL-001','MAIL-002','MAIL-003','MAIL-004','MAIL-005','MAIL-006','TEST-090'],run_transactional_mail_tests)
+
+    # Run provider-neutral problem-report lifecycle and image-safety tests. (TEST-091, issue #349)
+    def run_feedback_tests():
+        # Import the focused suite lazily so non-API runners do not require Pillow.
+        from tests import feedback_tests
+        # Load only the feedback service test case.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(feedback_tests.FeedbackServiceTests)
+        # Execute with the standard in-memory result collector.
+        result = unittest.TestResult()
+        # Run the complete focused suite.
+        suite.run(result)
+        # Raise the first combined failure through the standard run_case boundary.
+        if result.failures or result.errors:
+            # Preserve useful test diagnostics without exposing runtime secrets.
+            raise AssertionError((result.failures + result.errors)[0][1])
+    # Map the focused service proof to the new requirements.
+    run_case('API-FEEDBACK-001',['CORE-027','ADMIN-025','SEC-011','I18N-005','TEST-091'],run_feedback_tests)
     # Record listener-free disposable-principal lifecycle and browser-binding proof.
     run_case('API-GUEST-LIFECYCLE-001',['GUEST-001','GUEST-002','GUEST-006','TEST-080'],validate_guest_lifecycle)
     # Record listener-free telemetry privacy, milestones, and retention proof.
@@ -2671,6 +2688,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         page.get_by_test_id('auth-locale-select').select_option(brand_locale); page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale",arg=brand_locale)
                         # Read the exact safety acknowledgement from the locale-owned shell resource.
                         expected_safety=read_i18n_json(ROOT/'web'/'i18n'/brand_locale/'shell.json')['auth.termsCheck']
+                        # Wait for the async locale resource load and auth-gate rerender, not only the earlier in-memory locale assignment.
+                        page.wait_for_function("expected => document.querySelector('label.check-row')?.textContent.includes(expected)",arg=expected_safety)
                         # Require the guest surface to preserve the full fake-money/play-token safety wording.
                         assert expected_safety in page.locator('label.check-row').inner_text()
                         # Require the protected authenticated topbar, wallet, and diagnostics provenance to remain absent for guests.
@@ -3027,9 +3046,9 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             # Resize to the exact matrix viewport and let responsive layout settle before measuring.
                             page.set_viewport_size(viewport); page.wait_for_timeout(100)
                             # Audit the complete brand lockup against its topbar and viewport bounds.
-                            brand_geometry=page.evaluate("""() => { const topbar=document.querySelector('[data-testid=\"premium-topbar\"]'); const lockup=document.querySelector('.brand-lockup'); const title=document.querySelector('#shell-brand-title'); const subtitle=document.querySelector('#shell-brand-subtitle'); const topbarBox=topbar.getBoundingClientRect(); const lockupBox=lockup.getBoundingClientRect(); return { topbarHeight:topbarBox.height, contained:lockupBox.left >= topbarBox.left - 1 && lockupBox.right <= topbarBox.right + 1 && lockupBox.top >= topbarBox.top - 1 && lockupBox.bottom <= topbarBox.bottom + 1, viewportContained:lockupBox.left >= -1 && lockupBox.right <= window.innerWidth + 1, titleUnclipped:title.scrollWidth <= title.clientWidth + 1 && title.scrollHeight <= title.clientHeight + 1, subtitleUnclipped:subtitle.scrollWidth <= subtitle.clientWidth + 1 && subtitle.scrollHeight <= subtitle.clientHeight + 1, pageNoOverflow:document.documentElement.scrollWidth <= window.innerWidth + 1 }; }""")
+                            brand_geometry=page.evaluate("""() => { const topbar=document.querySelector('[data-testid=\"premium-topbar\"]'); const lockup=document.querySelector('.brand-lockup'); const title=document.querySelector('#shell-brand-title'); const subtitle=document.querySelector('#shell-brand-subtitle'); const topbarBox=topbar.getBoundingClientRect(); const lockupBox=lockup.getBoundingClientRect(); return { topbarHeight:topbarBox.height, titleClientWidth:title.clientWidth, titleScrollWidth:title.scrollWidth, titleClientHeight:title.clientHeight, titleScrollHeight:title.scrollHeight, contained:lockupBox.left >= topbarBox.left - 1 && lockupBox.right <= topbarBox.right + 1 && lockupBox.top >= topbarBox.top - 1 && lockupBox.bottom <= topbarBox.bottom + 1, viewportContained:lockupBox.left >= -1 && lockupBox.right <= window.innerWidth + 1, titleUnclipped:title.scrollWidth <= title.clientWidth + 1 && title.scrollHeight <= title.clientHeight + 1, subtitleUnclipped:subtitle.scrollWidth <= subtitle.clientWidth + 1 && subtitle.scrollHeight <= subtitle.clientHeight + 1, pageNoOverflow:document.documentElement.scrollWidth <= window.innerWidth + 1 }; }""")
                             # Require every geometry and overflow invariant to pass before evidence can be accepted.
-                            assert brand_geometry['contained'] and brand_geometry['viewportContained'] and brand_geometry['titleUnclipped'] and brand_geometry['subtitleUnclipped'] and brand_geometry['pageNoOverflow'],brand_geometry
+                            assert brand_geometry['contained'] and brand_geometry['viewportContained'] and brand_geometry['titleUnclipped'] and brand_geometry['subtitleUnclipped'] and brand_geometry['pageNoOverflow'],(brand_locale,viewport_id,brand_geometry)
                             # Record the topbar height for the later cross-locale stability comparison.
                             header_heights[(brand_locale,viewport_id)]=brand_geometry['topbarHeight']
                             # Capture exact-head authenticated lobby evidence with a self-describing sidecar.
@@ -6229,6 +6248,60 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         game_evidence(f'after-pass-shell-admin-nav-context-admin-{admin_nav_locale}-{admin_nav_viewport_id}.png','shell_lobby',['authenticated'],admin_nav_locale,admin_nav_viewport_id)
                 # Restore the default locale and primary viewport before keyboard activation.
                 page.set_viewport_size({'width':1920,'height':1080}); page.get_by_test_id('shell-locale-select').select_option('en-US'); page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'en-US'")
+                # Store the created internal report reference for the later Admin inbox proof.
+                feedback_report_reference={'value':''}
+                # Define the registered-user report modal, paste-equivalent upload, localization, submission, and containment proof. (issue #349)
+                def feedback_report_browser():
+                    # Enumerate every governed viewport required by the feedback visual-matrix row.
+                    viewports={'desktop_primary':{'width':1920,'height':1080},'desktop_compact':{'width':1440,'height':900},'tablet':{'width':1024,'height':900},'mobile':{'width':390,'height':844}}
+                    # Exercise empty modal presentation in both installed locales and every viewport.
+                    for locale in ('en-US','ru-RU'):
+                        # Switch through the player-visible locale control.
+                        page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale",arg=locale)
+                        # Capture and inspect the native modal at each governed width.
+                        for viewport_id,viewport in viewports.items():
+                            # Apply the exact visual-matrix dimensions.
+                            page.set_viewport_size(viewport); page.wait_for_timeout(100)
+                            # Open a clean report draft from the registered-user affordance.
+                            page.get_by_test_id('report-problem-open').click(); page.get_by_test_id('feedback-dialog').wait_for(state='visible')
+                            # Require no page-level or dialog-level horizontal overflow.
+                            assert page.evaluate("() => { const dialog=document.querySelector('[data-testid=feedback-dialog]'); return document.documentElement.scrollWidth <= window.innerWidth + 1 && dialog.scrollWidth <= dialog.clientWidth + 1; }")
+                            # Require translated copy rather than a visible resource key.
+                            assert 'feedback.' not in page.get_by_test_id('feedback-dialog').inner_text()
+                            # Capture governed empty-state evidence.
+                            game_evidence(f'after-pass-feedback-empty-{locale}-{viewport_id}.png','feedback_report',['empty'],locale,viewport_id)
+                            # Close through the localized explicit cancel control.
+                            page.locator('#report-cancel').click()
+                    # Restore English primary desktop for real submission.
+                    page.set_viewport_size(viewports['desktop_primary']); page.get_by_test_id('shell-locale-select').select_option('en-US'); page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'en-US'")
+                    # Open the final submission draft.
+                    page.get_by_test_id('report-problem-open').click()
+                    # Select the governed visual category.
+                    page.get_by_test_id('feedback-category').select_option('visual')
+                    # Fill the complete required prose contract.
+                    page.get_by_test_id('feedback-summary').fill('Browser feedback test report')
+                    # Describe the observed behavior without private data.
+                    page.get_by_test_id('feedback-actual').fill('A visual element overlaps its intended region.')
+                    # Describe the expected presentation.
+                    page.get_by_test_id('feedback-expected').fill('The element should remain inside its intended region.')
+                    # Decode a tiny valid PNG into a browser File payload.
+                    png=base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAI0lEQVR4nGMUqghiIAUwkaSaYVQDcYCJSHVwMKqBGEByKAEA0/YA/Hxc1QQAAAAASUVORK5CYII=')
+                    # Send the same file path handled by paste and drag normalization.
+                    page.locator('#report-file-input').set_input_files({'name':'feedback.png','mimeType':'image/png','buffer':png})
+                    # Wait for either the metadata-free browser preview or a surfaced decode diagnostic.
+                    page.wait_for_function("() => document.querySelector('[data-testid=feedback-previews] img') || document.querySelector('#report-message')?.textContent.trim()")
+                    # Require the preview and include only the bounded user-facing diagnostic if normalization failed.
+                    assert page.locator('[data-testid=feedback-previews] img').count()==1,page.locator('#report-message').inner_text()
+                    # Capture screenshot-ready evidence before submission.
+                    game_evidence('after-pass-feedback-screenshot-ready-en-US-desktop_primary.png','feedback_report',['screenshot_ready'],'en-US','desktop_primary')
+                    # Submit through the real v2 API and wait for the reference confirmation.
+                    page.get_by_test_id('feedback-submit').click(); page.wait_for_function("() => /RPT-[A-Z0-9]+/.test(document.querySelector('#report-message')?.textContent || '')")
+                    # Extract only the public reference for later Admin lookup.
+                    feedback_report_reference['value']=re.search(r'RPT-[A-Z0-9]+',page.locator('#report-message').inner_text()).group(0)
+                    # Require the modal to close after the confirmation announcement.
+                    page.get_by_test_id('feedback-dialog').wait_for(state='hidden',timeout=3000)
+                # Execute the player-facing problem-report acceptance case.
+                run_case('BR-FEEDBACK-001',['CORE-027','ADMIN-025','I18N-005','UX-019','TEST-091'],feedback_report_browser)
                 # Focus the visible role-owned route without a pointer.
                 page.get_by_test_id('nav-admin').focus()
                 # Record the focused control before its native Enter activation changes documents.
@@ -6283,6 +6356,46 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         assert module_table.locator('tr').filter(has_text=expected['module']).filter(has_text=expected['revision']).count()==1
                 # Execute the mapped Admin dashboard and packaged-release browser regression.
                 run_case('BR-ADMIN-001',['ADMIN-001','ADMIN-003','ADMIN-004','ADMIN-010','ADMIN-014','TEST-023'],admin_dashboard_browser)
+                # Define Admin problem-report discovery, triage, evidence, and GitHub-draft review. (issue #349)
+                def admin_feedback_browser():
+                    # Open the dedicated Admin problem-report section.
+                    page.get_by_test_id('admin-tab-feedback').click(); page.get_by_test_id('admin-feedback-inbox').wait_for(timeout=5000)
+                    # Locate the report created through the real player modal.
+                    report_button=page.locator('[data-feedback-id]').filter(has_text=feedback_report_reference['value'])
+                    # Require exactly one idempotent report row.
+                    assert report_button.count()==1
+                    # Open canonical detail with internal screenshot evidence.
+                    report_button.click(); page.get_by_test_id('admin-feedback-detail').wait_for(timeout=5000)
+                    # Require the normalized screenshot to render inside the Admin-only detail.
+                    assert page.locator('.feedback-evidence img').count()==1
+                    # Apply governed P1 triage and internal notes.
+                    page.locator('#feedback-detail-priority').select_option('P1'); page.locator('#feedback-detail-status').select_option('triaged'); page.locator('#feedback-admin-notes').fill('Confirmed by exact-head browser acceptance.')
+                    # Save through the real v2 patch route.
+                    page.locator('#feedback-save').click(); page.get_by_test_id('admin-feedback-detail').wait_for(timeout=5000)
+                    # Prepare a reporter-free GitHub draft without external publication.
+                    page.locator('#feedback-draft').click(); page.locator('#feedback-github-draft:not([hidden])').wait_for(timeout=5000)
+                    # Require the governed P1 label and no reporter email or credential text.
+                    draft_text=page.locator('#feedback-github-draft').inner_text(); assert 'P1' in draft_text and '@' not in draft_text and 'password' not in draft_text.lower()
+                    # Verify localized responsive containment across every governed Admin viewport.
+                    for locale in ('en-US','ru-RU'):
+                        # Switch locale in place through the shared i18n runtime.
+                        page.evaluate("async locale => { const i18n=await import('/core/i18n.js'); await i18n.setLocale(locale,{persistLocal:false}); }",locale)
+                        # Reopen the feedback tab because locale rerender returns to its current list view.
+                        page.get_by_test_id('admin-tab-feedback').click(); page.get_by_test_id('admin-feedback-inbox').wait_for(timeout=5000)
+                        # Check all governed viewports without page-level overflow.
+                        for viewport_id,viewport in {'desktop_primary':{'width':1920,'height':1080},'desktop_compact':{'width':1440,'height':900},'tablet':{'width':1024,'height':900},'mobile':{'width':390,'height':844}}.items():
+                            # Apply exact dimensions and allow layout to settle.
+                            page.set_viewport_size(viewport); page.wait_for_timeout(100)
+                            # Capture separate localization and containment diagnostics so failures identify the exact governed state.
+                            feedback_diagnostics=page.evaluate("""() => { const inbox=document.querySelector('[data-testid="admin-feedback-inbox"]'); const table=document.querySelector('.feedback-table-scroll'); return { text:inbox?.innerText || '', pageScrollWidth:document.documentElement.scrollWidth, viewportWidth:innerWidth, tableClientWidth:table?.clientWidth || 0, tableScrollWidth:table?.scrollWidth || 0 }; }""")
+                            # Require translated inbox text and page containment while allowing only the named table region to scroll horizontally.
+                            assert 'feedback.' not in feedback_diagnostics['text'] and feedback_diagnostics['pageScrollWidth'] <= feedback_diagnostics['viewportWidth'] + 1,(locale,viewport_id,feedback_diagnostics)
+                            # Capture the governed inbox state.
+                            game_evidence(f'after-pass-admin-feedback-inbox-{locale}-{viewport_id}.png','admin',['feedback_inbox'],locale,viewport_id)
+                    # Restore the suite default viewport and locale.
+                    page.set_viewport_size({'width':1920,'height':1080}); page.evaluate("async () => { const i18n=await import('/core/i18n.js'); await i18n.setLocale('en-US',{persistLocal:false}); }")
+                # Execute the Admin half of the same permanent feedback acceptance case.
+                run_case('BR-ADMIN-FEEDBACK-001',['ADMIN-025','I18N-005','UX-019','TEST-091'],admin_feedback_browser)
                 # Define Admin-only OAuth diagnostics, isolation from Operations, and visual evidence.
                 def admin_oauth_browser():
                     # Define every governed Admin viewport from the visual matrix.

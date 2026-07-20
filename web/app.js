@@ -26,6 +26,10 @@ let gameRailObserver = null;
 let lobbySearch = '';
 // Track the selected scalable catalog category.
 let lobbyCategory = 'all';
+// Retain only browser-normalized screenshot payloads while the report dialog remains open.
+let feedbackAttachments = [];
+// Preserve one action identity across retries of the same open report draft.
+let feedbackIdempotencyKey = '';
 
 // Relay game/autoplay toast events through the shell-level toast outlet.
 window.addEventListener('casino-toast', event => toast(event.detail?.message || 'Auto stopped'));
@@ -52,6 +56,220 @@ function normalizeCurrentUser(payload) {
   const termsRequired = typeof terms.required === 'boolean' ? terms.required : user.terms_required === true || data.terms_required === true || terms.accepted === false;
   // Return a normalized current-user session object for shell rendering.
   return { ...data, user, player, terms: { ...terms, required: termsRequired } };
+}
+
+// Return whether the current authenticated identity is a disposable guest trial.
+function isRegisteredReporter() {
+  // Require a current user and exclude the separately governed guest identity provider.
+  return Boolean(currentSession?.user?.user_id) && String(currentSession.user.identity_provider || '').toLowerCase() !== 'guest';
+}
+
+// Identify a low-cardinality browser family without retaining the raw user-agent string.
+function browserFamily() {
+  // Read the browser-owned agent only for local classification.
+  const agent = navigator.userAgent || '';
+  // Distinguish Chromium Edge before the generic Chrome marker.
+  if (/Edg\//.test(agent)) return 'Edge';
+  // Identify Firefox through its stable token.
+  if (/Firefox\//.test(agent)) return 'Firefox';
+  // Identify Chromium-family browsers without preserving versions.
+  if (/Chrome\//.test(agent)) return 'Chrome';
+  // Identify Safari only when Chrome is absent.
+  if (/Safari\//.test(agent)) return 'Safari';
+  // Return a privacy-reduced fallback.
+  return 'Other';
+}
+
+// Identify a low-cardinality operating-system family without persisting exact device data.
+function osFamily() {
+  // Read the platform string only for bounded local classification.
+  const source = `${navigator.platform || ''} ${navigator.userAgent || ''}`;
+  // Return the first stable family match.
+  if (/Windows/i.test(source)) return 'Windows';
+  // Group iPhone and iPad under iOS.
+  if (/iPhone|iPad|iPod/i.test(source)) return 'iOS';
+  // Identify Android before generic Linux.
+  if (/Android/i.test(source)) return 'Android';
+  // Identify Apple desktop operating systems.
+  if (/Mac/i.test(source)) return 'macOS';
+  // Identify remaining Linux desktops.
+  if (/Linux/i.test(source)) return 'Linux';
+  // Return a low-cardinality fallback.
+  return 'Other';
+}
+
+// Compress one user-selected image through canvas so the request stays inside the reviewed 1 MiB ceiling.
+async function normalizeFeedbackImage(file) {
+  // Reject non-image and unusually large local files before browser decode work.
+  if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type) || file.size > 12_000_000) throw new Error(t('feedback.error.imageType', {}, 'feedback'));
+  // Decode the image through the browser rather than trusting filename extensions.
+  const bitmap = await createImageBitmap(file);
+  // Calculate a scale that keeps the longest edge at or below 1600 CSS pixels.
+  const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height));
+  // Allocate a metadata-free canvas at the normalized size.
+  const canvas = document.createElement('canvas');
+  // Set the normalized width to at least one pixel.
+  canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+  // Set the normalized height to at least one pixel.
+  canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+  // Paint the decoded pixels into a clean canvas.
+  canvas.getContext('2d', { alpha: false }).drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  // Release browser decoder resources after painting completes.
+  bitmap.close();
+  // Start at readable JPEG quality and reduce it only when needed.
+  let quality = 0.82;
+  // Encode the clean canvas to a data URL for the JSON transport.
+  let data = canvas.toDataURL('image/jpeg', quality);
+  // Reduce quality in bounded steps until the encoded payload fits the server limit.
+  while (data.length > 260_000 && quality > 0.42) { quality -= 0.08; data = canvas.toDataURL('image/jpeg', quality); }
+  // Reject an image that remains too large after bounded compression.
+  if (data.length > 275_000) throw new Error(t('feedback.error.imageSize', {}, 'feedback'));
+  // Return a preview-safe attachment object with no local path or original filename.
+  return { data, preview: data, width: canvas.width, height: canvas.height };
+}
+
+// Render screenshot previews and removal controls from the in-memory attachment list.
+function renderFeedbackPreviews() {
+  // Read the persistent dialog preview outlet.
+  const previews = document.getElementById('report-previews');
+  // Stop safely when the page has no report dialog.
+  if (!previews) return;
+  // Render one compact figure per normalized screenshot.
+  previews.innerHTML = feedbackAttachments.map((item, index) => `<figure class="report-preview"><img src="${item.preview}" alt="${safe(t('feedback.screenshotAlt', { number: index + 1 }, 'feedback'))}"><button type="button" data-remove-feedback-image="${index}">${safe(t('feedback.removeScreenshot', {}, 'feedback'))}</button></figure>`).join('');
+  // Bind each removal control to immutable list replacement.
+  previews.querySelectorAll('[data-remove-feedback-image]').forEach(button => { button.onclick = () => { feedbackAttachments = feedbackAttachments.filter((_, index) => index !== Number(button.dataset.removeFeedbackImage)); renderFeedbackPreviews(); }; });
+}
+
+// Add one or more pasted, dropped, or selected image files to the report draft.
+async function addFeedbackFiles(files) {
+  // Read the inline status region for validation feedback.
+  const message = document.getElementById('report-message');
+  // Convert the browser FileList into a bounded ordinary list.
+  const selected = Array.from(files || []);
+  // Reject collections that would exceed the three-image limit.
+  if (feedbackAttachments.length + selected.length > 3) { message.textContent = t('feedback.error.imageCount', {}, 'feedback'); return; }
+  // Start protected normalization so one invalid file does not close the dialog.
+  try {
+    // Normalize files sequentially to avoid concurrent image-decoder memory spikes.
+    for (const file of selected) feedbackAttachments.push(await normalizeFeedbackImage(file));
+    // Clear stale errors after all files succeed.
+    message.textContent = '';
+    // Show the complete updated preview list.
+    renderFeedbackPreviews();
+  // Convert browser decode and product validation failures into localized inline feedback.
+  } catch (error) {
+    // Show only the bounded local error message.
+    message.textContent = error.message || t('feedback.error.imageType', {}, 'feedback');
+  }
+}
+
+// Translate the static native report dialog without recreating its form controls.
+function localizeFeedbackDialog() {
+  // Map static element identifiers to shell dictionary keys.
+  const text = { 'report-problem-btn': 'feedback.open', 'report-problem-eyebrow': 'feedback.eyebrow', 'report-problem-title': 'feedback.title', 'report-problem-privacy': 'feedback.privacy', 'report-category-label': 'feedback.category', 'report-summary-label': 'feedback.summary', 'report-actual-label': 'feedback.actual', 'report-expected-label': 'feedback.expected', 'report-screenshot-title': 'feedback.screenshotTitle', 'report-screenshot-help': 'feedback.screenshotHelp', 'report-context-title': 'feedback.contextTitle', 'report-context-copy': 'feedback.contextCopy', 'report-cancel': 'feedback.cancel', 'report-submit': 'feedback.submit' };
+  // Apply localized text to every present static node.
+  Object.entries(text).forEach(([id, key]) => { const node = document.getElementById(id); if (node) node.textContent = t(key, {}, 'feedback'); });
+  // Localize the close button's accessible name.
+  document.getElementById('report-problem-close')?.setAttribute('aria-label', t('feedback.close', {}, 'feedback'));
+  // Localize fixed category option labels in their stable order.
+  const labels = ['bug', 'visual', 'accessibility', 'performance', 'content', 'other'];
+  // Apply one translated label to each matching option.
+  labels.forEach(value => { const option = document.querySelector(`#report-category option[value="${value}"]`); if (option) option.textContent = t(`feedback.category.${value}`, {}, 'feedback'); });
+  // Repaint preview alt text and remove controls after a locale switch.
+  renderFeedbackPreviews();
+}
+
+// Open a clean report draft for the current registered user.
+function openFeedbackDialog() {
+  // Reject stale or guest sessions at the presentation boundary while the API remains authoritative.
+  if (!isRegisteredReporter()) { toast(t('feedback.registeredOnly', {}, 'feedback')); return; }
+  // Read the native modal.
+  const dialog = document.getElementById('report-problem-dialog');
+  // Reset the form before exposing a new draft.
+  document.getElementById('report-problem-form')?.reset();
+  // Reset in-memory screenshots between drafts.
+  feedbackAttachments = [];
+  // Allocate one retry-safe action identity for the lifetime of this visible draft.
+  feedbackIdempotencyKey = crypto.randomUUID().replaceAll('-', '');
+  // Clear inline status from a previous submission.
+  document.getElementById('report-message').textContent = '';
+  // Render the empty preview state.
+  renderFeedbackPreviews();
+  // Open the modal with browser-owned focus containment.
+  dialog?.showModal();
+  // Move focus to the first task field.
+  document.getElementById('report-category')?.focus();
+}
+
+// Submit the current report draft through the additive v2 API.
+async function submitFeedbackReport(event) {
+  // Prevent native method=dialog submission from closing before API success.
+  event.preventDefault();
+  // Read the submit button for in-flight locking.
+  const submit = document.getElementById('report-submit');
+  // Read the live status region.
+  const message = document.getElementById('report-message');
+  // Disable duplicate user actions during the idempotent request.
+  submit.disabled = true;
+  // Show concise in-flight feedback.
+  message.textContent = t('feedback.submitting', {}, 'feedback');
+  // Build a retry-safe random browser action key.
+  const idempotencyKey = feedbackIdempotencyKey || crypto.randomUUID().replaceAll('-', '');
+  // Build a privacy-reduced context from browser-owned state.
+  const context = { route: location.pathname, locale: getLocaleState().locale, viewport_width: window.innerWidth, viewport_height: window.innerHeight, browser_family: browserFamily(), os_family: osFamily(), reduced_motion: matchMedia('(prefers-reduced-motion: reduce)').matches };
+  // Start protected API submission so the modal remains recoverable on failure.
+  try {
+    // Submit only validated fields and normalized image payloads.
+    const result = await api('/api/v2/feedback/reports', { method: 'POST', body: { idempotency_key: idempotencyKey, category: document.getElementById('report-category').value, summary: document.getElementById('report-summary').value, actual: document.getElementById('report-actual').value, expected: document.getElementById('report-expected').value, attachments: feedbackAttachments.map(item => ({ data: item.data })), context } });
+    // Show the stable reference before closing.
+    message.textContent = t('feedback.success', { reference: result.reference }, 'feedback');
+    // Mirror success in the persistent shell toast.
+    toast(t('feedback.success', { reference: result.reference }, 'feedback'), true);
+    // Retire the action identity only after a confirmed success.
+    feedbackIdempotencyKey = '';
+    // Close after the live region has a chance to announce confirmation.
+    setTimeout(() => document.getElementById('report-problem-dialog')?.close(), 500);
+  // Keep the draft open and show the safe API diagnostic on failure.
+  } catch (error) {
+    // Prefer the standard API message and fall back to localized generic copy.
+    message.textContent = error.message || t('feedback.error.submit', {}, 'feedback');
+  // Always restore the submit action after completion.
+  } finally {
+    // Re-enable the control when the request settles.
+    submit.disabled = false;
+  }
+}
+
+// Wire the persistent problem-report affordance and all screenshot entry methods once.
+function bindFeedbackDialog() {
+  // Read persistent shell controls.
+  const open = document.getElementById('report-problem-btn');
+  // Open a clean draft from the floating affordance.
+  open.onclick = openFeedbackDialog;
+  // Close without retaining screenshot bytes when the player cancels.
+  const close = () => { feedbackAttachments = []; feedbackIdempotencyKey = ''; document.getElementById('report-problem-dialog')?.close(); };
+  // Bind both close controls to identical teardown.
+  document.getElementById('report-problem-close').onclick = close;
+  // Bind the explicit cancel action.
+  document.getElementById('report-cancel').onclick = close;
+  // Submit through the API rather than native dialog closure.
+  document.getElementById('report-problem-form').onsubmit = submitFeedbackReport;
+  // Open the hidden picker when the dropzone is clicked.
+  document.getElementById('report-dropzone').onclick = () => document.getElementById('report-file-input').click();
+  // Preserve keyboard activation semantics on the custom dropzone.
+  document.getElementById('report-dropzone').onkeydown = event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); document.getElementById('report-file-input').click(); } };
+  // Normalize picker files when the selection changes.
+  document.getElementById('report-file-input').onchange = event => addFeedbackFiles(event.target.files);
+  // Accept dragged files only inside the explicit evidence region.
+  document.getElementById('report-dropzone').ondragover = event => { event.preventDefault(); event.currentTarget.classList.add('dragging'); };
+  // Clear drag styling when the pointer leaves the region.
+  document.getElementById('report-dropzone').ondragleave = event => event.currentTarget.classList.remove('dragging');
+  // Normalize dropped files without opening them in the browser.
+  document.getElementById('report-dropzone').ondrop = event => { event.preventDefault(); event.currentTarget.classList.remove('dragging'); addFeedbackFiles(event.dataTransfer.files); };
+  // Capture pasted image clipboard items only while the dialog is open.
+  document.getElementById('report-problem-dialog').onpaste = event => { const files = Array.from(event.clipboardData?.items || []).filter(item => item.kind === 'file').map(item => item.getAsFile()).filter(Boolean); if (files.length) { event.preventDefault(); addFeedbackFiles(files); } };
+  // Apply the initial locale to the static dialog.
+  localizeFeedbackDialog();
 }
 
 // Convert one public API catalog row into the shell's route and presentation descriptor.
@@ -161,6 +379,8 @@ function updateCurrentUserShell() {
   const amount = renderTokenBalance(currentSession);
   // Read the logout button reserved by index.html.
   const logoutButton = document.getElementById('logout-btn');
+  // Read the registered-user report affordance.
+  const reportButton = document.getElementById('report-problem-btn');
   // Read the registered-user-only token-credit menu from the persistent shell.
   const walletMenu = document.querySelector('.wallet-menu');
   // Read the visible lifecycle disclosure rendered inside the guest wallet.
@@ -169,6 +389,8 @@ function updateCurrentUserShell() {
   const name = currentSession?.user?.display_name || currentSession?.user?.username || currentSession?.user?.email || 'Player';
   // Label the logout control with the current user for accessibility.
   if (logoutButton) logoutButton.setAttribute('aria-label', t('auth.logout', { name }, 'shell'));
+  // Expose problem reporting only to registered authenticated users in this first release.
+  if (reportButton) reportButton.hidden = !isRegisteredReporter();
   // Present the disposable-guest affordance on the persistent control: an End-trial label and a testable guest marker. (issue #317)
   if (logoutButton) {
     // Read the guest state once so the label and markers stay consistent.
@@ -214,6 +436,8 @@ function updateCurrentUserShell() {
 function renderLoginGate(message = '') {
   // Clear the public current-user hook while the browser is logged out.
   window.CasinoCurrentUser = null;
+  // Hide registered-user reporting whenever the authenticated session is absent.
+  document.getElementById('report-problem-btn')?.setAttribute('hidden', '');
   // Leave lobby-only flex containment before the public authentication screen replaces the route outlet.
   document.body.classList.remove('lobby-active');
   // Mark the document so chrome and game routes stay hidden while logged out.
@@ -671,11 +895,13 @@ export async function navigate(route, options = {}) {
 // Initialize shell state, wallet behavior, and the first lobby route.
 async function init() {
   // Initialize i18n before any auth or shell markup renders.
-  await initI18n({ domains: ['shell'] });
+  await initI18n({ domains: ['shell', 'feedback'] });
+  // Bind and localize the persistent problem-report modal after dictionaries are ready.
+  bindFeedbackDialog();
   // Recalculate active-route visibility whenever responsive navigation layout changes.
   window.addEventListener('resize', revealActiveNav);
   // Repaint persistent shell text when the locale changes.
-  onLocaleChange(() => { if (currentSession && !currentSession.terms?.required) { gameDescriptors = (latestState?.games || []).map(game => descriptorFromCatalog(game)); renderNav(); updateCurrentUserShell(); updateShellStatus(latestState, shellConnected); if (active === 'lobby') navigate('lobby', { history: 'none' }); } });
+  onLocaleChange(() => { localizeFeedbackDialog(); if (currentSession && !currentSession.terms?.required) { gameDescriptors = (latestState?.games || []).map(game => descriptorFromCatalog(game)); renderNav(); updateCurrentUserShell(); updateShellStatus(latestState, shellConnected); if (active === 'lobby') navigate('lobby', { history: 'none' }); } });
   // Restore game routes through browser Back and Forward without remounting stale history entries.
   window.addEventListener('popstate', () => { if (currentSession && !currentSession.terms?.required) navigate(routeFromLocation(), { history: 'none' }); });
   // Read the add-token button from the wallet popover.

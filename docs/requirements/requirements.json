@@ -9358,6 +9358,78 @@
       "introduced_in": "issue-330-transactional-mail",
       "changed_in": "issue-330-transactional-mail",
       "notes": "Browser evidence is generated only by exact-head GitHub Actions; no local Playwright, Chromium, provider, or live network run is authorized."
+    },
+    {
+      "id": "CORE-027",
+      "module": "Core",
+      "description": "A registered authenticated user can submit one retry-safe problem report through the additive v2 API with bounded category, summary, actual behavior, expected behavior, privacy-reduced route and environment context, and up to three screenshots; guest and anonymous submission remain outside this release.",
+      "status": "PASS",
+      "api_tests": ["API-FEEDBACK-001"],
+      "browser_tests": ["BR-FEEDBACK-001", "BR-ADMIN-FEEDBACK-001"],
+      "implementation_files": ["casino/core/feedback.py", "casino/app.py", "web/index.html", "web/app.js", "contracts/openapi/feedback.v2.yaml"],
+      "introduced_in": "issue-349-feedback-reports",
+      "changed_in": "issue-349-feedback-reports",
+      "notes": "Reporter identity is derived from the authenticated session; the request never accepts user, player, session, or wallet identifiers."
+    },
+    {
+      "id": "ADMIN-025",
+      "module": "Admin",
+      "description": "The Admin problem-report inbox lists attachment-free summaries, filters by governed priority, status, and category, provides internal detail and evidence review, preserves reports through non-destructive lifecycle states, and prepares a reporter-free GitHub draft plus reviewed repository-issue linkage without automatic publication.",
+      "status": "PASS",
+      "api_tests": ["API-FEEDBACK-001"],
+      "browser_tests": ["BR-FEEDBACK-001", "BR-ADMIN-FEEDBACK-001"],
+      "implementation_files": ["casino/admin.py", "web/admin.html", "web/admin.js", "web/styles.css"],
+      "introduced_in": "issue-349-feedback-reports",
+      "changed_in": "issue-349-feedback-reports",
+      "notes": "P1, P2, and P3 are the complete priority taxonomy; P4 is rejected. GitHub publication remains a deliberate human action."
+    },
+    {
+      "id": "SEC-011",
+      "module": "Security",
+      "description": "Problem-report screenshots are strictly base64 decoded, limited by count, bytes, pixels, and dimensions, decoded only as PNG, JPEG, or WebP, re-encoded to metadata-free JPEG, stored only in Admin detail documents, and excluded from list and GitHub-draft responses; diagnostic context excludes cookies, credentials, raw URLs, wallet contents, and wager data.",
+      "status": "PASS",
+      "api_tests": ["API-FEEDBACK-001"],
+      "browser_tests": [],
+      "implementation_files": ["casino/core/feedback.py", "tests/feedback_tests.py", "contracts/openapi/feedback.v2.yaml"],
+      "introduced_in": "issue-349-feedback-reports",
+      "changed_in": "issue-349-feedback-reports",
+      "notes": "The upload remains inside the existing one-mebibyte application request ceiling and adds no new anonymous route or external credential."
+    },
+    {
+      "id": "I18N-005",
+      "module": "Application",
+      "description": "Player reporting and Admin problem-report triage provide complete en-US and ru-RU labels, instructions, privacy disclosure, status, validation, filter, detail, and GitHub-draft copy with no visible resource keys after locale changes.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": ["BR-FEEDBACK-001", "BR-ADMIN-FEEDBACK-001"],
+      "implementation_files": ["web/i18n/manifest.json", "web/i18n/en-US/feedback.json", "web/i18n/ru-RU/feedback.json", "web/app.js", "web/admin.js"],
+      "introduced_in": "issue-349-feedback-reports",
+      "changed_in": "issue-349-feedback-reports",
+      "notes": "The feedback domain is loaded by both the player shell and Admin application."
+    },
+    {
+      "id": "UX-019",
+      "module": "Application",
+      "description": "The report affordance and native modal remain keyboard-operable, focus-visible, scroll-contained, touch-sized, and free of page-level horizontal overflow at desktop, compact desktop, tablet, and mobile viewports; screenshot previews are removable and diagnostic disclosure is inspectable before submission.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": ["BR-FEEDBACK-001", "BR-ADMIN-FEEDBACK-001"],
+      "implementation_files": ["web/index.html", "web/app.js", "web/styles.css", "tests/visual/visual_matrix.json"],
+      "introduced_in": "issue-349-feedback-reports",
+      "changed_in": "issue-349-feedback-reports",
+      "notes": "Governed visual rows are feedback_report empty, screenshot_ready, validation_error, and submitted plus Admin feedback inbox, detail, and GitHub draft states."
+    },
+    {
+      "id": "TEST-091",
+      "module": "Tests",
+      "description": "Provider-neutral API tests prove report idempotency, registered-user scope, P4 rejection, route minimization, metadata stripping, attachment-free listings, triage, linkage, and reporter-free GitHub drafts; browser tests prove player and Admin flows, EN/RU localization, keyboard access, screenshot previews, and responsive containment against the visual matrix.",
+      "status": "PASS",
+      "api_tests": ["API-FEEDBACK-001"],
+      "browser_tests": ["BR-FEEDBACK-001", "BR-ADMIN-FEEDBACK-001"],
+      "implementation_files": ["tests/feedback_tests.py", "tests/run_tests.py", "tests/visual/visual_matrix.json"],
+      "introduced_in": "issue-349-feedback-reports",
+      "changed_in": "issue-349-feedback-reports",
+      "notes": "Exact-head browser evidence is produced by the standard browser workflow; service tests use an isolated JSON provider and in-memory images."
     }
   ]
 }
