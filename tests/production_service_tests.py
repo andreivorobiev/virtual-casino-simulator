@@ -39,6 +39,8 @@ class ProductionServiceTests(unittest.TestCase):
         environment["CASINO_BOOTSTRAP_ADMIN_EMAIL"] = "service-probe@example.invalid"
         # Supply a synthetic external token-digest key for the isolated production adapter probe.
         environment["CASINO_TOKEN_DIGEST_KEY"] = "service-probe-token-digest-key-material-2026"
+        # Supply an independent synthetic mail digest key required by public startup.
+        environment["CASINO_MAIL_DIGEST_KEY"] = "service-probe-mail-digest-key-material-2026"
         # Supply a synthetic non-default child credential that is never printed.
         environment["CASINO_BOOTSTRAP_ADMIN_PASSWORD"] = "synthetic-service-probe-password"
         # Supply the restricted-preview canonical origin through a reserved test domain.

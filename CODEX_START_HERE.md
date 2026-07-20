@@ -290,6 +290,7 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 - [`docs/restricted_preview_edge.md`](docs/restricted_preview_edge.md) — Restricted-preview edge preparation
 - [`docs/restricted_preview_security.md`](docs/restricted_preview_security.md) — Restricted-preview security policy
 - [`docs/server_authority_certification.md`](docs/server_authority_certification.md) — Server-Authority and Hostile-Client Certification
+- [`docs/transactional_mail_runbook.md`](docs/transactional_mail_runbook.md) — Transactional mail runbook
 - [`docs/visual_design_standard.md`](docs/visual_design_standard.md) — Visual Design Standard
 
 ### Mobile integration documentation

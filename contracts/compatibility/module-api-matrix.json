@@ -1,9 +1,11 @@
 {
   "application": [
-    "contracts/openapi/auth.v2.yaml"
+    "contracts/openapi/auth.v2.yaml",
+    "contracts/openapi/transactional-mail.v2.yaml"
   ],
   "core": [
-    "contracts/openapi/auth.v2.yaml"
+    "contracts/openapi/auth.v2.yaml",
+    "contracts/openapi/transactional-mail.v2.yaml"
   ],
   "ledger": [],
   "players": [
@@ -19,7 +21,8 @@
     "contracts/openapi/admin-users.v2.yaml",
     "contracts/openapi/admin.v1.yaml",
     "contracts/openapi/auth.v2.yaml",
-    "contracts/openapi/operations.v1.yaml"
+    "contracts/openapi/operations.v1.yaml",
+    "contracts/openapi/transactional-mail.v2.yaml"
   ],
   "operations": [
     "contracts/openapi/operations.v1.yaml"
@@ -119,7 +122,8 @@
   "contracts": [
     "contracts/openapi/admin-users.v2.yaml",
     "contracts/openapi/auth.v2.yaml",
-    "contracts/openapi/operations.v1.yaml"
+    "contracts/openapi/operations.v1.yaml",
+    "contracts/openapi/transactional-mail.v2.yaml"
   ],
   "tooling": [],
   "commenting_policy": []

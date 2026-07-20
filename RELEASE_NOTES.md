@@ -15,6 +15,12 @@
 - Publishes additive v2 auth and Guest Trials Admin contracts while preserving the frozen v1 compatibility boundary, and adds EN/RU exact-head browser-evidence requirements across all four governed viewports.
 - Keeps public signup, live OAuth, deployment, provider, DNS, TLS, firewall, billing, unrestricted exposure, and issue #209 launch outside this repository merge.
 
+## Post-release module addendum: disabled transactional mail
+
+- Adds a provider-neutral transactional-mail foundation for four fixed private enrollment and recovery purposes, with caller idempotency, atomic delivery claims, bounded retry, ambiguous-result freezing, keyed-only persistence, suppression, rate limits, retention, and accessible EN/RU plain-text plus HTML templates.
+- Adds one additive Admin-only v2 readiness contract and responsive Operations diagnostic card while publishing no consumer send, callback, bounce, signup, or recovery route and preserving frozen `/api/v1`.
+- Keeps the repository feature and independent provider/network release switches disabled by default. Workroom #23 authorizes this inert code only; live mail, provider accounts, credentials, DNS/email authentication, deployment, billing, signup, public exposure, and issue #209 remain separately gated.
+
 ## Prior v9.3.0 release record
 
 ### Private-invite restricted-preview release

@@ -44,6 +44,8 @@ from casino.admin import register as register_admin
 from casino.bots.api import register as register_bots
 # Import the disabled OAuth registrar for Admin-only secret-safe diagnostics.
 from casino.core.oauth.api import register as register_oauth
+# Import the disabled-by-default transactional-mail Admin readiness registrar. (MAIL-003)
+from casino.core.mail import register as register_mail
 # Import the approved Operations registrar for liveness, readiness, and Admin telemetry.
 from casino.operations import register as register_operations
 # Import required dependency so this module can use its public functions or constants.
@@ -414,6 +416,8 @@ def build_router() -> Router:
     register_games(router)
     # Register only the Admin diagnostic OAuth route; provider action routes remain absent.
     register_oauth(router)
+    # Register only the Admin readiness route; mail consumer flows remain outside this scope.
+    register_mail(router)
     # Register Operations probes after game routes and before the Admin API surface.
     register_operations(router)
     # Execute this statement as part of the module's documented control flow.

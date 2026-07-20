@@ -6525,7 +6525,8 @@
       "status": "PASS",
       "api_tests": [
         "STORAGE-JSON-001",
-        "STORAGE-MYSQL-LIVE-001"
+        "STORAGE-MYSQL-LIVE-001",
+        "MYSQL-MIGRATION-LIVE-001"
       ],
       "browser_tests": [],
       "implementation_files": [
@@ -6543,7 +6544,8 @@
       "description": "The storage provider supports users, sessions, terms acceptance, player records, game state, history, settings, and ledger data.",
       "status": "PASS",
       "api_tests": [
-        "STORAGE-MYSQL-LIVE-001"
+        "STORAGE-MYSQL-LIVE-001",
+        "MYSQL-MIGRATION-LIVE-001"
       ],
       "browser_tests": [],
       "implementation_files": [
@@ -9215,6 +9217,147 @@
       "introduced_in": "issue-317-guest-trials",
       "changed_in": "issue-317-guest-trials",
       "notes": "Issue #317 contract acceptance is tied to exact v2 routes and compatibility policies rather than generic API smoke tests."
+    },
+    {
+      "id": "MAIL-001",
+      "module": "Core",
+      "description": "Transactional mail supports only invitation, email verification, password reset, and magic-link purposes; builds fixed-path links from one canonical HTTPS origin; rejects caller-controlled redirects; and keeps provider/network access unreachable unless both the repository feature gate and an independent release gate are enabled.",
+      "status": "PASS",
+      "api_tests": [
+        "API-MAIL-001",
+        "API-MAIL-002"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/config.py",
+        "casino/core/mail.py",
+        "contracts/compatibility/transactional-mail.json"
+      ],
+      "introduced_in": "issue-330-transactional-mail",
+      "changed_in": "issue-330-transactional-mail",
+      "notes": "Workroom #23 authorizes the disabled repository foundation only; it does not authorize live provider or network delivery, credentials, DNS, deployment, billing, signup, or public exposure."
+    },
+    {
+      "id": "MAIL-002",
+      "module": "Security",
+      "description": "Durable mail state, receipts, diagnostics, errors, and logs exclude raw recipients, bearer tokens, tokened URLs, caller idempotency keys, credentials, and provider responses; persistence uses independent keyed HMAC-SHA256 digests, public startup rejects the known digest-key default, and structurally malformed state is preserved for operator recovery.",
+      "status": "PASS",
+      "api_tests": [
+        "API-MAIL-001",
+        "API-MAIL-002"
+      ],
+      "browser_tests": [
+        "BR-ADMIN-MAIL-001"
+      ],
+      "implementation_files": [
+        "casino/config.py",
+        "casino/core/mail.py",
+        "tests/mail_tests.py"
+      ],
+      "introduced_in": "issue-330-transactional-mail",
+      "changed_in": "issue-330-transactional-mail",
+      "notes": "The provider payload exists only transiently in the single process that wins an atomic delivery claim."
+    },
+    {
+      "id": "MAIL-003",
+      "module": "Admin",
+      "description": "An Admin-only additive v2 readiness route and Operations card distinguish disabled, misconfigured, release-held, ready, and unavailable mail states and expose only fixed booleans, reason codes, and aggregate lifecycle/suppression counts; no consumer send, callback, bounce, signup, or recovery route is published.",
+      "status": "PASS",
+      "api_tests": [
+        "API-MAIL-002"
+      ],
+      "browser_tests": [
+        "BR-ADMIN-MAIL-001"
+      ],
+      "implementation_files": [
+        "casino/app.py",
+        "casino/core/mail.py",
+        "web/admin.js",
+        "web/i18n/en-US/admin.json",
+        "web/i18n/ru-RU/admin.json"
+      ],
+      "introduced_in": "issue-330-transactional-mail",
+      "changed_in": "issue-330-transactional-mail",
+      "notes": "Mail diagnostic failure remains isolated from Operations and OAuth health classification."
+    },
+    {
+      "id": "MAIL-004",
+      "module": "Core",
+      "description": "Every submission requires caller idempotency; changed-meaning reuse conflicts; JSON and MySQL perform one atomic delivery claim per attempt; known non-accepted failures use bounded exponential retry; ambiguous results become uncertain and never auto-retry; and per-recipient rate limits, internal bounce/complaint suppression, attempt ceilings, and terminal retention cleanup are enforced.",
+      "status": "PASS",
+      "api_tests": [
+        "API-MAIL-001",
+        "STORAGE-MYSQL-LIVE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/mail.py",
+        "casino/core/state_store.py",
+        "casino/core/storage.py",
+        "tests/mail_tests.py",
+        "tests/storage_tests.py"
+      ],
+      "introduced_in": "issue-330-transactional-mail",
+      "changed_in": "issue-330-transactional-mail",
+      "notes": "Unexpected or timeout-like provider results fail to the manual-reconciliation state to preserve at-most-once delivery."
+    },
+    {
+      "id": "MAIL-005",
+      "module": "Application",
+      "description": "Every authorized purpose has matching en-US and ru-RU subjects plus plain-text and semantic HTML alternatives whose action link has meaningful text and whose fixed content is safely escaped.",
+      "status": "PASS",
+      "api_tests": [
+        "API-MAIL-001"
+      ],
+      "browser_tests": [
+        "BR-ADMIN-MAIL-001"
+      ],
+      "implementation_files": [
+        "casino/core/mail.py",
+        "web/i18n/en-US/admin.json",
+        "web/i18n/ru-RU/admin.json"
+      ],
+      "introduced_in": "issue-330-transactional-mail",
+      "changed_in": "issue-330-transactional-mail",
+      "notes": "No template accepts caller-authored HTML, subject, path, redirect, origin, or host values."
+    },
+    {
+      "id": "MAIL-006",
+      "module": "Docs",
+      "description": "The transactional-mail runbook documents disabled defaults, separate release authority, sender/domain and SPF/DKIM/DMARC posture, canonical-origin and OAuth callback coordination, domain-move revalidation, bounded smoke evidence, rollback, suppression review, and the prohibition on treating repository merge as live authorization.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        "docs/transactional_mail_runbook.md",
+        "docs/production_service.md"
+      ],
+      "introduced_in": "issue-330-transactional-mail",
+      "changed_in": "issue-330-transactional-mail",
+      "notes": "All provider-account, credentials, DNS/email authentication, deployment, billing, signup, and public-exposure operations remain separately gated."
+    },
+    {
+      "id": "TEST-090",
+      "module": "Tests",
+      "description": "Provider-free unit and API tests prove dual-gate inaccessibility, raw-value exclusion, public digest-key hardening, atomic caller idempotency, changed-meaning conflict, bounded retry, ambiguous-result freezing, rate limits, suppression, retention, malformed-state preservation, bilingual templates, Admin-only contract shape, absent consumer routes, and real MySQL cross-process single-claim behavior; exact-head browser evidence covers disabled, misconfigured, release-held, and suppression-summary states in en-US and ru-RU at all four governed viewports.",
+      "status": "PASS",
+      "api_tests": [
+        "API-MAIL-001",
+        "API-MAIL-002",
+        "STORAGE-MYSQL-LIVE-001"
+      ],
+      "browser_tests": [
+        "BR-ADMIN-MAIL-001"
+      ],
+      "implementation_files": [
+        "tests/mail_tests.py",
+        "tests/storage_tests.py",
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-330-transactional-mail",
+      "changed_in": "issue-330-transactional-mail",
+      "notes": "Browser evidence is generated only by exact-head GitHub Actions; no local Playwright, Chromium, provider, or live network run is authorized."
     }
   ]
 }

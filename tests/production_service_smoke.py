@@ -81,6 +81,8 @@ def service_environment(runtime_root: pathlib.Path, port: int) -> dict:
     environment["CASINO_BOOTSTRAP_ADMIN_EMAIL"] = "service-smoke@example.invalid"
     # Supply a synthetic external token-digest key for the isolated production adapter probe.
     environment["CASINO_TOKEN_DIGEST_KEY"] = "service-smoke-token-digest-key-material-2026"
+    # Supply an independent synthetic mail digest key required by public startup.
+    environment["CASINO_MAIL_DIGEST_KEY"] = "service-smoke-mail-digest-key-material-2026"
     # Supply a synthetic non-default credential that is never printed or persisted in evidence.
     environment["CASINO_BOOTSTRAP_ADMIN_PASSWORD"] = "synthetic-service-smoke-password"
     # Supply the restricted-preview exact origin through a reserved test domain.

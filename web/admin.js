@@ -419,6 +419,34 @@ function replaceOAuthDiagnosticsCard(data) {
   if (card) card.outerHTML = oauthDiagnosticsCard(data);
 }
 
+// Render transactional-mail diagnostics independently from Operations and OAuth health. (MAIL-003)
+function mailDiagnosticsCard(data) {
+  // Constrain backend status to the five contract-published low-cardinality states.
+  const status = ['disabled', 'misconfigured', 'release_held', 'ready', 'unavailable'].includes(data?.status) ? data.status : 'unavailable';
+  // Constrain the provider label so unexpected backend values never become translation keys.
+  const provider = ['disabled', 'postmark', 'unrecognized'].includes(data?.provider) ? data.provider : 'unrecognized';
+  // Normalize aggregate lifecycle counts without accepting record identifiers or negative values.
+  const summary = data?.delivery_summary && typeof data.delivery_summary === 'object' ? data.delivery_summary : {};
+  // Convert each published aggregate to a bounded non-negative display number.
+  const count = key => Number.isInteger(summary[key]) && summary[key] >= 0 ? summary[key] : 0;
+  // Map only contract-allowlisted reason codes to localized remediation copy.
+  const reasons = Array.isArray(data?.reasons) ? data.reasons.filter(reason => ['feature_disabled', 'provider_not_configured', 'canonical_origin_invalid', 'sender_identity_invalid', 'provider_credential_missing', 'digest_key_invalid', 'network_release_held', 'state_recovery_required'].includes(reason)) : [];
+  // Normalize the de-identified suppression count independently from lifecycle rows.
+  const suppressedRecipients = Number.isInteger(data?.suppressed_recipients) && data.suppressed_recipients >= 0 ? data.suppressed_recipients : 0;
+  // Render one explicit non-color state, aggregate-only lifecycle table, and suppression summary.
+  return `<section class="admin-card ${['misconfigured', 'unavailable'].includes(status) ? 'danger' : ''}" data-testid="admin-mail-${status}"><div class="row"><div><h2>${safe(t('mail.title', {}, 'admin'))}</h2><p>${safe(t(`mail.detail.${status}`, {}, 'admin'))}</p></div><span class="badge">${safe(t(`mail.state.${status}`, {}, 'admin'))}</span></div>${table([t('mail.field', {}, 'admin'), t('mail.value', {}, 'admin')], [`<tr><td>${safe(t('mail.provider', {}, 'admin'))}</td><td>${safe(t(`mail.provider.${provider}`, {}, 'admin'))}</td></tr>`, `<tr><td>${safe(t('mail.sent', {}, 'admin'))}</td><td>${count('sent')}</td></tr>`, `<tr><td>${safe(t('mail.retryWait', {}, 'admin'))}</td><td>${count('retry_wait')}</td></tr>`, `<tr><td>${safe(t('mail.failed', {}, 'admin'))}</td><td>${count('failed')}</td></tr>`, `<tr><td>${safe(t('mail.uncertain', {}, 'admin'))}</td><td>${count('uncertain')}</td></tr>`])}<div data-testid="admin-mail-suppression-summary"><h3>${safe(t('mail.suppressionTitle', {}, 'admin'))}</h3><p>${safe(t('mail.suppressionCount', { count: suppressedRecipients }, 'admin'))}</p></div>${reasons.length ? `<h3>${safe(t('mail.attention', {}, 'admin'))}</h3><ul>${reasons.map(reason => `<li>${safe(t(`mail.reason.${reason}`, {}, 'admin'))}</li>`).join('')}</ul>` : ''}</section>`;
+}
+
+// Replace only the independent mail diagnostic card when its request settles.
+function replaceMailDiagnosticsCard(data) {
+  // Ignore a delayed response after the user has left Operations.
+  if (!isActiveTab('operations')) return;
+  // Find the loading/unavailable or prior mail card by its stable prefix.
+  const card = view.querySelector('[data-testid^="admin-mail-"]');
+  // Replace the mail card without rerendering Operations or OAuth diagnostics.
+  if (card) card.outerHTML = mailDiagnosticsCard(data);
+}
+
 // Define operations to render trusted dependency and heartbeat telemetry for Admin users.
 async function operations() {
   // Set localized Operations chrome before the request so transport failures retain context.
@@ -440,9 +468,11 @@ async function operations() {
     // Format the trusted heartbeat timestamp without exposing raw transport diagnostics.
     const heartbeat = data.last_successful_heartbeat_at ? formatDate(new Date(data.last_successful_heartbeat_at), { dateStyle: 'medium', timeStyle: 'medium' }) : t('operations.unavailable', {}, 'admin');
     // Render live or degraded diagnostics with stable test hooks for EN/RU visual evidence.
-    view.innerHTML = `<section class="admin-card ${data.ready ? '' : 'danger'}" data-testid="admin-operations-${stateKey}"><div class="row"><div><h2>${safe(t(`operations.state.${stateKey}`, {}, 'admin'))}</h2><p>${safe(t(`operations.detail.${stateKey}`, {}, 'admin'))}</p></div><span class="badge" data-testid="admin-operations-state">${safe(t(`operations.symbol.${stateKey}`, {}, 'admin'))} ${safe(t(`operations.state.${stateKey}`, {}, 'admin'))}</span></div>${table([t('operations.field', {}, 'admin'), t('operations.value', {}, 'admin')], [`<tr><td>${safe(t('operations.storage', {}, 'admin'))}</td><td>${safe(providerLabel)}</td></tr>`, `<tr><td>${safe(t('operations.appVersion', {}, 'admin'))}</td><td>${safe(data.build.app_version)}</td></tr>`, `<tr><td>${safe(t('operations.buildSha', {}, 'admin'))}</td><td>${safe(buildSha)}</td></tr>`, `<tr><td>${safe(t('operations.lastHeartbeat', {}, 'admin'))}</td><td>${safe(heartbeat)}</td></tr>`])}${reasonLabels.length ? `<h3>${safe(t('operations.attention', {}, 'admin'))}</h3><ul>${reasonLabels.map(label => `<li>${safe(label)}</li>`).join('')}</ul>` : ''}</section>${oauthDiagnosticsCard(null)}`;
+    view.innerHTML = `<section class="admin-card ${data.ready ? '' : 'danger'}" data-testid="admin-operations-${stateKey}"><div class="row"><div><h2>${safe(t(`operations.state.${stateKey}`, {}, 'admin'))}</h2><p>${safe(t(`operations.detail.${stateKey}`, {}, 'admin'))}</p></div><span class="badge" data-testid="admin-operations-state">${safe(t(`operations.symbol.${stateKey}`, {}, 'admin'))} ${safe(t(`operations.state.${stateKey}`, {}, 'admin'))}</span></div>${table([t('operations.field', {}, 'admin'), t('operations.value', {}, 'admin')], [`<tr><td>${safe(t('operations.storage', {}, 'admin'))}</td><td>${safe(providerLabel)}</td></tr>`, `<tr><td>${safe(t('operations.appVersion', {}, 'admin'))}</td><td>${safe(data.build.app_version)}</td></tr>`, `<tr><td>${safe(t('operations.buildSha', {}, 'admin'))}</td><td>${safe(buildSha)}</td></tr>`, `<tr><td>${safe(t('operations.lastHeartbeat', {}, 'admin'))}</td><td>${safe(heartbeat)}</td></tr>`])}${reasonLabels.length ? `<h3>${safe(t('operations.attention', {}, 'admin'))}</h3><ul>${reasonLabels.map(label => `<li>${safe(label)}</li>`).join('')}</ul>` : ''}</section>${oauthDiagnosticsCard(null)}${mailDiagnosticsCard(null)}`;
     // Start provider diagnostics only after Operations is visible and handle failure locally.
     api('/api/v2/admin/oauth/providers').then(replaceOAuthDiagnosticsCard).catch(() => replaceOAuthDiagnosticsCard(null));
+    // Start secret-free mail diagnostics independently so failure affects only its own card.
+    api('/api/v2/admin/mail/readiness').then(replaceMailDiagnosticsCard).catch(() => replaceMailDiagnosticsCard(null));
   // Convert network or server loss into a client-derived down state without raw error text.
   } catch (error) {
     // Avoid replacing a newer tab after a delayed transport failure.

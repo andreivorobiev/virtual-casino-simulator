@@ -273,13 +273,13 @@ def run_storage_tests(include_live=False, include_migration_live=False):
     # Execute the real-service persistence and concurrent-ledger gate only when explicitly requested.
     if include_live:
         # Map the live integration case to the durable storage and MySQL requirements.
-        run_case('STORAGE-MYSQL-LIVE-001',['STORAGE-001','STORAGE-002','STORAGE-003','STORAGE-004','STORAGE-005','STORAGE-006','MYSQL-001','MYSQL-002','MYSQL-003','MYSQL-004','OTT-001','OTT-002','TEST-038','TEST-043','TEST-089'],storage_tests.run_mysql_live_provider_path)
+        run_case('STORAGE-MYSQL-LIVE-001',['STORAGE-001','STORAGE-002','STORAGE-003','STORAGE-004','STORAGE-005','STORAGE-006','MYSQL-001','MYSQL-002','MYSQL-003','MYSQL-004','OTT-001','OTT-002','MAIL-002','MAIL-004','TEST-038','TEST-043','TEST-089','TEST-090'],storage_tests.run_mysql_live_provider_path)
     # Execute the newly created disposable MySQL 8.4 gate only when explicitly requested.
     if include_migration_live:
         # Import the service-dependent matrix only after the disposable selector is explicit.
         from tests.mysql_migration_live import run_mysql_migration_live_matrix
         # Map clean bootstrap, upgrade, refusal, restart, grants, and lock evidence.
-        run_case('MYSQL-MIGRATION-LIVE-001',['MYSQL-005','STORAGE-007','OTT-001','OTT-002','TEST-048','TEST-089'],run_mysql_migration_live_matrix)
+        run_case('MYSQL-MIGRATION-LIVE-001',['MYSQL-005','STORAGE-007','OTT-001','OTT-002','MAIL-002','MAIL-004','TEST-048','TEST-089','TEST-090'],run_mysql_migration_live_matrix)
 
 # Define the read_i18n_json function used by this module.
 def read_i18n_json(path):
@@ -351,6 +351,8 @@ def validate_deployment_bootstrap():
         'CASINO_BOOTSTRAP_ADMIN_PASSWORD':'deployment-test-' + ('x' * 32),
         # Supply a separate test-only keyed-digest secret above the public strength floor.
         'CASINO_TOKEN_DIGEST_KEY':'deployment-token-digest-' + ('y' * 32),
+        # Supply an independent test-only mail digest key above the public strength floor.
+        'CASINO_MAIL_DIGEST_KEY':'deployment-mail-digest-' + ('z' * 32),
     }
     # Accept a non-loopback binding only after both required settings are explicit and non-default.
     casino_config.validate_bootstrap_for_startup('0.0.0.0', public_environment)
@@ -374,6 +376,8 @@ def validate_deployment_bootstrap():
             'CASINO_BOOTSTRAP_ADMIN_PASSWORD':casino_config.AUTH_BOOTSTRAP_ADMIN_PASSWORD,
             # Reuse the known local digest key so the public guard rejects every developer default.
             'CASINO_TOKEN_DIGEST_KEY':casino_config.LOCAL_TOKEN_DIGEST_KEY,
+            # Reuse the known local mail digest key so every developer default is rejected.
+            'CASINO_MAIL_DIGEST_KEY':casino_config.LOCAL_MAIL_DIGEST_KEY,
         }),
         # Reject otherwise hardened public bootstrap settings when the token digest key is the known local default.
         ('0.0.0.0', {
@@ -383,6 +387,19 @@ def validate_deployment_bootstrap():
             'CASINO_BOOTSTRAP_ADMIN_PASSWORD':'deployment-test-' + ('x' * 32),
             # Reuse the known local digest key that must never cross the loopback boundary.
             'CASINO_TOKEN_DIGEST_KEY':casino_config.LOCAL_TOKEN_DIGEST_KEY,
+            # Supply a valid independent mail digest so this case isolates the token-key rejection.
+            'CASINO_MAIL_DIGEST_KEY':'deployment-mail-digest-' + ('z' * 32),
+        }),
+        # Reject otherwise hardened public settings when the mail digest key is the known local default.
+        ('0.0.0.0', {
+            # Supply a non-local bootstrap identity.
+            'CASINO_BOOTSTRAP_ADMIN_EMAIL':'deployment-test@example.invalid',
+            # Supply a non-local bootstrap credential.
+            'CASINO_BOOTSTRAP_ADMIN_PASSWORD':'deployment-test-' + ('x' * 32),
+            # Supply a valid one-time-token digest key.
+            'CASINO_TOKEN_DIGEST_KEY':'deployment-token-digest-' + ('y' * 32),
+            # Reuse the known local mail digest key that must never cross the loopback boundary.
+            'CASINO_MAIL_DIGEST_KEY':casino_config.LOCAL_MAIL_DIGEST_KEY,
         }),
     # Finish the unsafe-case collection and begin the validation loop.
     ):
@@ -893,6 +910,20 @@ def run_api_tests():
             raise AssertionError('one-time-token infrastructure suite failed')
     # Record the purpose-bound one-time-token platform proof.
     run_case('API-OTT-001',['OTT-001','OTT-002','TEST-089'],run_one_time_token_tests)
+    # Certify the disabled mail boundary, atomic idempotency, privacy, retry, suppression, and templates without a listener. (issue #330)
+    def run_transactional_mail_tests():
+        # Import the focused suite only when its mapped API case runs.
+        from tests import mail_tests
+        # Load exactly the transactional-mail test class.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(mail_tests.MailServiceTests)
+        # Execute the isolated provider-free suite with concise standard output.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused assertion fails or errors.
+        if not result.wasSuccessful():
+            # Preserve a stable secret-free central diagnostic.
+            raise AssertionError('transactional-mail infrastructure suite failed')
+    # Record the complete listener-free transactional-mail platform proof.
+    run_case('API-MAIL-001',['MAIL-001','MAIL-002','MAIL-003','MAIL-004','MAIL-005','MAIL-006','TEST-090'],run_transactional_mail_tests)
     # Record listener-free disposable-principal lifecycle and browser-binding proof.
     run_case('API-GUEST-LIFECYCLE-001',['GUEST-001','GUEST-002','GUEST-006','TEST-080'],validate_guest_lifecycle)
     # Record listener-free telemetry privacy, milestones, and retention proof.
@@ -1029,6 +1060,26 @@ def run_api_tests():
             assert set(api(base,'/api/v2/admin/operations'))=={'schema_version','probe','status','checked_at','last_successful_heartbeat_at','build','ready','storage_provider','checks','reasons'}
         # Record secret-safe Admin diagnostics, absent action routes, and unchanged readiness under permanent IDs.
         run_case('API-OAUTH-001',['OAUTH-001','OAUTH-002','OAUTH-006','TEST-045'],oauth_api)
+        # Define the disabled transactional-mail Admin diagnostic contract against the real loopback backend.
+        def mail_api():
+            # Require unauthenticated callers to fail before mail diagnostics disclose configuration state.
+            anonymous=api(base,'/api/v2/admin/mail/readiness',ok=False,auth_token=None); assert anonymous['error']['code']=='UNAUTHORIZED'
+            # Read the disabled-by-default diagnostic through the authenticated Admin session.
+            diagnostic=api(base,'/api/v2/admin/mail/readiness')
+            # Require the exact top-level secret-free contract shape.
+            assert set(diagnostic)=={'schema_version','provider','status','checks','reasons','delivery_summary','suppressed_recipients'}
+            # Require the repository feature and network release gates to remain false by default.
+            assert diagnostic['status']=='disabled' and diagnostic['checks']['feature_enabled'] is False and diagnostic['checks']['network_release_enabled'] is False
+            # Require every lifecycle diagnostic to be an aggregate non-negative integer.
+            assert set(diagnostic['delivery_summary'])=={'sending','sent','retry_wait','failed','suppressed','uncertain','disabled','release_held','misconfigured'} and all(isinstance(value,int) and value>=0 for value in diagnostic['delivery_summary'].values())
+            # Serialize the diagnostic and reject raw configuration, credential, recipient, token, or URL surfaces.
+            serialized=json.dumps(diagnostic); assert 'CASINO_' not in serialized and '://' not in serialized and '@' not in serialized and 'token=' not in serialized
+            # Require likely consumer and provider event routes to remain absent from the application router.
+            for held_path in ('/api/v2/mail/send','/api/v2/mail/bounce','/api/v2/auth/password-reset','/api/v2/auth/invitations'):
+                # Dispatch one empty request and require a closed route surface.
+                missing=api(base,held_path,ok=False); assert missing['error']['code']=='NOT_FOUND'
+        # Record Admin authorization, disabled gates, aggregate diagnostics, and absent consumer routes.
+        run_case('API-MAIL-002',['MAIL-001','MAIL-002','MAIL-003','TEST-090'],mail_api)
         # Define the auth_backend function used by this module.
         def auth_backend():
             # Set blocked to the value needed for the next operation.
@@ -1596,7 +1647,7 @@ def run_api_tests():
             # Verify user B cannot mutate user A's server-side autoplay session.
             cross_auto=api(base,'/api/v1/autoplay/stop','POST',{'autoplay_id':auto_a['autoplay_id']},ok=False,auth_token=token_b); assert auto_a['player_id']==user_a['player_id'] and cross_auto['error']['code']=='FORBIDDEN'
             # Enumerate every registered Admin route shape to prove the central role gate fails closed.
-            admin_paths=[('GET','/api/v1/admin/overview'),('GET','/api/v1/admin/dashboard'),('GET','/api/v1/admin/modules'),('GET','/api/v1/admin/requirements'),('GET','/api/v1/admin/game-states'),('GET','/api/v1/admin/users'),('POST','/api/v1/admin/users'),('GET',f'/api/v1/admin/users/{user_b["user_id"]}'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/deactivate'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/reactivate'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/password-reset'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/terms'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/locale'),('GET','/api/v1/admin/logs'),('GET','/api/v1/admin/ledger'),('GET','/api/v1/admin/history'),('GET','/api/v1/admin/test-results'),('GET','/api/v1/admin/audio-settings'),('POST','/api/v1/admin/audio-settings'),('GET','/api/v1/admin/autoplay'),('POST','/api/v1/admin/autoplay/stop-all'),('GET','/api/v1/admin/bots'),('POST','/api/v1/admin/bots/practice-opponents/fund'),('GET','/api/v2/admin/operations'),('GET','/api/v2/admin/oauth/providers'),('GET','/api/v2/admin/users'),('POST','/api/v2/admin/users'),('GET',f'/api/v2/admin/users/{user_b["user_id"]}'),('PATCH',f'/api/v2/admin/users/{user_b["user_id"]}'),('POST',f'/api/v2/admin/users/{user_b["user_id"]}/password'),('PATCH',f'/api/v2/admin/users/{user_b["user_id"]}/terms'),('GET',f'/api/v2/admin/users/{user_b["user_id"]}/state')]
+            admin_paths=[('GET','/api/v1/admin/overview'),('GET','/api/v1/admin/dashboard'),('GET','/api/v1/admin/modules'),('GET','/api/v1/admin/requirements'),('GET','/api/v1/admin/game-states'),('GET','/api/v1/admin/users'),('POST','/api/v1/admin/users'),('GET',f'/api/v1/admin/users/{user_b["user_id"]}'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/deactivate'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/reactivate'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/password-reset'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/terms'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/locale'),('GET','/api/v1/admin/logs'),('GET','/api/v1/admin/ledger'),('GET','/api/v1/admin/history'),('GET','/api/v1/admin/test-results'),('GET','/api/v1/admin/audio-settings'),('POST','/api/v1/admin/audio-settings'),('GET','/api/v1/admin/autoplay'),('POST','/api/v1/admin/autoplay/stop-all'),('GET','/api/v1/admin/bots'),('POST','/api/v1/admin/bots/practice-opponents/fund'),('GET','/api/v2/admin/operations'),('GET','/api/v2/admin/oauth/providers'),('GET','/api/v2/admin/mail/readiness'),('GET','/api/v2/admin/users'),('POST','/api/v2/admin/users'),('GET',f'/api/v2/admin/users/{user_b["user_id"]}'),('PATCH',f'/api/v2/admin/users/{user_b["user_id"]}'),('POST',f'/api/v2/admin/users/{user_b["user_id"]}/password'),('PATCH',f'/api/v2/admin/users/{user_b["user_id"]}/terms'),('GET',f'/api/v2/admin/users/{user_b["user_id"]}/state')]
             # Request each Admin endpoint as a normal user and require a forbidden response.
             for method,path in admin_paths:
                 # Send an empty body for mutating routes because authorization must run before validation.
@@ -6272,6 +6323,61 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.set_viewport_size({'width':1920,'height':1080}); page.evaluate("async () => { const i18n = await import('/core/i18n.js'); await i18n.setLocale('en-US', { persistLocal: false }); }")
                 # Record Admin authorization presentation, runtime-disabled status, isolation, and evidence.
                 run_case('BR-ADMIN-OAUTH-001',['OAUTH-002','OAUTH-006','TEST-045'],admin_oauth_browser)
+                # Define secret-free transactional-mail diagnostics across all governed locales, viewports, and states. (issue #330)
+                def admin_mail_browser():
+                    # Define all four visual-matrix viewports, including the narrow mobile Admin layout.
+                    viewports={'desktop_primary':{'width':1920,'height':1080},'desktop_compact':{'width':1440,'height':900},'tablet':{'width':1024,'height':900},'mobile':{'width':390,'height':844}}
+                    # Build the stable aggregate delivery shape required by the v2 contract.
+                    empty_summary={'sending':0,'sent':0,'retry_wait':0,'failed':0,'suppressed':0,'uncertain':0,'disabled':0,'release_held':0,'misconfigured':0}
+                    # Enumerate the exact matrix rows and low-cardinality diagnostic payloads.
+                    scenarios=[
+                        # Prove the intentionally disabled repository default.
+                        ('operations_mail_disabled','disabled','disabled',['feature_disabled'],0),
+                        # Prove actionable incomplete configuration without secrets.
+                        ('operations_mail_misconfigured','misconfigured','postmark',['sender_identity_invalid','provider_credential_missing'],0),
+                        # Prove complete configuration remains visibly held from provider/network release.
+                        ('operations_mail_release_held','release_held','postmark',['network_release_held'],0),
+                        # Prove de-identified suppression aggregates without recipient rows.
+                        ('operations_mail_suppression_summary','release_held','postmark',['network_release_held'],7),
+                    ]
+                    # Exercise each state in both governed Admin locales.
+                    for locale in ('en-US','ru-RU'):
+                        # Switch locale without modifying an external browser preference.
+                        page.evaluate("async locale => { const i18n = await import('/core/i18n.js'); await i18n.setLocale(locale, { persistLocal: false }); }", locale)
+                        # Render each contract-published acceptance state independently.
+                        for matrix_state,status,provider,reasons,suppressed_count in scenarios:
+                            # Clone the aggregate summary so the suppression scenario can carry one bounded count.
+                            summary=dict(empty_summary); summary['suppressed']=suppressed_count
+                            # Publish only the documented response envelope and low-cardinality values.
+                            payload={'ok':True,'data':{'schema_version':'transactional-mail-readiness.v2','provider':provider,'status':status,'checks':{'feature_enabled':status!='disabled','network_release_enabled':False,'canonical_origin_https':status in ('release_held','ready'),'sender_identity_configured':status in ('release_held','ready'),'provider_credential_configured':status in ('release_held','ready'),'digest_key_configured':True},'reasons':reasons,'delivery_summary':summary,'suppressed_recipients':suppressed_count}}
+                            # Intercept only the Admin mail diagnostic while Operations and OAuth use the real backend.
+                            page.route('**/api/v2/admin/mail/readiness',lambda route,_request,body=json.dumps(payload): route.fulfill(status=200,content_type='application/json',body=body))
+                            # Refresh the active Operations surface and wait for the exact explicit state card.
+                            page.get_by_test_id('admin-tab-operations').click(); page.get_by_test_id(f'admin-mail-{status}').wait_for(timeout=5000)
+                            # Wait for the repeated release-held suppression scenario to render its new aggregate before evidence.
+                            if matrix_state=='operations_mail_suppression_summary': page.wait_for_function("expected => document.querySelector('[data-testid=\"admin-mail-suppression-summary\"]')?.textContent.includes(expected)",arg=str(suppressed_count))
+                            # Read the rendered card once for data-minimization assertions.
+                            visible_mail=page.get_by_test_id(f'admin-mail-{status}').inner_text()
+                            # Require no environment key, recipient syntax, tokened link, credential, or raw provider response.
+                            assert 'CASINO_' not in visible_mail and '@' not in visible_mail and 'token=' not in visible_mail.lower() and '://' not in visible_mail
+                            # Require the suppression scenario to expose only its localized aggregate count.
+                            if matrix_state=='operations_mail_suppression_summary': assert '7' in page.get_by_test_id('admin-mail-suppression-summary').inner_text()
+                            # Capture exact after-pass evidence for every locale and governed viewport.
+                            for viewport_id,viewport in viewports.items():
+                                # Resize to the exact matrix dimensions before containment checks.
+                                page.set_viewport_size(viewport); page.wait_for_timeout(150)
+                                # Bring the independent mail card into the bounded Admin scroll region.
+                                page.get_by_test_id(f'admin-mail-{status}').scroll_into_view_if_needed()
+                                # Require document, Admin content, and card containment without horizontal overflow.
+                                assert page.evaluate("status => { const content=document.querySelector('.admin-content'); const card=document.querySelector(`[data-testid=\"admin-mail-${status}\"]`); return document.documentElement.scrollWidth <= window.innerWidth + 1 && content.scrollWidth <= content.clientWidth + 1 && card.scrollWidth <= card.clientWidth + 1; }",status)
+                                # Write a paired after-pass screenshot and sidecar for the exact matrix row.
+                                game_evidence(f'after-pass-admin-mail-{matrix_state}-{locale}-{viewport_id}.png','admin',[matrix_state],locale,viewport_id)
+                            # Remove the focused response before installing the next state.
+                            page.unroute('**/api/v2/admin/mail/readiness')
+                    # Restore the real disabled backend response and primary desktop dimensions.
+                    page.set_viewport_size({'width':1920,'height':1080}); page.evaluate("async () => { const i18n = await import('/core/i18n.js'); await i18n.setLocale('en-US', { persistLocal: false }); }"); page.get_by_test_id('admin-refresh').click(); page.get_by_test_id('admin-mail-disabled').wait_for(timeout=5000)
+                # Record dual-gate states, secret-free aggregate diagnostics, responsive containment, and evidence.
+                run_case('BR-ADMIN-MAIL-001',['MAIL-002','MAIL-003','MAIL-005','TEST-090'],admin_mail_browser)
                 # Define real-backend Operations states, localization, responsive layout, and evidence.
                 def admin_operations_browser():
                     # Cache the isolated backend's primary storage document for reversible degradation.

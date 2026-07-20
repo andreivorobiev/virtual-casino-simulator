@@ -482,6 +482,10 @@
         "language",
         "test_results",
         "operations_oauth_disabled",
+        "operations_mail_disabled",
+        "operations_mail_misconfigured",
+        "operations_mail_release_held",
+        "operations_mail_suppression_summary",
         "operations_live",
         "operations_degraded",
         "operations_down"

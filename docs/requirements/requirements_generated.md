@@ -6,14 +6,14 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.40.0
-- core: 9.15.0
+- application: 9.41.0
+- core: 9.16.0
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.0
 - autoplay: 1.1.3
 - audio: 9.1.1
-- admin: 1.7.0
+- admin: 1.8.0
 - operations: 1.0.0
 - roulette: 9.4.5
 - slots: 9.1.4
@@ -45,10 +45,10 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.1
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.47.0
-- docs: 1.47.0
-- contracts: 1.35.0
-- tooling: 1.15.0
+- tests: 1.48.0
+- docs: 1.48.0
+- contracts: 1.36.0
+- tooling: 1.16.0
 - commenting_policy: 1.0.0
 
 ## Requirements
@@ -716,3 +716,10 @@ Historical source baseline: 9.1.0
 - **TEST-080** (Tests) - PASS: Focused API tests prove consent rejection creates no state, server-authoritative guest creation, 5,000-token isolation, non-Admin authorization, CSRF and browser-proof enforcement, same-context activity, inactivity and absolute expiry, atomic concurrent capacity, per-session game-action and autoplay bounds, complete-catalog guest state access, irreversible explicit end, wallet and autoplay revocation, and cookie-only non-resumption.
 - **TEST-081** (Tests) - PASS: Exact-head browser evidence verifies guest consent, disclosed temporary/no-cash terms, start, refresh preservation, real game-module entry, End trial, no recovery, and the Admin funnel, games, filters, detail, cleanup health, de-identification, keyboard access, reduced motion, 200 percent zoom, and no horizontal overflow in en-US and ru-RU at 1920x1080, 1440x900, 1024x900, and 390x844.
 - **TEST-088** (Tests) - PASS: Contract and telemetry tests prove the additive v2 paths, full filters, nine-stage funnel, fake-token/game/action/error/latency aggregates, bounded event drill-down, privacy threshold, envelopes, v1 freeze, Admin-only enforcement, allowlisted low-cardinality dimensions, no forbidden identifiers, fixed 30-day raw and 400-day aggregate retention, safe detail lookup, and sanitized cleanup failure plus recovery status.
+- **MAIL-001** (Core) - PASS: Transactional mail supports only invitation, email verification, password reset, and magic-link purposes; builds fixed-path links from one canonical HTTPS origin; rejects caller-controlled redirects; and keeps provider/network access unreachable unless both the repository feature gate and an independent release gate are enabled.
+- **MAIL-002** (Security) - PASS: Durable mail state, receipts, diagnostics, errors, and logs exclude raw recipients, bearer tokens, tokened URLs, caller idempotency keys, credentials, and provider responses; persistence uses independent keyed HMAC-SHA256 digests, public startup rejects the known digest-key default, and structurally malformed state is preserved for operator recovery.
+- **MAIL-003** (Admin) - PASS: An Admin-only additive v2 readiness route and Operations card distinguish disabled, misconfigured, release-held, ready, and unavailable mail states and expose only fixed booleans, reason codes, and aggregate lifecycle/suppression counts; no consumer send, callback, bounce, signup, or recovery route is published.
+- **MAIL-004** (Core) - PASS: Every submission requires caller idempotency; changed-meaning reuse conflicts; JSON and MySQL perform one atomic delivery claim per attempt; known non-accepted failures use bounded exponential retry; ambiguous results become uncertain and never auto-retry; and per-recipient rate limits, internal bounce/complaint suppression, attempt ceilings, and terminal retention cleanup are enforced.
+- **MAIL-005** (Application) - PASS: Every authorized purpose has matching en-US and ru-RU subjects plus plain-text and semantic HTML alternatives whose action link has meaningful text and whose fixed content is safely escaped.
+- **MAIL-006** (Docs) - PASS: The transactional-mail runbook documents disabled defaults, separate release authority, sender/domain and SPF/DKIM/DMARC posture, canonical-origin and OAuth callback coordination, domain-move revalidation, bounded smoke evidence, rollback, suppression review, and the prohibition on treating repository merge as live authorization.
+- **TEST-090** (Tests) - PASS: Provider-free unit and API tests prove dual-gate inaccessibility, raw-value exclusion, public digest-key hardening, atomic caller idempotency, changed-meaning conflict, bounded retry, ambiguous-result freezing, rate limits, suppression, retention, malformed-state preservation, bilingual templates, Admin-only contract shape, absent consumer routes, and real MySQL cross-process single-claim behavior; exact-head browser evidence covers disabled, misconfigured, release-held, and suppression-summary states in en-US and ru-RU at all four governed viewports.
