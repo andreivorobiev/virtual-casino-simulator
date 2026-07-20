@@ -8589,6 +8589,38 @@
       "introduced_in": "issue-284-283-auth-visual-conformance",
       "changed_in": "issue-284-283-auth-visual-conformance",
       "notes": "Issue #284/#283 auth short-viewport fit and terms touch-target browser proof."
+    },
+    {
+      "id": "ROU-060",
+      "module": "Roulette",
+      "description": "Leaving the Roulette table with open, un-spun bets refunds each staked amount through the documented clear endpoint, so navigating away never strands an already-debited stake and the reopened round starts with no lingering bet.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-ROU-REFUND-001"
+      ],
+      "implementation_files": [
+        "web/games/roulette.js"
+      ],
+      "introduced_in": "issue-246-roulette-refund-on-leave",
+      "changed_in": "issue-246-roulette-refund-on-leave",
+      "notes": "Issue #246: unmount() now fires a best-effort refund for open-round human bets and refreshes the shared wallet."
+    },
+    {
+      "id": "TEST-073",
+      "module": "Tests",
+      "description": "Browser evidence verifies that placing a Roulette bet debits the shared wallet, navigating away refunds the stake back to the pre-wager balance, and reopening the table shows no lingering open-bet chip.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-ROU-REFUND-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-246-roulette-refund-on-leave",
+      "changed_in": "issue-246-roulette-refund-on-leave",
+      "notes": "Issue #246 refund-on-leave wallet-correctness browser proof."
     }
   ]
 }

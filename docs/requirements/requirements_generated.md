@@ -15,7 +15,7 @@ Historical source baseline: 9.1.0
 - audio: 9.1.1
 - admin: 1.6.1
 - operations: 1.0.0
-- roulette: 9.4.3
+- roulette: 9.4.4
 - slots: 9.1.3
 - blackjack: 9.1.3
 - baccarat: 9.1.2
@@ -45,8 +45,8 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.0
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.45.0
-- docs: 1.45.0
+- tests: 1.45.1
+- docs: 1.45.1
 - contracts: 1.33.0
 - tooling: 1.14.0
 - commenting_policy: 1.0.0
@@ -682,3 +682,5 @@ Historical source baseline: 9.1.0
 - **TEST-070** (Tests) - PASS: Browser regression proves the lost-response idempotency guarantee: after the backend commits and the client sees a simulated lost response, a retry through the visible control resends the identical idempotency identity and immutable wager body, and the ledger records exactly one wager debit for the intended play.
 - **AUTH-UI-002** (Application) - PASS: The login screen fits without page scroll at the short 1280x720 desktop viewport, and the required terms acceptance control presents an enlarged (>=42px) touch target.
 - **TEST-071** (Tests) - PASS: Browser evidence verifies the login gate fits without page overflow at 1280x720 with the sign-in submit control on screen, and that the terms acceptance row meets the enlarged touch-target height.
+- **ROU-060** (Roulette) - PASS: Leaving the Roulette table with open, un-spun bets refunds each staked amount through the documented clear endpoint, so navigating away never strands an already-debited stake and the reopened round starts with no lingering bet.
+- **TEST-073** (Tests) - PASS: Browser evidence verifies that placing a Roulette bet debits the shared wallet, navigating away refunds the stake back to the pre-wager balance, and reopening the table shows no lingering open-bet chip.
