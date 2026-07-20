@@ -126,5 +126,20 @@
   "users.createTitle": "Create Beta User",
   "users.subtitle": "Create beta users, inspect token state, manage terms status, and preserve per-account locale preferences.",
   "users.tableTitle": "Managed Users",
-  "users.title": "Users"
+  "users.title": "Users",
+  "nav.guests": "Guest Trials",
+  "guests.subtitle": "De-identified account-free trial telemetry. No trial can be identified or restored from this view.",
+  "guests.started": "Trials started",
+  "guests.activeNow": "Active now",
+  "guests.ended": "Ended",
+  "guests.expired": "Expired",
+  "guests.recentTitle": "Recent trials",
+  "guests.colId": "Analytics ID",
+  "guests.colStarted": "Started",
+  "guests.colLastEvent": "Last activity",
+  "guests.colEnded": "Ended",
+  "guests.colReason": "Reason",
+  "guests.colDuration": "Duration (s)",
+  "guests.empty": "No guest trials yet",
+  "guests.emptyDetail": "Account-free trials appear here after a visitor selects Try without an account."
 }

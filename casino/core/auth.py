@@ -15,6 +15,8 @@ from http.cookies import SimpleCookie
 from casino.config import AUTH_BOOTSTRAP_ADMIN_DISPLAY_NAME, AUTH_BOOTSTRAP_ADMIN_EMAIL, AUTH_BOOTSTRAP_ADMIN_PASSWORD, AUTH_SESSION_COOKIE, AUTH_SESSION_TTL_SECONDS, DATA_DIR, GUEST_INACTIVITY_SECONDS, GUEST_LIFETIME_SECONDS, GUEST_STARTING_BALANCE, GUEST_TRIALS_ENABLED, SCHEMA_VERSION
 # Import required dependency so this module can use its public functions or constants.
 from casino.core import players
+# Import the de-identified guest-trial telemetry recorder for the Admin Guest Trials section. (issue #317)
+from casino.core import guest_analytics
 # Import required dependency so this module can use its public functions or constants.
 from casino.core.clock import utc_now
 # Import required dependency so this module can use its public functions or constants.
@@ -249,7 +251,7 @@ def create_guest(client: str = "") -> dict:
     # Resolve the absolute-lifetime expiry the session must not outlive.
     expires_at = guest_session_expiry()
     # Build a credential-free guest identity bound only to its own fresh player and holding the non-privileged guest role.
-    user = {"user_id": new_id("guest"), "email": None, "username": None, "display_name": "Guest trial", "role": "guest", "roles": ["guest"], "status": "active", "player_id": guest_player["player_id"], "password_hash": "", "terms_required": False, "terms_accepted_at": now, "locale": "en-US", "language": "en-US", "created_at": now, "updated_at": now, "identity_provider": "guest", "guest": True, "guest_expires_at": expires_at}
+    user = {"user_id": new_id("guest"), "email": None, "username": None, "display_name": "Guest trial", "role": "guest", "roles": ["guest"], "status": "active", "player_id": guest_player["player_id"], "password_hash": "", "terms_required": False, "terms_accepted_at": now, "locale": "en-US", "language": "en-US", "created_at": now, "updated_at": now, "identity_provider": "guest", "guest": True, "guest_expires_at": expires_at, "guest_analytics_id": guest_analytics.record_started()}
     # Persist the guest identity through the same atomic user store as registered accounts.
     def add_user(state: dict) -> dict:
         # Normalize malformed state before appending the new guest identity.
@@ -279,7 +281,7 @@ def create_guest(client: str = "") -> dict:
     return {"user": user, "session": session}
 
 # Irreversibly end a guest trial so no cookie can restore its wallet, game state, history, or identity. (issue #317)
-def end_guest_trial(user: dict) -> None:
+def end_guest_trial(user: dict, reason: str = "ended") -> None:
     # Ignore any non-guest caller so a registered identity can never be revoked here.
     if not is_guest(user):
         # Return without action for non-guest principals.
@@ -304,6 +306,23 @@ def end_guest_trial(user: dict) -> None:
         # Return the mutated user document for atomic persistence.
         return state
     update_json(USERS_PATH, disable_user, default_users)
+    # Close the de-identified trial summary with its bounded end reason for the Admin funnel. (issue #317)
+    guest_analytics.record_ended(user.get("guest_analytics_id"), reason)
+
+# Lazily end guests whose absolute lifetime has passed so Admin analytics reflect expiry without a background job. (issue #317)
+def expire_overdue_guests() -> int:
+    # Read the user store once for the bounded expiry sweep.
+    state = load_users()
+    # Capture the comparison instant for lifetime checks.
+    now = utc_datetime()
+    # Collect the active guests whose configured absolute lifetime has already passed.
+    overdue = [user for user in state.get("users", []) if is_guest(user) and user.get("status") == "active" and user.get("guest_expires_at") and parse_time(user["guest_expires_at"]) <= now]
+    # End each overdue guest through the standard no-recovery teardown with the expired reason.
+    for user in overdue:
+        # Revoke the guest's sessions and identity, closing its analytics summary as expired.
+        end_guest_trial(user, "expired")
+    # Return the count so the Admin endpoint can report the sweep without identifiers.
+    return len(overdue)
 
 # Build the guest browser-session cookie so closing the browser drops the disposable trial. (issue #317)
 def guest_cookie_headers(session: dict, same_site: str = "Lax", secure: bool = False, include_csrf: bool = False) -> list[tuple[str, str]]:
@@ -579,6 +598,10 @@ def authenticate_token(token: str) -> tuple[dict, dict]:
             if not user or user.get("status") != "active":
                 # Raise an error so invalid input or state is reported explicitly.
                 raise ForbiddenError("User is inactive")
+            # Refresh the guest's de-identified activity marker so the Admin active-now window stays truthful. (issue #317)
+            if is_guest(user):
+                # Touch only the one-way analytics id; the summary never stores user, player, or session identifiers.
+                guest_analytics.record_event(user.get("guest_analytics_id"))
             # Return the computed value to the caller.
             return session, user
     # Raise an error so invalid input or state is reported explicitly.

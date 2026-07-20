@@ -13,7 +13,7 @@ Historical source baseline: 9.1.0
 - bots: 1.1.0
 - autoplay: 1.1.2
 - audio: 9.1.1
-- admin: 1.6.1
+- admin: 1.6.2
 - operations: 1.0.0
 - roulette: 9.4.4
 - slots: 9.1.4
@@ -689,3 +689,6 @@ Historical source baseline: 9.1.0
 - **GUEST-001** (Core) - PASS: An account-free guest trial mints one isolated, non-privileged guest principal (role guest only, never admin or an existing player) with a fresh temporary wallet and a browser-session cookie holding no durable credential, capped to a configurable absolute lifetime; ending the trial revokes the session and identity with no recovery path. Guest creation is server-authoritative and cannot select role, player, balance, or expiry.
 - **GUEST-002** (Application) - PASS: The login screen presents a 'Try without an account' entry that starts a disposable guest session without email, password, or OAuth and lands the visitor in the shell; the persistent control relabels to End trial for a guest and ends the trial with no recovery. Player-facing copy discloses the free, non-cashable, temporary nature in en-US and ru-RU.
 - **TEST-080** (Tests) - PASS: Browser evidence verifies the account-free guest flow: the login-screen entry starts an isolated non-admin guest session (fresh 5000-token wallet, no credential), a guest cannot reach an Admin endpoint, and End trial returns the login gate with no cookie able to resume the ended trial.
+- **GUEST-003** (Core) - PASS: Guest trials retain only bounded, de-identified, non-resumable telemetry: each trial summary carries a random analytics id unrelated to the session cookie plus start/last-activity/end timestamps, end reason, and duration, and never stores user, player, session, or network identifiers; ending or expiring a trial closes its summary, and overdue guests are lazily expired through the standard no-recovery teardown.
+- **GUEST-004** (Admin) - PASS: Admin provides a dedicated Guest Trials section showing started, active-now (recent server event window), ended, and expired totals plus a recent-trials table keyed only by random analytics ids, localized in en-US and ru-RU, behind the standard Admin authorization boundary.
+- **TEST-081** (Tests) - PASS: Browser evidence verifies that after an account-free guest trial starts, the Admin Guest Trials section reports it in the started tile and lists a recent row keyed by a random analytics id containing no email, player, or session material.

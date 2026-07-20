@@ -5259,6 +5259,26 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.get_by_test_id('admin-tab-language').click(); page.get_by_test_id('admin-language-select').wait_for(timeout=5000)
                 # Execute this statement as part of the module's documented control flow.
                 run_case('BR-ADMIN-USERS-001',['ADMIN-USER-PENDING-035','TERMS-PENDING-035','TOKEN-PENDING-035','I18N-003'],admin_users_browser)
+                # Prove the Admin Guest Trials section reports de-identified account-free telemetry. (issue #317)
+                def admin_guest_trials_browser():
+                    # Mint one disposable guest trial through the public endpoint without touching the Admin page's cookie jar.
+                    guest_mint=urllib.request.Request(base+'/api/v2/auth/guest',data=b'{}',headers={'Content-Type':'application/json'},method='POST')
+                    guest_mint_payload=json.loads(urllib.request.urlopen(guest_mint,timeout=5).read().decode('utf-8'))
+                    # Require the public endpoint to issue a non-privileged guest principal.
+                    assert guest_mint_payload.get('ok') is True and guest_mint_payload['data']['user'].get('role')=='guest'
+                    # Open the dedicated Guest Trials section through its visible sidebar tab.
+                    page.get_by_test_id('admin-tab-guests').click(); page.get_by_test_id('admin-guest-summary').wait_for(timeout=5000)
+                    # Require the started tile to count at least the trial minted above.
+                    assert int(page.get_by_test_id('admin-guest-started').inner_text().replace(',','').replace('\xa0',''))>=1
+                    # Require at least one recent trial row keyed by a random analytics id.
+                    guest_first_row=page.get_by_test_id('admin-guest-row').first
+                    guest_first_row.wait_for(timeout=5000)
+                    # Read the row text once for the de-identification checks.
+                    guest_row_text=guest_first_row.inner_text()
+                    # Require the row to expose only the analytics identity: no email, player id, or session material.
+                    assert 'gtrial' in guest_row_text and '@' not in guest_row_text and 'player' not in guest_row_text.lower() and 'session' not in guest_row_text.lower()
+                # Execute the de-identified Guest Trials Admin regression.
+                run_case('BR-ADMIN-GUEST-001',['GUEST-003','TEST-081'],admin_guest_trials_browser)
                 # Execute this statement as part of the module's documented control flow.
                 page.get_by_test_id('admin-tab-audio').click(); page.get_by_test_id('admin-save-audio').wait_for(timeout=5000)
                 # Execute this statement as part of the module's documented control flow.

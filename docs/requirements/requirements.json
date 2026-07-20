@@ -8710,6 +8710,59 @@
       "introduced_in": "issue-317-guest-trials",
       "changed_in": "issue-317-guest-trials",
       "notes": "Issue #317 disposable guest-trial browser proof (isolation, non-admin, no recovery)."
+    },
+    {
+      "id": "GUEST-003",
+      "module": "Core",
+      "description": "Guest trials retain only bounded, de-identified, non-resumable telemetry: each trial summary carries a random analytics id unrelated to the session cookie plus start/last-activity/end timestamps, end reason, and duration, and never stores user, player, session, or network identifiers; ending or expiring a trial closes its summary, and overdue guests are lazily expired through the standard no-recovery teardown.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-ADMIN-GUEST-001"
+      ],
+      "implementation_files": [
+        "casino/core/guest_analytics.py",
+        "casino/core/auth.py"
+      ],
+      "introduced_in": "issue-317-guest-trials",
+      "changed_in": "issue-317-guest-trials",
+      "notes": "Issue #317: the retained summary is the analytics side of the disposable-state split; the one-way analytics id on the guest record cannot restore the guest."
+    },
+    {
+      "id": "GUEST-004",
+      "module": "Admin",
+      "description": "Admin provides a dedicated Guest Trials section showing started, active-now (recent server event window), ended, and expired totals plus a recent-trials table keyed only by random analytics ids, localized in en-US and ru-RU, behind the standard Admin authorization boundary.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-ADMIN-GUEST-001"
+      ],
+      "implementation_files": [
+        "casino/admin.py",
+        "web/admin.js",
+        "web/admin.html",
+        "web/i18n/en-US/admin.json",
+        "web/i18n/ru-RU/admin.json"
+      ],
+      "introduced_in": "issue-317-guest-trials",
+      "changed_in": "issue-317-guest-trials",
+      "notes": "Issue #317: the Guest Trials navigation section for measuring account-free visitors without treating them as real users."
+    },
+    {
+      "id": "TEST-081",
+      "module": "Tests",
+      "description": "Browser evidence verifies that after an account-free guest trial starts, the Admin Guest Trials section reports it in the started tile and lists a recent row keyed by a random analytics id containing no email, player, or session material.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-ADMIN-GUEST-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-317-guest-trials",
+      "changed_in": "issue-317-guest-trials",
+      "notes": "Issue #317 de-identified Admin Guest Trials browser proof."
     }
   ]
 }

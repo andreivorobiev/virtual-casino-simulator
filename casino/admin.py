@@ -11,6 +11,8 @@ from casino.config import DATA_DIR, GAME_DATA_DIR, LOG_DIR, DOCS_DIR, APP_VERSIO
 from casino.module_versions import list_module_revisions
 # Import required dependency so this module can use its public functions or constants.
 from casino.core import auth, players, ledger, history, logger, autoplay, settings
+# Import the de-identified guest-trial telemetry for the Admin Guest Trials section. (issue #317)
+from casino.core import guest_analytics
 # Import required dependency so this module can use its public functions or constants.
 from casino.core.clock import utc_now
 # Import required dependency so this module can use its public functions or constants.
@@ -127,7 +129,7 @@ def _ensure_unique_email(state, email):
     # Iterate through persisted users to enforce unique beta account emails.
     for user in state["users"]:
         # Branch when the normalized email is already assigned.
-        if user.get("email", "").lower() == email.lower():
+        if (user.get("email") or "").lower() == email.lower():
             # Raise an explicit validation error instead of overwriting an account.
             raise ValidationError("email already exists", {"email": email})
 
@@ -396,6 +398,15 @@ def register(router):
     def admin_dashboard(body, query):
         # Return the computed value to the caller.
         return overview()
+
+    # Attach this decorator so the following function is registered with the framework.
+    @router.get(r"/api/v1/admin/guest-trials")
+    # Publish the de-identified Guest Trials summary for the Admin section. (issue #317)
+    def admin_guest_trials(body, query):
+        # Lazily end overdue guests first so expiry counts stay truthful without a background job.
+        auth.expire_overdue_guests()
+        # Return only bounded, non-resumable telemetry that cannot authenticate, identify, or restore any guest.
+        return {"guest_trials": guest_analytics.summary()}
 
     # Attach this decorator so the following function is registered with the framework.
     @router.get(r"/api/v1/admin/modules")

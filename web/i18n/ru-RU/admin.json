@@ -126,5 +126,20 @@
   "players.time": "Время",
   "players.title": "Игроки и боты",
   "system.subtitle": "Маршруты, модули и исходный обзор.",
-  "system.title": "Система"
+  "system.title": "Система",
+  "nav.guests": "Гостевые сессии",
+  "guests.subtitle": "Обезличенная телеметрия проб без аккаунта. По этим данным нельзя опознать или восстановить сессию.",
+  "guests.started": "Начато проб",
+  "guests.activeNow": "Активны сейчас",
+  "guests.ended": "Завершены",
+  "guests.expired": "Истекли",
+  "guests.recentTitle": "Недавние пробы",
+  "guests.colId": "ID аналитики",
+  "guests.colStarted": "Начало",
+  "guests.colLastEvent": "Последняя активность",
+  "guests.colEnded": "Завершение",
+  "guests.colReason": "Причина",
+  "guests.colDuration": "Длительность (с)",
+  "guests.empty": "Гостевых проб пока нет",
+  "guests.emptyDetail": "Пробы без аккаунта появятся здесь после выбора «Попробовать без аккаунта»."
 }

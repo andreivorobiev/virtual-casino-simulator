@@ -84,6 +84,8 @@ async function load(tab = 'dashboard') {
     if (tab === 'players') return playersBots();
     // Branch to the Admin beta-user renderer.
     if (tab === 'users') return users();
+    // Branch to the de-identified Guest Trials telemetry renderer. (issue #317)
+    if (tab === 'guests') return guests();
     // Branch to the ledger renderer.
     if (tab === 'ledger') return ledger();
     // Branch to the history renderer.
@@ -194,6 +196,20 @@ async function users() {
   view.querySelectorAll('.terms-user').forEach(button => button.onclick = () => updateUserTerms(button));
   // Bind locale save buttons after rendering the table.
   view.querySelectorAll('.save-user-locale').forEach(button => button.onclick = () => saveUserLocale(button));
+}
+
+// Render the de-identified Guest Trials telemetry section for account-free visitors. (issue #317)
+async function guests() {
+  // Set the localized Guest Trials heading and its measurement helper line.
+  setTitle(t('nav.guests', {}, 'admin'), t('guests.subtitle', {}, 'admin'));
+  // Load the bounded, non-resumable summary through the Admin-only endpoint.
+  const data = await api('/api/v1/admin/guest-trials');
+  // Stop when another tab took over during the async load.
+  if (!isActiveTab('guests')) return;
+  // Read the summary totals used by the funnel tiles.
+  const summary = data.guest_trials || {};
+  // Render four funnel tiles plus the recent de-identified trial table with no identity columns.
+  view.innerHTML = `<div class="admin-card-grid" data-testid="admin-guest-summary"><div class="admin-card"><b>${safe(t('guests.started', {}, 'admin'))}</b><h2 data-testid="admin-guest-started">${formatNumber(summary.started_total || 0)}</h2></div><div class="admin-card"><b>${safe(t('guests.activeNow', {}, 'admin'))}</b><h2 data-testid="admin-guest-active">${formatNumber(summary.active_now || 0)}</h2></div><div class="admin-card"><b>${safe(t('guests.ended', {}, 'admin'))}</b><h2 data-testid="admin-guest-ended">${formatNumber(summary.ended_total || 0)}</h2></div><div class="admin-card"><b>${safe(t('guests.expired', {}, 'admin'))}</b><h2 data-testid="admin-guest-expired">${formatNumber(summary.expired_total || 0)}</h2></div></div><section class="admin-card" data-testid="admin-guest-recent"><h3>${safe(t('guests.recentTitle', {}, 'admin'))}</h3>${(summary.recent || []).length ? table([t('guests.colId', {}, 'admin'), t('guests.colStarted', {}, 'admin'), t('guests.colLastEvent', {}, 'admin'), t('guests.colEnded', {}, 'admin'), t('guests.colReason', {}, 'admin'), t('guests.colDuration', {}, 'admin')], summary.recent.map(row => `<tr data-testid="admin-guest-row"><td>${safe(row.analytics_id)}</td><td>${safe(row.started_at)}</td><td>${safe(row.last_event_at || '—')}</td><td>${safe(row.ended_at || '—')}</td><td>${safe(row.end_reason || '—')}</td><td>${row.duration_seconds == null ? '—' : formatNumber(row.duration_seconds)}</td></tr>`)) : emptyState(t('guests.empty', {}, 'admin'), t('guests.emptyDetail', {}, 'admin'), 'admin-guest-empty')}</section>`;
 }
 
 // Define createUser to submit a new beta user through Admin.
