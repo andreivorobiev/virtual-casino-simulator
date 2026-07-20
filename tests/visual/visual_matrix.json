@@ -89,6 +89,8 @@
       "states": [
         "login",
         "oauth_providers_disabled",
+        "oauth_providers_available",
+        "oauth_provider_status_error",
         "terms_required",
         "invalid_credentials"
       ],
@@ -120,7 +122,10 @@
         "search_filtered",
         "category_filtered",
         "admin_nav_hidden_player",
-        "admin_nav_visible_admin"
+        "admin_nav_visible_admin",
+        "oauth_account_unlinked",
+        "oauth_account_linked",
+        "oauth_link_confirmation"
       ],
       "locales": [
         "en-US",

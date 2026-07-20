@@ -16,7 +16,7 @@ from casino.core import auth
 # Import restricted-preview policy primitives under test.
 from casino.core import security
 # Import stable request rejection types for exact hostile-client assertions.
-from casino.errors import ForbiddenError, RateLimitError
+from casino.errors import ForbiddenError, RateLimitError, UnauthorizedError
 
 # Define one synthetic canonical origin reserved from real DNS.
 ORIGIN = "https://casino.example.invalid"
@@ -229,6 +229,33 @@ class SessionSecurityTests(unittest.TestCase):
         auth.update_user_by_id(user["user_id"], lambda record: record.update({"role": "admin", "roles": ["admin"]}))
         # Require every active session to be revoked after the privilege change.
         self.assertEqual([session for session in auth.load_sessions()["sessions"] if session.get("status") == "active"], [])
+
+    # Prove unlink rollback revokes only the selected provider authority while preserving local recovery. (OAUTH-010, TEST-074, issue #326)
+    def test_provider_session_revocation_preserves_local_and_other_provider_sessions(self):
+        # Seed one active private-invite local-password identity for all three session methods.
+        user = {"user_id": "user-oauth-rollback", "email": "rollback@example.invalid", "status": "active", "role": "player", "roles": ["player"], "password_hash": "hash", "identity_provider": "local"}
+        # Persist the isolated canonical identity registry.
+        auth.save_users({"users": [user]})
+        # Issue the local-password recovery session that unlink must preserve.
+        local_session = auth.create_session(user, "192.0.2.10", auth_method="local")
+        # Issue one Google-authenticated session that the exact unlink must revoke.
+        google_session = auth.create_session(user, "192.0.2.11", auth_method="google")
+        # Issue an independent Facebook-authenticated session that Google unlink must preserve.
+        facebook_session = auth.create_session(user, "192.0.2.12", auth_method="facebook")
+        # Revoke only active Google sessions for the canonical user.
+        self.assertEqual(auth.revoke_sessions_for_user_method(user["user_id"], "google"), 1)
+        # Index the durable records by authentication method without exposing their bearer values.
+        sessions_by_method = {session["auth_method"]: session for session in auth.load_sessions()["sessions"]}
+        # Require the selected provider session to be unusable immediately.
+        self.assertEqual(sessions_by_method["google"]["status"], "revoked")
+        # Require local-password recovery to remain active after provider unlink.
+        self.assertEqual(auth.authenticate_token(local_session["token"])[0]["status"], "active")
+        # Require the other independently linked provider session to remain active.
+        self.assertEqual(auth.authenticate_token(facebook_session["token"])[0]["status"], "active")
+        # Require the revoked provider bearer to fail canonical authentication.
+        with self.assertRaises(UnauthorizedError):
+            # Resolve the revoked Google token through the normal bearer authenticator.
+            auth.authenticate_token(google_session["token"])
 
     # Prove concurrent same-account logins keep every prior session valid with no 401/500. (SESSION-007, TEST-051, issue #226)
     def test_concurrent_same_user_logins_keep_prior_sessions_valid(self):

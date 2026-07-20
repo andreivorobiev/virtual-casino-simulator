@@ -407,7 +407,7 @@ def run_api_tests():
     # Record the complete listener-free request, access, session, and browser-helper security proof.
     run_case('API-SEC-PREVIEW-001',['SEC-010','SESSION-006','ADMIN-024','AUTH-007','TEST-047'],run_restricted_preview_security_tests)
     # Centrally discover all mocked and disabled OAuth tests before any listener starts.
-    run_case('OAUTH-MOCK-001',['OAUTH-001','OAUTH-002','OAUTH-003','OAUTH-004','OAUTH-005','TEST-045'],run_oauth_mock_tests)
+    run_case('OAUTH-MOCK-001',['OAUTH-001','OAUTH-002','OAUTH-003','OAUTH-004','OAUTH-005','OAUTH-007','OAUTH-008','OAUTH-009','OAUTH-010','TEST-045','TEST-074'],run_oauth_mock_tests)
     # Record focused deployment-default coverage before starting the normal loopback API server.
     run_case('API-AUTH-DEPLOYMENT-001',['AUTH-006','TEST-041'],validate_deployment_bootstrap)
     # Certify the matrix and shared hostile-client boundary before starting a listener.
@@ -514,8 +514,10 @@ def run_api_tests():
             assert api(base,'/readyz')['ready'] is True
         # Record anonymous/authenticated/degraded/recovery Operations behavior under permanent IDs.
         run_case('API-OPS-001',['OPS-001','OPS-002','OPS-003','OPS-005','TEST-044'],operations_api)
-        # Define the disabled OAuth Admin diagnostic contract against the real loopback backend.
+        # Define the disabled-by-default OAuth API contract against the real loopback backend.
         def oauth_api():
+            # Require anonymous provider status to expose only two false availability booleans by default.
+            assert api(base,'/api/v2/auth/oauth/providers',auth_token=None)=={'providers':[{'provider':'google','available':False},{'provider':'facebook','available':False}]}
             # Require unauthenticated callers to fail before the Admin route can disclose diagnostics.
             anonymous=api(base,'/api/v2/admin/oauth/providers',ok=False,auth_token=None); assert anonymous['error']['code']=='UNAUTHORIZED'
             # Read the allowlisted provider diagnostics through the authenticated Admin session.
@@ -528,18 +530,18 @@ def run_api_tests():
             assert all(set(provider)==allowed_keys for provider in diagnostic['providers'])
             # Index the three stable providers for explicit runtime assertions.
             providers={provider['provider']:provider for provider in diagnostic['providers']}
-            # Preserve local password login as the sole runtime-available provider.
+            # Preserve local password login as runtime-available under default configuration.
             assert providers['local']['runtime_available'] is True
-            # Keep both external providers unavailable regardless of environment readiness.
+            # Keep both external providers unavailable under default configuration.
             assert providers['google']['runtime_available'] is False and providers['facebook']['runtime_available'] is False
-            # Require every held provider action route to remain absent from the application router.
+            # Require every disabled or unregistered provider action to return the same not-found envelope.
             for held_path in ('/api/v2/auth/oauth/google/start','/api/v2/auth/oauth/google/callback','/api/v2/auth/oauth/google/link','/api/v2/auth/oauth/google/exchange','/api/v2/auth/oauth/facebook/start','/api/v2/auth/oauth/facebook/callback'):
                 # Dispatch only empty, value-free requests so no callback data can enter logs.
                 missing=api(base,held_path,ok=False); assert missing['error']['code']=='NOT_FOUND'
             # Confirm OAuth diagnostics never extend the accepted Operations response shape.
             assert set(api(base,'/api/v2/admin/operations'))=={'schema_version','probe','status','checked_at','last_successful_heartbeat_at','build','ready','storage_provider','checks','reasons'}
-        # Record secret-safe Admin diagnostics, absent action routes, and unchanged readiness under permanent IDs.
-        run_case('API-OAUTH-001',['OAUTH-001','OAUTH-002','OAUTH-006','TEST-045'],oauth_api)
+        # Record secret-safe diagnostics, disabled flags, and unchanged readiness under permanent IDs.
+        run_case('API-OAUTH-001',['OAUTH-001','OAUTH-002','OAUTH-006','OAUTH-007','OAUTH-010','TEST-045','TEST-074'],oauth_api)
         # Define the auth_backend function used by this module.
         def auth_backend():
             # Set blocked to the value needed for the next operation.
@@ -1781,7 +1783,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
             # Capture failing response URLs so authorization regressions are diagnosable.
             page.on('response', lambda response: http_errors.append(f'{response.status} {response.url}') if response.status >= 400 else None)
             # Record only attempted provider-action traffic so disabled-control assertions remain focused.
-            page.on('request', lambda request: provider_requests.append(request.url) if '/api/v2/auth/oauth/' in request.url or 'accounts.google.com' in request.url or 'facebook.com' in request.url else None)
+            page.on('request', lambda request: provider_requests.append(request.url) if ('/api/v2/auth/oauth/' in request.url and not request.url.endswith('/providers')) or 'accounts.google.com' in request.url or 'facebook.com' in request.url else None)
             # Install an audio probe before navigation so Roulette voice text can be matched to the authoritative result.
             page.add_init_script("window.__casinoAudioEvents=[]; window.__casinoAudioProbe=(event)=>window.__casinoAudioEvents.push(event);")
             # Define the shot function used by this module.
@@ -2062,6 +2064,42 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     assert page.get_by_test_id('shell-locale-select').input_value()=='ru-RU'
                 # Execute this statement as part of the module's documented control flow.
                 run_case('BR-AUTH-SHELL-001',['AUTH-UI-001','TOKEN-UI-001','I18N-003'],auth_shell)
+                # Define an intercepted no-provider-network browser proof for authenticated linking UI.
+                def oauth_invite_only_browser():
+                    # Fulfill boolean link status with one unlinked and one linked provider.
+                    page.route('**/api/v2/auth/oauth/links',lambda route:route.fulfill(status=200,content_type='application/json',body='{"ok":true,"data":{"providers":[{"provider":"google","available":true,"linked":false},{"provider":"facebook","available":true,"linked":true}]}}'))
+                    # Fulfill the start response with a same-origin synthetic destination so no provider host is contacted.
+                    page.route('**/api/v2/auth/oauth/google/start',lambda route:route.fulfill(status=200,content_type='application/json',body='{"ok":true,"data":{"provider":"google","action":"link","authorization_url":"'+base+'/?oauth_status=linked&oauth_provider=google","expires_in":300}}'))
+                    # Reload so the authenticated account popover reads the intercepted boolean-only link state.
+                    page.reload(wait_until='networkidle'); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    # Open the accessible account-method details control.
+                    page.get_by_test_id('account-menu').click(); page.get_by_test_id('oauth-account-popover').wait_for(timeout=5000)
+                    # Require explicit consent plus distinct linked and unlinked provider actions.
+                    assert page.get_by_test_id('oauth-link-confirm').is_visible() and page.get_by_test_id('oauth-link-google').locator('button').get_attribute('data-oauth-account-action')=='link' and page.get_by_test_id('oauth-link-facebook').locator('button').get_attribute('data-oauth-account-action')=='unlink'
+                    # Click unconfirmed linking and prove no provider-start request was sent.
+                    provider_count=len(provider_requests); page.get_by_test_id('oauth-link-google').locator('button').click(); page.wait_for_timeout(100); assert len(provider_requests)==provider_count
+                    # Require a localized confirmation error adjacent to the account controls.
+                    assert page.locator('#oauth-account-message').inner_text().strip()
+                    # Capture the explicit confirmation, linked, and unlinked account state in both governed widths.
+                    for viewport_id,viewport in {'desktop_primary':{'width':1920,'height':1080},'mobile':{'width':390,'height':844}}.items():
+                        # Resize before checking page and popover containment.
+                        page.set_viewport_size(viewport); page.wait_for_timeout(150)
+                        # Require no horizontal overflow and a reachable explicit confirmation control.
+                        assert page.evaluate("() => document.documentElement.scrollWidth <= window.innerWidth + 1") and page.get_by_test_id('oauth-link-confirm').is_visible()
+                        # Record self-describing after-pass evidence for the three mapped account states.
+                        game_evidence(f'after-pass-shell-oauth-account-{viewport_id}.png','shell_lobby',['oauth_account_unlinked','oauth_account_linked','oauth_link_confirmation'],'ru-RU',viewport_id)
+                    # Restore the primary viewport and confirm the explicit linking checkbox.
+                    page.set_viewport_size({'width':1920,'height':1080}); page.get_by_test_id('oauth-link-confirm').check()
+                    # Observe the link-start request before same-origin synthetic navigation.
+                    with page.expect_request(lambda request: request.url.endswith('/api/v2/auth/oauth/google/start') and request.method=='POST'):
+                        # Submit the now-explicitly-confirmed provider link action.
+                        page.get_by_test_id('oauth-link-google').locator('button').click()
+                    # Wait for the same-origin synthetic completion to restore the authenticated lobby.
+                    page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    # Remove only this test's route interceptions before normal backend checks continue.
+                    page.unroute('**/api/v2/auth/oauth/links'); page.unroute('**/api/v2/auth/oauth/google/start')
+                # Record invite-only provider link UI without real provider credentials or network access.
+                run_case('BR-OAUTH-INVITE-001',['OAUTH-006','OAUTH-007','OAUTH-008','OAUTH-010','TEST-074'],oauth_invite_only_browser)
                 # Open the token wallet menu before adding fake tokens.
                 page.locator('.wallet-menu summary').click()
                 # Read the authenticated player id from the live shell state.

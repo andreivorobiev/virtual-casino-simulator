@@ -1,4 +1,4 @@
-"""Focused Admin-route tests for the disabled OAuth integration.
+"""Focused route tests for the invite-only OAuth integration.
 
 Requirements: OAUTH-001, OAUTH-002, and TEST-045.
 """
@@ -14,7 +14,7 @@ from casino.router import Router
 from casino.errors import ForbiddenError
 
 
-# Verify the shared integration exposes diagnostics but no OAuth action surface.
+# Verify the shared integration exposes only the reviewed invite-only OAuth surface.
 class OAuthApiTests(unittest.TestCase):
     # Build one isolated router with a synthetic environment and no live configuration.
     def _router(self, environment=None):
@@ -25,14 +25,14 @@ class OAuthApiTests(unittest.TestCase):
         # Return the isolated router for direct dispatch.
         return router
 
-    # Verify route registration stays limited to the single Admin diagnostic endpoint.
-    def test_route_inventory_exposes_no_oauth_action_or_callback(self):
+    # Verify route registration contains only the exact reviewed v2 and Admin endpoints.
+    def test_route_inventory_is_exact_and_leaves_v1_unchanged(self):
         # Read the exact registered route patterns from the isolated router.
         routes = [(route.method, route.pattern) for route in self._router().routes]
-        # Require exactly one read-only Admin diagnostic route.
-        self.assertEqual(routes, [("GET", "/api/v2/admin/oauth/providers")])
-        # Reject any accidental action or callback segment in the registered route inventory.
-        self.assertFalse(any(segment in pattern for _, pattern in routes for segment in ("/start", "/callback", "/link", "/exchange")))
+        # Require only boolean status, start, callback, link status, unlink, and Admin diagnostics.
+        self.assertEqual(routes, [("GET", "/api/v2/auth/oauth/providers"), ("POST", "/api/v2/auth/oauth/(?P<provider>google|facebook)/start"), ("GET", "/api/v2/auth/oauth/(?P<provider>google|facebook)/callback"), ("GET", "/api/v2/auth/oauth/links"), ("POST", "/api/v2/auth/oauth/(?P<provider>google|facebook)/unlink"), ("GET", "/api/v2/admin/oauth/providers")])
+        # Prove no OAuth route broadens the frozen v1 namespace.
+        self.assertFalse(any(pattern.startswith("/api/v1") for _, pattern in routes))
 
     # Verify a normal authenticated user cannot read configuration diagnostics.
     def test_direct_dispatch_requires_admin_role(self):
@@ -43,20 +43,20 @@ class OAuthApiTests(unittest.TestCase):
             # Attempt the Admin route without passing through the application's central prefix guard.
             self._router().dispatch("GET", "/api/v2/admin/oauth/providers", context=context)
 
-    # Verify complete synthetic configuration never becomes runtime availability.
-    def test_admin_diagnostics_are_allowlisted_and_runtime_disabled(self):
+    # Verify complete synthetic configuration becomes runtime-ready without exposing secrets.
+    def test_admin_diagnostics_are_allowlisted_and_runtime_ready(self):
         # Supply synthetic values that must never appear in the serialized response.
         environment = {"CASINO_OAUTH_ENABLED_GOOGLE": "true", "CASINO_GOOGLE_CLIENT_ID": "synthetic-client-id", "CASINO_GOOGLE_CLIENT_SECRET": "synthetic-client-secret", "CASINO_OAUTH_PUBLIC_BASE_URL": "http://localhost:8767"}
         # Dispatch through an Admin context while opening no provider connection.
         payload = self._router(environment).dispatch("GET", "/api/v2/admin/oauth/providers", context={"user": {"roles": ["admin"], "role": "admin", "status": "active"}})
         # Index the stable provider rows for focused assertions.
         providers = {provider["provider"]: provider for provider in payload["providers"]}
-        # Require the local password provider to remain the sole runtime-available option.
+        # Require the local password provider to remain runtime-available.
         self.assertTrue(providers["local"]["runtime_available"])
         # Distinguish inert configuration readiness from unavailable Google runtime behavior.
         self.assertTrue(providers["google"]["configuration_ready"])
-        # Keep Google unavailable even when synthetic configuration is structurally complete.
-        self.assertFalse(providers["google"]["runtime_available"])
+        # Make Google available only under the complete synthetic explicit configuration.
+        self.assertTrue(providers["google"]["runtime_available"])
         # Keep Facebook unavailable independently.
         self.assertFalse(providers["facebook"]["runtime_available"])
         # Serialize only for secret-absence assertions without printing the result.

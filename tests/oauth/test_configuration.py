@@ -1,4 +1,4 @@
-"""Focused OAuth disabled-configuration diagnostic tests for issue #70.
+"""Focused OAuth disabled-by-default configuration tests for issues #70 and #326.
 
 Requirements: OAUTH-001, OAUTH-002, and TEST-045.
 """
@@ -48,8 +48,8 @@ class OAuthConfigurationTests(unittest.TestCase):
         self.assertEqual(diagnostics["google"].status, "ready")
         # Assert inert configuration is ready while no runtime route or adapter is available.
         self.assertTrue(diagnostics["google"].configuration_ready)
-        # Assert runtime availability remains false in the isolated package.
-        self.assertFalse(diagnostics["google"].runtime_available)
+        # Assert the integrated runtime becomes available only with the complete explicit flag contract.
+        self.assertTrue(diagnostics["google"].runtime_available)
         # Assert the exact public callback URL is available to Operations.
         self.assertEqual(diagnostics["google"].callback_url, "http://localhost:8767/api/v2/auth/oauth/google/callback")
         # Assert readiness diagnostics contain no missing variables.
