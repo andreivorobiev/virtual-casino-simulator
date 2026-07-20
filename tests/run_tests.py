@@ -2456,8 +2456,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             page.wait_for_timeout(100)
                             # Read exact semantics, containment, and focus presentation after the keyboard action.
                             metrics=lobby_metrics()
-                            # Resolve the localized lobby label from the visible navigation control for parity checking.
-                            expected_label=page.get_by_test_id('nav-lobby').inner_text().strip()
+                            # Resolve only the navigation button's localized text node, excluding its aria-hidden home icon.
+                            expected_label=page.get_by_test_id('nav-lobby').evaluate("(button) => [...button.childNodes].filter((node) => node.nodeType === Node.TEXT_NODE).map((node) => node.textContent).join('').trim()")
                             # Require one named, keyboard-focusable region with native vertical scrolling and no horizontal outlet overflow.
                             assert metrics['role']=='region' and metrics['label']==expected_label and metrics['tabIndex']==0 and metrics['overflowY']=='auto' and metrics['overflowX']=='hidden',metrics
                             # Require a genuinely bounded overflow surface whose bottom ends above the in-flow status rail.
