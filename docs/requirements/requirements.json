@@ -8662,6 +8662,45 @@
       "notes": "Issue #246 refund-on-leave wallet-correctness browser proof."
     },
     {
+      "id": "UX-014",
+      "module": "UX",
+      "description": "The player-facing brand block and document title present the product name and the play-tokens-only/no-cash-value safety cue without internal version, validation-stage, build, commit, environment, or debug metadata, in en-US and ru-RU across authenticated, unauthenticated guest, and restricted-preview login states at every governed viewport; exact build provenance remains available through the status/diagnostics surfaces rather than the brand block.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-SHELL-BRAND-001",
+        "BR-SHELL-BRAND-GUEST-001"
+      ],
+      "implementation_files": [
+        "web/index.html",
+        "web/styles.css",
+        "web/i18n/en-US/shell.json",
+        "web/i18n/ru-RU/shell.json",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-321-shell-version-copy",
+      "changed_in": "issue-321-shell-version-copy",
+      "notes": "Issue #321: 'v9 validation release' is removed from the brand subtitle and page title; the subtitle reserves its two-line footprint so header height stays locale-invariant; the restricted-preview guest state keeps the authenticated topbar absent; the status-rail APP version chip is retained for #287 provenance."
+    },
+    {
+      "id": "TEST-079",
+      "module": "Tests",
+      "description": "Browser evidence verifies, in en-US and ru-RU at 1920x1080, 1440x900, 1024x900, and 390x844, that authenticated lobby and Roulette headers render the canonical brand and safety cue without metadata or clipping, while unauthenticated guests in restricted preview receive a metadata-free title and login surface with no protected topbar.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-SHELL-BRAND-001",
+        "BR-SHELL-BRAND-GUEST-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-321-shell-version-copy",
+      "changed_in": "issue-321-shell-version-copy",
+      "notes": "Issue #321 exact-head evidence paths are logs/test-runs/after-pass-shell-brand-*.png and logs/test-runs/after-pass-roulette-brand-*.png with matching VIS-EVIDENCE-001 sidecars."
+    },
+    {
       "id": "SLOT-029",
       "module": "Slots",
       "description": "The Slots result renders every authoritative winning payline as a labelled, non-color-only SVG path whose five points are recalculated from the live reel-cell centers, remain within one CSS pixel after responsive resize, locale rerender, zoom, and route recovery, and preserve visible symbol identity in normal and reduced-motion modes.",
@@ -8733,7 +8772,7 @@
     {
       "id": "ROU-061",
       "module": "Roulette",
-      "description": "Every visible wagering surface registers exactly one correctly labeled bet per activation with no silent no-ops: straight number cells (including zero) show their pocket number, FAST BETS shortcuts and grid outside cells show their canonical outside labels even on repeat clicks, and every inside/special bet type (split, street, line, corner, zero split, trio, top line, snake, dozens, columns) shows its exact catalog label on the bet slip.",
+      "description": "Every visible Roulette wagering surface registers correctly labeled bets with no silent no-ops: all 38 straight pockets show their pocket number, every FAST BETS shortcut and grid outside cell shows its canonical outside label even on repeat clicks, all dozen and column cells plus every inside/special marker type show their exact catalog labels, and each racetrack/call control renders every authoritative component label returned for that activation.",
       "status": "PASS",
       "api_tests": [],
       "browser_tests": [
@@ -8750,7 +8789,7 @@
     {
       "id": "TEST-082",
       "module": "Tests",
-      "description": "Browser evidence audits the bet slip across straight (17 and 0), all six FAST BETS shortcuts including a repeat click, all six grid outside cells, dozens, columns, and one representative of every inside/special bet type, requiring exactly one new correctly labeled slip entry per activation and a clean refunded slip afterward.",
+      "description": "Browser evidence audits all 38 straight pockets, all six FAST BETS shortcuts including a repeat click, all six grid outside cells, every dozen and column cell, one representative of every inside/special marker type, and all eight racetrack/call controls; direct targets must add exactly one correctly labeled row, call controls must match every authoritative response component, and each audited group must finish with a clean refunded slip.",
       "status": "PASS",
       "api_tests": [],
       "browser_tests": [
@@ -8761,7 +8800,40 @@
       ],
       "introduced_in": "issue-250-slip-label-audit",
       "changed_in": "issue-250-slip-label-audit",
-      "notes": "Issues #230/#231/#233/#250 exhaustive slip-label and reliability audit."
+      "notes": "Issues #230/#231/#233/#250 exhaustive direct-surface and racetrack/call-control slip-label reliability audit."
+    },
+    {
+      "id": "KENO-025",
+      "module": "Keno",
+      "description": "All 80 Keno number cells, including every outer row and column, keep their borders, numerals, keyboard focus rings, selection outlines, and drawn, caught, latest, and disabled treatments visible inside the board scroll region at every governed viewport.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-KENO-EDGE-001"
+      ],
+      "implementation_files": [
+        "web/games/keno.js"
+      ],
+      "introduced_in": "issue-320-keno-edge-clipping",
+      "changed_in": "issue-320-keno-edge-clipping",
+      "notes": "Issue #320 gives the clip container explicit border-box clearance and scroll padding for outlines, focus rings, transforms, and the largest result glow while preserving intentional keyboard/touch scrolling."
+    },
+    {
+      "id": "TEST-078",
+      "module": "Tests",
+      "description": "Browser geometry and after-pass evidence in English and Russian at 1920x1080, 1440x900, 1024x900, and 390x844 verifies corner-cell containment, keyboard focus visibility and reveal, idle, selected, final-draw, caught, latest, and disabled treatments, minimum touch targets, and no page-level horizontal overflow.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-KENO-EDGE-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-320-keno-edge-clipping",
+      "changed_in": "issue-320-keno-edge-clipping",
+      "notes": "Issue #320 evidence paths are logs/test-runs/after-pass-keno-edge-*.png with matching VIS-EVIDENCE-001 JSON sidecars generated from the exact tested head."
     }
   ]
 }

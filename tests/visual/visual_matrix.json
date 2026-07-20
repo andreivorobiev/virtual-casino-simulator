@@ -88,6 +88,8 @@
       "selector": "[data-testid='login-gate'], [data-testid='terms-gate']",
       "states": [
         "login",
+        "guest",
+        "restricted_preview",
         "oauth_providers_disabled",
         "terms_required",
         "invalid_credentials"
@@ -98,6 +100,8 @@
       ],
       "viewports": [
         "desktop_primary",
+        "desktop_compact",
+        "tablet",
         "mobile"
       ],
       "gates": [
@@ -221,6 +225,9 @@
         "selection",
         "drawing",
         "result",
+        "edge_idle",
+        "edge_selected_focus_visible",
+        "edge_final_caught",
         "route_restored"
       ],
       "locales": [
