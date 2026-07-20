@@ -11,6 +11,8 @@ from pathlib import Path
 
 # Import required dependency so storage tests can resolve repository files.
 ROOT = Path(__file__).resolve().parents[1]
+# Use synthetic keyed-digest material unrelated to MySQL credentials for live token evidence.
+MYSQL_TOKEN_TEST_KEY = "synthetic-mysql-token-digest-key-material-2026"
 
 
 # Execute one JSON action call in a separately spawned process.
@@ -62,6 +64,40 @@ def _mysql_action_worker(index):
     event, replayed = provider.transact_ledger_once("human", -3, "MYSQL_IDEMPOTENT_DEBIT", "mysql-action-debit", "storage", "mysql_action_round", {"family": "debit"})
     # Return proof fields plus the caller index for process-result materialization.
     return index, event["ledger_id"], replayed
+
+
+# Execute one live MySQL token consume from an independent spawned process. (OTT-001)
+def _mysql_token_consume_worker(arguments):
+    # Import the inert token service inside the child process.
+    from casino.core import one_time_tokens
+    # Import the configured data root so state_store derives the canonical MySQL document key.
+    from casino.config import DATA_DIR
+    # Import the generic validation envelope used by losing race participants.
+    from casino.errors import ValidationError
+
+    # Unpack the synthetic race packet without printing any ephemeral value.
+    index, token, subject = arguments
+    # Build an independent provider-routed service over the canonical auth document.
+    service = one_time_tokens.TokenService(
+        # Use the normal data-root path so MySQL provider routing is exercised.
+        store_path=DATA_DIR / "auth" / "one_time_tokens.json",
+        # Use the synthetic test-only keyed digest material.
+        digest_key=MYSQL_TOKEN_TEST_KEY,
+        # Suppress application log output from bounded race participants.
+        audit_sink=lambda level, event, fields: None,
+    )
+    # Start protected consumption so expected race losers return stable evidence.
+    try:
+        # Attempt the exact same purpose, bearer, and subject from this process.
+        result = service.consume("password_reset", token, subject=subject)
+        # Return the caller index, winner flag, and opaque record identifier.
+        return index, True, result["token_id"]
+    # Convert the generic losing result into serializable evidence.
+    except ValidationError as error:
+        # Require every loser to receive only the generic public reason.
+        assert error.details == one_time_tokens.INVALID_TOKEN_DETAILS
+        # Return no identifier for a rejected replay or race loser.
+        return index, False, None
 
 
 # Simulate a process that commits an action journal entry but loses projection and response.
@@ -380,6 +416,12 @@ def run_mysql_schema_provider_path():
     assert "start_transaction" in source
     # Verify the MySQL ledger path inserts the ledger row before committing.
     assert "INSERT INTO casino_ledger" in source and "connection.commit()" in source
+    # Read the generic document mutation implementation added for security-state transactions.
+    document_source = inspect.getsource(storage.MySQLStorageProvider.update_document)
+    # Require one explicit transaction and row lock around the entire read-modify-write.
+    assert "start_transaction" in document_source and "FOR UPDATE" in document_source
+    # Require absent-row materialization, locked update, commit, and rollback behavior.
+    assert "INSERT INTO casino_documents" in document_source and "UPDATE casino_documents" in document_source and "connection.commit()" in document_source and "connection.rollback()" in document_source
     # Read the storage-enforced action transaction implementation source.
     action_source = inspect.getsource(storage.MySQLStorageProvider.transact_ledger_once)
     # Verify action replay lookup occurs after a wallet row lock in one explicit transaction.
@@ -401,7 +443,7 @@ def run_mysql_live_provider_path():
     # Import the data root used to derive stable provider document keys.
     from casino.config import DATA_DIR
     # Import core services whose JSON-shaped state must no longer create hybrid files.
-    from casino.core import auth, autoplay, ledger, players, state_store, storage
+    from casino.core import auth, autoplay, ledger, one_time_tokens, players, state_store, storage
 
     # Build the explicitly configured provider without ever reading or displaying its password.
     provider = storage.MySQLStorageProvider()
@@ -443,6 +485,28 @@ def run_mysql_live_provider_path():
         assert sum(1 for _, _, replayed in action_results if replayed is False) == 1
         # Verify the wallet absorbed only one three-token debit from 25 calls.
         assert players.get_player("human")["balance"] == starting_balance - 23
+        # Build the inert token service over the canonical provider-routed authentication document.
+        token_service = one_time_tokens.TokenService(store_path=DATA_DIR / "auth" / "one_time_tokens.json", digest_key=MYSQL_TOKEN_TEST_KEY, audit_sink=lambda level, event, fields: None)
+        # Issue one ephemeral bearer for the cross-process exactly-once race.
+        token_receipt = token_service.issue("password_reset", "mysql-token-subject@example.invalid")
+        # Build twelve bounded independent process packets without writing ephemeral values to evidence.
+        token_packets = [(index, token_receipt["token"], "mysql-token-subject@example.invalid") for index in range(12)]
+        # Execute the same consume operation through independent MySQL connections and processes.
+        with ProcessPoolExecutor(max_workers=4) as executor:
+            # Materialize every result so child failures surface in the live integration gate.
+            token_results = list(executor.map(_mysql_token_consume_worker, token_packets))
+        # Require exactly one successful consume across all independent processes.
+        assert sum(1 for _, won, _ in token_results if won) == 1
+        # Require every successful observation to name the issued opaque record.
+        assert {token_id for _, won, token_id in token_results if won} == {token_receipt["token_id"]}
+        # Read the provider document after the race for durable state minimization evidence.
+        token_document = provider.read_document("auth/one_time_tokens.json", one_time_tokens.default_tokens)
+        # Serialize only isolated in-memory state for raw-material absence assertions.
+        token_document_text = __import__("json").dumps(token_document, sort_keys=True)
+        # Require no raw bearer or subject value in the durable MySQL document.
+        assert token_receipt["token"] not in token_document_text and "mysql-token-subject@example.invalid" not in token_document_text
+        # Require exactly one consumed timestamp for the issued opaque record.
+        assert sum(1 for row in token_document.get("tokens", []) if row.get("token_id") == token_receipt["token_id"] and row.get("consumed_at")) == 1
         # Rebuild the provider to simulate a fresh application process after restart.
         storage.set_provider_for_tests(storage.MySQLStorageProvider())
         # Replay the same action after provider reconstruction.

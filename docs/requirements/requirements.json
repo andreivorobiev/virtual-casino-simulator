@@ -8938,7 +8938,7 @@
     {
       "id": "OTT-001",
       "module": "Core",
-      "description": "Purpose-bound one-time tokens use cryptographically random bearer values, persist only keyed one-way digests of the bearer and recipient (never raw values), bind an explicit purpose and subject plus an optional session, and atomically support exactly-once consumption so replay, double consumption, expiry, revocation, and exhausted attempt budgets all fail closed with a uniform non-sensitive error. Atomic persistence is equivalent in JSON and MySQL through the shared storage helper.",
+      "description": "Purpose-bound one-time tokens use 256-bit operating-system randomness, domain-separated HMAC-SHA256 verifiers under an external key whose known local default is rejected for public startup, strict purpose and subject binding plus enforced optional session binding, one active record per purpose and subject, atomic reissue, and exactly-once consumption under the JSON cross-process file lock or one MySQL canonical-row transaction with SELECT FOR UPDATE.",
       "status": "PASS",
       "api_tests": [
         "API-OTT-001"
@@ -8946,6 +8946,8 @@
       "browser_tests": [],
       "implementation_files": [
         "casino/core/one_time_tokens.py",
+        "casino/core/state_store.py",
+        "casino/core/storage.py",
         "casino/config.py"
       ],
       "introduced_in": "issue-331-one-time-tokens",
@@ -8955,7 +8957,7 @@
     {
       "id": "OTT-002",
       "module": "Core",
-      "description": "One-time token operations never expose sensitive material: cross-purpose substitution and subject/session-binding mismatch fail closed, mismatches are charged against a bounded attempt budget, and no raw token, recipient, session, or digest appears in the returned result, the persisted store, error details, or audit log events (which carry only token id, purpose, and reason code).",
+      "description": "One-time-token consumers receive only generic invalid_request or invalid_token errors across malformed, cross-purpose, subject/session mismatch, inactive-subject, replay, expiry, revocation, and exhausted-attempt cases; raw bearer, subject, and session values never enter persistence, results, errors, or audit events, frozen v1 remains unchanged, and the inert v2 component and compatibility contracts require future consumers to reject ambiguous callbacks and enforce bounded initiation, exact CSRF/origin checks, safe redirects, active subjects, and separate delivery approval.",
       "status": "PASS",
       "api_tests": [
         "API-OTT-001"
@@ -8963,27 +8965,256 @@
       "browser_tests": [],
       "implementation_files": [
         "casino/core/one_time_tokens.py",
-        "casino/config.py"
+        "contracts/openapi/one-time-tokens.v2.yaml",
+        "contracts/compatibility/one-time-tokens-infrastructure.json",
+        "scripts/validate_contracts.py"
       ],
       "introduced_in": "issue-331-one-time-tokens",
       "changed_in": "issue-331-one-time-tokens",
       "notes": "Issue #331 data-minimization and abuse-resistance boundary."
     },
     {
-      "id": "TEST-087",
+      "id": "UX-018",
+      "module": "UX",
+      "description": "Primary and high-frequency controls use a required minimum hit size of 42 CSS pixels, with 44 CSS pixels recommended where new layouts allow; small visual controls such as checkboxes may satisfy the floor through an enlarged clickable parent row.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-TOUCH-TARGET-AUTH-001",
+        "BR-TOUCH-TARGET-001"
+      ],
+      "implementation_files": [
+        "docs/visual_design_standard.md",
+        "web/styles.css"
+      ],
+      "introduced_in": "issue-283-touch-target-floor",
+      "changed_in": "issue-283-touch-target-floor",
+      "notes": "Issue #283 codifies owner-approved Option A and the 42px behavior already shipped by the scoped Auth, shell, and Slots remediations."
+    },
+    {
+      "id": "TEST-089",
       "module": "Tests",
-      "description": "Listener-free API-suite evidence verifies the one-time token lifecycle: issue+consume success, replay, cross-purpose substitution, subject and session binding, expiry, revocation, attempt-budget throttle, malformed input, and absence of any raw bearer, recipient, or session value in the persisted store.",
+      "description": "Listener-free and MySQL-live evidence verifies the one-time-token lifecycle: deterministic issue and consume, generic rejection, strict purpose, subject, and session binding, replay, expiry, revocation, bounded attempts, retention, atomic reissue, cross-process exactly-once consumption, and absence of raw bearer, subject, session, or digest material from public results and audit events.",
       "status": "PASS",
       "api_tests": [
         "API-OTT-001"
       ],
       "browser_tests": [],
       "implementation_files": [
-        "tests/run_tests.py"
+        "tests/run_tests.py",
+        "tests/one_time_token_tests.py",
+        "tests/storage_tests.py"
       ],
       "introduced_in": "issue-331-one-time-tokens",
       "changed_in": "issue-331-one-time-tokens",
-      "notes": "Issue #331 fail-closed lifecycle proof."
+      "notes": "Issue #331 fail-closed lifecycle and JSON/MySQL atomicity proof."
+    },
+    {
+      "id": "TEST-087",
+      "module": "Tests",
+      "description": "Exact-head browser geometry verifies Auth controls and the enlarged terms row, authenticated shell primaries, and Slots wager/autoplay controls meet the 42px floor without page-level horizontal overflow in en-US and ru-RU at all four governed viewports.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-TOUCH-TARGET-AUTH-001",
+        "BR-TOUCH-TARGET-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-283-touch-target-floor",
+      "changed_in": "issue-283-touch-target-floor",
+      "notes": "Issue #283 after-pass evidence is stored at logs/test-runs/after-pass-touch-target-auth-*.png, after-pass-touch-target-shell-*.png, and after-pass-touch-target-slots-*.png with matching VIS-EVIDENCE-001 sidecars."
+    },
+    {
+      "id": "GUEST-001",
+      "module": "Core",
+      "description": "Restricted-preview guest entry requires explicit acceptance of private-beta-1 terms, creates one isolated non-Admin guest principal and fresh fixed 5,000-play-token wallet with no add-token path, enforces configurable active-principal, per-session game-action, single-autoplay, autoplay-round, inactivity, and absolute-lifetime limits, and never accepts caller-authored role, player, balance, expiry, or credential fields.",
+      "status": "PASS",
+      "api_tests": [
+        "API-GUEST-LIFECYCLE-001"
+      ],
+      "browser_tests": [
+        "BR-GUEST-TRIAL-001"
+      ],
+      "implementation_files": [
+        "casino/config.py",
+        "casino/core/auth.py",
+        "casino/core/state_store.py",
+        "casino/app.py",
+        "casino/wsgi.py"
+      ],
+      "introduced_in": "issue-317-guest-trials",
+      "changed_in": "issue-317-guest-trials",
+      "notes": "Issue #317 is repository-only restricted-preview scope and does not alter unrestricted-public-launch issue #209."
+    },
+    {
+      "id": "GUEST-002",
+      "module": "Application",
+      "description": "The en-US and ru-RU login surface discloses disposable play-token-only guest terms and requires affirmative consent; the one-time browser-context proof is kept only in sessionStorage, a session cookie alone cannot resume the trial after browser-context loss, same-context refresh remains supported, End trial irreversibly revokes session, identity, wallet, and guest-owned autoplay state, and the guest shell remains usable with reduced motion and at 200 percent zoom.",
+      "status": "PASS",
+      "api_tests": [
+        "API-GUEST-LIFECYCLE-001"
+      ],
+      "browser_tests": [
+        "BR-GUEST-TRIAL-001",
+        "BR-GUEST-REFRESH-001"
+      ],
+      "implementation_files": [
+        "casino/core/auth.py",
+        "casino/core/autoplay.py",
+        "web/index.html",
+        "web/app.js",
+        "web/core/api.js",
+        "web/styles.css",
+        "web/i18n/en-US/shell.json",
+        "web/i18n/ru-RU/shell.json"
+      ],
+      "introduced_in": "issue-317-guest-trials",
+      "changed_in": "issue-317-guest-trials",
+      "notes": "Issue #317 browser-close non-resumability uses a server-stored nonce digest plus a raw sessionStorage proof; raw proof material is never stored in analytics."
+    },
+    {
+      "id": "GUEST-003",
+      "module": "Core",
+      "description": "Guest telemetry stores only an unrelated analytics id, server timestamps, bounded lifecycle reason, locale, coarse device class, registered game slug, named journey milestones, allowlisted action/error categories, coarse latency buckets, fake-token-only aggregates, and bounded event/counter summaries; it never stores user, player, auth-session, cookie, browser-proof, email, network, or user-agent identifiers, retains raw rows for 30 days and daily aggregates for 400 days, and exposes sanitized cleanup success and failure health.",
+      "status": "PASS",
+      "api_tests": [
+        "API-GUEST-ANALYTICS-001"
+      ],
+      "browser_tests": [
+        "BR-ADMIN-GUEST-001"
+      ],
+      "implementation_files": [
+        "casino/core/guest_analytics.py",
+        "casino/router.py",
+        "contracts/compatibility/guest-trials-restricted-preview.json"
+      ],
+      "introduced_in": "issue-317-guest-trials",
+      "changed_in": "issue-317-guest-trials",
+      "notes": "Issue #317 telemetry is intentionally non-resumable and de-identified; cleanup uses fixed server cutoffs and cannot accept caller paths or destructive scope."
+    },
+    {
+      "id": "GUEST-004",
+      "module": "Admin",
+      "description": "The centrally Admin-gated Guest Trials v2 surface provides the named nine-stage funnel; duration, games-per-trial, rounds-per-trial, error-free, and fake-token-only totals; complete per-game engagement, round, error, latency, and action-category metrics; time, lifecycle, game, locale, device, completion, and error filters; bounded recent rows and allowlisted drill-down; and retention health in en-US and ru-RU, including keyboard-scrollable tables, the governed mobile viewport, reduced motion, and 200 percent zoom.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ADMIN-GUEST-001"
+      ],
+      "browser_tests": [
+        "BR-ADMIN-GUEST-001"
+      ],
+      "implementation_files": [
+        "casino/admin.py",
+        "web/admin.html",
+        "web/admin.js",
+        "web/styles.css",
+        "web/i18n/en-US/admin.json",
+        "web/i18n/ru-RU/admin.json"
+      ],
+      "introduced_in": "issue-317-guest-trials",
+      "changed_in": "issue-317-guest-trials",
+      "notes": "Issue #317 Admin analytics accept only the analytics_id route key and low-cardinality locale, device, status, and limit filters."
+    },
+    {
+      "id": "GUEST-005",
+      "module": "Contracts",
+      "description": "Guest creation, lifecycle, browser proof, Admin summary/list/detail/cleanup, standard envelopes, restricted-preview access, retention, and forbidden analytics fields are published as additive v2 OpenAPI and compatibility contracts while /api/v1 remains frozen.",
+      "status": "PASS",
+      "api_tests": [
+        "API-GUEST-CONTRACT-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "contracts/openapi/auth.v2.yaml",
+        "contracts/openapi/guest-trials.v2.yaml",
+        "contracts/compatibility/restricted-preview-security.json",
+        "contracts/compatibility/guest-trials-restricted-preview.json",
+        "contracts/compatibility/contract-digests.json"
+      ],
+      "introduced_in": "issue-317-guest-trials",
+      "changed_in": "issue-317-guest-trials",
+      "notes": "Issue #317 is an additive v2-only surface; frozen /api/v1 receives no Guest Trials route or payload change."
+    },
+    {
+      "id": "GUEST-006",
+      "module": "Security",
+      "description": "Guest principals may access restricted-preview player routes through the same central player binding and CSRF policy as invited users, can never access Admin routes or shared bot mutation, cannot resume without the originating browser proof, and do not authorize signup, OAuth, deployment, provider, DNS, public exposure, or unrestricted launch.",
+      "status": "PASS",
+      "api_tests": [
+        "API-GUEST-LIFECYCLE-001",
+        "API-ADMIN-GUEST-001"
+      ],
+      "browser_tests": [
+        "BR-GUEST-TRIAL-001"
+      ],
+      "implementation_files": [
+        "casino/wsgi.py",
+        "casino/app.py",
+        "casino/core/auth.py",
+        "contracts/compatibility/restricted-preview-security.json"
+      ],
+      "introduced_in": "issue-317-guest-trials",
+      "changed_in": "issue-317-guest-trials",
+      "notes": "Issue #317 durable approvals limit this implementation to repository-only restricted-preview testing and leave #209 unchanged."
+    },
+    {
+      "id": "TEST-080",
+      "module": "Tests",
+      "description": "Focused API tests prove consent rejection creates no state, server-authoritative guest creation, 5,000-token isolation, non-Admin authorization, CSRF and browser-proof enforcement, same-context activity, inactivity and absolute expiry, atomic concurrent capacity, per-session game-action and autoplay bounds, complete-catalog guest state access, irreversible explicit end, wallet and autoplay revocation, and cookie-only non-resumption.",
+      "status": "PASS",
+      "api_tests": [
+        "API-GUEST-LIFECYCLE-001",
+        "API-ADMIN-GUEST-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/run_tests.py",
+        "tests/security/test_browser_api.mjs",
+        "tests/security/test_browser_contract.py"
+      ],
+      "introduced_in": "issue-317-guest-trials",
+      "changed_in": "issue-317-guest-trials",
+      "notes": "Issue #317 lifecycle tests run in bounded isolated temporary state and do not require the formal browser load suite."
+    },
+    {
+      "id": "TEST-081",
+      "module": "Tests",
+      "description": "Exact-head browser evidence verifies guest consent, disclosed temporary/no-cash terms, start, refresh preservation, real game-module entry, End trial, no recovery, and the Admin funnel, games, filters, detail, cleanup health, de-identification, keyboard access, reduced motion, 200 percent zoom, and no horizontal overflow in en-US and ru-RU at 1920x1080, 1440x900, 1024x900, and 390x844.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-GUEST-TRIAL-001",
+        "BR-GUEST-REFRESH-001",
+        "BR-ADMIN-GUEST-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-317-guest-trials",
+      "changed_in": "issue-317-guest-trials",
+      "notes": "Issue #317 after-pass artifacts must be exact-head CI output; reduced-motion and 200 percent zoom artifacts are named separately, and no known-failing or before-state image is acceptance evidence."
+    },
+    {
+      "id": "TEST-088",
+      "module": "Tests",
+      "description": "Contract and telemetry tests prove the additive v2 paths, full filters, nine-stage funnel, fake-token/game/action/error/latency aggregates, bounded event drill-down, privacy threshold, envelopes, v1 freeze, Admin-only enforcement, allowlisted low-cardinality dimensions, no forbidden identifiers, fixed 30-day raw and 400-day aggregate retention, safe detail lookup, and sanitized cleanup failure plus recovery status.",
+      "status": "PASS",
+      "api_tests": [
+        "API-GUEST-ANALYTICS-001",
+        "API-ADMIN-GUEST-001",
+        "API-GUEST-CONTRACT-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/run_tests.py",
+        "scripts/validate_contracts.py"
+      ],
+      "introduced_in": "issue-317-guest-trials",
+      "changed_in": "issue-317-guest-trials",
+      "notes": "Issue #317 contract acceptance is tied to exact v2 routes and compatibility policies rather than generic API smoke tests."
     }
   ]
 }

@@ -5,6 +5,8 @@ import json
 import shutil
 # Import required dependency so this module can use its public functions or constants.
 import threading
+# Import bounded retry timing for transient Windows atomic-replace sharing violations.
+import time
 # Import contextmanager so the cross-process file lock reads as a with-statement.
 from contextlib import contextmanager
 # Import required dependency so this module can use its public functions or constants.
@@ -110,8 +112,22 @@ def write_json(path: Path, data: Any) -> None:
         tmp = path.with_suffix(path.suffix + ".tmp")
         # Set tmp.write_text(json.dumps(data, indent to the value needed for the next operation.
         tmp.write_text(json.dumps(data, indent=2, sort_keys=True), encoding="utf-8")
-        # Execute this statement as part of the module's documented control flow.
-        tmp.replace(path)
+        # Retry only transient Windows sharing violations while preserving atomic replace semantics.
+        for attempt in range(5):
+            # Start protected replacement of the complete temporary document.
+            try:
+                # Atomically publish the fully written JSON document.
+                tmp.replace(path)
+                # Stop after the first successful atomic publication.
+                break
+            # Handle a brief scanner/indexer handle without widening the persistence operation.
+            except PermissionError:
+                # Re-raise after the bounded final attempt so durable failures remain visible.
+                if attempt == 4:
+                    # Preserve the original platform error and traceback.
+                    raise
+                # Wait a small exponentially bounded interval while still holding the document locks.
+                time.sleep(0.01 * (2 ** attempt))
 
 # Hold a best-effort exclusive cross-process lock around a state document's read-modify-write. (SESSION-007, CORE-021)
 @contextmanager
@@ -177,16 +193,8 @@ def update_json(path: Path, mutator: Callable[[Any], Any], default: Any) -> Any:
     document_key = _provider_document_key(path)
     # Route the atomic mutation through the database provider when MySQL is selected.
     if document_key is not None and storage_provider_name() == "mysql":
-        # Serialize the provider read-modify-write with the shared in-process lock.
-        with _LOCK:
-            # Read the current provider document (or its lazy default) before mutation.
-            current = get_storage_provider().read_document(document_key, default)
-            # Apply the caller-owned mutation to the current document.
-            updated = mutator(current)
-            # Persist the mutated document through the provider's own atomic write.
-            get_storage_provider().write_document(document_key, updated)
-            # Return the persisted document to the caller.
-            return updated
+        # Delegate the complete read-modify-write to the provider's cross-process transaction boundary.
+        return get_storage_provider().update_document(document_key, mutator, default)
     # Ensure runtime directories exist before locking a JSON document.
     ensure_dirs()
     # Serialize the whole read-modify-write with the shared reentrant in-process lock.

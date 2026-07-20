@@ -27,6 +27,10 @@ REQUIRED_V2 = [
 OPERATIONS_CONTRACT = CONTRACT_DIR / "operations.v1.yaml"
 # Point to the checked restricted-preview request and access policy.
 PREVIEW_SECURITY_CONTRACT = ROOT / "contracts" / "compatibility" / "restricted-preview-security.json"
+# Point to the inert one-time-token compatibility policy.
+TOKEN_COMPATIBILITY_CONTRACT = ROOT / "contracts" / "compatibility" / "one-time-tokens-infrastructure.json"
+# Point to the component-only v2 token contract that deliberately publishes no routes.
+TOKEN_COMPONENT_CONTRACT = CONTRACT_DIR / "one-time-tokens.v2.yaml"
 
 # Define the main function used by this module.
 def main():
@@ -139,7 +143,8 @@ def main():
             # Reject renamed or repurposed policy records.
             errors.append(f"{PREVIEW_SECURITY_CONTRACT} does not identify the restricted-preview policy")
         # Require exactly the two deliberately anonymous application routes.
-        if preview_security.get("anonymous_routes") != ["/api/v2/auth/login", "/healthz"]:
+        # Preserve only login, explicitly approved disposable guest entry, and liveness as anonymous routes.
+        if preview_security.get("anonymous_routes") != ["/api/v2/auth/login", "/api/v2/auth/guest", "/healthz"]:
             # Fail closed when anonymous route scope expands or changes order.
             errors.append(f"{PREVIEW_SECURITY_CONTRACT} does not preserve the anonymous route allowlist")
         # Require public enrollment and live provider flows to stay disabled.
@@ -158,6 +163,54 @@ def main():
     except (OSError, json.JSONDecodeError) as exc:
         # Report only the artifact path and exception class.
         errors.append(f"restricted-preview policy could not be validated: {PREVIEW_SECURITY_CONTRACT} ({type(exc).__name__})")
+    # Require the inert token compatibility policy to remain parseable and exact.
+    try:
+        # Parse the checked token policy without reading runtime secrets or state.
+        token_policy = json.loads(TOKEN_COMPATIBILITY_CONTRACT.read_text(encoding="utf-8"))
+        # Require the permanent artifact identity and inert stage.
+        if token_policy.get("artifact") != "one-time-tokens-infrastructure" or token_policy.get("stage") != "inert-foundation":
+            # Reject renamed or repurposed token policy records.
+            errors.append(f"{TOKEN_COMPATIBILITY_CONTRACT} does not identify the inert token foundation")
+        # Require the exact fixed purpose vocabulary.
+        if token_policy.get("purposes") != ["invitation", "email_verification", "password_reset", "magic_link"]:
+            # Reject purpose expansion without a separately reviewed contract change.
+            errors.append(f"{TOKEN_COMPATIBILITY_CONTRACT} does not preserve the token purpose allowlist")
+        # Require separate fixed policy records for every supported purpose.
+        purpose_policies = token_policy.get("purpose_policies", {})
+        # Check exact purpose membership and bounded default lifetimes together.
+        if set(purpose_policies) != {"invitation", "email_verification", "password_reset", "magic_link"} or {purpose: details.get("default_ttl_seconds") for purpose, details in purpose_policies.items()} != {"invitation": 604800, "email_verification": 86400, "password_reset": 3600, "magic_link": 900}:
+            # Reject collapsed, missing, expanded, or unbounded purpose policies.
+            errors.append(f"{TOKEN_COMPATIBILITY_CONTRACT} does not preserve separate purpose policies")
+        # Require every consumer and live-use authority to remain absent.
+        authorization = token_policy.get("authorization", {})
+        # Check repository approval separately from every denied live capability.
+        if authorization.get("repository_merge_requires_separate_owner_approval") is not True or any(authorization.get(key) is not False for key in ("consumer_routes_authorized", "signup_authorized", "recovery_authorized", "mail_authorized", "oauth_authorized", "deployment_authorized", "public_exposure_authorized")):
+            # Reject a compatibility artifact that widens authority.
+            errors.append(f"{TOKEN_COMPATIBILITY_CONTRACT} does not preserve the inert authorization boundary")
+        # Require the generic public error contract and frozen v1 boundary.
+        if token_policy.get("public_errors") != {"consume_reason": "invalid_token", "request_reason": "invalid_request", "state_specific_reason_exposed": False} or token_policy.get("compatibility", {}).get("api_v1_frozen") is not True:
+            # Reject enumeration or compatibility drift.
+            errors.append(f"{TOKEN_COMPATIBILITY_CONTRACT} does not preserve generic errors and frozen v1")
+    # Convert absent or malformed policy into one stable contract error.
+    except (OSError, json.JSONDecodeError) as exc:
+        # Report only the artifact path and exception class.
+        errors.append(f"token compatibility policy could not be validated: {TOKEN_COMPATIBILITY_CONTRACT} ({type(exc).__name__})")
+    # Require the component-only OpenAPI artifact to publish schemas and no routes.
+    try:
+        # Read the inert component contract as text for exact boundary checks.
+        token_component_text = TOKEN_COMPONENT_CONTRACT.read_text(encoding="utf-8")
+        # Require OpenAPI 3.0.3, an explicitly empty path map, and the fixed purpose vocabulary.
+        if "openapi: 3.0.3" not in token_component_text or "paths: {}" not in token_component_text or not all(purpose in token_component_text for purpose in ("invitation", "email_verification", "password_reset", "magic_link")):
+            # Reject malformed or incomplete component publication.
+            errors.append(f"{TOKEN_COMPONENT_CONTRACT} does not preserve the inert v2 component contract")
+        # Reject any concrete API route from the infrastructure-only artifact.
+        if "/api/" in token_component_text:
+            # Prevent the component contract from silently becoming a live surface.
+            errors.append(f"{TOKEN_COMPONENT_CONTRACT} must not publish routes")
+    # Convert an absent component artifact into one stable contract error.
+    except OSError as exc:
+        # Report only the artifact path and exception class.
+        errors.append(f"token component contract could not be validated: {TOKEN_COMPONENT_CONTRACT} ({type(exc).__name__})")
     # Set schema_dir to the value needed for the next operation.
     schema_dir = ROOT / "contracts" / "schemas"
     # Iterate through the collection to process each item.
@@ -177,7 +230,7 @@ def main():
         # Return the computed value to the caller.
         return 1
     # Write diagnostic output so the current operation can be inspected.
-    print(f"Contract validation passed for {len(REQUIRED) + len(REQUIRED_V2) + 2} shared policies and {len(GAMES)} catalog games.")
+    print(f"Contract validation passed for {len(REQUIRED) + len(REQUIRED_V2) + 4} shared policies and {len(GAMES)} catalog games.")
     # Return the computed value to the caller.
     return 0
 

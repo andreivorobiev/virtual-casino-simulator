@@ -1,6 +1,6 @@
 {
   "module": "core",
-  "version": "9.13.4",
+  "version": "9.15.0",
   "paths": [
     "casino/core/",
     "casino/app.py",
@@ -17,8 +17,10 @@
     "LOG",
     "AUTH",
     "OAUTH",
+    "OTT",
     "SEC",
     "SESSION",
+    "GUEST",
     "MYSQL",
     "STORAGE"
   ],

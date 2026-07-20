@@ -1,0 +1,98 @@
+openapi: 3.0.3
+info:
+  title: Casino One-Time-Token Consumer Components
+  version: 2.0.0
+  description: >-
+    Infrastructure-only component contract for future separately approved v2 invitation,
+    email-verification, password-reset, and magic-link consumers. This artifact publishes no route.
+# Keep the inert foundation unreachable until a later consumer receives separate approval.
+paths: {}
+x-casino-infrastructure-boundary:
+  routes_published: false
+  api_v1_changed: false
+  signup_enabled: false
+  recovery_enabled: false
+  mail_enabled: false
+  oauth_enabled: false
+# Publish reusable schemas without implying that any endpoint currently accepts them.
+components:
+  schemas:
+    OneTimeTokenPurpose:
+      type: string
+      enum:
+        - invitation
+        - email_verification
+        - password_reset
+        - magic_link
+    OneTimeTokenIssueReceipt:
+      type: object
+      additionalProperties: false
+      required:
+        - token_id
+        - token
+        - purpose
+        - expires_at
+      properties:
+        token_id:
+          type: string
+          description: Opaque non-secret record identifier.
+        token:
+          type: string
+          writeOnly: true
+          description: Ephemeral bearer returned exactly once and never stored raw.
+        purpose:
+          $ref: '#/components/schemas/OneTimeTokenPurpose'
+        expires_at:
+          type: string
+          format: date-time
+    OneTimeTokenConsumeResult:
+      type: object
+      additionalProperties: false
+      required:
+        - token_id
+        - purpose
+        - audit_id
+      properties:
+        token_id:
+          type: string
+        purpose:
+          $ref: '#/components/schemas/OneTimeTokenPurpose'
+        audit_id:
+          type: string
+    OneTimeTokenInvalidError:
+      type: object
+      additionalProperties: false
+      required:
+        - ok
+        - error
+      properties:
+        ok:
+          type: boolean
+          enum:
+            - false
+        error:
+          type: object
+          additionalProperties: false
+          required:
+            - code
+            - message
+            - details
+          properties:
+            code:
+              type: string
+              enum:
+                - VALIDATION_ERROR
+            message:
+              type: string
+              enum:
+                - one-time token is invalid
+            details:
+              type: object
+              additionalProperties: false
+              required:
+                - reason
+              properties:
+                reason:
+                  type: string
+                  enum:
+                    - invalid_token
