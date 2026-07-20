@@ -1967,6 +1967,34 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 run_case('BR-STATIC-CACHE-001',['CORE-026','TEST-068'],static_cache_parity)
                 # Capture logged-out login evidence for the frontend auth handback.
                 shot('auth_login_gate.png')
+                # Prove the restricted-preview guest surface keeps protected brand chrome absent and metadata out of the public title. (issue #321)
+                def guest_restricted_brand_copy():
+                    # Enumerate every governed viewport because the issue requires the shared entry surface at all four sizes.
+                    brand_viewports={entry['id']:{'width':entry['width'],'height':entry['height']} for entry in visual_matrix['viewports']}
+                    # Require the public document title to be the exact approved product name with no release suffix.
+                    assert page.title()=='Virtual Casino Simulator'
+                    # Exercise the unauthenticated restricted-preview entry state in both installed locales.
+                    for brand_locale in ('en-US','ru-RU'):
+                        # Switch through the visible guest locale control and wait for the canonical locale state.
+                        page.get_by_test_id('auth-locale-select').select_option(brand_locale); page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale",arg=brand_locale)
+                        # Read the exact safety acknowledgement from the locale-owned shell resource.
+                        expected_safety=read_i18n_json(ROOT/'web'/'i18n'/brand_locale/'shell.json')['auth.termsCheck']
+                        # Require the guest surface to preserve the full fake-money/play-token safety wording.
+                        assert expected_safety in page.locator('label.check-row').inner_text()
+                        # Require the protected authenticated topbar, wallet, and diagnostics provenance to remain absent for guests.
+                        assert not page.get_by_test_id('premium-topbar').is_visible() and not page.get_by_test_id('premium-wallet').is_visible() and not page.get_by_test_id('shell-status').is_visible()
+                        # Capture exact-head restricted-preview guest evidence at every governed viewport.
+                        for viewport_id,viewport in brand_viewports.items():
+                            # Resize to the exact named visual-matrix viewport before geometry assertions.
+                            page.set_viewport_size(viewport); page.wait_for_timeout(100)
+                            # Reject page or login-panel horizontal overflow while requiring the current login state to remain visible.
+                            assert page.get_by_test_id('login-gate').is_visible() and page.evaluate("() => { const panel=document.querySelector('[data-testid=\"login-gate\"]'); return document.documentElement.scrollWidth <= window.innerWidth + 1 && panel.scrollWidth <= panel.clientWidth + 1; }")
+                            # Record self-describing after-pass evidence for both the guest and restricted-preview state identifiers.
+                            game_evidence(f'after-pass-shell-brand-guest-restricted-preview-{brand_locale.lower()}-{viewport_id}.png','auth',['login','guest','restricted_preview'],brand_locale,viewport_id)
+                    # Restore the primary desktop viewport while keeping Russian selected for the existing authentication flow.
+                    page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(100)
+                # Record guest/restricted-preview title, access-boundary, safety-copy, locale, and viewport acceptance.
+                run_case('BR-SHELL-BRAND-GUEST-001',['UX-014','TEST-079'],guest_restricted_brand_copy)
                 # Define disabled OAuth control, localization, no-request, and visual evidence acceptance.
                 def oauth_disabled_browser():
                     # Define the two governed Auth viewports required by the visual matrix.
@@ -2198,6 +2226,68 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     assert page.get_by_test_id('nav-baccarat').is_visible()
                 # Execute this statement as part of the module's documented control flow.
                 run_case('BR-SHELL-001',['UX-007','CORE-006','LEDGER-025','TOKEN-001','TOKEN-002'],premium_shell)
+                # Prove the player-facing brand block carries no internal version or release-stage metadata in either locale. (issue #321)
+                def shell_brand_copy():
+                    # Enumerate internal metadata tokens that must never appear in the player brand block.
+                    forbidden=re.compile(r'v\d|\bbuild\b|\bcommit\b|\bdebug\b|\benvironment\b|\bstaging\b|validation release|релиз|сборк|проверочн|отлад',re.IGNORECASE)
+                    # Enumerate all required visual-matrix viewport dimensions from their single governed source.
+                    brand_viewports={entry['id']:{'width':entry['width'],'height':entry['height']} for entry in visual_matrix['viewports']}
+                    # Retain each locale/viewport header height so locale switching cannot silently shift the game stage.
+                    header_heights={}
+                    # Require the document title to present the exact approved product name without metadata.
+                    assert page.title()=='Virtual Casino Simulator' and not forbidden.search(page.title())
+                    # Check the localized authenticated brand block in both installed locales.
+                    for brand_locale in ('en-US','ru-RU'):
+                        # Switch the shell locale through the visible control and wait for the runtime to settle.
+                        page.get_by_test_id('shell-locale-select').select_option(brand_locale); page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale",arg=brand_locale)
+                        # Read the exact canonical subtitle for this locale from the paired resource file.
+                        expected_subtitle=read_i18n_json(ROOT/'web'/'i18n'/brand_locale/'shell.json')['brand.subtitle']
+                        # Wait for the asynchronous locale rerender to publish the exact canonical subtitle, which also proves resource-key-free equality.
+                        page.wait_for_function("expected => document.querySelector('#shell-brand-subtitle')?.textContent.trim() === expected", arg=expected_subtitle, timeout=5000)
+                        # Read the settled rendered player-facing brand subtitle for the metadata checks.
+                        rendered_subtitle=page.locator('#shell-brand-subtitle').inner_text().strip()
+                        # Require the approved product name to remain exact and resource-key-free.
+                        assert page.locator('#shell-brand-title').inner_text().strip()=='Virtual Casino Simulator'
+                        # Require the subtitle to keep the play-token safety cue while carrying no version metadata.
+                        assert not forbidden.search(rendered_subtitle), rendered_subtitle
+                        # Require the play-token cue to remain present in the locale's own words.
+                        assert ('token' in rendered_subtitle.lower()) or ('токен' in rendered_subtitle.lower()), rendered_subtitle
+                        # Require the separately approved diagnostics rail to retain a concrete semantic version for #287 provenance.
+                        assert re.fullmatch(r'v\d+\.\d+\.\d+',page.locator('#status-version').inner_text().strip())
+                        # Prove the lobby header remains readable, contained, and unclipped at every governed viewport.
+                        for viewport_id,viewport in brand_viewports.items():
+                            # Resize to the exact matrix viewport and let responsive layout settle before measuring.
+                            page.set_viewport_size(viewport); page.wait_for_timeout(100)
+                            # Audit the complete brand lockup against its topbar and viewport bounds.
+                            brand_geometry=page.evaluate("""() => { const topbar=document.querySelector('[data-testid=\"premium-topbar\"]'); const lockup=document.querySelector('.brand-lockup'); const title=document.querySelector('#shell-brand-title'); const subtitle=document.querySelector('#shell-brand-subtitle'); const topbarBox=topbar.getBoundingClientRect(); const lockupBox=lockup.getBoundingClientRect(); return { topbarHeight:topbarBox.height, contained:lockupBox.left >= topbarBox.left - 1 && lockupBox.right <= topbarBox.right + 1 && lockupBox.top >= topbarBox.top - 1 && lockupBox.bottom <= topbarBox.bottom + 1, viewportContained:lockupBox.left >= -1 && lockupBox.right <= window.innerWidth + 1, titleUnclipped:title.scrollWidth <= title.clientWidth + 1 && title.scrollHeight <= title.clientHeight + 1, subtitleUnclipped:subtitle.scrollWidth <= subtitle.clientWidth + 1 && subtitle.scrollHeight <= subtitle.clientHeight + 1, pageNoOverflow:document.documentElement.scrollWidth <= window.innerWidth + 1 }; }""")
+                            # Require every geometry and overflow invariant to pass before evidence can be accepted.
+                            assert brand_geometry['contained'] and brand_geometry['viewportContained'] and brand_geometry['titleUnclipped'] and brand_geometry['subtitleUnclipped'] and brand_geometry['pageNoOverflow'],brand_geometry
+                            # Record the topbar height for the later cross-locale stability comparison.
+                            header_heights[(brand_locale,viewport_id)]=brand_geometry['topbarHeight']
+                            # Capture exact-head authenticated lobby evidence with a self-describing sidecar.
+                            game_evidence(f'after-pass-shell-brand-authenticated-{brand_locale.lower()}-{viewport_id}.png','shell_lobby',['authenticated'],brand_locale,viewport_id)
+                        # Open one representative affected game so shared-shell evidence is not limited to the lobby.
+                        page.get_by_test_id('nav-roulette').click(); page.get_by_test_id('roulette-premium').wait_for(timeout=5000)
+                        # Capture the same authenticated header across the representative game at all governed sizes.
+                        for viewport_id,viewport in brand_viewports.items():
+                            # Resize to the exact governed viewport before the shared-shell overflow check.
+                            page.set_viewport_size(viewport); page.wait_for_timeout(100)
+                            # Reject page-level horizontal overflow and require the shared brand lockup to remain visible above Roulette.
+                            assert page.locator('.brand-lockup').is_visible() and page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1')
+                            # Record one affected game surface alongside the shared lobby acceptance evidence.
+                            game_evidence(f'after-pass-roulette-brand-{brand_locale.lower()}-{viewport_id}.png','roulette',['betting'],brand_locale,viewport_id)
+                        # Return to the lobby before switching locale so the next evidence set starts from the canonical shell route.
+                        page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    # Compare matching viewport heights so EN/RU switching cannot move the game stage.
+                    for viewport_id in brand_viewports:
+                        # Allow only sub-pixel rounding while rejecting a locale-dependent topbar height change.
+                        assert abs(header_heights[('en-US',viewport_id)]-header_heights[('ru-RU',viewport_id)]) <= 1,(viewport_id,header_heights)
+                    # Restore the English locale for downstream shell coverage.
+                    page.get_by_test_id('shell-locale-select').select_option('en-US'); page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'en-US'")
+                    # Restore the primary desktop viewport for downstream shell interactions.
+                    page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(100)
+                # Execute the version-free brand copy regression.
+                run_case('BR-SHELL-BRAND-001',['UX-014','TEST-079'],shell_brand_copy)
                 # Open the wallet popover through the token top-up control.
                 page.locator('summary[aria-label="Add play tokens"]').click()
                 # Set a deterministic token top-up amount for the wallet terminology check.
@@ -3959,13 +4049,10 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 def casino_holdem_acceptance():
                     # Open the catalog-owned route and wait for the stable game selector.
                     page.get_by_test_id('nav-casino_holdem').click(); page.get_by_test_id('casino-holdem').wait_for(timeout=5000)
-                    # Require the server-owned ante payout schedule to be player-visible with representative top and bottom rows. (issue #253)
-                    holdem_paytable_text=page.get_by_test_id('choldem-paytable').inner_text()
-                    assert 'Ante payout schedule' in holdem_paytable_text and 'Royal flush' in holdem_paytable_text and '100:1' in holdem_paytable_text and 'High card' in holdem_paytable_text and '1:1' in holdem_paytable_text
                     # Enumerate all governed viewport dimensions.
                     required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
-                    # Load exact UTF-8 title expectations from the paired canonical resource files.
-                    expected_titles={locale:read_i18n_json(ROOT/'web'/'i18n'/locale/'games'/'casino_holdem.json')['title'] for locale in ('en-US','ru-RU')}
+                    # Load exact UTF-8 copy expectations from the paired canonical resource files.
+                    holdem_resources={locale:read_i18n_json(ROOT/'web'/'i18n'/locale/'games'/'casino_holdem.json') for locale in ('en-US','ru-RU')}
                     # Capture one mounted state across both locales and every viewport.
                     def localized_evidence(prefix,states):
                         # Iterate through paired English and Russian game resources.
@@ -3973,13 +4060,17 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             # Switch locale without discarding the active decision or settled history.
                             page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_timeout(100)
                             # Require the localized title rather than a fallback key or English leakage.
-                            assert page.locator('.choldem-header h1').inner_text()==expected_titles[locale]
+                            assert page.locator('.choldem-header h1').inner_text()==holdem_resources[locale]['title']
+                            # Read all ten rendered schedule rows after the locale rerender. (issue #253)
+                            paytable=page.get_by_test_id('choldem-paytable'); paytable_labels=paytable.locator('li span').all_inner_texts(); paytable_odds=paytable.locator('li strong').all_inner_texts()
+                            # Require the localized title, strongest and weakest labels, complete row count, and server-derived net odds.
+                            assert paytable.locator('h2').inner_text()==holdem_resources[locale]['paytable.title'] and len(paytable_labels)==10 and len(paytable_odds)==10 and paytable_labels[0]==holdem_resources[locale]['ranksMade.royal_flush'] and paytable_odds[0]=='100:1' and paytable_labels[-1]==holdem_resources[locale]['ranksMade.high_card'] and paytable_odds[-1]=='1:1'
                             # Validate containment and capture after-pass evidence at every viewport.
                             for viewport_id,width,height in required_viewports:
                                 # Resize to the exact visual matrix dimensions.
                                 page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
                                 # Reject horizontal overflow and require the mounted community-card table.
-                                assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.get_by_test_id('casino-holdem').is_visible()
+                                assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.get_by_test_id('casino-holdem').is_visible() and paytable.is_visible()
                                 # Record self-describing evidence for this state and viewport.
                                 game_evidence(f'after-pass-casino-holdem-{prefix}-{locale.lower()}-{viewport_id}.png','casino_holdem',states,locale,viewport_id)
                         # Restore English desktop controls for the next public action.
@@ -4269,18 +4360,24 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             page.locator('#clear').click(); page.wait_for_function("() => document.querySelectorAll('.bet-item').length === 0", timeout=5000)
                     # Start from a clean slip after the preceding hit-map case.
                     clear_slip()
-                    # Straight bets show their pocket number, including zero, never a color label. (issue #230)
-                    place_and_check('[data-testid="roulette-num-17"]','17')
-                    place_and_check('[data-testid="roulette-num-0"]','0')
+                    # Audit every American-wheel straight pocket so zero, double zero, and all 1-36 labels are authoritative. (issues #230 #250)
+                    for pocket in ['0','00']+[str(number) for number in range(1,37)]:
+                        # Require this exact visible pocket to add its number instead of a color or empty label.
+                        place_and_check(f'[data-testid="roulette-num-{pocket}"]',pocket)
                     # Every FAST BETS shortcut places exactly one correctly typed bet, including repeat clicks. (issue #231)
                     for fast_type,fast_label in (('red','Red'),('red','Red'),('odd','Odd'),('black','Black'),('even','Even'),('low','1-18'),('high','19-36')):
                         place_and_check(f'[data-outbtn="{fast_type}"]',fast_label)
                     # The equivalent grid outside cells register the same labels through the board surface. (issue #233)
                     for grid_type,grid_label in (('red','Red'),('black','Black'),('odd','Odd'),('even','Even'),('low','1-18'),('high','19-36')):
                         place_and_check(f'[data-testid="roulette-outside-{grid_type}"]',grid_label)
-                    # Dozens and columns register their canonical range labels through their stable cell keys.
-                    place_and_check('[data-cell-key="dozen:2"]','2nd 12',use_dispatch=True)
-                    place_and_check('[data-cell-key="column:1"]','Column 1',use_dispatch=True)
+                    # Audit every dozen cell through its stable catalog identity and canonical ordinal label.
+                    for dozen,dozen_label in ((1,'1st 12'),(2,'2nd 12'),(3,'3rd 12')):
+                        # Dispatch against the fixed-board hit target so scaled layouts do not alter identity coverage.
+                        place_and_check(f'[data-cell-key="dozen:{dozen}"]',dozen_label,use_dispatch=True)
+                    # Audit every column cell through its stable catalog identity and canonical label.
+                    for column in (1,2,3):
+                        # Dispatch against the fixed-board hit target so every governed column is exercised.
+                        place_and_check(f'[data-cell-key="column:{column}"]',f'Column {column}',use_dispatch=True)
                     # Enumerate one representative hotspot per inside/special type straight from the rendered catalog markers. (issue #250)
                     inside_targets=page.evaluate("() => { const seen={}; for (const spot of document.querySelectorAll('.spot')) { const type=spot.dataset.betType; if (!seen[type]) seen[type]={key:spot.dataset.cellKey,label:spot.title.replace(/ \\d+:1$/,'')}; } return Object.entries(seen).map(([type,info]) => ({type,key:info.key,label:info.label})); }")
                     # Require the board to expose every governed inside and special bet type as a marker.
@@ -4288,8 +4385,32 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Place one bet per inside/special type and require its exact catalog label on the slip.
                     for target in inside_targets:
                         place_and_check(f"[data-cell-key=\"{target['key']}\"]",target['label'],use_dispatch=True)
-                    # Return every audited stake to the wallet through the refund control.
+                    # Return all direct-surface audit stakes before exercising multi-component call bets.
                     clear_slip()
+                    # Open the racetrack disclosure through its visible summary control.
+                    page.get_by_test_id('roulette-racetrack-disclosure').locator('summary').click()
+                    # Exercise every visible racetrack, neighbor, final, and complete-number control. (issue #250)
+                    for call_type in ('snake','voisins','tiers','orphelins','jeu_zero','neighbors','final','complete'):
+                        # Capture the authoritative component list returned for this exact visible activation.
+                        with page.expect_response(lambda response: response.url.endswith('/api/v1/games/roulette/call-bet') and response.request.method=='POST') as call_response_info:
+                            # Activate the visible call-bet button instead of bypassing the player interaction path.
+                            page.locator(f'[data-call="{call_type}"]').click()
+                        # Read the standard response envelope after the route has accepted the activation.
+                        call_payload=call_response_info.value.json()['data']
+                        # Derive the exact expected slip labels from the server-authoritative placed components.
+                        expected_call_labels=[component['label'] for component in call_payload['placed']]
+                        # Reject silent no-ops even when a call type legitimately expands to several rows.
+                        assert expected_call_labels, call_type
+                        # Wait until the rerendered slip contains every returned component and no extra row.
+                        page.wait_for_function("n => document.querySelectorAll('.bet-item').length === n",arg=len(expected_call_labels),timeout=5000)
+                        # Read every rendered component label in stable response order.
+                        actual_call_labels=[label.strip() for label in page.locator('.bet-item span').all_inner_texts()]
+                        # Require the visible slip to match the exact authoritative label sequence.
+                        assert actual_call_labels==expected_call_labels,(call_type,actual_call_labels,expected_call_labels)
+                        # Refund this call group before the next control so row counts and wallet capacity stay isolated.
+                        clear_slip()
+                    # Restore the advanced racetrack disclosure to its governed collapsed baseline for downstream layout acceptance.
+                    page.get_by_test_id('roulette-racetrack-disclosure').locator('summary').click()
                 # Execute the exhaustive slip-label and reliability audit.
                 run_case('BR-ROU-SLIP-AUDIT-001',['ROU-061','TEST-082'],roulette_slip_label_audit)
                 # Define the raw Roulette resource keys reported as visible regressions.

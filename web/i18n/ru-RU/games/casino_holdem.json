@@ -92,15 +92,5 @@
   "title": "Казино Холдем",
   "tokens.amount": "{amount} игровых токенов",
   "paytable.title": "Таблица выплат анте",
-  "paytable.net": "{net}:1",
-  "paytable.rank.royal_flush": "Роял-флеш",
-  "paytable.rank.straight_flush": "Стрит-флеш",
-  "paytable.rank.four_of_a_kind": "Каре",
-  "paytable.rank.full_house": "Фулл-хаус",
-  "paytable.rank.flush": "Флеш",
-  "paytable.rank.straight": "Стрит",
-  "paytable.rank.three_of_a_kind": "Тройка",
-  "paytable.rank.two_pair": "Две пары",
-  "paytable.rank.one_pair": "Пара",
-  "paytable.rank.high_card": "Старшая карта"
+  "paytable.net": "{net}:1"
 }

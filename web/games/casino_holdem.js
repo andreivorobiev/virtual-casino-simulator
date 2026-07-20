@@ -238,7 +238,7 @@ function paytableHtml() {
   // Read the published returned-credit multipliers straight from the authoritative rules payload.
   const multipliers = rules.ante_return_multipliers || {};
   // Build one localized row per published category showing its net odds.
-  const rows = rankOrder.filter(rank => multipliers[rank]).map(rank => '<li><span>' + safe(text('paytable.rank.' + rank)) + '</span><strong>' + safe(text('paytable.net', { net: multipliers[rank] - 1 })) + '</strong></li>').join('');
+  const rows = rankOrder.filter(rank => multipliers[rank]).map(rank => '<li><span>' + safe(text('ranksMade.' + rank)) + '</span><strong>' + safe(text('paytable.net', { net: multipliers[rank] - 1 })) + '</strong></li>').join('');
   // Return the disclosure section only when the server has published the schedule.
   return rows ? '<section data-testid="choldem-paytable"><h2>' + safe(text('paytable.title')) + '</h2><ul class="choldem-paytable">' + rows + '</ul></section>' : '';
 }

@@ -8662,6 +8662,45 @@
       "notes": "Issue #246 refund-on-leave wallet-correctness browser proof."
     },
     {
+      "id": "UX-014",
+      "module": "UX",
+      "description": "The player-facing brand block and document title present the product name and the play-tokens-only/no-cash-value safety cue without internal version, validation-stage, build, commit, environment, or debug metadata, in en-US and ru-RU across authenticated, unauthenticated guest, and restricted-preview login states at every governed viewport; exact build provenance remains available through the status/diagnostics surfaces rather than the brand block.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-SHELL-BRAND-001",
+        "BR-SHELL-BRAND-GUEST-001"
+      ],
+      "implementation_files": [
+        "web/index.html",
+        "web/styles.css",
+        "web/i18n/en-US/shell.json",
+        "web/i18n/ru-RU/shell.json",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-321-shell-version-copy",
+      "changed_in": "issue-321-shell-version-copy",
+      "notes": "Issue #321: 'v9 validation release' is removed from the brand subtitle and page title; the subtitle reserves its two-line footprint so header height stays locale-invariant; the restricted-preview guest state keeps the authenticated topbar absent; the status-rail APP version chip is retained for #287 provenance."
+    },
+    {
+      "id": "TEST-079",
+      "module": "Tests",
+      "description": "Browser evidence verifies, in en-US and ru-RU at 1920x1080, 1440x900, 1024x900, and 390x844, that authenticated lobby and Roulette headers render the canonical brand and safety cue without metadata or clipping, while unauthenticated guests in restricted preview receive a metadata-free title and login surface with no protected topbar.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-SHELL-BRAND-001",
+        "BR-SHELL-BRAND-GUEST-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-321-shell-version-copy",
+      "changed_in": "issue-321-shell-version-copy",
+      "notes": "Issue #321 exact-head evidence paths are logs/test-runs/after-pass-shell-brand-*.png and logs/test-runs/after-pass-roulette-brand-*.png with matching VIS-EVIDENCE-001 sidecars."
+    },
+    {
       "id": "SLOT-029",
       "module": "Slots",
       "description": "The Slots result renders every authoritative winning payline as a labelled, non-color-only SVG path whose five points are recalculated from the live reel-cell centers, remain within one CSS pixel after responsive resize, locale rerender, zoom, and route recovery, and preserve visible symbol identity in normal and reduced-motion modes.",
@@ -8731,6 +8770,39 @@
       "notes": "Issue #318 evidence paths are logs/test-runs/after-pass-shell-lobby-scroll-*.png with matching VIS-EVIDENCE-001 JSON sidecars generated from the exact tested head."
     },
     {
+      "id": "ROU-061",
+      "module": "Roulette",
+      "description": "Every visible Roulette wagering surface registers correctly labeled bets with no silent no-ops: all 38 straight pockets show their pocket number, every FAST BETS shortcut and grid outside cell shows its canonical outside label even on repeat clicks, all dozen and column cells plus every inside/special marker type show their exact catalog labels, and each racetrack/call control renders every authoritative component label returned for that activation.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-ROU-SLIP-AUDIT-001"
+      ],
+      "implementation_files": [
+        "web/games/roulette.js",
+        "casino/games/roulette/rules.py"
+      ],
+      "introduced_in": "issue-250-slip-label-audit",
+      "changed_in": "issue-250-slip-label-audit",
+      "notes": "Issues #230/#231/#233/#250: the audited behavior is served by the shared resolveCellBet identity plumbing; this requirement pins it with an exhaustive per-type regression."
+    },
+    {
+      "id": "TEST-082",
+      "module": "Tests",
+      "description": "Browser evidence audits all 38 straight pockets, all six FAST BETS shortcuts including a repeat click, all six grid outside cells, every dozen and column cell, one representative of every inside/special marker type, and all eight racetrack/call controls; direct targets must add exactly one correctly labeled row, call controls must match every authoritative response component, and each audited group must finish with a clean refunded slip.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-ROU-SLIP-AUDIT-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-250-slip-label-audit",
+      "changed_in": "issue-250-slip-label-audit",
+      "notes": "Issues #230/#231/#233/#250 exhaustive direct-surface and racetrack/call-control slip-label reliability audit."
+    },
+    {
       "id": "KENO-025",
       "module": "Keno",
       "description": "All 80 Keno number cells, including every outer row and column, keep their borders, numerals, keyboard focus rings, selection outlines, and drawn, caught, latest, and disabled treatments visible inside the board scroll region at every governed viewport.",
@@ -8765,7 +8837,7 @@
     },
     {
       "id": "CH-006",
-      "module": "Application",
+      "module": "Casino Hold'em",
       "description": "The Casino Hold'em data rail displays the server-owned ante payout schedule (royal flush 100:1 through the even-money band at 1:1) in both en-US and ru-RU, sourced from the published ante_return_multipliers rules payload rather than duplicated client constants.",
       "status": "PASS",
       "api_tests": [],
@@ -8784,18 +8856,19 @@
     {
       "id": "TEST-084",
       "module": "Tests",
-      "description": "Browser evidence verifies the Casino Hold'em data rail shows the ante payout schedule with representative top (royal flush 100:1) and bottom (high card 1:1) rows before the first ante-backed deal.",
+      "description": "Browser evidence verifies in English and Russian at all four governed viewports that the Casino Hold'em data rail shows all ten server-published ante payout rows, including the strongest royal-flush 100:1 and weakest high-card 1:1 net returns, before the first ante-backed deal and throughout governed play states.",
       "status": "PASS",
       "api_tests": [],
       "browser_tests": [
         "BR-CH-001"
       ],
       "implementation_files": [
-        "tests/run_tests.py"
+        "tests/run_tests.py",
+        "tests/games/casino_holdem/test_resources.py"
       ],
       "introduced_in": "issue-253-holdem-paytable",
       "changed_in": "issue-253-holdem-paytable",
-      "notes": "Issue #253 Casino Hold'em payout-schedule browser proof."
+      "notes": "Issue #253 exact-head after-pass evidence paths are logs/test-runs/after-pass-casino-holdem-*.png with matching VIS-EVIDENCE-001 sidecars."
     }
   ]
 }
