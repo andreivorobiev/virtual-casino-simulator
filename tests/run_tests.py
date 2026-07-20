@@ -2198,6 +2198,14 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     assert page.get_by_test_id('nav-baccarat').is_visible()
                 # Execute this statement as part of the module's documented control flow.
                 run_case('BR-SHELL-001',['UX-007','CORE-006','LEDGER-025','TOKEN-001','TOKEN-002'],premium_shell)
+                # Enforce the adopted 42px touch-target floor across visible shell primaries. (issue #283)
+                def shell_touch_target_floor():
+                    # Measure every visible primary shell control's hit height through one live sweep.
+                    undersized_controls=page.evaluate("""() => { const selectors=['.nav-item','.shell-locale','#logout-btn','#catalog-search','.catalog-category','summary[aria-label="Add play tokens"]']; const failures=[]; for (const selector of selectors) { for (const el of document.querySelectorAll(selector)) { const rect=el.getBoundingClientRect(); if (rect.width===0 && rect.height===0) continue; if (rect.height < 41.5) failures.push({selector, height: rect.height, text: (el.textContent||'').trim().slice(0,24)}); } } return failures; }""")
+                    # Require every visible primary control to meet the adopted floor, naming any offender.
+                    assert not undersized_controls, undersized_controls
+                # Execute the adopted touch-target floor sweep.
+                run_case('BR-TOUCH-TARGET-001',['UX-015','TEST-083'],shell_touch_target_floor)
                 # Open the wallet popover through the token top-up control.
                 page.locator('summary[aria-label="Add play tokens"]').click()
                 # Set a deterministic token top-up amount for the wallet terminology check.

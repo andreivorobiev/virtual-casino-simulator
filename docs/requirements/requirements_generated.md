@@ -45,8 +45,8 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.0
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.45.5
-- docs: 1.45.5
+- tests: 1.45.10
+- docs: 1.45.10
 - contracts: 1.33.0
 - tooling: 1.14.0
 - commenting_policy: 1.0.0
@@ -690,3 +690,5 @@ Historical source baseline: 9.1.0
 - **TEST-077** (Tests) - PASS: Deterministic browser evidence derives all twenty paths and payouts from the production Slots engine, restores a simultaneous-win outcome through the normal state loader, verifies every transformed SVG point within one CSS pixel of its authoritative cell, checks result/history identity, multi-win distinction, symbol visibility, zoom, reduced motion, and captures EN/RU after-pass evidence at all four governed viewports.
 - **UX-013** (UX) - PASS: The lobby route outlet is one bounded, keyboard-focusable vertical scroll region with a localized accessible name, visible focus and themed scroll affordances, wheel and touch panning, and native Page Down and End behavior, so every filtered catalog card and Play control remains reachable at 1920x1080, 1440x900, 1024x900, and 390x844 without page-level horizontal overflow or fixed-chrome overlap.
 - **TEST-076** (Tests) - PASS: Browser evidence in English and Russian at all four governed viewports verifies the focused lobby region, themed affordance, no scroll trap or horizontal overflow, Page Down, End, wheel, and touch scrolling, final-card and Play-control reachability for unfiltered, category-filtered, search-filtered, and empty states, and exact-head after-pass evidence sidecars.
+- **UX-015** (UX) - PASS: The adopted touch-target floor is 42 CSS pixels for primary and high-frequency controls (exceeding the WCAG 2.2 AA 24px target-size minimum, with 44px recommended for new surfaces), small visual controls satisfy it through an enlarged clickable parent row, and visible shell primaries (navigation items, locale selector, logout, catalog search and categories, wallet top-up) meet the floor.
+- **TEST-083** (Tests) - PASS: Browser evidence sweeps every visible primary shell control (navigation items, locale selector, logout, catalog search, category buttons, wallet top-up summary) and requires each hit height to meet the adopted 42px floor, naming any offender.

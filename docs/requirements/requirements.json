@@ -8729,6 +8729,39 @@
       "introduced_in": "issue-318-lobby-catalog-scroll",
       "changed_in": "issue-318-lobby-catalog-scroll",
       "notes": "Issue #318 evidence paths are logs/test-runs/after-pass-shell-lobby-scroll-*.png with matching VIS-EVIDENCE-001 JSON sidecars generated from the exact tested head."
+    },
+    {
+      "id": "UX-015",
+      "module": "UX",
+      "description": "The adopted touch-target floor is 42 CSS pixels for primary and high-frequency controls (exceeding the WCAG 2.2 AA 24px target-size minimum, with 44px recommended for new surfaces), small visual controls satisfy it through an enlarged clickable parent row, and visible shell primaries (navigation items, locale selector, logout, catalog search and categories, wallet top-up) meet the floor.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-TOUCH-TARGET-001"
+      ],
+      "implementation_files": [
+        "docs/visual_design_standard.md",
+        "web/styles.css"
+      ],
+      "introduced_in": "issue-283-touch-target-floor",
+      "changed_in": "issue-283-touch-target-floor",
+      "notes": "Issue #283: codifies the 42-versus-44 resolution already shipped by the remediated controls; auth-surface targets are separately pinned by AUTH-UI evidence."
+    },
+    {
+      "id": "TEST-083",
+      "module": "Tests",
+      "description": "Browser evidence sweeps every visible primary shell control (navigation items, locale selector, logout, catalog search, category buttons, wallet top-up summary) and requires each hit height to meet the adopted 42px floor, naming any offender.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-TOUCH-TARGET-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-283-touch-target-floor",
+      "changed_in": "issue-283-touch-target-floor",
+      "notes": "Issue #283 adopted-floor enforcement sweep."
     }
   ]
 }
