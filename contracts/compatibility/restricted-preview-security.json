@@ -5,6 +5,9 @@
   "canonical_origin": "https://casino.andvor.com",
   "anonymous_routes": [
     "/api/v2/auth/login",
+    "/api/v2/auth/oauth/providers",
+    "/api/v2/auth/oauth/{google|facebook}/start",
+    "/api/v2/auth/oauth/{google|facebook}/callback",
     "/healthz"
   ],
   "authenticated_routes": [
@@ -15,13 +18,7 @@
     "/admin.js",
     "/api/v2/admin/"
   ],
-  "disabled_public_actions": [
-    "signup",
-    "oauth_authorize",
-    "oauth_callback",
-    "oauth_exchange",
-    "oauth_link"
-  ],
+  "disabled_public_actions": ["signup", "provider_user_creation", "email_based_identity_linking", "unconfigured_provider_flow"],
   "request_integrity": {
     "unsafe_methods": ["DELETE", "PATCH", "POST", "PUT"],
     "origin": "exact",
@@ -42,7 +39,8 @@
   },
   "access_policy": {
     "public_signup": false,
-    "live_oauth": false,
+    "oauth_disabled_by_default": true,
+    "oauth_existing_invite_users_only": true,
     "admin_requires_admin_session": true
   }
 }

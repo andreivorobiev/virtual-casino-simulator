@@ -1,27 +1,25 @@
-# OAuth provider abstraction disabled foundation
+# Invite-only OAuth runtime
 
-This package is the provider-ready, disabled-until-configured foundation for GitHub issue #70. It maps to `OAUTH-001` through `OAUTH-005` and `USER-001`: local password login remains the only executable login flow, and every mocked external identity resolution points to an existing canonical user whose current record owns the player binding.
+This package implements issue #326 under `OAUTH-001` through `OAUTH-010`: Google and Facebook are integrated but independently disabled by default. Local-password login, recovery, manual invitation, and the no-public-signup boundary remain unchanged.
 
-The package provides:
+The runtime provides:
 
-- static local, Google, and Facebook provider definitions;
-- allowlisted Google and Facebook identity normalization from mocked claims;
-- inert environment loading and secret-safe readiness diagnostics;
-- exact callback URL, query, state, nonce, and PKCE S256 helpers based on issue #75;
-- explicit one-to-one provider identity linking through an injected repository contract;
-- one Admin-only, read-only diagnostic adapter at `GET /api/v2/admin/oauth/providers`;
-- focused dependency-injected behavior with no HTTP client, provider SDK, provider action route, callback route, listener, or live browser flow.
+- exact v2 authorization-start and callback routes using authorization code, strict state, OIDC nonce for Google, and S256 PKCE for both providers;
+- expiring one-time flow records atomically consumed before exchange and bound to provider, callback URI, browser owner, intended action, and the initiating user/session for linking;
+- Google RS256 signature, issuer, audience/authorized-party, expiry, issued-at, nonce, and displayed-email verification;
+- Facebook token validity, configured-app, expiry, data-access expiry, scope, and provider-subject/profile verification;
+- durable JSON/MySQL-neutral links with transactional uniqueness for `(provider, subject)` and `(provider, Casino user)`;
+- authenticated explicit first linking, prelinked-only subsequent sign-in, safe unlink, and provider-session rollback;
+- secret-safe diagnostics, errors, redirects, rate limits, logs, cookies, and dependency-injected provider transports.
 
-Both external providers remain runtime-unavailable even when their exact enable flag is true and the client id, secret, and callback base are all present and valid. A `ready` diagnostic means only that inert configuration is structurally complete; it does not expose an authorization action, contact a provider, or claim live login works.
+Provider email and profile fields are request-local display metadata. They never select, create, or link a Casino user. Persistent link rows contain only provider, opaque subject, canonical user id, and timestamps.
 
-External identities never create users and never link by email. A first link requires the authenticated context's canonical user id; it must never accept a request-body target user. Persistence remains integration-owned. The repository contract accepts only provider, opaque subject, canonical user id, and timestamps, while tokens, codes, state, nonce, claims, email, display name, and avatar URL stay outside link records.
-
-The login gate shows native-disabled Google and Facebook controls with localized explanation. Those controls contain no URL or click handler, while the local email/password form remains unchanged. Admin renders only allowlisted configuration and runtime facts; it never renders provider credentials, tokens, raw claims, or callback values.
-
-Run the focused service-free tests from the repository root:
+Run the listener-free suite with the configured Python runtime:
 
 ```powershell
 python -m unittest discover -s tests/oauth -p "test_*.py" -v
 ```
 
-No listener is required for the focused suite, and the tests inject in-memory configuration, users, and link storage. Central API/browser acceptance runs only in disposable copies on tracked loopback listeners.
+Tests generate synthetic Google tokens at runtime, inject every Facebook/Google HTTP response, and need no real credentials or provider network access. Browser tests are mapped in the visual matrix; local Playwright execution is held by the owner's machine-performance instruction and belongs in GitHub checks.
+
+Implementation does not authorize enablement. The exact Workroom approval gate in issue #326 is still required before a provider flag is enabled live, a security-sensitive enablement change is merged, or deployment occurs.

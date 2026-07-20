@@ -22,7 +22,9 @@ Every `POST`, `PUT`, `PATCH`, and `DELETE` requires both the exact configured Or
 
 ## Restricted access
 
-Anonymous application access is limited to `/healthz` and `/api/v2/auth/login`. Readiness remains authenticated. Admin HTML, JavaScript, and APIs require an active Admin session. Public signup and live OAuth authorization, callback, exchange, and linking remain absent. Manual invitation and local-password access are the only approved enrollment and login path for this stage.
+Anonymous application access is limited to `/healthz`, `/api/v2/auth/login`, boolean-only OAuth provider status, and exact Google/Facebook start and callback routes. Readiness remains authenticated. Admin HTML, JavaScript, and APIs require an active Admin session. Public signup, provider-driven user creation, and email-based linking remain absent. Manual invitation is the only enrollment path; local password remains the recovery path, while an explicitly configured provider may authenticate only a previously linked active invite user.
+
+Both providers are independently disabled by default. Start requires exact Origin and double-submit CSRF proof, callbacks require one-time state plus the initiating browser binding, and authenticated linking also requires exact initiating user/session ownership and explicit confirmation. Disabling a flag prevents new flows and invalidates provider-authenticated sessions; unlink preserves local-password sessions.
 
 ## Response, bounds, and logs
 

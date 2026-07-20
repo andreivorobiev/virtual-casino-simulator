@@ -1,22 +1,6 @@
-# OAuth disabled-foundation integration for #70
+# Invite-only OAuth integration for issue #326
 
-GitHub issue #77 released this branch to integrate only the owner-approved disabled foundation. The shared app, auth contract, login/Admin presentation, requirement registry, visual matrix, test discovery, module descriptors, and manifest now describe the inert provider abstraction without enabling a provider action.
-
-## Exact callback reservation
-
-The integration owner must preserve the issue #75 paths exactly:
-
-- `http://localhost:8765/api/v2/auth/oauth/google/callback`
-- `http://localhost:8765/api/v2/auth/oauth/facebook/callback`
-- equivalent fixed local copies on ports `8766` and `8767`;
-- `https://<owned-public-hostname>/api/v2/auth/oauth/google/callback`;
-- `https://<owned-public-hostname>/api/v2/auth/oauth/facebook/callback`.
-
-Do not substitute `127.0.0.1`, add a trailing slash, add a base path, use a wildcard, or expose a callback before the deployment gates are approved. The helper accepts HTTP only for the three reserved `localhost` origins and HTTPS only for a DNS hostname using the default port.
-
-## Configuration contract
-
-The isolated diagnostics consume the exact issue #75 names:
+## Exact configuration contract
 
 - `CASINO_GOOGLE_CLIENT_ID`
 - `CASINO_GOOGLE_CLIENT_SECRET`
@@ -26,29 +10,34 @@ The isolated diagnostics consume the exact issue #75 names:
 - `CASINO_OAUTH_ENABLED_GOOGLE`
 - `CASINO_OAUTH_ENABLED_FACEBOOK`
 
-Diagnostics expose only presence booleans, status, callback URL, missing setting names, and stable problem codes. Live adapters must not log or serialize configuration objects, raw claims, authorization codes, access or refresh tokens, state, or nonce.
+Each provider remains unavailable unless its own enable flag is explicitly true, both of its credential variables are non-empty, and the shared base produces an accepted exact callback. Credentials and provider responses must remain in the deployment secret store, never source, fixtures, logs, issue text, PR text, screenshots, or evidence.
 
-## Integrated disabled surface
+## Exact callbacks
 
-- `GET /api/v2/admin/oauth/providers` is read-only, uses the standard envelope, repeats the Admin role check at the route boundary, and exposes only allowlisted diagnostics.
-- The login gate renders Google and Facebook as native-disabled controls with no URL or event handler and explains the hold in English and Russian.
-- Admin renders provider configuration status separately from Operations health; OAuth diagnostic failure cannot change `/healthz`, `/readyz`, or `/api/v2/admin/operations` state.
-- Permanent `OAUTH-001` through `OAUTH-006` and `TEST-045` trace configuration, callbacks, mocked claims, identity-link rules, disabled UI, and focused acceptance.
-- Google and Facebook keep `runtime_available=false` even if inert environment configuration is structurally ready.
+- `http://localhost:8765/api/v2/auth/oauth/google/callback`
+- `http://localhost:8765/api/v2/auth/oauth/facebook/callback`
+- equivalent fixed development copies on ports `8766` and `8767`;
+- `https://<owned-public-hostname>/api/v2/auth/oauth/google/callback`;
+- `https://<owned-public-hostname>/api/v2/auth/oauth/facebook/callback`.
 
-No start, link, callback, exchange, provider SDK, or live transport route is registered. The callback helpers remain pure and service-free. Identity linking remains injected and non-persistent; no user is created and no email-based association occurs.
+Do not substitute an IP literal, wildcard, trailing slash, alternate port, query, fragment, or base path. Register only the callback that matches `CASINO_OAUTH_PUBLIC_BASE_URL` for that deployment.
 
-## Deferred runtime work
+## Account and storage boundary
 
-A later explicitly authorized auth/storage owner must first:
+Public signup and provider-driven user creation do not exist. Linking starts only from an active authenticated local-password account after an explicit checkbox confirmation. The flow retains the exact user and session; callbacks cannot submit a target. Provider email is never passed to `find_user_by_email`.
 
-1. Harden request logging and unexpected-error handling so authorization codes, state, and other callback query data can never enter logs or error payloads.
-2. Preserve duplicate query parameters through routing so the callback validator can reject ambiguity before any exchange.
-3. Persist state, nonce, and PKCE verifier as atomic one-time flow records and reject replay, expiry, provider, callback, and session-owner drift.
-4. Add a dedicated allowlisted identity-link store with atomic uniqueness for `(provider, subject)` and `(provider, user_id)` across every supported storage process.
-5. Implement provider adapters that verify signatures, issuer, audience, expiry, nonce, and applicable PKCE before returning an allowlisted identity.
-6. Add authorization-start, link, and callback contracts/routes only after a separate owner approval releases live runtime work.
+Sign-in resolves only `(provider, subject)` to an existing link and then rechecks the canonical user's active state and player binding. Unlink requires a retained local password, removes only the authenticated user's provider row, and revokes only sessions created through that provider.
 
-## Live-enable blockers
+Flow and link updates use `StorageProvider.update_document`. JSON holds a thread and operating-system document lock across read/mutate/atomic replace. MySQL holds a transaction and `SELECT ... FOR UPDATE`. No provider token, code, state, nonce, verifier, credential, email, profile, or raw response is stored in identity-link persistence.
 
-Real provider login remains blocked on user-created provider applications and credentials, exact provider-console callback registration, successful real callback testing, an approved owned HTTPS hostname, secure-cookie/deployment hardening under #71, and public privacy, terms, and data-deletion pages. A `configuration_ready` diagnostic cannot bypass any provider-console, callback-test, secure-cookie, legal, or #71 deployment gate. No live enablement or public exposure is authorized by this package.
+## Provider console inputs still required
+
+The owner must create or select the two provider applications, supply the public client/app identifiers and confidential secrets through deployment secret storage, register the exact callbacks, configure the approved scopes, complete provider privacy/data-deletion settings, and validate current provider-console behavior against the pinned integration before any enable flag changes.
+
+## Workroom gate
+
+The following exact approval must be durably recorded in a separate Workroom issue before live enablement, merge of a security-sensitive enablement change, or deployment:
+
+> APPROVE: Enable Google and Facebook authentication only for existing private-invite Casino accounts. Keep public signup disabled, require authenticated explicit linking, never link by email, and keep each provider disabled until its console configuration, credentials, callbacks, security checks, rollback, and owner release approval are complete.
+
+Issue #326, this disabled implementation, tests, or a draft PR do not satisfy that separate approval gate.

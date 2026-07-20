@@ -8,6 +8,13 @@
 - Keeps admission manual-invite only, with public signup and live OAuth disabled. Unrestricted public launch remains held under issue #209.
 - Binds the retained v9.3.0 release manifest as the immediate application-only rollback predecessor under `TOOL-003`; immutable publication and deployment remain separately gated.
 
+## Post-release module addendum: invite-only OAuth runtime
+
+- Implements Google and Facebook authorization-code authentication only for existing private-invite accounts, with authenticated explicit first linking, prelinked-subject-only sign-in, no signup, and no email-based account association.
+- Adds strict state, Google OIDC nonce and signed-token validation, S256 PKCE, Facebook app/token debugging, atomic expiring flow replay protection, transactional compound identity links, safe unlink, rollback-aware sessions, rate limits, safe redirects, and secret-free logging/errors through mockable provider adapters.
+- Keeps both provider flags disabled by default and leaves frozen `/api/v1` unchanged. Live provider configuration, enablement, security-sensitive merge, and deployment remain held behind the exact separate Workroom approval gate recorded in issue #326.
+- Adds permanent `OAUTH-007` through `OAUTH-010` and `TEST-074` traceability. Browser tests and visual-matrix rows are authored for GitHub checks; local Playwright execution remains skipped under the owner's machine-performance restriction.
+
 ## Prior v9.3.0 release record
 
 ### Private-invite restricted-preview release

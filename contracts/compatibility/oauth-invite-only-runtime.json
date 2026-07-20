@@ -1,0 +1,52 @@
+{
+  "issue": "https://github.com/andreivorobiev/virtual-casino-simulator/issues/326",
+  "status": "implemented_disabled_by_default",
+  "v1_compatibility": {
+    "policy": "unchanged",
+    "notes": "No frozen /api/v1 path, request, response, envelope, ledger, or gameplay behavior changes. The bounded provider surface is additive under /api/v2 only."
+  },
+  "v2_endpoints": [
+    "GET /api/v2/auth/oauth/providers",
+    "POST /api/v2/auth/oauth/{google|facebook}/start",
+    "GET /api/v2/auth/oauth/{google|facebook}/callback",
+    "GET /api/v2/auth/oauth/links",
+    "POST /api/v2/auth/oauth/{google|facebook}/unlink",
+    "GET /api/v2/admin/oauth/providers"
+  ],
+  "account_boundary": {
+    "public_signup": false,
+    "provider_user_creation": false,
+    "email_matching_or_linking": false,
+    "first_link": "active authenticated local-password user plus explicit confirmation, exact session, and browser owner",
+    "subsequent_signin": "previous provider-subject link plus currently active canonical private-invite user"
+  },
+  "provider_flags": {
+    "google": "CASINO_OAUTH_ENABLED_GOOGLE defaults disabled",
+    "facebook": "CASINO_OAUTH_ENABLED_FACEBOOK defaults disabled",
+    "independent": true
+  },
+  "flow_security": {
+    "authorization_code": true,
+    "pkce_s256": true,
+    "strict_state": true,
+    "google_oidc_nonce": true,
+    "atomic_one_time_flow": true,
+    "replay_rejected": true,
+    "bindings": ["provider", "callback_uri", "browser_owner", "session_owner_for_link", "action"],
+    "safe_relative_redirect_allowlist": true
+  },
+  "identity_security": {
+    "google": ["RS256 signature", "issuer", "audience and azp", "expiry", "issued-at", "nonce", "verified email when displayed"],
+    "facebook": ["token validity", "configured app binding", "expiry", "data-access expiry", "scope", "provider subject and profile match"],
+    "identity_key": "provider plus provider subject",
+    "stored_fields": ["provider", "subject", "canonical user id", "created timestamp", "updated timestamp"],
+    "identity_link_forbidden_fields": ["email", "profile claims", "authorization code", "state", "nonce", "PKCE verifier", "access token", "ID token", "provider secret", "raw provider response"]
+  },
+  "rollback": {
+    "disable_provider_flag": "prevents new flows, callbacks, and continued provider-session authorization",
+    "unlink": "removes one provider-user binding and revokes matching provider-authenticated sessions",
+    "local_password": "remains available and is required for safe linking and unlinking"
+  },
+  "live_enablement_gate": "APPROVE: Enable Google and Facebook authentication only for existing private-invite Casino accounts. Keep public signup disabled, require authenticated explicit linking, never link by email, and keep each provider disabled until its console configuration, credentials, callbacks, security checks, rollback, and owner release approval are complete.",
+  "gate_policy": "The exact approval must be recorded in a separate Workroom issue before live enablement, merge of a security-sensitive enablement change, or deployment. Repository implementation, disabled flags, and a draft PR do not satisfy this gate."
+}

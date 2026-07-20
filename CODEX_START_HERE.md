@@ -92,8 +92,8 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 
 - [`casino/bots/AGENTS.md`](casino/bots/AGENTS.md) — AGENTS.md - bots module
 - [`casino/core/AGENTS.md`](casino/core/AGENTS.md) — AGENTS.md - core module
-- [`casino/core/oauth/INTEGRATION.md`](casino/core/oauth/INTEGRATION.md) — OAuth disabled-foundation integration for #70
-- [`casino/core/oauth/README.md`](casino/core/oauth/README.md) — OAuth provider abstraction disabled foundation
+- [`casino/core/oauth/INTEGRATION.md`](casino/core/oauth/INTEGRATION.md) — Invite-only OAuth integration for issue #326
+- [`casino/core/oauth/README.md`](casino/core/oauth/README.md) — Invite-only OAuth runtime
 - [`casino/games/acey_deucey/README.md`](casino/games/acey_deucey/README.md) — Acey-Deucey / In-Between game module
 - [`casino/games/baccarat/AGENTS.md`](casino/games/baccarat/AGENTS.md) — AGENTS.md - baccarat module
 - [`casino/games/big_six_wheel/AGENTS.md`](casino/games/big_six_wheel/AGENTS.md) — AGENTS.md - Big Six Wheel module

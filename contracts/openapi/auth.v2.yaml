@@ -2,13 +2,13 @@ openapi: 3.0.3
 info:
   title: Virtual Casino auth and current-user API
   version: v2
-  description: Additive v2 contract skeleton for authenticated private beta play, current-user state, terms acceptance, and play-token balance flows.
+  description: Additive v2 contract for authenticated private-invite play, current-user state, terms acceptance, play-token balance flows, and disabled-by-default provider linking and sign-in.
 servers:
   - url: /api/v2
 paths:
   /admin/oauth/providers:
     get:
-      summary: Inspect disabled OAuth provider configuration through the Admin role gate.
+      summary: Inspect secret-safe OAuth provider readiness through the Admin role gate.
       operationId: auth_v2_admin_oauth_providers
       security:
         - cookieSession: []
@@ -27,6 +27,189 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
         '403':
           description: Standard API envelope for an authenticated non-Admin request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /auth/oauth/providers:
+    get:
+      summary: List boolean-only Google and Facebook runtime availability.
+      operationId: auth_v2_oauth_public_providers
+      responses:
+        '200':
+          description: Standard envelope with no credentials, client identifiers, callbacks, or configuration diagnostics.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OAuthPublicProvidersEnvelope'
+  /auth/oauth/{provider}/start:
+    post:
+      summary: Start invite-only provider sign-in or explicitly confirmed authenticated linking.
+      operationId: auth_v2_oauth_start
+      parameters:
+        - $ref: '#/components/parameters/OAuthProvider'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OAuthStartRequest'
+      responses:
+        '200':
+          description: Standard envelope carrying a short-lived authorization navigation URL.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OAuthStartEnvelope'
+        '400':
+          description: Standard envelope for invalid action, confirmation, or return path.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '401':
+          description: Linking requires an authenticated canonical Casino session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          description: Browser/session CSRF binding or private-invite local-password authority is unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '404':
+          description: Provider is disabled, incomplete, or unsupported.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '429':
+          description: OAuth-specific attempt rate was exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /auth/oauth/{provider}/callback:
+    get:
+      summary: Consume one browser-bound callback and complete a prior sign-in or link action.
+      operationId: auth_v2_oauth_callback
+      parameters:
+        - $ref: '#/components/parameters/OAuthProvider'
+        - name: state
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: code
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: error
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '303':
+          description: Safe same-origin completion redirect; successful sign-in also sets hardened session and CSRF cookies.
+          headers:
+            Location:
+              schema:
+                type: string
+                pattern: '^/(?:\?|games/)'
+        '400':
+          description: Standard envelope for duplicate, ambiguous, or malformed callback parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '401':
+          description: Standard envelope for state, binding, expiry, replay, token, identity, or prelink failure.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          description: Browser ownership, linking-session ownership, or private-invite authorization is unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '404':
+          description: Provider was disabled, became incomplete, or is unsupported.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '429':
+          description: OAuth-specific callback attempt rate was exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: Standard secret-safe provider-unavailable envelope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /auth/oauth/links:
+    get:
+      summary: List boolean-only provider availability and link state for the current user.
+      operationId: auth_v2_oauth_links
+      security:
+        - cookieSession: []
+      responses:
+        '200':
+          description: Standard envelope without provider subjects, claims, or canonical identifiers.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OAuthLinksEnvelope'
+        '401':
+          description: Standard envelope for an unauthenticated request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /auth/oauth/{provider}/unlink:
+    post:
+      summary: Explicitly unlink one provider while preserving local-password recovery.
+      operationId: auth_v2_oauth_unlink
+      security:
+        - cookieSession: []
+      parameters:
+        - $ref: '#/components/parameters/OAuthProvider'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OAuthUnlinkRequest'
+      responses:
+        '200':
+          description: Standard envelope with idempotent boolean unlink state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OAuthUnlinkEnvelope'
+        '400':
+          description: Standard envelope when explicit confirmation is absent.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          description: Standard envelope when safe local-password recovery is unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '401':
+          description: Standard envelope for an unauthenticated request.
           content:
             application/json:
               schema:
@@ -144,12 +327,97 @@ paths:
               schema:
                 $ref: '#/components/schemas/PlayerEnvelope'
 components:
+  parameters:
+    OAuthProvider:
+      name: provider
+      in: path
+      required: true
+      schema:
+        type: string
+        enum: [google, facebook]
   securitySchemes:
     cookieSession:
       type: apiKey
       in: cookie
       name: casino_session
   schemas:
+    OAuthProviderAvailability:
+      type: object
+      required: [provider, available]
+      additionalProperties: false
+      properties:
+        provider:
+          type: string
+          enum: [google, facebook]
+        available:
+          type: boolean
+    OAuthProviderLinkStatus:
+      type: object
+      required: [provider, available, linked]
+      additionalProperties: false
+      properties:
+        provider:
+          type: string
+          enum: [google, facebook]
+        available:
+          type: boolean
+        linked:
+          type: boolean
+    OAuthStartRequest:
+      type: object
+      required: [action]
+      additionalProperties: false
+      properties:
+        action:
+          type: string
+          enum: [signin, link]
+        return_to:
+          type: string
+          pattern: '^/(?:$|games/[a-z0-9][a-z0-9_-]{0,63})$'
+          default: '/'
+        confirm_link:
+          type: boolean
+          description: Must be exactly true for link; it does not select a user.
+    OAuthStartResult:
+      type: object
+      required: [provider, action, authorization_url, expires_in]
+      additionalProperties: false
+      properties:
+        provider:
+          type: string
+          enum: [google, facebook]
+        action:
+          type: string
+          enum: [signin, link]
+        authorization_url:
+          type: string
+          format: uri
+          description: Request-local provider navigation URL; clients must not log or persist it.
+        expires_in:
+          type: integer
+          minimum: 1
+          maximum: 300
+    OAuthUnlinkRequest:
+      type: object
+      required: [confirm_unlink]
+      additionalProperties: false
+      properties:
+        confirm_unlink:
+          type: boolean
+          enum: [true]
+    OAuthUnlinkResult:
+      type: object
+      required: [provider, linked, deleted]
+      additionalProperties: false
+      properties:
+        provider:
+          type: string
+          enum: [google, facebook]
+        linked:
+          type: boolean
+          enum: [false]
+        deleted:
+          type: boolean
     LoginRequest:
       type: object
       required: [username, password]
@@ -208,7 +476,7 @@ components:
           description: Structural configuration readiness only; this never implies runtime availability.
         runtime_available:
           type: boolean
-          description: False for Google and Facebook in the disabled foundation.
+          description: True for an external provider only when its explicit flag, credentials, callback configuration, and integrated runtime are ready.
         enabled_requested:
           type: boolean
         client_id_configured:
@@ -342,6 +610,64 @@ components:
           enum: [true]
         data:
           $ref: '#/components/schemas/OAuthProviderDiagnosticsData'
+    OAuthPublicProvidersEnvelope:
+      type: object
+      required: [ok, data]
+      additionalProperties: false
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          required: [providers]
+          additionalProperties: false
+          properties:
+            providers:
+              type: array
+              minItems: 2
+              maxItems: 2
+              items:
+                $ref: '#/components/schemas/OAuthProviderAvailability'
+    OAuthStartEnvelope:
+      type: object
+      required: [ok, data]
+      additionalProperties: false
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/OAuthStartResult'
+    OAuthLinksEnvelope:
+      type: object
+      required: [ok, data]
+      additionalProperties: false
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          required: [providers]
+          additionalProperties: false
+          properties:
+            providers:
+              type: array
+              minItems: 2
+              maxItems: 2
+              items:
+                $ref: '#/components/schemas/OAuthProviderLinkStatus'
+    OAuthUnlinkEnvelope:
+      type: object
+      required: [ok, data]
+      additionalProperties: false
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/OAuthUnlinkResult'
     EmptyEnvelope:
       type: object
       required: [ok, data]

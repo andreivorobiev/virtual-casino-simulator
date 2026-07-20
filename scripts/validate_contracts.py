@@ -138,14 +138,16 @@ def main():
         if preview_security.get("artifact") != "restricted-preview-security" or preview_security.get("stage") != "restricted-preview":
             # Reject renamed or repurposed policy records.
             errors.append(f"{PREVIEW_SECURITY_CONTRACT} does not identify the restricted-preview policy")
-        # Require exactly the two deliberately anonymous application routes.
-        if preview_security.get("anonymous_routes") != ["/api/v2/auth/login", "/healthz"]:
+        # Require exactly the reviewed login, disabled-by-default OAuth, and liveness routes.
+        expected_anonymous = ["/api/v2/auth/login", "/api/v2/auth/oauth/providers", "/api/v2/auth/oauth/{google|facebook}/start", "/api/v2/auth/oauth/{google|facebook}/callback", "/healthz"]
+        # Compare the complete ordered allowlist so generalized provider routes fail validation.
+        if preview_security.get("anonymous_routes") != expected_anonymous:
             # Fail closed when anonymous route scope expands or changes order.
             errors.append(f"{PREVIEW_SECURITY_CONTRACT} does not preserve the anonymous route allowlist")
-        # Require public enrollment and live provider flows to stay disabled.
+        # Require public enrollment disabled and provider auth bounded to disabled-default invite users.
         access_policy = preview_security.get("access_policy", {})
         # Check each non-public stage switch explicitly.
-        if access_policy.get("public_signup") is not False or access_policy.get("live_oauth") is not False or access_policy.get("admin_requires_admin_session") is not True:
+        if access_policy.get("public_signup") is not False or access_policy.get("oauth_disabled_by_default") is not True or access_policy.get("oauth_existing_invite_users_only") is not True or access_policy.get("admin_requires_admin_session") is not True:
             # Report access-policy drift without runtime details.
             errors.append(f"{PREVIEW_SECURITY_CONTRACT} does not preserve restricted-preview access")
         # Require exact request integrity rather than advisory browser behavior.

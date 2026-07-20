@@ -6,8 +6,8 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.39.0
-- core: 9.13.3
+- application: 9.40.0
+- core: 9.14.0
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.0
@@ -45,10 +45,10 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.0
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.45.1
-- docs: 1.45.1
-- contracts: 1.33.0
-- tooling: 1.14.0
+- tests: 1.46.0
+- docs: 1.46.0
+- contracts: 1.34.0
+- tooling: 1.14.1
 - commenting_policy: 1.0.0
 
 ## Requirements
@@ -430,18 +430,23 @@ Historical source baseline: 9.1.0
 - **AUDIO-008** (Audio) - PASS: Browser audio verification observes voice and sound-effect events without requiring physical speakers.
 - **AUDIO-009** (Audio) - PASS: Repeated Baccarat announcements complete without being cancelled by the next deal.
 - **AUTH-001** (Auth) - PASS: Protected browser app and API routes require an authenticated private beta session.
-- **AUTH-002** (Auth) - PASS: Login verifies server-side credentials and does not expose public self-signup or external identity-provider flows.
+- **AUTH-002** (Auth) - PASS: Login verifies server-side credentials, exposes no public self-signup, and permits external identity authentication only for active private-invite users who explicitly linked the provider while already authenticated.
 - **AUTH-003** (Auth) - PLANNED: Bootstrap Admin creation is operator-controlled and separate from public runtime registration.
 - **AUTH-004** (Auth) - PASS: Unauthenticated or inactive-user access returns the standard ok/error API envelope without leaking protected data.
 - **AUTH-005** (Auth) - PASS: Authenticated Admin-only actions require an active user with an Admin role.
 - **AUTH-006** (Auth) - PASS: Non-loopback or explicitly public deployment startup requires explicit bootstrap Admin settings and rejects known local defaults before runtime state is mutated.
-- **OAUTH-001** (OAuth) - PASS: The provider catalog preserves local password login as the sole runtime-available provider while Google and Facebook remain unavailable regardless of inert configuration readiness.
+- **OAUTH-001** (OAuth) - PASS: The provider catalog preserves local password login while Google and Facebook remain independently disabled by default and become runtime-available only through their exact explicit flag, credential, and callback configuration contract.
 - **OAUTH-002** (OAuth) - PASS: Admin-only diagnostics expose a fixed allowlist of provider configuration and runtime facts without credential values, tokens, raw claims, authorization URLs, or raw errors and without affecting Operations readiness.
-- **OAUTH-003** (OAuth) - PASS: Pure callback helpers preserve the issue #75 route reservation and fail closed on invalid callback origins, ambiguous parameters, state, nonce, authorization codes, and PKCE values without registering a callback route.
-- **OAUTH-004** (OAuth) - PASS: Injected identity-link logic binds an external provider subject only to an authenticated canonical user, never creates users or links by email, and fails closed on repository ownership or uniqueness drift.
-- **OAUTH-005** (OAuth) - PASS: Mocked Google and Facebook claim normalization retains only bounded allowlisted identity fields and is not treated as live token, signature, issuer, audience, expiry, nonce, or PKCE verification.
-- **OAUTH-006** (Application) - PASS: The English and Russian login gate presents readable native-disabled Google and Facebook controls with no link or handler, while local email/password login behavior remains unchanged.
-- **TEST-045** (Tests) - PASS: OAuth regression evidence centrally discovers service-free mocked tests and covers Admin authorization, secret-safe diagnostics, absent action routes, disabled EN/RU controls, unchanged local login, contracts, and listener cleanup.
+- **OAUTH-003** (OAuth) - PASS: OAuth callbacks use exact registered v2 routes and fail closed on callback-origin drift, ambiguous or duplicate parameters, state, nonce, authorization codes, PKCE values, expiry, replay, and browser/session-owner mismatch.
+- **OAUTH-004** (OAuth) - PASS: Durable identity-link logic binds an external provider subject only after authenticated explicit confirmation, never creates users or links by email, and transactionally enforces provider-subject and provider-user uniqueness with safe unlink.
+- **OAUTH-005** (OAuth) - PASS: Mockable Google and Facebook authorization-code adapters retain only bounded allowlisted identity fields after Google signature, issuer, audience, expiry, nonce, and verified-email checks or Facebook validity, app, expiry, scope, and provider-subject checks.
+- **OAUTH-006** (Application) - PASS: The English and Russian login and authenticated account surfaces expose independently available Google and Facebook controls, explicit first-link consent, boolean link status, safe unlink, and disabled/error states while local password behavior remains unchanged.
+- **TEST-045** (Tests) - PASS: OAuth regression evidence centrally discovers provider-mocked tests and covers Admin authorization, secret-safe diagnostics, disabled-default action behavior, disabled EN/RU controls, unchanged local login, contracts, and listener cleanup.
+- **OAUTH-007** (OAuth) - PASS: Provider sign-in authenticates only a previously linked provider subject whose canonical private-invite user remains active; first-use identities, even with matching verified email metadata, cannot create, select, or link a Casino user.
+- **OAUTH-008** (OAuth) - PASS: First-time provider linking requires an already-authenticated active local-password Casino user, an exact initiating session and browser binding, and an explicit confirmation immediately before provider navigation.
+- **OAUTH-009** (OAuth) - PASS: OAuth flow and identity-link persistence is atomic across JSON and MySQL providers, uses expiring one-time flow records bound to provider, callback URI, browser/session owner, and action, rejects replay, and enforces both compound link uniqueness constraints.
+- **OAUTH-010** (OAuth) - PASS: OAuth authorization uses code flow with S256 PKCE, strict state and Google OIDC nonce validation, full provider token/app verification, bounded mockable HTTPS transport, CSRF and safe redirect policy, secure session cookies, rate limits, secret-free errors and logs, and immediate flag/unlink rollback for provider sessions.
+- **TEST-074** (Tests) - PASS: Invite-only OAuth regression evidence covers independent disabled flags, signed Google and debugged Facebook tokens, negative claims, no email linking or signup, explicit link consent, callback duplication, browser binding, expiry, replay, atomic uniqueness, safe redirects, provider-session rollback, v2 contracts, EN/RU UI states, and no provider network dependency.
 - **SESSION-001** (Session) - PASS: Successful login creates a server-side session represented to clients by a protected session cookie.
 - **SESSION-002** (Session) - PASS: Logout invalidates the current session before returning a standard ok/data envelope.
 - **SESSION-003** (Session) - PASS: Current-user lookup returns user, role, session, terms, locale, and bound player token balance data.
@@ -638,7 +643,7 @@ Historical source baseline: 9.1.0
 - **SESSION-006** (Core) - PASS: Restricted-preview sessions use host-only Secure HttpOnly SameSite cookies, distinct per-session CSRF values, bounded per-user concurrent session retention with least-recently-used eviction, bounded lifetime, logout clearing, and revocation after privilege-bearing account changes.
 - **SESSION-007** (Session) - PASS: Concurrent same-account logins create independent durable sessions that remain valid and never invalidate each other, bounded by a per-user cap with least-recently-used eviction and atomic session persistence that prevents lost writes, returning no 401 or 500 under concurrency.
 - **ADMIN-024** (Admin) - PASS: Admin HTML, JavaScript, and API surfaces require an active Admin session during restricted preview, and user privilege or status changes revoke existing sessions.
-- **AUTH-007** (Core) - PASS: Restricted preview exposes local-password login only; public signup and live OAuth authorization, callback, exchange, linking, SDK, and provider transport routes remain absent.
+- **AUTH-007** (Core) - PASS: Restricted preview exposes no public signup; local-password access remains available and provider authorization/callback/linking routes operate only for explicitly configured providers and existing private-invite accounts under the invite-only OAuth boundary.
 - **AUTH-008** (Core) - PASS: The authenticated shared shell renders and keyboard-wires Admin navigation only for an authenticated Admin user; normal-player locale rerenders and restored game routes never expose the affordance, while direct Admin HTML and API access remain server-enforced.
 - **TEST-047** (Tests) - PASS: Permanent restricted-preview evidence covers configuration failure, Host and proxy abuse, Origin and CSRF enforcement, session and privilege rotation, cookie and header policy, Admin and disabled-access boundaries, concurrency, capacity recovery, redacted logging, copied production behavior, and exact listener cleanup.
 - **MYSQL-005** (MySQL) - PASS: MySQL schema changes use an explicit contiguous checksum-bound migration catalog, a deployment-only identity, a named target lock, proof-gated pre-DDL state, and durable applying or dirty markers that never claim transactional DDL rollback.
