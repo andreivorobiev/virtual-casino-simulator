@@ -5027,8 +5027,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.locator('#toggleSpots').click()
                     # Require the rerendered control to report the visible inside-spot state truthfully.
                     assert page.locator('#toggleSpots').get_attribute('aria-pressed')=='true', 'Roulette inside spots did not enter the visible state'
-                    # Read every bet cell's stable identity and hit geometry from the mounted board.
-                    cells=page.evaluate("() => [...document.querySelectorAll('[data-cell-key]')].map(el => { const r=el.getBoundingClientRect(); return {key:el.getAttribute('data-cell-key'), type:el.getAttribute('data-bet-type'), covered:(el.getAttribute('data-covered')||'').split(',').filter(Boolean), x:r.left, y:r.top, w:r.width, h:r.height}; })")
+                    # Read every fixed-table bet cell's stable identity and hit geometry without duplicating the control-rail fast-bet aliases. (issue #348)
+                    cells=page.evaluate("() => [...document.querySelectorAll('[data-testid=roulette-table] [data-cell-key]')].map(el => { const r=el.getBoundingClientRect(); return {key:el.getAttribute('data-cell-key'), type:el.getAttribute('data-bet-type'), covered:(el.getAttribute('data-covered')||'').split(',').filter(Boolean), x:r.left, y:r.top, w:r.width, h:r.height}; })")
                     # Require a populated board so an empty catalog cannot pass this regression silently.
                     assert cells, 'no roulette bet cells rendered'
                     # Require every bet cell to expose a non-zero hit region.
