@@ -114,6 +114,8 @@
       "selector": "[data-testid='premium-topbar'], [data-testid='lobby']",
       "states": [
         "authenticated",
+        "catalog_scrolled",
+        "keyboard_focused_scroll_region",
         "wallet_closed",
         "wallet_open",
         "token_added",

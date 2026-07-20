@@ -8656,6 +8656,40 @@
       "introduced_in": "issue-319-slots-payline-alignment",
       "changed_in": "issue-319-slots-payline-alignment",
       "notes": "Issue #319 evidence paths are logs/test-runs/after-pass-slots-paylines-*.png with matching VIS-EVIDENCE-001 JSON sidecars generated from the exact tested head."
+    },
+    {
+      "id": "UX-013",
+      "module": "UX",
+      "description": "The lobby route outlet is one bounded, keyboard-focusable vertical scroll region with a localized accessible name, visible focus and themed scroll affordances, wheel and touch panning, and native Page Down and End behavior, so every filtered catalog card and Play control remains reachable at 1920x1080, 1440x900, 1024x900, and 390x844 without page-level horizontal overflow or fixed-chrome overlap.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-LOBBY-RESP-001"
+      ],
+      "implementation_files": [
+        "web/app.js",
+        "web/styles.css"
+      ],
+      "introduced_in": "issue-318-lobby-catalog-scroll",
+      "changed_in": "issue-318-lobby-catalog-scroll",
+      "notes": "Issue #318: the shell gives the lobby outlet the remaining viewport between its header and status rail, while the outlet owns the single accessible catalog scroll surface."
+    },
+    {
+      "id": "TEST-076",
+      "module": "Tests",
+      "description": "Browser evidence in English and Russian at all four governed viewports verifies the focused lobby region, themed affordance, no scroll trap or horizontal overflow, Page Down, End, wheel, and touch scrolling, final-card and Play-control reachability for unfiltered, category-filtered, search-filtered, and empty states, and exact-head after-pass evidence sidecars.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-LOBBY-RESP-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-318-lobby-catalog-scroll",
+      "changed_in": "issue-318-lobby-catalog-scroll",
+      "notes": "Issue #318 evidence paths are logs/test-runs/after-pass-shell-lobby-scroll-*.png with matching VIS-EVIDENCE-001 JSON sidecars generated from the exact tested head."
     }
   ]
 }

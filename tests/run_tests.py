@@ -2358,28 +2358,204 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 run_case('BR-CATALOG-I18N-RU-001',['UX-010','I18N-001'],catalog_ru_acceptance)
                 # Capture the polished desktop lobby and shared topbar for review evidence.
                 shot('after-pass-shell-lobby-desktop.png')
-                # Resize the browser to the compact desktop viewport before responsive checks.
-                page.set_viewport_size({'width':1440,'height':900}); page.wait_for_timeout(250)
-                # Define the responsive_lobby function used by this module.
+                # Define the complete lobby-scroll acceptance matrix requested by issue #318.
                 def responsive_lobby():
-                    # Verify compact desktop preserves the complete wallet and avoids page-level horizontal overflow.
-                    assert page.get_by_test_id('premium-wallet').is_visible() and page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1')
-                    # Capture the compact desktop shell for visual-matrix evidence.
-                    shot('after-pass-shell-lobby-compact.png')
-                    # Resize to the approved mobile viewport inside the same responsive matrix case.
-                    page.set_viewport_size({'width':390,'height':844}); page.wait_for_timeout(250)
-                    # Verify the stacked topbar remains visible on a narrow viewport.
-                    assert page.get_by_test_id('premium-topbar').is_visible()
-                    # Verify the lobby does not introduce page-level horizontal overflow.
-                    assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1')
-                    # Verify the featured game card remains visible after responsive stacking.
-                    assert page.get_by_test_id('card-roulette').is_visible()
-                # Execute this statement as part of the module's documented control flow.
-                run_case('BR-LOBBY-RESP-001',['CORE-015','UX-009'],responsive_lobby)
-                # Capture the narrow stacked shell so mobile top-action behavior can be reviewed.
-                shot('after-pass-shell-lobby-mobile.png')
-                # Restore desktop dimensions before existing game interaction coverage runs.
-                page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(250)
+                    # Name every governed viewport so behavior and evidence share the visual-matrix identifiers.
+                    governed_viewports=(('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844))
+                    # Name both required locales so scroll semantics survive localized shell rerenders.
+                    governed_locales=('en-US','ru-RU')
+                    # Read the stable locator for the intentional route-outlet scroll region.
+                    lobby_region=page.get_by_test_id('lobby-scroll-region')
+                    # Define a focused metrics probe for containment, accessibility, and affordance assertions.
+                    def lobby_metrics():
+                        # Read layout and computed-style facts from the live browser instead of duplicating CSS constants.
+                        return page.evaluate("""() => { const region=document.querySelector('[data-testid="lobby-scroll-region"]'); const footer=document.querySelector('[data-testid="shell-status"]'); const rect=region.getBoundingClientRect(); const footerRect=footer.getBoundingClientRect(); const style=getComputedStyle(region); return {clientHeight:region.clientHeight,scrollHeight:region.scrollHeight,scrollTop:region.scrollTop,clientWidth:region.clientWidth,scrollWidth:region.scrollWidth,role:region.getAttribute('role'),label:region.getAttribute('aria-label'),tabIndex:region.tabIndex,overflowY:style.overflowY,overflowX:style.overflowX,scrollbarWidth:style.scrollbarWidth,touchAction:style.touchAction,overscrollY:style.overscrollBehaviorY,outlineStyle:style.outlineStyle,outlineWidth:parseFloat(style.outlineWidth)||0,top:rect.top,bottom:rect.bottom,footerTop:footerRect.top,viewportHeight:innerHeight,documentWidth:document.documentElement.scrollWidth,viewportWidth:innerWidth,focused:document.activeElement===region}; }""")
+                    # Define one assertion that proves the last card and its Play control are fully inside the bounded region.
+                    def assert_last_action_reachable():
+                        # Compare live rectangles so visibility cannot pass while fixed chrome clips the action.
+                        reachability=page.evaluate("""() => { const region=document.querySelector('[data-testid="lobby-scroll-region"]'); const cards=[...document.querySelectorAll('[data-testid^="card-"]')]; const plays=[...document.querySelectorAll('[data-testid^="open-"]')]; if (!cards.length || !plays.length) return {reachable:false}; const regionRect=region.getBoundingClientRect(); const cardRect=cards.at(-1).getBoundingClientRect(); const playRect=plays.at(-1).getBoundingClientRect(); return {reachable:cardRect.top>=regionRect.top-1 && cardRect.bottom<=regionRect.bottom+1 && playRect.top>=regionRect.top-1 && playRect.bottom<=regionRect.bottom+1,cardBottom:cardRect.bottom,playBottom:playRect.bottom,regionBottom:regionRect.bottom}; }""")
+                        # Reject partial visibility, footer overlap, and Play controls clipped below the outlet edge.
+                        assert reachability['reachable'],reachability
+                    # Reset the intentional region to its first catalog row before exercising a new input mode.
+                    def reset_lobby_scroll():
+                        # Set the scroll offset synchronously so each modality must create its own movement.
+                        lobby_region.evaluate('(region) => { region.scrollTop = 0; }')
+                        # Wait one frame so geometry reads cannot observe the previous smooth-scroll position.
+                        page.wait_for_timeout(40)
+                    # Send the native End key and wait for Chromium's compositor scroll to reach its real boundary.
+                    def keyboard_end_to_boundary():
+                        # Focus the persistent region so the key cannot target the document or a filter control.
+                        lobby_region.focus()
+                        # Send the real End key rather than assigning the final offset in script.
+                        page.keyboard.press('End')
+                        # Wait until native keyboard scrolling reaches the maximum offset, allowing compositor animation time.
+                        page.wait_for_function("() => { const region=document.querySelector('[data-testid=\"lobby-scroll-region\"]'); return region.scrollHeight-region.clientHeight-region.scrollTop<=2; }",timeout=2500)
+                    # Drive a real Chromium touch gesture against the focused region without enabling touch for unrelated cases.
+                    def touch_scroll_to_end():
+                        # Open a scoped DevTools session for native touch-event injection on the existing authenticated page.
+                        touch_session=page.context.new_cdp_session(page)
+                        # Enable one emulated touch point only for this interaction proof.
+                        touch_session.send('Emulation.setTouchEmulationEnabled',{'enabled':True,'maxTouchPoints':1})
+                        # Guarantee touch emulation and the session are released even when reachability fails.
+                        try:
+                            # Reset the region so the gesture must move the catalog from its top edge.
+                            reset_lobby_scroll()
+                            # Read the current region rectangle after responsive header and footer layout settles.
+                            region_box=lobby_region.bounding_box()
+                            # Require enough visible region height to perform a meaningful upward pan.
+                            assert region_box and region_box['height']>=80,region_box
+                            # Place the gesture inside the horizontal center of the bounded region.
+                            touch_x=region_box['x']+(region_box['width']/2)
+                            # Start near the visible region bottom while remaining above its edge.
+                            touch_start_y=region_box['y']+region_box['height']-20
+                            # End near the region top so every gesture advances by most of one viewport.
+                            touch_end_y=region_box['y']+20
+                            # Allow enough native pans to reach the longest all-games catalog without hard-coding its height.
+                            for _ in range(24):
+                                # Stop once native panning reaches the region's maximum scroll offset.
+                                touch_position=lobby_metrics()
+                                # Leave the loop when the remaining scroll distance is within layout rounding tolerance.
+                                if touch_position['scrollHeight']-touch_position['clientHeight']-touch_position['scrollTop']<=2: break
+                                # Begin one real touch contact inside the visible region.
+                                touch_session.send('Input.dispatchTouchEvent',{'type':'touchStart','touchPoints':[{'x':touch_x,'y':touch_start_y,'id':0,'radiusX':1,'radiusY':1,'force':1}]})
+                                # Send progressive moves so Chromium recognizes a pan rather than a synthetic teleport.
+                                for step in range(1,7):
+                                    # Interpolate the finger position across six native touch moves.
+                                    touch_y=touch_start_y+((touch_end_y-touch_start_y)*step/6)
+                                    # Dispatch the current touch move while retaining one stable contact identity.
+                                    touch_session.send('Input.dispatchTouchEvent',{'type':'touchMove','touchPoints':[{'x':touch_x,'y':touch_y,'id':0,'radiusX':1,'radiusY':1,'force':1}]})
+                                # Release the contact so native scroll state commits before the next gesture.
+                                touch_session.send('Input.dispatchTouchEvent',{'type':'touchEnd','touchPoints':[]})
+                                # Wait briefly for compositor-driven scrolling to update the DOM scroll offset.
+                                page.wait_for_timeout(60)
+                            # Prove native touch panning reached the final catalog action.
+                            assert_last_action_reachable()
+                        # Release temporary touch configuration after the scoped proof.
+                        finally:
+                            # Disable touch emulation before mouse and keyboard coverage continues.
+                            touch_session.send('Emulation.setTouchEmulationEnabled',{'enabled':False})
+                            # Detach the scoped DevTools session without closing the shared browser page.
+                            touch_session.detach()
+                    # Exercise both locales at every governed viewport without substituting generic snapshots for behavior.
+                    for locale in governed_locales:
+                        # Switch through the visible shell locale control so the lobby rerenders through production code.
+                        page.get_by_test_id('shell-locale-select').select_option(locale)
+                        # Wait until the runtime locale state and localized lobby semantics agree.
+                        page.wait_for_function('(locale) => window.CasinoI18n?.getLocaleState().locale === locale',arg=locale)
+                        # Exercise each governed viewport under the active localized shell.
+                        for viewport_id,width,height in governed_viewports:
+                            # Resize to the exact visual-matrix dimensions before testing bounded containment.
+                            page.set_viewport_size({'width':width,'height':height})
+                            # Wait for responsive shell geometry and the flex-contained region to settle.
+                            page.wait_for_timeout(180)
+                            # Clear search through the visible control before restoring the complete catalog.
+                            page.get_by_test_id('catalog-search').fill('')
+                            # Restore the all-games category through its real catalog control.
+                            page.locator('[data-catalog-category="all"]').click()
+                            # Reset any scroll retained by the persistent route-outlet element.
+                            reset_lobby_scroll()
+                            # Enter the region from the final visible header control using the real Tab order.
+                            page.get_by_test_id('logout').focus()
+                            # Advance keyboard focus from shell chrome into the next tabbable main region.
+                            page.keyboard.press('Tab')
+                            # Press Page Down while the focused region owns keyboard scrolling.
+                            page.keyboard.press('PageDown')
+                            # Wait for native keyboard scrolling to update the region offset and focus ring.
+                            page.wait_for_timeout(100)
+                            # Read exact semantics, containment, and focus presentation after the keyboard action.
+                            metrics=lobby_metrics()
+                            # Resolve only the navigation button's localized text node, excluding its aria-hidden home icon.
+                            expected_label=page.get_by_test_id('nav-lobby').evaluate("(button) => [...button.childNodes].filter((node) => node.nodeType === Node.TEXT_NODE).map((node) => node.textContent).join('').trim()")
+                            # Require one named, keyboard-focusable region with native vertical scrolling and no horizontal outlet overflow.
+                            assert metrics['role']=='region' and metrics['label']==expected_label and metrics['tabIndex']==0 and metrics['overflowY']=='auto' and metrics['overflowX']=='hidden',metrics
+                            # Require a genuinely bounded overflow surface whose bottom ends above the in-flow status rail.
+                            assert metrics['scrollHeight']>metrics['clientHeight']+1 and metrics['clientHeight']>0 and metrics['bottom']<=metrics['footerTop']+1,metrics
+                            # Reject page-level and region-level horizontal overflow at this locale and viewport.
+                            assert metrics['documentWidth']<=metrics['viewportWidth']+1 and metrics['scrollWidth']<=metrics['clientWidth']+1,metrics
+                            # Require the declared wheel/touch containment and stable themed scrollbar affordance.
+                            assert metrics['scrollbarWidth']=='thin' and metrics['touchAction']=='pan-y' and metrics['overscrollY']=='contain',metrics
+                            # Prove Tab reached the region, Page Down moved it, and the focused region shows a visible outline.
+                            assert metrics['focused'] and metrics['scrollTop']>0 and metrics['outlineStyle']!='none' and metrics['outlineWidth']>=2,metrics
+                            # Reset before proving the native End key reaches the final all-games action directly.
+                            reset_lobby_scroll()
+                            # Use native End behavior and wait for the compositor to reach the real scroll boundary.
+                            keyboard_end_to_boundary()
+                            # Require the final all-games card and Play action to be fully visible above the footer.
+                            assert_last_action_reachable()
+                            # Reset before proving a wheel gesture independently moves the same region.
+                            reset_lobby_scroll()
+                            # Hover the region so the real wheel event targets the intentional scroll owner.
+                            lobby_region.hover()
+                            # Send repeated large wheel deltas until the longest catalog reaches its end.
+                            for _ in range(8): page.mouse.wheel(0,2000)
+                            # Wait for compositor wheel scrolling to settle before reading rectangles.
+                            page.wait_for_timeout(120)
+                            # Require the wheel path to reveal the same final enabled action.
+                            assert_last_action_reachable()
+                            # Prove native touch panning at touch-oriented tablet and mobile viewports.
+                            if viewport_id in ('tablet','mobile'): touch_scroll_to_end()
+                            # Read every installed category identifier from the production catalog controls.
+                            category_ids=page.locator('[data-catalog-category]').evaluate_all('(buttons) => buttons.map((button) => button.dataset.catalogCategory)')
+                            # Prove the last enabled action remains reachable for every category-filtered state.
+                            for category_id in category_ids:
+                                # Return to the catalog controls before selecting the next production category.
+                                reset_lobby_scroll()
+                                # Select the current category through its visible localized button.
+                                page.locator(f'[data-catalog-category="{category_id}"]').click()
+                                # Use native End behavior and wait for the current category's real scroll boundary.
+                                keyboard_end_to_boundary()
+                                # Require the final category card and Play control to remain fully reachable.
+                                assert_last_action_reachable()
+                            # Restore all games before capturing the primary scrolled state.
+                            reset_lobby_scroll()
+                            # Select the unfiltered catalog state through the visible control.
+                            page.locator('[data-catalog-category="all"]').click()
+                            # Reach the final all-games action through native End behavior before recording evidence.
+                            keyboard_end_to_boundary()
+                            # Capture EN/RU after-pass evidence for the focused and fully scrolled catalog at this viewport.
+                            game_evidence(f'after-pass-shell-lobby-scroll-{locale.lower()}-{viewport_id}.png','shell_lobby',['authenticated','catalog_scrolled','keyboard_focused_scroll_region'],locale,viewport_id)
+                            # Return to the catalog controls before entering a multi-result search state.
+                            reset_lobby_scroll()
+                            # Enter a stable metadata-backed query that matches the installed poker category in both locales.
+                            page.get_by_test_id('catalog-search').fill('poker')
+                            # Require a real non-empty filtered result set before testing its last action.
+                            assert page.locator('[data-testid^="card-"]').count()>1
+                            # Reach the search result set's final action through native End behavior on the scroll owner.
+                            keyboard_end_to_boundary()
+                            # Require the last search result and Play control to remain fully visible.
+                            assert_last_action_reachable()
+                            # Capture the governed search-filtered after-pass state at this locale and viewport.
+                            game_evidence(f'after-pass-shell-lobby-scroll-search-{locale.lower()}-{viewport_id}.png','shell_lobby',['search_filtered','catalog_scrolled','keyboard_focused_scroll_region'],locale,viewport_id)
+                            # Return to the catalog controls before proving the empty search state has no trapped scroll content.
+                            reset_lobby_scroll()
+                            # Enter an impossible query through the visible search field.
+                            page.get_by_test_id('catalog-search').fill('__no_catalog_match__')
+                            # Require the localized empty state and zero stale game cards.
+                            assert page.get_by_test_id('catalog-empty').is_visible() and page.locator('[data-testid^="card-"]').count()==0
+                            # Clear the query before the representative category evidence state.
+                            page.get_by_test_id('catalog-search').fill('')
+                            # Select the table category as a visible representative after every category passed behavior checks.
+                            page.locator('[data-catalog-category="table"]').click()
+                            # Reach the representative category's last action through the same native End helper.
+                            keyboard_end_to_boundary()
+                            # Require the representative category's final action to remain fully visible.
+                            assert_last_action_reachable()
+                            # Capture the governed category-filtered after-pass state at this locale and viewport.
+                            game_evidence(f'after-pass-shell-lobby-scroll-category-{locale.lower()}-{viewport_id}.png','shell_lobby',['category_filtered','catalog_scrolled','keyboard_focused_scroll_region'],locale,viewport_id)
+                    # Restore the canonical English locale for downstream game cases.
+                    page.get_by_test_id('shell-locale-select').select_option('en-US')
+                    # Wait for the English lobby rerender before restoring desktop dimensions.
+                    page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'en-US'")
+                    # Restore the primary desktop viewport expected by subsequent browser cases.
+                    page.set_viewport_size({'width':1920,'height':1080})
+                    # Restore the complete catalog so later route-discovery coverage starts from its normal state.
+                    page.get_by_test_id('catalog-search').fill('')
+                    # Restore the all-games category through the current English control.
+                    page.locator('[data-catalog-category="all"]').click()
+                    # Return the persistent route outlet to its top edge for the next browser case.
+                    reset_lobby_scroll()
+                # Execute the full locale, viewport, state, and interaction matrix under the permanent requirement mapping.
+                run_case('BR-LOBBY-RESP-001',['CORE-015','UX-009','UX-013','TEST-076'],responsive_lobby)
                 # Define catalog_route_discovery to mount every frontend driver from catalog metadata.
                 def catalog_route_discovery():
                     # Select a catalog game with a route id that differs from its display label for loader-copy coverage. (UX-011)
