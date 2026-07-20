@@ -86,8 +86,8 @@ async function load(tab = 'dashboard') {
     if (tab === 'players') return playersBots();
     // Branch to the Admin beta-user renderer.
     if (tab === 'users') return users();
-    // Branch to the de-identified Guest Trials telemetry renderer. (issue #317)
-    if (tab === 'guests') return guests();
+    // Await Guest Trials so rejected Admin requests stay inside the localized load-error boundary. (issue #317)
+    if (tab === 'guests') return await guests();
     // Branch to the ledger renderer.
     if (tab === 'ledger') return ledger();
     // Branch to the history renderer.
