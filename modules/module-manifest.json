@@ -44,7 +44,7 @@
     "tests": "1.49.0",
     "docs": "1.49.0",
     "contracts": "1.36.0",
-    "tooling": "1.16.0",
+    "tooling": "1.17.0",
     "commenting_policy": "1.0.0"
   },
   "created_at": "2026-07-09T00:00:00.000000Z"

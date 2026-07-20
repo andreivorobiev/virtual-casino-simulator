@@ -9,6 +9,7 @@ import os  # Resolve the disposable runtime parent and process-scoped run identi
 import shutil  # Copy and remove isolated runtime trees.
 import subprocess  # Launch shard-owned loopback servers without an undrained output pipe.
 import sys  # Prefer the current checkout when importing Casino modules.
+import tempfile  # Resolve a portable disposable-runtime parent on local and hosted workers.
 import time  # Measure browser-visible latency and timestamp the run.
 import traceback  # Retain local-only diagnostics for unexpected harness failures.
 from collections import Counter  # Aggregate control, error, and coverage counts.
@@ -93,6 +94,18 @@ def resolve_source_commit(repo_root=ROOT):
     if status.returncode != 0 or status.stdout.strip():  # Reject tracked or untracked source drift while ignoring repository-defined evidence paths.
         raise RuntimeError("source checkout must be clean before qualification")  # Prevent a dirty harness or application from claiming committed provenance.
     return commit  # Return the immutable full source identity.
+
+
+# Validate the immutable source supplied by a distributed aggregate without rejecting downloaded artifacts.
+def resolve_distributed_source_commit(expected_commit, repo_root=ROOT):
+    commit = str(expected_commit).strip().lower()  # Normalize the workflow-provided full commit identity.
+    if len(commit) != 40 or any(character not in "0123456789abcdef" for character in commit):  # Reject abbreviated or malformed provenance.
+        raise RuntimeError("--source-commit must be one full hexadecimal commit")  # Fail before accepting any downloaded shard.
+    completed = subprocess.run(["git", "rev-parse", "HEAD"], cwd=str(repo_root), capture_output=True, text=True, timeout=10, check=False)  # Read the aggregate checkout identity without modifying it.
+    checkout_commit = completed.stdout.strip().lower()  # Normalize the checked-out commit.
+    if completed.returncode != 0 or checkout_commit != commit:  # Require the aggregator to run the same exact source as every worker.
+        raise RuntimeError("aggregate checkout does not match --source-commit")  # Reject stale or foreign workflow artifacts.
+    return commit  # Return the exact distributed identity while permitting downloaded evidence files.
 
 
 # Prefix one rendered-control signature with its owning surface to prevent cross-game collisions.
@@ -792,7 +805,7 @@ def parse_args():
     parser.add_argument("--total-cycles", type=int, default=50_000, help="Exact total UI cycle attempts distributed across selected games.")  # Configure smoke or full volume.
     parser.add_argument("--parallel", type=int, default=4, help="Maximum isolated game shards active together.")  # Bound local CPU, memory, and listeners.
     parser.add_argument("--only-games", default="", help="Optional comma-separated catalog game IDs for focused rehearsal.")  # Enable bounded strategy debugging.
-    parser.add_argument("--deployment-root", default=str(Path(os.environ.get("TEMP", str(ROOT))) / "casino-ui-50000"), help="Parent for disposable runtime copies.")  # Keep runtime writes outside OneDrive.
+    parser.add_argument("--deployment-root", default=str(Path(tempfile.gettempdir()) / "casino-ui-50000"), help="Parent for disposable runtime copies.")  # Keep runtime writes outside the source checkout on every supported runner.
     parser.add_argument("--report", default=str(ROOT / "logs" / "test-runs" / "ui_50000.json"), help="Aggregate JSON report path.")  # Configure terminal evidence.
     parser.add_argument("--shard-report-root", default=str(ROOT / "logs" / "test-runs" / "ui_50000_shards"), help="Per-game JSON artifact directory.")  # Preserve recoverable shard handbacks.
     parser.add_argument("--evidence-root", default=str(ROOT / "logs" / "test-runs" / "ui_50000_visual"), help="Representative and failure screenshot directory.")  # Configure visual evidence.
@@ -804,6 +817,9 @@ def parse_args():
     parser.add_argument("--max-attempts-per-cycle", type=int, default=3, help="Maximum UI recovery attempts for one unique global cycle ID.")  # Bound retries while preserving exact completed-cycle evidence.
     parser.add_argument("--headed", action="store_true", help="Show test browsers for focused debugging only.")  # Keep long qualification headless.
     parser.add_argument("--keep-deployments", action="store_true", help="Preserve disposable runtimes for explicit local debugging.")  # Allow opt-in post-failure inspection.
+    parser.add_argument("--allocation-index", type=int, default=None, help="Run exactly one deterministic formal worker allocation.")  # Let non-local CI distribute the immutable 50,000-cycle assignment.
+    parser.add_argument("--aggregate-only", action="store_true", help="Aggregate a complete downloaded formal shard set without launching a browser.")  # Separate terminal accounting from worker execution.
+    parser.add_argument("--source-commit", default="", help="Exact 40-character commit expected by --aggregate-only.")  # Bind downloaded evidence to the workflow checkout.
     args = parser.parse_args()  # Parse caller options.
     if args.total_cycles < 1:  # Reject an empty test run.
         parser.error("--total-cycles must be at least 1")  # Require real UI work.
@@ -817,6 +833,15 @@ def parse_args():
         parser.error("--game-replicas must be at least 1")  # Preserve forward progress.
     if args.max_attempts_per_cycle < 1:  # Reject a retry policy that cannot attempt a cycle.
         parser.error("--max-attempts-per-cycle must be at least 1")  # Preserve real UI execution.
+    if args.allocation_index is not None and args.allocation_index < 0:  # Reject negative distributed worker identities.
+        parser.error("--allocation-index must be zero or greater")  # Require a deterministic allocation index.
+    if args.aggregate_only and args.allocation_index is not None:  # Keep worker and aggregate roles mutually exclusive.
+        parser.error("--aggregate-only cannot be combined with --allocation-index")  # Prevent ambiguous execution.
+    if args.aggregate_only or args.allocation_index is not None:  # Enforce one immutable formal distributed plan.
+        if args.total_cycles != 50_000 or args.only_games.strip() or args.replicate_games.strip() or args.roulette_replicas != 4 or args.resume_shards:  # Reject focused, resized, or resumed distributed variants.
+            parser.error("distributed modes require exactly 50000 full-catalog cycles, four Roulette replicas, and no resume or extra replicas")  # Freeze issue-owned accounting.
+    if args.aggregate_only and not args.source_commit.strip():  # Require explicit provenance for downloaded artifacts.
+        parser.error("--aggregate-only requires --source-commit")  # Avoid inferring identity from mutable workflow context.
     return args  # Return validated options.
 
 
@@ -888,25 +913,77 @@ def partition_resume_allocations(args, allocations, source_commit):
     return resumed, pending  # Return immutable evidence and remaining work separately.
 
 
+# Load one and only one exact-source report for every deterministic distributed allocation.
+def load_distributed_shards(args, allocations, source_commit):
+    root = Path(args.shard_report_root).expanduser().resolve()  # Resolve the merged GitHub artifact directory.
+    evidence_root = Path(args.evidence_root).expanduser().resolve()  # Resolve the downloaded visual-evidence directory.
+    expected_names = {f"{game_index:02d}-{game_id}-r{replica_index}.json" for game_id, game_index, replica_index, _quota, _cycle_start in allocations}  # Derive the complete immutable filename inventory.
+    actual_names = {path.name for path in root.glob("*.json")} if root.is_dir() else set()  # Inventory only terminal shard JSON files.
+    if actual_names != expected_names:  # Reject missing, extra, or colliding worker artifacts.
+        raise RuntimeError(f"distributed shard inventory mismatch expected={len(expected_names)} actual={len(actual_names)}")  # Report bounded counts without private paths.
+    results = []  # Preserve canonical allocation order in the terminal aggregate.
+    referenced_artifacts = set()  # Prevent duplicate screenshot references from satisfying multiple viewport rows.
+    for allocation in allocations:  # Validate every expected report against its immutable assignment.
+        game_id, game_index, replica_index, quota, cycle_start = allocation  # Unpack the canonical worker identity and range.
+        path = root / f"{game_index:02d}-{game_id}-r{replica_index}.json"  # Resolve the expected terminal report.
+        try:  # Convert malformed or partial JSON into a fail-closed controller result.
+            report = json.loads(path.read_text(encoding="utf-8"))  # Read only the downloaded public evidence.
+        except Exception as exc:  # Reject corrupt worker handbacks without launching replacement work.
+            raise RuntimeError(f"distributed shard JSON is unreadable for allocation {game_index}:{replica_index}") from exc  # Name only the public deterministic index.
+        compatible = report.get("source_commit") == source_commit and report.get("game") == game_id and report.get("game_index") == game_index and report.get("replica_index") == replica_index and report.get("quota") == quota and report.get("global_cycle_start") == cycle_start and report.get("global_cycle_end") == cycle_start + quota - 1 and report.get("requirements") == list(REQUIREMENT_IDS)  # Require exact source, range, identity, and requirement mapping.
+        if not compatible:  # Reject foreign-source or incorrectly assigned evidence.
+            raise RuntimeError(f"distributed shard identity mismatch for allocation {game_index}:{replica_index}")  # Keep the diagnostic sanitized and deterministic.
+        for visual in report.get("visuals", []):  # Verify every claimed screenshot is present in the downloaded corpus.
+            artifact_name = str(visual.get("artifact", ""))  # Read the worker-authored repository-relative evidence name.
+            artifact_path = Path(artifact_name)  # Parse the portable relative screenshot path.
+            if not artifact_name or artifact_path.is_absolute() or ".." in artifact_path.parts or "\\" in artifact_name or artifact_path.suffix.lower() != ".png":  # Reject private, escaping, nonportable, or non-PNG references.
+                raise RuntimeError(f"distributed visual reference is invalid for allocation {game_index}:{replica_index}")  # Keep the failure bound to the public allocation.
+            normalized_artifact = artifact_path.as_posix()  # Normalize the portable artifact identity.
+            if normalized_artifact in referenced_artifacts:  # Reject one screenshot reused for multiple governed rows.
+                raise RuntimeError(f"distributed visual reference is duplicated for allocation {game_index}:{replica_index}")  # Preserve a bounded deterministic diagnostic.
+            if not (evidence_root / artifact_path).is_file():  # Require the named screenshot to have survived artifact upload and download.
+                raise RuntimeError(f"distributed visual artifact is missing for allocation {game_index}:{replica_index}")  # Fail before claiming visual completeness.
+            referenced_artifacts.add(normalized_artifact)  # Reserve the verified screenshot identity exactly once.
+        results.append(report)  # Add the exact compatible shard, including honest failures, for aggregate accounting.
+    return results  # Return the complete ordered shard corpus.
+
+
 # Execute bounded game shards and build one terminal qualification report.
 async def run_all(args):
-    from playwright.async_api import async_playwright  # Load Playwright only for the explicit UI command.
-
     game_ids = selected_games(args)  # Resolve the complete or focused catalog subset.
-    source_commit = resolve_source_commit()  # Freeze the exact checkout identity before any resume or runtime work.
+    source_commit = resolve_distributed_source_commit(args.source_commit) if args.aggregate_only else resolve_source_commit()  # Freeze either distributed or clean-checkout provenance before accepting evidence.
     replicated_games = {item.strip() for item in args.replicate_games.split(",") if item.strip()}  # Parse explicit additional replica targets.
     unknown_replicas = replicated_games.difference(game_ids)  # Reject out-of-scope or misspelled replica targets.
     if unknown_replicas:  # Fail before starting local resources.
         raise ValueError(f"replicate-games not selected: {sorted(unknown_replicas)}")  # Preserve an actionable caller error.
     allocations = allocate_cycles(game_ids, args.total_cycles, args.roulette_replicas, replicated_games, args.game_replicas)  # Allocate exact quotas, replicas, and global IDs.
-    resumed_results, pending_allocations = partition_resume_allocations(args, allocations, source_commit)  # Reuse only exact-source compatible safe-boundary handbacks.
+    if args.aggregate_only:  # Load the immutable downloaded corpus without importing or launching Playwright.
+        resumed_results = load_distributed_shards(args, allocations, source_commit)  # Require all exact reports before aggregate accounting.
+        pending_allocations = []  # Never repair missing remote work inside the aggregate job.
+    elif args.allocation_index is not None:  # Run exactly one formal deterministic assignment on this hosted worker.
+        if args.allocation_index >= len(allocations):  # Reject stale workflow matrices when the catalog changes.
+            raise ValueError(f"allocation index out of range for {len(allocations)} formal workers")  # Preserve the exact expected matrix size.
+        resumed_results = []  # Distributed workers never reuse an earlier run.
+        pending_allocations = [allocations[args.allocation_index]]  # Schedule only the caller-owned immutable range.
+    else:  # Preserve the existing bounded single-controller mode for focused development.
+        resumed_results, pending_allocations = partition_resume_allocations(args, allocations, source_commit)  # Reuse only exact-source compatible safe-boundary handbacks.
     run_id = f"{int(time.time())}-{os.getpid()}"  # Create a collision-resistant local-only runtime identity.
     report = {"status": "FAIL", "requested_cycles": args.total_cycles, "selected_games": game_ids, "selected_game_count": len(game_ids), "registered_game_count": len(GAME_IDS), "worker_count": len(allocations), "resumed_worker_count": len(resumed_results), "pending_worker_count": len(pending_allocations), "roulette_replicas": args.roulette_replicas if "roulette" in game_ids else 0, "replicated_games": sorted(replicated_games), "parallel_limit": args.parallel, "source_commit": source_commit, "started_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "requirements": list(REQUIREMENT_IDS)}  # Start the exact-source aggregate artifact fail closed.
-    semaphore = asyncio.Semaphore(args.parallel)  # Bound active browsers, servers, and disposable runtimes.
-    async with async_playwright() as playwright:  # Own the shared Playwright driver lifecycle.
-        tasks = [asyncio.create_task(run_bounded_shard(playwright, semaphore, args, allocation, run_id, source_commit)) for allocation in pending_allocations]  # Queue only missing exact-source deterministic workers.
-        fresh_results = await asyncio.gather(*tasks)  # Wait for every newly terminal shard handback.
+    fresh_results = []  # Keep aggregate-only mode browser-free.
+    if pending_allocations:  # Import and launch Playwright only when this process owns real browser work.
+        from playwright.async_api import async_playwright  # Load Playwright only for explicit worker execution.
+
+        semaphore = asyncio.Semaphore(args.parallel)  # Bound active browsers, servers, and disposable runtimes.
+        async with async_playwright() as playwright:  # Own the shared Playwright driver lifecycle.
+            tasks = [asyncio.create_task(run_bounded_shard(playwright, semaphore, args, allocation, run_id, source_commit)) for allocation in pending_allocations]  # Queue only caller-owned deterministic workers.
+            fresh_results = await asyncio.gather(*tasks)  # Wait for every newly terminal shard handback.
     results = resumed_results + fresh_results  # Combine earlier safe boundaries with fresh terminal evidence.
+    if args.allocation_index is not None:  # Return one hosted worker's honest terminal result without pretending it is the aggregate.
+        worker_result = results[0]  # Resolve the single exact allocation result.
+        worker_report = {"status": worker_result.get("status", "FAIL"), "allocation_index": args.allocation_index, "formal_worker_count": len(allocations), "source_commit": source_commit, "requirements": list(REQUIREMENT_IDS), "shard": worker_result}  # Bind the worker controller handback to the full immutable plan.
+        write_json(Path(args.report).expanduser().resolve(), worker_report)  # Preserve a concise worker-level artifact beside the shard evidence.
+        print(f"UI50000 WORKER {worker_report['status']} allocation={args.allocation_index}/{len(allocations)} attempted={worker_result.get('attempted', 0)} completed={worker_result.get('completed', 0)}", flush=True)  # Emit bounded monitoring without private paths.
+        return 0 if worker_report["status"] == "PASS" else 1  # Fail the hosted worker when its assigned range fails.
     seen_counts = Counter()  # Aggregate discovered control states.
     activated_counts = Counter()  # Aggregate real DOM activations.
     failure_counts = Counter()  # Aggregate product/harness failure classes.
@@ -940,8 +1017,14 @@ async def run_all(args):
         item["status"] = "FAIL" if result.get("status", "FAIL") != "PASS" else item["status"]  # Fail the game if any worker fails.
         item["worker_latencies"].append(result.get("latency", {}))  # Preserve each independent worker's timing summary.
     visual_failures = []  # Collect geometry failures across distributed governed viewports.
+    expected_viewports = {viewport["id"] for viewport in VIEWPORTS}  # Freeze the complete governed viewport identity set.
+    visuals_complete = True  # Keep missing, duplicate, or recovered-failure evidence fail closed.
     for result in results:  # Inspect each shard's complete visual handback.
-        for visual in result.get("visuals", []):  # Evaluate every governed viewport independently.
+        visuals = result.get("visuals", [])  # Read this worker's representative evidence inventory.
+        viewport_ids = [visual.get("viewport", {}).get("id") for visual in visuals]  # Extract stable viewport identities.
+        if len(visuals) != len(VIEWPORTS) or set(viewport_ids) != expected_viewports or len(viewport_ids) != len(set(viewport_ids)) or any(visual.get("evidence_class") != "after_pass" or not visual.get("artifact") for visual in visuals):  # Require one passing artifact for every governed viewport.
+            visuals_complete = False  # Reject absent, duplicate, recovered-failure, or unnamed evidence.
+        for visual in visuals:  # Evaluate every governed viewport independently.
             geometry = visual.get("geometry", {})  # Read automated geometry evidence when available.
             if geometry.get("document_overflow_x_px", 0) > 0 or geometry.get("brand_truncated") or geometry.get("clipped_enabled_control_count", 0) > 0 or geometry.get("occluded_enabled_control_count", 0) > 0:  # Detect governed overflow, clipping, branding, and overlay failures.
                 visual_failures.append({"game": result["game"], "viewport": visual.get("viewport", {}), "geometry": geometry})  # Preserve sanitized defect evidence.
@@ -952,14 +1035,15 @@ async def run_all(args):
     failed_attempts = sum(result.get("failed_attempts", 0) for result in results)  # Count every failed rendered UI attempt.
     cleanup_ok = all(result.get("listener_cleanup", {}).get("closed") is True for result in results)  # Require every tracked listener to close.
     isolation_ok = all(result.get("isolation", {}).get("player_match") and result.get("isolation", {}).get("nonnegative_balance") for result in results)  # Require canonical user isolation.
+    shards_pass = len(results) == len(allocations) and all(result.get("status") == "PASS" for result in results)  # Require every deterministic worker to report an explicit passing terminal state.
     ranges_ok = len(assigned_ids) == args.total_cycles and len(unique_ids) == args.total_cycles and unique_ids == expected_ids  # Require no duplicate or missing global IDs.
     control_coverage.update({"discovered_signatures": len(seen_counts), "activated_signatures": len(activated_counts), "minimum_required_activations": CONTROL_ACTIVATION_FLOOR, "activated_counts": dict(sorted(activated_counts.items()))})  # Add aggregate inventory totals to the complete classifications.
-    report.update({"attempted_cycles": attempted, "attempted_actions": attempted_actions, "completed_cycles": completed, "failed_cycles": failed, "failed_attempts": failed_attempts, "assignment": {"range_count": len(assigned_ids), "unique_count": len(unique_ids), "no_gaps_or_duplicates": ranges_ok}, "game_counts": game_counts, "control_coverage": control_coverage, "failure_counts": dict(failure_counts.most_common()), "browser_diagnostics": {"console_errors": dict(console_errors.most_common()), "page_errors": dict(page_errors.most_common()), "http_failures": dict(http_failures.most_common())}, "visual_failures": visual_failures, "isolation_ok": isolation_ok, "listener_cleanup_ok": cleanup_ok, "shards": results})  # Store complete aggregate evidence.
+    report.update({"attempted_cycles": attempted, "attempted_actions": attempted_actions, "completed_cycles": completed, "failed_cycles": failed, "failed_attempts": failed_attempts, "assignment": {"range_count": len(assigned_ids), "unique_count": len(unique_ids), "no_gaps_or_duplicates": ranges_ok}, "game_counts": game_counts, "control_coverage": control_coverage, "failure_counts": dict(failure_counts.most_common()), "browser_diagnostics": {"console_errors": dict(console_errors.most_common()), "page_errors": dict(page_errors.most_common()), "http_failures": dict(http_failures.most_common())}, "visual_failures": visual_failures, "visuals_complete": visuals_complete, "shards_pass": shards_pass, "isolation_ok": isolation_ok, "listener_cleanup_ok": cleanup_ok, "shards": results})  # Store complete aggregate evidence.
     full_catalog = not args.only_games.strip() and len(game_ids) == len(GAME_IDS)  # Detect the formal full-catalog command.
     minimum_game_cycles = min((item["completed"] for item in game_counts.values()), default=0)  # Record the successful per-game floor.
     report["minimum_completed_per_game"] = minimum_game_cycles  # Preserve distribution evidence.
     classification_complete = control_coverage["classified_count"] == len(set(seen_counts).union(activated_counts))  # Prove every observed identity has exactly one class.
-    gates = [attempted == args.total_cycles, completed == args.total_cycles, failed == 0, ranges_ok, cleanup_ok, isolation_ok, not failure_counts, not console_errors, not page_errors, not http_failures, not visual_failures, classification_complete, not failed_controls]  # Evaluate every universal qualification gate.
+    gates = [attempted == args.total_cycles, completed == args.total_cycles, failed == 0, ranges_ok, cleanup_ok, isolation_ok, shards_pass, visuals_complete, not failure_counts, not console_errors, not page_errors, not http_failures, not visual_failures, classification_complete, not failed_controls]  # Evaluate every universal qualification gate.
     if full_catalog:  # Enforce the formal #227 per-game floor only on the complete command.
         gates.append(minimum_game_cycles >= args.total_cycles // len(GAME_IDS))  # Require the deterministic minimum allocation.
     report["status"] = "PASS" if all(gates) else "FAIL"  # Mark the aggregate only after every gate passes.
