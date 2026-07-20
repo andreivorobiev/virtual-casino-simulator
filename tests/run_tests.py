@@ -4405,6 +4405,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         assert actual_call_labels==expected_call_labels,(call_type,actual_call_labels,expected_call_labels)
                         # Refund this call group before the next control so row counts and wallet capacity stay isolated.
                         clear_slip()
+                    # Restore the advanced racetrack disclosure to its governed collapsed baseline for downstream layout acceptance.
+                    page.get_by_test_id('roulette-racetrack-disclosure').locator('summary').click()
                 # Execute the exhaustive slip-label and reliability audit.
                 run_case('BR-ROU-SLIP-AUDIT-001',['ROU-061','TEST-082'],roulette_slip_label_audit)
                 # Define the raw Roulette resource keys reported as visible regressions.
