@@ -3,11 +3,11 @@
 import argparse  # Build narrow command namespaces without invoking the CLI parser.
 import asyncio  # Exercise the browser-free aggregate controller end to end.
 import json  # Persist synthetic shard reports for resume-policy tests.
-import subprocess  # Resolve the exact test checkout commit for provenance validation.
 import tempfile  # Own disposable report directories for every test.
 import unittest  # Integrate the focused proofs with the repository API runner.
 from collections import Counter  # Aggregate deterministic per-game allocation totals.
 from pathlib import Path  # Address temporary shard reports with platform-neutral paths.
+from unittest import mock  # Inject immutable provenance when release tests intentionally omit Git metadata.
 
 from tests import ui_50000  # Exercise the public harness helpers without starting Playwright.
 
@@ -115,8 +115,7 @@ class UI50000HarnessTests(unittest.TestCase):
     # Prove the browser-free controller accepts exactly 50,000 completed cycles only when every formal gate is present.
     def test_distributed_aggregate_accounts_for_exact_terminal_corpus(self):
         allocations = ui_50000.allocate_cycles(list(ui_50000.GAME_IDS), 50_000, 4, set(), 4)  # Build the immutable formal assignment.
-        completed = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ui_50000.ROOT, capture_output=True, text=True, check=True)  # Resolve the test checkout's full public commit identity.
-        source_commit = completed.stdout.strip().lower()  # Normalize exact provenance for the aggregate guard.
+        source_commit = "f" * 40  # Use one valid immutable identity independent of optional release-copy Git metadata.
         with tempfile.TemporaryDirectory() as temporary_directory:  # Own and clean the complete downloaded-artifact simulation.
             root = Path(temporary_directory)  # Resolve the disposable aggregate root.
             shard_root = root / "shards"  # Separate terminal JSON from screenshots.
@@ -125,7 +124,8 @@ class UI50000HarnessTests(unittest.TestCase):
             self.write_distributed_corpus(shard_root, allocations, source_commit, evidence_root)  # Persist a complete passing 33-worker corpus.
             report_path = root / "aggregate.json"  # Resolve the test-owned terminal aggregate.
             args = argparse.Namespace(aggregate_only=True, allocation_index=None, source_commit=source_commit, only_games="", replicate_games="", total_cycles=50_000, roulette_replicas=4, game_replicas=4, shard_report_root=str(shard_root), evidence_root=str(evidence_root), report=str(report_path), parallel=4)  # Provide every aggregate-owned immutable option.
-            exit_code = asyncio.run(ui_50000.run_all(args))  # Execute aggregate accounting without importing or launching Playwright.
+            with mock.patch.object(ui_50000, "resolve_distributed_source_commit", return_value=source_commit):  # Isolate aggregate accounting from the release builder's intentional metadata-free source copy.
+                exit_code = asyncio.run(ui_50000.run_all(args))  # Execute aggregate accounting without importing or launching Playwright.
             report = json.loads(report_path.read_text(encoding="utf-8"))  # Read the generated terminal evidence.
             self.assertEqual(exit_code, 0)  # Require the aggregate controller to accept the complete corpus.
             self.assertEqual(report["status"], "PASS")  # Require every universal gate to resolve green.
