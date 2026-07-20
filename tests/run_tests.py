@@ -5087,6 +5087,12 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     assert second_dozen['bet_type']=='dozen' and {str(number) for number in second_dozen['covered_numbers']}=={str(number) for number in range(13,25)}, '2nd 12 did not post the 13-24 dozen'
                     # Refund every audit wager so the board returns to its pre-audit betting state.
                     page.locator('#clear').click(); page.wait_for_timeout(150)
+                    # Resolve the governed disclosure that owns wheel-mode and zero-rule settings.
+                    rules_disclosure=page.get_by_test_id('roulette-rules-disclosure')
+                    # Open advanced settings through the visible summary before exercising its native select controls.
+                    if rules_disclosure.get_attribute('open') is None: rules_disclosure.locator('summary').click()
+                    # Require the real mode field to become visible rather than bypassing disclosure actionability.
+                    page.get_by_test_id('roulette-mode').wait_for(state='visible', timeout=5000)
                     # Audit every zero-zone special in both supported wheel modes so no catalog combination can share a pointer target. (issue #348)
                     for wheel_mode,expected_count in (('single',6),('double',10)):
                         # Read the current rendered wheel mode before deciding whether an asynchronous settings request is required.
