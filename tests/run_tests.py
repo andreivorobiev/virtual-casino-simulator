@@ -6435,6 +6435,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                 pending_routes.pop(0).continue_(); page.unroute(summary_pattern); page.get_by_test_id('admin-guest-empty').wait_for(timeout=5000)
                                 # Capture the genuine zero-row Admin surface.
                                 game_evidence(f'after-pass-admin-guest-empty-{locale}-{viewport_id}.png','admin',['guest_trials_empty'],locale,viewport_id)
+                                # Record diagnostics boundaries so the intentional failure probe cannot pollute suite-wide error accounting.
+                                guest_error_console_index=len(console_errors); guest_error_http_index=len(http_errors); guest_error_page_index=len(page_errors)
                                 # Fail the next summary request with a sanitized standard error response.
                                 page.route(summary_pattern,lambda route: route.fulfill(status=503,content_type='application/json',body='{"ok":false,"error":{"code":"UNAVAILABLE","message":"Unavailable"}}'))
                                 # Reload the current Guest Trials tab through its visible control.
@@ -6443,6 +6445,14 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                 assert page.evaluate("() => document.documentElement.scrollWidth <= window.innerWidth + 1") and 'UNAVAILABLE' not in page.get_by_test_id('admin-load-error').inner_text()
                                 # Capture exact-head localized error evidence before removing the interceptor.
                                 game_evidence(f'after-pass-admin-guest-error-{locale}-{viewport_id}.png','admin',['guest_trials_error'],locale,viewport_id)
+                                # Retain only the diagnostics produced by this controlled error-state request.
+                                guest_expected_console=console_errors[guest_error_console_index:]; guest_expected_http=http_errors[guest_error_http_index:]; guest_expected_page=page_errors[guest_error_page_index:]
+                                # Require no unhandled JavaScript error and only the browser's standard failed-resource console line.
+                                assert guest_expected_page==[] and all('Failed to load resource' in value for value in guest_expected_console)
+                                # Require exactly the controlled Guest Trials summary rejection before consuming it from global accounting.
+                                assert len(guest_expected_http)==1 and guest_expected_http[0].startswith('503 ') and '/api/v2/admin/guest-trials?' in guest_expected_http[0]
+                                # Remove only the verified controlled diagnostics so unexpected errors elsewhere still fail the suite.
+                                del console_errors[guest_error_console_index:]; del http_errors[guest_error_http_index:]
                                 # Restore normal routing for populated evidence.
                                 page.unroute(summary_pattern)
                         # Seed one safe analytics row per locale through the canonical guest service.
