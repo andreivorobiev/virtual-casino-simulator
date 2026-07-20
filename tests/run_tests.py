@@ -6354,6 +6354,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             page.route('**/api/v2/admin/mail/readiness',lambda route,_request,body=json.dumps(payload): route.fulfill(status=200,content_type='application/json',body=body))
                             # Refresh the active Operations surface and wait for the exact explicit state card.
                             page.get_by_test_id('admin-tab-operations').click(); page.get_by_test_id(f'admin-mail-{status}').wait_for(timeout=5000)
+                            # Wait for the repeated release-held suppression scenario to render its new aggregate before evidence.
+                            if matrix_state=='operations_mail_suppression_summary': page.wait_for_function("expected => document.querySelector('[data-testid=\"admin-mail-suppression-summary\"]')?.textContent.includes(expected)",arg=str(suppressed_count))
                             # Read the rendered card once for data-minimization assertions.
                             visible_mail=page.get_by_test_id(f'admin-mail-{status}').inner_text()
                             # Require no environment key, recipient syntax, tokened link, credential, or raw provider response.
