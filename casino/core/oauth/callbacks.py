@@ -268,6 +268,22 @@ def _single_query_value(query: Mapping[str, object], name: str) -> str:
     return value
 
 
+# Read the callback state with duplicate rejection before a durable flow can be claimed.
+def callback_state(query: Mapping[str, object]) -> str:
+    # Reject non-mapping query data without serializing provider-controlled values.
+    if not isinstance(query, Mapping):
+        # Return the same bounded validation class as complete callback validation.
+        raise ValidationError("OAuth callback query is invalid")
+    # Reuse the single-value parser so duplicate state parameters can never select a flow.
+    state = _single_query_value(query, "state")
+    # Require the same generated opaque shape before persistence lookup.
+    if not OPAQUE_PROOF_RE.fullmatch(state):
+        # Reject absent or malformed state without revealing whether any flow exists.
+        raise UnauthorizedError("OAuth state is invalid")
+    # Return the exact opaque value only to the one-time flow repository.
+    return state
+
+
 # Validate one raw provider callback before any token exchange or session creation.
 def validate_callback_query(provider: str, query: Mapping[str, object], expected_state: str) -> CallbackParameters:
     # Validate the external provider independently of callback parameter content.
@@ -276,6 +292,10 @@ def validate_callback_query(provider: str, query: Mapping[str, object], expected
     if not isinstance(query, Mapping):
         # Raise a generic request error suitable for a standard API envelope.
         raise ValidationError("OAuth callback query is invalid")
+    # Reject duplicates for every returned parameter, including provider extension fields we do not consume.
+    if any(isinstance(value, (list, tuple)) and len(value) != 1 for value in query.values()):
+        # Prevent ambiguous parser normalization before any outcome field is selected.
+        raise ValidationError("OAuth callback parameters must occur once")
     # Read state with duplicate detection before processing provider success or failure.
     returned_state = _single_query_value(query, "state")
     # Validate anti-forgery state using constant-time comparison.

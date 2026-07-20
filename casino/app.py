@@ -30,6 +30,8 @@ from casino.router import Router
 from casino.errors import CasinoError, ForbiddenError, ValidationError
 # Import strict JSON-number handling shared with the production WSGI adapter.
 from casino.core.validation import reject_nonfinite_json_constant
+# Import host-only CSRF bootstrap helpers for the local browser adapter.
+from casino.core.security import CSRF_COOKIE, cookie_value, csrf_cookie_header, new_csrf_token
 # Import required dependency so this module can use its public functions or constants.
 from casino.core.state_store import ensure_dirs, migrate_from_v7_if_needed
 # Import required dependency so this module can bootstrap whichever storage provider is configured.
@@ -360,8 +362,8 @@ class Handler(BaseHTTPRequestHandler):
 
     # Define the log_message function used by this module.
     def log_message(self, fmt, *args):
-        # Set logger.info("http_access", client to the value needed for the next operation.
-        logger.info("http_access", client=self.client_address[0], message=fmt % args)
+        # Record only the method and broad route class so callback queries never enter access logs.
+        logger.info("http_access", method=self.command, route_class="api" if urlparse(self.path).path.startswith("/api/") else "static")
 
     # Define the _read_body function used by this module.
     def _read_body(self):
@@ -407,6 +409,23 @@ class Handler(BaseHTTPRequestHandler):
         # Execute this statement as part of the module's documented control flow.
         self.wfile.write(raw)
 
+    # Send one validated same-origin OAuth completion redirect without a response body.
+    def _send_redirect(self, location, extra_headers=None):
+        # Commit the See Other status used after callback consumption.
+        self.send_response(303)
+        # Return only the service-validated relative destination.
+        self.send_header("Location", location)
+        # Prevent storage of callback navigation responses.
+        self.send_header("Cache-Control", CACHE_CONTROL_NO_STORE)
+        # Publish an exact empty body length.
+        self.send_header("Content-Length", "0")
+        # Preserve application-owned session and CSRF cookies.
+        for name, value in extra_headers or []:
+            # Append each already hardened cookie header.
+            self.send_header(name, value)
+        # Finish response headers before returning.
+        self.end_headers()
+
     # Define the _handle_api function used by this module.
     def _handle_api(self):
         # Set request_id to the value needed for the next operation.
@@ -418,11 +437,17 @@ class Handler(BaseHTTPRequestHandler):
             # Set path to the value needed for the next operation.
             path = urlparse(self.path).path
             # Set context to the value needed for the next operation.
-            context = {"headers": self.headers, "client": self.client_address[0], "response_headers": []}
+            context = {"headers": self.headers, "client": self.client_address[0], "response_headers": [], "include_csrf_cookie": True, "secure_cookie": False, "session_samesite": "Lax"}
             # Branch when the request targets a protected API route.
             if not auth.is_public_api_path(path):
                 # Set session,user to the value needed for the next operation.
                 session, user = auth.authenticate_headers(self.headers)
+                # Import provider-session authorization lazily to preserve router bootstrap ordering.
+                from casino.core.oauth.service import provider_session_is_authorized
+                # Require external-login sessions to retain both provider enablement and their durable link.
+                if not provider_session_is_authorized(session, user):
+                    # Apply provider rollback without affecting local-password sessions.
+                    raise ForbiddenError("Identity provider session is no longer authorized")
                 # Set context["session"] to the value needed for the next operation.
                 context["session"] = session
                 # Set context["user"] to the value needed for the next operation.
@@ -453,22 +478,26 @@ class Handler(BaseHTTPRequestHandler):
                     if player_match and player_match.group(1) != user["player_id"]:
                         # Raise the standard forbidden envelope without confirming private player details.
                         raise ForbiddenError("Player resource is outside the authenticated session")
-            # Set logger.info("api_request", request_id to the value needed for the next operation.
-            logger.info("api_request", request_id=request_id, method=self.command, path=self.path)
+            # Record a fixed route class rather than callback query, code, or state values.
+            logger.info("api_request", request_id=request_id, method=self.command, route_class="oauth" if "/auth/oauth/" in path else "api")
             # Set data to the value needed for the next operation.
             data = ROUTER.dispatch(self.command, self.path, body, context)
+            # Return validated OAuth callbacks through a browser navigation response.
+            if context.get("redirect"):
+                # Preserve newly issued session cookies without serializing callback data.
+                return self._send_redirect(context["redirect"], context.get("response_headers"))
             # Execute this statement as part of the module's documented control flow.
             self._send_json(200, {"ok": True, "data": data}, context.get("response_headers"))
         # Handle the expected failure path for the protected logic.
         except CasinoError as e:
-            # Set logger.warning("api_error", request_id to the value needed for the next operation.
-            logger.warning("api_error", request_id=request_id, code=e.code, message=e.message, path=self.path, details=e.details)
+            # Record only fixed request metadata and error code so callbacks cannot enter logs.
+            logger.warning("api_error", request_id=request_id, code=e.code, method=self.command, route_class="oauth" if "/auth/oauth/" in urlparse(self.path).path else "api")
             # Execute this statement as part of the module's documented control flow.
             self._send_json(e.status, {"ok": False, "error": {"code": e.code, "message": e.message, "details": e.details}})
         # Handle the expected failure path for the protected logic.
         except Exception as e:
-            # Set logger.error("api_exception", e, request_id to the value needed for the next operation.
-            logger.error("api_exception", e, request_id=request_id, path=self.path)
+            # Record only bounded metadata and suppress exception/query values.
+            logger.error("api_exception", request_id=request_id, method=self.command, route_class="oauth" if "/auth/oauth/" in urlparse(self.path).path else "api")
             # Return a sanitized envelope so filesystem paths and exception text never reach the client. (SESSION-007, SEC-010)
             self._send_json(500, {"ok": False, "error": {"code": "INTERNAL_ERROR", "message": "Internal server error", "details": {"request_id": request_id}}})
 
@@ -556,6 +585,14 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(content)))
         # Prevent HTML and lazy JavaScript from surviving a source or route reload. (CORE-026)
         self.send_header("Cache-Control", CACHE_CONTROL_NO_STORE)
+        # Bootstrap a browser-owner cookie for the public shell without exposing it to logs.
+        if target.name == "index.html":
+            # Read only the existing named cookie and accept generated token lengths.
+            existing_csrf = cookie_value(self.headers, CSRF_COOKIE)
+            # Reuse a valid browser binding or generate a fresh anonymous value.
+            bootstrap_csrf = existing_csrf if 32 <= len(existing_csrf) <= 128 else new_csrf_token()
+            # Send the host-only development cookie without a production-only Secure attribute.
+            self.send_header(*csrf_cookie_header(bootstrap_csrf, "Lax", False))
         # Execute this statement as part of the module's documented control flow.
         self.end_headers()
         # Execute this statement as part of the module's documented control flow.

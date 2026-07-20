@@ -1,6 +1,6 @@
-"""Disabled-until-configured OAuth settings and secret-safe diagnostics.
+"""Disabled-by-default OAuth settings and secret-safe runtime diagnostics.
 
-Requirements: OAUTH-001 and OAUTH-002. No settings here enable provider traffic.
+Requirements: OAUTH-001 and OAUTH-002. This module performs no provider traffic.
 """
 
 # Import process environment access while retaining injectable mappings for tests.
@@ -184,8 +184,10 @@ def _external_provider_diagnostic(configuration: ProviderConfiguration) -> Provi
     else:
         # Store the safe default status.
         status = "disabled"
+    # Report integrated runtime availability only when every explicit setting is ready.
+    runtime_available = status == "ready"
     # Return only secret-safe readiness facts.
-    return ProviderDiagnostic(provider=configuration.spec.provider_id, flow=configuration.spec.flow, status=status, configuration_ready=status == "ready", runtime_available=False, enabled_requested=configuration.enabled_requested, client_id_configured=bool(configuration.credentials.client_id.strip()), client_secret_configured=bool(configuration.credentials.client_secret.strip()), callback_url=callback_url, missing_variables=tuple(name for name in missing_variables if name), problems=tuple(problems))
+    return ProviderDiagnostic(provider=configuration.spec.provider_id, flow=configuration.spec.flow, status=status, configuration_ready=status == "ready", runtime_available=runtime_available, enabled_requested=configuration.enabled_requested, client_id_configured=bool(configuration.credentials.client_id.strip()), client_secret_configured=bool(configuration.credentials.client_secret.strip()), callback_url=callback_url, missing_variables=tuple(name for name in missing_variables if name), problems=tuple(problems))
 
 
 # Return local and external provider diagnostics in deterministic display order.

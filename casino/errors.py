@@ -69,3 +69,10 @@ class RateLimitError(CasinoError):
     def __init__(self, message="Request rate limit exceeded", details=None):
         # Publish HTTP 429 without exposing client identity or limiter state.
         super().__init__("RATE_LIMITED", message, 429, details)
+
+# Define a stable provider-unavailable error without exposing transport or token details.
+class ProviderUnavailableError(CasinoError):
+    # Initialize the fixed retryable provider failure envelope.
+    def __init__(self, message="Identity provider is temporarily unavailable", details=None):
+        # Publish HTTP 503 while keeping provider responses and exception text private.
+        super().__init__("PROVIDER_UNAVAILABLE", message, 503, details)

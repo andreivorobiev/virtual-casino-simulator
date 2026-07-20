@@ -177,16 +177,8 @@ def update_json(path: Path, mutator: Callable[[Any], Any], default: Any) -> Any:
     document_key = _provider_document_key(path)
     # Route the atomic mutation through the database provider when MySQL is selected.
     if document_key is not None and storage_provider_name() == "mysql":
-        # Serialize the provider read-modify-write with the shared in-process lock.
-        with _LOCK:
-            # Read the current provider document (or its lazy default) before mutation.
-            current = get_storage_provider().read_document(document_key, default)
-            # Apply the caller-owned mutation to the current document.
-            updated = mutator(current)
-            # Persist the mutated document through the provider's own atomic write.
-            get_storage_provider().write_document(document_key, updated)
-            # Return the persisted document to the caller.
-            return updated
+        # Delegate the complete transaction to the provider so MySQL processes share a row lock.
+        return get_storage_provider().update_document(document_key, mutator, default)
     # Ensure runtime directories exist before locking a JSON document.
     ensure_dirs()
     # Serialize the whole read-modify-write with the shared reentrant in-process lock.

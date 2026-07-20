@@ -150,6 +150,11 @@ class StorageProvider:
         # Raise because concrete providers must persist settings documents.
         raise NotImplementedError
 
+    # Atomically update one named JSON document and return the committed value.
+    def update_document(self, key: str, mutator: Callable[[Any], Any], default: Any) -> Any:
+        # Raise because concrete providers must define their concurrency boundary.
+        raise NotImplementedError
+
 
 # Define the JsonStorageProvider that preserves default local file behavior.
 class JsonStorageProvider(StorageProvider):
@@ -196,6 +201,13 @@ class JsonStorageProvider(StorageProvider):
     def document_path(self, key: str) -> Path:
         # Return a namespaced JSON path so settings retain their current layout.
         return self.data_dir / f"{key}.json"
+
+    # Return a non-sensitive lock path derived from the document key.
+    def document_lock_path(self, key: str) -> Path:
+        # Hash the key so nested document names cannot influence the lock-file path.
+        digest = hashlib.sha256(key.encode("utf-8")).hexdigest()
+        # Keep document transaction locks separate from wallet settlement locks.
+        return self.data_dir / ".document-locks" / f"{digest}.lock"
 
     # Ensure local data folders exist before reads and writes.
     def ensure_ready(self) -> None:
@@ -324,6 +336,56 @@ class JsonStorageProvider(StorageProvider):
                 # Always release the advisory lock after the operation.
                 finally:
                     # Release the file lock for the next process.
+                    fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+
+    # Hold one operating-system lock across a named JSON document transaction.
+    @contextmanager
+    def _document_process_lock(self, key: str):  # Preserve cross-process document uniqueness.
+        # Ensure the provider directory exists before creating the namespaced lock.
+        self.ensure_ready()
+        # Resolve a digest-only path so caller document keys never become filesystem input.
+        lock_path = self.document_lock_path(key)
+        # Create the lock namespace before opening the one-byte lock target.
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
+        # Open a persistent lock target shared by every process using this provider root.
+        with lock_path.open("a+b") as handle:
+            # Branch to the Windows byte-range locking implementation.
+            if os.name == "nt":
+                # Import the Windows runtime lock API only on Windows.
+                import msvcrt
+                # Ensure the file contains one byte that can be locked.
+                if handle.seek(0, os.SEEK_END) == 0:
+                    # Write the lock byte once for a fresh document lock.
+                    handle.write(b"0")
+                    # Flush the byte before another process can inspect the lock target.
+                    handle.flush()
+                # Seek to the exact byte range used for every document lock.
+                handle.seek(0)
+                # Block until this process exclusively owns the byte range.
+                msvcrt.locking(handle.fileno(), msvcrt.LK_LOCK, 1)
+                # Yield while the caller owns the cross-process document lock.
+                try:
+                    # Transfer control to the protected document mutation.
+                    yield
+                # Always release the byte-range lock after the mutation.
+                finally:
+                    # Return to the locked byte before unlocking it.
+                    handle.seek(0)
+                    # Release the byte range for the next provider process.
+                    msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+            # Use advisory flock on POSIX development and CI hosts.
+            else:
+                # Import POSIX locking only where the module is available.
+                import fcntl
+                # Block until this process exclusively owns the document lock.
+                fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+                # Yield while the caller owns the cross-process document lock.
+                try:
+                    # Transfer control to the protected document mutation.
+                    yield
+                # Always release the advisory lock after the mutation.
+                finally:
+                    # Release the document lock for the next provider process.
                     fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
 
     # Append a JSONL ledger event to the local ledger file.
@@ -673,6 +735,25 @@ class JsonStorageProvider(StorageProvider):
     def write_document(self, key: str, data: Any) -> None:
         # Reuse the local JSON helper for settings documents.
         self._write_json(self.document_path(key), data)
+
+    # Atomically mutate one local JSON document under thread and process locks.
+    def update_document(self, key: str, mutator: Callable[[Any], Any], default: Any) -> Any:
+        # Reject keys that cannot be represented consistently by both providers.
+        if not isinstance(key, str) or not key or len(key) > 191:
+            # Fail before filesystem or database access with a value-free diagnostic.
+            raise ValidationError("Storage document key is invalid")
+        # Serialize in-process callers before acquiring the cross-process document lock.
+        with self.lock:
+            # Hold the digest-named operating-system lock across read, mutation, and replace.
+            with self._document_process_lock(key):
+                # Read the latest committed document while the transaction lock is held.
+                current = self._read_json(self.document_path(key), default)
+                # Apply the caller-owned mutation without exposing intermediate state.
+                updated = mutator(current)
+                # Atomically replace the document before releasing either lock.
+                self._write_json(self.document_path(key), updated)
+                # Return exactly the committed document value.
+                return updated
 
 
 # Define the canonical history fields shared by JSON and MySQL providers.
@@ -1205,6 +1286,51 @@ class MySQLStorageProvider(StorageProvider):
         # Always close the connection after the upsert.
         finally:
             # Close the MySQL connection for this operation.
+            connection.close()
+
+    # Atomically mutate one MySQL document under a row-level transaction lock.
+    def update_document(self, key: str, mutator: Callable[[Any], Any], default: Any) -> Any:
+        # Reject keys outside the indexed document-key contract before opening a connection.
+        if not isinstance(key, str) or not key or len(key) > 191:
+            # Fail with a value-free validation error shared with the JSON provider.
+            raise ValidationError("Storage document key is invalid")
+        # Verify the exact migration state before issuing runtime DML.
+        self.ensure_ready()
+        # Evaluate a fresh default outside serialization so callable reuse cannot leak state.
+        initial = default() if callable(default) else default
+        # Open one connection for row creation, locking, mutation, and commit.
+        connection = self.connect()
+        # Start protected transaction handling so failures always roll back and close.
+        try:
+            # Disable autocommit so the row lock spans the complete mutation.
+            connection.start_transaction()
+            # Open a dictionary cursor for the locked document read.
+            cursor = connection.cursor(dictionary=True)
+            # Ensure the unique document row exists and lock it without overwriting prior data.
+            cursor.execute("INSERT INTO casino_documents (document_key, payload_json, updated_at) VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE document_key = VALUES(document_key)", (key, json.dumps(initial, sort_keys=True, allow_nan=False), utc_now()))
+            # Lock the unique row so concurrent provider processes serialize their mutations.
+            cursor.execute("SELECT payload_json FROM casino_documents WHERE document_key = %s FOR UPDATE", (key,))
+            # Read the row that the preceding insert-or-existing statement guarantees.
+            row = cursor.fetchone()
+            # Decode only the committed document payload under the row lock.
+            current = _decode_json(row["payload_json"])
+            # Apply the caller-owned mutation before any persistent update occurs.
+            updated = mutator(current)
+            # Replace the locked payload with the complete normalized JSON document.
+            cursor.execute("UPDATE casino_documents SET payload_json = %s, updated_at = %s WHERE document_key = %s", (json.dumps(updated, sort_keys=True, allow_nan=False), utc_now(), key))
+            # Commit both first-row creation and the mutation as one transaction.
+            connection.commit()
+            # Return exactly the committed document value.
+            return updated
+        # Roll back both row creation and mutation when validation or storage fails.
+        except Exception:
+            # Release locks without claiming a partial document commit.
+            connection.rollback()
+            # Propagate the original bounded application or provider error.
+            raise
+        # Always close the runtime connection after the transaction completes.
+        finally:
+            # Release the provider connection and any remaining server resources.
             connection.close()
 
 

@@ -154,8 +154,8 @@ def _json_response(start_response, status: int, payload: dict, extra_headers=Non
 
 # Initialize provider-neutral state once during production worker boot.
 def _validate_restricted_preview_routes() -> None:
-    # Require the public-route allowlist to remain exactly login plus sanitized liveness.
-    if auth.PUBLIC_API_PATHS != {"/api/v2/auth/login", "/healthz"}:
+    # Require the fixed public-route allowlist to remain login, provider status, and liveness.
+    if auth.PUBLIC_API_PATHS != {"/api/v2/auth/login", "/api/v2/auth/oauth/providers", "/healthz"}:
         # Fail startup rather than allowing compatibility metadata to broaden public access.
         raise RuntimeError("Restricted preview public routes do not match the accepted allowlist")
     # Inspect registered method and pattern pairs without invoking any route.
@@ -166,10 +166,10 @@ def _validate_restricted_preview_routes() -> None:
         if "signup" in pattern or "/register" in pattern:
             # Keep the diagnostic free of private route or configuration details.
             raise RuntimeError("Restricted preview does not permit signup routes")
-        # Reject live OAuth action and callback routes while retaining the Admin diagnostic route.
-        if "/auth/oauth/" in pattern and "/admin/" not in pattern:
-            # Fail closed until the separately held public-launch provider gate.
-            raise RuntimeError("Restricted preview does not permit OAuth action routes")
+        # Permit only the reviewed invite-only OAuth route patterns outside Admin diagnostics.
+        if "/auth/oauth/" in pattern and "/admin/" not in pattern and pattern not in {r"/api/v2/auth/oauth/providers", r"/api/v2/auth/oauth/(?p<provider>google|facebook)/start", r"/api/v2/auth/oauth/(?p<provider>google|facebook)/callback", r"/api/v2/auth/oauth/links", r"/api/v2/auth/oauth/(?p<provider>google|facebook)/unlink"}:
+            # Fail startup on signup, generalized provider, or unreviewed OAuth routes.
+            raise RuntimeError("Restricted preview OAuth routes do not match the accepted allowlist")
 
 
 # Initialize provider-neutral state and return the validated production security policy.
@@ -210,6 +210,12 @@ def _authorize_request(method: str, path: str, body: dict, headers: dict, client
         return context
     # Authenticate the direct request headers through the canonical session service.
     session, user = auth.authenticate_headers(headers)
+    # Import provider-session authorization lazily to preserve application bootstrap ordering.
+    from casino.core.oauth.service import provider_session_is_authorized
+    # Require an external-login session's provider flag and durable link to remain active.
+    if not provider_session_is_authorized(session, user):
+        # Make provider disablement and unlink effective immediately without affecting password sessions.
+        raise ForbiddenError("Identity provider session is no longer authorized")
     # Require a distinct per-session CSRF secret for every authenticated mutation.
     validate_request_integrity(method, headers, policy, str(session.get("csrf_token") or ""))
     # Keep restricted-preview access on manually provisioned local identities only.
@@ -271,6 +277,12 @@ class CasinoWSGIApplication:
         context = _authorize_request(method, path, body, headers, client, self.policy)
         # Dispatch the request through the single canonical route registry.
         data = ROUTER.dispatch(method, raw_path, body, context)
+        # Return OAuth callbacks as safe same-origin 303 redirects without JSON bodies.
+        if context.get("redirect"):
+            # Add only the service-validated relative location to hardened response headers.
+            redirect_headers = list(context.get("response_headers") or []) + [("Location", context["redirect"])]
+            # Prevent browser history from resubmitting callback query material.
+            return _respond(start_response, 303, b"", "text/plain; charset=utf-8", redirect_headers, effective_scheme)
         # Return the standard successful envelope with hardened cookies and response policy.
         return _json_response(start_response, 200, {"ok": True, "data": data}, context.get("response_headers"), effective_scheme)
 
