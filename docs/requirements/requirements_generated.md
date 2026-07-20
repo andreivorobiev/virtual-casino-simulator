@@ -7,7 +7,7 @@ Historical source baseline: 9.1.0
 ## Independent module revisions
 
 - application: 9.40.0
-- core: 9.14.0
+- core: 9.15.0
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.0
@@ -45,10 +45,10 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.1
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.46.0
-- docs: 1.46.0
-- contracts: 1.34.0
-- tooling: 1.14.1
+- tests: 1.47.0
+- docs: 1.47.0
+- contracts: 1.35.0
+- tooling: 1.15.0
 - commenting_policy: 1.0.0
 
 ## Requirements
@@ -702,7 +702,10 @@ Historical source baseline: 9.1.0
 - **TEST-085** (Tests) - PASS: Browser geometry evidence verifies, for each governed locale and viewport, that every visible status-footer segment stays inside the bar and no two segments intersect.
 - **UX-017** (Application) - PASS: Every in-game play-token amount rendered by the shared money formatters includes a full localized unit label—play tokens in en-US and игровых токенов in ru-RU—while the diamond mark remains decorative and never solely carries the value's meaning.
 - **TEST-086** (Tests) - PASS: Browser acceptance verifies both shared money formatters and real Slots amount surfaces use the full localized play-token label without clipping or page-level horizontal overflow in en-US and ru-RU at all four governed viewports.
+- **OTT-001** (Core) - PASS: Purpose-bound one-time tokens use 256-bit operating-system randomness, domain-separated HMAC-SHA256 verifiers under an external key whose known local default is rejected for public startup, strict purpose and subject binding plus enforced optional session binding, one active record per purpose and subject, atomic reissue, and exactly-once consumption under the JSON cross-process file lock or one MySQL canonical-row transaction with SELECT FOR UPDATE.
+- **OTT-002** (Core) - PASS: One-time-token consumers receive only generic invalid_request or invalid_token errors across malformed, cross-purpose, subject/session mismatch, inactive-subject, replay, expiry, revocation, and exhausted-attempt cases; raw bearer, subject, and session values never enter persistence, results, errors, or audit events, frozen v1 remains unchanged, and the inert v2 component and compatibility contracts require future consumers to reject ambiguous callbacks and enforce bounded initiation, exact CSRF/origin checks, safe redirects, active subjects, and separate delivery approval.
 - **UX-018** (UX) - PASS: Primary and high-frequency controls use a required minimum hit size of 42 CSS pixels, with 44 CSS pixels recommended where new layouts allow; small visual controls such as checkboxes may satisfy the floor through an enlarged clickable parent row.
+- **TEST-089** (Tests) - PASS: Listener-free and MySQL-live evidence verifies the one-time-token lifecycle: deterministic issue and consume, generic rejection, strict purpose, subject, and session binding, replay, expiry, revocation, bounded attempts, retention, atomic reissue, cross-process exactly-once consumption, and absence of raw bearer, subject, session, or digest material from public results and audit events.
 - **TEST-087** (Tests) - PASS: Exact-head browser geometry verifies Auth controls and the enlarged terms row, authenticated shell primaries, and Slots wager/autoplay controls meet the 42px floor without page-level horizontal overflow in en-US and ru-RU at all four governed viewports.
 - **GUEST-001** (Core) - PASS: Restricted-preview guest entry requires explicit acceptance of private-beta-1 terms, creates one isolated non-Admin guest principal and fresh fixed 5,000-play-token wallet with no add-token path, enforces configurable active-principal, per-session game-action, single-autoplay, autoplay-round, inactivity, and absolute-lifetime limits, and never accepts caller-authored role, player, balance, expiry, or credential fields.
 - **GUEST-002** (Application) - PASS: The en-US and ru-RU login surface discloses disposable play-token-only guest terms and requires affirmative consent; the one-time browser-context proof is kept only in sessionStorage, a session cookie alone cannot resume the trial after browser-context loss, same-context refresh remains supported, End trial irreversibly revokes session, identity, wallet, and guest-owned autoplay state, and the guest shell remains usable with reduced motion and at 200 percent zoom.

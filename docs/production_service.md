@@ -29,6 +29,7 @@ A root-managed environment file at `/etc/casino/casino.env` supplies runtime con
 - the exact external `CASINO_DATA_DIR=/var/lib/casino` and `CASINO_LOG_DIR=/var/log/casino` values authorized by the tracked template;
 - the selected storage provider and its connection settings;
 - unique bootstrap Admin settings;
+- a unique external `CASINO_TOKEN_DIGEST_KEY` of at least 32 bytes, distinct from every provider or bootstrap credential;
 - every credential required by the selected provider.
 
 Deployment-only `CASINO_MYSQL_MIGRATION_*` variables are never part of this file. The tracked unit unsets them defensively, and `docs/mysql_migrations.md` requires the operator to load them only for the proof-gated migration command and remove them before application startup.

@@ -150,6 +150,11 @@ class StorageProvider:
         # Raise because concrete providers must persist settings documents.
         raise NotImplementedError
 
+    # Mutate one named JSON document atomically under the provider's cross-process transaction boundary.
+    def update_document(self, key: str, mutator: Callable[[Any], Any], default: Any) -> Any:
+        # Raise because concrete providers must own their read-modify-write concurrency semantics.
+        raise NotImplementedError
+
 
 # Define the JsonStorageProvider that preserves default local file behavior.
 class JsonStorageProvider(StorageProvider):
@@ -673,6 +678,19 @@ class JsonStorageProvider(StorageProvider):
     def write_document(self, key: str, data: Any) -> None:
         # Reuse the local JSON helper for settings documents.
         self._write_json(self.document_path(key), data)
+
+    # Mutate one local document under the provider lock for direct provider callers.
+    def update_document(self, key: str, mutator: Callable[[Any], Any], default: Any) -> Any:
+        # Serialize the direct provider read-modify-write inside this process.
+        with self.lock:
+            # Read an independent current document or evaluate its lazy default.
+            current = self._read_json(self.document_path(key), default)
+            # Apply the caller-owned mutation while the provider lock is held.
+            updated = mutator(current)
+            # Atomically replace the complete JSON document on disk.
+            self._write_json(self.document_path(key), updated)
+            # Return the exact value that was persisted.
+            return updated
 
 
 # Define the canonical history fields shared by JSON and MySQL providers.
@@ -1205,6 +1223,53 @@ class MySQLStorageProvider(StorageProvider):
         # Always close the connection after the upsert.
         finally:
             # Close the MySQL connection for this operation.
+            connection.close()
+
+    # Mutate one document in a single row-locking MySQL transaction. (OTT-001)
+    def update_document(self, key: str, mutator: Callable[[Any], Any], default: Any) -> Any:
+        # Verify the exact schema before opening a mutation transaction.
+        self.ensure_ready()
+        # Evaluate the default once so retries and the persisted seed share one canonical value.
+        initial = default() if callable(default) else default
+        # Open an independent connection so separate processes contend on the database row lock.
+        connection = self.connect()
+        # Start protected transaction logic so rollback and close are guaranteed.
+        try:
+            # Start an explicit transaction before creating or locking the canonical document row.
+            connection.start_transaction()
+            # Open a dictionary cursor so the stored JSON payload is accessed by its stable column name.
+            cursor = connection.cursor(dictionary=True)
+            # Materialize an absent row inside this transaction; concurrent inserts serialize on the unique key.
+            cursor.execute(
+                "INSERT INTO casino_documents (document_key, payload_json, updated_at) VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE document_key = VALUES(document_key)",  # Create the lockable row without overwriting existing state.
+                (key, json.dumps(initial, sort_keys=True), utc_now()),  # Bind only the document key, non-secret initial payload, and timestamp.
+            )
+            # Lock the canonical row until the complete caller mutation commits.
+            cursor.execute("SELECT payload_json FROM casino_documents WHERE document_key = %s FOR UPDATE", (key,))
+            # Read the row that the preceding upsert guarantees exists.
+            row = cursor.fetchone()
+            # Decode a detached current document for the caller-owned mutation.
+            current = _decode_json(row["payload_json"])
+            # Apply the mutation while the row remains locked against every other process.
+            updated = mutator(current)
+            # Persist the complete updated document before releasing the row lock.
+            cursor.execute(
+                "UPDATE casino_documents SET payload_json = %s, updated_at = %s WHERE document_key = %s",  # Replace exactly the locked document row.
+                (json.dumps(updated, sort_keys=True), utc_now(), key),  # Bind the canonical payload, timestamp, and locked key.
+            )
+            # Commit the mutation atomically so one-time consumers observe exactly one winner.
+            connection.commit()
+            # Return only after the updated document is durable.
+            return updated
+        # Roll back mutation or caller validation failures without publishing partial state.
+        except Exception:
+            # Release every transactional change made on this connection.
+            connection.rollback()
+            # Preserve the original exception and traceback for the caller.
+            raise
+        # Always close the transaction connection after success or failure.
+        finally:
+            # Release the database connection and any remaining server resources.
             connection.close()
 
 

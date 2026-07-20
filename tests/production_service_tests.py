@@ -37,6 +37,8 @@ class ProductionServiceTests(unittest.TestCase):
         environment["CASINO_STORAGE_PROVIDER"] = "json"
         # Supply a synthetic reserved-domain Admin identity only to the child process.
         environment["CASINO_BOOTSTRAP_ADMIN_EMAIL"] = "service-probe@example.invalid"
+        # Supply a synthetic external token-digest key for the isolated production adapter probe.
+        environment["CASINO_TOKEN_DIGEST_KEY"] = "service-probe-token-digest-key-material-2026"
         # Supply a synthetic non-default child credential that is never printed.
         environment["CASINO_BOOTSTRAP_ADMIN_PASSWORD"] = "synthetic-service-probe-password"
         # Supply the restricted-preview canonical origin through a reserved test domain.

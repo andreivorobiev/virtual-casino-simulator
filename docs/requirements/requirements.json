@@ -8936,6 +8936,44 @@
       "notes": "Issue #286 exact-head proof is stored at logs/test-runs/after-pass-labeled-money-slots-*.png with matching VIS-EVIDENCE-001 sidecars for both locales at every governed viewport."
     },
     {
+      "id": "OTT-001",
+      "module": "Core",
+      "description": "Purpose-bound one-time tokens use 256-bit operating-system randomness, domain-separated HMAC-SHA256 verifiers under an external key whose known local default is rejected for public startup, strict purpose and subject binding plus enforced optional session binding, one active record per purpose and subject, atomic reissue, and exactly-once consumption under the JSON cross-process file lock or one MySQL canonical-row transaction with SELECT FOR UPDATE.",
+      "status": "PASS",
+      "api_tests": [
+        "API-OTT-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/one_time_tokens.py",
+        "casino/core/state_store.py",
+        "casino/core/storage.py",
+        "casino/config.py"
+      ],
+      "introduced_in": "issue-331-one-time-tokens",
+      "changed_in": "issue-331-one-time-tokens",
+      "notes": "Issue #331 infrastructure: no mail, users, providers, or live enrollment; consumed by future invitation/verification/reset/magic-link flows."
+    },
+    {
+      "id": "OTT-002",
+      "module": "Core",
+      "description": "One-time-token consumers receive only generic invalid_request or invalid_token errors across malformed, cross-purpose, subject/session mismatch, inactive-subject, replay, expiry, revocation, and exhausted-attempt cases; raw bearer, subject, and session values never enter persistence, results, errors, or audit events, frozen v1 remains unchanged, and the inert v2 component and compatibility contracts require future consumers to reject ambiguous callbacks and enforce bounded initiation, exact CSRF/origin checks, safe redirects, active subjects, and separate delivery approval.",
+      "status": "PASS",
+      "api_tests": [
+        "API-OTT-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/one_time_tokens.py",
+        "contracts/openapi/one-time-tokens.v2.yaml",
+        "contracts/compatibility/one-time-tokens-infrastructure.json",
+        "scripts/validate_contracts.py"
+      ],
+      "introduced_in": "issue-331-one-time-tokens",
+      "changed_in": "issue-331-one-time-tokens",
+      "notes": "Issue #331 data-minimization and abuse-resistance boundary."
+    },
+    {
       "id": "UX-018",
       "module": "UX",
       "description": "Primary and high-frequency controls use a required minimum hit size of 42 CSS pixels, with 44 CSS pixels recommended where new layouts allow; small visual controls such as checkboxes may satisfy the floor through an enlarged clickable parent row.",
@@ -8952,6 +8990,24 @@
       "introduced_in": "issue-283-touch-target-floor",
       "changed_in": "issue-283-touch-target-floor",
       "notes": "Issue #283 codifies owner-approved Option A and the 42px behavior already shipped by the scoped Auth, shell, and Slots remediations."
+    },
+    {
+      "id": "TEST-089",
+      "module": "Tests",
+      "description": "Listener-free and MySQL-live evidence verifies the one-time-token lifecycle: deterministic issue and consume, generic rejection, strict purpose, subject, and session binding, replay, expiry, revocation, bounded attempts, retention, atomic reissue, cross-process exactly-once consumption, and absence of raw bearer, subject, session, or digest material from public results and audit events.",
+      "status": "PASS",
+      "api_tests": [
+        "API-OTT-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/run_tests.py",
+        "tests/one_time_token_tests.py",
+        "tests/storage_tests.py"
+      ],
+      "introduced_in": "issue-331-one-time-tokens",
+      "changed_in": "issue-331-one-time-tokens",
+      "notes": "Issue #331 fail-closed lifecycle and JSON/MySQL atomicity proof."
     },
     {
       "id": "TEST-087",

@@ -56,6 +56,28 @@ SCHEMA_VERSION = "v9_1"
 AUTH_SESSION_COOKIE = "casino_session"
 # Set AUTH_SESSION_TTL_SECONDS to the value needed for the next operation.
 AUTH_SESSION_TTL_SECONDS = int(os.environ.get("CASINO_SESSION_TTL_SECONDS", "86400"))
+# Preserve the developer-only one-time-token key so shared deployments can reject the known default. (issue #331)
+LOCAL_TOKEN_DIGEST_KEY = "local-development-one-time-token-digest-key"
+# Key one-time-token digests so stored verifiers remain non-reversible outside local development.
+TOKEN_DIGEST_KEY = os.environ.get("CASINO_TOKEN_DIGEST_KEY", LOCAL_TOKEN_DIGEST_KEY)
+# Bound the number of consume attempts per one-time token so a bearer cannot be brute-forced.
+TOKEN_MAX_ATTEMPTS = int(os.environ.get("CASINO_TOKEN_MAX_ATTEMPTS", "5"))
+# Retain terminal one-time-token records this many seconds past their end state before cleanup prunes them.
+TOKEN_RETENTION_SECONDS = int(os.environ.get("CASINO_TOKEN_RETENTION_SECONDS", "1209600"))
+# Fix absolute policy ceilings so environment configuration may shorten but never extend a purpose lifetime.
+TOKEN_PURPOSE_MAX_TTL_SECONDS = {
+    "invitation": 604800,  # Cap private invitation validity at seven days.
+    "email_verification": 86400,  # Cap verification validity at one day.
+    "password_reset": 3600,  # Cap reset validity at one hour.
+    "magic_link": 900,  # Cap future magic-link validity at fifteen minutes.
+}
+# Define the default absolute lifetime of each token purpose; callers may shorten but not remove the allowlist.
+TOKEN_PURPOSE_TTL_SECONDS = {
+    "invitation": int(os.environ.get("CASINO_TOKEN_TTL_INVITATION", "604800")),  # Allow a bounded seven-day private invitation window.
+    "email_verification": int(os.environ.get("CASINO_TOKEN_TTL_EMAIL_VERIFICATION", "86400")),  # Allow a bounded one-day verification window.
+    "password_reset": int(os.environ.get("CASINO_TOKEN_TTL_PASSWORD_RESET", "3600")),  # Allow a bounded one-hour reset window.
+    "magic_link": int(os.environ.get("CASINO_TOKEN_TTL_MAGIC_LINK", "900")),  # Allow a bounded fifteen-minute future magic-link window.
+}
 # Enable the account-free disposable guest trial entry within the restricted-preview boundary; configuration-driven per owner-approved #317.
 GUEST_TRIALS_ENABLED = os.environ.get("CASINO_GUEST_TRIALS_ENABLED", "true").strip().lower() in ("1", "true", "yes", "on")
 # Grant each new guest trial this many free, non-cashable play tokens.
@@ -88,8 +110,10 @@ DEPLOYMENT_MODE_ENV = "CASINO_DEPLOYMENT_MODE"
 PUBLIC_DEPLOYMENT_MODES = frozenset({"deployment", "production", "public"})
 # List the explicit local modes accepted for developer and test startup.
 LOCAL_DEPLOYMENT_MODES = frozenset({"development", "local", "test"})
+# Name the external keyed-digest setting without ever reporting its value.
+TOKEN_DIGEST_ENV_KEY = "CASINO_TOKEN_DIGEST_KEY"
 # Name the required public bootstrap settings without ever including their values in diagnostics.
-PUBLIC_BOOTSTRAP_ENV_KEYS = ("CASINO_BOOTSTRAP_ADMIN_EMAIL", "CASINO_BOOTSTRAP_ADMIN_PASSWORD")
+PUBLIC_BOOTSTRAP_ENV_KEYS = ("CASINO_BOOTSTRAP_ADMIN_EMAIL", "CASINO_BOOTSTRAP_ADMIN_PASSWORD", TOKEN_DIGEST_ENV_KEY)
 # Require both mutable roots to be explicit when the production adapter is selected.
 PRODUCTION_RUNTIME_ENV_KEYS = (DATA_DIR_ENV, LOG_DIR_ENV)
 # Set DEFAULT_STORAGE_PROVIDER to keep local runs on JSON unless explicitly configured.
@@ -148,10 +172,16 @@ def validate_bootstrap_for_startup(host: str, environ=None) -> None:
     configured_password = str(current_environment[PUBLIC_BOOTSTRAP_ENV_KEYS[1]])
     # Hash the supplied password so comparison does not require another plaintext default in source.
     configured_password_sha256 = hashlib.sha256(configured_password.encode("utf-8")).hexdigest()
+    # Read the external digest key only for value-free strength and known-default validation.
+    configured_token_digest_key = str(current_environment[TOKEN_DIGEST_ENV_KEY])
     # Reject either known local default so copying developer configuration cannot expose a public Admin account.
     if configured_email.lower() == LOCAL_BOOTSTRAP_ADMIN_EMAIL.lower() or configured_password_sha256 == LOCAL_BOOTSTRAP_ADMIN_PASSWORD_SHA256:
         # Raise a value-free diagnostic that tells the operator which settings need unique deployment values.
         raise RuntimeError("Public deployment rejects local bootstrap defaults; configure unique bootstrap Admin settings")
+    # Reject the known local token key and keys shorter than the 256-bit policy floor.
+    if configured_token_digest_key == LOCAL_TOKEN_DIGEST_KEY or len(configured_token_digest_key.encode("utf-8")) < 32:
+        # Raise a value-free diagnostic that never exposes digest-key material.
+        raise RuntimeError("Public deployment requires a unique one-time-token digest key of at least 32 bytes")
 
 # Validate immutable-release runtime boundaries before the WSGI application initializes state.
 def validate_production_runtime(environ=None) -> None:

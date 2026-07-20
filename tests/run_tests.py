@@ -273,13 +273,13 @@ def run_storage_tests(include_live=False, include_migration_live=False):
     # Execute the real-service persistence and concurrent-ledger gate only when explicitly requested.
     if include_live:
         # Map the live integration case to the durable storage and MySQL requirements.
-        run_case('STORAGE-MYSQL-LIVE-001',['STORAGE-001','STORAGE-002','STORAGE-003','STORAGE-004','STORAGE-005','STORAGE-006','MYSQL-001','MYSQL-002','MYSQL-003','MYSQL-004','TEST-038','TEST-043'],storage_tests.run_mysql_live_provider_path)
+        run_case('STORAGE-MYSQL-LIVE-001',['STORAGE-001','STORAGE-002','STORAGE-003','STORAGE-004','STORAGE-005','STORAGE-006','MYSQL-001','MYSQL-002','MYSQL-003','MYSQL-004','OTT-001','OTT-002','TEST-038','TEST-043','TEST-089'],storage_tests.run_mysql_live_provider_path)
     # Execute the newly created disposable MySQL 8.4 gate only when explicitly requested.
     if include_migration_live:
         # Import the service-dependent matrix only after the disposable selector is explicit.
         from tests.mysql_migration_live import run_mysql_migration_live_matrix
         # Map clean bootstrap, upgrade, refusal, restart, grants, and lock evidence.
-        run_case('MYSQL-MIGRATION-LIVE-001',['MYSQL-005','STORAGE-007','TEST-048'],run_mysql_migration_live_matrix)
+        run_case('MYSQL-MIGRATION-LIVE-001',['MYSQL-005','STORAGE-007','OTT-001','OTT-002','TEST-048','TEST-089'],run_mysql_migration_live_matrix)
 
 # Define the read_i18n_json function used by this module.
 def read_i18n_json(path):
@@ -349,6 +349,8 @@ def validate_deployment_bootstrap():
         'CASINO_BOOTSTRAP_ADMIN_EMAIL':'deployment-test@example.invalid',
         # Supply a test-only unique value for the guarded deployment path.
         'CASINO_BOOTSTRAP_ADMIN_PASSWORD':'deployment-test-' + ('x' * 32),
+        # Supply a separate test-only keyed-digest secret above the public strength floor.
+        'CASINO_TOKEN_DIGEST_KEY':'deployment-token-digest-' + ('y' * 32),
     }
     # Accept a non-loopback binding only after both required settings are explicit and non-default.
     casino_config.validate_bootstrap_for_startup('0.0.0.0', public_environment)
@@ -370,6 +372,17 @@ def validate_deployment_bootstrap():
             'CASINO_BOOTSTRAP_ADMIN_EMAIL':casino_config.LOCAL_BOOTSTRAP_ADMIN_EMAIL,
             # Reuse the local credential constant so the test never copies its value into output.
             'CASINO_BOOTSTRAP_ADMIN_PASSWORD':casino_config.AUTH_BOOTSTRAP_ADMIN_PASSWORD,
+            # Reuse the known local digest key so the public guard rejects every developer default.
+            'CASINO_TOKEN_DIGEST_KEY':casino_config.LOCAL_TOKEN_DIGEST_KEY,
+        }),
+        # Reject otherwise hardened public bootstrap settings when the token digest key is the known local default.
+        ('0.0.0.0', {
+            # Supply a non-local bootstrap identity.
+            'CASINO_BOOTSTRAP_ADMIN_EMAIL':'deployment-test@example.invalid',
+            # Supply a non-local bootstrap credential.
+            'CASINO_BOOTSTRAP_ADMIN_PASSWORD':'deployment-test-' + ('x' * 32),
+            # Reuse the known local digest key that must never cross the loopback boundary.
+            'CASINO_TOKEN_DIGEST_KEY':casino_config.LOCAL_TOKEN_DIGEST_KEY,
         }),
     # Finish the unsafe-case collection and begin the validation loop.
     ):
@@ -866,6 +879,20 @@ def run_api_tests():
     run_case('API-AUTH-DEPLOYMENT-001',['AUTH-006','TEST-041'],validate_deployment_bootstrap)
     # Certify the matrix and shared hostile-client boundary before starting a listener.
     run_case('API-SEC-001',[f'SEC-{index:03d}' for index in range(1,10)],run_server_authority_tests)
+    # Certify deterministic lifecycle, generic errors, strict bindings, concurrency, and data minimization without a listener. (issue #331)
+    def run_one_time_token_tests():
+        # Import the focused infrastructure suite only when the mapped API case runs.
+        from tests import one_time_token_tests
+        # Load exactly the security-focused one-time-token test class.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(one_time_token_tests.OneTimeTokenTests)
+        # Execute the isolated suite with concise standard output.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the mapped API case when any focused assertion fails or errors.
+        if not result.wasSuccessful():
+            # Preserve a stable value-free central diagnostic.
+            raise AssertionError('one-time-token infrastructure suite failed')
+    # Record the purpose-bound one-time-token platform proof.
+    run_case('API-OTT-001',['OTT-001','OTT-002','TEST-089'],run_one_time_token_tests)
     # Record listener-free disposable-principal lifecycle and browser-binding proof.
     run_case('API-GUEST-LIFECYCLE-001',['GUEST-001','GUEST-002','GUEST-006','TEST-080'],validate_guest_lifecycle)
     # Record listener-free telemetry privacy, milestones, and retention proof.

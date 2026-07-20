@@ -205,6 +205,8 @@ def run_production_asset_cache_probe():
     environment["CASINO_STORAGE_PROVIDER"] = "json"
     # Supply a reserved-domain synthetic Admin identity required by production bootstrap.
     environment["CASINO_BOOTSTRAP_ADMIN_EMAIL"] = "big-six-probe@example.invalid"
+    # Supply a synthetic external token-digest key for the isolated production-mode browser probe.
+    environment["CASINO_TOKEN_DIGEST_KEY"] = "big-six-probe-token-digest-key-material-2026"
     # Supply a non-default synthetic credential that is never printed or persisted.
     environment["CASINO_BOOTSTRAP_ADMIN_PASSWORD"] = "synthetic-big-six-static-probe-password"
     # Configure one reserved synthetic origin for host and CSRF validation.
