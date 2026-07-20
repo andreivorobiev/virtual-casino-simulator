@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.39.0
+- application: 9.39.3
 - core: 9.13.3
 - ledger: 9.1.1
 - players: 9.1.0
@@ -45,8 +45,8 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.0
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.45.1
-- docs: 1.45.1
+- tests: 1.45.7
+- docs: 1.45.7
 - contracts: 1.33.0
 - tooling: 1.14.0
 - commenting_policy: 1.0.0
@@ -684,3 +684,5 @@ Historical source baseline: 9.1.0
 - **TEST-071** (Tests) - PASS: Browser evidence verifies the login gate fits without page overflow at 1280x720 with the sign-in submit control on screen, and that the terms acceptance row meets the enlarged touch-target height.
 - **ROU-060** (Roulette) - PASS: Leaving the Roulette table with open, un-spun bets refunds each staked amount through the documented clear endpoint, so navigating away never strands an already-debited stake and the reopened round starts with no lingering bet.
 - **TEST-073** (Tests) - PASS: Browser evidence verifies that placing a Roulette bet debits the shared wallet, navigating away refunds the stake back to the pre-wager balance, and reopening the table shows no lingering open-bet chip.
+- **UX-014** (UX) - PASS: The player-facing brand block and document title present the product name and the play-tokens-only/no-cash-value safety cue without internal version, validation-stage, build, commit, environment, or debug metadata, in en-US and ru-RU; exact build provenance remains available through the status/diagnostics surfaces rather than the brand block.
+- **TEST-079** (Tests) - PASS: Browser evidence verifies, in en-US and ru-RU, that the rendered brand subtitle matches its canonical resource, carries the play-token safety cue, and contains no version, build, commit, debug, or release-stage metadata; the document title is also metadata-free.

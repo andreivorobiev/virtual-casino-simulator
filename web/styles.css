@@ -202,6 +202,12 @@ label {
   font-size: 14px;
 }
 
+/* Reserve the subtitle's historical two-line footprint so switching locales never changes the
+   header height and shifts game layouts below it. (issue #321) */
+#shell-brand-subtitle {
+  min-height: 38px;
+}
+
 .casino-nav {
   display: flex;
   align-items: center;

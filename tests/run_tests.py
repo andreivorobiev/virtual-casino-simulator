@@ -2196,6 +2196,30 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     assert page.get_by_test_id('nav-baccarat').is_visible()
                 # Execute this statement as part of the module's documented control flow.
                 run_case('BR-SHELL-001',['UX-007','CORE-006','LEDGER-025','TOKEN-001','TOKEN-002'],premium_shell)
+                # Prove the player-facing brand block carries no internal version or release-stage metadata in either locale. (issue #321)
+                def shell_brand_copy():
+                    # Enumerate the internal metadata tokens that must never appear in player brand copy.
+                    forbidden=re.compile(r'v\d|\bbuild\b|\bcommit\b|\bdebug\b|validation release|релиз|сборк', re.IGNORECASE)
+                    # Require the document title to present the product name without version metadata.
+                    assert not forbidden.search(page.title()), page.title()
+                    # Check the localized brand subtitle in both installed locales.
+                    for brand_locale in ('en-US','ru-RU'):
+                        # Switch the shell locale through the visible control and wait for the runtime to settle.
+                        page.get_by_test_id('shell-locale-select').select_option(brand_locale); page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale",arg=brand_locale)
+                        # Read the exact canonical subtitle for this locale from the paired resource file.
+                        expected_subtitle=read_i18n_json(ROOT/'web'/'i18n'/brand_locale/'shell.json')['brand.subtitle']
+                        # Wait for the asynchronous locale rerender to publish the exact canonical subtitle, which also proves resource-key-free equality.
+                        page.wait_for_function("expected => document.querySelector('#shell-brand-subtitle')?.textContent.trim() === expected", arg=expected_subtitle, timeout=5000)
+                        # Read the settled rendered player-facing brand subtitle for the metadata checks.
+                        rendered_subtitle=page.locator('#shell-brand-subtitle').inner_text().strip()
+                        # Require the subtitle to keep the play-token safety cue while carrying no version metadata.
+                        assert not forbidden.search(rendered_subtitle), rendered_subtitle
+                        # Require the play-token cue to remain present in the locale's own words.
+                        assert ('token' in rendered_subtitle.lower()) or ('токен' in rendered_subtitle.lower()), rendered_subtitle
+                    # Restore the English locale for downstream shell coverage.
+                    page.get_by_test_id('shell-locale-select').select_option('en-US'); page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'en-US'")
+                # Execute the version-free brand copy regression.
+                run_case('BR-SHELL-BRAND-001',['UX-014','TEST-079'],shell_brand_copy)
                 # Open the wallet popover through the token top-up control.
                 page.locator('summary[aria-label="Add play tokens"]').click()
                 # Set a deterministic token top-up amount for the wallet terminology check.

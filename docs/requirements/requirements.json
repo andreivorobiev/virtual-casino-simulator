@@ -8621,6 +8621,41 @@
       "introduced_in": "issue-246-roulette-refund-on-leave",
       "changed_in": "issue-246-roulette-refund-on-leave",
       "notes": "Issue #246 refund-on-leave wallet-correctness browser proof."
+    },
+    {
+      "id": "UX-014",
+      "module": "UX",
+      "description": "The player-facing brand block and document title present the product name and the play-tokens-only/no-cash-value safety cue without internal version, validation-stage, build, commit, environment, or debug metadata, in en-US and ru-RU; exact build provenance remains available through the status/diagnostics surfaces rather than the brand block.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-SHELL-BRAND-001"
+      ],
+      "implementation_files": [
+        "web/index.html",
+        "web/styles.css",
+        "web/i18n/en-US/shell.json",
+        "web/i18n/ru-RU/shell.json"
+      ],
+      "introduced_in": "issue-321-shell-version-copy",
+      "changed_in": "issue-321-shell-version-copy",
+      "notes": "Issue #321: 'v9 validation release' removed from the brand subtitle and page title; the subtitle reserves its two-line footprint so header height stays locale-invariant; the status-rail APP version chip is retained for #287 provenance."
+    },
+    {
+      "id": "TEST-079",
+      "module": "Tests",
+      "description": "Browser evidence verifies, in en-US and ru-RU, that the rendered brand subtitle matches its canonical resource, carries the play-token safety cue, and contains no version, build, commit, debug, or release-stage metadata; the document title is also metadata-free.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-SHELL-BRAND-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-321-shell-version-copy",
+      "changed_in": "issue-321-shell-version-copy",
+      "notes": "Issue #321 version-free player brand copy proof (both locales)."
     }
   ]
 }
