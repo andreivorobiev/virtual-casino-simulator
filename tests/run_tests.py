@@ -2469,6 +2469,9 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             reset_lobby_scroll()
                             # Resolve the one approved localized count string for this locale and installed catalog. (issue #235)
                             expected_capacity=f'{len(casino_config.GAMES)} available' if locale=='en-US' else f'Доступно: {len(casino_config.GAMES)}'
+                            # Require the fixed status footer to contain its localized segments without overlap or spill under RU copy expansion. (issue #285)
+                            footer_geometry=page.evaluate("""() => { const bar=document.querySelector('[data-testid="shell-status"]'); if (!bar) return {ok:true}; const barRect=bar.getBoundingClientRect(); const items=[...bar.querySelectorAll('.status-item')].filter(item => { const r=item.getBoundingClientRect(); return r.width>0 && r.height>0; }); const rects=items.map(item => item.getBoundingClientRect()); const spill=rects.some(r => r.left < barRect.left-1 || r.right > barRect.right+1 || r.top < barRect.top-1 || r.bottom > barRect.bottom+1); let collide=false; for (let a=0;a<rects.length;a+=1) for (let b=a+1;b<rects.length;b+=1) { const ra=rects[a], rb=rects[b]; if (ra.left < rb.right-1 && rb.left < ra.right-1 && ra.top < rb.bottom-1 && rb.top < ra.bottom-1) collide=true; } return {ok:!spill && !collide, spill, collide, items:rects.length, barWidth:barRect.width}; }""")
+                            assert footer_geometry['ok'],footer_geometry
                             # Require exact single-count copy so neither retired roadmap clause nor a second count can enter evidence.
                             assert page.get_by_test_id('catalog-capacity').inner_text()==expected_capacity
                             # Bring the capacity line into the bounded outlet before capturing the governed copy state.
@@ -2580,7 +2583,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Return the persistent route outlet to its top edge for the next browser case.
                     reset_lobby_scroll()
                 # Execute the full locale, viewport, state, and interaction matrix under the permanent requirement mapping.
-                run_case('BR-LOBBY-RESP-001',['CORE-015','UX-009','UX-012','UX-013','TEST-072','TEST-076'],responsive_lobby)
+                run_case('BR-LOBBY-RESP-001',['CORE-015','UX-009','UX-012','UX-013','TEST-072','TEST-076','UX-016','TEST-085'],responsive_lobby)
                 # Define catalog_route_discovery to mount every frontend driver from catalog metadata.
                 def catalog_route_discovery():
                     # Select a catalog game with a route id that differs from its display label for loader-copy coverage. (UX-011)
