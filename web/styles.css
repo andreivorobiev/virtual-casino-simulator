@@ -445,6 +445,14 @@ label {
   background: #fff2c2;
 }
 
+/* Size the irreversible guest action by its localized label instead of the registered-user glyph box. (issue #317) */
+.profile-dot[data-guest-trial="true"] {
+  width: auto;
+  min-width: 92px;
+  padding: 0 12px;
+  white-space: nowrap;
+}
+
 .screen {
   position: relative;
   z-index: 1;
@@ -2606,6 +2614,11 @@ h3 {
     grid-template-columns: minmax(0, 1fr) 46px 46px;
   }
 
+  /* Remove the hidden top-up track and give the localized End-trial action an intrinsic column. (issue #317) */
+  .guest-trial-active .top-actions {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
   .wallet-pill {
     min-width: 0;
   }
@@ -2618,6 +2631,11 @@ h3 {
   .profile-dot {
     grid-column: 3;
     grid-row: 1;
+  }
+
+  /* Place the guest action in the second live track so it cannot spill beyond the mobile viewport. */
+  .guest-trial-active .profile-dot {
+    grid-column: 2;
   }
 
   .shell-locale {
