@@ -8900,7 +8900,7 @@
       ],
       "introduced_in": "issue-285-ru-footer-containment",
       "changed_in": "issue-285-ru-footer-containment",
-      "notes": "Issue #285 status-footer containment and overlap proof."
+      "notes": "Issue #285 exact-head footer proof is stored at logs/test-runs/after-pass-shell-status-footer-*.png with matching sidecars that record the accepted geometry for both locales at every governed viewport."
     }
   ]
 }
