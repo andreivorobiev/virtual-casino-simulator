@@ -90,5 +90,7 @@
   "suits.H": "hearts",
   "suits.S": "spades",
   "title": "Casino Hold'em",
-  "tokens.amount": "{amount} play tokens"
+  "tokens.amount": "{amount} play tokens",
+  "paytable.title": "Ante payout schedule",
+  "paytable.net": "{net}:1"
 }
