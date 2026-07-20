@@ -12,7 +12,7 @@ from datetime import datetime, timedelta, timezone
 # Import required dependency so this module can use its public functions or constants.
 from http.cookies import SimpleCookie
 # Import required dependency so this module can use its public functions or constants.
-from casino.config import AUTH_BOOTSTRAP_ADMIN_DISPLAY_NAME, AUTH_BOOTSTRAP_ADMIN_EMAIL, AUTH_BOOTSTRAP_ADMIN_PASSWORD, AUTH_SESSION_COOKIE, AUTH_SESSION_TTL_SECONDS, DATA_DIR, GUEST_INACTIVITY_SECONDS, GUEST_LIFETIME_SECONDS, GUEST_STARTING_BALANCE, GUEST_TRIALS_ENABLED, SCHEMA_VERSION
+from casino.config import AUTH_BOOTSTRAP_ADMIN_DISPLAY_NAME, AUTH_BOOTSTRAP_ADMIN_EMAIL, AUTH_BOOTSTRAP_ADMIN_PASSWORD, AUTH_SESSION_COOKIE, AUTH_SESSION_TTL_SECONDS, DATA_DIR, GUEST_INACTIVITY_SECONDS, GUEST_LIFETIME_SECONDS, GUEST_MAX_ACTIONS, GUEST_MAX_ACTIVE, GUEST_STARTING_BALANCE, GUEST_TERMS_VERSION, GUEST_TRIALS_ENABLED, SCHEMA_VERSION
 # Import required dependency so this module can use its public functions or constants.
 from casino.core import players
 # Import the de-identified guest-trial telemetry recorder for the Admin Guest Trials section. (issue #317)
@@ -26,7 +26,7 @@ from casino.core.state_store import read_json, write_json, update_json
 # Import restricted-preview cookie helpers without coupling the auth store to WSGI.
 from casino.core.security import clear_csrf_cookie_header, csrf_cookie_header, new_csrf_token
 # Import required dependency so this module can use its public functions or constants.
-from casino.errors import ForbiddenError, UnauthorizedError, ValidationError
+from casino.errors import ForbiddenError, RateLimitError, UnauthorizedError, ValidationError
 
 # Set USERS_PATH to the value needed for the next operation.
 USERS_PATH = DATA_DIR / "auth" / "users.json"
@@ -160,16 +160,18 @@ def verify_password(password: str, encoded: str) -> bool:
 
 # Define the public_user function used by this module.
 def public_user(user: dict) -> dict:
-    # Copy the durable identity without exposing its password verifier.
-    result = {key: value for key, value in user.items() if key != "password_hash"}
+    # Copy the durable identity without exposing its password verifier or internal analytics binding.
+    result = {key: value for key, value in user.items() if key not in ("password_hash", "guest_analytics_id")}
     # Publish the username alias required by the v2 contract while email remains compatible.
-    result["username"] = user.get("username") or user.get("email", "")
+    result["username"] = user.get("username") or user.get("email") or ""
     # Publish the canonical role list while retaining the historical singular role field.
     result["roles"] = list(user.get("roles") or [user.get("role", "player")])
     # Publish the contract's active flag from the durable status value.
     result["active"] = user.get("status") == "active"
     # Publish the canonical locale from legacy or current account metadata.
     result["locale"] = user.get("locale") or user.get("language") or "en-US"
+    # Publish the non-authoritative principal class so clients can render guest lifecycle controls explicitly.
+    result["principal_type"] = "guest" if is_guest(user) else "account"
     # Return the contract-compatible identity summary.
     return result
 
@@ -239,31 +241,54 @@ def guest_session_expiry() -> str:
     return (utc_datetime() + timedelta(seconds=GUEST_LIFETIME_SECONDS)).isoformat(timespec="milliseconds").replace("+00:00", "Z")
 
 # Create one isolated, disposable guest-trial principal, wallet, and browser session. (issue #317)
-def create_guest(client: str = "") -> dict:
+def create_guest(client: str = "", accepted: bool = False, terms_version: str = "", locale: str = "en-US", device: str = "unknown") -> dict:
     # Fail closed when the configuration-driven account-free entry is disabled.
     if not GUEST_TRIALS_ENABLED:
         # Never mint a guest principal outside the enabled restricted-preview entry.
         raise ForbiddenError("Guest trials are not available")
-    # Seed a brand-new isolated player wallet with the configured non-cashable starting balance.
-    guest_player = players.create_player("Guest trial", "guest", GUEST_STARTING_BALANCE)
-    # Capture the creation instant for the record and analytics bounds.
-    now = utc_now()
-    # Resolve the absolute-lifetime expiry the session must not outlive.
-    expires_at = guest_session_expiry()
-    # Build a credential-free guest identity bound only to its own fresh player and holding the non-privileged guest role.
-    user = {"user_id": new_id("guest"), "email": None, "username": None, "display_name": "Guest trial", "role": "guest", "roles": ["guest"], "status": "active", "player_id": guest_player["player_id"], "password_hash": "", "terms_required": False, "terms_accepted_at": now, "locale": "en-US", "language": "en-US", "created_at": now, "updated_at": now, "identity_provider": "guest", "guest": True, "guest_expires_at": expires_at, "guest_analytics_id": guest_analytics.record_started()}
-    # Persist the guest identity through the same atomic user store as registered accounts.
+    # Require the same explicit current-version acceptance used by invited accounts before creating state.
+    if accepted is not True or str(terms_version or "").strip() != GUEST_TERMS_VERSION:
+        # Reject missing, stale, or implied consent without creating a wallet, identity, or analytics row.
+        raise ValidationError("Current guest-trial terms must be accepted")
+    # End time-bounded trials before enforcing the anonymous-principal capacity limit.
+    expire_overdue_guests()
+    # Retain created objects outside the atomic mutation without publishing them before capacity succeeds.
+    created = {}
+    # Reserve capacity and persist the identity inside one user-store critical section.
     def add_user(state: dict) -> dict:
         # Normalize malformed state before appending the new guest identity.
         if not isinstance(state, dict) or "users" not in state:
             state = default_users()
+        # Count active disposable identities inside the same mutation that appends the new one.
+        active_guests = sum(1 for stored in state.get("users", []) if is_guest(stored) and stored.get("status") == "active")
+        # Reject concurrent excess creation before any wallet or telemetry state is allocated.
+        if active_guests >= GUEST_MAX_ACTIVE:
+            # Preserve registered-login capacity without leaving an orphan guest resource.
+            raise ForbiddenError("Guest trial capacity is temporarily full")
+        # Seed a brand-new isolated player wallet only after the atomic capacity decision succeeds.
+        guest_player = players.create_player("Guest trial", "guest", GUEST_STARTING_BALANCE)
+        # Capture the creation instant for identity and analytics bounds.
+        now = utc_now()
+        # Resolve the absolute-lifetime expiry the session must not outlive.
+        expires_at = guest_session_expiry()
+        # Build a credential-free identity bound only to its fresh non-cashable wallet.
+        user = {"user_id": new_id("guest"), "email": None, "username": None, "display_name": "Guest trial", "role": "guest", "roles": ["guest"], "status": "active", "player_id": guest_player["player_id"], "password_hash": "", "terms_required": False, "terms_accepted_at": now, "terms_accepted_version": GUEST_TERMS_VERSION, "terms_acceptance_source": "guest_entry", "locale": locale if locale in ("en-US", "ru-RU") else "en-US", "language": locale if locale in ("en-US", "ru-RU") else "en-US", "created_at": now, "updated_at": now, "identity_provider": "guest", "guest": True, "guest_expires_at": expires_at, "guest_analytics_id": guest_analytics.record_started(locale=locale, device=device, starting_balance=GUEST_STARTING_BALANCE)}
         # Append the credential-free guest identity.
         state.setdefault("users", []).append(user)
+        # Publish the successfully reserved objects to the post-commit session step.
+        created.update({"user": user, "expires_at": expires_at})
         # Return the mutated user document for atomic persistence.
         return state
+    # Persist the capacity reservation and identity through the atomic user store.
     update_json(USERS_PATH, add_user, default_users)
+    # Read only objects created by the successful atomic mutation.
+    user, expires_at = created["user"], created["expires_at"]
     # Issue a browser session for the guest identity.
     session = create_session(user, client)
+    # Generate an unguessable browser-context proof returned once and retained only in sessionStorage.
+    browser_nonce = secrets.token_urlsafe(32)
+    # Persist only a digest so storage disclosure cannot recreate the browser-context proof.
+    browser_nonce_hash = hashlib.sha256(browser_nonce.encode("utf-8")).hexdigest()
     # Tighten the persisted session expiry from the registered-user TTL down to the guest lifetime cap.
     def cap_expiry(state: dict) -> dict:
         # Apply the guest lifetime to only this session record.
@@ -272,13 +297,17 @@ def create_guest(client: str = "") -> dict:
             if stored.get("session_id") == session["session_id"]:
                 # Overwrite its expiry with the guest lifetime bound.
                 stored["expires_at"] = expires_at
+                # Bind the credential to the creating browser context without retaining the raw proof.
+                stored["guest_browser_nonce_hash"] = browser_nonce_hash
         # Return the mutated session document for atomic persistence.
         return state
     update_json(SESSIONS_PATH, cap_expiry, default_sessions)
     # Reflect the capped expiry on the returned session copy for the caller.
     session["expires_at"] = expires_at
+    # Reflect only the digest on the internal session copy; the raw proof has a separate one-time field.
+    session["guest_browser_nonce_hash"] = browser_nonce_hash
     # Return the guest principal and its session to the endpoint layer.
-    return {"user": user, "session": session}
+    return {"user": user, "session": session, "browser_nonce": browser_nonce}
 
 # Irreversibly end a guest trial so no cookie can restore its wallet, game state, history, or identity. (issue #317)
 def end_guest_trial(user: dict, reason: str = "ended") -> None:
@@ -286,6 +315,14 @@ def end_guest_trial(user: dict, reason: str = "ended") -> None:
     if not is_guest(user):
         # Return without action for non-guest principals.
         return
+    # Capture the terminal fake-token balance before revocation for de-identified product aggregates.
+    try:
+        # Read only the guest-bound wallet selected by the authenticated server identity.
+        ending_balance = players.get_player(user.get("player_id"))["balance"]
+    # Preserve teardown even if a previously corrupted guest wallet is unavailable.
+    except Exception:
+        # Omit the optional aggregate rather than weakening credential revocation.
+        ending_balance = None
     # Remove every session belonging to the guest so the browser cookie stops resolving immediately.
     def revoke_sessions(state: dict) -> dict:
         # Drop the guest's sessions entirely, leaving no resumable credential.
@@ -306,8 +343,64 @@ def end_guest_trial(user: dict, reason: str = "ended") -> None:
         # Return the mutated user document for atomic persistence.
         return state
     update_json(USERS_PATH, disable_user, default_users)
+    # Import the control-plane helper lazily so auth initialization remains cycle-free.
+    from casino.core import autoplay
+    # Stop every active guest-owned autoplay registration before revoking its wallet.
+    autoplay.stop_for_player(user["player_id"])
+    # Irreversibly revoke the disposable wallet pointer and remaining play-token balance.
+    players.update_player(user["player_id"], lambda player: player.update({"status": "ended", "balance": 0.0, "display_name": "Ended guest trial", "updated_at": utc_now()}))
     # Close the de-identified trial summary with its bounded end reason for the Admin funnel. (issue #317)
-    guest_analytics.record_ended(user.get("guest_analytics_id"), reason)
+    guest_analytics.record_ended(user.get("guest_analytics_id"), reason, ending_balance=ending_balance)
+
+# Consume one guest game-action allowance before a state-changing route executes. (issue #317)
+def consume_guest_action(session: dict, user: dict) -> int:
+    # Leave registered identities outside the disposable-session ceiling.
+    if not is_guest(user):
+        # Return zero so callers can use one uniform control path.
+        return 0
+    # Track the persisted count returned by the atomic mutation.
+    result = {"count": 0, "limited": False}
+    # Define the session-scoped allowance update.
+    def mutate(state: dict) -> dict:
+        # Normalize malformed session storage before searching the authenticated row.
+        if not isinstance(state, dict) or not isinstance(state.get("sessions"), list):
+            # Replace invalid state with the canonical empty container.
+            state = default_sessions()
+        # Find only the already-authenticated guest session.
+        for stored in state.get("sessions", []):
+            # Skip every unrelated or inactive session.
+            if stored.get("session_id") != session.get("session_id") or stored.get("status") != "active":
+                # Continue without exposing whether another session exists.
+                continue
+            # Read the current bounded action count.
+            current = int(stored.get("guest_action_count") or 0)
+            # Reject any request at or beyond the configured ceiling without incrementing it.
+            if current >= GUEST_MAX_ACTIONS:
+                # Publish only the bounded result to the caller.
+                result["limited"] = True
+                result["count"] = current
+                # Return unchanged session state.
+                return state
+            # Consume one allowance before the game mutation begins.
+            stored["guest_action_count"] = current + 1
+            # Publish the accepted count to the authenticated caller.
+            result["count"] = current + 1
+            # Mirror the count in the in-request session copy for consistent diagnostics.
+            session["guest_action_count"] = current + 1
+            # Return the mutated session document.
+            return state
+        # Treat a missing authenticated row as a generic limit failure.
+        result["limited"] = True
+        # Return state unchanged.
+        return state
+    # Persist the allowance atomically before gameplay starts.
+    update_json(SESSIONS_PATH, mutate, default_sessions)
+    # Fail closed with the standard sanitized rate-limit envelope.
+    if result["limited"]:
+        # Never expose the configured ceiling or current counter.
+        raise RateLimitError("Guest trial action limit reached")
+    # Return the accepted count for focused tests only.
+    return result["count"]
 
 # Lazily end guests whose absolute lifetime has passed so Admin analytics reflect expiry without a background job. (issue #317)
 def expire_overdue_guests() -> int:
@@ -315,14 +408,59 @@ def expire_overdue_guests() -> int:
     state = load_users()
     # Capture the comparison instant for lifetime checks.
     now = utc_datetime()
-    # Collect the active guests whose configured absolute lifetime has already passed.
-    overdue = [user for user in state.get("users", []) if is_guest(user) and user.get("status") == "active" and user.get("guest_expires_at") and parse_time(user["guest_expires_at"]) <= now]
+    # Read active sessions once so inactivity and absolute expiry use the same bounded snapshot.
+    sessions = prune_sessions(load_sessions()).get("sessions", [])
+    # Index the newest activity timestamp for each disposable identity without retaining credentials.
+    last_activity = {}
+    # Walk active sessions to build the bounded guest-activity index.
+    for session in sessions:
+        # Keep the newest timestamp when an identity somehow owns more than one active session.
+        last_activity[session.get("user_id")] = max(last_activity.get(session.get("user_id"), ""), str(session.get("updated_at") or session.get("created_at") or ""))
+    # Collect active guests past either the absolute lifetime or inactivity boundary.
+    overdue = []
+    # Evaluate each disposable identity independently so registered accounts remain untouched.
+    for user in state.get("users", []):
+        # Skip every non-active or non-guest identity before parsing guest-only timestamps.
+        if not is_guest(user) or user.get("status") != "active":
+            # Continue to the next stored identity.
+            continue
+        # Detect the configured absolute lifetime boundary.
+        absolute_expired = bool(user.get("guest_expires_at")) and parse_time(user["guest_expires_at"]) <= now
+        # Resolve the newest server-observed activity, falling back to creation when no session remains.
+        activity_at = last_activity.get(user.get("user_id")) or user.get("created_at")
+        # Detect the inactivity boundary without depending on client-authored events.
+        inactive = bool(activity_at) and (now - parse_time(activity_at)).total_seconds() >= GUEST_INACTIVITY_SECONDS
+        # Queue either time-bounded outcome for the standard irreversible teardown.
+        if absolute_expired or inactive:
+            # Retain only the user object needed by the teardown, never a session token.
+            overdue.append(user)
     # End each overdue guest through the standard no-recovery teardown with the expired reason.
     for user in overdue:
         # Revoke the guest's sessions and identity, closing its analytics summary as expired.
         end_guest_trial(user, "expired")
     # Return the count so the Admin endpoint can report the sweep without identifiers.
     return len(overdue)
+
+# Mark a page departure without ending same-context reloads; the browser nonce still prevents restoration elsewhere. (issue #317)
+def mark_guest_departed(session: dict, user: dict) -> None:
+    # Ignore non-guest identities so the signal cannot mutate registered sessions.
+    if not is_guest(user):
+        # Return without changing registered session state.
+        return
+    # Capture one server timestamp for the departure marker.
+    now = utc_now()
+    # Define the atomic session-scoped departure mutation.
+    def mutate(state: dict) -> dict:
+        # Find only the authenticated guest session without exposing its token.
+        for stored in state.get("sessions", []):
+            # Match the durable random session identifier.
+            if stored.get("session_id") == session.get("session_id"):
+                # Record the lifecycle signal used by cleanup diagnostics.
+                stored["guest_departed_at"] = now
+        # Return the mutated sessions document for atomic persistence.
+        return state
+    # Persist the marker without creating a resumable credential.
+    update_json(SESSIONS_PATH, mutate, default_sessions)
 
 # Build the guest browser-session cookie so closing the browser drops the disposable trial. (issue #317)
 def guest_cookie_headers(session: dict, same_site: str = "Lax", secure: bool = False, include_csrf: bool = False) -> list[tuple[str, str]]:
@@ -515,8 +653,8 @@ def create_session(user: dict, client: str = "") -> dict:
 
 # Define the public_session function used by this module.
 def public_session(session: dict) -> dict:
-    # Copy public session metadata without exposing the bearer token.
-    result = {key: value for key, value in session.items() if key not in {"token", "client"}}
+    # Copy public session metadata without exposing the bearer token, client, or guest proof digest.
+    result = {key: value for key, value in session.items() if key not in {"token", "client", "guest_browser_nonce_hash", "guest_departed_at", "guest_action_count"}}
     # Publish the contract's issued_at alias from the durable creation timestamp.
     result["issued_at"] = session.get("issued_at") or session.get("created_at")
     # Return the contract-compatible session summary.
@@ -581,7 +719,7 @@ def extract_cookie_token(headers) -> str:
     return morsel.value if morsel else ""
 
 # Define the authenticate_token function used by this module.
-def authenticate_token(token: str) -> tuple[dict, dict]:
+def authenticate_token(token: str, guest_browser_nonce: str = "") -> tuple[dict, dict]:
     # Branch when the token is missing.
     if not token:
         # Raise an error so invalid input or state is reported explicitly.
@@ -600,6 +738,44 @@ def authenticate_token(token: str) -> tuple[dict, dict]:
                 raise ForbiddenError("User is inactive")
             # Refresh the guest's de-identified activity marker so the Admin active-now window stays truthful. (issue #317)
             if is_guest(user):
+                # End an expired absolute-lifetime session before any protected route can resume it.
+                if user.get("guest_expires_at") and parse_time(user["guest_expires_at"]) <= utc_datetime():
+                    # Revoke the complete disposable principal through the canonical teardown.
+                    end_guest_trial(user, "expired")
+                    # Reject the expired credential with the standard unauthenticated result.
+                    raise UnauthorizedError("Guest trial expired")
+                # End a session that exceeded the configured server-observed inactivity window.
+                if (utc_datetime() - parse_time(session.get("updated_at") or session.get("created_at"))).total_seconds() >= GUEST_INACTIVITY_SECONDS:
+                    # Revoke the complete disposable principal through the canonical teardown.
+                    end_guest_trial(user, "inactive")
+                    # Reject the inactive credential without exposing timestamps.
+                    raise UnauthorizedError("Guest trial expired")
+                # Hash the browser-context proof before constant-time comparison with storage.
+                supplied_nonce_hash = hashlib.sha256(str(guest_browser_nonce or "").encode("utf-8")).hexdigest()
+                # End the guest when a cookie is replayed outside its originating browser-session context.
+                if not guest_browser_nonce or not hmac.compare_digest(str(session.get("guest_browser_nonce_hash") or ""), supplied_nonce_hash):
+                    # Irreversibly close the replayed or contextless trial.
+                    end_guest_trial(user, "browser_closed")
+                    # Reject without revealing which component of the browser binding failed.
+                    raise UnauthorizedError("Guest trial is not resumable")
+                # Capture one timestamp used for both session activity and departure-marker clearing.
+                activity_now = utc_now()
+                # Define the atomic authenticated-activity mutation.
+                def touch_guest_session(stored_state: dict) -> dict:
+                    # Find only the authenticated session by its opaque identifier.
+                    for stored in stored_state.get("sessions", []):
+                        # Match the session without comparing or copying its bearer credential.
+                        if stored.get("session_id") == session.get("session_id"):
+                            # Refresh the server-observed inactivity marker.
+                            stored["updated_at"] = activity_now
+                            # Clear a page-departure marker when the same browser context resumes after reload.
+                            stored.pop("guest_departed_at", None)
+                    # Return the mutated sessions document for atomic persistence.
+                    return stored_state
+                # Persist activity atomically so concurrent requests cannot restore stale session state.
+                update_json(SESSIONS_PATH, touch_guest_session, default_sessions)
+                # Reflect the touch in the request-local session used by downstream code.
+                session["updated_at"] = activity_now
                 # Touch only the one-way analytics id; the summary never stores user, player, or session identifiers.
                 guest_analytics.record_event(user.get("guest_analytics_id"))
             # Return the computed value to the caller.
@@ -612,7 +788,10 @@ def authenticate_headers(headers) -> tuple[dict, dict]:
     # Set token to the value needed for the next operation.
     token = extract_bearer_token(headers) or extract_cookie_token(headers)
     # Return the computed value to the caller.
-    return authenticate_token(token)
+    # Read the browser-context proof case-insensitively without retaining any other request header.
+    guest_browser_nonce = next((str(value) for name, value in headers.items() if str(name).lower() == "x-guest-browser-nonce"), "")
+    # Authenticate the credential and its optional guest-only browser binding together.
+    return authenticate_token(token, guest_browser_nonce)
 
 # Define the logout function used by this module.
 def logout(token: str) -> dict:

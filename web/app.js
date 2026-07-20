@@ -1,6 +1,6 @@
 // AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
 // Import required dependency so this module can call the frozen API envelope safely.
-import { acceptTerms, addUserTokens, api, currentUser, endGuestTrial, guestTrial, logClient, login, logout } from './core/api.js';
+import { acceptTerms, addUserTokens, api, currentUser, departGuestTrial, endGuestTrial, guestTrial, logClient, login, logout } from './core/api.js';
 // Import required dependency so this module can render shared wallet and premium UI helpers.
 import { renderTokenBalance, toast, tokens, safe, renderPremiumTag } from './core/ui.js';
 // Import required dependency so the shell can preserve locale across auth and route changes.
@@ -35,6 +35,8 @@ window.addEventListener('casino-current-user', event => { currentSession = norma
 window.addEventListener('error', event => logClient('window_error', { message: event.message, filename: event.filename, lineno: event.lineno, colno: event.colno }));
 // Report unhandled promise rejections through the client log API for admin visibility.
 window.addEventListener('unhandledrejection', event => logClient('unhandled_rejection', { reason: String(event.reason?.message || event.reason) }));
+// Mark a guest page departure so lifecycle cleanup stays observable without ending same-context reloads.
+window.addEventListener('pagehide', () => { if (isGuestSession()) void departGuestTrial().catch(() => {}); });
 
 // Normalize the draft v2 current-user payloads without committing to backend internals.
 function normalizeCurrentUser(payload) {
@@ -159,6 +161,10 @@ function updateCurrentUserShell() {
   const amount = renderTokenBalance(currentSession);
   // Read the logout button reserved by index.html.
   const logoutButton = document.getElementById('logout-btn');
+  // Read the registered-user-only token-credit menu from the persistent shell.
+  const walletMenu = document.querySelector('.wallet-menu');
+  // Read the visible lifecycle disclosure rendered inside the guest wallet.
+  const guestNotice = document.getElementById('guest-trial-notice');
   // Read the best available display name for the authenticated user.
   const name = currentSession?.user?.display_name || currentSession?.user?.username || currentSession?.user?.email || 'Player';
   // Label the logout control with the current user for accessibility.
@@ -167,12 +173,18 @@ function updateCurrentUserShell() {
   if (logoutButton) {
     // Read the guest state once so the label and markers stay consistent.
     const guest = isGuestSession();
-    // Show End trial for a guest without disturbing the registered-user control's existing content.
-    if (guest) logoutButton.textContent = t('guest.endTrial', {}, 'shell');
+    // Show End trial for a guest and restore the profile glyph for any later registered login.
+    logoutButton.innerHTML = guest ? safe(t('guest.endTrial', {}, 'shell')) : '<span aria-hidden="true"></span>';
     // Expose the guest identity and action for accessibility and browser evidence without leaking any credential.
     logoutButton.setAttribute('aria-label', guest ? t('guest.endTrial', {}, 'shell') : t('auth.logout', { name }, 'shell'));
     // Stamp a stable guest marker the shell and tests can read.
     logoutButton.setAttribute('data-guest-trial', guest ? 'true' : 'false');
+    // Remove the top-up affordance for guests because their one-time 5,000-token grant is fixed and disposable.
+    if (walletMenu) walletMenu.hidden = guest;
+    // Show the inactivity, lifetime, browser-close, and no-recovery boundary throughout guest play.
+    if (guestNotice) { guestNotice.hidden = !guest; guestNotice.textContent = guest ? t('guest.expiryWarning', {}, 'shell') : ''; }
+    // Let responsive CSS allocate a disclosure row only while the disposable principal is active.
+    document.querySelector('.wallet-pill')?.classList.toggle('guest-trial-wallet', guest);
   }
   // Read the language selector in the persistent topbar.
   const localeSelect = document.getElementById('shell-locale-select');
@@ -183,7 +195,7 @@ function updateCurrentUserShell() {
   // Keep the compact subtitle aligned with the selected shell locale.
   setStatusText('shell-brand-subtitle', t('brand.subtitle', {}, 'shell'));
   // Localize the visible wallet balance caption.
-  setStatusText('balance-label', t('wallet.balanceLabel', {}, 'shell'));
+  setStatusText('balance-label', t(isGuestSession() ? 'guest.balanceLabel' : 'wallet.balanceLabel', {}, 'shell'));
   // Localize the wallet popover field label.
   setStatusText('add-token-label', t('wallet.addTokens', {}, 'shell'));
   // Localize the wallet submit action.
@@ -295,8 +307,12 @@ async function handleGuestTrial() {
   const message = document.getElementById('auth-message');
   // Start protected guest logic so any rejection stays inside the auth panel.
   try {
-    // Create the isolated disposable guest session through the public guest endpoint.
-    const session = await guestTrial();
+    // Read the visible shared consent checkbox rather than inferring acceptance from the button click.
+    const accepted = document.getElementById('login-terms-check')?.checked === true;
+    // Require an affirmative action before any anonymous identity, wallet, or telemetry is created.
+    if (!accepted) throw new Error(t('auth.guestTermsRequired', {}, 'shell'));
+    // Create the isolated disposable guest session with exact versioned consent metadata.
+    const session = await guestTrial({ accepted, terms_version: 'private-beta-1', locale: getLocaleState().locale, device: innerWidth < 600 ? 'mobile' : innerWidth < 1100 ? 'tablet' : 'desktop' });
     // Enter the authenticated shell using the same payload shape as a registered login.
     await enterAuthenticated(session);
   // Handle a disabled or failed guest entry with local auth-panel feedback.
@@ -701,7 +717,7 @@ async function init() {
     // Reset the active route so a later entry starts at the lobby.
     active = null;
     // Return to the login gate, noting the ended guest trial where applicable.
-    renderLoginGate(t(guestSession ? 'auth.loggedOut' : 'auth.loggedOut', {}, 'shell'));
+    renderLoginGate(t(guestSession ? 'auth.guestEnded' : 'auth.loggedOut', {}, 'shell'));
   };
   // Start protected bootstrapping so the app can still show a friendly error toast.
   try {

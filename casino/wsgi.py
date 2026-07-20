@@ -212,10 +212,10 @@ def _authorize_request(method: str, path: str, body: dict, headers: dict, client
     session, user = auth.authenticate_headers(headers)
     # Require a distinct per-session CSRF secret for every authenticated mutation.
     validate_request_integrity(method, headers, policy, str(session.get("csrf_token") or ""))
-    # Keep restricted-preview access on manually provisioned local identities only.
-    if str(user.get("identity_provider") or "local").lower() != "local":
-        # Reject linked providers until the separately held public-launch gate.
-        raise ForbiddenError("Local invite access is required")
+    # Keep restricted-preview access on manually provisioned local identities and disposable guests only.
+    if str(user.get("identity_provider") or "local").lower() not in ("local", "guest"):
+        # Reject linked providers until the separately held public-launch gate while permitting #317 guests.
+        raise ForbiddenError("Local invite or guest-trial access is required")
     # Publish the durable session to context-aware route handlers.
     context["session"] = session
     # Publish the authenticated user to authorization-aware route handlers.

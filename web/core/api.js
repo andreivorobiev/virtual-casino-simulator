@@ -3,6 +3,8 @@
 const CSRF_COOKIE = 'casino_csrf';
 // Enumerate browser methods that require exact Origin plus CSRF proof.
 const UNSAFE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+// Keep the guest browser-context proof in sessionStorage so browser closure destroys it.
+const GUEST_NONCE_KEY = 'casino.guestBrowserNonce';
 
 // Read one named cookie without exposing the complete cookie string to logs or storage.
 function cookieValue(name) {
@@ -18,10 +20,14 @@ export async function api(path, options = {}) {
   const method = String(options.method || (options.body !== undefined ? 'POST' : 'GET')).toUpperCase();
   // Build same-origin JSON headers without retaining credentials outside the browser cookie jar.
   const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+  // Attach the context proof to every later request without copying it to durable local storage.
+  const guestNonce = sessionStorage.getItem(GUEST_NONCE_KEY) || '';
+  // Publish the proof only while the originating browser context remains alive.
+  if (guestNonce) headers['X-Guest-Browser-Nonce'] = guestNonce;
   // Attach the host-only double-submit value to every state-changing browser request.
   if (UNSAFE_METHODS.has(method)) headers['X-CSRF-Token'] = cookieValue(CSRF_COOKIE);
   // Store init so later code can read or update this value.
-  const init = { method, headers, credentials: 'include' };
+  const init = { method, headers, credentials: 'include', keepalive: options.keepalive === true };
   // Branch when the following condition is true.
   if (options.body !== undefined) init.body = JSON.stringify(options.body);
   // Store res so later code can read or update this value.
@@ -55,9 +61,27 @@ export const login = body => post('/api/v2/auth/login', body);
 // Export this symbol so the shell can end the current authenticated browser session.
 export const logout = () => post('/api/v2/auth/logout', {});
 // Start one account-free disposable guest trial from the login surface. (issue #317)
-export const guestTrial = () => post('/api/v2/auth/guest', {});
+export async function guestTrial(body) {
+  // Create the disposable principal only after the caller supplies explicit consent metadata.
+  const payload = await post('/api/v2/auth/guest', body);
+  // Capture the one-time proof before any protected guest request can be sent.
+  sessionStorage.setItem(GUEST_NONCE_KEY, String(payload.guest_browser_nonce || ''));
+  // Remove the transport-only proof from application state and UI inspection surfaces.
+  delete payload.guest_browser_nonce;
+  // Return the standard current-user payload consumed by the shell.
+  return payload;
+}
 // Irreversibly end the current guest trial with no recovery path. (issue #317)
-export const endGuestTrial = () => post('/api/v2/auth/guest/end', {});
+export async function endGuestTrial() {
+  // End the authenticated guest while the browser-context proof is still available.
+  const result = await post('/api/v2/auth/guest/end', {});
+  // Destroy the context proof after the server has irreversibly revoked the trial.
+  sessionStorage.removeItem(GUEST_NONCE_KEY);
+  // Return the identifier-free acknowledgement to the shell.
+  return result;
+}
+// Send a best-effort lifecycle marker while preserving sessionStorage across same-context reloads.
+export const departGuestTrial = () => api('/api/v2/auth/guest/depart', { method: 'POST', body: {}, keepalive: true });
 // Export this symbol so the shell can acknowledge the private beta toy-simulator terms.
 export const acceptTerms = body => post('/api/v2/auth/terms/accept', body);
 // Export this symbol so the shell can request ledger-backed token additions for the current user.

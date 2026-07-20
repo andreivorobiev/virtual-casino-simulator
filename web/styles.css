@@ -349,6 +349,21 @@ label {
   white-space: nowrap;
 }
 
+/* Keep the disposable lifecycle boundary visible beside the temporary wallet without widening the shell. (issue #317) */
+.guest-trial-notice {
+  grid-column: 1 / -1;
+  max-width: 260px;
+  color: #ffe59a;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.wallet-pill.guest-trial-wallet {
+  grid-template-rows: auto auto auto;
+  min-width: 245px;
+}
+
 .wallet-menu {
   position: relative;
 }
@@ -2062,6 +2077,61 @@ h3 {
   color: var(--gold);
 }
 
+/* Guest Trials controls use bounded low-cardinality filters and keyboard-scrollable tables. */
+.guest-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(150px, 1fr)) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.guest-filter-grid label {
+  display: grid;
+  gap: 6px;
+}
+
+.guest-filter-grid select,
+.guest-filter-grid button,
+.guest-detail-button {
+  min-height: 42px;
+}
+
+.guest-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(120px, 1fr));
+  gap: 12px;
+}
+
+.guest-detail-grid div {
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: 10px;
+}
+
+.guest-detail-grid dd {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+}
+
+[data-testid="admin-guest-funnel"],
+[data-testid="admin-guest-games"],
+[data-testid="admin-guest-game-detail"],
+[data-testid="admin-guest-recent"],
+[data-testid="admin-guest-timeline"] {
+  overflow-x: auto;
+  scrollbar-color: rgba(255, 217, 130, .42) transparent;
+}
+
+[data-testid="admin-guest-recent"] .mini-table {
+  min-width: 860px;
+}
+
+/* Keep the complete game analytics and event timeline readable inside intentional scroll regions. */
+[data-testid="admin-guest-game-detail"] .mini-table,
+[data-testid="admin-guest-timeline"] .mini-table {
+  min-width: 1180px;
+}
+
 .admin-split {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -2249,6 +2319,10 @@ h3 {
     grid-template-columns: 1fr;
   }
 
+  .guest-filter-grid {
+    grid-template-columns: repeat(2, minmax(150px, 1fr));
+  }
+
   .three-col {
     grid-template-columns: 288px minmax(0, 1fr) 300px;
   }
@@ -2261,6 +2335,68 @@ h3 {
 
   .roulette-stage {
     grid-template-columns: 260px minmax(0, 1fr);
+  }
+}
+
+/* Admin remains usable at the governed phone viewport, including Guest Trials evidence. */
+@media (max-width: 700px) {
+  .admin-body {
+    overflow: auto;
+  }
+
+  .admin-shell {
+    display: block;
+    height: auto;
+    min-height: 100vh;
+  }
+
+  .admin-sidebar {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    flex-direction: row;
+    padding: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-right: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, .12);
+  }
+
+  .admin-sidebar button {
+    flex: 0 0 auto;
+    min-height: 42px;
+  }
+
+  .admin-brand,
+  .admin-sidebar hr {
+    display: none;
+  }
+
+  .admin-main {
+    display: block;
+    overflow: visible;
+  }
+
+  .admin-top {
+    align-items: flex-start;
+    gap: 10px;
+    min-height: 0;
+    padding: 12px;
+  }
+
+  .admin-top h1 {
+    font-size: 24px;
+  }
+
+  .admin-content {
+    padding: 10px;
+    overflow: visible;
+  }
+
+  .admin-card-grid,
+  .guest-filter-grid,
+  .guest-detail-grid {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -2306,6 +2442,12 @@ h3 {
 
   .wallet-pill {
     justify-content: space-between;
+  }
+
+  .wallet-pill.guest-trial-wallet,
+  .guest-trial-notice {
+    max-width: none;
+    min-width: 0;
   }
 
   .screen {

@@ -139,7 +139,8 @@ def main():
             # Reject renamed or repurposed policy records.
             errors.append(f"{PREVIEW_SECURITY_CONTRACT} does not identify the restricted-preview policy")
         # Require exactly the two deliberately anonymous application routes.
-        if preview_security.get("anonymous_routes") != ["/api/v2/auth/login", "/healthz"]:
+        # Preserve only login, explicitly approved disposable guest entry, and liveness as anonymous routes.
+        if preview_security.get("anonymous_routes") != ["/api/v2/auth/login", "/api/v2/auth/guest", "/healthz"]:
             # Fail closed when anonymous route scope expands or changes order.
             errors.append(f"{PREVIEW_SECURITY_CONTRACT} does not preserve the anonymous route allowlist")
         # Require public enrollment and live provider flows to stay disabled.

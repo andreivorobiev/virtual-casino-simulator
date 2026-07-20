@@ -6,14 +6,14 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.39.5
-- core: 9.13.3
+- application: 9.40.0
+- core: 9.14.0
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.0
-- autoplay: 1.1.2
+- autoplay: 1.1.3
 - audio: 9.1.1
-- admin: 1.6.1
+- admin: 1.7.0
 - operations: 1.0.0
 - roulette: 9.4.5
 - slots: 9.1.4
@@ -45,10 +45,10 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.1
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.45.13
-- docs: 1.45.13
-- contracts: 1.33.0
-- tooling: 1.14.0
+- tests: 1.46.0
+- docs: 1.46.0
+- contracts: 1.34.0
+- tooling: 1.14.1
 - commenting_policy: 1.0.0
 
 ## Requirements
@@ -704,3 +704,12 @@ Historical source baseline: 9.1.0
 - **TEST-086** (Tests) - PASS: Browser acceptance verifies both shared money formatters and real Slots amount surfaces use the full localized play-token label without clipping or page-level horizontal overflow in en-US and ru-RU at all four governed viewports.
 - **UX-018** (UX) - PASS: Primary and high-frequency controls use a required minimum hit size of 42 CSS pixels, with 44 CSS pixels recommended where new layouts allow; small visual controls such as checkboxes may satisfy the floor through an enlarged clickable parent row.
 - **TEST-087** (Tests) - PASS: Exact-head browser geometry verifies Auth controls and the enlarged terms row, authenticated shell primaries, and Slots wager/autoplay controls meet the 42px floor without page-level horizontal overflow in en-US and ru-RU at all four governed viewports.
+- **GUEST-001** (Core) - PASS: Restricted-preview guest entry requires explicit acceptance of private-beta-1 terms, creates one isolated non-Admin guest principal and fresh fixed 5,000-play-token wallet with no add-token path, enforces configurable active-principal, per-session game-action, single-autoplay, autoplay-round, inactivity, and absolute-lifetime limits, and never accepts caller-authored role, player, balance, expiry, or credential fields.
+- **GUEST-002** (Application) - PASS: The en-US and ru-RU login surface discloses disposable play-token-only guest terms and requires affirmative consent; the one-time browser-context proof is kept only in sessionStorage, a session cookie alone cannot resume the trial after browser-context loss, same-context refresh remains supported, End trial irreversibly revokes session, identity, wallet, and guest-owned autoplay state, and the guest shell remains usable with reduced motion and at 200 percent zoom.
+- **GUEST-003** (Core) - PASS: Guest telemetry stores only an unrelated analytics id, server timestamps, bounded lifecycle reason, locale, coarse device class, registered game slug, named journey milestones, allowlisted action/error categories, coarse latency buckets, fake-token-only aggregates, and bounded event/counter summaries; it never stores user, player, auth-session, cookie, browser-proof, email, network, or user-agent identifiers, retains raw rows for 30 days and daily aggregates for 400 days, and exposes sanitized cleanup success and failure health.
+- **GUEST-004** (Admin) - PASS: The centrally Admin-gated Guest Trials v2 surface provides the named nine-stage funnel; duration, games-per-trial, rounds-per-trial, error-free, and fake-token-only totals; complete per-game engagement, round, error, latency, and action-category metrics; time, lifecycle, game, locale, device, completion, and error filters; bounded recent rows and allowlisted drill-down; and retention health in en-US and ru-RU, including keyboard-scrollable tables, the governed mobile viewport, reduced motion, and 200 percent zoom.
+- **GUEST-005** (Contracts) - PASS: Guest creation, lifecycle, browser proof, Admin summary/list/detail/cleanup, standard envelopes, restricted-preview access, retention, and forbidden analytics fields are published as additive v2 OpenAPI and compatibility contracts while /api/v1 remains frozen.
+- **GUEST-006** (Security) - PASS: Guest principals may access restricted-preview player routes through the same central player binding and CSRF policy as invited users, can never access Admin routes or shared bot mutation, cannot resume without the originating browser proof, and do not authorize signup, OAuth, deployment, provider, DNS, public exposure, or unrestricted launch.
+- **TEST-080** (Tests) - PASS: Focused API tests prove consent rejection creates no state, server-authoritative guest creation, 5,000-token isolation, non-Admin authorization, CSRF and browser-proof enforcement, same-context activity, inactivity and absolute expiry, atomic concurrent capacity, per-session game-action and autoplay bounds, complete-catalog guest state access, irreversible explicit end, wallet and autoplay revocation, and cookie-only non-resumption.
+- **TEST-081** (Tests) - PASS: Exact-head browser evidence verifies guest consent, disclosed temporary/no-cash terms, start, refresh preservation, real game-module entry, End trial, no recovery, and the Admin funnel, games, filters, detail, cleanup health, de-identification, keyboard access, reduced motion, 200 percent zoom, and no horizontal overflow in en-US and ru-RU at 1920x1080, 1440x900, 1024x900, and 390x844.
+- **TEST-088** (Tests) - PASS: Contract and telemetry tests prove the additive v2 paths, full filters, nine-stage funnel, fake-token/game/action/error/latency aggregates, bounded event drill-down, privacy threshold, envelopes, v1 freeze, Admin-only enforcement, allowlisted low-cardinality dimensions, no forbidden identifiers, fixed 30-day raw and 400-day aggregate retention, safe detail lookup, and sanitized cleanup failure plus recovery status.

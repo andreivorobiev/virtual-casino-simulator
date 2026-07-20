@@ -64,6 +64,14 @@ GUEST_STARTING_BALANCE = float(os.environ.get("CASINO_GUEST_STARTING_BALANCE", "
 GUEST_INACTIVITY_SECONDS = int(os.environ.get("CASINO_GUEST_INACTIVITY_SECONDS", "1800"))
 # Cap the absolute lifetime of any guest trial regardless of activity.
 GUEST_LIFETIME_SECONDS = int(os.environ.get("CASINO_GUEST_LIFETIME_SECONDS", "14400"))
+# Bound simultaneous disposable principals so anonymous entry cannot exhaust preview storage.
+GUEST_MAX_ACTIVE = int(os.environ.get("CASINO_GUEST_MAX_ACTIVE", "100"))
+# Bound accepted game mutations in one disposable session so anonymous traffic cannot grow state indefinitely.
+GUEST_MAX_ACTIONS = int(os.environ.get("CASINO_GUEST_MAX_ACTIONS", "1000"))
+# Bound one guest autoplay registration to a conservative number of rounds.
+GUEST_AUTOPLAY_MAX_ROUNDS = int(os.environ.get("CASINO_GUEST_AUTOPLAY_MAX_ROUNDS", "25"))
+# Publish the exact private-preview terms revision a guest must explicitly accept before creation.
+GUEST_TERMS_VERSION = os.environ.get("CASINO_GUEST_TERMS_VERSION", "private-beta-1").strip()
 # Preserve the developer-only bootstrap email so public startup can reject the local identity default.
 LOCAL_BOOTSTRAP_ADMIN_EMAIL = "admin@example.local"
 # Preserve only a digest of the developer credential so validation never needs another plaintext copy.

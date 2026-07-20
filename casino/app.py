@@ -23,11 +23,11 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 # Import required dependency so this module can use its public functions or constants.
-from casino.config import DEFAULT_HOST, DEFAULT_PORT, WEB_DIR, DATA_DIR, APP_VERSION, validate_bootstrap_for_startup
+from casino.config import DEFAULT_HOST, DEFAULT_PORT, WEB_DIR, DATA_DIR, APP_VERSION, GUEST_AUTOPLAY_MAX_ROUNDS, validate_bootstrap_for_startup
 # Import required dependency so this module can use its public functions or constants.
 from casino.router import Router
 # Import required dependency so this module can use its public functions or constants.
-from casino.errors import CasinoError, ForbiddenError, ValidationError
+from casino.errors import CasinoError, ConflictError, ForbiddenError, ValidationError
 # Import strict JSON-number handling shared with the production WSGI adapter.
 from casino.core.validation import reject_nonfinite_json_constant
 # Import required dependency so this module can use its public functions or constants.
@@ -35,7 +35,7 @@ from casino.core.state_store import ensure_dirs, migrate_from_v7_if_needed
 # Import required dependency so this module can bootstrap whichever storage provider is configured.
 from casino.core.storage import bootstrap_players, get_storage_provider
 # Import required dependency so this module can use its public functions or constants.
-from casino.core import logger, players, ledger, history, auth
+from casino.core import logger, players, ledger, history, auth, guest_analytics
 # Import required dependency so this module can use its public functions or constants.
 from casino.games.registry import catalog_summary, list_games, register_games
 # Import required dependency so this module can use its public functions or constants.
@@ -221,17 +221,29 @@ def build_router() -> Router:
     @router.post(r"/api/v2/auth/guest")
     # Start one account-free disposable guest trial from the login surface. (issue #317)
     def auth_guest(body, query, context):
-        # Create one isolated, non-privileged guest principal, temporary wallet, and browser session.
-        guest = auth.create_guest(context.get("client", ""))
+        # Reject caller-authored identity, wallet, role, expiry, or other fields outside the exact v2 contract.
+        if set(body) - {"accepted", "terms_version", "locale", "device"}:
+            # Fail closed before creating any disposable principal or analytics state.
+            raise ValidationError("Guest trial request contains unsupported fields")
+        # Create one isolated principal only after explicit current-version guest terms acceptance.
+        guest = auth.create_guest(context.get("client", ""), body.get("accepted") is True, body.get("terms_version", ""), body.get("locale", "en-US"), body.get("device", "unknown"))
         # Set a browser-session cookie with no durable credential so closing the browser drops the trial.
         context.setdefault("response_headers", []).extend(auth.guest_cookie_headers(guest["session"], context.get("session_samesite", "Lax"), bool(context.get("secure_cookie")), bool(context.get("include_csrf_cookie"))))
-        # Return the same current-user payload shape the shell already consumes for registered logins.
-        return auth.current_user_payload(guest["session"], guest["user"])
+        # Build the same current-user payload shape the shell already consumes for registered logins.
+        payload = auth.current_user_payload(guest["session"], guest["user"])
+        # Return the raw browser-context proof exactly once so the shell can keep it in sessionStorage.
+        payload["guest_browser_nonce"] = guest["browser_nonce"]
+        # Return the guest session payload without exposing any durable credential or internal identifier.
+        return payload
 
     # Attach this decorator so the following function is registered with the framework.
     @router.post(r"/api/v2/auth/guest/end")
     # Irreversibly end the authenticated guest's own trial. (issue #317)
     def auth_guest_end(body, query, context):
+        # Reject registered identities so this lifecycle route cannot masquerade as ordinary logout.
+        if not auth.is_guest(context.get("user") or {}):
+            # Preserve the published forbidden envelope without changing the registered session.
+            raise ForbiddenError("Guest trial is required")
         # End only the authenticated guest principal, revoking every resumable credential and state pointer.
         auth.end_guest_trial(context.get("user") or {})
         # Expire the guest session cookie so the browser stops presenting it.
@@ -239,10 +251,27 @@ def build_router() -> Router:
         # Return a simple ended acknowledgement with no recoverable material.
         return {"ended": True}
 
+    # Attach a lifecycle signal used to distinguish same-context reloads from later cookie replay.
+    @router.post(r"/api/v2/auth/guest/depart")
+    # Record a best-effort browser page departure without making reloads lose the active trial. (issue #317)
+    def auth_guest_depart(body, query, context):
+        # Reject registered identities so this lifecycle route cannot alter normal sessions.
+        if not auth.is_guest(context.get("user") or {}):
+            # Preserve the standard authorization envelope for the guest-only operation.
+            raise ForbiddenError("Guest trial is required")
+        # Mark the authenticated session as departed; nonce validation still governs any resumption.
+        auth.mark_guest_departed(context["session"], context["user"])
+        # Return an identifier-free acknowledgement suitable for keepalive delivery.
+        return {"departed": True}
+
     # Attach this decorator so the following function is registered with the framework.
     @router.get(r"/api/v2/auth/session")
     # Define the auth_session function used by this module.
     def auth_session(body, query, context):
+        # Record the first authenticated lobby journey milestone for a guest without client-authored telemetry.
+        if auth.is_guest(context.get("user") or {}):
+            # Bind only through the server-stored unrelated analytics id.
+            guest_analytics.record_event(context["user"].get("guest_analytics_id"), "lobby_reached")
         # Return the computed value to the caller.
         return auth.current_user_payload(context["session"], context["user"])
 
@@ -250,6 +279,10 @@ def build_router() -> Router:
     @router.get(r"/api/v2/me")
     # Define the current_user function used by this module.
     def current_user(body, query, context):
+        # Record the first authenticated lobby journey milestone for a guest without client-authored telemetry.
+        if auth.is_guest(context.get("user") or {}):
+            # Bind only through the server-stored unrelated analytics id.
+            guest_analytics.record_event(context["user"].get("guest_analytics_id"), "lobby_reached")
         # Return the computed value to the caller.
         return auth.current_user_payload(context["session"], context["user"])
 
@@ -280,6 +313,10 @@ def build_router() -> Router:
     @router.post(r"/api/v2/me/tokens/add")
     # Define current_user_add_tokens for ledger-backed session wallet credits.
     def current_user_add_tokens(body, query, context):
+        # Keep the guest wallet fixed to its one server-issued trial grant with no top-up path. (issue #317)
+        if auth.is_guest(context.get("user") or {}):
+            # Reject even play-token-only credits because guest value must stay disposable and non-purchasable.
+            raise ForbiddenError("Guest trial balances cannot be increased")
         # Parse the requested play-token amount from the contract body.
         amount = float(body.get("amount", 0))
         # Reject zero and negative credits before touching the ledger.
@@ -294,9 +331,21 @@ def build_router() -> Router:
     # Attach this decorator so the following function is registered with the framework.
     @router.post(r"/api/v1/autoplay/start")
     # Define the autoplay_start function used by this module.
-    def autoplay_start(body, query):
-        # Return the computed value to the caller.
-        return {"session": autoplay.start(body.get("game_id"), body.get("player_id", "human"), body.get("speed", "medium"), int(body.get("round_limit", 25)), body.get("plan") or {}, body.get("limits") or {})}
+    def autoplay_start(body, query, context):
+        # Bind every non-Admin autoplay registration to the authenticated player's wallet.
+        player_id = body.get("player_id", "human") if auth.is_admin(context["user"]) else context["user"].get("player_id")
+        # Parse the requested round limit before applying guest-specific ceilings.
+        round_limit = int(body.get("round_limit", 25))
+        # Apply disposable-session resource controls without changing registered-player behavior.
+        if auth.is_guest(context.get("user") or {}):
+            # Reject a second concurrent guest autoplay registration.
+            if any(session.get("player_id") == player_id for session in autoplay.list_sessions(active_only=True)):
+                # Return the standard conflict envelope without creating shared control-plane state.
+                raise ConflictError("Guest trial already has an active autoplay session")
+            # Clamp the disposable registration to the configured bounded round count.
+            round_limit = max(1, min(round_limit, GUEST_AUTOPLAY_MAX_ROUNDS))
+        # Return the authenticated, bounded autoplay registration.
+        return {"session": autoplay.start(body.get("game_id"), player_id, body.get("speed", "medium"), round_limit, body.get("plan") or {}, body.get("limits") or {})}
 
     # Attach this decorator so the following function is registered with the framework.
     @router.post(r"/api/v1/autoplay/stop")

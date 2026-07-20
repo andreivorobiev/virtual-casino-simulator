@@ -3,6 +3,8 @@
 import json
 # Import required dependency so this module can use its public functions or constants.
 import secrets
+# Import timestamp parsing for bounded Guest Trials Admin filters.
+from datetime import datetime, timezone
 # Import required dependency so this module can use its public functions or constants.
 from pathlib import Path
 # Import required dependency so this module can use its public functions or constants.
@@ -28,6 +30,88 @@ REQ_PATH = DOCS_DIR / "requirements.json"
 TEST_RESULTS_PATH = LOG_DIR / "test-runs" / "latest_results.json"
 # Set ADMIN_USERS_PATH to the value needed for the next operation.
 ADMIN_USERS_PATH = DATA_DIR / "admin_users.json"
+
+# Parse one bounded Guest Trials list limit for v2 Admin routes.
+def _guest_limit(value) -> int:
+    # Start protected parsing so malformed query text receives a validation envelope.
+    try:
+        # Clamp valid integers to the contract's one-through-one-hundred range.
+        return max(1, min(int(value or 25), 100))
+    # Convert type and numeric failures into the public validation error.
+    except (TypeError, ValueError):
+        # Reject arbitrary text without echoing it into logs or responses.
+        raise ValidationError("Guest trial limit must be an integer from 1 to 100")
+
+# Validate the complete low-cardinality Guest Trials filter contract.
+def _guest_filters(query: dict) -> dict:
+    # Read each optional string without echoing it in any error message.
+    locale = str(query.get("locale") or "")
+    # Read the coarse device class.
+    device = str(query.get("device") or "")
+    # Read the lifecycle state.
+    status = str(query.get("status") or "")
+    # Read the registered catalog game slug.
+    game = str(query.get("game") or "")
+    # Read the first-round completion selector.
+    completed = str(query.get("completed") or "")
+    # Read the sanitized server error category.
+    error_category = str(query.get("error_category") or "")
+    # Reject any unsupported locale before analytics filtering.
+    if locale and locale not in guest_analytics.ALLOWED_LOCALES:
+        # Return a fixed diagnostic without reflecting query text.
+        raise ValidationError("Guest trial locale filter is invalid")
+    # Reject any unsupported device class.
+    if device and device not in guest_analytics.ALLOWED_DEVICES:
+        # Return a fixed diagnostic without reflecting query text.
+        raise ValidationError("Guest trial device filter is invalid")
+    # Reject any unsupported lifecycle state.
+    if status and status not in guest_analytics.ALLOWED_STATUSES:
+        # Return a fixed diagnostic without reflecting query text.
+        raise ValidationError("Guest trial status filter is invalid")
+    # Require game slugs to remain exact normalized catalog-style keys.
+    if game and guest_analytics._game(game) != game:
+        # Return a fixed diagnostic without reflecting query text.
+        raise ValidationError("Guest trial game filter is invalid")
+    # Reject unsupported completion selectors.
+    if completed and completed not in guest_analytics.ALLOWED_COMPLETION_FILTERS:
+        # Return a fixed diagnostic without reflecting query text.
+        raise ValidationError("Guest trial completion filter is invalid")
+    # Reject arbitrary exception categories.
+    if error_category and error_category not in guest_analytics.ALLOWED_ERROR_CATEGORIES:
+        # Return a fixed diagnostic without reflecting query text.
+        raise ValidationError("Guest trial error filter is invalid")
+    # Parse one optional ISO timestamp into the canonical UTC string form.
+    def timestamp(name: str) -> str:
+        # Read the selected time bound.
+        value = str(query.get(name) or "")
+        # Preserve an omitted bound.
+        if not value:
+            # Return the empty filter value.
+            return ""
+        # Start protected parsing so malformed dates become a standard validation envelope.
+        try:
+            # Parse a Z suffix through the standard offset format.
+            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+            # Require an explicit timezone so server locale never changes filter meaning.
+            if parsed.tzinfo is None:
+                # Raise into the fixed validation path.
+                raise ValueError("timezone required")
+            # Normalize to UTC with the repository's shared Z spelling.
+            return parsed.astimezone(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+        # Replace every parsing failure with a fixed public diagnostic.
+        except (TypeError, ValueError):
+            # Name only the governed filter, never its supplied value.
+            raise ValidationError(f"Guest trial {name} filter must be an ISO timestamp with timezone")
+    # Parse the inclusive lower bound.
+    since = timestamp("since")
+    # Parse the inclusive upper bound.
+    until = timestamp("until")
+    # Reject a reversed time range deterministically.
+    if since and until and datetime.fromisoformat(since.replace("Z", "+00:00")) > datetime.fromisoformat(until.replace("Z", "+00:00")):
+        # Return a fixed ordering diagnostic.
+        raise ValidationError("Guest trial since filter must not be after until")
+    # Return the exact analytics-service arguments and bounded list limit.
+    return {"recent_limit": _guest_limit(query.get("limit")), "locale": locale, "device": device, "status": status, "game": game, "completed": completed, "error_category": error_category, "since": since, "until": until}
 
 
 # Define the _read_json_file function used by this module.
@@ -399,14 +483,47 @@ def register(router):
         # Return the computed value to the caller.
         return overview()
 
-    # Attach this decorator so the following function is registered with the framework.
-    @router.get(r"/api/v1/admin/guest-trials")
-    # Publish the de-identified Guest Trials summary for the Admin section. (issue #317)
-    def admin_guest_trials(body, query):
-        # Lazily end overdue guests first so expiry counts stay truthful without a background job.
+    # Attach the v2 Admin summary route required for additive guest-trial reporting.
+    @router.get(r"/api/v2/admin/guest-trials")
+    # Publish filterable de-identified Guest Trials aggregates through the governed v2 contract. (issue #317)
+    def admin_guest_trials_v2(body, query):
+        # End inactive or absolute-expiry principals before reporting active counts.
         auth.expire_overdue_guests()
-        # Return only bounded, non-resumable telemetry that cannot authenticate, identify, or restore any guest.
-        return {"guest_trials": guest_analytics.summary()}
+        # Apply only validated low-cardinality and bounded-time filters inside the analytics service.
+        summary = guest_analytics.summary(**_guest_filters(query))
+        # Return the contract-owned summary without auth, player, session, or network identifiers.
+        return {"guest_trials": summary}
+
+    # Attach the v2 recent-session list as an explicit contract surface.
+    @router.get(r"/api/v2/admin/guest-trials/sessions")
+    # Publish only retained de-identified analytics rows for Admin drill-down. (issue #317)
+    def admin_guest_trial_sessions_v2(body, query):
+        # Reuse the same filtered summary so retention and lifecycle cleanup cannot diverge.
+        summary = guest_analytics.summary(**_guest_filters(query))
+        # Return rows plus active filters without exposing credential-backed state.
+        return {"sessions": summary["recent"], "filters": summary["filters"]}
+
+    # Attach the v2 analytics-only detail route.
+    @router.get(r"/api/v2/admin/guest-trials/sessions/(?P<analytics_id>gtrial_[A-Za-z0-9_-]+)")
+    # Return one retained de-identified Guest Trials detail row. (issue #317)
+    def admin_guest_trial_detail_v2(body, query, analytics_id):
+        # Read the analytics-only row after the router has enforced Admin authorization.
+        trial = guest_analytics.detail(analytics_id)
+        # Return the standard not-found envelope when retention removed the row.
+        if not trial:
+            # Avoid confirming any auth, player, or session identity because none is accepted by this route.
+            raise NotFoundError("Guest trial analytics row was not found")
+        # Return the bounded lifecycle and aggregate counters.
+        return {"guest_trial": trial}
+
+    # Attach the v2 manual retention trigger for Admin diagnostics and bounded CI tests.
+    @router.post(r"/api/v2/admin/guest-trials/cleanup")
+    # Run the same idempotent raw and aggregate retention used by Admin reads. (issue #317)
+    def admin_guest_trials_cleanup_v2(body, query):
+        # Apply retention without accepting a caller-authored path, cutoff, or destructive scope.
+        result = guest_analytics.cleanup()
+        # Return identifier-free counts and completion health.
+        return {"cleanup": result}
 
     # Attach this decorator so the following function is registered with the framework.
     @router.get(r"/api/v1/admin/modules")
