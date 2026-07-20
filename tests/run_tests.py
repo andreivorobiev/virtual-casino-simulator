@@ -2382,6 +2382,14 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         lobby_region.evaluate('(region) => { region.scrollTop = 0; }')
                         # Wait one frame so geometry reads cannot observe the previous smooth-scroll position.
                         page.wait_for_timeout(40)
+                    # Send the native End key and wait for Chromium's compositor scroll to reach its real boundary.
+                    def keyboard_end_to_boundary():
+                        # Focus the persistent region so the key cannot target the document or a filter control.
+                        lobby_region.focus()
+                        # Send the real End key rather than assigning the final offset in script.
+                        page.keyboard.press('End')
+                        # Wait until native keyboard scrolling reaches the maximum offset, allowing compositor animation time.
+                        page.wait_for_function("() => { const region=document.querySelector('[data-testid=\"lobby-scroll-region\"]'); return region.scrollHeight-region.clientHeight-region.scrollTop<=2; }",timeout=2500)
                     # Drive a real Chromium touch gesture against the focused region without enabling touch for unrelated cases.
                     def touch_scroll_to_end():
                         # Open a scoped DevTools session for native touch-event injection on the existing authenticated page.
@@ -2470,12 +2478,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             assert metrics['focused'] and metrics['scrollTop']>0 and metrics['outlineStyle']!='none' and metrics['outlineWidth']>=2,metrics
                             # Reset before proving the native End key reaches the final all-games action directly.
                             reset_lobby_scroll()
-                            # Focus the region before sending the End key to its native scroll behavior.
-                            lobby_region.focus()
-                            # Send the real End key rather than assigning the final offset in script.
-                            page.keyboard.press('End')
-                            # Wait for the native key action to reach the scroll boundary.
-                            page.wait_for_timeout(100)
+                            # Use native End behavior and wait for the compositor to reach the real scroll boundary.
+                            keyboard_end_to_boundary()
                             # Require the final all-games card and Play action to be fully visible above the footer.
                             assert_last_action_reachable()
                             # Reset before proving a wheel gesture independently moves the same region.
@@ -2498,24 +2502,16 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                 reset_lobby_scroll()
                                 # Select the current category through its visible localized button.
                                 page.locator(f'[data-catalog-category="{category_id}"]').click()
-                                # Focus the persistent region after the catalog rerender replaces its child controls.
-                                lobby_region.focus()
-                                # Use native End behavior to reach the current category's final card.
-                                page.keyboard.press('End')
-                                # Let the category layout and scroll position settle before the clipping assertion.
-                                page.wait_for_timeout(40)
+                                # Use native End behavior and wait for the current category's real scroll boundary.
+                                keyboard_end_to_boundary()
                                 # Require the final category card and Play control to remain fully reachable.
                                 assert_last_action_reachable()
                             # Restore all games before capturing the primary scrolled state.
                             reset_lobby_scroll()
                             # Select the unfiltered catalog state through the visible control.
                             page.locator('[data-catalog-category="all"]').click()
-                            # Focus the region so the evidence records its visible keyboard outline.
-                            lobby_region.focus()
-                            # Reach the final all-games action through the native End key for evidence.
-                            page.keyboard.press('End')
-                            # Wait for the final scroll position before taking exact-head evidence.
-                            page.wait_for_timeout(80)
+                            # Reach the final all-games action through native End behavior before recording evidence.
+                            keyboard_end_to_boundary()
                             # Capture EN/RU after-pass evidence for the focused and fully scrolled catalog at this viewport.
                             game_evidence(f'after-pass-shell-lobby-scroll-{locale.lower()}-{viewport_id}.png','shell_lobby',['authenticated','catalog_scrolled','keyboard_focused_scroll_region'],locale,viewport_id)
                             # Return to the catalog controls before entering a multi-result search state.
@@ -2524,12 +2520,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             page.get_by_test_id('catalog-search').fill('poker')
                             # Require a real non-empty filtered result set before testing its last action.
                             assert page.locator('[data-testid^="card-"]').count()>1
-                            # Focus the region so End scrolls the filtered catalog rather than editing the search field.
-                            lobby_region.focus()
-                            # Reach the search result set's final action through the keyboard scroll owner.
-                            page.keyboard.press('End')
-                            # Wait for the filtered layout and scroll offset to settle.
-                            page.wait_for_timeout(80)
+                            # Reach the search result set's final action through native End behavior on the scroll owner.
+                            keyboard_end_to_boundary()
                             # Require the last search result and Play control to remain fully visible.
                             assert_last_action_reachable()
                             # Capture the governed search-filtered after-pass state at this locale and viewport.
@@ -2544,12 +2536,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             page.get_by_test_id('catalog-search').fill('')
                             # Select the table category as a visible representative after every category passed behavior checks.
                             page.locator('[data-catalog-category="table"]').click()
-                            # Focus the region before reaching the representative category's last action.
-                            lobby_region.focus()
-                            # Send End through the same native keyboard path used for every category assertion.
-                            page.keyboard.press('End')
-                            # Wait for category layout and scroll position to settle before evidence capture.
-                            page.wait_for_timeout(80)
+                            # Reach the representative category's last action through the same native End helper.
+                            keyboard_end_to_boundary()
                             # Require the representative category's final action to remain fully visible.
                             assert_last_action_reachable()
                             # Capture the governed category-filtered after-pass state at this locale and viewport.
