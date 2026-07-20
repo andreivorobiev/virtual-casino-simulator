@@ -451,7 +451,7 @@ def run_api_tests():
         expect_reason(lambda: mail.send('not_a_purpose', 'a@example.com'), 'bad_purpose')
         expect_reason(lambda: mail.send('invitation', '   '), 'missing_recipient')
     # Record the transactional mail boundary proof.
-    run_case('API-MAIL-001',['MAIL-001','MAIL-002','TEST-088'],transactional_mail_boundary)
+    run_case('API-MAIL-001',['MAIL-001','MAIL-002','TEST-090'],transactional_mail_boundary)
     # Set proc,base to the value needed for the next operation.
     proc,base=start_server()
     # Start protected logic so failures can be handled safely.

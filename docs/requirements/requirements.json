@@ -8970,7 +8970,7 @@
       "notes": "Issue #330 data-minimization boundary; readiness blocks enrollment-method enablement until gates pass."
     },
     {
-      "id": "TEST-088",
+      "id": "TEST-090",
       "module": "Tests",
       "description": "Listener-free API-suite evidence verifies the mail boundary is disabled by default, builds canonical HTTPS links while rejecting open redirects, captures a purpose-bound message locally with a token-free stored link, returns the deliverable tokened link only in the receipt, and stores no raw recipient, token, or password.",
       "status": "PASS",
