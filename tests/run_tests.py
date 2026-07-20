@@ -414,6 +414,44 @@ def run_api_tests():
     run_case('API-AUTH-DEPLOYMENT-001',['AUTH-006','TEST-041'],validate_deployment_bootstrap)
     # Certify the matrix and shared hostile-client boundary before starting a listener.
     run_case('API-SEC-001',[f'SEC-{index:03d}' for index in range(1,10)],run_server_authority_tests)
+    # Certify the provider-neutral transactional mail boundary is disabled-by-default and privacy-safe without a listener. (issue #330)
+    def transactional_mail_boundary():
+        # Import the infrastructure module and its fail-closed error type locally.
+        from casino.core import mail
+        from casino.errors import ValidationError
+        # Assert a call fails closed with the exact non-sensitive reason code.
+        def expect_reason(fn, reason):
+            # Run the call expecting a fail-closed ValidationError.
+            try:
+                # Invoke the operation that must be rejected.
+                fn()
+                # Fail the case if the rejected path unexpectedly succeeded.
+                raise AssertionError(f'expected fail-closed ({reason})')
+            # Require the exact reason code without any sensitive field.
+            except ValidationError as error:
+                # Compare the returned reason code against the expected one.
+                assert error.details.get('reason') == reason, (reason, error.details)
+        # Require the boundary to be disabled by default so enrollment enablement stays blocked.
+        readiness = mail.readiness()
+        assert readiness['enabled'] is False and readiness['provider'] == 'disabled' and readiness['ready'] is False, readiness
+        # Require links to use the canonical HTTPS origin and to reject open-redirect and host-spoof paths.
+        assert mail.build_link('/enroll/invitation', token='abc.def') == 'https://localhost/enroll/invitation?token=abc.def'
+        for unsafe in ('//evil.example', 'https://evil.example', '/x:y', 'no-leading-slash'):
+            expect_reason(lambda value=unsafe: mail.build_link(value), 'unsafe_path')
+        # Require a purpose-bound send to capture locally (no network) and return the deliverable tokened link.
+        receipt = mail.send('invitation', 'Owner@Example.com', token='tok-abc')
+        assert receipt['status'] == 'captured' and receipt['provider'] == 'disabled' and receipt['link'] == 'https://localhost/enroll/invitation?token=tok-abc' and 'recipient' not in receipt, receipt
+        # Require the persisted outbox to store only digests and a token-free link, never a raw recipient, token, or password.
+        outbox = open(mail.OUTBOX_PATH, encoding='utf-8').read()
+        assert 'owner@example.com' not in outbox.lower() and 'tok-abc' not in outbox and 'password' not in outbox.lower()
+        import json as _json
+        stored = _json.loads(outbox)['messages'][-1]
+        assert stored['link'] == 'https://localhost/enroll/invitation' and 'token_digest' in stored and 'recipient_digest' in stored and 'recipient' not in stored, stored
+        # Require malformed input to fail closed.
+        expect_reason(lambda: mail.send('not_a_purpose', 'a@example.com'), 'bad_purpose')
+        expect_reason(lambda: mail.send('invitation', '   '), 'missing_recipient')
+    # Record the transactional mail boundary proof.
+    run_case('API-MAIL-001',['MAIL-001','MAIL-002','TEST-088'],transactional_mail_boundary)
     # Set proc,base to the value needed for the next operation.
     proc,base=start_server()
     # Start protected logic so failures can be handled safely.

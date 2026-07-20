@@ -56,6 +56,20 @@ SCHEMA_VERSION = "v9_1"
 AUTH_SESSION_COOKIE = "casino_session"
 # Set AUTH_SESSION_TTL_SECONDS to the value needed for the next operation.
 AUTH_SESSION_TTL_SECONDS = int(os.environ.get("CASINO_SESSION_TTL_SECONDS", "86400"))
+# Keep transactional mail delivery disabled until configuration, DNS, security, and release gates pass. (issue #330)
+MAIL_ENABLED = os.environ.get("CASINO_MAIL_ENABLED", "false").strip().lower() in ("1", "true", "yes", "on")
+# Select the provider-neutral transport; the disabled transport captures messages locally and never sends.
+MAIL_PROVIDER = os.environ.get("CASINO_MAIL_PROVIDER", "disabled").strip().lower()
+# Configure the From address from the deployment domain rather than hardcoding it.
+MAIL_FROM_ADDRESS = os.environ.get("CASINO_MAIL_FROM_ADDRESS", "").strip()
+# Configure the verified sending domain as a deployment input.
+MAIL_SENDING_DOMAIN = os.environ.get("CASINO_MAIL_SENDING_DOMAIN", "").strip()
+# Build browser links from this canonical HTTPS origin; the local default keeps link tests deterministic without a real domain.
+MAIL_CANONICAL_ORIGIN = os.environ.get("CASINO_MAIL_CANONICAL_ORIGIN", os.environ.get("CASINO_CANONICAL_ORIGIN", "https://localhost")).strip().rstrip("/")
+# Hold the Postmark server token only for a configured, enabled deployment; it is never logged or echoed.
+MAIL_POSTMARK_SERVER_TOKEN = os.environ.get("CASINO_MAIL_POSTMARK_SERVER_TOKEN", "")
+# Key the mail-outbox recipient digests so audited addresses are never stored in raw form; operators override the local default.
+MAIL_DIGEST_KEY = os.environ.get("CASINO_MAIL_DIGEST_KEY", "local-development-mail-recipient-digest-key")
 # Preserve the developer-only bootstrap email so public startup can reject the local identity default.
 LOCAL_BOOTSTRAP_ADMIN_EMAIL = "admin@example.local"
 # Preserve only a digest of the developer credential so validation never needs another plaintext copy.

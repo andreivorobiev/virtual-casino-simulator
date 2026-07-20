@@ -8934,6 +8934,56 @@
       "introduced_in": "issue-286-labeled-money",
       "changed_in": "issue-286-labeled-money",
       "notes": "Issue #286 exact-head proof is stored at logs/test-runs/after-pass-labeled-money-slots-*.png with matching VIS-EVIDENCE-001 sidecars for both locales at every governed viewport."
+    },
+    {
+      "id": "MAIL-001",
+      "module": "Core",
+      "description": "A provider-neutral transactional mail boundary builds enrollment and recovery messages for a fixed purpose allowlist, generates browser links from the configured canonical HTTPS origin, rejects open-redirect and host-spoof link paths, and routes through a pluggable transport whose disabled default captures messages locally and never touches the network; a Postmark transport exists but stays inert until the deployment is configured, enabled, and released. Delivery is disabled by default and misconfiguration fails closed.",
+      "status": "PASS",
+      "api_tests": [
+        "API-MAIL-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/mail.py",
+        "casino/config.py"
+      ],
+      "introduced_in": "issue-330-mail-adapter",
+      "changed_in": "issue-330-mail-adapter",
+      "notes": "Issue #330 infrastructure: no live mail, provider mutation, user creation, or enablement; the mail provider is not an identity provider."
+    },
+    {
+      "id": "MAIL-002",
+      "module": "Core",
+      "description": "The mail boundary never exposes sensitive material: the persisted outbox stores only keyed recipient and token digests plus a token-free canonical link, the deliverable tokened link is returned only in the transient send receipt, readiness reports boolean configuration state without secrets, and no API key, recipient address, raw token, or provider response appears in storage, results, errors, or audit logs (which carry only delivery id, purpose, provider, and status).",
+      "status": "PASS",
+      "api_tests": [
+        "API-MAIL-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/mail.py",
+        "casino/config.py"
+      ],
+      "introduced_in": "issue-330-mail-adapter",
+      "changed_in": "issue-330-mail-adapter",
+      "notes": "Issue #330 data-minimization boundary; readiness blocks enrollment-method enablement until gates pass."
+    },
+    {
+      "id": "TEST-088",
+      "module": "Tests",
+      "description": "Listener-free API-suite evidence verifies the mail boundary is disabled by default, builds canonical HTTPS links while rejecting open redirects, captures a purpose-bound message locally with a token-free stored link, returns the deliverable tokened link only in the receipt, and stores no raw recipient, token, or password.",
+      "status": "PASS",
+      "api_tests": [
+        "API-MAIL-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-330-mail-adapter",
+      "changed_in": "issue-330-mail-adapter",
+      "notes": "Issue #330 disabled-by-default privacy-safe mail proof."
     }
   ]
 }

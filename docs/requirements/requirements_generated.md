@@ -7,7 +7,7 @@ Historical source baseline: 9.1.0
 ## Independent module revisions
 
 - application: 9.39.5
-- core: 9.13.3
+- core: 9.13.4
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.0
@@ -45,8 +45,8 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.1
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.45.12
-- docs: 1.45.12
+- tests: 1.45.16
+- docs: 1.45.16
 - contracts: 1.33.0
 - tooling: 1.14.0
 - commenting_policy: 1.0.0
@@ -702,3 +702,6 @@ Historical source baseline: 9.1.0
 - **TEST-085** (Tests) - PASS: Browser geometry evidence verifies, for each governed locale and viewport, that every visible status-footer segment stays inside the bar and no two segments intersect.
 - **UX-017** (Application) - PASS: Every in-game play-token amount rendered by the shared money formatters includes a full localized unit label—play tokens in en-US and игровых токенов in ru-RU—while the diamond mark remains decorative and never solely carries the value's meaning.
 - **TEST-086** (Tests) - PASS: Browser acceptance verifies both shared money formatters and real Slots amount surfaces use the full localized play-token label without clipping or page-level horizontal overflow in en-US and ru-RU at all four governed viewports.
+- **MAIL-001** (Core) - PASS: A provider-neutral transactional mail boundary builds enrollment and recovery messages for a fixed purpose allowlist, generates browser links from the configured canonical HTTPS origin, rejects open-redirect and host-spoof link paths, and routes through a pluggable transport whose disabled default captures messages locally and never touches the network; a Postmark transport exists but stays inert until the deployment is configured, enabled, and released. Delivery is disabled by default and misconfiguration fails closed.
+- **MAIL-002** (Core) - PASS: The mail boundary never exposes sensitive material: the persisted outbox stores only keyed recipient and token digests plus a token-free canonical link, the deliverable tokened link is returned only in the transient send receipt, readiness reports boolean configuration state without secrets, and no API key, recipient address, raw token, or provider response appears in storage, results, errors, or audit logs (which carry only delivery id, purpose, provider, and status).
+- **TEST-088** (Tests) - PASS: Listener-free API-suite evidence verifies the mail boundary is disabled by default, builds canonical HTTPS links while rejecting open redirects, captures a purpose-bound message locally with a token-free stored link, returns the deliverable tokened link only in the receipt, and stores no raw recipient, token, or password.
