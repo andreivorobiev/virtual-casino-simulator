@@ -34,6 +34,11 @@
         </div>
       </details>
       <select id="shell-locale-select" class="shell-locale" data-testid="shell-locale-select" aria-label="Language"></select>
+      <!-- Account identity controls require explicit consent and remain separate from logout. -->
+      <details id="account-menu" class="account-menu">
+        <summary id="account-menu-summary" class="icon-button profile-dot" aria-label="Account sign-in methods" data-testid="account-menu"><span aria-hidden="true"></span></summary>
+        <div id="oauth-account-popover" class="account-popover" data-testid="oauth-account-popover"></div>
+      </details>
       <button id="logout-btn" class="icon-button profile-dot" type="button" aria-label="Logout" data-testid="logout"><span aria-hidden="true"></span></button>
     </div>
   </header>

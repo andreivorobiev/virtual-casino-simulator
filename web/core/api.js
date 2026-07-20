@@ -52,6 +52,14 @@ export const del = (path, body = {}) => api(path, { method: 'DELETE', body });
 export const currentUser = () => api('/api/v2/me');
 // Export this symbol so the shell can start an authenticated browser session.
 export const login = body => post('/api/v2/auth/login', body);
+// Export boolean-only provider availability for the logged-out sign-in surface.
+export const oauthProviders = () => api('/api/v2/auth/oauth/providers');
+// Start one provider sign-in or explicitly confirmed authenticated link flow.
+export const startOAuth = (provider, body) => post(`/api/v2/auth/oauth/${encodeURIComponent(provider)}/start`, body);
+// Read authenticated boolean link status without provider subject or claim data.
+export const oauthLinks = () => api('/api/v2/auth/oauth/links');
+// Remove one authenticated provider link after explicit confirmation.
+export const unlinkOAuth = provider => post(`/api/v2/auth/oauth/${encodeURIComponent(provider)}/unlink`, { confirm_unlink: true });
 // Export this symbol so the shell can end the current authenticated browser session.
 export const logout = () => post('/api/v2/auth/logout', {});
 // Export this symbol so the shell can acknowledge the private beta toy-simulator terms.

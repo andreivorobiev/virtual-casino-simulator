@@ -1,6 +1,6 @@
 // AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
 // Import required dependency so this module can call the frozen API envelope safely.
-import { acceptTerms, addUserTokens, api, currentUser, logClient, login, logout } from './core/api.js';
+import { acceptTerms, addUserTokens, api, currentUser, logClient, login, logout, oauthLinks, oauthProviders, startOAuth, unlinkOAuth } from './core/api.js';
 // Import required dependency so this module can render shared wallet and premium UI helpers.
 import { renderTokenBalance, toast, tokens, safe, renderPremiumTag } from './core/ui.js';
 // Import required dependency so the shell can preserve locale across auth and route changes.
@@ -173,8 +173,12 @@ function updateCurrentUserShell() {
   setStatusText('add-token-btn', t('wallet.add', {}, 'shell'));
   // Localize the wallet menu's accessible name.
   document.getElementById('wallet-menu-summary')?.setAttribute('aria-label', t('wallet.addTokens', {}, 'shell'));
+  // Localize the account identity-method menu before its asynchronous content loads.
+  document.getElementById('account-menu-summary')?.setAttribute('aria-label', t('auth.oauthAccountTitle', {}, 'shell'));
   // Localize the language selector's accessible name.
   localeSelect?.setAttribute('aria-label', t('language.aria', {}, 'shell'));
+  // Refresh provider link state without delaying wallet or route rendering.
+  void renderOAuthAccountControls();
   // Return the rendered token amount for test and toast flows.
   return amount;
 }
@@ -195,6 +199,113 @@ function renderLoginGate(message = '') {
   wireLocaleSelect(document.getElementById('auth-locale-select'), () => renderLoginGate(message));
   // Wire form submission through the v2 auth login endpoint.
   document.getElementById('login-form').onsubmit = handleLoginSubmit;
+  // Resolve provider availability after the password form is already usable.
+  void enableAvailableOAuthSignIn();
+}
+
+// Enable only fully configured providers while retaining disabled-by-default login behavior.
+async function enableAvailableOAuthSignIn() {
+  // Read the provider-status region from the current login render.
+  const region = document.querySelector('.oauth-provider-status');
+  // Stop when navigation replaced the login screen before the request began.
+  if (!region) return;
+  // Start protected availability loading so local-password login remains usable on failure.
+  try {
+    // Fetch only provider ids and boolean availability.
+    const result = await oauthProviders();
+    // Select the ready providers from the bounded public response.
+    const available = new Set((result.providers || []).filter(item => item.available === true).map(item => item.provider));
+    // Configure each fixed provider button independently.
+    for (const provider of ['google', 'facebook']) {
+      // Read the provider's stable login control.
+      const button = document.querySelector(`[data-testid="oauth-${provider}"]`);
+      // Skip a stale render or malformed response without affecting password login.
+      if (!button) continue;
+      // Enable only an exact provider whose complete runtime is ready.
+      button.disabled = !available.has(provider);
+      // Keep assistive state aligned with native disabled behavior.
+      button.setAttribute('aria-disabled', String(button.disabled));
+      // Navigate only after a server-created one-time flow succeeds.
+      button.onclick = button.disabled ? null : () => beginOAuth(provider, 'signin');
+    }
+    // Mark the visual matrix state according to any ready provider.
+    region.dataset.testid = available.size ? 'oauth-providers-available' : 'oauth-providers-disabled';
+    // Explain the invite-only boundary whenever an external provider is available.
+    region.querySelector('[data-testid="oauth-provider-message"]').textContent = available.size ? t('auth.oauthInviteOnly', {}, 'shell') : t('auth.oauthUnavailable', {}, 'shell');
+  // Keep controls disabled and show a stable retry-safe message on status failure.
+  } catch (_) {
+    // Preserve password login and communicate only a generic availability failure.
+    region.querySelector('[data-testid="oauth-provider-message"]').textContent = t('auth.oauthStatusError', {}, 'shell');
+  }
+}
+
+// Request a one-time authorization URL and navigate without logging or persisting it.
+async function beginOAuth(provider, action) {
+  // Read the active auth/account message outlet for bounded errors.
+  const message = action === 'signin' ? document.getElementById('auth-message') : document.getElementById('oauth-account-message');
+  // Start protected flow creation so no provider navigation occurs after an API failure.
+  try {
+    // Read the explicit linking checkbox only for authenticated account linking.
+    const confirmation = document.getElementById('oauth-link-confirm');
+    // Stop linking until the canonical user explicitly confirms this action.
+    if (action === 'link' && !confirmation?.checked) throw new Error(t('auth.oauthConfirmRequired', {}, 'shell'));
+    // Request a short-lived browser-bound flow with a same-origin destination.
+    const result = await startOAuth(provider, { action, return_to: '/', ...(action === 'link' ? { confirm_link: true } : {}) });
+    // Navigate directly without copying the sensitive URL into logs or application storage.
+    location.assign(result.authorization_url);
+  // Show only the server's safe public message in the current auth surface.
+  } catch (error) {
+    // Keep the page usable and avoid reflecting any provider response value.
+    if (message) message.textContent = error.message;
+  }
+}
+
+// Render authenticated provider linking with an explicit confirmation control and safe unlink.
+async function renderOAuthAccountControls() {
+  // Read the persistent popover reserved by the authenticated shell.
+  const popover = document.getElementById('oauth-account-popover');
+  // Stop before login or while another auth gate owns the page.
+  if (!popover || !currentSession) return;
+  // Render a localized loading state without provider configuration details.
+  popover.innerHTML = `<h2>${safe(t('auth.oauthAccountTitle', {}, 'shell'))}</h2><p class="oauth-provider-copy">${safe(t('status.loading', {}, 'shell'))}</p>`;
+  // Start protected link-status loading so provider errors cannot affect gameplay.
+  try {
+    // Read boolean availability and ownership for the current canonical user.
+    const result = await oauthLinks();
+    // Render one fixed provider row with link or unlink action as appropriate.
+    const rows = (result.providers || []).map(item => `<div class="oauth-account-row" data-testid="oauth-link-${safe(item.provider)}"><span>${safe(item.provider === 'google' ? t('auth.oauthGoogleName', {}, 'shell') : t('auth.oauthFacebookName', {}, 'shell'))}</span><button type="button" data-oauth-account-provider="${safe(item.provider)}" data-oauth-account-action="${item.linked ? 'unlink' : 'link'}" ${!item.linked && !item.available ? 'disabled aria-disabled="true"' : ''}>${safe(item.linked ? t('auth.oauthUnlink', {}, 'shell') : t('auth.oauthLink', {}, 'shell'))}</button></div>`).join('');
+    // Require explicit confirmation adjacent to the provider actions.
+    popover.innerHTML = `<h2>${safe(t('auth.oauthAccountTitle', {}, 'shell'))}</h2><p class="oauth-provider-copy">${safe(t('auth.oauthAccountCopy', {}, 'shell'))}</p><label class="check-row oauth-link-confirm"><input id="oauth-link-confirm" type="checkbox" data-testid="oauth-link-confirm"><span>${safe(t('auth.oauthLinkConfirm', {}, 'shell'))}</span></label>${rows}<p id="oauth-account-message" class="auth-message" role="status"></p>`;
+    // Wire each rendered provider action through its explicit operation.
+    popover.querySelectorAll('[data-oauth-account-provider]').forEach(button => {
+      // Handle link navigation or a separately confirmed unlink transaction.
+      button.onclick = async () => {
+        // Read the bounded action and provider from server-derived fixed rows.
+        const provider = button.dataset.oauthAccountProvider;
+        // Start a confirmed provider navigation for an unlinked account.
+        if (button.dataset.oauthAccountAction === 'link') return beginOAuth(provider, 'link');
+        // Require a browser confirmation before the destructive unlink request.
+        if (!window.confirm(t('auth.oauthUnlinkConfirm', {}, 'shell'))) return;
+        // Start protected unlink handling so a failed request cannot become an unhandled browser rejection.
+        try {
+          // Remove only this provider's current-user link.
+          await unlinkOAuth(provider);
+          // Refresh the boolean provider rows after a successful unlink.
+          await renderOAuthAccountControls();
+        // Keep the current account controls usable after a safe server failure.
+        } catch (_) {
+          // Publish one generic localized message without provider response details.
+          const message = document.getElementById('oauth-account-message');
+          // Update only the still-mounted account message outlet.
+          if (message) message.textContent = t('auth.oauthStatusError', {}, 'shell');
+        }
+      };
+    });
+  // Replace the popover with a generic status failure while leaving logout and gameplay usable.
+  } catch (_) {
+    // Publish no provider configuration or request details.
+    popover.innerHTML = `<h2>${safe(t('auth.oauthAccountTitle', {}, 'shell'))}</h2><p class="oauth-provider-copy">${safe(t('auth.oauthStatusError', {}, 'shell'))}</p>`;
+  }
 }
 
 // Render the terms acceptance step when the current session still requires it.
