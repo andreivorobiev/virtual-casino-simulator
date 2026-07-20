@@ -8621,6 +8621,38 @@
       "introduced_in": "issue-246-roulette-refund-on-leave",
       "changed_in": "issue-246-roulette-refund-on-leave",
       "notes": "Issue #246 refund-on-leave wallet-correctness browser proof."
+    },
+    {
+      "id": "KENO-025",
+      "module": "Keno",
+      "description": "All 80 Keno number cells, including the outer rows and columns, keep their complete borders, focus rings, selection outlines, and result treatments visible inside the board's scroll region; the board's clip boundary carries enough internal padding that no edge treatment is cut off, and keyboard focus scrolling reveals edge cells.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-KENO-EDGE-001"
+      ],
+      "implementation_files": [
+        "web/games/keno.js"
+      ],
+      "introduced_in": "issue-320-keno-edge-clipping",
+      "changed_in": "issue-320-keno-edge-clipping",
+      "notes": "Issue #320: the keno-board-scroll clip container gains internal padding and scroll-padding so edge outlines, glows, and focus rings are no longer clipped at any of the four edges."
+    },
+    {
+      "id": "TEST-078",
+      "module": "Tests",
+      "description": "Browser geometry evidence verifies each corner Keno cell, with the real drawn-outline treatment and keyboard focus applied, clears the board scroll container's clip boundary on every edge, with no page-level horizontal overflow.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-KENO-EDGE-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-320-keno-edge-clipping",
+      "changed_in": "issue-320-keno-edge-clipping",
+      "notes": "Issue #320 edge-containment geometry proof for cells 1, 10, 71, and 80."
     }
   ]
 }

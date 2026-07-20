@@ -4509,6 +4509,20 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 run_case('BR-SLOT-001',['SLOT-020','SLOT-021','SLOT-022','SLOT-023','SLOT-024','SLOT-025','SLOT-026','SLOT-027','SLOT-028','TEST-064','AUTO-010','LEDGER-025','UX-007','UX-009'],premium_slots)
                 # Navigate to Keno and wait for the premium route shell to mount.
                 page.get_by_test_id('nav-keno').click(); page.get_by_test_id('keno-premium-hero').wait_for(timeout=5000)
+                # Prove edge number cells and their state treatments stay inside the visible board bounds instead of being clipped. (issue #320)
+                def keno_edge_containment():
+                    # Probe the four corner cells with the real drawn-outline treatment and keyboard focus applied through the live stylesheet.
+                    edge_probe=page.evaluate("""() => { const scroll=document.querySelector('[data-testid="keno-board-scroll"]'); const clip=scroll.getBoundingClientRect(); const results=[]; for (const number of [1,10,71,80]) { const cell=document.querySelector(`[data-testid="keno-num-${number}"]`); cell.classList.add('drawn'); cell.focus(); const box=cell.getBoundingClientRect(); const style=getComputedStyle(cell); const reach=(parseFloat(style.outlineWidth)||0)+(parseFloat(style.outlineOffset)||0); results.push({number, reach, top:box.top-clip.top, left:box.left-clip.left, right:clip.right-box.right, bottom:clip.bottom-box.bottom}); cell.classList.remove('drawn'); cell.blur(); } return results; }""")
+                    # Require each corner cell plus its outline reach to clear the scroll container's clip boundary on every edge.
+                    for probe in edge_probe:
+                        # Compute the clearance the outline needs beyond the cell border box.
+                        needed=max(probe['reach'],2)+2
+                        # Require top, left, right, and bottom clearances to fit the full treatment inside the visible board.
+                        assert min(probe['top'],probe['left'],probe['right'],probe['bottom']) >= needed, edge_probe
+                    # Require the board region to stay free of page-level horizontal overflow after the probes.
+                    assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1')
+                # Execute the Keno edge-containment geometry regression.
+                run_case('BR-KENO-EDGE-001',['KENO-025','TEST-078'],keno_edge_containment)
                 # Select ten deterministic spots so paytable comparison has a stable row.
                 for spot in [3,8,12,17,24,31,44,55,63,72]: page.get_by_test_id(f'keno-num-{spot}').click()
                 # Store the spot-selection board box for stability assertions.
