@@ -2047,6 +2047,38 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(150)
                 # Record provider-disabled EN/RU controls, no-request behavior, and visual evidence.
                 run_case('BR-OAUTH-001',['OAUTH-001','OAUTH-006','TEST-045'],oauth_disabled_browser)
+                # Define exact geometry acceptance for every primary Auth hit target. (issue #283)
+                def auth_touch_target_floor():
+                    # Read every governed viewport from the authoritative visual matrix.
+                    touch_viewports={entry['id']:{'width':entry['width'],'height':entry['height']} for entry in visual_matrix['viewports']}
+                    # Require the complete desktop, tablet, and mobile viewport set.
+                    assert set(touch_viewports)=={'desktop_primary','desktop_compact','tablet','mobile'}
+                    # Name each login control and use the clickable parent row for the small checkbox glyph.
+                    auth_targets=[{'name':'email','selector':'[data-testid="login-email"]'},{'name':'password','selector':'[data-testid="login-password"]'},{'name':'locale','selector':'[data-testid="auth-locale-select"]'},{'name':'terms-row','selector':'[data-testid="login-terms-check"]','closest':'.check-row'},{'name':'submit','selector':'[data-testid="login-submit"]'},{'name':'google','selector':'[data-testid="oauth-google"]'},{'name':'facebook','selector':'[data-testid="oauth-facebook"]'}]
+                    # Exercise the real localized Auth surface in both governed locales.
+                    for locale in ('en-US','ru-RU'):
+                        # Switch through the visible locale control so the whole gate rerenders normally.
+                        page.get_by_test_id('auth-locale-select').select_option(locale)
+                        # Wait for the active locale and replacement DOM to settle.
+                        page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale && document.querySelector('[data-testid=\"login-email\"]')",arg=locale)
+                        # Measure and capture every governed viewport for this locale.
+                        for viewport_id,viewport in touch_viewports.items():
+                            # Apply the exact visual-matrix dimensions before reading hit geometry.
+                            page.set_viewport_size(viewport); page.wait_for_timeout(120)
+                            # Resolve each semantic target, substituting the permitted enlarged parent when configured.
+                            diagnostics=page.evaluate("""specs => specs.map(spec => { let element=document.querySelector(spec.selector); if(spec.closest) element=element?.closest(spec.closest); if(!element) return {name:spec.name,missing:true}; const rect=element.getBoundingClientRect(); const style=getComputedStyle(element); return {name:spec.name,width:rect.width,height:rect.height,display:style.display,visibility:style.visibility}; })""",auth_targets)
+                            # Require every named target to exist visibly and meet the two-dimensional 42px hit floor.
+                            assert len(diagnostics)==len(auth_targets) and all(not item.get('missing') and item['display']!='none' and item['visibility']!='hidden' and item['width']>=41.5 and item['height']>=41.5 for item in diagnostics),diagnostics
+                            # Reject page-level or panel-level horizontal overflow at the accepted geometry.
+                            assert page.evaluate("() => { const panel=document.querySelector('[data-testid=\"login-gate\"]'); return document.documentElement.scrollWidth<=window.innerWidth+1 && panel.scrollWidth<=panel.clientWidth+1; }")
+                            # Capture self-describing Auth proof for this locale and viewport.
+                            game_evidence(f'after-pass-touch-target-auth-{locale.lower()}-{viewport_id}.png','auth',['login','restricted_preview','touch_target_floor'],locale,viewport_id)
+                    # Restore Russian and the primary desktop size expected by the existing authentication flow.
+                    page.set_viewport_size(touch_viewports['desktop_primary']); page.get_by_test_id('auth-locale-select').select_option('ru-RU')
+                    # Wait for the restored Russian gate before handing off to the login case.
+                    page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'ru-RU' && document.querySelector('[data-testid=\"login-email\"]')")
+                # Execute Auth touch-target acceptance under the adopted governance requirements.
+                run_case('BR-TOUCH-TARGET-AUTH-001',['UX-018','TEST-087'],auth_touch_target_floor)
                 # Define the auth_login_gate function used by this module.
                 def auth_login_gate():
                     # Verify the login panel is visible before casino routes mount.
@@ -2240,6 +2272,50 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     assert page.get_by_test_id('nav-baccarat').is_visible()
                 # Execute this statement as part of the module's documented control flow.
                 run_case('BR-SHELL-001',['UX-007','CORE-006','LEDGER-025','TOKEN-001','TOKEN-002'],premium_shell)
+                # Define governed touch-target acceptance for authenticated shell and Slots controls. (issue #283)
+                def shell_and_slots_touch_target_floor():
+                    # Read the exact responsive dimensions from the visual matrix.
+                    touch_viewports={entry['id']:{'width':entry['width'],'height':entry['height']} for entry in visual_matrix['viewports']}
+                    # Name every shell selector covered by the owner-approved floor.
+                    shell_selectors=['.nav-item','#shell-locale-select','#logout-btn','#catalog-search','.catalog-category','#wallet-menu-summary']
+                    # Name the reported Slots wager and autoplay controls plus the primary action.
+                    slots_selectors=['[data-testid="slots-lines"]','[data-testid="slots-line-bet"]','[data-testid="slots-spin"]','[data-testid="slots-auto-speed"]','[data-testid="slots-auto-rounds"]','[data-testid="slots-auto-start"]','[data-testid="slots-auto-stop"]']
+                    # Exercise both installed player-facing locales on the real authenticated route.
+                    for locale in ('en-US','ru-RU'):
+                        # Switch the mounted shell through its visible locale selector.
+                        page.get_by_test_id('shell-locale-select').select_option(locale)
+                        # Wait for the lobby and locale runtime to finish rerendering.
+                        page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale && document.querySelector('[data-testid=\"lobby\"]')",arg=locale)
+                        # Measure every required viewport in this locale.
+                        for viewport_id,viewport in touch_viewports.items():
+                            # Apply the exact governed viewport before auditing shell controls.
+                            page.set_viewport_size(viewport); page.wait_for_timeout(120)
+                            # Measure every rendered match while preserving the selector that owns it.
+                            shell_diagnostics=page.evaluate("""selectors => { const records=[]; for(const selector of selectors){ for(const element of document.querySelectorAll(selector)){ const rect=element.getBoundingClientRect(); const style=getComputedStyle(element); if(style.display==='none'||style.visibility==='hidden'||(rect.width===0&&rect.height===0)) continue; records.push({selector,testid:element.dataset.testid||'',width:rect.width,height:rect.height}); } } return records; }""",shell_selectors)
+                            # Require every selector to resolve and every live target to meet the 42px width and height floor.
+                            assert {item['selector'] for item in shell_diagnostics}==set(shell_selectors) and all(item['width']>=41.5 and item['height']>=41.5 for item in shell_diagnostics),shell_diagnostics
+                            # Reject shell page-level horizontal overflow before collecting after-pass proof.
+                            assert page.evaluate("() => document.documentElement.scrollWidth<=window.innerWidth+1")
+                            # Capture authenticated Lobby proof for the exact locale and viewport.
+                            game_evidence(f'after-pass-touch-target-shell-{locale.lower()}-{viewport_id}.png','shell_lobby',['authenticated','touch_target_floor'],locale,viewport_id)
+                            # Open the affected Slots surface through the real bounded navigation.
+                            page.get_by_test_id('nav-slots').click(); page.get_by_test_id('slot-grid').wait_for(timeout=5000)
+                            # Measure every named Slots control, including disabled Stop, by its real layout box.
+                            slots_diagnostics=page.evaluate("""selectors => selectors.map(selector => { const element=document.querySelector(selector); if(!element) return {selector,missing:true}; const rect=element.getBoundingClientRect(); const style=getComputedStyle(element); return {selector,width:rect.width,height:rect.height,display:style.display,visibility:style.visibility}; })""",slots_selectors)
+                            # Require all Slots wager, autoplay, and action controls to meet the adopted floor.
+                            assert len(slots_diagnostics)==len(slots_selectors) and all(not item.get('missing') and item['display']!='none' and item['visibility']!='hidden' and item['width']>=41.5 and item['height']>=41.5 for item in slots_diagnostics),slots_diagnostics
+                            # Reject game-level horizontal overflow at the current governed dimensions.
+                            assert page.evaluate("() => document.documentElement.scrollWidth<=window.innerWidth+1")
+                            # Capture the affected game surface in its idle touch-target state.
+                            game_evidence(f'after-pass-touch-target-slots-{locale.lower()}-{viewport_id}.png','slots',['idle','touch_target_floor'],locale,viewport_id)
+                            # Return to the stable Lobby surface before the next viewport or locale.
+                            page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    # Restore the default locale and primary viewport for downstream shell acceptance.
+                    page.set_viewport_size(touch_viewports['desktop_primary']); page.get_by_test_id('shell-locale-select').select_option('en-US')
+                    # Wait for the restored English Lobby before the next case begins.
+                    page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'en-US' && document.querySelector('[data-testid=\"lobby\"]')")
+                # Execute authenticated shell and affected-game touch-target acceptance.
+                run_case('BR-TOUCH-TARGET-001',['UX-018','TEST-087'],shell_and_slots_touch_target_floor)
                 # Prove the player-facing brand block carries no internal version or release-stage metadata in either locale. (issue #321)
                 def shell_brand_copy():
                     # Enumerate internal metadata tokens that must never appear in the player brand block.
