@@ -15,7 +15,7 @@ Historical source baseline: 9.1.0
 - audio: 9.1.1
 - admin: 1.8.0
 - operations: 1.0.0
-- roulette: 9.4.5
+- roulette: 9.4.6
 - slots: 9.1.4
 - blackjack: 9.1.3
 - baccarat: 9.1.2
@@ -45,8 +45,8 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.1
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.49.0
-- docs: 1.49.0
+- tests: 1.50.0
+- docs: 1.50.0
 - contracts: 1.36.0
 - tooling: 1.17.0
 - commenting_policy: 1.0.0
@@ -158,7 +158,7 @@ Historical source baseline: 9.1.0
 - **ROU-042** (Roulette) - PASS: Roulette UI animates wheel and ball while spinning.
 - **ROU-043** (Roulette) - PASS: Roulette UI renders a real table-style layout.
 - **ROU-044** (Roulette) - PASS: Roulette UI allows clicking number cells for straight bets.
-- **ROU-045** (Roulette) - PASS: Roulette UI exposes clickable inside-bet spots.
+- **ROU-045** (Roulette) - PASS: Roulette UI exposes semantically visible, pointer-actionable inside-bet spots with distinct zero-zone targets; hiding the layer removes those spots from pointer and accessibility actionability.
 - **ROU-046** (Roulette) - PASS: Roulette UI draws chips on table spots with amounts.
 - **ROU-047** (Roulette) - PASS: Roulette auto play repeats saved bet templates.
 - **ROU-048** (Roulette) - PASS: Roulette bots can be enabled with strategy and stake settings.
@@ -652,7 +652,7 @@ Historical source baseline: 9.1.0
 - **TEST-050** (Tests) - PASS: Edge evidence covers exact origin and loopback topology, restricted access, replacement forwarding headers, protected ports, ACME preflight, inert service and rollback templates, traversal refusal, listener-free static validation, exact success-envelope validation through the production WSGI/API boundary, pre-network credential refusal, bounded authenticated probes, security headers, certificate age, sanitized output, packaging, and fail-closed negative cases.
 - **TEST-051** (Tests) - PASS: Regression tests exercise 1, 3, 30, and 100 concurrent same-account logins asserting every prior session stays valid with no 401 or 500, and prove per-user cap least-recently-used session eviction.
 - **TEST-052** (Tests) - PASS: Browser regression asserts bounded keyboard-accessible shell navigation, full brand readability without truncation, minimum nav-label readability, no page-level horizontal overflow, and every game control's containment and scroll reachability at the 1920, 1440, 1024, and 390 governed viewports.
-- **TEST-053** (Tests) - PASS: Browser regression clicks every Roulette primary betting region plus a representative inside hotspot per covered-number size and asserts the posted bet_type and covered_numbers match the clicked cell's canonical identity, with non-overlapping, non-zero hit geometry.
+- **TEST-053** (Tests) - PASS: Browser regression uses the real pointer path for every Roulette primary betting region, representative inside sizes, and every single- and double-zero special; it asserts canonical bet_type and covered_numbers plus distinct non-zero hit geometry.
 - **DOC-017** (Documentation) - PASS: A vendor-neutral root handbook documents the complete engineering practice, required capabilities, authority hierarchy, and current-versus-historical status, while the repository start page links every other Markdown file exactly once.
 - **TOOL-006** (Tooling) - PASS: Documentation generation deterministically inventories every tracked or non-ignored Markdown file, updates the bounded root catalog, and fails check mode when the catalog or generated requirements are stale.
 - **DOC-018** (Documentation) - PASS: The repository defines a durable Claude-author/Codex-merge operating model in which Claude composes assigned pull requests and Codex alone reviews integration gates and executes every merge without bypassing owner authority.

@@ -1627,11 +1627,12 @@
     {
       "id": "ROU-045",
       "module": "Roulette",
-      "description": "Roulette UI exposes clickable inside-bet spots.",
+      "description": "Roulette UI exposes semantically visible, pointer-actionable inside-bet spots with distinct zero-zone targets; hiding the layer removes those spots from pointer and accessibility actionability.",
       "status": "PASS",
       "api_tests": [],
       "browser_tests": [
-        "BR-ROU-001"
+        "BR-ROU-001",
+        "BR-ROU-HITMAP-001"
       ],
       "implementation_files": [
         "casino/games/roulette/rules.py",
@@ -1639,7 +1640,9 @@
         "casino/games/roulette/api.py",
         "web/games/roulette.js"
       ],
-      "notes": ""
+      "introduced_in": "9.1.0",
+      "changed_in": "issue-348-roulette-zero-zone",
+      "notes": "Issue #348 requires the visible layer state to use real pointer hit testing in both single- and double-zero modes; invisible overlay controls cannot satisfy this requirement."
     },
     {
       "id": "ROU-046",
@@ -5582,8 +5585,8 @@
         "web/games/roulette.js"
       ],
       "introduced_in": "issue-222-roulette-hit-target",
-      "changed_in": "issue-222-roulette-hit-target",
-      "notes": "Resolves issue #222: the '2nd 12'/inside-trio hit-target mismatch caused by full-innerHTML re-renders churning bet-cell nodes."
+      "changed_in": "issue-348-roulette-zero-zone",
+      "notes": "Issue #222 established stable identities; issue #348 additionally requires real pointer actionability and distinct zero-zone geometry instead of programmatic event dispatch."
     },
     {
       "id": "ROU-058",
@@ -8085,7 +8088,7 @@
     {
       "id": "TEST-053",
       "module": "Tests",
-      "description": "Browser regression clicks every Roulette primary betting region plus a representative inside hotspot per covered-number size and asserts the posted bet_type and covered_numbers match the clicked cell's canonical identity, with non-overlapping, non-zero hit geometry.",
+      "description": "Browser regression uses the real pointer path for every Roulette primary betting region, representative inside sizes, and every single- and double-zero special; it asserts canonical bet_type and covered_numbers plus distinct non-zero hit geometry.",
       "status": "PASS",
       "api_tests": [],
       "browser_tests": [
@@ -8096,8 +8099,8 @@
         "web/games/roulette.js"
       ],
       "introduced_in": "issue-222-roulette-hit-target",
-      "changed_in": "issue-222-roulette-hit-target",
-      "notes": "Covers the issue #222 acceptance that every wager target maps to the same identity across UI, API payload, and no zero-area or overlapping hit regions."
+      "changed_in": "issue-348-roulette-zero-zone",
+      "notes": "Issue #348 removes dispatch_event from acceptance, audits every zero split, trio, first-four, and top-line target in both modes, and rejects stacked pointer rectangles."
     },
     {
       "id": "DOC-017",
@@ -9376,7 +9379,7 @@
       ],
       "introduced_in": "issue-227-ui-50000-ci-replacement",
       "changed_in": "issue-227-ui-50000-ci-replacement",
-      "notes": "The formal qualification runs only on approved non-local GitHub Actions workers; local Playwright, Chromium, and heavy-load execution remain prohibited."
+      "notes": "The formal qualification runs only on approved non-local GitHub Actions workers; local Playwright, Chromium, and heavy-load execution remain prohibited. Geometry inspection restores every ancestor and window scroll position so one viewport cannot mutate later evidence."
     }
   ]
 }

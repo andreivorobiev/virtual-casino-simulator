@@ -5019,6 +5019,14 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 def roulette_hit_target_integrity():
                     # Select the smallest chip so exhaustive region coverage cannot deplete the wallet.
                     page.get_by_test_id('chip-1').click()
+                    # Read the semantic precision-layer state before changing it. (issue #348)
+                    spots_visible=page.locator('#toggleSpots').get_attribute('aria-pressed')=='true'
+                    # Exercise an already-visible layer through a complete hide/show round trip.
+                    if spots_visible: page.locator('#toggleSpots').click()
+                    # Expose the precision layer through its real semantic toggle before any pointer-path hit test.
+                    page.locator('#toggleSpots').click()
+                    # Require the rerendered control to report the visible inside-spot state truthfully.
+                    assert page.locator('#toggleSpots').get_attribute('aria-pressed')=='true', 'Roulette inside spots did not enter the visible state'
                     # Read every bet cell's stable identity and hit geometry from the mounted board.
                     cells=page.evaluate("() => [...document.querySelectorAll('[data-cell-key]')].map(el => { const r=el.getBoundingClientRect(); return {key:el.getAttribute('data-cell-key'), type:el.getAttribute('data-bet-type'), covered:(el.getAttribute('data-covered')||'').split(',').filter(Boolean), x:r.left, y:r.top, w:r.width, h:r.height}; })")
                     # Require a populated board so an empty catalog cannot pass this regression silently.
@@ -5059,8 +5067,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         selector=f'[data-cell-key="{key}"]'
                         # Capture the exact wager POST triggered by activating this cell.
                         with page.expect_request(lambda request: request.url.endswith('/api/v1/games/roulette/bets') and request.method=='POST', timeout=5000) as request_info:
-                            # Activate the cell semantically so intentionally-stacked corner spots cannot intercept the pointer.
-                            page.dispatch_event(selector, 'click')
+                            # Activate the cell through Playwright's real actionability-checked pointer path. (issue #348)
+                            page.locator(selector).click()
                         # Read the posted bet body for identity verification.
                         body=request_info.value.post_data_json
                         # Require the posted bet type to match the clicked cell's canonical type.
@@ -5071,16 +5079,64 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         page.wait_for_timeout(25)
                     # Capture the exact "2nd 12" wager the issue reported as mismatched.
                     with page.expect_request(lambda request: request.url.endswith('/api/v1/games/roulette/bets') and request.method=='POST', timeout=5000) as second_dozen_info:
-                        # Activate the reported second-dozen hit target directly.
-                        page.dispatch_event('[data-cell-key="dozen:2"]', 'click')
+                        # Activate the reported second-dozen hit target through the real pointer path.
+                        page.locator('[data-cell-key="dozen:2"]').click()
                     # Read the second-dozen wager body.
                     second_dozen=second_dozen_info.value.post_data_json
                     # Require "2nd 12" to post the dozen covering exactly 13 through 24.
                     assert second_dozen['bet_type']=='dozen' and {str(number) for number in second_dozen['covered_numbers']}=={str(number) for number in range(13,25)}, '2nd 12 did not post the 13-24 dozen'
                     # Refund every audit wager so the board returns to its pre-audit betting state.
                     page.locator('#clear').click(); page.wait_for_timeout(150)
+                    # Audit every zero-zone special in both supported wheel modes so no catalog combination can share a pointer target. (issue #348)
+                    for wheel_mode,expected_count in (('single',6),('double',10)):
+                        # Read the current rendered wheel mode before deciding whether an asynchronous settings request is required.
+                        current_mode=page.get_by_test_id('roulette-mode').input_value()
+                        # Change modes only when needed so every expected response corresponds to a real state transition.
+                        if current_mode!=wheel_mode:
+                            # Capture the documented settings response that owns the catalog rerender.
+                            with page.expect_response(lambda response: response.url.endswith('/api/v1/games/roulette/settings') and response.request.method=='POST', timeout=5000) as settings_info:
+                                # Select the requested wheel mode through the rendered control.
+                                page.get_by_test_id('roulette-mode').select_option(wheel_mode)
+                            # Require the mode transition to succeed before reading its zero-zone catalog.
+                            assert settings_info.value.ok, f'Roulette {wheel_mode} mode settings request failed'
+                        # Require the semantic visibility state to survive the mode-owned rerender.
+                        assert page.locator('#toggleSpots').get_attribute('aria-pressed')=='true', f'Roulette {wheel_mode} mode hid inside spots after rerender'
+                        # Read only the mode-specific zero-zone targets and their real pointer rectangles.
+                        zero_cells=page.evaluate("() => [...document.querySelectorAll('[data-betid][data-bet-type=zero_split],[data-betid][data-bet-type=trio],[data-betid][data-bet-type=first_four],[data-betid][data-bet-type=top_line]')].map(el => { const r=el.getBoundingClientRect(); return {key:el.getAttribute('data-cell-key'), type:el.getAttribute('data-bet-type'), covered:(el.getAttribute('data-covered')||'').split(',').filter(Boolean), x:r.left, y:r.top, w:r.width, h:r.height}; })")
+                        # Require the complete authoritative single- or double-zero special inventory.
+                        assert len(zero_cells)==expected_count, f'Roulette {wheel_mode} exposed {len(zero_cells)} of {expected_count} zero-zone controls'
+                        # Compare every zero-zone pointer rectangle against every later one exactly once.
+                        for outer in range(len(zero_cells)):
+                            # Visit later targets only so a rectangle never compares with itself.
+                            for inner in range(outer+1,len(zero_cells)):
+                                # Resolve the two physical pointer targets under review.
+                                first=zero_cells[outer]; second=zero_cells[inner]
+                                # Measure real horizontal overlap between the transformed viewport rectangles.
+                                overlap_x=max(0,min(first['x']+first['w'],second['x']+second['w'])-max(first['x'],second['x']))
+                                # Measure real vertical overlap between the transformed viewport rectangles.
+                                overlap_y=max(0,min(first['y']+first['h'],second['y']+second['h'])-max(first['y'],second['y']))
+                                # Reject stacked zero-zone controls before pointer activation can become ambiguous.
+                                assert overlap_x*overlap_y<=2, f"Roulette {wheel_mode} overlaps {first['key']} and {second['key']}"
+                        # Index the mode-owned identities before request-body verification.
+                        zero_identity={cell['key']:cell for cell in zero_cells}
+                        # Pointer-click every zero-zone control rather than sampling one covered-number size.
+                        for key in zero_identity:
+                            # Build the stable selector that survives each wager-owned rerender.
+                            selector=f'[data-cell-key="{key}"]'
+                            # Capture the exact wager request emitted by the real pointer activation.
+                            with page.expect_request(lambda request: request.url.endswith('/api/v1/games/roulette/bets') and request.method=='POST', timeout=5000) as zero_request:
+                                # Exercise Playwright visibility, stability, hit testing, and pointer dispatch together.
+                                page.locator(selector).click()
+                            # Read the mode-specific wager body without relying on localized labels.
+                            body=zero_request.value.post_data_json
+                            # Require the backend bet type to match the exact target identity.
+                            assert body['bet_type']==zero_identity[key]['type'], f"{wheel_mode} {key}: posted wrong bet type"
+                            # Require the backend covered pockets to match the exact target identity.
+                            assert {str(number) for number in body['covered_numbers']}=={str(number) for number in zero_identity[key]['covered']}, f"{wheel_mode} {key}: covered mismatch"
+                        # Refund this mode's complete zero-zone audit before changing the table or continuing the suite.
+                        page.locator('#clear').click(); page.wait_for_timeout(150)
                 # Record the exhaustive Roulette hit-target integrity and geometry regression.
-                run_case('BR-ROU-HITMAP-001',['ROU-005','ROU-013','ROU-014','ROU-015','ROU-016','ROU-017','ROU-044','ROU-045','ROU-057','TEST-053'],roulette_hit_target_integrity)
+                run_case('BR-ROU-HITMAP-001',['ROU-002','ROU-005','ROU-007','ROU-011','ROU-012','ROU-013','ROU-014','ROU-015','ROU-016','ROU-017','ROU-044','ROU-045','ROU-057','TEST-053','TEST-092'],roulette_hit_target_integrity)
                 # Prove leaving Roulette with an open, un-spun bet refunds the stake rather than stranding it. (issue #246)
                 def roulette_refund_on_leave():
                     # Read the authoritative current-user token balance straight from the session endpoint so the assertion never depends on shell DOM refresh timing. (issue #246)
