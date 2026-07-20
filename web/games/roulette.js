@@ -991,6 +991,11 @@ export const RouletteGame = {
     if (localeUnsubscribe) localeUnsubscribe();
     // Clear the locale unsubscribe handle.
     localeUnsubscribe = null;
+    // Refund any open, un-spun bets so leaving the table never strands already-debited stakes. (issue #246)
+    if (humanBets().length && !spinBusy) {
+      // Fire the documented clear/refund endpoint best-effort; the route is leaving, so do not await or rerender, and refresh only the shared wallet.
+      post('/api/v1/games/roulette/clear', withCurrentPlayer()).then(() => refreshBalance()).catch(() => {});
+    }
     // Clear the route root to prevent async rerenders after unmount.
     root = null;
   },
