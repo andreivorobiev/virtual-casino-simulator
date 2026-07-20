@@ -46,6 +46,8 @@
   "paytable.progressiveTitle": "Progressive",
   "paytable.scatter": "3=5x, 4=20x, 5=100x and 3+ awards 8 free spins",
   "paytable.title": "Paytable",
+  "payline.overlayLabel": "Winning paylines: {lines}",
+  "payline.pathLabel": "Payline {line}",
   "result.accepted": "Spin accepted.",
   "result.acceptedDetail": "Cost {cost} is committed while the payout region stays visible.",
   "result.complete": "Result.",

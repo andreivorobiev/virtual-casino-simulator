@@ -594,6 +594,68 @@ label {
   overflow: hidden;
 }
 
+/* Keep the authenticated lobby shell within one viewport-height flex column so the header and status rail
+   reserve their real responsive heights around the single catalog scroll region. (issue #318, UX-013) */
+.casino-page.lobby-active {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+/* Let responsive header and footer chrome reserve space instead of covering the lobby's focus ring or cards. */
+.casino-page.lobby-active > .casino-topbar,
+.casino-page.lobby-active > .status-bar {
+  flex: 0 0 auto;
+}
+
+/* Keep the lobby status rail visible in normal flex flow so the bounded outlet ends above it at every viewport. */
+.casino-page.lobby-active > .status-bar {
+  position: relative;
+}
+
+/* Make the lobby outlet a single bounded vertical scroll region so every catalog card below the fold is
+   reachable at 1920/1440/1024/390, mirroring the game outlet's fixed-height-ancestor scroll fix. (issue #318, CORE-015, UX-009) */
+#view.screen.lobby-screen {
+  flex: 1 1 0;
+  height: auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* Keep the outlet scroll keyboard-driven with a stable landing offset below the sticky chrome. */
+  scroll-padding-block: 12px 18px;
+  /* Prevent wheel and touch gestures at either edge from leaking into a competing page scroll container. */
+  overscroll-behavior-y: contain;
+  /* Preserve native vertical touch panning while reserving horizontal gestures for shell navigation. */
+  touch-action: pan-y;
+  /* Reserve a stable themed scrollbar gutter so catalog width does not jump when filters change overflow. */
+  scrollbar-gutter: stable;
+  scrollbar-color: rgba(255, 217, 130, 0.42) transparent;
+  scrollbar-width: thin;
+}
+
+/* Match the shared thin themed scrollbar used by the game outlet. */
+#view.screen.lobby-screen::-webkit-scrollbar {
+  width: 8px;
+}
+
+/* Keep the lobby outlet scrollbar track transparent within the premium chrome. */
+#view.screen.lobby-screen::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Render the lobby outlet scrollbar thumb with the shared gold treatment. */
+#view.screen.lobby-screen::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(255, 217, 130, 0.42);
+}
+
+/* Give the keyboard-focusable lobby outlet a visible focus indicator when it owns the scroll. */
+#view.screen.lobby-screen:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: -4px;
+}
+
 /* Premium lobby hero, trust rail, and game-card gallery. */
 .lobby {
   display: grid;
@@ -2218,6 +2280,12 @@ h3 {
   .lobby-screen,
   .game-screen {
     padding: 16px 14px 70px;
+  }
+
+  /* The lobby status rail now reserves its own flex-flow height, so keep only content breathing room instead
+     of the legacy overlay allowance that can make a complete card taller than the tablet outlet. (issue #318, UX-013) */
+  #view.screen.lobby-screen {
+    padding-bottom: 16px;
   }
 
   .lobby {

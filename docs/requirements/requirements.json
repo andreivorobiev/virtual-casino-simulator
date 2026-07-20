@@ -8591,6 +8591,45 @@
       "notes": "Issue #284/#283 auth short-viewport fit and terms touch-target browser proof."
     },
     {
+      "id": "UX-012",
+      "module": "Application",
+      "description": "The lobby capacity line shows a single authoritative game count (the same catalog size the nav and gallery render) with no contradictory roadmap target clause, in both en-US and ru-RU.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-LOBBY-001",
+        "BR-CATALOG-I18N-RU-001",
+        "BR-LOBBY-RESP-001"
+      ],
+      "implementation_files": [
+        "web/app.js",
+        "web/i18n/en-US/shell.json",
+        "web/i18n/ru-RU/shell.json"
+      ],
+      "introduced_in": "issue-235-single-lobby-count",
+      "changed_in": "issue-235-single-lobby-count",
+      "notes": "Issue #235: removed the 'catalog ready for {target}' clause that contradicted the live count when current>target."
+    },
+    {
+      "id": "TEST-072",
+      "module": "Tests",
+      "description": "Browser evidence at all four governed viewports verifies the lobby capacity line renders exactly one authoritative game count in en-US ('{n} available') and ru-RU ('Доступно: {n}'), with no roadmap-target clause, no English leakage in Russian, and named after-pass evidence.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-LOBBY-001",
+        "BR-CATALOG-I18N-RU-001",
+        "BR-LOBBY-RESP-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-235-single-lobby-count",
+      "changed_in": "issue-235-single-lobby-count",
+      "notes": "Issue #235 evidence paths are logs/test-runs/after-pass-shell-lobby-single-count-*.png with matching VIS-EVIDENCE-001 JSON sidecars for both locales at every governed viewport."
+    },
+    {
       "id": "ROU-060",
       "module": "Roulette",
       "description": "Leaving the Roulette table with open, un-spun bets refunds each staked amount through the documented clear endpoint, so navigating away never strands an already-debited stake and the reopened round starts with no lingering bet.",
@@ -8625,37 +8664,143 @@
     {
       "id": "UX-014",
       "module": "UX",
-      "description": "The player-facing brand block and document title present the product name and the play-tokens-only/no-cash-value safety cue without internal version, validation-stage, build, commit, environment, or debug metadata, in en-US and ru-RU; exact build provenance remains available through the status/diagnostics surfaces rather than the brand block.",
+      "description": "The player-facing brand block and document title present the product name and the play-tokens-only/no-cash-value safety cue without internal version, validation-stage, build, commit, environment, or debug metadata, in en-US and ru-RU across authenticated, unauthenticated guest, and restricted-preview login states at every governed viewport; exact build provenance remains available through the status/diagnostics surfaces rather than the brand block.",
       "status": "PASS",
       "api_tests": [],
       "browser_tests": [
-        "BR-SHELL-BRAND-001"
+        "BR-SHELL-BRAND-001",
+        "BR-SHELL-BRAND-GUEST-001"
       ],
       "implementation_files": [
         "web/index.html",
         "web/styles.css",
         "web/i18n/en-US/shell.json",
-        "web/i18n/ru-RU/shell.json"
+        "web/i18n/ru-RU/shell.json",
+        "tests/visual/visual_matrix.json"
       ],
       "introduced_in": "issue-321-shell-version-copy",
       "changed_in": "issue-321-shell-version-copy",
-      "notes": "Issue #321: 'v9 validation release' removed from the brand subtitle and page title; the subtitle reserves its two-line footprint so header height stays locale-invariant; the status-rail APP version chip is retained for #287 provenance."
+      "notes": "Issue #321: 'v9 validation release' is removed from the brand subtitle and page title; the subtitle reserves its two-line footprint so header height stays locale-invariant; the restricted-preview guest state keeps the authenticated topbar absent; the status-rail APP version chip is retained for #287 provenance."
     },
     {
       "id": "TEST-079",
       "module": "Tests",
-      "description": "Browser evidence verifies, in en-US and ru-RU, that the rendered brand subtitle matches its canonical resource, carries the play-token safety cue, and contains no version, build, commit, debug, or release-stage metadata; the document title is also metadata-free.",
+      "description": "Browser evidence verifies, in en-US and ru-RU at 1920x1080, 1440x900, 1024x900, and 390x844, that authenticated lobby and Roulette headers render the canonical brand and safety cue without metadata or clipping, while unauthenticated guests in restricted preview receive a metadata-free title and login surface with no protected topbar.",
       "status": "PASS",
       "api_tests": [],
       "browser_tests": [
-        "BR-SHELL-BRAND-001"
+        "BR-SHELL-BRAND-001",
+        "BR-SHELL-BRAND-GUEST-001"
       ],
       "implementation_files": [
-        "tests/run_tests.py"
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
       ],
       "introduced_in": "issue-321-shell-version-copy",
       "changed_in": "issue-321-shell-version-copy",
-      "notes": "Issue #321 version-free player brand copy proof (both locales)."
+      "notes": "Issue #321 exact-head evidence paths are logs/test-runs/after-pass-shell-brand-*.png and logs/test-runs/after-pass-roulette-brand-*.png with matching VIS-EVIDENCE-001 sidecars."
+    },
+    {
+      "id": "SLOT-029",
+      "module": "Slots",
+      "description": "The Slots result renders every authoritative winning payline as a labelled, non-color-only SVG path whose five points are recalculated from the live reel-cell centers, remain within one CSS pixel after responsive resize, locale rerender, zoom, and route recovery, and preserve visible symbol identity in normal and reduced-motion modes.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-SLOTS-PAYLINE-001"
+      ],
+      "implementation_files": [
+        "web/games/slots.js",
+        "web/i18n/en-US/games/slots.json",
+        "web/i18n/ru-RU/games/slots.json"
+      ],
+      "introduced_in": "issue-319-slots-payline-alignment",
+      "changed_in": "issue-319-slots-payline-alignment",
+      "notes": "Issue #319: ResizeObserver-backed geometry derives each point from the rendered cell center; simultaneous paths expose permanent line numbers, accessible labels, unique color/dash combinations, and exact round/payout identity."
+    },
+    {
+      "id": "TEST-077",
+      "module": "Tests",
+      "description": "Deterministic browser evidence derives all twenty paths and payouts from the production Slots engine, restores a simultaneous-win outcome through the normal state loader, verifies every transformed SVG point within one CSS pixel of its authoritative cell, checks result/history identity, multi-win distinction, symbol visibility, zoom, reduced motion, and captures EN/RU after-pass evidence at all four governed viewports.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-SLOTS-PAYLINE-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-319-slots-payline-alignment",
+      "changed_in": "issue-319-slots-payline-alignment",
+      "notes": "Issue #319 evidence paths are logs/test-runs/after-pass-slots-paylines-*.png with matching VIS-EVIDENCE-001 JSON sidecars generated from the exact tested head."
+    },
+    {
+      "id": "UX-013",
+      "module": "UX",
+      "description": "The lobby route outlet is one bounded, keyboard-focusable vertical scroll region with a localized accessible name, visible focus and themed scroll affordances, wheel and touch panning, and native Page Down and End behavior, so every filtered catalog card and Play control remains reachable at 1920x1080, 1440x900, 1024x900, and 390x844 without page-level horizontal overflow or fixed-chrome overlap.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-LOBBY-RESP-001"
+      ],
+      "implementation_files": [
+        "web/app.js",
+        "web/styles.css"
+      ],
+      "introduced_in": "issue-318-lobby-catalog-scroll",
+      "changed_in": "issue-318-lobby-catalog-scroll",
+      "notes": "Issue #318: the shell gives the lobby outlet the remaining viewport between its header and status rail, while the outlet owns the single accessible catalog scroll surface."
+    },
+    {
+      "id": "TEST-076",
+      "module": "Tests",
+      "description": "Browser evidence in English and Russian at all four governed viewports verifies the focused lobby region, themed affordance, no scroll trap or horizontal overflow, Page Down, End, wheel, and touch scrolling, final-card and Play-control reachability for unfiltered, category-filtered, search-filtered, and empty states, and exact-head after-pass evidence sidecars.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-LOBBY-RESP-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-318-lobby-catalog-scroll",
+      "changed_in": "issue-318-lobby-catalog-scroll",
+      "notes": "Issue #318 evidence paths are logs/test-runs/after-pass-shell-lobby-scroll-*.png with matching VIS-EVIDENCE-001 JSON sidecars generated from the exact tested head."
+    },
+    {
+      "id": "KENO-025",
+      "module": "Keno",
+      "description": "All 80 Keno number cells, including every outer row and column, keep their borders, numerals, keyboard focus rings, selection outlines, and drawn, caught, latest, and disabled treatments visible inside the board scroll region at every governed viewport.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-KENO-EDGE-001"
+      ],
+      "implementation_files": [
+        "web/games/keno.js"
+      ],
+      "introduced_in": "issue-320-keno-edge-clipping",
+      "changed_in": "issue-320-keno-edge-clipping",
+      "notes": "Issue #320 gives the clip container explicit border-box clearance and scroll padding for outlines, focus rings, transforms, and the largest result glow while preserving intentional keyboard/touch scrolling."
+    },
+    {
+      "id": "TEST-078",
+      "module": "Tests",
+      "description": "Browser geometry and after-pass evidence in English and Russian at 1920x1080, 1440x900, 1024x900, and 390x844 verifies corner-cell containment, keyboard focus visibility and reveal, idle, selected, final-draw, caught, latest, and disabled treatments, minimum touch targets, and no page-level horizontal overflow.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-KENO-EDGE-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-320-keno-edge-clipping",
+      "changed_in": "issue-320-keno-edge-clipping",
+      "notes": "Issue #320 evidence paths are logs/test-runs/after-pass-keno-edge-*.png with matching VIS-EVIDENCE-001 JSON sidecars generated from the exact tested head."
     }
   ]
 }

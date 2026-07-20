@@ -34,7 +34,7 @@
   "catalog.controlsAria": "Find a game",
   "catalog.empty": "No games match these filters.",
   "catalog.galleryAria": "Games",
-  "catalog.capacity": "{current} available · catalog ready for {target}",
+  "catalog.capacity": "{current} available",
   "catalog.play": "Play",
   "lobby.chooseTable": "Choose your table",
   "catalog.searchLabel": "Search games",
