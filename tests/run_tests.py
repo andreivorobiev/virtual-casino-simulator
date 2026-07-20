@@ -6351,7 +6351,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             # Publish only the documented response envelope and low-cardinality values.
                             payload={'ok':True,'data':{'schema_version':'transactional-mail-readiness.v2','provider':provider,'status':status,'checks':{'feature_enabled':status!='disabled','network_release_enabled':False,'canonical_origin_https':status in ('release_held','ready'),'sender_identity_configured':status in ('release_held','ready'),'provider_credential_configured':status in ('release_held','ready'),'digest_key_configured':True},'reasons':reasons,'delivery_summary':summary,'suppressed_recipients':suppressed_count}}
                             # Intercept only the Admin mail diagnostic while Operations and OAuth use the real backend.
-                            page.route('**/api/v2/admin/mail/readiness',lambda route,body=json.dumps(payload): route.fulfill(status=200,content_type='application/json',body=body))
+                            page.route('**/api/v2/admin/mail/readiness',lambda route,_request,body=json.dumps(payload): route.fulfill(status=200,content_type='application/json',body=body))
                             # Refresh the active Operations surface and wait for the exact explicit state card.
                             page.get_by_test_id('admin-tab-operations').click(); page.get_by_test_id(f'admin-mail-{status}').wait_for(timeout=5000)
                             # Read the rendered card once for data-minimization assertions.
