@@ -221,6 +221,9 @@
         "selection",
         "drawing",
         "result",
+        "edge_idle",
+        "edge_selected_focus_visible",
+        "edge_final_caught",
         "route_restored"
       ],
       "locales": [

@@ -4775,10 +4775,84 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 run_case('BR-SLOT-001',['SLOT-020','SLOT-021','SLOT-022','SLOT-023','SLOT-024','SLOT-025','SLOT-026','SLOT-027','SLOT-028','TEST-064','AUTO-010','LEDGER-025','UX-007','UX-009'],premium_slots)
                 # Navigate to Keno and wait for the premium route shell to mount.
                 page.get_by_test_id('nav-keno').click(); page.get_by_test_id('keno-premium-hero').wait_for(timeout=5000)
+                # Prove edge number cells and their state treatments stay inside the visible board bounds instead of being clipped. (issue #320)
+                def keno_edge_containment():
+                    # Resolve the authenticated player whose disposable Keno state drives deterministic edge evidence.
+                    edge_player=page.evaluate("() => { const shellPlayer = window.CasinoCurrentUser?.player || window.CasinoCurrentPlayer || {}; return shellPlayer.player_id || window.CasinoCurrentUser?.player_id || localStorage.getItem('casino.currentPlayerId') || 'human'; }")
+                    # Define the exact governed viewport matrix from the visual standard.
+                    edge_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
+                    # Keep the idle state free of prior tickets and draws before each locale/viewport capture.
+                    empty_edge_state={'open_tickets':[],'last_draws':[]}
+                    # Build one legitimate one-catch final draw with the latest result on bottom-right cell 80.
+                    edge_draw=[2,3,4,5,6,7,8,9,11,12,13,14,15,16,17,18,19,20,21,80]
+                    # Reuse the existing one-spot Keno multiplier so evidence state agrees with the published paytable.
+                    final_edge_state={'open_tickets':[],'last_draws':[{'round_id':'keno-edge-final','timestamp':'2026-07-20T00:00:00Z','drawn':edge_draw,'results':[{'ticket':{'ticket_id':'keno-edge-catch','player_id':edge_player,'spots':[80],'amount':1,'source':'browser-test','created_at':'2026-07-20T00:00:00Z'},'catches':[80],'catch_count':1,'multiplier':3,'payout':3}]}]}
+                    # Exercise both installed player-facing locales.
+                    for edge_locale in ('en-US','ru-RU'):
+                        # Exercise every governed viewport without substituting an approximate breakpoint.
+                        for edge_viewport_id,edge_width,edge_height in edge_viewports:
+                            # Start this matrix cell from an authoritative empty persisted state.
+                            save_player_game_state('keno',edge_player,empty_edge_state)
+                            # Apply the exact viewport before route reconstruction and geometry sampling.
+                            page.set_viewport_size({'width':edge_width,'height':edge_height})
+                            # Reload the canonical game route so local selection state is empty and backend state is current.
+                            page.reload(wait_until='networkidle'); page.get_by_test_id('keno-premium-hero').wait_for(timeout=5000)
+                            # Switch through the real shell control so visible copy and accessible names use the requested locale.
+                            page.get_by_test_id('shell-locale-select').select_option(edge_locale)
+                            # Wait for the locale runtime to confirm the completed in-place rerender.
+                            page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale",arg=edge_locale)
+                            # Require real localized title copy instead of a raw resource key or blank fallback.
+                            edge_title=page.locator('.keno-hero-title').inner_text(); assert edge_title.strip() and 'phase.' not in edge_title
+                            # Probe every corner under the combined selected, drawn, caught, latest, disabled, and focus treatment.
+                            edge_probe=page.evaluate("""() => { const scroll=document.querySelector('[data-testid="keno-board-scroll"]'); const results=[]; for (const number of [1,10,71,80]) { const cell=document.querySelector(`[data-testid="keno-num-${number}"]`); const originalClass=cell.className; const originalDisabled=cell.disabled; const originalAnimation=cell.style.animation; const originalTransition=cell.style.transition; scroll.scrollLeft=number%10===0?scroll.scrollWidth:0; cell.classList.add('selected','drawn','catch','latest'); cell.style.animation='none'; cell.style.transition='none'; cell.focus({preventScroll:true}); const focusedStyle=getComputedStyle(cell); const focusOutlineWidth=parseFloat(focusedStyle.outlineWidth)||0; const focusVisible=cell.matches(':focus-visible'); cell.disabled=true; const box=cell.getBoundingClientRect(); const clip=scroll.getBoundingClientRect(); const style=getComputedStyle(cell); results.push({number,top:box.top-clip.top,left:box.left-clip.left,right:clip.right-box.right,bottom:clip.bottom-box.bottom,width:box.width,height:box.height,outlineWidth:parseFloat(style.outlineWidth)||0,focusOutlineWidth,focusVisible,boxShadow:style.boxShadow,transform:style.transform,disabled:cell.disabled,opacity:style.opacity,text:cell.textContent.trim()}); cell.disabled=originalDisabled; cell.className=originalClass; cell.style.animation=originalAnimation; cell.style.transition=originalTransition; cell.blur(); } scroll.scrollLeft=0; return results; }""")
+                            # Require every corner's full worst-case visual reach to remain inside the clip boundary.
+                            for probe in edge_probe:
+                                # Keep the 22px glow, transformed edge, and outlines inside a conservative 26px visual clearance.
+                                assert min(probe['top'],probe['left'],probe['right'],probe['bottom']) >= 26, edge_probe
+                                # Preserve the governed minimum touch target and visible numeric identity at every corner.
+                                assert probe['width']>=42 and probe['height']>=42 and probe['text']==str(probe['number']), edge_probe
+                                # Verify the production result and disabled treatments were active during the geometry sample.
+                                assert probe['outlineWidth']>=2 and probe['boxShadow']!='none' and probe['transform']!='none' and probe['disabled'] and probe['opacity']=='1', edge_probe
+                            # Audit every clipping ancestor so passing board-local geometry cannot hide a compact-desktop panel crop.
+                            edge_clipping_ancestors=page.evaluate("""() => { const board=document.querySelector('[data-testid="keno-board-scroll"]'); const boardRect=board.getBoundingClientRect(); const blockers=[]; for (let ancestor=board.parentElement; ancestor; ancestor=ancestor.parentElement) { const style=getComputedStyle(ancestor); const paintContained=style.contain.split(/\\s+/).includes('paint'); const clipsX=paintContained||['hidden','clip'].includes(style.overflowX); const clipsY=paintContained||['hidden','clip'].includes(style.overflowY); if (!clipsX && !clipsY) continue; const rect=ancestor.getBoundingClientRect(); if ((clipsX && (boardRect.left<rect.left-1 || boardRect.right>rect.right+1)) || (clipsY && (boardRect.top<rect.top-1 || boardRect.bottom>rect.bottom+1))) blockers.push({tag:ancestor.tagName,className:ancestor.className,testid:ancestor.getAttribute('data-testid'),contain:style.contain,overflowX:style.overflowX,overflowY:style.overflowY,board:{top:boardRect.top,right:boardRect.right,bottom:boardRect.bottom,left:boardRect.left},ancestor:{top:rect.top,right:rect.right,bottom:rect.bottom,left:rect.left}}); } return blockers; }""")
+                            # Reject any hidden or clip ancestor that cuts the board before the governed game-outlet scroller can reveal it.
+                            assert not edge_clipping_ancestors,edge_clipping_ancestors
+                            # Keep the document itself contained while the board owns any intentional horizontal overflow.
+                            assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1')
+                            # Bring the bounded game surface into view before capturing the real idle state.
+                            page.locator('.keno-premium').scroll_into_view_if_needed()
+                            # Record self-describing idle evidence for this exact locale and viewport.
+                            region_evidence(f'after-pass-keno-edge-idle-{edge_locale.lower()}-{edge_viewport_id}.png','.keno-premium','keno',['edge_idle'],edge_locale,edge_viewport_id)
+                            # Select all four corner cells through the same public controls used by a player.
+                            for edge_number in (1,10,71,80): page.get_by_test_id(f'keno-num-{edge_number}').click()
+                            # Start keyboard traversal from the named board region so the first corner receives true focus-visible state.
+                            page.get_by_test_id('keno-board-scroll').focus(); page.keyboard.press('Tab')
+                            # Read the actual keyboard focus style rather than inferring accessibility from source text.
+                            focus_probe=page.evaluate("() => { const active=document.activeElement; const style=getComputedStyle(active); return {testid:active?.getAttribute('data-testid'),focusVisible:active?.matches(':focus-visible')||false,outlineWidth:parseFloat(style.outlineWidth)||0,outlineOffset:parseFloat(style.outlineOffset)||0,scrollLeft:document.querySelector('[data-testid=\"keno-board-scroll\"]')?.scrollLeft||0}; }")
+                            # Require the top-left edge target to be keyboard-revealed with the explicit visible focus ring.
+                            assert focus_probe['testid']=='keno-num-1' and focus_probe['focusVisible'] and focus_probe['outlineWidth']>=3 and focus_probe['outlineOffset']>=3 and focus_probe['scrollLeft']<=1, focus_probe
+                            # Require every intended corner selection to survive rerenders before evidence capture.
+                            assert all(page.get_by_test_id(f'keno-num-{edge_number}').get_attribute('aria-pressed')=='true' for edge_number in (1,10,71,80))
+                            # Record selected and focus-visible evidence from the real public controls.
+                            region_evidence(f'after-pass-keno-edge-selected-focus-{edge_locale.lower()}-{edge_viewport_id}.png','.keno-premium','keno',['edge_selected_focus_visible'],edge_locale,edge_viewport_id)
+                            # Persist one deterministic final draw so caught/latest state does not depend on random outcomes.
+                            save_player_game_state('keno',edge_player,final_edge_state)
+                            # Reconstruct the route from authoritative history and wait for all twenty final balls.
+                            page.reload(wait_until='networkidle'); page.get_by_test_id('keno-premium-hero').wait_for(timeout=5000); page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale",arg=edge_locale); page.wait_for_function("() => document.querySelectorAll('[data-testid=\"keno-drawn-ball\"]').length === 20",timeout=5000)
+                            # Require the seeded result to render every draw plus the caught/latest bottom-right edge cell.
+                            assert page.locator('.keno-num.drawn').count()==20 and page.locator('.keno-num.catch').count()==1 and page.get_by_test_id('keno-num-80').evaluate("cell => cell.classList.contains('catch') && cell.classList.contains('latest')")
+                            # Reveal the right edge through the intended board scroller before final-state capture.
+                            page.get_by_test_id('keno-board-scroll').evaluate('scroll => { scroll.scrollLeft=scroll.scrollWidth; }')
+                            # Record final-draw and caught/latest evidence for this exact locale and viewport.
+                            region_evidence(f'after-pass-keno-edge-final-caught-{edge_locale.lower()}-{edge_viewport_id}.png','.keno-premium','keno',['edge_final_caught'],edge_locale,edge_viewport_id)
+                    # Restore an empty English desktop route so the existing real-draw regression remains independent.
+                    save_player_game_state('keno',edge_player,empty_edge_state); page.set_viewport_size({'width':1920,'height':1080}); page.reload(wait_until='networkidle'); page.get_by_test_id('keno-premium-hero').wait_for(timeout=5000); page.get_by_test_id('shell-locale-select').select_option('en-US'); page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'en-US'")
+                # Execute the Keno edge-containment geometry regression.
+                run_case('BR-KENO-EDGE-001',['KENO-025','TEST-078'],keno_edge_containment)
                 # Select ten deterministic spots so paytable comparison has a stable row.
                 for spot in [3,8,12,17,24,31,44,55,63,72]: page.get_by_test_id(f'keno-num-{spot}').click()
                 # Store the spot-selection board box for stability assertions.
-                keno_selection_box=page.get_by_test_id('keno-grid').bounding_box()
+                keno_selection_box=page.evaluate("() => { const box=document.querySelector('[data-testid=\"keno-grid\"]')?.getBoundingClientRect(); return box&&box.width>0&&box.height>0?{width:box.width,height:box.height}:null; }"); assert keno_selection_box
                 # Capture the approved spot-selection evidence state.
                 shot('keno_spot_selection.png')
                 # Start the draw through the same human action used in normal play.
@@ -4786,13 +4860,13 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 # Wait until the animated draw rail shows a partial reveal.
                 page.wait_for_function("""() => { const count = document.querySelectorAll('[data-testid="keno-drawn-ball"]').length; return count >= 8 && count < 20; }""", timeout=3000)
                 # Store the draw-progress board box for stability assertions.
-                keno_progress_box=page.get_by_test_id('keno-grid').bounding_box()
+                keno_progress_box=page.evaluate("() => { const box=document.querySelector('[data-testid=\"keno-grid\"]')?.getBoundingClientRect(); return box&&box.width>0&&box.height>0?{width:box.width,height:box.height}:null; }"); assert keno_progress_box
                 # Capture the approved draw-progress evidence state.
                 shot('keno_draw_progress.png')
                 # Wait for the full Keno draw and comparison drawer to finish rendering.
                 page.wait_for_function("""() => document.querySelectorAll('[data-testid="keno-drawn-ball"]').length === 20""", timeout=5000); page.get_by_test_id('keno-paytable-comparison').wait_for(timeout=5000)
                 # Store the final-result board box for stability assertions.
-                keno_result_box=page.get_by_test_id('keno-grid').bounding_box()
+                keno_result_box=page.evaluate("() => { const box=document.querySelector('[data-testid=\"keno-grid\"]')?.getBoundingClientRect(); return box&&box.width>0&&box.height>0?{width:box.width,height:box.height}:null; }"); assert keno_result_box
                 # Capture the approved result and paytable-comparison evidence state.
                 shot('keno_result_paytable_comparison.png')
                 # Define the premium_keno function used by this module.
