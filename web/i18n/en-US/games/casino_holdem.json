@@ -90,5 +90,17 @@
   "suits.H": "hearts",
   "suits.S": "spades",
   "title": "Casino Hold'em",
-  "tokens.amount": "{amount} play tokens"
+  "tokens.amount": "{amount} play tokens",
+  "paytable.title": "Ante payout schedule",
+  "paytable.net": "{net}:1",
+  "paytable.rank.royal_flush": "Royal flush",
+  "paytable.rank.straight_flush": "Straight flush",
+  "paytable.rank.four_of_a_kind": "Four of a kind",
+  "paytable.rank.full_house": "Full house",
+  "paytable.rank.flush": "Flush",
+  "paytable.rank.straight": "Straight",
+  "paytable.rank.three_of_a_kind": "Three of a kind",
+  "paytable.rank.two_pair": "Two pair",
+  "paytable.rank.one_pair": "One pair",
+  "paytable.rank.high_card": "High card"
 }

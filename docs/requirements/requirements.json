@@ -8762,6 +8762,40 @@
       "introduced_in": "issue-320-keno-edge-clipping",
       "changed_in": "issue-320-keno-edge-clipping",
       "notes": "Issue #320 evidence paths are logs/test-runs/after-pass-keno-edge-*.png with matching VIS-EVIDENCE-001 JSON sidecars generated from the exact tested head."
+    },
+    {
+      "id": "CH-006",
+      "module": "Application",
+      "description": "The Casino Hold'em data rail displays the server-owned ante payout schedule (royal flush 100:1 through the even-money band at 1:1) in both en-US and ru-RU, sourced from the published ante_return_multipliers rules payload rather than duplicated client constants.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-CH-001"
+      ],
+      "implementation_files": [
+        "web/games/casino_holdem.js",
+        "web/i18n/en-US/games/casino_holdem.json",
+        "web/i18n/ru-RU/games/casino_holdem.json"
+      ],
+      "introduced_in": "issue-253-holdem-paytable",
+      "changed_in": "issue-253-holdem-paytable",
+      "notes": "Issue #253 (Casino Hold'em half): mirrors the merged Caribbean Stud disclosure; the schedule renders only when the server publishes it."
+    },
+    {
+      "id": "TEST-084",
+      "module": "Tests",
+      "description": "Browser evidence verifies the Casino Hold'em data rail shows the ante payout schedule with representative top (royal flush 100:1) and bottom (high card 1:1) rows before the first ante-backed deal.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-CH-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-253-holdem-paytable",
+      "changed_in": "issue-253-holdem-paytable",
+      "notes": "Issue #253 Casino Hold'em payout-schedule browser proof."
     }
   ]
 }

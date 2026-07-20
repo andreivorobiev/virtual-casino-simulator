@@ -42,11 +42,11 @@ Historical source baseline: 9.1.0
 - acey_deucey: 1.0.1
 - caribbean_stud: 1.0.1
 - let_it_ride: 1.0.0
-- casino_holdem: 1.0.0
+- casino_holdem: 1.0.1
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.45.6
-- docs: 1.45.6
+- tests: 1.45.12
+- docs: 1.45.12
 - contracts: 1.33.0
 - tooling: 1.14.0
 - commenting_policy: 1.0.0
@@ -692,3 +692,5 @@ Historical source baseline: 9.1.0
 - **TEST-076** (Tests) - PASS: Browser evidence in English and Russian at all four governed viewports verifies the focused lobby region, themed affordance, no scroll trap or horizontal overflow, Page Down, End, wheel, and touch scrolling, final-card and Play-control reachability for unfiltered, category-filtered, search-filtered, and empty states, and exact-head after-pass evidence sidecars.
 - **KENO-025** (Keno) - PASS: All 80 Keno number cells, including every outer row and column, keep their borders, numerals, keyboard focus rings, selection outlines, and drawn, caught, latest, and disabled treatments visible inside the board scroll region at every governed viewport.
 - **TEST-078** (Tests) - PASS: Browser geometry and after-pass evidence in English and Russian at 1920x1080, 1440x900, 1024x900, and 390x844 verifies corner-cell containment, keyboard focus visibility and reveal, idle, selected, final-draw, caught, latest, and disabled treatments, minimum touch targets, and no page-level horizontal overflow.
+- **CH-006** (Application) - PASS: The Casino Hold'em data rail displays the server-owned ante payout schedule (royal flush 100:1 through the even-money band at 1:1) in both en-US and ru-RU, sourced from the published ante_return_multipliers rules payload rather than duplicated client constants.
+- **TEST-084** (Tests) - PASS: Browser evidence verifies the Casino Hold'em data rail shows the ante payout schedule with representative top (royal flush 100:1) and bottom (high card 1:1) rows before the first ante-backed deal.
