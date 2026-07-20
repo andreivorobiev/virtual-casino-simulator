@@ -16,6 +16,8 @@ EXPECTED_MODULE_ROWS = [{'module':module,'revision':revision} for module,revisio
 sys.path.insert(0, str(ROOT))
 # Import Blackjack helpers so deterministic API-suite checks can cover table rules.
 from casino.games.blackjack import api as blackjack_api, engine as blackjack_engine
+# Import Slots rules so deterministic browser evidence is derived from the authoritative twenty-payline table.
+from casino.games.slots import engine as slots_engine
 # Import auth helpers so API tests can seed users through the backend storage seam.
 from casino.core import auth as auth_core
 # Import configuration helpers so startup hardening can be tested without launching a public listener.
@@ -4383,6 +4385,82 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 idle_box=page.get_by_test_id('slots-cabinet').bounding_box()
                 # Store the idle result box so the reserved payout region can be compared.
                 idle_result_box=page.get_by_test_id('slots-result').bounding_box()
+                # Prove the payline overlay coordinate space coincides with the reel cells rather than detaching below them. (issue #319)
+                def slots_payline_alignment():
+                    # Copy the exact twenty-line rule table so browser expectations cannot drift from the engine.
+                    payline_rows=[list(line) for line in slots_engine.PAYLINES[20]]
+                    # Build one deterministic all-Wild grid that makes every authoritative payline a simultaneous win.
+                    payline_grid=[['WILD' for _column in range(5)] for _row in range(3)]
+                    # Evaluate the grid through the production rules rather than fabricating payout or win rows in the browser test.
+                    payline_result=slots_engine.evaluate(payline_grid,20,1)
+                    # Require the authoritative engine to return all twenty indexed rows before UI evidence is seeded.
+                    assert len(payline_result['wins'])==20 and [win['line'] for win in payline_result['wins']]==payline_rows
+                    # Build the persisted spin shape consumed by the normal Slots route loader.
+                    payline_spin={'round_id':'slot-payline-acceptance','timestamp':'2026-07-20T00:00:00Z','stops':[0,0,0,0,0],'grid':payline_grid,'active_lines':20,'line_bet':1,'cost':20,**payline_result,'free_spin':False,'free_spins_remaining':0,'progressive':1000}
+                    # Resolve the authenticated browser player before writing isolated deterministic game state.
+                    payline_player=page.evaluate("() => { const shellPlayer=window.CasinoCurrentUser?.player || window.CasinoCurrentPlayer || {}; return shellPlayer.player_id || window.CasinoCurrentUser?.player_id || localStorage.getItem('casino.currentPlayerId') || 'human'; }")
+                    # Persist the authoritative result through the same state store the Slots route reads after refresh.
+                    save_player_game_state('slots',payline_player,{'last_spins':[payline_spin],'progressive':1000,'free_spins':0})
+                    # Reload the real route so the overlay, result text, and history all recover from one authoritative state.
+                    page.reload(wait_until='networkidle'); page.get_by_test_id('slots-payline').wait_for(timeout=5000)
+                    # Define a browser-side audit that compares every rendered SVG point with its actual cell center in screen coordinates.
+                    def audit_payline_geometry():
+                        # Bring the bounded reel grid into the viewport so elementFromPoint can test symbol identity instead of returning null for off-screen coordinates.
+                        page.get_by_test_id('slot-grid').scroll_into_view_if_needed()
+                        # Let ResizeObserver and requestAnimationFrame finish the current responsive or zoom alignment.
+                        page.wait_for_timeout(120)
+                        # Return exact geometry, identity, style, accessibility, and containment diagnostics for all twenty paths.
+                        return page.evaluate("""expectedRows => { const grid=document.querySelector('[data-testid="slot-grid"]'); const overlay=document.querySelector('[data-testid="slots-payline"]'); const gridBox=grid.getBoundingClientRect(); const overlayBox=overlay.getBoundingClientRect(); const paths=[...overlay.querySelectorAll('polyline[data-line-number]')]; let maxError=0; const rows=paths.map((path,index) => { const declared=String(path.dataset.lineRows || '').split(',').map(Number); const matrix=path.getScreenCTM(); const pointErrors=declared.map((row,column) => { const point=path.points.getItem(column); const rendered=new DOMPoint(point.x,point.y).matrixTransform(matrix); const cell=document.querySelector(`[data-testid="slot-cell-${row}-${column}"]`).getBoundingClientRect(); const error=Math.hypot(rendered.x-(cell.left+cell.width/2),rendered.y-(cell.top+cell.height/2)); maxError=Math.max(maxError,error); return error; }); const style=getComputedStyle(path); return {number:Number(path.dataset.lineNumber),declared,expected:expectedRows[index],pointErrors,stroke:style.stroke,dash:style.strokeDasharray,width:parseFloat(style.strokeWidth)}; }); const symbolHits=[...document.querySelectorAll('[data-testid^="slot-cell-"]')].map(cell => { const box=cell.getBoundingClientRect(); const hit=document.elementFromPoint(box.left+box.width/2,box.top+box.height/2); const style=getComputedStyle(cell); return Boolean(hit?.closest('.slots-symbol')) && style.visibility==='visible' && style.display!=='none' && Number(style.opacity)>0 && Boolean(cell.textContent.trim()); }); return {positioned:getComputedStyle(grid).position,pathCount:paths.length,groupCount:overlay.querySelectorAll('g[data-line-number]').length,rows,maxError,gridBox:{left:gridBox.left,top:gridBox.top,width:gridBox.width,height:gridBox.height},overlayBox:{left:overlayBox.left,top:overlayBox.top,width:overlayBox.width,height:overlayBox.height},roundId:overlay.dataset.roundId,payout:Number(overlay.dataset.payout),reduced:overlay.dataset.reducedMotion,aria:overlay.getAttribute('aria-label'),uniqueStyles:new Set(rows.map(row => `${row.stroke}|${row.dash}`)).size,symbolHits,noOverflow:document.documentElement.scrollWidth<=window.innerWidth+1}; }""",payline_rows)
+                    # Read the four authoritative dimensions directly from the visual matrix used by the browser gate.
+                    payline_viewports={entry['id']:{'width':entry['width'],'height':entry['height']} for entry in visual_matrix['viewports']}
+                    # Require the matrix to expose every issue-mandated desktop, tablet, and mobile viewport.
+                    assert set(payline_viewports)=={'desktop_primary','desktop_compact','tablet','mobile'}
+                    # Define one strict acceptance assertion reused after locale, resize, zoom, and refresh changes.
+                    def require_payline_acceptance(diagnostics):
+                        # Require exact current-main positioning, all twenty labelled paths, and outcome identity.
+                        assert diagnostics['positioned']=='relative' and diagnostics['pathCount']==20 and diagnostics['groupCount']==20 and diagnostics['roundId']==payline_spin['round_id'] and diagnostics['payout']==payline_spin['payout'],diagnostics
+                        # Require the SVG box to coincide with the grid and every transformed point to hit its cell center within one CSS pixel.
+                        assert max(abs(diagnostics['overlayBox'][edge]-diagnostics['gridBox'][edge]) for edge in ('left','top','width','height'))<=1 and diagnostics['maxError']<=1,diagnostics
+                        # Require every rendered path to preserve its engine row vector and permanent one-based line number.
+                        assert all(row['number']==index+1 and row['declared']==payline_rows[index] and row['expected']==payline_rows[index] and max(row['pointErrors'])<=1 for index,row in enumerate(diagnostics['rows'])),diagnostics
+                        # Require twenty distinguishable color/dash combinations, thin non-obscuring strokes, visible symbol identity, and bounded layout.
+                        assert diagnostics['uniqueStyles']==20 and all(row['width']<=2 for row in diagnostics['rows']) and all(diagnostics['symbolHits']) and diagnostics['noOverflow'] and diagnostics['aria'],diagnostics
+                    # Verify every locale and governed viewport, capturing after-pass route-restored multi-win evidence with sidecars.
+                    for locale in ('en-US','ru-RU'):
+                        # Switch through the player-visible locale control so the overlay's accessible copy rerenders normally.
+                        page.get_by_test_id('shell-locale-select').select_option(locale); page.get_by_test_id('slots-payline').wait_for(timeout=5000)
+                        # Exercise every exact visual-matrix size for this locale.
+                        for viewport_id,viewport in payline_viewports.items():
+                            # Resize through the supported browser path before auditing responsive alignment.
+                            page.set_viewport_size(viewport)
+                            # Require all twenty paths to remain exact after this locale and viewport combination.
+                            payline_diagnostics=audit_payline_geometry(); require_payline_acceptance(payline_diagnostics)
+                            # Read the visible result and history so their line summary and payout can be matched to the authoritative spin.
+                            payline_visible_text=page.get_by_test_id('slots-premium').inner_text(); payline_result_text=page.get_by_test_id('slots-result').inner_text(); payline_history_text=page.get_by_test_id('slots-recent-spins').inner_text()
+                            # Normalize locale separators while retaining every visible digit needed for the exact payout comparison.
+                            payline_result_digits=''.join(character for character in payline_result_text if character.isdigit()); payline_history_digits=''.join(character for character in payline_history_text if character.isdigit())
+                            # Require the first three detailed lines, the remaining-win count, total payout, and round history to agree with the engine outcome.
+                            line_word='Line' if locale=='en-US' else 'Линия'; assert all(f'{line_word} {number}' in payline_result_text for number in (1,2,3)) and '17' in payline_result_text and str(int(payline_spin['payout'])) in payline_result_digits and payline_spin['round_id'] in payline_history_text and str(int(payline_spin['payout'])) in payline_history_digits
+                            # Reject any resource-key leakage from the localized accessible or visible result treatment.
+                            assert all(key not in payline_visible_text for key in ('payline.overlayLabel','payline.pathLabel','result.lineWin'))
+                            # Capture the complete governed game surface for exact-head acceptance review.
+                            game_evidence(f'after-pass-slots-paylines-{locale}-{viewport_id}.png','slots',['win','multi_win','route_restored'],locale,viewport_id)
+                    # Restore English at the primary desktop viewport before the zoom-specific audit.
+                    page.get_by_test_id('shell-locale-select').select_option('en-US'); page.set_viewport_size(payline_viewports['desktop_primary'])
+                    # Apply a representative 125 percent CSS zoom and require geometry to realign rather than use stale percentages.
+                    page.evaluate("document.body.style.zoom='125%'"); zoom_diagnostics=audit_payline_geometry(); require_payline_acceptance(zoom_diagnostics)
+                    # Record the zoomed after-pass state separately so the evidence sidecar names the acceptance dimension.
+                    game_evidence('after-pass-slots-paylines-en-US-desktop_primary-zoomed.png','slots',['win','multi_win','zoomed'], 'en-US','desktop_primary')
+                    # Restore normal zoom before exercising the operating-system reduced-motion preference.
+                    page.evaluate("document.body.style.zoom=''"); page.emulate_media(reduced_motion='reduce'); page.reload(wait_until='networkidle'); page.get_by_test_id('slots-payline').wait_for(timeout=5000)
+                    # Require the reduced-motion rerender to expose static paths with the same exact geometry.
+                    reduced_diagnostics=audit_payline_geometry(); require_payline_acceptance(reduced_diagnostics); assert reduced_diagnostics['reduced']=='true' and page.locator('[data-testid="slots-payline"] polyline').first.evaluate("path => { const style=getComputedStyle(path); return style.animationName==='none' && style.transitionDuration==='0s'; }")
+                    # Capture the clear non-animated win treatment as governed after-pass evidence.
+                    game_evidence('after-pass-slots-paylines-en-US-desktop_primary-reduced-motion.png','slots',['win','multi_win','reduced_motion','route_restored'],'en-US','desktop_primary')
+                    # Restore the default media preference and route state for the existing Slots regression sequence.
+                    page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('slots-payline').wait_for(timeout=5000); require_payline_acceptance(audit_payline_geometry())
+                # Execute the payline-to-reel alignment regression.
+                run_case('BR-SLOTS-PAYLINE-001',['SLOT-029','TEST-077'],slots_payline_alignment)
                 # Define the focused line-bet regression using real visible controls and backend requests.
                 def slots_line_bet_validation():
                     # Track only Slots spin requests so input edits can prove they never move tokens by themselves.

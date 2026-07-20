@@ -16,7 +16,7 @@ Historical source baseline: 9.1.0
 - admin: 1.6.1
 - operations: 1.0.0
 - roulette: 9.4.4
-- slots: 9.1.3
+- slots: 9.1.4
 - blackjack: 9.1.3
 - baccarat: 9.1.2
 - keno: 9.2.2
@@ -45,8 +45,8 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.0
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.45.1
-- docs: 1.45.1
+- tests: 1.45.2
+- docs: 1.45.2
 - contracts: 1.33.0
 - tooling: 1.14.0
 - commenting_policy: 1.0.0
@@ -684,3 +684,5 @@ Historical source baseline: 9.1.0
 - **TEST-071** (Tests) - PASS: Browser evidence verifies the login gate fits without page overflow at 1280x720 with the sign-in submit control on screen, and that the terms acceptance row meets the enlarged touch-target height.
 - **ROU-060** (Roulette) - PASS: Leaving the Roulette table with open, un-spun bets refunds each staked amount through the documented clear endpoint, so navigating away never strands an already-debited stake and the reopened round starts with no lingering bet.
 - **TEST-073** (Tests) - PASS: Browser evidence verifies that placing a Roulette bet debits the shared wallet, navigating away refunds the stake back to the pre-wager balance, and reopening the table shows no lingering open-bet chip.
+- **SLOT-029** (Slots) - PASS: The Slots result renders every authoritative winning payline as a labelled, non-color-only SVG path whose five points are recalculated from the live reel-cell centers, remain within one CSS pixel after responsive resize, locale rerender, zoom, and route recovery, and preserve visible symbol identity in normal and reduced-motion modes.
+- **TEST-077** (Tests) - PASS: Deterministic browser evidence derives all twenty paths and payouts from the production Slots engine, restores a simultaneous-win outcome through the normal state loader, verifies every transformed SVG point within one CSS pixel of its authoritative cell, checks result/history identity, multi-win distinction, symbol visibility, zoom, reduced motion, and captures EN/RU after-pass evidence at all four governed viewports.

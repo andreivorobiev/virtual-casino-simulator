@@ -181,8 +181,11 @@
         "idle",
         "spinning",
         "win",
+        "multi_win",
         "bonus",
         "invalid_line_bet",
+        "reduced_motion",
+        "zoomed",
         "route_restored"
       ],
       "locales": [
@@ -192,6 +195,7 @@
       "viewports": [
         "desktop_primary",
         "desktop_compact",
+        "tablet",
         "mobile"
       ],
       "gates": [
@@ -202,6 +206,7 @@
         "VIS-SCROLL-001",
         "VIS-HIERARCHY-001",
         "VIS-RESPONSIVE-001",
+        "VIS-EVIDENCE-001",
         "VIS-CATALOG-001"
       ]
     },

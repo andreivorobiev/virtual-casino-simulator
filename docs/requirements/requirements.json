@@ -8621,6 +8621,41 @@
       "introduced_in": "issue-246-roulette-refund-on-leave",
       "changed_in": "issue-246-roulette-refund-on-leave",
       "notes": "Issue #246 refund-on-leave wallet-correctness browser proof."
+    },
+    {
+      "id": "SLOT-029",
+      "module": "Slots",
+      "description": "The Slots result renders every authoritative winning payline as a labelled, non-color-only SVG path whose five points are recalculated from the live reel-cell centers, remain within one CSS pixel after responsive resize, locale rerender, zoom, and route recovery, and preserve visible symbol identity in normal and reduced-motion modes.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-SLOTS-PAYLINE-001"
+      ],
+      "implementation_files": [
+        "web/games/slots.js",
+        "web/i18n/en-US/games/slots.json",
+        "web/i18n/ru-RU/games/slots.json"
+      ],
+      "introduced_in": "issue-319-slots-payline-alignment",
+      "changed_in": "issue-319-slots-payline-alignment",
+      "notes": "Issue #319: ResizeObserver-backed geometry derives each point from the rendered cell center; simultaneous paths expose permanent line numbers, accessible labels, unique color/dash combinations, and exact round/payout identity."
+    },
+    {
+      "id": "TEST-077",
+      "module": "Tests",
+      "description": "Deterministic browser evidence derives all twenty paths and payouts from the production Slots engine, restores a simultaneous-win outcome through the normal state loader, verifies every transformed SVG point within one CSS pixel of its authoritative cell, checks result/history identity, multi-win distinction, symbol visibility, zoom, reduced motion, and captures EN/RU after-pass evidence at all four governed viewports.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-SLOTS-PAYLINE-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-319-slots-payline-alignment",
+      "changed_in": "issue-319-slots-payline-alignment",
+      "notes": "Issue #319 evidence paths are logs/test-runs/after-pass-slots-paylines-*.png with matching VIS-EVIDENCE-001 JSON sidecars generated from the exact tested head."
     }
   ]
 }
