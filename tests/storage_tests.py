@@ -70,6 +70,8 @@ def _mysql_action_worker(index):
 def _mysql_token_consume_worker(arguments):
     # Import the inert token service inside the child process.
     from casino.core import one_time_tokens
+    # Import storage provider injection so this child ignores the workflow's JSON default.
+    from casino.core import storage
     # Import the configured data root so state_store derives the canonical MySQL document key.
     from casino.config import DATA_DIR
     # Import the generic validation envelope used by losing race participants.
@@ -77,27 +79,35 @@ def _mysql_token_consume_worker(arguments):
 
     # Unpack the synthetic race packet without printing any ephemeral value.
     index, token, subject = arguments
-    # Build an independent provider-routed service over the canonical auth document.
-    service = one_time_tokens.TokenService(
-        # Use the normal data-root path so MySQL provider routing is exercised.
-        store_path=DATA_DIR / "auth" / "one_time_tokens.json",
-        # Use the synthetic test-only keyed digest material.
-        digest_key=MYSQL_TOKEN_TEST_KEY,
-        # Suppress application log output from bounded race participants.
-        audit_sink=lambda level, event, fields: None,
-    )
-    # Start protected consumption so expected race losers return stable evidence.
+    # Inject an independent MySQL provider because process-local test injection is not inherited.
+    storage.set_provider_for_tests(storage.MySQLStorageProvider())
+    # Start protected consumption so provider injection is always released.
     try:
-        # Attempt the exact same purpose, bearer, and subject from this process.
-        result = service.consume("password_reset", token, subject=subject)
-        # Return the caller index, winner flag, and opaque record identifier.
-        return index, True, result["token_id"]
-    # Convert the generic losing result into serializable evidence.
-    except ValidationError as error:
-        # Require every loser to receive only the generic public reason.
-        assert error.details == one_time_tokens.INVALID_TOKEN_DETAILS
-        # Return no identifier for a rejected replay or race loser.
-        return index, False, None
+        # Build an independent provider-routed service over the canonical auth document.
+        service = one_time_tokens.TokenService(
+            # Use the normal data-root path so state_store derives the MySQL document key.
+            store_path=DATA_DIR / "auth" / "one_time_tokens.json",
+            # Use the synthetic test-only keyed digest material.
+            digest_key=MYSQL_TOKEN_TEST_KEY,
+            # Suppress application log output from bounded race participants.
+            audit_sink=lambda level, event, fields: None,
+        )
+        # Start protected consumption so expected race losers return stable evidence.
+        try:
+            # Attempt the exact same purpose, bearer, and subject from this process.
+            result = service.consume("password_reset", token, subject=subject)
+            # Return the caller index, winner flag, and opaque record identifier.
+            return index, True, result["token_id"]
+        # Convert the generic losing result into serializable evidence.
+        except ValidationError as error:
+            # Require every loser to receive only the generic public reason.
+            assert error.details == one_time_tokens.INVALID_TOKEN_DETAILS
+            # Return no identifier for a rejected replay or race loser.
+            return index, False, None
+    # Always clear process-local provider injection before the worker exits.
+    finally:
+        # Restore normal provider selection in this spawned process.
+        storage.set_provider_for_tests(None)
 
 
 # Simulate a process that commits an action journal entry but loses projection and response.
