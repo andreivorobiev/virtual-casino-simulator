@@ -893,6 +893,78 @@ def run_api_tests():
             raise AssertionError('one-time-token infrastructure suite failed')
     # Record the purpose-bound one-time-token platform proof.
     run_case('API-OTT-001',['OTT-001','OTT-002','TEST-089'],run_one_time_token_tests)
+    # Certify the provider-neutral transactional mail boundary is disabled-by-default and privacy-safe. (issue #330)
+    def transactional_mail_boundary():
+        # Import the infrastructure module and its fail-closed error type locally.
+        from casino.core import mail
+        from casino.errors import ValidationError
+        # Require the boundary to be disabled by default.
+        readiness = mail.readiness()
+        assert readiness['enabled'] is False and readiness['provider'] == 'disabled' and readiness['ready'] is False, readiness
+        # Require canonical HTTPS links and open-redirect rejection.
+        assert mail.build_link('/enroll/invitation', token='abc.def') == 'https://localhost/enroll/invitation?token=abc.def'
+        for unsafe in ('//evil.example', 'https://evil.example', '/x:y', 'no-leading-slash'):
+            try:
+                mail.build_link(unsafe); raise AssertionError('expected unsafe_path')
+            except ValidationError as error:
+                assert error.details.get('reason') == 'unsafe_path', error.details
+        # Require a purpose-bound send to capture locally and return the deliverable tokened link.
+        receipt = mail.send('invitation', 'Owner@Example.com', token='tok-abc')
+        assert receipt['status'] == 'captured' and receipt['link'] == 'https://localhost/enroll/invitation?token=tok-abc' and 'recipient' not in receipt, receipt
+        # Require the outbox to store no raw recipient, token, or password.
+        outbox = open(mail.OUTBOX_PATH, encoding='utf-8').read()
+        assert 'owner@example.com' not in outbox.lower() and 'tok-abc' not in outbox and 'password' not in outbox.lower()
+    # Record the transactional mail boundary proof.
+    run_case('API-MAIL-001',['MAIL-001','MAIL-002','TEST-090'],transactional_mail_boundary)
+    # Certify Admin invitations and secure redemption compose the token and mail platforms fail-closed. (issue #332)
+    def admin_invitations_flow():
+        # Import the composed lifecycle module and its fail-closed error type locally.
+        from casino.core import invitations, one_time_tokens
+        from casino.core.state_store import update_json
+        from casino.core.clock import utc_now
+        from casino.errors import ValidationError
+        # Assert a call fails closed with the exact non-sensitive reason code.
+        def expect_reason(fn, reason):
+            try:
+                fn(); raise AssertionError(f'expected fail-closed ({reason})')
+            except ValidationError as error:
+                assert error.details.get('reason') == reason, (reason, error.details)
+        # Creating an invitation delivers it and creates no account, returning a token-free Admin view.
+        created = invitations.create('Invitee@Example.com', invited_by='admin_1')
+        assert created['status'] == 'pending' and created['email'] == 'invitee@example.com' and 'token' not in created, created
+        # A malformed recipient fails closed.
+        expect_reason(lambda: invitations.create('not-an-email'), 'bad_email')
+        # Redemption is disabled by default and fails closed before any account is created.
+        expect_reason(lambda: invitations.redeem('anytoken', 'invitee@example.com', 'password123'), 'enrollment_disabled')
+        # Enable enrollment through configuration for the redemption path proof.
+        import importlib, casino.config, casino.core.invitations
+        os.environ['CASINO_ENROLLMENT_ENABLED'] = 'true'
+        importlib.reload(casino.config); importlib.reload(casino.core.invitations)
+        flow = casino.core.invitations
+        try:
+            # Drive redemption end-to-end with a real token bound to a pending invitation.
+            issued = one_time_tokens.issue('invitation', 'redeemer@example.com')
+            def _seed(document):
+                document.setdefault('invitations', []).append({'invitation_id': 'invite_test', 'email': 'redeemer@example.com', 'email_digest': flow._digest('redeemer@example.com'), 'status': 'pending', 'token_id': issued['token_id'], 'invited_by': 'admin_1', 'created_at': utc_now(), 'expires_at': issued['expires_at'], 'redeemed_at': None, 'revoked_at': None, 'audit_id': 'a'})
+                return document
+            update_json(flow.INVITATIONS_PATH, _seed, flow.default_invitations)
+            # A weak password fails closed before any account is created.
+            expect_reason(lambda: flow.redeem(issued['token'], 'redeemer@example.com', 'short'), 'bad_password')
+            # A wrong subject fails closed with one generic redemption error.
+            expect_reason(lambda: flow.redeem(issued['token'], 'someone-else@example.com', 'password123'), 'invalid_redemption')
+            # The correct redemption enrolls exactly one canonical account.
+            enrolled = flow.redeem(issued['token'], 'redeemer@example.com', 'password123')
+            assert enrolled['status'] == 'enrolled' and enrolled['user_id'], enrolled
+            from casino.core import auth
+            assert auth.find_user_by_email('redeemer@example.com'), 'account not created on redemption'
+            # Replaying the consumed token fails closed generically.
+            expect_reason(lambda: flow.redeem(issued['token'], 'redeemer@example.com', 'password123'), 'invalid_redemption')
+        finally:
+            # Restore the disabled-by-default enrollment configuration after the proof.
+            os.environ.pop('CASINO_ENROLLMENT_ENABLED', None)
+            importlib.reload(casino.config); importlib.reload(casino.core.invitations)
+    # Record the Admin invitation and secure redemption proof.
+    run_case('API-INVITE-001',['INVITE-001','INVITE-002','TEST-091'],admin_invitations_flow)
     # Record listener-free disposable-principal lifecycle and browser-binding proof.
     run_case('API-GUEST-LIFECYCLE-001',['GUEST-001','GUEST-002','GUEST-006','TEST-080'],validate_guest_lifecycle)
     # Record listener-free telemetry privacy, milestones, and retention proof.

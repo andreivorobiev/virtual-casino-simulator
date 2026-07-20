@@ -9215,6 +9215,114 @@
       "introduced_in": "issue-317-guest-trials",
       "changed_in": "issue-317-guest-trials",
       "notes": "Issue #317 contract acceptance is tied to exact v2 routes and compatibility policies rather than generic API smoke tests."
+    },
+    {
+      "id": "MAIL-001",
+      "module": "Core",
+      "description": "A provider-neutral transactional mail boundary builds enrollment and recovery messages for a fixed purpose allowlist, generates browser links from the configured canonical HTTPS origin, rejects open-redirect and host-spoof link paths, and routes through a pluggable transport whose disabled default captures messages locally and never touches the network; a Postmark transport exists but stays inert until the deployment is configured, enabled, and released. Delivery is disabled by default and misconfiguration fails closed.",
+      "status": "PASS",
+      "api_tests": [
+        "API-MAIL-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/mail.py",
+        "casino/config.py"
+      ],
+      "introduced_in": "issue-330-mail-adapter",
+      "changed_in": "issue-330-mail-adapter",
+      "notes": "Issue #330 infrastructure: no live mail, provider mutation, user creation, or enablement."
+    },
+    {
+      "id": "MAIL-002",
+      "module": "Core",
+      "description": "The mail boundary never exposes sensitive material: the persisted outbox stores only keyed recipient and token digests plus a token-free canonical link, the deliverable tokened link is returned only in the transient send receipt, readiness reports boolean configuration state without secrets, and no API key, recipient address, raw token, or provider response appears in storage, results, errors, or audit logs.",
+      "status": "PASS",
+      "api_tests": [
+        "API-MAIL-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/mail.py",
+        "casino/config.py"
+      ],
+      "introduced_in": "issue-330-mail-adapter",
+      "changed_in": "issue-330-mail-adapter",
+      "notes": "Issue #330 data-minimization boundary."
+    },
+    {
+      "id": "TEST-090",
+      "module": "Tests",
+      "description": "Listener-free API-suite evidence verifies the mail boundary is disabled by default, builds canonical HTTPS links while rejecting open redirects, captures a purpose-bound message locally with a token-free stored link, and stores no raw recipient, token, or password.",
+      "status": "PASS",
+      "api_tests": [
+        "API-MAIL-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-330-mail-adapter",
+      "changed_in": "issue-330-mail-adapter",
+      "notes": "Issue #330 disabled-by-default privacy-safe mail proof."
+    },
+    {
+      "id": "INVITE-001",
+      "module": "Core",
+      "description": "An Admin can send, list, resend (with a per-recipient cooldown), and revoke email invitations; each invitation issues a one-time token (via the token platform) delivered through the mail boundary and authorizes enrollment only, never pre-creating an account, player, wallet, or password. Admin invitation endpoints sit behind the standard Admin authorization boundary.",
+      "status": "PASS",
+      "api_tests": [
+        "API-INVITE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/invitations.py",
+        "casino/admin.py",
+        "casino/app.py",
+        "casino/core/auth.py",
+        "casino/wsgi.py",
+        "casino/config.py"
+      ],
+      "introduced_in": "issue-332-admin-invitations",
+      "changed_in": "issue-332-admin-invitations",
+      "notes": "Issue #332: composes #331 tokens and #330 mail; the Admin Invitations UI section is a follow-up slice."
+    },
+    {
+      "id": "INVITE-002",
+      "module": "Core",
+      "description": "Invitation redemption is disabled by default and, when enabled, atomically creates one canonical account with a verified email and password only after the bound one-time token is consumed; it never auto-links a social identity by email match. Disabled enrollment, a weak or missing password, a wrong subject, replay, expiry, and revocation all fail closed with one generic non-disclosing error, and the redemption endpoint accepts only the exact token, email, and password fields.",
+      "status": "PASS",
+      "api_tests": [
+        "API-INVITE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/invitations.py",
+        "casino/admin.py",
+        "casino/app.py",
+        "casino/core/auth.py",
+        "casino/wsgi.py",
+        "casino/config.py"
+      ],
+      "introduced_in": "issue-332-admin-invitations",
+      "changed_in": "issue-332-admin-invitations",
+      "notes": "Issue #332 secure redemption boundary; enrollment stays disabled until separate release approval."
+    },
+    {
+      "id": "TEST-091",
+      "module": "Tests",
+      "description": "Listener-free API-suite evidence verifies the invitation lifecycle: create delivers without creating an account, malformed recipients fail closed, redemption is disabled by default, and when enabled a weak password, wrong subject, and replay fail closed while a correct redemption enrolls exactly one canonical account.",
+      "status": "PASS",
+      "api_tests": [
+        "API-INVITE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-332-admin-invitations",
+      "changed_in": "issue-332-admin-invitations",
+      "notes": "Issue #332 invitation and redemption fail-closed proof."
     }
   ]
 }

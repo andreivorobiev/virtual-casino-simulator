@@ -7,13 +7,13 @@ Historical source baseline: 9.1.0
 ## Independent module revisions
 
 - application: 9.40.0
-- core: 9.15.0
+- core: 9.15.1
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.0
 - autoplay: 1.1.3
 - audio: 9.1.1
-- admin: 1.7.0
+- admin: 1.7.1
 - operations: 1.0.0
 - roulette: 9.4.5
 - slots: 9.1.4
@@ -45,8 +45,8 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.1
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.47.0
-- docs: 1.47.0
+- tests: 1.47.5
+- docs: 1.47.5
 - contracts: 1.35.0
 - tooling: 1.15.0
 - commenting_policy: 1.0.0
@@ -716,3 +716,9 @@ Historical source baseline: 9.1.0
 - **TEST-080** (Tests) - PASS: Focused API tests prove consent rejection creates no state, server-authoritative guest creation, 5,000-token isolation, non-Admin authorization, CSRF and browser-proof enforcement, same-context activity, inactivity and absolute expiry, atomic concurrent capacity, per-session game-action and autoplay bounds, complete-catalog guest state access, irreversible explicit end, wallet and autoplay revocation, and cookie-only non-resumption.
 - **TEST-081** (Tests) - PASS: Exact-head browser evidence verifies guest consent, disclosed temporary/no-cash terms, start, refresh preservation, real game-module entry, End trial, no recovery, and the Admin funnel, games, filters, detail, cleanup health, de-identification, keyboard access, reduced motion, 200 percent zoom, and no horizontal overflow in en-US and ru-RU at 1920x1080, 1440x900, 1024x900, and 390x844.
 - **TEST-088** (Tests) - PASS: Contract and telemetry tests prove the additive v2 paths, full filters, nine-stage funnel, fake-token/game/action/error/latency aggregates, bounded event drill-down, privacy threshold, envelopes, v1 freeze, Admin-only enforcement, allowlisted low-cardinality dimensions, no forbidden identifiers, fixed 30-day raw and 400-day aggregate retention, safe detail lookup, and sanitized cleanup failure plus recovery status.
+- **MAIL-001** (Core) - PASS: A provider-neutral transactional mail boundary builds enrollment and recovery messages for a fixed purpose allowlist, generates browser links from the configured canonical HTTPS origin, rejects open-redirect and host-spoof link paths, and routes through a pluggable transport whose disabled default captures messages locally and never touches the network; a Postmark transport exists but stays inert until the deployment is configured, enabled, and released. Delivery is disabled by default and misconfiguration fails closed.
+- **MAIL-002** (Core) - PASS: The mail boundary never exposes sensitive material: the persisted outbox stores only keyed recipient and token digests plus a token-free canonical link, the deliverable tokened link is returned only in the transient send receipt, readiness reports boolean configuration state without secrets, and no API key, recipient address, raw token, or provider response appears in storage, results, errors, or audit logs.
+- **TEST-090** (Tests) - PASS: Listener-free API-suite evidence verifies the mail boundary is disabled by default, builds canonical HTTPS links while rejecting open redirects, captures a purpose-bound message locally with a token-free stored link, and stores no raw recipient, token, or password.
+- **INVITE-001** (Core) - PASS: An Admin can send, list, resend (with a per-recipient cooldown), and revoke email invitations; each invitation issues a one-time token (via the token platform) delivered through the mail boundary and authorizes enrollment only, never pre-creating an account, player, wallet, or password. Admin invitation endpoints sit behind the standard Admin authorization boundary.
+- **INVITE-002** (Core) - PASS: Invitation redemption is disabled by default and, when enabled, atomically creates one canonical account with a verified email and password only after the bound one-time token is consumed; it never auto-links a social identity by email match. Disabled enrollment, a weak or missing password, a wrong subject, replay, expiry, and revocation all fail closed with one generic non-disclosing error, and the redemption endpoint accepts only the exact token, email, and password fields.
+- **TEST-091** (Tests) - PASS: Listener-free API-suite evidence verifies the invitation lifecycle: create delivers without creating an account, malformed recipients fail closed, redemption is disabled by default, and when enabled a weak password, wrong subject, and replay fail closed while a correct redemption enrolls exactly one canonical account.

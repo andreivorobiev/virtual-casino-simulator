@@ -15,6 +15,8 @@ from casino.module_versions import list_module_revisions
 from casino.core import auth, players, ledger, history, logger, autoplay, settings
 # Import the de-identified guest-trial telemetry for the Admin Guest Trials section. (issue #317)
 from casino.core import guest_analytics
+# Import the invitation lifecycle for the Admin invitation-by-email section. (issue #332)
+from casino.core import invitations
 # Import required dependency so this module can use its public functions or constants.
 from casino.core.clock import utc_now
 # Import required dependency so this module can use its public functions or constants.
@@ -559,6 +561,34 @@ def register(router):
     def admin_create_user(body, query):
         # Return the newly created beta user and one-time password value.
         return create_admin_user(body)
+
+    # Attach this decorator so the following function is registered with the framework.
+    @router.get(r"/api/v1/admin/invitations")
+    # List email invitations for least-privilege Admin inspection. (issue #332)
+    def admin_list_invitations(body, query):
+        # Return the bounded, token-free invitation views.
+        return {"invitations": invitations.listing()}
+
+    # Attach this decorator so the following function is registered with the framework.
+    @router.post(r"/api/v1/admin/invitations")
+    # Send one email invitation without creating any account, player, wallet, or password. (issue #332)
+    def admin_create_invitation(body, query, context):
+        # Create and deliver the invitation, attributing it to the authenticated Admin.
+        return {"invitation": invitations.create(str((body or {}).get("email", "")), invited_by=(context.get("user") or {}).get("user_id", ""))}
+
+    # Attach this decorator so the following function is registered with the framework.
+    @router.post(r"/api/v1/admin/invitations/resend")
+    # Resend one pending invitation with a fresh token, honoring the cooldown. (issue #332)
+    def admin_resend_invitation(body, query):
+        # Resend the identified invitation.
+        return {"invitation": invitations.resend(str((body or {}).get("invitation_id", "")))}
+
+    # Attach this decorator so the following function is registered with the framework.
+    @router.post(r"/api/v1/admin/invitations/revoke")
+    # Revoke one pending invitation so its token can no longer be redeemed. (issue #332)
+    def admin_revoke_invitation(body, query):
+        # Revoke the identified invitation.
+        return {"invitation": invitations.revoke(str((body or {}).get("invitation_id", "")))}
 
     # Attach this decorator so the following function is registered with the framework.
     @router.get(r"/api/v1/admin/users/(?P<user_id>[^/]+)")

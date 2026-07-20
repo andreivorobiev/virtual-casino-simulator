@@ -35,7 +35,7 @@ from casino.core.state_store import ensure_dirs, migrate_from_v7_if_needed
 # Import required dependency so this module can bootstrap whichever storage provider is configured.
 from casino.core.storage import bootstrap_players, get_storage_provider
 # Import required dependency so this module can use its public functions or constants.
-from casino.core import logger, players, ledger, history, auth, guest_analytics
+from casino.core import logger, players, ledger, history, auth, guest_analytics, invitations
 # Import required dependency so this module can use its public functions or constants.
 from casino.games.registry import catalog_summary, list_games, register_games
 # Import required dependency so this module can use its public functions or constants.
@@ -235,6 +235,17 @@ def build_router() -> Router:
         payload["guest_browser_nonce"] = guest["browser_nonce"]
         # Return the guest session payload without exposing any durable credential or internal identifier.
         return payload
+
+    # Attach this decorator so the following function is registered with the framework.
+    @router.post(r"/api/v2/auth/redeem-invitation")
+    # Redeem an email invitation into a new canonical account when enrollment is enabled. (issue #332)
+    def auth_redeem_invitation(body, query):
+        # Reject any field outside the exact v2 redemption contract before consuming the bearer.
+        if set(body or {}) - {"token", "email", "password"}:
+            # Fail closed on an unexpected field without echoing its value.
+            raise ValidationError("Invitation redemption request contains unsupported fields")
+        # Redeem through the invitation lifecycle; disabled enrollment and every abuse case fail closed generically.
+        return invitations.redeem(str((body or {}).get("token", "")), str((body or {}).get("email", "")), str((body or {}).get("password", "")))
 
     # Attach this decorator so the following function is registered with the framework.
     @router.post(r"/api/v2/auth/guest/end")
