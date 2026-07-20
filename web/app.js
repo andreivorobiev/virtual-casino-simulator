@@ -183,10 +183,14 @@ function updateCurrentUserShell() {
 function renderLoginGate(message = '') {
   // Clear the public current-user hook while the browser is logged out.
   window.CasinoCurrentUser = null;
+  // Leave lobby-only flex containment before the public authentication screen replaces the route outlet.
+  document.body.classList.remove('lobby-active');
   // Mark the document so chrome and game routes stay hidden while logged out.
   document.body.classList.add('auth-locked');
   // Read the main route outlet reserved by index.html.
   const view = document.getElementById('view');
+  // Remove authenticated lobby-region semantics before exposing the public login gate.
+  view.removeAttribute('tabindex'); view.removeAttribute('role'); view.removeAttribute('aria-label'); view.removeAttribute('data-testid');
   // Apply the auth screen class contract for login and terms flows.
   view.className = 'screen auth-screen';
   // Render the browser login gate with private-beta toy-simulator acknowledgement.
@@ -201,10 +205,14 @@ function renderLoginGate(message = '') {
 function renderTermsGate(session) {
   // Store the current session so accepted terms can continue into the shell.
   currentSession = session;
+  // Leave lobby-only flex containment before the terms screen replaces the route outlet.
+  document.body.classList.remove('lobby-active');
   // Mark the document so chrome and game routes stay hidden until terms are accepted.
   document.body.classList.add('auth-locked');
   // Read the main route outlet reserved by index.html.
   const view = document.getElementById('view');
+  // Remove authenticated lobby-region semantics before exposing the terms gate.
+  view.removeAttribute('tabindex'); view.removeAttribute('role'); view.removeAttribute('aria-label'); view.removeAttribute('data-testid');
   // Apply the auth screen class contract for login and terms flows.
   view.className = 'screen auth-screen';
   // Read the required terms version from the current-user payload.
@@ -544,17 +552,29 @@ export async function navigate(route, options = {}) {
     if (targetRoute === 'lobby') {
       // Stop observing game-only rails before rendering the lobby surface.
       gameRailObserver?.disconnect();
+      // Let the authenticated shell allocate its remaining viewport height to one bounded lobby scroll region. (issue #318)
+      document.body.classList.add('lobby-active');
       // Apply the lobby screen class contract for responsive shell styling.
       view.className = 'screen lobby-screen';
-      // Drop the game-outlet scroll-region semantics so the lobby uses natural document flow.
-      view.removeAttribute('tabindex'); view.removeAttribute('role'); view.removeAttribute('aria-label');
+      // Include the intentional lobby scroll region in the natural keyboard tab order.
+      view.tabIndex = 0;
+      // Expose the bounded outlet as an assistive-technology region instead of an unlabeled generic main element.
+      view.setAttribute('role', 'region');
+      // Localize the scroll region's accessible name whenever the active shell locale rerenders the lobby.
+      view.setAttribute('aria-label', safe(t('nav.lobby', {}, 'shell') || 'Lobby'));
+      // Give browser acceptance tests a stable selector without coupling them to presentation classes.
+      view.setAttribute('data-testid', 'lobby-scroll-region');
       // Render lobby markup and catalog controls from the cached API state.
       renderLobby(view);
       // Stop after lobby render because no game module is mounted.
       return;
     }
+    // Restore the regular game shell flow before mounting any non-lobby route.
+    document.body.classList.remove('lobby-active');
     // Apply the game screen class contract before mounting a game module.
     view.className = 'screen game-screen';
+    // Remove the lobby-only test identity while preserving the shared route-outlet element.
+    view.removeAttribute('data-testid');
     // Make the bounded game outlet a keyboard-focusable scroll region so every control stays reachable. (issue #221)
     view.tabIndex = 0; view.setAttribute('role', 'region'); view.setAttribute('aria-label', safe(t('nav.gamesArea', {}, 'shell') || 'Game area'));
     // Render a premium loading panel while the dynamic game module loads.
@@ -577,6 +597,10 @@ export async function navigate(route, options = {}) {
     await logClient('navigation_error', { route: targetRoute, message: err.message, stack: err.stack });
     // Read the route outlet for the fallback panel.
     const view = document.getElementById('view');
+    // Keep a failed game route out of the lobby-only flex containment contract.
+    document.body.classList.remove('lobby-active');
+    // Remove the lobby-only test identity from the game error surface.
+    view.removeAttribute('data-testid');
     // Keep the route outlet in game-screen mode so the error panel has premium shell padding.
     view.className = 'screen game-screen';
     // Render a friendly error state with a lobby recovery action.

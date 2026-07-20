@@ -1,6 +1,16 @@
-# Virtual Casino Simulator v9.3.0 Release Notes
+# Virtual Casino Simulator v9.4.0 Release Notes
 
-## Private-invite restricted-preview release
+## Compatible restricted-preview update
+
+- Packages the compatible Casino changes merged after v9.3.0, including gameplay and ledger correctness fixes, durable retry and reconnect behavior, responsive interface improvements, localization coverage, and static-cache parity.
+- Preserves the accepted production adapter, restricted-preview session and Origin security, explicit MySQL migration boundary, encrypted recovery controls, and nginx/ACME observation and rollback gates.
+- Keeps the MySQL schema at exact version 2 and preserves the DDL-free runtime account boundary; this release introduces no database rollback path.
+- Keeps admission manual-invite only, with public signup and live OAuth disabled. Unrestricted public launch remains held under issue #209.
+- Binds the retained v9.3.0 release manifest as the immediate application-only rollback predecessor under `TOOL-003`; immutable publication and deployment remain separately gated.
+
+## Prior v9.3.0 release record
+
+### Private-invite restricted-preview release
 
 - Packages the accepted production WSGI adapter and supervised graceful-service policy from issue #202 with loopback-only application binding and copied-release smoke coverage.
 - Packages hardened sessions, exact Origin and trusted-proxy enforcement, CSRF protection, security headers, bounded requests and sessions, and the Admin/manual-invite boundary from issue #203.

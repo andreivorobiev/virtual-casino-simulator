@@ -4695,11 +4695,12 @@
         "tests/release_artifact_tests.py",
         "docs/release_artifacts.md",
         "contracts/compatibility/app-9.2.0.json",
-        "contracts/compatibility/app-9.3.0.json"
+        "contracts/compatibility/app-9.3.0.json",
+        "contracts/compatibility/app-9.4.0.json"
       ],
       "introduced_in": "9.2.0",
-      "changed_in": "9.3.0",
-      "notes": "Branch and ordinary manual candidates remain unpublished. A one-time owner-dispatched protected-main recovery may rebuild exact pre-bump commit 832c067596e44375217514c1cf28f9e5352abd4b twice and create a non-latest v9.2.0 predecessor only when no tag or Release exists; it has no overwrite or deletion path. Normal v9.3.0 publication still requires the verified retained predecessor manifest and the protected release gates. Rollback is application-only and never reverses the MySQL schema."
+      "changed_in": "9.4.0",
+      "notes": "Branch and ordinary manual candidates remain unpublished. The historical one-time owner-dispatched recovery created the retained v9.2.0 predecessor without overwrite or deletion paths. Normal v9.4.0 publication requires the verified retained v9.3.0 predecessor manifest and the protected release gates. Rollback is application-only and never reverses the MySQL schema."
     },
     {
       "id": "BOT-001",
@@ -8597,7 +8598,8 @@
       "api_tests": [],
       "browser_tests": [
         "BR-LOBBY-001",
-        "BR-CATALOG-I18N-RU-001"
+        "BR-CATALOG-I18N-RU-001",
+        "BR-LOBBY-RESP-001"
       ],
       "implementation_files": [
         "web/app.js",
@@ -8611,19 +8613,122 @@
     {
       "id": "TEST-072",
       "module": "Tests",
-      "description": "Browser evidence verifies the lobby capacity line renders exactly one authoritative game count in en-US ('{n} available') and ru-RU ('Доступно: {n}'), with no roadmap-target clause and no English leakage in Russian.",
+      "description": "Browser evidence at all four governed viewports verifies the lobby capacity line renders exactly one authoritative game count in en-US ('{n} available') and ru-RU ('Доступно: {n}'), with no roadmap-target clause, no English leakage in Russian, and named after-pass evidence.",
       "status": "PASS",
       "api_tests": [],
       "browser_tests": [
         "BR-LOBBY-001",
-        "BR-CATALOG-I18N-RU-001"
+        "BR-CATALOG-I18N-RU-001",
+        "BR-LOBBY-RESP-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-235-single-lobby-count",
+      "changed_in": "issue-235-single-lobby-count",
+      "notes": "Issue #235 evidence paths are logs/test-runs/after-pass-shell-lobby-single-count-*.png with matching VIS-EVIDENCE-001 JSON sidecars for both locales at every governed viewport."
+    },
+    {
+      "id": "ROU-060",
+      "module": "Roulette",
+      "description": "Leaving the Roulette table with open, un-spun bets refunds each staked amount through the documented clear endpoint, so navigating away never strands an already-debited stake and the reopened round starts with no lingering bet.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-ROU-REFUND-001"
+      ],
+      "implementation_files": [
+        "web/games/roulette.js"
+      ],
+      "introduced_in": "issue-246-roulette-refund-on-leave",
+      "changed_in": "issue-246-roulette-refund-on-leave",
+      "notes": "Issue #246: unmount() now fires a best-effort refund for open-round human bets and refreshes the shared wallet."
+    },
+    {
+      "id": "TEST-073",
+      "module": "Tests",
+      "description": "Browser evidence verifies that placing a Roulette bet debits the shared wallet, navigating away refunds the stake back to the pre-wager balance, and reopening the table shows no lingering open-bet chip.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-ROU-REFUND-001"
       ],
       "implementation_files": [
         "tests/run_tests.py"
       ],
-      "introduced_in": "issue-235-single-lobby-count",
-      "changed_in": "issue-235-single-lobby-count",
-      "notes": "Issue #235 single-count lobby capacity browser proof (both locales)."
+      "introduced_in": "issue-246-roulette-refund-on-leave",
+      "changed_in": "issue-246-roulette-refund-on-leave",
+      "notes": "Issue #246 refund-on-leave wallet-correctness browser proof."
+    },
+    {
+      "id": "SLOT-029",
+      "module": "Slots",
+      "description": "The Slots result renders every authoritative winning payline as a labelled, non-color-only SVG path whose five points are recalculated from the live reel-cell centers, remain within one CSS pixel after responsive resize, locale rerender, zoom, and route recovery, and preserve visible symbol identity in normal and reduced-motion modes.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-SLOTS-PAYLINE-001"
+      ],
+      "implementation_files": [
+        "web/games/slots.js",
+        "web/i18n/en-US/games/slots.json",
+        "web/i18n/ru-RU/games/slots.json"
+      ],
+      "introduced_in": "issue-319-slots-payline-alignment",
+      "changed_in": "issue-319-slots-payline-alignment",
+      "notes": "Issue #319: ResizeObserver-backed geometry derives each point from the rendered cell center; simultaneous paths expose permanent line numbers, accessible labels, unique color/dash combinations, and exact round/payout identity."
+    },
+    {
+      "id": "TEST-077",
+      "module": "Tests",
+      "description": "Deterministic browser evidence derives all twenty paths and payouts from the production Slots engine, restores a simultaneous-win outcome through the normal state loader, verifies every transformed SVG point within one CSS pixel of its authoritative cell, checks result/history identity, multi-win distinction, symbol visibility, zoom, reduced motion, and captures EN/RU after-pass evidence at all four governed viewports.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-SLOTS-PAYLINE-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-319-slots-payline-alignment",
+      "changed_in": "issue-319-slots-payline-alignment",
+      "notes": "Issue #319 evidence paths are logs/test-runs/after-pass-slots-paylines-*.png with matching VIS-EVIDENCE-001 JSON sidecars generated from the exact tested head."
+    },
+    {
+      "id": "UX-013",
+      "module": "UX",
+      "description": "The lobby route outlet is one bounded, keyboard-focusable vertical scroll region with a localized accessible name, visible focus and themed scroll affordances, wheel and touch panning, and native Page Down and End behavior, so every filtered catalog card and Play control remains reachable at 1920x1080, 1440x900, 1024x900, and 390x844 without page-level horizontal overflow or fixed-chrome overlap.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-LOBBY-RESP-001"
+      ],
+      "implementation_files": [
+        "web/app.js",
+        "web/styles.css"
+      ],
+      "introduced_in": "issue-318-lobby-catalog-scroll",
+      "changed_in": "issue-318-lobby-catalog-scroll",
+      "notes": "Issue #318: the shell gives the lobby outlet the remaining viewport between its header and status rail, while the outlet owns the single accessible catalog scroll surface."
+    },
+    {
+      "id": "TEST-076",
+      "module": "Tests",
+      "description": "Browser evidence in English and Russian at all four governed viewports verifies the focused lobby region, themed affordance, no scroll trap or horizontal overflow, Page Down, End, wheel, and touch scrolling, final-card and Play-control reachability for unfiltered, category-filtered, search-filtered, and empty states, and exact-head after-pass evidence sidecars.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-LOBBY-RESP-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-318-lobby-catalog-scroll",
+      "changed_in": "issue-318-lobby-catalog-scroll",
+      "notes": "Issue #318 evidence paths are logs/test-runs/after-pass-shell-lobby-scroll-*.png with matching VIS-EVIDENCE-001 JSON sidecars generated from the exact tested head."
     }
   ]
 }
