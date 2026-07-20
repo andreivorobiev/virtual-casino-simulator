@@ -5141,6 +5141,12 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             assert {str(number) for number in body['covered_numbers']}=={str(number) for number in zero_identity[key]['covered']}, f"{wheel_mode} {key}: covered mismatch"
                         # Refund this mode's complete zero-zone audit before changing the table or continuing the suite.
                         page.locator('#clear').click(); page.wait_for_timeout(150)
+                    # Reacquire the disclosure after mode-owned rerenders so test cleanup targets the current DOM node.
+                    rules_disclosure=page.get_by_test_id('roulette-rules-disclosure')
+                    # Restore the documented collapsed state through the visible summary for downstream test isolation.
+                    if rules_disclosure.get_attribute('open') is not None: rules_disclosure.locator('summary').click()
+                    # Require advanced settings to be hidden again before handing the shared page to the next case.
+                    page.get_by_test_id('roulette-mode').wait_for(state='hidden', timeout=5000)
                 # Record the exhaustive Roulette hit-target integrity and geometry regression.
                 run_case('BR-ROU-HITMAP-001',['ROU-002','ROU-005','ROU-007','ROU-011','ROU-012','ROU-013','ROU-014','ROU-015','ROU-016','ROU-017','ROU-044','ROU-045','ROU-057','TEST-053','TEST-092'],roulette_hit_target_integrity)
                 # Prove leaving Roulette with an open, un-spun bet refunds the stake rather than stranding it. (issue #246)
