@@ -8934,6 +8934,56 @@
       "introduced_in": "issue-286-labeled-money",
       "changed_in": "issue-286-labeled-money",
       "notes": "Issue #286 exact-head proof is stored at logs/test-runs/after-pass-labeled-money-slots-*.png with matching VIS-EVIDENCE-001 sidecars for both locales at every governed viewport."
+    },
+    {
+      "id": "OTT-001",
+      "module": "Core",
+      "description": "Purpose-bound one-time tokens use cryptographically random bearer values, persist only keyed one-way digests of the bearer and recipient (never raw values), bind an explicit purpose and subject plus an optional session, and atomically support exactly-once consumption so replay, double consumption, expiry, revocation, and exhausted attempt budgets all fail closed with a uniform non-sensitive error. Atomic persistence is equivalent in JSON and MySQL through the shared storage helper.",
+      "status": "PASS",
+      "api_tests": [
+        "API-OTT-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/one_time_tokens.py",
+        "casino/config.py"
+      ],
+      "introduced_in": "issue-331-one-time-tokens",
+      "changed_in": "issue-331-one-time-tokens",
+      "notes": "Issue #331 infrastructure: no mail, users, providers, or live enrollment; consumed by future invitation/verification/reset/magic-link flows."
+    },
+    {
+      "id": "OTT-002",
+      "module": "Core",
+      "description": "One-time token operations never expose sensitive material: cross-purpose substitution and subject/session-binding mismatch fail closed, mismatches are charged against a bounded attempt budget, and no raw token, recipient, session, or digest appears in the returned result, the persisted store, error details, or audit log events (which carry only token id, purpose, and reason code).",
+      "status": "PASS",
+      "api_tests": [
+        "API-OTT-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/one_time_tokens.py",
+        "casino/config.py"
+      ],
+      "introduced_in": "issue-331-one-time-tokens",
+      "changed_in": "issue-331-one-time-tokens",
+      "notes": "Issue #331 data-minimization and abuse-resistance boundary."
+    },
+    {
+      "id": "TEST-087",
+      "module": "Tests",
+      "description": "Listener-free API-suite evidence verifies the one-time token lifecycle: issue+consume success, replay, cross-purpose substitution, subject and session binding, expiry, revocation, attempt-budget throttle, malformed input, and absence of any raw bearer, recipient, or session value in the persisted store.",
+      "status": "PASS",
+      "api_tests": [
+        "API-OTT-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-331-one-time-tokens",
+      "changed_in": "issue-331-one-time-tokens",
+      "notes": "Issue #331 fail-closed lifecycle proof."
     }
   ]
 }

@@ -414,6 +414,67 @@ def run_api_tests():
     run_case('API-AUTH-DEPLOYMENT-001',['AUTH-006','TEST-041'],validate_deployment_bootstrap)
     # Certify the matrix and shared hostile-client boundary before starting a listener.
     run_case('API-SEC-001',[f'SEC-{index:03d}' for index in range(1,10)],run_server_authority_tests)
+    # Certify the purpose-bound one-time token platform's fail-closed lifecycle without a listener. (issue #331)
+    def one_time_token_platform():
+        # Import the infrastructure module and its fail-closed error type locally.
+        from casino.core import one_time_tokens as ott
+        from casino.core.state_store import update_json
+        from casino.errors import ValidationError
+        # Assert a call fails closed with the exact non-sensitive reason code.
+        def expect_reason(fn, reason):
+            # Run the call expecting a fail-closed ValidationError.
+            try:
+                # Invoke the operation that must be rejected.
+                fn()
+                # Fail the case if the abuse path unexpectedly succeeded.
+                raise AssertionError(f'expected fail-closed ({reason})')
+            # Require the exact reason code without any sensitive field.
+            except ValidationError as error:
+                # Compare the returned reason code against the expected one.
+                assert error.details.get('reason') == reason, (reason, error.details)
+        # Issue and consume a token on the happy path, requiring no raw bearer in the result.
+        issued=ott.issue('invitation','Owner@Example.com')
+        assert set(issued)=={'token_id','token','purpose','expires_at'}
+        assert ott.consume('invitation',issued['token'],subject='owner@example.com')['token_id']==issued['token_id']
+        # Require replay of a consumed token to fail closed.
+        expect_reason(lambda: ott.consume('invitation',issued['token'],subject='owner@example.com'),'consumed')
+        # Require cross-purpose substitution to fail closed.
+        cross=ott.issue('password_reset','user@example.com')
+        expect_reason(lambda: ott.consume('magic_link',cross['token']),'not_found')
+        # Require subject-binding mismatch to fail closed while the correct subject still redeems.
+        bound=ott.issue('email_verification','a@example.com')
+        expect_reason(lambda: ott.consume('email_verification',bound['token'],subject='b@example.com'),'subject_mismatch')
+        assert ott.consume('email_verification',bound['token'],subject='a@example.com')['token_id']==bound['token_id']
+        # Require an expired token to fail closed after its absolute lifetime passes.
+        expiring=ott.issue('magic_link','x@example.com')
+        def _backdate(state):
+            for row in state['tokens']:
+                if row['token_id']==expiring['token_id']: row['expires_at']='2020-01-01T00:00:00.000Z'
+            return state
+        update_json(ott.TOKENS_PATH,_backdate,ott.default_tokens)
+        expect_reason(lambda: ott.consume('magic_link',expiring['token']),'expired')
+        # Require a revoked token to fail closed.
+        revoked=ott.issue('invitation','rev@example.com')
+        assert ott.revoke(revoked['token_id']) is True
+        expect_reason(lambda: ott.consume('invitation',revoked['token'],subject='rev@example.com'),'revoked')
+        # Require a session-bound token to reject a missing or wrong session and accept the matching one.
+        sessioned=ott.issue('magic_link','s@example.com',session_binding='sess-abc')
+        expect_reason(lambda: ott.consume('magic_link',sessioned['token'],subject='s@example.com'),'session_mismatch')
+        assert ott.consume('magic_link',sessioned['token'],subject='s@example.com',session_binding='sess-abc')['token_id']==sessioned['token_id']
+        # Require the attempt budget to throttle brute force after the configured maximum.
+        throttled=ott.issue('password_reset','brute@example.com',max_attempts=2)
+        expect_reason(lambda: ott.consume('password_reset',throttled['token'],subject='wrong@example.com'),'subject_mismatch')
+        expect_reason(lambda: ott.consume('password_reset',throttled['token'],subject='wrong@example.com'),'subject_mismatch')
+        expect_reason(lambda: ott.consume('password_reset',throttled['token'],subject='brute@example.com'),'too_many_attempts')
+        # Require malformed input to fail closed.
+        expect_reason(lambda: ott.issue('not_a_purpose','z@example.com'),'bad_purpose')
+        expect_reason(lambda: ott.issue('invitation','   '),'missing_subject')
+        expect_reason(lambda: ott.consume('invitation',''),'missing_token')
+        # Require the persisted store to hold no raw bearer, recipient, or session value.
+        stored=open(ott.TOKENS_PATH,encoding='utf-8').read().lower()
+        assert 'owner@example.com' not in stored and issued['token'].lower() not in stored and 'sess-abc' not in stored
+    # Record the purpose-bound one-time token platform proof.
+    run_case('API-OTT-001',['OTT-001','OTT-002','TEST-087'],one_time_token_platform)
     # Set proc,base to the value needed for the next operation.
     proc,base=start_server()
     # Start protected logic so failures can be handled safely.

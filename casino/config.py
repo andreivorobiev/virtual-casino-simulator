@@ -56,6 +56,19 @@ SCHEMA_VERSION = "v9_1"
 AUTH_SESSION_COOKIE = "casino_session"
 # Set AUTH_SESSION_TTL_SECONDS to the value needed for the next operation.
 AUTH_SESSION_TTL_SECONDS = int(os.environ.get("CASINO_SESSION_TTL_SECONDS", "86400"))
+# Key the one-time-token digests so stored verifiers are non-reversible; operators must override the local default in any shared deployment. (issue #331)
+TOKEN_DIGEST_KEY = os.environ.get("CASINO_TOKEN_DIGEST_KEY", "local-development-one-time-token-digest-key")
+# Bound the number of consume attempts per one-time token so a bearer cannot be brute-forced.
+TOKEN_MAX_ATTEMPTS = int(os.environ.get("CASINO_TOKEN_MAX_ATTEMPTS", "5"))
+# Retain terminal one-time-token records this many seconds past their end state before cleanup prunes them.
+TOKEN_RETENTION_SECONDS = int(os.environ.get("CASINO_TOKEN_RETENTION_SECONDS", "1209600"))
+# Define the default absolute lifetime of each token purpose; callers may shorten but not remove the allowlist.
+TOKEN_PURPOSE_TTL_SECONDS = {
+    "invitation": int(os.environ.get("CASINO_TOKEN_TTL_INVITATION", "604800")),
+    "email_verification": int(os.environ.get("CASINO_TOKEN_TTL_EMAIL_VERIFICATION", "86400")),
+    "password_reset": int(os.environ.get("CASINO_TOKEN_TTL_PASSWORD_RESET", "3600")),
+    "magic_link": int(os.environ.get("CASINO_TOKEN_TTL_MAGIC_LINK", "900")),
+}
 # Preserve the developer-only bootstrap email so public startup can reject the local identity default.
 LOCAL_BOOTSTRAP_ADMIN_EMAIL = "admin@example.local"
 # Preserve only a digest of the developer credential so validation never needs another plaintext copy.

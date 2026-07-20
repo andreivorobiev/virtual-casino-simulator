@@ -7,7 +7,7 @@ Historical source baseline: 9.1.0
 ## Independent module revisions
 
 - application: 9.39.5
-- core: 9.13.3
+- core: 9.13.4
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.0
@@ -45,8 +45,8 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.1
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.45.12
-- docs: 1.45.12
+- tests: 1.45.16
+- docs: 1.45.16
 - contracts: 1.33.0
 - tooling: 1.14.0
 - commenting_policy: 1.0.0
@@ -702,3 +702,6 @@ Historical source baseline: 9.1.0
 - **TEST-085** (Tests) - PASS: Browser geometry evidence verifies, for each governed locale and viewport, that every visible status-footer segment stays inside the bar and no two segments intersect.
 - **UX-017** (Application) - PASS: Every in-game play-token amount rendered by the shared money formatters includes a full localized unit label—play tokens in en-US and игровых токенов in ru-RU—while the diamond mark remains decorative and never solely carries the value's meaning.
 - **TEST-086** (Tests) - PASS: Browser acceptance verifies both shared money formatters and real Slots amount surfaces use the full localized play-token label without clipping or page-level horizontal overflow in en-US and ru-RU at all four governed viewports.
+- **OTT-001** (Core) - PASS: Purpose-bound one-time tokens use cryptographically random bearer values, persist only keyed one-way digests of the bearer and recipient (never raw values), bind an explicit purpose and subject plus an optional session, and atomically support exactly-once consumption so replay, double consumption, expiry, revocation, and exhausted attempt budgets all fail closed with a uniform non-sensitive error. Atomic persistence is equivalent in JSON and MySQL through the shared storage helper.
+- **OTT-002** (Core) - PASS: One-time token operations never expose sensitive material: cross-purpose substitution and subject/session-binding mismatch fail closed, mismatches are charged against a bounded attempt budget, and no raw token, recipient, session, or digest appears in the returned result, the persisted store, error details, or audit log events (which carry only token id, purpose, and reason code).
+- **TEST-087** (Tests) - PASS: Listener-free API-suite evidence verifies the one-time token lifecycle: issue+consume success, replay, cross-purpose substitution, subject and session binding, expiry, revocation, attempt-budget throttle, malformed input, and absence of any raw bearer, recipient, or session value in the persisted store.
