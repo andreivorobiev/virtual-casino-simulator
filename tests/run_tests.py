@@ -1967,6 +1967,34 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 run_case('BR-STATIC-CACHE-001',['CORE-026','TEST-068'],static_cache_parity)
                 # Capture logged-out login evidence for the frontend auth handback.
                 shot('auth_login_gate.png')
+                # Prove the restricted-preview guest surface keeps protected brand chrome absent and metadata out of the public title. (issue #321)
+                def guest_restricted_brand_copy():
+                    # Enumerate every governed viewport because the issue requires the shared entry surface at all four sizes.
+                    brand_viewports={entry['id']:{'width':entry['width'],'height':entry['height']} for entry in visual_matrix['viewports']}
+                    # Require the public document title to be the exact approved product name with no release suffix.
+                    assert page.title()=='Virtual Casino Simulator'
+                    # Exercise the unauthenticated restricted-preview entry state in both installed locales.
+                    for brand_locale in ('en-US','ru-RU'):
+                        # Switch through the visible guest locale control and wait for the canonical locale state.
+                        page.get_by_test_id('auth-locale-select').select_option(brand_locale); page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale",arg=brand_locale)
+                        # Read the exact safety acknowledgement from the locale-owned shell resource.
+                        expected_safety=read_i18n_json(ROOT/'web'/'i18n'/brand_locale/'shell.json')['auth.termsCheck']
+                        # Require the guest surface to preserve the full fake-money/play-token safety wording.
+                        assert expected_safety in page.locator('label.check-row').inner_text()
+                        # Require the protected authenticated topbar, wallet, and diagnostics provenance to remain absent for guests.
+                        assert not page.get_by_test_id('premium-topbar').is_visible() and not page.get_by_test_id('premium-wallet').is_visible() and not page.get_by_test_id('shell-status').is_visible()
+                        # Capture exact-head restricted-preview guest evidence at every governed viewport.
+                        for viewport_id,viewport in brand_viewports.items():
+                            # Resize to the exact named visual-matrix viewport before geometry assertions.
+                            page.set_viewport_size(viewport); page.wait_for_timeout(100)
+                            # Reject page or login-panel horizontal overflow while requiring the current login state to remain visible.
+                            assert page.get_by_test_id('login-gate').is_visible() and page.evaluate("() => { const panel=document.querySelector('[data-testid=\"login-gate\"]'); return document.documentElement.scrollWidth <= window.innerWidth + 1 && panel.scrollWidth <= panel.clientWidth + 1; }")
+                            # Record self-describing after-pass evidence for both the guest and restricted-preview state identifiers.
+                            game_evidence(f'after-pass-shell-brand-guest-restricted-preview-{brand_locale.lower()}-{viewport_id}.png','auth',['login','guest','restricted_preview'],brand_locale,viewport_id)
+                    # Restore the primary desktop viewport while keeping Russian selected for the existing authentication flow.
+                    page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(100)
+                # Record guest/restricted-preview title, access-boundary, safety-copy, locale, and viewport acceptance.
+                run_case('BR-SHELL-BRAND-GUEST-001',['UX-014','TEST-079'],guest_restricted_brand_copy)
                 # Define disabled OAuth control, localization, no-request, and visual evidence acceptance.
                 def oauth_disabled_browser():
                     # Define the two governed Auth viewports required by the visual matrix.
@@ -2198,6 +2226,68 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     assert page.get_by_test_id('nav-baccarat').is_visible()
                 # Execute this statement as part of the module's documented control flow.
                 run_case('BR-SHELL-001',['UX-007','CORE-006','LEDGER-025','TOKEN-001','TOKEN-002'],premium_shell)
+                # Prove the player-facing brand block carries no internal version or release-stage metadata in either locale. (issue #321)
+                def shell_brand_copy():
+                    # Enumerate internal metadata tokens that must never appear in the player brand block.
+                    forbidden=re.compile(r'v\d|\bbuild\b|\bcommit\b|\bdebug\b|\benvironment\b|\bstaging\b|validation release|релиз|сборк|проверочн|отлад',re.IGNORECASE)
+                    # Enumerate all required visual-matrix viewport dimensions from their single governed source.
+                    brand_viewports={entry['id']:{'width':entry['width'],'height':entry['height']} for entry in visual_matrix['viewports']}
+                    # Retain each locale/viewport header height so locale switching cannot silently shift the game stage.
+                    header_heights={}
+                    # Require the document title to present the exact approved product name without metadata.
+                    assert page.title()=='Virtual Casino Simulator' and not forbidden.search(page.title())
+                    # Check the localized authenticated brand block in both installed locales.
+                    for brand_locale in ('en-US','ru-RU'):
+                        # Switch the shell locale through the visible control and wait for the runtime to settle.
+                        page.get_by_test_id('shell-locale-select').select_option(brand_locale); page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale",arg=brand_locale)
+                        # Read the exact canonical subtitle for this locale from the paired resource file.
+                        expected_subtitle=read_i18n_json(ROOT/'web'/'i18n'/brand_locale/'shell.json')['brand.subtitle']
+                        # Wait for the asynchronous locale rerender to publish the exact canonical subtitle, which also proves resource-key-free equality.
+                        page.wait_for_function("expected => document.querySelector('#shell-brand-subtitle')?.textContent.trim() === expected", arg=expected_subtitle, timeout=5000)
+                        # Read the settled rendered player-facing brand subtitle for the metadata checks.
+                        rendered_subtitle=page.locator('#shell-brand-subtitle').inner_text().strip()
+                        # Require the approved product name to remain exact and resource-key-free.
+                        assert page.locator('#shell-brand-title').inner_text().strip()=='Virtual Casino Simulator'
+                        # Require the subtitle to keep the play-token safety cue while carrying no version metadata.
+                        assert not forbidden.search(rendered_subtitle), rendered_subtitle
+                        # Require the play-token cue to remain present in the locale's own words.
+                        assert ('token' in rendered_subtitle.lower()) or ('токен' in rendered_subtitle.lower()), rendered_subtitle
+                        # Require the separately approved diagnostics rail to retain a concrete semantic version for #287 provenance.
+                        assert re.fullmatch(r'v\d+\.\d+\.\d+',page.locator('#status-version').inner_text().strip())
+                        # Prove the lobby header remains readable, contained, and unclipped at every governed viewport.
+                        for viewport_id,viewport in brand_viewports.items():
+                            # Resize to the exact matrix viewport and let responsive layout settle before measuring.
+                            page.set_viewport_size(viewport); page.wait_for_timeout(100)
+                            # Audit the complete brand lockup against its topbar and viewport bounds.
+                            brand_geometry=page.evaluate("""() => { const topbar=document.querySelector('[data-testid=\"premium-topbar\"]'); const lockup=document.querySelector('.brand-lockup'); const title=document.querySelector('#shell-brand-title'); const subtitle=document.querySelector('#shell-brand-subtitle'); const topbarBox=topbar.getBoundingClientRect(); const lockupBox=lockup.getBoundingClientRect(); return { topbarHeight:topbarBox.height, contained:lockupBox.left >= topbarBox.left - 1 && lockupBox.right <= topbarBox.right + 1 && lockupBox.top >= topbarBox.top - 1 && lockupBox.bottom <= topbarBox.bottom + 1, viewportContained:lockupBox.left >= -1 && lockupBox.right <= window.innerWidth + 1, titleUnclipped:title.scrollWidth <= title.clientWidth + 1 && title.scrollHeight <= title.clientHeight + 1, subtitleUnclipped:subtitle.scrollWidth <= subtitle.clientWidth + 1 && subtitle.scrollHeight <= subtitle.clientHeight + 1, pageNoOverflow:document.documentElement.scrollWidth <= window.innerWidth + 1 }; }""")
+                            # Require every geometry and overflow invariant to pass before evidence can be accepted.
+                            assert brand_geometry['contained'] and brand_geometry['viewportContained'] and brand_geometry['titleUnclipped'] and brand_geometry['subtitleUnclipped'] and brand_geometry['pageNoOverflow'],brand_geometry
+                            # Record the topbar height for the later cross-locale stability comparison.
+                            header_heights[(brand_locale,viewport_id)]=brand_geometry['topbarHeight']
+                            # Capture exact-head authenticated lobby evidence with a self-describing sidecar.
+                            game_evidence(f'after-pass-shell-brand-authenticated-{brand_locale.lower()}-{viewport_id}.png','shell_lobby',['authenticated'],brand_locale,viewport_id)
+                        # Open one representative affected game so shared-shell evidence is not limited to the lobby.
+                        page.get_by_test_id('nav-roulette').click(); page.get_by_test_id('roulette-premium').wait_for(timeout=5000)
+                        # Capture the same authenticated header across the representative game at all governed sizes.
+                        for viewport_id,viewport in brand_viewports.items():
+                            # Resize to the exact governed viewport before the shared-shell overflow check.
+                            page.set_viewport_size(viewport); page.wait_for_timeout(100)
+                            # Reject page-level horizontal overflow and require the shared brand lockup to remain visible above Roulette.
+                            assert page.locator('.brand-lockup').is_visible() and page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1')
+                            # Record one affected game surface alongside the shared lobby acceptance evidence.
+                            game_evidence(f'after-pass-roulette-brand-{brand_locale.lower()}-{viewport_id}.png','roulette',['betting'],brand_locale,viewport_id)
+                        # Return to the lobby before switching locale so the next evidence set starts from the canonical shell route.
+                        page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    # Compare matching viewport heights so EN/RU switching cannot move the game stage.
+                    for viewport_id in brand_viewports:
+                        # Allow only sub-pixel rounding while rejecting a locale-dependent topbar height change.
+                        assert abs(header_heights[('en-US',viewport_id)]-header_heights[('ru-RU',viewport_id)]) <= 1,(viewport_id,header_heights)
+                    # Restore the English locale for downstream shell coverage.
+                    page.get_by_test_id('shell-locale-select').select_option('en-US'); page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'en-US'")
+                    # Restore the primary desktop viewport for downstream shell interactions.
+                    page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(100)
+                # Execute the version-free brand copy regression.
+                run_case('BR-SHELL-BRAND-001',['UX-014','TEST-079'],shell_brand_copy)
                 # Open the wallet popover through the token top-up control.
                 page.locator('summary[aria-label="Add play tokens"]').click()
                 # Set a deterministic token top-up amount for the wallet terminology check.

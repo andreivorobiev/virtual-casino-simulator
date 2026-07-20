@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.39.3
+- application: 9.39.4
 - core: 9.13.3
 - ledger: 9.1.1
 - players: 9.1.0
@@ -45,8 +45,8 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.0
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.45.6
-- docs: 1.45.6
+- tests: 1.45.7
+- docs: 1.45.7
 - contracts: 1.33.0
 - tooling: 1.14.0
 - commenting_policy: 1.0.0
@@ -686,6 +686,8 @@ Historical source baseline: 9.1.0
 - **TEST-072** (Tests) - PASS: Browser evidence at all four governed viewports verifies the lobby capacity line renders exactly one authoritative game count in en-US ('{n} available') and ru-RU ('Доступно: {n}'), with no roadmap-target clause, no English leakage in Russian, and named after-pass evidence.
 - **ROU-060** (Roulette) - PASS: Leaving the Roulette table with open, un-spun bets refunds each staked amount through the documented clear endpoint, so navigating away never strands an already-debited stake and the reopened round starts with no lingering bet.
 - **TEST-073** (Tests) - PASS: Browser evidence verifies that placing a Roulette bet debits the shared wallet, navigating away refunds the stake back to the pre-wager balance, and reopening the table shows no lingering open-bet chip.
+- **UX-014** (UX) - PASS: The player-facing brand block and document title present the product name and the play-tokens-only/no-cash-value safety cue without internal version, validation-stage, build, commit, environment, or debug metadata, in en-US and ru-RU across authenticated, unauthenticated guest, and restricted-preview login states at every governed viewport; exact build provenance remains available through the status/diagnostics surfaces rather than the brand block.
+- **TEST-079** (Tests) - PASS: Browser evidence verifies, in en-US and ru-RU at 1920x1080, 1440x900, 1024x900, and 390x844, that authenticated lobby and Roulette headers render the canonical brand and safety cue without metadata or clipping, while unauthenticated guests in restricted preview receive a metadata-free title and login surface with no protected topbar.
 - **SLOT-029** (Slots) - PASS: The Slots result renders every authoritative winning payline as a labelled, non-color-only SVG path whose five points are recalculated from the live reel-cell centers, remain within one CSS pixel after responsive resize, locale rerender, zoom, and route recovery, and preserve visible symbol identity in normal and reduced-motion modes.
 - **TEST-077** (Tests) - PASS: Deterministic browser evidence derives all twenty paths and payouts from the production Slots engine, restores a simultaneous-win outcome through the normal state loader, verifies every transformed SVG point within one CSS pixel of its authoritative cell, checks result/history identity, multi-win distinction, symbol visibility, zoom, reduced motion, and captures EN/RU after-pass evidence at all four governed viewports.
 - **UX-013** (UX) - PASS: The lobby route outlet is one bounded, keyboard-focusable vertical scroll region with a localized accessible name, visible focus and themed scroll affordances, wheel and touch panning, and native Page Down and End behavior, so every filtered catalog card and Play control remains reachable at 1920x1080, 1440x900, 1024x900, and 390x844 without page-level horizontal overflow or fixed-chrome overlap.

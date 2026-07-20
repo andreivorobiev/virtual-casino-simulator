@@ -8662,6 +8662,45 @@
       "notes": "Issue #246 refund-on-leave wallet-correctness browser proof."
     },
     {
+      "id": "UX-014",
+      "module": "UX",
+      "description": "The player-facing brand block and document title present the product name and the play-tokens-only/no-cash-value safety cue without internal version, validation-stage, build, commit, environment, or debug metadata, in en-US and ru-RU across authenticated, unauthenticated guest, and restricted-preview login states at every governed viewport; exact build provenance remains available through the status/diagnostics surfaces rather than the brand block.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-SHELL-BRAND-001",
+        "BR-SHELL-BRAND-GUEST-001"
+      ],
+      "implementation_files": [
+        "web/index.html",
+        "web/styles.css",
+        "web/i18n/en-US/shell.json",
+        "web/i18n/ru-RU/shell.json",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-321-shell-version-copy",
+      "changed_in": "issue-321-shell-version-copy",
+      "notes": "Issue #321: 'v9 validation release' is removed from the brand subtitle and page title; the subtitle reserves its two-line footprint so header height stays locale-invariant; the restricted-preview guest state keeps the authenticated topbar absent; the status-rail APP version chip is retained for #287 provenance."
+    },
+    {
+      "id": "TEST-079",
+      "module": "Tests",
+      "description": "Browser evidence verifies, in en-US and ru-RU at 1920x1080, 1440x900, 1024x900, and 390x844, that authenticated lobby and Roulette headers render the canonical brand and safety cue without metadata or clipping, while unauthenticated guests in restricted preview receive a metadata-free title and login surface with no protected topbar.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-SHELL-BRAND-001",
+        "BR-SHELL-BRAND-GUEST-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-321-shell-version-copy",
+      "changed_in": "issue-321-shell-version-copy",
+      "notes": "Issue #321 exact-head evidence paths are logs/test-runs/after-pass-shell-brand-*.png and logs/test-runs/after-pass-roulette-brand-*.png with matching VIS-EVIDENCE-001 sidecars."
+    },
+    {
       "id": "SLOT-029",
       "module": "Slots",
       "description": "The Slots result renders every authoritative winning payline as a labelled, non-color-only SVG path whose five points are recalculated from the live reel-cell centers, remain within one CSS pixel after responsive resize, locale rerender, zoom, and route recovery, and preserve visible symbol identity in normal and reduced-motion modes.",
