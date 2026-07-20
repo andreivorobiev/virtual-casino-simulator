@@ -46,6 +46,8 @@
   "paytable.progressiveTitle": "Прогрессив",
   "paytable.scatter": "3=5x, 4=20x, 5=100x и 3+ дают 8 фриспинов",
   "paytable.title": "Таблица выплат",
+  "payline.overlayLabel": "Выигрышные линии: {lines}",
+  "payline.pathLabel": "Линия {line}",
   "result.accepted": "Спин принят.",
   "result.acceptedDetail": "Стоимость {cost} зафиксирована, область выплаты остается видимой.",
   "result.complete": "Результат.",
