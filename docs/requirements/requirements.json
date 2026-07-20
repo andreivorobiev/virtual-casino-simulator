@@ -8770,6 +8770,39 @@
       "notes": "Issue #318 evidence paths are logs/test-runs/after-pass-shell-lobby-scroll-*.png with matching VIS-EVIDENCE-001 JSON sidecars generated from the exact tested head."
     },
     {
+      "id": "ROU-061",
+      "module": "Roulette",
+      "description": "Every visible Roulette wagering surface registers correctly labeled bets with no silent no-ops: all 38 straight pockets show their pocket number, every FAST BETS shortcut and grid outside cell shows its canonical outside label even on repeat clicks, all dozen and column cells plus every inside/special marker type show their exact catalog labels, and each racetrack/call control renders every authoritative component label returned for that activation.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-ROU-SLIP-AUDIT-001"
+      ],
+      "implementation_files": [
+        "web/games/roulette.js",
+        "casino/games/roulette/rules.py"
+      ],
+      "introduced_in": "issue-250-slip-label-audit",
+      "changed_in": "issue-250-slip-label-audit",
+      "notes": "Issues #230/#231/#233/#250: the audited behavior is served by the shared resolveCellBet identity plumbing; this requirement pins it with an exhaustive per-type regression."
+    },
+    {
+      "id": "TEST-082",
+      "module": "Tests",
+      "description": "Browser evidence audits all 38 straight pockets, all six FAST BETS shortcuts including a repeat click, all six grid outside cells, every dozen and column cell, one representative of every inside/special marker type, and all eight racetrack/call controls; direct targets must add exactly one correctly labeled row, call controls must match every authoritative response component, and each audited group must finish with a clean refunded slip.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-ROU-SLIP-AUDIT-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-250-slip-label-audit",
+      "changed_in": "issue-250-slip-label-audit",
+      "notes": "Issues #230/#231/#233/#250 exhaustive direct-surface and racetrack/call-control slip-label reliability audit."
+    },
+    {
       "id": "KENO-025",
       "module": "Keno",
       "description": "All 80 Keno number cells, including every outer row and column, keep their borders, numerals, keyboard focus rings, selection outlines, and drawn, caught, latest, and disabled treatments visible inside the board scroll region at every governed viewport.",
@@ -8803,9 +8836,76 @@
       "notes": "Issue #320 evidence paths are logs/test-runs/after-pass-keno-edge-*.png with matching VIS-EVIDENCE-001 JSON sidecars generated from the exact tested head."
     },
     {
+      "id": "CH-006",
+      "module": "Casino Hold'em",
+      "description": "The Casino Hold'em data rail displays the server-owned ante payout schedule (royal flush 100:1 through the even-money band at 1:1) in both en-US and ru-RU, sourced from the published ante_return_multipliers rules payload rather than duplicated client constants.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-CH-001"
+      ],
+      "implementation_files": [
+        "web/games/casino_holdem.js",
+        "web/i18n/en-US/games/casino_holdem.json",
+        "web/i18n/ru-RU/games/casino_holdem.json"
+      ],
+      "introduced_in": "issue-253-holdem-paytable",
+      "changed_in": "issue-253-holdem-paytable",
+      "notes": "Issue #253 (Casino Hold'em half): mirrors the merged Caribbean Stud disclosure; the schedule renders only when the server publishes it."
+    },
+    {
+      "id": "TEST-084",
+      "module": "Tests",
+      "description": "Browser evidence verifies in English and Russian at all four governed viewports that the Casino Hold'em data rail shows all ten server-published ante payout rows, including the strongest royal-flush 100:1 and weakest high-card 1:1 net returns, before the first ante-backed deal and throughout governed play states.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-CH-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py",
+        "tests/games/casino_holdem/test_resources.py"
+      ],
+      "introduced_in": "issue-253-holdem-paytable",
+      "changed_in": "issue-253-holdem-paytable",
+      "notes": "Issue #253 exact-head after-pass evidence paths are logs/test-runs/after-pass-casino-holdem-*.png with matching VIS-EVIDENCE-001 sidecars."
+    },
+    {
+      "id": "UX-016",
+      "module": "UX",
+      "description": "The fixed status footer contains all of its visible localized segments without pairwise overlap or spill outside the bar at every governed viewport in en-US and ru-RU, so Russian copy expansion cannot cram or collide the ledger note and connection status.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-LOBBY-RESP-001"
+      ],
+      "implementation_files": [
+        "web/styles.css"
+      ],
+      "introduced_in": "issue-285-ru-footer-containment",
+      "changed_in": "issue-285-ru-footer-containment",
+      "notes": "Issue #285: the merged mobile status-bar ellipsis/hiding rules provide the behavior; this requirement pins it with locale-by-viewport geometry evidence."
+    },
+    {
+      "id": "TEST-085",
+      "module": "Tests",
+      "description": "Browser geometry evidence verifies, for each governed locale and viewport, that every visible status-footer segment stays inside the bar and no two segments intersect.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-LOBBY-RESP-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-285-ru-footer-containment",
+      "changed_in": "issue-285-ru-footer-containment",
+      "notes": "Issue #285 exact-head footer proof is stored at logs/test-runs/after-pass-shell-status-footer-*.png with matching sidecars that record the accepted geometry for both locales at every governed viewport."
+    },
+    {
       "id": "UX-017",
-      "module": "Core",
-      "description": "Shared play-token formatters pair the decorative token mark with a visible localized unit label ('tokens' / 'ток.'), so no in-game amount relies on the glyph alone to carry value, per the visual design standard's wallet-and-token presentation rules.",
+      "module": "Application",
+      "description": "Every in-game play-token amount rendered by the shared money formatters includes a full localized unit label—play tokens in en-US and игровых токенов in ru-RU—while the diamond mark remains decorative and never solely carries the value's meaning.",
       "status": "PASS",
       "api_tests": [],
       "browser_tests": [
@@ -8815,14 +8915,14 @@
         "web/core/i18n.js",
         "web/core/ui.js"
       ],
-      "introduced_in": "issue-286-labeled-amounts",
-      "changed_in": "issue-286-labeled-amounts",
-      "notes": "Issue #286: formatMoney and money append the active-locale unit; labeled shell-wallet and scoreboard presentations are unchanged."
+      "introduced_in": "issue-286-labeled-money",
+      "changed_in": "issue-286-labeled-money",
+      "notes": "Issue #286 applies the repository visual standard's play-token terminology to both shared in-game formatters without changing ledger values or settlement semantics."
     },
     {
       "id": "TEST-086",
       "module": "Tests",
-      "description": "Browser evidence collects every token-marked amount on a mounted game surface and requires each one to carry the visible unit label, so a glyph-only amount fails the run.",
+      "description": "Browser acceptance verifies both shared money formatters and real Slots amount surfaces use the full localized play-token label without clipping or page-level horizontal overflow in en-US and ru-RU at all four governed viewports.",
       "status": "PASS",
       "api_tests": [],
       "browser_tests": [
@@ -8831,9 +8931,9 @@
       "implementation_files": [
         "tests/run_tests.py"
       ],
-      "introduced_in": "issue-286-labeled-amounts",
-      "changed_in": "issue-286-labeled-amounts",
-      "notes": "Issue #286 labeled in-game amount proof."
+      "introduced_in": "issue-286-labeled-money",
+      "changed_in": "issue-286-labeled-money",
+      "notes": "Issue #286 exact-head proof is stored at logs/test-runs/after-pass-labeled-money-slots-*.png with matching VIS-EVIDENCE-001 sidecars for both locales at every governed viewport."
     }
   ]
 }

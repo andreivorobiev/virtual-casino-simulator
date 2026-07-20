@@ -1822,6 +1822,20 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 metadata={'evidence_class':'after_pass','branch':evidence_branch,'commit':evidence_commit,'surface':surface,'states':states,'locale':locale,'viewport':{'id':viewport_id,**viewport},'path':str(target.relative_to(ROOT)).replace('\\','/'),'focused_control':focused}
                 # Write a UTF-8 sidecar next to the image so the evidence remains self-describing.
                 target.with_suffix('.json').write_text(json.dumps(metadata,indent=2,ensure_ascii=False),encoding='utf-8')
+            # Capture the visible status-footer region together with the exact accepted geometry diagnostics. (UX-016, TEST-085)
+            def footer_evidence(name, states, locale, viewport_id, geometry):
+                # Resolve the PNG target under the standard browser test artifact directory.
+                target=screenshots/name
+                # Capture the governed footer itself without the generic shell helper's intentional status-bar suppression.
+                page.get_by_test_id('shell-status').screenshot(path=str(target),animations='disabled',style='#toast { visibility: hidden !important; }')
+                # Record the active viewport dimensions alongside the named visual-matrix viewport.
+                viewport=page.viewport_size
+                # Record the current focus target so the bounded artifact remains self-describing.
+                focused=page.evaluate("() => document.activeElement?.getAttribute('data-testid') || ''")
+                # Bind the footer crop, locale, viewport, and passing geometry to one after-pass evidence sidecar.
+                metadata={'evidence_class':'after_pass','branch':evidence_branch,'commit':evidence_commit,'surface':'shell_lobby','states':states,'locale':locale,'viewport':{'id':viewport_id,**viewport},'path':str(target.relative_to(ROOT)).replace('\\','/'),'focused_control':focused,'region_selector':'[data-testid="shell-status"]','geometry':geometry}
+                # Write the exact geometry proof next to its visible footer image for independent artifact audit.
+                target.with_suffix('.json').write_text(json.dumps(metadata,indent=2,ensure_ascii=False),encoding='utf-8')
             # Capture one bounded interaction region without misrepresenting unrelated full-page defects as accepted.
             def region_evidence(name, selector, surface, states, locale, viewport_id):
                 # Resolve the PNG target under the standard browser test artifact directory.
@@ -1979,8 +1993,6 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         page.get_by_test_id('auth-locale-select').select_option(brand_locale); page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale",arg=brand_locale)
                         # Read the exact safety acknowledgement from the locale-owned shell resource.
                         expected_safety=read_i18n_json(ROOT/'web'/'i18n'/brand_locale/'shell.json')['auth.termsCheck']
-                        # Wait for the asynchronous login-gate rerender to publish the localized terms copy before asserting, since the locale state updates before afterChange re-renders.
-                        page.wait_for_function("expected => document.querySelector('label.check-row')?.innerText.includes(expected)", arg=expected_safety, timeout=5000)
                         # Require the guest surface to preserve the full fake-money/play-token safety wording.
                         assert expected_safety in page.locator('label.check-row').inner_text()
                         # Require the protected authenticated topbar, wallet, and diagnostics provenance to remain absent for guests.
@@ -2561,6 +2573,12 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             reset_lobby_scroll()
                             # Resolve the one approved localized count string for this locale and installed catalog. (issue #235)
                             expected_capacity=f'{len(casino_config.GAMES)} available' if locale=='en-US' else f'Доступно: {len(casino_config.GAMES)}'
+                            # Fail closed unless the fixed status footer and every expected visible localized segment are contained and pairwise disjoint. (issue #285)
+                            footer_geometry=page.evaluate("""() => { const bar=document.querySelector('[data-testid="shell-status"]'); if (!bar) return {ok:false,reason:'missing_status_bar'}; const barRect=bar.getBoundingClientRect(); const items=[...bar.querySelectorAll('.status-item')].map((item,index) => { const rect=item.getBoundingClientRect(); return {index,left:rect.left,right:rect.right,top:rect.top,bottom:rect.bottom,width:rect.width,height:rect.height}; }).filter(item => item.width>0 && item.height>0); const spill=items.some(item => item.left < barRect.left-1 || item.right > barRect.right+1 || item.top < barRect.top-1 || item.bottom > barRect.bottom+1); const collisions=[]; for (let a=0;a<items.length;a+=1) for (let b=a+1;b<items.length;b+=1) { const first=items[a],second=items[b]; if (first.left < second.right-1 && second.left < first.right-1 && first.top < second.bottom-1 && second.top < first.bottom-1) collisions.push([first.index,second.index]); } return {ok:barRect.width>0 && barRect.height>0 && items.length>=2 && !spill && collisions.length===0,bar:{width:barRect.width,height:barRect.height},visibleItems:items,spill,collisions}; }""")
+                            # Surface exact geometry diagnostics when localized copy spills or visible status segments collide.
+                            assert footer_geometry['ok'],footer_geometry
+                            # Capture named bounded footer evidence whose sidecar preserves the passing geometry for this exact locale and viewport.
+                            footer_evidence(f'after-pass-shell-status-footer-{locale.lower()}-{viewport_id}.png',['authenticated','status_footer_contained','geometry_verified'],locale,viewport_id,footer_geometry)
                             # Require exact single-count copy so neither retired roadmap clause nor a second count can enter evidence.
                             assert page.get_by_test_id('catalog-capacity').inner_text()==expected_capacity
                             # Bring the capacity line into the bounded outlet before capturing the governed copy state.
@@ -2672,7 +2690,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Return the persistent route outlet to its top edge for the next browser case.
                     reset_lobby_scroll()
                 # Execute the full locale, viewport, state, and interaction matrix under the permanent requirement mapping.
-                run_case('BR-LOBBY-RESP-001',['CORE-015','UX-009','UX-012','UX-013','TEST-072','TEST-076'],responsive_lobby)
+                run_case('BR-LOBBY-RESP-001',['CORE-015','UX-009','UX-012','UX-013','TEST-072','TEST-076','UX-016','TEST-085'],responsive_lobby)
                 # Define catalog_route_discovery to mount every frontend driver from catalog metadata.
                 def catalog_route_discovery():
                     # Select a catalog game with a route id that differs from its display label for loader-copy coverage. (UX-011)
@@ -4053,8 +4071,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.get_by_test_id('nav-casino_holdem').click(); page.get_by_test_id('casino-holdem').wait_for(timeout=5000)
                     # Enumerate all governed viewport dimensions.
                     required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
-                    # Load exact UTF-8 title expectations from the paired canonical resource files.
-                    expected_titles={locale:read_i18n_json(ROOT/'web'/'i18n'/locale/'games'/'casino_holdem.json')['title'] for locale in ('en-US','ru-RU')}
+                    # Load exact UTF-8 copy expectations from the paired canonical resource files.
+                    holdem_resources={locale:read_i18n_json(ROOT/'web'/'i18n'/locale/'games'/'casino_holdem.json') for locale in ('en-US','ru-RU')}
                     # Capture one mounted state across both locales and every viewport.
                     def localized_evidence(prefix,states):
                         # Iterate through paired English and Russian game resources.
@@ -4062,13 +4080,17 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             # Switch locale without discarding the active decision or settled history.
                             page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_timeout(100)
                             # Require the localized title rather than a fallback key or English leakage.
-                            assert page.locator('.choldem-header h1').inner_text()==expected_titles[locale]
+                            assert page.locator('.choldem-header h1').inner_text()==holdem_resources[locale]['title']
+                            # Read all ten rendered schedule rows after the locale rerender. (issue #253)
+                            paytable=page.get_by_test_id('choldem-paytable'); paytable_labels=paytable.locator('li span').all_inner_texts(); paytable_odds=paytable.locator('li strong').all_inner_texts()
+                            # Require the localized title, strongest and weakest labels, complete row count, and server-derived net odds.
+                            assert paytable.locator('h2').inner_text()==holdem_resources[locale]['paytable.title'] and len(paytable_labels)==10 and len(paytable_odds)==10 and paytable_labels[0]==holdem_resources[locale]['ranksMade.royal_flush'] and paytable_odds[0]=='100:1' and paytable_labels[-1]==holdem_resources[locale]['ranksMade.high_card'] and paytable_odds[-1]=='1:1'
                             # Validate containment and capture after-pass evidence at every viewport.
                             for viewport_id,width,height in required_viewports:
                                 # Resize to the exact visual matrix dimensions.
                                 page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
                                 # Reject horizontal overflow and require the mounted community-card table.
-                                assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.get_by_test_id('casino-holdem').is_visible()
+                                assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.get_by_test_id('casino-holdem').is_visible() and paytable.is_visible()
                                 # Record self-describing evidence for this state and viewport.
                                 game_evidence(f'after-pass-casino-holdem-{prefix}-{locale.lower()}-{viewport_id}.png','casino_holdem',states,locale,viewport_id)
                         # Restore English desktop controls for the next public action.
@@ -4088,7 +4110,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Return to the lobby for downstream browser cases.
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Execute the integrated Casino Hold'em browser and visual gate.
-                run_case('BR-CH-001',['CH-001','CH-002','CH-004','CH-005'],casino_holdem_acceptance)
+                run_case('BR-CH-001',['CH-001','CH-002','CH-004','CH-005','CH-006','TEST-084'],casino_holdem_acceptance)
                 # Define real-backend Joker Poker localization, hold, draw, responsive, motion, and route acceptance.
                 def joker_poker_acceptance():
                     # Open the catalog-owned route and wait for the stable game selector.
@@ -4358,18 +4380,24 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             page.locator('#clear').click(); page.wait_for_function("() => document.querySelectorAll('.bet-item').length === 0", timeout=5000)
                     # Start from a clean slip after the preceding hit-map case.
                     clear_slip()
-                    # Straight bets show their pocket number, including zero, never a color label. (issue #230)
-                    place_and_check('[data-testid="roulette-num-17"]','17')
-                    place_and_check('[data-testid="roulette-num-0"]','0')
+                    # Audit every American-wheel straight pocket so zero, double zero, and all 1-36 labels are authoritative. (issues #230 #250)
+                    for pocket in ['0','00']+[str(number) for number in range(1,37)]:
+                        # Require this exact visible pocket to add its number instead of a color or empty label.
+                        place_and_check(f'[data-testid="roulette-num-{pocket}"]',pocket)
                     # Every FAST BETS shortcut places exactly one correctly typed bet, including repeat clicks. (issue #231)
                     for fast_type,fast_label in (('red','Red'),('red','Red'),('odd','Odd'),('black','Black'),('even','Even'),('low','1-18'),('high','19-36')):
                         place_and_check(f'[data-outbtn="{fast_type}"]',fast_label)
                     # The equivalent grid outside cells register the same labels through the board surface. (issue #233)
                     for grid_type,grid_label in (('red','Red'),('black','Black'),('odd','Odd'),('even','Even'),('low','1-18'),('high','19-36')):
                         place_and_check(f'[data-testid="roulette-outside-{grid_type}"]',grid_label)
-                    # Dozens and columns register their canonical range labels through their stable cell keys.
-                    place_and_check('[data-cell-key="dozen:2"]','2nd 12',use_dispatch=True)
-                    place_and_check('[data-cell-key="column:1"]','Column 1',use_dispatch=True)
+                    # Audit every dozen cell through its stable catalog identity and canonical ordinal label.
+                    for dozen,dozen_label in ((1,'1st 12'),(2,'2nd 12'),(3,'3rd 12')):
+                        # Dispatch against the fixed-board hit target so scaled layouts do not alter identity coverage.
+                        place_and_check(f'[data-cell-key="dozen:{dozen}"]',dozen_label,use_dispatch=True)
+                    # Audit every column cell through its stable catalog identity and canonical label.
+                    for column in (1,2,3):
+                        # Dispatch against the fixed-board hit target so every governed column is exercised.
+                        place_and_check(f'[data-cell-key="column:{column}"]',f'Column {column}',use_dispatch=True)
                     # Enumerate one representative hotspot per inside/special type straight from the rendered catalog markers. (issue #250)
                     inside_targets=page.evaluate("() => { const seen={}; for (const spot of document.querySelectorAll('.spot')) { const type=spot.dataset.betType; if (!seen[type]) seen[type]={key:spot.dataset.cellKey,label:spot.title.replace(/ \\d+:1$/,'')}; } return Object.entries(seen).map(([type,info]) => ({type,key:info.key,label:info.label})); }")
                     # Require the board to expose every governed inside and special bet type as a marker.
@@ -4377,8 +4405,32 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Place one bet per inside/special type and require its exact catalog label on the slip.
                     for target in inside_targets:
                         place_and_check(f"[data-cell-key=\"{target['key']}\"]",target['label'],use_dispatch=True)
-                    # Return every audited stake to the wallet through the refund control.
+                    # Return all direct-surface audit stakes before exercising multi-component call bets.
                     clear_slip()
+                    # Open the racetrack disclosure through its visible summary control.
+                    page.get_by_test_id('roulette-racetrack-disclosure').locator('summary').click()
+                    # Exercise every visible racetrack, neighbor, final, and complete-number control. (issue #250)
+                    for call_type in ('snake','voisins','tiers','orphelins','jeu_zero','neighbors','final','complete'):
+                        # Capture the authoritative component list returned for this exact visible activation.
+                        with page.expect_response(lambda response: response.url.endswith('/api/v1/games/roulette/call-bet') and response.request.method=='POST') as call_response_info:
+                            # Activate the visible call-bet button instead of bypassing the player interaction path.
+                            page.locator(f'[data-call="{call_type}"]').click()
+                        # Read the standard response envelope after the route has accepted the activation.
+                        call_payload=call_response_info.value.json()['data']
+                        # Derive the exact expected slip labels from the server-authoritative placed components.
+                        expected_call_labels=[component['label'] for component in call_payload['placed']]
+                        # Reject silent no-ops even when a call type legitimately expands to several rows.
+                        assert expected_call_labels, call_type
+                        # Wait until the rerendered slip contains every returned component and no extra row.
+                        page.wait_for_function("n => document.querySelectorAll('.bet-item').length === n",arg=len(expected_call_labels),timeout=5000)
+                        # Read every rendered component label in stable response order.
+                        actual_call_labels=[label.strip() for label in page.locator('.bet-item span').all_inner_texts()]
+                        # Require the visible slip to match the exact authoritative label sequence.
+                        assert actual_call_labels==expected_call_labels,(call_type,actual_call_labels,expected_call_labels)
+                        # Refund this call group before the next control so row counts and wallet capacity stay isolated.
+                        clear_slip()
+                    # Restore the advanced racetrack disclosure to its governed collapsed baseline for downstream layout acceptance.
+                    page.get_by_test_id('roulette-racetrack-disclosure').locator('summary').click()
                 # Execute the exhaustive slip-label and reliability audit.
                 run_case('BR-ROU-SLIP-AUDIT-001',['ROU-061','TEST-082'],roulette_slip_label_audit)
                 # Define the raw Roulette resource keys reported as visible regressions.
@@ -4721,14 +4773,42 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 slots_evidence_text=page.get_by_test_id('slots-premium').inner_text()
                 # Verify the after-pass game evidence contains user-facing copy rather than internal resource identifiers.
                 assert 'controls.' not in slots_evidence_text and 'status.' not in slots_evidence_text and 'slots.' not in slots_evidence_text
-                # Require in-game amounts to pair the decorative token mark with a visible unit label so the glyph never solely carries a value. (issue #286)
-                def slots_labeled_amounts():
-                    # Collect every marked amount with its optional unit from the mounted game surface.
-                    marked_amounts=re.findall(r'◈[\d.,]+(?: tokens)?', slots_evidence_text)
-                    # Require marked amounts to exist and every one of them to carry the visible unit label.
-                    assert marked_amounts and all(item.endswith(' tokens') for item in marked_amounts), marked_amounts[:6]
-                # Execute the labeled in-game amount regression.
-                run_case('BR-MONEY-LABEL-001',['UX-017','TEST-086'],slots_labeled_amounts)
+                # Define the cross-formatter, localized, responsive play-token label acceptance case. (issue #286)
+                def labeled_play_token_amounts():
+                    # Read all governed dimensions from the authoritative visual matrix instead of duplicating them.
+                    money_viewports={entry['id']:{'width':entry['width'],'height':entry['height']} for entry in visual_matrix['viewports']}
+                    # Require the matrix to expose the complete issue-mandated desktop, tablet, and mobile set.
+                    assert set(money_viewports)=={'desktop_primary','desktop_compact','tablet','mobile'}
+                    # Bind each governed locale to the full play-token terminology required by the visual standard.
+                    localized_units={'en-US':'play tokens','ru-RU':'игровых токенов'}
+                    # Exercise the shared formatters and the real Slots surface in both governed locales.
+                    for locale,expected_unit in localized_units.items():
+                        # Switch through the player-visible shell control so the mounted Slots route follows the real locale path.
+                        page.get_by_test_id('shell-locale-select').select_option(locale)
+                        # Wait for the shared runtime and the visible round-cost amount to finish rerendering.
+                        page.wait_for_function("expected => window.CasinoI18n?.getLocaleState().locale === expected.locale && document.querySelector('[data-testid=\"slots-round-cost\"]')?.textContent.trim().endsWith(expected.unit)",arg={'locale':locale,'unit':expected_unit})
+                        # Invoke both public shared helpers through their browser module boundary at the active locale.
+                        formatter_values=page.evaluate("""async () => { const i18n=await import('/core/i18n.js'); const ui=await import('/core/ui.js'); return {formatMoney:i18n.formatMoney(1234.5),money:ui.money(1234.5)}; }""")
+                        # Require both helpers to preserve the decorative diamond while adding the exact full localized label.
+                        assert all(value.startswith('◈') and value.endswith(f' {expected_unit}') for value in formatter_values.values()), formatter_values
+                        # Prevent either locale from accepting the other locale's wording by coincidence.
+                        assert ('play tokens' not in ' '.join(formatter_values.values())) if locale=='ru-RU' else ('игровых токенов' not in ' '.join(formatter_values.values()))
+                        # Exercise every governed viewport for responsive copy and geometry acceptance.
+                        for viewport_id,viewport in money_viewports.items():
+                            # Resize the real route and allow responsive layout and localized copy to settle.
+                            page.set_viewport_size(viewport); page.wait_for_timeout(150)
+                            # Audit leaf-level visible play-token amounts so parent container text cannot mask clipping.
+                            amount_diagnostics=page.evaluate("""expectedUnit => { const root=document.querySelector('[data-testid="slots-premium"]'); const nodes=[...root.querySelectorAll('*')].filter(element => [...element.childNodes].some(node => node.nodeType===Node.TEXT_NODE && node.textContent.includes('◈'))); const amounts=nodes.map(element => { const rect=element.getBoundingClientRect(); const style=getComputedStyle(element); return {text:element.textContent.trim(),left:rect.left,right:rect.right,width:rect.width,clientWidth:element.clientWidth,scrollWidth:element.scrollWidth,display:style.display,visibility:style.visibility,opacity:Number(style.opacity)}; }).filter(entry => entry.display!=='none' && entry.visibility!=='hidden' && entry.opacity>0 && entry.width>0); return {amounts,pageWidth:document.documentElement.scrollWidth,viewportWidth:innerWidth,allLabeled:amounts.every(entry => entry.text.endsWith(expectedUnit)),contained:amounts.every(entry => entry.left>=-1 && entry.right<=innerWidth+1 && entry.scrollWidth<=entry.clientWidth+1)}; }""",expected_unit)
+                            # Require at least one real amount and reject missing labels, element clipping, and page overflow.
+                            assert amount_diagnostics['amounts'] and amount_diagnostics['allLabeled'] and amount_diagnostics['contained'] and amount_diagnostics['pageWidth']<=amount_diagnostics['viewportWidth']+1, amount_diagnostics
+                            # Capture exact-head after-pass evidence for this locale and governed viewport.
+                            game_evidence(f'after-pass-labeled-money-slots-{locale.lower()}-{viewport_id}.png','slots',['idle','labeled_play_token_amounts'],locale,viewport_id)
+                    # Restore the default locale and primary desktop dimensions for the existing Slots regression sequence.
+                    page.get_by_test_id('shell-locale-select').select_option('en-US'); page.set_viewport_size(money_viewports['desktop_primary'])
+                    # Wait for the restored visible amount before handing the route to later Slots cases.
+                    page.wait_for_function("() => document.querySelector('[data-testid=\"slots-round-cost\"]')?.textContent.trim().endsWith('play tokens')")
+                # Execute the issue-mapped shared formatter and real Slots acceptance regression.
+                run_case('BR-MONEY-LABEL-001',['UX-017','TEST-086'],labeled_play_token_amounts)
                 # Store the idle cabinet box so spin/result states can be compared.
                 idle_box=page.get_by_test_id('slots-cabinet').bounding_box()
                 # Store the idle result box so the reserved payout region can be compared.
