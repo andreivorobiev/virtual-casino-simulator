@@ -8591,36 +8591,105 @@
       "notes": "Issue #284/#283 auth short-viewport fit and terms touch-target browser proof."
     },
     {
-      "id": "UX-013",
-      "module": "UX",
-      "description": "The lobby route outlet is a single bounded vertical scroll region, so every filtered catalog card and its Play control is reachable below the fold at 1920x1080, 1440x900, 1024x900, and 390x844 without page-level horizontal overflow and without content hidden behind the fixed shell chrome.",
+      "id": "ROU-060",
+      "module": "Roulette",
+      "description": "Leaving the Roulette table with open, un-spun bets refunds each staked amount through the documented clear endpoint, so navigating away never strands an already-debited stake and the reopened round starts with no lingering bet.",
       "status": "PASS",
       "api_tests": [],
       "browser_tests": [
-        "BR-LOBBY-RESP-001"
+        "BR-ROU-REFUND-001"
       ],
       "implementation_files": [
-        "web/styles.css"
+        "web/games/roulette.js"
       ],
-      "introduced_in": "issue-318-lobby-catalog-scroll",
-      "changed_in": "issue-318-lobby-catalog-scroll",
-      "notes": "Issue #318: the lobby outlet gains the same fixed-height-ancestor overflow-y:auto scroll fix the game outlet already had (#221)."
+      "introduced_in": "issue-246-roulette-refund-on-leave",
+      "changed_in": "issue-246-roulette-refund-on-leave",
+      "notes": "Issue #246: unmount() now fires a best-effort refund for open-round human bets and refreshes the shared wallet."
     },
     {
-      "id": "TEST-076",
+      "id": "TEST-073",
       "module": "Tests",
-      "description": "Browser evidence verifies the lobby outlet owns a bounded vertical scroll and that the final catalog card and its Play control can be scrolled into view fully within the viewport, proving cards below the fold are reachable rather than clipped.",
+      "description": "Browser evidence verifies that placing a Roulette bet debits the shared wallet, navigating away refunds the stake back to the pre-wager balance, and reopening the table shows no lingering open-bet chip.",
       "status": "PASS",
       "api_tests": [],
       "browser_tests": [
-        "BR-LOBBY-RESP-001"
+        "BR-ROU-REFUND-001"
       ],
       "implementation_files": [
         "tests/run_tests.py"
       ],
+      "introduced_in": "issue-246-roulette-refund-on-leave",
+      "changed_in": "issue-246-roulette-refund-on-leave",
+      "notes": "Issue #246 refund-on-leave wallet-correctness browser proof."
+    },
+    {
+      "id": "SLOT-029",
+      "module": "Slots",
+      "description": "The Slots result renders every authoritative winning payline as a labelled, non-color-only SVG path whose five points are recalculated from the live reel-cell centers, remain within one CSS pixel after responsive resize, locale rerender, zoom, and route recovery, and preserve visible symbol identity in normal and reduced-motion modes.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-SLOTS-PAYLINE-001"
+      ],
+      "implementation_files": [
+        "web/games/slots.js",
+        "web/i18n/en-US/games/slots.json",
+        "web/i18n/ru-RU/games/slots.json"
+      ],
+      "introduced_in": "issue-319-slots-payline-alignment",
+      "changed_in": "issue-319-slots-payline-alignment",
+      "notes": "Issue #319: ResizeObserver-backed geometry derives each point from the rendered cell center; simultaneous paths expose permanent line numbers, accessible labels, unique color/dash combinations, and exact round/payout identity."
+    },
+    {
+      "id": "TEST-077",
+      "module": "Tests",
+      "description": "Deterministic browser evidence derives all twenty paths and payouts from the production Slots engine, restores a simultaneous-win outcome through the normal state loader, verifies every transformed SVG point within one CSS pixel of its authoritative cell, checks result/history identity, multi-win distinction, symbol visibility, zoom, reduced motion, and captures EN/RU after-pass evidence at all four governed viewports.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-SLOTS-PAYLINE-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-319-slots-payline-alignment",
+      "changed_in": "issue-319-slots-payline-alignment",
+      "notes": "Issue #319 evidence paths are logs/test-runs/after-pass-slots-paylines-*.png with matching VIS-EVIDENCE-001 JSON sidecars generated from the exact tested head."
+    },
+    {
+      "id": "UX-013",
+      "module": "UX",
+      "description": "The lobby route outlet is one bounded, keyboard-focusable vertical scroll region with a localized accessible name, visible focus and themed scroll affordances, wheel and touch panning, and native Page Down and End behavior, so every filtered catalog card and Play control remains reachable at 1920x1080, 1440x900, 1024x900, and 390x844 without page-level horizontal overflow or fixed-chrome overlap.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-LOBBY-RESP-001"
+      ],
+      "implementation_files": [
+        "web/app.js",
+        "web/styles.css"
+      ],
       "introduced_in": "issue-318-lobby-catalog-scroll",
       "changed_in": "issue-318-lobby-catalog-scroll",
-      "notes": "Issue #318 lobby below-fold reachability browser proof."
+      "notes": "Issue #318: the shell gives the lobby outlet the remaining viewport between its header and status rail, while the outlet owns the single accessible catalog scroll surface."
+    },
+    {
+      "id": "TEST-076",
+      "module": "Tests",
+      "description": "Browser evidence in English and Russian at all four governed viewports verifies the focused lobby region, themed affordance, no scroll trap or horizontal overflow, Page Down, End, wheel, and touch scrolling, final-card and Play-control reachability for unfiltered, category-filtered, search-filtered, and empty states, and exact-head after-pass evidence sidecars.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-LOBBY-RESP-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-318-lobby-catalog-scroll",
+      "changed_in": "issue-318-lobby-catalog-scroll",
+      "notes": "Issue #318 evidence paths are logs/test-runs/after-pass-shell-lobby-scroll-*.png with matching VIS-EVIDENCE-001 JSON sidecars generated from the exact tested head."
     }
   ]
 }
