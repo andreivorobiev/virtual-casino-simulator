@@ -16,7 +16,7 @@ Historical source baseline: 9.1.0
 - admin: 1.6.1
 - operations: 1.0.0
 - roulette: 9.4.3
-- slots: 9.1.3
+- slots: 9.1.4
 - blackjack: 9.1.3
 - baccarat: 9.1.2
 - keno: 9.2.2
@@ -45,8 +45,8 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.0
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.45.0
-- docs: 1.45.0
+- tests: 1.45.5
+- docs: 1.45.5
 - contracts: 1.33.0
 - tooling: 1.14.0
 - commenting_policy: 1.0.0
@@ -682,3 +682,5 @@ Historical source baseline: 9.1.0
 - **TEST-070** (Tests) - PASS: Browser regression proves the lost-response idempotency guarantee: after the backend commits and the client sees a simulated lost response, a retry through the visible control resends the identical idempotency identity and immutable wager body, and the ledger records exactly one wager debit for the intended play.
 - **AUTH-UI-002** (Application) - PASS: The login screen fits without page scroll at the short 1280x720 desktop viewport, and the required terms acceptance control presents an enlarged (>=42px) touch target.
 - **TEST-071** (Tests) - PASS: Browser evidence verifies the login gate fits without page overflow at 1280x720 with the sign-in submit control on screen, and that the terms acceptance row meets the enlarged touch-target height.
+- **SLOT-029** (Slots) - PASS: The Slots payline overlay is anchored to the reel grid itself (its positioning context), so the line that maps rows to 16.7/50/83.3 percent of its box crosses the exact winning reel cells instead of rendering detached below them when the reel window is taller than the grid.
+- **TEST-077** (Tests) - PASS: Browser evidence verifies the payline overlay's box coincides with the reel-grid box on every edge and each reel row center aligns with the overlay's row coordinates, proving the payline crosses the reel cells rather than detaching below them.

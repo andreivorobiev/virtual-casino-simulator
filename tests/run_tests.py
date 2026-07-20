@@ -4342,6 +4342,22 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 idle_box=page.get_by_test_id('slots-cabinet').bounding_box()
                 # Store the idle result box so the reserved payout region can be compared.
                 idle_result_box=page.get_by_test_id('slots-result').bounding_box()
+                # Prove the payline overlay coordinate space coincides with the reel cells rather than detaching below them. (issue #319)
+                def slots_payline_alignment():
+                    # Probe the real stylesheet: mount a temporary payline element inside the reel grid and measure both boxes.
+                    payline_probe=page.evaluate("""() => { const grid=document.querySelector('[data-testid="slot-grid"]'); const probe=document.createElementNS('http://www.w3.org/2000/svg','svg'); probe.setAttribute('class','slots-payline'); grid.appendChild(probe); const gridBox=grid.getBoundingClientRect(); const overlayBox=probe.getBoundingClientRect(); probe.remove(); return {gridY:gridBox.y,gridH:gridBox.height,gridX:gridBox.x,gridW:gridBox.width,overlayY:overlayBox.y,overlayH:overlayBox.height,overlayX:overlayBox.x,overlayW:overlayBox.width,positioned:getComputedStyle(grid).position}; }""")
+                    # Require the grid to be the overlay's positioning context so the payline box equals the cell box by construction.
+                    assert payline_probe['positioned']=='relative'
+                    # Require the overlay box to coincide with the reel-grid box on every edge instead of extending below the cells.
+                    assert abs(payline_probe['overlayY']-payline_probe['gridY'])<=2 and abs(payline_probe['overlayH']-payline_probe['gridH'])<=3 and abs(payline_probe['overlayX']-payline_probe['gridX'])<=2 and abs(payline_probe['overlayW']-payline_probe['gridW'])<=3, payline_probe
+                    # The overlay maps the three rows to 16.7/50/83.3 percent of its box; require each reel row center to land there so a win line crosses its own cells.
+                    for row_index, fraction in ((0, 0.167), (1, 0.5), (2, 0.833)):
+                        cell_box=page.get_by_test_id(f'slot-cell-{row_index}-0').bounding_box()
+                        cell_center=cell_box['y'] + cell_box['height'] / 2
+                        expected_center=payline_probe['gridY'] + payline_probe['gridH'] * fraction
+                        assert abs(cell_center - expected_center) <= 18, (row_index, cell_center, expected_center)
+                # Execute the payline-to-reel alignment regression.
+                run_case('BR-SLOTS-PAYLINE-001',['SLOT-029','TEST-077'],slots_payline_alignment)
                 # Define the focused line-bet regression using real visible controls and backend requests.
                 def slots_line_bet_validation():
                     # Track only Slots spin requests so input edits can prove they never move tokens by themselves.

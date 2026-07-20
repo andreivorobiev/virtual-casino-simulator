@@ -8589,6 +8589,38 @@
       "introduced_in": "issue-284-283-auth-visual-conformance",
       "changed_in": "issue-284-283-auth-visual-conformance",
       "notes": "Issue #284/#283 auth short-viewport fit and terms touch-target browser proof."
+    },
+    {
+      "id": "SLOT-029",
+      "module": "Slots",
+      "description": "The Slots payline overlay is anchored to the reel grid itself (its positioning context), so the line that maps rows to 16.7/50/83.3 percent of its box crosses the exact winning reel cells instead of rendering detached below them when the reel window is taller than the grid.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-SLOTS-PAYLINE-001"
+      ],
+      "implementation_files": [
+        "web/games/slots.js"
+      ],
+      "introduced_in": "issue-319-slots-payline-alignment",
+      "changed_in": "issue-319-slots-payline-alignment",
+      "notes": "Issue #319: the payline SVG moved inside the position:relative reel grid with inset:0, so its coordinate space equals the cell box at every viewport."
+    },
+    {
+      "id": "TEST-077",
+      "module": "Tests",
+      "description": "Browser evidence verifies the payline overlay's box coincides with the reel-grid box on every edge and each reel row center aligns with the overlay's row coordinates, proving the payline crosses the reel cells rather than detaching below them.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-SLOTS-PAYLINE-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-319-slots-payline-alignment",
+      "changed_in": "issue-319-slots-payline-alignment",
+      "notes": "Issue #319 payline-to-reel alignment browser proof."
     }
   ]
 }

@@ -1,6 +1,6 @@
 {
   "module": "slots",
-  "version": "9.1.3",
+  "version": "9.1.4",
   "paths": [
     "casino/games/slots/",
     "web/games/slots.js",
@@ -20,12 +20,44 @@
     "route": "/games/slots",
     "label": "Slots",
     "category": "machine",
-    "categories": ["machine", "reels", "instant"],
-    "backend": {"register": "casino.games.slots.api:register"},
-    "frontend": {"module": "./games/slots.js", "export": "SlotsGame", "ready_testid": "slot-grid", "i18n_domain": "games/slots", "i18n_probe": "history.row"},
-    "tests": {"long_driver": "tests.game_drivers.slots:play"},
-    "translations": {"ru-RU": {"label": "Слоты", "kicker": "Автомат", "description": "Анимированные слоты 5x3 с линиями, wild, scatter, бесплатными вращениями и прогрессивными функциями."}},
-    "lobby": {"featured": false, "wide": true, "art_class": "slot-art", "symbol": "&#9638;", "kicker": "Machine", "description": "Animated 5-reel slots with paylines, wilds, scatters, free spins, and progressive features.", "tags": ["Bots", "Autoplay", "Bonus rounds"]}
+    "categories": [
+      "machine",
+      "reels",
+      "instant"
+    ],
+    "backend": {
+      "register": "casino.games.slots.api:register"
+    },
+    "frontend": {
+      "module": "./games/slots.js",
+      "export": "SlotsGame",
+      "ready_testid": "slot-grid",
+      "i18n_domain": "games/slots",
+      "i18n_probe": "history.row"
+    },
+    "tests": {
+      "long_driver": "tests.game_drivers.slots:play"
+    },
+    "translations": {
+      "ru-RU": {
+        "label": "\u0421\u043b\u043e\u0442\u044b",
+        "kicker": "\u0410\u0432\u0442\u043e\u043c\u0430\u0442",
+        "description": "\u0410\u043d\u0438\u043c\u0438\u0440\u043e\u0432\u0430\u043d\u043d\u044b\u0435 \u0441\u043b\u043e\u0442\u044b 5x3 \u0441 \u043b\u0438\u043d\u0438\u044f\u043c\u0438, wild, scatter, \u0431\u0435\u0441\u043f\u043b\u0430\u0442\u043d\u044b\u043c\u0438 \u0432\u0440\u0430\u0449\u0435\u043d\u0438\u044f\u043c\u0438 \u0438 \u043f\u0440\u043e\u0433\u0440\u0435\u0441\u0441\u0438\u0432\u043d\u044b\u043c\u0438 \u0444\u0443\u043d\u043a\u0446\u0438\u044f\u043c\u0438."
+      }
+    },
+    "lobby": {
+      "featured": false,
+      "wide": true,
+      "art_class": "slot-art",
+      "symbol": "&#9638;",
+      "kicker": "Machine",
+      "description": "Animated 5-reel slots with paylines, wilds, scatters, free spins, and progressive features.",
+      "tags": [
+        "Bots",
+        "Autoplay",
+        "Bonus rounds"
+      ]
+    }
   },
   "depends_on": [
     "core",
