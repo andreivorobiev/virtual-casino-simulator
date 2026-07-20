@@ -45,8 +45,8 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.1
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.45.10
-- docs: 1.45.10
+- tests: 1.45.11
+- docs: 1.45.11
 - contracts: 1.33.0
 - tooling: 1.14.0
 - commenting_policy: 1.0.0
@@ -698,3 +698,5 @@ Historical source baseline: 9.1.0
 - **TEST-078** (Tests) - PASS: Browser geometry and after-pass evidence in English and Russian at 1920x1080, 1440x900, 1024x900, and 390x844 verifies corner-cell containment, keyboard focus visibility and reveal, idle, selected, final-draw, caught, latest, and disabled treatments, minimum touch targets, and no page-level horizontal overflow.
 - **CH-006** (Casino Hold'em) - PASS: The Casino Hold'em data rail displays the server-owned ante payout schedule (royal flush 100:1 through the even-money band at 1:1) in both en-US and ru-RU, sourced from the published ante_return_multipliers rules payload rather than duplicated client constants.
 - **TEST-084** (Tests) - PASS: Browser evidence verifies in English and Russian at all four governed viewports that the Casino Hold'em data rail shows all ten server-published ante payout rows, including the strongest royal-flush 100:1 and weakest high-card 1:1 net returns, before the first ante-backed deal and throughout governed play states.
+- **UX-016** (UX) - PASS: The fixed status footer contains all of its visible localized segments without pairwise overlap or spill outside the bar at every governed viewport in en-US and ru-RU, so Russian copy expansion cannot cram or collide the ledger note and connection status.
+- **TEST-085** (Tests) - PASS: Browser geometry evidence verifies, for each governed locale and viewport, that every visible status-footer segment stays inside the bar and no two segments intersect.

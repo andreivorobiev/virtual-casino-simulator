@@ -41,8 +41,8 @@
     "casino_holdem": "1.0.1",
     "joker_poker": "1.0.0",
     "texas_holdem_practice_table": "1.0.0",
-    "tests": "1.45.10",
-    "docs": "1.45.10",
+    "tests": "1.45.11",
+    "docs": "1.45.11",
     "contracts": "1.33.0",
     "tooling": "1.14.0",
     "commenting_policy": "1.0.0"

@@ -8869,6 +8869,38 @@
       "introduced_in": "issue-253-holdem-paytable",
       "changed_in": "issue-253-holdem-paytable",
       "notes": "Issue #253 exact-head after-pass evidence paths are logs/test-runs/after-pass-casino-holdem-*.png with matching VIS-EVIDENCE-001 sidecars."
+    },
+    {
+      "id": "UX-016",
+      "module": "UX",
+      "description": "The fixed status footer contains all of its visible localized segments without pairwise overlap or spill outside the bar at every governed viewport in en-US and ru-RU, so Russian copy expansion cannot cram or collide the ledger note and connection status.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-LOBBY-RESP-001"
+      ],
+      "implementation_files": [
+        "web/styles.css"
+      ],
+      "introduced_in": "issue-285-ru-footer-containment",
+      "changed_in": "issue-285-ru-footer-containment",
+      "notes": "Issue #285: the merged mobile status-bar ellipsis/hiding rules provide the behavior; this requirement pins it with locale-by-viewport geometry evidence."
+    },
+    {
+      "id": "TEST-085",
+      "module": "Tests",
+      "description": "Browser geometry evidence verifies, for each governed locale and viewport, that every visible status-footer segment stays inside the bar and no two segments intersect.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-LOBBY-RESP-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-285-ru-footer-containment",
+      "changed_in": "issue-285-ru-footer-containment",
+      "notes": "Issue #285 exact-head footer proof is stored at logs/test-runs/after-pass-shell-status-footer-*.png with matching sidecars that record the accepted geometry for both locales at every governed viewport."
     }
   ]
 }

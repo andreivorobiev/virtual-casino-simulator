@@ -1822,6 +1822,20 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 metadata={'evidence_class':'after_pass','branch':evidence_branch,'commit':evidence_commit,'surface':surface,'states':states,'locale':locale,'viewport':{'id':viewport_id,**viewport},'path':str(target.relative_to(ROOT)).replace('\\','/'),'focused_control':focused}
                 # Write a UTF-8 sidecar next to the image so the evidence remains self-describing.
                 target.with_suffix('.json').write_text(json.dumps(metadata,indent=2,ensure_ascii=False),encoding='utf-8')
+            # Capture the visible status-footer region together with the exact accepted geometry diagnostics. (UX-016, TEST-085)
+            def footer_evidence(name, states, locale, viewport_id, geometry):
+                # Resolve the PNG target under the standard browser test artifact directory.
+                target=screenshots/name
+                # Capture the governed footer itself without the generic shell helper's intentional status-bar suppression.
+                page.get_by_test_id('shell-status').screenshot(path=str(target),animations='disabled',style='#toast { visibility: hidden !important; }')
+                # Record the active viewport dimensions alongside the named visual-matrix viewport.
+                viewport=page.viewport_size
+                # Record the current focus target so the bounded artifact remains self-describing.
+                focused=page.evaluate("() => document.activeElement?.getAttribute('data-testid') || ''")
+                # Bind the footer crop, locale, viewport, and passing geometry to one after-pass evidence sidecar.
+                metadata={'evidence_class':'after_pass','branch':evidence_branch,'commit':evidence_commit,'surface':'shell_lobby','states':states,'locale':locale,'viewport':{'id':viewport_id,**viewport},'path':str(target.relative_to(ROOT)).replace('\\','/'),'focused_control':focused,'region_selector':'[data-testid="shell-status"]','geometry':geometry}
+                # Write the exact geometry proof next to its visible footer image for independent artifact audit.
+                target.with_suffix('.json').write_text(json.dumps(metadata,indent=2,ensure_ascii=False),encoding='utf-8')
             # Capture one bounded interaction region without misrepresenting unrelated full-page defects as accepted.
             def region_evidence(name, selector, surface, states, locale, viewport_id):
                 # Resolve the PNG target under the standard browser test artifact directory.
@@ -2559,6 +2573,12 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             reset_lobby_scroll()
                             # Resolve the one approved localized count string for this locale and installed catalog. (issue #235)
                             expected_capacity=f'{len(casino_config.GAMES)} available' if locale=='en-US' else f'Доступно: {len(casino_config.GAMES)}'
+                            # Fail closed unless the fixed status footer and every expected visible localized segment are contained and pairwise disjoint. (issue #285)
+                            footer_geometry=page.evaluate("""() => { const bar=document.querySelector('[data-testid="shell-status"]'); if (!bar) return {ok:false,reason:'missing_status_bar'}; const barRect=bar.getBoundingClientRect(); const items=[...bar.querySelectorAll('.status-item')].map((item,index) => { const rect=item.getBoundingClientRect(); return {index,left:rect.left,right:rect.right,top:rect.top,bottom:rect.bottom,width:rect.width,height:rect.height}; }).filter(item => item.width>0 && item.height>0); const spill=items.some(item => item.left < barRect.left-1 || item.right > barRect.right+1 || item.top < barRect.top-1 || item.bottom > barRect.bottom+1); const collisions=[]; for (let a=0;a<items.length;a+=1) for (let b=a+1;b<items.length;b+=1) { const first=items[a],second=items[b]; if (first.left < second.right-1 && second.left < first.right-1 && first.top < second.bottom-1 && second.top < first.bottom-1) collisions.push([first.index,second.index]); } return {ok:barRect.width>0 && barRect.height>0 && items.length>=2 && !spill && collisions.length===0,bar:{width:barRect.width,height:barRect.height},visibleItems:items,spill,collisions}; }""")
+                            # Surface exact geometry diagnostics when localized copy spills or visible status segments collide.
+                            assert footer_geometry['ok'],footer_geometry
+                            # Capture named bounded footer evidence whose sidecar preserves the passing geometry for this exact locale and viewport.
+                            footer_evidence(f'after-pass-shell-status-footer-{locale.lower()}-{viewport_id}.png',['authenticated','status_footer_contained','geometry_verified'],locale,viewport_id,footer_geometry)
                             # Require exact single-count copy so neither retired roadmap clause nor a second count can enter evidence.
                             assert page.get_by_test_id('catalog-capacity').inner_text()==expected_capacity
                             # Bring the capacity line into the bounded outlet before capturing the governed copy state.
@@ -2670,7 +2690,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Return the persistent route outlet to its top edge for the next browser case.
                     reset_lobby_scroll()
                 # Execute the full locale, viewport, state, and interaction matrix under the permanent requirement mapping.
-                run_case('BR-LOBBY-RESP-001',['CORE-015','UX-009','UX-012','UX-013','TEST-072','TEST-076'],responsive_lobby)
+                run_case('BR-LOBBY-RESP-001',['CORE-015','UX-009','UX-012','UX-013','TEST-072','TEST-076','UX-016','TEST-085'],responsive_lobby)
                 # Define catalog_route_discovery to mount every frontend driver from catalog metadata.
                 def catalog_route_discovery():
                     # Select a catalog game with a route id that differs from its display label for loader-copy coverage. (UX-011)
