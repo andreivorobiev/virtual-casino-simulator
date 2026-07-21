@@ -21,6 +21,7 @@ class UI50000HarnessTests(unittest.TestCase):
         self.assertIn(".big-six-wheel__wheel-shell", contract["contained_items"])  # Require the stable circular shell to remain fully inside the stage.
         self.assertNotIn(".big-six-wheel__wheel", contract["contained_items"])  # Avoid interpreting a rotated square bounding box as visible circular overflow.
         self.assertEqual(contract["paint_items"][".big-six-wheel__wheel"], ".big-six-wheel__wheel-shell")  # Require the wheel to paint across its clipping owner.
+        self.assertEqual(contract["paint_min_ratio"], 0.8)  # Reject a missing or materially undersized wheel without requiring its intentional 90% inset to fill the shell.
 
     # Persist one complete synthetic distributed corpus bound to an exact source identity.
     def write_distributed_corpus(self, root, allocations, source_commit, evidence_root=None):
