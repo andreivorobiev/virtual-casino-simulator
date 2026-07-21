@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.41.0
+- application: 9.41.1
 - core: 9.16.0
 - ledger: 9.1.1
 - players: 9.1.0
@@ -45,8 +45,8 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.1
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.48.0
-- docs: 1.48.0
+- tests: 1.48.3
+- docs: 1.48.3
 - contracts: 1.36.0
 - tooling: 1.16.0
 - commenting_policy: 1.0.0
@@ -723,3 +723,6 @@ Historical source baseline: 9.1.0
 - **MAIL-005** (Application) - PASS: Every authorized purpose has matching en-US and ru-RU subjects plus plain-text and semantic HTML alternatives whose action link has meaningful text and whose fixed content is safely escaped.
 - **MAIL-006** (Docs) - PASS: The transactional-mail runbook documents disabled defaults, separate release authority, sender/domain and SPF/DKIM/DMARC posture, canonical-origin and OAuth callback coordination, domain-move revalidation, bounded smoke evidence, rollback, suppression review, and the prohibition on treating repository merge as live authorization.
 - **TEST-090** (Tests) - PASS: Provider-free unit and API tests prove dual-gate inaccessibility, raw-value exclusion, public digest-key hardening, atomic caller idempotency, changed-meaning conflict, bounded retry, ambiguous-result freezing, rate limits, suppression, retention, malformed-state preservation, bilingual templates, Admin-only contract shape, absent consumer routes, and real MySQL cross-process single-claim behavior; exact-head browser evidence covers disabled, misconfigured, release-held, and suppression-summary states in en-US and ru-RU at all four governed viewports.
+- **PWA-001** (Application) - PASS: The player application is installable as a progressive web app: a linked web manifest declares the product name, description, start URL, standalone display, theme and background colors, orientation, and an icon set, and the shell provides theme-color, viewport-fit safe-area, and Apple home-screen metadata. The app remains fully usable in a normal browser and install guidance is optional and non-coercive.
+- **PWA-002** (Application) - PASS: A service worker caches only versioned static shell assets and never caches authenticated API responses, wallet values, game outcomes, ledger data, credentials, or private content; navigations fall back to the cached shell offline, and the shell presents explicit localized online, offline, update-available, and update-failed states with a non-coercive reload that applies an update only on user request.
+- **TEST-092** (Tests) - PASS: Browser evidence verifies the installable shell: a linked valid manifest with required installability fields, the mobile PWA meta contract, a controlling service worker whose cache holds shell assets but never an API path, localized offline and update copy, and an explicit offline banner when connectivity drops.

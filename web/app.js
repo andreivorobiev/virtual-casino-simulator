@@ -5,6 +5,8 @@ import { acceptTerms, addUserTokens, api, currentUser, departGuestTrial, endGues
 import { renderTokenBalance, toast, tokens, safe, renderPremiumTag } from './core/ui.js';
 // Import required dependency so the shell can preserve locale across auth and route changes.
 import { getLocaleState, initI18n, onLocaleChange, setLocale, t } from './core/i18n.js';
+// Import the progressive-web-app controller so the shell can install, update, and show offline state. (issue #182)
+import { initPwa } from './core/pwa.js';
 // Import required dependency so this module can preload global voice settings before games mount.
 import { loadVoiceSettings } from './core/voice.js';
 
@@ -672,6 +674,8 @@ export async function navigate(route, options = {}) {
 async function init() {
   // Initialize i18n before any auth or shell markup renders.
   await initI18n({ domains: ['shell'] });
+  // Register the PWA service worker and wire offline/update state without blocking first paint. (issue #182)
+  initPwa();
   // Recalculate active-route visibility whenever responsive navigation layout changes.
   window.addEventListener('resize', revealActiveNav);
   // Repaint persistent shell text when the locale changes.

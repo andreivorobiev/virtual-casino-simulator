@@ -1178,6 +1178,44 @@ label {
   min-height: 48px;
 }
 
+/* Progressive-web-app connectivity and update banner, kept clear of device safe areas. (issue #182) */
+/* Keep the hidden banner fully removed so its fixed layer never intercepts pointer events. */
+#pwa-banner[hidden] {
+  display: none;
+}
+
+#pwa-banner {
+  position: fixed;
+  z-index: 5;
+  top: calc(env(safe-area-inset-top, 0px) + 8px);
+  right: max(env(safe-area-inset-right, 0px), 12px);
+  left: max(env(safe-area-inset-left, 0px), 12px);
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 1px solid rgba(255, 217, 130, 0.5);
+  border-radius: 12px;
+  color: #fff2c2;
+  font-size: 13px;
+  background: rgba(4, 20, 15, 0.96);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(12px);
+}
+
+/* Style the offline state with a distinct, non-alarming cue. */
+#pwa-banner[data-state="offline"] {
+  border-color: rgba(255, 199, 83, 0.6);
+}
+
+/* Give the update reload control a clear, compliant touch target. */
+#pwa-banner button {
+  min-height: 40px;
+  padding: 8px 14px;
+}
+
 .status-bar {
   position: fixed;
   z-index: 2;

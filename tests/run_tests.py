@@ -2304,6 +2304,50 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 real_login_page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Record the focused real-backend browser login regression coverage.
                 run_case('BR-AUTH-BACKEND-001',['AUTH-001','AUTH-002','SESSION-001','OAUTH-006','TEST-045'],lambda: real_login_response['ok'] is True and real_login_response['data']['user']['email']==DEFAULT_AUTH_EMAIL and real_login_page.get_by_test_id('lobby').is_visible())
+                # Prove the installable-PWA shell: valid manifest, controlling service worker, and a cache that never holds API or private data. (issue #182)
+                def pwa_installable_shell():
+                    # Use an isolated page so the service-worker controllerchange reload cannot disturb other cases.
+                    pwa_page=browser.new_page(viewport={'width':390,'height':844})
+                    # Guarantee the isolated page and its registration are cleaned up.
+                    try:
+                        # Load the public shell where the manifest links and the worker registers.
+                        pwa_page.goto(base, wait_until='networkidle'); pwa_page.get_by_test_id('login-gate').wait_for(timeout=8000)
+                        # Read the manifest link and PWA meta tags from the document head.
+                        head_meta=pwa_page.evaluate("""() => { const link=document.querySelector('link[rel="manifest"]'); return { manifestHref:link?link.getAttribute('href'):null, themeColor:document.querySelector('meta[name="theme-color"]')?.content||null, viewport:document.querySelector('meta[name="viewport"]')?.content||'', appleCapable:document.querySelector('meta[name="apple-mobile-web-app-capable"]')?.content||null }; }""")
+                        # Require the manifest to be linked and the mobile meta contract to be present.
+                        assert head_meta['manifestHref']=='/manifest.webmanifest' and head_meta['themeColor']=='#03110c' and 'viewport-fit=cover' in head_meta['viewport'] and head_meta['appleCapable']=='yes', head_meta
+                        # Fetch and validate the manifest's required installability fields.
+                        manifest=pwa_page.evaluate("async () => (await (await fetch('/manifest.webmanifest')).json())")
+                        assert manifest['name']=='Virtual Casino Simulator' and manifest['start_url'].startswith('/') and manifest['display']=='standalone' and manifest['theme_color']=='#03110c' and isinstance(manifest['icons'],list) and len(manifest['icons'])>=1, manifest
+                        # Wait for a registration to appear, then capture worker state so a failure names the cause.
+                        pwa_page.wait_for_function("async () => (await navigator.serviceWorker.getRegistrations()).length > 0", timeout=10000)
+                        pwa_page.wait_for_timeout(1500)
+                        sw_state=pwa_page.evaluate("""async () => { const regs=await navigator.serviceWorker.getRegistrations(); const reg=regs[0]; let served=null; try { const r=await fetch('/sw.js'); served={status:r.status, ctype:r.headers.get('content-type')}; } catch(e){ served={err:String(e)}; } return { regCount:regs.length, active:reg&&reg.active?reg.active.state:null, installing:reg&&reg.installing?reg.installing.state:null, waiting:reg&&reg.waiting?reg.waiting.state:null, controller:navigator.serviceWorker.controller?navigator.serviceWorker.controller.scriptURL:null, served }; }""")
+                        # Require the worker to be active and controlling the page, reporting full state on failure.
+                        assert sw_state['active']=='activated' and sw_state['controller'], sw_state
+                        # Inspect every populated cache to prove only same-origin shell assets are stored.
+                        cache_inventory=pwa_page.evaluate("""async () => { const names=await caches.keys(); const urls=[]; for (const name of names) { const cache=await caches.open(name); for (const request of await cache.keys()) urls.push(request.url); } return { names, urls }; }""")
+                        # Require a versioned Casino shell cache to exist.
+                        assert any(name.startswith('casino-shell-') for name in cache_inventory['names']), cache_inventory['names']
+                        # Require the cache to hold the shell but never any API, wallet, or private path.
+                        assert cache_inventory['urls'] and all('/api/' not in url for url in cache_inventory['urls']) and any(url.endswith('/styles.css') or url.endswith('/index.html') for url in cache_inventory['urls']), cache_inventory['urls']
+                        # Require the localized offline and update copy to resolve rather than leak resource keys.
+                        pwa_copy=pwa_page.evaluate("() => ({ offline: window.CasinoI18n.t('pwa.offline',{},'shell'), reload: window.CasinoI18n.t('pwa.reload',{},'shell') })")
+                        assert 'pwa.' not in pwa_copy['offline'] and 'Offline' in pwa_copy['offline'] and pwa_copy['reload']=='Reload', pwa_copy
+                        # Emulate a dropped connection and require the explicit offline banner with its localized copy.
+                        pwa_page.context.set_offline(True); pwa_page.evaluate("() => window.dispatchEvent(new Event('offline'))")
+                        pwa_page.get_by_test_id('pwa-banner').wait_for(timeout=5000)
+                        assert pwa_page.get_by_test_id('pwa-banner').get_attribute('data-state')=='offline' and 'Offline' in pwa_page.get_by_test_id('pwa-banner').inner_text()
+                        # Restore connectivity before releasing the isolated page.
+                        pwa_page.context.set_offline(False)
+                    # Always unregister the worker and close the isolated page so later cases stay clean.
+                    finally:
+                        # Remove the service-worker registration and its caches for downstream isolation.
+                        pwa_page.evaluate("async () => { const regs=await navigator.serviceWorker.getRegistrations(); await Promise.all(regs.map(r => r.unregister())); const names=await caches.keys(); await Promise.all(names.map(n => caches.delete(n))); }")
+                        # Close the isolated PWA page.
+                        pwa_page.close()
+                # Execute the installable-PWA shell regression.
+                run_case('BR-PWA-001',['PWA-001','PWA-002','TEST-092'],pwa_installable_shell)
             # Close the focused page even when its assertions fail.
             finally:
                 # Release the isolated backend-login browser context before the existing broad UI suite.

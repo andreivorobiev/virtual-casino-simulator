@@ -87,5 +87,9 @@
   "guest.badge": "Guest trial",
   "guest.endTrial": "End trial",
   "guest.balanceLabel": "Guest trial · temporary play tokens",
-  "guest.expiryWarning": "Ends after 30 min inactivity, 4 hours, or browser close. No recovery or top-up."
+  "guest.expiryWarning": "Ends after 30 min inactivity, 4 hours, or browser close. No recovery or top-up.",
+  "pwa.offline": "Offline — actions that need the server are paused until you reconnect.",
+  "pwa.updateReady": "A new version is ready.",
+  "pwa.reload": "Reload",
+  "pwa.updateFailed": "The update could not be applied. The app is still usable."
 }

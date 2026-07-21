@@ -9358,6 +9358,61 @@
       "introduced_in": "issue-330-transactional-mail",
       "changed_in": "issue-330-transactional-mail",
       "notes": "Browser evidence is generated only by exact-head GitHub Actions; no local Playwright, Chromium, provider, or live network run is authorized."
+    },
+    {
+      "id": "PWA-001",
+      "module": "Application",
+      "description": "The player application is installable as a progressive web app: a linked web manifest declares the product name, description, start URL, standalone display, theme and background colors, orientation, and an icon set, and the shell provides theme-color, viewport-fit safe-area, and Apple home-screen metadata. The app remains fully usable in a normal browser and install guidance is optional and non-coercive.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-PWA-001"
+      ],
+      "implementation_files": [
+        "web/manifest.webmanifest",
+        "web/index.html",
+        "web/core/pwa.js",
+        "web/app.js"
+      ],
+      "introduced_in": "issue-182-pwa",
+      "changed_in": "issue-182-pwa",
+      "notes": "Issue #182 local installability slice; maskable PNG icon assets and native store packaging are follow-ups."
+    },
+    {
+      "id": "PWA-002",
+      "module": "Application",
+      "description": "A service worker caches only versioned static shell assets and never caches authenticated API responses, wallet values, game outcomes, ledger data, credentials, or private content; navigations fall back to the cached shell offline, and the shell presents explicit localized online, offline, update-available, and update-failed states with a non-coercive reload that applies an update only on user request.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-PWA-001"
+      ],
+      "implementation_files": [
+        "web/sw.js",
+        "web/core/pwa.js",
+        "web/styles.css",
+        "web/i18n/en-US/shell.json",
+        "web/i18n/ru-RU/shell.json"
+      ],
+      "introduced_in": "issue-182-pwa",
+      "changed_in": "issue-182-pwa",
+      "notes": "Issue #182: the worker is scope-root, API and non-GET traffic are network-only, and old shell caches are pruned on activation."
+    },
+    {
+      "id": "TEST-092",
+      "module": "Tests",
+      "description": "Browser evidence verifies the installable shell: a linked valid manifest with required installability fields, the mobile PWA meta contract, a controlling service worker whose cache holds shell assets but never an API path, localized offline and update copy, and an explicit offline banner when connectivity drops.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-PWA-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-182-pwa",
+      "changed_in": "issue-182-pwa",
+      "notes": "Issue #182 installable-PWA shell and no-private-cache proof."
     }
   ]
 }
