@@ -55,14 +55,22 @@ class UI50000HarnessTests(unittest.TestCase):
 
     # Prove every observed control receives exactly one honest acceptance classification.
     def test_control_coverage_classifies_floor_conditional_failure_and_exclusion(self):
-        seen = Counter({"roulette::button[data-testid=spin]": 120, "blackjack::button[data-action=insurance]": 12, "baccarat::button[data-action=deal]": 200, "auth::input[data-testid=login-email]": 1})  # Model ordinary, rare, skipped, and lifecycle controls.
-        activated = Counter({"roulette::button[data-testid=spin]": 120, "blackjack::button[data-action=insurance]": 6, "auth::input[data-testid=login-email]": 1})  # Exercise the passing control and sample the mutually exclusive rare action.
+        seen = Counter({"roulette::button[data-testid=spin]": 120, "blackjack::button[data-action=insurance]": 12, "baccarat::button[data-action=deal]": 200, "auth::input[data-testid=login-email]": 1, "casino_war::button[data-action=surrender]": 124, "casino_war::button[data-action=war]": 124})  # Model ordinary, rare, skipped, lifecycle, and shared rare-state controls.
+        activated = Counter({"roulette::button[data-testid=spin]": 120, "blackjack::button[data-action=insurance]": 6, "auth::input[data-testid=login-email]": 1, "casino_war::button[data-action=surrender]": 60, "casino_war::button[data-action=war]": 64})  # Exercise passing and finite mutually exclusive controls through real sampled opportunities.
         result = ui_50000.classify_control_coverage(seen, activated)  # Apply the durable policy.
         self.assertIn("roulette::button[data-testid=spin]", result["exercised"])  # Accept the literal 100-activation floor.
         self.assertIn("blackjack::button[data-action=insurance]", result["intentionally_unavailable"])  # Accept a rare control only with real activation evidence.
         self.assertIn("baccarat::button[data-action=deal]", result["failed"])  # Fail an ordinarily reachable skipped control.
         self.assertIn("auth::input[data-testid=login-email]", result["excluded"])  # Keep one-time authentication outside gameplay counts.
-        self.assertEqual(result["classified_count"], 4)  # Require complete mutually exclusive accounting.
+        self.assertIn("casino_war::button[data-action=surrender]", result["intentionally_unavailable"])  # Accept only an exercised alternative whose fair share of rare tie states is below the floor.
+        self.assertIn("casino_war::button[data-action=war]", result["intentionally_unavailable"])  # Preserve the paired alternative under the same explicit finite-state rule.
+        self.assertEqual(result["intentionally_unavailable"]["casino_war::button[data-action=war]"]["opportunities"], 64)  # Never report fewer opportunities than the control's actual activations.
+        self.assertEqual(result["classified_count"], 6)  # Require complete mutually exclusive accounting.
+
+    # Prove only replicated Roulette continues its deterministic target schedule across worker boundaries.
+    def test_coverage_ordinal_continues_roulette_replicas_only(self):
+        self.assertEqual(ui_50000.coverage_ordinal("roulette", 0, 417), 417)  # Continue Roulette after the prior replica's exact range.
+        self.assertEqual(ui_50000.coverage_ordinal("blackjack", 0, 6667), 0)  # Preserve the local first-one-hundred budgets for ordinary games.
 
     # Prove Roulette cannot mistake its pre-click enabled node for post-settlement readiness.
     def test_roulette_terminal_action_observes_resolving_before_ready(self):

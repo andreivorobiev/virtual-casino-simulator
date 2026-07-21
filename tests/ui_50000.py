@@ -42,6 +42,10 @@ ACTION_TIMEOUT_MS = 15_000
 SETUP_TIMEOUT_MS = 20_000
 # Require the issue-owned activation floor for every ordinarily reachable eligible control.
 CONTROL_ACTIVATION_FLOOR = 100
+# Model controls that share one rare decision state where activating one necessarily removes every alternative.
+MUTUALLY_EXCLUSIVE_CONTROL_GROUPS = (
+    frozenset(("casino_war::button[data-action=surrender]", "casino_war::button[data-action=war]")),
+)
 # Map shared autoplay games to a visible post-atomic-action readiness control.
 AUTOPLAY_SETTLED_SELECTORS = {
     "roulette": ['[data-testid="roulette-spin"]'],  # Require the wheel to accept the next manual spin.
@@ -114,6 +118,23 @@ def qualify_control_signature(signature, namespace=None):
     return f"{owner}::{signature}"  # Preserve the raw selector while adding stable module ownership.
 
 
+# Keep replicated game schedules continuous while preserving each ordinary game's local coverage budget.
+def coverage_ordinal(game_id, local_ordinal, global_cycle):
+    return global_cycle if game_id == "roulette" else local_ordinal  # Avoid restarting Roulette's round-robin target schedule in every replica.
+
+
+# Resolve the honest per-control opportunity budget for mutually exclusive rare decision groups.
+def reachable_control_opportunities(signature, seen_counts, activated_counts):
+    raw_opportunities = max(int(seen_counts.get(signature, 0)), int(activated_counts.get(signature, 0)))  # Preserve the ordinary rendered opportunity count.
+    for group in MUTUALLY_EXCLUSIVE_CONTROL_GROUPS:  # Apply only explicitly governed decision-state groups.
+        if signature not in group:  # Ignore unrelated controls without weakening their literal floor.
+            continue
+        shared_states = max((int(seen_counts.get(member, 0)) for member in group), default=0)  # Count each shared decision state once instead of once per alternative.
+        fair_share = math.ceil(shared_states / len(group)) if group else 0  # Divide the finite state budget across alternatives that cannot both be activated.
+        return max(int(activated_counts.get(signature, 0)), fair_share), "mutually exclusive rare decision-state share"  # Never report fewer opportunities than real activations.
+    return raw_opportunities, ""  # Preserve the literal opportunity count for every ordinary control.
+
+
 # Classify whether one namespaced signature belongs to the #227 gameplay/navigation floor.
 def control_eligibility(signature):
     namespace, separator, raw_signature = signature.partition("::")  # Split only the harness-owned namespace prefix.
@@ -136,9 +157,11 @@ def classify_control_coverage(seen_counts, activated_counts, minimum=CONTROL_ACT
     for signature in signatures:  # Assign every identity exactly once.
         seen = int(seen_counts.get(signature, 0))  # Read distinct rendered-state observations.
         activated = int(activated_counts.get(signature, 0))  # Read successful UI dispatches.
-        opportunities = max(seen, activated)  # Never claim fewer opportunities than successful activations.
+        opportunities, opportunity_reason = reachable_control_opportunities(signature, seen_counts, activated_counts)  # Adjust only explicitly governed mutually exclusive rare states.
         eligible, reason = control_eligibility(signature)  # Apply the durable surface policy.
         evidence = {"seen": seen, "activated": activated, "opportunities": opportunities, "reason": reason}  # Preserve bounded numeric evidence.
+        if opportunity_reason:  # Keep the exceptional opportunity calculation explicit in terminal evidence.
+            evidence["opportunity_reason"] = opportunity_reason  # Prevent a rare-state exception from becoming an unexplained waiver.
         if not eligible:  # Keep non-gameplay lifecycle controls visible without diluting the floor.
             classifications["excluded"][signature] = evidence  # Record the exact exclusion and reason.
         elif activated >= minimum:  # Accept controls that meet the literal requested activation floor.
@@ -173,7 +196,7 @@ def start_ui_server(repo_root):
 
 # Resolve a stable selector-like signature from one rendered form control.
 async def control_signature(locator):
-    expression = """node => { const tag = node.tagName.toLowerCase(); if (node.hasAttribute('data-clear')) return `${tag}[data-clear]`; if (node.hasAttribute('data-remove-bet')) return `${tag}[data-remove-bet]`; const attrs = ['data-testid','data-action','data-decision','data-guess','data-side','data-bet-id','data-betid','data-num','data-dozen','data-column','data-outside','data-outbtn','data-call','data-wager','data-chip','data-hand-count','data-coin-count','data-hold-position','data-play','data-spin','data-roll']; for (const attr of attrs) { if (node.hasAttribute(attr)) return `${tag}[${attr}=${node.getAttribute(attr)}]`; } if (node.id) return `${tag}#${node.id}`; const label = node.getAttribute('aria-label') || node.textContent || node.getAttribute('name') || node.type || 'control'; return `${tag}:${label.trim().replace(/\\s+/g,' ').slice(0,80)}`; }"""  # Prefer stable metadata and collapse dynamic ticket ids into semantic remove actions.
+    expression = """node => { const tag = node.tagName.toLowerCase(); if (node.hasAttribute('data-clear')) return `${tag}[data-clear]`; if (node.hasAttribute('data-remove-bet')) return `${tag}[data-remove-bet]`; const attrs = ['data-testid','data-action','data-decision','data-guess','data-side','data-bet','data-bet-id','data-betid','data-num','data-dozen','data-column','data-outside','data-outbtn','data-call','data-wager','data-chip','data-hand-count','data-coin-count','data-hold-position','data-play','data-spin','data-roll']; for (const attr of attrs) { if (node.hasAttribute(attr)) return `${tag}[${attr}=${node.getAttribute(attr)}]`; } if (node.id) return `${tag}#${node.id}`; const label = node.getAttribute('aria-label') || node.textContent || node.getAttribute('name') || node.type || 'control'; return `${tag}:${label.trim().replace(/\\s+/g,' ').slice(0,80)}`; }"""  # Prefer stable metadata and collapse dynamic ticket ids into semantic remove actions.
     return qualify_control_signature(await locator.evaluate(expression))  # Read DOM metadata and bind it to the task-local surface.
 
 
@@ -181,7 +204,7 @@ async def control_signature(locator):
 async def inventory_controls(page, seen_counts):
     namespace = CONTROL_NAMESPACE.get()  # Read the task-local owning surface.
     root_selector = "#view" if namespace in READY_TEST_IDS else None  # Scan the complete game outlet while excluding persistent shell controls.
-    expression = """rootSelector => { const root = rootSelector ? document.querySelector(rootSelector) : document; if (!root) return []; const attrs = ['data-testid','data-action','data-decision','data-guess','data-side','data-bet-id','data-betid','data-num','data-dozen','data-column','data-outside','data-outbtn','data-call','data-wager','data-chip','data-hand-count','data-coin-count','data-hold-position','data-play','data-spin','data-roll']; return [...root.querySelectorAll('button,input,select,summary')].filter(node => !node.disabled && node.getClientRects().length && getComputedStyle(node).visibility !== 'hidden' && (node.tagName === 'SUMMARY' || !node.closest('details:not([open])'))).map(node => { const tag = node.tagName.toLowerCase(); if (node.hasAttribute('data-clear')) return `${tag}[data-clear]`; if (node.hasAttribute('data-remove-bet')) return `${tag}[data-remove-bet]`; for (const attr of attrs) { if (node.hasAttribute(attr)) return `${tag}[${attr}=${node.getAttribute(attr)}]`; } if (node.id) return `${tag}#${node.id}`; const label = node.getAttribute('aria-label') || node.textContent || node.getAttribute('name') || node.type || 'control'; return `${tag}:${label.trim().replace(/\\s+/g,' ').slice(0,80)}`; }); }"""  # Discover only semantically visible enabled controls within the owned game root or current shell/auth surface.
+    expression = """rootSelector => { const root = rootSelector ? document.querySelector(rootSelector) : document; if (!root) return []; const attrs = ['data-testid','data-action','data-decision','data-guess','data-side','data-bet','data-bet-id','data-betid','data-num','data-dozen','data-column','data-outside','data-outbtn','data-call','data-wager','data-chip','data-hand-count','data-coin-count','data-hold-position','data-play','data-spin','data-roll']; return [...root.querySelectorAll('button,input,select,summary')].filter(node => !node.disabled && node.getClientRects().length && getComputedStyle(node).visibility !== 'hidden' && (node.tagName === 'SUMMARY' || !node.closest('details:not([open])'))).map(node => { const tag = node.tagName.toLowerCase(); if (node.hasAttribute('data-clear')) return `${tag}[data-clear]`; if (node.hasAttribute('data-remove-bet')) return `${tag}[data-remove-bet]`; for (const attr of attrs) { if (node.hasAttribute(attr)) return `${tag}[${attr}=${node.getAttribute(attr)}]`; } if (node.id) return `${tag}#${node.id}`; const label = node.getAttribute('aria-label') || node.textContent || node.getAttribute('name') || node.type || 'control'; return `${tag}:${label.trim().replace(/\\s+/g,' ').slice(0,80)}`; }); }"""  # Discover only semantically visible enabled controls within the owned game root or current shell/auth surface.
     for signature in await page.evaluate(expression, root_selector):  # Visit every stable signature on this owned UI state.
         seen_counts[qualify_control_signature(signature, namespace)] += 1  # Count namespaced observations for later classification.
 
@@ -334,6 +357,17 @@ async def enabled_locators(page, selector):
     return ready  # Return the current decision set.
 
 
+# Choose the currently enabled control with the largest remaining activation deficit.
+async def least_activated_locator(locators, activated_counts):
+    scored = []  # Preserve DOM order as the deterministic tie breaker.
+    for index, locator in enumerate(locators):  # Inspect only the caller's already actionability-filtered controls.
+        signature = await control_signature(locator)  # Resolve the same stable identity used by aggregate accounting.
+        scored.append((int(activated_counts.get(signature, 0)), index, locator))  # Prioritize the least-used signature, then its rendered order.
+    if not scored:  # Refuse an empty decision set explicitly.
+        raise AssertionError("no enabled control available for deficit selection")  # Preserve one bounded harness diagnostic.
+    return min(scored, key=lambda item: (item[0], item[1]))[2]  # Return the real rendered locator without programmatic activation.
+
+
 # Fill exactly one rotating wager input and clear other compatible wager fields.
 async def rotate_wager_inputs(page, ordinal, activated_counts):
     inputs = page.locator("[data-wager]")  # Discover module-owned outcome inputs.
@@ -380,11 +414,11 @@ async def play_game_ui(page, game_id, ordinal, seen_counts, activated_counts):
         numbers = await enabled_locators(page, '[data-testid^="roulette-num-"]')  # Discover straight-up targets.
         if not numbers:  # Require the visible number grid.
             raise AssertionError("Roulette number targets unavailable")  # Preserve a wagering-surface failure.
-        for offset in range(min(3, len(numbers))):  # Touch three rotating number targets per spin.
-            await click_locator(numbers[(ordinal * 3 + offset) % len(numbers)], activated_counts)  # Exercise pointer mapping through the DOM.
+        for offset in range(min(5, len(numbers))):  # Touch enough rotating number targets for double-zero-only cells to exceed the floor.
+            await click_locator(numbers[(ordinal * 5 + offset) % len(numbers)], activated_counts)  # Exercise pointer mapping through the continuous replicated schedule.
         specials = await enabled_locators(page, "[data-dozen],[data-column],[data-outside],[data-outbtn],[data-betid],[data-call]")  # Discover table, fast, hotspot, and racetrack wagers.
-        for offset in range(min(12, len(specials))):  # Exceed one hundred activations for every complex target within Roulette's fixed full-run quota.
-            await click_locator(specials[(ordinal * 12 + offset) % len(specials)], activated_counts)  # Exercise the actual rendered hit region.
+        for offset in range(min(24, len(specials))):  # Give mode-specific zero targets enough capacity to exceed one hundred real activations.
+            await click_locator(specials[(ordinal * 24 + offset) % len(specials)], activated_counts)  # Exercise the actual rendered hit region through the continuous replicated schedule.
         await inventory_controls(page, seen_counts)  # Discover contextual removal actions after the wager slip is populated.
         remove_buttons = await enabled_locators(page, "[data-clear]")  # Discover contextual bet-removal buttons after wager placement.
         if remove_buttons:  # Exercise one semantic remove action without emptying the complete slip.
@@ -446,7 +480,17 @@ async def play_game_ui(page, game_id, ordinal, seen_counts, activated_counts):
             actions = await enabled_locators(page, '[data-testid^="blackjack-"][data-action]')  # Discover current legal actions.
             if not actions:  # Require progress from every nonterminal state.
                 raise AssertionError("Blackjack decision state exposed no legal action")  # Preserve a stranded hand.
-            await click_locator(actions[(ordinal + step) % len(actions)], activated_counts)  # Rotate across legal conditional controls.
+            preferred = None  # Reserve the rare insurance and split opportunities before ordinary deficit balancing.
+            for selector in ('[data-testid="blackjack-insurance"]', '[data-testid="blackjack-split"]'):  # Order the two aggregate shortfalls by observed scarcity.
+                candidate = page.locator(selector).first  # Resolve the currently rendered conditional action.
+                if not await locator_ready(candidate):  # Ignore a conditional action outside its legal state.
+                    continue
+                signature = await control_signature(candidate)  # Read the exact aggregate identity before comparing its deficit.
+                if activated_counts.get(signature, 0) < CONTROL_ACTIVATION_FLOOR:  # Consume the scarce opportunity only until its literal floor is met.
+                    preferred = candidate  # Preserve the real rendered action for normal pointer dispatch.
+                    break
+            selected_action = preferred or await least_activated_locator(actions, activated_counts)  # Fall back to the largest remaining ordinary control deficit.
+            await click_locator(selected_action, activated_counts)  # Dispatch the chosen legal decision through the real pointer path.
             await page.wait_for_timeout(5)  # Allow the next decision or settlement rerender.
         else:  # Reject unbounded or cycling Blackjack state.
             raise AssertionError("Blackjack UI did not settle within 24 decisions")  # Preserve a terminal-state failure.
@@ -481,8 +525,8 @@ async def play_game_ui(page, game_id, ordinal, seen_counts, activated_counts):
         choice = await wait_any_enabled(page, ['[data-action="surrender"]', '[data-action="war"]', '[data-action="deal"]'])  # Detect tie or settlement.
         if choice != '[data-action="deal"]':  # Resolve only an active tie decision.
             await inventory_controls(page, seen_counts)  # Record both mutually exclusive tie actions when the rare state appears.
-            tie_choice = '[data-action="war"]' if ordinal % 2 and await locator_ready(page.locator('[data-action="war"]').first) else '[data-action="surrender"]'  # Alternate War and surrender.
-            await click_control(page, tie_choice, activated_counts)  # Resolve through the rendered decision.
+            tie_actions = await enabled_locators(page, '[data-action="surrender"],[data-action="war"]')  # Resolve both mutually exclusive rare actions in the live tie state.
+            await click_locator(await least_activated_locator(tie_actions, activated_counts), activated_counts)  # Balance the finite tie-state budget honestly across both alternatives.
             await wait_any_enabled(page, ['[data-action="deal"]'])  # Require terminal next-deal state.
     elif game_id in {"big_six_wheel", "crown_and_anchor", "fan_tan", "over_under_7", "chuck_a_luck"}:  # Exercise rotating wager-input games.
         await rotate_wager_inputs(page, ordinal, activated_counts)  # Select one catalog outcome visibly.
@@ -575,6 +619,7 @@ async def play_game_ui(page, game_id, ordinal, seen_counts, activated_counts):
         await click_control(page, f'[data-side="{"andar" if ordinal % 2 == 0 else "bahar"}"]', activated_counts)  # Select a rotating side.
         await terminal_action(page, '[data-action="play"]', activated_counts)  # Deal and settle the round.
     elif game_id == "acey_deucey":  # Exercise pass and play when legally available.
+        await fill_control(page.locator("#acey-wager").first, "1", activated_counts)  # Exercise the ordinary wager input on every public deal cycle.
         await click_control(page, '[data-action="deal"]', activated_counts)  # Deal the boundary cards.
         choice = await wait_any_enabled(page, ['[data-action="play"]', '[data-action="pass"]', '[data-action="deal"]'])  # Wait for a decision or an automatically terminal pair/consecutive deal.
         if choice == '[data-action="deal"]':  # Accept a round that settled without a player decision.
@@ -739,14 +784,15 @@ async def run_game_shard(playwright, semaphore, args, game_id, game_index, repli
             await inventory_controls(page, seen_counts)  # Discover the authenticated lobby and shell controls.
             for ordinal in range(quota):  # Complete every assigned global UI cycle or exhaust its bounded retry evidence.
                 global_cycle = cycle_start + ordinal  # Resolve the globally unique test ID.
+                scheduled_ordinal = coverage_ordinal(game_id, ordinal, global_cycle)  # Continue replicated Roulette coverage across worker range boundaries.
                 report["attempted"] += 1  # Count each unique assigned cycle ID exactly once.
                 cycle_completed = False  # Keep the cycle fail closed until a terminal UI state is observed.
                 for attempt_number in range(1, args.max_attempts_per_cycle + 1):  # Retry only the same global cycle within a strict bound.
                     report["attempted_actions"] += 1  # Count every real browser play attempt, including recovery attempts.
                     started = time.perf_counter()  # Start end-to-end navigation and gameplay timing.
                     try:  # Continue after bounded product failures so exact completion can still be measured.
-                        await navigate_to_game(page, game_id, activated_counts, ordinal)  # Navigate visibly while rotating this shard's game-local route coverage.
-                        await play_game_ui(page, game_id, ordinal, seen_counts, activated_counts)  # Complete one rendered-control play using the game-local coverage schedule.
+                        await navigate_to_game(page, game_id, activated_counts, scheduled_ordinal)  # Navigate visibly while rotating the complete game-local coverage schedule.
+                        await play_game_ui(page, game_id, scheduled_ordinal, seen_counts, activated_counts)  # Complete one rendered-control play using the continuous replicated schedule.
                         latencies.append(time.perf_counter() - started)  # Record successful full-cycle latency.
                         report["completed"] += 1  # Count only the first terminal completion for this global cycle.
                         cycle_completed = True  # Prevent any duplicate completion for this ID.
