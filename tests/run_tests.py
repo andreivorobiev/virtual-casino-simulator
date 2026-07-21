@@ -4481,6 +4481,10 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             for viewport_id,width,height in required_viewports:
                                 # Resize to the exact visual matrix dimensions.
                                 page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
+                                # Probe every non-control theater node against the route-owned stage after responsive layout settles.
+                                stage_failures=page.evaluate("""() => { const stage=document.querySelector('.crown-anchor__stage'); const selectors=['[data-die="0"]','[data-die="1"]','[data-die="2"]','[data-symbol="crown"]','[data-symbol="anchor"]','[data-symbol="heart"]','[data-symbol="diamond"]','[data-symbol="club"]','[data-symbol="spade"]']; if(!stage)return['stage']; const owner=stage.getBoundingClientRect(); return selectors.filter(selector=>{ const node=document.querySelector(selector); if(!node)return true; const style=getComputedStyle(node); const rect=node.getBoundingClientRect(); const painted=node.getClientRects().length&&style.display!=='none'&&style.visibility!=='hidden'&&rect.width>0&&rect.height>0; const contained=rect.left>=owner.left-1&&rect.right<=owner.right+1&&rect.top>=owner.top-1&&rect.bottom<=owner.bottom+1; return !painted||!contained; }); }""")
+                                # Reject a missing, unpainted, or escaped die/result panel before labeling this viewport after-pass.
+                                assert not stage_failures,f'Crown and Anchor stage incomplete at {viewport_id}: {stage_failures}'
                                 # Reject horizontal overflow and require the mounted table.
                                 assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.get_by_test_id('crown-and-anchor').is_visible()
                                 # Record self-describing evidence for this state and viewport.

@@ -34,7 +34,7 @@ Historical source baseline: 9.1.0
 - sic_bo: 1.0.0
 - chuck_a_luck: 1.0.0
 - craps: 1.0.0
-- crown_and_anchor: 1.0.1
+- crown_and_anchor: 1.0.2
 - over_under_7: 1.0.2
 - plinko: 1.0.1
 - fan_tan: 1.0.2
@@ -45,8 +45,8 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.1
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.50.6
-- docs: 1.50.0
+- tests: 1.50.7
+- docs: 1.50.1
 - contracts: 1.36.0
 - tooling: 1.17.0
 - commenting_policy: 1.0.0
@@ -564,8 +564,8 @@ Historical source baseline: 9.1.0
 - **CAA-001** (Crown and Anchor) - PASS: Three server-authoritative symbol dice implement six coverage targets and transparent one-, two-, and three-hit net payouts.
 - **CAA-002** (Crown and Anchor) - PASS: Authenticated sessions own private reload-safe rounds, settled history, and canonical route restoration.
 - **CAA-003** (Crown and Anchor) - PASS: Aggregate symbol wagers and returned credits use the shared ledger exactly once under durable request identities.
-- **CAA-004** (Application) - PASS: Crown and Anchor supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.
-- **CAA-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Crown and Anchor with requirement, module, version, and visual traceability.
+- **CAA-004** (Application) - PASS: Crown and Anchor supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play with all three dice and all six symbol hit-result panels painted and contained at every governed viewport.
+- **CAA-005** (Tests) - PASS: Catalog, contract, browser, long-suite, and formal TEST-092 discovery include Crown and Anchor with requirement, module, version, visual, and essential-stage traceability.
 - **OU7-001** (Over/Under 7) - PASS: Two server-authoritative dice implement under-seven, exactly-seven, and over-seven outcomes with transparent net and total-return rules.
 - **OU7-002** (Over/Under 7) - PASS: Authenticated sessions own private reload-safe plays, settled history, and canonical route restoration.
 - **OU7-003** (Over/Under 7) - PASS: Aggregate wagers and returned credits use the shared ledger exactly once under durable action identities.
@@ -723,4 +723,4 @@ Historical source baseline: 9.1.0
 - **MAIL-005** (Application) - PASS: Every authorized purpose has matching en-US and ru-RU subjects plus plain-text and semantic HTML alternatives whose action link has meaningful text and whose fixed content is safely escaped.
 - **MAIL-006** (Docs) - PASS: The transactional-mail runbook documents disabled defaults, separate release authority, sender/domain and SPF/DKIM/DMARC posture, canonical-origin and OAuth callback coordination, domain-move revalidation, bounded smoke evidence, rollback, suppression review, and the prohibition on treating repository merge as live authorization.
 - **TEST-090** (Tests) - PASS: Provider-free unit and API tests prove dual-gate inaccessibility, raw-value exclusion, public digest-key hardening, atomic caller idempotency, changed-meaning conflict, bounded retry, ambiguous-result freezing, rate limits, suppression, retention, malformed-state preservation, bilingual templates, Admin-only contract shape, absent consumer routes, and real MySQL cross-process single-claim behavior; exact-head browser evidence covers disabled, misconfigured, release-held, and suppression-summary states in en-US and ru-RU at all four governed viewports.
-- **TEST-092** (Tests) - PASS: An exact-source browser qualification executes exactly 50,000 completed UI cycles across every catalog game, assigns at least 1,666 cycles to each game, exercises every eligible game control at least 100 times or records an approved ineligible classification, captures all four governed viewports for human review, and rejects unexplained failures, incomplete ranges, source drift, or cleanup residue.
+- **TEST-092** (Tests) - PASS: An exact-source browser qualification executes exactly 50,000 completed UI cycles across every catalog game, assigns at least 1,666 cycles to each game, exercises every eligible game control at least 100 times or records an approved ineligible classification, captures all four governed viewports for human review, and rejects unexplained failures, incomplete ranges, incomplete declared non-control stages, source drift, or cleanup residue.

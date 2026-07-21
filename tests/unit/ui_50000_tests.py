@@ -23,6 +23,16 @@ class UI50000HarnessTests(unittest.TestCase):
         self.assertEqual(contract["paint_items"][".big-six-wheel__wheel"], ".big-six-wheel__wheel-shell")  # Require the wheel to paint across its clipping owner.
         self.assertEqual(contract["paint_min_ratio"], 0.8)  # Reject a missing or materially undersized wheel without requiring its intentional 90% inset to fill the shell.
 
+    # Prove Crown and Anchor cannot pass when any non-control die or hit-result panel escapes the governed stage.
+    def test_crown_and_anchor_stage_contract_tracks_complete_theater(self):
+        contract = ui_50000.ESSENTIAL_STAGE_CONTRACTS["crown_and_anchor"]  # Read the route-specific contract applied after every formal viewport capture.
+        self.assertEqual(contract["stage"], ".crown-anchor__stage")  # Keep the game-owned panel as the completeness boundary.
+        dice = tuple(selector for selector in contract["contained_items"] if selector.startswith("[data-die="))  # Isolate the three stable die identities.
+        symbols = tuple(selector for selector in contract["contained_items"] if selector.startswith("[data-symbol="))  # Isolate the six stable result-panel identities.
+        self.assertEqual(dice, ('[data-die="0"]', '[data-die="1"]', '[data-die="2"]'))  # Require every die slot exactly once.
+        self.assertEqual(symbols, tuple(f'[data-symbol="{symbol}"]' for symbol in ("crown", "anchor", "heart", "diamond", "club", "spade")))  # Require every authoritative symbol panel exactly once.
+        self.assertEqual(contract["paint_items"], {})  # Keep all Crown nodes on the strict painted-and-contained path.
+
     # Persist one complete synthetic distributed corpus bound to an exact source identity.
     def write_distributed_corpus(self, root, allocations, source_commit, evidence_root=None):
         for game_id, game_index, replica_index, quota, cycle_start in allocations:  # Materialize every deterministic formal worker handback.

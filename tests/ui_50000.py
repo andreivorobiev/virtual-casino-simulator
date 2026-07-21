@@ -59,6 +59,7 @@ REQUIREMENT_IDS = ("AUTH-001", "AUTH-002", "SESSION-001", "SESSION-005", "TEST-0
 # Register essential non-control stage geometry that human evidence must show completely.
 ESSENTIAL_STAGE_CONTRACTS = {
     "big_six_wheel": {"stage": ".big-six-wheel__stage", "contained_items": (".big-six-wheel__wheel-shell", ".big-six-wheel__pointer", ".big-six-wheel__hub"), "paint_items": {".big-six-wheel__wheel": ".big-six-wheel__wheel-shell"}, "paint_min_ratio": 0.8},  # Contain stable theater geometry while requiring the rotating square wheel to paint materially across its circular clipping owner.
+    "crown_and_anchor": {"stage": ".crown-anchor__stage", "contained_items": ('[data-die="0"]', '[data-die="1"]', '[data-die="2"]', '[data-symbol="crown"]', '[data-symbol="anchor"]', '[data-symbol="heart"]', '[data-symbol="diamond"]', '[data-symbol="club"]', '[data-symbol="spade"]'), "paint_items": {}, "paint_min_ratio": 0.0},  # Require all three dice and all six hit-result panels to paint fully inside the route-owned stage at every governed viewport.
 }
 # Keep each asynchronous shard's control identities scoped to auth, shell, or one game.
 CONTROL_NAMESPACE = ContextVar("ui_50000_control_namespace", default="unscoped")
