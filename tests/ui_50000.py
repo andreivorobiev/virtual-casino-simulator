@@ -128,6 +128,12 @@ def coverage_ordinal(game_id, local_ordinal, global_cycle):
     return global_cycle if game_id == "roulette" else local_ordinal  # Avoid restarting Roulette's round-robin target schedule in every replica.
 
 
+# Keep real Rebet attempts on the first Roulette shard until its literal activation floor is satisfied.
+def should_exercise_roulette_rebet(replica_index, activated_counts):
+    signature = qualify_control_signature("button#rebet", "roulette")  # Resolve the aggregate identity independently of the current context variable.
+    return replica_index == 0 and int(activated_counts.get(signature, 0)) < CONTROL_ACTIVATION_FLOOR  # Retry only the primary shard and stop immediately after one hundred real activations.
+
+
 # Resolve the honest per-control opportunity budget for mutually exclusive rare decision groups.
 def reachable_control_opportunities(signature, seen_counts, activated_counts):
     raw_opportunities = max(int(seen_counts.get(signature, 0)), int(activated_counts.get(signature, 0)))  # Preserve the ordinary rendered opportunity count.
@@ -231,6 +237,31 @@ async def wait_any_enabled(page, selectors, timeout_ms=ACTION_TIMEOUT_MS):
         if await locator_ready(locator):  # Require one visible enabled target.
             return selector  # Return the actionable selector.
     raise AssertionError(f"enabled control disappeared: {selectors}")  # Fail a racy state transition explicitly.
+
+
+# Wait until Roulette's asynchronous wager drawer publishes one exact committed row count.
+async def wait_roulette_bet_drawer(page, expected_rows, timeout_ms=ACTION_TIMEOUT_MS):
+    expression = """expected => { const clear = document.querySelector('#clear'); const rows = [...document.querySelectorAll('[data-clear]')]; if (!clear || rows.length !== expected) return false; if (expected === 0) return clear.disabled; return !clear.disabled && rows.every(row => !row.disabled && row.getClientRects().length); }"""  # Bind acceptance to both the clear-all state and every rendered removable wager row.
+    try:  # Convert a missing request-owned rerender into one bounded harness diagnostic.
+        await page.wait_for_function(expression, arg=int(expected_rows), timeout=timeout_ms)  # Wait through the asynchronous refund or wager response before another mutation.
+    except Exception as exc:  # Preserve only the public drawer-state contract in terminal evidence.
+        raise AssertionError(f"Roulette bet drawer did not settle at {expected_rows} rows") from exc  # Reject overlapping wager mutations instead of clicking a stale DOM instance.
+
+
+# Wait until a Roulette wager response publishes at least one requested number of committed drawer rows.
+async def wait_roulette_bet_drawer_minimum(page, minimum_rows, timeout_ms=ACTION_TIMEOUT_MS):
+    expression = """minimum => { const clear = document.querySelector('#clear'); const rows = [...document.querySelectorAll('[data-clear]')]; return Boolean(clear && !clear.disabled && rows.length >= minimum && rows.every(row => !row.disabled && row.getClientRects().length)); }"""  # Accept single bets and multi-component call bets only after their complete response-owned render.
+    try:  # Convert a missing populated rerender into one bounded harness diagnostic.
+        await page.wait_for_function(expression, arg=int(minimum_rows), timeout=timeout_ms)  # Wait until the wager response exposes its removable drawer rows.
+    except Exception as exc:  # Preserve only the public populated-drawer contract in terminal evidence.
+        raise AssertionError(f"Roulette bet drawer did not reach {minimum_rows} rows") from exc  # Reject a wager mutation that never became player-visible.
+
+
+# Add one Roulette wager and wait until its request-owned drawer rerender commits.
+async def roulette_add_bet(page, locator, activated_counts):
+    rows_before = await page.locator("[data-clear]").count()  # Capture the current committed drawer size before dispatching a new wager.
+    await click_locator(locator, activated_counts)  # Activate the rendered table target through Playwright's real pointer path.
+    await wait_roulette_bet_drawer_minimum(page, rows_before + 1)  # Serialize single or multi-component wager responses before another mutation can replace their DOM.
 
 
 # Click a locator through Playwright's real pointer path and record its signature.
@@ -351,6 +382,22 @@ async def roulette_terminal_action(page, activated_counts):
     await wait_any_enabled(page, [selector])  # Accept the cycle only after settlement returns a genuinely enabled fresh-spin control.
 
 
+# Remove one contextual wager, clear the drawer, seed one final wager, and spin only after every rerender commits.
+async def roulette_reset_seed_and_spin(page, ordinal, activated_counts):
+    remove_buttons = await enabled_locators(page, "[data-clear]")  # Discover contextual refund controls only after all preceding wagers have committed.
+    if remove_buttons:  # Exercise one semantic removal without assuming the drawer is already empty.
+        rows_before = len(remove_buttons)  # Preserve the exact committed row count that owns the selected refund.
+        await click_locator(remove_buttons[ordinal % rows_before], activated_counts)  # Remove one rendered wager through the public drawer.
+        await wait_roulette_bet_drawer(page, rows_before - 1)  # Require the refund response and replacement DOM before clear-all.
+    await click_control(page, "#clear", activated_counts)  # Exercise full bet clearing through the rendered control.
+    await wait_roulette_bet_drawer(page, 0)  # Require the empty rerender so no late refund can race the replacement wager.
+    replacement_numbers = await enabled_locators(page, '[data-testid^="roulette-num-"]')  # Re-resolve number targets only after clear-all owns the current DOM.
+    if not replacement_numbers:  # Require a playable table after clearing.
+        raise AssertionError("Roulette number targets unavailable after clear")  # Preserve a broken reset state.
+    await roulette_add_bet(page, replacement_numbers[ordinal % len(replacement_numbers)], activated_counts)  # Commit one bounded wager and await its populated drawer.
+    await roulette_terminal_action(page, activated_counts)  # Observe the strict disabled resolving render before accepting settlement.
+
+
 # Complete one Acey-Deucey round without editing its wager before the boundary deal enables that decision input.
 async def acey_deucey_terminal_action(page, ordinal, seen_counts, activated_counts):
     await click_control(page, '[data-action="deal"]', activated_counts)  # Reveal the two free boundary cards before touching the phase-owned wager input.
@@ -420,7 +467,7 @@ async def navigate_to_game(page, game_id, activated_counts, ordinal=None):
 
 
 # Complete one terminal game play using only rendered controls.
-async def play_game_ui(page, game_id, ordinal, seen_counts, activated_counts):
+async def play_game_ui(page, game_id, ordinal, seen_counts, activated_counts, replica_index=0):
     await inventory_controls(page, seen_counts)  # Discover ready-state controls before the play.
     await exercise_configuration_controls(page, ordinal, activated_counts)  # Cover visible fields and disclosures before the game locks them.
     await exercise_autoplay_controls(page, ordinal, activated_counts)  # Cover shared Start/Stop without leaving background play active.
@@ -435,26 +482,19 @@ async def play_game_ui(page, game_id, ordinal, seen_counts, activated_counts):
                 await click_locator(spot_toggle, activated_counts)  # Hide the inside layer through the rendered control.
             await click_locator(spot_toggle, activated_counts)  # End with every inside target visible for real pointer coverage. (issue #348)
         rebet = page.locator("#rebet").first  # Resolve the prior-round template action.
-        if 1 <= ordinal <= CONTROL_ACTIVATION_FLOOR and await locator_ready(rebet):  # Exercise exactly one hundred reachable rebet opportunities.
+        if should_exercise_roulette_rebet(replica_index, activated_counts) and await locator_ready(rebet):  # Retry real reachable Rebet states on the primary shard until its literal floor is met.
             await click_locator(rebet, activated_counts)  # Reapply the prior template through the visible control.
+            await wait_roulette_bet_drawer_minimum(page, 1)  # Require the populated template rerender before adding any new wagers.
         numbers = await enabled_locators(page, '[data-testid^="roulette-num-"]')  # Discover straight-up targets.
         if not numbers:  # Require the visible number grid.
             raise AssertionError("Roulette number targets unavailable")  # Preserve a wagering-surface failure.
         for offset in range(min(5, len(numbers))):  # Touch enough rotating number targets for double-zero-only cells to exceed the floor.
-            await click_locator(numbers[(ordinal * 5 + offset) % len(numbers)], activated_counts)  # Exercise pointer mapping through the continuous replicated schedule.
+            await roulette_add_bet(page, numbers[(ordinal * 5 + offset) % len(numbers)], activated_counts)  # Exercise and serialize pointer mapping through the continuous replicated schedule.
         specials = await enabled_locators(page, "[data-dozen],[data-column],[data-outside],[data-outbtn],[data-betid],[data-call]")  # Discover table, fast, hotspot, and racetrack wagers.
         for offset in range(min(24, len(specials))):  # Give mode-specific zero targets enough capacity to exceed one hundred real activations.
-            await click_locator(specials[(ordinal * 24 + offset) % len(specials)], activated_counts)  # Exercise the actual rendered hit region through the continuous replicated schedule.
+            await roulette_add_bet(page, specials[(ordinal * 24 + offset) % len(specials)], activated_counts)  # Exercise and serialize each rendered hit region through the continuous replicated schedule.
         await inventory_controls(page, seen_counts)  # Discover contextual removal actions after the wager slip is populated.
-        remove_buttons = await enabled_locators(page, "[data-clear]")  # Discover contextual bet-removal buttons after wager placement.
-        if remove_buttons:  # Exercise one semantic remove action without emptying the complete slip.
-            await click_locator(remove_buttons[ordinal % len(remove_buttons)], activated_counts)  # Remove one rendered bet through the drawer.
-        await click_control(page, "#clear", activated_counts)  # Exercise full bet clearing before the terminal spin.
-        replacement_numbers = await enabled_locators(page, '[data-testid^="roulette-num-"]')  # Re-resolve number targets after the clear rerender.
-        if not replacement_numbers:  # Require a playable table after clearing.
-            raise AssertionError("Roulette number targets unavailable after clear")  # Preserve a broken reset state.
-        await click_locator(replacement_numbers[ordinal % len(replacement_numbers)], activated_counts)  # Leave one bounded wager for settlement.
-        await roulette_terminal_action(page, activated_counts)  # Observe the disabled resolving render before requiring a settled fresh-spin state.
+        await roulette_reset_seed_and_spin(page, ordinal, activated_counts)  # Serialize contextual refund, clear-all, replacement wager, and terminal spin.
     elif game_id == "slots":  # Exercise one complete slot spin.
         await terminal_action(page, '[data-testid="slots-spin"]', activated_counts)  # Use the cabinet's visible spin control.
     elif game_id == "keno":  # Exercise ticket selection, purchase, drawing, and reset.
@@ -816,7 +856,7 @@ async def run_game_shard(playwright, semaphore, args, game_id, game_index, repli
                     started = time.perf_counter()  # Start end-to-end navigation and gameplay timing.
                     try:  # Continue after bounded product failures so exact completion can still be measured.
                         await navigate_to_game(page, game_id, activated_counts, scheduled_ordinal)  # Navigate visibly while rotating the complete game-local coverage schedule.
-                        await play_game_ui(page, game_id, scheduled_ordinal, seen_counts, activated_counts)  # Complete one rendered-control play using the continuous replicated schedule.
+                        await play_game_ui(page, game_id, scheduled_ordinal, seen_counts, activated_counts, replica_index)  # Complete one rendered-control play using the continuous replicated schedule and shard-owned rare-control budget.
                         latencies.append(time.perf_counter() - started)  # Record successful full-cycle latency.
                         report["completed"] += 1  # Count only the first terminal completion for this global cycle.
                         cycle_completed = True  # Prevent any duplicate completion for this ID.

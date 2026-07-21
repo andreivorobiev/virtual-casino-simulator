@@ -91,6 +91,15 @@ class UI50000HarnessTests(unittest.TestCase):
         self.assertEqual(ui_50000.coverage_ordinal("roulette", 0, 417), 417)  # Continue Roulette after the prior replica's exact range.
         self.assertEqual(ui_50000.coverage_ordinal("blackjack", 0, 6667), 0)  # Preserve the local first-one-hundred budgets for ordinary games.
 
+    # Prove Rebet closes a real activation deficit beyond the first hundred cycles without duplicating work across Roulette shards.
+    def test_roulette_rebet_retries_only_primary_shard_until_floor(self):
+        signature = ui_50000.qualify_control_signature("button#rebet", "roulette")  # Resolve the exact aggregate signature used by the formal report.
+        under_floor = Counter({signature: 80})  # Reproduce the frozen aggregate's twenty-activation deficit.
+        at_floor = Counter({signature: ui_50000.CONTROL_ACTIVATION_FLOOR})  # Model the completed literal acceptance floor.
+        self.assertTrue(ui_50000.should_exercise_roulette_rebet(0, under_floor))  # Continue real rendered attempts on the first Roulette shard after cycle one hundred.
+        self.assertFalse(ui_50000.should_exercise_roulette_rebet(1, under_floor))  # Prevent every later replica from restarting the same control budget.
+        self.assertFalse(ui_50000.should_exercise_roulette_rebet(0, at_floor))  # Stop immediately after one hundred successful pointer activations.
+
     # Prove Roulette cannot mistake its pre-click enabled node for post-settlement readiness.
     def test_roulette_terminal_action_observes_resolving_before_ready(self):
         events = []  # Record the browser-free synchronization order.
@@ -119,6 +128,69 @@ class UI50000HarnessTests(unittest.TestCase):
         self.assertIn("roulette-result-region", page.expression)  # Bind the predicate to the visible phase contract.
         self.assertIn("spin?.disabled", page.expression)  # Require the public button to be non-actionable during resolution.
         self.assertEqual(page.timeout, ui_50000.ACTION_TIMEOUT_MS)  # Keep transition observation inside the governed action timeout.
+
+    # Prove Roulette serializes refund and wager rerenders before the strict spinning-state transition.
+    def test_roulette_reset_seed_and_spin_orders_every_drawer_boundary(self):
+        events = []  # Record only public UI mutation and committed-state boundaries.
+
+        class FakeLocator:  # Model one rendered removal or replacement control.
+            def __init__(self, name):
+                self.name = name  # Preserve a stable semantic name for the event trace.
+
+        class FakePage:  # Supply the page only as an identity passed through patched helpers.
+            pass  # No private browser behavior is needed for this browser-free ordering proof.
+
+        remove = [FakeLocator("remove-0"), FakeLocator("remove-1")]  # Model two committed open wagers before the contextual refund.
+        replacement = [FakeLocator("number-0")]  # Model one playable straight-up target after clear-all.
+
+        async def fake_enabled_locators(_page, selector):
+            events.append(f"discover:{selector}")  # Record each DOM re-resolution boundary.
+            return remove if selector == "[data-clear]" else replacement  # Return the state-owned control collection.
+
+        async def fake_click_locator(locator, _activated_counts, timeout_ms=ui_50000.ACTION_TIMEOUT_MS):
+            events.append(f"click:{locator.name}")  # Record the contextual refund pointer action.
+
+        async def fake_wait_drawer(_page, expected_rows, timeout_ms=ui_50000.ACTION_TIMEOUT_MS):
+            events.append(f"drawer:{expected_rows}")  # Record the exact committed drawer size before continuing.
+
+        async def fake_click_control(_page, selector, _activated_counts, timeout_ms=ui_50000.ACTION_TIMEOUT_MS):
+            events.append(f"click:{selector}")  # Record clear-all through its public selector.
+
+        async def fake_add_bet(_page, locator, _activated_counts):
+            events.append(f"add:{locator.name}")  # Record the replacement wager plus its internal populated-drawer wait.
+
+        async def fake_terminal(_page, _activated_counts):
+            events.append("spin")  # Record the strict spinning-state helper only after every drawer boundary.
+
+        with mock.patch.object(ui_50000, "enabled_locators", side_effect=fake_enabled_locators), mock.patch.object(ui_50000, "click_locator", side_effect=fake_click_locator), mock.patch.object(ui_50000, "wait_roulette_bet_drawer", side_effect=fake_wait_drawer), mock.patch.object(ui_50000, "click_control", side_effect=fake_click_control), mock.patch.object(ui_50000, "roulette_add_bet", side_effect=fake_add_bet), mock.patch.object(ui_50000, "roulette_terminal_action", side_effect=fake_terminal):  # Isolate the exact mutation order from Playwright and network timing.
+            asyncio.run(ui_50000.roulette_reset_seed_and_spin(FakePage(), 1, Counter()))  # Select the second contextual row and execute the complete ordered seam.
+        self.assertEqual(events, ["discover:[data-clear]", "click:remove-1", "drawer:1", "click:#clear", "drawer:0", 'discover:[data-testid^="roulette-num-"]', "add:number-0", "spin"])  # Require every refund/wager rerender before the terminal click.
+
+    # Prove each single or multi-component Roulette wager waits for a populated response-owned drawer rerender.
+    def test_roulette_add_bet_waits_for_committed_row_growth(self):
+        events = []  # Record the committed row count, pointer action, and minimum populated boundary.
+
+        class FakeRows:  # Model the current committed removable-wager collection.
+            async def count(self):
+                events.append("count:7")  # Record the pre-action drawer inventory.
+                return 7  # Model seven existing rows before a single or call-bet request.
+
+        class FakePage:  # Provide the one public selector lookup owned by the helper.
+            def locator(self, selector):
+                self.selector = selector  # Preserve the requested removable-row selector.
+                return FakeRows()  # Return the current committed drawer collection.
+
+        async def fake_click_locator(locator, _activated_counts, timeout_ms=ui_50000.ACTION_TIMEOUT_MS):
+            events.append(f"click:{locator}")  # Record the pointer dispatch after the baseline count.
+
+        async def fake_wait_minimum(_page, minimum_rows, timeout_ms=ui_50000.ACTION_TIMEOUT_MS):
+            events.append(f"minimum:{minimum_rows}")  # Record the required post-response lower bound.
+
+        page = FakePage()  # Create one isolated page seam for the asynchronous wager helper.
+        with mock.patch.object(ui_50000, "click_locator", side_effect=fake_click_locator), mock.patch.object(ui_50000, "wait_roulette_bet_drawer_minimum", side_effect=fake_wait_minimum):  # Isolate ordering from Playwright and API timing.
+            asyncio.run(ui_50000.roulette_add_bet(page, "roulette-target", Counter()))  # Exercise one rendered wager mutation.
+        self.assertEqual(page.selector, "[data-clear]")  # Count only public removable wager rows.
+        self.assertEqual(events, ["count:7", "click:roulette-target", "minimum:8"])  # Require response-owned row growth before the helper returns.
 
     # Prove Acey-Deucey deals before editing its phase-owned wager and skips that edit for Pass or automatic settlement.
     def test_acey_deucey_orders_wager_after_deal_only_for_play(self):
