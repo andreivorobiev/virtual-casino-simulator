@@ -5031,6 +5031,16 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 page.get_by_test_id('nav-roulette').click(); page.get_by_test_id('roulette-wheel').wait_for()
                 # Define the exhaustive hit-target integrity and geometry regression required by issue #222.
                 def roulette_hit_target_integrity():
+                    # Define an exact clear-settlement guard so mode changes cannot race the asynchronous refund request. (issue #227)
+                    def clear_roulette_audit_bets():
+                        # Capture the documented clear response before activating the real rendered control.
+                        with page.expect_response(lambda response: response.url.endswith('/api/v1/games/roulette/clear') and response.request.method=='POST', timeout=5000) as clear_info:
+                            # Activate the same clear-all path a player uses rather than mutating test state directly.
+                            page.locator('#clear').click()
+                        # Require the refund request to succeed before attempting a wheel-mode transition.
+                        assert clear_info.value.ok, 'Roulette audit-bet clear request failed'
+                        # Require the rerendered control to prove the browser consumed the empty-bet response.
+                        page.wait_for_function("() => document.querySelector('#clear')?.disabled === true", timeout=5000)
                     # Select the smallest chip so exhaustive region coverage cannot deplete the wallet.
                     page.get_by_test_id('chip-1').click()
                     # Read the semantic precision-layer state before changing it. (issue #348)
@@ -5100,7 +5110,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Require "2nd 12" to post the dozen covering exactly 13 through 24.
                     assert second_dozen['bet_type']=='dozen' and {str(number) for number in second_dozen['covered_numbers']}=={str(number) for number in range(13,25)}, '2nd 12 did not post the 13-24 dozen'
                     # Refund every audit wager so the board returns to its pre-audit betting state.
-                    page.locator('#clear').click(); page.wait_for_timeout(150)
+                    clear_roulette_audit_bets()
                     # Resolve the governed disclosure that owns wheel-mode and zero-rule settings.
                     rules_disclosure=page.get_by_test_id('roulette-rules-disclosure')
                     # Open advanced settings through the visible summary before exercising its native select controls.
@@ -5154,7 +5164,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             # Require the backend covered pockets to match the exact target identity.
                             assert {str(number) for number in body['covered_numbers']}=={str(number) for number in zero_identity[key]['covered']}, f"{wheel_mode} {key}: covered mismatch"
                         # Refund this mode's complete zero-zone audit before changing the table or continuing the suite.
-                        page.locator('#clear').click(); page.wait_for_timeout(150)
+                        clear_roulette_audit_bets()
                     # Reacquire the disclosure after mode-owned rerenders so test cleanup targets the current DOM node.
                     rules_disclosure=page.get_by_test_id('roulette-rules-disclosure')
                     # Restore the documented collapsed state through the visible summary for downstream test isolation.
