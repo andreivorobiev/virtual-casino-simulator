@@ -14,6 +14,14 @@ from tests import ui_50000  # Exercise the public harness helpers without starti
 
 # Prove TEST-092 allocation, control classification, and exact-source resume invariants.
 class UI50000HarnessTests(unittest.TestCase):
+    # Prove rotating paint is required without treating its intentionally clipped square bounds as stable stage geometry.
+    def test_big_six_stage_contract_separates_paint_from_containment(self):
+        contract = ui_50000.ESSENTIAL_STAGE_CONTRACTS["big_six_wheel"]  # Read the public harness contract used by every formal viewport.
+        self.assertEqual(contract["stage"], ".big-six-wheel__stage")  # Keep the route-owned stage as the containment boundary.
+        self.assertIn(".big-six-wheel__wheel-shell", contract["contained_items"])  # Require the stable circular shell to remain fully inside the stage.
+        self.assertNotIn(".big-six-wheel__wheel", contract["contained_items"])  # Avoid interpreting a rotated square bounding box as visible circular overflow.
+        self.assertEqual(contract["paint_items"][".big-six-wheel__wheel"], ".big-six-wheel__wheel-shell")  # Require the wheel to paint across its clipping owner.
+
     # Persist one complete synthetic distributed corpus bound to an exact source identity.
     def write_distributed_corpus(self, root, allocations, source_commit, evidence_root=None):
         for game_id, game_index, replica_index, quota, cycle_start in allocations:  # Materialize every deterministic formal worker handback.
