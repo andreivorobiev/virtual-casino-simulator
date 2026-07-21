@@ -101,6 +101,78 @@ class UI50000HarnessTests(unittest.TestCase):
         self.assertIn("spin?.disabled", page.expression)  # Require the public button to be non-actionable during resolution.
         self.assertEqual(page.timeout, ui_50000.ACTION_TIMEOUT_MS)  # Keep transition observation inside the governed action timeout.
 
+    # Prove Acey-Deucey deals before editing its phase-owned wager and skips that edit for Pass or automatic settlement.
+    def test_acey_deucey_orders_wager_after_deal_only_for_play(self):
+        # Execute one browser-free decision scenario and return its exact public interaction order.
+        async def run_scenario(decision_action):
+            events = []  # Record only semantic harness boundaries, never private runtime data.
+
+            class FakeDecision:  # Model one already-actionability-filtered decision locator.
+                def __init__(self, action):
+                    self.action = action  # Preserve the public data-action value used by the helper.
+
+                async def get_attribute(self, name):
+                    self.assert_name = name  # Retain the requested attribute for the enclosing assertion seam.
+                    return self.action  # Return the stable Play or Pass identity.
+
+            class FakeCollection:  # Model Playwright's locator collection wrapper for the wager field.
+                first = "wager-locator"  # Expose the same first-locator property used by production code.
+
+            class FakePage:  # Provide only the selector lookup owned by the wager edit path.
+                def locator(self, selector):
+                    self.selector = selector  # Preserve the exact public wager selector for assertion.
+                    return FakeCollection()  # Return the synthetic rendered input collection.
+
+            page = FakePage()  # Create one isolated page seam for this state-machine scenario.
+            waits = [decision_action if decision_action == '[data-action="deal"]' else f'[data-action="{decision_action}"]']  # Return automatic terminal state or the requested decision first.
+            if decision_action != '[data-action="deal"]':  # Add the post-decision fresh-deal boundary for interactive scenarios.
+                waits.append('[data-action="deal"]')  # Model successful settlement returning to ready.
+
+            async def fake_click_control(_page, selector, _activated_counts, timeout_ms=ui_50000.ACTION_TIMEOUT_MS):
+                events.append(f"click:{selector}")  # Record the initial free boundary deal.
+
+            async def fake_wait_any_enabled(_page, selectors, timeout_ms=ui_50000.ACTION_TIMEOUT_MS):
+                events.append(f"wait:{'|'.join(selectors)}")  # Record each real state boundary before returning it.
+                return waits.pop(0)  # Resolve the deterministic next public state.
+
+            async def fake_inventory_controls(_page, _seen_counts):
+                events.append("inventory")  # Record terminal or decision-state coverage discovery.
+
+            async def fake_enabled_locators(_page, selector):
+                self.assertEqual(selector, '[data-action="play"],[data-action="pass"]')  # Require the bounded decision selector.
+                return [FakeDecision("play"), FakeDecision("pass")]  # Preserve rendered Play-before-Pass order.
+
+            async def fake_fill_control(locator, value, _activated_counts, timeout_ms=ui_50000.ACTION_TIMEOUT_MS):
+                self.assertEqual(locator, "wager-locator")  # Require the public wager input seam.
+                self.assertEqual(value, "1")  # Keep the synthetic play-token wager bounded.
+                events.append("fill:wager")  # Record that editing occurs only after Deal exposes Play.
+
+            async def fake_click_locator(locator, _activated_counts, timeout_ms=ui_50000.ACTION_TIMEOUT_MS):
+                events.append(f"click:{locator.action}")  # Record the selected rendered decision.
+
+            patches = (  # Group the browser-free replacements around one helper invocation.
+                mock.patch.object(ui_50000, "click_control", side_effect=fake_click_control),
+                mock.patch.object(ui_50000, "wait_any_enabled", side_effect=fake_wait_any_enabled),
+                mock.patch.object(ui_50000, "inventory_controls", side_effect=fake_inventory_controls),
+                mock.patch.object(ui_50000, "enabled_locators", side_effect=fake_enabled_locators),
+                mock.patch.object(ui_50000, "fill_control", side_effect=fake_fill_control),
+                mock.patch.object(ui_50000, "click_locator", side_effect=fake_click_locator),
+            )
+            with patches[0], patches[1], patches[2], patches[3], patches[4], patches[5]:  # Apply every interaction seam for this isolated scenario.
+                ordinal = 0 if decision_action in {"play", '[data-action="deal"]'} else 1  # Select Play first, Pass second, or ignore decisions for automatic settlement.
+                await ui_50000.acey_deucey_terminal_action(page, ordinal, Counter(), Counter())  # Exercise the production state ordering without Playwright.
+            self.assertFalse(waits)  # Require the helper to consume every modeled public state boundary.
+            return events  # Return the semantic order for precise assertions.
+
+        decision_wait = 'wait:[data-action="play"]|[data-action="pass"]|[data-action="deal"]'  # Reuse the exact decision boundary in all scenarios.
+        ready_wait = 'wait:[data-action="deal"]'  # Reuse the exact post-settlement boundary.
+        play_events = asyncio.run(run_scenario("play"))  # Exercise the wager-consuming decision.
+        self.assertEqual(play_events, ['click:[data-action="deal"]', decision_wait, "inventory", "fill:wager", "click:play", ready_wait])  # Require Deal before wager before Play.
+        pass_events = asyncio.run(run_scenario("pass"))  # Exercise the token-free decision.
+        self.assertEqual(pass_events, ['click:[data-action="deal"]', decision_wait, "inventory", "click:pass", ready_wait])  # Forbid an unnecessary wager edit on Pass.
+        automatic_events = asyncio.run(run_scenario('[data-action="deal"]'))  # Exercise an automatically terminal boundary pair.
+        self.assertEqual(automatic_events, ['click:[data-action="deal"]', decision_wait, "inventory"])  # Return safely without fabricating a wager or decision.
+
     # Prove a terminal shard from another source commit is rerun instead of silently resumed.
     def test_resume_requires_exact_source_commit(self):
         allocation = ("roulette", ui_50000.GAME_IDS.index("roulette"), 0, 5, 0)  # Build one deterministic shard identity.
@@ -170,6 +242,17 @@ class UI50000HarnessTests(unittest.TestCase):
             self.assertEqual(report["completed_cycles"], 50_000)  # Require exact terminal completion accounting.
             self.assertTrue(report["assignment"]["no_gaps_or_duplicates"])  # Require the immutable global range proof.
             self.assertTrue(report["visuals_complete"])  # Require all 132 unique governed screenshots.
+            first_allocation = allocations[0]  # Select one deterministic test-owned shard for a visual completeness regression.
+            first_path = shard_root / f"{first_allocation[1]:02d}-{first_allocation[0]}-r{first_allocation[2]}.json"  # Resolve its exact distributed filename.
+            incomplete = json.loads(first_path.read_text(encoding="utf-8"))  # Read the synthetic passing shard before introducing one bounded defect.
+            incomplete["visuals"][0]["geometry"]["essential_stage_failures"] = [{"selector": ".stage", "reason": "essential node clipped by hidden ancestor"}]  # Model the human-found Big Six class that enabled-control geometry missed.
+            first_path.write_text(json.dumps(incomplete), encoding="utf-8")  # Persist only the disposable incomplete-stage evidence.
+            with mock.patch.object(ui_50000, "resolve_distributed_source_commit", return_value=source_commit):  # Keep the second aggregate browser-free and provenance-stable.
+                rejected_exit_code = asyncio.run(ui_50000.run_all(args))  # Re-evaluate the complete corpus with one explicit essential-stage failure.
+            rejected = json.loads(report_path.read_text(encoding="utf-8"))  # Read the fail-closed aggregate evidence.
+            self.assertEqual(rejected_exit_code, 1)  # Reject an otherwise perfect 50,000-cycle corpus with clipped essential theater.
+            self.assertEqual(rejected["status"], "FAIL")  # Keep the terminal qualification red for human-visible stage loss.
+            self.assertEqual(len(rejected["visual_failures"]), 1)  # Preserve the exact single governed viewport failure.
 
 
 # Run the focused module directly for local diagnosis.

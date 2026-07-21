@@ -3767,6 +3767,12 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.get_by_test_id('nav-big_six_wheel').click(); page.get_by_test_id('big-six-wheel').wait_for(timeout=5000)
                     # Require the canonical route, English title, and ready phase from the live backend mount.
                     assert page.url.split('?',1)[0].endswith('/games/big_six_wheel') and page.locator('.big-six-wheel__header h1').inner_text()=='Big Six Wheel' and page.get_by_test_id('big-six-wheel-phase').inner_text()=='Accepting wagers'
+                    # Require the complete code-native stage to remain painted inside its panel and every hidden ancestor.
+                    def assert_big_six_stage_complete(viewport_id):
+                        # Inspect the wheel shell, wheel, pointer, and hub without scrolling or changing later evidence.
+                        failures=page.evaluate("""viewportId => { const failures=[]; const stage=document.querySelector('.big-six-wheel__stage'); const selectors=['.big-six-wheel__wheel-shell','.big-six-wheel__wheel','.big-six-wheel__pointer','.big-six-wheel__hub']; if(!stage)return [{viewport:viewportId,selector:'.big-six-wheel__stage',reason:'stage missing'}]; const stageRect=stage.getBoundingClientRect(); const outside=(rect,owner)=>rect.left<owner.left-1||rect.right>owner.right+1||rect.top<owner.top-1||rect.bottom>owner.bottom+1; for(const selector of selectors){const node=document.querySelector(selector); if(!node){failures.push({viewport:viewportId,selector,reason:'essential node missing'});continue;} const style=getComputedStyle(node); const rect=node.getBoundingClientRect(); if(!node.getClientRects().length||style.display==='none'||style.visibility==='hidden'||rect.width<=0||rect.height<=0){failures.push({viewport:viewportId,selector,reason:'essential node not painted'});continue;} if(outside(rect,stageRect))failures.push({viewport:viewportId,selector,reason:'essential node escaped stage'}); let ancestor=node.parentElement; while(ancestor&&ancestor!==document.body){const ancestorStyle=getComputedStyle(ancestor);const ancestorRect=ancestor.getBoundingClientRect();const overflowY=ancestorStyle.overflowY==='visible'?ancestorStyle.overflow:ancestorStyle.overflowY;const overflowX=ancestorStyle.overflowX==='visible'?ancestorStyle.overflow:ancestorStyle.overflowX;const clippedY=(rect.top<ancestorRect.top-1||rect.bottom>ancestorRect.bottom+1)&&['hidden','clip'].includes(overflowY);const clippedX=(rect.left<ancestorRect.left-1||rect.right>ancestorRect.right+1)&&['hidden','clip'].includes(overflowX);if(clippedY||clippedX){failures.push({viewport:viewportId,selector,reason:'essential node clipped by hidden ancestor'});break;}ancestor=ancestor.parentElement;}}return failures;}""",viewport_id)
+                        # Fail the named governed viewport with bounded public selector evidence.
+                        assert not failures,failures
                     # Read the initial cumulative target before the first real motion-qualified spin.
                     initial_big_six_target=page.locator('[data-wheel]').evaluate("node => Number.parseFloat(node.style.getPropertyValue('--wheel-angle'))")
                     # Define every named viewport required by the Big Six visual-matrix row.
@@ -3777,6 +3783,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
                         # Require a visible complete surface without page-level horizontal overflow.
                         assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.get_by_test_id('big-six-wheel').is_visible()
+                        # Reject missing or clipped wheel, pointer, or hub before labeling evidence as passing.
+                        assert_big_six_stage_complete(viewport_id)
                         # Record self-describing English ready evidence.
                         game_evidence(f'after-pass-big-six-ready-en-{viewport_id}.png','big_six_wheel',['ready'],'en-US',viewport_id)
                     # Restore primary desktop and enter a positive real-backend wager.
@@ -3827,6 +3835,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
                         # Require the settled control and page-level containment.
                         assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.locator('[data-spin]').is_enabled()
+                        # Require the complete settled stage at this governed viewport.
+                        assert_big_six_stage_complete(viewport_id)
                         # Record self-describing English settlement evidence.
                         game_evidence(f'after-pass-big-six-settled-en-{viewport_id}.png','big_six_wheel',['settled'],'en-US',viewport_id)
                     # Switch the restored settlement to Russian without discarding player-owned state.
@@ -3839,6 +3849,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
                         # Require the localized route to remain visible and horizontally contained.
                         assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.get_by_test_id('big-six-wheel').is_visible()
+                        # Require the complete localized settled stage before writing evidence.
+                        assert_big_six_stage_complete(viewport_id)
                         # Record self-describing Russian settlement evidence.
                         game_evidence(f'after-pass-big-six-settled-ru-{viewport_id}.png','big_six_wheel',['settled'],'ru-RU',viewport_id)
                     # Reload in Russian so the route lifecycle restores a clean ready phase with persisted history.
@@ -3849,6 +3861,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
                         # Require the localized route to remain visible and horizontally contained.
                         assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.get_by_test_id('big-six-wheel').is_visible()
+                        # Require the complete localized ready stage before writing evidence.
+                        assert_big_six_stage_complete(viewport_id)
                         # Record self-describing Russian ready evidence.
                         game_evidence(f'after-pass-big-six-ready-ru-{viewport_id}.png','big_six_wheel',['ready'],'ru-RU',viewport_id)
                     # Restore the unsent wager cleared by the full-page route reload.

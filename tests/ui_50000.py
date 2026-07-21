@@ -56,6 +56,10 @@ AUTOPLAY_SETTLED_SELECTORS = {
 }
 # Keep every shard and aggregate artifact mapped to the same permanent requirements.
 REQUIREMENT_IDS = ("AUTH-001", "AUTH-002", "SESSION-001", "SESSION-005", "TEST-042", "TEST-047", "TEST-092", "CORE-021")
+# Register essential non-control stage geometry that human evidence must show completely.
+ESSENTIAL_STAGE_CONTRACTS = {
+    "big_six_wheel": {"stage": ".big-six-wheel__stage", "items": (".big-six-wheel__wheel-shell", ".big-six-wheel__wheel", ".big-six-wheel__pointer", ".big-six-wheel__hub")},  # Guard the complete Big Six wheel theater rather than enabled controls alone.
+}
 # Keep each asynchronous shard's control identities scoped to auth, shell, or one game.
 CONTROL_NAMESPACE = ContextVar("ui_50000_control_namespace", default="unscoped")
 
@@ -346,6 +350,27 @@ async def roulette_terminal_action(page, activated_counts):
     await wait_any_enabled(page, [selector])  # Accept the cycle only after settlement returns a genuinely enabled fresh-spin control.
 
 
+# Complete one Acey-Deucey round without editing its wager before the boundary deal enables that decision input.
+async def acey_deucey_terminal_action(page, ordinal, seen_counts, activated_counts):
+    await click_control(page, '[data-action="deal"]', activated_counts)  # Reveal the two free boundary cards before touching the phase-owned wager input.
+    choice = await wait_any_enabled(page, ['[data-action="play"]', '[data-action="pass"]', '[data-action="deal"]'])  # Wait for a legal decision or an automatically terminal pair/consecutive deal.
+    if choice == '[data-action="deal"]':  # Accept a round that settled without exposing a player decision.
+        await inventory_controls(page, seen_counts)  # Preserve the terminal next-deal control for complete coverage accounting.
+        return  # Complete the UI cycle without fabricating a wager or decision.
+    await inventory_controls(page, seen_counts)  # Discover both legal decision controls and the newly enabled wager input.
+    decisions = await enabled_locators(page, '[data-action="play"],[data-action="pass"]')  # Resolve only currently actionable decision buttons after the deal rerender.
+    if not decisions:  # Reject a prepared round that exposes no legal choice.
+        raise AssertionError("Acey-Deucey exposed no decision")  # Preserve a bounded product-state diagnostic.
+    decision = decisions[ordinal % len(decisions)]  # Rotate real Play and Pass actions across the complete game quota.
+    action = await decision.get_attribute("data-action")  # Read the stable semantic identity before the decision rerenders the route.
+    if action == "play":  # Supply a wager only for the action whose real contract consumes one.
+        await fill_control(page.locator("#acey-wager").first, "1", activated_counts)  # Edit the now-enabled public input immediately before Play.
+    elif action != "pass":  # Refuse an unexpected control admitted by a future selector regression.
+        raise AssertionError("Acey-Deucey exposed an unknown decision")  # Keep the state-machine mismatch actionable.
+    await click_locator(decision, activated_counts)  # Commit the selected decision through Playwright's real pointer path.
+    await wait_any_enabled(page, ['[data-action="deal"]'])  # Require terminal settlement and fresh-boundary readiness.
+
+
 # Return all visible enabled locators matching a selector after a decision rerender.
 async def enabled_locators(page, selector):
     ready = []  # Preserve DOM order for deterministic cycling.
@@ -619,18 +644,7 @@ async def play_game_ui(page, game_id, ordinal, seen_counts, activated_counts):
         await click_control(page, f'[data-side="{"andar" if ordinal % 2 == 0 else "bahar"}"]', activated_counts)  # Select a rotating side.
         await terminal_action(page, '[data-action="play"]', activated_counts)  # Deal and settle the round.
     elif game_id == "acey_deucey":  # Exercise pass and play when legally available.
-        await fill_control(page.locator("#acey-wager").first, "1", activated_counts)  # Exercise the ordinary wager input on every public deal cycle.
-        await click_control(page, '[data-action="deal"]', activated_counts)  # Deal the boundary cards.
-        choice = await wait_any_enabled(page, ['[data-action="play"]', '[data-action="pass"]', '[data-action="deal"]'])  # Wait for a decision or an automatically terminal pair/consecutive deal.
-        if choice == '[data-action="deal"]':  # Accept a round that settled without a player decision.
-            await inventory_controls(page, seen_counts)  # Preserve terminal controls for coverage accounting.
-            return  # Complete the UI cycle without fabricating a decision.
-        await inventory_controls(page, seen_counts)  # Discover both legal Acey-Deucey decisions before choosing one.
-        decisions = await enabled_locators(page, '[data-action="play"],[data-action="pass"]')  # Discover legal terminal decisions.
-        if not decisions:  # Require one visible choice.
-            raise AssertionError("Acey-Deucey exposed no decision")  # Preserve a stranded round.
-        await click_locator(decisions[ordinal % len(decisions)], activated_counts)  # Rotate across legal choices.
-        await wait_any_enabled(page, ['[data-action="deal"]'])  # Require next-round readiness.
+        await acey_deucey_terminal_action(page, ordinal, seen_counts, activated_counts)  # Respect Deal-before-wager ownership while covering Play, Pass, and automatic settlement.
     elif game_id == "caribbean_stud":  # Exercise call and fold decisions.
         await click_control(page, '[data-action="deal"]', activated_counts)  # Deal the five-card hand.
         await inventory_controls(page, seen_counts)  # Discover Call and Fold in their live decision state.
@@ -693,6 +707,15 @@ def attach_page_diagnostics(page, diagnostics):
 async def geometry_scan(page):
     expression = r"""() => { const viewport = { width: innerWidth, height: innerHeight }; const originalScroll = { x: scrollX, y: scrollY }; const documentOverflowX = Math.max(document.documentElement.scrollWidth, document.body.scrollWidth) - innerWidth; const brand = document.querySelector('.brand-text,.brand-name,[data-testid="premium-brand"]'); const brandTruncated = Boolean(brand && brand.scrollWidth > brand.clientWidth + 1); const clipped = []; const scrollReachable = []; const occluded = []; const controls = [...document.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled),summary')]; for (const node of controls) { if (!node.getClientRects().length || node.offsetParent === null || getComputedStyle(node).visibility === 'hidden' || (node.tagName !== 'SUMMARY' && node.closest('details:not([open])'))) continue; const sig = String(node.getAttribute('data-testid') || node.getAttribute('data-action') || node.getAttribute('data-bet-id') || node.id || node.getAttribute('aria-label') || node.textContent || node.tagName).trim().replace(/\s+/g,' ').slice(0,100); let targetRect = node.getBoundingClientRect(); let ancestor = node.parentElement; let reachableByScroller = false; let inaccessible = false; const ancestorScrolls = []; while (ancestor && ancestor !== document.body) { const style = getComputedStyle(ancestor); const ancestorRect = ancestor.getBoundingClientRect(); const outsideY = targetRect.bottom > ancestorRect.bottom + 4 || targetRect.top < ancestorRect.top - 4; const outsideX = targetRect.right > ancestorRect.right + 4 || targetRect.left < ancestorRect.left - 4; const overflowY = style.overflowY === 'visible' ? style.overflow : style.overflowY; const overflowX = style.overflowX === 'visible' ? style.overflow : style.overflowX; const scrollableY = ['auto','scroll'].includes(overflowY) && ancestor.scrollHeight > ancestor.clientHeight + 1; const scrollableX = ['auto','scroll'].includes(overflowX) && ancestor.scrollWidth > ancestor.clientWidth + 1; ancestorScrolls.push({ node: ancestor, left: ancestor.scrollLeft, top: ancestor.scrollTop, scrollableX, scrollableY }); if ((outsideY && scrollableY) || (outsideX && scrollableX)) { reachableByScroller = true; targetRect = ancestorRect; } else if ((outsideY && ['hidden','clip'].includes(overflowY)) || (outsideX && ['hidden','clip'].includes(overflowX))) { inaccessible = true; break; } ancestor = ancestor.parentElement; } if (inaccessible) { clipped.push(sig); continue; } if (reachableByScroller) scrollReachable.push(sig); node.scrollIntoView({ block: 'center', inline: 'center' }); for (const saved of ancestorScrolls) saved.node.scrollTo(saved.scrollableX ? saved.node.scrollLeft : saved.left, saved.scrollableY ? saved.node.scrollTop : saved.top); const actionRect = node.getBoundingClientRect(); const x = Math.max(0, Math.min(innerWidth - 1, actionRect.left + actionRect.width / 2)); const y = Math.max(0, Math.min(innerHeight - 1, actionRect.top + actionRect.height / 2)); const top = document.elementFromPoint(x, y); const labelOwnsNode = Boolean(top?.closest('label')?.contains(node)); if (top && top !== node && !node.contains(top) && !labelOwnsNode) occluded.push(sig); for (const saved of ancestorScrolls) saved.node.scrollTo(saved.left, saved.top); scrollTo(originalScroll.x, originalScroll.y); } scrollTo(originalScroll.x, originalScroll.y); return { viewport, document_overflow_x_px: Math.max(0, Math.round(documentOverflowX)), brand_truncated: brandTruncated, clipped_enabled_control_count: clipped.length, clipped_enabled_controls: [...new Set(clipped)].slice(0,100), scroll_reachable_enabled_control_count: scrollReachable.length, scroll_reachable_enabled_controls: [...new Set(scrollReachable)].slice(0,100), occluded_enabled_control_count: occluded.length, occluded_enabled_controls: [...new Set(occluded)].slice(0,100) }; }"""  # Detect clipping and occlusion without letting scrollIntoView mutate hidden-overflow axes or later viewport evidence. (issue #348)
     return await page.evaluate(expression)  # Return sanitized geometry findings.
+
+
+# Inspect game-declared essential stage nodes for missing paint, stage escape, and hidden-ancestor clipping.
+async def essential_stage_scan(page, game_id):
+    contract = ESSENTIAL_STAGE_CONTRACTS.get(game_id)  # Resolve only an explicit game-owned completeness contract.
+    if not contract:  # Preserve ordinary control geometry for games without a declared non-control stage.
+        return []  # Return one uniform clean result for aggregate accounting.
+    expression = r"""contract => { const failures = []; const stage = document.querySelector(contract.stage); if (!stage) return [{ selector: contract.stage, reason: 'stage missing' }]; const stageRect = stage.getBoundingClientRect(); const outside = (rect, owner) => rect.left < owner.left - 1 || rect.right > owner.right + 1 || rect.top < owner.top - 1 || rect.bottom > owner.bottom + 1; for (const selector of contract.items) { const node = document.querySelector(selector); if (!node) { failures.push({ selector, reason: 'essential node missing' }); continue; } const style = getComputedStyle(node); const rect = node.getBoundingClientRect(); if (!node.getClientRects().length || style.display === 'none' || style.visibility === 'hidden' || rect.width <= 0 || rect.height <= 0) { failures.push({ selector, reason: 'essential node not painted' }); continue; } if (outside(rect, stageRect)) failures.push({ selector, reason: 'essential node escaped stage' }); let ancestor = node.parentElement; while (ancestor && ancestor !== document.body) { const ancestorStyle = getComputedStyle(ancestor); const ancestorRect = ancestor.getBoundingClientRect(); const overflowY = ancestorStyle.overflowY === 'visible' ? ancestorStyle.overflow : ancestorStyle.overflowY; const overflowX = ancestorStyle.overflowX === 'visible' ? ancestorStyle.overflow : ancestorStyle.overflowX; const clippedY = (rect.top < ancestorRect.top - 1 || rect.bottom > ancestorRect.bottom + 1) && ['hidden','clip'].includes(overflowY); const clippedX = (rect.left < ancestorRect.left - 1 || rect.right > ancestorRect.right + 1) && ['hidden','clip'].includes(overflowX); if (clippedY || clippedX) { failures.push({ selector, reason: 'essential node clipped by hidden ancestor' }); break; } ancestor = ancestor.parentElement; } } return failures.filter((failure, index, all) => all.findIndex(candidate => candidate.selector === failure.selector && candidate.reason === failure.reason) === index); }"""  # Detect stage incompleteness without scrolling or mutating later evidence.
+    return await page.evaluate(expression, contract)  # Return bounded selector-and-reason evidence only.
 
 
 # Create one isolated disposable runtime copy outside the source checkout.
@@ -828,7 +851,9 @@ async def run_game_shard(playwright, semaphore, args, game_id, game_index, repli
                 evidence_path = screenshot_root / "representative" / artifact_name  # Resolve the representative evidence path.
                 evidence_path.parent.mkdir(parents=True, exist_ok=True)  # Ensure the evidence directory exists.
                 await page.screenshot(path=str(evidence_path), full_page=True)  # Save reviewable UI evidence.
-                report["visuals"].append({"viewport": viewport, "geometry": await geometry_scan(page), "artifact": f"representative/{artifact_name}", "evidence_class": "after_failure_recovery" if failure_counts else "after_pass"})  # Store automated geometry evidence without private paths or mislabeled recovered failures.
+                geometry = await geometry_scan(page)  # Inspect controls and document overflow without retaining scroll mutations.
+                geometry["essential_stage_failures"] = await essential_stage_scan(page, game_id)  # Reject clipped game theater that contains no enabled controls.
+                report["visuals"].append({"viewport": viewport, "geometry": geometry, "artifact": f"representative/{artifact_name}", "evidence_class": "after_failure_recovery" if failure_counts else "after_pass"})  # Store complete automated geometry evidence without private paths or mislabeled recovered failures.
             post_operations = client.call("/api/v2/admin/operations")  # Recheck readiness after the complete shard.
             report["operations_ready_after"] = bool(post_operations.get("ready"))  # Preserve post-load readiness.
             report["status"] = "PASS" if report["completed"] == quota and not report["failed"] and not failure_counts and report["isolation"]["player_match"] and report["isolation"]["nonnegative_balance"] and report["isolation"]["ledger_events"] > 0 and report["operations_ready_after"] and not diagnostics["console_errors"] and not diagnostics["page_errors"] and not diagnostics["http_failures"] else "FAIL"  # Evaluate every gameplay, identity, readiness, and browser-diagnostic shard gate.
@@ -1086,7 +1111,7 @@ async def run_all(args):
             visuals_complete = False  # Reject absent, duplicate, recovered-failure, or unnamed evidence.
         for visual in visuals:  # Evaluate every governed viewport independently.
             geometry = visual.get("geometry", {})  # Read automated geometry evidence when available.
-            if geometry.get("document_overflow_x_px", 0) > 0 or geometry.get("brand_truncated") or geometry.get("clipped_enabled_control_count", 0) > 0 or geometry.get("occluded_enabled_control_count", 0) > 0:  # Detect governed overflow, clipping, branding, and overlay failures.
+            if geometry.get("document_overflow_x_px", 0) > 0 or geometry.get("brand_truncated") or geometry.get("clipped_enabled_control_count", 0) > 0 or geometry.get("occluded_enabled_control_count", 0) > 0 or geometry.get("essential_stage_failures"):  # Detect governed overflow, clipping, branding, overlays, and incomplete non-control stages.
                 visual_failures.append({"game": result["game"], "viewport": visual.get("viewport", {}), "geometry": geometry})  # Preserve sanitized defect evidence.
     attempted = sum(result.get("attempted", 0) for result in results)  # Count actual browser test attempts.
     attempted_actions = sum(result.get("attempted_actions", 0) for result in results)  # Count retry-inclusive rendered UI actions.
