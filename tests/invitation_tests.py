@@ -322,8 +322,8 @@ class InvitationServiceTests(unittest.TestCase):
         with ProcessPoolExecutor(max_workers=2) as executor:
             # Collect both bounded process results.
             results = list(executor.map(_json_redeem_worker, [arguments, arguments]))
-        # Require at least one successful response and no process exception.
-        self.assertTrue(any(results))
+        # Require both same-key processes to receive the exact idempotent success receipt.
+        self.assertEqual(results, [True, True])
         # Require exactly one durable invited identity.
         self.assertEqual(sum(1 for user in auth.load_users()["users"] if user.get("invitation_id")), 1)
         # Require exactly one deterministic invited player wallet.

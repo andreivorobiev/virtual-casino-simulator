@@ -755,14 +755,26 @@ class InvitationService:
             update_json(self.store_path, recovery_required, default_invitations)
             # Return the same non-disclosing public error.
             self._invalid_redemption()
+        # Track whether this worker performs the one durable terminal transition.
+        finalized = {"changed": False}
         # Finalize the invitation after the canonical identity and wallet are active.
         def finalize(raw_state: Any) -> dict:
             # Validate the durable document before terminal transition.
             state = self._state(raw_state)
             # Resolve the exact invitation claim.
             row = self._find(state, selected["invitation_id"])
-            # Require the same caller recovery binding and active identity reference.
-            if row is None or row.get("status") != "redeeming" or not hmac.compare_digest(str((row.get("redemption") or {}).get("idempotency_digest", "")), idempotency_digest):
+            # Read recovery metadata without accepting a malformed terminal row.
+            recovery = row.get("redemption") if isinstance(row, dict) and isinstance(row.get("redemption"), dict) else {}
+            # Compare the caller binding without leaking the stored verifier through timing.
+            same_caller = hmac.compare_digest(str(recovery.get("idempotency_digest", "")), idempotency_digest)
+            # Compare the deterministic identity references created by this exact claim.
+            same_identity = hmac.compare_digest(str(recovery.get("user_id", "")), str(user.get("user_id", ""))) and hmac.compare_digest(str(recovery.get("player_id", "")), str(user.get("player_id", "")))
+            # Accept a concurrent worker's already-committed terminal state only for the exact replay.
+            if row is not None and row.get("status") == "redeemed" and recovery.get("phase") == "complete" and same_caller and same_identity:
+                # Leave the terminal document and lifecycle history byte-for-byte unchanged.
+                return state
+            # Require the same in-progress caller recovery binding and active identity reference.
+            if row is None or row.get("status") != "redeeming" or not same_caller or not same_identity:
                 # Preserve active account state and surface operator recovery on retry.
                 raise ConflictError("Invitation redemption finalization changed")
             # Transition to the terminal redeemed state.
@@ -773,12 +785,16 @@ class InvitationService:
             row["redemption"].update({"phase": "complete", "user_id": user.get("user_id"), "player_id": user.get("player_id"), "last_error": None})
             # Append a system lifecycle event without a caller-controlled reason.
             self._event(row, "system", "recipient_redeem", "redeeming", "redeemed")
+            # Mark this worker as the sole terminal transition owner.
+            finalized["changed"] = True
             # Return the complete document.
             return state
         # Commit the terminal invitation state.
         update_json(self.store_path, finalize, default_invitations)
-        # Emit only opaque lifecycle identifiers after every durable step succeeds.
-        self.audit_sink("invitation_redeemed", invitation_id=selected["invitation_id"], user_id=user.get("user_id"))
+        # Emit one opaque lifecycle audit only from the worker that committed the transition.
+        if finalized["changed"]:
+            # Publish no recipient, bearer, password, or caller key in the audit event.
+            self.audit_sink("invitation_redeemed", invitation_id=selected["invitation_id"], user_id=user.get("user_id"))
         # Return one generic success without account, recipient, token, or audit details.
         return {"status": "enrolled"}
 
