@@ -15,7 +15,7 @@ Historical source baseline: 9.1.0
 - audio: 9.1.1
 - admin: 1.8.0
 - operations: 1.0.0
-- roulette: 9.4.5
+- roulette: 9.4.6
 - slots: 9.1.4
 - blackjack: 9.1.3
 - baccarat: 9.1.2
@@ -23,7 +23,7 @@ Historical source baseline: 9.1.0
 - bingo: 9.2.1
 - multi_hand_video_poker: 1.0.1
 - casino_war: 1.0.1
-- big_six_wheel: 1.0.2
+- big_six_wheel: 1.0.3
 - red_dog: 1.0.0
 - dragon_tiger: 1.0.0
 - hi_lo: 1.0.0
@@ -34,7 +34,7 @@ Historical source baseline: 9.1.0
 - sic_bo: 1.0.0
 - chuck_a_luck: 1.0.0
 - craps: 1.0.0
-- crown_and_anchor: 1.0.1
+- crown_and_anchor: 1.0.2
 - over_under_7: 1.0.2
 - plinko: 1.0.1
 - fan_tan: 1.0.2
@@ -45,10 +45,10 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.1
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.48.0
-- docs: 1.48.0
+- tests: 1.50.9
+- docs: 1.50.2
 - contracts: 1.36.0
-- tooling: 1.16.0
+- tooling: 1.17.0
 - commenting_policy: 1.0.0
 
 ## Requirements
@@ -158,7 +158,7 @@ Historical source baseline: 9.1.0
 - **ROU-042** (Roulette) - PASS: Roulette UI animates wheel and ball while spinning.
 - **ROU-043** (Roulette) - PASS: Roulette UI renders a real table-style layout.
 - **ROU-044** (Roulette) - PASS: Roulette UI allows clicking number cells for straight bets.
-- **ROU-045** (Roulette) - PASS: Roulette UI exposes clickable inside-bet spots.
+- **ROU-045** (Roulette) - PASS: Roulette UI exposes semantically visible, pointer-actionable inside-bet spots with distinct zero-zone targets; hiding the layer removes those spots from pointer and accessibility actionability.
 - **ROU-046** (Roulette) - PASS: Roulette UI draws chips on table spots with amounts.
 - **ROU-047** (Roulette) - PASS: Roulette auto play repeats saved bet templates.
 - **ROU-048** (Roulette) - PASS: Roulette bots can be enabled with strategy and stake settings.
@@ -564,8 +564,8 @@ Historical source baseline: 9.1.0
 - **CAA-001** (Crown and Anchor) - PASS: Three server-authoritative symbol dice implement six coverage targets and transparent one-, two-, and three-hit net payouts.
 - **CAA-002** (Crown and Anchor) - PASS: Authenticated sessions own private reload-safe rounds, settled history, and canonical route restoration.
 - **CAA-003** (Crown and Anchor) - PASS: Aggregate symbol wagers and returned credits use the shared ledger exactly once under durable request identities.
-- **CAA-004** (Application) - PASS: Crown and Anchor supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.
-- **CAA-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Crown and Anchor with requirement, module, version, and visual traceability.
+- **CAA-004** (Application) - PASS: Crown and Anchor supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play with all three dice and all six symbol hit-result panels painted and contained at every governed viewport.
+- **CAA-005** (Tests) - PASS: Catalog, contract, browser, long-suite, and formal TEST-092 discovery include Crown and Anchor with requirement, module, version, visual, and essential-stage traceability.
 - **OU7-001** (Over/Under 7) - PASS: Two server-authoritative dice implement under-seven, exactly-seven, and over-seven outcomes with transparent net and total-return rules.
 - **OU7-002** (Over/Under 7) - PASS: Authenticated sessions own private reload-safe plays, settled history, and canonical route restoration.
 - **OU7-003** (Over/Under 7) - PASS: Aggregate wagers and returned credits use the shared ledger exactly once under durable action identities.
@@ -652,7 +652,7 @@ Historical source baseline: 9.1.0
 - **TEST-050** (Tests) - PASS: Edge evidence covers exact origin and loopback topology, restricted access, replacement forwarding headers, protected ports, ACME preflight, inert service and rollback templates, traversal refusal, listener-free static validation, exact success-envelope validation through the production WSGI/API boundary, pre-network credential refusal, bounded authenticated probes, security headers, certificate age, sanitized output, packaging, and fail-closed negative cases.
 - **TEST-051** (Tests) - PASS: Regression tests exercise 1, 3, 30, and 100 concurrent same-account logins asserting every prior session stays valid with no 401 or 500, and prove per-user cap least-recently-used session eviction.
 - **TEST-052** (Tests) - PASS: Browser regression asserts bounded keyboard-accessible shell navigation, full brand readability without truncation, minimum nav-label readability, no page-level horizontal overflow, and every game control's containment and scroll reachability at the 1920, 1440, 1024, and 390 governed viewports.
-- **TEST-053** (Tests) - PASS: Browser regression clicks every Roulette primary betting region plus a representative inside hotspot per covered-number size and asserts the posted bet_type and covered_numbers match the clicked cell's canonical identity, with non-overlapping, non-zero hit geometry.
+- **TEST-053** (Tests) - PASS: Browser regression uses the real pointer path for every Roulette primary betting region, representative inside sizes, and every single- and double-zero special; it asserts canonical bet_type and covered_numbers plus distinct non-zero hit geometry.
 - **DOC-017** (Documentation) - PASS: A vendor-neutral root handbook documents the complete engineering practice, required capabilities, authority hierarchy, and current-versus-historical status, while the repository start page links every other Markdown file exactly once.
 - **TOOL-006** (Tooling) - PASS: Documentation generation deterministically inventories every tracked or non-ignored Markdown file, updates the bounded root catalog, and fails check mode when the catalog or generated requirements are stale.
 - **DOC-018** (Documentation) - PASS: The repository defines a durable Claude-author/Codex-merge operating model in which Claude composes assigned pull requests and Codex alone reviews integration gates and executes every merge without bypassing owner authority.
@@ -723,3 +723,4 @@ Historical source baseline: 9.1.0
 - **MAIL-005** (Application) - PASS: Every authorized purpose has matching en-US and ru-RU subjects plus plain-text and semantic HTML alternatives whose action link has meaningful text and whose fixed content is safely escaped.
 - **MAIL-006** (Docs) - PASS: The transactional-mail runbook documents disabled defaults, separate release authority, sender/domain and SPF/DKIM/DMARC posture, canonical-origin and OAuth callback coordination, domain-move revalidation, bounded smoke evidence, rollback, suppression review, and the prohibition on treating repository merge as live authorization.
 - **TEST-090** (Tests) - PASS: Provider-free unit and API tests prove dual-gate inaccessibility, raw-value exclusion, public digest-key hardening, atomic caller idempotency, changed-meaning conflict, bounded retry, ambiguous-result freezing, rate limits, suppression, retention, malformed-state preservation, bilingual templates, Admin-only contract shape, absent consumer routes, and real MySQL cross-process single-claim behavior; exact-head browser evidence covers disabled, misconfigured, release-held, and suppression-summary states in en-US and ru-RU at all four governed viewports.
+- **TEST-092** (Tests) - PASS: An exact-source browser qualification executes exactly 50,000 completed UI cycles across every catalog game, assigns at least 1,666 cycles to each game, exercises every eligible game control at least 100 times or records an approved ineligible classification, captures all four governed viewports for human review, and rejects unexplained failures, incomplete ranges, incomplete declared non-control stages, source drift, or cleanup residue.

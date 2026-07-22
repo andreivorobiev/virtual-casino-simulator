@@ -50,7 +50,13 @@ frontend.scheduleDiceReveal({ timerScope, onSettled: () => { settled = true; }, 
 assert.equal(settled, true);
 // Assert the helper passed the requested duration to the lifecycle scope.
 assert.equal(scheduledDuration, 0);
+// Render one deterministic route snapshot for stable theater identity assertions.
+const markup = frontend.viewMarkup({ translate: key => key });
 // Assert route markup contains the stable ready test id.
-assert.match(frontend.viewMarkup({ translate: key => key }), /data-testid="crown-and-anchor"/);
+assert.match(markup, /data-testid="crown-and-anchor"/);
+// Assert every authoritative die receives one stable geometry identity.
+for (const index of [0, 1, 2]) assert.match(markup, new RegExp(`data-die="${index}"`));
+// Assert every authoritative symbol panel receives one stable geometry identity.
+for (const symbol of frontend.SYMBOL_IDS) assert.match(markup, new RegExp(`data-symbol="${symbol}"`));
 // Report success for the Python wrapper.
 console.log('Crown and Anchor frontend module tests passed.');

@@ -6,6 +6,6 @@ All play-token movement is routed through `casino.core.ledger`; the game engine 
 
 ## Canonical #77 integration
 
-The descriptor at `modules/crown_and_anchor.json` owns module version `1.0.0`, route `/games/crown_and_anchor`, sort order `210`, paired EN/RU resources, additive contract discovery, and `tests.game_drivers.crown_and_anchor:play`. Permanent requirements `CAA-001` through `CAA-005` map rules, session/restart behavior, ledger safety, browser localization, and catalog-wide evidence.
+The descriptor at `modules/crown_and_anchor.json` owns module version `1.0.2`, route `/games/crown_and_anchor`, sort order `210`, paired EN/RU resources, additive contract discovery, and `tests.game_drivers.crown_and_anchor:play`. Permanent requirements `CAA-001` through `CAA-005` map rules, session/restart behavior, ledger safety, browser localization, and catalog-wide evidence.
 
-The visual surface `crown_and_anchor` covers `ready`, `rolling`, `settled`, `reduced_motion`, and `route_restored` in both locales at desktop primary, desktop compact, tablet, and mobile viewports. Shared registration remains catalog-driven; no bespoke router, shell, or long-suite allowlist is required.
+The visual surface `crown_and_anchor` covers `ready`, `rolling`, `settled`, `reduced_motion`, and `route_restored` in both locales at desktop primary, desktop compact, tablet, and mobile viewports. At every governed viewport, all three dice and all six symbol hit-result panels must paint fully inside `.crown-anchor__stage`; both the ordinary browser matrix and formal TEST-092 qualification reject missing, clipped, or escaped theater nodes. Shared registration remains catalog-driven; no bespoke router, shell, or long-suite allowlist is required.

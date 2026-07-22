@@ -31,19 +31,19 @@ const ROUTE_CSS = [
   '.crown-anchor__bet input{min-height:42px;min-width:0;}', // Preserve touch usability.
   '.crown-anchor__play{min-height:46px;border:0;border-radius:8px;color:white;background:#9f1f2e;font-weight:800;}', // Use a strong primary action.
   '.crown-anchor__play:disabled{opacity:.58;cursor:not-allowed;}', // Keep disabled state readable.
-  '.crown-anchor__stage{display:grid;align-content:center;gap:16px;overflow:hidden;}', // Center dice without nested scroll.
-  '.crown-anchor__dice{display:grid;grid-template-columns:repeat(3,minmax(74px,1fr));gap:12px;}', // Reserve stable dice slots.
+  '.crown-anchor__stage{display:grid;grid-template-rows:auto auto auto;align-content:center;gap:16px;min-width:0;overflow:hidden;}', // Center complete bounded theater rows without allowing intrinsic width to escape the panel.
+  '.crown-anchor__dice{display:grid;grid-template-columns:repeat(3,minmax(74px,1fr));gap:12px;width:100%;min-width:0;}', // Reserve three stable dice slots inside the stage width.
   '.crown-anchor__die{display:grid;place-items:center;aspect-ratio:1;border:2px solid #f2c55c;border-radius:8px;background:#f8f0d5;color:#15211d;font-size:clamp(22px,4vw,44px);font-weight:900;transition:transform .9s ease;}', // Render symbol dice as text.
   '.crown-anchor__die[data-rolling="true"]{transform:rotate(14deg) scale(1.03);}', // Add small decorative motion.
   '.crown-anchor__die[data-reduced-motion="true"]{transition:none;transform:none;}', // Remove decorative motion when requested.
-  '.crown-anchor__table{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}', // Show all six symbol cells.
+  '.crown-anchor__table{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;width:100%;min-width:0;}', // Show all six symbol cells inside the stage width.
   '.crown-anchor__cell{display:grid;gap:4px;min-height:88px;padding:10px;border:1px solid rgba(255,255,255,.14);border-radius:8px;background:rgba(255,255,255,.05);}', // Keep table cells scannable.
-  '.crown-anchor__result{display:grid;gap:5px;text-align:center;min-height:54px;}', // Reserve result space.
+  '.crown-anchor__result{display:grid;gap:5px;width:100%;min-width:0;text-align:center;min-height:54px;}', // Reserve a bounded result row.
   '.crown-anchor__data{display:grid;align-content:start;gap:12px;}', // Keep data distinct.
   '.crown-anchor__payrow,.crown-anchor__history-row{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.08);}', // Align compact rows.
   '.crown-anchor__history{max-height:260px;overflow:auto;scrollbar-width:thin;}', // Provide one scroll region.
   '.crown-anchor__error{min-height:20px;color:#ffb9b9;}', // Reserve error text.
-  '@media(max-width:1200px){.crown-anchor__layout{grid-template-columns:1fr;}.crown-anchor__controls{order:1}.crown-anchor__stage{order:2}.crown-anchor__data{order:3}}', // Stack at tablet widths.
+  '@media(max-width:1200px){.crown-anchor{min-height:0}.crown-anchor__layout{grid-template-columns:minmax(0,1fr);}.crown-anchor__controls{order:1}.crown-anchor__stage{order:2;align-content:start;overflow:visible}.crown-anchor__data{order:3}}', // Let tablet document flow size the complete stage instead of centering and clipping it inside a forced route track.
   '@media(max-width:560px){.crown-anchor__header{align-items:start;flex-direction:column}.crown-anchor__panel{padding:12px}.crown-anchor__bet{grid-template-columns:minmax(0,1fr) 84px}.crown-anchor__table{grid-template-columns:repeat(2,minmax(0,1fr));}.crown-anchor__dice{grid-template-columns:repeat(3,minmax(54px,1fr));}}', // Preserve mobile fit.
 ].join(''); // Combine route-local CSS.
 
@@ -222,7 +222,7 @@ function symbolTableHtml(translate = tx) {
   // Read latest hit counts or default every symbol to zero.
   const counts = latestRound?.hit_counts || {};
   // Render all six symbols as keyboard-scannable table cells.
-  return SYMBOL_IDS.map(symbol => `<div class="crown-anchor__cell"><strong>${safe(translate(`symbol.${symbol}`))}</strong><span>${safe(translate('table.hits', { hits: counts[symbol] || 0 }))}</span></div>`).join('');
+  return SYMBOL_IDS.map(symbol => `<div class="crown-anchor__cell" data-symbol="${safe(symbol)}"><strong>${safe(translate(`symbol.${symbol}`))}</strong><span>${safe(translate('table.hits', { hits: counts[symbol] || 0 }))}</span></div>`).join('');
 }
 
 // Return bounded recent-round rows with no nested controls.

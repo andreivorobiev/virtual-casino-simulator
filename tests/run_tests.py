@@ -46,6 +46,8 @@ from tests import recovery_tests
 from tests import edge_gate_tests
 # Import focused non-finite validation and persistence tests for TEST-055.
 from tests import nonfinite_money_tests
+# Import exact-source 50,000-cycle harness proofs for TEST-092.
+from tests.unit import ui_50000_tests
 # Import the current-catalog hostile-client certification entrypoint.
 from tests.server_authority_tests import run_server_authority_tests
 # Import the reusable flushed reporter for TEST-010 browser execution.
@@ -856,6 +858,16 @@ def validate_guest_admin_api(base):
 
 # Define the run_api_tests function used by this module.
 def run_api_tests():
+    # Execute the listener-free TEST-092 allocation, classification, and resume-policy proofs.
+    def run_ui_50000_harness_tests():
+        # Load only the focused #227 harness test class.
+        suite=unittest.defaultTestLoader.loadTestsFromTestCase(ui_50000_tests.UI50000HarnessTests)
+        # Execute the focused suite with concise standard output.
+        result=unittest.TextTestRunner(stream=sys.stdout,verbosity=1).run(suite)
+        # Fail the named central case when any focused assertion fails.
+        if not result.wasSuccessful(): raise AssertionError('50,000-cycle UI harness unit suite failed')
+    # Record the exact-source allocation, control-classification, and safe-resume proof.
+    run_case('UI-50000-HARNESS-001',['TEST-042','TEST-047','TEST-092'],run_ui_50000_harness_tests)
     # Run service-free shared validation, ledger, MHVP, and strict JSON persistence evidence.
     def run_nonfinite_money_unit_tests():
         # Load only the focused TEST-055 unit-test class.
@@ -3755,6 +3767,12 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.get_by_test_id('nav-big_six_wheel').click(); page.get_by_test_id('big-six-wheel').wait_for(timeout=5000)
                     # Require the canonical route, English title, and ready phase from the live backend mount.
                     assert page.url.split('?',1)[0].endswith('/games/big_six_wheel') and page.locator('.big-six-wheel__header h1').inner_text()=='Big Six Wheel' and page.get_by_test_id('big-six-wheel-phase').inner_text()=='Accepting wagers'
+                    # Require the complete code-native stage to remain painted inside its panel and every hidden ancestor.
+                    def assert_big_six_stage_complete(viewport_id):
+                        # Inspect the wheel shell, wheel, pointer, and hub without scrolling or changing later evidence.
+                        failures=page.evaluate("""viewportId => { const failures=[]; const stage=document.querySelector('.big-six-wheel__stage'); const contained=['.big-six-wheel__wheel-shell','.big-six-wheel__pointer','.big-six-wheel__hub']; const painted={'.big-six-wheel__wheel':'.big-six-wheel__wheel-shell'}; const paintMinRatio=.8; if(!stage)return [{viewport:viewportId,selector:'.big-six-wheel__stage',reason:'stage missing'}]; const stageRect=stage.getBoundingClientRect(); const outside=(rect,owner)=>rect.left<owner.left-1||rect.right>owner.right+1||rect.top<owner.top-1||rect.bottom>owner.bottom+1; const visible=(node,style,rect)=>node.getClientRects().length&&style.display!=='none'&&style.visibility!=='hidden'&&rect.width>0&&rect.height>0; for(const selector of contained){const node=document.querySelector(selector); if(!node){failures.push({viewport:viewportId,selector,reason:'essential node missing'});continue;} const style=getComputedStyle(node); const rect=node.getBoundingClientRect(); if(!visible(node,style,rect)){failures.push({viewport:viewportId,selector,reason:'essential node not painted'});continue;} if(outside(rect,stageRect))failures.push({viewport:viewportId,selector,reason:'essential node escaped stage'}); let ancestor=node.parentElement; while(ancestor&&ancestor!==document.body){const ancestorStyle=getComputedStyle(ancestor);const ancestorRect=ancestor.getBoundingClientRect();const overflowY=ancestorStyle.overflowY==='visible'?ancestorStyle.overflow:ancestorStyle.overflowY;const overflowX=ancestorStyle.overflowX==='visible'?ancestorStyle.overflow:ancestorStyle.overflowX;const clippedY=(rect.top<ancestorRect.top-1||rect.bottom>ancestorRect.bottom+1)&&['hidden','clip'].includes(overflowY);const clippedX=(rect.left<ancestorRect.left-1||rect.right>ancestorRect.right+1)&&['hidden','clip'].includes(overflowX);if(clippedY||clippedX){failures.push({viewport:viewportId,selector,reason:'essential node clipped by hidden ancestor'});break;}ancestor=ancestor.parentElement;}} for(const [selector,ownerSelector] of Object.entries(painted)){const node=document.querySelector(selector);const owner=document.querySelector(ownerSelector);if(!node){failures.push({viewport:viewportId,selector,reason:'essential node missing'});continue;}if(!owner){failures.push({viewport:viewportId,selector:ownerSelector,reason:'visual owner missing'});continue;}const style=getComputedStyle(node);const rect=node.getBoundingClientRect();const ownerRect=owner.getBoundingClientRect();if(!visible(node,style,rect)){failures.push({viewport:viewportId,selector,reason:'essential node not painted'});continue;}const centerInside=rect.left+rect.width/2>=ownerRect.left-1&&rect.left+rect.width/2<=ownerRect.right+1&&rect.top+rect.height/2>=ownerRect.top-1&&rect.top+rect.height/2<=ownerRect.bottom+1;const coversOwner=rect.width>=ownerRect.width*paintMinRatio&&rect.height>=ownerRect.height*paintMinRatio;if(!centerInside||!coversOwner)failures.push({viewport:viewportId,selector,reason:'essential node does not cover visual owner'});}return failures;}""",viewport_id)
+                        # Fail the named governed viewport with bounded public selector evidence.
+                        assert not failures,failures
                     # Read the initial cumulative target before the first real motion-qualified spin.
                     initial_big_six_target=page.locator('[data-wheel]').evaluate("node => Number.parseFloat(node.style.getPropertyValue('--wheel-angle'))")
                     # Define every named viewport required by the Big Six visual-matrix row.
@@ -3765,6 +3783,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
                         # Require a visible complete surface without page-level horizontal overflow.
                         assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.get_by_test_id('big-six-wheel').is_visible()
+                        # Reject missing or clipped wheel, pointer, or hub before labeling evidence as passing.
+                        assert_big_six_stage_complete(viewport_id)
                         # Record self-describing English ready evidence.
                         game_evidence(f'after-pass-big-six-ready-en-{viewport_id}.png','big_six_wheel',['ready'],'en-US',viewport_id)
                     # Restore primary desktop and enter a positive real-backend wager.
@@ -3815,6 +3835,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
                         # Require the settled control and page-level containment.
                         assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.locator('[data-spin]').is_enabled()
+                        # Require the complete settled stage at this governed viewport.
+                        assert_big_six_stage_complete(viewport_id)
                         # Record self-describing English settlement evidence.
                         game_evidence(f'after-pass-big-six-settled-en-{viewport_id}.png','big_six_wheel',['settled'],'en-US',viewport_id)
                     # Switch the restored settlement to Russian without discarding player-owned state.
@@ -3827,6 +3849,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
                         # Require the localized route to remain visible and horizontally contained.
                         assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.get_by_test_id('big-six-wheel').is_visible()
+                        # Require the complete localized settled stage before writing evidence.
+                        assert_big_six_stage_complete(viewport_id)
                         # Record self-describing Russian settlement evidence.
                         game_evidence(f'after-pass-big-six-settled-ru-{viewport_id}.png','big_six_wheel',['settled'],'ru-RU',viewport_id)
                     # Reload in Russian so the route lifecycle restores a clean ready phase with persisted history.
@@ -3837,6 +3861,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
                         # Require the localized route to remain visible and horizontally contained.
                         assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.get_by_test_id('big-six-wheel').is_visible()
+                        # Require the complete localized ready stage before writing evidence.
+                        assert_big_six_stage_complete(viewport_id)
                         # Record self-describing Russian ready evidence.
                         game_evidence(f'after-pass-big-six-ready-ru-{viewport_id}.png','big_six_wheel',['ready'],'ru-RU',viewport_id)
                     # Restore the unsent wager cleared by the full-page route reload.
@@ -4455,6 +4481,10 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             for viewport_id,width,height in required_viewports:
                                 # Resize to the exact visual matrix dimensions.
                                 page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
+                                # Probe every non-control theater node against the route-owned stage after responsive layout settles.
+                                stage_failures=page.evaluate("""() => { const stage=document.querySelector('.crown-anchor__stage'); const selectors=['[data-die="0"]','[data-die="1"]','[data-die="2"]','[data-symbol="crown"]','[data-symbol="anchor"]','[data-symbol="heart"]','[data-symbol="diamond"]','[data-symbol="club"]','[data-symbol="spade"]']; if(!stage)return['stage']; const owner=stage.getBoundingClientRect(); return selectors.filter(selector=>{ const node=document.querySelector(selector); if(!node)return true; const style=getComputedStyle(node); const rect=node.getBoundingClientRect(); const painted=node.getClientRects().length&&style.display!=='none'&&style.visibility!=='hidden'&&rect.width>0&&rect.height>0; const contained=rect.left>=owner.left-1&&rect.right<=owner.right+1&&rect.top>=owner.top-1&&rect.bottom<=owner.bottom+1; return !painted||!contained; }); }""")
+                                # Reject a missing, unpainted, or escaped die/result panel before labeling this viewport after-pass.
+                                assert not stage_failures,f'Crown and Anchor stage incomplete at {viewport_id}: {stage_failures}'
                                 # Reject horizontal overflow and require the mounted table.
                                 assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.get_by_test_id('crown-and-anchor').is_visible()
                                 # Record self-describing evidence for this state and viewport.
@@ -5005,10 +5035,28 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 page.get_by_test_id('nav-roulette').click(); page.get_by_test_id('roulette-wheel').wait_for()
                 # Define the exhaustive hit-target integrity and geometry regression required by issue #222.
                 def roulette_hit_target_integrity():
+                    # Define an exact clear-settlement guard so mode changes cannot race the asynchronous refund request. (issue #227)
+                    def clear_roulette_audit_bets():
+                        # Capture the documented clear response before activating the real rendered control.
+                        with page.expect_response(lambda response: response.url.endswith('/api/v1/games/roulette/clear') and response.request.method=='POST', timeout=5000) as clear_info:
+                            # Activate the same clear-all path a player uses rather than mutating test state directly.
+                            page.locator('#clear').click()
+                        # Require the refund request to succeed before attempting a wheel-mode transition.
+                        assert clear_info.value.ok, 'Roulette audit-bet clear request failed'
+                        # Require the rerendered control to prove the browser consumed the empty-bet response.
+                        page.wait_for_function("() => document.querySelector('#clear')?.disabled === true", timeout=5000)
                     # Select the smallest chip so exhaustive region coverage cannot deplete the wallet.
                     page.get_by_test_id('chip-1').click()
-                    # Read every bet cell's stable identity and hit geometry from the mounted board.
-                    cells=page.evaluate("() => [...document.querySelectorAll('[data-cell-key]')].map(el => { const r=el.getBoundingClientRect(); return {key:el.getAttribute('data-cell-key'), type:el.getAttribute('data-bet-type'), covered:(el.getAttribute('data-covered')||'').split(',').filter(Boolean), x:r.left, y:r.top, w:r.width, h:r.height}; })")
+                    # Read the semantic precision-layer state before changing it. (issue #348)
+                    spots_visible=page.locator('#toggleSpots').get_attribute('aria-pressed')=='true'
+                    # Exercise an already-visible layer through a complete hide/show round trip.
+                    if spots_visible: page.locator('#toggleSpots').click()
+                    # Expose the precision layer through its real semantic toggle before any pointer-path hit test.
+                    page.locator('#toggleSpots').click()
+                    # Require the rerendered control to report the visible inside-spot state truthfully.
+                    assert page.locator('#toggleSpots').get_attribute('aria-pressed')=='true', 'Roulette inside spots did not enter the visible state'
+                    # Read every fixed-table bet cell's stable identity and hit geometry without duplicating the control-rail fast-bet aliases. (issue #348)
+                    cells=page.evaluate("() => [...document.querySelectorAll('[data-testid=roulette-table] [data-cell-key]')].map(el => { const r=el.getBoundingClientRect(); return {key:el.getAttribute('data-cell-key'), type:el.getAttribute('data-bet-type'), covered:(el.getAttribute('data-covered')||'').split(',').filter(Boolean), x:r.left, y:r.top, w:r.width, h:r.height}; })")
                     # Require a populated board so an empty catalog cannot pass this regression silently.
                     assert cells, 'no roulette bet cells rendered'
                     # Require every bet cell to expose a non-zero hit region.
@@ -5047,8 +5095,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         selector=f'[data-cell-key="{key}"]'
                         # Capture the exact wager POST triggered by activating this cell.
                         with page.expect_request(lambda request: request.url.endswith('/api/v1/games/roulette/bets') and request.method=='POST', timeout=5000) as request_info:
-                            # Activate the cell semantically so intentionally-stacked corner spots cannot intercept the pointer.
-                            page.dispatch_event(selector, 'click')
+                            # Activate the cell through Playwright's real actionability-checked pointer path. (issue #348)
+                            page.get_by_test_id('roulette-table').locator(selector).click()
                         # Read the posted bet body for identity verification.
                         body=request_info.value.post_data_json
                         # Require the posted bet type to match the clicked cell's canonical type.
@@ -5059,16 +5107,76 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         page.wait_for_timeout(25)
                     # Capture the exact "2nd 12" wager the issue reported as mismatched.
                     with page.expect_request(lambda request: request.url.endswith('/api/v1/games/roulette/bets') and request.method=='POST', timeout=5000) as second_dozen_info:
-                        # Activate the reported second-dozen hit target directly.
-                        page.dispatch_event('[data-cell-key="dozen:2"]', 'click')
+                        # Activate the reported second-dozen hit target through the real pointer path.
+                        page.locator('[data-cell-key="dozen:2"]').click()
                     # Read the second-dozen wager body.
                     second_dozen=second_dozen_info.value.post_data_json
                     # Require "2nd 12" to post the dozen covering exactly 13 through 24.
                     assert second_dozen['bet_type']=='dozen' and {str(number) for number in second_dozen['covered_numbers']}=={str(number) for number in range(13,25)}, '2nd 12 did not post the 13-24 dozen'
                     # Refund every audit wager so the board returns to its pre-audit betting state.
-                    page.locator('#clear').click(); page.wait_for_timeout(150)
+                    clear_roulette_audit_bets()
+                    # Resolve the governed disclosure that owns wheel-mode and zero-rule settings.
+                    rules_disclosure=page.get_by_test_id('roulette-rules-disclosure')
+                    # Open advanced settings through the visible summary before exercising its native select controls.
+                    if rules_disclosure.get_attribute('open') is None: rules_disclosure.locator('summary').click()
+                    # Require the real mode field to become visible rather than bypassing disclosure actionability.
+                    page.get_by_test_id('roulette-mode').wait_for(state='visible', timeout=5000)
+                    # Audit every zero-zone special in both supported wheel modes so no catalog combination can share a pointer target. (issue #348)
+                    for wheel_mode,expected_count in (('single',6),('double',10)):
+                        # Read the current rendered wheel mode before deciding whether an asynchronous settings request is required.
+                        current_mode=page.get_by_test_id('roulette-mode').input_value()
+                        # Change modes only when needed so every expected response corresponds to a real state transition.
+                        if current_mode!=wheel_mode:
+                            # Capture the documented settings response that owns the catalog rerender.
+                            with page.expect_response(lambda response: response.url.endswith('/api/v1/games/roulette/settings') and response.request.method=='POST', timeout=5000) as settings_info:
+                                # Select the requested wheel mode through the rendered control.
+                                page.get_by_test_id('roulette-mode').select_option(wheel_mode)
+                            # Require the mode transition to succeed before reading its zero-zone catalog.
+                            assert settings_info.value.ok, f'Roulette {wheel_mode} mode settings request failed'
+                        # Require the semantic visibility state to survive the mode-owned rerender.
+                        assert page.locator('#toggleSpots').get_attribute('aria-pressed')=='true', f'Roulette {wheel_mode} mode hid inside spots after rerender'
+                        # Read only the mode-specific zero-zone targets and their real pointer rectangles.
+                        zero_cells=page.evaluate("() => [...document.querySelectorAll('[data-betid][data-bet-type=zero_split],[data-betid][data-bet-type=trio],[data-betid][data-bet-type=first_four],[data-betid][data-bet-type=top_line]')].map(el => { const r=el.getBoundingClientRect(); return {key:el.getAttribute('data-cell-key'), type:el.getAttribute('data-bet-type'), covered:(el.getAttribute('data-covered')||'').split(',').filter(Boolean), x:r.left, y:r.top, w:r.width, h:r.height}; })")
+                        # Require the complete authoritative single- or double-zero special inventory.
+                        assert len(zero_cells)==expected_count, f'Roulette {wheel_mode} exposed {len(zero_cells)} of {expected_count} zero-zone controls'
+                        # Compare every zero-zone pointer rectangle against every later one exactly once.
+                        for outer in range(len(zero_cells)):
+                            # Visit later targets only so a rectangle never compares with itself.
+                            for inner in range(outer+1,len(zero_cells)):
+                                # Resolve the two physical pointer targets under review.
+                                first=zero_cells[outer]; second=zero_cells[inner]
+                                # Measure real horizontal overlap between the transformed viewport rectangles.
+                                overlap_x=max(0,min(first['x']+first['w'],second['x']+second['w'])-max(first['x'],second['x']))
+                                # Measure real vertical overlap between the transformed viewport rectangles.
+                                overlap_y=max(0,min(first['y']+first['h'],second['y']+second['h'])-max(first['y'],second['y']))
+                                # Reject stacked zero-zone controls before pointer activation can become ambiguous.
+                                assert overlap_x*overlap_y<=2, f"Roulette {wheel_mode} overlaps {first['key']} and {second['key']}"
+                        # Index the mode-owned identities before request-body verification.
+                        zero_identity={cell['key']:cell for cell in zero_cells}
+                        # Pointer-click every zero-zone control rather than sampling one covered-number size.
+                        for key in zero_identity:
+                            # Build the stable selector that survives each wager-owned rerender.
+                            selector=f'[data-cell-key="{key}"]'
+                            # Capture the exact wager request emitted by the real pointer activation.
+                            with page.expect_request(lambda request: request.url.endswith('/api/v1/games/roulette/bets') and request.method=='POST', timeout=5000) as zero_request:
+                                # Exercise Playwright visibility, stability, hit testing, and pointer dispatch together.
+                                page.locator(selector).click()
+                            # Read the mode-specific wager body without relying on localized labels.
+                            body=zero_request.value.post_data_json
+                            # Require the backend bet type to match the exact target identity.
+                            assert body['bet_type']==zero_identity[key]['type'], f"{wheel_mode} {key}: posted wrong bet type"
+                            # Require the backend covered pockets to match the exact target identity.
+                            assert {str(number) for number in body['covered_numbers']}=={str(number) for number in zero_identity[key]['covered']}, f"{wheel_mode} {key}: covered mismatch"
+                        # Refund this mode's complete zero-zone audit before changing the table or continuing the suite.
+                        clear_roulette_audit_bets()
+                    # Reacquire the disclosure after mode-owned rerenders so test cleanup targets the current DOM node.
+                    rules_disclosure=page.get_by_test_id('roulette-rules-disclosure')
+                    # Restore the documented collapsed state through the visible summary for downstream test isolation.
+                    if rules_disclosure.get_attribute('open') is not None: rules_disclosure.locator('summary').click()
+                    # Require advanced settings to be hidden again before handing the shared page to the next case.
+                    page.get_by_test_id('roulette-mode').wait_for(state='hidden', timeout=5000)
                 # Record the exhaustive Roulette hit-target integrity and geometry regression.
-                run_case('BR-ROU-HITMAP-001',['ROU-005','ROU-013','ROU-014','ROU-015','ROU-016','ROU-017','ROU-044','ROU-045','ROU-057','TEST-053'],roulette_hit_target_integrity)
+                run_case('BR-ROU-HITMAP-001',['ROU-002','ROU-005','ROU-007','ROU-011','ROU-012','ROU-013','ROU-014','ROU-015','ROU-016','ROU-017','ROU-044','ROU-045','ROU-057','TEST-053','TEST-092'],roulette_hit_target_integrity)
                 # Prove leaving Roulette with an open, un-spun bet refunds the stake rather than stranding it. (issue #246)
                 def roulette_refund_on_leave():
                     # Read the authoritative current-user token balance straight from the session endpoint so the assertion never depends on shell DOM refresh timing. (issue #246)

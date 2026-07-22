@@ -1627,11 +1627,12 @@
     {
       "id": "ROU-045",
       "module": "Roulette",
-      "description": "Roulette UI exposes clickable inside-bet spots.",
+      "description": "Roulette UI exposes semantically visible, pointer-actionable inside-bet spots with distinct zero-zone targets; hiding the layer removes those spots from pointer and accessibility actionability.",
       "status": "PASS",
       "api_tests": [],
       "browser_tests": [
-        "BR-ROU-001"
+        "BR-ROU-001",
+        "BR-ROU-HITMAP-001"
       ],
       "implementation_files": [
         "casino/games/roulette/rules.py",
@@ -1639,7 +1640,9 @@
         "casino/games/roulette/api.py",
         "web/games/roulette.js"
       ],
-      "notes": ""
+      "introduced_in": "9.1.0",
+      "changed_in": "issue-348-roulette-zero-zone",
+      "notes": "Issue #348 requires the visible layer state to use real pointer hit testing in both single- and double-zero modes; invisible overlay controls cannot satisfy this requirement."
     },
     {
       "id": "ROU-046",
@@ -5582,8 +5585,8 @@
         "web/games/roulette.js"
       ],
       "introduced_in": "issue-222-roulette-hit-target",
-      "changed_in": "issue-222-roulette-hit-target",
-      "notes": "Resolves issue #222: the '2nd 12'/inside-trio hit-target mismatch caused by full-innerHTML re-renders churning bet-cell nodes."
+      "changed_in": "issue-348-roulette-zero-zone",
+      "notes": "Issue #222 established stable identities; issue #348 additionally requires real pointer actionability and distinct zero-zone geometry instead of programmatic event dispatch."
     },
     {
       "id": "ROU-058",
@@ -7753,10 +7756,10 @@
       "id": "CAA-003", "module": "Crown and Anchor", "description": "Aggregate symbol wagers and returned credits use the shared ledger exactly once under durable request identities.", "status": "PASS", "api_tests": ["API-CAA-001"], "browser_tests": [], "implementation_files": ["casino/games/crown_and_anchor/service.py", "casino/core/ledger.py", "tests/games/crown_and_anchor/test_api.py", "tests/run_tests.py"], "introduced_in": "game-expansion-crown-and-anchor", "changed_in": "game-expansion-crown-and-anchor", "notes": "No game code mutates balances directly and conflicting retries fail closed."
     },
     {
-      "id": "CAA-004", "module": "Application", "description": "Crown and Anchor supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.", "status": "PASS", "api_tests": [], "browser_tests": ["BR-CAA-001"], "implementation_files": ["web/games/crown_and_anchor.js", "web/i18n/en-US/games/crown_and_anchor.json", "web/i18n/ru-RU/games/crown_and_anchor.json", "tests/visual/visual_matrix.json", "tests/run_tests.py"], "introduced_in": "game-expansion-crown-and-anchor", "changed_in": "game-expansion-crown-and-anchor", "notes": "Evidence covers both locales and every governed viewport."
+      "id": "CAA-004", "module": "Application", "description": "Crown and Anchor supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play with all three dice and all six symbol hit-result panels painted and contained at every governed viewport.", "status": "PASS", "api_tests": [], "browser_tests": ["BR-CAA-001"], "implementation_files": ["web/games/crown_and_anchor.js", "web/i18n/en-US/games/crown_and_anchor.json", "web/i18n/ru-RU/games/crown_and_anchor.json", "tests/visual/visual_matrix.json", "tests/run_tests.py"], "introduced_in": "game-expansion-crown-and-anchor", "changed_in": "issue-227-crown-stage-completeness", "notes": "Evidence covers both locales and every governed viewport; BR-CAA-001 rejects any missing, unpainted, or stage-escaped die or symbol panel."
     },
     {
-      "id": "CAA-005", "module": "Tests", "description": "Catalog, contract, browser, and long-suite discovery include Crown and Anchor with requirement, module, version, and visual traceability.", "status": "PASS", "api_tests": ["API-CATALOG-001", "LONG-SUITE-100"], "browser_tests": ["BR-CATALOG-DISCOVERY-001", "BR-CAA-001"], "implementation_files": ["modules/crown_and_anchor.json", "modules/module-manifest.json", "contracts/compatibility/module-api-matrix.json", "tests/game_drivers/crown_and_anchor.py", "tests/visual/visual_matrix.json", "tests/run_tests.py"], "introduced_in": "game-expansion-crown-and-anchor", "changed_in": "game-expansion-crown-and-anchor", "notes": "Descriptor sort order 210 and the catalog-discovered long driver are canonical."
+      "id": "CAA-005", "module": "Tests", "description": "Catalog, contract, browser, long-suite, and formal TEST-092 discovery include Crown and Anchor with requirement, module, version, visual, and essential-stage traceability.", "status": "PASS", "api_tests": ["API-CATALOG-001", "LONG-SUITE-100", "UI-50000-HARNESS-001"], "browser_tests": ["BR-CATALOG-DISCOVERY-001", "BR-CAA-001"], "implementation_files": ["modules/crown_and_anchor.json", "modules/module-manifest.json", "contracts/compatibility/module-api-matrix.json", "tests/game_drivers/crown_and_anchor.py", "tests/visual/visual_matrix.json", "tests/ui_50000.py", "tests/unit/ui_50000_tests.py", "tests/run_tests.py"], "introduced_in": "game-expansion-crown-and-anchor", "changed_in": "issue-227-crown-stage-completeness", "notes": "Descriptor sort order 210 and the catalog-discovered long driver are canonical; formal evidence rejects incomplete Crown and Anchor theater even when no enabled control is clipped."
     },
     {
       "id": "OU7-001", "module": "Over/Under 7", "description": "Two server-authoritative dice implement under-seven, exactly-seven, and over-seven outcomes with transparent net and total-return rules.", "status": "PASS", "api_tests": ["API-OU7-001"], "browser_tests": ["BR-OU7-001"], "implementation_files": ["casino/games/over_under_7/engine.py", "casino/games/over_under_7/rules.py", "web/games/over_under_7.js"], "introduced_in": "game-expansion-over-under-7", "changed_in": "game-expansion-over-under-7", "notes": "Issue #77 allocates the permanent distinct rules requirement for issue #135."
@@ -8085,7 +8088,7 @@
     {
       "id": "TEST-053",
       "module": "Tests",
-      "description": "Browser regression clicks every Roulette primary betting region plus a representative inside hotspot per covered-number size and asserts the posted bet_type and covered_numbers match the clicked cell's canonical identity, with non-overlapping, non-zero hit geometry.",
+      "description": "Browser regression uses the real pointer path for every Roulette primary betting region, representative inside sizes, and every single- and double-zero special; it asserts canonical bet_type and covered_numbers plus distinct non-zero hit geometry.",
       "status": "PASS",
       "api_tests": [],
       "browser_tests": [
@@ -8096,8 +8099,8 @@
         "web/games/roulette.js"
       ],
       "introduced_in": "issue-222-roulette-hit-target",
-      "changed_in": "issue-222-roulette-hit-target",
-      "notes": "Covers the issue #222 acceptance that every wager target maps to the same identity across UI, API payload, and no zero-area or overlapping hit regions."
+      "changed_in": "issue-348-roulette-zero-zone",
+      "notes": "Issue #348 removes dispatch_event from acceptance, audits every zero split, trio, first-four, and top-line target in both modes, and rejects stacked pointer rectangles."
     },
     {
       "id": "DOC-017",
@@ -9358,6 +9361,25 @@
       "introduced_in": "issue-330-transactional-mail",
       "changed_in": "issue-330-transactional-mail",
       "notes": "Browser evidence is generated only by exact-head GitHub Actions; no local Playwright, Chromium, provider, or live network run is authorized."
+    },
+    {
+      "id": "TEST-092",
+      "module": "Tests",
+      "description": "An exact-source browser qualification executes exactly 50,000 completed UI cycles across every catalog game, assigns at least 1,666 cycles to each game, exercises every eligible game control at least 100 times or records an approved ineligible classification, captures all four governed viewports for human review, and rejects unexplained failures, incomplete ranges, incomplete declared non-control stages, source drift, or cleanup residue.",
+      "status": "PASS",
+      "api_tests": [
+        "UI-50000-HARNESS-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/ui_50000.py",
+        "tests/unit/ui_50000_tests.py",
+        "tests/run_tests.py",
+        ".github/workflows/browser-tests.yml"
+      ],
+      "introduced_in": "issue-227-ui-50000-ci-replacement",
+      "changed_in": "issue-227-draw-poker-hold-serialization",
+      "notes": "The formal qualification runs only on approved non-local GitHub Actions workers; local Playwright, Chromium, and heavy-load execution remain prohibited. Geometry inspection restores every ancestor and window scroll position so one viewport cannot mutate later evidence, route-owned essential-stage contracts cover non-control theater such as Crown and Anchor dice and result panels, Roulette wager/refund rerenders commit before the strict spinning-state observation while the primary shard retries real reachable Rebet states until the literal activation floor is met, and draw-poker workers wait for the complete five-position decision state, balance the hold-control deficit, and observe the persisted held rerender before Draw."
     }
   ]
 }

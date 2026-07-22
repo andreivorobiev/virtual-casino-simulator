@@ -143,3 +143,15 @@ test('issue 86 EN and RU resources have exact clean coverage', async () => {
   // Verify the empty history state is localized through the same seam.
   assert.match(markup, /RU:history\.empty/);
 });
+
+// Verify responsive ownership aligns stacking with the shared document-scroll transition.
+test('issue 227 Big Six keeps essential stage complete across compact and stacked layouts', async () => {
+  // Read the game-owned source so the embedded route CSS remains observable without a browser.
+  const source = await readFile(new URL('../../web/games/big_six_wheel.js', import.meta.url), 'utf8');
+  // Keep desktop compact in the three-zone layout while shrinking only its wheel theater.
+  assert.match(source, /@media\(max-width:1500px\) and \(min-width:1201px\).*wheel-shell\{width:min\(54vh,480px\)/);
+  // Stack only at the same 1200-pixel boundary where the shared shell enables document scrolling.
+  assert.match(source, /@media\(max-width:1200px\).*layout\{grid-template-columns:1fr/);
+  // Make the stacked stage contribute complete intrinsic rows instead of clipping the pointer, wheel, or hub.
+  assert.match(source, /stage\{order:2;grid-template-rows:auto auto;align-content:start;overflow:visible\}/);
+});
