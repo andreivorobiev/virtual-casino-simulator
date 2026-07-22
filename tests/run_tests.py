@@ -2400,8 +2400,10 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     with urllib.request.urlopen(public_shell_request,timeout=12) as public_shell_response:
                         # Require valid HTML while proving this public cache-fill response cannot bootstrap a CSRF cookie.
                         assert public_shell_response.status==200 and public_shell_response.headers.get_content_type()=='text/html' and not public_shell_response.headers.get_all('Set-Cookie'),dict(public_shell_response.headers.items())
-                    # Reuse the authenticated context while isolating route, worker, and evidence state on one page.
-                    pwa_page=real_login_page.context.new_page()
+                    # Copy the authenticated storage proof into a normal explicit context that supports extra pages.
+                    pwa_context=browser.new_context(storage_state=real_login_page.context.storage_state())
+                    # Isolate route, worker, offline, and evidence state on one page in that explicit context.
+                    pwa_page=pwa_context.new_page()
                     # Define every governed viewport for exact visual-matrix evidence.
                     pwa_viewports={'desktop_primary':{'width':1920,'height':1080},'desktop_compact':{'width':1440,'height':900},'tablet':{'width':1024,'height':900},'mobile':{'width':390,'height':844}}
                     # Map visual-matrix state IDs to the controller's bounded display protocol.
@@ -2520,6 +2522,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         pwa_page.evaluate("async () => { const regs=await navigator.serviceWorker.getRegistrations(); await Promise.all(regs.map(reg => reg.unregister())); const names=await caches.keys(); await Promise.all(names.filter(name => name.startsWith('casino-static-shell-v')).map(name => caches.delete(name))); }")
                         # Close the isolated PWA page after cleanup completes.
                         pwa_page.close()
+                        # Release the explicit PWA context after its page, worker, cache, and network cleanup.
+                        pwa_context.close()
                 # Execute the narrowed PWA foundation regression and exact-head evidence corpus.
                 run_case('BR-PWA-001',['PWA-001','PWA-002','TEST-095'],pwa_installable_shell)
             # Close the focused page even when its assertions fail.
