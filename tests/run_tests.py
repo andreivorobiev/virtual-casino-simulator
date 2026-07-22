@@ -6643,6 +6643,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             game_evidence(f'after-pass-feedback-validation-{locale}-{viewport_id}.png','feedback_report',['validation_error'],locale,viewport_id)
                             # Fill a complete disposable draft for controlled retry and terminal visual evidence.
                             page.get_by_test_id('feedback-category').select_option('bug'); page.get_by_test_id('feedback-impact').select_option('minor'); page.get_by_test_id('feedback-summary').fill('Controlled storage retry proof'); page.get_by_test_id('feedback-actual').fill('The controlled test endpoint rejected this attempt.'); page.get_by_test_id('feedback-expected').fill('The draft should remain available for exact retry.')
+                            # Record diagnostic boundaries so only this deliberate storage rejection can be consumed.
+                            feedback_retry_console_index=len(console_errors); feedback_retry_http_index=len(http_errors); feedback_retry_page_index=len(page_errors)
                             # Intercept only this same-origin route with a fixed storage failure.
                             page.route('**/api/v2/feedback/reports',lambda route: route.fulfill(status=503,content_type='application/json',body='{"ok":false,"error":{"code":"STORAGE_UNAVAILABLE","message":"Report storage is temporarily unavailable"}}'))
                             # Submit and require the dialog to preserve its draft after failure.
@@ -6657,8 +6659,12 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             game_evidence(f'after-pass-feedback-submitted-{locale}-{viewport_id}.png','feedback_report',['submitted'],locale,viewport_id)
                             # Wait for the native dialog to close after announcement.
                             page.get_by_test_id('feedback-dialog').wait_for(state='hidden',timeout=3000)
-                            # Restore the real repository endpoint and remove intentional 503 diagnostics.
-                            page.unroute('**/api/v2/feedback/reports'); http_errors.clear()
+                            # Isolate the diagnostics emitted by the one deliberate retryable 503 response.
+                            feedback_retry_console=console_errors[feedback_retry_console_index:]; feedback_retry_http=http_errors[feedback_retry_http_index:]; feedback_retry_page=page_errors[feedback_retry_page_index:]
+                            # Require exactly the controlled failed-resource observation and no JavaScript failure.
+                            assert feedback_retry_page==[] and len(feedback_retry_console)==1 and 'Failed to load resource' in feedback_retry_console[0] and len(feedback_retry_http)==1 and feedback_retry_http[0].startswith('503 ') and feedback_retry_http[0].endswith('/api/v2/feedback/reports'),feedback_retry_console+feedback_retry_page+feedback_retry_http
+                            # Restore the real endpoint and remove only the verified controlled diagnostics.
+                            page.unroute('**/api/v2/feedback/reports'); del console_errors[feedback_retry_console_index:]; del http_errors[feedback_retry_http_index:]
                     # Use the standard desktop-primary zoom proxy at an effective 960 CSS pixels.
                     page.set_viewport_size({'width':960,'height':540}); page.get_by_test_id('shell-locale-select').select_option('en-US'); page.get_by_test_id('report-problem-open').click()
                     # Require a readable panel width at the 200 percent proxy rather than mere no-overflow.
@@ -6823,6 +6829,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     game_evidence('after-pass-admin-feedback-zoom-200-en-US-desktop_primary.png','admin',['feedback_zoom_200'],'en-US','desktop_primary')
                     # Restore primary desktop before controlled storage-error evidence.
                     page.set_viewport_size({'width':1920,'height':1080})
+                    # Record diagnostic boundaries so only the deliberate Admin storage rejection can be consumed.
+                    feedback_admin_console_index=len(console_errors); feedback_admin_http_index=len(http_errors); feedback_admin_page_index=len(page_errors)
                     # Match only the Admin list path with an optional query so report detail and export calls stay real.
                     feedback_list_pattern=re.compile(r'/api/v2/admin/feedback/reports(?:\?.*)?$'); page.route(feedback_list_pattern,lambda route: route.fulfill(status=503,content_type='application/json',body='{"ok":false,"error":{"code":"STORAGE_UNAVAILABLE","message":"Problem-report storage requires recovery"}}'))
                     # Trigger the active tab's normal refresh path and prove the controlled list request occurred.
@@ -6831,8 +6839,12 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.get_by_test_id('admin-load-error').wait_for(timeout=5000)
                     # Capture the localized storage-recovery failure without raw state.
                     game_evidence('after-pass-admin-feedback-storage-error-en-US-desktop_primary.png','admin',['feedback_storage_error'],'en-US','desktop_primary')
-                    # Restore the exact filtered-list route and discard the intentional 503 diagnostic.
-                    page.unroute(feedback_list_pattern); http_errors.clear()
+                    # Isolate the diagnostics emitted by the one deliberate Admin 503 response.
+                    feedback_admin_console=console_errors[feedback_admin_console_index:]; feedback_admin_http=http_errors[feedback_admin_http_index:]; feedback_admin_page=page_errors[feedback_admin_page_index:]
+                    # Require exactly the controlled list rejection and no unhandled JavaScript failure.
+                    assert feedback_admin_page==[] and len(feedback_admin_console)==1 and 'Failed to load resource' in feedback_admin_console[0] and len(feedback_admin_http)==1 and feedback_admin_http[0].startswith('503 ') and '/api/v2/admin/feedback/reports?' in feedback_admin_http[0],feedback_admin_console+feedback_admin_page+feedback_admin_http
+                    # Restore the exact filtered-list route and remove only its verified diagnostics.
+                    page.unroute(feedback_list_pattern); del console_errors[feedback_admin_console_index:]; del http_errors[feedback_admin_http_index:]
                     # Restore the suite default for subsequent Admin cases.
                     page.set_viewport_size({'width':1920,'height':1080})
                 # Execute Admin manual-only triage and evidence acceptance under TEST-094.
