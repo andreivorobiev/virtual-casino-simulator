@@ -6823,10 +6823,12 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     game_evidence('after-pass-admin-feedback-zoom-200-en-US-desktop_primary.png','admin',['feedback_zoom_200'],'en-US','desktop_primary')
                     # Restore primary desktop before controlled storage-error evidence.
                     page.set_viewport_size({'width':1920,'height':1080})
-                    # Intercept only the query-bearing filtered inbox request with one fixed internal storage failure.
-                    feedback_list_pattern='**/api/v2/admin/feedback/reports?*'; page.route(feedback_list_pattern,lambda route: route.fulfill(status=503,content_type='application/json',body='{"ok":false,"error":{"code":"STORAGE_UNAVAILABLE","message":"Problem-report storage requires recovery"}}'))
-                    # Trigger the normal Admin error boundary through the visible tab.
-                    page.get_by_test_id('admin-tab-feedback').click(); page.get_by_test_id('admin-load-error').wait_for(timeout=5000)
+                    # Match only the Admin list path with an optional query so report detail and export calls stay real.
+                    feedback_list_pattern=re.compile(r'/api/v2/admin/feedback/reports(?:\?.*)?$'); page.route(feedback_list_pattern,lambda route: route.fulfill(status=503,content_type='application/json',body='{"ok":false,"error":{"code":"STORAGE_UNAVAILABLE","message":"Problem-report storage requires recovery"}}'))
+                    # Trigger the active tab's normal refresh path and prove the controlled list request occurred.
+                    with page.expect_request(feedback_list_pattern): page.locator('#refreshAdmin').click()
+                    # Require the shared localized Admin error boundary after the injected storage failure.
+                    page.get_by_test_id('admin-load-error').wait_for(timeout=5000)
                     # Capture the localized storage-recovery failure without raw state.
                     game_evidence('after-pass-admin-feedback-storage-error-en-US-desktop_primary.png','admin',['feedback_storage_error'],'en-US','desktop_primary')
                     # Restore the exact filtered-list route and discard the intentional 503 diagnostic.
