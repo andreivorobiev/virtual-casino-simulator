@@ -2436,8 +2436,14 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         pwa_page.goto(f'{base}/?locale=en-US',wait_until='domcontentloaded'); pwa_page.get_by_test_id('lobby').wait_for(timeout=8000)
                         # Require a true cold first load before testing same-context warm restoration.
                         assert pwa_page.evaluate("() => document.documentElement.dataset.pwaStart")=='cold-start'
-                        # Reload the same page so sessionStorage proves the warm-start classification.
+                        # Await the production registration's fully activated worker before issuing competing manifest, icon, or reload traffic.
+                        registration_identity=pwa_page.evaluate("""async () => { const timeout=new Promise(resolve => setTimeout(() => resolve({ready:false,state:'timeout',scriptUrl:''}),20000)); const active=navigator.serviceWorker.ready.then(registration => ({ready:Boolean(registration.active),state:registration.active?.state||'',scriptUrl:registration.active?.scriptURL||''})); return await Promise.race([active,timeout]); }""")
+                        # Require atomic shell installation and activation at the canonical script before a controlled navigation is attempted.
+                        assert registration_identity=={'ready':True,'state':'activated','scriptUrl':f'{base}/sw.js?v=9.4.0'},registration_identity
+                        # Reload only after activation so the navigation is deterministically controlled even when the initial clients.claim event raced first paint.
                         pwa_page.reload(wait_until='domcontentloaded'); pwa_page.get_by_test_id('lobby').wait_for(timeout=8000)
+                        # Wait synchronously for the controlled reload and canonical page identity without an async polling predicate.
+                        pwa_page.wait_for_function("() => Boolean(navigator.serviceWorker.controller) && window.CasinoPwa?.version==='9.4.0'",timeout=8000)
                         # Require the same-context reload to classify as warm rather than a fresh install claim.
                         assert pwa_page.evaluate("() => document.documentElement.dataset.pwaStart")=='warm-start'
                         # Read the manifest link and both Android/iOS browser-foundation meta contracts.
@@ -2454,8 +2460,6 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         icon_responses=pwa_page.evaluate("async icons => Promise.all(icons.map(async icon => { const response=await fetch(icon.src); return { src:icon.src, ok:response.ok, type:response.headers.get('content-type'), bytes:(await response.arrayBuffer()).byteLength }; }))",manifest['icons'])
                         # Reject missing, mislabeled, or placeholder icon responses.
                         assert all(row['ok'] and row['type']=='image/png' and row['bytes']>4000 for row in icon_responses),icon_responses
-                        # Wait for one active controlling worker and its canonical page version.
-                        pwa_page.wait_for_function("async () => (await navigator.serviceWorker.getRegistrations()).some(reg => reg.active?.state==='activated') && Boolean(navigator.serviceWorker.controller) && window.CasinoPwa?.version==='9.4.0'",timeout=20000)
                         # Read the controlling worker identity without opening CacheStorage through a competing page transaction.
                         worker_identity=pwa_page.evaluate("async () => { const active=(await navigator.serviceWorker.getRegistrations()).find(reg => reg.active)?.active; return { pageVersion:window.CasinoPwa?.version||'', controller:Boolean(navigator.serviceWorker.controller), scriptUrl:active?.scriptURL||'' }; }")
                         # Require the active root worker and page to share the canonical packaged version.

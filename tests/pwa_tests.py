@@ -154,6 +154,25 @@ class PwaFoundationTests(unittest.TestCase):
         # Require the exact low-cardinality version response.
         self.assertIn("{ type: 'PWA_VERSION', version: APP_VERSION }", worker)
 
+    # Require browser acceptance to serialize activation before a controlled reload and controller proof.
+    def test_browser_acceptance_serializes_worker_readiness(self):
+        # Read the browser acceptance harness as governed source without starting Chromium.
+        harness = (ROOT / "tests" / "run_tests.py").read_text(encoding="utf-8")
+        # Isolate the narrowed PWA case so unrelated browser reloads cannot satisfy order checks.
+        pwa_case = harness[harness.index("def pwa_installable_shell"):harness.index("run_case('BR-PWA-001")]
+        # Locate the native active-registration readiness boundary.
+        ready_index = pwa_case.index("navigator.serviceWorker.ready")
+        # Locate the controlled reload performed only after activation completes.
+        reload_index = pwa_case.index("pwa_page.reload(wait_until='domcontentloaded')")
+        # Locate the synchronous controller assertion after the controlled navigation.
+        controller_index = pwa_case.index("Boolean(navigator.serviceWorker.controller) && window.CasinoPwa?.version==='9.4.0'")
+        # Require activation, reload, and controller proof to remain in deterministic lifecycle order.
+        self.assertLess(ready_index, reload_index)
+        # Require the reload to precede controller proof rather than racing an uncontrolled initial client.
+        self.assertLess(reload_index, controller_index)
+        # Reject the async polling predicate that previously allowed registration state to race page traffic.
+        self.assertNotIn('wait_for_function("async () => (await navigator.serviceWorker.getRegistrations())', pwa_case)
+
     # Require page-side offline controls and authoritative reconnect behavior.
     def test_client_fails_closed_and_refreshes_authoritatively(self):
         # Read the PWA controller source.
