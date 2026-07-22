@@ -2598,6 +2598,16 @@ h3 {
 }
 
 @media (max-width: 1200px) {
+  /* Pin account controls to the responsive viewport because the multi-row tablet navigation can
+     place an anchor-relative popover below the fixed status rail. (OAUTH-010) */
+  .account-popover {
+    position: fixed;
+    top: auto;
+    right: 14px;
+    bottom: 60px;
+    max-height: calc(100dvh - 88px);
+  }
+
   .casino-page {
     overflow: auto;
     background-attachment: scroll;
@@ -2821,12 +2831,6 @@ h3 {
   .account-menu {
     grid-column: 3;
     grid-row: 1;
-  }
-
-  /* Extend the account popover across the following logout track so its right edge aligns with
-     the mobile shell gutter instead of pushing its left edge outside the viewport. (OAUTH-010) */
-  .account-popover {
-    right: -56px;
   }
 
   #logout-btn {
