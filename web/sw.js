@@ -77,20 +77,43 @@ async function fetchPublicAsset(pathname) {
 async function installShell() {
   // Collect validated responses in reviewed order without a connection-saturating install fan-out.
   const rows = [];
-  // Fetch every exact allowlisted asset sequentially before exposing a cache or worker.
-  for (const pathname of SHELL_ASSETS) rows.push(await fetchPublicAsset(pathname));
-  // Record whether a prior canonical cache exists so failed same-version repair never deletes it.
-  const cacheWasPresent = (await caches.keys()).includes(SHELL_CACHE);
-  // Open only the canonical cache after all source responses succeeded.
-  const cache = await caches.open(SHELL_CACHE);
-  // Start protected ordered storage so the CacheStorage backend receives one mutation at a time.
+  // Track only a bounded operation class and numeric allowlist position for sanitized install diagnostics.
+  let stage = 'fetch-0';
+  // Assume a prior cache exists until the exact inventory read proves a clean install.
+  let cacheWasPresent = true;
+  // Track cache creation so a fetch rejection cannot delete unrelated storage.
+  let cacheOpened = false;
   try {
-    // Store each validated public response under its exact credential-free request key.
-    for (const row of rows) await cache.put(row.request, row.response);
-  // Roll back only a newly created partial cache and preserve any previous complete worker/cache pair.
+    // Fetch every exact allowlisted asset sequentially before exposing a cache or worker.
+    for (let index = 0; index < SHELL_ASSETS.length; index += 1) {
+      // Publish only the numeric reviewed position, never a URL or response value.
+      stage = `fetch-${index}`;
+      // Append the validated public response in canonical allowlist order.
+      rows.push(await fetchPublicAsset(SHELL_ASSETS[index]));
+    }
+    // Mark the bounded cache-inventory operation before reading owned cache names.
+    stage = 'cache-inventory';
+    // Record whether a prior canonical cache exists so failed same-version repair never deletes it.
+    cacheWasPresent = (await caches.keys()).includes(SHELL_CACHE);
+    // Mark the bounded cache-open operation after every source response validates.
+    stage = 'cache-open';
+    // Open only the canonical cache after all source responses succeeded.
+    const cache = await caches.open(SHELL_CACHE);
+    // Record that subsequent rollback may target only this exact canonical cache.
+    cacheOpened = true;
+    // Store every response through one ordered CacheStorage mutation.
+    for (let index = 0; index < rows.length; index += 1) {
+      // Publish only the numeric reviewed position before one cache write.
+      stage = `cache-write-${index}`;
+      // Store the validated response under its signal-free credential-omitting key.
+      await cache.put(rows[index].request, rows[index].response);
+    }
+  // Emit a low-cardinality diagnostic and preserve browser rollback semantics on any install failure.
   } catch (error) {
+    // Report only the bounded operation stage and standard error name for hosted acceptance diagnosis.
+    console.error(`PWA_INSTALL_FAILURE stage=${stage} error=${error?.name || 'Error'}`);
     // Delete the incomplete cache only when this installation created it.
-    if (!cacheWasPresent) await caches.delete(SHELL_CACHE);
+    if (cacheOpened && !cacheWasPresent) await caches.delete(SHELL_CACHE);
     // Reject installation so browser rollback semantics retain the prior active worker.
     throw error;
   }

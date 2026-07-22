@@ -2378,6 +2378,10 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 return 2
             # Open an isolated browser page so the visible login form must establish its own backend session.
             real_login_page=browser.new_page(viewport={'width':1920,'height':1080})
+            # Retain only sanitized service-worker install diagnostics emitted by the narrowed PWA worker.
+            pwa_worker_diagnostics=[]
+            # Observe console output before first navigation so an early install rejection cannot escape the acceptance record.
+            real_login_page.context.on('console',lambda message: pwa_worker_diagnostics.append(message.text) if message.text.startswith('PWA_INSTALL_FAILURE ') else None)
             # Start protected login verification so the isolated page is always closed before the broad suite.
             try:
                 # Navigate without a seeded cookie so the real backend returns the login gate.
@@ -2435,7 +2439,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Await the production registration's fully activated worker before issuing competing manifest, icon, or reload traffic.
                         registration_identity=pwa_page.evaluate("""async () => { const timeout=new Promise(resolve => setTimeout(async () => { const registrations=await navigator.serviceWorker.getRegistrations(); const worker=registrations[0]?.installing||registrations[0]?.waiting||registrations[0]?.active; resolve({ready:false,state:worker?.state||'missing',scriptUrl:worker?.scriptURL||''}); },20000)); const active=navigator.serviceWorker.ready.then(registration => ({ready:Boolean(registration.active),state:registration.active?.state||'',scriptUrl:registration.active?.scriptURL||''})); return await Promise.race([active,timeout]); }""")
                         # Require atomic shell installation and activation at the canonical script before a controlled navigation is attempted.
-                        assert registration_identity=={'ready':True,'state':'activated','scriptUrl':f'{base}/sw.js?v=9.4.0'},registration_identity
+                        assert registration_identity=={'ready':True,'state':'activated','scriptUrl':f'{base}/sw.js?v=9.4.0'},{'registration':registration_identity,'workerDiagnostics':pwa_worker_diagnostics[-4:]}
                         # Reload only after activation so the navigation is deterministically controlled even when the initial clients.claim event raced first paint.
                         pwa_page.reload(wait_until='domcontentloaded'); pwa_page.get_by_test_id('lobby').wait_for(timeout=8000)
                         # Wait synchronously for the controlled reload and canonical page identity without an async polling predicate.
