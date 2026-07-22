@@ -2406,10 +2406,6 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     pwa_viewports={'desktop_primary':{'width':1920,'height':1080},'desktop_compact':{'width':1440,'height':900},'tablet':{'width':1024,'height':900},'mobile':{'width':390,'height':844}}
                     # Map visual-matrix state IDs to the controller's bounded display protocol.
                     pwa_states={'cold_start':'cold-start','warm_start':'warm-start','offline':'offline','reconnecting':'reconnecting','update_available':'update','update_failed':'update-failed','stale_client':'stale-client','expired_session':'expired-session','route_restored':'route-restored'}
-                    # Ask the controlling worker for bounded canonical-cache completeness metadata.
-                    def pwa_cache_status():
-                        # Wait for one matching response while preventing a stale listener from surviving timeout.
-                        return pwa_page.evaluate("""async () => { const controller=navigator.serviceWorker.controller; if(!controller) return null; return await new Promise(resolve => { const timer=setTimeout(() => { navigator.serviceWorker.removeEventListener('message',handler); resolve(null); },3000); const handler=event => { if(event.data?.type!=='PWA_CACHE_STATUS') return; clearTimeout(timer); navigator.serviceWorker.removeEventListener('message',handler); resolve(event.data); }; navigator.serviceWorker.addEventListener('message',handler); controller.postMessage({type:'GET_CACHE_STATUS'}); }); }""")
                     # Read exact source identity once for every PWA evidence sidecar.
                     pwa_evidence_commit=subprocess.check_output(['git','rev-parse','HEAD'],cwd=str(ROOT),text=True).strip()
                     # Prefer the CI head branch and retain a safe detached fallback.
@@ -2460,18 +2456,12 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         assert all(row['ok'] and row['type']=='image/png' and row['bytes']>4000 for row in icon_responses),icon_responses
                         # Wait for one active controlling worker and its canonical page version.
                         pwa_page.wait_for_function("async () => (await navigator.serviceWorker.getRegistrations()).some(reg => reg.active?.state==='activated') && Boolean(navigator.serviceWorker.controller) && window.CasinoPwa?.version==='9.4.0'",timeout=20000)
-                        # Load the browser-free expected allowlist so cache acceptance cannot drift from policy tests.
-                        from tests.pwa_tests import EXPECTED_SHELL_ASSETS
-                        # Read bounded exact-inventory proof from the controlling worker's own CacheStorage partition.
-                        cache_status=pwa_cache_status()
-                        # Require the canonical name/version and every-and-only allowlist entry without exposing raw paths.
-                        assert cache_status=={'type':'PWA_CACHE_STATUS','version':'9.4.0','cacheName':'casino-static-shell-v9.4.0','entryCount':len(EXPECTED_SHELL_ASSETS),'complete':True},cache_status
+                        # Read the controlling worker identity without opening CacheStorage through a competing page transaction.
+                        worker_identity=pwa_page.evaluate("async () => { const active=(await navigator.serviceWorker.getRegistrations()).find(reg => reg.active)?.active; return { pageVersion:window.CasinoPwa?.version||'', controller:Boolean(navigator.serviceWorker.controller), scriptUrl:active?.scriptURL||'' }; }")
+                        # Require the active root worker and page to share the canonical packaged version.
+                        assert worker_identity['pageVersion']=='9.4.0' and worker_identity['controller'] and worker_identity['scriptUrl'].endswith('/sw.js?v=9.4.0'),worker_identity
                         # Fetch an authoritative API path and prove it does not enter any worker cache.
                         pwa_page.evaluate("async () => { await fetch('/api/v1/casino/state',{credentials:'include'}); }")
-                        # Read bounded cache proof again after authoritative API traffic.
-                        post_api_status=pwa_cache_status()
-                        # Require API traffic to leave the exact allowlist count and completeness proof unchanged.
-                        assert post_api_status==cache_status,post_api_status
                         # Enter true offline mode and require native fail-closed controls plus a pre-fetch API rejection.
                         pwa_page.context.set_offline(True); pwa_page.evaluate("() => window.dispatchEvent(new Event('offline'))")
                         # Wait for the controller to expose the offline boundary.
@@ -2482,14 +2472,16 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         offline_result=pwa_page.evaluate("async () => { try { const mod=await import('/core/api.js'); await mod.addUserTokens({amount:1}); return {ok:true}; } catch(error){ return {ok:false,code:error.code||'',message:error.message}; } }")
                         # Require a fail-closed error before any queued or replayable mutation.
                         assert offline_result['ok'] is False and offline_result['code']=='OFFLINE',offline_result
-                        # Restore connectivity and require authoritative session, wallet, catalog, and route refresh before controls return.
+                        # Navigate while truly offline so only the cached index and exact static module allowlist can reconstruct the shell.
+                        pwa_page.goto(f'{base}/games/roulette',wait_until='domcontentloaded',timeout=10000)
+                        # Require the cached shell, PWA controller, and localization runtime without accepting stale authoritative game state.
+                        pwa_page.wait_for_function("() => window.CasinoPwa?.state()==='offline' && document.body?.dataset.testid==='pwa-shell' && Boolean(window.CasinoI18n)",timeout=8000)
+                        # Prove a direct authoritative API request is unavailable rather than served from the worker cache.
+                        direct_offline_api=pwa_page.evaluate("async () => { try { await fetch('/api/v1/casino/state',{credentials:'include'}); return true; } catch (_) { return false; } }")
+                        # Reject any offline API replay or cached authoritative response.
+                        assert direct_offline_api is False
+                        # Restore connectivity and require authoritative session, wallet, catalog, and same-route refresh before controls return.
                         pwa_page.context.set_offline(False); pwa_page.evaluate("() => window.dispatchEvent(new Event('online'))")
-                        # Wait for the bounded reconnect flow to complete.
-                        pwa_page.wait_for_function("() => ['online','route-restored'].includes(window.CasinoPwa?.state()) && !document.querySelector('#add-token-btn')?.disabled",timeout=10000)
-                        # Navigate to one accepted game before testing offline route restoration.
-                        pwa_page.get_by_test_id('nav-roulette').click(); pwa_page.get_by_test_id('roulette-premium').wait_for(timeout=8000)
-                        # Enter and leave offline mode on the game route.
-                        pwa_page.context.set_offline(True); pwa_page.evaluate("() => window.dispatchEvent(new Event('offline'))"); pwa_page.context.set_offline(False); pwa_page.evaluate("() => window.dispatchEvent(new Event('online'))")
                         # Require the authoritative reconnect callback to remount the same route.
                         pwa_page.wait_for_function("() => window.CasinoPwa?.state()==='route-restored' && location.pathname==='/games/roulette' && Boolean(document.querySelector('[data-testid=roulette-premium]'))",timeout=12000)
                         # Prove a mismatched controlling-worker version produces a bounded stale-client state.

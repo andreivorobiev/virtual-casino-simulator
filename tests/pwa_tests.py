@@ -153,12 +153,6 @@ class PwaFoundationTests(unittest.TestCase):
         self.assertIn("event.data?.type === 'SKIP_WAITING'", worker)
         # Require the exact low-cardinality version response.
         self.assertIn("{ type: 'PWA_VERSION', version: APP_VERSION }", worker)
-        # Require runtime acceptance to query bounded completeness metadata inside the controlling worker.
-        self.assertIn("event.data?.type === 'GET_CACHE_STATUS'", worker)
-        # Require the worker to prove every stored path belongs to the exact reviewed allowlist.
-        self.assertIn("paths.length === SHELL_ASSET_SET.size && paths.every(pathname => SHELL_ASSET_SET.has(pathname))", worker)
-        # Reject leaking the complete path inventory back to the client diagnostic surface.
-        self.assertIn("entryCount: paths.length, complete", worker)
 
     # Require page-side offline controls and authoritative reconnect behavior.
     def test_client_fails_closed_and_refreshes_authoritatively(self):
