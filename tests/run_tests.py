@@ -6611,6 +6611,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 def feedback_report_browser():
                     # Enumerate the complete governed feedback viewport matrix.
                     viewports={'desktop_primary':{'width':1920,'height':1080},'desktop_compact':{'width':1440,'height':900},'tablet':{'width':1024,'height':900},'mobile':{'width':390,'height':844}}
+                    # Pin the localized retry copy so controlled server diagnostics never leak into either visible locale.
+                    retry_messages={'en-US':'The report could not be submitted. Your draft remains open.','ru-RU':'Не удалось отправить отчёт. Черновик остался открытым.'}
                     # Use one safe in-memory image for file, preview, and removal evidence.
                     png=base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAI0lEQVR4nGMUqghiIAUwkaSaYVQDcYCJSHVwMKqBGEByKAEA0/YA/Hxc1QQAAAAASUVORK5CYII=')
                     # Exercise localized empty, evidence, removal, validation, keyboard, motion, and zoom states everywhere.
@@ -6647,8 +6649,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             feedback_retry_console_index=len(console_errors); feedback_retry_http_index=len(http_errors); feedback_retry_page_index=len(page_errors)
                             # Intercept only this same-origin route with a fixed storage failure.
                             page.route('**/api/v2/feedback/reports',lambda route: route.fulfill(status=503,content_type='application/json',body='{"ok":false,"error":{"code":"STORAGE_UNAVAILABLE","message":"Report storage is temporarily unavailable"}}'))
-                            # Submit and require the dialog to preserve its draft after failure.
-                            page.get_by_test_id('feedback-submit').click(); page.wait_for_function("() => document.querySelector('#report-message')?.textContent.includes('temporarily unavailable')")
+                            # Submit and require the dialog to preserve its draft behind exact locale-owned failure copy.
+                            page.get_by_test_id('feedback-submit').click(); page.wait_for_function("expected => document.querySelector('#report-message')?.textContent === expected",arg=retry_messages[locale])
                             # Capture the true retryable storage-failure state.
                             game_evidence(f'after-pass-feedback-retry-{locale}-{viewport_id}.png','feedback_report',['retry_storage_failure'],locale,viewport_id)
                             # Replace the failure route with one controlled successful exact replay receipt.

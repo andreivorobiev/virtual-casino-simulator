@@ -189,8 +189,8 @@ async function submitReport(event) {
     setTimeout(() => document.getElementById('report-problem-dialog')?.close(), 500);
   // Convert safe API errors into local status.
   } catch (error) {
-    // Preserve draft and evidence for retry.
-    message.textContent = error.message || t('feedback.error.submit', {}, 'feedback');
+    // Preserve draft and evidence while keeping every server failure behind localized public copy.
+    message.textContent = t('feedback.error.submit', {}, 'feedback');
   // Always restore the submit control.
   } finally {
     // Re-enable the action after request settlement.
