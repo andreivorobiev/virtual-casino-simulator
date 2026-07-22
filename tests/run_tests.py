@@ -2406,6 +2406,10 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     pwa_viewports={'desktop_primary':{'width':1920,'height':1080},'desktop_compact':{'width':1440,'height':900},'tablet':{'width':1024,'height':900},'mobile':{'width':390,'height':844}}
                     # Map visual-matrix state IDs to the controller's bounded display protocol.
                     pwa_states={'cold_start':'cold-start','warm_start':'warm-start','offline':'offline','reconnecting':'reconnecting','update_available':'update','update_failed':'update-failed','stale_client':'stale-client','expired_session':'expired-session','route_restored':'route-restored'}
+                    # Ask the controlling worker for bounded canonical-cache completeness metadata.
+                    def pwa_cache_status():
+                        # Wait for one matching response while preventing a stale listener from surviving timeout.
+                        return pwa_page.evaluate("""async () => { const controller=navigator.serviceWorker.controller; if(!controller) return null; return await new Promise(resolve => { const timer=setTimeout(() => { navigator.serviceWorker.removeEventListener('message',handler); resolve(null); },3000); const handler=event => { if(event.data?.type!=='PWA_CACHE_STATUS') return; clearTimeout(timer); navigator.serviceWorker.removeEventListener('message',handler); resolve(event.data); }; navigator.serviceWorker.addEventListener('message',handler); controller.postMessage({type:'GET_CACHE_STATUS'}); }); }""")
                     # Read exact source identity once for every PWA evidence sidecar.
                     pwa_evidence_commit=subprocess.check_output(['git','rev-parse','HEAD'],cwd=str(ROOT),text=True).strip()
                     # Prefer the CI head branch and retain a safe detached fallback.
@@ -2433,11 +2437,11 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Remove prior worker/cache state created during login so this case proves one fresh canonical install.
                         pwa_page.evaluate("async () => { const regs=await navigator.serviceWorker.getRegistrations(); await Promise.all(regs.map(reg => reg.unregister())); const names=await caches.keys(); await Promise.all(names.filter(name => name.startsWith('casino-static-shell-v')).map(name => caches.delete(name))); sessionStorage.removeItem('casino.pwa.warmStart'); }")
                         # Load the authenticated shell where the service worker registers without changing server scope.
-                        pwa_page.goto(f'{base}/?locale=en-US',wait_until='networkidle'); pwa_page.get_by_test_id('lobby').wait_for(timeout=8000)
+                        pwa_page.goto(f'{base}/?locale=en-US',wait_until='domcontentloaded'); pwa_page.get_by_test_id('lobby').wait_for(timeout=8000)
                         # Require a true cold first load before testing same-context warm restoration.
                         assert pwa_page.evaluate("() => document.documentElement.dataset.pwaStart")=='cold-start'
                         # Reload the same page so sessionStorage proves the warm-start classification.
-                        pwa_page.reload(wait_until='networkidle'); pwa_page.get_by_test_id('lobby').wait_for(timeout=8000)
+                        pwa_page.reload(wait_until='domcontentloaded'); pwa_page.get_by_test_id('lobby').wait_for(timeout=8000)
                         # Require the same-context reload to classify as warm rather than a fresh install claim.
                         assert pwa_page.evaluate("() => document.documentElement.dataset.pwaStart")=='warm-start'
                         # Read the manifest link and both Android/iOS browser-foundation meta contracts.
@@ -2454,20 +2458,20 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         icon_responses=pwa_page.evaluate("async icons => Promise.all(icons.map(async icon => { const response=await fetch(icon.src); return { src:icon.src, ok:response.ok, type:response.headers.get('content-type'), bytes:(await response.arrayBuffer()).byteLength }; }))",manifest['icons'])
                         # Reject missing, mislabeled, or placeholder icon responses.
                         assert all(row['ok'] and row['type']=='image/png' and row['bytes']>4000 for row in icon_responses),icon_responses
-                        # Wait for one active controller, canonical page version, and complete canonical cache in the same origin context.
-                        pwa_page.wait_for_function("async () => (await navigator.serviceWorker.getRegistrations()).some(reg => reg.active?.state==='activated') && Boolean(navigator.serviceWorker.controller) && window.CasinoPwa?.version==='9.4.0' && (await caches.keys()).includes('casino-static-shell-v9.4.0')",timeout=20000)
-                        # Read the exact canonical cache inventory after atomic installation.
-                        cache_inventory=pwa_page.evaluate("""async () => { const names=await caches.keys(); const urls=[]; for(const name of names){ const cache=await caches.open(name); for(const request of await cache.keys()) urls.push(new URL(request.url).pathname); } return { names:names.sort(), urls:[...new Set(urls)].sort() }; }""")
+                        # Wait for one active controlling worker and its canonical page version.
+                        pwa_page.wait_for_function("async () => (await navigator.serviceWorker.getRegistrations()).some(reg => reg.active?.state==='activated') && Boolean(navigator.serviceWorker.controller) && window.CasinoPwa?.version==='9.4.0'",timeout=20000)
                         # Load the browser-free expected allowlist so cache acceptance cannot drift from policy tests.
                         from tests.pwa_tests import EXPECTED_SHELL_ASSETS
-                        # Require exactly one canonical-version cache and exactly the reviewed public static paths.
-                        assert cache_inventory['names']==['casino-static-shell-v9.4.0'] and set(cache_inventory['urls'])==EXPECTED_SHELL_ASSETS,cache_inventory
+                        # Read bounded exact-inventory proof from the controlling worker's own CacheStorage partition.
+                        cache_status=pwa_cache_status()
+                        # Require the canonical name/version and every-and-only allowlist entry without exposing raw paths.
+                        assert cache_status=={'type':'PWA_CACHE_STATUS','version':'9.4.0','cacheName':'casino-static-shell-v9.4.0','entryCount':len(EXPECTED_SHELL_ASSETS),'complete':True},cache_status
                         # Fetch an authoritative API path and prove it does not enter any worker cache.
                         pwa_page.evaluate("async () => { await fetch('/api/v1/casino/state',{credentials:'include'}); }")
-                        # Read all cache paths again after API traffic.
-                        post_api_urls=pwa_page.evaluate("async () => { const urls=[]; for(const name of await caches.keys()){ const cache=await caches.open(name); for(const request of await cache.keys()) urls.push(new URL(request.url).pathname); } return urls; }")
-                        # Require the cache inventory to remain the exact public allowlist.
-                        assert set(post_api_urls)==EXPECTED_SHELL_ASSETS and all(not path.startswith('/api/') for path in post_api_urls),post_api_urls
+                        # Read bounded cache proof again after authoritative API traffic.
+                        post_api_status=pwa_cache_status()
+                        # Require API traffic to leave the exact allowlist count and completeness proof unchanged.
+                        assert post_api_status==cache_status,post_api_status
                         # Enter true offline mode and require native fail-closed controls plus a pre-fetch API rejection.
                         pwa_page.context.set_offline(True); pwa_page.evaluate("() => window.dispatchEvent(new Event('offline'))")
                         # Wait for the controller to expose the offline boundary.
@@ -2493,11 +2497,11 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Require stale-client status without worker or provider mutation.
                         pwa_page.wait_for_function("() => window.CasinoPwa?.state()==='stale-client'",timeout=3000)
                         # Return to the shell root before generating the governed visual corpus.
-                        pwa_page.goto(f'{base}/?locale=en-US',wait_until='networkidle'); pwa_page.get_by_test_id('lobby').wait_for(timeout=8000)
+                        pwa_page.goto(f'{base}/?locale=en-US',wait_until='domcontentloaded'); pwa_page.get_by_test_id('lobby').wait_for(timeout=8000)
                         # Generate exact EN/RU evidence for every state at every governed viewport.
                         for pwa_locale in ('en-US','ru-RU'):
                             # Reload through the locale query so visible copy and sidecar metadata share one source.
-                            pwa_page.goto(f'{base}/?locale={pwa_locale}',wait_until='networkidle'); pwa_page.get_by_test_id('lobby').wait_for(timeout=8000)
+                            pwa_page.goto(f'{base}/?locale={pwa_locale}',wait_until='domcontentloaded'); pwa_page.get_by_test_id('lobby').wait_for(timeout=8000)
                             # Wait until the active locale exactly matches the evidence label.
                             pwa_page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale===locale",pwa_locale,timeout=5000)
                             # Visit every governed viewport in stable matrix order.

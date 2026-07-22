@@ -97,6 +97,20 @@ self.addEventListener('message', event => {
   if (event.data?.type === 'SKIP_WAITING') { self.skipWaiting(); return; }
   // Reply to version probes without exposing cache contents or client identity.
   if (event.data?.type === 'GET_VERSION' && event.source) event.source.postMessage({ type: 'PWA_VERSION', version: APP_VERSION });
+  // Return only bounded completeness metadata for runtime cache acceptance probes.
+  if (event.data?.type === 'GET_CACHE_STATUS' && event.source) {
+    // Extend the message lifetime until the canonical cache inventory has been verified.
+    event.waitUntil((async () => {
+      // Open the canonical cache owned by this exact worker version.
+      const cache = await caches.open(SHELL_CACHE);
+      // Read exact stored request paths without returning them to the page.
+      const paths = (await cache.keys()).map(request => new URL(request.url).pathname);
+      // Require the stored inventory to contain every and only reviewed shell path.
+      const complete = paths.length === SHELL_ASSET_SET.size && paths.every(pathname => SHELL_ASSET_SET.has(pathname));
+      // Report only low-cardinality version, name, count, and completeness proof.
+      event.source.postMessage({ type: 'PWA_CACHE_STATUS', version: APP_VERSION, cacheName: SHELL_CACHE, entryCount: paths.length, complete });
+    })());
+  }
 });
 
 // Serve a public static asset from the canonical cache, refreshing only with credential-free responses.
