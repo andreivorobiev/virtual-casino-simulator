@@ -419,6 +419,25 @@ async def acey_deucey_terminal_action(page, ordinal, seen_counts, activated_coun
     await wait_any_enabled(page, ['[data-action="deal"]'])  # Require terminal settlement and fresh-boundary readiness.
 
 
+# Select one least-covered draw-poker hold only after both the deal and hold response own the rendered DOM.
+async def draw_poker_select_balanced_hold(page, seen_counts, activated_counts):
+    selector = '[data-hold-position][aria-pressed="false"]'  # Address only currently unheld source cards so the pointer action always adds a hold.
+    await wait_any_enabled(page, [selector])  # Require the asynchronous deal response to publish the actionable decision state.
+    await inventory_controls(page, seen_counts)  # Count all five hold opportunities only after the live hand is committed.
+    holds = await enabled_locators(page, selector)  # Re-resolve the five unheld cards from the response-owned DOM.
+    positions = [await hold.get_attribute("data-hold-position") for hold in holds]  # Read stable semantic positions before any click rerenders the hand.
+    if set(positions) != {"0", "1", "2", "3", "4"}:  # Reject an incomplete or duplicate five-card decision surface.
+        raise AssertionError(f"draw-poker hold controls incomplete: {positions}")  # Preserve the exact public position inventory without private state.
+    target = await least_activated_locator(holds, activated_counts)  # Balance the literal activation floor across all five stable identities.
+    target_position = await target.get_attribute("data-hold-position")  # Bind the post-response wait to the clicked public card identity.
+    await click_locator(target, activated_counts)  # Toggle the selected hold through the real pointer and public API path.
+    committed_expression = """position => [...document.querySelectorAll('[data-hold-position]')].some(node => node.dataset.holdPosition === String(position) && node.getAttribute('aria-pressed') === 'true' && !node.disabled && node.getClientRects().length)"""  # Require the persisted response to publish the selected, actionable held card.
+    try:  # Convert a lost or stale hold response into one bounded state-contract diagnostic.
+        await page.wait_for_function(committed_expression, arg=target_position, timeout=ACTION_TIMEOUT_MS)  # Serialize the hold mutation before Draw can consume its server-owned state.
+    except Exception as exc:  # Preserve only the public rendered-state failure in terminal evidence.
+        raise AssertionError(f"draw-poker hold did not commit at position {target_position}") from exc  # Reject a draw that would race or omit the selected hold.
+
+
 # Return all visible enabled locators matching a selector after a decision rerender.
 async def enabled_locators(page, selector):
     ready = []  # Preserve DOM order for deterministic cycling.
@@ -580,10 +599,7 @@ async def play_game_ui(page, game_id, ordinal, seen_counts, activated_counts, re
         if modes:  # Rotate configuration coverage before the hand locks.
             await click_locator(modes[ordinal % len(modes)], activated_counts)  # Select a rendered compatible mode.
         await click_control(page, '[data-action="deal"]', activated_counts)  # Deal the source hand.
-        await inventory_controls(page, seen_counts)  # Discover every card-hold control in the live decision state.
-        holds = await enabled_locators(page, "[data-hold-position]")  # Discover five card-hold controls.
-        if holds:  # Exercise at least one hold per hand.
-            await click_locator(holds[ordinal % len(holds)], activated_counts)  # Toggle a rotating card hold.
+        await draw_poker_select_balanced_hold(page, seen_counts, activated_counts)  # Wait for the hand, cover every position fairly, and commit the selected hold.
         await click_control(page, '[data-action="draw"]', activated_counts)  # Draw and settle the hand.
         await wait_any_enabled(page, ['[data-action="deal"]'])  # Require next-hand readiness.
     elif game_id == "casino_war":  # Exercise deal and tie decisions when available.

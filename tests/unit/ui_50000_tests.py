@@ -192,6 +192,55 @@ class UI50000HarnessTests(unittest.TestCase):
         self.assertEqual(page.selector, "[data-clear]")  # Count only public removable wager rows.
         self.assertEqual(events, ["count:7", "click:roulette-target", "minimum:8"])  # Require response-owned row growth before the helper returns.
 
+    # Prove draw poker waits for all five positions, balances the activation deficit, and observes the persisted held rerender before Draw.
+    def test_draw_poker_hold_waits_balances_and_commits(self):
+        events = []  # Record each public decision-state and pointer boundary without launching a browser.
+
+        class FakeHold:  # Model one response-owned hold control with a stable semantic position.
+            def __init__(self, position):
+                self.position = str(position)  # Preserve the same string-valued dataset identity exposed by the DOM.
+
+            async def get_attribute(self, name):
+                self.requested_attribute = name  # Retain the requested public attribute for debugging this test seam.
+                return self.position  # Return the rendered hold position used by aggregate signatures.
+
+        class FakePage:  # Provide only the committed-state predicate boundary owned by the helper.
+            async def wait_for_function(self, expression, arg, timeout):
+                events.append(f"committed:{arg}")  # Record the selected hold's persisted rerender after the click.
+                self.expression = expression  # Preserve the public DOM predicate for semantic assertions.
+                self.timeout = timeout  # Preserve the governed action bound.
+
+        holds = [FakeHold(position) for position in range(5)]  # Model the complete five-card decision state.
+
+        async def fake_wait_any_enabled(_page, selectors, timeout_ms=ui_50000.ACTION_TIMEOUT_MS):
+            events.append(f"wait:{selectors[0]}")  # Record the async Deal-to-Hold boundary.
+            return selectors[0]  # Model a genuinely enabled unheld source card.
+
+        async def fake_inventory_controls(_page, _seen_counts):
+            events.append("inventory")  # Record discovery only after the decision state is committed.
+
+        async def fake_enabled_locators(_page, selector):
+            events.append(f"discover:{selector}")  # Record response-owned locator resolution.
+            return holds  # Expose every authoritative source-card position.
+
+        async def fake_control_signature(locator):
+            events.append(f"score:{locator.position}")  # Record that every authoritative position participates in the real deficit selector.
+            return f"jacks_or_better_video_poker::button[data-hold-position={locator.position}]"  # Return the aggregate identity scored by production code.
+
+        async def fake_click_locator(locator, _activated_counts, timeout_ms=ui_50000.ACTION_TIMEOUT_MS):
+            events.append(f"click:{locator.position}")  # Record the real pointer boundary before committed-state observation.
+
+        page = FakePage()  # Create one browser-free public state-machine seam.
+        activated = Counter({f"jacks_or_better_video_poker::button[data-hold-position={position}]": 100 + position for position in range(5)})  # Give every position a passing but distinct activation count.
+        activated["jacks_or_better_video_poker::button[data-hold-position=3]"] = 12  # Reproduce one material aggregate deficit that must win selection.
+        with mock.patch.object(ui_50000, "wait_any_enabled", side_effect=fake_wait_any_enabled), mock.patch.object(ui_50000, "inventory_controls", side_effect=fake_inventory_controls), mock.patch.object(ui_50000, "enabled_locators", side_effect=fake_enabled_locators), mock.patch.object(ui_50000, "control_signature", side_effect=fake_control_signature), mock.patch.object(ui_50000, "click_locator", side_effect=fake_click_locator):  # Isolate the exact wait, discovery, real deficit selection, click, and commit order.
+            asyncio.run(ui_50000.draw_poker_select_balanced_hold(page, Counter(), activated))  # Exercise the complete draw-poker synchronization helper.
+        selector = '[data-hold-position][aria-pressed="false"]'  # Reuse the expected public unheld-card identity.
+        self.assertEqual(events, [f"wait:{selector}", "inventory", f"discover:{selector}", "score:0", "score:1", "score:2", "score:3", "score:4", "click:3", "committed:3"])  # Reject early discovery, unbalanced selection, or Draw-before-commit ordering.
+        self.assertIn("aria-pressed", page.expression)  # Bind the response boundary to the visible selected state.
+        self.assertIn("!node.disabled", page.expression)  # Require the public hold response to leave the hand actionable.
+        self.assertEqual(page.timeout, ui_50000.ACTION_TIMEOUT_MS)  # Keep the network-backed hold transition bounded.
+
     # Prove Acey-Deucey deals before editing its phase-owned wager and skips that edit for Pass or automatic settlement.
     def test_acey_deucey_orders_wager_after_deal_only_for_play(self):
         # Execute one browser-free decision scenario and return its exact public interaction order.

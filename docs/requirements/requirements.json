@@ -9378,8 +9378,8 @@
         ".github/workflows/browser-tests.yml"
       ],
       "introduced_in": "issue-227-ui-50000-ci-replacement",
-      "changed_in": "issue-227-roulette-mutation-serialization",
-      "notes": "The formal qualification runs only on approved non-local GitHub Actions workers; local Playwright, Chromium, and heavy-load execution remain prohibited. Geometry inspection restores every ancestor and window scroll position so one viewport cannot mutate later evidence, route-owned essential-stage contracts cover non-control theater such as Crown and Anchor dice and result panels, and Roulette wager/refund rerenders must commit before the strict spinning-state observation while the primary shard retries real reachable Rebet states until the literal activation floor is met."
+      "changed_in": "issue-227-draw-poker-hold-serialization",
+      "notes": "The formal qualification runs only on approved non-local GitHub Actions workers; local Playwright, Chromium, and heavy-load execution remain prohibited. Geometry inspection restores every ancestor and window scroll position so one viewport cannot mutate later evidence, route-owned essential-stage contracts cover non-control theater such as Crown and Anchor dice and result panels, Roulette wager/refund rerenders commit before the strict spinning-state observation while the primary shard retries real reachable Rebet states until the literal activation floor is met, and draw-poker workers wait for the complete five-position decision state, balance the hold-control deficit, and observe the persisted held rerender before Draw."
     }
   ]
 }
