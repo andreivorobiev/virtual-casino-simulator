@@ -6842,7 +6842,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Isolate the diagnostics emitted by the one deliberate Admin 503 response.
                     feedback_admin_console=console_errors[feedback_admin_console_index:]; feedback_admin_http=http_errors[feedback_admin_http_index:]; feedback_admin_page=page_errors[feedback_admin_page_index:]
                     # Require exactly the controlled list rejection and no unhandled JavaScript failure.
-                    assert feedback_admin_page==[] and len(feedback_admin_console)==1 and 'Failed to load resource' in feedback_admin_console[0] and len(feedback_admin_http)==1 and feedback_admin_http[0].startswith('503 ') and '/api/v2/admin/feedback/reports?' in feedback_admin_http[0],feedback_admin_console+feedback_admin_page+feedback_admin_http
+                    assert feedback_admin_page==[] and len(feedback_admin_console)==1 and 'Failed to load resource' in feedback_admin_console[0] and len(feedback_admin_http)==1 and feedback_admin_http[0].startswith('503 ') and feedback_list_pattern.search(feedback_admin_http[0]),feedback_admin_console+feedback_admin_page+feedback_admin_http
                     # Restore the exact filtered-list route and remove only its verified diagnostics.
                     page.unroute(feedback_list_pattern); del console_errors[feedback_admin_console_index:]; del http_errors[feedback_admin_http_index:]
                     # Restore the suite default for subsequent Admin cases.
