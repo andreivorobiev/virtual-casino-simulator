@@ -95,8 +95,76 @@
         "guest_trial_ended",
         "restricted_preview",
         "oauth_providers_disabled",
+        "oauth_providers_available",
+        "oauth_provider_status_error",
+        "oauth_callback_success",
+        "oauth_callback_error",
         "terms_required",
         "invalid_credentials"
+      ],
+      "locales": [
+        "en-US",
+        "ru-RU"
+      ],
+      "viewports": [
+        "desktop_primary",
+        "desktop_compact",
+        "tablet",
+        "mobile"
+      ],
+      "gates": [
+        "VIS-COPY-001",
+        "VIS-TOKEN-002",
+        "VIS-LAYOUT-003",
+        "VIS-RESPONSIVE-001",
+        "VIS-EVIDENCE-001"
+      ]
+    },
+    {
+      "id": "oauth_account",
+      "route": "/",
+      "selector": "[data-testid='oauth-account-popover']",
+      "states": [
+        "unlinked_available",
+        "unlinked_release_held",
+        "linked",
+        "link_confirmation_required",
+        "unlink_error",
+        "status_error",
+        "callback_success",
+        "callback_error",
+        "refresh_persisted"
+      ],
+      "locales": [
+        "en-US",
+        "ru-RU"
+      ],
+      "viewports": [
+        "desktop_primary",
+        "desktop_compact",
+        "tablet",
+        "mobile"
+      ],
+      "gates": [
+        "VIS-COPY-001",
+        "VIS-TOKEN-002",
+        "VIS-LAYOUT-003",
+        "VIS-RESPONSIVE-001",
+        "VIS-EVIDENCE-001"
+      ]
+    },
+    {
+      "id": "invitation_redemption",
+      "route": "/enroll/invitation",
+      "selector": "[data-testid='invitation-redemption']",
+      "states": [
+        "form",
+        "terms_unaccepted",
+        "generic_error",
+        "success_return_to_login",
+        "keyboard_focus",
+        "reduced_motion",
+        "zoom_200"
       ],
       "locales": [
         "en-US",
@@ -165,9 +233,17 @@
       "selector": "[data-testid='feedback-dialog']",
       "states": [
         "empty",
+        "paste",
+        "drop",
+        "file",
         "screenshot_ready",
+        "screenshot_removed",
         "validation_error",
-        "submitted"
+        "submitted",
+        "retry_storage_failure",
+        "keyboard_focus",
+        "reduced_motion",
+        "zoom_200"
       ],
       "locales": [
         "en-US",
@@ -493,6 +569,15 @@
         "dashboard",
         "players_and_bots",
         "users",
+        "invitations_disabled",
+        "invitations_release_held",
+        "invitations_empty",
+        "invitations_pending",
+        "invitations_redeemed",
+        "invitations_error",
+        "invitations_keyboard_scroll",
+        "invitations_reduced_motion",
+        "invitations_zoom_200",
         "guest_trials_empty",
         "guest_trials_loading",
         "guest_trials_error",
@@ -509,8 +594,16 @@
         "guest_trials_reduced_motion",
         "guest_trials_zoom_200",
         "feedback_inbox",
+        "feedback_filtered",
         "feedback_detail",
-        "feedback_github_draft",
+        "feedback_triaged",
+        "feedback_manual_draft",
+        "feedback_manual_linked",
+        "feedback_export",
+        "feedback_storage_error",
+        "feedback_keyboard_focus",
+        "feedback_reduced_motion",
+        "feedback_zoom_200",
         "language",
         "test_results",
         "operations_oauth_disabled",

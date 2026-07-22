@@ -900,7 +900,7 @@ Restricted-preview hardening adds permanent requirements `SEC-010`, `SESSION-006
 
 ## In-app problem reports
 
-Issue #349 adds `CORE-027`, `ADMIN-025`, `SEC-011`, `I18N-005`, `UX-019`, and `TEST-091`. Registered authenticated users can submit bounded reports with locally compressed screenshots; the server verifies, resizes, re-encodes, and strips metadata before provider-neutral persistence. Admin receives a separate inbox with P1/P2/P3 triage, non-destructive lifecycle states, internal notes, and a reporter-free GitHub draft. Anonymous and guest submission, automatic GitHub publication, and any new external credential remain outside this release.
+The Workroom #28 manual-only slice of issue #349 adds `CORE-027`, `ADMIN-025`, `SEC-011`, `I18N-005`, `UX-019`, and `TEST-094`. Registered authenticated users can submit bounded reports with locally compressed screenshots; the server verifies, resizes, re-encodes, strips metadata, and commits them through a recoverable provider-neutral saga. Admin receives privacy-safe filters, P1/P2/P3 triage, retention/deletion/export controls, and a reporter-free manual GitHub draft plus manual link recording. Anonymous or guest submission, automatic GitHub publication, external credentials, deployment, and public exposure remain outside this slice.
 
 ## Disabled transactional-mail foundation
 

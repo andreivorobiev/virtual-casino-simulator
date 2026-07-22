@@ -6,16 +6,16 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.41.1
-- core: 9.16.1
+- application: 9.44.0
+- core: 9.19.0
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.0
 - autoplay: 1.1.3
 - audio: 9.1.1
-- admin: 1.8.1
+- admin: 1.10.0
 - operations: 1.0.0
-- roulette: 9.4.5
+- roulette: 9.4.6
 - slots: 9.1.4
 - blackjack: 9.1.3
 - baccarat: 9.1.2
@@ -23,7 +23,7 @@ Historical source baseline: 9.1.0
 - bingo: 9.2.1
 - multi_hand_video_poker: 1.0.1
 - casino_war: 1.0.1
-- big_six_wheel: 1.0.2
+- big_six_wheel: 1.0.3
 - red_dog: 1.0.0
 - dragon_tiger: 1.0.0
 - hi_lo: 1.0.0
@@ -34,7 +34,7 @@ Historical source baseline: 9.1.0
 - sic_bo: 1.0.0
 - chuck_a_luck: 1.0.0
 - craps: 1.0.0
-- crown_and_anchor: 1.0.1
+- crown_and_anchor: 1.0.2
 - over_under_7: 1.0.2
 - plinko: 1.0.1
 - fan_tan: 1.0.2
@@ -45,10 +45,10 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.1
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.48.1
-- docs: 1.48.1
-- contracts: 1.36.1
-- tooling: 1.16.0
+- tests: 1.53.0
+- docs: 1.53.0
+- contracts: 1.39.0
+- tooling: 1.18.0
 - commenting_policy: 1.0.0
 
 ## Requirements
@@ -158,7 +158,7 @@ Historical source baseline: 9.1.0
 - **ROU-042** (Roulette) - PASS: Roulette UI animates wheel and ball while spinning.
 - **ROU-043** (Roulette) - PASS: Roulette UI renders a real table-style layout.
 - **ROU-044** (Roulette) - PASS: Roulette UI allows clicking number cells for straight bets.
-- **ROU-045** (Roulette) - PASS: Roulette UI exposes clickable inside-bet spots.
+- **ROU-045** (Roulette) - PASS: Roulette UI exposes semantically visible, pointer-actionable inside-bet spots with distinct zero-zone targets; hiding the layer removes those spots from pointer and accessibility actionability.
 - **ROU-046** (Roulette) - PASS: Roulette UI draws chips on table spots with amounts.
 - **ROU-047** (Roulette) - PASS: Roulette auto play repeats saved bet templates.
 - **ROU-048** (Roulette) - PASS: Roulette bots can be enabled with strategy and stake settings.
@@ -435,13 +435,13 @@ Historical source baseline: 9.1.0
 - **AUTH-004** (Auth) - PASS: Unauthenticated or inactive-user access returns the standard ok/error API envelope without leaking protected data.
 - **AUTH-005** (Auth) - PASS: Authenticated Admin-only actions require an active user with an Admin role.
 - **AUTH-006** (Auth) - PASS: Non-loopback or explicitly public deployment startup requires explicit bootstrap Admin settings and rejects known local defaults before runtime state is mutated.
-- **OAUTH-001** (OAuth) - PASS: The provider catalog preserves local password login as the sole runtime-available provider while Google and Facebook remain unavailable regardless of inert configuration readiness.
+- **OAUTH-001** (OAuth) - PASS: The provider catalog preserves local password login while Google and Facebook remain unavailable by default and distinguish structural readiness from an independent false-by-default provider-network release latch.
 - **OAUTH-002** (OAuth) - PASS: Admin-only diagnostics expose a fixed allowlist of provider configuration and runtime facts without credential values, tokens, raw claims, authorization URLs, or raw errors and without affecting Operations readiness.
-- **OAUTH-003** (OAuth) - PASS: Pure callback helpers preserve the issue #75 route reservation and fail closed on invalid callback origins, ambiguous parameters, state, nonce, authorization codes, and PKCE values without registering a callback route.
+- **OAUTH-003** (OAuth) - PASS: Pure callback helpers fail closed on invalid callback origins, duplicate or ambiguous parameters, state, nonce, authorization codes, and PKCE values; the additive v2 callback route uses those exact helpers and remains inaccessible under default provider gates.
 - **OAUTH-004** (OAuth) - PASS: Injected identity-link logic binds an external provider subject only to an authenticated canonical user, never creates users or links by email, and fails closed on repository ownership or uniqueness drift.
-- **OAUTH-005** (OAuth) - PASS: Mocked Google and Facebook claim normalization retains only bounded allowlisted identity fields and is not treated as live token, signature, issuer, audience, expiry, nonce, or PKCE verification.
-- **OAUTH-006** (Application) - PASS: The English and Russian login gate presents readable native-disabled Google and Facebook controls with no link or handler, while local email/password login behavior remains unchanged.
-- **TEST-045** (Tests) - PASS: OAuth regression evidence centrally discovers service-free mocked tests and covers Admin authorization, secret-safe diagnostics, absent action routes, disabled EN/RU controls, unchanged local login, contracts, and listener cleanup.
+- **OAUTH-005** (OAuth) - PASS: Google and Facebook adapters normalize only bounded allowlisted identity fields after provider-specific signature/app-binding, issuer, audience, expiry, nonce, and subject checks; provider-free mocks never count as live provider evidence.
+- **OAUTH-006** (Application) - PASS: The English and Russian login gate keeps Google and Facebook native-disabled under default gates, enables only boolean-reported available providers, and preserves local email/password and guest entry behavior unchanged.
+- **TEST-045** (Tests) - PASS: OAuth foundation regression evidence covers Admin authorization, secret-safe diagnostics, disabled defaults, EN/RU controls, unchanged local login, contracts, and listener cleanup; TEST-093 owns the additive runtime qualification.
 - **SESSION-001** (Session) - PASS: Successful login creates a server-side session represented to clients by a protected session cookie.
 - **SESSION-002** (Session) - PASS: Logout invalidates the current session before returning a standard ok/data envelope.
 - **SESSION-003** (Session) - PASS: Current-user lookup returns user, role, session, terms, locale, and bound player token balance data.
@@ -564,8 +564,8 @@ Historical source baseline: 9.1.0
 - **CAA-001** (Crown and Anchor) - PASS: Three server-authoritative symbol dice implement six coverage targets and transparent one-, two-, and three-hit net payouts.
 - **CAA-002** (Crown and Anchor) - PASS: Authenticated sessions own private reload-safe rounds, settled history, and canonical route restoration.
 - **CAA-003** (Crown and Anchor) - PASS: Aggregate symbol wagers and returned credits use the shared ledger exactly once under durable request identities.
-- **CAA-004** (Application) - PASS: Crown and Anchor supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.
-- **CAA-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Crown and Anchor with requirement, module, version, and visual traceability.
+- **CAA-004** (Application) - PASS: Crown and Anchor supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play with all three dice and all six symbol hit-result panels painted and contained at every governed viewport.
+- **CAA-005** (Tests) - PASS: Catalog, contract, browser, long-suite, and formal TEST-092 discovery include Crown and Anchor with requirement, module, version, visual, and essential-stage traceability.
 - **OU7-001** (Over/Under 7) - PASS: Two server-authoritative dice implement under-seven, exactly-seven, and over-seven outcomes with transparent net and total-return rules.
 - **OU7-002** (Over/Under 7) - PASS: Authenticated sessions own private reload-safe plays, settled history, and canonical route restoration.
 - **OU7-003** (Over/Under 7) - PASS: Aggregate wagers and returned credits use the shared ledger exactly once under durable action identities.
@@ -638,7 +638,7 @@ Historical source baseline: 9.1.0
 - **SESSION-006** (Core) - PASS: Restricted-preview sessions use host-only Secure HttpOnly SameSite cookies, distinct per-session CSRF values, bounded per-user concurrent session retention with least-recently-used eviction, bounded lifetime, logout clearing, and revocation after privilege-bearing account changes.
 - **SESSION-007** (Session) - PASS: Concurrent same-account logins create independent durable sessions that remain valid and never invalidate each other, bounded by a per-user cap with least-recently-used eviction and atomic session persistence that prevents lost writes, returning no 401 or 500 under concurrency.
 - **ADMIN-024** (Admin) - PASS: Admin HTML, JavaScript, and API surfaces require an active Admin session during restricted preview, and user privilege or status changes revoke existing sessions.
-- **AUTH-007** (Core) - PASS: Restricted preview exposes local-password login only; public signup and live OAuth authorization, callback, exchange, linking, SDK, and provider transport routes remain absent.
+- **AUTH-007** (Core) - PASS: Restricted preview keeps public signup absent; additive invite-only OAuth routes remain disabled and provider-network inaccessible by default, create no users, never link by email, and require exact browser/session integrity when separately released.
 - **AUTH-008** (Core) - PASS: The authenticated shared shell renders and keyboard-wires Admin navigation only for an authenticated Admin user; normal-player locale rerenders and restored game routes never expose the affordance, while direct Admin HTML and API access remain server-enforced.
 - **TEST-047** (Tests) - PASS: Permanent restricted-preview evidence covers configuration failure, Host and proxy abuse, Origin and CSRF enforcement, session and privilege rotation, cookie and header policy, Admin and disabled-access boundaries, concurrency, capacity recovery, redacted logging, copied production behavior, and exact listener cleanup.
 - **MYSQL-005** (MySQL) - PASS: MySQL schema changes use an explicit contiguous checksum-bound migration catalog, a deployment-only identity, a named target lock, proof-gated pre-DDL state, and durable applying or dirty markers that never claim transactional DDL rollback.
@@ -652,7 +652,7 @@ Historical source baseline: 9.1.0
 - **TEST-050** (Tests) - PASS: Edge evidence covers exact origin and loopback topology, restricted access, replacement forwarding headers, protected ports, ACME preflight, inert service and rollback templates, traversal refusal, listener-free static validation, exact success-envelope validation through the production WSGI/API boundary, pre-network credential refusal, bounded authenticated probes, security headers, certificate age, sanitized output, packaging, and fail-closed negative cases.
 - **TEST-051** (Tests) - PASS: Regression tests exercise 1, 3, 30, and 100 concurrent same-account logins asserting every prior session stays valid with no 401 or 500, and prove per-user cap least-recently-used session eviction.
 - **TEST-052** (Tests) - PASS: Browser regression asserts bounded keyboard-accessible shell navigation, full brand readability without truncation, minimum nav-label readability, no page-level horizontal overflow, and every game control's containment and scroll reachability at the 1920, 1440, 1024, and 390 governed viewports.
-- **TEST-053** (Tests) - PASS: Browser regression clicks every Roulette primary betting region plus a representative inside hotspot per covered-number size and asserts the posted bet_type and covered_numbers match the clicked cell's canonical identity, with non-overlapping, non-zero hit geometry.
+- **TEST-053** (Tests) - PASS: Browser regression uses the real pointer path for every Roulette primary betting region, representative inside sizes, and every single- and double-zero special; it asserts canonical bet_type and covered_numbers plus distinct non-zero hit geometry.
 - **DOC-017** (Documentation) - PASS: A vendor-neutral root handbook documents the complete engineering practice, required capabilities, authority hierarchy, and current-versus-historical status, while the repository start page links every other Markdown file exactly once.
 - **TOOL-006** (Tooling) - PASS: Documentation generation deterministically inventories every tracked or non-ignored Markdown file, updates the bounded root catalog, and fails check mode when the catalog or generated requirements are stale.
 - **DOC-018** (Documentation) - PASS: The repository defines a durable Claude-author/Codex-merge operating model in which Claude composes assigned pull requests and Codex alone reviews integration gates and executes every merge without bypassing owner authority.
@@ -723,9 +723,22 @@ Historical source baseline: 9.1.0
 - **MAIL-005** (Application) - PASS: Every authorized purpose has matching en-US and ru-RU subjects plus plain-text and semantic HTML alternatives whose action link has meaningful text and whose fixed content is safely escaped.
 - **MAIL-006** (Docs) - PASS: The transactional-mail runbook documents disabled defaults, separate release authority, sender/domain and SPF/DKIM/DMARC posture, canonical-origin and OAuth callback coordination, domain-move revalidation, bounded smoke evidence, rollback, suppression review, and the prohibition on treating repository merge as live authorization.
 - **TEST-090** (Tests) - PASS: Provider-free unit and API tests prove dual-gate inaccessibility, raw-value exclusion, public digest-key hardening, atomic caller idempotency, changed-meaning conflict, bounded retry, ambiguous-result freezing, rate limits, suppression, retention, malformed-state preservation, bilingual templates, Admin-only contract shape, absent consumer routes, and real MySQL cross-process single-claim behavior; exact-head browser evidence covers disabled, misconfigured, release-held, and suppression-summary states in en-US and ru-RU at all four governed viewports.
-- **CORE-027** (Core) - PASS: A registered authenticated user can submit one retry-safe problem report through the additive v2 API with bounded category, summary, actual behavior, expected behavior, privacy-reduced route and environment context, and up to three screenshots; guest and anonymous submission remain outside this release.
-- **ADMIN-025** (Admin) - PASS: The Admin problem-report inbox lists attachment-free summaries, filters by governed priority, status, and category, provides internal detail and evidence review, preserves reports through non-destructive lifecycle states, and prepares a reporter-free GitHub draft plus reviewed repository-issue linkage without automatic publication.
-- **SEC-011** (Security) - PASS: Problem-report screenshots are strictly base64 decoded, limited by count, bytes, pixels, and dimensions, decoded only as PNG, JPEG, or WebP, re-encoded to metadata-free JPEG, stored only in Admin detail documents, and excluded from list and GitHub-draft responses; diagnostic context excludes cookies, credentials, raw URLs, wallet contents, and wager data.
-- **I18N-005** (Application) - PASS: Player reporting and Admin problem-report triage provide complete en-US and ru-RU labels, instructions, privacy disclosure, status, validation, filter, detail, and GitHub-draft copy with no visible resource keys after locale changes.
-- **UX-019** (Application) - PASS: The report affordance and native modal remain keyboard-operable, focus-visible, scroll-contained, touch-sized, and free of page-level horizontal overflow at desktop, compact desktop, tablet, and mobile viewports; screenshot previews are removable and diagnostic disclosure is inspectable before submission.
-- **TEST-091** (Tests) - PASS: Provider-neutral API tests prove report idempotency, registered-user scope, P4 rejection, route minimization, metadata stripping, attachment-free listings, triage, linkage, and reporter-free GitHub drafts; browser tests prove player and Admin flows, EN/RU localization, keyboard access, screenshot previews, and responsive containment against the visual matrix.
+- **INVITE-001** (Admin) - PASS: Authenticated Admins can list masked invitation lifecycle records and perform caller-idempotent create, resend, revoke, and fixed-policy cleanup actions through additive v2 routes; actor and recipient rate limits, resend cooldowns, fixed-reason audit history, and bounded retention apply without returning raw recipients, bearers, credentials, or tokened links.
+- **INVITE-002** (Core) - PASS: Invitation issuance and public redemption are independently disabled by default and compose only the purpose-bound one-time-token and transactional-mail foundations; provider delivery additionally requires the mail feature and network-release gates, and repository merge grants no live mail, enrollment, provider, DNS, deployment, or public-signup authority.
+- **INVITE-003** (Core) - PASS: Private invitation redemption validates the invited mailbox, canonical strong password policy, supported locale, explicit current terms version, and caller idempotency before consuming a bearer; an account-free uniqueness reservation and recoverable claim-consume-inactive-user-wallet-activation-finalization saga converge on one active local account and one ledger-backed fake-token wallet across JSON and MySQL processes, while all public failures share one generic response.
+- **INVITE-004** (Contracts) - PASS: The frozen /api/v1 surface publishes no invitation route; exact Admin lifecycle and public redemption requests, responses, generic errors, security boundaries, and disabled authority are defined additively in invitations.v2 and a checked compatibility policy.
+- **INVITE-005** (Application) - PASS: Admin invitation readiness, empty, pending, redeemed, and error states plus the account-free redemption form, explicit terms, keyboard focus, generic error, and terminal success return are accessible and localized in en-US and ru-RU without raw recipient or bearer evidence at desktop-primary, desktop-compact, tablet, mobile, reduced-motion, and 200-percent zoom states.
+- **INVITE-006** (Docs) - PASS: The invitation runbook documents disabled defaults, separate live authority, private-recipient approval, current terms and password policy, rate/cooldown/retention behavior, recovery states, privacy-safe audit, JSON/MySQL operational checks, rollback, and the prohibition on public signup or provider/deployment changes from repository merge.
+- **TEST-091** (Tests) - PASS: Provider-free service and API tests prove disabled defaults, privacy-safe projections, current terms and password enforcement, caller-idempotent token consumption, post-consumption recovery, malformed-state preservation, frozen-v1 compatibility, and independent JSON-process convergence; disposable MySQL CI races claim, consume, account, wallet, and finalization across independent processes; exact-head browser evidence covers every invitation/Admin locale, state, and governed viewport.
+- **OAUTH-007** (OAuth) - PASS: Google and Facebook remain independently disabled by default; each provider requires complete secret-safe configuration and a separate false-by-default provider-network release latch before an adapter can be constructed, while Admin and public readiness projections expose only allowlisted low-cardinality facts.
+- **OAUTH-008** (OAuth) - PASS: Authorization-code flows use PKCE S256, strict duplicate-aware state, Google nonce, exact provider/callback/browser/action binding, authenticated user/session binding for explicit links, HMAC-only durable metadata, physically separate nonce/PKCE proofs, cross-process rate limits, recoverable transient exchange claims, terminal replay tombstones, bounded retention, and privacy-safe audit.
+- **OAUTH-009** (Core) - PASS: An external provider subject links only after explicit confirmation by the exact authenticated active private-invite local-password account; JSON and MySQL transactions enforce provider-subject and provider-user uniqueness across processes, sign-in requires a prior link, provider email is display-only, and no provider flow creates or merges users, players, wallets, or accounts.
+- **OAUTH-010** (Application) - PASS: The disabled-by-default provider login and persistent-account link/unlink surfaces are keyboard accessible, localized in en-US and ru-RU, preserve local-password recovery and guest/invitation flows, revoke matching provider sessions on unlink or release rollback, and expose disabled, available, status-error, linked, unlinked, callback-success, callback-error, refresh, and responsive states without raw identity or bearer evidence.
+- **TEST-093** (Tests) - PASS: Provider-free unit, API, JSON-process, and disposable MySQL tests prove dual-gate adapter inaccessibility, proof separation, malformed-state preservation, durable rate limits, recoverable exchange ambiguity, strict callback/link/session binding, static-shell CSRF lookup without consuming browser-bound guest sessions, no email linking or account creation, compound uniqueness and replay safety, frozen-v1 compatibility, and rollback; exact-head browser evidence covers OAuth readiness and lifecycle states in en-US and ru-RU at every governed viewport.
+- **CORE-027** (Core) - PASS: Authenticated persistent users can submit retry-safe bounded problem reports with a separate player-selected impact, privacy-reduced context, and normalized screenshots through the additive v2 API; the recoverable provider-neutral saga publishes only fully committed reports.
+- **ADMIN-025** (Admin) - PASS: Admin can filter privacy-safe report summaries, inspect normalized evidence, idempotently triage P1/P2/P3 lifecycle state, export metadata, delete retained content, prepare a sanitized manual GitHub draft, and record a separately created issue link without any external publication capability.
+- **SEC-011** (Security) - PASS: Reporter identity is retained only as an HMAC-derived opaque reference; screenshots are bounded, decoded, format-checked, pixel-limited, re-encoded without metadata, Admin-only, retained under terminal and absolute ceilings, and recoverably deleted; exports and manual drafts exclude pixels and private identity.
+- **I18N-005** (Application) - PASS: Player reporting and Admin manual-triage interfaces provide complete en-US and ru-RU labels, privacy disclosure, filters, lifecycle, export, deletion, and manual-only draft copy with no visible resource keys after locale changes.
+- **UX-019** (Application) - PASS: Problem reporting and Admin triage remain keyboard-operable, focus-visible, scroll-contained, touch-sized, readable at 200 percent zoom, reduced-motion safe, and responsive across all governed viewports with paste, drop, file, preview-removal, retry, filter, draft, export, and deletion states.
+- **TEST-094** (Tests) - PASS: Provider-neutral unit, API, JSON-process, and disposable MySQL tests prove recoverable submission, single idempotent winners, durable rates, malformed-state preservation, atomic triage, privacy deletion and retention, metadata-only export, frozen-v1 compatibility, and manual-only publication; browser tests prove complete bilingual player and Admin states across governed viewports.
+- **TEST-092** (Tests) - PASS: An exact-source browser qualification executes exactly 50,000 completed UI cycles across every catalog game, assigns at least 1,666 cycles to each game, exercises every eligible game control at least 100 times or records an approved ineligible classification, captures all four governed viewports for human review, and rejects unexplained failures, incomplete ranges, incomplete declared non-control stages, source drift, or cleanup residue.

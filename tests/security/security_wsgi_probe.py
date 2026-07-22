@@ -250,10 +250,14 @@ assert admin_html["status"] == "200 OK" and b"adminView" in admin_html["body"]
 signup = request("POST", "/api/v2/auth/signup", {"email": "held@example.invalid", "password": "held"}, mutation_headers(admin_csrf, admin_token))
 # Require route absence rather than provider or account mutation.
 assert signup["status"] == "404 Not Found"
-# Prove live OAuth start remains absent.
+# Prove the wrong HTTP method remains absent on the exact OAuth start path.
 oauth_start = request("GET", "/api/v2/auth/oauth/google/start", headers={"Authorization": f"Bearer {admin_token}"})
-# Require route absence while Admin diagnostic OAuth remains separate.
+# Require method-level route absence without treating it as provider readiness.
 assert oauth_start["status"] == "404 Not Found"
+# Prove the registered start mutation remains provider-inaccessible under repository defaults.
+oauth_start_held = request("POST", "/api/v2/auth/oauth/google/start", {"action": "signin", "return_to": "/"}, mutation_headers(admin_csrf, admin_token))
+# Require the same non-enumerating unavailable result without provider network or account mutation.
+assert oauth_start_held["status"] == "404 Not Found"
 
 # Require direct cleartext loopback to omit HSTS even though other headers remain.
 direct = request("GET", "/healthz", proxied=False)

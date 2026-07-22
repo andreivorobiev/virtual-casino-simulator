@@ -1,0 +1,41 @@
+{
+  "artifact": "manual-feedback-reporting",
+  "version": 2,
+  "stage": "repository-only-manual-triage",
+  "authorization": {
+    "workroom_issue": 28,
+    "decision_comment": 5049349447,
+    "authenticated_persistent_user_capture": true,
+    "admin_triage": true,
+    "sanitized_manual_draft": true,
+    "manual_issue_link_recording": true,
+    "automatic_github_publication": false,
+    "external_issue_mutation": false,
+    "credentials_authorized": false,
+    "guest_or_anonymous_reporting": false,
+    "deployment_or_public_exposure": false
+  },
+  "compatibility": {
+    "api_v1_frozen": true,
+    "v1_paths_changed": [],
+    "contract": "contracts/openapi/feedback.v2.yaml",
+    "publication_mode": "manual_only"
+  },
+  "storage": {
+    "metadata_state": "single recoverable versioned provider document",
+    "attachments": "winner-owned normalized evidence documents",
+    "json_atomicity": "cross-process locked update_document mutations",
+    "mysql_atomicity": "SELECT FOR UPDATE provider document mutations",
+    "malformed_state": "preserved unchanged for operator recovery",
+    "idempotency": "domain-separated HMAC replay proofs",
+    "deletion": "recoverable metadata reservation, evidence scrub, tombstone finalization saga"
+  },
+  "privacy": {
+    "reporter": "HMAC-derived opaque reference only",
+    "screenshots": "decoded, resized, re-encoded, and metadata stripped",
+    "admin_list": "attachment and prose free",
+    "export": "metadata and evidence digests only",
+    "retention": "terminal and absolute ceilings with Admin cleanup",
+    "external_draft": "no reporter identity, screenshots, Admin notes, bearer values, cookies, raw URLs, wallet, wagers, or ledger data"
+  }
+}

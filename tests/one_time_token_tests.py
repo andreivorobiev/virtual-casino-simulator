@@ -202,6 +202,27 @@ class OneTimeTokenTests(unittest.TestCase):
         # Require the replacement opaque identifier to match the successful result.
         self.assertEqual(result["token_id"], replacement["token_id"])
 
+    # Prove an approved recoverable consumer may replay only the exact caller idempotency binding. (INVITE-003)
+    def test_caller_idempotent_consume_replays_only_same_binding(self):
+        # Issue one invitation bearer for a synthetic non-routable recipient.
+        issued = self.service.issue("invitation", "recoverable@example.invalid")
+        # Consume the bearer with an explicit caller-owned recovery key.
+        first = self.service.consume("invitation", issued["token"], subject="recoverable@example.invalid", idempotency_key="invitation-recovery-key-0001")
+        # Replay the exact request after a simulated lost response.
+        replay = self.service.consume("invitation", issued["token"], subject="recoverable@example.invalid", idempotency_key="invitation-recovery-key-0001")
+        # Require the same opaque receipt without another attempt counter transition.
+        self.assertEqual(replay, first)
+        # Reject a changed caller key through the unchanged one-time public envelope.
+        self.assert_generic_token_error(lambda: self.service.consume("invitation", issued["token"], subject="recoverable@example.invalid", idempotency_key="invitation-recovery-key-0002"))
+        # Reject the original key when the subject binding changes.
+        self.assert_generic_token_error(lambda: self.service.consume("invitation", issued["token"], subject="other@example.invalid", idempotency_key="invitation-recovery-key-0001"))
+        # Inspect durable state without printing any digest value.
+        durable = json.loads(self.store_path.read_text(encoding="utf-8"))
+        # Require one keyed replay verifier and no raw caller key.
+        self.assertTrue(durable["tokens"][0].get("consume_idempotency_digest"))
+        # Require raw caller replay material to remain absent from storage.
+        self.assertNotIn("invitation-recovery-key-0001", self.store_path.read_text(encoding="utf-8"))
+
     # Prove bounded attempts, expiry, explicit revocation, and retention cleanup.
     def test_attempt_expiry_revocation_and_cleanup(self):
         # Issue a reset token with a deliberately smaller bounded attempt budget.

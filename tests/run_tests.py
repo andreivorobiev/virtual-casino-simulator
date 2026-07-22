@@ -1,7 +1,7 @@
 # AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
 #!/usr/bin/env python3
 # Import required dependency so this module can use its public functions or constants.
-import argparse, base64, hashlib, importlib, io, json, os, re, socket, subprocess, sys, tempfile, threading, time, traceback, unittest, urllib.request
+import argparse, hashlib, importlib, io, json, os, re, socket, subprocess, sys, tempfile, threading, time, traceback, unittest, urllib.request
 # Import date arithmetic for fixed-window Guest Trials retention tests.
 from datetime import datetime, timedelta, timezone
 # Import source inspection so browser progress totals follow declared run_case calls automatically.
@@ -46,6 +46,8 @@ from tests import recovery_tests
 from tests import edge_gate_tests
 # Import focused non-finite validation and persistence tests for TEST-055.
 from tests import nonfinite_money_tests
+# Import exact-source 50,000-cycle harness proofs for TEST-092.
+from tests.unit import ui_50000_tests
 # Import the current-catalog hostile-client certification entrypoint.
 from tests.server_authority_tests import run_server_authority_tests
 # Import the reusable flushed reporter for TEST-010 browser execution.
@@ -273,7 +275,7 @@ def run_storage_tests(include_live=False, include_migration_live=False):
     # Execute the real-service persistence and concurrent-ledger gate only when explicitly requested.
     if include_live:
         # Map the live integration case to the durable storage and MySQL requirements.
-        run_case('STORAGE-MYSQL-LIVE-001',['STORAGE-001','STORAGE-002','STORAGE-003','STORAGE-004','STORAGE-005','STORAGE-006','MYSQL-001','MYSQL-002','MYSQL-003','MYSQL-004','OTT-001','OTT-002','MAIL-002','MAIL-004','TEST-038','TEST-043','TEST-089','TEST-090'],storage_tests.run_mysql_live_provider_path)
+        run_case('STORAGE-MYSQL-LIVE-001',['STORAGE-001','STORAGE-002','STORAGE-003','STORAGE-004','STORAGE-005','STORAGE-006','MYSQL-001','MYSQL-002','MYSQL-003','MYSQL-004','OTT-001','OTT-002','MAIL-002','MAIL-004','INVITE-003','TEST-038','TEST-043','TEST-089','TEST-090','TEST-091'],storage_tests.run_mysql_live_provider_path)
     # Execute the newly created disposable MySQL 8.4 gate only when explicitly requested.
     if include_migration_live:
         # Import the service-dependent matrix only after the disposable selector is explicit.
@@ -750,8 +752,8 @@ def validate_guest_contracts():
     assert all(route in admin_contract for route in ('/admin/guest-trials:','/admin/guest-trials/sessions:','/admin/guest-trials/sessions/{analytics_id}:','/admin/guest-trials/cleanup:'))
     # Prove the full filters, journey, fake-token, action/error/latency, and bounded timeline schemas are published.
     assert all(term in admin_contract for term in ('GameFilter','CompletedFilter','ErrorCategoryFilter','SinceFilter','UntilFilter','account_cta_selected','ProductMetrics','fake_tokens_only','action_categories','error_categories','latency_buckets','maxItems: 80'))
-    # Prove the anonymous allowlist adds only the approved guest-create route.
-    assert security_contract['anonymous_routes']==['/api/v2/auth/login','/api/v2/auth/guest','/healthz']
+    # Preserve the exact anonymous allowlist including private redemption and the reviewed provider-latched OAuth routes. (OAUTH-007)
+    assert security_contract['anonymous_routes']==['/api/v2/auth/login','/api/v2/auth/guest','/api/v2/auth/redeem-invitation','/api/v2/auth/oauth/providers','/api/v2/auth/oauth/{google|facebook}/start','/api/v2/auth/oauth/{google|facebook}/callback','/healthz']
     # Prove launch stays held and retention/forbidden fields remain exact.
     assert guest_contract['public_launch_authorized'] is False and guest_contract['wallet']['add_tokens_allowed'] is False and guest_contract['lifecycle']['autoplay_stopped_on_end'] is True and guest_contract['entry']['max_game_actions_per_session']==1000 and guest_contract['entry']['max_concurrent_autoplay_sessions']==1 and guest_contract['admin_telemetry']['raw_retention_days']==30 and guest_contract['admin_telemetry']['aggregate_retention_days']==400 and guest_contract['admin_telemetry']['cleanup_failure_visible'] is True and guest_contract['admin_telemetry']['timeline_event_limit']==80 and guest_contract['admin_telemetry']['responsive_error_cohort_minimum']==5 and guest_contract['admin_telemetry']['export_allowed'] is False and 'browser_nonce' in guest_contract['admin_telemetry']['forbidden_fields']
     # Parse the exact digest freeze map.
@@ -856,6 +858,16 @@ def validate_guest_admin_api(base):
 
 # Define the run_api_tests function used by this module.
 def run_api_tests():
+    # Execute the listener-free TEST-092 allocation, classification, and resume-policy proofs.
+    def run_ui_50000_harness_tests():
+        # Load only the focused #227 harness test class.
+        suite=unittest.defaultTestLoader.loadTestsFromTestCase(ui_50000_tests.UI50000HarnessTests)
+        # Execute the focused suite with concise standard output.
+        result=unittest.TextTestRunner(stream=sys.stdout,verbosity=1).run(suite)
+        # Fail the named central case when any focused assertion fails.
+        if not result.wasSuccessful(): raise AssertionError('50,000-cycle UI harness unit suite failed')
+    # Record the exact-source allocation, control-classification, and safe-resume proof.
+    run_case('UI-50000-HARNESS-001',['TEST-042','TEST-047','TEST-092'],run_ui_50000_harness_tests)
     # Run service-free shared validation, ledger, MHVP, and strict JSON persistence evidence.
     def run_nonfinite_money_unit_tests():
         # Load only the focused TEST-055 unit-test class.
@@ -891,7 +903,7 @@ def run_api_tests():
     # Record the complete listener-free request, access, session, and browser-helper security proof.
     run_case('API-SEC-PREVIEW-001',['SEC-010','SESSION-006','ADMIN-024','AUTH-007','TEST-047'],run_restricted_preview_security_tests)
     # Centrally discover all mocked and disabled OAuth tests before any listener starts.
-    run_case('OAUTH-MOCK-001',['OAUTH-001','OAUTH-002','OAUTH-003','OAUTH-004','OAUTH-005','TEST-045'],run_oauth_mock_tests)
+    run_case('OAUTH-MOCK-001',['OAUTH-001','OAUTH-002','OAUTH-003','OAUTH-004','OAUTH-005','OAUTH-007','OAUTH-008','OAUTH-009','TEST-045','TEST-093'],run_oauth_mock_tests)
     # Record focused deployment-default coverage before starting the normal loopback API server.
     run_case('API-AUTH-DEPLOYMENT-001',['AUTH-006','TEST-041'],validate_deployment_bootstrap)
     # Certify the matrix and shared hostile-client boundary before starting a listener.
@@ -924,23 +936,32 @@ def run_api_tests():
             raise AssertionError('transactional-mail infrastructure suite failed')
     # Record the complete listener-free transactional-mail platform proof.
     run_case('API-MAIL-001',['MAIL-001','MAIL-002','MAIL-003','MAIL-004','MAIL-005','MAIL-006','TEST-090'],run_transactional_mail_tests)
-
-    # Run provider-neutral problem-report lifecycle and image-safety tests. (TEST-091, issue #349)
+    # Certify disabled invitation issuance, recoverable enrollment, privacy, and cross-process JSON behavior without a listener. (issue #332)
+    def run_invitation_tests():
+        # Import the focused invitation lifecycle suite lazily so API-only discovery remains lightweight.
+        from tests import invitation_tests
+        # Load exactly the invitation service acceptance class.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(invitation_tests.InvitationServiceTests)
+        # Run the focused service suite with the repository's quiet test runner.
+        result = unittest.TextTestRunner(verbosity=0).run(suite)
+        # Fail the mapped API gate when any lifecycle, privacy, or concurrency assertion fails.
+        if not result.wasSuccessful():
+            # Raise one bounded failure naming no recipient, bearer, or credential material.
+            raise AssertionError('invitation enrollment infrastructure suite failed')
+    # Record the listener-free invitation platform proof under its permanent requirements.
+    run_case('API-INVITE-001',['INVITE-001','INVITE-002','INVITE-003','INVITE-004','INVITE-005','INVITE-006','TEST-091'],run_invitation_tests)
+    # Run provider-neutral feedback lifecycle, concurrency, retention, and image-safety tests. (TEST-094, issue #349)
     def run_feedback_tests():
-        # Import the focused suite lazily so non-API runners do not require Pillow.
+        # Import the focused suite lazily so unrelated runners do not require image tooling.
         from tests import feedback_tests
-        # Load only the feedback service test case.
-        suite = unittest.defaultTestLoader.loadTestsFromTestCase(feedback_tests.FeedbackServiceTests)
-        # Execute with the standard in-memory result collector.
-        result = unittest.TestResult()
-        # Run the complete focused suite.
-        suite.run(result)
-        # Raise the first combined failure through the standard run_case boundary.
-        if result.failures or result.errors:
-            # Preserve useful test diagnostics without exposing runtime secrets.
-            raise AssertionError((result.failures + result.errors)[0][1])
-    # Map the focused service proof to the new requirements.
-    run_case('API-FEEDBACK-001',['CORE-027','ADMIN-025','SEC-011','I18N-005','TEST-091'],run_feedback_tests)
+        # Load exactly the feedback service acceptance class.
+        suite=unittest.defaultTestLoader.loadTestsFromTestCase(feedback_tests.FeedbackServiceTests)
+        # Execute the focused suite with concise standard output.
+        result=unittest.TextTestRunner(stream=sys.stdout,verbosity=1).run(suite)
+        # Fail the mapped API case when any recovery, privacy, or concurrency proof fails.
+        if not result.wasSuccessful(): raise AssertionError('manual problem-report service suite failed')
+    # Map the manual-only slice to its unique permanent test requirement.
+    run_case('API-FEEDBACK-001',['CORE-027','ADMIN-025','SEC-011','I18N-005','TEST-094'],run_feedback_tests)
     # Record listener-free disposable-principal lifecycle and browser-binding proof.
     run_case('API-GUEST-LIFECYCLE-001',['GUEST-001','GUEST-002','GUEST-006','TEST-080'],validate_guest_lifecycle)
     # Record listener-free telemetry privacy, milestones, and retention proof.
@@ -1060,7 +1081,7 @@ def run_api_tests():
             # Require the stable catalog order so UI and contract clients cannot confuse provider rows.
             assert [provider['provider'] for provider in diagnostic['providers']]==['local','google','facebook']
             # Define the exact allowlisted schema published by the additive auth v2 contract.
-            allowed_keys={'provider','flow','status','configuration_ready','runtime_available','enabled_requested','client_id_configured','client_secret_configured','callback_url','missing_variables','problems'}
+            allowed_keys={'provider','flow','status','configuration_ready','runtime_available','enabled_requested','network_released','client_id_configured','client_secret_configured','callback_url','missing_variables','problems'}
             # Require every diagnostic row to contain no undeclared or action-bearing fields.
             assert all(set(provider)==allowed_keys for provider in diagnostic['providers'])
             # Index the three stable providers for explicit runtime assertions.
@@ -1069,14 +1090,42 @@ def run_api_tests():
             assert providers['local']['runtime_available'] is True
             # Keep both external providers unavailable regardless of environment readiness.
             assert providers['google']['runtime_available'] is False and providers['facebook']['runtime_available'] is False
-            # Require every held provider action route to remain absent from the application router.
-            for held_path in ('/api/v2/auth/oauth/google/start','/api/v2/auth/oauth/google/callback','/api/v2/auth/oauth/google/link','/api/v2/auth/oauth/google/exchange','/api/v2/auth/oauth/facebook/start','/api/v2/auth/oauth/facebook/callback'):
-                # Dispatch only empty, value-free requests so no callback data can enter logs.
-                missing=api(base,held_path,ok=False); assert missing['error']['code']=='NOT_FOUND'
+            # Read the boolean-only public provider catalog without authenticated configuration detail.
+            public=api(base,'/api/v2/auth/oauth/providers',auth_token=None)
+            # Require exactly two disabled external providers under repository-default flags.
+            assert public=={'providers':[{'provider':'google','available':False},{'provider':'facebook','available':False}]}
+            # Require reviewed provider start routes to exist but remain inaccessible under both default gates.
+            for held_provider in ('google','facebook'):
+                # Send one exact start request and require provider-unavailable without allocating a flow.
+                held=api(base,f'/api/v2/auth/oauth/{held_provider}/start','POST',{'action':'signin','return_to':'/'},ok=False); assert held['error']['code']=='NOT_FOUND'
+                # Require the callback route to remain equally inaccessible before parsing callback proof.
+                callback=api(base,f'/api/v2/auth/oauth/{held_provider}/callback',ok=False); assert callback['error']['code']=='NOT_FOUND'
+            # Require unreviewed account creation, generic linking, and exchange surfaces to remain absent.
+            for missing_path in ('/api/v2/auth/oauth/google/link','/api/v2/auth/oauth/google/exchange','/api/v2/auth/signup'):
+                # Dispatch only empty value-free reads and require a closed surface.
+                missing=api(base,missing_path,ok=False); assert missing['error']['code']=='NOT_FOUND'
             # Confirm OAuth diagnostics never extend the accepted Operations response shape.
             assert set(api(base,'/api/v2/admin/operations'))=={'schema_version','probe','status','checked_at','last_successful_heartbeat_at','build','ready','storage_provider','checks','reasons'}
         # Record secret-safe Admin diagnostics, absent action routes, and unchanged readiness under permanent IDs.
-        run_case('API-OAUTH-001',['OAUTH-001','OAUTH-002','OAUTH-006','TEST-045'],oauth_api)
+        run_case('API-OAUTH-001',['OAUTH-001','OAUTH-002','OAUTH-006','OAUTH-007','AUTH-007','TEST-045','TEST-093'],oauth_api)
+        # Define additive current-user OAuth contract behavior under repository-default held gates.
+        def oauth_runtime_api():
+            # Read the public boolean catalog without an authenticated session.
+            public=api(base,'/api/v2/auth/oauth/providers',auth_token=None)
+            # Require fixed provider order and no configuration, callback, client, or release detail.
+            assert public=={'providers':[{'provider':'google','available':False},{'provider':'facebook','available':False}]}
+            # Read current-user link status through the authenticated Admin's ordinary account identity.
+            links=api(base,'/api/v2/me/oauth/providers')
+            # Require boolean-only current-user state and held availability for both providers.
+            assert links=={'providers':[{'provider':'google','linked':False,'available':False},{'provider':'facebook','linked':False,'available':False}]}
+            # Reject caller-selected account targets before any provider or persistence operation.
+            targeted=api(base,'/api/v2/auth/oauth/google/start','POST',{'action':'signin','return_to':'/','email':'target@example.invalid'},ok=False)
+            # Central restricted-preview integrity may fail before service validation, but no provider start can succeed.
+            assert targeted['error']['code'] in {'FORBIDDEN','NOT_FOUND','VALIDATION_ERROR'}
+            # Preserve the frozen v1 surface without any OAuth path.
+            assert api(base,'/api/v1/auth/oauth/providers',ok=False)['error']['code']=='NOT_FOUND'
+        # Record additive v2, boolean privacy, current-user ownership, disabled gate, and frozen-v1 proof.
+        run_case('API-OAUTH-002',['OAUTH-007','OAUTH-008','OAUTH-009','OAUTH-010','AUTH-007','TEST-093'],oauth_runtime_api)
         # Define the disabled transactional-mail Admin diagnostic contract against the real loopback backend.
         def mail_api():
             # Require unauthenticated callers to fail before mail diagnostics disclose configuration state.
@@ -1097,6 +1146,28 @@ def run_api_tests():
                 missing=api(base,held_path,ok=False); assert missing['error']['code']=='NOT_FOUND'
         # Record Admin authorization, disabled gates, aggregate diagnostics, and absent consumer routes.
         run_case('API-MAIL-002',['MAIL-001','MAIL-002','MAIL-003','TEST-090'],mail_api)
+        # Define the disabled private invitation API and frozen-v1 compatibility proof. (issue #332)
+        def invitation_api():
+            # Reject anonymous access before any Admin invitation readiness or lifecycle metadata is returned.
+            anonymous=api(base,'/api/v2/admin/invitations',ok=False,auth_token=None); assert anonymous['error']['code']=='UNAUTHORIZED'
+            # Read the repository-default disabled diagnostic through the authenticated Admin session.
+            diagnostic=api(base,'/api/v2/admin/invitations')
+            # Require the exact secret-free list contract with both independent gates held.
+            assert set(diagnostic)=={'enabled','redemption_enabled','mail_status','recovery_required','invitations'} and diagnostic['enabled'] is False and diagnostic['redemption_enabled'] is False and diagnostic['invitations']==[]
+            # Reject issuance before token, mail, invitation, account, or wallet state can be allocated.
+            blocked=api(base,'/api/v2/admin/invitations','POST',{'recipient':'api-invitation@example.invalid','locale':'en-US','idempotency_key':'api-invitation-create-key-0001'},ok=False); assert blocked['error']['code']=='FORBIDDEN'
+            # Exercise a fully shaped disabled public request without an authenticated session.
+            redemption=api(base,'/api/v2/auth/redeem-invitation','POST',{'token':'synthetic-disabled-bearer','email':'api-invitation@example.invalid','password':'Synthetic-Invite-2026!','display_name':'Invited Player','locale':'en-US','terms_version':'private-beta-1','accepted':True,'idempotency_key':'api-invitation-redeem-key-0001'},ok=False,auth_token=None)
+            # Require one non-enumerating message and reason for the disabled request.
+            assert redemption['error']=={'code':'VALIDATION_ERROR','message':'invitation could not be redeemed','details':{'reason':'invitation_unavailable'}}
+            # Require an unsupported field to receive the same generic public envelope.
+            malformed=api(base,'/api/v2/auth/redeem-invitation','POST',{'unexpected':'value'},ok=False,auth_token=None); assert malformed['error']==redemption['error']
+            # Preserve every historical invitation-like v1 path as absent rather than adding a compatibility alias.
+            for frozen_path in ('/api/v1/admin/invitations','/api/v1/auth/redeem-invitation','/api/v1/auth/invitations'):
+                # Require the frozen router to expose no invitation surface.
+                missing=api(base,frozen_path,ok=False); assert missing['error']['code']=='NOT_FOUND'
+        # Record authorization, disabled gates, generic public errors, and frozen-v1 compatibility.
+        run_case('API-INVITE-002',['INVITE-001','INVITE-002','INVITE-003','INVITE-004','TEST-091'],invitation_api)
         # Define the auth_backend function used by this module.
         def auth_backend():
             # Set blocked to the value needed for the next operation.
@@ -2478,7 +2549,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
             # Capture failing response URLs so authorization regressions are diagnosable.
             page.on('response', lambda response: http_errors.append(f'{response.status} {response.url}') if response.status >= 400 else None)
             # Record only attempted provider-action traffic so disabled-control assertions remain focused.
-            page.on('request', lambda request: provider_requests.append(request.url) if '/api/v2/auth/oauth/' in request.url or 'accounts.google.com' in request.url or 'facebook.com' in request.url else None)
+            page.on('request', lambda request: provider_requests.append(request.url) if any(marker in request.url for marker in ('/start','/callback','accounts.google.com','facebook.com')) else None)
             # Install an audio probe before navigation so Roulette voice text can be matched to the authoritative result.
             page.add_init_script("window.__casinoAudioEvents=[]; window.__casinoAudioProbe=(event)=>window.__casinoAudioEvents.push(event);")
             # Define the shot function used by this module.
@@ -2688,8 +2759,6 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         page.get_by_test_id('auth-locale-select').select_option(brand_locale); page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale",arg=brand_locale)
                         # Read the exact safety acknowledgement from the locale-owned shell resource.
                         expected_safety=read_i18n_json(ROOT/'web'/'i18n'/brand_locale/'shell.json')['auth.termsCheck']
-                        # Wait for the async locale resource load and auth-gate rerender, not only the earlier in-memory locale assignment.
-                        page.wait_for_function("expected => document.querySelector('label.check-row')?.textContent.includes(expected)",arg=expected_safety)
                         # Require the guest surface to preserve the full fake-money/play-token safety wording.
                         assert expected_safety in page.locator('label.check-row').inner_text()
                         # Require the protected authenticated topbar, wallet, and diagnostics provenance to remain absent for guests.
@@ -2708,8 +2777,10 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 run_case('BR-SHELL-BRAND-GUEST-001',['UX-014','TEST-079'],guest_restricted_brand_copy)
                 # Define disabled OAuth control, localization, no-request, and visual evidence acceptance.
                 def oauth_disabled_browser():
-                    # Define the two governed Auth viewports required by the visual matrix.
-                    viewports={'desktop_primary':{'width':1920,'height':1080},'mobile':{'width':390,'height':844}}
+                    # Read all four governed Auth viewports from the authoritative visual matrix.
+                    viewports={entry['id']:{'width':entry['width'],'height':entry['height']} for entry in visual_matrix['viewports']}
+                    # Require the complete desktop, compact, tablet, and mobile matrix.
+                    assert set(viewports)=={'desktop_primary','desktop_compact','tablet','mobile'}
                     # Exercise the disabled controls in every installed Auth locale.
                     for locale in ('en-US','ru-RU'):
                         # Switch the visible login gate through its own localized selector.
@@ -2740,10 +2811,56 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             assert page.evaluate("() => { const screen=document.querySelector('.auth-screen'); const panel=document.querySelector('.auth-panel'); return document.documentElement.scrollWidth <= window.innerWidth + 1 && screen.scrollWidth <= screen.clientWidth + 1 && panel.scrollWidth <= panel.clientWidth + 1; }")
                             # Write the PNG and metadata sidecar through the shared exact-head evidence helper.
                             game_evidence(f'after-pass-auth-oauth-providers-disabled-{locale}-{viewport_id}.png','auth',['oauth_providers_disabled'],locale,viewport_id)
+                    # Override only the boolean public status endpoint without contacting any provider.
+                    page.route('**/api/v2/auth/oauth/providers',lambda route: route.fulfill(status=200,content_type='application/json',body='{"ok":true,"data":{"providers":[{"provider":"google","available":true},{"provider":"facebook","available":false}]}}'))
+                    # Exercise available-provider copy and native states in both locales.
+                    for locale in ('en-US','ru-RU'):
+                        # Trigger a fresh status request through the visible locale rerender.
+                        page.get_by_test_id('auth-locale-select').select_option(locale)
+                        # Wait until the exact available state and one independently enabled provider commit.
+                        page.get_by_test_id('oauth-providers-available').wait_for(timeout=5000)
+                        # Require only the released provider to be interactive.
+                        assert not page.get_by_test_id('oauth-google').is_disabled() and page.get_by_test_id('oauth-facebook').is_disabled()
+                        # Capture every governed viewport without activating the sensitive navigation action.
+                        for viewport_id,viewport in viewports.items():
+                            # Resize to the exact matrix dimensions.
+                            page.set_viewport_size(viewport); page.wait_for_timeout(100)
+                            # Require the Auth panel and provider controls to remain horizontally contained.
+                            assert page.evaluate("() => { const panel=document.querySelector('[data-testid=\"login-gate\"]'); return document.documentElement.scrollWidth<=window.innerWidth+1 && panel.scrollWidth<=panel.clientWidth+1; }")
+                            # Record available-provider after-pass evidence without a provider request.
+                            game_evidence(f'after-pass-auth-oauth-providers-available-{locale}-{viewport_id}.png','auth',['oauth_providers_available'],locale,viewport_id)
+                    # Replace public status with one generic unavailable envelope.
+                    page.unroute('**/api/v2/auth/oauth/providers')
+                    # Intercept the next status request as a fixed server failure.
+                    page.route('**/api/v2/auth/oauth/providers',lambda route: route.fulfill(status=503,content_type='application/json',body='{"ok":false,"error":{"code":"PROVIDER_UNAVAILABLE","message":"Provider is temporarily unavailable"}}'))
+                    # Exercise generic status-error rendering in both locales.
+                    for locale in ('en-US','ru-RU'):
+                        # Trigger a fresh failed status request through the visible locale rerender.
+                        page.get_by_test_id('auth-locale-select').select_option(locale)
+                        # Wait for the governed low-cardinality error marker.
+                        page.get_by_test_id('oauth-providers-status-error').wait_for(timeout=5000)
+                        # Require both provider actions to remain native-disabled after failure.
+                        assert page.get_by_test_id('oauth-google').is_disabled() and page.get_by_test_id('oauth-facebook').is_disabled()
+                        # Capture every governed viewport for the generic failure state.
+                        for viewport_id,viewport in viewports.items():
+                            # Resize to exact governed dimensions before capture.
+                            page.set_viewport_size(viewport); page.wait_for_timeout(100)
+                            # Require no page or Auth-panel horizontal spill.
+                            assert page.evaluate("() => { const panel=document.querySelector('[data-testid=\"login-gate\"]'); return document.documentElement.scrollWidth<=window.innerWidth+1 && panel.scrollWidth<=panel.clientWidth+1; }")
+                            # Record generic status-error evidence without raw server or provider detail.
+                            game_evidence(f'after-pass-auth-oauth-status-error-{locale}-{viewport_id}.png','auth',['oauth_provider_status_error'],locale,viewport_id)
+                    # Restore the real default-held endpoint before downstream login acceptance.
+                    page.unroute('**/api/v2/auth/oauth/providers')
+                    # Remove the intentionally generated 503 from the broad unexpected-response collector.
+                    http_errors.clear()
+                    # Trigger one final real disabled status refresh through the visible locale selector.
+                    page.get_by_test_id('auth-locale-select').select_option('ru-RU')
+                    # Wait for the default-held state before downstream Auth tests continue.
+                    page.get_by_test_id('oauth-providers-disabled').wait_for(timeout=5000)
                     # Restore the primary viewport while leaving Russian selected for the existing login flow.
                     page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(150)
                 # Record provider-disabled EN/RU controls, no-request behavior, and visual evidence.
-                run_case('BR-OAUTH-001',['OAUTH-001','OAUTH-006','TEST-045'],oauth_disabled_browser)
+                run_case('BR-OAUTH-001',['OAUTH-001','OAUTH-006','OAUTH-007','OAUTH-010','TEST-045','TEST-093'],oauth_disabled_browser)
                 # Define exact geometry acceptance for every primary Auth hit target. (issue #283)
                 def auth_touch_target_floor():
                     # Read every governed viewport from the authoritative visual matrix.
@@ -2835,6 +2952,182 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     assert page.get_by_test_id('shell-locale-select').input_value()=='ru-RU'
                 # Execute this statement as part of the module's documented control flow.
                 run_case('BR-AUTH-SHELL-001',['AUTH-UI-001','TOKEN-UI-001','I18N-003'],auth_shell)
+                # Define provider-free authenticated account-method and callback lifecycle visual acceptance. (OAUTH-010)
+                def oauth_runtime_browser():
+                    # Read all four governed viewports from the authoritative matrix.
+                    oauth_viewports={entry['id']:{'width':entry['width'],'height':entry['height']} for entry in visual_matrix['viewports']}
+                    # Require the full responsive matrix before generating any evidence.
+                    assert set(oauth_viewports)=={'desktop_primary','desktop_compact','tablet','mobile'}
+                    # Require the account popover to remain fully painted inside the active viewport.
+                    def assert_oauth_account_containment():
+                        # Check both document overflow and the popover's physical viewport bounds.
+                        assert page.evaluate("""() => { const popover=document.querySelector('[data-testid="oauth-account-popover"]'); const bounds=popover.getBoundingClientRect(); return document.documentElement.scrollWidth<=window.innerWidth+1 && popover.scrollWidth<=popover.clientWidth+1 && bounds.left>=13 && bounds.right<=window.innerWidth-13 && bounds.top>=0 && bounds.bottom<=window.innerHeight+1 && bounds.width>=Math.min(300,window.innerWidth-28); }""")
+                    # Install one boolean-only unlinked/available current-user response without provider network access.
+                    page.route('**/api/v2/me/oauth/providers',lambda route: route.fulfill(status=200,content_type='application/json',body='{"ok":true,"data":{"providers":[{"provider":"google","linked":false,"available":true},{"provider":"facebook","linked":false,"available":false}]}}'))
+                    # Exercise current-user unlinked state across both installed locales.
+                    for locale in ('en-US','ru-RU'):
+                        # Force a different locale first so the requested locale always triggers shell refresh.
+                        alternate='ru-RU' if locale=='en-US' else 'en-US'
+                        # Switch through the visible shell selector to rerender account methods.
+                        page.get_by_test_id('shell-locale-select').select_option(alternate); page.get_by_test_id('shell-locale-select').select_option(locale)
+                        # Open the native details account surface when it is currently closed.
+                        if not page.locator('#account-menu').evaluate("element => element.open"): page.get_by_test_id('account-menu').click()
+                        # Wait for the fixed Google row to become visible only after its native details owner is open.
+                        page.get_by_test_id('oauth-link-google').wait_for(timeout=5000)
+                        # Require explicit confirmation and both provider rows before capture.
+                        assert page.get_by_test_id('oauth-link-confirm').is_visible() and page.get_by_test_id('oauth-link-google').is_visible() and page.get_by_test_id('oauth-link-facebook').is_visible()
+                        # Focus the native account summary for keyboard-reachability evidence.
+                        page.get_by_test_id('account-menu').focus()
+                        # Capture every governed responsive viewport.
+                        for viewport_id,viewport in oauth_viewports.items():
+                            # Resize to the exact matrix dimensions.
+                            page.set_viewport_size(viewport); page.wait_for_timeout(100)
+                            # Prove the complete account surface remains painted inside this viewport.
+                            assert_oauth_account_containment()
+                            # Require page and account popover containment with all provider actions readable.
+                            assert page.evaluate("() => { const popover=document.querySelector('[data-testid=\"oauth-account-popover\"]'); return document.documentElement.scrollWidth<=window.innerWidth+1 && popover.scrollWidth<=popover.clientWidth+1 && popover.getBoundingClientRect().width>=Math.min(300,window.innerWidth-28); }")
+                            # Record unlinked available/release-held state without identity data.
+                            region_evidence(f'after-pass-oauth-account-unlinked-{locale}-{viewport_id}.png','[data-testid="oauth-account-popover"]','oauth_account',['unlinked_available','unlinked_release_held','link_confirmation_required'],locale,viewport_id)
+                    # Replace the unlinked response with one prior-link state using no provider subject.
+                    page.unroute('**/api/v2/me/oauth/providers')
+                    # Install a fixed boolean-only linked response.
+                    page.route('**/api/v2/me/oauth/providers',lambda route: route.fulfill(status=200,content_type='application/json',body='{"ok":true,"data":{"providers":[{"provider":"google","linked":true,"available":true},{"provider":"facebook","linked":false,"available":false}]}}'))
+                    # Exercise the linked/unlinked mix in both locales.
+                    for locale in ('en-US','ru-RU'):
+                        # Trigger a full account-method rerender through the visible locale control.
+                        alternate='ru-RU' if locale=='en-US' else 'en-US'
+                        # Switch away and back so the exact target locale owns the final render.
+                        page.get_by_test_id('shell-locale-select').select_option(alternate); page.get_by_test_id('shell-locale-select').select_option(locale)
+                        # Wait until the linked Google row renders an unlink action.
+                        page.wait_for_function("() => document.querySelector('[data-testid=\"oauth-link-google\"] [data-oauth-account-action=\"unlink\"]')")
+                        # Ensure the account popover remains open after shell locale rerender.
+                        if not page.locator('#account-menu').evaluate("element => element.open"): page.get_by_test_id('account-menu').click()
+                        # Capture every governed viewport for boolean linked state.
+                        for viewport_id,viewport in oauth_viewports.items():
+                            # Resize before geometry and capture.
+                            page.set_viewport_size(viewport); page.wait_for_timeout(100)
+                            # Prove the complete account surface remains painted inside this viewport.
+                            assert_oauth_account_containment()
+                            # Require every native action to remain visible and contained.
+                            assert page.get_by_test_id('oauth-link-google').is_visible() and page.evaluate("() => document.documentElement.scrollWidth<=window.innerWidth+1")
+                            # Record linked state without provider subject, email, or canonical user id.
+                            region_evidence(f'after-pass-oauth-account-linked-{locale}-{viewport_id}.png','[data-testid="oauth-account-popover"]','oauth_account',['linked'],locale,viewport_id)
+                    # Intercept the exact unlink mutation with one fixed failure so error isolation is proven without deleting the mocked link.
+                    page.route('**/api/v2/me/oauth/google/unlink',lambda route: route.fulfill(status=503,content_type='application/json',body='{"ok":false,"error":{"code":"PROVIDER_UNAVAILABLE","message":"Provider is temporarily unavailable"}}'))
+                    # Exercise a real confirmed unlink click and its localized generic failure in both locales.
+                    for locale in ('en-US','ru-RU'):
+                        # Force a locale-owned account rerender before the unlink attempt.
+                        alternate='ru-RU' if locale=='en-US' else 'en-US'
+                        # Switch away and back so the intended locale owns every visible row and error message.
+                        page.get_by_test_id('shell-locale-select').select_option(alternate); page.get_by_test_id('shell-locale-select').select_option(locale)
+                        # Reopen the account popover after the shell rerender when necessary.
+                        if not page.locator('#account-menu').evaluate("element => element.open"): page.get_by_test_id('account-menu').click()
+                        # Select the exact linked-provider unlink control.
+                        unlink_button=page.locator('[data-testid="oauth-link-google"] [data-oauth-account-action="unlink"]')
+                        # Require the linked action to be visible before accepting its browser confirmation.
+                        unlink_button.wait_for(timeout=5000); page.once('dialog',lambda dialog: dialog.accept()); unlink_button.click()
+                        # Wait until the provider-neutral localized failure message replaces the empty status outlet.
+                        page.wait_for_function("() => Boolean(document.getElementById('oauth-account-message')?.textContent.trim())",timeout=5000)
+                        # Require failure to preserve the linked rows without rendering configuration or identity data.
+                        assert page.locator('[data-testid="oauth-account-popover"]').get_attribute('data-oauth-state')=='linked' and 'CASINO_' not in page.get_by_test_id('oauth-account-popover').inner_text() and '@' not in page.get_by_test_id('oauth-account-popover').inner_text()
+                        # Capture the confirmed unlink failure at every governed viewport.
+                        for viewport_id,viewport in oauth_viewports.items():
+                            # Resize before the error-message containment assertion.
+                            page.set_viewport_size(viewport); page.wait_for_timeout(100)
+                            # Prove the complete account surface remains painted inside this viewport.
+                            assert_oauth_account_containment()
+                            # Require the complete linked popover and its failure status to remain readable without horizontal spill.
+                            assert page.locator('#oauth-account-message').is_visible() and page.evaluate("() => { const popover=document.querySelector('[data-testid=\"oauth-account-popover\"]'); return document.documentElement.scrollWidth<=window.innerWidth+1 && popover.scrollWidth<=popover.clientWidth+1; }")
+                            # Record actual unlink-error evidence rather than relabeling a status-load failure.
+                            region_evidence(f'after-pass-oauth-account-unlink-error-{locale}-{viewport_id}.png','[data-testid="oauth-account-popover"]','oauth_account',['unlink_error','linked'],locale,viewport_id)
+                    # Restore normal mutation routing while retaining the provider-free linked status fixture.
+                    page.unroute('**/api/v2/me/oauth/google/unlink')
+                    # Reload through one fixed successful callback marker to prove safe outcome cleanup and refresh persistence.
+                    page.goto(base+'?oauth_provider=google&oauth_status=linked',wait_until='networkidle'); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    # Open the account surface after the authenticated reload.
+                    page.get_by_test_id('account-menu').click(); page.get_by_test_id('oauth-callback-message').wait_for(timeout=5000)
+                    # Require browser history to remove the low-cardinality completion query immediately.
+                    assert 'oauth_provider=' not in page.url and 'oauth_status=' not in page.url
+                    # Capture successful callback and refresh persistence across locale and viewport.
+                    for locale in ('en-US','ru-RU'):
+                        # Trigger localized callback copy through shell rerender.
+                        alternate='ru-RU' if locale=='en-US' else 'en-US'
+                        # Switch away and back to the exact final locale.
+                        page.get_by_test_id('shell-locale-select').select_option(alternate); page.get_by_test_id('shell-locale-select').select_option(locale)
+                        # Reopen the native account details after DOM-stable shell refresh when needed.
+                        if not page.locator('#account-menu').evaluate("element => element.open"): page.get_by_test_id('account-menu').click()
+                        # Require fixed success copy to remain visible after refresh.
+                        page.get_by_test_id('oauth-callback-message').wait_for(timeout=5000)
+                        # Capture all four governed viewports.
+                        for viewport_id,viewport in oauth_viewports.items():
+                            # Resize to the matrix dimensions.
+                            page.set_viewport_size(viewport); page.wait_for_timeout(100)
+                            # Prove the complete account surface remains painted inside this viewport.
+                            assert_oauth_account_containment()
+                            # Require the callback acknowledgement and account rows to remain contained.
+                            assert page.get_by_test_id('oauth-callback-message').is_visible() and page.evaluate("() => document.documentElement.scrollWidth<=window.innerWidth+1")
+                            # Record successful callback and same-session refresh evidence.
+                            region_evidence(f'after-pass-oauth-callback-success-{locale}-{viewport_id}.png','[data-testid="oauth-account-popover"]','oauth_account',['callback_success','refresh_persisted','linked'],locale,viewport_id)
+                    # Reload through one fixed failure marker to prove callback-error localization and history cleanup independently from status loading.
+                    page.goto(base+'?oauth_provider=google&oauth_status=error',wait_until='networkidle'); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    # Open the account surface after the authenticated error-marker reload.
+                    page.get_by_test_id('account-menu').click(); page.get_by_test_id('oauth-callback-message').wait_for(timeout=5000)
+                    # Require browser history to remove the low-cardinality error marker immediately.
+                    assert 'oauth_provider=' not in page.url and 'oauth_status=' not in page.url
+                    # Exercise the actual callback-error acknowledgement in both installed locales.
+                    for locale in ('en-US','ru-RU'):
+                        # Trigger locale-owned callback-error copy through the shared shell rerender.
+                        alternate='ru-RU' if locale=='en-US' else 'en-US'
+                        # Switch away and back to make the evidence locale exact.
+                        page.get_by_test_id('shell-locale-select').select_option(alternate); page.get_by_test_id('shell-locale-select').select_option(locale)
+                        # Reopen the native details popover when rerendering closed it.
+                        if not page.locator('#account-menu').evaluate("element => element.open"): page.get_by_test_id('account-menu').click()
+                        # Require the fixed callback-error message without provider response details.
+                        page.get_by_test_id('oauth-callback-message').wait_for(timeout=5000); assert page.get_by_test_id('oauth-callback-message').inner_text().strip()
+                        # Capture the actual callback failure at every governed viewport.
+                        for viewport_id,viewport in oauth_viewports.items():
+                            # Resize before responsive containment proof.
+                            page.set_viewport_size(viewport); page.wait_for_timeout(100)
+                            # Prove the complete account surface remains painted inside this viewport.
+                            assert_oauth_account_containment()
+                            # Require the callback error and account rows to remain visible without page-level overflow.
+                            assert page.get_by_test_id('oauth-callback-message').is_visible() and page.evaluate("() => document.documentElement.scrollWidth<=window.innerWidth+1")
+                            # Record callback-error evidence separately from provider-status loading failures.
+                            region_evidence(f'after-pass-oauth-callback-error-{locale}-{viewport_id}.png','[data-testid="oauth-account-popover"]','oauth_account',['callback_error','linked'],locale,viewport_id)
+                    # Replace current-user status with one fixed failure to exercise graceful account-control isolation.
+                    page.unroute('**/api/v2/me/oauth/providers')
+                    # Install one generic provider-status failure with no raw details.
+                    page.route('**/api/v2/me/oauth/providers',lambda route: route.fulfill(status=503,content_type='application/json',body='{"ok":false,"error":{"code":"PROVIDER_UNAVAILABLE","message":"Provider is temporarily unavailable"}}'))
+                    # Exercise generic account status failure in both locales.
+                    for locale in ('en-US','ru-RU'):
+                        # Trigger a fresh failed current-user status request by rerendering shell locale.
+                        alternate='ru-RU' if locale=='en-US' else 'en-US'
+                        # Switch away and back to the intended locale.
+                        page.get_by_test_id('shell-locale-select').select_option(alternate); page.get_by_test_id('shell-locale-select').select_option(locale)
+                        # Open the account popover and wait for the generic localized failure copy.
+                        if not page.locator('#account-menu').evaluate("element => element.open"): page.get_by_test_id('account-menu').click()
+                        # Wait until the failed request replaces the loading state.
+                        page.locator('[data-testid="oauth-account-popover"][data-oauth-state="status-error"]').wait_for(timeout=5000)
+                        # Require the popover to contain no provider configuration or identifier rows.
+                        assert 'CASINO_' not in page.get_by_test_id('oauth-account-popover').inner_text() and '@' not in page.get_by_test_id('oauth-account-popover').inner_text()
+                        # Capture the generic error at every governed viewport.
+                        for viewport_id,viewport in oauth_viewports.items():
+                            # Resize before containment proof.
+                            page.set_viewport_size(viewport); page.wait_for_timeout(100)
+                            # Prove the complete account surface remains painted inside this viewport.
+                            assert_oauth_account_containment()
+                            # Require the generic failure card to remain usable and contained.
+                            assert page.get_by_test_id('oauth-account-popover').is_visible() and page.evaluate("() => document.documentElement.scrollWidth<=window.innerWidth+1")
+                            # Record provider-status loading failure without mislabeling unlink or callback behavior.
+                            region_evidence(f'after-pass-oauth-account-status-error-{locale}-{viewport_id}.png','[data-testid="oauth-account-popover"]','oauth_account',['status_error'],locale,viewport_id)
+                    # Restore the real current-user endpoint and clear the intentionally generated 503 diagnostics.
+                    page.unroute('**/api/v2/me/oauth/providers'); http_errors.clear()
+                    # Reload the normal authenticated shell without a callback marker or mocked provider state.
+                    page.goto(base,wait_until='networkidle'); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    # Restore the primary desktop viewport for downstream wallet evidence.
+                    page.set_viewport_size({'width':1920,'height':1080})
+                # Record the complete provider-free OAuth lifecycle and visual matrix.
+                run_case('BR-OAUTH-RUNTIME-001',['OAUTH-007','OAUTH-008','OAUTH-009','OAUTH-010','AUTH-007','TEST-093'],oauth_runtime_browser)
                 # Open the token wallet menu before adding fake tokens.
                 page.locator('.wallet-menu summary').click()
                 # Read the authenticated player id from the live shell state.
@@ -3046,9 +3339,9 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             # Resize to the exact matrix viewport and let responsive layout settle before measuring.
                             page.set_viewport_size(viewport); page.wait_for_timeout(100)
                             # Audit the complete brand lockup against its topbar and viewport bounds.
-                            brand_geometry=page.evaluate("""() => { const topbar=document.querySelector('[data-testid=\"premium-topbar\"]'); const lockup=document.querySelector('.brand-lockup'); const title=document.querySelector('#shell-brand-title'); const subtitle=document.querySelector('#shell-brand-subtitle'); const topbarBox=topbar.getBoundingClientRect(); const lockupBox=lockup.getBoundingClientRect(); return { topbarHeight:topbarBox.height, titleClientWidth:title.clientWidth, titleScrollWidth:title.scrollWidth, titleClientHeight:title.clientHeight, titleScrollHeight:title.scrollHeight, contained:lockupBox.left >= topbarBox.left - 1 && lockupBox.right <= topbarBox.right + 1 && lockupBox.top >= topbarBox.top - 1 && lockupBox.bottom <= topbarBox.bottom + 1, viewportContained:lockupBox.left >= -1 && lockupBox.right <= window.innerWidth + 1, titleUnclipped:title.scrollWidth <= title.clientWidth + 1 && title.scrollHeight <= title.clientHeight + 1, subtitleUnclipped:subtitle.scrollWidth <= subtitle.clientWidth + 1 && subtitle.scrollHeight <= subtitle.clientHeight + 1, pageNoOverflow:document.documentElement.scrollWidth <= window.innerWidth + 1 }; }""")
+                            brand_geometry=page.evaluate("""() => { const topbar=document.querySelector('[data-testid=\"premium-topbar\"]'); const lockup=document.querySelector('.brand-lockup'); const title=document.querySelector('#shell-brand-title'); const subtitle=document.querySelector('#shell-brand-subtitle'); const topbarBox=topbar.getBoundingClientRect(); const lockupBox=lockup.getBoundingClientRect(); return { topbarHeight:topbarBox.height, contained:lockupBox.left >= topbarBox.left - 1 && lockupBox.right <= topbarBox.right + 1 && lockupBox.top >= topbarBox.top - 1 && lockupBox.bottom <= topbarBox.bottom + 1, viewportContained:lockupBox.left >= -1 && lockupBox.right <= window.innerWidth + 1, titleUnclipped:title.scrollWidth <= title.clientWidth + 1 && title.scrollHeight <= title.clientHeight + 1, subtitleUnclipped:subtitle.scrollWidth <= subtitle.clientWidth + 1 && subtitle.scrollHeight <= subtitle.clientHeight + 1, pageNoOverflow:document.documentElement.scrollWidth <= window.innerWidth + 1 }; }""")
                             # Require every geometry and overflow invariant to pass before evidence can be accepted.
-                            assert brand_geometry['contained'] and brand_geometry['viewportContained'] and brand_geometry['titleUnclipped'] and brand_geometry['subtitleUnclipped'] and brand_geometry['pageNoOverflow'],(brand_locale,viewport_id,brand_geometry)
+                            assert brand_geometry['contained'] and brand_geometry['viewportContained'] and brand_geometry['titleUnclipped'] and brand_geometry['subtitleUnclipped'] and brand_geometry['pageNoOverflow'],brand_geometry
                             # Record the topbar height for the later cross-locale stability comparison.
                             header_heights[(brand_locale,viewport_id)]=brand_geometry['topbarHeight']
                             # Capture exact-head authenticated lobby evidence with a self-describing sidecar.
@@ -3774,6 +4067,12 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.get_by_test_id('nav-big_six_wheel').click(); page.get_by_test_id('big-six-wheel').wait_for(timeout=5000)
                     # Require the canonical route, English title, and ready phase from the live backend mount.
                     assert page.url.split('?',1)[0].endswith('/games/big_six_wheel') and page.locator('.big-six-wheel__header h1').inner_text()=='Big Six Wheel' and page.get_by_test_id('big-six-wheel-phase').inner_text()=='Accepting wagers'
+                    # Require the complete code-native stage to remain painted inside its panel and every hidden ancestor.
+                    def assert_big_six_stage_complete(viewport_id):
+                        # Inspect the wheel shell, wheel, pointer, and hub without scrolling or changing later evidence.
+                        failures=page.evaluate("""viewportId => { const failures=[]; const stage=document.querySelector('.big-six-wheel__stage'); const contained=['.big-six-wheel__wheel-shell','.big-six-wheel__pointer','.big-six-wheel__hub']; const painted={'.big-six-wheel__wheel':'.big-six-wheel__wheel-shell'}; const paintMinRatio=.8; if(!stage)return [{viewport:viewportId,selector:'.big-six-wheel__stage',reason:'stage missing'}]; const stageRect=stage.getBoundingClientRect(); const outside=(rect,owner)=>rect.left<owner.left-1||rect.right>owner.right+1||rect.top<owner.top-1||rect.bottom>owner.bottom+1; const visible=(node,style,rect)=>node.getClientRects().length&&style.display!=='none'&&style.visibility!=='hidden'&&rect.width>0&&rect.height>0; for(const selector of contained){const node=document.querySelector(selector); if(!node){failures.push({viewport:viewportId,selector,reason:'essential node missing'});continue;} const style=getComputedStyle(node); const rect=node.getBoundingClientRect(); if(!visible(node,style,rect)){failures.push({viewport:viewportId,selector,reason:'essential node not painted'});continue;} if(outside(rect,stageRect))failures.push({viewport:viewportId,selector,reason:'essential node escaped stage'}); let ancestor=node.parentElement; while(ancestor&&ancestor!==document.body){const ancestorStyle=getComputedStyle(ancestor);const ancestorRect=ancestor.getBoundingClientRect();const overflowY=ancestorStyle.overflowY==='visible'?ancestorStyle.overflow:ancestorStyle.overflowY;const overflowX=ancestorStyle.overflowX==='visible'?ancestorStyle.overflow:ancestorStyle.overflowX;const clippedY=(rect.top<ancestorRect.top-1||rect.bottom>ancestorRect.bottom+1)&&['hidden','clip'].includes(overflowY);const clippedX=(rect.left<ancestorRect.left-1||rect.right>ancestorRect.right+1)&&['hidden','clip'].includes(overflowX);if(clippedY||clippedX){failures.push({viewport:viewportId,selector,reason:'essential node clipped by hidden ancestor'});break;}ancestor=ancestor.parentElement;}} for(const [selector,ownerSelector] of Object.entries(painted)){const node=document.querySelector(selector);const owner=document.querySelector(ownerSelector);if(!node){failures.push({viewport:viewportId,selector,reason:'essential node missing'});continue;}if(!owner){failures.push({viewport:viewportId,selector:ownerSelector,reason:'visual owner missing'});continue;}const style=getComputedStyle(node);const rect=node.getBoundingClientRect();const ownerRect=owner.getBoundingClientRect();if(!visible(node,style,rect)){failures.push({viewport:viewportId,selector,reason:'essential node not painted'});continue;}const centerInside=rect.left+rect.width/2>=ownerRect.left-1&&rect.left+rect.width/2<=ownerRect.right+1&&rect.top+rect.height/2>=ownerRect.top-1&&rect.top+rect.height/2<=ownerRect.bottom+1;const coversOwner=rect.width>=ownerRect.width*paintMinRatio&&rect.height>=ownerRect.height*paintMinRatio;if(!centerInside||!coversOwner)failures.push({viewport:viewportId,selector,reason:'essential node does not cover visual owner'});}return failures;}""",viewport_id)
+                        # Fail the named governed viewport with bounded public selector evidence.
+                        assert not failures,failures
                     # Read the initial cumulative target before the first real motion-qualified spin.
                     initial_big_six_target=page.locator('[data-wheel]').evaluate("node => Number.parseFloat(node.style.getPropertyValue('--wheel-angle'))")
                     # Define every named viewport required by the Big Six visual-matrix row.
@@ -3784,6 +4083,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
                         # Require a visible complete surface without page-level horizontal overflow.
                         assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.get_by_test_id('big-six-wheel').is_visible()
+                        # Reject missing or clipped wheel, pointer, or hub before labeling evidence as passing.
+                        assert_big_six_stage_complete(viewport_id)
                         # Record self-describing English ready evidence.
                         game_evidence(f'after-pass-big-six-ready-en-{viewport_id}.png','big_six_wheel',['ready'],'en-US',viewport_id)
                     # Restore primary desktop and enter a positive real-backend wager.
@@ -3834,6 +4135,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
                         # Require the settled control and page-level containment.
                         assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.locator('[data-spin]').is_enabled()
+                        # Require the complete settled stage at this governed viewport.
+                        assert_big_six_stage_complete(viewport_id)
                         # Record self-describing English settlement evidence.
                         game_evidence(f'after-pass-big-six-settled-en-{viewport_id}.png','big_six_wheel',['settled'],'en-US',viewport_id)
                     # Switch the restored settlement to Russian without discarding player-owned state.
@@ -3846,6 +4149,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
                         # Require the localized route to remain visible and horizontally contained.
                         assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.get_by_test_id('big-six-wheel').is_visible()
+                        # Require the complete localized settled stage before writing evidence.
+                        assert_big_six_stage_complete(viewport_id)
                         # Record self-describing Russian settlement evidence.
                         game_evidence(f'after-pass-big-six-settled-ru-{viewport_id}.png','big_six_wheel',['settled'],'ru-RU',viewport_id)
                     # Reload in Russian so the route lifecycle restores a clean ready phase with persisted history.
@@ -3856,6 +4161,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
                         # Require the localized route to remain visible and horizontally contained.
                         assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.get_by_test_id('big-six-wheel').is_visible()
+                        # Require the complete localized ready stage before writing evidence.
+                        assert_big_six_stage_complete(viewport_id)
                         # Record self-describing Russian ready evidence.
                         game_evidence(f'after-pass-big-six-ready-ru-{viewport_id}.png','big_six_wheel',['ready'],'ru-RU',viewport_id)
                     # Restore the unsent wager cleared by the full-page route reload.
@@ -4474,6 +4781,10 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             for viewport_id,width,height in required_viewports:
                                 # Resize to the exact visual matrix dimensions.
                                 page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
+                                # Probe every non-control theater node against the route-owned stage after responsive layout settles.
+                                stage_failures=page.evaluate("""() => { const stage=document.querySelector('.crown-anchor__stage'); const selectors=['[data-die="0"]','[data-die="1"]','[data-die="2"]','[data-symbol="crown"]','[data-symbol="anchor"]','[data-symbol="heart"]','[data-symbol="diamond"]','[data-symbol="club"]','[data-symbol="spade"]']; if(!stage)return['stage']; const owner=stage.getBoundingClientRect(); return selectors.filter(selector=>{ const node=document.querySelector(selector); if(!node)return true; const style=getComputedStyle(node); const rect=node.getBoundingClientRect(); const painted=node.getClientRects().length&&style.display!=='none'&&style.visibility!=='hidden'&&rect.width>0&&rect.height>0; const contained=rect.left>=owner.left-1&&rect.right<=owner.right+1&&rect.top>=owner.top-1&&rect.bottom<=owner.bottom+1; return !painted||!contained; }); }""")
+                                # Reject a missing, unpainted, or escaped die/result panel before labeling this viewport after-pass.
+                                assert not stage_failures,f'Crown and Anchor stage incomplete at {viewport_id}: {stage_failures}'
                                 # Reject horizontal overflow and require the mounted table.
                                 assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.get_by_test_id('crown-and-anchor').is_visible()
                                 # Record self-describing evidence for this state and viewport.
@@ -5024,10 +5335,28 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 page.get_by_test_id('nav-roulette').click(); page.get_by_test_id('roulette-wheel').wait_for()
                 # Define the exhaustive hit-target integrity and geometry regression required by issue #222.
                 def roulette_hit_target_integrity():
+                    # Define an exact clear-settlement guard so mode changes cannot race the asynchronous refund request. (issue #227)
+                    def clear_roulette_audit_bets():
+                        # Capture the documented clear response before activating the real rendered control.
+                        with page.expect_response(lambda response: response.url.endswith('/api/v1/games/roulette/clear') and response.request.method=='POST', timeout=5000) as clear_info:
+                            # Activate the same clear-all path a player uses rather than mutating test state directly.
+                            page.locator('#clear').click()
+                        # Require the refund request to succeed before attempting a wheel-mode transition.
+                        assert clear_info.value.ok, 'Roulette audit-bet clear request failed'
+                        # Require the rerendered control to prove the browser consumed the empty-bet response.
+                        page.wait_for_function("() => document.querySelector('#clear')?.disabled === true", timeout=5000)
                     # Select the smallest chip so exhaustive region coverage cannot deplete the wallet.
                     page.get_by_test_id('chip-1').click()
-                    # Read every bet cell's stable identity and hit geometry from the mounted board.
-                    cells=page.evaluate("() => [...document.querySelectorAll('[data-cell-key]')].map(el => { const r=el.getBoundingClientRect(); return {key:el.getAttribute('data-cell-key'), type:el.getAttribute('data-bet-type'), covered:(el.getAttribute('data-covered')||'').split(',').filter(Boolean), x:r.left, y:r.top, w:r.width, h:r.height}; })")
+                    # Read the semantic precision-layer state before changing it. (issue #348)
+                    spots_visible=page.locator('#toggleSpots').get_attribute('aria-pressed')=='true'
+                    # Exercise an already-visible layer through a complete hide/show round trip.
+                    if spots_visible: page.locator('#toggleSpots').click()
+                    # Expose the precision layer through its real semantic toggle before any pointer-path hit test.
+                    page.locator('#toggleSpots').click()
+                    # Require the rerendered control to report the visible inside-spot state truthfully.
+                    assert page.locator('#toggleSpots').get_attribute('aria-pressed')=='true', 'Roulette inside spots did not enter the visible state'
+                    # Read every fixed-table bet cell's stable identity and hit geometry without duplicating the control-rail fast-bet aliases. (issue #348)
+                    cells=page.evaluate("() => [...document.querySelectorAll('[data-testid=roulette-table] [data-cell-key]')].map(el => { const r=el.getBoundingClientRect(); return {key:el.getAttribute('data-cell-key'), type:el.getAttribute('data-bet-type'), covered:(el.getAttribute('data-covered')||'').split(',').filter(Boolean), x:r.left, y:r.top, w:r.width, h:r.height}; })")
                     # Require a populated board so an empty catalog cannot pass this regression silently.
                     assert cells, 'no roulette bet cells rendered'
                     # Require every bet cell to expose a non-zero hit region.
@@ -5066,8 +5395,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         selector=f'[data-cell-key="{key}"]'
                         # Capture the exact wager POST triggered by activating this cell.
                         with page.expect_request(lambda request: request.url.endswith('/api/v1/games/roulette/bets') and request.method=='POST', timeout=5000) as request_info:
-                            # Activate the cell semantically so intentionally-stacked corner spots cannot intercept the pointer.
-                            page.dispatch_event(selector, 'click')
+                            # Activate the cell through Playwright's real actionability-checked pointer path. (issue #348)
+                            page.get_by_test_id('roulette-table').locator(selector).click()
                         # Read the posted bet body for identity verification.
                         body=request_info.value.post_data_json
                         # Require the posted bet type to match the clicked cell's canonical type.
@@ -5078,16 +5407,76 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         page.wait_for_timeout(25)
                     # Capture the exact "2nd 12" wager the issue reported as mismatched.
                     with page.expect_request(lambda request: request.url.endswith('/api/v1/games/roulette/bets') and request.method=='POST', timeout=5000) as second_dozen_info:
-                        # Activate the reported second-dozen hit target directly.
-                        page.dispatch_event('[data-cell-key="dozen:2"]', 'click')
+                        # Activate the reported second-dozen hit target through the real pointer path.
+                        page.locator('[data-cell-key="dozen:2"]').click()
                     # Read the second-dozen wager body.
                     second_dozen=second_dozen_info.value.post_data_json
                     # Require "2nd 12" to post the dozen covering exactly 13 through 24.
                     assert second_dozen['bet_type']=='dozen' and {str(number) for number in second_dozen['covered_numbers']}=={str(number) for number in range(13,25)}, '2nd 12 did not post the 13-24 dozen'
                     # Refund every audit wager so the board returns to its pre-audit betting state.
-                    page.locator('#clear').click(); page.wait_for_timeout(150)
+                    clear_roulette_audit_bets()
+                    # Resolve the governed disclosure that owns wheel-mode and zero-rule settings.
+                    rules_disclosure=page.get_by_test_id('roulette-rules-disclosure')
+                    # Open advanced settings through the visible summary before exercising its native select controls.
+                    if rules_disclosure.get_attribute('open') is None: rules_disclosure.locator('summary').click()
+                    # Require the real mode field to become visible rather than bypassing disclosure actionability.
+                    page.get_by_test_id('roulette-mode').wait_for(state='visible', timeout=5000)
+                    # Audit every zero-zone special in both supported wheel modes so no catalog combination can share a pointer target. (issue #348)
+                    for wheel_mode,expected_count in (('single',6),('double',10)):
+                        # Read the current rendered wheel mode before deciding whether an asynchronous settings request is required.
+                        current_mode=page.get_by_test_id('roulette-mode').input_value()
+                        # Change modes only when needed so every expected response corresponds to a real state transition.
+                        if current_mode!=wheel_mode:
+                            # Capture the documented settings response that owns the catalog rerender.
+                            with page.expect_response(lambda response: response.url.endswith('/api/v1/games/roulette/settings') and response.request.method=='POST', timeout=5000) as settings_info:
+                                # Select the requested wheel mode through the rendered control.
+                                page.get_by_test_id('roulette-mode').select_option(wheel_mode)
+                            # Require the mode transition to succeed before reading its zero-zone catalog.
+                            assert settings_info.value.ok, f'Roulette {wheel_mode} mode settings request failed'
+                        # Require the semantic visibility state to survive the mode-owned rerender.
+                        assert page.locator('#toggleSpots').get_attribute('aria-pressed')=='true', f'Roulette {wheel_mode} mode hid inside spots after rerender'
+                        # Read only the mode-specific zero-zone targets and their real pointer rectangles.
+                        zero_cells=page.evaluate("() => [...document.querySelectorAll('[data-betid][data-bet-type=zero_split],[data-betid][data-bet-type=trio],[data-betid][data-bet-type=first_four],[data-betid][data-bet-type=top_line]')].map(el => { const r=el.getBoundingClientRect(); return {key:el.getAttribute('data-cell-key'), type:el.getAttribute('data-bet-type'), covered:(el.getAttribute('data-covered')||'').split(',').filter(Boolean), x:r.left, y:r.top, w:r.width, h:r.height}; })")
+                        # Require the complete authoritative single- or double-zero special inventory.
+                        assert len(zero_cells)==expected_count, f'Roulette {wheel_mode} exposed {len(zero_cells)} of {expected_count} zero-zone controls'
+                        # Compare every zero-zone pointer rectangle against every later one exactly once.
+                        for outer in range(len(zero_cells)):
+                            # Visit later targets only so a rectangle never compares with itself.
+                            for inner in range(outer+1,len(zero_cells)):
+                                # Resolve the two physical pointer targets under review.
+                                first=zero_cells[outer]; second=zero_cells[inner]
+                                # Measure real horizontal overlap between the transformed viewport rectangles.
+                                overlap_x=max(0,min(first['x']+first['w'],second['x']+second['w'])-max(first['x'],second['x']))
+                                # Measure real vertical overlap between the transformed viewport rectangles.
+                                overlap_y=max(0,min(first['y']+first['h'],second['y']+second['h'])-max(first['y'],second['y']))
+                                # Reject stacked zero-zone controls before pointer activation can become ambiguous.
+                                assert overlap_x*overlap_y<=2, f"Roulette {wheel_mode} overlaps {first['key']} and {second['key']}"
+                        # Index the mode-owned identities before request-body verification.
+                        zero_identity={cell['key']:cell for cell in zero_cells}
+                        # Pointer-click every zero-zone control rather than sampling one covered-number size.
+                        for key in zero_identity:
+                            # Build the stable selector that survives each wager-owned rerender.
+                            selector=f'[data-cell-key="{key}"]'
+                            # Capture the exact wager request emitted by the real pointer activation.
+                            with page.expect_request(lambda request: request.url.endswith('/api/v1/games/roulette/bets') and request.method=='POST', timeout=5000) as zero_request:
+                                # Exercise Playwright visibility, stability, hit testing, and pointer dispatch together.
+                                page.locator(selector).click()
+                            # Read the mode-specific wager body without relying on localized labels.
+                            body=zero_request.value.post_data_json
+                            # Require the backend bet type to match the exact target identity.
+                            assert body['bet_type']==zero_identity[key]['type'], f"{wheel_mode} {key}: posted wrong bet type"
+                            # Require the backend covered pockets to match the exact target identity.
+                            assert {str(number) for number in body['covered_numbers']}=={str(number) for number in zero_identity[key]['covered']}, f"{wheel_mode} {key}: covered mismatch"
+                        # Refund this mode's complete zero-zone audit before changing the table or continuing the suite.
+                        clear_roulette_audit_bets()
+                    # Reacquire the disclosure after mode-owned rerenders so test cleanup targets the current DOM node.
+                    rules_disclosure=page.get_by_test_id('roulette-rules-disclosure')
+                    # Restore the documented collapsed state through the visible summary for downstream test isolation.
+                    if rules_disclosure.get_attribute('open') is not None: rules_disclosure.locator('summary').click()
+                    # Require advanced settings to be hidden again before handing the shared page to the next case.
+                    page.get_by_test_id('roulette-mode').wait_for(state='hidden', timeout=5000)
                 # Record the exhaustive Roulette hit-target integrity and geometry regression.
-                run_case('BR-ROU-HITMAP-001',['ROU-005','ROU-013','ROU-014','ROU-015','ROU-016','ROU-017','ROU-044','ROU-045','ROU-057','TEST-053'],roulette_hit_target_integrity)
+                run_case('BR-ROU-HITMAP-001',['ROU-002','ROU-005','ROU-007','ROU-011','ROU-012','ROU-013','ROU-014','ROU-015','ROU-016','ROU-017','ROU-044','ROU-045','ROU-057','TEST-053','TEST-092'],roulette_hit_target_integrity)
                 # Prove leaving Roulette with an open, un-spun bet refunds the stake rather than stranding it. (issue #246)
                 def roulette_refund_on_leave():
                     # Read the authoritative current-user token balance straight from the session endpoint so the assertion never depends on shell DOM refresh timing. (issue #246)
@@ -6216,6 +6605,84 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.evaluate("async () => { const i18n = await import('/core/i18n.js'); await i18n.setLocale('en-US', { persistLocal: false }); }")
                 # Execute the release-blocking i18n audit as one requirement-mapped browser case.
                 run_case('BR-I18N-ROUTES-001',['I18N-001','I18N-002'],all_game_route_i18n)
+                # Preserve the stable internal reference created by the player flow for later Admin acceptance.
+                feedback_report_reference={'value':''}
+                # Define registered-user submission, bilingual layout, image normalization, and retry acceptance. (issue #349)
+                def feedback_report_browser():
+                    # Enumerate the complete governed feedback viewport matrix.
+                    viewports={'desktop_primary':{'width':1920,'height':1080},'desktop_compact':{'width':1440,'height':900},'tablet':{'width':1024,'height':900},'mobile':{'width':390,'height':844}}
+                    # Use one safe in-memory image for file, preview, and removal evidence.
+                    png=base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAI0lEQVR4nGMUqghiIAUwkaSaYVQDcYCJSHVwMKqBGEByKAEA0/YA/Hxc1QQAAAAASUVORK5CYII=')
+                    # Exercise localized empty, evidence, removal, validation, keyboard, motion, and zoom states everywhere.
+                    for locale in ('en-US','ru-RU'):
+                        # Switch through the persistent player-visible locale selector.
+                        page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale",arg=locale)
+                        # Capture each governed responsive width from a clean native dialog.
+                        for viewport_id,viewport in viewports.items():
+                            # Apply the exact visual-matrix dimensions.
+                            page.set_viewport_size(viewport); page.wait_for_timeout(100)
+                            # Open one clean draft from the registered-user-only affordance.
+                            page.get_by_test_id('report-problem-open').click(); page.get_by_test_id('feedback-dialog').wait_for(state='visible')
+                            # Require translated content and both document/dialog horizontal containment.
+                            assert 'feedback.' not in page.get_by_test_id('feedback-dialog').inner_text() and page.evaluate("() => { const dialog=document.querySelector('[data-testid=feedback-dialog]'); return document.documentElement.scrollWidth <= window.innerWidth + 1 && dialog.scrollWidth <= dialog.clientWidth + 1; }")
+                            # Focus the first governed task control for keyboard evidence.
+                            page.get_by_test_id('feedback-category').focus()
+                            # Capture the clean, keyboard, and current motion states together because they are concurrently visible.
+                            game_evidence(f'after-pass-feedback-empty-{locale}-{viewport_id}.png','feedback_report',['empty','keyboard_focus','reduced_motion'],locale,viewport_id)
+                            # Normalize a local screenshot through the real browser controller.
+                            page.locator('#report-file-input').set_input_files({'name':'feedback.png','mimeType':'image/png','buffer':png}); page.wait_for_function("() => document.querySelector('[data-testid=feedback-previews] img')")
+                            # Capture file/paste/drop contract presentation through the shared normalized evidence state.
+                            game_evidence(f'after-pass-feedback-evidence-{locale}-{viewport_id}.png','feedback_report',['file','paste','drop','screenshot_ready'],locale,viewport_id)
+                            # Remove the retained in-memory preview through its accessible control.
+                            page.locator('[data-testid=feedback-previews] button').click(); assert page.locator('[data-testid=feedback-previews] img').count()==0
+                            # Capture the explicit user-controlled removal state.
+                            game_evidence(f'after-pass-feedback-removed-{locale}-{viewport_id}.png','feedback_report',['screenshot_removed'],locale,viewport_id)
+                            # Trigger native validation without making a network request.
+                            page.get_by_test_id('feedback-submit').click(); assert page.get_by_test_id('feedback-summary').evaluate('element => !element.validity.valid')
+                            # Capture visible invalid controls under the governed validation state.
+                            game_evidence(f'after-pass-feedback-validation-{locale}-{viewport_id}.png','feedback_report',['validation_error'],locale,viewport_id)
+                            # Fill a complete disposable draft for controlled retry and terminal visual evidence.
+                            page.get_by_test_id('feedback-category').select_option('bug'); page.get_by_test_id('feedback-impact').select_option('minor'); page.get_by_test_id('feedback-summary').fill('Controlled storage retry proof'); page.get_by_test_id('feedback-actual').fill('The controlled test endpoint rejected this attempt.'); page.get_by_test_id('feedback-expected').fill('The draft should remain available for exact retry.')
+                            # Intercept only this same-origin route with a fixed storage failure.
+                            page.route('**/api/v2/feedback/reports',lambda route: route.fulfill(status=503,content_type='application/json',body='{"ok":false,"error":{"code":"STORAGE_UNAVAILABLE","message":"Report storage is temporarily unavailable"}}'))
+                            # Submit and require the dialog to preserve its draft after failure.
+                            page.get_by_test_id('feedback-submit').click(); page.wait_for_function("() => document.querySelector('#report-message')?.textContent.includes('temporarily unavailable')")
+                            # Capture the true retryable storage-failure state.
+                            game_evidence(f'after-pass-feedback-retry-{locale}-{viewport_id}.png','feedback_report',['retry_storage_failure'],locale,viewport_id)
+                            # Replace the failure route with one controlled successful exact replay receipt.
+                            page.unroute('**/api/v2/feedback/reports'); page.route('**/api/v2/feedback/reports',lambda route: route.fulfill(status=200,content_type='application/json',body='{"ok":true,"data":{"report_id":"report_visual_only","reference":"RPT-VISUAL01","status":"new","replayed":false}}'))
+                            # Retry the unchanged draft and wait for the terminal receipt.
+                            page.get_by_test_id('feedback-submit').click(); page.wait_for_function("() => document.querySelector('#report-message')?.textContent.includes('RPT-VISUAL01')")
+                            # Capture an honest terminal confirmation for this locale and viewport.
+                            game_evidence(f'after-pass-feedback-submitted-{locale}-{viewport_id}.png','feedback_report',['submitted'],locale,viewport_id)
+                            # Wait for the native dialog to close after announcement.
+                            page.get_by_test_id('feedback-dialog').wait_for(state='hidden',timeout=3000)
+                            # Restore the real repository endpoint and remove intentional 503 diagnostics.
+                            page.unroute('**/api/v2/feedback/reports'); http_errors.clear()
+                    # Use the standard desktop-primary zoom proxy at an effective 960 CSS pixels.
+                    page.set_viewport_size({'width':960,'height':540}); page.get_by_test_id('shell-locale-select').select_option('en-US'); page.get_by_test_id('report-problem-open').click()
+                    # Require a readable panel width at the 200 percent proxy rather than mere no-overflow.
+                    assert page.get_by_test_id('feedback-dialog').evaluate('element => element.getBoundingClientRect().width >= 360')
+                    # Capture the explicit zoom state.
+                    game_evidence('after-pass-feedback-zoom-200-en-US-desktop_primary.png','feedback_report',['zoom_200'],'en-US','desktop_primary')
+                    # Close the zoom draft before the real submission.
+                    page.locator('#report-cancel').click()
+                    # Restore primary desktop and create one real report for Admin acceptance.
+                    page.set_viewport_size(viewports['desktop_primary']); page.get_by_test_id('report-problem-open').click()
+                    # Select controlled category and independently recorded impact.
+                    page.get_by_test_id('feedback-category').select_option('visual'); page.get_by_test_id('feedback-impact').select_option('difficult')
+                    # Fill the complete bounded prose contract.
+                    page.get_by_test_id('feedback-summary').fill('Browser feedback test report'); page.get_by_test_id('feedback-actual').fill('A visual element overlaps its intended region.'); page.get_by_test_id('feedback-expected').fill('The element should remain inside its intended region.')
+                    # Include one normalized screenshot in the committed report.
+                    page.locator('#report-file-input').set_input_files({'name':'feedback.png','mimeType':'image/png','buffer':png}); page.wait_for_function("() => document.querySelector('[data-testid=feedback-previews] img')")
+                    # Submit through the real additive v2 route.
+                    page.get_by_test_id('feedback-submit').click(); page.wait_for_function("() => /RPT-[A-Z0-9]+/.test(document.querySelector('#report-message')?.textContent || '')")
+                    # Retain only the internal public reference for the Admin lookup.
+                    feedback_report_reference['value']=re.search(r'RPT-[A-Z0-9]+',page.locator('#report-message').inner_text()).group(0)
+                    # Require automatic close after the live-region announcement.
+                    page.get_by_test_id('feedback-dialog').wait_for(state='hidden',timeout=3000)
+                # Execute the player-facing manual-report acceptance case under the unique requirement.
+                run_case('BR-FEEDBACK-001',['CORE-027','ADMIN-025','I18N-005','UX-019','TEST-094'],feedback_report_browser)
                 # Replace the normal-user browser cookie with an authenticated Admin session.
                 admin_browser_login=page.request.post(base+'/api/v2/auth/login',data={'email':DEFAULT_AUTH_EMAIL,'password':DEFAULT_AUTH_PASSWORD})
                 # Verify the browser context received a successful Admin login response.
@@ -6248,60 +6715,6 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         game_evidence(f'after-pass-shell-admin-nav-context-admin-{admin_nav_locale}-{admin_nav_viewport_id}.png','shell_lobby',['authenticated'],admin_nav_locale,admin_nav_viewport_id)
                 # Restore the default locale and primary viewport before keyboard activation.
                 page.set_viewport_size({'width':1920,'height':1080}); page.get_by_test_id('shell-locale-select').select_option('en-US'); page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'en-US'")
-                # Store the created internal report reference for the later Admin inbox proof.
-                feedback_report_reference={'value':''}
-                # Define the registered-user report modal, paste-equivalent upload, localization, submission, and containment proof. (issue #349)
-                def feedback_report_browser():
-                    # Enumerate every governed viewport required by the feedback visual-matrix row.
-                    viewports={'desktop_primary':{'width':1920,'height':1080},'desktop_compact':{'width':1440,'height':900},'tablet':{'width':1024,'height':900},'mobile':{'width':390,'height':844}}
-                    # Exercise empty modal presentation in both installed locales and every viewport.
-                    for locale in ('en-US','ru-RU'):
-                        # Switch through the player-visible locale control.
-                        page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale",arg=locale)
-                        # Capture and inspect the native modal at each governed width.
-                        for viewport_id,viewport in viewports.items():
-                            # Apply the exact visual-matrix dimensions.
-                            page.set_viewport_size(viewport); page.wait_for_timeout(100)
-                            # Open a clean report draft from the registered-user affordance.
-                            page.get_by_test_id('report-problem-open').click(); page.get_by_test_id('feedback-dialog').wait_for(state='visible')
-                            # Require no page-level or dialog-level horizontal overflow.
-                            assert page.evaluate("() => { const dialog=document.querySelector('[data-testid=feedback-dialog]'); return document.documentElement.scrollWidth <= window.innerWidth + 1 && dialog.scrollWidth <= dialog.clientWidth + 1; }")
-                            # Require translated copy rather than a visible resource key.
-                            assert 'feedback.' not in page.get_by_test_id('feedback-dialog').inner_text()
-                            # Capture governed empty-state evidence.
-                            game_evidence(f'after-pass-feedback-empty-{locale}-{viewport_id}.png','feedback_report',['empty'],locale,viewport_id)
-                            # Close through the localized explicit cancel control.
-                            page.locator('#report-cancel').click()
-                    # Restore English primary desktop for real submission.
-                    page.set_viewport_size(viewports['desktop_primary']); page.get_by_test_id('shell-locale-select').select_option('en-US'); page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'en-US'")
-                    # Open the final submission draft.
-                    page.get_by_test_id('report-problem-open').click()
-                    # Select the governed visual category.
-                    page.get_by_test_id('feedback-category').select_option('visual')
-                    # Fill the complete required prose contract.
-                    page.get_by_test_id('feedback-summary').fill('Browser feedback test report')
-                    # Describe the observed behavior without private data.
-                    page.get_by_test_id('feedback-actual').fill('A visual element overlaps its intended region.')
-                    # Describe the expected presentation.
-                    page.get_by_test_id('feedback-expected').fill('The element should remain inside its intended region.')
-                    # Decode a tiny valid PNG into a browser File payload.
-                    png=base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAI0lEQVR4nGMUqghiIAUwkaSaYVQDcYCJSHVwMKqBGEByKAEA0/YA/Hxc1QQAAAAASUVORK5CYII=')
-                    # Send the same file path handled by paste and drag normalization.
-                    page.locator('#report-file-input').set_input_files({'name':'feedback.png','mimeType':'image/png','buffer':png})
-                    # Wait for either the metadata-free browser preview or a surfaced decode diagnostic.
-                    page.wait_for_function("() => document.querySelector('[data-testid=feedback-previews] img') || document.querySelector('#report-message')?.textContent.trim()")
-                    # Require the preview and include only the bounded user-facing diagnostic if normalization failed.
-                    assert page.locator('[data-testid=feedback-previews] img').count()==1,page.locator('#report-message').inner_text()
-                    # Capture screenshot-ready evidence before submission.
-                    game_evidence('after-pass-feedback-screenshot-ready-en-US-desktop_primary.png','feedback_report',['screenshot_ready'],'en-US','desktop_primary')
-                    # Submit through the real v2 API and wait for the reference confirmation.
-                    page.get_by_test_id('feedback-submit').click(); page.wait_for_function("() => /RPT-[A-Z0-9]+/.test(document.querySelector('#report-message')?.textContent || '')")
-                    # Extract only the public reference for later Admin lookup.
-                    feedback_report_reference['value']=re.search(r'RPT-[A-Z0-9]+',page.locator('#report-message').inner_text()).group(0)
-                    # Require the modal to close after the confirmation announcement.
-                    page.get_by_test_id('feedback-dialog').wait_for(state='hidden',timeout=3000)
-                # Execute the player-facing problem-report acceptance case.
-                run_case('BR-FEEDBACK-001',['CORE-027','ADMIN-025','I18N-005','UX-019','TEST-091'],feedback_report_browser)
                 # Focus the visible role-owned route without a pointer.
                 page.get_by_test_id('nav-admin').focus()
                 # Record the focused control before its native Enter activation changes documents.
@@ -6356,50 +6769,76 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         assert module_table.locator('tr').filter(has_text=expected['module']).filter(has_text=expected['revision']).count()==1
                 # Execute the mapped Admin dashboard and packaged-release browser regression.
                 run_case('BR-ADMIN-001',['ADMIN-001','ADMIN-003','ADMIN-004','ADMIN-010','ADMIN-014','TEST-023'],admin_dashboard_browser)
-                # Define Admin problem-report discovery, triage, evidence, and GitHub-draft review. (issue #349)
+                # Define Admin inbox, evidence, triage, manual draft, export, and responsive acceptance. (issue #349)
                 def admin_feedback_browser():
-                    # Open the dedicated Admin problem-report section.
+                    # Open the dedicated Admin feedback surface and wait for its attachment-free list.
                     page.get_by_test_id('admin-tab-feedback').click(); page.get_by_test_id('admin-feedback-inbox').wait_for(timeout=5000)
-                    # Locate the report created through the real player modal.
-                    report_button=page.locator('[data-feedback-id]').filter(has_text=feedback_report_reference['value'])
-                    # Require exactly one idempotent report row.
-                    assert report_button.count()==1
-                    # Open canonical detail with internal screenshot evidence.
-                    report_button.click(); page.get_by_test_id('admin-feedback-detail').wait_for(timeout=5000)
-                    # Require the normalized screenshot to render inside the Admin-only detail.
-                    assert page.locator('.feedback-evidence img').count()==1
-                    # Apply governed P1 triage and internal notes.
-                    page.locator('#feedback-detail-priority').select_option('P1'); page.locator('#feedback-detail-status').select_option('triaged'); page.locator('#feedback-admin-notes').fill('Confirmed by exact-head browser acceptance.')
-                    # Save through the real v2 patch route.
-                    page.locator('#feedback-save').click(); page.get_by_test_id('admin-feedback-detail').wait_for(timeout=5000)
-                    # Prepare a reporter-free GitHub draft without external publication.
+                    # Locate exactly the report created by the authenticated player flow.
+                    report_button=page.locator('[data-feedback-id]').filter(has_text=feedback_report_reference['value']); assert report_button.count()==1
+                    # Open canonical detail and require one normalized Admin-only screenshot.
+                    report_button.click(); page.get_by_test_id('admin-feedback-detail').wait_for(timeout=5000); assert page.locator('.feedback-evidence img').count()==1
+                    # Apply controlled P1 triage and bounded internal notes through the idempotent patch route.
+                    page.locator('#feedback-detail-priority').select_option('P1'); page.locator('#feedback-detail-status').select_option('triaged'); page.locator('#feedback-admin-notes').fill('Confirmed by exact-head browser acceptance.'); page.locator('#feedback-github-url').fill('https://github.com/andreivorobiev/virtual-casino-simulator/issues/349'); page.locator('#feedback-save').click(); page.get_by_test_id('admin-feedback-detail').wait_for(timeout=5000)
+                    # Prepare the manual-only reporter-free draft without an external publication control.
                     page.locator('#feedback-draft').click(); page.locator('#feedback-github-draft:not([hidden])').wait_for(timeout=5000)
-                    # Require the governed P1 label and no reporter email or credential text.
-                    draft_text=page.locator('#feedback-github-draft').inner_text(); assert 'P1' in draft_text and '@' not in draft_text and 'password' not in draft_text.lower()
-                    # Verify localized responsive containment across every governed Admin viewport.
+                    # Require governed labels, privacy-safe content, and no automatic GitHub route or popup button.
+                    draft_text=page.locator('#feedback-github-draft').inner_text(); assert 'P1' in draft_text and '@' not in draft_text and 'password' not in draft_text.lower() and page.locator('#feedback-open-github').count()==0
+                    # Exercise both installed Admin locales at every governed viewport.
                     for locale in ('en-US','ru-RU'):
-                        # Switch locale in place through the shared i18n runtime.
+                        # Switch through the shared Admin locale runtime.
                         page.evaluate("async locale => { const i18n=await import('/core/i18n.js'); await i18n.setLocale(locale,{persistLocal:false}); }",locale)
-                        # Reopen the feedback tab because locale rerender returns to its current list view.
+                        # Reopen the feedback inbox after locale rerender.
                         page.get_by_test_id('admin-tab-feedback').click(); page.get_by_test_id('admin-feedback-inbox').wait_for(timeout=5000)
-                        # Check all governed viewports without page-level overflow.
+                        # Apply and prove the independent impact filter before responsive evidence.
+                        page.locator('#feedback-impact-filter').select_option('difficult'); page.locator('#feedback-apply-filters').click(); page.get_by_test_id('admin-feedback-inbox').wait_for(timeout=5000)
+                        # Check every governed Admin layout.
                         for viewport_id,viewport in {'desktop_primary':{'width':1920,'height':1080},'desktop_compact':{'width':1440,'height':900},'tablet':{'width':1024,'height':900},'mobile':{'width':390,'height':844}}.items():
-                            # Apply exact dimensions and allow layout to settle.
+                            # Apply exact visual-matrix geometry.
                             page.set_viewport_size(viewport); page.wait_for_timeout(100)
-                            # Capture separate localization and containment diagnostics so failures identify the exact governed state.
-                            feedback_diagnostics=page.evaluate("""() => { const inbox=document.querySelector('[data-testid="admin-feedback-inbox"]'); const table=document.querySelector('.feedback-table-scroll'); return { text:inbox?.innerText || '', pageScrollWidth:document.documentElement.scrollWidth, viewportWidth:innerWidth, tableClientWidth:table?.clientWidth || 0, tableScrollWidth:table?.scrollWidth || 0 }; }""")
-                            # Require translated inbox text and page containment while allowing only the named table region to scroll horizontally.
-                            assert 'feedback.' not in feedback_diagnostics['text'] and feedback_diagnostics['pageScrollWidth'] <= feedback_diagnostics['viewportWidth'] + 1,(locale,viewport_id,feedback_diagnostics)
-                            # Capture the governed inbox state.
-                            game_evidence(f'after-pass-admin-feedback-inbox-{locale}-{viewport_id}.png','admin',['feedback_inbox'],locale,viewport_id)
-                    # Restore the suite default viewport and locale.
+                            # Require translated page containment while allowing only the named table region to scroll.
+                            diagnostics=page.evaluate("""() => { const inbox=document.querySelector('[data-testid="admin-feedback-inbox"]'); return {text:inbox?.innerText || '',page:document.documentElement.scrollWidth,viewport:innerWidth}; }"""); assert 'feedback.' not in diagnostics['text'] and diagnostics['page']<=diagnostics['viewport']+1,(locale,viewport_id,diagnostics)
+                            # Capture the localized filtered inbox and keyboard-scroll surface.
+                            game_evidence(f'after-pass-admin-feedback-inbox-{locale}-{viewport_id}.png','admin',['feedback_inbox','feedback_filtered','feedback_keyboard_focus','feedback_reduced_motion'],locale,viewport_id)
+                            # Open the retained report from this exact localized responsive list.
+                            page.locator('[data-feedback-id]').filter(has_text=feedback_report_reference['value']).click(); page.get_by_test_id('admin-feedback-detail').wait_for(timeout=5000)
+                            # Capture the true linked triage and evidence-detail state.
+                            game_evidence(f'after-pass-admin-feedback-detail-{locale}-{viewport_id}.png','admin',['feedback_detail','feedback_triaged','feedback_manual_linked','feedback_export'],locale,viewport_id)
+                            # Prepare the server-sanitized manual-only draft in this locale and viewport.
+                            page.locator('#feedback-draft').click(); page.locator('#feedback-github-draft:not([hidden])').wait_for(timeout=5000)
+                            # Capture the manual draft with no external publication action.
+                            game_evidence(f'after-pass-admin-feedback-manual-draft-{locale}-{viewport_id}.png','admin',['feedback_manual_draft'],locale,viewport_id)
+                            # Return to the exact filtered inbox for the next viewport.
+                            page.locator('#feedback-back').click(); page.get_by_test_id('admin-feedback-inbox').wait_for(timeout=5000)
+                    # Restore one detail and capture triage/manual-draft states at primary desktop.
                     page.set_viewport_size({'width':1920,'height':1080}); page.evaluate("async () => { const i18n=await import('/core/i18n.js'); await i18n.setLocale('en-US',{persistLocal:false}); }")
-                # Execute the Admin half of the same permanent feedback acceptance case.
-                run_case('BR-ADMIN-FEEDBACK-001',['ADMIN-025','I18N-005','UX-019','TEST-091'],admin_feedback_browser)
+                    # Reopen the selected report from the filtered list.
+                    page.locator('[data-feedback-id]').filter(has_text=feedback_report_reference['value']).click(); page.get_by_test_id('admin-feedback-detail').wait_for(timeout=5000); page.locator('#feedback-draft').click(); page.locator('#feedback-github-draft:not([hidden])').wait_for(timeout=5000)
+                    # Download the metadata-only export through the real additive v2 route.
+                    with page.expect_download():
+                        # Activate the explicit Admin export control.
+                        page.locator('#feedback-export').click()
+                    # Use the desktop-primary 200 percent proxy and require a readable detail width.
+                    page.set_viewport_size({'width':960,'height':540}); assert page.get_by_test_id('admin-feedback-detail').evaluate('element => element.getBoundingClientRect().width >= 360')
+                    # Capture the governed Admin zoom proxy.
+                    game_evidence('after-pass-admin-feedback-zoom-200-en-US-desktop_primary.png','admin',['feedback_zoom_200'],'en-US','desktop_primary')
+                    # Restore primary desktop before controlled storage-error evidence.
+                    page.set_viewport_size({'width':1920,'height':1080})
+                    # Intercept the inbox request with one fixed internal storage failure.
+                    page.route('**/api/v2/admin/feedback/reports',lambda route: route.fulfill(status=503,content_type='application/json',body='{"ok":false,"error":{"code":"STORAGE_UNAVAILABLE","message":"Problem-report storage requires recovery"}}'))
+                    # Trigger the normal Admin error boundary through the visible tab.
+                    page.get_by_test_id('admin-tab-feedback').click(); page.get_by_test_id('admin-load-error').wait_for(timeout=5000)
+                    # Capture the localized storage-recovery failure without raw state.
+                    game_evidence('after-pass-admin-feedback-storage-error-en-US-desktop_primary.png','admin',['feedback_storage_error'],'en-US','desktop_primary')
+                    # Restore the real route and discard the intentional 503 diagnostic.
+                    page.unroute('**/api/v2/admin/feedback/reports'); http_errors.clear()
+                    # Restore the suite default for subsequent Admin cases.
+                    page.set_viewport_size({'width':1920,'height':1080})
+                # Execute Admin manual-only triage and evidence acceptance under TEST-094.
+                run_case('BR-ADMIN-FEEDBACK-001',['ADMIN-025','I18N-005','UX-019','TEST-094'],admin_feedback_browser)
                 # Define Admin-only OAuth diagnostics, isolation from Operations, and visual evidence.
                 def admin_oauth_browser():
                     # Define every governed Admin viewport from the visual matrix.
-                    viewports={'desktop_primary':{'width':1920,'height':1080},'desktop_compact':{'width':1440,'height':900},'tablet':{'width':1024,'height':900}}
+                    viewports={'desktop_primary':{'width':1920,'height':1080},'desktop_compact':{'width':1440,'height':900},'tablet':{'width':1024,'height':900},'mobile':{'width':390,'height':844}}
                     # Exercise provider diagnostics in both installed Admin locales.
                     for locale in ('en-US','ru-RU'):
                         # Switch locale without persisting a preference outside this disposable test copy.
@@ -6491,6 +6930,156 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.set_viewport_size({'width':1920,'height':1080}); page.evaluate("async () => { const i18n = await import('/core/i18n.js'); await i18n.setLocale('en-US', { persistLocal: false }); }"); page.get_by_test_id('admin-refresh').click(); page.get_by_test_id('admin-mail-disabled').wait_for(timeout=5000)
                 # Record dual-gate states, secret-free aggregate diagnostics, responsive containment, and evidence.
                 run_case('BR-ADMIN-MAIL-001',['MAIL-002','MAIL-003','MAIL-005','TEST-090'],admin_mail_browser)
+                # Define masked Admin invitation and account-free redemption evidence across every governed locale and viewport. (issue #332)
+                def invitation_browser():
+                    # Define all four visual-matrix viewports used by both invitation surfaces.
+                    viewports={'desktop_primary':{'width':1920,'height':1080},'desktop_compact':{'width':1440,'height':900},'tablet':{'width':1024,'height':900},'mobile':{'width':390,'height':844}}
+                    # Build one complete masked lifecycle row containing no raw recipient or credential material.
+                    pending_row={'invitation_id':'invite_visual_pending','recipient_hint':'i***@e***.invalid','status':'pending','delivery_status':'sent','locale':'en-US','created_at':'2032-02-03T04:05:06.000Z','updated_at':'2032-02-03T04:05:06.000Z','expires_at':'2032-02-10T04:05:06.000Z','redeemed_at':None,'revoked_at':None,'invited_by':'user_admin_visual','history':[]}
+                    # Derive one terminal row without adding recipient or account identifiers.
+                    redeemed_row={**pending_row,'invitation_id':'invite_visual_redeemed','status':'redeemed','redeemed_at':'2032-02-04T04:05:06.000Z','updated_at':'2032-02-04T04:05:06.000Z'}
+                    # Enumerate exact Admin matrix states and contract-shaped secret-free responses.
+                    scenarios=[
+                        ('invitations_disabled',{'enabled':False,'redemption_enabled':False,'mail_status':'disabled','recovery_required':0,'invitations':[]},'admin-invitations-disabled'),
+                        ('invitations_release_held',{'enabled':True,'redemption_enabled':False,'mail_status':'release_held','recovery_required':0,'invitations':[]},'admin-invitations-release-held'),
+                        ('invitations_empty',{'enabled':True,'redemption_enabled':True,'mail_status':'ready','recovery_required':0,'invitations':[]},'admin-invitations-ready'),
+                        ('invitations_pending',{'enabled':True,'redemption_enabled':True,'mail_status':'ready','recovery_required':0,'invitations':[pending_row]},'admin-invitations-ready'),
+                        ('invitations_redeemed',{'enabled':True,'redemption_enabled':True,'mail_status':'ready','recovery_required':0,'invitations':[redeemed_row]},'admin-invitations-ready'),
+                    ]
+                    # Exercise every Admin invitation state in both installed locales.
+                    for locale in ('en-US','ru-RU'):
+                        # Switch locale through the same runtime used by the visible Admin selector.
+                        page.evaluate("async locale => { const i18n = await import('/core/i18n.js'); await i18n.setLocale(locale, { persistLocal: false }); }",locale)
+                        # Render each exact contract response independently.
+                        for matrix_state,data,test_id in scenarios:
+                            # Wrap the safe data in the standard success envelope.
+                            payload={'ok':True,'data':data}
+                            # Intercept only the invitation list endpoint while all other Admin APIs remain real.
+                            page.route('**/api/v2/admin/invitations?limit=100',lambda route,_request,body=json.dumps(payload): route.fulfill(status=200,content_type='application/json',body=body))
+                            # Open the dedicated tab and wait for the exact readiness card.
+                            page.get_by_test_id('admin-tab-invitations').click(); page.get_by_test_id(test_id).wait_for(timeout=5000)
+                            # Require only masked recipient display and no secret-bearing URL or environment label.
+                            visible_invitation=page.get_by_test_id('admin-invitation-list').inner_text(); assert 'i***@e***.invalid' in visible_invitation or not data['invitations']; assert 'CASINO_' not in visible_invitation and 'token=' not in visible_invitation.lower() and '://' not in visible_invitation and 'invitee@' not in visible_invitation
+                            # Capture every state at all four governed viewports with containment checks.
+                            for viewport_id,viewport in viewports.items():
+                                # Resize to the exact matrix dimensions.
+                                page.set_viewport_size(viewport); page.wait_for_timeout(120)
+                                # Bring the lifecycle region into view inside the Admin scroll surface.
+                                page.get_by_test_id('admin-invitation-list').scroll_into_view_if_needed()
+                                # Measure page containment plus the bounded lifecycle region's accessibility and scroll ownership.
+                                invitation_geometry=page.evaluate("() => { const content=document.querySelector('.admin-content'); const card=document.querySelector('[data-testid=\"admin-invitation-list\"]'); const contentBox=content.getBoundingClientRect(); const cardBox=card.getBoundingClientRect(); const style=getComputedStyle(card); return { viewport:innerWidth, documentScrollWidth:document.documentElement.scrollWidth, contentClientWidth:content.clientWidth, contentScrollWidth:content.scrollWidth, contentBox:contentBox.toJSON(), cardClientWidth:card.clientWidth, cardScrollWidth:card.scrollWidth, cardBox:cardBox.toJSON(), overflowX:style.overflowX, role:card.getAttribute('role'), tabIndex:card.tabIndex, label:card.getAttribute('aria-label') }; }")
+                                # Require no page/content overflow while allowing only the named card to own an intentional table scroll.
+                                assert invitation_geometry['documentScrollWidth'] <= invitation_geometry['viewport'] + 1 and invitation_geometry['contentScrollWidth'] <= invitation_geometry['contentClientWidth'] + 1 and invitation_geometry['cardBox']['left'] >= invitation_geometry['contentBox']['left'] - 1 and invitation_geometry['cardBox']['right'] <= invitation_geometry['contentBox']['right'] + 1 and invitation_geometry['role']=='region' and invitation_geometry['tabIndex']==0 and invitation_geometry['label'] and (invitation_geometry['cardScrollWidth'] <= invitation_geometry['cardClientWidth'] + 1 or invitation_geometry['overflowX'] in ('auto','scroll')), {'state':matrix_state,'locale':locale,'viewport':viewport_id,'geometry':invitation_geometry}
+                                # Capture exact after-pass evidence for this state, locale, and viewport.
+                                game_evidence(f'after-pass-admin-{matrix_state}-{locale}-{viewport_id}.png','admin',[matrix_state],locale,viewport_id)
+                                # Prove the populated mobile lifecycle table responds to keyboard scrolling without widening the page.
+                                if matrix_state=='invitations_pending' and viewport_id=='mobile':
+                                    # Focus the semantic region before issuing native horizontal navigation keys.
+                                    page.get_by_test_id('admin-invitation-list').focus()
+                                    # Advance the native scroll position through keyboard input rather than script-only movement.
+                                    for _ in range(12): page.keyboard.press('ArrowRight')
+                                    # Wait for Chromium to commit the asynchronous native scroll after the keyboard events.
+                                    page.wait_for_function("() => document.querySelector('[data-testid=\"admin-invitation-list\"]')?.scrollLeft > 0",timeout=2000)
+                                    # Require visible focus, actual horizontal movement, and continued page containment.
+                                    assert page.evaluate("() => { const card=document.querySelector('[data-testid=\"admin-invitation-list\"]'); return document.activeElement===card && card.scrollLeft>0 && document.documentElement.scrollWidth<=innerWidth+1; }")
+                                    # Capture the explicit keyboard-scroll matrix state with masked data only.
+                                    game_evidence(f'after-pass-admin-invitations-keyboard-scroll-{locale}-mobile.png','admin',['invitations_keyboard_scroll'],locale,'mobile')
+                                    # Restore the region to its leading edge before later evidence.
+                                    page.evaluate("() => { document.querySelector('[data-testid=\"admin-invitation-list\"]').scrollLeft=0; }")
+                                    # Capture the complete mobile region under reduced-motion preference.
+                                    page.emulate_media(reduced_motion='reduce'); game_evidence(f'after-pass-admin-invitations-reduced-motion-{locale}-mobile.png','admin',['invitations_reduced_motion'],locale,'mobile'); page.emulate_media(reduced_motion='no-preference')
+                                    # Apply the repository's 200-percent content-zoom proxy and wait for responsive reflow.
+                                    page.set_viewport_size(viewports['desktop_primary']); page.evaluate("() => { document.body.style.zoom='200%'; document.body.style.width='100%'; }"); page.wait_for_timeout(100)
+                                    # Measure the zoomed shell, header, content, and intentional sidebar/list scroll regions.
+                                    zoom_geometry=page.evaluate("() => { const shell=document.querySelector('.admin-shell'); const sidebar=document.querySelector('.admin-sidebar'); const top=document.querySelector('.admin-top'); const content=document.querySelector('.admin-content'); const list=document.querySelector('[data-testid=\"admin-invitation-list\"]'); return { viewport:innerWidth, documentScrollWidth:document.documentElement.scrollWidth, bodyScrollWidth:document.body.scrollWidth, shellClientWidth:shell.clientWidth, shellScrollWidth:shell.scrollWidth, sidebarClientWidth:sidebar.clientWidth, sidebarScrollWidth:sidebar.scrollWidth, topClientWidth:top.clientWidth, topScrollWidth:top.scrollWidth, contentClientWidth:content.clientWidth, contentScrollWidth:content.scrollWidth, listClientWidth:list.clientWidth, listScrollWidth:list.scrollWidth }; }")
+                                    # Require the page, shell, header, and content to remain contained while named regions own any internal scroll.
+                                    assert zoom_geometry['documentScrollWidth']<=zoom_geometry['viewport']+1 and zoom_geometry['bodyScrollWidth']<=zoom_geometry['viewport']+1 and zoom_geometry['shellScrollWidth']<=zoom_geometry['shellClientWidth']+1 and zoom_geometry['topScrollWidth']<=zoom_geometry['topClientWidth']+1 and zoom_geometry['contentScrollWidth']<=zoom_geometry['contentClientWidth']+1 and zoom_geometry['sidebarScrollWidth']>=zoom_geometry['sidebarClientWidth'] and zoom_geometry['listScrollWidth']>=zoom_geometry['listClientWidth'] and zoom_geometry['topClientWidth']>=320 and zoom_geometry['contentClientWidth']>=320 and zoom_geometry['listClientWidth']>=280, {'locale':locale,'viewport':'desktop_primary','zoom':200,'geometry':zoom_geometry}
+                                    # Capture the explicit invitation zoom state before restoring normal scale.
+                                    game_evidence(f'after-pass-admin-invitations-zoom-200-{locale}-desktop_primary.png','admin',['invitations_zoom_200'],locale,'desktop_primary'); page.evaluate("() => { document.body.style.zoom=''; document.body.style.width=''; }")
+                            # Remove the focused response before the next state.
+                            page.unroute('**/api/v2/admin/invitations?limit=100')
+                        # Publish one standard API error to prove a bounded localized Admin recovery state.
+                        page.route('**/api/v2/admin/invitations?limit=100',lambda route: route.fulfill(status=200,content_type='application/json',body='{"ok":false,"error":{"code":"INVITATION_UNAVAILABLE","message":"Unavailable"}}'))
+                        # Open and wait for the shared localized Admin load-error card.
+                        page.get_by_test_id('admin-tab-invitations').click(); page.get_by_test_id('admin-load-error').wait_for(timeout=5000)
+                        # Capture the invitation error state at every governed viewport.
+                        for viewport_id,viewport in viewports.items(): page.set_viewport_size(viewport); page.wait_for_timeout(100); game_evidence(f'after-pass-admin-invitations-error-{locale}-{viewport_id}.png','admin',['invitations_error'],locale,viewport_id)
+                        # Remove the error shim before the next locale.
+                        page.unroute('**/api/v2/admin/invitations?limit=100')
+                    # Restore primary dimensions before leaving the Admin session.
+                    page.set_viewport_size(viewports['desktop_primary'])
+                    # Record diagnostics boundaries so only the controlled anonymous and generic-error responses can be consumed.
+                    invitation_console_index=len(console_errors); invitation_http_index=len(http_errors); invitation_page_error_index=len(page_errors)
+                    # Clear the authenticated cookie jar so the account-free public route is exercised honestly.
+                    page.context.clear_cookies()
+                    # Exercise the form, consent, generic error, focus, motion, and zoom states in both locales.
+                    for locale in ('en-US','ru-RU'):
+                        # Navigate with a synthetic bearer that is never rendered or written to evidence metadata.
+                        page.goto(base+'/enroll/invitation?token=synthetic-browser-invitation-bearer',wait_until='networkidle'); page.get_by_test_id('invitation-redemption').wait_for(timeout=5000)
+                        # Switch the visible form locale through its own governed selector.
+                        page.get_by_test_id('invitation-locale').select_option(locale); page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale",arg=locale)
+                        # Capture the empty account-free form and explicit unaccepted-terms state at every viewport.
+                        for viewport_id,viewport in viewports.items():
+                            # Resize before containment and evidence.
+                            page.set_viewport_size(viewport); page.wait_for_timeout(100)
+                            # Require no page-level horizontal overflow.
+                            assert page.evaluate("() => document.documentElement.scrollWidth <= window.innerWidth + 1")
+                            # Capture the empty form and explicit consent boundary together.
+                            game_evidence(f'after-pass-invitation-form-{locale}-{viewport_id}.png','invitation_redemption',['form','terms_unaccepted'],locale,viewport_id)
+                        # Focus the native submit control so keyboard evidence records the exact target.
+                        page.get_by_test_id('invitation-submit').focus(); assert page.evaluate("() => document.activeElement?.getAttribute('data-testid')")=='invitation-submit'
+                        # Capture the keyboard-focus state at primary desktop.
+                        page.set_viewport_size(viewports['desktop_primary']); game_evidence(f'after-pass-invitation-keyboard-focus-{locale}-desktop_primary.png','invitation_redemption',['keyboard_focus'],locale,'desktop_primary')
+                        # Enable reduced motion and capture the unchanged complete form.
+                        page.emulate_media(reduced_motion='reduce'); game_evidence(f'after-pass-invitation-reduced-motion-{locale}-desktop_primary.png','invitation_redemption',['reduced_motion'],locale,'desktop_primary'); page.emulate_media(reduced_motion='no-preference')
+                        # Apply the repository's 200-percent content-zoom proxy and wait for responsive form reflow.
+                        page.set_viewport_size(viewports['desktop_primary']); page.evaluate("() => { document.body.style.zoom='200%'; document.body.style.width='100%'; }"); page.wait_for_timeout(100)
+                        # Measure the page, panel, form, and every visible enrollment field at the exact zoom state.
+                        public_zoom_geometry=page.evaluate("() => { const panel=document.querySelector('[data-testid=\"invitation-redemption\"]'); const form=document.querySelector('#invitation-form'); const panelBox=panel.getBoundingClientRect(); const formBox=form.getBoundingClientRect(); const controls=[...form.querySelectorAll('input, select, button')].map(control => ({ testId:control.getAttribute('data-testid'), tag:control.tagName.toLowerCase(), clientWidth:control.clientWidth, scrollWidth:control.scrollWidth, box:control.getBoundingClientRect().toJSON() })); return { viewport:innerWidth, documentScrollWidth:document.documentElement.scrollWidth, panelClientWidth:panel.clientWidth, panelScrollWidth:panel.scrollWidth, panelBox:panelBox.toJSON(), formClientWidth:form.clientWidth, formScrollWidth:form.scrollWidth, formBox:formBox.toJSON(), controls }; }")
+                        # Require page/panel/form containment plus every native field fully painted inside the form.
+                        assert public_zoom_geometry['documentScrollWidth']<=public_zoom_geometry['viewport']+1 and public_zoom_geometry['panelScrollWidth']<=public_zoom_geometry['panelClientWidth']+1 and public_zoom_geometry['formScrollWidth']<=public_zoom_geometry['formClientWidth']+1 and public_zoom_geometry['panelBox']['left']>=-1 and public_zoom_geometry['panelBox']['right']<=public_zoom_geometry['viewport']+1 and public_zoom_geometry['panelClientWidth']>=320 and public_zoom_geometry['formClientWidth']>=280 and all(control['box']['left']>=public_zoom_geometry['formBox']['left']-1 and control['box']['right']<=public_zoom_geometry['formBox']['right']+1 and (control['tag']=='select' or control['scrollWidth']<=control['clientWidth']+1) for control in public_zoom_geometry['controls']), {'locale':locale,'viewport':'desktop_primary','zoom':200,'geometry':public_zoom_geometry}
+                        # Capture the explicit zoom acceptance state before restoring scale.
+                        game_evidence(f'after-pass-invitation-zoom-200-{locale}-desktop_primary.png','invitation_redemption',['zoom_200'],locale,'desktop_primary'); page.evaluate("() => { document.body.style.zoom=''; document.body.style.width=''; }")
+                        # Return to primary dimensions for the generic-error interaction.
+                        page.set_viewport_size(viewports['desktop_primary'])
+                        # Intercept only redemption with the exact generic contract error.
+                        page.route('**/api/v2/auth/redeem-invitation',lambda route: route.fulfill(status=400,content_type='application/json',body='{"ok":false,"error":{"code":"VALIDATION_ERROR","message":"invitation could not be redeemed","details":{"reason":"invitation_unavailable"}}}'))
+                        # Fill transient synthetic fields and explicit current terms before submit.
+                        page.get_by_test_id('invitation-email').fill('visual-invitation@example.invalid'); page.get_by_test_id('invitation-display-name').fill('Invited Player'); page.get_by_test_id('invitation-password').fill('Synthetic-Invite-2026!'); page.get_by_test_id('invitation-terms').check(); page.get_by_test_id('invitation-submit').click()
+                        # Wait for the localized generic message, then clear all raw transient fields before evidence.
+                        page.wait_for_function("() => document.querySelector('#invitation-message')?.textContent.trim().length > 0"); page.get_by_test_id('invitation-email').fill(''); page.get_by_test_id('invitation-display-name').fill(''); page.get_by_test_id('invitation-password').fill('')
+                        # Capture the non-enumerating error at every governed viewport.
+                        for viewport_id,viewport in viewports.items(): page.set_viewport_size(viewport); page.wait_for_timeout(100); game_evidence(f'after-pass-invitation-generic-error-{locale}-{viewport_id}.png','invitation_redemption',['generic_error'],locale,viewport_id)
+                        # Remove the generic-error shim before the terminal success response.
+                        page.unroute('**/api/v2/auth/redeem-invitation')
+                    # Exercise terminal success independently in both installed locales with identifier-free responses.
+                    for success_locale in ('en-US','ru-RU'):
+                        # Open a fresh synthetic form whose bearer is never written to screenshots or sidecars.
+                        page.goto(base+'/enroll/invitation?token=synthetic-browser-success-bearer',wait_until='networkidle'); page.get_by_test_id('invitation-redemption').wait_for(timeout=5000)
+                        # Select and verify the exact locale before submitting so evidence metadata matches rendered copy.
+                        page.get_by_test_id('invitation-locale').select_option(success_locale); page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale",arg=success_locale)
+                        # Intercept the terminal response without creating a real account in the browser copy.
+                        page.route('**/api/v2/auth/redeem-invitation',lambda route: route.fulfill(status=200,content_type='application/json',body='{"ok":true,"data":{"status":"enrolled"}}'))
+                        # Fill current terms and submit through the visible public form.
+                        page.get_by_test_id('invitation-email').fill('visual-success@example.invalid'); page.get_by_test_id('invitation-display-name').fill('Invited Player'); page.get_by_test_id('invitation-password').fill('Synthetic-Invite-2026!'); page.get_by_test_id('invitation-terms').check(); page.get_by_test_id('invitation-submit').click(); page.get_by_test_id('login-gate').wait_for(timeout=5000)
+                        # Require the bearer to be removed from browser history after success.
+                        assert page.url.rstrip('/')==base.rstrip('/') and 'token=' not in page.url
+                        # Capture the identifier-free success return at every governed viewport with truthful locale metadata.
+                        for viewport_id,viewport in viewports.items(): page.set_viewport_size(viewport); page.wait_for_timeout(100); game_evidence(f'after-pass-invitation-success-{success_locale}-{viewport_id}.png','invitation_redemption',['success_return_to_login'],success_locale,viewport_id)
+                        # Remove the focused success shim before the next locale or authenticated restoration.
+                        page.unroute('**/api/v2/auth/redeem-invitation')
+                    # Restore an authenticated Admin session for the following browser suites.
+                    page.request.post(base+'/api/v2/auth/login',data={'email':DEFAULT_AUTH_EMAIL,'password':DEFAULT_AUTH_PASSWORD}); page.goto(base+'/admin',wait_until='networkidle'); page.get_by_test_id('admin-tab-operations').wait_for(timeout=5000)
+                    # Retain only diagnostics emitted by the controlled account-free invitation journey.
+                    invitation_expected_console=console_errors[invitation_console_index:]; invitation_expected_http=http_errors[invitation_http_index:]; invitation_expected_page_errors=page_errors[invitation_page_error_index:]
+                    # Require exactly four anonymous session probes and two contract-shaped generic redemption rejections.
+                    assert len(invitation_expected_http)==6 and sum(value.startswith('401 ') and value.endswith('/api/v2/me') for value in invitation_expected_http)==4 and sum(value.startswith('400 ') and value.endswith('/api/v2/auth/redeem-invitation') for value in invitation_expected_http)==2, invitation_expected_http
+                    # Require the browser to report no JavaScript failure and only its standard failed-resource console lines.
+                    assert invitation_expected_page_errors==[] and len(invitation_expected_console)==len(invitation_expected_http) and all('Failed to load resource' in value for value in invitation_expected_console), invitation_expected_console+invitation_expected_page_errors
+                    # Remove only the verified controlled diagnostics so every unrelated HTTP or console failure remains fatal.
+                    del console_errors[invitation_console_index:]; del http_errors[invitation_http_index:]
+                # Record the complete Admin/public locale, viewport, state, privacy, keyboard, motion, zoom, and evidence matrix.
+                run_case('BR-INVITE-001',['INVITE-001','INVITE-002','INVITE-003','INVITE-005','TEST-091'],invitation_browser)
                 # Define real-backend Operations states, localization, responsive layout, and evidence.
                 def admin_operations_browser():
                     # Cache the isolated backend's primary storage document for reversible degradation.

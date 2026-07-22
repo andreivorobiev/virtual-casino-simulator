@@ -1,14 +1,12 @@
 {
   "module": "application",
-  "version": "9.41.1",
+  "version": "9.44.0",
   "paths": [
     "run.py",
     "pyproject.toml",
-    "requirements-dev.txt",
     "deploy/",
     "README.md",
     "modules/__init__.py",
-    "web/index.html",
     "web/app.js",
     "web/styles.css",
     "web/core/i18n.js",

@@ -6,6 +6,10 @@
   "anonymous_routes": [
     "/api/v2/auth/login",
     "/api/v2/auth/guest",
+    "/api/v2/auth/redeem-invitation",
+    "/api/v2/auth/oauth/providers",
+    "/api/v2/auth/oauth/{google|facebook}/start",
+    "/api/v2/auth/oauth/{google|facebook}/callback",
     "/healthz"
   ],
   "authenticated_routes": [
@@ -18,10 +22,9 @@
   ],
   "disabled_public_actions": [
     "signup",
-    "oauth_authorize",
-    "oauth_callback",
     "oauth_exchange",
-    "oauth_link"
+    "oauth_account_creation",
+    "oauth_email_linking"
   ],
   "request_integrity": {
     "unsafe_methods": ["DELETE", "PATCH", "POST", "PUT"],
@@ -44,6 +47,9 @@
   "access_policy": {
     "public_signup": false,
     "live_oauth": false,
+    "oauth_provider_flags_default_false": true,
+    "oauth_provider_network_release_flags_default_false": true,
+    "oauth_existing_private_invite_accounts_only": true,
     "admin_requires_admin_session": true,
     "guest_trials_restricted_preview_only": true,
     "guest_browser_context_proof_required": true,

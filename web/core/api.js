@@ -58,6 +58,16 @@ export const del = (path, body = {}) => api(path, { method: 'DELETE', body });
 export const currentUser = () => api('/api/v2/me');
 // Export this symbol so the shell can start an authenticated browser session.
 export const login = body => post('/api/v2/auth/login', body);
+// Read boolean-only provider availability for the logged-out sign-in surface. (OAUTH-007)
+export const oauthProviders = () => api('/api/v2/auth/oauth/providers');
+// Start one browser-bound sign-in or explicitly confirmed authenticated link flow. (OAUTH-008)
+export const startOAuth = (provider, body) => post(`/api/v2/auth/oauth/${encodeURIComponent(provider)}/start`, body);
+// Read authenticated boolean-only provider-link state without provider subjects. (OAUTH-009)
+export const oauthLinks = () => api('/api/v2/me/oauth/providers');
+// Remove one current-user provider link after explicit confirmation. (OAUTH-010)
+export const unlinkOAuth = provider => post(`/api/v2/me/oauth/${encodeURIComponent(provider)}/unlink`, { confirm_unlink: true });
+// Redeem one disabled-by-default private invitation through the additive v2 boundary. (INVITE-003)
+export const redeemInvitation = body => post('/api/v2/auth/redeem-invitation', body);
 // Export this symbol so the shell can end the current authenticated browser session.
 export const logout = () => post('/api/v2/auth/logout', {});
 // Start one account-free disposable guest trial from the login surface. (issue #317)

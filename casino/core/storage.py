@@ -115,6 +115,11 @@ class StorageProvider:
         # Raise because concrete providers must preserve update semantics.
         raise NotImplementedError
 
+    # Create one deterministic player exactly once or return its existing compatible row.
+    def ensure_player(self, player: dict) -> dict:
+        # Raise because concrete providers must serialize deterministic player provisioning.
+        raise NotImplementedError
+
     # Execute a ledger transaction and persist the resulting balance atomically.
     def transact_ledger(self, player_id: str, amount: float, transaction_type: str, game: str | None = None, round_id: str | None = None, details: dict | None = None) -> dict:
         # Raise because concrete providers must enforce atomic ledger writes.
@@ -191,6 +196,11 @@ class JsonStorageProvider(StorageProvider):
     def ledger_lock_path(self) -> Path:
         # Return one provider-local lock file shared by all wallet-writing processes.
         return self.data_dir / ".ledger.lock"
+
+    # Return one sidecar lock path for an atomic named-document mutation.
+    def document_lock_path(self, key: str) -> Path:
+        # Place the lock beside the selected document so independent documents do not block each other.
+        return self.document_path(key).with_suffix(".json.lock")
 
     # Return the local CSV history path.
     def history_path(self) -> Path:
@@ -331,6 +341,52 @@ class JsonStorageProvider(StorageProvider):
                     # Release the file lock for the next process.
                     fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
 
+    # Hold one operating-system lock across a named-document read-modify-write.
+    @contextmanager
+    def _document_process_lock(self, key: str):  # Serialize the same document across provider instances and processes.
+        # Ensure the document parent exists before opening its sidecar lock target.
+        self.document_lock_path(key).parent.mkdir(parents=True, exist_ok=True)
+        # Open a persistent one-byte lock target shared by every provider instance for this key.
+        with self.document_lock_path(key).open("a+b") as handle:
+            # Branch to the Windows byte-range locking implementation.
+            if os.name == "nt":
+                # Import the Windows runtime lock API only on Windows.
+                import msvcrt
+                # Ensure the file contains one byte that can be locked.
+                if handle.seek(0, os.SEEK_END) == 0:
+                    # Write the lock byte once for a fresh document lock.
+                    handle.write(b"0")
+                    # Flush the byte before locking it from another process.
+                    handle.flush()
+                # Seek to the byte range that represents this document lock.
+                handle.seek(0)
+                # Block until this process exclusively owns the byte range.
+                msvcrt.locking(handle.fileno(), msvcrt.LK_LOCK, 1)
+                # Yield while the caller owns the cross-process document lock.
+                try:
+                    # Transfer control to the protected document operation.
+                    yield
+                # Always release the byte-range lock after the operation.
+                finally:
+                    # Return to the locked byte before unlocking it.
+                    handle.seek(0)
+                    # Release the byte range for the next process.
+                    msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+            # Use advisory flock on POSIX development and CI hosts.
+            else:
+                # Import POSIX locking only where the module is available.
+                import fcntl
+                # Block until this process exclusively owns the file lock.
+                fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+                # Yield while the caller owns the cross-process document lock.
+                try:
+                    # Transfer control to the protected document operation.
+                    yield
+                # Always release the advisory lock after the operation.
+                finally:
+                    # Release the file lock for the next process.
+                    fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+
     # Append a JSONL ledger event to the local ledger file.
     def _append_jsonl(self, path: Path, event: dict) -> None:
         # Ensure local directories exist before writing.
@@ -401,6 +457,33 @@ class JsonStorageProvider(StorageProvider):
                         return player
         # Raise a consistent not-found error when no player matched.
         raise NotFoundError(f"Player {player_id} was not found")
+
+    # Create one deterministic player under the same cross-process wallet lock used by updates.
+    def ensure_player(self, player: dict) -> dict:
+        # Guard deterministic provisioning from concurrent threads.
+        with self.lock:
+            # Guard deterministic provisioning from independent processes.
+            with self._ledger_process_lock():
+                # Recover any committed ledger projection before changing the player document.
+                self._recover_committed_actions()
+                # Load the current player collection without seeding unrelated defaults.
+                state = self._load_players_document(lambda: {"schema_version": SCHEMA_VERSION, "players": []})
+                # Return an existing compatible row for an idempotent recovery attempt.
+                for existing in state["players"]:
+                    # Match only the deterministic invited-player identifier.
+                    if existing.get("player_id") == player.get("player_id"):
+                        # Reject an identifier collision with different ownership semantics.
+                        if existing.get("type") != player.get("type"):
+                            # Preserve the existing row and fail the provisioning saga closed.
+                            raise ConflictError("Player provisioning identity conflicts with existing state")
+                        # Return the already provisioned player without resetting balance or timestamps.
+                        return existing
+                # Append a detached copy so caller mutation cannot alter persisted state after return.
+                state["players"].append(dict(player))
+                # Persist the complete deterministic player document while the process lock remains held.
+                self.save_players(state)
+                # Return the newly committed compatible row.
+                return dict(player)
 
     # Return the empty committed-action registry shape used by fresh JSON stores.
     def _empty_action_registry(self) -> dict:
@@ -683,14 +766,34 @@ class JsonStorageProvider(StorageProvider):
     def update_document(self, key: str, mutator: Callable[[Any], Any], default: Any) -> Any:
         # Serialize the direct provider read-modify-write inside this process.
         with self.lock:
-            # Read an independent current document or evaluate its lazy default.
-            current = self._read_json(self.document_path(key), default)
-            # Apply the caller-owned mutation while the provider lock is held.
-            updated = mutator(current)
-            # Atomically replace the complete JSON document on disk.
-            self._write_json(self.document_path(key), updated)
-            # Return the exact value that was persisted.
-            return updated
+            # Hold the same sidecar lock across every provider instance and process.
+            with self._document_process_lock(key):
+                # Resolve the exact document path once under the cross-process lock.
+                path = self.document_path(key)
+                # Evaluate the default only when the durable document is absent.
+                if not path.exists():
+                    # Preserve lazy default-factory behavior for new documents.
+                    current = default() if callable(default) else default
+                # Parse an existing document strictly so malformed evidence is never replaced by a default.
+                else:
+                    # Start protected parsing while keeping the original file untouched on failure.
+                    try:
+                        # Decode the current durable payload inside the complete mutation boundary.
+                        current = json.loads(path.read_text(encoding="utf-8"))
+                    # Preserve malformed state and publish an operator-recovery failure.
+                    except json.JSONDecodeError:
+                        # Copy the malformed payload for explicit recovery without replacing the source.
+                        backup = path.with_suffix(path.suffix + f".corrupt-{int(time.time())}")
+                        # Preserve a recoverable snapshot before aborting the mutation.
+                        shutil.copy2(path, backup)
+                        # Abort without invoking the mutator or writing a normalized document.
+                        raise RuntimeError("Stored document requires operator recovery") from None
+                # Apply the caller-owned mutation while both process and thread locks are held.
+                updated = mutator(current)
+                # Atomically replace the complete JSON document only after successful validation and mutation.
+                self._write_json(path, updated)
+                # Return the exact value that was persisted.
+                return updated
 
 
 # Define the canonical history fields shared by JSON and MySQL providers.
@@ -951,6 +1054,52 @@ class MySQLStorageProvider(StorageProvider):
         # Always close the connection after the update attempt.
         finally:
             # Close the MySQL connection for this operation.
+            connection.close()
+
+    # Create one deterministic player under a MySQL primary-key transaction.
+    def ensure_player(self, player: dict) -> dict:
+        # Ensure the relational schema exists before provisioning.
+        self.ensure_ready()
+        # Open one connection for the insert-or-read transaction.
+        connection = self.connect()
+        # Protect rollback and cleanup for every database outcome.
+        try:
+            # Start an explicit transaction so duplicate creators serialize on the primary key.
+            connection.start_transaction()
+            # Open a dictionary cursor for the committed row projection.
+            cursor = connection.cursor(dictionary=True)
+            # Insert the deterministic player once without overwriting any existing wallet state.
+            cursor.execute(
+                "INSERT IGNORE INTO casino_players (player_id, display_name, player_type, balance, created_at, updated_at, status) VALUES (%s, %s, %s, %s, %s, %s, %s)",  # Preserve existing rows on an idempotent replay.
+                (player["player_id"], player["display_name"], player.get("type", "human"), round(float(player.get("balance", 0)), 2), player["created_at"], player["updated_at"], player.get("status", "active")),  # Bind only normalized deterministic fields.
+            )
+            # Lock and read the resulting row before validating compatibility.
+            cursor.execute("SELECT player_id, display_name, player_type, balance, created_at, updated_at, status FROM casino_players WHERE player_id = %s FOR UPDATE", (player["player_id"],))
+            # Resolve the inserted or pre-existing row.
+            row = cursor.fetchone()
+            # Reject an impossible missing row without committing partial state.
+            if row is None:
+                # Raise a stable provisioning conflict for the recoverable caller.
+                raise ConflictError("Player provisioning did not produce durable state")
+            # Convert the relational row into the public storage shape.
+            result = self._player_from_row(row)
+            # Reject a primary-key collision with incompatible player ownership semantics.
+            if result.get("type") != player.get("type"):
+                # Keep the original row unchanged and fail closed.
+                raise ConflictError("Player provisioning identity conflicts with existing state")
+            # Commit either the first insert or the compatible no-op replay.
+            connection.commit()
+            # Return the committed player row.
+            return result
+        # Roll back every failed provisioning attempt.
+        except Exception:
+            # Discard any partial insert or lock state.
+            connection.rollback()
+            # Preserve the original bounded application error.
+            raise
+        # Always release the provider connection.
+        finally:
+            # Close the database connection after commit or rollback.
             connection.close()
 
     # Execute a ledger transaction and player balance update atomically in MySQL.

@@ -35,6 +35,11 @@
         </div>
       </details>
       <select id="shell-locale-select" class="shell-locale" data-testid="shell-locale-select" aria-label="Language"></select>
+      <!-- Account identity controls require explicit consent and remain separate from logout. -->
+      <details id="account-menu" class="account-menu">
+        <summary id="account-menu-summary" class="icon-button profile-dot" aria-label="Account sign-in methods" data-testid="account-menu"><span aria-hidden="true"></span></summary>
+        <div id="oauth-account-popover" class="account-popover" data-testid="oauth-account-popover"></div>
+      </details>
       <button id="logout-btn" class="icon-button profile-dot" type="button" aria-label="Logout" data-testid="logout"><span aria-hidden="true"></span></button>
     </div>
   </header>
@@ -57,9 +62,10 @@
       </div>
       <p id="report-problem-privacy" class="muted">Describe what happened. Do not include passwords, tokens, or other private information.</p>
       <div class="report-grid">
-        <label><span id="report-category-label">Category</span><select id="report-category" data-testid="feedback-category" required><option value="bug">Bug</option><option value="visual">Visual / layout</option><option value="accessibility">Accessibility</option><option value="performance">Performance</option><option value="content">Content</option><option value="other">Other</option></select></label>
-        <label><span id="report-summary-label">Short summary</span><input id="report-summary" data-testid="feedback-summary" type="text" minlength="5" maxlength="140" required></label>
+        <label><span id="report-category-label">Category</span><select id="report-category" data-testid="feedback-category" required><option value="bug">Bug</option><option value="visual">Visual / layout</option><option value="gameplay">Gameplay</option><option value="account">Account</option><option value="idea">Idea</option><option value="other">Other</option></select></label>
+        <label><span id="report-impact-label">Impact</span><select id="report-impact" data-testid="feedback-impact" required><option value="blocked">Blocked</option><option value="difficult">Difficult</option><option value="minor">Minor</option></select></label>
       </div>
+      <label><span id="report-summary-label">Short summary</span><input id="report-summary" data-testid="feedback-summary" type="text" minlength="5" maxlength="140" required></label>
       <label><span id="report-actual-label">What happened?</span><textarea id="report-actual" data-testid="feedback-actual" minlength="5" maxlength="4000" rows="4" required></textarea></label>
       <label><span id="report-expected-label">What did you expect?</span><textarea id="report-expected" data-testid="feedback-expected" minlength="5" maxlength="2000" rows="3" required></textarea></label>
       <section id="report-dropzone" class="report-dropzone" data-testid="feedback-dropzone" tabindex="0" role="button" aria-describedby="report-screenshot-help">

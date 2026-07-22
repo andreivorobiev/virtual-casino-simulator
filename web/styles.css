@@ -128,6 +128,8 @@ label {
 
 .casino-page.auth-locked {
   overflow: auto;
+  container-name: auth-page;
+  container-type: inline-size;
 }
 
 .auth-locked .casino-topbar,
@@ -534,6 +536,52 @@ label {
   color: var(--bad);
 }
 
+/* Let every invitation enrollment layer shrink inside the governed mobile 200-percent zoom column. */
+[data-testid="invitation-redemption"],
+[data-testid="invitation-redemption"] .auth-form,
+[data-testid="invitation-redemption"] .auth-form > label {
+  min-width: 0;
+}
+
+/* Wrap localized enrollment copy instead of letting a long word widen the anonymous page. */
+[data-testid="invitation-redemption"] :is(h1, p, label, span, a) {
+  overflow-wrap: anywhere;
+}
+
+/* Override native field minimums while retaining the shared 42-pixel control-height floor. */
+[data-testid="invitation-redemption"] .auth-form > label:not(.check-row) > :is(input, select),
+[data-testid="invitation-redemption"] .auth-form > button {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  word-break: break-word;
+}
+
+/* Reclaim fixed auth padding only when zoom or a genuinely narrow window leaves at most 220 CSS pixels. */
+@container auth-page (max-width: 220px) {
+  .auth-screen:has(> [data-testid="invitation-redemption"]) {
+    padding: 4px;
+  }
+
+  /* Preserve a readable invitation card while leaving enough inline space for native fields. */
+  [data-testid="invitation-redemption"] {
+    gap: 8px;
+    padding: 8px 4px;
+  }
+
+  /* Scale the display heading without reducing form labels or 42-pixel controls. */
+  [data-testid="invitation-redemption"] h1 {
+    font-size: 22px;
+  }
+
+  /* Tighten only vertical form rhythm in the effective zoom column. */
+  [data-testid="invitation-redemption"] .auth-form {
+    gap: 8px;
+  }
+}
+
 /* Disabled OAuth controls communicate provider readiness without exposing an action surface. */
 .oauth-provider-status {
   display: grid;
@@ -564,6 +612,72 @@ label {
   color: #d8d0b7;
   background: rgba(255, 255, 255, 0.055);
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.18);
+}
+
+/* Keep enabled provider controls visually distinct while matching the reviewed auth panel. */
+.oauth-provider-button:not(:disabled) {
+  border-color: rgba(255, 215, 128, .58);
+  color: #fff2c2;
+  background: rgba(255, 215, 128, .1);
+}
+
+/* Anchor identity-management controls to the authenticated account affordance. */
+.account-menu {
+  position: relative;
+}
+
+/* Remove the browser disclosure marker from the custom account control. */
+.account-menu summary {
+  list-style: none;
+}
+
+/* Hide the WebKit marker while preserving details keyboard semantics. */
+.account-menu summary::-webkit-details-marker {
+  display: none;
+}
+
+/* Present provider status in a bounded, scroll-safe account popover. */
+.account-popover {
+  position: absolute;
+  z-index: 8;
+  top: calc(100% + 10px);
+  right: 0;
+  display: grid;
+  gap: 12px;
+  width: min(360px, calc(100vw - 28px));
+  max-height: min(560px, calc(100dvh - 120px));
+  overflow: auto;
+  padding: 20px;
+  border: 1px solid rgba(255, 215, 128, .28);
+  border-radius: 18px;
+  background: #162218;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .45);
+}
+
+/* Keep account-control headings compact inside the persistent shell. */
+.account-popover h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+/* Align each provider label and action without clipping localized text. */
+.oauth-account-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+/* Let provider names wrap while keeping the action reachable. */
+.oauth-account-row span {
+  overflow-wrap: anywhere;
+  color: var(--text);
+  font-weight: 800;
+}
+
+/* Keep explicit linking consent in normal sentence case. */
+.oauth-link-confirm {
+  text-transform: none;
 }
 
 .oauth-provider-copy {
@@ -2276,6 +2390,47 @@ h3 {
   color: var(--gold);
 }
 
+/* Keep the invitation form columns bounded before the phone breakpoint stacks them. (INVITE-005) */
+[data-testid="admin-invitation-create"] .grid3 {
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(120px, auto);
+}
+
+/* Let every invitation form control shrink inside its assigned responsive column. */
+[data-testid="admin-invitation-create"] :is(input, select, button) {
+  width: 100%;
+  min-width: 0;
+}
+
+/* Own wide invitation lifecycle tables inside one named keyboard-scrollable region. */
+[data-testid="admin-invitation-list"] {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x pan-y;
+  scrollbar-color: rgba(255, 217, 130, .42) transparent;
+  scrollbar-width: thin;
+}
+
+/* Preserve readable columns while preventing their width from escaping the bounded region. */
+[data-testid="admin-invitation-list"] .mini-table {
+  min-width: 680px;
+  table-layout: fixed;
+}
+
+/* Wrap opaque lifecycle values without exposing a page-level horizontal overflow. */
+[data-testid="admin-invitation-list"] :is(th, td) {
+  overflow-wrap: anywhere;
+  vertical-align: top;
+}
+
+/* Make keyboard ownership of the lifecycle scroll region visibly apparent. */
+[data-testid="admin-invitation-list"]:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: -4px;
+}
+
 /* Guest Trials controls use bounded low-cardinality filters and keyboard-scrollable tables. */
 .guest-filter-grid {
   display: grid;
@@ -2405,7 +2560,7 @@ h3 {
 /* Keep the problem-report inbox filters readable and touch-sized at desktop and compact widths. */
 .feedback-filters {
   display: grid;
-  grid-template-columns: repeat(3, minmax(150px, 1fr)) auto;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 10px;
   align-items: end;
   margin-bottom: 16px;
@@ -2642,6 +2797,8 @@ h3 {
     top: 0;
     z-index: 5;
     flex-direction: row;
+    width: 100%;
+    max-width: 100%;
     padding: 8px;
     overflow-x: auto;
     overflow-y: hidden;
@@ -2666,9 +2823,30 @@ h3 {
 
   .admin-top {
     align-items: flex-start;
+    flex-wrap: wrap;
     gap: 10px;
     min-height: 0;
     padding: 12px;
+  }
+
+  /* Let the heading copy shrink and wrap beside or above Refresh at 200-percent zoom. */
+  .admin-top > div {
+    flex: 1 1 140px;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  /* Keep long localized one-word headings inside the effective half-width zoom proxy. */
+  .admin-top h1,
+  .admin-top p {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  /* Keep the secondary Refresh action inside the zoomed header width. */
+  .admin-top > button {
+    flex: 0 1 auto;
+    max-width: 100%;
   }
 
   .admin-top h1 {
@@ -2680,14 +2858,35 @@ h3 {
     overflow: visible;
   }
 
+  /* Permit localized card copy to wrap inside the effective half-width zoom proxy. */
+  .admin-card {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
   .admin-card-grid,
   .guest-filter-grid,
   .guest-detail-grid {
     grid-template-columns: 1fr;
   }
+
+  /* Stack the invitation creation form before native input minimums can widen the page. */
+  [data-testid="admin-invitation-create"] .grid3 {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 1200px) {
+  /* Pin account controls to the responsive viewport because the multi-row tablet navigation can
+     place an anchor-relative popover below the fixed status rail. (OAUTH-010) */
+  .account-popover {
+    position: fixed;
+    top: 14px;
+    right: 14px;
+    bottom: auto;
+    max-height: calc(100dvh - 88px);
+  }
+
   .casino-page {
     overflow: auto;
     background-attachment: scroll;
@@ -2723,7 +2922,8 @@ h3 {
 
   .top-actions {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto auto;
+    /* Reserve one track for wallet, top-up, locale, account methods, and logout so tablet chrome never wraps. */
+    grid-template-columns: minmax(0, 1fr) auto auto auto auto;
     justify-content: stretch;
   }
 
@@ -2890,7 +3090,7 @@ h3 {
   }
 
   .top-actions {
-    grid-template-columns: minmax(0, 1fr) 46px 46px;
+    grid-template-columns: minmax(0, 1fr) 46px 46px 46px;
   }
 
   /* Remove the hidden top-up track and give the localized End-trial action an intrinsic column. (issue #317) */
@@ -2907,13 +3107,18 @@ h3 {
     grid-row: 1;
   }
 
-  .profile-dot {
+  .account-menu {
     grid-column: 3;
     grid-row: 1;
   }
 
+  #logout-btn {
+    grid-column: 4;
+    grid-row: 1;
+  }
+
   /* Place the guest action in the second live track so it cannot spill beyond the mobile viewport. */
-  .guest-trial-active .profile-dot {
+  .guest-trial-active #logout-btn {
     grid-column: 2;
   }
 

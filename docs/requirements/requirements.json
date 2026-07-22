@@ -1627,11 +1627,12 @@
     {
       "id": "ROU-045",
       "module": "Roulette",
-      "description": "Roulette UI exposes clickable inside-bet spots.",
+      "description": "Roulette UI exposes semantically visible, pointer-actionable inside-bet spots with distinct zero-zone targets; hiding the layer removes those spots from pointer and accessibility actionability.",
       "status": "PASS",
       "api_tests": [],
       "browser_tests": [
-        "BR-ROU-001"
+        "BR-ROU-001",
+        "BR-ROU-HITMAP-001"
       ],
       "implementation_files": [
         "casino/games/roulette/rules.py",
@@ -1639,7 +1640,9 @@
         "casino/games/roulette/api.py",
         "web/games/roulette.js"
       ],
-      "notes": ""
+      "introduced_in": "9.1.0",
+      "changed_in": "issue-348-roulette-zero-zone",
+      "notes": "Issue #348 requires the visible layer state to use real pointer hit testing in both single- and double-zero modes; invisible overlay controls cannot satisfy this requirement."
     },
     {
       "id": "ROU-046",
@@ -5582,8 +5585,8 @@
         "web/games/roulette.js"
       ],
       "introduced_in": "issue-222-roulette-hit-target",
-      "changed_in": "issue-222-roulette-hit-target",
-      "notes": "Resolves issue #222: the '2nd 12'/inside-trio hit-target mismatch caused by full-innerHTML re-renders churning bet-cell nodes."
+      "changed_in": "issue-348-roulette-zero-zone",
+      "notes": "Issue #222 established stable identities; issue #348 additionally requires real pointer actionability and distinct zero-zone geometry instead of programmatic event dispatch."
     },
     {
       "id": "ROU-058",
@@ -6221,7 +6224,7 @@
     {
       "id": "OAUTH-001",
       "module": "OAuth",
-      "description": "The provider catalog preserves local password login as the sole runtime-available provider while Google and Facebook remain unavailable regardless of inert configuration readiness.",
+      "description": "The provider catalog preserves local password login while Google and Facebook remain unavailable by default and distinguish structural readiness from an independent false-by-default provider-network release latch.",
       "status": "PASS",
       "api_tests": [
         "API-OAUTH-001",
@@ -6237,8 +6240,8 @@
         "casino/app.py"
       ],
       "introduced_in": "issue-70-disabled-oauth-foundation",
-      "changed_in": "issue-70-disabled-oauth-foundation",
-      "notes": "GitHub issue #77 integrates only the owner-approved disabled foundation; no provider authorization action or live adapter is registered."
+      "changed_in": "issue-326-invite-oauth",
+      "notes": "Workroom #25 authorizes disabled repository code only; no provider is runtime-available until both its configuration and independent network-release gates are explicitly true."
     },
     {
       "id": "OAUTH-002",
@@ -6266,7 +6269,7 @@
     {
       "id": "OAUTH-003",
       "module": "OAuth",
-      "description": "Pure callback helpers preserve the issue #75 route reservation and fail closed on invalid callback origins, ambiguous parameters, state, nonce, authorization codes, and PKCE values without registering a callback route.",
+      "description": "Pure callback helpers fail closed on invalid callback origins, duplicate or ambiguous parameters, state, nonce, authorization codes, and PKCE values; the additive v2 callback route uses those exact helpers and remains inaccessible under default provider gates.",
       "status": "PASS",
       "api_tests": [
         "OAUTH-MOCK-001"
@@ -6278,8 +6281,8 @@
         "casino/core/oauth/INTEGRATION.md"
       ],
       "introduced_in": "issue-70-disabled-oauth-foundation",
-      "changed_in": "issue-70-disabled-oauth-foundation",
-      "notes": "One-time server persistence and callback routing remain deferred behind a separate live-runtime approval and security hardening."
+      "changed_in": "issue-326-invite-oauth",
+      "notes": "Durable recoverable callback lifecycle and routing are specified by OAUTH-008; live provider release remains separately prohibited."
     },
     {
       "id": "OAUTH-004",
@@ -6296,13 +6299,13 @@
         "tests/oauth/test_identity_links.py"
       ],
       "introduced_in": "issue-70-disabled-oauth-foundation",
-      "changed_in": "issue-70-disabled-oauth-foundation",
-      "notes": "Persistent compound uniqueness remains deferred; no JSON, MySQL, signup, user, or player store is mutated by this foundation."
+      "changed_in": "issue-326-invite-oauth",
+      "notes": "The injected foundation remains independently tested; OAUTH-009 adds JSON/MySQL transactional compound uniqueness without signup or email linking."
     },
     {
       "id": "OAUTH-005",
       "module": "OAuth",
-      "description": "Mocked Google and Facebook claim normalization retains only bounded allowlisted identity fields and is not treated as live token, signature, issuer, audience, expiry, nonce, or PKCE verification.",
+      "description": "Google and Facebook adapters normalize only bounded allowlisted identity fields after provider-specific signature/app-binding, issuer, audience, expiry, nonce, and subject checks; provider-free mocks never count as live provider evidence.",
       "status": "PASS",
       "api_tests": [
         "OAUTH-MOCK-001"
@@ -6314,13 +6317,13 @@
         "tests/oauth/test_providers.py"
       ],
       "introduced_in": "issue-70-disabled-oauth-foundation",
-      "changed_in": "issue-70-disabled-oauth-foundation",
-      "notes": "No provider SDK, HTTP client, token endpoint, or client-supplied verified-identity route exists."
+      "changed_in": "issue-326-invite-oauth",
+      "notes": "The provider transport uses fixed reviewed endpoints and cannot be constructed unless the provider-specific network-release latch is true; no client-supplied verified-identity route exists."
     },
     {
       "id": "OAUTH-006",
       "module": "Application",
-      "description": "The English and Russian login gate presents readable native-disabled Google and Facebook controls with no link or handler, while local email/password login behavior remains unchanged.",
+      "description": "The English and Russian login gate keeps Google and Facebook native-disabled under default gates, enables only boolean-reported available providers, and preserves local email/password and guest entry behavior unchanged.",
       "status": "PASS",
       "api_tests": [
         "API-OAUTH-001"
@@ -6341,13 +6344,13 @@
         "tests/visual/visual_matrix.json"
       ],
       "introduced_in": "issue-70-disabled-oauth-foundation",
-      "changed_in": "issue-70-disabled-oauth-foundation",
-      "notes": "Browser acceptance proves disabled controls dispatch no provider request and the Admin card never changes Operations health classification."
+      "changed_in": "issue-326-invite-oauth",
+      "notes": "Browser acceptance covers disabled, available, status-error, current-user linked/unlinked, callback outcome, locale, viewport, refresh, and rollback states without provider network access."
     },
     {
       "id": "TEST-045",
       "module": "Tests",
-      "description": "OAuth regression evidence centrally discovers service-free mocked tests and covers Admin authorization, secret-safe diagnostics, absent action routes, disabled EN/RU controls, unchanged local login, contracts, and listener cleanup.",
+      "description": "OAuth foundation regression evidence covers Admin authorization, secret-safe diagnostics, disabled defaults, EN/RU controls, unchanged local login, contracts, and listener cleanup; TEST-093 owns the additive runtime qualification.",
       "status": "PASS",
       "api_tests": [
         "OAUTH-MOCK-001",
@@ -6365,8 +6368,8 @@
         "contracts/compatibility/oauth-disabled-foundation.json"
       ],
       "introduced_in": "issue-70-disabled-oauth-foundation",
-      "changed_in": "issue-70-disabled-oauth-foundation",
-      "notes": "GitHub issue #77 allocates the permanent IDs for the owner-approved disabled OAuth foundation."
+      "changed_in": "issue-326-invite-oauth",
+      "notes": "This permanent foundation requirement remains active; additive runtime, persistence, and full visual coverage are tracked by OAUTH-007 through OAUTH-010 and TEST-093."
     },
     {
       "id": "SESSION-001",
@@ -7753,10 +7756,10 @@
       "id": "CAA-003", "module": "Crown and Anchor", "description": "Aggregate symbol wagers and returned credits use the shared ledger exactly once under durable request identities.", "status": "PASS", "api_tests": ["API-CAA-001"], "browser_tests": [], "implementation_files": ["casino/games/crown_and_anchor/service.py", "casino/core/ledger.py", "tests/games/crown_and_anchor/test_api.py", "tests/run_tests.py"], "introduced_in": "game-expansion-crown-and-anchor", "changed_in": "game-expansion-crown-and-anchor", "notes": "No game code mutates balances directly and conflicting retries fail closed."
     },
     {
-      "id": "CAA-004", "module": "Application", "description": "Crown and Anchor supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.", "status": "PASS", "api_tests": [], "browser_tests": ["BR-CAA-001"], "implementation_files": ["web/games/crown_and_anchor.js", "web/i18n/en-US/games/crown_and_anchor.json", "web/i18n/ru-RU/games/crown_and_anchor.json", "tests/visual/visual_matrix.json", "tests/run_tests.py"], "introduced_in": "game-expansion-crown-and-anchor", "changed_in": "game-expansion-crown-and-anchor", "notes": "Evidence covers both locales and every governed viewport."
+      "id": "CAA-004", "module": "Application", "description": "Crown and Anchor supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play with all three dice and all six symbol hit-result panels painted and contained at every governed viewport.", "status": "PASS", "api_tests": [], "browser_tests": ["BR-CAA-001"], "implementation_files": ["web/games/crown_and_anchor.js", "web/i18n/en-US/games/crown_and_anchor.json", "web/i18n/ru-RU/games/crown_and_anchor.json", "tests/visual/visual_matrix.json", "tests/run_tests.py"], "introduced_in": "game-expansion-crown-and-anchor", "changed_in": "issue-227-crown-stage-completeness", "notes": "Evidence covers both locales and every governed viewport; BR-CAA-001 rejects any missing, unpainted, or stage-escaped die or symbol panel."
     },
     {
-      "id": "CAA-005", "module": "Tests", "description": "Catalog, contract, browser, and long-suite discovery include Crown and Anchor with requirement, module, version, and visual traceability.", "status": "PASS", "api_tests": ["API-CATALOG-001", "LONG-SUITE-100"], "browser_tests": ["BR-CATALOG-DISCOVERY-001", "BR-CAA-001"], "implementation_files": ["modules/crown_and_anchor.json", "modules/module-manifest.json", "contracts/compatibility/module-api-matrix.json", "tests/game_drivers/crown_and_anchor.py", "tests/visual/visual_matrix.json", "tests/run_tests.py"], "introduced_in": "game-expansion-crown-and-anchor", "changed_in": "game-expansion-crown-and-anchor", "notes": "Descriptor sort order 210 and the catalog-discovered long driver are canonical."
+      "id": "CAA-005", "module": "Tests", "description": "Catalog, contract, browser, long-suite, and formal TEST-092 discovery include Crown and Anchor with requirement, module, version, visual, and essential-stage traceability.", "status": "PASS", "api_tests": ["API-CATALOG-001", "LONG-SUITE-100", "UI-50000-HARNESS-001"], "browser_tests": ["BR-CATALOG-DISCOVERY-001", "BR-CAA-001"], "implementation_files": ["modules/crown_and_anchor.json", "modules/module-manifest.json", "contracts/compatibility/module-api-matrix.json", "tests/game_drivers/crown_and_anchor.py", "tests/visual/visual_matrix.json", "tests/ui_50000.py", "tests/unit/ui_50000_tests.py", "tests/run_tests.py"], "introduced_in": "game-expansion-crown-and-anchor", "changed_in": "issue-227-crown-stage-completeness", "notes": "Descriptor sort order 210 and the catalog-discovered long driver are canonical; formal evidence rejects incomplete Crown and Anchor theater even when no enabled control is clipped."
     },
     {
       "id": "OU7-001", "module": "Over/Under 7", "description": "Two server-authoritative dice implement under-seven, exactly-seven, and over-seven outcomes with transparent net and total-return rules.", "status": "PASS", "api_tests": ["API-OU7-001"], "browser_tests": ["BR-OU7-001"], "implementation_files": ["casino/games/over_under_7/engine.py", "casino/games/over_under_7/rules.py", "web/games/over_under_7.js"], "introduced_in": "game-expansion-over-under-7", "changed_in": "game-expansion-over-under-7", "notes": "Issue #77 allocates the permanent distinct rules requirement for issue #135."
@@ -8010,7 +8013,7 @@
       "id": "ADMIN-024", "module": "Admin", "description": "Admin HTML, JavaScript, and API surfaces require an active Admin session during restricted preview, and user privilege or status changes revoke existing sessions.", "status": "PASS", "api_tests": ["API-SEC-PREVIEW-001", "API-ADMIN-USERS-001"], "browser_tests": ["BR-SEC-PREVIEW-001"], "implementation_files": ["casino/wsgi.py", "casino/admin.py", "web/admin.html", "web/admin.js"], "introduced_in": "issue-203-restricted-preview-security", "changed_in": "issue-203-restricted-preview-security", "notes": "Manual invitation is the only approved enrollment path at this stage."
     },
     {
-      "id": "AUTH-007", "module": "Core", "description": "Restricted preview exposes local-password login only; public signup and live OAuth authorization, callback, exchange, linking, SDK, and provider transport routes remain absent.", "status": "PASS", "api_tests": ["API-SEC-PREVIEW-001", "OAUTH-MOCK-001"], "browser_tests": ["BR-SEC-PREVIEW-001"], "implementation_files": ["casino/wsgi.py", "casino/core/auth.py", "casino/app.py", "contracts/compatibility/oauth-disabled-foundation.json", "contracts/compatibility/restricted-preview-security.json"], "introduced_in": "issue-203-restricted-preview-security", "changed_in": "issue-203-restricted-preview-security", "notes": "The unrestricted provider launch remains a separately held gate."
+      "id": "AUTH-007", "module": "Core", "description": "Restricted preview keeps public signup absent; additive invite-only OAuth routes remain disabled and provider-network inaccessible by default, create no users, never link by email, and require exact browser/session integrity when separately released.", "status": "PASS", "api_tests": ["API-SEC-PREVIEW-001", "OAUTH-MOCK-001", "API-OAUTH-002"], "browser_tests": ["BR-SEC-PREVIEW-001", "BR-OAUTH-RUNTIME-001"], "implementation_files": ["casino/wsgi.py", "casino/core/auth.py", "casino/app.py", "contracts/compatibility/oauth-disabled-foundation.json", "contracts/compatibility/oauth-invite-only-runtime.json", "contracts/compatibility/restricted-preview-security.json"], "introduced_in": "issue-203-restricted-preview-security", "changed_in": "issue-326-invite-oauth", "notes": "Workroom #25 authorizes disabled repository code only; live provider release, public signup, deployment, DNS, and unrestricted launch remain separately prohibited."
     },
     {
       "id": "AUTH-008", "module": "Core", "description": "The authenticated shared shell renders and keyboard-wires Admin navigation only for an authenticated Admin user; normal-player locale rerenders and restored game routes never expose the affordance, while direct Admin HTML and API access remain server-enforced.", "status": "PASS", "api_tests": ["API-ADMIN-USERS-001"], "browser_tests": ["BR-ADMIN-NAV-AUTH-001"], "implementation_files": ["web/app.js", "casino/app.py", "casino/wsgi.py", "casino/admin.py"], "introduced_in": "issue-251-admin-nav-gate", "changed_in": "issue-251-admin-nav-gate", "notes": "Hiding the shell affordance is presentation hardening; both runtime adapters enforce direct Admin HTML, JavaScript, and API authorization as the security boundary."
@@ -8085,7 +8088,7 @@
     {
       "id": "TEST-053",
       "module": "Tests",
-      "description": "Browser regression clicks every Roulette primary betting region plus a representative inside hotspot per covered-number size and asserts the posted bet_type and covered_numbers match the clicked cell's canonical identity, with non-overlapping, non-zero hit geometry.",
+      "description": "Browser regression uses the real pointer path for every Roulette primary betting region, representative inside sizes, and every single- and double-zero special; it asserts canonical bet_type and covered_numbers plus distinct non-zero hit geometry.",
       "status": "PASS",
       "api_tests": [],
       "browser_tests": [
@@ -8096,8 +8099,8 @@
         "web/games/roulette.js"
       ],
       "introduced_in": "issue-222-roulette-hit-target",
-      "changed_in": "issue-222-roulette-hit-target",
-      "notes": "Covers the issue #222 acceptance that every wager target maps to the same identity across UI, API payload, and no zero-area or overlapping hit regions."
+      "changed_in": "issue-348-roulette-zero-zone",
+      "notes": "Issue #348 removes dispatch_event from acceptance, audits every zero split, trio, first-four, and top-line target in both modes, and rejects stacked pointer rectangles."
     },
     {
       "id": "DOC-017",
@@ -9360,76 +9363,239 @@
       "notes": "Browser evidence is generated only by exact-head GitHub Actions; no local Playwright, Chromium, provider, or live network run is authorized."
     },
     {
+      "id": "INVITE-001",
+      "module": "Admin",
+      "description": "Authenticated Admins can list masked invitation lifecycle records and perform caller-idempotent create, resend, revoke, and fixed-policy cleanup actions through additive v2 routes; actor and recipient rate limits, resend cooldowns, fixed-reason audit history, and bounded retention apply without returning raw recipients, bearers, credentials, or tokened links.",
+      "status": "PASS",
+      "api_tests": ["API-INVITE-001", "API-INVITE-002"],
+      "browser_tests": ["BR-INVITE-001"],
+      "implementation_files": ["casino/admin.py", "casino/core/invitations.py", "web/admin.html", "web/admin.js"],
+      "introduced_in": "issue-332-admin-invitations",
+      "changed_in": "issue-332-admin-invitations",
+      "notes": "Emergency revocation remains available while issuance is disabled; every rendered recipient is a fixed masked hint."
+    },
+    {
+      "id": "INVITE-002",
+      "module": "Core",
+      "description": "Invitation issuance and public redemption are independently disabled by default and compose only the purpose-bound one-time-token and transactional-mail foundations; provider delivery additionally requires the mail feature and network-release gates, and repository merge grants no live mail, enrollment, provider, DNS, deployment, or public-signup authority.",
+      "status": "PASS",
+      "api_tests": ["API-INVITE-001", "API-INVITE-002"],
+      "browser_tests": ["BR-INVITE-001"],
+      "implementation_files": ["casino/config.py", "casino/core/invitations.py", "casino/core/mail.py", "casino/core/one_time_tokens.py", "casino/wsgi.py"],
+      "introduced_in": "issue-332-admin-invitations",
+      "changed_in": "issue-332-admin-invitations",
+      "notes": "Workroom #24 authorizes disabled repository code for restricted-preview enrollment only."
+    },
+    {
+      "id": "INVITE-003",
+      "module": "Core",
+      "description": "Private invitation redemption validates the invited mailbox, canonical strong password policy, supported locale, explicit current terms version, and caller idempotency before consuming a bearer; an account-free uniqueness reservation and recoverable claim-consume-inactive-user-wallet-activation-finalization saga converge on one active local account and one ledger-backed fake-token wallet across JSON and MySQL processes, while all public failures share one generic response.",
+      "status": "PASS",
+      "api_tests": ["API-INVITE-001", "API-INVITE-002", "STORAGE-MYSQL-LIVE-001"],
+      "browser_tests": ["BR-INVITE-001"],
+      "implementation_files": ["casino/core/auth.py", "casino/core/invitations.py", "casino/core/one_time_tokens.py", "casino/core/players.py", "casino/core/storage.py", "casino/app.py"],
+      "introduced_in": "issue-332-admin-invitations",
+      "changed_in": "issue-332-admin-invitations",
+      "notes": "No social identity link is created, and post-consumption interruption is resumed only by the exact caller binding."
+    },
+    {
+      "id": "INVITE-004",
+      "module": "Contracts",
+      "description": "The frozen /api/v1 surface publishes no invitation route; exact Admin lifecycle and public redemption requests, responses, generic errors, security boundaries, and disabled authority are defined additively in invitations.v2 and a checked compatibility policy.",
+      "status": "PASS",
+      "api_tests": ["API-INVITE-002"],
+      "browser_tests": [],
+      "implementation_files": ["contracts/openapi/invitations.v2.yaml", "contracts/compatibility/invitation-enrollment.json", "contracts/compatibility/module-api-matrix.json", "scripts/validate_contracts.py"],
+      "introduced_in": "issue-332-admin-invitations",
+      "changed_in": "issue-332-admin-invitations",
+      "notes": "The anonymous redemption route remains protected by exact Origin and bootstrap CSRF policy and is inert while redemption is disabled."
+    },
+    {
+      "id": "INVITE-005",
+      "module": "Application",
+      "description": "Admin invitation readiness, empty, pending, redeemed, and error states plus the account-free redemption form, explicit terms, keyboard focus, generic error, and terminal success return are accessible and localized in en-US and ru-RU without raw recipient or bearer evidence at desktop-primary, desktop-compact, tablet, mobile, reduced-motion, and 200-percent zoom states.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": ["BR-INVITE-001"],
+      "implementation_files": ["web/admin.html", "web/admin.js", "web/app.js", "web/core/api.js", "web/i18n/en-US/admin.json", "web/i18n/ru-RU/admin.json", "web/i18n/en-US/shell.json", "web/i18n/ru-RU/shell.json", "tests/visual/visual_matrix.json"],
+      "introduced_in": "issue-332-admin-invitations",
+      "changed_in": "issue-332-admin-invitations",
+      "notes": "After successful redemption the bearer is removed from browser history before returning to private-beta sign in."
+    },
+    {
+      "id": "INVITE-006",
+      "module": "Docs",
+      "description": "The invitation runbook documents disabled defaults, separate live authority, private-recipient approval, current terms and password policy, rate/cooldown/retention behavior, recovery states, privacy-safe audit, JSON/MySQL operational checks, rollback, and the prohibition on public signup or provider/deployment changes from repository merge.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": ["docs/invitation_enrollment.md", "docs/production_service.md", "RELEASE_NOTES.md"],
+      "introduced_in": "issue-332-admin-invitations",
+      "changed_in": "issue-332-admin-invitations",
+      "notes": "Broader enrollment, public exposure, and live mail remain separately gated."
+    },
+    {
+      "id": "TEST-091",
+      "module": "Tests",
+      "description": "Provider-free service and API tests prove disabled defaults, privacy-safe projections, current terms and password enforcement, caller-idempotent token consumption, post-consumption recovery, malformed-state preservation, frozen-v1 compatibility, and independent JSON-process convergence; disposable MySQL CI races claim, consume, account, wallet, and finalization across independent processes; exact-head browser evidence covers every invitation/Admin locale, state, and governed viewport.",
+      "status": "PASS",
+      "api_tests": ["API-INVITE-001", "API-INVITE-002", "STORAGE-MYSQL-LIVE-001"],
+      "browser_tests": ["BR-INVITE-001"],
+      "implementation_files": ["tests/invitation_tests.py", "tests/one_time_token_tests.py", "tests/storage_tests.py", "tests/run_tests.py", "tests/visual/visual_matrix.json"],
+      "introduced_in": "issue-332-admin-invitations",
+      "changed_in": "issue-332-admin-invitations",
+      "notes": "Browser evidence is generated only by exact-head GitHub Actions; no local Playwright, Chromium, provider, or live network run is authorized."
+    },
+    {
+      "id": "OAUTH-007",
+      "module": "OAuth",
+      "description": "Google and Facebook remain independently disabled by default; each provider requires complete secret-safe configuration and a separate false-by-default provider-network release latch before an adapter can be constructed, while Admin and public readiness projections expose only allowlisted low-cardinality facts.",
+      "status": "PASS",
+      "api_tests": ["OAUTH-MOCK-001", "API-OAUTH-002", "API-SEC-PREVIEW-001"],
+      "browser_tests": ["BR-OAUTH-RUNTIME-001", "BR-ADMIN-OAUTH-001"],
+      "implementation_files": ["casino/core/oauth/configuration.py", "casino/core/oauth/api.py", "casino/core/oauth/service.py", "casino/wsgi.py", "contracts/openapi/auth.v2.yaml", "contracts/compatibility/oauth-invite-only-runtime.json"],
+      "introduced_in": "issue-326-invite-oauth",
+      "changed_in": "issue-326-invite-oauth",
+      "notes": "Workroom #25 authorizes repository merge only; provider consoles, credentials, callback registration, network release, deployment, DNS, and public exposure remain out of scope."
+    },
+    {
+      "id": "OAUTH-008",
+      "module": "OAuth",
+      "description": "Authorization-code flows use PKCE S256, strict duplicate-aware state, Google nonce, exact provider/callback/browser/action binding, authenticated user/session binding for explicit links, HMAC-only durable metadata, physically separate nonce/PKCE proofs, cross-process rate limits, recoverable transient exchange claims, terminal replay tombstones, bounded retention, and privacy-safe audit.",
+      "status": "PASS",
+      "api_tests": ["OAUTH-MOCK-001", "API-OAUTH-002", "STORAGE-MYSQL-LIVE-001"],
+      "browser_tests": ["BR-OAUTH-RUNTIME-001"],
+      "implementation_files": ["casino/core/oauth/callbacks.py", "casino/core/oauth/persistence.py", "casino/core/oauth/service.py", "casino/core/oauth/transport.py", "casino/core/storage.py", "casino/router.py", "casino/app.py"],
+      "introduced_in": "issue-326-invite-oauth",
+      "changed_in": "issue-326-invite-oauth",
+      "notes": "Raw state, callback URI, browser binding, user/session ids, nonce, and PKCE verifier never share one durable record or diagnostic/log surface."
+    },
+    {
+      "id": "OAUTH-009",
+      "module": "Core",
+      "description": "An external provider subject links only after explicit confirmation by the exact authenticated active private-invite local-password account; JSON and MySQL transactions enforce provider-subject and provider-user uniqueness across processes, sign-in requires a prior link, provider email is display-only, and no provider flow creates or merges users, players, wallets, or accounts.",
+      "status": "PASS",
+      "api_tests": ["OAUTH-MOCK-001", "API-OAUTH-002", "STORAGE-MYSQL-LIVE-001"],
+      "browser_tests": ["BR-OAUTH-RUNTIME-001"],
+      "implementation_files": ["casino/core/oauth/identity_links.py", "casino/core/oauth/persistence.py", "casino/core/oauth/service.py", "casino/core/auth.py"],
+      "introduced_in": "issue-326-invite-oauth",
+      "changed_in": "issue-326-invite-oauth",
+      "notes": "Identity links retain only provider, provider subject, canonical user id, and bounded timestamps; recipient email and provider claims never select the Casino account."
+    },
+    {
+      "id": "OAUTH-010",
+      "module": "Application",
+      "description": "The disabled-by-default provider login and persistent-account link/unlink surfaces are keyboard accessible, localized in en-US and ru-RU, preserve local-password recovery and guest/invitation flows, revoke matching provider sessions on unlink or release rollback, and expose disabled, available, status-error, linked, unlinked, callback-success, callback-error, refresh, and responsive states without raw identity or bearer evidence.",
+      "status": "PASS",
+      "api_tests": ["API-OAUTH-002"],
+      "browser_tests": ["BR-OAUTH-RUNTIME-001"],
+      "implementation_files": ["web/app.js", "web/core/api.js", "web/index.html", "web/styles.css", "web/i18n/en-US/shell.json", "web/i18n/ru-RU/shell.json", "tests/visual/visual_matrix.json"],
+      "introduced_in": "issue-326-invite-oauth",
+      "changed_in": "issue-326-invite-oauth",
+      "notes": "Exact-head evidence covers all four governed viewports and both locales without provider network access; guests never receive provider-link controls."
+    },
+    {
+      "id": "TEST-093",
+      "module": "Tests",
+      "description": "Provider-free unit, API, JSON-process, and disposable MySQL tests prove dual-gate adapter inaccessibility, proof separation, malformed-state preservation, durable rate limits, recoverable exchange ambiguity, strict callback/link/session binding, static-shell CSRF lookup without consuming browser-bound guest sessions, no email linking or account creation, compound uniqueness and replay safety, frozen-v1 compatibility, and rollback; exact-head browser evidence covers OAuth readiness and lifecycle states in en-US and ru-RU at every governed viewport.",
+      "status": "PASS",
+      "api_tests": ["OAUTH-MOCK-001", "API-OAUTH-002", "STORAGE-MYSQL-LIVE-001"],
+      "browser_tests": ["BR-OAUTH-RUNTIME-001"],
+      "implementation_files": ["tests/oauth/", "tests/storage_tests.py", "tests/run_tests.py", "tests/visual/visual_matrix.json"],
+      "introduced_in": "issue-326-invite-oauth",
+      "changed_in": "issue-326-invite-oauth",
+      "notes": "Browser evidence is generated only by exact-head GitHub Actions; no local Playwright, Chromium, provider, live network, or production action is authorized."
+    },
+    {
       "id": "CORE-027",
       "module": "Core",
-      "description": "A registered authenticated user can submit one retry-safe problem report through the additive v2 API with bounded category, summary, actual behavior, expected behavior, privacy-reduced route and environment context, and up to three screenshots; guest and anonymous submission remain outside this release.",
+      "description": "Authenticated persistent users can submit retry-safe bounded problem reports with a separate player-selected impact, privacy-reduced context, and normalized screenshots through the additive v2 API; the recoverable provider-neutral saga publishes only fully committed reports.",
       "status": "PASS",
-      "api_tests": ["API-FEEDBACK-001"],
+      "api_tests": ["API-FEEDBACK-001", "STORAGE-MYSQL-LIVE-001"],
       "browser_tests": ["BR-FEEDBACK-001", "BR-ADMIN-FEEDBACK-001"],
-      "implementation_files": ["casino/core/feedback.py", "casino/app.py", "web/index.html", "web/app.js", "contracts/openapi/feedback.v2.yaml"],
+      "implementation_files": ["casino/core/feedback.py", "casino/app.py", "web/core/feedback.js", "contracts/openapi/feedback.v2.yaml"],
       "introduced_in": "issue-349-feedback-reports",
-      "changed_in": "issue-349-feedback-reports",
-      "notes": "Reporter identity is derived from the authenticated session; the request never accepts user, player, session, or wallet identifiers."
+      "changed_in": "issue-349-manual-feedback-slice",
+      "notes": "Guest and anonymous submission remain out of scope; durable cross-process rate slots and HMAC replay proofs are shared by JSON and MySQL providers."
     },
     {
       "id": "ADMIN-025",
       "module": "Admin",
-      "description": "The Admin problem-report inbox lists attachment-free summaries, filters by governed priority, status, and category, provides internal detail and evidence review, preserves reports through non-destructive lifecycle states, and prepares a reporter-free GitHub draft plus reviewed repository-issue linkage without automatic publication.",
+      "description": "Admin can filter privacy-safe report summaries, inspect normalized evidence, idempotently triage P1/P2/P3 lifecycle state, export metadata, delete retained content, prepare a sanitized manual GitHub draft, and record a separately created issue link without any external publication capability.",
       "status": "PASS",
       "api_tests": ["API-FEEDBACK-001"],
-      "browser_tests": ["BR-FEEDBACK-001", "BR-ADMIN-FEEDBACK-001"],
+      "browser_tests": ["BR-ADMIN-FEEDBACK-001"],
       "implementation_files": ["casino/admin.py", "web/admin.html", "web/admin.js", "web/styles.css"],
       "introduced_in": "issue-349-feedback-reports",
-      "changed_in": "issue-349-feedback-reports",
-      "notes": "P1, P2, and P3 are the complete priority taxonomy; P4 is rejected. GitHub publication remains a deliberate human action."
+      "changed_in": "issue-349-manual-feedback-slice",
+      "notes": "Workroom #28 comment 5049349447 authorizes manual draft and link recording only; automatic GitHub issue creation and credentials are absent."
     },
     {
       "id": "SEC-011",
       "module": "Security",
-      "description": "Problem-report screenshots are strictly base64 decoded, limited by count, bytes, pixels, and dimensions, decoded only as PNG, JPEG, or WebP, re-encoded to metadata-free JPEG, stored only in Admin detail documents, and excluded from list and GitHub-draft responses; diagnostic context excludes cookies, credentials, raw URLs, wallet contents, and wager data.",
+      "description": "Reporter identity is retained only as an HMAC-derived opaque reference; screenshots are bounded, decoded, format-checked, pixel-limited, re-encoded without metadata, Admin-only, retained under terminal and absolute ceilings, and recoverably deleted; exports and manual drafts exclude pixels and private identity.",
       "status": "PASS",
-      "api_tests": ["API-FEEDBACK-001"],
+      "api_tests": ["API-FEEDBACK-001", "STORAGE-MYSQL-LIVE-001"],
       "browser_tests": [],
-      "implementation_files": ["casino/core/feedback.py", "tests/feedback_tests.py", "contracts/openapi/feedback.v2.yaml"],
+      "implementation_files": ["casino/core/feedback.py", "casino/config.py", "tests/feedback_tests.py", "contracts/compatibility/manual-feedback-reporting.json"],
       "introduced_in": "issue-349-feedback-reports",
-      "changed_in": "issue-349-feedback-reports",
-      "notes": "The upload remains inside the existing one-mebibyte application request ceiling and adds no new anonymous route or external credential."
+      "changed_in": "issue-349-manual-feedback-slice",
+      "notes": "Cookies, credentials, raw URLs, session ids, wallet contents, wagers, ledger data, raw user ids, and display names are never accepted in report context."
     },
     {
       "id": "I18N-005",
       "module": "Application",
-      "description": "Player reporting and Admin problem-report triage provide complete en-US and ru-RU labels, instructions, privacy disclosure, status, validation, filter, detail, and GitHub-draft copy with no visible resource keys after locale changes.",
+      "description": "Player reporting and Admin manual-triage interfaces provide complete en-US and ru-RU labels, privacy disclosure, filters, lifecycle, export, deletion, and manual-only draft copy with no visible resource keys after locale changes.",
       "status": "PASS",
       "api_tests": [],
       "browser_tests": ["BR-FEEDBACK-001", "BR-ADMIN-FEEDBACK-001"],
       "implementation_files": ["web/i18n/manifest.json", "web/i18n/en-US/feedback.json", "web/i18n/ru-RU/feedback.json", "web/app.js", "web/admin.js"],
       "introduced_in": "issue-349-feedback-reports",
-      "changed_in": "issue-349-feedback-reports",
+      "changed_in": "issue-349-manual-feedback-slice",
       "notes": "The feedback domain is loaded by both the player shell and Admin application."
     },
     {
       "id": "UX-019",
       "module": "Application",
-      "description": "The report affordance and native modal remain keyboard-operable, focus-visible, scroll-contained, touch-sized, and free of page-level horizontal overflow at desktop, compact desktop, tablet, and mobile viewports; screenshot previews are removable and diagnostic disclosure is inspectable before submission.",
+      "description": "Problem reporting and Admin triage remain keyboard-operable, focus-visible, scroll-contained, touch-sized, readable at 200 percent zoom, reduced-motion safe, and responsive across all governed viewports with paste, drop, file, preview-removal, retry, filter, draft, export, and deletion states.",
       "status": "PASS",
       "api_tests": [],
       "browser_tests": ["BR-FEEDBACK-001", "BR-ADMIN-FEEDBACK-001"],
-      "implementation_files": ["web/index.html", "web/app.js", "web/styles.css", "tests/visual/visual_matrix.json"],
+      "implementation_files": ["web/index.html", "web/core/feedback.js", "web/admin.js", "web/styles.css", "tests/visual/visual_matrix.json"],
       "introduced_in": "issue-349-feedback-reports",
-      "changed_in": "issue-349-feedback-reports",
-      "notes": "Governed visual rows are feedback_report empty, screenshot_ready, validation_error, and submitted plus Admin feedback inbox, detail, and GitHub draft states."
+      "changed_in": "issue-349-manual-feedback-slice",
+      "notes": "Exact-head evidence covers en-US and ru-RU at desktop primary, desktop compact, tablet, and mobile viewports."
     },
     {
-      "id": "TEST-091",
+      "id": "TEST-094",
       "module": "Tests",
-      "description": "Provider-neutral API tests prove report idempotency, registered-user scope, P4 rejection, route minimization, metadata stripping, attachment-free listings, triage, linkage, and reporter-free GitHub drafts; browser tests prove player and Admin flows, EN/RU localization, keyboard access, screenshot previews, and responsive containment against the visual matrix.",
+      "description": "Provider-neutral unit, API, JSON-process, and disposable MySQL tests prove recoverable submission, single idempotent winners, durable rates, malformed-state preservation, atomic triage, privacy deletion and retention, metadata-only export, frozen-v1 compatibility, and manual-only publication; browser tests prove complete bilingual player and Admin states across governed viewports.",
       "status": "PASS",
-      "api_tests": ["API-FEEDBACK-001"],
+      "api_tests": ["API-FEEDBACK-001", "STORAGE-MYSQL-LIVE-001"],
       "browser_tests": ["BR-FEEDBACK-001", "BR-ADMIN-FEEDBACK-001"],
-      "implementation_files": ["tests/feedback_tests.py", "tests/run_tests.py", "tests/visual/visual_matrix.json"],
+      "implementation_files": ["tests/feedback_tests.py", "tests/storage_tests.py", "tests/run_tests.py", "tests/visual/visual_matrix.json"],
       "introduced_in": "issue-349-feedback-reports",
-      "changed_in": "issue-349-feedback-reports",
-      "notes": "Exact-head browser evidence is produced by the standard browser workflow; service tests use an isolated JSON provider and in-memory images."
+      "changed_in": "issue-349-manual-feedback-slice",
+      "notes": "TEST-091 remains owned by invitation enrollment and TEST-092 remains owned by formal 50,000-cycle qualification; local Playwright, Chromium, and heavy QA are not authorized."
+    },
+    {
+      "id": "TEST-092",
+      "module": "Tests",
+      "description": "An exact-source browser qualification executes exactly 50,000 completed UI cycles across every catalog game, assigns at least 1,666 cycles to each game, exercises every eligible game control at least 100 times or records an approved ineligible classification, captures all four governed viewports for human review, and rejects unexplained failures, incomplete ranges, incomplete declared non-control stages, source drift, or cleanup residue.",
+      "status": "PASS",
+      "api_tests": [
+        "UI-50000-HARNESS-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/ui_50000.py",
+        "tests/unit/ui_50000_tests.py",
+        "tests/run_tests.py",
+        ".github/workflows/browser-tests.yml"
+      ],
+      "introduced_in": "issue-227-ui-50000-ci-replacement",
+      "changed_in": "issue-227-draw-poker-hold-serialization",
+      "notes": "The formal qualification runs only on approved non-local GitHub Actions workers; local Playwright, Chromium, and heavy-load execution remain prohibited. Geometry inspection restores every ancestor and window scroll position so one viewport cannot mutate later evidence, route-owned essential-stage contracts cover non-control theater such as Crown and Anchor dice and result panels, Roulette wager/refund rerenders commit before the strict spinning-state observation while the primary shard retries real reachable Rebet states until the literal activation floor is met, and draw-poker workers wait for the complete five-position decision state, balance the hold-control deficit, and observe the persisted held rerender before Draw."
     }
   ]
 }

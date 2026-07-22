@@ -1,12 +1,14 @@
 // AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
 // Import required dependency so this module can call the frozen API envelope safely.
-import { acceptTerms, addUserTokens, api, currentUser, departGuestTrial, endGuestTrial, guestTrial, logClient, login, logout } from './core/api.js';
+import { acceptTerms, addUserTokens, api, currentUser, departGuestTrial, endGuestTrial, guestTrial, logClient, login, logout, oauthLinks, oauthProviders, redeemInvitation, startOAuth, unlinkOAuth } from './core/api.js';
 // Import required dependency so this module can render shared wallet and premium UI helpers.
 import { renderTokenBalance, toast, tokens, safe, renderPremiumTag } from './core/ui.js';
 // Import required dependency so the shell can preserve locale across auth and route changes.
 import { getLocaleState, initI18n, onLocaleChange, setLocale, t } from './core/i18n.js';
 // Import required dependency so this module can preload global voice settings before games mount.
 import { loadVoiceSettings } from './core/voice.js';
+// Import the registered-user problem-report dialog without adding feedback code to the shared shell.
+import { bindFeedbackDialog, localizeFeedback, syncFeedbackReporter } from './core/feedback.js';
 
 // Store frontend descriptors loaded from the same API catalog that registers backend games.
 let gameDescriptors = [];
@@ -26,10 +28,8 @@ let gameRailObserver = null;
 let lobbySearch = '';
 // Track the selected scalable catalog category.
 let lobbyCategory = 'all';
-// Retain only browser-normalized screenshot payloads while the report dialog remains open.
-let feedbackAttachments = [];
-// Preserve one action identity across retries of the same open report draft.
-let feedbackIdempotencyKey = '';
+// Read one fixed provider-completion marker and immediately remove it from browser history.
+const oauthCompletion = readOAuthCompletion();
 
 // Relay game/autoplay toast events through the shell-level toast outlet.
 window.addEventListener('casino-toast', event => toast(event.detail?.message || 'Auto stopped'));
@@ -56,220 +56,6 @@ function normalizeCurrentUser(payload) {
   const termsRequired = typeof terms.required === 'boolean' ? terms.required : user.terms_required === true || data.terms_required === true || terms.accepted === false;
   // Return a normalized current-user session object for shell rendering.
   return { ...data, user, player, terms: { ...terms, required: termsRequired } };
-}
-
-// Return whether the current authenticated identity is a disposable guest trial.
-function isRegisteredReporter() {
-  // Require a current user and exclude the separately governed guest identity provider.
-  return Boolean(currentSession?.user?.user_id) && String(currentSession.user.identity_provider || '').toLowerCase() !== 'guest';
-}
-
-// Identify a low-cardinality browser family without retaining the raw user-agent string.
-function browserFamily() {
-  // Read the browser-owned agent only for local classification.
-  const agent = navigator.userAgent || '';
-  // Distinguish Chromium Edge before the generic Chrome marker.
-  if (/Edg\//.test(agent)) return 'Edge';
-  // Identify Firefox through its stable token.
-  if (/Firefox\//.test(agent)) return 'Firefox';
-  // Identify Chromium-family browsers without preserving versions.
-  if (/Chrome\//.test(agent)) return 'Chrome';
-  // Identify Safari only when Chrome is absent.
-  if (/Safari\//.test(agent)) return 'Safari';
-  // Return a privacy-reduced fallback.
-  return 'Other';
-}
-
-// Identify a low-cardinality operating-system family without persisting exact device data.
-function osFamily() {
-  // Read the platform string only for bounded local classification.
-  const source = `${navigator.platform || ''} ${navigator.userAgent || ''}`;
-  // Return the first stable family match.
-  if (/Windows/i.test(source)) return 'Windows';
-  // Group iPhone and iPad under iOS.
-  if (/iPhone|iPad|iPod/i.test(source)) return 'iOS';
-  // Identify Android before generic Linux.
-  if (/Android/i.test(source)) return 'Android';
-  // Identify Apple desktop operating systems.
-  if (/Mac/i.test(source)) return 'macOS';
-  // Identify remaining Linux desktops.
-  if (/Linux/i.test(source)) return 'Linux';
-  // Return a low-cardinality fallback.
-  return 'Other';
-}
-
-// Compress one user-selected image through canvas so the request stays inside the reviewed 1 MiB ceiling.
-async function normalizeFeedbackImage(file) {
-  // Reject non-image and unusually large local files before browser decode work.
-  if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type) || file.size > 12_000_000) throw new Error(t('feedback.error.imageType', {}, 'feedback'));
-  // Decode the image through the browser rather than trusting filename extensions.
-  const bitmap = await createImageBitmap(file);
-  // Calculate a scale that keeps the longest edge at or below 1600 CSS pixels.
-  const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height));
-  // Allocate a metadata-free canvas at the normalized size.
-  const canvas = document.createElement('canvas');
-  // Set the normalized width to at least one pixel.
-  canvas.width = Math.max(1, Math.round(bitmap.width * scale));
-  // Set the normalized height to at least one pixel.
-  canvas.height = Math.max(1, Math.round(bitmap.height * scale));
-  // Paint the decoded pixels into a clean canvas.
-  canvas.getContext('2d', { alpha: false }).drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  // Release browser decoder resources after painting completes.
-  bitmap.close();
-  // Start at readable JPEG quality and reduce it only when needed.
-  let quality = 0.82;
-  // Encode the clean canvas to a data URL for the JSON transport.
-  let data = canvas.toDataURL('image/jpeg', quality);
-  // Reduce quality in bounded steps until the encoded payload fits the server limit.
-  while (data.length > 260_000 && quality > 0.42) { quality -= 0.08; data = canvas.toDataURL('image/jpeg', quality); }
-  // Reject an image that remains too large after bounded compression.
-  if (data.length > 275_000) throw new Error(t('feedback.error.imageSize', {}, 'feedback'));
-  // Return a preview-safe attachment object with no local path or original filename.
-  return { data, preview: data, width: canvas.width, height: canvas.height };
-}
-
-// Render screenshot previews and removal controls from the in-memory attachment list.
-function renderFeedbackPreviews() {
-  // Read the persistent dialog preview outlet.
-  const previews = document.getElementById('report-previews');
-  // Stop safely when the page has no report dialog.
-  if (!previews) return;
-  // Render one compact figure per normalized screenshot.
-  previews.innerHTML = feedbackAttachments.map((item, index) => `<figure class="report-preview"><img src="${item.preview}" alt="${safe(t('feedback.screenshotAlt', { number: index + 1 }, 'feedback'))}"><button type="button" data-remove-feedback-image="${index}">${safe(t('feedback.removeScreenshot', {}, 'feedback'))}</button></figure>`).join('');
-  // Bind each removal control to immutable list replacement.
-  previews.querySelectorAll('[data-remove-feedback-image]').forEach(button => { button.onclick = () => { feedbackAttachments = feedbackAttachments.filter((_, index) => index !== Number(button.dataset.removeFeedbackImage)); renderFeedbackPreviews(); }; });
-}
-
-// Add one or more pasted, dropped, or selected image files to the report draft.
-async function addFeedbackFiles(files) {
-  // Read the inline status region for validation feedback.
-  const message = document.getElementById('report-message');
-  // Convert the browser FileList into a bounded ordinary list.
-  const selected = Array.from(files || []);
-  // Reject collections that would exceed the three-image limit.
-  if (feedbackAttachments.length + selected.length > 3) { message.textContent = t('feedback.error.imageCount', {}, 'feedback'); return; }
-  // Start protected normalization so one invalid file does not close the dialog.
-  try {
-    // Normalize files sequentially to avoid concurrent image-decoder memory spikes.
-    for (const file of selected) feedbackAttachments.push(await normalizeFeedbackImage(file));
-    // Clear stale errors after all files succeed.
-    message.textContent = '';
-    // Show the complete updated preview list.
-    renderFeedbackPreviews();
-  // Convert browser decode and product validation failures into localized inline feedback.
-  } catch (error) {
-    // Show only the bounded local error message.
-    message.textContent = error.message || t('feedback.error.imageType', {}, 'feedback');
-  }
-}
-
-// Translate the static native report dialog without recreating its form controls.
-function localizeFeedbackDialog() {
-  // Map static element identifiers to shell dictionary keys.
-  const text = { 'report-problem-btn': 'feedback.open', 'report-problem-eyebrow': 'feedback.eyebrow', 'report-problem-title': 'feedback.title', 'report-problem-privacy': 'feedback.privacy', 'report-category-label': 'feedback.category', 'report-summary-label': 'feedback.summary', 'report-actual-label': 'feedback.actual', 'report-expected-label': 'feedback.expected', 'report-screenshot-title': 'feedback.screenshotTitle', 'report-screenshot-help': 'feedback.screenshotHelp', 'report-context-title': 'feedback.contextTitle', 'report-context-copy': 'feedback.contextCopy', 'report-cancel': 'feedback.cancel', 'report-submit': 'feedback.submit' };
-  // Apply localized text to every present static node.
-  Object.entries(text).forEach(([id, key]) => { const node = document.getElementById(id); if (node) node.textContent = t(key, {}, 'feedback'); });
-  // Localize the close button's accessible name.
-  document.getElementById('report-problem-close')?.setAttribute('aria-label', t('feedback.close', {}, 'feedback'));
-  // Localize fixed category option labels in their stable order.
-  const labels = ['bug', 'visual', 'accessibility', 'performance', 'content', 'other'];
-  // Apply one translated label to each matching option.
-  labels.forEach(value => { const option = document.querySelector(`#report-category option[value="${value}"]`); if (option) option.textContent = t(`feedback.category.${value}`, {}, 'feedback'); });
-  // Repaint preview alt text and remove controls after a locale switch.
-  renderFeedbackPreviews();
-}
-
-// Open a clean report draft for the current registered user.
-function openFeedbackDialog() {
-  // Reject stale or guest sessions at the presentation boundary while the API remains authoritative.
-  if (!isRegisteredReporter()) { toast(t('feedback.registeredOnly', {}, 'feedback')); return; }
-  // Read the native modal.
-  const dialog = document.getElementById('report-problem-dialog');
-  // Reset the form before exposing a new draft.
-  document.getElementById('report-problem-form')?.reset();
-  // Reset in-memory screenshots between drafts.
-  feedbackAttachments = [];
-  // Allocate one retry-safe action identity for the lifetime of this visible draft.
-  feedbackIdempotencyKey = crypto.randomUUID().replaceAll('-', '');
-  // Clear inline status from a previous submission.
-  document.getElementById('report-message').textContent = '';
-  // Render the empty preview state.
-  renderFeedbackPreviews();
-  // Open the modal with browser-owned focus containment.
-  dialog?.showModal();
-  // Move focus to the first task field.
-  document.getElementById('report-category')?.focus();
-}
-
-// Submit the current report draft through the additive v2 API.
-async function submitFeedbackReport(event) {
-  // Prevent native method=dialog submission from closing before API success.
-  event.preventDefault();
-  // Read the submit button for in-flight locking.
-  const submit = document.getElementById('report-submit');
-  // Read the live status region.
-  const message = document.getElementById('report-message');
-  // Disable duplicate user actions during the idempotent request.
-  submit.disabled = true;
-  // Show concise in-flight feedback.
-  message.textContent = t('feedback.submitting', {}, 'feedback');
-  // Build a retry-safe random browser action key.
-  const idempotencyKey = feedbackIdempotencyKey || crypto.randomUUID().replaceAll('-', '');
-  // Build a privacy-reduced context from browser-owned state.
-  const context = { route: location.pathname, locale: getLocaleState().locale, viewport_width: window.innerWidth, viewport_height: window.innerHeight, browser_family: browserFamily(), os_family: osFamily(), reduced_motion: matchMedia('(prefers-reduced-motion: reduce)').matches };
-  // Start protected API submission so the modal remains recoverable on failure.
-  try {
-    // Submit only validated fields and normalized image payloads.
-    const result = await api('/api/v2/feedback/reports', { method: 'POST', body: { idempotency_key: idempotencyKey, category: document.getElementById('report-category').value, summary: document.getElementById('report-summary').value, actual: document.getElementById('report-actual').value, expected: document.getElementById('report-expected').value, attachments: feedbackAttachments.map(item => ({ data: item.data })), context } });
-    // Show the stable reference before closing.
-    message.textContent = t('feedback.success', { reference: result.reference }, 'feedback');
-    // Mirror success in the persistent shell toast.
-    toast(t('feedback.success', { reference: result.reference }, 'feedback'), true);
-    // Retire the action identity only after a confirmed success.
-    feedbackIdempotencyKey = '';
-    // Close after the live region has a chance to announce confirmation.
-    setTimeout(() => document.getElementById('report-problem-dialog')?.close(), 500);
-  // Keep the draft open and show the safe API diagnostic on failure.
-  } catch (error) {
-    // Prefer the standard API message and fall back to localized generic copy.
-    message.textContent = error.message || t('feedback.error.submit', {}, 'feedback');
-  // Always restore the submit action after completion.
-  } finally {
-    // Re-enable the control when the request settles.
-    submit.disabled = false;
-  }
-}
-
-// Wire the persistent problem-report affordance and all screenshot entry methods once.
-function bindFeedbackDialog() {
-  // Read persistent shell controls.
-  const open = document.getElementById('report-problem-btn');
-  // Open a clean draft from the floating affordance.
-  open.onclick = openFeedbackDialog;
-  // Close without retaining screenshot bytes when the player cancels.
-  const close = () => { feedbackAttachments = []; feedbackIdempotencyKey = ''; document.getElementById('report-problem-dialog')?.close(); };
-  // Bind both close controls to identical teardown.
-  document.getElementById('report-problem-close').onclick = close;
-  // Bind the explicit cancel action.
-  document.getElementById('report-cancel').onclick = close;
-  // Submit through the API rather than native dialog closure.
-  document.getElementById('report-problem-form').onsubmit = submitFeedbackReport;
-  // Open the hidden picker when the dropzone is clicked.
-  document.getElementById('report-dropzone').onclick = () => document.getElementById('report-file-input').click();
-  // Preserve keyboard activation semantics on the custom dropzone.
-  document.getElementById('report-dropzone').onkeydown = event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); document.getElementById('report-file-input').click(); } };
-  // Normalize picker files when the selection changes.
-  document.getElementById('report-file-input').onchange = event => addFeedbackFiles(event.target.files);
-  // Accept dragged files only inside the explicit evidence region.
-  document.getElementById('report-dropzone').ondragover = event => { event.preventDefault(); event.currentTarget.classList.add('dragging'); };
-  // Clear drag styling when the pointer leaves the region.
-  document.getElementById('report-dropzone').ondragleave = event => event.currentTarget.classList.remove('dragging');
-  // Normalize dropped files without opening them in the browser.
-  document.getElementById('report-dropzone').ondrop = event => { event.preventDefault(); event.currentTarget.classList.remove('dragging'); addFeedbackFiles(event.dataTransfer.files); };
-  // Capture pasted image clipboard items only while the dialog is open.
-  document.getElementById('report-problem-dialog').onpaste = event => { const files = Array.from(event.clipboardData?.items || []).filter(item => item.kind === 'file').map(item => item.getAsFile()).filter(Boolean); if (files.length) { event.preventDefault(); addFeedbackFiles(files); } };
-  // Apply the initial locale to the static dialog.
-  localizeFeedbackDialog();
 }
 
 // Convert one public API catalog row into the shell's route and presentation descriptor.
@@ -300,6 +86,38 @@ function routeFromLocation() {
   if (gameDescriptors.some(game => game.id === hashRoute)) return hashRoute;
   // Treat every non-game static path as the lobby shell route.
   return 'lobby';
+}
+
+// Consume only fixed OAuth completion markers without retaining callback query material. (OAUTH-010)
+function readOAuthCompletion() {
+  // Parse the current same-origin URL through the browser URL implementation.
+  const url = new URL(location.href);
+  // Read only the bounded provider and outcome values emitted by the server.
+  const provider = url.searchParams.get('oauth_provider');
+  // Read the fixed completion state independently from every other query field.
+  const status = url.searchParams.get('oauth_status');
+  // Ignore any unreviewed or partial values without reflecting them into the UI.
+  if (!['google', 'facebook'].includes(provider) || !['linked', 'signed_in', 'cancelled', 'error'].includes(status)) return null;
+  // Remove only the fixed completion markers before later logs, reloads, or copied links can retain them.
+  url.searchParams.delete('oauth_provider');
+  // Remove the bounded status marker alongside its provider.
+  url.searchParams.delete('oauth_status');
+  // Replace the current history entry while preserving unrelated approved test and locale parameters.
+  history.replaceState(history.state, '', `${url.pathname}${url.search}${url.hash}`);
+  // Return only the allowlisted low-cardinality completion facts.
+  return { provider, status };
+}
+
+// Resolve localized copy for one server-owned OAuth completion marker.
+function oauthCompletionCopy() {
+  // Return no copy when the browser did not arrive from a reviewed completion redirect.
+  if (!oauthCompletion) return '';
+  // Map successful link and sign-in outcomes to the same privacy-safe acknowledgement.
+  if (['linked', 'signed_in'].includes(oauthCompletion.status)) return t('auth.oauthCallbackSuccess', {}, 'shell');
+  // Map cancellation separately without reflecting provider error parameters.
+  if (oauthCompletion.status === 'cancelled') return t('auth.oauthCallbackCancelled', {}, 'shell');
+  // Collapse every reviewed error outcome to one generic retry-safe message.
+  return t('auth.oauthCallbackError', {}, 'shell');
 }
 
 // Synchronize browser history with one resolved catalog route.
@@ -375,12 +193,12 @@ function isGuestSession() {
 function updateCurrentUserShell() {
   // Expose the current-user session so legacy game refresh calls keep token formatting.
   window.CasinoCurrentUser = currentSession;
+  // Expose problem reporting only to authenticated persistent accounts.
+  syncFeedbackReporter(currentSession?.user);
   // Render the fake-token balance with the required token glyph.
   const amount = renderTokenBalance(currentSession);
   // Read the logout button reserved by index.html.
   const logoutButton = document.getElementById('logout-btn');
-  // Read the registered-user report affordance.
-  const reportButton = document.getElementById('report-problem-btn');
   // Read the registered-user-only token-credit menu from the persistent shell.
   const walletMenu = document.querySelector('.wallet-menu');
   // Read the visible lifecycle disclosure rendered inside the guest wallet.
@@ -389,8 +207,6 @@ function updateCurrentUserShell() {
   const name = currentSession?.user?.display_name || currentSession?.user?.username || currentSession?.user?.email || 'Player';
   // Label the logout control with the current user for accessibility.
   if (logoutButton) logoutButton.setAttribute('aria-label', t('auth.logout', { name }, 'shell'));
-  // Expose problem reporting only to registered authenticated users in this first release.
-  if (reportButton) reportButton.hidden = !isRegisteredReporter();
   // Present the disposable-guest affordance on the persistent control: an End-trial label and a testable guest marker. (issue #317)
   if (logoutButton) {
     // Read the guest state once so the label and markers stay consistent.
@@ -413,7 +229,7 @@ function updateCurrentUserShell() {
   // Read the language selector in the persistent topbar.
   const localeSelect = document.getElementById('shell-locale-select');
   // Wire the persistent locale selector without remounting games.
-  wireLocaleSelect(localeSelect, () => { renderNav(); if (active === 'lobby') navigate('lobby'); });
+  wireLocaleSelect(localeSelect, () => { renderNav(); updateCurrentUserShell(); if (active === 'lobby') navigate('lobby'); });
   // Localize the persistent brand and wallet labels that remain mounted across routes.
   setStatusText('shell-brand-title', t('brand.title', {}, 'shell'));
   // Keep the compact subtitle aligned with the selected shell locale.
@@ -428,6 +244,12 @@ function updateCurrentUserShell() {
   document.getElementById('wallet-menu-summary')?.setAttribute('aria-label', t('wallet.addTokens', {}, 'shell'));
   // Localize the language selector's accessible name.
   localeSelect?.setAttribute('aria-label', t('language.aria', {}, 'shell'));
+  // Keep provider identity controls unavailable to disposable guests and current for persistent accounts.
+  const accountMenu = document.getElementById('account-menu');
+  // Hide the complete account-method surface for account-free guest principals.
+  if (accountMenu) accountMenu.hidden = isGuestSession();
+  // Refresh boolean-only provider link state without delaying wallet or route rendering.
+  if (!isGuestSession()) void renderOAuthAccountControls();
   // Return the rendered token amount for test and toast flows.
   return amount;
 }
@@ -436,8 +258,8 @@ function updateCurrentUserShell() {
 function renderLoginGate(message = '') {
   // Clear the public current-user hook while the browser is logged out.
   window.CasinoCurrentUser = null;
-  // Hide registered-user reporting whenever the authenticated session is absent.
-  document.getElementById('report-problem-btn')?.setAttribute('hidden', '');
+  // Hide the registered-user reporting affordance for logged-out and guest entry screens.
+  syncFeedbackReporter(null);
   // Leave lobby-only flex containment before the public authentication screen replaces the route outlet.
   document.body.classList.remove('lobby-active');
   // Mark the document so chrome and game routes stay hidden while logged out.
@@ -450,8 +272,10 @@ function renderLoginGate(message = '') {
   view.className = 'screen auth-screen';
   // Clear guest-only shell sizing after explicit end, expiry, or browser-proof loss.
   document.body.classList.remove('guest-trial-active');
+  // Resolve explicit caller feedback before a fixed provider completion acknowledgement.
+  const authMessage = message || oauthCompletionCopy();
   // Render the browser login gate with private-beta toy-simulator acknowledgement.
-  view.innerHTML = `<section class="auth-panel" data-testid="login-gate"><p class="eyebrow">${safe(t('auth.eyebrow', {}, 'shell'))}</p><h1>${safe(t('auth.title', {}, 'shell'))}</h1><p class="auth-copy">${safe(t('auth.copy', {}, 'shell'))}</p><form id="login-form" class="auth-form"><label>${safe(t('auth.email', {}, 'shell'))}<input id="login-email" data-testid="login-email" type="email" autocomplete="username" required></label><label>${safe(t('auth.password', {}, 'shell'))}<input id="login-password" data-testid="login-password" type="password" autocomplete="current-password" required></label><label>${safe(t('auth.language', {}, 'shell'))}<select id="auth-locale-select" data-testid="auth-locale-select"></select></label><label class="check-row"><input id="login-terms-check" data-testid="login-terms-check" type="checkbox" required><span>${safe(t('auth.termsCheck', {}, 'shell'))}</span></label><button class="primary" data-testid="login-submit" type="submit">${safe(t('auth.submit', {}, 'shell'))}</button><p id="auth-message" class="auth-message">${safe(message)}</p></form><div class="auth-guest" data-testid="guest-trial"><button id="guest-trial-button" class="secondary" data-testid="guest-trial-button" type="button">${safe(t('auth.guestCta', {}, 'shell'))}</button><p class="auth-guest-copy" data-testid="guest-trial-copy">${safe(t('auth.guestInfo', {}, 'shell'))}</p></div><section class="oauth-provider-status" data-testid="oauth-providers-disabled" aria-labelledby="oauth-provider-heading"><h2 id="oauth-provider-heading">${safe(t('auth.oauthDivider', {}, 'shell'))}</h2><div class="oauth-provider-grid"><button class="oauth-provider-button" data-testid="oauth-google" type="button" disabled aria-disabled="true">${safe(t('auth.oauthGoogle', {}, 'shell'))}</button><button class="oauth-provider-button" data-testid="oauth-facebook" type="button" disabled aria-disabled="true">${safe(t('auth.oauthFacebook', {}, 'shell'))}</button></div><p class="oauth-provider-copy" data-testid="oauth-provider-message" role="status">${safe(t('auth.oauthUnavailable', {}, 'shell'))}</p></section></section>`;
+  view.innerHTML = `<section class="auth-panel" data-testid="login-gate"><p class="eyebrow">${safe(t('auth.eyebrow', {}, 'shell'))}</p><h1>${safe(t('auth.title', {}, 'shell'))}</h1><p class="auth-copy">${safe(t('auth.copy', {}, 'shell'))}</p><form id="login-form" class="auth-form"><label>${safe(t('auth.email', {}, 'shell'))}<input id="login-email" data-testid="login-email" type="email" autocomplete="username" required></label><label>${safe(t('auth.password', {}, 'shell'))}<input id="login-password" data-testid="login-password" type="password" autocomplete="current-password" required></label><label>${safe(t('auth.language', {}, 'shell'))}<select id="auth-locale-select" data-testid="auth-locale-select"></select></label><label class="check-row"><input id="login-terms-check" data-testid="login-terms-check" type="checkbox" required><span>${safe(t('auth.termsCheck', {}, 'shell'))}</span></label><button class="primary" data-testid="login-submit" type="submit">${safe(t('auth.submit', {}, 'shell'))}</button><p id="auth-message" class="auth-message" data-testid="oauth-callback-message">${safe(authMessage)}</p></form><div class="auth-guest" data-testid="guest-trial"><button id="guest-trial-button" class="secondary" data-testid="guest-trial-button" type="button">${safe(t('auth.guestCta', {}, 'shell'))}</button><p class="auth-guest-copy" data-testid="guest-trial-copy">${safe(t('auth.guestInfo', {}, 'shell'))}</p></div><section class="oauth-provider-status" data-testid="oauth-providers-disabled" aria-labelledby="oauth-provider-heading"><h2 id="oauth-provider-heading">${safe(t('auth.oauthDivider', {}, 'shell'))}</h2><div class="oauth-provider-grid"><button class="oauth-provider-button" data-testid="oauth-google" type="button" disabled aria-disabled="true">${safe(t('auth.oauthGoogle', {}, 'shell'))}</button><button class="oauth-provider-button" data-testid="oauth-facebook" type="button" disabled aria-disabled="true">${safe(t('auth.oauthFacebook', {}, 'shell'))}</button></div><p class="oauth-provider-copy" data-testid="oauth-provider-message" role="status">${safe(t('auth.oauthUnavailable', {}, 'shell'))}</p></section></section>`;
   // Wire the auth-screen locale selector and rerender the gate after switching.
   wireLocaleSelect(document.getElementById('auth-locale-select'), () => renderLoginGate(message));
   // Wire form submission through the v2 auth login endpoint.
@@ -460,6 +284,198 @@ function renderLoginGate(message = '') {
   const guestButton = document.getElementById('guest-trial-button');
   // Start a guest trial on click only when the configuration-driven button is present.
   if (guestButton) guestButton.onclick = handleGuestTrial;
+  // Resolve provider availability after the password and guest controls are already usable.
+  void enableAvailableOAuthSignIn();
+}
+
+// Enable only independently released providers while retaining disabled-by-default login behavior. (OAUTH-007)
+async function enableAvailableOAuthSignIn() {
+  // Read the provider-status region from the current login render.
+  const region = document.querySelector('.oauth-provider-status');
+  // Stop when navigation replaced the login screen before the request began.
+  if (!region) return;
+  // Start protected availability loading so local-password and guest entry remain usable on failure.
+  try {
+    // Fetch only fixed provider ids and boolean availability.
+    const result = await oauthProviders();
+    // Select exact provider identifiers whose complete runtime and independent network gate are ready.
+    const available = new Set((result.providers || []).filter(item => item.available === true).map(item => item.provider));
+    // Configure each reviewed provider button independently.
+    for (const provider of ['google', 'facebook']) {
+      // Read the provider's stable login control.
+      const button = document.querySelector(`[data-testid="oauth-${provider}"]`);
+      // Skip a stale render or malformed response without affecting local login.
+      if (!button) continue;
+      // Enable only an exact provider reported available by the bounded public contract.
+      button.disabled = !available.has(provider);
+      // Keep assistive state aligned with native disabled behavior.
+      button.setAttribute('aria-disabled', String(button.disabled));
+      // Navigate only after a server-created one-time flow succeeds.
+      button.onclick = button.disabled ? null : () => beginOAuth(provider, 'signin');
+    }
+    // Mark the visual matrix state according to any fully released provider.
+    region.dataset.testid = available.size ? 'oauth-providers-available' : 'oauth-providers-disabled';
+    // Explain the private-invite boundary whenever a provider is available.
+    region.querySelector('[data-testid="oauth-provider-message"]').textContent = available.size ? t('auth.oauthInviteOnly', {}, 'shell') : t('auth.oauthUnavailable', {}, 'shell');
+  // Keep controls disabled and show a stable retry-safe message on status failure.
+  } catch (_) {
+    // Stamp the governed failure state without exposing transport or configuration details.
+    region.dataset.testid = 'oauth-providers-status-error';
+    // Preserve all local auth controls and publish one generic localized status.
+    region.querySelector('[data-testid="oauth-provider-message"]').textContent = t('auth.oauthStatusError', {}, 'shell');
+  }
+}
+
+// Request a one-time authorization URL and navigate without logging or persisting it. (OAUTH-008)
+async function beginOAuth(provider, action) {
+  // Read the active auth/account message outlet for bounded errors.
+  const message = action === 'signin' ? document.getElementById('auth-message') : document.getElementById('oauth-account-message');
+  // Start protected flow creation so no provider navigation occurs after an API failure.
+  try {
+    // Read the explicit linking checkbox only for authenticated account linking.
+    const confirmation = document.getElementById('oauth-link-confirm');
+    // Stop linking until the canonical user explicitly confirms this action.
+    if (action === 'link' && !confirmation?.checked) throw new Error(t('auth.oauthConfirmRequired', {}, 'shell'));
+    // Request a short-lived browser-bound flow with a same-origin destination.
+    const result = await startOAuth(provider, { action, return_to: '/', ...(action === 'link' ? { confirm_link: true } : {}) });
+    // Navigate directly without copying the sensitive URL into logs or application storage.
+    location.assign(result.authorization_url);
+  // Show only the server's safe public message in the current auth surface.
+  } catch (error) {
+    // Keep the page usable and avoid reflecting provider response content.
+    if (message) message.textContent = error.message;
+  }
+}
+
+// Render authenticated provider linking with explicit confirmation and safe unlink. (OAUTH-009, OAUTH-010)
+async function renderOAuthAccountControls() {
+  // Read the persistent popover reserved by the authenticated shell.
+  const popover = document.getElementById('oauth-account-popover');
+  // Stop before login, for a guest, or while another auth gate owns the page.
+  if (!popover || !currentSession || isGuestSession()) return;
+  // Stamp a bounded loading state for assistive and automated lifecycle evidence.
+  popover.dataset.oauthState = 'loading';
+  // Render a localized loading state without provider configuration details.
+  popover.innerHTML = `<h2>${safe(t('auth.oauthAccountTitle', {}, 'shell'))}</h2><p class="oauth-provider-copy">${safe(t('status.loading', {}, 'shell'))}</p>`;
+  // Start protected link-status loading so provider errors cannot affect gameplay.
+  try {
+    // Read boolean availability and ownership for the current canonical user.
+    const result = await oauthLinks();
+    // Mark the boolean-only linked mix without exposing provider subjects or user ids.
+    popover.dataset.oauthState = (result.providers || []).some(item => item.linked === true) ? 'linked' : 'unlinked';
+    // Render one fixed provider row with the appropriate link or unlink action.
+    const rows = (result.providers || []).filter(item => ['google', 'facebook'].includes(item.provider)).map(item => `<div class="oauth-account-row" data-testid="oauth-link-${safe(item.provider)}"><span>${safe(item.provider === 'google' ? t('auth.oauthGoogleName', {}, 'shell') : t('auth.oauthFacebookName', {}, 'shell'))}</span><button type="button" data-oauth-account-provider="${safe(item.provider)}" data-oauth-account-action="${item.linked ? 'unlink' : 'link'}" ${!item.linked && !item.available ? 'disabled aria-disabled="true"' : ''}>${safe(item.linked ? t('auth.oauthUnlink', {}, 'shell') : t('auth.oauthLink', {}, 'shell'))}</button></div>`).join('');
+    // Require explicit consent adjacent to the provider actions.
+    popover.innerHTML = `<h2>${safe(t('auth.oauthAccountTitle', {}, 'shell'))}</h2><p class="oauth-provider-copy">${safe(t('auth.oauthAccountCopy', {}, 'shell'))}</p>${oauthCompletion ? `<p class="auth-message" data-testid="oauth-callback-message" role="status">${safe(oauthCompletionCopy())}</p>` : ''}<label class="check-row oauth-link-confirm"><input id="oauth-link-confirm" type="checkbox" data-testid="oauth-link-confirm"><span>${safe(t('auth.oauthLinkConfirm', {}, 'shell'))}</span></label>${rows}<p id="oauth-account-message" class="auth-message" role="status"></p>`;
+    // Wire each rendered provider action through its explicit operation.
+    popover.querySelectorAll('[data-oauth-account-provider]').forEach(button => {
+      // Handle link navigation or a separately confirmed unlink transaction.
+      button.onclick = async () => {
+        // Read the bounded action and provider from server-derived fixed rows.
+        const provider = button.dataset.oauthAccountProvider;
+        // Start a confirmed provider navigation for an unlinked account.
+        if (button.dataset.oauthAccountAction === 'link') return beginOAuth(provider, 'link');
+        // Require a browser confirmation before the destructive unlink request.
+        if (!window.confirm(t('auth.oauthUnlinkConfirm', {}, 'shell'))) return;
+        // Start protected unlink handling so a failed request stays local to the popover.
+        try {
+          // Remove only this provider's current-user link.
+          await unlinkOAuth(provider);
+          // Refresh boolean provider rows after a successful unlink.
+          await renderOAuthAccountControls();
+        // Keep the current account controls usable after a safe server failure.
+        } catch (_) {
+          // Publish one generic localized message without provider response details.
+          const status = document.getElementById('oauth-account-message');
+          // Update only the still-mounted account message outlet.
+          if (status) status.textContent = t('auth.oauthStatusError', {}, 'shell');
+        }
+      };
+    });
+  // Replace the popover with a generic status failure while leaving logout and gameplay usable.
+  } catch (_) {
+    // Stamp one generic failure state without transport or provider detail.
+    popover.dataset.oauthState = 'status-error';
+    // Publish no provider configuration or request details.
+    popover.innerHTML = `<h2>${safe(t('auth.oauthAccountTitle', {}, 'shell'))}</h2><p class="oauth-provider-copy">${safe(t('auth.oauthStatusError', {}, 'shell'))}</p>`;
+  }
+}
+
+// Report whether the current URL names the separately approved private invitation redemption surface. (INVITE-005)
+function isInvitationRoute() {
+  // Match only the canonical path; all other anonymous paths retain the normal private-beta login gate.
+  return location.pathname.replace(/\/$/, '') === '/enroll/invitation';
+}
+
+// Derive a token-free session key and stable caller idempotency value for reload-safe redemption. (INVITE-003)
+async function invitationIdempotency(token) {
+  // Hash the transient URL bearer with the browser crypto implementation.
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token));
+  // Encode only a short non-secret digest prefix for sessionStorage lookup.
+  const key = `casino.invitation.idempotency.${Array.from(new Uint8Array(digest).slice(0, 12)).map(value => value.toString(16).padStart(2, '0')).join('')}`;
+  // Read an existing same-browser caller key so a lost response can resume safely.
+  const existing = sessionStorage.getItem(key);
+  // Return the stable value when the browser already started this exact bearer flow.
+  if (existing) return existing;
+  // Generate one bounded caller-owned replay key without deriving it from the bearer.
+  const created = crypto.randomUUID();
+  // Persist only the random caller key under the non-secret digest lookup for this browser session.
+  sessionStorage.setItem(key, created);
+  // Return the newly created idempotency value.
+  return created;
+}
+
+// Render the account-free private invitation enrollment form without creating state on page load. (INVITE-003, INVITE-005)
+function renderInvitationGate(message = '', success = false) {
+  // Clear any stale authenticated shell identity while the public route is displayed.
+  window.CasinoCurrentUser = null;
+  // Keep the casino shell and lobby layout locked behind successful enrollment and later login.
+  document.body.classList.remove('lobby-active', 'guest-trial-active');
+  // Apply the established authentication layout at all governed viewports.
+  document.body.classList.add('auth-locked');
+  // Resolve the shared public route outlet.
+  const view = document.getElementById('view');
+  // Remove authenticated region semantics before rendering the account-free form.
+  view.removeAttribute('tabindex'); view.removeAttribute('role'); view.removeAttribute('aria-label'); view.removeAttribute('data-testid');
+  // Apply the shared accessible auth-screen presentation.
+  view.className = 'screen auth-screen';
+  // Render explicit restricted-preview, password, locale, and current-terms fields with one generic live result.
+  view.innerHTML = `<section class="auth-panel" data-testid="invitation-redemption"><p class="eyebrow">${safe(t('invitation.eyebrow', {}, 'shell'))}</p><h1>${safe(t('invitation.title', {}, 'shell'))}</h1><p class="auth-copy">${safe(t('invitation.copy', {}, 'shell'))}</p><form id="invitation-form" class="auth-form"><label>${safe(t('invitation.email', {}, 'shell'))}<input id="invitation-email" data-testid="invitation-email" type="email" autocomplete="email" maxlength="254" required></label><label>${safe(t('invitation.displayName', {}, 'shell'))}<input id="invitation-display-name" data-testid="invitation-display-name" autocomplete="name" maxlength="80" required></label><label>${safe(t('invitation.password', {}, 'shell'))}<input id="invitation-password" data-testid="invitation-password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required></label><label>${safe(t('invitation.language', {}, 'shell'))}<select id="invitation-locale" data-testid="invitation-locale"></select></label><label class="check-row"><input id="invitation-terms" data-testid="invitation-terms" type="checkbox" required><span>${safe(t('invitation.terms', {}, 'shell'))}</span></label><button class="primary" data-testid="invitation-submit" type="submit">${safe(t('invitation.submit', {}, 'shell'))}</button><p id="invitation-message" class="auth-message" role="status" data-success="${success ? 'true' : 'false'}">${safe(message)}</p></form><a href="/" data-testid="invitation-login-link">${safe(t('invitation.back', {}, 'shell'))}</a></section>`;
+  // Populate the locale selector from the governed manifest and rerender in place after a switch.
+  wireLocaleSelect(document.getElementById('invitation-locale'), () => renderInvitationGate(message, success));
+  // Submit through the recovery-safe public handler.
+  document.getElementById('invitation-form').onsubmit = handleInvitationSubmit;
+}
+
+// Submit one explicit invitation redemption while keeping every rejection non-enumerating. (INVITE-003)
+async function handleInvitationSubmit(event) {
+  // Prevent a full page reload that could obscure the caller-idempotent result.
+  event.preventDefault();
+  // Resolve the generic live status outlet.
+  const message = document.getElementById('invitation-message');
+  // Resolve the transient bearer from the canonical URL without copying it to DOM or durable storage.
+  const token = new URL(location.href).searchParams.get('token') || '';
+  // Disable repeated clicks until the exact request settles.
+  const submit = document.querySelector('[data-testid="invitation-submit"]');
+  // Prevent a second in-flight mutation from this form.
+  submit.disabled = true;
+  // Start protected redemption so every failure renders the same localized public message.
+  try {
+    // Build the complete current-terms payload with one reload-stable caller key.
+    const payload = { token, email: document.getElementById('invitation-email').value.trim(), password: document.getElementById('invitation-password').value, display_name: document.getElementById('invitation-display-name').value.trim(), locale: getLocaleState().locale, terms_version: 'private-beta-1', accepted: document.getElementById('invitation-terms').checked === true, idempotency_key: await invitationIdempotency(token) };
+    // Submit only after the browser has collected every explicit enrollment field.
+    await redeemInvitation(payload);
+    // Remove the bearer from browser history immediately after terminal success.
+    history.replaceState({}, '', '/');
+    // Return to login with an identifier-free success prompt.
+    renderLoginGate(t('invitation.success', {}, 'shell'));
+  // Collapse disabled, malformed, expired, revoked, replayed, and raced results into one message.
+  } catch (_) {
+    // Publish no state-specific reason or server text.
+    if (message) message.textContent = t('invitation.unavailable', {}, 'shell');
+    // Re-enable the same form for recoverable exact-key retry.
+    submit.disabled = false;
+  }
 }
 
 // Render the terms acceptance step when the current session still requires it.
@@ -583,8 +599,8 @@ async function refreshCurrentSession() {
   } catch (_) {
     // Clear the current session so no stale wallet can render.
     currentSession = null;
-    // Render the logged-out gate before any route mounts.
-    renderLoginGate();
+    // Render the exact account-free invitation path or the normal private-beta login gate.
+    if (isInvitationRoute()) renderInvitationGate(); else renderLoginGate();
   }
 }
 
@@ -896,12 +912,12 @@ export async function navigate(route, options = {}) {
 async function init() {
   // Initialize i18n before any auth or shell markup renders.
   await initI18n({ domains: ['shell', 'feedback'] });
-  // Bind and localize the persistent problem-report modal after dictionaries are ready.
+  // Bind the native problem-report dialog after its translation domain is ready.
   bindFeedbackDialog();
   // Recalculate active-route visibility whenever responsive navigation layout changes.
   window.addEventListener('resize', revealActiveNav);
   // Repaint persistent shell text when the locale changes.
-  onLocaleChange(() => { localizeFeedbackDialog(); if (currentSession && !currentSession.terms?.required) { gameDescriptors = (latestState?.games || []).map(game => descriptorFromCatalog(game)); renderNav(); updateCurrentUserShell(); updateShellStatus(latestState, shellConnected); if (active === 'lobby') navigate('lobby', { history: 'none' }); } });
+  onLocaleChange(() => { localizeFeedback(); if (currentSession && !currentSession.terms?.required) { gameDescriptors = (latestState?.games || []).map(game => descriptorFromCatalog(game)); renderNav(); updateCurrentUserShell(); updateShellStatus(latestState, shellConnected); if (active === 'lobby') navigate('lobby', { history: 'none' }); } });
   // Restore game routes through browser Back and Forward without remounting stale history entries.
   window.addEventListener('popstate', () => { if (currentSession && !currentSession.terms?.required) navigate(routeFromLocation(), { history: 'none' }); });
   // Read the add-token button from the wallet popover.

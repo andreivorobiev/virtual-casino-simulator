@@ -122,6 +122,30 @@ GUEST_MAX_ACTIONS = int(os.environ.get("CASINO_GUEST_MAX_ACTIONS", "1000"))
 GUEST_AUTOPLAY_MAX_ROUNDS = int(os.environ.get("CASINO_GUEST_AUTOPLAY_MAX_ROUNDS", "25"))
 # Publish the exact private-preview terms revision a guest must explicitly accept before creation.
 GUEST_TERMS_VERSION = os.environ.get("CASINO_GUEST_TERMS_VERSION", "private-beta-1").strip()
+# Keep Admin invitation issuance disabled until its separately authorized restricted-preview release. (issue #332)
+INVITATIONS_ENABLED = os.environ.get("CASINO_INVITATIONS_ENABLED", "false").strip().lower() in ("1", "true", "yes", "on")
+# Keep public invitation redemption disabled independently from issuance and mail readiness. (issue #332)
+ENROLLMENT_ENABLED = os.environ.get("CASINO_ENROLLMENT_ENABLED", "false").strip().lower() in ("1", "true", "yes", "on")
+# Suppress repeated delivery actions inside a bounded operator-visible cooldown.
+INVITATION_RESEND_COOLDOWN_SECONDS = int(os.environ.get("CASINO_INVITATION_RESEND_COOLDOWN_SECONDS", "300"))
+# Bound invitation mutations per Admin during one fixed policy window.
+INVITATION_ADMIN_RATE_LIMIT = int(os.environ.get("CASINO_INVITATION_ADMIN_RATE_LIMIT", "20"))
+# Bound invitation deliveries per keyed recipient during one fixed policy window.
+INVITATION_RECIPIENT_RATE_LIMIT = int(os.environ.get("CASINO_INVITATION_RECIPIENT_RATE_LIMIT", "5"))
+# Define the shared invitation rate window in seconds.
+INVITATION_RATE_WINDOW_SECONDS = int(os.environ.get("CASINO_INVITATION_RATE_WINDOW_SECONDS", "86400"))
+# Retain terminal invitation and audit metadata for at most one year by default.
+INVITATION_RETENTION_SECONDS = int(os.environ.get("CASINO_INVITATION_RETENTION_SECONDS", "31536000"))
+# Allow a pre-consumption browser claim to be recovered after a bounded abandoned interval.
+INVITATION_CLAIM_TIMEOUT_SECONDS = int(os.environ.get("CASINO_INVITATION_CLAIM_TIMEOUT_SECONDS", "900"))
+# Bound accepted authenticated problem reports per opaque reporter during one durable window. (issue #349)
+FEEDBACK_RATE_LIMIT = int(os.environ.get("CASINO_FEEDBACK_RATE_LIMIT", "5"))
+# Define the cross-process problem-report rate window in seconds.
+FEEDBACK_RATE_WINDOW_SECONDS = int(os.environ.get("CASINO_FEEDBACK_RATE_WINDOW_SECONDS", "3600"))
+# Retain terminal report content and normalized screenshots for ninety days by default.
+FEEDBACK_TERMINAL_RETENTION_SECONDS = int(os.environ.get("CASINO_FEEDBACK_TERMINAL_RETENTION_SECONDS", "7776000"))
+# Apply an absolute one-year privacy ceiling even when a report never reaches a terminal state.
+FEEDBACK_MAX_RETENTION_SECONDS = int(os.environ.get("CASINO_FEEDBACK_MAX_RETENTION_SECONDS", "31536000"))
 # Preserve the developer-only bootstrap email so public startup can reject the local identity default.
 LOCAL_BOOTSTRAP_ADMIN_EMAIL = "admin@example.local"
 # Preserve only a digest of the developer credential so validation never needs another plaintext copy.
