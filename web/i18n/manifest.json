@@ -47,6 +47,7 @@
     "common",
     "shell",
     "admin",
+    "feedback",
     "core/autoplay",
     "core/bots",
     "games/roulette",

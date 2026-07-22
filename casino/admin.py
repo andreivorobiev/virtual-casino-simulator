@@ -12,7 +12,7 @@ from casino.config import DATA_DIR, GAME_DATA_DIR, LOG_DIR, DOCS_DIR, APP_VERSIO
 # Import required dependency so this module can use its public functions or constants.
 from casino.module_versions import list_module_revisions
 # Import required dependency so this module can use its public functions or constants.
-from casino.core import auth, players, ledger, history, logger, autoplay, settings
+from casino.core import auth, players, ledger, history, logger, autoplay, feedback, settings
 # Import the de-identified guest-trial telemetry for the Admin Guest Trials section. (issue #317)
 from casino.core import guest_analytics
 # Import the invitation lifecycle for the Admin invitation-by-email section. (issue #332)
@@ -484,6 +484,55 @@ def register(router):
     def admin_dashboard(body, query):
         # Return the computed value to the caller.
         return overview()
+
+    # Register the additive v2 Admin problem-report inbox. (ADMIN-025, issue #349)
+    @router.get(r"/api/v2/admin/feedback/reports")
+    # Return attachment-free summaries with optional governed filters.
+    def admin_feedback_reports_v2(body, query):
+        # Delegate validation and newest-first ordering to the feedback service.
+        return {"reports": feedback.list_reports(query), "priorities": sorted(feedback.ALLOWED_PRIORITIES), "statuses": sorted(feedback.ALLOWED_STATUSES), "categories": sorted(feedback.ALLOWED_CATEGORIES), "impacts": sorted(feedback.ALLOWED_IMPACTS)}
+
+    # Register one Admin report detail route with server-sanitized image evidence.
+    @router.get(r"/api/v2/admin/feedback/reports/(?P<report_id>report_[A-Za-z0-9_-]+)")
+    # Return one canonical internal report after the central Admin authorization gate.
+    def admin_feedback_report_detail_v2(body, query, report_id):
+        # Keep evidence and reporter linkage inside the Admin surface.
+        return {"report": feedback.detail(report_id)}
+
+    # Register the partial Admin triage update route.
+    @router.patch(r"/api/v2/admin/feedback/reports/(?P<report_id>report_[A-Za-z0-9_-]+)")
+    # Apply governed priority, lifecycle, notes, and an optional reviewed GitHub link.
+    def admin_feedback_report_update_v2(body, query, report_id):
+        # Return the complete updated report for immediate Admin rerendering.
+        return {"report": feedback.update(report_id, body)}
+
+    # Register an explicit safe GitHub-draft preparation action without external mutation.
+    @router.post(r"/api/v2/admin/feedback/reports/(?P<report_id>report_[A-Za-z0-9_-]+)/github-draft")
+    # Generate a reporter-free issue draft for Admin review and manual publication.
+    def admin_feedback_github_draft_v2(body, query, report_id):
+        # Return only title, body, and governed repository labels.
+        return {"draft": feedback.github_draft(report_id)}
+
+    # Register a metadata-only manual Admin export with no encoded attachment payloads.
+    @router.get(r"/api/v2/admin/feedback/reports/(?P<report_id>report_[A-Za-z0-9_-]+)/export")
+    # Return one privacy-safe export manifest after the central Admin authorization gate.
+    def admin_feedback_export_v2(body, query, report_id):
+        # Delegate evidence validation and payload removal to the feedback service.
+        return {"export": feedback.export_report(report_id)}
+
+    # Register explicit privacy deletion as a recoverable provider-neutral saga.
+    @router.delete(r"/api/v2/admin/feedback/reports/(?P<report_id>report_[A-Za-z0-9_-]+)")
+    # Scrub report content and evidence only after an idempotent Admin request.
+    def admin_feedback_delete_v2(body, query, report_id):
+        # Return only the minimal deletion receipt.
+        return {"deletion": feedback.delete_report(report_id, body)}
+
+    # Register bounded retention cleanup for explicit Admin operation.
+    @router.post(r"/api/v2/admin/feedback/cleanup")
+    # Apply terminal and absolute privacy ceilings while recovering interrupted deletions.
+    def admin_feedback_cleanup_v2(body, query):
+        # Return only policy and deletion counts.
+        return {"cleanup": feedback.cleanup_retention()}
 
     # Attach the v2 Admin summary route required for additive guest-trial reporting.
     @router.get(r"/api/v2/admin/guest-trials")

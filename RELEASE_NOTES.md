@@ -1,5 +1,12 @@
 # Virtual Casino Simulator v9.4.0 Release Notes
 
+## Unreleased repository addendum: manual problem reporting and Admin triage
+
+- Adds authenticated persistent-user problem reports with bounded impact/category/prose, privacy-reduced context, and server-normalized metadata-free screenshots through an additive v2 contract.
+- Adds an Admin-only privacy-safe inbox, exact filters, idempotent P1/P2/P3 triage, metadata export, recoverable deletion and retention cleanup, sanitized manual issue drafts, and manual repository-link recording.
+- Uses provider-neutral recoverable JSON/MySQL state transitions, HMAC-only reporter and replay references, durable cross-process rate slots, malformed-state preservation, and exact-head EN/RU responsive evidence under TEST-094.
+- Workroom #28 authorizes this manual-only repository slice; automatic GitHub publication, external credentials or mutation, guest/anonymous reporting, deployment, and public exposure remain excluded.
+
 ## Unreleased repository addendum: disabled invite-only OAuth runtime
 
 - Adds additive v2 Google/Facebook provider availability, browser-bound start/callback, and current-user link/unlink contracts for existing active private-invite local-password accounts only.

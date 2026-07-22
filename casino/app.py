@@ -37,7 +37,7 @@ from casino.core.state_store import ensure_dirs, migrate_from_v7_if_needed
 # Import required dependency so this module can bootstrap whichever storage provider is configured.
 from casino.core.storage import bootstrap_players, get_storage_provider
 # Import required dependency so this module can use its public functions or constants.
-from casino.core import logger, players, ledger, history, auth, guest_analytics, invitations
+from casino.core import logger, players, ledger, history, auth, feedback, guest_analytics, invitations
 # Import required dependency so this module can use its public functions or constants.
 from casino.games.registry import catalog_summary, list_games, register_games
 # Import required dependency so this module can use its public functions or constants.
@@ -97,6 +97,13 @@ def build_router() -> Router:
         recent_ledger = ledger.read_recent(None if auth.is_admin(context["user"]) else player_id, 25)
         # Return the session-scoped casino summary.
         return {"version": APP_VERSION, "games": list_games(), "catalog": catalog_summary(), "players": visible_players, "recent_history": visible_history, "recent_ledger": recent_ledger}
+
+    # Register additive v2 authenticated manual problem-report submission. (CORE-027, issue #349)
+    @router.post(r"/api/v2/feedback/reports")
+    # Persist one privacy-safe report through the provider-neutral recovery state machine.
+    def submit_feedback_report_v2(body, query, context):
+        # Bind the reporter from the authenticated session rather than accepting caller identity.
+        return feedback.submit(context["user"], body)
 
     # Attach this decorator so the following function is registered with the framework.
     @router.post(r"/api/v1/casino/reset")

@@ -9507,6 +9507,78 @@
       "notes": "Browser evidence is generated only by exact-head GitHub Actions; no local Playwright, Chromium, provider, live network, or production action is authorized."
     },
     {
+      "id": "CORE-027",
+      "module": "Core",
+      "description": "Authenticated persistent users can submit retry-safe bounded problem reports with a separate player-selected impact, privacy-reduced context, and normalized screenshots through the additive v2 API; the recoverable provider-neutral saga publishes only fully committed reports.",
+      "status": "PASS",
+      "api_tests": ["API-FEEDBACK-001", "STORAGE-MYSQL-LIVE-001"],
+      "browser_tests": ["BR-FEEDBACK-001", "BR-ADMIN-FEEDBACK-001"],
+      "implementation_files": ["casino/core/feedback.py", "casino/app.py", "web/core/feedback.js", "contracts/openapi/feedback.v2.yaml"],
+      "introduced_in": "issue-349-feedback-reports",
+      "changed_in": "issue-349-manual-feedback-slice",
+      "notes": "Guest and anonymous submission remain out of scope; durable cross-process rate slots and HMAC replay proofs are shared by JSON and MySQL providers."
+    },
+    {
+      "id": "ADMIN-025",
+      "module": "Admin",
+      "description": "Admin can filter privacy-safe report summaries, inspect normalized evidence, idempotently triage P1/P2/P3 lifecycle state, export metadata, delete retained content, prepare a sanitized manual GitHub draft, and record a separately created issue link without any external publication capability.",
+      "status": "PASS",
+      "api_tests": ["API-FEEDBACK-001"],
+      "browser_tests": ["BR-ADMIN-FEEDBACK-001"],
+      "implementation_files": ["casino/admin.py", "web/admin.html", "web/admin.js", "web/styles.css"],
+      "introduced_in": "issue-349-feedback-reports",
+      "changed_in": "issue-349-manual-feedback-slice",
+      "notes": "Workroom #28 comment 5049349447 authorizes manual draft and link recording only; automatic GitHub issue creation and credentials are absent."
+    },
+    {
+      "id": "SEC-011",
+      "module": "Security",
+      "description": "Reporter identity is retained only as an HMAC-derived opaque reference; screenshots are bounded, decoded, format-checked, pixel-limited, re-encoded without metadata, Admin-only, retained under terminal and absolute ceilings, and recoverably deleted; exports and manual drafts exclude pixels and private identity.",
+      "status": "PASS",
+      "api_tests": ["API-FEEDBACK-001", "STORAGE-MYSQL-LIVE-001"],
+      "browser_tests": [],
+      "implementation_files": ["casino/core/feedback.py", "casino/config.py", "tests/feedback_tests.py", "contracts/compatibility/manual-feedback-reporting.json"],
+      "introduced_in": "issue-349-feedback-reports",
+      "changed_in": "issue-349-manual-feedback-slice",
+      "notes": "Cookies, credentials, raw URLs, session ids, wallet contents, wagers, ledger data, raw user ids, and display names are never accepted in report context."
+    },
+    {
+      "id": "I18N-005",
+      "module": "Application",
+      "description": "Player reporting and Admin manual-triage interfaces provide complete en-US and ru-RU labels, privacy disclosure, filters, lifecycle, export, deletion, and manual-only draft copy with no visible resource keys after locale changes.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": ["BR-FEEDBACK-001", "BR-ADMIN-FEEDBACK-001"],
+      "implementation_files": ["web/i18n/manifest.json", "web/i18n/en-US/feedback.json", "web/i18n/ru-RU/feedback.json", "web/app.js", "web/admin.js"],
+      "introduced_in": "issue-349-feedback-reports",
+      "changed_in": "issue-349-manual-feedback-slice",
+      "notes": "The feedback domain is loaded by both the player shell and Admin application."
+    },
+    {
+      "id": "UX-019",
+      "module": "Application",
+      "description": "Problem reporting and Admin triage remain keyboard-operable, focus-visible, scroll-contained, touch-sized, readable at 200 percent zoom, reduced-motion safe, and responsive across all governed viewports with paste, drop, file, preview-removal, retry, filter, draft, export, and deletion states.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": ["BR-FEEDBACK-001", "BR-ADMIN-FEEDBACK-001"],
+      "implementation_files": ["web/index.html", "web/core/feedback.js", "web/admin.js", "web/styles.css", "tests/visual/visual_matrix.json"],
+      "introduced_in": "issue-349-feedback-reports",
+      "changed_in": "issue-349-manual-feedback-slice",
+      "notes": "Exact-head evidence covers en-US and ru-RU at desktop primary, desktop compact, tablet, and mobile viewports."
+    },
+    {
+      "id": "TEST-094",
+      "module": "Tests",
+      "description": "Provider-neutral unit, API, JSON-process, and disposable MySQL tests prove recoverable submission, single idempotent winners, durable rates, malformed-state preservation, atomic triage, privacy deletion and retention, metadata-only export, frozen-v1 compatibility, and manual-only publication; browser tests prove complete bilingual player and Admin states across governed viewports.",
+      "status": "PASS",
+      "api_tests": ["API-FEEDBACK-001", "STORAGE-MYSQL-LIVE-001"],
+      "browser_tests": ["BR-FEEDBACK-001", "BR-ADMIN-FEEDBACK-001"],
+      "implementation_files": ["tests/feedback_tests.py", "tests/storage_tests.py", "tests/run_tests.py", "tests/visual/visual_matrix.json"],
+      "introduced_in": "issue-349-feedback-reports",
+      "changed_in": "issue-349-manual-feedback-slice",
+      "notes": "TEST-091 remains owned by invitation enrollment and TEST-092 remains owned by formal 50,000-cycle qualification; local Playwright, Chromium, and heavy QA are not authorized."
+    },
+    {
       "id": "TEST-092",
       "module": "Tests",
       "description": "An exact-source browser qualification executes exactly 50,000 completed UI cycles across every catalog game, assigns at least 1,666 cycles to each game, exercises every eligible game control at least 100 times or records an approved ineligible classification, captures all four governed viewports for human review, and rejects unexplained failures, incomplete ranges, incomplete declared non-control stages, source drift, or cleanup residue.",

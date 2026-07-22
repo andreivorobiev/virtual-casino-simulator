@@ -1,0 +1,158 @@
+openapi: 3.0.3
+info:
+  title: Virtual Casino manual problem-report API
+  version: v2
+  description: Authenticated persistent-user capture and Admin-only triage. This contract prepares sanitized manual drafts but never publishes to GitHub or another external provider.
+servers:
+  - url: /api/v2
+paths:
+  /feedback/reports:
+    post:
+      summary: Submit one retry-safe problem report for an authenticated persistent user.
+      operationId: feedback_v2_submit
+      security: [{ cookieSession: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReportSubmission' }
+      responses:
+        '200': { description: Stable internal receipt, content: { application/json: { schema: { $ref: '#/components/schemas/SuccessEnvelope' } } } }
+        '400': { description: Invalid, guest, or rate-limited submission, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+        '401': { description: Authentication required, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+  /admin/feedback/reports:
+    get:
+      summary: List attachment-free Admin report summaries using exact privacy-safe filters.
+      operationId: feedback_v2_admin_list
+      security: [{ cookieSession: [] }]
+      parameters:
+        - { in: query, name: priority, schema: { type: string, enum: [P1, P2, P3] } }
+        - { in: query, name: status, schema: { $ref: '#/components/schemas/Status' } }
+        - { in: query, name: category, schema: { $ref: '#/components/schemas/Category' } }
+        - { in: query, name: impact, schema: { $ref: '#/components/schemas/Impact' } }
+        - { in: query, name: locale, schema: { type: string, enum: [en-US, ru-RU] } }
+        - { in: query, name: route, schema: { type: string, maxLength: 181 } }
+        - { in: query, name: reporter, schema: { type: string, pattern: '^USR-[A-F0-9]{16}$' } }
+        - { in: query, name: created_from, schema: { type: string, format: date-time } }
+        - { in: query, name: created_to, schema: { type: string, format: date-time } }
+      responses:
+        '200': { description: Report summaries and fixed filter taxonomies, content: { application/json: { schema: { $ref: '#/components/schemas/SuccessEnvelope' } } } }
+        '403': { description: Admin role required, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+  /admin/feedback/reports/{report_id}:
+    parameters: [{ $ref: '#/components/parameters/ReportId' }]
+    get:
+      summary: Read one Admin report with normalized retained screenshots.
+      operationId: feedback_v2_admin_detail
+      security: [{ cookieSession: [] }]
+      responses:
+        '200': { description: Canonical report detail, content: { application/json: { schema: { $ref: '#/components/schemas/SuccessEnvelope' } } } }
+        '404': { description: Report not found, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+    patch:
+      summary: Idempotently apply triage, notes, and a manually recorded GitHub issue link.
+      operationId: feedback_v2_admin_update
+      security: [{ cookieSession: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/TriageUpdate' } } }
+      responses:
+        '200': { description: Updated canonical detail, content: { application/json: { schema: { $ref: '#/components/schemas/SuccessEnvelope' } } } }
+    delete:
+      summary: Idempotently delete retained report content and screenshots through a recoverable saga.
+      operationId: feedback_v2_admin_delete
+      security: [{ cookieSession: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/IdempotentAction' } } }
+      responses:
+        '200': { description: Privacy-deletion receipt, content: { application/json: { schema: { $ref: '#/components/schemas/SuccessEnvelope' } } } }
+  /admin/feedback/reports/{report_id}/github-draft:
+    parameters: [{ $ref: '#/components/parameters/ReportId' }]
+    post:
+      summary: Prepare reporter-free manual issue text without external mutation capability.
+      operationId: feedback_v2_admin_manual_github_draft
+      security: [{ cookieSession: [] }]
+      responses:
+        '200': { description: Sanitized title, body, labels, and publication_mode=manual_only, content: { application/json: { schema: { $ref: '#/components/schemas/SuccessEnvelope' } } } }
+  /admin/feedback/reports/{report_id}/export:
+    parameters: [{ $ref: '#/components/parameters/ReportId' }]
+    get:
+      summary: Export privacy-safe metadata and screenshot digests without encoded pixels.
+      operationId: feedback_v2_admin_export
+      security: [{ cookieSession: [] }]
+      responses:
+        '200': { description: Metadata-only export, content: { application/json: { schema: { $ref: '#/components/schemas/SuccessEnvelope' } } } }
+  /admin/feedback/cleanup:
+    post:
+      summary: Resume interrupted deletions and enforce terminal and absolute retention ceilings.
+      operationId: feedback_v2_admin_cleanup
+      security: [{ cookieSession: [] }]
+      responses:
+        '200': { description: Bounded cleanup accounting, content: { application/json: { schema: { $ref: '#/components/schemas/SuccessEnvelope' } } } }
+components:
+  securitySchemes:
+    cookieSession: { type: apiKey, in: cookie, name: casino_session }
+  parameters:
+    ReportId:
+      in: path
+      name: report_id
+      required: true
+      schema: { type: string, pattern: '^report_[A-Za-z0-9_-]+$' }
+  schemas:
+    Category: { type: string, enum: [bug, visual, gameplay, account, idea, other] }
+    Impact: { type: string, enum: [blocked, difficult, minor] }
+    Status: { type: string, enum: [new, triaged, linked, resolved, duplicate, rejected] }
+    IdempotentAction:
+      type: object
+      additionalProperties: false
+      required: [idempotency_key]
+      properties:
+        idempotency_key: { type: string, minLength: 16, maxLength: 100, pattern: '^[A-Za-z0-9_-]+$' }
+    DiagnosticContext:
+      type: object
+      additionalProperties: false
+      required: [route, locale, viewport_width, viewport_height, browser_family, os_family, reduced_motion]
+      properties:
+        route: { type: string, maxLength: 181 }
+        locale: { type: string, enum: [en-US, ru-RU] }
+        viewport_width: { type: integer, minimum: 0, maximum: 8000 }
+        viewport_height: { type: integer, minimum: 0, maximum: 8000 }
+        browser_family: { type: string, enum: [Chrome, Edge, Firefox, Safari, Other] }
+        os_family: { type: string, enum: [Android, iOS, Linux, macOS, Windows, Other] }
+        reduced_motion: { type: boolean }
+    AttachmentSubmission:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data: { type: string, maxLength: 275000, description: PNG, JPEG, or WebP base64 normalized and metadata-stripped by the server before persistence. }
+    ReportSubmission:
+      type: object
+      additionalProperties: false
+      required: [idempotency_key, category, impact, summary, actual, expected, context]
+      properties:
+        idempotency_key: { type: string, minLength: 16, maxLength: 100, pattern: '^[A-Za-z0-9_-]+$' }
+        category: { $ref: '#/components/schemas/Category' }
+        impact: { $ref: '#/components/schemas/Impact' }
+        summary: { type: string, minLength: 5, maxLength: 140 }
+        actual: { type: string, minLength: 5, maxLength: 4000 }
+        expected: { type: string, minLength: 5, maxLength: 2000 }
+        attachments: { type: array, maxItems: 3, items: { $ref: '#/components/schemas/AttachmentSubmission' } }
+        context: { $ref: '#/components/schemas/DiagnosticContext' }
+    TriageUpdate:
+      type: object
+      additionalProperties: false
+      required: [idempotency_key]
+      properties:
+        idempotency_key: { type: string, minLength: 16, maxLength: 100, pattern: '^[A-Za-z0-9_-]+$' }
+        priority: { type: string, enum: [P1, P2, P3] }
+        status: { $ref: '#/components/schemas/Status' }
+        admin_notes: { type: string, maxLength: 4000 }
+        github_issue_url: { type: string, pattern: '^https://github.com/andreivorobiev/virtual-casino-simulator/issues/[1-9][0-9]*$' }
+    SuccessEnvelope:
+      type: object
+      required: [ok, data]
+      properties: { ok: { type: boolean, enum: [true] }, data: { type: object } }
+    ErrorEnvelope:
+      type: object
+      required: [ok, error]
+      properties: { ok: { type: boolean, enum: [false] }, error: { type: object } }

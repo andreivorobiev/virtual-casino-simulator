@@ -21,7 +21,7 @@ REQUIRED = ["casino", "players", "ledger", "bots", "autoplay", "admin"]
 # Set REQUIRED_V2 to the value needed for the next operation.
 REQUIRED_V2 = [
     # Execute this statement as part of the module's documented control flow.
-    "auth", "admin-users", "transactional-mail", "invitations",
+    "auth", "admin-users", "transactional-mail", "invitations", "feedback",
 ]
 # Point to the mixed-surface Operations contract that cannot use the legacy v1-only skeleton rule.
 OPERATIONS_CONTRACT = CONTRACT_DIR / "operations.v1.yaml"
@@ -37,6 +37,8 @@ MAIL_COMPATIBILITY_CONTRACT = ROOT / "contracts" / "compatibility" / "transactio
 INVITATION_COMPATIBILITY_CONTRACT = ROOT / "contracts" / "compatibility" / "invitation-enrollment.json"
 # Point to the owner-approved disabled invite-only OAuth compatibility policy.
 OAUTH_COMPATIBILITY_CONTRACT = ROOT / "contracts" / "compatibility" / "oauth-invite-only-runtime.json"
+# Point to the manual-only Workroom-approved feedback compatibility policy.
+FEEDBACK_COMPATIBILITY_CONTRACT = ROOT / "contracts" / "compatibility" / "manual-feedback-reporting.json"
 
 # Define the main function used by this module.
 def main():
@@ -305,6 +307,28 @@ def main():
     except (OSError, json.JSONDecodeError) as exc:
         # Report only the checked artifact path and exception class.
         errors.append(f"OAuth compatibility policy could not be validated: {OAUTH_COMPATIBILITY_CONTRACT} ({type(exc).__name__})")
+    # Require the narrowed manual-only feedback authority and compatibility boundary to remain exact.
+    try:
+        # Parse the checked policy without inspecting any retained user report data.
+        feedback_policy = json.loads(FEEDBACK_COMPATIBILITY_CONTRACT.read_text(encoding="utf-8"))
+        # Require the exact artifact, additive v2 contract, and frozen v1 surface.
+        if feedback_policy.get("artifact") != "manual-feedback-reporting" or feedback_policy.get("compatibility", {}).get("api_v1_frozen") is not True or feedback_policy.get("compatibility", {}).get("contract") != "contracts/openapi/feedback.v2.yaml":
+            # Reject renamed, missing, or compatibility-breaking manual feedback policy.
+            errors.append(f"{FEEDBACK_COMPATIBILITY_CONTRACT} does not preserve additive feedback compatibility")
+        # Read the exact Workroom decision boundary once.
+        feedback_authorization = feedback_policy.get("authorization", {})
+        # Require manual capture and triage while denying every external, guest, deployment, and public capability.
+        if feedback_authorization.get("workroom_issue") != 28 or feedback_authorization.get("decision_comment") != 5049349447 or feedback_authorization.get("sanitized_manual_draft") is not True or feedback_authorization.get("manual_issue_link_recording") is not True or any(feedback_authorization.get(key) is not False for key in ("automatic_github_publication", "external_issue_mutation", "credentials_authorized", "guest_or_anonymous_reporting", "deployment_or_public_exposure")):
+            # Reject scope widening beyond the owner-approved manual-only slice.
+            errors.append(f"{FEEDBACK_COMPATIBILITY_CONTRACT} does not preserve the Workroom #28 authority boundary")
+        # Require privacy-safe reporter, export, and malformed-state recovery declarations.
+        if feedback_policy.get("compatibility", {}).get("publication_mode") != "manual_only" or feedback_policy.get("privacy", {}).get("reporter") != "HMAC-derived opaque reference only" or feedback_policy.get("privacy", {}).get("export") != "metadata and evidence digests only" or feedback_policy.get("storage", {}).get("malformed_state") != "preserved unchanged for operator recovery":
+            # Reject privacy or recoverability weakening.
+            errors.append(f"{FEEDBACK_COMPATIBILITY_CONTRACT} does not preserve feedback privacy and recovery")
+    # Convert an absent or malformed policy into one stable contract diagnostic.
+    except (OSError, json.JSONDecodeError) as exc:
+        # Report only the checked artifact path and exception class.
+        errors.append(f"feedback compatibility policy could not be validated: {FEEDBACK_COMPATIBILITY_CONTRACT} ({type(exc).__name__})")
     # Set schema_dir to the value needed for the next operation.
     schema_dir = ROOT / "contracts" / "schemas"
     # Iterate through the collection to process each item.
@@ -324,7 +348,7 @@ def main():
         # Return the computed value to the caller.
         return 1
     # Write diagnostic output so the current operation can be inspected.
-    print(f"Contract validation passed for {len(REQUIRED) + len(REQUIRED_V2) + 5} shared policies and {len(GAMES)} catalog games.")
+    print(f"Contract validation passed for {len(REQUIRED) + len(REQUIRED_V2) + 6} shared policies and {len(GAMES)} catalog games.")
     # Return the computed value to the caller.
     return 0
 

@@ -898,6 +898,10 @@ flowchart LR
 
 Restricted-preview hardening adds permanent requirements `SEC-010`, `SESSION-006`, `ADMIN-024`, `AUTH-007`, and `TEST-047`. Their canonical descriptions, implementation paths, and centrally discovered evidence are maintained in `requirements.json` and the generated requirements report.
 
+## In-app problem reports
+
+The Workroom #28 manual-only slice of issue #349 adds `CORE-027`, `ADMIN-025`, `SEC-011`, `I18N-005`, `UX-019`, and `TEST-094`. Registered authenticated users can submit bounded reports with locally compressed screenshots; the server verifies, resizes, re-encodes, strips metadata, and commits them through a recoverable provider-neutral saga. Admin receives privacy-safe filters, P1/P2/P3 triage, retention/deletion/export controls, and a reporter-free manual GitHub draft plus manual link recording. Anonymous or guest submission, automatic GitHub publication, external credentials, deployment, and public exposure remain outside this slice.
+
 ## Disabled transactional-mail foundation
 
 Issue #330 adds permanent requirements `MAIL-001` through `MAIL-006` and `TEST-090`. The repository-owned feature remains disabled by default, and the separate provider/network release gate remains held by default. The only published API surface is secret-free Admin readiness under `/api/v2`; no signup, invitation, recovery, magic-link, bounce, provider callback, or send route is created. Workroom #23 authorizes repository merge of this inert foundation only and does not authorize provider accounts, credentials, DNS or email-authentication records, live delivery, deployment, billing, public signup, or public exposure.

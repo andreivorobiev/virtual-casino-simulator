@@ -6,14 +6,14 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.43.5
-- core: 9.18.1
+- application: 9.44.0
+- core: 9.19.0
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.0
 - autoplay: 1.1.3
 - audio: 9.1.1
-- admin: 1.9.1
+- admin: 1.10.0
 - operations: 1.0.0
 - roulette: 9.4.6
 - slots: 9.1.4
@@ -45,9 +45,9 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.1
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.52.5
-- docs: 1.52.0
-- contracts: 1.38.0
+- tests: 1.53.6
+- docs: 1.53.0
+- contracts: 1.39.0
 - tooling: 1.18.0
 - commenting_policy: 1.0.0
 
@@ -735,4 +735,10 @@ Historical source baseline: 9.1.0
 - **OAUTH-009** (Core) - PASS: An external provider subject links only after explicit confirmation by the exact authenticated active private-invite local-password account; JSON and MySQL transactions enforce provider-subject and provider-user uniqueness across processes, sign-in requires a prior link, provider email is display-only, and no provider flow creates or merges users, players, wallets, or accounts.
 - **OAUTH-010** (Application) - PASS: The disabled-by-default provider login and persistent-account link/unlink surfaces are keyboard accessible, localized in en-US and ru-RU, preserve local-password recovery and guest/invitation flows, revoke matching provider sessions on unlink or release rollback, and expose disabled, available, status-error, linked, unlinked, callback-success, callback-error, refresh, and responsive states without raw identity or bearer evidence.
 - **TEST-093** (Tests) - PASS: Provider-free unit, API, JSON-process, and disposable MySQL tests prove dual-gate adapter inaccessibility, proof separation, malformed-state preservation, durable rate limits, recoverable exchange ambiguity, strict callback/link/session binding, static-shell CSRF lookup without consuming browser-bound guest sessions, no email linking or account creation, compound uniqueness and replay safety, frozen-v1 compatibility, and rollback; exact-head browser evidence covers OAuth readiness and lifecycle states in en-US and ru-RU at every governed viewport.
+- **CORE-027** (Core) - PASS: Authenticated persistent users can submit retry-safe bounded problem reports with a separate player-selected impact, privacy-reduced context, and normalized screenshots through the additive v2 API; the recoverable provider-neutral saga publishes only fully committed reports.
+- **ADMIN-025** (Admin) - PASS: Admin can filter privacy-safe report summaries, inspect normalized evidence, idempotently triage P1/P2/P3 lifecycle state, export metadata, delete retained content, prepare a sanitized manual GitHub draft, and record a separately created issue link without any external publication capability.
+- **SEC-011** (Security) - PASS: Reporter identity is retained only as an HMAC-derived opaque reference; screenshots are bounded, decoded, format-checked, pixel-limited, re-encoded without metadata, Admin-only, retained under terminal and absolute ceilings, and recoverably deleted; exports and manual drafts exclude pixels and private identity.
+- **I18N-005** (Application) - PASS: Player reporting and Admin manual-triage interfaces provide complete en-US and ru-RU labels, privacy disclosure, filters, lifecycle, export, deletion, and manual-only draft copy with no visible resource keys after locale changes.
+- **UX-019** (Application) - PASS: Problem reporting and Admin triage remain keyboard-operable, focus-visible, scroll-contained, touch-sized, readable at 200 percent zoom, reduced-motion safe, and responsive across all governed viewports with paste, drop, file, preview-removal, retry, filter, draft, export, and deletion states.
+- **TEST-094** (Tests) - PASS: Provider-neutral unit, API, JSON-process, and disposable MySQL tests prove recoverable submission, single idempotent winners, durable rates, malformed-state preservation, atomic triage, privacy deletion and retention, metadata-only export, frozen-v1 compatibility, and manual-only publication; browser tests prove complete bilingual player and Admin states across governed viewports.
 - **TEST-092** (Tests) - PASS: An exact-source browser qualification executes exactly 50,000 completed UI cycles across every catalog game, assigns at least 1,666 cycles to each game, exercises every eligible game control at least 100 times or records an approved ineligible classification, captures all four governed viewports for human review, and rejects unexplained failures, incomplete ranges, incomplete declared non-control stages, source drift, or cleanup residue.

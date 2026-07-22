@@ -23,6 +23,8 @@ MYSQL_INVITATION_RECIPIENT = "mysql-invitation@example.invalid"
 MYSQL_INVITATION_PASSWORD = "Synthetic-MySQL-Invite-2026!"
 # Use independent synthetic OAuth digest material for cross-process flow, link, and rate evidence.
 MYSQL_OAUTH_TEST_KEY = "synthetic-mysql-oauth-digest-key-material-2026"
+# Use one synthetic canonical user identifier for disposable MySQL feedback concurrency.
+MYSQL_FEEDBACK_USER_ID = "user_mysql_feedback"
 
 
 # Execute one JSON action call in a separately spawned process.
@@ -238,6 +240,51 @@ def _mysql_invitation_redeem_worker(arguments):
         # Remove only the test-owned selector when the parent had none.
         else:
             # Delete the bounded process environment entry.
+            os.environ.pop("CASINO_STORAGE_PROVIDER", None)
+
+
+# Submit one problem report through an independent MySQL process. (CORE-027, TEST-094)
+def _mysql_feedback_worker(arguments):
+    # Import the production feedback service and independent provider only inside the child.
+    from casino.core import feedback, storage
+    # Import the stable public rate outcome for bounded worker serialization.
+    from casino.errors import RateLimitError
+
+    # Unpack mode, caller index, and browser-style action key without logging report prose.
+    mode, index, action_key = arguments
+    # Preserve the workflow provider selector around this disposable operation.
+    previous_provider_name = os.environ.get("CASINO_STORAGE_PROVIDER")
+    # Route every provider lookup through the disposable MySQL database.
+    os.environ["CASINO_STORAGE_PROVIDER"] = "mysql"
+    # Inject one independent provider and connection pool per spawned process.
+    storage.set_provider_for_tests(storage.MySQLStorageProvider())
+    # Start protected submission so provider routing is always restored.
+    try:
+        # Build one synthetic authenticated persistent-user identity.
+        user = {"user_id": MYSQL_FEEDBACK_USER_ID, "identity_provider": "local"}
+        # Build bounded privacy-safe submission input with no attachment bytes.
+        body = {"idempotency_key": action_key, "category": "bug", "impact": "difficult", "summary": "Disposable MySQL feedback proof", "actual": "A synthetic integration state was observed.", "expected": "The synthetic integration state should remain consistent.", "attachments": [], "context": {"route": "/roulette", "locale": "en-US", "viewport_width": 1024, "viewport_height": 900, "browser_family": "Other", "os_family": "Other", "reduced_motion": False}}
+        # Convert the expected durable rate limit into one fixed serializable result.
+        try:
+            # Submit through the same recoverable saga used by the HTTP route.
+            receipt = feedback.submit(user, body)
+            # Return only opaque identifiers and replay state.
+            return index, "accepted", receipt["report_id"], receipt["replayed"]
+        # Handle only the governed durable rate outcome for unique-key races.
+        except RateLimitError:
+            # Return no report identity for a rejected rate slot.
+            return index, "limited", None, None
+    # Always restore child-process provider routing.
+    finally:
+        # Clear the injected provider instance.
+        storage.set_provider_for_tests(None)
+        # Restore an inherited selector exactly when one existed.
+        if previous_provider_name is not None:
+            # Replace the bounded selector with its inherited value.
+            os.environ["CASINO_STORAGE_PROVIDER"] = previous_provider_name
+        # Remove the worker-owned selector when the parent had none.
+        else:
+            # Delete only the scoped environment entry.
             os.environ.pop("CASINO_STORAGE_PROVIDER", None)
 
 
@@ -665,7 +712,7 @@ def run_mysql_live_provider_path():
     # Import the data root used to derive stable provider document keys.
     from casino.config import DATA_DIR
     # Import core services whose JSON-shaped state must no longer create hybrid files.
-    from casino.core import auth, autoplay, invitations, ledger, mail, one_time_tokens, players, state_store, storage
+    from casino.core import auth, autoplay, feedback, invitations, ledger, mail, one_time_tokens, players, state_store, storage
     # Import OAuth persistence only inside the explicitly requested disposable MySQL gate.
     from casino.core.oauth.persistence import FLOW_DOCUMENT_KEY, FLOW_SECRET_DOCUMENT_KEY, OAuthFlowRecord, OAuthFlowRepository, PersistentIdentityLinkRepository
     # Import UTC helpers for one bounded flow fixture.
@@ -785,6 +832,28 @@ def run_mysql_live_provider_path():
             invitation_document_text = __import__("json").dumps(invitation_document, sort_keys=True)
             # Verify the exact lifecycle result and privacy boundary.
             assert [row.get("status") for row in invitation_document.get("invitations", [])] == ["redeemed"] and invitation_token["token"] not in invitation_document_text and MYSQL_INVITATION_PASSWORD not in invitation_document_text and "mysql-invitation-redeem-idempotency" not in invitation_document_text
+            # Race eight exact feedback retries through independent MySQL connections and processes.
+            feedback_replay_packets = [("replay", index, "mysql-feedback-shared-idempotency") for index in range(8)]
+            # Materialize every exact retry result.
+            with ProcessPoolExecutor(max_workers=4) as executor:
+                # Execute the complete recoverable service rather than a storage-only shortcut.
+                feedback_replay_results = list(executor.map(_mysql_feedback_worker, feedback_replay_packets))
+            # Require every process to resolve one opaque winner and exactly one non-replay response.
+            assert len({report_id for _, status, report_id, _ in feedback_replay_results if status == "accepted"}) == 1 and sum(1 for _, status, _, replayed in feedback_replay_results if status == "accepted" and replayed is False) == 1
+            # Race eight distinct actions against the remaining four durable rate slots.
+            feedback_rate_packets = [("rate", index, f"mysql-feedback-unique-{index:02d}") for index in range(8)]
+            # Materialize every rate decision across independent connections.
+            with ProcessPoolExecutor(max_workers=4) as executor:
+                # Prove check-and-append serialization through the production service.
+                feedback_rate_results = list(executor.map(_mysql_feedback_worker, feedback_rate_packets))
+            # Require the shared five-event window to accept four new reports and reject four callers.
+            assert sum(1 for _, status, _, _ in feedback_rate_results if status == "accepted") == 4 and sum(1 for _, status, _, _ in feedback_rate_results if status == "limited") == 4
+            # Read the final authoritative state through the injected parent provider.
+            feedback_document = provider.read_document(feedback.STATE_DOCUMENT, feedback._empty_state)
+            # Serialize only disposable state for raw-material absence assertions.
+            feedback_document_text = __import__("json").dumps(feedback_document, sort_keys=True)
+            # Require five committed reports, five durable rate events, and no raw user id or caller keys.
+            assert len(feedback_document.get("reports", [])) == 5 and len(feedback_document.get("rate_events", [])) == 5 and MYSQL_FEEDBACK_USER_ID not in feedback_document_text and "mysql-feedback-" not in feedback_document_text
             # Build one strong-key flow repository over the same disposable MySQL provider.
             oauth_flows = OAuthFlowRepository(provider, MYSQL_OAUTH_TEST_KEY)
             # Create opaque synthetic proofs that never leave this live-test process group.

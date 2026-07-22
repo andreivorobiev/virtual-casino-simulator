@@ -228,6 +228,43 @@
       ]
     },
     {
+      "id": "feedback_report",
+      "route": "/",
+      "selector": "[data-testid='feedback-dialog']",
+      "states": [
+        "empty",
+        "paste",
+        "drop",
+        "file",
+        "screenshot_ready",
+        "screenshot_removed",
+        "validation_error",
+        "submitted",
+        "retry_storage_failure",
+        "keyboard_focus",
+        "reduced_motion",
+        "zoom_200"
+      ],
+      "locales": [
+        "en-US",
+        "ru-RU"
+      ],
+      "viewports": [
+        "desktop_primary",
+        "desktop_compact",
+        "tablet",
+        "mobile"
+      ],
+      "gates": [
+        "VIS-COPY-001",
+        "VIS-LAYOUT-003",
+        "VIS-SCROLL-002",
+        "VIS-HIERARCHY-001",
+        "VIS-RESPONSIVE-001",
+        "VIS-EVIDENCE-001"
+      ]
+    },
+    {
       "id": "roulette",
       "route": "roulette",
       "selector": "[data-testid='roulette-premium']",
@@ -556,6 +593,17 @@
         "guest_trials_keyboard_scroll",
         "guest_trials_reduced_motion",
         "guest_trials_zoom_200",
+        "feedback_inbox",
+        "feedback_filtered",
+        "feedback_detail",
+        "feedback_triaged",
+        "feedback_manual_draft",
+        "feedback_manual_linked",
+        "feedback_export",
+        "feedback_storage_error",
+        "feedback_keyboard_focus",
+        "feedback_reduced_motion",
+        "feedback_zoom_200",
         "language",
         "test_results",
         "operations_oauth_disabled",

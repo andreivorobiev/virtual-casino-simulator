@@ -1,7 +1,7 @@
 # AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
 #!/usr/bin/env python3
 # Import required dependency so this module can use its public functions or constants.
-import argparse, hashlib, importlib, io, json, os, re, socket, subprocess, sys, tempfile, threading, time, traceback, unittest, urllib.request
+import argparse, base64, hashlib, importlib, io, json, os, re, socket, subprocess, sys, tempfile, threading, time, traceback, unittest, urllib.request
 # Import date arithmetic for fixed-window Guest Trials retention tests.
 from datetime import datetime, timedelta, timezone
 # Import source inspection so browser progress totals follow declared run_case calls automatically.
@@ -950,6 +950,18 @@ def run_api_tests():
             raise AssertionError('invitation enrollment infrastructure suite failed')
     # Record the listener-free invitation platform proof under its permanent requirements.
     run_case('API-INVITE-001',['INVITE-001','INVITE-002','INVITE-003','INVITE-004','INVITE-005','INVITE-006','TEST-091'],run_invitation_tests)
+    # Run provider-neutral feedback lifecycle, concurrency, retention, and image-safety tests. (TEST-094, issue #349)
+    def run_feedback_tests():
+        # Import the focused suite lazily so unrelated runners do not require image tooling.
+        from tests import feedback_tests
+        # Load exactly the feedback service acceptance class.
+        suite=unittest.defaultTestLoader.loadTestsFromTestCase(feedback_tests.FeedbackServiceTests)
+        # Execute the focused suite with concise standard output.
+        result=unittest.TextTestRunner(stream=sys.stdout,verbosity=1).run(suite)
+        # Fail the mapped API case when any recovery, privacy, or concurrency proof fails.
+        if not result.wasSuccessful(): raise AssertionError('manual problem-report service suite failed')
+    # Map the manual-only slice to its unique permanent test requirement.
+    run_case('API-FEEDBACK-001',['CORE-027','ADMIN-025','SEC-011','I18N-005','TEST-094'],run_feedback_tests)
     # Record listener-free disposable-principal lifecycle and browser-binding proof.
     run_case('API-GUEST-LIFECYCLE-001',['GUEST-001','GUEST-002','GUEST-006','TEST-080'],validate_guest_lifecycle)
     # Record listener-free telemetry privacy, milestones, and retention proof.
@@ -6593,6 +6605,92 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.evaluate("async () => { const i18n = await import('/core/i18n.js'); await i18n.setLocale('en-US', { persistLocal: false }); }")
                 # Execute the release-blocking i18n audit as one requirement-mapped browser case.
                 run_case('BR-I18N-ROUTES-001',['I18N-001','I18N-002'],all_game_route_i18n)
+                # Preserve the stable internal reference created by the player flow for later Admin acceptance.
+                feedback_report_reference={'value':''}
+                # Define registered-user submission, bilingual layout, image normalization, and retry acceptance. (issue #349)
+                def feedback_report_browser():
+                    # Enumerate the complete governed feedback viewport matrix.
+                    viewports={'desktop_primary':{'width':1920,'height':1080},'desktop_compact':{'width':1440,'height':900},'tablet':{'width':1024,'height':900},'mobile':{'width':390,'height':844}}
+                    # Pin the localized retry copy so controlled server diagnostics never leak into either visible locale.
+                    retry_messages={'en-US':'The report could not be submitted. Your draft remains open.','ru-RU':'Не удалось отправить отчёт. Черновик остался открытым.'}
+                    # Use one safe in-memory image for file, preview, and removal evidence.
+                    png=base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAI0lEQVR4nGMUqghiIAUwkaSaYVQDcYCJSHVwMKqBGEByKAEA0/YA/Hxc1QQAAAAASUVORK5CYII=')
+                    # Exercise localized empty, evidence, removal, validation, keyboard, motion, and zoom states everywhere.
+                    for locale in ('en-US','ru-RU'):
+                        # Switch through the persistent player-visible locale selector.
+                        page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale",arg=locale)
+                        # Capture each governed responsive width from a clean native dialog.
+                        for viewport_id,viewport in viewports.items():
+                            # Apply the exact visual-matrix dimensions.
+                            page.set_viewport_size(viewport); page.wait_for_timeout(100)
+                            # Open one clean draft from the registered-user-only affordance.
+                            page.get_by_test_id('report-problem-open').click(); page.get_by_test_id('feedback-dialog').wait_for(state='visible')
+                            # Require translated content and both document/dialog horizontal containment.
+                            assert 'feedback.' not in page.get_by_test_id('feedback-dialog').inner_text() and page.evaluate("() => { const dialog=document.querySelector('[data-testid=feedback-dialog]'); return document.documentElement.scrollWidth <= window.innerWidth + 1 && dialog.scrollWidth <= dialog.clientWidth + 1; }")
+                            # Focus the first governed task control for keyboard evidence.
+                            page.get_by_test_id('feedback-category').focus()
+                            # Capture the clean, keyboard, and current motion states together because they are concurrently visible.
+                            game_evidence(f'after-pass-feedback-empty-{locale}-{viewport_id}.png','feedback_report',['empty','keyboard_focus','reduced_motion'],locale,viewport_id)
+                            # Normalize a local screenshot through the real browser controller.
+                            page.locator('#report-file-input').set_input_files({'name':'feedback.png','mimeType':'image/png','buffer':png}); page.wait_for_function("() => document.querySelector('[data-testid=feedback-previews] img')")
+                            # Capture file/paste/drop contract presentation through the shared normalized evidence state.
+                            game_evidence(f'after-pass-feedback-evidence-{locale}-{viewport_id}.png','feedback_report',['file','paste','drop','screenshot_ready'],locale,viewport_id)
+                            # Remove the retained in-memory preview through its accessible control.
+                            page.locator('[data-testid=feedback-previews] button').click(); assert page.locator('[data-testid=feedback-previews] img').count()==0
+                            # Capture the explicit user-controlled removal state.
+                            game_evidence(f'after-pass-feedback-removed-{locale}-{viewport_id}.png','feedback_report',['screenshot_removed'],locale,viewport_id)
+                            # Trigger native validation without making a network request.
+                            page.get_by_test_id('feedback-submit').click(); assert page.get_by_test_id('feedback-summary').evaluate('element => !element.validity.valid')
+                            # Capture visible invalid controls under the governed validation state.
+                            game_evidence(f'after-pass-feedback-validation-{locale}-{viewport_id}.png','feedback_report',['validation_error'],locale,viewport_id)
+                            # Fill a complete disposable draft for controlled retry and terminal visual evidence.
+                            page.get_by_test_id('feedback-category').select_option('bug'); page.get_by_test_id('feedback-impact').select_option('minor'); page.get_by_test_id('feedback-summary').fill('Controlled storage retry proof'); page.get_by_test_id('feedback-actual').fill('The controlled test endpoint rejected this attempt.'); page.get_by_test_id('feedback-expected').fill('The draft should remain available for exact retry.')
+                            # Record diagnostic boundaries so only this deliberate storage rejection can be consumed.
+                            feedback_retry_console_index=len(console_errors); feedback_retry_http_index=len(http_errors); feedback_retry_page_index=len(page_errors)
+                            # Intercept only this same-origin route with a fixed storage failure.
+                            page.route('**/api/v2/feedback/reports',lambda route: route.fulfill(status=503,content_type='application/json',body='{"ok":false,"error":{"code":"STORAGE_UNAVAILABLE","message":"Report storage is temporarily unavailable"}}'))
+                            # Submit and require the dialog to preserve its draft behind exact locale-owned failure copy.
+                            page.get_by_test_id('feedback-submit').click(); page.wait_for_function("expected => document.querySelector('#report-message')?.textContent === expected",arg=retry_messages[locale])
+                            # Capture the true retryable storage-failure state.
+                            game_evidence(f'after-pass-feedback-retry-{locale}-{viewport_id}.png','feedback_report',['retry_storage_failure'],locale,viewport_id)
+                            # Replace the failure route with one controlled successful exact replay receipt.
+                            page.unroute('**/api/v2/feedback/reports'); page.route('**/api/v2/feedback/reports',lambda route: route.fulfill(status=200,content_type='application/json',body='{"ok":true,"data":{"report_id":"report_visual_only","reference":"RPT-VISUAL01","status":"new","replayed":false}}'))
+                            # Retry the unchanged draft and wait for the terminal receipt.
+                            page.get_by_test_id('feedback-submit').click(); page.wait_for_function("() => document.querySelector('#report-message')?.textContent.includes('RPT-VISUAL01')")
+                            # Capture an honest terminal confirmation for this locale and viewport.
+                            game_evidence(f'after-pass-feedback-submitted-{locale}-{viewport_id}.png','feedback_report',['submitted'],locale,viewport_id)
+                            # Wait for the native dialog to close after announcement.
+                            page.get_by_test_id('feedback-dialog').wait_for(state='hidden',timeout=3000)
+                            # Isolate the diagnostics emitted by the one deliberate retryable 503 response.
+                            feedback_retry_console=console_errors[feedback_retry_console_index:]; feedback_retry_http=http_errors[feedback_retry_http_index:]; feedback_retry_page=page_errors[feedback_retry_page_index:]
+                            # Require exactly the controlled failed-resource observation and no JavaScript failure.
+                            assert feedback_retry_page==[] and len(feedback_retry_console)==1 and 'Failed to load resource' in feedback_retry_console[0] and len(feedback_retry_http)==1 and feedback_retry_http[0].startswith('503 ') and feedback_retry_http[0].endswith('/api/v2/feedback/reports'),feedback_retry_console+feedback_retry_page+feedback_retry_http
+                            # Restore the real endpoint and remove only the verified controlled diagnostics.
+                            page.unroute('**/api/v2/feedback/reports'); del console_errors[feedback_retry_console_index:]; del http_errors[feedback_retry_http_index:]
+                    # Use the standard desktop-primary zoom proxy at an effective 960 CSS pixels.
+                    page.set_viewport_size({'width':960,'height':540}); page.get_by_test_id('shell-locale-select').select_option('en-US'); page.get_by_test_id('report-problem-open').click()
+                    # Require a readable panel width at the 200 percent proxy rather than mere no-overflow.
+                    assert page.get_by_test_id('feedback-dialog').evaluate('element => element.getBoundingClientRect().width >= 360')
+                    # Capture the explicit zoom state.
+                    game_evidence('after-pass-feedback-zoom-200-en-US-desktop_primary.png','feedback_report',['zoom_200'],'en-US','desktop_primary')
+                    # Close the zoom draft before the real submission.
+                    page.locator('#report-cancel').click()
+                    # Restore primary desktop and create one real report for Admin acceptance.
+                    page.set_viewport_size(viewports['desktop_primary']); page.get_by_test_id('report-problem-open').click()
+                    # Select controlled category and independently recorded impact.
+                    page.get_by_test_id('feedback-category').select_option('visual'); page.get_by_test_id('feedback-impact').select_option('difficult')
+                    # Fill the complete bounded prose contract.
+                    page.get_by_test_id('feedback-summary').fill('Browser feedback test report'); page.get_by_test_id('feedback-actual').fill('A visual element overlaps its intended region.'); page.get_by_test_id('feedback-expected').fill('The element should remain inside its intended region.')
+                    # Include one normalized screenshot in the committed report.
+                    page.locator('#report-file-input').set_input_files({'name':'feedback.png','mimeType':'image/png','buffer':png}); page.wait_for_function("() => document.querySelector('[data-testid=feedback-previews] img')")
+                    # Submit through the real additive v2 route.
+                    page.get_by_test_id('feedback-submit').click(); page.wait_for_function("() => /RPT-[A-Z0-9]+/.test(document.querySelector('#report-message')?.textContent || '')")
+                    # Retain only the internal public reference for the Admin lookup.
+                    feedback_report_reference['value']=re.search(r'RPT-[A-Z0-9]+',page.locator('#report-message').inner_text()).group(0)
+                    # Require automatic close after the live-region announcement.
+                    page.get_by_test_id('feedback-dialog').wait_for(state='hidden',timeout=3000)
+                # Execute the player-facing manual-report acceptance case under the unique requirement.
+                run_case('BR-FEEDBACK-001',['CORE-027','ADMIN-025','I18N-005','UX-019','TEST-094'],feedback_report_browser)
                 # Replace the normal-user browser cookie with an authenticated Admin session.
                 admin_browser_login=page.request.post(base+'/api/v2/auth/login',data={'email':DEFAULT_AUTH_EMAIL,'password':DEFAULT_AUTH_PASSWORD})
                 # Verify the browser context received a successful Admin login response.
@@ -6679,6 +6777,80 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         assert module_table.locator('tr').filter(has_text=expected['module']).filter(has_text=expected['revision']).count()==1
                 # Execute the mapped Admin dashboard and packaged-release browser regression.
                 run_case('BR-ADMIN-001',['ADMIN-001','ADMIN-003','ADMIN-004','ADMIN-010','ADMIN-014','TEST-023'],admin_dashboard_browser)
+                # Define Admin inbox, evidence, triage, manual draft, export, and responsive acceptance. (issue #349)
+                def admin_feedback_browser():
+                    # Open the dedicated Admin feedback surface and wait for its attachment-free list.
+                    page.get_by_test_id('admin-tab-feedback').click(); page.get_by_test_id('admin-feedback-inbox').wait_for(timeout=5000)
+                    # Locate exactly the report created by the authenticated player flow.
+                    report_button=page.locator('[data-feedback-id]').filter(has_text=feedback_report_reference['value']); assert report_button.count()==1
+                    # Open canonical detail and require one normalized Admin-only screenshot.
+                    report_button.click(); page.get_by_test_id('admin-feedback-detail').wait_for(timeout=5000); assert page.locator('.feedback-evidence img').count()==1
+                    # Apply controlled P1 triage and bounded internal notes through the idempotent patch route.
+                    page.locator('#feedback-detail-priority').select_option('P1'); page.locator('#feedback-detail-status').select_option('triaged'); page.locator('#feedback-admin-notes').fill('Confirmed by exact-head browser acceptance.'); page.locator('#feedback-github-url').fill('https://github.com/andreivorobiev/virtual-casino-simulator/issues/349'); page.locator('#feedback-save').click(); page.get_by_test_id('admin-feedback-detail').wait_for(timeout=5000)
+                    # Prepare the manual-only reporter-free draft without an external publication control.
+                    page.locator('#feedback-draft').click(); page.locator('#feedback-github-draft:not([hidden])').wait_for(timeout=5000)
+                    # Require governed labels, privacy-safe content, and no automatic GitHub route or popup button.
+                    draft_text=page.locator('#feedback-github-draft').inner_text(); assert 'P1' in draft_text and '@' not in draft_text and 'password' not in draft_text.lower() and page.locator('#feedback-open-github').count()==0
+                    # Exercise both installed Admin locales at every governed viewport.
+                    for locale in ('en-US','ru-RU'):
+                        # Switch through the shared Admin locale runtime.
+                        page.evaluate("async locale => { const i18n=await import('/core/i18n.js'); await i18n.setLocale(locale,{persistLocal:false}); }",locale)
+                        # Reopen the feedback inbox after locale rerender.
+                        page.get_by_test_id('admin-tab-feedback').click(); page.get_by_test_id('admin-feedback-inbox').wait_for(timeout=5000)
+                        # Apply and prove the independent impact filter before responsive evidence.
+                        page.locator('#feedback-impact-filter').select_option('difficult'); page.locator('#feedback-apply-filters').click(); page.get_by_test_id('admin-feedback-inbox').wait_for(timeout=5000)
+                        # Check every governed Admin layout.
+                        for viewport_id,viewport in {'desktop_primary':{'width':1920,'height':1080},'desktop_compact':{'width':1440,'height':900},'tablet':{'width':1024,'height':900},'mobile':{'width':390,'height':844}}.items():
+                            # Apply exact visual-matrix geometry.
+                            page.set_viewport_size(viewport); page.wait_for_timeout(100)
+                            # Require translated page containment while allowing only the named table region to scroll.
+                            diagnostics=page.evaluate("""() => { const inbox=document.querySelector('[data-testid="admin-feedback-inbox"]'); return {text:inbox?.innerText || '',page:document.documentElement.scrollWidth,viewport:innerWidth}; }"""); assert 'feedback.' not in diagnostics['text'] and diagnostics['page']<=diagnostics['viewport']+1,(locale,viewport_id,diagnostics)
+                            # Capture the localized filtered inbox and keyboard-scroll surface.
+                            game_evidence(f'after-pass-admin-feedback-inbox-{locale}-{viewport_id}.png','admin',['feedback_inbox','feedback_filtered','feedback_keyboard_focus','feedback_reduced_motion'],locale,viewport_id)
+                            # Open the retained report from this exact localized responsive list.
+                            page.locator('[data-feedback-id]').filter(has_text=feedback_report_reference['value']).click(); page.get_by_test_id('admin-feedback-detail').wait_for(timeout=5000)
+                            # Capture the true linked triage and evidence-detail state.
+                            game_evidence(f'after-pass-admin-feedback-detail-{locale}-{viewport_id}.png','admin',['feedback_detail','feedback_triaged','feedback_manual_linked','feedback_export'],locale,viewport_id)
+                            # Prepare the server-sanitized manual-only draft in this locale and viewport.
+                            page.locator('#feedback-draft').click(); page.locator('#feedback-github-draft:not([hidden])').wait_for(timeout=5000)
+                            # Capture the manual draft with no external publication action.
+                            game_evidence(f'after-pass-admin-feedback-manual-draft-{locale}-{viewport_id}.png','admin',['feedback_manual_draft'],locale,viewport_id)
+                            # Return to the exact filtered inbox for the next viewport.
+                            page.locator('#feedback-back').click(); page.get_by_test_id('admin-feedback-inbox').wait_for(timeout=5000)
+                    # Restore one detail and capture triage/manual-draft states at primary desktop.
+                    page.set_viewport_size({'width':1920,'height':1080}); page.evaluate("async () => { const i18n=await import('/core/i18n.js'); await i18n.setLocale('en-US',{persistLocal:false}); }")
+                    # Reopen the selected report from the filtered list.
+                    page.locator('[data-feedback-id]').filter(has_text=feedback_report_reference['value']).click(); page.get_by_test_id('admin-feedback-detail').wait_for(timeout=5000); page.locator('#feedback-draft').click(); page.locator('#feedback-github-draft:not([hidden])').wait_for(timeout=5000)
+                    # Download the metadata-only export through the real additive v2 route.
+                    with page.expect_download():
+                        # Activate the explicit Admin export control.
+                        page.locator('#feedback-export').click()
+                    # Use the desktop-primary 200 percent proxy and require a readable detail width.
+                    page.set_viewport_size({'width':960,'height':540}); assert page.get_by_test_id('admin-feedback-detail').evaluate('element => element.getBoundingClientRect().width >= 360')
+                    # Capture the governed Admin zoom proxy.
+                    game_evidence('after-pass-admin-feedback-zoom-200-en-US-desktop_primary.png','admin',['feedback_zoom_200'],'en-US','desktop_primary')
+                    # Restore primary desktop before controlled storage-error evidence.
+                    page.set_viewport_size({'width':1920,'height':1080})
+                    # Record diagnostic boundaries so only the deliberate Admin storage rejection can be consumed.
+                    feedback_admin_console_index=len(console_errors); feedback_admin_http_index=len(http_errors); feedback_admin_page_index=len(page_errors)
+                    # Match only the Admin list path with an optional query so report detail and export calls stay real.
+                    feedback_list_pattern=re.compile(r'/api/v2/admin/feedback/reports(?:\?.*)?$'); page.route(feedback_list_pattern,lambda route: route.fulfill(status=503,content_type='application/json',body='{"ok":false,"error":{"code":"STORAGE_UNAVAILABLE","message":"Problem-report storage requires recovery"}}'))
+                    # Trigger the active tab's normal refresh path and prove the controlled list request occurred.
+                    with page.expect_request(feedback_list_pattern): page.locator('#refreshAdmin').click()
+                    # Require the shared localized Admin error boundary after the injected storage failure.
+                    page.get_by_test_id('admin-load-error').wait_for(timeout=5000)
+                    # Capture the localized storage-recovery failure without raw state.
+                    game_evidence('after-pass-admin-feedback-storage-error-en-US-desktop_primary.png','admin',['feedback_storage_error'],'en-US','desktop_primary')
+                    # Isolate the diagnostics emitted by the one deliberate Admin 503 response.
+                    feedback_admin_console=console_errors[feedback_admin_console_index:]; feedback_admin_http=http_errors[feedback_admin_http_index:]; feedback_admin_page=page_errors[feedback_admin_page_index:]
+                    # Require exactly the controlled list rejection and no unhandled JavaScript failure.
+                    assert feedback_admin_page==[] and len(feedback_admin_console)==1 and 'Failed to load resource' in feedback_admin_console[0] and len(feedback_admin_http)==1 and feedback_admin_http[0].startswith('503 ') and feedback_list_pattern.search(feedback_admin_http[0]),feedback_admin_console+feedback_admin_page+feedback_admin_http
+                    # Restore the exact filtered-list route and remove only its verified diagnostics.
+                    page.unroute(feedback_list_pattern); del console_errors[feedback_admin_console_index:]; del http_errors[feedback_admin_http_index:]
+                    # Restore the suite default for subsequent Admin cases.
+                    page.set_viewport_size({'width':1920,'height':1080})
+                # Execute Admin manual-only triage and evidence acceptance under TEST-094.
+                run_case('BR-ADMIN-FEEDBACK-001',['ADMIN-025','I18N-005','UX-019','TEST-094'],admin_feedback_browser)
                 # Define Admin-only OAuth diagnostics, isolation from Operations, and visual evidence.
                 def admin_oauth_browser():
                     # Define every governed Admin viewport from the visual matrix.

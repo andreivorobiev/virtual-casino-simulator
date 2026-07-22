@@ -47,6 +47,39 @@
   <!-- Main route outlet: lobby markup is rendered here and game modules mount here unchanged. -->
   <main id="view" class="screen lobby-screen"></main>
 
+  <!-- Registered-user support affordance stays above game content without competing with gameplay controls. -->
+  <button id="report-problem-btn" class="report-problem-fab" type="button" data-testid="report-problem-open" hidden>Report a problem</button>
+
+  <!-- Native modal keeps focus, Escape handling, and assistive-technology semantics browser-owned. -->
+  <dialog id="report-problem-dialog" class="report-dialog" data-testid="feedback-dialog" aria-labelledby="report-problem-title">
+    <form id="report-problem-form" class="report-form" method="dialog">
+      <div class="report-heading">
+        <div>
+          <p id="report-problem-eyebrow" class="eyebrow">Help improve the simulator</p>
+          <h2 id="report-problem-title">Report a problem</h2>
+        </div>
+        <button id="report-problem-close" class="icon-button" type="button" aria-label="Close">&times;</button>
+      </div>
+      <p id="report-problem-privacy" class="muted">Describe what happened. Do not include passwords, tokens, or other private information.</p>
+      <div class="report-grid">
+        <label><span id="report-category-label">Category</span><select id="report-category" data-testid="feedback-category" required><option value="bug">Bug</option><option value="visual">Visual / layout</option><option value="gameplay">Gameplay</option><option value="account">Account</option><option value="idea">Idea</option><option value="other">Other</option></select></label>
+        <label><span id="report-impact-label">Impact</span><select id="report-impact" data-testid="feedback-impact" required><option value="blocked">Blocked</option><option value="difficult">Difficult</option><option value="minor">Minor</option></select></label>
+      </div>
+      <label><span id="report-summary-label">Short summary</span><input id="report-summary" data-testid="feedback-summary" type="text" minlength="5" maxlength="140" required></label>
+      <label><span id="report-actual-label">What happened?</span><textarea id="report-actual" data-testid="feedback-actual" minlength="5" maxlength="4000" rows="4" required></textarea></label>
+      <label><span id="report-expected-label">What did you expect?</span><textarea id="report-expected" data-testid="feedback-expected" minlength="5" maxlength="2000" rows="3" required></textarea></label>
+      <section id="report-dropzone" class="report-dropzone" data-testid="feedback-dropzone" tabindex="0" role="button" aria-describedby="report-screenshot-help">
+        <strong id="report-screenshot-title">Paste or add screenshots</strong>
+        <span id="report-screenshot-help">Press Ctrl+V here, drag images in, or choose up to three PNG, JPEG, or WebP files.</span>
+        <input id="report-file-input" type="file" accept="image/png,image/jpeg,image/webp" multiple hidden>
+      </section>
+      <div id="report-previews" class="report-previews" data-testid="feedback-previews" aria-live="polite"></div>
+      <details class="report-context"><summary id="report-context-title">Diagnostic context included</summary><p id="report-context-copy">Route, app version, language, viewport, browser family, OS family, and reduced-motion setting. No cookies, passwords, wallet contents, wagers, or raw URLs.</p></details>
+      <p id="report-message" class="report-message" role="status" aria-live="polite"></p>
+      <div class="report-actions"><button id="report-cancel" type="button">Cancel</button><button id="report-submit" class="primary" data-testid="feedback-submit" type="submit">Submit report</button></div>
+    </form>
+  </dialog>
+
   <!-- Persistent status rail keeps play-token, ledger, app, player, and connection state visible. -->
   <footer id="shell-status" class="status-bar" data-testid="shell-status">
     <span class="status-item"><span id="status-safe-code" class="gold">SAFE</span><span id="status-safe-detail">All games use play tokens only</span></span>

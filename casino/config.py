@@ -138,6 +138,14 @@ INVITATION_RATE_WINDOW_SECONDS = int(os.environ.get("CASINO_INVITATION_RATE_WIND
 INVITATION_RETENTION_SECONDS = int(os.environ.get("CASINO_INVITATION_RETENTION_SECONDS", "31536000"))
 # Allow a pre-consumption browser claim to be recovered after a bounded abandoned interval.
 INVITATION_CLAIM_TIMEOUT_SECONDS = int(os.environ.get("CASINO_INVITATION_CLAIM_TIMEOUT_SECONDS", "900"))
+# Bound accepted authenticated problem reports per opaque reporter during one durable window. (issue #349)
+FEEDBACK_RATE_LIMIT = int(os.environ.get("CASINO_FEEDBACK_RATE_LIMIT", "5"))
+# Define the cross-process problem-report rate window in seconds.
+FEEDBACK_RATE_WINDOW_SECONDS = int(os.environ.get("CASINO_FEEDBACK_RATE_WINDOW_SECONDS", "3600"))
+# Retain terminal report content and normalized screenshots for ninety days by default.
+FEEDBACK_TERMINAL_RETENTION_SECONDS = int(os.environ.get("CASINO_FEEDBACK_TERMINAL_RETENTION_SECONDS", "7776000"))
+# Apply an absolute one-year privacy ceiling even when a report never reaches a terminal state.
+FEEDBACK_MAX_RETENTION_SECONDS = int(os.environ.get("CASINO_FEEDBACK_MAX_RETENTION_SECONDS", "31536000"))
 # Preserve the developer-only bootstrap email so public startup can reject the local identity default.
 LOCAL_BOOTSTRAP_ADMIN_EMAIL = "admin@example.local"
 # Preserve only a digest of the developer credential so validation never needs another plaintext copy.

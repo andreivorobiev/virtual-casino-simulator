@@ -6489,6 +6489,78 @@
       "introduced_in": "issue-251-admin-nav-gate",
       "changed_in": "issue-251-admin-nav-gate",
       "notes": "Real normal-player and Admin sessions cover en-US and ru-RU at desktop_primary and mobile, plus direct HTML and API authorization and keyboard route entry."
+    },
+    {
+      "id": "CORE-027",
+      "module": "Core",
+      "description": "Registered authenticated users can submit retry-safe bounded problem reports with privacy-reduced context and sanitized screenshots through the additive v2 API.",
+      "status": "PASS",
+      "api_tests": ["API-FEEDBACK-001"],
+      "browser_tests": ["BR-FEEDBACK-001", "BR-ADMIN-FEEDBACK-001"],
+      "implementation_files": ["casino/core/feedback.py", "casino/app.py", "web/app.js", "contracts/openapi/feedback.v2.yaml"],
+      "introduced_in": "issue-349-feedback-reports",
+      "changed_in": "issue-349-feedback-reports",
+      "notes": "Guest and anonymous submission remain outside this release; provider-neutral recovery publishes only complete reports."
+    },
+    {
+      "id": "ADMIN-025",
+      "module": "Admin",
+      "description": "Admin can filter, inspect, prioritize, preserve, annotate, and link internal problem reports and prepare a sanitized manual GitHub issue draft.",
+      "status": "PASS",
+      "api_tests": ["API-FEEDBACK-001"],
+      "browser_tests": ["BR-FEEDBACK-001", "BR-ADMIN-FEEDBACK-001"],
+      "implementation_files": ["casino/admin.py", "web/admin.html", "web/admin.js"],
+      "introduced_in": "issue-349-feedback-reports",
+      "changed_in": "issue-349-feedback-reports",
+      "notes": "Only P1, P2, and P3 are accepted; Workroom #28 permits sanitized manual drafts and manual link recording but no automatic GitHub publication."
+    },
+    {
+      "id": "SEC-011",
+      "module": "Security",
+      "description": "Screenshot evidence is bounded, decoded, format-checked, pixel-limited, metadata-stripped, re-encoded, Admin-only, and excluded from list and GitHub-draft responses.",
+      "status": "PASS",
+      "api_tests": ["API-FEEDBACK-001"],
+      "browser_tests": [],
+      "implementation_files": ["casino/core/feedback.py", "tests/feedback_tests.py"],
+      "introduced_in": "issue-349-feedback-reports",
+      "changed_in": "issue-349-feedback-reports",
+      "notes": "No cookies, credentials, raw URLs, wallet contents, wagers, raw user ids, or display names are collected; retention, metadata export, and recoverable deletion are governed."
+    },
+    {
+      "id": "I18N-005",
+      "module": "Application",
+      "description": "Player and Admin problem-report interfaces provide complete en-US and ru-RU copy through the feedback locale domain.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": ["BR-FEEDBACK-001", "BR-ADMIN-FEEDBACK-001"],
+      "implementation_files": ["web/i18n/en-US/feedback.json", "web/i18n/ru-RU/feedback.json"],
+      "introduced_in": "issue-349-feedback-reports",
+      "changed_in": "issue-349-feedback-reports",
+      "notes": "Locale changes rerender report controls and Admin triage copy."
+    },
+    {
+      "id": "UX-019",
+      "module": "Application",
+      "description": "Problem reporting is keyboard-operable, focus-visible, scroll-contained, touch-sized, and responsive across governed viewports with removable screenshot previews.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": ["BR-FEEDBACK-001", "BR-ADMIN-FEEDBACK-001"],
+      "implementation_files": ["web/index.html", "web/app.js", "web/styles.css", "tests/visual/visual_matrix.json"],
+      "introduced_in": "issue-349-feedback-reports",
+      "changed_in": "issue-349-feedback-reports",
+      "notes": "The visual matrix includes player modal and Admin inbox/detail states."
+    },
+    {
+      "id": "TEST-094",
+      "module": "Tests",
+      "description": "Unit, API, JSON/MySQL concurrency, and browser tests cover recoverable report submission, evidence sanitation, durable rate limits, atomic triage, retention/deletion/export, manual-only publication, bilingual UI, and responsive visual acceptance.",
+      "status": "PASS",
+      "api_tests": ["API-FEEDBACK-001"],
+      "browser_tests": ["BR-FEEDBACK-001", "BR-ADMIN-FEEDBACK-001"],
+      "implementation_files": ["tests/feedback_tests.py", "tests/run_tests.py", "tests/visual/visual_matrix.json"],
+      "introduced_in": "issue-349-feedback-reports",
+      "changed_in": "issue-349-feedback-reports",
+      "notes": "TEST-091 remains invitation-owned and TEST-092 remains formal-qualification-owned; exact-head browser evidence follows the standard workflow."
     }
   ]
 }

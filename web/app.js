@@ -7,6 +7,8 @@ import { renderTokenBalance, toast, tokens, safe, renderPremiumTag } from './cor
 import { getLocaleState, initI18n, onLocaleChange, setLocale, t } from './core/i18n.js';
 // Import required dependency so this module can preload global voice settings before games mount.
 import { loadVoiceSettings } from './core/voice.js';
+// Import the registered-user problem-report dialog without adding feedback code to the shared shell.
+import { bindFeedbackDialog, localizeFeedback, syncFeedbackReporter } from './core/feedback.js';
 
 // Store frontend descriptors loaded from the same API catalog that registers backend games.
 let gameDescriptors = [];
@@ -191,6 +193,8 @@ function isGuestSession() {
 function updateCurrentUserShell() {
   // Expose the current-user session so legacy game refresh calls keep token formatting.
   window.CasinoCurrentUser = currentSession;
+  // Expose problem reporting only to authenticated persistent accounts.
+  syncFeedbackReporter(currentSession?.user);
   // Render the fake-token balance with the required token glyph.
   const amount = renderTokenBalance(currentSession);
   // Read the logout button reserved by index.html.
@@ -254,6 +258,8 @@ function updateCurrentUserShell() {
 function renderLoginGate(message = '') {
   // Clear the public current-user hook while the browser is logged out.
   window.CasinoCurrentUser = null;
+  // Hide the registered-user reporting affordance for logged-out and guest entry screens.
+  syncFeedbackReporter(null);
   // Leave lobby-only flex containment before the public authentication screen replaces the route outlet.
   document.body.classList.remove('lobby-active');
   // Mark the document so chrome and game routes stay hidden while logged out.
@@ -905,11 +911,13 @@ export async function navigate(route, options = {}) {
 // Initialize shell state, wallet behavior, and the first lobby route.
 async function init() {
   // Initialize i18n before any auth or shell markup renders.
-  await initI18n({ domains: ['shell'] });
+  await initI18n({ domains: ['shell', 'feedback'] });
+  // Bind the native problem-report dialog after its translation domain is ready.
+  bindFeedbackDialog();
   // Recalculate active-route visibility whenever responsive navigation layout changes.
   window.addEventListener('resize', revealActiveNav);
   // Repaint persistent shell text when the locale changes.
-  onLocaleChange(() => { if (currentSession && !currentSession.terms?.required) { gameDescriptors = (latestState?.games || []).map(game => descriptorFromCatalog(game)); renderNav(); updateCurrentUserShell(); updateShellStatus(latestState, shellConnected); if (active === 'lobby') navigate('lobby', { history: 'none' }); } });
+  onLocaleChange(() => { localizeFeedback(); if (currentSession && !currentSession.terms?.required) { gameDescriptors = (latestState?.games || []).map(game => descriptorFromCatalog(game)); renderNav(); updateCurrentUserShell(); updateShellStatus(latestState, shellConnected); if (active === 'lobby') navigate('lobby', { history: 'none' }); } });
   // Restore game routes through browser Back and Forward without remounting stale history entries.
   window.addEventListener('popstate', () => { if (currentSession && !currentSession.terms?.required) navigate(routeFromLocation(), { history: 'none' }); });
   // Read the add-token button from the wallet popover.
