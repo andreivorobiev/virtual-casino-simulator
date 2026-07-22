@@ -128,6 +128,8 @@ label {
 
 .casino-page.auth-locked {
   overflow: auto;
+  container-name: auth-page;
+  container-type: inline-size;
 }
 
 .auth-locked .casino-topbar,
@@ -550,6 +552,30 @@ label {
   width: 100%;
   min-width: 0;
   max-width: 100%;
+  white-space: normal;
+}
+
+/* Reclaim fixed auth padding only when zoom or a genuinely narrow window leaves at most 220 CSS pixels. */
+@container auth-page (max-width: 220px) {
+  .auth-screen:has(> [data-testid="invitation-redemption"]) {
+    padding: 4px;
+  }
+
+  /* Preserve a readable invitation card while leaving enough inline space for native fields. */
+  [data-testid="invitation-redemption"] {
+    gap: 8px;
+    padding: 8px 4px;
+  }
+
+  /* Scale the display heading without reducing form labels or 42-pixel controls. */
+  [data-testid="invitation-redemption"] h1 {
+    font-size: 22px;
+  }
+
+  /* Tighten only vertical form rhythm in the effective zoom column. */
+  [data-testid="invitation-redemption"] .auth-form {
+    gap: 8px;
+  }
 }
 
 /* Disabled OAuth controls communicate provider readiness without exposing an action surface. */
