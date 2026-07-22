@@ -6558,10 +6558,30 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                 page.set_viewport_size(viewport); page.wait_for_timeout(120)
                                 # Bring the lifecycle region into view inside the Admin scroll surface.
                                 page.get_by_test_id('admin-invitation-list').scroll_into_view_if_needed()
-                                # Require document, Admin content, and lifecycle region containment.
-                                assert page.evaluate("() => { const content=document.querySelector('.admin-content'); const card=document.querySelector('[data-testid=\"admin-invitation-list\"]'); return document.documentElement.scrollWidth <= window.innerWidth + 1 && content.scrollWidth <= content.clientWidth + 1 && card.scrollWidth <= card.clientWidth + 1; }")
+                                # Measure page containment plus the bounded lifecycle region's accessibility and scroll ownership.
+                                invitation_geometry=page.evaluate("() => { const content=document.querySelector('.admin-content'); const card=document.querySelector('[data-testid=\"admin-invitation-list\"]'); const contentBox=content.getBoundingClientRect(); const cardBox=card.getBoundingClientRect(); const style=getComputedStyle(card); return { viewport:innerWidth, documentScrollWidth:document.documentElement.scrollWidth, contentClientWidth:content.clientWidth, contentScrollWidth:content.scrollWidth, contentBox:contentBox.toJSON(), cardClientWidth:card.clientWidth, cardScrollWidth:card.scrollWidth, cardBox:cardBox.toJSON(), overflowX:style.overflowX, role:card.getAttribute('role'), tabIndex:card.tabIndex, label:card.getAttribute('aria-label') }; }")
+                                # Require no page/content overflow while allowing only the named card to own an intentional table scroll.
+                                assert invitation_geometry['documentScrollWidth'] <= invitation_geometry['viewport'] + 1 and invitation_geometry['contentScrollWidth'] <= invitation_geometry['contentClientWidth'] + 1 and invitation_geometry['cardBox']['left'] >= invitation_geometry['contentBox']['left'] - 1 and invitation_geometry['cardBox']['right'] <= invitation_geometry['contentBox']['right'] + 1 and invitation_geometry['role']=='region' and invitation_geometry['tabIndex']==0 and invitation_geometry['label'] and (invitation_geometry['cardScrollWidth'] <= invitation_geometry['cardClientWidth'] + 1 or invitation_geometry['overflowX'] in ('auto','scroll')), {'state':matrix_state,'locale':locale,'viewport':viewport_id,'geometry':invitation_geometry}
                                 # Capture exact after-pass evidence for this state, locale, and viewport.
                                 game_evidence(f'after-pass-admin-{matrix_state}-{locale}-{viewport_id}.png','admin',[matrix_state],locale,viewport_id)
+                                # Prove the populated mobile lifecycle table responds to keyboard scrolling without widening the page.
+                                if matrix_state=='invitations_pending' and viewport_id=='mobile':
+                                    # Focus the semantic region before issuing native horizontal navigation keys.
+                                    page.get_by_test_id('admin-invitation-list').focus()
+                                    # Advance the native scroll position through keyboard input rather than script-only movement.
+                                    for _ in range(12): page.keyboard.press('ArrowRight')
+                                    # Require visible focus, actual horizontal movement, and continued page containment.
+                                    assert page.evaluate("() => { const card=document.querySelector('[data-testid=\"admin-invitation-list\"]'); return document.activeElement===card && card.scrollLeft>0 && document.documentElement.scrollWidth<=innerWidth+1; }")
+                                    # Capture the explicit keyboard-scroll matrix state with masked data only.
+                                    game_evidence(f'after-pass-admin-invitations-keyboard-scroll-{locale}-mobile.png','admin',['invitations_keyboard_scroll'],locale,'mobile')
+                                    # Restore the region to its leading edge before later evidence.
+                                    page.evaluate("() => { document.querySelector('[data-testid=\"admin-invitation-list\"]').scrollLeft=0; }")
+                                    # Capture the complete mobile region under reduced-motion preference.
+                                    page.emulate_media(reduced_motion='reduce'); game_evidence(f'after-pass-admin-invitations-reduced-motion-{locale}-mobile.png','admin',['invitations_reduced_motion'],locale,'mobile'); page.emulate_media(reduced_motion='no-preference')
+                                    # Apply the repository's 200-percent content-zoom proxy without permitting page overflow.
+                                    page.evaluate("() => { document.body.style.zoom='200%'; document.body.style.width='50%'; }"); assert page.evaluate("() => document.documentElement.scrollWidth<=innerWidth+1")
+                                    # Capture the explicit invitation zoom state before restoring normal scale.
+                                    game_evidence(f'after-pass-admin-invitations-zoom-200-{locale}-mobile.png','admin',['invitations_zoom_200'],locale,'mobile'); page.evaluate("() => { document.body.style.zoom=''; document.body.style.width=''; }")
                             # Remove the focused response before the next state.
                             page.unroute('**/api/v2/admin/invitations?limit=100')
                         # Publish one standard API error to prove a bounded localized Admin recovery state.

@@ -2085,6 +2085,47 @@ h3 {
   color: var(--gold);
 }
 
+/* Keep the invitation form columns bounded before the phone breakpoint stacks them. (INVITE-005) */
+[data-testid="admin-invitation-create"] .grid3 {
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(120px, auto);
+}
+
+/* Let every invitation form control shrink inside its assigned responsive column. */
+[data-testid="admin-invitation-create"] :is(input, select, button) {
+  width: 100%;
+  min-width: 0;
+}
+
+/* Own wide invitation lifecycle tables inside one named keyboard-scrollable region. */
+[data-testid="admin-invitation-list"] {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x pan-y;
+  scrollbar-color: rgba(255, 217, 130, .42) transparent;
+  scrollbar-width: thin;
+}
+
+/* Preserve readable columns while preventing their width from escaping the bounded region. */
+[data-testid="admin-invitation-list"] .mini-table {
+  min-width: 680px;
+  table-layout: fixed;
+}
+
+/* Wrap opaque lifecycle values without exposing a page-level horizontal overflow. */
+[data-testid="admin-invitation-list"] :is(th, td) {
+  overflow-wrap: anywhere;
+  vertical-align: top;
+}
+
+/* Make keyboard ownership of the lifecycle scroll region visibly apparent. */
+[data-testid="admin-invitation-list"]:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: -4px;
+}
+
 /* Guest Trials controls use bounded low-cardinality filters and keyboard-scrollable tables. */
 .guest-filter-grid {
   display: grid;
@@ -2404,6 +2445,11 @@ h3 {
   .admin-card-grid,
   .guest-filter-grid,
   .guest-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Stack the invitation creation form before native input minimums can widen the page. */
+  [data-testid="admin-invitation-create"] .grid3 {
     grid-template-columns: 1fr;
   }
 }
