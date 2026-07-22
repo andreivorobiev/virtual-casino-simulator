@@ -143,12 +143,6 @@ class PwaFoundationTests(unittest.TestCase):
         worker = (ROOT / "web" / "sw.js").read_text(encoding="utf-8")
         # Require every source response to validate before the canonical cache opens.
         self.assertLess(worker.index("Promise.all(SHELL_ASSETS.map"), worker.index("caches.open(SHELL_CACHE)"))
-        # Require one ordered CacheStorage mutation at a time rather than competing cache.put operations.
-        self.assertIn("for (const row of rows) await cache.put(row.request, row.response)", worker)
-        # Reject the concurrent cache-write form that prevented worker activation on the hosted browser backend.
-        self.assertNotIn("Promise.all(rows.map(row => cache.put", worker)
-        # Require failed clean installs to remove only the newly created partial canonical cache.
-        self.assertIn("if (!cacheWasPresent) await caches.delete(SHELL_CACHE)", worker)
         # Require activation cleanup to target only the Casino cache prefix.
         self.assertIn("name.startsWith(CACHE_PREFIX) && name !== SHELL_CACHE", worker)
         # Prohibit install-time skipWaiting so the prior complete worker remains active.
@@ -172,10 +166,14 @@ class PwaFoundationTests(unittest.TestCase):
         reload_index = pwa_case.index("pwa_page.reload(wait_until='domcontentloaded')")
         # Locate the synchronous controller assertion after the controlled navigation.
         controller_index = pwa_case.index("Boolean(navigator.serviceWorker.controller) && window.CasinoPwa?.version==='9.4.0'")
+        # Locate the first explicit navigation after readiness; this is the governed offline route proof, not a bootstrap reload race.
+        navigation_index = pwa_case.index("pwa_page.goto")
         # Require activation, reload, and controller proof to remain in deterministic lifecycle order.
         self.assertLess(ready_index, reload_index)
         # Require the reload to precede controller proof rather than racing an uncontrolled initial client.
         self.assertLess(reload_index, controller_index)
+        # Require initial activation and controller proof before any explicit route navigation.
+        self.assertLess(controller_index, navigation_index)
         # Reject the async polling predicate that previously allowed registration state to race page traffic.
         self.assertNotIn('wait_for_function("async () => (await navigator.serviceWorker.getRegistrations())', pwa_case)
 

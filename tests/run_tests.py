@@ -2430,14 +2430,10 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         target.with_suffix('.json').write_text(json.dumps(metadata,indent=2,ensure_ascii=False),encoding='utf-8')
                     # Guarantee offline reset, registration cleanup, cache cleanup, and page closure.
                     try:
-                        # Reset only the same-context lifecycle marker; CI already supplies a clean browser origin and the active page must not retain a stale unregistered controller.
-                        pwa_page.evaluate("() => sessionStorage.removeItem('casino.pwa.warmStart')")
-                        # Load the authenticated shell where the service worker registers without changing server scope.
-                        pwa_page.goto(f'{base}/?locale=en-US',wait_until='domcontentloaded'); pwa_page.get_by_test_id('lobby').wait_for(timeout=8000)
-                        # Require a true cold first load before testing same-context warm restoration.
+                        # Use the already-authenticated first-load shell as the genuine cold client without racing installation through a redundant navigation.
                         assert pwa_page.evaluate("() => document.documentElement.dataset.pwaStart")=='cold-start'
                         # Await the production registration's fully activated worker before issuing competing manifest, icon, or reload traffic.
-                        registration_identity=pwa_page.evaluate("""async () => { const timeout=new Promise(resolve => setTimeout(() => resolve({ready:false,state:'timeout',scriptUrl:''}),20000)); const active=navigator.serviceWorker.ready.then(registration => ({ready:Boolean(registration.active),state:registration.active?.state||'',scriptUrl:registration.active?.scriptURL||''})); return await Promise.race([active,timeout]); }""")
+                        registration_identity=pwa_page.evaluate("""async () => { const timeout=new Promise(resolve => setTimeout(async () => { const registrations=await navigator.serviceWorker.getRegistrations(); const worker=registrations[0]?.installing||registrations[0]?.waiting||registrations[0]?.active; resolve({ready:false,state:worker?.state||'missing',scriptUrl:worker?.scriptURL||''}); },20000)); const active=navigator.serviceWorker.ready.then(registration => ({ready:Boolean(registration.active),state:registration.active?.state||'',scriptUrl:registration.active?.scriptURL||''})); return await Promise.race([active,timeout]); }""")
                         # Require atomic shell installation and activation at the canonical script before a controlled navigation is attempted.
                         assert registration_identity=={'ready':True,'state':'activated','scriptUrl':f'{base}/sw.js?v=9.4.0'},registration_identity
                         # Reload only after activation so the navigation is deterministically controlled even when the initial clients.claim event raced first paint.
