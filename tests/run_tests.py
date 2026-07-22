@@ -2434,8 +2434,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         target.with_suffix('.json').write_text(json.dumps(metadata,indent=2,ensure_ascii=False),encoding='utf-8')
                     # Guarantee offline reset, registration cleanup, cache cleanup, and page closure.
                     try:
-                        # Remove prior worker/cache state created during login so this case proves one fresh canonical install.
-                        pwa_page.evaluate("async () => { const regs=await navigator.serviceWorker.getRegistrations(); await Promise.all(regs.map(reg => reg.unregister())); const names=await caches.keys(); await Promise.all(names.filter(name => name.startsWith('casino-static-shell-v')).map(name => caches.delete(name))); sessionStorage.removeItem('casino.pwa.warmStart'); }")
+                        # Reset only the same-context lifecycle marker; CI already supplies a clean browser origin and the active page must not retain a stale unregistered controller.
+                        pwa_page.evaluate("() => sessionStorage.removeItem('casino.pwa.warmStart')")
                         # Load the authenticated shell where the service worker registers without changing server scope.
                         pwa_page.goto(f'{base}/?locale=en-US',wait_until='domcontentloaded'); pwa_page.get_by_test_id('lobby').wait_for(timeout=8000)
                         # Require a true cold first load before testing same-context warm restoration.
