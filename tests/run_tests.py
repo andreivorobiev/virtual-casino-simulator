@@ -5492,6 +5492,14 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         if abs(_current-refund_balance_before)<0.005: break
                         # Adopt the moving value as the new candidate baseline.
                         refund_balance_before=_current
+                    # Prove the visible Clear bets control refunds an open, unspun wager instead of losing the stake. (issue #229)
+                    page.get_by_test_id('roulette-num-3').click(); page.locator('.bet-chip').first.wait_for(timeout=3000)
+                    # Require the open bet to first debit the authoritative balance on placement, proving one consistent escrow model. (issue #232)
+                    assert wait_balance(lambda value: value < refund_balance_before-0.005) < refund_balance_before-0.005
+                    # Clear the open bet through the visible Clear bets control rather than spinning or leaving the table.
+                    page.locator('#clear').click()
+                    # Require the authoritative balance to return to the pre-wager amount because clearing refunds the stake, never debiting it. (issue #229)
+                    assert abs(wait_balance(lambda value: abs(value-refund_balance_before)<0.005)-refund_balance_before)<0.005
                     # Place one straight bet through the visible board and wait for the table chip to confirm the wager rendered.
                     page.get_by_test_id('roulette-num-17').click(); page.locator('.bet-chip').first.wait_for(timeout=3000)
                     # Require the open bet to have debited the authoritative balance before leaving the table.
@@ -5505,7 +5513,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Require no open-bet chip to remain after the refund so the next round starts clean.
                     assert page.locator('.bet-chip').count()==0
                 # Record the refund-on-leave wallet-correctness regression before the standard betting acceptance continues.
-                run_case('BR-ROU-REFUND-001',['ROU-060','TEST-073'],roulette_refund_on_leave)
+                run_case('BR-ROU-REFUND-001',['ROU-060','ROU-062','TEST-073','TEST-094'],roulette_refund_on_leave)
                 # Audit slip labels for straight, fast-bet, grid-outside, and every inside/special bet type with no silent no-ops. (issues #230 #231 #233 #250)
                 def roulette_slip_label_audit():
                     # Place one bet through the given target and require exactly one new, correctly labeled slip entry.
