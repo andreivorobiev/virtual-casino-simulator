@@ -752,8 +752,8 @@ def validate_guest_contracts():
     assert all(route in admin_contract for route in ('/admin/guest-trials:','/admin/guest-trials/sessions:','/admin/guest-trials/sessions/{analytics_id}:','/admin/guest-trials/cleanup:'))
     # Prove the full filters, journey, fake-token, action/error/latency, and bounded timeline schemas are published.
     assert all(term in admin_contract for term in ('GameFilter','CompletedFilter','ErrorCategoryFilter','SinceFilter','UntilFilter','account_cta_selected','ProductMetrics','fake_tokens_only','action_categories','error_categories','latency_buckets','maxItems: 80'))
-    # Preserve the exact anonymous allowlist including the separately approved disabled private redemption route.
-    assert security_contract['anonymous_routes']==['/api/v2/auth/login','/api/v2/auth/guest','/api/v2/auth/redeem-invitation','/healthz']
+    # Preserve the exact anonymous allowlist including private redemption and the reviewed provider-latched OAuth routes. (OAUTH-007)
+    assert security_contract['anonymous_routes']==['/api/v2/auth/login','/api/v2/auth/guest','/api/v2/auth/redeem-invitation','/api/v2/auth/oauth/providers','/api/v2/auth/oauth/{google|facebook}/start','/api/v2/auth/oauth/{google|facebook}/callback','/healthz']
     # Prove launch stays held and retention/forbidden fields remain exact.
     assert guest_contract['public_launch_authorized'] is False and guest_contract['wallet']['add_tokens_allowed'] is False and guest_contract['lifecycle']['autoplay_stopped_on_end'] is True and guest_contract['entry']['max_game_actions_per_session']==1000 and guest_contract['entry']['max_concurrent_autoplay_sessions']==1 and guest_contract['admin_telemetry']['raw_retention_days']==30 and guest_contract['admin_telemetry']['aggregate_retention_days']==400 and guest_contract['admin_telemetry']['cleanup_failure_visible'] is True and guest_contract['admin_telemetry']['timeline_event_limit']==80 and guest_contract['admin_telemetry']['responsive_error_cohort_minimum']==5 and guest_contract['admin_telemetry']['export_allowed'] is False and 'browser_nonce' in guest_contract['admin_telemetry']['forbidden_fields']
     # Parse the exact digest freeze map.
@@ -903,7 +903,7 @@ def run_api_tests():
     # Record the complete listener-free request, access, session, and browser-helper security proof.
     run_case('API-SEC-PREVIEW-001',['SEC-010','SESSION-006','ADMIN-024','AUTH-007','TEST-047'],run_restricted_preview_security_tests)
     # Centrally discover all mocked and disabled OAuth tests before any listener starts.
-    run_case('OAUTH-MOCK-001',['OAUTH-001','OAUTH-002','OAUTH-003','OAUTH-004','OAUTH-005','TEST-045'],run_oauth_mock_tests)
+    run_case('OAUTH-MOCK-001',['OAUTH-001','OAUTH-002','OAUTH-003','OAUTH-004','OAUTH-005','OAUTH-007','OAUTH-008','OAUTH-009','TEST-045','TEST-093'],run_oauth_mock_tests)
     # Record focused deployment-default coverage before starting the normal loopback API server.
     run_case('API-AUTH-DEPLOYMENT-001',['AUTH-006','TEST-041'],validate_deployment_bootstrap)
     # Certify the matrix and shared hostile-client boundary before starting a listener.
@@ -1069,7 +1069,7 @@ def run_api_tests():
             # Require the stable catalog order so UI and contract clients cannot confuse provider rows.
             assert [provider['provider'] for provider in diagnostic['providers']]==['local','google','facebook']
             # Define the exact allowlisted schema published by the additive auth v2 contract.
-            allowed_keys={'provider','flow','status','configuration_ready','runtime_available','enabled_requested','client_id_configured','client_secret_configured','callback_url','missing_variables','problems'}
+            allowed_keys={'provider','flow','status','configuration_ready','runtime_available','enabled_requested','network_released','client_id_configured','client_secret_configured','callback_url','missing_variables','problems'}
             # Require every diagnostic row to contain no undeclared or action-bearing fields.
             assert all(set(provider)==allowed_keys for provider in diagnostic['providers'])
             # Index the three stable providers for explicit runtime assertions.
@@ -1078,14 +1078,42 @@ def run_api_tests():
             assert providers['local']['runtime_available'] is True
             # Keep both external providers unavailable regardless of environment readiness.
             assert providers['google']['runtime_available'] is False and providers['facebook']['runtime_available'] is False
-            # Require every held provider action route to remain absent from the application router.
-            for held_path in ('/api/v2/auth/oauth/google/start','/api/v2/auth/oauth/google/callback','/api/v2/auth/oauth/google/link','/api/v2/auth/oauth/google/exchange','/api/v2/auth/oauth/facebook/start','/api/v2/auth/oauth/facebook/callback'):
-                # Dispatch only empty, value-free requests so no callback data can enter logs.
-                missing=api(base,held_path,ok=False); assert missing['error']['code']=='NOT_FOUND'
+            # Read the boolean-only public provider catalog without authenticated configuration detail.
+            public=api(base,'/api/v2/auth/oauth/providers',auth_token=None)
+            # Require exactly two disabled external providers under repository-default flags.
+            assert public=={'providers':[{'provider':'google','available':False},{'provider':'facebook','available':False}]}
+            # Require reviewed provider start routes to exist but remain inaccessible under both default gates.
+            for held_provider in ('google','facebook'):
+                # Send one exact start request and require provider-unavailable without allocating a flow.
+                held=api(base,f'/api/v2/auth/oauth/{held_provider}/start','POST',{'action':'signin','return_to':'/'},ok=False); assert held['error']['code']=='NOT_FOUND'
+                # Require the callback route to remain equally inaccessible before parsing callback proof.
+                callback=api(base,f'/api/v2/auth/oauth/{held_provider}/callback',ok=False); assert callback['error']['code']=='NOT_FOUND'
+            # Require unreviewed account creation, generic linking, and exchange surfaces to remain absent.
+            for missing_path in ('/api/v2/auth/oauth/google/link','/api/v2/auth/oauth/google/exchange','/api/v2/auth/signup'):
+                # Dispatch only empty value-free reads and require a closed surface.
+                missing=api(base,missing_path,ok=False); assert missing['error']['code']=='NOT_FOUND'
             # Confirm OAuth diagnostics never extend the accepted Operations response shape.
             assert set(api(base,'/api/v2/admin/operations'))=={'schema_version','probe','status','checked_at','last_successful_heartbeat_at','build','ready','storage_provider','checks','reasons'}
         # Record secret-safe Admin diagnostics, absent action routes, and unchanged readiness under permanent IDs.
-        run_case('API-OAUTH-001',['OAUTH-001','OAUTH-002','OAUTH-006','TEST-045'],oauth_api)
+        run_case('API-OAUTH-001',['OAUTH-001','OAUTH-002','OAUTH-006','OAUTH-007','AUTH-007','TEST-045','TEST-093'],oauth_api)
+        # Define additive current-user OAuth contract behavior under repository-default held gates.
+        def oauth_runtime_api():
+            # Read the public boolean catalog without an authenticated session.
+            public=api(base,'/api/v2/auth/oauth/providers',auth_token=None)
+            # Require fixed provider order and no configuration, callback, client, or release detail.
+            assert public=={'providers':[{'provider':'google','available':False},{'provider':'facebook','available':False}]}
+            # Read current-user link status through the authenticated Admin's ordinary account identity.
+            links=api(base,'/api/v2/me/oauth/providers')
+            # Require boolean-only current-user state and held availability for both providers.
+            assert links=={'providers':[{'provider':'google','linked':False,'available':False},{'provider':'facebook','linked':False,'available':False}]}
+            # Reject caller-selected account targets before any provider or persistence operation.
+            targeted=api(base,'/api/v2/auth/oauth/google/start','POST',{'action':'signin','return_to':'/','email':'target@example.invalid'},ok=False)
+            # Central restricted-preview integrity may fail before service validation, but no provider start can succeed.
+            assert targeted['error']['code'] in {'FORBIDDEN','NOT_FOUND','VALIDATION_ERROR'}
+            # Preserve the frozen v1 surface without any OAuth path.
+            assert api(base,'/api/v1/auth/oauth/providers',ok=False)['error']['code']=='NOT_FOUND'
+        # Record additive v2, boolean privacy, current-user ownership, disabled gate, and frozen-v1 proof.
+        run_case('API-OAUTH-002',['OAUTH-007','OAUTH-008','OAUTH-009','OAUTH-010','AUTH-007','TEST-093'],oauth_runtime_api)
         # Define the disabled transactional-mail Admin diagnostic contract against the real loopback backend.
         def mail_api():
             # Require unauthenticated callers to fail before mail diagnostics disclose configuration state.
@@ -2509,7 +2537,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
             # Capture failing response URLs so authorization regressions are diagnosable.
             page.on('response', lambda response: http_errors.append(f'{response.status} {response.url}') if response.status >= 400 else None)
             # Record only attempted provider-action traffic so disabled-control assertions remain focused.
-            page.on('request', lambda request: provider_requests.append(request.url) if '/api/v2/auth/oauth/' in request.url or 'accounts.google.com' in request.url or 'facebook.com' in request.url else None)
+            page.on('request', lambda request: provider_requests.append(request.url) if any(marker in request.url for marker in ('/start','/callback','accounts.google.com','facebook.com')) else None)
             # Install an audio probe before navigation so Roulette voice text can be matched to the authoritative result.
             page.add_init_script("window.__casinoAudioEvents=[]; window.__casinoAudioProbe=(event)=>window.__casinoAudioEvents.push(event);")
             # Define the shot function used by this module.
@@ -2737,8 +2765,10 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 run_case('BR-SHELL-BRAND-GUEST-001',['UX-014','TEST-079'],guest_restricted_brand_copy)
                 # Define disabled OAuth control, localization, no-request, and visual evidence acceptance.
                 def oauth_disabled_browser():
-                    # Define the two governed Auth viewports required by the visual matrix.
-                    viewports={'desktop_primary':{'width':1920,'height':1080},'mobile':{'width':390,'height':844}}
+                    # Read all four governed Auth viewports from the authoritative visual matrix.
+                    viewports={entry['id']:{'width':entry['width'],'height':entry['height']} for entry in visual_matrix['viewports']}
+                    # Require the complete desktop, compact, tablet, and mobile matrix.
+                    assert set(viewports)=={'desktop_primary','desktop_compact','tablet','mobile'}
                     # Exercise the disabled controls in every installed Auth locale.
                     for locale in ('en-US','ru-RU'):
                         # Switch the visible login gate through its own localized selector.
@@ -2769,10 +2799,56 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             assert page.evaluate("() => { const screen=document.querySelector('.auth-screen'); const panel=document.querySelector('.auth-panel'); return document.documentElement.scrollWidth <= window.innerWidth + 1 && screen.scrollWidth <= screen.clientWidth + 1 && panel.scrollWidth <= panel.clientWidth + 1; }")
                             # Write the PNG and metadata sidecar through the shared exact-head evidence helper.
                             game_evidence(f'after-pass-auth-oauth-providers-disabled-{locale}-{viewport_id}.png','auth',['oauth_providers_disabled'],locale,viewport_id)
+                    # Override only the boolean public status endpoint without contacting any provider.
+                    page.route('**/api/v2/auth/oauth/providers',lambda route: route.fulfill(status=200,content_type='application/json',body='{"ok":true,"data":{"providers":[{"provider":"google","available":true},{"provider":"facebook","available":false}]}}'))
+                    # Exercise available-provider copy and native states in both locales.
+                    for locale in ('en-US','ru-RU'):
+                        # Trigger a fresh status request through the visible locale rerender.
+                        page.get_by_test_id('auth-locale-select').select_option(locale)
+                        # Wait until the exact available state and one independently enabled provider commit.
+                        page.get_by_test_id('oauth-providers-available').wait_for(timeout=5000)
+                        # Require only the released provider to be interactive.
+                        assert not page.get_by_test_id('oauth-google').is_disabled() and page.get_by_test_id('oauth-facebook').is_disabled()
+                        # Capture every governed viewport without activating the sensitive navigation action.
+                        for viewport_id,viewport in viewports.items():
+                            # Resize to the exact matrix dimensions.
+                            page.set_viewport_size(viewport); page.wait_for_timeout(100)
+                            # Require the Auth panel and provider controls to remain horizontally contained.
+                            assert page.evaluate("() => { const panel=document.querySelector('[data-testid=\"login-gate\"]'); return document.documentElement.scrollWidth<=window.innerWidth+1 && panel.scrollWidth<=panel.clientWidth+1; }")
+                            # Record available-provider after-pass evidence without a provider request.
+                            game_evidence(f'after-pass-auth-oauth-providers-available-{locale}-{viewport_id}.png','auth',['oauth_providers_available'],locale,viewport_id)
+                    # Replace public status with one generic unavailable envelope.
+                    page.unroute('**/api/v2/auth/oauth/providers')
+                    # Intercept the next status request as a fixed server failure.
+                    page.route('**/api/v2/auth/oauth/providers',lambda route: route.fulfill(status=503,content_type='application/json',body='{"ok":false,"error":{"code":"PROVIDER_UNAVAILABLE","message":"Provider is temporarily unavailable"}}'))
+                    # Exercise generic status-error rendering in both locales.
+                    for locale in ('en-US','ru-RU'):
+                        # Trigger a fresh failed status request through the visible locale rerender.
+                        page.get_by_test_id('auth-locale-select').select_option(locale)
+                        # Wait for the governed low-cardinality error marker.
+                        page.get_by_test_id('oauth-providers-status-error').wait_for(timeout=5000)
+                        # Require both provider actions to remain native-disabled after failure.
+                        assert page.get_by_test_id('oauth-google').is_disabled() and page.get_by_test_id('oauth-facebook').is_disabled()
+                        # Capture every governed viewport for the generic failure state.
+                        for viewport_id,viewport in viewports.items():
+                            # Resize to exact governed dimensions before capture.
+                            page.set_viewport_size(viewport); page.wait_for_timeout(100)
+                            # Require no page or Auth-panel horizontal spill.
+                            assert page.evaluate("() => { const panel=document.querySelector('[data-testid=\"login-gate\"]'); return document.documentElement.scrollWidth<=window.innerWidth+1 && panel.scrollWidth<=panel.clientWidth+1; }")
+                            # Record generic status-error evidence without raw server or provider detail.
+                            game_evidence(f'after-pass-auth-oauth-status-error-{locale}-{viewport_id}.png','auth',['oauth_provider_status_error'],locale,viewport_id)
+                    # Restore the real default-held endpoint before downstream login acceptance.
+                    page.unroute('**/api/v2/auth/oauth/providers')
+                    # Remove the intentionally generated 503 from the broad unexpected-response collector.
+                    http_errors.clear()
+                    # Trigger one final real disabled status refresh through the visible locale selector.
+                    page.get_by_test_id('auth-locale-select').select_option('ru-RU')
+                    # Wait for the default-held state before downstream Auth tests continue.
+                    page.get_by_test_id('oauth-providers-disabled').wait_for(timeout=5000)
                     # Restore the primary viewport while leaving Russian selected for the existing login flow.
                     page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(150)
                 # Record provider-disabled EN/RU controls, no-request behavior, and visual evidence.
-                run_case('BR-OAUTH-001',['OAUTH-001','OAUTH-006','TEST-045'],oauth_disabled_browser)
+                run_case('BR-OAUTH-001',['OAUTH-001','OAUTH-006','OAUTH-007','OAUTH-010','TEST-045','TEST-093'],oauth_disabled_browser)
                 # Define exact geometry acceptance for every primary Auth hit target. (issue #283)
                 def auth_touch_target_floor():
                     # Read every governed viewport from the authoritative visual matrix.
@@ -2864,6 +2940,182 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     assert page.get_by_test_id('shell-locale-select').input_value()=='ru-RU'
                 # Execute this statement as part of the module's documented control flow.
                 run_case('BR-AUTH-SHELL-001',['AUTH-UI-001','TOKEN-UI-001','I18N-003'],auth_shell)
+                # Define provider-free authenticated account-method and callback lifecycle visual acceptance. (OAUTH-010)
+                def oauth_runtime_browser():
+                    # Read all four governed viewports from the authoritative matrix.
+                    oauth_viewports={entry['id']:{'width':entry['width'],'height':entry['height']} for entry in visual_matrix['viewports']}
+                    # Require the full responsive matrix before generating any evidence.
+                    assert set(oauth_viewports)=={'desktop_primary','desktop_compact','tablet','mobile'}
+                    # Require the account popover to remain fully painted inside the active viewport.
+                    def assert_oauth_account_containment():
+                        # Check both document overflow and the popover's physical viewport bounds.
+                        assert page.evaluate("""() => { const popover=document.querySelector('[data-testid="oauth-account-popover"]'); const bounds=popover.getBoundingClientRect(); return document.documentElement.scrollWidth<=window.innerWidth+1 && popover.scrollWidth<=popover.clientWidth+1 && bounds.left>=13 && bounds.right<=window.innerWidth-13 && bounds.top>=0 && bounds.bottom<=window.innerHeight+1 && bounds.width>=Math.min(300,window.innerWidth-28); }""")
+                    # Install one boolean-only unlinked/available current-user response without provider network access.
+                    page.route('**/api/v2/me/oauth/providers',lambda route: route.fulfill(status=200,content_type='application/json',body='{"ok":true,"data":{"providers":[{"provider":"google","linked":false,"available":true},{"provider":"facebook","linked":false,"available":false}]}}'))
+                    # Exercise current-user unlinked state across both installed locales.
+                    for locale in ('en-US','ru-RU'):
+                        # Force a different locale first so the requested locale always triggers shell refresh.
+                        alternate='ru-RU' if locale=='en-US' else 'en-US'
+                        # Switch through the visible shell selector to rerender account methods.
+                        page.get_by_test_id('shell-locale-select').select_option(alternate); page.get_by_test_id('shell-locale-select').select_option(locale)
+                        # Open the native details account surface when it is currently closed.
+                        if not page.locator('#account-menu').evaluate("element => element.open"): page.get_by_test_id('account-menu').click()
+                        # Wait for the fixed Google row to become visible only after its native details owner is open.
+                        page.get_by_test_id('oauth-link-google').wait_for(timeout=5000)
+                        # Require explicit confirmation and both provider rows before capture.
+                        assert page.get_by_test_id('oauth-link-confirm').is_visible() and page.get_by_test_id('oauth-link-google').is_visible() and page.get_by_test_id('oauth-link-facebook').is_visible()
+                        # Focus the native account summary for keyboard-reachability evidence.
+                        page.get_by_test_id('account-menu').focus()
+                        # Capture every governed responsive viewport.
+                        for viewport_id,viewport in oauth_viewports.items():
+                            # Resize to the exact matrix dimensions.
+                            page.set_viewport_size(viewport); page.wait_for_timeout(100)
+                            # Prove the complete account surface remains painted inside this viewport.
+                            assert_oauth_account_containment()
+                            # Require page and account popover containment with all provider actions readable.
+                            assert page.evaluate("() => { const popover=document.querySelector('[data-testid=\"oauth-account-popover\"]'); return document.documentElement.scrollWidth<=window.innerWidth+1 && popover.scrollWidth<=popover.clientWidth+1 && popover.getBoundingClientRect().width>=Math.min(300,window.innerWidth-28); }")
+                            # Record unlinked available/release-held state without identity data.
+                            region_evidence(f'after-pass-oauth-account-unlinked-{locale}-{viewport_id}.png','[data-testid="oauth-account-popover"]','oauth_account',['unlinked_available','unlinked_release_held','link_confirmation_required'],locale,viewport_id)
+                    # Replace the unlinked response with one prior-link state using no provider subject.
+                    page.unroute('**/api/v2/me/oauth/providers')
+                    # Install a fixed boolean-only linked response.
+                    page.route('**/api/v2/me/oauth/providers',lambda route: route.fulfill(status=200,content_type='application/json',body='{"ok":true,"data":{"providers":[{"provider":"google","linked":true,"available":true},{"provider":"facebook","linked":false,"available":false}]}}'))
+                    # Exercise the linked/unlinked mix in both locales.
+                    for locale in ('en-US','ru-RU'):
+                        # Trigger a full account-method rerender through the visible locale control.
+                        alternate='ru-RU' if locale=='en-US' else 'en-US'
+                        # Switch away and back so the exact target locale owns the final render.
+                        page.get_by_test_id('shell-locale-select').select_option(alternate); page.get_by_test_id('shell-locale-select').select_option(locale)
+                        # Wait until the linked Google row renders an unlink action.
+                        page.wait_for_function("() => document.querySelector('[data-testid=\"oauth-link-google\"] [data-oauth-account-action=\"unlink\"]')")
+                        # Ensure the account popover remains open after shell locale rerender.
+                        if not page.locator('#account-menu').evaluate("element => element.open"): page.get_by_test_id('account-menu').click()
+                        # Capture every governed viewport for boolean linked state.
+                        for viewport_id,viewport in oauth_viewports.items():
+                            # Resize before geometry and capture.
+                            page.set_viewport_size(viewport); page.wait_for_timeout(100)
+                            # Prove the complete account surface remains painted inside this viewport.
+                            assert_oauth_account_containment()
+                            # Require every native action to remain visible and contained.
+                            assert page.get_by_test_id('oauth-link-google').is_visible() and page.evaluate("() => document.documentElement.scrollWidth<=window.innerWidth+1")
+                            # Record linked state without provider subject, email, or canonical user id.
+                            region_evidence(f'after-pass-oauth-account-linked-{locale}-{viewport_id}.png','[data-testid="oauth-account-popover"]','oauth_account',['linked'],locale,viewport_id)
+                    # Intercept the exact unlink mutation with one fixed failure so error isolation is proven without deleting the mocked link.
+                    page.route('**/api/v2/me/oauth/google/unlink',lambda route: route.fulfill(status=503,content_type='application/json',body='{"ok":false,"error":{"code":"PROVIDER_UNAVAILABLE","message":"Provider is temporarily unavailable"}}'))
+                    # Exercise a real confirmed unlink click and its localized generic failure in both locales.
+                    for locale in ('en-US','ru-RU'):
+                        # Force a locale-owned account rerender before the unlink attempt.
+                        alternate='ru-RU' if locale=='en-US' else 'en-US'
+                        # Switch away and back so the intended locale owns every visible row and error message.
+                        page.get_by_test_id('shell-locale-select').select_option(alternate); page.get_by_test_id('shell-locale-select').select_option(locale)
+                        # Reopen the account popover after the shell rerender when necessary.
+                        if not page.locator('#account-menu').evaluate("element => element.open"): page.get_by_test_id('account-menu').click()
+                        # Select the exact linked-provider unlink control.
+                        unlink_button=page.locator('[data-testid="oauth-link-google"] [data-oauth-account-action="unlink"]')
+                        # Require the linked action to be visible before accepting its browser confirmation.
+                        unlink_button.wait_for(timeout=5000); page.once('dialog',lambda dialog: dialog.accept()); unlink_button.click()
+                        # Wait until the provider-neutral localized failure message replaces the empty status outlet.
+                        page.wait_for_function("() => Boolean(document.getElementById('oauth-account-message')?.textContent.trim())",timeout=5000)
+                        # Require failure to preserve the linked rows without rendering configuration or identity data.
+                        assert page.locator('[data-testid="oauth-account-popover"]').get_attribute('data-oauth-state')=='linked' and 'CASINO_' not in page.get_by_test_id('oauth-account-popover').inner_text() and '@' not in page.get_by_test_id('oauth-account-popover').inner_text()
+                        # Capture the confirmed unlink failure at every governed viewport.
+                        for viewport_id,viewport in oauth_viewports.items():
+                            # Resize before the error-message containment assertion.
+                            page.set_viewport_size(viewport); page.wait_for_timeout(100)
+                            # Prove the complete account surface remains painted inside this viewport.
+                            assert_oauth_account_containment()
+                            # Require the complete linked popover and its failure status to remain readable without horizontal spill.
+                            assert page.locator('#oauth-account-message').is_visible() and page.evaluate("() => { const popover=document.querySelector('[data-testid=\"oauth-account-popover\"]'); return document.documentElement.scrollWidth<=window.innerWidth+1 && popover.scrollWidth<=popover.clientWidth+1; }")
+                            # Record actual unlink-error evidence rather than relabeling a status-load failure.
+                            region_evidence(f'after-pass-oauth-account-unlink-error-{locale}-{viewport_id}.png','[data-testid="oauth-account-popover"]','oauth_account',['unlink_error','linked'],locale,viewport_id)
+                    # Restore normal mutation routing while retaining the provider-free linked status fixture.
+                    page.unroute('**/api/v2/me/oauth/google/unlink')
+                    # Reload through one fixed successful callback marker to prove safe outcome cleanup and refresh persistence.
+                    page.goto(base+'?oauth_provider=google&oauth_status=linked',wait_until='networkidle'); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    # Open the account surface after the authenticated reload.
+                    page.get_by_test_id('account-menu').click(); page.get_by_test_id('oauth-callback-message').wait_for(timeout=5000)
+                    # Require browser history to remove the low-cardinality completion query immediately.
+                    assert 'oauth_provider=' not in page.url and 'oauth_status=' not in page.url
+                    # Capture successful callback and refresh persistence across locale and viewport.
+                    for locale in ('en-US','ru-RU'):
+                        # Trigger localized callback copy through shell rerender.
+                        alternate='ru-RU' if locale=='en-US' else 'en-US'
+                        # Switch away and back to the exact final locale.
+                        page.get_by_test_id('shell-locale-select').select_option(alternate); page.get_by_test_id('shell-locale-select').select_option(locale)
+                        # Reopen the native account details after DOM-stable shell refresh when needed.
+                        if not page.locator('#account-menu').evaluate("element => element.open"): page.get_by_test_id('account-menu').click()
+                        # Require fixed success copy to remain visible after refresh.
+                        page.get_by_test_id('oauth-callback-message').wait_for(timeout=5000)
+                        # Capture all four governed viewports.
+                        for viewport_id,viewport in oauth_viewports.items():
+                            # Resize to the matrix dimensions.
+                            page.set_viewport_size(viewport); page.wait_for_timeout(100)
+                            # Prove the complete account surface remains painted inside this viewport.
+                            assert_oauth_account_containment()
+                            # Require the callback acknowledgement and account rows to remain contained.
+                            assert page.get_by_test_id('oauth-callback-message').is_visible() and page.evaluate("() => document.documentElement.scrollWidth<=window.innerWidth+1")
+                            # Record successful callback and same-session refresh evidence.
+                            region_evidence(f'after-pass-oauth-callback-success-{locale}-{viewport_id}.png','[data-testid="oauth-account-popover"]','oauth_account',['callback_success','refresh_persisted','linked'],locale,viewport_id)
+                    # Reload through one fixed failure marker to prove callback-error localization and history cleanup independently from status loading.
+                    page.goto(base+'?oauth_provider=google&oauth_status=error',wait_until='networkidle'); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    # Open the account surface after the authenticated error-marker reload.
+                    page.get_by_test_id('account-menu').click(); page.get_by_test_id('oauth-callback-message').wait_for(timeout=5000)
+                    # Require browser history to remove the low-cardinality error marker immediately.
+                    assert 'oauth_provider=' not in page.url and 'oauth_status=' not in page.url
+                    # Exercise the actual callback-error acknowledgement in both installed locales.
+                    for locale in ('en-US','ru-RU'):
+                        # Trigger locale-owned callback-error copy through the shared shell rerender.
+                        alternate='ru-RU' if locale=='en-US' else 'en-US'
+                        # Switch away and back to make the evidence locale exact.
+                        page.get_by_test_id('shell-locale-select').select_option(alternate); page.get_by_test_id('shell-locale-select').select_option(locale)
+                        # Reopen the native details popover when rerendering closed it.
+                        if not page.locator('#account-menu').evaluate("element => element.open"): page.get_by_test_id('account-menu').click()
+                        # Require the fixed callback-error message without provider response details.
+                        page.get_by_test_id('oauth-callback-message').wait_for(timeout=5000); assert page.get_by_test_id('oauth-callback-message').inner_text().strip()
+                        # Capture the actual callback failure at every governed viewport.
+                        for viewport_id,viewport in oauth_viewports.items():
+                            # Resize before responsive containment proof.
+                            page.set_viewport_size(viewport); page.wait_for_timeout(100)
+                            # Prove the complete account surface remains painted inside this viewport.
+                            assert_oauth_account_containment()
+                            # Require the callback error and account rows to remain visible without page-level overflow.
+                            assert page.get_by_test_id('oauth-callback-message').is_visible() and page.evaluate("() => document.documentElement.scrollWidth<=window.innerWidth+1")
+                            # Record callback-error evidence separately from provider-status loading failures.
+                            region_evidence(f'after-pass-oauth-callback-error-{locale}-{viewport_id}.png','[data-testid="oauth-account-popover"]','oauth_account',['callback_error','linked'],locale,viewport_id)
+                    # Replace current-user status with one fixed failure to exercise graceful account-control isolation.
+                    page.unroute('**/api/v2/me/oauth/providers')
+                    # Install one generic provider-status failure with no raw details.
+                    page.route('**/api/v2/me/oauth/providers',lambda route: route.fulfill(status=503,content_type='application/json',body='{"ok":false,"error":{"code":"PROVIDER_UNAVAILABLE","message":"Provider is temporarily unavailable"}}'))
+                    # Exercise generic account status failure in both locales.
+                    for locale in ('en-US','ru-RU'):
+                        # Trigger a fresh failed current-user status request by rerendering shell locale.
+                        alternate='ru-RU' if locale=='en-US' else 'en-US'
+                        # Switch away and back to the intended locale.
+                        page.get_by_test_id('shell-locale-select').select_option(alternate); page.get_by_test_id('shell-locale-select').select_option(locale)
+                        # Open the account popover and wait for the generic localized failure copy.
+                        if not page.locator('#account-menu').evaluate("element => element.open"): page.get_by_test_id('account-menu').click()
+                        # Wait until the failed request replaces the loading state.
+                        page.locator('[data-testid="oauth-account-popover"][data-oauth-state="status-error"]').wait_for(timeout=5000)
+                        # Require the popover to contain no provider configuration or identifier rows.
+                        assert 'CASINO_' not in page.get_by_test_id('oauth-account-popover').inner_text() and '@' not in page.get_by_test_id('oauth-account-popover').inner_text()
+                        # Capture the generic error at every governed viewport.
+                        for viewport_id,viewport in oauth_viewports.items():
+                            # Resize before containment proof.
+                            page.set_viewport_size(viewport); page.wait_for_timeout(100)
+                            # Prove the complete account surface remains painted inside this viewport.
+                            assert_oauth_account_containment()
+                            # Require the generic failure card to remain usable and contained.
+                            assert page.get_by_test_id('oauth-account-popover').is_visible() and page.evaluate("() => document.documentElement.scrollWidth<=window.innerWidth+1")
+                            # Record provider-status loading failure without mislabeling unlink or callback behavior.
+                            region_evidence(f'after-pass-oauth-account-status-error-{locale}-{viewport_id}.png','[data-testid="oauth-account-popover"]','oauth_account',['status_error'],locale,viewport_id)
+                    # Restore the real current-user endpoint and clear the intentionally generated 503 diagnostics.
+                    page.unroute('**/api/v2/me/oauth/providers'); http_errors.clear()
+                    # Reload the normal authenticated shell without a callback marker or mocked provider state.
+                    page.goto(base,wait_until='networkidle'); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                    # Restore the primary desktop viewport for downstream wallet evidence.
+                    page.set_viewport_size({'width':1920,'height':1080})
+                # Record the complete provider-free OAuth lifecycle and visual matrix.
+                run_case('BR-OAUTH-RUNTIME-001',['OAUTH-007','OAUTH-008','OAUTH-009','OAUTH-010','AUTH-007','TEST-093'],oauth_runtime_browser)
                 # Open the token wallet menu before adding fake tokens.
                 page.locator('.wallet-menu summary').click()
                 # Read the authenticated player id from the live shell state.
@@ -6430,7 +6682,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 # Define Admin-only OAuth diagnostics, isolation from Operations, and visual evidence.
                 def admin_oauth_browser():
                     # Define every governed Admin viewport from the visual matrix.
-                    viewports={'desktop_primary':{'width':1920,'height':1080},'desktop_compact':{'width':1440,'height':900},'tablet':{'width':1024,'height':900}}
+                    viewports={'desktop_primary':{'width':1920,'height':1080},'desktop_compact':{'width':1440,'height':900},'tablet':{'width':1024,'height':900},'mobile':{'width':390,'height':844}}
                     # Exercise provider diagnostics in both installed Admin locales.
                     for locale in ('en-US','ru-RU'):
                         # Switch locale without persisting a preference outside this disposable test copy.

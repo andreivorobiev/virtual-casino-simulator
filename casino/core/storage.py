@@ -197,6 +197,11 @@ class JsonStorageProvider(StorageProvider):
         # Return one provider-local lock file shared by all wallet-writing processes.
         return self.data_dir / ".ledger.lock"
 
+    # Return one sidecar lock path for an atomic named-document mutation.
+    def document_lock_path(self, key: str) -> Path:
+        # Place the lock beside the selected document so independent documents do not block each other.
+        return self.document_path(key).with_suffix(".json.lock")
+
     # Return the local CSV history path.
     def history_path(self) -> Path:
         # Return the existing history file path under the configured data root.
@@ -330,6 +335,52 @@ class JsonStorageProvider(StorageProvider):
                 # Yield while the caller owns the cross-process wallet lock.
                 try:
                     # Transfer control to the protected wallet operation.
+                    yield
+                # Always release the advisory lock after the operation.
+                finally:
+                    # Release the file lock for the next process.
+                    fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+
+    # Hold one operating-system lock across a named-document read-modify-write.
+    @contextmanager
+    def _document_process_lock(self, key: str):  # Serialize the same document across provider instances and processes.
+        # Ensure the document parent exists before opening its sidecar lock target.
+        self.document_lock_path(key).parent.mkdir(parents=True, exist_ok=True)
+        # Open a persistent one-byte lock target shared by every provider instance for this key.
+        with self.document_lock_path(key).open("a+b") as handle:
+            # Branch to the Windows byte-range locking implementation.
+            if os.name == "nt":
+                # Import the Windows runtime lock API only on Windows.
+                import msvcrt
+                # Ensure the file contains one byte that can be locked.
+                if handle.seek(0, os.SEEK_END) == 0:
+                    # Write the lock byte once for a fresh document lock.
+                    handle.write(b"0")
+                    # Flush the byte before locking it from another process.
+                    handle.flush()
+                # Seek to the byte range that represents this document lock.
+                handle.seek(0)
+                # Block until this process exclusively owns the byte range.
+                msvcrt.locking(handle.fileno(), msvcrt.LK_LOCK, 1)
+                # Yield while the caller owns the cross-process document lock.
+                try:
+                    # Transfer control to the protected document operation.
+                    yield
+                # Always release the byte-range lock after the operation.
+                finally:
+                    # Return to the locked byte before unlocking it.
+                    handle.seek(0)
+                    # Release the byte range for the next process.
+                    msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+            # Use advisory flock on POSIX development and CI hosts.
+            else:
+                # Import POSIX locking only where the module is available.
+                import fcntl
+                # Block until this process exclusively owns the file lock.
+                fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+                # Yield while the caller owns the cross-process document lock.
+                try:
+                    # Transfer control to the protected document operation.
                     yield
                 # Always release the advisory lock after the operation.
                 finally:
@@ -715,14 +766,34 @@ class JsonStorageProvider(StorageProvider):
     def update_document(self, key: str, mutator: Callable[[Any], Any], default: Any) -> Any:
         # Serialize the direct provider read-modify-write inside this process.
         with self.lock:
-            # Read an independent current document or evaluate its lazy default.
-            current = self._read_json(self.document_path(key), default)
-            # Apply the caller-owned mutation while the provider lock is held.
-            updated = mutator(current)
-            # Atomically replace the complete JSON document on disk.
-            self._write_json(self.document_path(key), updated)
-            # Return the exact value that was persisted.
-            return updated
+            # Hold the same sidecar lock across every provider instance and process.
+            with self._document_process_lock(key):
+                # Resolve the exact document path once under the cross-process lock.
+                path = self.document_path(key)
+                # Evaluate the default only when the durable document is absent.
+                if not path.exists():
+                    # Preserve lazy default-factory behavior for new documents.
+                    current = default() if callable(default) else default
+                # Parse an existing document strictly so malformed evidence is never replaced by a default.
+                else:
+                    # Start protected parsing while keeping the original file untouched on failure.
+                    try:
+                        # Decode the current durable payload inside the complete mutation boundary.
+                        current = json.loads(path.read_text(encoding="utf-8"))
+                    # Preserve malformed state and publish an operator-recovery failure.
+                    except json.JSONDecodeError:
+                        # Copy the malformed payload for explicit recovery without replacing the source.
+                        backup = path.with_suffix(path.suffix + f".corrupt-{int(time.time())}")
+                        # Preserve a recoverable snapshot before aborting the mutation.
+                        shutil.copy2(path, backup)
+                        # Abort without invoking the mutator or writing a normalized document.
+                        raise RuntimeError("Stored document requires operator recovery") from None
+                # Apply the caller-owned mutation while both process and thread locks are held.
+                updated = mutator(current)
+                # Atomically replace the complete JSON document only after successful validation and mutation.
+                self._write_json(path, updated)
+                # Return the exact value that was persisted.
+                return updated
 
 
 # Define the canonical history fields shared by JSON and MySQL providers.

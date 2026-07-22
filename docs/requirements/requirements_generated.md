@@ -6,8 +6,8 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.42.6
-- core: 9.17.1
+- application: 9.43.5
+- core: 9.18.1
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.0
@@ -45,9 +45,9 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.1
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.51.9
-- docs: 1.51.0
-- contracts: 1.37.0
+- tests: 1.52.5
+- docs: 1.52.0
+- contracts: 1.38.0
 - tooling: 1.18.0
 - commenting_policy: 1.0.0
 
@@ -435,13 +435,13 @@ Historical source baseline: 9.1.0
 - **AUTH-004** (Auth) - PASS: Unauthenticated or inactive-user access returns the standard ok/error API envelope without leaking protected data.
 - **AUTH-005** (Auth) - PASS: Authenticated Admin-only actions require an active user with an Admin role.
 - **AUTH-006** (Auth) - PASS: Non-loopback or explicitly public deployment startup requires explicit bootstrap Admin settings and rejects known local defaults before runtime state is mutated.
-- **OAUTH-001** (OAuth) - PASS: The provider catalog preserves local password login as the sole runtime-available provider while Google and Facebook remain unavailable regardless of inert configuration readiness.
+- **OAUTH-001** (OAuth) - PASS: The provider catalog preserves local password login while Google and Facebook remain unavailable by default and distinguish structural readiness from an independent false-by-default provider-network release latch.
 - **OAUTH-002** (OAuth) - PASS: Admin-only diagnostics expose a fixed allowlist of provider configuration and runtime facts without credential values, tokens, raw claims, authorization URLs, or raw errors and without affecting Operations readiness.
-- **OAUTH-003** (OAuth) - PASS: Pure callback helpers preserve the issue #75 route reservation and fail closed on invalid callback origins, ambiguous parameters, state, nonce, authorization codes, and PKCE values without registering a callback route.
+- **OAUTH-003** (OAuth) - PASS: Pure callback helpers fail closed on invalid callback origins, duplicate or ambiguous parameters, state, nonce, authorization codes, and PKCE values; the additive v2 callback route uses those exact helpers and remains inaccessible under default provider gates.
 - **OAUTH-004** (OAuth) - PASS: Injected identity-link logic binds an external provider subject only to an authenticated canonical user, never creates users or links by email, and fails closed on repository ownership or uniqueness drift.
-- **OAUTH-005** (OAuth) - PASS: Mocked Google and Facebook claim normalization retains only bounded allowlisted identity fields and is not treated as live token, signature, issuer, audience, expiry, nonce, or PKCE verification.
-- **OAUTH-006** (Application) - PASS: The English and Russian login gate presents readable native-disabled Google and Facebook controls with no link or handler, while local email/password login behavior remains unchanged.
-- **TEST-045** (Tests) - PASS: OAuth regression evidence centrally discovers service-free mocked tests and covers Admin authorization, secret-safe diagnostics, absent action routes, disabled EN/RU controls, unchanged local login, contracts, and listener cleanup.
+- **OAUTH-005** (OAuth) - PASS: Google and Facebook adapters normalize only bounded allowlisted identity fields after provider-specific signature/app-binding, issuer, audience, expiry, nonce, and subject checks; provider-free mocks never count as live provider evidence.
+- **OAUTH-006** (Application) - PASS: The English and Russian login gate keeps Google and Facebook native-disabled under default gates, enables only boolean-reported available providers, and preserves local email/password and guest entry behavior unchanged.
+- **TEST-045** (Tests) - PASS: OAuth foundation regression evidence covers Admin authorization, secret-safe diagnostics, disabled defaults, EN/RU controls, unchanged local login, contracts, and listener cleanup; TEST-093 owns the additive runtime qualification.
 - **SESSION-001** (Session) - PASS: Successful login creates a server-side session represented to clients by a protected session cookie.
 - **SESSION-002** (Session) - PASS: Logout invalidates the current session before returning a standard ok/data envelope.
 - **SESSION-003** (Session) - PASS: Current-user lookup returns user, role, session, terms, locale, and bound player token balance data.
@@ -638,7 +638,7 @@ Historical source baseline: 9.1.0
 - **SESSION-006** (Core) - PASS: Restricted-preview sessions use host-only Secure HttpOnly SameSite cookies, distinct per-session CSRF values, bounded per-user concurrent session retention with least-recently-used eviction, bounded lifetime, logout clearing, and revocation after privilege-bearing account changes.
 - **SESSION-007** (Session) - PASS: Concurrent same-account logins create independent durable sessions that remain valid and never invalidate each other, bounded by a per-user cap with least-recently-used eviction and atomic session persistence that prevents lost writes, returning no 401 or 500 under concurrency.
 - **ADMIN-024** (Admin) - PASS: Admin HTML, JavaScript, and API surfaces require an active Admin session during restricted preview, and user privilege or status changes revoke existing sessions.
-- **AUTH-007** (Core) - PASS: Restricted preview exposes local-password login only; public signup and live OAuth authorization, callback, exchange, linking, SDK, and provider transport routes remain absent.
+- **AUTH-007** (Core) - PASS: Restricted preview keeps public signup absent; additive invite-only OAuth routes remain disabled and provider-network inaccessible by default, create no users, never link by email, and require exact browser/session integrity when separately released.
 - **AUTH-008** (Core) - PASS: The authenticated shared shell renders and keyboard-wires Admin navigation only for an authenticated Admin user; normal-player locale rerenders and restored game routes never expose the affordance, while direct Admin HTML and API access remain server-enforced.
 - **TEST-047** (Tests) - PASS: Permanent restricted-preview evidence covers configuration failure, Host and proxy abuse, Origin and CSRF enforcement, session and privilege rotation, cookie and header policy, Admin and disabled-access boundaries, concurrency, capacity recovery, redacted logging, copied production behavior, and exact listener cleanup.
 - **MYSQL-005** (MySQL) - PASS: MySQL schema changes use an explicit contiguous checksum-bound migration catalog, a deployment-only identity, a named target lock, proof-gated pre-DDL state, and durable applying or dirty markers that never claim transactional DDL rollback.
@@ -730,4 +730,9 @@ Historical source baseline: 9.1.0
 - **INVITE-005** (Application) - PASS: Admin invitation readiness, empty, pending, redeemed, and error states plus the account-free redemption form, explicit terms, keyboard focus, generic error, and terminal success return are accessible and localized in en-US and ru-RU without raw recipient or bearer evidence at desktop-primary, desktop-compact, tablet, mobile, reduced-motion, and 200-percent zoom states.
 - **INVITE-006** (Docs) - PASS: The invitation runbook documents disabled defaults, separate live authority, private-recipient approval, current terms and password policy, rate/cooldown/retention behavior, recovery states, privacy-safe audit, JSON/MySQL operational checks, rollback, and the prohibition on public signup or provider/deployment changes from repository merge.
 - **TEST-091** (Tests) - PASS: Provider-free service and API tests prove disabled defaults, privacy-safe projections, current terms and password enforcement, caller-idempotent token consumption, post-consumption recovery, malformed-state preservation, frozen-v1 compatibility, and independent JSON-process convergence; disposable MySQL CI races claim, consume, account, wallet, and finalization across independent processes; exact-head browser evidence covers every invitation/Admin locale, state, and governed viewport.
+- **OAUTH-007** (OAuth) - PASS: Google and Facebook remain independently disabled by default; each provider requires complete secret-safe configuration and a separate false-by-default provider-network release latch before an adapter can be constructed, while Admin and public readiness projections expose only allowlisted low-cardinality facts.
+- **OAUTH-008** (OAuth) - PASS: Authorization-code flows use PKCE S256, strict duplicate-aware state, Google nonce, exact provider/callback/browser/action binding, authenticated user/session binding for explicit links, HMAC-only durable metadata, physically separate nonce/PKCE proofs, cross-process rate limits, recoverable transient exchange claims, terminal replay tombstones, bounded retention, and privacy-safe audit.
+- **OAUTH-009** (Core) - PASS: An external provider subject links only after explicit confirmation by the exact authenticated active private-invite local-password account; JSON and MySQL transactions enforce provider-subject and provider-user uniqueness across processes, sign-in requires a prior link, provider email is display-only, and no provider flow creates or merges users, players, wallets, or accounts.
+- **OAUTH-010** (Application) - PASS: The disabled-by-default provider login and persistent-account link/unlink surfaces are keyboard accessible, localized in en-US and ru-RU, preserve local-password recovery and guest/invitation flows, revoke matching provider sessions on unlink or release rollback, and expose disabled, available, status-error, linked, unlinked, callback-success, callback-error, refresh, and responsive states without raw identity or bearer evidence.
+- **TEST-093** (Tests) - PASS: Provider-free unit, API, JSON-process, and disposable MySQL tests prove dual-gate adapter inaccessibility, proof separation, malformed-state preservation, durable rate limits, recoverable exchange ambiguity, strict callback/link/session binding, static-shell CSRF lookup without consuming browser-bound guest sessions, no email linking or account creation, compound uniqueness and replay safety, frozen-v1 compatibility, and rollback; exact-head browser evidence covers OAuth readiness and lifecycle states in en-US and ru-RU at every governed viewport.
 - **TEST-092** (Tests) - PASS: An exact-source browser qualification executes exactly 50,000 completed UI cycles across every catalog game, assigns at least 1,666 cycles to each game, exercises every eligible game control at least 100 times or records an approved ineligible classification, captures all four governed viewports for human review, and rejects unexplained failures, incomplete ranges, incomplete declared non-control stages, source drift, or cleanup residue.

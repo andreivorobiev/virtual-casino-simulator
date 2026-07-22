@@ -23,6 +23,8 @@ from casino.errors import ValidationError
 TRUE_VALUES = frozenset({"1", "true", "yes", "on"})
 # Accept explicit false values and blank defaults without treating them as errors.
 FALSE_VALUES = frozenset({"", "0", "false", "no", "off"})
+# Reject committed or placeholder digest material before any OAuth persistence can become available.
+UNSAFE_DIGEST_KEYS = frozenset({"change-me", "development", "local-oauth-digest-key"})
 
 
 # Hold configured external-provider credential values while suppressing them from repr output.
@@ -43,6 +45,10 @@ class ProviderConfiguration:  # Keep one provider's inert effective settings tog
     enabled_requested: bool
     # Record whether the enable setting used an accepted explicit value.
     enable_flag_valid: bool
+    # Record the independent provider-network release decision.
+    network_released: bool
+    # Record whether the independent network-release flag used an accepted explicit value.
+    network_flag_valid: bool
     # Store configured credentials while suppressing their values from repr output.
     credentials: ProviderCredentials = field(repr=False)
     # Store the callback base without exposing accidental credentials or malformed input in repr.
@@ -54,6 +60,8 @@ class ProviderConfiguration:  # Keep one provider's inert effective settings tog
 class OAuthConfiguration:  # Keep the complete inert provider snapshot immutable.
     # Store external provider configurations in deterministic order.
     providers: tuple[ProviderConfiguration, ...]
+    # Store the server-owned HMAC key without exposing it through representations.
+    digest_key: str = field(repr=False)
 
 
 # Describe one provider's readiness without exposing credentials or personal data.
@@ -71,6 +79,8 @@ class ProviderDiagnostic:  # Publish only allowlisted readiness facts.
     runtime_available: bool
     # Report whether an operator explicitly requested enablement.
     enabled_requested: bool
+    # Report whether the separately governed provider-network release was requested.
+    network_released: bool
     # Report only whether the public client identifier is present.
     client_id_configured: bool
     # Report only whether the provider secret is present.
@@ -85,7 +95,7 @@ class ProviderDiagnostic:  # Publish only allowlisted readiness facts.
     # Convert diagnostics to the plain public shape expected by later Admin integration.
     def as_dict(self) -> dict:
         # Return only allowlisted non-secret configuration facts.
-        return {"provider": self.provider, "flow": self.flow, "status": self.status, "configuration_ready": self.configuration_ready, "runtime_available": self.runtime_available, "enabled_requested": self.enabled_requested, "client_id_configured": self.client_id_configured, "client_secret_configured": self.client_secret_configured, "callback_url": self.callback_url, "missing_variables": list(self.missing_variables), "problems": list(self.problems)}
+        return {"provider": self.provider, "flow": self.flow, "status": self.status, "configuration_ready": self.configuration_ready, "runtime_available": self.runtime_available, "enabled_requested": self.enabled_requested, "network_released": self.network_released, "client_id_configured": self.client_id_configured, "client_secret_configured": self.client_secret_configured, "callback_url": self.callback_url, "missing_variables": list(self.missing_variables), "problems": list(self.problems)}
 
 
 # Read one environment setting as exact text without logging or returning its key/value pair.
@@ -130,16 +140,18 @@ def load_oauth_configuration(environ: Mapping[str, object] | None = None) -> OAu
             continue
         # Read and parse the provider's explicit enable flag.
         enabled_requested, enable_flag_valid = _parse_enable_flag(_environment_value(current_environment, spec.enabled_env))
+        # Read the independent provider-network release latch without treating readiness as release.
+        network_released, network_flag_valid = _parse_enable_flag(_environment_value(current_environment, f"CASINO_OAUTH_NETWORK_RELEASED_{spec.provider_id.upper()}"))
         # Store credentials without exposing their values through repr output.
         credentials = ProviderCredentials(client_id=_environment_value(current_environment, spec.client_id_env), client_secret=_environment_value(current_environment, spec.client_secret_env))
         # Store the inert configuration snapshot for later diagnostics.
-        provider_configurations.append(ProviderConfiguration(spec=spec, enabled_requested=enabled_requested, enable_flag_valid=enable_flag_valid, credentials=credentials, public_base_url=_environment_value(current_environment, "CASINO_OAUTH_PUBLIC_BASE_URL")))
+        provider_configurations.append(ProviderConfiguration(spec=spec, enabled_requested=enabled_requested, enable_flag_valid=enable_flag_valid, network_released=network_released, network_flag_valid=network_flag_valid, credentials=credentials, public_base_url=_environment_value(current_environment, "CASINO_OAUTH_PUBLIC_BASE_URL")))
     # Return an immutable configuration snapshot without enabling any provider behavior.
-    return OAuthConfiguration(providers=tuple(provider_configurations))
+    return OAuthConfiguration(providers=tuple(provider_configurations), digest_key=_environment_value(current_environment, "CASINO_OAUTH_DIGEST_KEY"))
 
 
 # Build one external provider diagnostic from an inert configuration snapshot.
-def _external_provider_diagnostic(configuration: ProviderConfiguration) -> ProviderDiagnostic:
+def _external_provider_diagnostic(configuration: ProviderConfiguration, digest_key: str) -> ProviderDiagnostic:
     # Collect missing variable names without collecting or exposing their values.
     missing_variables = []
     # Record absence of the public client identifier.
@@ -154,12 +166,24 @@ def _external_provider_diagnostic(configuration: ProviderConfiguration) -> Provi
     if not configuration.public_base_url:
         # Append only the canonical environment-variable name.
         missing_variables.append("CASINO_OAUTH_PUBLIC_BASE_URL")
+    # Require independent server-owned digest material before flow or limiter persistence is ready.
+    if len(digest_key.encode("utf-8")) < 32:
+        # Name only the missing configuration key and never its supplied value.
+        missing_variables.append("CASINO_OAUTH_DIGEST_KEY")
     # Collect stable problem identifiers rather than exception text or supplied values.
     problems = []
     # Record an invalid enable flag separately from other missing configuration.
     if not configuration.enable_flag_valid:
         # Append one stable problem identifier.
         problems.append("invalid_enable_flag")
+    # Record an invalid network-release flag separately from provider readiness.
+    if not configuration.network_flag_valid:
+        # Preserve a stable secret-free diagnostic category.
+        problems.append("invalid_network_release_flag")
+    # Reject known placeholder digest material even when it happens to meet the length floor.
+    if digest_key.strip().lower() in UNSAFE_DIGEST_KEYS:
+        # Preserve a value-free unsafe-key diagnostic.
+        problems.append("invalid_digest_key")
     # Start without a callback URL until structural validation succeeds.
     callback_url = None
     # Validate a configured public base even while disabled so Operations can prepare safely.
@@ -173,7 +197,7 @@ def _external_provider_diagnostic(configuration: ProviderConfiguration) -> Provi
             # Record only the problem class and never the configured base value.
             problems.append("invalid_public_base_url")
     # Mark explicitly requested but incomplete or malformed providers as misconfigured.
-    if not configuration.enable_flag_valid or (configuration.enabled_requested and (missing_variables or problems)):
+    if not configuration.enable_flag_valid or not configuration.network_flag_valid or (configuration.enabled_requested and (missing_variables or problems)):
         # Store the fail-closed misconfigured status.
         status = "misconfigured"
     # Mark a fully configured explicitly requested provider as ready for later route integration.
@@ -185,14 +209,14 @@ def _external_provider_diagnostic(configuration: ProviderConfiguration) -> Provi
         # Store the safe default status.
         status = "disabled"
     # Return only secret-safe readiness facts.
-    return ProviderDiagnostic(provider=configuration.spec.provider_id, flow=configuration.spec.flow, status=status, configuration_ready=status == "ready", runtime_available=False, enabled_requested=configuration.enabled_requested, client_id_configured=bool(configuration.credentials.client_id.strip()), client_secret_configured=bool(configuration.credentials.client_secret.strip()), callback_url=callback_url, missing_variables=tuple(name for name in missing_variables if name), problems=tuple(problems))
+    return ProviderDiagnostic(provider=configuration.spec.provider_id, flow=configuration.spec.flow, status=status, configuration_ready=status == "ready", runtime_available=status == "ready" and configuration.network_released, enabled_requested=configuration.enabled_requested, network_released=configuration.network_released, client_id_configured=bool(configuration.credentials.client_id.strip()), client_secret_configured=bool(configuration.credentials.client_secret.strip()), callback_url=callback_url, missing_variables=tuple(name for name in missing_variables if name), problems=tuple(problems))
 
 
 # Return local and external provider diagnostics in deterministic display order.
 def oauth_diagnostics(configuration: OAuthConfiguration) -> tuple[ProviderDiagnostic, ...]:
     # Start with local password login as available and unchanged.
-    diagnostics = [ProviderDiagnostic(provider="local", flow="password", status="ready", configuration_ready=True, runtime_available=True, enabled_requested=True, client_id_configured=False, client_secret_configured=False, callback_url=None)]
+    diagnostics = [ProviderDiagnostic(provider="local", flow="password", status="ready", configuration_ready=True, runtime_available=True, enabled_requested=True, network_released=True, client_id_configured=False, client_secret_configured=False, callback_url=None)]
     # Append one fail-closed diagnostic for each configured external provider.
-    diagnostics.extend(_external_provider_diagnostic(provider) for provider in configuration.providers)
+    diagnostics.extend(_external_provider_diagnostic(provider, configuration.digest_key) for provider in configuration.providers)
     # Return an immutable diagnostic collection for future Admin or UI adapters.
     return tuple(diagnostics)

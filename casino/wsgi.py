@@ -154,8 +154,8 @@ def _json_response(start_response, status: int, payload: dict, extra_headers=Non
 
 # Initialize provider-neutral state once during production worker boot.
 def _validate_restricted_preview_routes() -> None:
-    # Require exactly login, guest entry, disabled private invitation redemption, and sanitized liveness. (issues #317, #332)
-    if auth.PUBLIC_API_PATHS != {"/api/v2/auth/login", "/api/v2/auth/guest", "/api/v2/auth/redeem-invitation", "/healthz"}:
+    # Require exactly the reviewed anonymous fixed routes plus separately matched OAuth paths. (issues #317, #326, #332)
+    if auth.PUBLIC_API_PATHS != {"/api/v2/auth/login", "/api/v2/auth/guest", "/api/v2/auth/redeem-invitation", "/api/v2/auth/oauth/providers", "/healthz"}:
         # Fail startup rather than allowing compatibility metadata to broaden public access.
         raise RuntimeError("Restricted preview public routes do not match the accepted allowlist")
     # Inspect registered method and pattern pairs without invoking any route.
@@ -166,10 +166,10 @@ def _validate_restricted_preview_routes() -> None:
         if "signup" in pattern or "/register" in pattern:
             # Keep the diagnostic free of private route or configuration details.
             raise RuntimeError("Restricted preview does not permit signup routes")
-        # Reject live OAuth action and callback routes while retaining the Admin diagnostic route.
-        if "/auth/oauth/" in pattern and "/admin/" not in pattern:
-            # Fail closed until the separately held public-launch provider gate.
-            raise RuntimeError("Restricted preview does not permit OAuth action routes")
+        # Reject every OAuth action route outside the exact reviewed disabled-by-default v2 shapes.
+        if "/auth/oauth/" in pattern and "/admin/" not in pattern and not any(fragment in pattern for fragment in ("/api/v2/auth/oauth/providers", "/api/v2/auth/oauth/(?p<provider>google|facebook)/start", "/api/v2/auth/oauth/(?p<provider>google|facebook)/callback")):
+            # Fail startup instead of accepting an unreviewed provider or action route.
+            raise RuntimeError("Restricted preview OAuth routes do not match the accepted allowlist")
 
 
 # Initialize provider-neutral state and return the validated production security policy.
@@ -182,7 +182,7 @@ def _initialize_runtime() -> SecurityPolicy:
     auth.validate_session_bounds()
     # Require the explicit canonical origin, proxy, cookie, body, and rate policy.
     policy = SecurityPolicy.from_environment()
-    # Prove signup and OAuth remain absent from the live route registry.
+    # Prove signup remains absent and every disabled-by-default OAuth route matches the reviewed v2 allowlist.
     _validate_restricted_preview_routes()
     # Create only the configured external data and log directories.
     ensure_dirs()
@@ -271,6 +271,12 @@ class CasinoWSGIApplication:
         context = _authorize_request(method, path, body, headers, client, self.policy)
         # Dispatch the request through the single canonical route registry.
         data = ROUTER.dispatch(method, raw_path, body, context)
+        # Return one same-origin OAuth completion redirect without a callback JSON body.
+        if context.get("redirect"):
+            # Prepend the reviewed Location to application-owned hardened cookie headers.
+            redirect_headers = [("Location", str(context["redirect"])), *list(context.get("response_headers") or [])]
+            # Publish an empty 303 response under the same cache and security policy.
+            return _respond(start_response, 303, b"", "text/plain; charset=utf-8", redirect_headers, effective_scheme)
         # Return the standard successful envelope with hardened cookies and response policy.
         return _json_response(start_response, 200, {"ok": True, "data": data}, context.get("response_headers"), effective_scheme)
 
@@ -318,20 +324,8 @@ class CasinoWSGIApplication:
             target = WEB_DIR / "index.html"
         # Bootstrap a host-only CSRF cookie on every non-Admin HTML shell response.
         if target.name == "index.html" and not extra_headers:
-            # Prefer an authenticated session's distinct CSRF value when a valid cookie exists.
-            bootstrap_token = ""
-            # Start protected optional authentication so an expired cookie still reaches login.
-            try:
-                # Authenticate only when the request actually carries a session credential.
-                if auth.extract_cookie_token(headers):
-                    # Resolve the durable session without exposing identity data.
-                    session, _user = auth.authenticate_headers(headers)
-                    # Reuse the current session CSRF value for authenticated browser requests.
-                    bootstrap_token = str(session.get("csrf_token") or "")
-            # Treat invalid or expired optional sessions as anonymous shell requests.
-            except CasinoError:
-                # Leave the bootstrap value empty so a fresh anonymous token is issued.
-                bootstrap_token = ""
+            # Reuse an active session's distinct CSRF value without authenticating a context-bound guest cookie.
+            bootstrap_token = auth.csrf_token_for_session_cookie(headers)
             # Reuse a bounded anonymous double-submit cookie when no session is active.
             if not bootstrap_token:
                 # Read only the named cookie rather than reflecting the complete Cookie header.

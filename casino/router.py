@@ -200,8 +200,10 @@ class Router:
         parsed = urlparse(raw_path)
         # Set path to the value needed for the next operation.
         path = parsed.path
-        # Set query to the value needed for the next operation.
-        query = {k: v[-1] if v else "" for k, v in parse_qs(parsed.query).items()}
+        # Parse blank values and preserve duplicate values so OAuth callbacks can reject ambiguity.
+        parsed_query = parse_qs(parsed.query, keep_blank_values=True)
+        # Keep ordinary single values scalar while passing duplicates as lists to strict handlers.
+        query = {key: values[0] if len(values) == 1 else values for key, values in parsed_query.items()}
         # Apply the shared authenticated-player resolver to every game endpoint before dispatch.
         if path.startswith("/api/v1/games/"):
             # Remove client-authored outcome, privilege, wallet, and round-control fields before game dispatch.

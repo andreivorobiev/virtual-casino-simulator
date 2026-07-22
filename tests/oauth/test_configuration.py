@@ -41,15 +41,17 @@ class OAuthConfigurationTests(unittest.TestCase):
         # Define a synthetic secret that must never appear in representations or diagnostics.
         client_secret = "synthetic-google-client-secret"
         # Build a complete injected Google configuration on non-user port 8767.
-        environment = {"CASINO_OAUTH_ENABLED_GOOGLE": "true", "CASINO_GOOGLE_CLIENT_ID": client_id, "CASINO_GOOGLE_CLIENT_SECRET": client_secret, "CASINO_OAUTH_PUBLIC_BASE_URL": "http://localhost:8767"}
+        environment = {"CASINO_OAUTH_ENABLED_GOOGLE": "true", "CASINO_GOOGLE_CLIENT_ID": client_id, "CASINO_GOOGLE_CLIENT_SECRET": client_secret, "CASINO_OAUTH_PUBLIC_BASE_URL": "http://localhost:8767", "CASINO_OAUTH_DIGEST_KEY": "synthetic-digest-key-with-at-least-32-bytes"}
         # Diagnose only the injected configuration.
         configuration, diagnostics = self._diagnostics_by_provider(environment)
         # Assert Google is structurally ready for later integration.
         self.assertEqual(diagnostics["google"].status, "ready")
         # Assert inert configuration is ready while no runtime route or adapter is available.
         self.assertTrue(diagnostics["google"].configuration_ready)
-        # Assert runtime availability remains false in the isolated package.
+        # Assert runtime availability remains false until the independent provider-network release.
         self.assertFalse(diagnostics["google"].runtime_available)
+        # Assert the independent release latch remains false by default.
+        self.assertFalse(diagnostics["google"].network_released)
         # Assert the exact public callback URL is available to Operations.
         self.assertEqual(diagnostics["google"].callback_url, "http://localhost:8767/api/v2/auth/oauth/google/callback")
         # Assert readiness diagnostics contain no missing variables.
@@ -87,7 +89,7 @@ class OAuthConfigurationTests(unittest.TestCase):
         # Assert incomplete configuration is unavailable.
         self.assertFalse(diagnostics["facebook"].runtime_available)
         # Assert only missing setting names are reported.
-        self.assertEqual(diagnostics["facebook"].missing_variables, ("CASINO_FACEBOOK_APP_SECRET", "CASINO_OAUTH_PUBLIC_BASE_URL"))
+        self.assertEqual(diagnostics["facebook"].missing_variables, ("CASINO_FACEBOOK_APP_SECRET", "CASINO_OAUTH_PUBLIC_BASE_URL", "CASINO_OAUTH_DIGEST_KEY"))
         # Assert no synthetic identifier appears in the configuration representation.
         self.assertNotIn("synthetic-app-id", repr(configuration))
 
@@ -113,6 +115,21 @@ class OAuthConfigurationTests(unittest.TestCase):
         malformed_configuration = load_oauth_configuration({"CASINO_OAUTH_PUBLIC_BASE_URL": f"https://user:{embedded_marker}@casino.example.test"})
         # Assert configuration representations suppress the entire raw callback base.
         self.assertNotIn(embedded_marker, repr(malformed_configuration))
+
+    # Verify the independent provider-network latch is required and provider-scoped.
+    def test_network_release_is_explicit_independent_and_provider_scoped(self):
+        # Build complete Google settings while releasing only Google transport construction.
+        environment = {"CASINO_OAUTH_ENABLED_GOOGLE": "true", "CASINO_OAUTH_NETWORK_RELEASED_GOOGLE": "true", "CASINO_GOOGLE_CLIENT_ID": "synthetic-id", "CASINO_GOOGLE_CLIENT_SECRET": "synthetic-secret", "CASINO_OAUTH_PUBLIC_BASE_URL": "https://casino.example.test", "CASINO_OAUTH_DIGEST_KEY": "synthetic-digest-key-with-at-least-32-bytes"}
+        # Diagnose only the injected release snapshot.
+        _, diagnostics = self._diagnostics_by_provider(environment)
+        # Require Google runtime availability only after both independent gates are true.
+        self.assertTrue(diagnostics["google"].runtime_available)
+        # Keep Facebook unavailable under the independently scoped latch.
+        self.assertFalse(diagnostics["facebook"].runtime_available)
+        # Reject ambiguous release values without enabling runtime.
+        _, invalid = self._diagnostics_by_provider({**environment, "CASINO_OAUTH_NETWORK_RELEASED_GOOGLE": "sometimes"})
+        # Require a stable fail-closed problem code for operator diagnosis.
+        self.assertIn("invalid_network_release_flag", invalid["google"].problems)
 
 
 # Run focused tests when this file is invoked directly.

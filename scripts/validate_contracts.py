@@ -35,6 +35,8 @@ TOKEN_COMPONENT_CONTRACT = CONTRACT_DIR / "one-time-tokens.v2.yaml"
 MAIL_COMPATIBILITY_CONTRACT = ROOT / "contracts" / "compatibility" / "transactional-mail.json"
 # Point to the disabled restricted-preview invitation compatibility policy.
 INVITATION_COMPATIBILITY_CONTRACT = ROOT / "contracts" / "compatibility" / "invitation-enrollment.json"
+# Point to the owner-approved disabled invite-only OAuth compatibility policy.
+OAUTH_COMPATIBILITY_CONTRACT = ROOT / "contracts" / "compatibility" / "oauth-invite-only-runtime.json"
 
 # Define the main function used by this module.
 def main():
@@ -146,15 +148,14 @@ def main():
         if preview_security.get("artifact") != "restricted-preview-security" or preview_security.get("stage") != "restricted-preview":
             # Reject renamed or repurposed policy records.
             errors.append(f"{PREVIEW_SECURITY_CONTRACT} does not identify the restricted-preview policy")
-        # Require exactly the two deliberately anonymous application routes.
-        # Preserve only login, explicitly approved disposable guest entry, and liveness as anonymous routes.
-        if preview_security.get("anonymous_routes") != ["/api/v2/auth/login", "/api/v2/auth/guest", "/api/v2/auth/redeem-invitation", "/healthz"]:
+        # Preserve login, approved guest/invitation entry, disabled provider status/start/callback, and liveness as anonymous routes.
+        if preview_security.get("anonymous_routes") != ["/api/v2/auth/login", "/api/v2/auth/guest", "/api/v2/auth/redeem-invitation", "/api/v2/auth/oauth/providers", "/api/v2/auth/oauth/{google|facebook}/start", "/api/v2/auth/oauth/{google|facebook}/callback", "/healthz"]:
             # Fail closed when anonymous route scope expands or changes order.
             errors.append(f"{PREVIEW_SECURITY_CONTRACT} does not preserve the anonymous route allowlist")
         # Require public enrollment and live provider flows to stay disabled.
         access_policy = preview_security.get("access_policy", {})
         # Check each non-public stage switch explicitly.
-        if access_policy.get("public_signup") is not False or access_policy.get("live_oauth") is not False or access_policy.get("admin_requires_admin_session") is not True:
+        if access_policy.get("public_signup") is not False or access_policy.get("live_oauth") is not False or access_policy.get("admin_requires_admin_session") is not True or access_policy.get("oauth_provider_flags_default_false") is not True or access_policy.get("oauth_provider_network_release_flags_default_false") is not True or access_policy.get("oauth_existing_private_invite_accounts_only") is not True:
             # Report access-policy drift without runtime details.
             errors.append(f"{PREVIEW_SECURITY_CONTRACT} does not preserve restricted-preview access")
         # Require exact request integrity rather than advisory browser behavior.
@@ -270,6 +271,40 @@ def main():
     except (OSError, json.JSONDecodeError) as exc:
         # Report only the checked artifact path and exception class.
         errors.append(f"invitation compatibility policy could not be validated: {INVITATION_COMPATIBILITY_CONTRACT} ({type(exc).__name__})")
+    # Require the separately approved disabled invite-only OAuth compatibility boundary to remain exact.
+    try:
+        # Parse the OAuth policy without reading runtime credentials, proofs, or identity state.
+        oauth_policy = json.loads(OAUTH_COMPATIBILITY_CONTRACT.read_text(encoding="utf-8"))
+        # Require frozen v1 compatibility and the exact implemented-disabled repository status.
+        if oauth_policy.get("status") != "implemented_disabled_by_default" or oauth_policy.get("v1_compatibility", {}).get("policy") != "unchanged":
+            # Reject a renamed, widened, or compatibility-breaking policy.
+            errors.append(f"{OAUTH_COMPATIBILITY_CONTRACT} does not preserve disabled OAuth compatibility")
+        # Read the additive route declarations once for exact boundary checks.
+        oauth_routes = oauth_policy.get("v2_endpoints", [])
+        # Require the six exact routes and continued denial of signup, user creation, merge, and email linking.
+        if oauth_routes != ["GET /api/v2/auth/oauth/providers", "POST /api/v2/auth/oauth/{google|facebook}/start", "GET /api/v2/auth/oauth/{google|facebook}/callback", "GET /api/v2/me/oauth/providers", "POST /api/v2/me/oauth/{google|facebook}/unlink", "GET /api/v2/admin/oauth/providers"] or oauth_policy.get("account_boundary", {}).get("public_signup") is not False or oauth_policy.get("account_boundary", {}).get("provider_user_creation") is not False or oauth_policy.get("account_boundary", {}).get("email_matching_or_linking") is not False:
+            # Reject route expansion or any provider-selected account behavior.
+            errors.append(f"{OAUTH_COMPATIBILITY_CONTRACT} does not preserve the invite-only account boundary")
+        # Read both provider-specific false-default gate declarations.
+        provider_flags = oauth_policy.get("provider_flags", {})
+        # Require exact provider enable/release names and their conjunctive runtime policy.
+        if provider_flags.get("google") != ["CASINO_OAUTH_ENABLED_GOOGLE defaults false", "CASINO_OAUTH_NETWORK_RELEASED_GOOGLE defaults false"] or provider_flags.get("facebook") != ["CASINO_OAUTH_ENABLED_FACEBOOK defaults false", "CASINO_OAUTH_NETWORK_RELEASED_FACEBOOK defaults false"] or provider_flags.get("runtime_available") != "provider configuration readiness AND its independent provider-network release latch":
+            # Reject any single-switch or cross-provider release policy.
+            errors.append(f"{OAUTH_COMPATIBILITY_CONTRACT} does not preserve independent OAuth release gates")
+        # Read the durable flow policy once for recovery and separation checks.
+        flow_security = oauth_policy.get("flow_security", {})
+        # Require recoverable claims, terminal replay protection, and physically separate metadata/proofs.
+        if flow_security.get("recoverable_atomic_one_time_flow") is not True or flow_security.get("replay_rejected") is not True or not flow_security.get("durable_separation", {}).get("metadata") or not flow_security.get("durable_separation", {}).get("exchange_proofs"):
+            # Reject weakened replay, ambiguity, or proof-separation policy.
+            errors.append(f"{OAUTH_COMPATIBILITY_CONTRACT} does not preserve OAuth flow safety")
+        # Require exact Workroom approval traceability and continued denial of live release authority.
+        if "Workroom #25 owner comment 5027642551" not in oauth_policy.get("repository_merge_approval", "") or "do not authorize live provider" not in oauth_policy.get("gate_policy", ""):
+            # Reject missing repository authority or accidental live authority.
+            errors.append(f"{OAUTH_COMPATIBILITY_CONTRACT} does not preserve the Workroom #25 authority boundary")
+    # Convert absent or malformed policy into one stable contract diagnostic.
+    except (OSError, json.JSONDecodeError) as exc:
+        # Report only the checked artifact path and exception class.
+        errors.append(f"OAuth compatibility policy could not be validated: {OAUTH_COMPATIBILITY_CONTRACT} ({type(exc).__name__})")
     # Set schema_dir to the value needed for the next operation.
     schema_dir = ROOT / "contracts" / "schemas"
     # Iterate through the collection to process each item.
@@ -289,7 +324,7 @@ def main():
         # Return the computed value to the caller.
         return 1
     # Write diagnostic output so the current operation can be inspected.
-    print(f"Contract validation passed for {len(REQUIRED) + len(REQUIRED_V2) + 4} shared policies and {len(GAMES)} catalog games.")
+    print(f"Contract validation passed for {len(REQUIRED) + len(REQUIRED_V2) + 5} shared policies and {len(GAMES)} catalog games.")
     # Return the computed value to the caller.
     return 0
 

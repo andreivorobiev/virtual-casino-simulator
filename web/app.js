@@ -1,6 +1,6 @@
 // AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
 // Import required dependency so this module can call the frozen API envelope safely.
-import { acceptTerms, addUserTokens, api, currentUser, departGuestTrial, endGuestTrial, guestTrial, logClient, login, logout, redeemInvitation } from './core/api.js';
+import { acceptTerms, addUserTokens, api, currentUser, departGuestTrial, endGuestTrial, guestTrial, logClient, login, logout, oauthLinks, oauthProviders, redeemInvitation, startOAuth, unlinkOAuth } from './core/api.js';
 // Import required dependency so this module can render shared wallet and premium UI helpers.
 import { renderTokenBalance, toast, tokens, safe, renderPremiumTag } from './core/ui.js';
 // Import required dependency so the shell can preserve locale across auth and route changes.
@@ -26,6 +26,8 @@ let gameRailObserver = null;
 let lobbySearch = '';
 // Track the selected scalable catalog category.
 let lobbyCategory = 'all';
+// Read one fixed provider-completion marker and immediately remove it from browser history.
+const oauthCompletion = readOAuthCompletion();
 
 // Relay game/autoplay toast events through the shell-level toast outlet.
 window.addEventListener('casino-toast', event => toast(event.detail?.message || 'Auto stopped'));
@@ -82,6 +84,38 @@ function routeFromLocation() {
   if (gameDescriptors.some(game => game.id === hashRoute)) return hashRoute;
   // Treat every non-game static path as the lobby shell route.
   return 'lobby';
+}
+
+// Consume only fixed OAuth completion markers without retaining callback query material. (OAUTH-010)
+function readOAuthCompletion() {
+  // Parse the current same-origin URL through the browser URL implementation.
+  const url = new URL(location.href);
+  // Read only the bounded provider and outcome values emitted by the server.
+  const provider = url.searchParams.get('oauth_provider');
+  // Read the fixed completion state independently from every other query field.
+  const status = url.searchParams.get('oauth_status');
+  // Ignore any unreviewed or partial values without reflecting them into the UI.
+  if (!['google', 'facebook'].includes(provider) || !['linked', 'signed_in', 'cancelled', 'error'].includes(status)) return null;
+  // Remove only the fixed completion markers before later logs, reloads, or copied links can retain them.
+  url.searchParams.delete('oauth_provider');
+  // Remove the bounded status marker alongside its provider.
+  url.searchParams.delete('oauth_status');
+  // Replace the current history entry while preserving unrelated approved test and locale parameters.
+  history.replaceState(history.state, '', `${url.pathname}${url.search}${url.hash}`);
+  // Return only the allowlisted low-cardinality completion facts.
+  return { provider, status };
+}
+
+// Resolve localized copy for one server-owned OAuth completion marker.
+function oauthCompletionCopy() {
+  // Return no copy when the browser did not arrive from a reviewed completion redirect.
+  if (!oauthCompletion) return '';
+  // Map successful link and sign-in outcomes to the same privacy-safe acknowledgement.
+  if (['linked', 'signed_in'].includes(oauthCompletion.status)) return t('auth.oauthCallbackSuccess', {}, 'shell');
+  // Map cancellation separately without reflecting provider error parameters.
+  if (oauthCompletion.status === 'cancelled') return t('auth.oauthCallbackCancelled', {}, 'shell');
+  // Collapse every reviewed error outcome to one generic retry-safe message.
+  return t('auth.oauthCallbackError', {}, 'shell');
 }
 
 // Synchronize browser history with one resolved catalog route.
@@ -191,7 +225,7 @@ function updateCurrentUserShell() {
   // Read the language selector in the persistent topbar.
   const localeSelect = document.getElementById('shell-locale-select');
   // Wire the persistent locale selector without remounting games.
-  wireLocaleSelect(localeSelect, () => { renderNav(); if (active === 'lobby') navigate('lobby'); });
+  wireLocaleSelect(localeSelect, () => { renderNav(); updateCurrentUserShell(); if (active === 'lobby') navigate('lobby'); });
   // Localize the persistent brand and wallet labels that remain mounted across routes.
   setStatusText('shell-brand-title', t('brand.title', {}, 'shell'));
   // Keep the compact subtitle aligned with the selected shell locale.
@@ -206,6 +240,12 @@ function updateCurrentUserShell() {
   document.getElementById('wallet-menu-summary')?.setAttribute('aria-label', t('wallet.addTokens', {}, 'shell'));
   // Localize the language selector's accessible name.
   localeSelect?.setAttribute('aria-label', t('language.aria', {}, 'shell'));
+  // Keep provider identity controls unavailable to disposable guests and current for persistent accounts.
+  const accountMenu = document.getElementById('account-menu');
+  // Hide the complete account-method surface for account-free guest principals.
+  if (accountMenu) accountMenu.hidden = isGuestSession();
+  // Refresh boolean-only provider link state without delaying wallet or route rendering.
+  if (!isGuestSession()) void renderOAuthAccountControls();
   // Return the rendered token amount for test and toast flows.
   return amount;
 }
@@ -226,8 +266,10 @@ function renderLoginGate(message = '') {
   view.className = 'screen auth-screen';
   // Clear guest-only shell sizing after explicit end, expiry, or browser-proof loss.
   document.body.classList.remove('guest-trial-active');
+  // Resolve explicit caller feedback before a fixed provider completion acknowledgement.
+  const authMessage = message || oauthCompletionCopy();
   // Render the browser login gate with private-beta toy-simulator acknowledgement.
-  view.innerHTML = `<section class="auth-panel" data-testid="login-gate"><p class="eyebrow">${safe(t('auth.eyebrow', {}, 'shell'))}</p><h1>${safe(t('auth.title', {}, 'shell'))}</h1><p class="auth-copy">${safe(t('auth.copy', {}, 'shell'))}</p><form id="login-form" class="auth-form"><label>${safe(t('auth.email', {}, 'shell'))}<input id="login-email" data-testid="login-email" type="email" autocomplete="username" required></label><label>${safe(t('auth.password', {}, 'shell'))}<input id="login-password" data-testid="login-password" type="password" autocomplete="current-password" required></label><label>${safe(t('auth.language', {}, 'shell'))}<select id="auth-locale-select" data-testid="auth-locale-select"></select></label><label class="check-row"><input id="login-terms-check" data-testid="login-terms-check" type="checkbox" required><span>${safe(t('auth.termsCheck', {}, 'shell'))}</span></label><button class="primary" data-testid="login-submit" type="submit">${safe(t('auth.submit', {}, 'shell'))}</button><p id="auth-message" class="auth-message">${safe(message)}</p></form><div class="auth-guest" data-testid="guest-trial"><button id="guest-trial-button" class="secondary" data-testid="guest-trial-button" type="button">${safe(t('auth.guestCta', {}, 'shell'))}</button><p class="auth-guest-copy" data-testid="guest-trial-copy">${safe(t('auth.guestInfo', {}, 'shell'))}</p></div><section class="oauth-provider-status" data-testid="oauth-providers-disabled" aria-labelledby="oauth-provider-heading"><h2 id="oauth-provider-heading">${safe(t('auth.oauthDivider', {}, 'shell'))}</h2><div class="oauth-provider-grid"><button class="oauth-provider-button" data-testid="oauth-google" type="button" disabled aria-disabled="true">${safe(t('auth.oauthGoogle', {}, 'shell'))}</button><button class="oauth-provider-button" data-testid="oauth-facebook" type="button" disabled aria-disabled="true">${safe(t('auth.oauthFacebook', {}, 'shell'))}</button></div><p class="oauth-provider-copy" data-testid="oauth-provider-message" role="status">${safe(t('auth.oauthUnavailable', {}, 'shell'))}</p></section></section>`;
+  view.innerHTML = `<section class="auth-panel" data-testid="login-gate"><p class="eyebrow">${safe(t('auth.eyebrow', {}, 'shell'))}</p><h1>${safe(t('auth.title', {}, 'shell'))}</h1><p class="auth-copy">${safe(t('auth.copy', {}, 'shell'))}</p><form id="login-form" class="auth-form"><label>${safe(t('auth.email', {}, 'shell'))}<input id="login-email" data-testid="login-email" type="email" autocomplete="username" required></label><label>${safe(t('auth.password', {}, 'shell'))}<input id="login-password" data-testid="login-password" type="password" autocomplete="current-password" required></label><label>${safe(t('auth.language', {}, 'shell'))}<select id="auth-locale-select" data-testid="auth-locale-select"></select></label><label class="check-row"><input id="login-terms-check" data-testid="login-terms-check" type="checkbox" required><span>${safe(t('auth.termsCheck', {}, 'shell'))}</span></label><button class="primary" data-testid="login-submit" type="submit">${safe(t('auth.submit', {}, 'shell'))}</button><p id="auth-message" class="auth-message" data-testid="oauth-callback-message">${safe(authMessage)}</p></form><div class="auth-guest" data-testid="guest-trial"><button id="guest-trial-button" class="secondary" data-testid="guest-trial-button" type="button">${safe(t('auth.guestCta', {}, 'shell'))}</button><p class="auth-guest-copy" data-testid="guest-trial-copy">${safe(t('auth.guestInfo', {}, 'shell'))}</p></div><section class="oauth-provider-status" data-testid="oauth-providers-disabled" aria-labelledby="oauth-provider-heading"><h2 id="oauth-provider-heading">${safe(t('auth.oauthDivider', {}, 'shell'))}</h2><div class="oauth-provider-grid"><button class="oauth-provider-button" data-testid="oauth-google" type="button" disabled aria-disabled="true">${safe(t('auth.oauthGoogle', {}, 'shell'))}</button><button class="oauth-provider-button" data-testid="oauth-facebook" type="button" disabled aria-disabled="true">${safe(t('auth.oauthFacebook', {}, 'shell'))}</button></div><p class="oauth-provider-copy" data-testid="oauth-provider-message" role="status">${safe(t('auth.oauthUnavailable', {}, 'shell'))}</p></section></section>`;
   // Wire the auth-screen locale selector and rerender the gate after switching.
   wireLocaleSelect(document.getElementById('auth-locale-select'), () => renderLoginGate(message));
   // Wire form submission through the v2 auth login endpoint.
@@ -236,6 +278,121 @@ function renderLoginGate(message = '') {
   const guestButton = document.getElementById('guest-trial-button');
   // Start a guest trial on click only when the configuration-driven button is present.
   if (guestButton) guestButton.onclick = handleGuestTrial;
+  // Resolve provider availability after the password and guest controls are already usable.
+  void enableAvailableOAuthSignIn();
+}
+
+// Enable only independently released providers while retaining disabled-by-default login behavior. (OAUTH-007)
+async function enableAvailableOAuthSignIn() {
+  // Read the provider-status region from the current login render.
+  const region = document.querySelector('.oauth-provider-status');
+  // Stop when navigation replaced the login screen before the request began.
+  if (!region) return;
+  // Start protected availability loading so local-password and guest entry remain usable on failure.
+  try {
+    // Fetch only fixed provider ids and boolean availability.
+    const result = await oauthProviders();
+    // Select exact provider identifiers whose complete runtime and independent network gate are ready.
+    const available = new Set((result.providers || []).filter(item => item.available === true).map(item => item.provider));
+    // Configure each reviewed provider button independently.
+    for (const provider of ['google', 'facebook']) {
+      // Read the provider's stable login control.
+      const button = document.querySelector(`[data-testid="oauth-${provider}"]`);
+      // Skip a stale render or malformed response without affecting local login.
+      if (!button) continue;
+      // Enable only an exact provider reported available by the bounded public contract.
+      button.disabled = !available.has(provider);
+      // Keep assistive state aligned with native disabled behavior.
+      button.setAttribute('aria-disabled', String(button.disabled));
+      // Navigate only after a server-created one-time flow succeeds.
+      button.onclick = button.disabled ? null : () => beginOAuth(provider, 'signin');
+    }
+    // Mark the visual matrix state according to any fully released provider.
+    region.dataset.testid = available.size ? 'oauth-providers-available' : 'oauth-providers-disabled';
+    // Explain the private-invite boundary whenever a provider is available.
+    region.querySelector('[data-testid="oauth-provider-message"]').textContent = available.size ? t('auth.oauthInviteOnly', {}, 'shell') : t('auth.oauthUnavailable', {}, 'shell');
+  // Keep controls disabled and show a stable retry-safe message on status failure.
+  } catch (_) {
+    // Stamp the governed failure state without exposing transport or configuration details.
+    region.dataset.testid = 'oauth-providers-status-error';
+    // Preserve all local auth controls and publish one generic localized status.
+    region.querySelector('[data-testid="oauth-provider-message"]').textContent = t('auth.oauthStatusError', {}, 'shell');
+  }
+}
+
+// Request a one-time authorization URL and navigate without logging or persisting it. (OAUTH-008)
+async function beginOAuth(provider, action) {
+  // Read the active auth/account message outlet for bounded errors.
+  const message = action === 'signin' ? document.getElementById('auth-message') : document.getElementById('oauth-account-message');
+  // Start protected flow creation so no provider navigation occurs after an API failure.
+  try {
+    // Read the explicit linking checkbox only for authenticated account linking.
+    const confirmation = document.getElementById('oauth-link-confirm');
+    // Stop linking until the canonical user explicitly confirms this action.
+    if (action === 'link' && !confirmation?.checked) throw new Error(t('auth.oauthConfirmRequired', {}, 'shell'));
+    // Request a short-lived browser-bound flow with a same-origin destination.
+    const result = await startOAuth(provider, { action, return_to: '/', ...(action === 'link' ? { confirm_link: true } : {}) });
+    // Navigate directly without copying the sensitive URL into logs or application storage.
+    location.assign(result.authorization_url);
+  // Show only the server's safe public message in the current auth surface.
+  } catch (error) {
+    // Keep the page usable and avoid reflecting provider response content.
+    if (message) message.textContent = error.message;
+  }
+}
+
+// Render authenticated provider linking with explicit confirmation and safe unlink. (OAUTH-009, OAUTH-010)
+async function renderOAuthAccountControls() {
+  // Read the persistent popover reserved by the authenticated shell.
+  const popover = document.getElementById('oauth-account-popover');
+  // Stop before login, for a guest, or while another auth gate owns the page.
+  if (!popover || !currentSession || isGuestSession()) return;
+  // Stamp a bounded loading state for assistive and automated lifecycle evidence.
+  popover.dataset.oauthState = 'loading';
+  // Render a localized loading state without provider configuration details.
+  popover.innerHTML = `<h2>${safe(t('auth.oauthAccountTitle', {}, 'shell'))}</h2><p class="oauth-provider-copy">${safe(t('status.loading', {}, 'shell'))}</p>`;
+  // Start protected link-status loading so provider errors cannot affect gameplay.
+  try {
+    // Read boolean availability and ownership for the current canonical user.
+    const result = await oauthLinks();
+    // Mark the boolean-only linked mix without exposing provider subjects or user ids.
+    popover.dataset.oauthState = (result.providers || []).some(item => item.linked === true) ? 'linked' : 'unlinked';
+    // Render one fixed provider row with the appropriate link or unlink action.
+    const rows = (result.providers || []).filter(item => ['google', 'facebook'].includes(item.provider)).map(item => `<div class="oauth-account-row" data-testid="oauth-link-${safe(item.provider)}"><span>${safe(item.provider === 'google' ? t('auth.oauthGoogleName', {}, 'shell') : t('auth.oauthFacebookName', {}, 'shell'))}</span><button type="button" data-oauth-account-provider="${safe(item.provider)}" data-oauth-account-action="${item.linked ? 'unlink' : 'link'}" ${!item.linked && !item.available ? 'disabled aria-disabled="true"' : ''}>${safe(item.linked ? t('auth.oauthUnlink', {}, 'shell') : t('auth.oauthLink', {}, 'shell'))}</button></div>`).join('');
+    // Require explicit consent adjacent to the provider actions.
+    popover.innerHTML = `<h2>${safe(t('auth.oauthAccountTitle', {}, 'shell'))}</h2><p class="oauth-provider-copy">${safe(t('auth.oauthAccountCopy', {}, 'shell'))}</p>${oauthCompletion ? `<p class="auth-message" data-testid="oauth-callback-message" role="status">${safe(oauthCompletionCopy())}</p>` : ''}<label class="check-row oauth-link-confirm"><input id="oauth-link-confirm" type="checkbox" data-testid="oauth-link-confirm"><span>${safe(t('auth.oauthLinkConfirm', {}, 'shell'))}</span></label>${rows}<p id="oauth-account-message" class="auth-message" role="status"></p>`;
+    // Wire each rendered provider action through its explicit operation.
+    popover.querySelectorAll('[data-oauth-account-provider]').forEach(button => {
+      // Handle link navigation or a separately confirmed unlink transaction.
+      button.onclick = async () => {
+        // Read the bounded action and provider from server-derived fixed rows.
+        const provider = button.dataset.oauthAccountProvider;
+        // Start a confirmed provider navigation for an unlinked account.
+        if (button.dataset.oauthAccountAction === 'link') return beginOAuth(provider, 'link');
+        // Require a browser confirmation before the destructive unlink request.
+        if (!window.confirm(t('auth.oauthUnlinkConfirm', {}, 'shell'))) return;
+        // Start protected unlink handling so a failed request stays local to the popover.
+        try {
+          // Remove only this provider's current-user link.
+          await unlinkOAuth(provider);
+          // Refresh boolean provider rows after a successful unlink.
+          await renderOAuthAccountControls();
+        // Keep the current account controls usable after a safe server failure.
+        } catch (_) {
+          // Publish one generic localized message without provider response details.
+          const status = document.getElementById('oauth-account-message');
+          // Update only the still-mounted account message outlet.
+          if (status) status.textContent = t('auth.oauthStatusError', {}, 'shell');
+        }
+      };
+    });
+  // Replace the popover with a generic status failure while leaving logout and gameplay usable.
+  } catch (_) {
+    // Stamp one generic failure state without transport or provider detail.
+    popover.dataset.oauthState = 'status-error';
+    // Publish no provider configuration or request details.
+    popover.innerHTML = `<h2>${safe(t('auth.oauthAccountTitle', {}, 'shell'))}</h2><p class="oauth-provider-copy">${safe(t('auth.oauthStatusError', {}, 'shell'))}</p>`;
+  }
 }
 
 // Report whether the current URL names the separately approved private invitation redemption surface. (INVITE-005)

@@ -297,6 +297,19 @@ class SessionSecurityTests(unittest.TestCase):
         # Keep the trusted effective client out of browser and API payloads.
         self.assertNotIn("client", public)
 
+    # Reuse guest-session CSRF for a static shell reload without consuming the browser-bound session. (AUTH-007, TEST-093)
+    def test_static_shell_csrf_lookup_does_not_authenticate_guest_cookie(self):
+        # Build one active context-bound guest session without invoking the guest authenticator.
+        session = {"session_id": "session-guest-shell", "user_id": "guest-shell", "token": security.new_csrf_token(), "csrf_token": security.new_csrf_token(), "guest_browser_nonce_hash": "synthetic-browser-proof-hash", "status": "active", "created_at": auth.utc_now(), "updated_at": auth.utc_now(), "expires_at": auth.session_expiry(), "auth_method": "local"}
+        # Persist the isolated session as the static adapter would observe it.
+        auth.save_sessions({"schema_version": auth.SCHEMA_VERSION, "sessions": [session]})
+        # Resolve only the session CSRF value from the host-only cookie.
+        resolved = auth.csrf_token_for_session_cookie({"Cookie": f"casino_session={session['token']}"})
+        # Require the exact session proof rather than an anonymous replacement.
+        self.assertEqual(resolved, session["csrf_token"])
+        # Require the read-only shell lookup to preserve the active context-bound session unchanged.
+        self.assertEqual(auth.load_sessions()["sessions"], [session])
+
     # Require production session and logout cookies to be Secure, HttpOnly, host-only, and governed.
     def test_session_cookie_set_and_clear_attributes(self):
         # Build one synthetic session record containing distinct credential material.

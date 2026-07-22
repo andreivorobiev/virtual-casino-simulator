@@ -2,6 +2,8 @@
 
 Private invitation enrollment remains disabled by default and is governed by [the invitation enrollment runbook](invitation_enrollment.md). Repository merge does not authorize live enrollment, mail/provider release, deployment, or public signup.
 
+Invite-only Google and Facebook OAuth also remains disabled by default and requires both provider configuration and a separate provider-specific network-release latch before any adapter can be constructed. Repository merge and deployment authorize no provider console, credentials, callback registration, DNS, public signup, or unrestricted exposure. See [the OAuth runbook](oauth_invite_only.md) for readiness, privacy, recovery, and rollback requirements.
+
 Requirement `CORE-023` defines the repository-side production process for the restricted-preview topology. This packet does not install, enable, start, or expose any host service.
 
 ## Supported topology
@@ -68,3 +70,6 @@ Issue #204 supplies the repository-only explicit migration and DDL-free runtime 
 ## Application rollback boundary
 
 Rollback selects the retained predecessor by replacing `/opt/casino/current` atomically and restarting the supervised service. It does not edit the retained release, copy mutable data into a release, or change database schema. The predecessor manifest must accept the already-applied MySQL migration version. If it does not, rollback is blocked; schema reversal remains prohibited without a separately approved migration and recovery packet.
+# Disabled invite-only OAuth
+
+The packaged service includes disabled-by-default Google and Facebook OAuth routes only for existing private-invite local-password accounts. Both provider configuration and the provider-specific network-release latch must be true before any provider adapter can be constructed. Repository merge and deployment keep both release latches false and do not authorize provider console, credential, callback, DNS, public-signup, or unrestricted-exposure work. See [oauth_invite_only.md](oauth_invite_only.md) for readiness, privacy, recovery, and rollback requirements.
