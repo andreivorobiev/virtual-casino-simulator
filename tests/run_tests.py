@@ -6666,7 +6666,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 # Define Admin-only OAuth diagnostics, isolation from Operations, and visual evidence.
                 def admin_oauth_browser():
                     # Define every governed Admin viewport from the visual matrix.
-                    viewports={'desktop_primary':{'width':1920,'height':1080},'desktop_compact':{'width':1440,'height':900},'tablet':{'width':1024,'height':900}}
+                    viewports={'desktop_primary':{'width':1920,'height':1080},'desktop_compact':{'width':1440,'height':900},'tablet':{'width':1024,'height':900},'mobile':{'width':390,'height':844}}
                     # Exercise provider diagnostics in both installed Admin locales.
                     for locale in ('en-US','ru-RU'):
                         # Switch locale without persisting a preference outside this disposable test copy.
