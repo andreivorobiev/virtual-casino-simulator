@@ -66,10 +66,21 @@ async function fetchPublicAsset(pathname) {
 async function installShell() {
   // Fetch and validate every exact allowlisted asset before exposing the new worker.
   const rows = await Promise.all(SHELL_ASSETS.map(pathname => fetchPublicAsset(pathname)));
+  // Record whether a prior complete canonical cache exists so a failed same-version update never deletes it.
+  const cacheWasPresent = (await caches.keys()).includes(SHELL_CACHE);
   // Open only the canonical cache after all source responses succeeded.
   const cache = await caches.open(SHELL_CACHE);
-  // Store each validated public response under its exact credential-free request key.
-  await Promise.all(rows.map(row => cache.put(row.request, row.response)));
+  // Start a protected sequential write transaction so one CacheStorage backend never receives competing mutations.
+  try {
+    // Store each validated public response under its exact credential-free request key in reviewed order.
+    for (const row of rows) await cache.put(row.request, row.response);
+  // Roll back only a newly created partial cache while preserving any previous complete same-version cache.
+  } catch (error) {
+    // Remove the incomplete canonical cache only when this install created it.
+    if (!cacheWasPresent) await caches.delete(SHELL_CACHE);
+    // Reject installation so the browser retains the previous active worker.
+    throw error;
+  }
 }
 
 // Precache the complete public static shell without forcing activation over an older working client.

@@ -143,6 +143,12 @@ class PwaFoundationTests(unittest.TestCase):
         worker = (ROOT / "web" / "sw.js").read_text(encoding="utf-8")
         # Require every source response to validate before the canonical cache opens.
         self.assertLess(worker.index("Promise.all(SHELL_ASSETS.map"), worker.index("caches.open(SHELL_CACHE)"))
+        # Require one ordered CacheStorage mutation at a time rather than competing cache.put operations.
+        self.assertIn("for (const row of rows) await cache.put(row.request, row.response)", worker)
+        # Reject the concurrent cache-write form that prevented worker activation on the hosted browser backend.
+        self.assertNotIn("Promise.all(rows.map(row => cache.put", worker)
+        # Require failed clean installs to remove only the newly created partial canonical cache.
+        self.assertIn("if (!cacheWasPresent) await caches.delete(SHELL_CACHE)", worker)
         # Require activation cleanup to target only the Casino cache prefix.
         self.assertIn("name.startsWith(CACHE_PREFIX) && name !== SHELL_CACHE", worker)
         # Prohibit install-time skipWaiting so the prior complete worker remains active.
