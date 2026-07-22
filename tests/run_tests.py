@@ -6570,6 +6570,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                     page.get_by_test_id('admin-invitation-list').focus()
                                     # Advance the native scroll position through keyboard input rather than script-only movement.
                                     for _ in range(12): page.keyboard.press('ArrowRight')
+                                    # Wait for Chromium to commit the asynchronous native scroll after the keyboard events.
+                                    page.wait_for_function("() => document.querySelector('[data-testid=\"admin-invitation-list\"]')?.scrollLeft > 0",timeout=2000)
                                     # Require visible focus, actual horizontal movement, and continued page containment.
                                     assert page.evaluate("() => { const card=document.querySelector('[data-testid=\"admin-invitation-list\"]'); return document.activeElement===card && card.scrollLeft>0 && document.documentElement.scrollWidth<=innerWidth+1; }")
                                     # Capture the explicit keyboard-scroll matrix state with masked data only.
