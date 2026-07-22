@@ -532,6 +532,26 @@ label {
   color: var(--bad);
 }
 
+/* Let every invitation enrollment layer shrink inside the governed mobile 200-percent zoom column. */
+[data-testid="invitation-redemption"],
+[data-testid="invitation-redemption"] .auth-form,
+[data-testid="invitation-redemption"] .auth-form > label {
+  min-width: 0;
+}
+
+/* Wrap localized enrollment copy instead of letting a long word widen the anonymous page. */
+[data-testid="invitation-redemption"] :is(h1, p, label, span, a) {
+  overflow-wrap: anywhere;
+}
+
+/* Override native field minimums while retaining the shared 42-pixel control-height floor. */
+[data-testid="invitation-redemption"] .auth-form > label:not(.check-row) > :is(input, select),
+[data-testid="invitation-redemption"] .auth-form > button {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
 /* Disabled OAuth controls communicate provider readiness without exposing an action surface. */
 .oauth-provider-status {
   display: grid;
