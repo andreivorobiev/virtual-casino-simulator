@@ -52,24 +52,48 @@ function isPublicStaticResponse(response) {
 
 // Fetch one public static asset without cookies or authorization and validate it before storage.
 async function fetchPublicAsset(pathname) {
+  // Create one abort controller so a stalled origin cannot leave the worker installing indefinitely.
+  const controller = new AbortController();
+  // Bound each reviewed static request independently while retaining the previous active worker on failure.
+  const timeout = setTimeout(() => controller.abort(), 8000);
   // Construct a same-origin request that omits credentials, requests cookie-free public shell bytes, and bypasses stale HTTP caches.
-  const request = new Request(pathname, { method: 'GET', credentials: 'omit', cache: 'reload', headers: { 'X-Casino-Public-Shell': '1' } });
-  // Fetch the exact allowlisted path from the origin.
-  const response = await fetch(request);
-  // Fail installation or runtime caching when the response is not safe public static content.
-  if (!isPublicStaticResponse(response)) throw new Error('public static asset rejected');
-  // Return the validated request and response pair for deterministic cache keys.
-  return { request, response };
+  const request = new Request(pathname, { method: 'GET', credentials: 'omit', cache: 'reload', headers: { 'X-Casino-Public-Shell': '1' }, signal: controller.signal });
+  // Start protected fetching so the timer is always released.
+  try {
+    // Fetch the exact allowlisted path from the origin.
+    const response = await fetch(request);
+    // Fail installation or runtime caching when the response is not safe public static content.
+    if (!isPublicStaticResponse(response)) throw new Error('public static asset rejected');
+    // Return a signal-free cache key plus the validated response so an expired fetch signal cannot affect storage.
+    return { request: new Request(pathname, { method: 'GET', credentials: 'omit' }), response };
+  // Release the bounded timer on success, rejection, or abort.
+  } finally {
+    // Prevent completed fetches from retaining timer callbacks through the rest of installation.
+    clearTimeout(timeout);
+  }
 }
 
 // Populate a fresh canonical-version cache atomically during worker installation.
 async function installShell() {
-  // Fetch and validate every exact allowlisted asset before exposing the new worker.
-  const rows = await Promise.all(SHELL_ASSETS.map(pathname => fetchPublicAsset(pathname)));
+  // Collect validated responses in reviewed order without a connection-saturating install fan-out.
+  const rows = [];
+  // Fetch every exact allowlisted asset sequentially before exposing a cache or worker.
+  for (const pathname of SHELL_ASSETS) rows.push(await fetchPublicAsset(pathname));
+  // Record whether a prior canonical cache exists so failed same-version repair never deletes it.
+  const cacheWasPresent = (await caches.keys()).includes(SHELL_CACHE);
   // Open only the canonical cache after all source responses succeeded.
   const cache = await caches.open(SHELL_CACHE);
-  // Store each validated public response under its exact credential-free request key.
-  await Promise.all(rows.map(row => cache.put(row.request, row.response)));
+  // Start protected ordered storage so the CacheStorage backend receives one mutation at a time.
+  try {
+    // Store each validated public response under its exact credential-free request key.
+    for (const row of rows) await cache.put(row.request, row.response);
+  // Roll back only a newly created partial cache and preserve any previous complete worker/cache pair.
+  } catch (error) {
+    // Delete the incomplete cache only when this installation created it.
+    if (!cacheWasPresent) await caches.delete(SHELL_CACHE);
+    // Reject installation so browser rollback semantics retain the prior active worker.
+    throw error;
+  }
 }
 
 // Precache the complete public static shell without forcing activation over an older working client.

@@ -142,7 +142,17 @@ class PwaFoundationTests(unittest.TestCase):
         # Read the service-worker source once for ordered policy assertions.
         worker = (ROOT / "web" / "sw.js").read_text(encoding="utf-8")
         # Require every source response to validate before the canonical cache opens.
-        self.assertLess(worker.index("Promise.all(SHELL_ASSETS.map"), worker.index("caches.open(SHELL_CACHE)"))
+        self.assertLess(worker.index("for (const pathname of SHELL_ASSETS)"), worker.index("caches.open(SHELL_CACHE)"))
+        # Require bounded worker fetches so a stalled origin cannot leave installation pending indefinitely.
+        self.assertIn("const controller = new AbortController()", worker)
+        # Require the exact per-asset timeout boundary to abort only the active public fetch.
+        self.assertIn("setTimeout(() => controller.abort(), 8000)", worker)
+        # Require reviewed sequential fetch order instead of a connection-saturating install fan-out.
+        self.assertNotIn("Promise.all(SHELL_ASSETS.map", worker)
+        # Require one ordered CacheStorage mutation at a time after every response validates.
+        self.assertIn("for (const row of rows) await cache.put(row.request, row.response)", worker)
+        # Require clean-install rollback without deleting a prior canonical cache.
+        self.assertIn("if (!cacheWasPresent) await caches.delete(SHELL_CACHE)", worker)
         # Require activation cleanup to target only the Casino cache prefix.
         self.assertIn("name.startsWith(CACHE_PREFIX) && name !== SHELL_CACHE", worker)
         # Prohibit install-time skipWaiting so the prior complete worker remains active.
