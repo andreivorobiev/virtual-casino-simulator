@@ -13,7 +13,7 @@ Historical source baseline: 9.1.0
 - bots: 1.1.0
 - autoplay: 1.1.3
 - audio: 9.1.1
-- admin: 1.9.0
+- admin: 1.9.1
 - operations: 1.0.0
 - roulette: 9.4.6
 - slots: 9.1.4

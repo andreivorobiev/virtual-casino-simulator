@@ -86,8 +86,8 @@ async function load(tab = 'dashboard') {
     if (tab === 'players') return playersBots();
     // Branch to the Admin beta-user renderer.
     if (tab === 'users') return users();
-    // Branch to disabled private invitation lifecycle controls. (INVITE-005)
-    if (tab === 'invitations') return invitations();
+    // Await private invitation controls so rejected v2 requests stay inside the localized load-error boundary. (INVITE-005)
+    if (tab === 'invitations') return await invitations();
     // Await Guest Trials so rejected Admin requests stay inside the localized load-error boundary. (issue #317)
     if (tab === 'guests') return await guests();
     // Branch to the ledger renderer.
