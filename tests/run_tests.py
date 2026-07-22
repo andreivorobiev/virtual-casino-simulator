@@ -46,6 +46,8 @@ from tests import recovery_tests
 from tests import edge_gate_tests
 # Import focused non-finite validation and persistence tests for TEST-055.
 from tests import nonfinite_money_tests
+# Import exact-source 50,000-cycle harness proofs for TEST-092.
+from tests.unit import ui_50000_tests
 # Import the current-catalog hostile-client certification entrypoint.
 from tests.server_authority_tests import run_server_authority_tests
 # Import the reusable flushed reporter for TEST-010 browser execution.
@@ -273,13 +275,13 @@ def run_storage_tests(include_live=False, include_migration_live=False):
     # Execute the real-service persistence and concurrent-ledger gate only when explicitly requested.
     if include_live:
         # Map the live integration case to the durable storage and MySQL requirements.
-        run_case('STORAGE-MYSQL-LIVE-001',['STORAGE-001','STORAGE-002','STORAGE-003','STORAGE-004','STORAGE-005','STORAGE-006','MYSQL-001','MYSQL-002','MYSQL-003','MYSQL-004','OTT-001','OTT-002','TEST-038','TEST-043','TEST-089'],storage_tests.run_mysql_live_provider_path)
+        run_case('STORAGE-MYSQL-LIVE-001',['STORAGE-001','STORAGE-002','STORAGE-003','STORAGE-004','STORAGE-005','STORAGE-006','MYSQL-001','MYSQL-002','MYSQL-003','MYSQL-004','OTT-001','OTT-002','MAIL-002','MAIL-004','INVITE-003','TEST-038','TEST-043','TEST-089','TEST-090','TEST-091'],storage_tests.run_mysql_live_provider_path)
     # Execute the newly created disposable MySQL 8.4 gate only when explicitly requested.
     if include_migration_live:
         # Import the service-dependent matrix only after the disposable selector is explicit.
         from tests.mysql_migration_live import run_mysql_migration_live_matrix
         # Map clean bootstrap, upgrade, refusal, restart, grants, and lock evidence.
-        run_case('MYSQL-MIGRATION-LIVE-001',['MYSQL-005','STORAGE-007','OTT-001','OTT-002','TEST-048','TEST-089'],run_mysql_migration_live_matrix)
+        run_case('MYSQL-MIGRATION-LIVE-001',['MYSQL-005','STORAGE-007','OTT-001','OTT-002','MAIL-002','MAIL-004','TEST-048','TEST-089','TEST-090'],run_mysql_migration_live_matrix)
 
 # Define the read_i18n_json function used by this module.
 def read_i18n_json(path):
@@ -351,6 +353,8 @@ def validate_deployment_bootstrap():
         'CASINO_BOOTSTRAP_ADMIN_PASSWORD':'deployment-test-' + ('x' * 32),
         # Supply a separate test-only keyed-digest secret above the public strength floor.
         'CASINO_TOKEN_DIGEST_KEY':'deployment-token-digest-' + ('y' * 32),
+        # Supply an independent test-only mail digest key above the public strength floor.
+        'CASINO_MAIL_DIGEST_KEY':'deployment-mail-digest-' + ('z' * 32),
     }
     # Accept a non-loopback binding only after both required settings are explicit and non-default.
     casino_config.validate_bootstrap_for_startup('0.0.0.0', public_environment)
@@ -374,6 +378,8 @@ def validate_deployment_bootstrap():
             'CASINO_BOOTSTRAP_ADMIN_PASSWORD':casino_config.AUTH_BOOTSTRAP_ADMIN_PASSWORD,
             # Reuse the known local digest key so the public guard rejects every developer default.
             'CASINO_TOKEN_DIGEST_KEY':casino_config.LOCAL_TOKEN_DIGEST_KEY,
+            # Reuse the known local mail digest key so every developer default is rejected.
+            'CASINO_MAIL_DIGEST_KEY':casino_config.LOCAL_MAIL_DIGEST_KEY,
         }),
         # Reject otherwise hardened public bootstrap settings when the token digest key is the known local default.
         ('0.0.0.0', {
@@ -383,6 +389,19 @@ def validate_deployment_bootstrap():
             'CASINO_BOOTSTRAP_ADMIN_PASSWORD':'deployment-test-' + ('x' * 32),
             # Reuse the known local digest key that must never cross the loopback boundary.
             'CASINO_TOKEN_DIGEST_KEY':casino_config.LOCAL_TOKEN_DIGEST_KEY,
+            # Supply a valid independent mail digest so this case isolates the token-key rejection.
+            'CASINO_MAIL_DIGEST_KEY':'deployment-mail-digest-' + ('z' * 32),
+        }),
+        # Reject otherwise hardened public settings when the mail digest key is the known local default.
+        ('0.0.0.0', {
+            # Supply a non-local bootstrap identity.
+            'CASINO_BOOTSTRAP_ADMIN_EMAIL':'deployment-test@example.invalid',
+            # Supply a non-local bootstrap credential.
+            'CASINO_BOOTSTRAP_ADMIN_PASSWORD':'deployment-test-' + ('x' * 32),
+            # Supply a valid one-time-token digest key.
+            'CASINO_TOKEN_DIGEST_KEY':'deployment-token-digest-' + ('y' * 32),
+            # Reuse the known local mail digest key that must never cross the loopback boundary.
+            'CASINO_MAIL_DIGEST_KEY':casino_config.LOCAL_MAIL_DIGEST_KEY,
         }),
     # Finish the unsafe-case collection and begin the validation loop.
     ):
@@ -733,8 +752,8 @@ def validate_guest_contracts():
     assert all(route in admin_contract for route in ('/admin/guest-trials:','/admin/guest-trials/sessions:','/admin/guest-trials/sessions/{analytics_id}:','/admin/guest-trials/cleanup:'))
     # Prove the full filters, journey, fake-token, action/error/latency, and bounded timeline schemas are published.
     assert all(term in admin_contract for term in ('GameFilter','CompletedFilter','ErrorCategoryFilter','SinceFilter','UntilFilter','account_cta_selected','ProductMetrics','fake_tokens_only','action_categories','error_categories','latency_buckets','maxItems: 80'))
-    # Prove the anonymous allowlist adds only the approved guest-create route.
-    assert security_contract['anonymous_routes']==['/api/v2/auth/login','/api/v2/auth/guest','/healthz']
+    # Preserve the exact anonymous allowlist including the separately approved disabled private redemption route.
+    assert security_contract['anonymous_routes']==['/api/v2/auth/login','/api/v2/auth/guest','/api/v2/auth/redeem-invitation','/healthz']
     # Prove launch stays held and retention/forbidden fields remain exact.
     assert guest_contract['public_launch_authorized'] is False and guest_contract['wallet']['add_tokens_allowed'] is False and guest_contract['lifecycle']['autoplay_stopped_on_end'] is True and guest_contract['entry']['max_game_actions_per_session']==1000 and guest_contract['entry']['max_concurrent_autoplay_sessions']==1 and guest_contract['admin_telemetry']['raw_retention_days']==30 and guest_contract['admin_telemetry']['aggregate_retention_days']==400 and guest_contract['admin_telemetry']['cleanup_failure_visible'] is True and guest_contract['admin_telemetry']['timeline_event_limit']==80 and guest_contract['admin_telemetry']['responsive_error_cohort_minimum']==5 and guest_contract['admin_telemetry']['export_allowed'] is False and 'browser_nonce' in guest_contract['admin_telemetry']['forbidden_fields']
     # Parse the exact digest freeze map.
@@ -839,6 +858,16 @@ def validate_guest_admin_api(base):
 
 # Define the run_api_tests function used by this module.
 def run_api_tests():
+    # Execute the listener-free TEST-092 allocation, classification, and resume-policy proofs.
+    def run_ui_50000_harness_tests():
+        # Load only the focused #227 harness test class.
+        suite=unittest.defaultTestLoader.loadTestsFromTestCase(ui_50000_tests.UI50000HarnessTests)
+        # Execute the focused suite with concise standard output.
+        result=unittest.TextTestRunner(stream=sys.stdout,verbosity=1).run(suite)
+        # Fail the named central case when any focused assertion fails.
+        if not result.wasSuccessful(): raise AssertionError('50,000-cycle UI harness unit suite failed')
+    # Record the exact-source allocation, control-classification, and safe-resume proof.
+    run_case('UI-50000-HARNESS-001',['TEST-042','TEST-047','TEST-092'],run_ui_50000_harness_tests)
     # Run service-free shared validation, ledger, MHVP, and strict JSON persistence evidence.
     def run_nonfinite_money_unit_tests():
         # Load only the focused TEST-055 unit-test class.
@@ -893,78 +922,34 @@ def run_api_tests():
             raise AssertionError('one-time-token infrastructure suite failed')
     # Record the purpose-bound one-time-token platform proof.
     run_case('API-OTT-001',['OTT-001','OTT-002','TEST-089'],run_one_time_token_tests)
-    # Certify the provider-neutral transactional mail boundary is disabled-by-default and privacy-safe. (issue #330)
-    def transactional_mail_boundary():
-        # Import the infrastructure module and its fail-closed error type locally.
-        from casino.core import mail
-        from casino.errors import ValidationError
-        # Require the boundary to be disabled by default.
-        readiness = mail.readiness()
-        assert readiness['enabled'] is False and readiness['provider'] == 'disabled' and readiness['ready'] is False, readiness
-        # Require canonical HTTPS links and open-redirect rejection.
-        assert mail.build_link('/enroll/invitation', token='abc.def') == 'https://localhost/enroll/invitation?token=abc.def'
-        for unsafe in ('//evil.example', 'https://evil.example', '/x:y', 'no-leading-slash'):
-            try:
-                mail.build_link(unsafe); raise AssertionError('expected unsafe_path')
-            except ValidationError as error:
-                assert error.details.get('reason') == 'unsafe_path', error.details
-        # Require a purpose-bound send to capture locally and return the deliverable tokened link.
-        receipt = mail.send('invitation', 'Owner@Example.com', token='tok-abc')
-        assert receipt['status'] == 'captured' and receipt['link'] == 'https://localhost/enroll/invitation?token=tok-abc' and 'recipient' not in receipt, receipt
-        # Require the outbox to store no raw recipient, token, or password.
-        outbox = open(mail.OUTBOX_PATH, encoding='utf-8').read()
-        assert 'owner@example.com' not in outbox.lower() and 'tok-abc' not in outbox and 'password' not in outbox.lower()
-    # Record the transactional mail boundary proof.
-    run_case('API-MAIL-001',['MAIL-001','MAIL-002','TEST-090'],transactional_mail_boundary)
-    # Certify Admin invitations and secure redemption compose the token and mail platforms fail-closed. (issue #332)
-    def admin_invitations_flow():
-        # Import the composed lifecycle module and its fail-closed error type locally.
-        from casino.core import invitations, one_time_tokens
-        from casino.core.state_store import update_json
-        from casino.core.clock import utc_now
-        from casino.errors import ValidationError
-        # Assert a call fails closed with the exact non-sensitive reason code.
-        def expect_reason(fn, reason):
-            try:
-                fn(); raise AssertionError(f'expected fail-closed ({reason})')
-            except ValidationError as error:
-                assert error.details.get('reason') == reason, (reason, error.details)
-        # Creating an invitation delivers it and creates no account, returning a token-free Admin view.
-        created = invitations.create('Invitee@Example.com', invited_by='admin_1')
-        assert created['status'] == 'pending' and created['email'] == 'invitee@example.com' and 'token' not in created, created
-        # A malformed recipient fails closed.
-        expect_reason(lambda: invitations.create('not-an-email'), 'bad_email')
-        # Redemption is disabled by default and fails closed before any account is created.
-        expect_reason(lambda: invitations.redeem('anytoken', 'invitee@example.com', 'password123'), 'enrollment_disabled')
-        # Enable enrollment through configuration for the redemption path proof.
-        import importlib, casino.config, casino.core.invitations
-        os.environ['CASINO_ENROLLMENT_ENABLED'] = 'true'
-        importlib.reload(casino.config); importlib.reload(casino.core.invitations)
-        flow = casino.core.invitations
-        try:
-            # Drive redemption end-to-end with a real token bound to a pending invitation.
-            issued = one_time_tokens.issue('invitation', 'redeemer@example.com')
-            def _seed(document):
-                document.setdefault('invitations', []).append({'invitation_id': 'invite_test', 'email': 'redeemer@example.com', 'email_digest': flow._digest('redeemer@example.com'), 'status': 'pending', 'token_id': issued['token_id'], 'invited_by': 'admin_1', 'created_at': utc_now(), 'expires_at': issued['expires_at'], 'redeemed_at': None, 'revoked_at': None, 'audit_id': 'a'})
-                return document
-            update_json(flow.INVITATIONS_PATH, _seed, flow.default_invitations)
-            # A weak password fails closed before any account is created.
-            expect_reason(lambda: flow.redeem(issued['token'], 'redeemer@example.com', 'short'), 'bad_password')
-            # A wrong subject fails closed with one generic redemption error.
-            expect_reason(lambda: flow.redeem(issued['token'], 'someone-else@example.com', 'password123'), 'invalid_redemption')
-            # The correct redemption enrolls exactly one canonical account.
-            enrolled = flow.redeem(issued['token'], 'redeemer@example.com', 'password123')
-            assert enrolled['status'] == 'enrolled' and enrolled['user_id'], enrolled
-            from casino.core import auth
-            assert auth.find_user_by_email('redeemer@example.com'), 'account not created on redemption'
-            # Replaying the consumed token fails closed generically.
-            expect_reason(lambda: flow.redeem(issued['token'], 'redeemer@example.com', 'password123'), 'invalid_redemption')
-        finally:
-            # Restore the disabled-by-default enrollment configuration after the proof.
-            os.environ.pop('CASINO_ENROLLMENT_ENABLED', None)
-            importlib.reload(casino.config); importlib.reload(casino.core.invitations)
-    # Record the Admin invitation and secure redemption proof.
-    run_case('API-INVITE-001',['INVITE-001','INVITE-002','TEST-091'],admin_invitations_flow)
+    # Certify the disabled mail boundary, atomic idempotency, privacy, retry, suppression, and templates without a listener. (issue #330)
+    def run_transactional_mail_tests():
+        # Import the focused suite only when its mapped API case runs.
+        from tests import mail_tests
+        # Load exactly the transactional-mail test class.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(mail_tests.MailServiceTests)
+        # Execute the isolated provider-free suite with concise standard output.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused assertion fails or errors.
+        if not result.wasSuccessful():
+            # Preserve a stable secret-free central diagnostic.
+            raise AssertionError('transactional-mail infrastructure suite failed')
+    # Record the complete listener-free transactional-mail platform proof.
+    run_case('API-MAIL-001',['MAIL-001','MAIL-002','MAIL-003','MAIL-004','MAIL-005','MAIL-006','TEST-090'],run_transactional_mail_tests)
+    # Certify disabled invitation issuance, recoverable enrollment, privacy, and cross-process JSON behavior without a listener. (issue #332)
+    def run_invitation_tests():
+        # Import the focused invitation lifecycle suite lazily so API-only discovery remains lightweight.
+        from tests import invitation_tests
+        # Load exactly the invitation service acceptance class.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(invitation_tests.InvitationServiceTests)
+        # Run the focused service suite with the repository's quiet test runner.
+        result = unittest.TextTestRunner(verbosity=0).run(suite)
+        # Fail the mapped API gate when any lifecycle, privacy, or concurrency assertion fails.
+        if not result.wasSuccessful():
+            # Raise one bounded failure naming no recipient, bearer, or credential material.
+            raise AssertionError('invitation enrollment infrastructure suite failed')
+    # Record the listener-free invitation platform proof under its permanent requirements.
+    run_case('API-INVITE-001',['INVITE-001','INVITE-002','INVITE-003','INVITE-004','INVITE-005','INVITE-006','TEST-091'],run_invitation_tests)
     # Record listener-free disposable-principal lifecycle and browser-binding proof.
     run_case('API-GUEST-LIFECYCLE-001',['GUEST-001','GUEST-002','GUEST-006','TEST-080'],validate_guest_lifecycle)
     # Record listener-free telemetry privacy, milestones, and retention proof.
@@ -1101,6 +1086,48 @@ def run_api_tests():
             assert set(api(base,'/api/v2/admin/operations'))=={'schema_version','probe','status','checked_at','last_successful_heartbeat_at','build','ready','storage_provider','checks','reasons'}
         # Record secret-safe Admin diagnostics, absent action routes, and unchanged readiness under permanent IDs.
         run_case('API-OAUTH-001',['OAUTH-001','OAUTH-002','OAUTH-006','TEST-045'],oauth_api)
+        # Define the disabled transactional-mail Admin diagnostic contract against the real loopback backend.
+        def mail_api():
+            # Require unauthenticated callers to fail before mail diagnostics disclose configuration state.
+            anonymous=api(base,'/api/v2/admin/mail/readiness',ok=False,auth_token=None); assert anonymous['error']['code']=='UNAUTHORIZED'
+            # Read the disabled-by-default diagnostic through the authenticated Admin session.
+            diagnostic=api(base,'/api/v2/admin/mail/readiness')
+            # Require the exact top-level secret-free contract shape.
+            assert set(diagnostic)=={'schema_version','provider','status','checks','reasons','delivery_summary','suppressed_recipients'}
+            # Require the repository feature and network release gates to remain false by default.
+            assert diagnostic['status']=='disabled' and diagnostic['checks']['feature_enabled'] is False and diagnostic['checks']['network_release_enabled'] is False
+            # Require every lifecycle diagnostic to be an aggregate non-negative integer.
+            assert set(diagnostic['delivery_summary'])=={'sending','sent','retry_wait','failed','suppressed','uncertain','disabled','release_held','misconfigured'} and all(isinstance(value,int) and value>=0 for value in diagnostic['delivery_summary'].values())
+            # Serialize the diagnostic and reject raw configuration, credential, recipient, token, or URL surfaces.
+            serialized=json.dumps(diagnostic); assert 'CASINO_' not in serialized and '://' not in serialized and '@' not in serialized and 'token=' not in serialized
+            # Require likely consumer and provider event routes to remain absent from the application router.
+            for held_path in ('/api/v2/mail/send','/api/v2/mail/bounce','/api/v2/auth/password-reset','/api/v2/auth/invitations'):
+                # Dispatch one empty request and require a closed route surface.
+                missing=api(base,held_path,ok=False); assert missing['error']['code']=='NOT_FOUND'
+        # Record Admin authorization, disabled gates, aggregate diagnostics, and absent consumer routes.
+        run_case('API-MAIL-002',['MAIL-001','MAIL-002','MAIL-003','TEST-090'],mail_api)
+        # Define the disabled private invitation API and frozen-v1 compatibility proof. (issue #332)
+        def invitation_api():
+            # Reject anonymous access before any Admin invitation readiness or lifecycle metadata is returned.
+            anonymous=api(base,'/api/v2/admin/invitations',ok=False,auth_token=None); assert anonymous['error']['code']=='UNAUTHORIZED'
+            # Read the repository-default disabled diagnostic through the authenticated Admin session.
+            diagnostic=api(base,'/api/v2/admin/invitations')
+            # Require the exact secret-free list contract with both independent gates held.
+            assert set(diagnostic)=={'enabled','redemption_enabled','mail_status','recovery_required','invitations'} and diagnostic['enabled'] is False and diagnostic['redemption_enabled'] is False and diagnostic['invitations']==[]
+            # Reject issuance before token, mail, invitation, account, or wallet state can be allocated.
+            blocked=api(base,'/api/v2/admin/invitations','POST',{'recipient':'api-invitation@example.invalid','locale':'en-US','idempotency_key':'api-invitation-create-key-0001'},ok=False); assert blocked['error']['code']=='FORBIDDEN'
+            # Exercise a fully shaped disabled public request without an authenticated session.
+            redemption=api(base,'/api/v2/auth/redeem-invitation','POST',{'token':'synthetic-disabled-bearer','email':'api-invitation@example.invalid','password':'Synthetic-Invite-2026!','display_name':'Invited Player','locale':'en-US','terms_version':'private-beta-1','accepted':True,'idempotency_key':'api-invitation-redeem-key-0001'},ok=False,auth_token=None)
+            # Require one non-enumerating message and reason for the disabled request.
+            assert redemption['error']=={'code':'VALIDATION_ERROR','message':'invitation could not be redeemed','details':{'reason':'invitation_unavailable'}}
+            # Require an unsupported field to receive the same generic public envelope.
+            malformed=api(base,'/api/v2/auth/redeem-invitation','POST',{'unexpected':'value'},ok=False,auth_token=None); assert malformed['error']==redemption['error']
+            # Preserve every historical invitation-like v1 path as absent rather than adding a compatibility alias.
+            for frozen_path in ('/api/v1/admin/invitations','/api/v1/auth/redeem-invitation','/api/v1/auth/invitations'):
+                # Require the frozen router to expose no invitation surface.
+                missing=api(base,frozen_path,ok=False); assert missing['error']['code']=='NOT_FOUND'
+        # Record authorization, disabled gates, generic public errors, and frozen-v1 compatibility.
+        run_case('API-INVITE-002',['INVITE-001','INVITE-002','INVITE-003','INVITE-004','TEST-091'],invitation_api)
         # Define the auth_backend function used by this module.
         def auth_backend():
             # Set blocked to the value needed for the next operation.
@@ -1668,7 +1695,7 @@ def run_api_tests():
             # Verify user B cannot mutate user A's server-side autoplay session.
             cross_auto=api(base,'/api/v1/autoplay/stop','POST',{'autoplay_id':auto_a['autoplay_id']},ok=False,auth_token=token_b); assert auto_a['player_id']==user_a['player_id'] and cross_auto['error']['code']=='FORBIDDEN'
             # Enumerate every registered Admin route shape to prove the central role gate fails closed.
-            admin_paths=[('GET','/api/v1/admin/overview'),('GET','/api/v1/admin/dashboard'),('GET','/api/v1/admin/modules'),('GET','/api/v1/admin/requirements'),('GET','/api/v1/admin/game-states'),('GET','/api/v1/admin/users'),('POST','/api/v1/admin/users'),('GET',f'/api/v1/admin/users/{user_b["user_id"]}'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/deactivate'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/reactivate'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/password-reset'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/terms'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/locale'),('GET','/api/v1/admin/logs'),('GET','/api/v1/admin/ledger'),('GET','/api/v1/admin/history'),('GET','/api/v1/admin/test-results'),('GET','/api/v1/admin/audio-settings'),('POST','/api/v1/admin/audio-settings'),('GET','/api/v1/admin/autoplay'),('POST','/api/v1/admin/autoplay/stop-all'),('GET','/api/v1/admin/bots'),('POST','/api/v1/admin/bots/practice-opponents/fund'),('GET','/api/v2/admin/operations'),('GET','/api/v2/admin/oauth/providers'),('GET','/api/v2/admin/users'),('POST','/api/v2/admin/users'),('GET',f'/api/v2/admin/users/{user_b["user_id"]}'),('PATCH',f'/api/v2/admin/users/{user_b["user_id"]}'),('POST',f'/api/v2/admin/users/{user_b["user_id"]}/password'),('PATCH',f'/api/v2/admin/users/{user_b["user_id"]}/terms'),('GET',f'/api/v2/admin/users/{user_b["user_id"]}/state')]
+            admin_paths=[('GET','/api/v1/admin/overview'),('GET','/api/v1/admin/dashboard'),('GET','/api/v1/admin/modules'),('GET','/api/v1/admin/requirements'),('GET','/api/v1/admin/game-states'),('GET','/api/v1/admin/users'),('POST','/api/v1/admin/users'),('GET',f'/api/v1/admin/users/{user_b["user_id"]}'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/deactivate'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/reactivate'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/password-reset'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/terms'),('POST',f'/api/v1/admin/users/{user_b["user_id"]}/locale'),('GET','/api/v1/admin/logs'),('GET','/api/v1/admin/ledger'),('GET','/api/v1/admin/history'),('GET','/api/v1/admin/test-results'),('GET','/api/v1/admin/audio-settings'),('POST','/api/v1/admin/audio-settings'),('GET','/api/v1/admin/autoplay'),('POST','/api/v1/admin/autoplay/stop-all'),('GET','/api/v1/admin/bots'),('POST','/api/v1/admin/bots/practice-opponents/fund'),('GET','/api/v2/admin/operations'),('GET','/api/v2/admin/oauth/providers'),('GET','/api/v2/admin/mail/readiness'),('GET','/api/v2/admin/users'),('POST','/api/v2/admin/users'),('GET',f'/api/v2/admin/users/{user_b["user_id"]}'),('PATCH',f'/api/v2/admin/users/{user_b["user_id"]}'),('POST',f'/api/v2/admin/users/{user_b["user_id"]}/password'),('PATCH',f'/api/v2/admin/users/{user_b["user_id"]}/terms'),('GET',f'/api/v2/admin/users/{user_b["user_id"]}/state')]
             # Request each Admin endpoint as a normal user and require a forbidden response.
             for method,path in admin_paths:
                 # Send an empty body for mutating routes because authorization must run before validation.
@@ -3776,6 +3803,12 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.get_by_test_id('nav-big_six_wheel').click(); page.get_by_test_id('big-six-wheel').wait_for(timeout=5000)
                     # Require the canonical route, English title, and ready phase from the live backend mount.
                     assert page.url.split('?',1)[0].endswith('/games/big_six_wheel') and page.locator('.big-six-wheel__header h1').inner_text()=='Big Six Wheel' and page.get_by_test_id('big-six-wheel-phase').inner_text()=='Accepting wagers'
+                    # Require the complete code-native stage to remain painted inside its panel and every hidden ancestor.
+                    def assert_big_six_stage_complete(viewport_id):
+                        # Inspect the wheel shell, wheel, pointer, and hub without scrolling or changing later evidence.
+                        failures=page.evaluate("""viewportId => { const failures=[]; const stage=document.querySelector('.big-six-wheel__stage'); const contained=['.big-six-wheel__wheel-shell','.big-six-wheel__pointer','.big-six-wheel__hub']; const painted={'.big-six-wheel__wheel':'.big-six-wheel__wheel-shell'}; const paintMinRatio=.8; if(!stage)return [{viewport:viewportId,selector:'.big-six-wheel__stage',reason:'stage missing'}]; const stageRect=stage.getBoundingClientRect(); const outside=(rect,owner)=>rect.left<owner.left-1||rect.right>owner.right+1||rect.top<owner.top-1||rect.bottom>owner.bottom+1; const visible=(node,style,rect)=>node.getClientRects().length&&style.display!=='none'&&style.visibility!=='hidden'&&rect.width>0&&rect.height>0; for(const selector of contained){const node=document.querySelector(selector); if(!node){failures.push({viewport:viewportId,selector,reason:'essential node missing'});continue;} const style=getComputedStyle(node); const rect=node.getBoundingClientRect(); if(!visible(node,style,rect)){failures.push({viewport:viewportId,selector,reason:'essential node not painted'});continue;} if(outside(rect,stageRect))failures.push({viewport:viewportId,selector,reason:'essential node escaped stage'}); let ancestor=node.parentElement; while(ancestor&&ancestor!==document.body){const ancestorStyle=getComputedStyle(ancestor);const ancestorRect=ancestor.getBoundingClientRect();const overflowY=ancestorStyle.overflowY==='visible'?ancestorStyle.overflow:ancestorStyle.overflowY;const overflowX=ancestorStyle.overflowX==='visible'?ancestorStyle.overflow:ancestorStyle.overflowX;const clippedY=(rect.top<ancestorRect.top-1||rect.bottom>ancestorRect.bottom+1)&&['hidden','clip'].includes(overflowY);const clippedX=(rect.left<ancestorRect.left-1||rect.right>ancestorRect.right+1)&&['hidden','clip'].includes(overflowX);if(clippedY||clippedX){failures.push({viewport:viewportId,selector,reason:'essential node clipped by hidden ancestor'});break;}ancestor=ancestor.parentElement;}} for(const [selector,ownerSelector] of Object.entries(painted)){const node=document.querySelector(selector);const owner=document.querySelector(ownerSelector);if(!node){failures.push({viewport:viewportId,selector,reason:'essential node missing'});continue;}if(!owner){failures.push({viewport:viewportId,selector:ownerSelector,reason:'visual owner missing'});continue;}const style=getComputedStyle(node);const rect=node.getBoundingClientRect();const ownerRect=owner.getBoundingClientRect();if(!visible(node,style,rect)){failures.push({viewport:viewportId,selector,reason:'essential node not painted'});continue;}const centerInside=rect.left+rect.width/2>=ownerRect.left-1&&rect.left+rect.width/2<=ownerRect.right+1&&rect.top+rect.height/2>=ownerRect.top-1&&rect.top+rect.height/2<=ownerRect.bottom+1;const coversOwner=rect.width>=ownerRect.width*paintMinRatio&&rect.height>=ownerRect.height*paintMinRatio;if(!centerInside||!coversOwner)failures.push({viewport:viewportId,selector,reason:'essential node does not cover visual owner'});}return failures;}""",viewport_id)
+                        # Fail the named governed viewport with bounded public selector evidence.
+                        assert not failures,failures
                     # Read the initial cumulative target before the first real motion-qualified spin.
                     initial_big_six_target=page.locator('[data-wheel]').evaluate("node => Number.parseFloat(node.style.getPropertyValue('--wheel-angle'))")
                     # Define every named viewport required by the Big Six visual-matrix row.
@@ -3786,6 +3819,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
                         # Require a visible complete surface without page-level horizontal overflow.
                         assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.get_by_test_id('big-six-wheel').is_visible()
+                        # Reject missing or clipped wheel, pointer, or hub before labeling evidence as passing.
+                        assert_big_six_stage_complete(viewport_id)
                         # Record self-describing English ready evidence.
                         game_evidence(f'after-pass-big-six-ready-en-{viewport_id}.png','big_six_wheel',['ready'],'en-US',viewport_id)
                     # Restore primary desktop and enter a positive real-backend wager.
@@ -3836,6 +3871,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
                         # Require the settled control and page-level containment.
                         assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.locator('[data-spin]').is_enabled()
+                        # Require the complete settled stage at this governed viewport.
+                        assert_big_six_stage_complete(viewport_id)
                         # Record self-describing English settlement evidence.
                         game_evidence(f'after-pass-big-six-settled-en-{viewport_id}.png','big_six_wheel',['settled'],'en-US',viewport_id)
                     # Switch the restored settlement to Russian without discarding player-owned state.
@@ -3848,6 +3885,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
                         # Require the localized route to remain visible and horizontally contained.
                         assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.get_by_test_id('big-six-wheel').is_visible()
+                        # Require the complete localized settled stage before writing evidence.
+                        assert_big_six_stage_complete(viewport_id)
                         # Record self-describing Russian settlement evidence.
                         game_evidence(f'after-pass-big-six-settled-ru-{viewport_id}.png','big_six_wheel',['settled'],'ru-RU',viewport_id)
                     # Reload in Russian so the route lifecycle restores a clean ready phase with persisted history.
@@ -3858,6 +3897,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
                         # Require the localized route to remain visible and horizontally contained.
                         assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.get_by_test_id('big-six-wheel').is_visible()
+                        # Require the complete localized ready stage before writing evidence.
+                        assert_big_six_stage_complete(viewport_id)
                         # Record self-describing Russian ready evidence.
                         game_evidence(f'after-pass-big-six-ready-ru-{viewport_id}.png','big_six_wheel',['ready'],'ru-RU',viewport_id)
                     # Restore the unsent wager cleared by the full-page route reload.
@@ -4476,6 +4517,10 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             for viewport_id,width,height in required_viewports:
                                 # Resize to the exact visual matrix dimensions.
                                 page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
+                                # Probe every non-control theater node against the route-owned stage after responsive layout settles.
+                                stage_failures=page.evaluate("""() => { const stage=document.querySelector('.crown-anchor__stage'); const selectors=['[data-die="0"]','[data-die="1"]','[data-die="2"]','[data-symbol="crown"]','[data-symbol="anchor"]','[data-symbol="heart"]','[data-symbol="diamond"]','[data-symbol="club"]','[data-symbol="spade"]']; if(!stage)return['stage']; const owner=stage.getBoundingClientRect(); return selectors.filter(selector=>{ const node=document.querySelector(selector); if(!node)return true; const style=getComputedStyle(node); const rect=node.getBoundingClientRect(); const painted=node.getClientRects().length&&style.display!=='none'&&style.visibility!=='hidden'&&rect.width>0&&rect.height>0; const contained=rect.left>=owner.left-1&&rect.right<=owner.right+1&&rect.top>=owner.top-1&&rect.bottom<=owner.bottom+1; return !painted||!contained; }); }""")
+                                # Reject a missing, unpainted, or escaped die/result panel before labeling this viewport after-pass.
+                                assert not stage_failures,f'Crown and Anchor stage incomplete at {viewport_id}: {stage_failures}'
                                 # Reject horizontal overflow and require the mounted table.
                                 assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.get_by_test_id('crown-and-anchor').is_visible()
                                 # Record self-describing evidence for this state and viewport.
@@ -5026,10 +5071,28 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 page.get_by_test_id('nav-roulette').click(); page.get_by_test_id('roulette-wheel').wait_for()
                 # Define the exhaustive hit-target integrity and geometry regression required by issue #222.
                 def roulette_hit_target_integrity():
+                    # Define an exact clear-settlement guard so mode changes cannot race the asynchronous refund request. (issue #227)
+                    def clear_roulette_audit_bets():
+                        # Capture the documented clear response before activating the real rendered control.
+                        with page.expect_response(lambda response: response.url.endswith('/api/v1/games/roulette/clear') and response.request.method=='POST', timeout=5000) as clear_info:
+                            # Activate the same clear-all path a player uses rather than mutating test state directly.
+                            page.locator('#clear').click()
+                        # Require the refund request to succeed before attempting a wheel-mode transition.
+                        assert clear_info.value.ok, 'Roulette audit-bet clear request failed'
+                        # Require the rerendered control to prove the browser consumed the empty-bet response.
+                        page.wait_for_function("() => document.querySelector('#clear')?.disabled === true", timeout=5000)
                     # Select the smallest chip so exhaustive region coverage cannot deplete the wallet.
                     page.get_by_test_id('chip-1').click()
-                    # Read every bet cell's stable identity and hit geometry from the mounted board.
-                    cells=page.evaluate("() => [...document.querySelectorAll('[data-cell-key]')].map(el => { const r=el.getBoundingClientRect(); return {key:el.getAttribute('data-cell-key'), type:el.getAttribute('data-bet-type'), covered:(el.getAttribute('data-covered')||'').split(',').filter(Boolean), x:r.left, y:r.top, w:r.width, h:r.height}; })")
+                    # Read the semantic precision-layer state before changing it. (issue #348)
+                    spots_visible=page.locator('#toggleSpots').get_attribute('aria-pressed')=='true'
+                    # Exercise an already-visible layer through a complete hide/show round trip.
+                    if spots_visible: page.locator('#toggleSpots').click()
+                    # Expose the precision layer through its real semantic toggle before any pointer-path hit test.
+                    page.locator('#toggleSpots').click()
+                    # Require the rerendered control to report the visible inside-spot state truthfully.
+                    assert page.locator('#toggleSpots').get_attribute('aria-pressed')=='true', 'Roulette inside spots did not enter the visible state'
+                    # Read every fixed-table bet cell's stable identity and hit geometry without duplicating the control-rail fast-bet aliases. (issue #348)
+                    cells=page.evaluate("() => [...document.querySelectorAll('[data-testid=roulette-table] [data-cell-key]')].map(el => { const r=el.getBoundingClientRect(); return {key:el.getAttribute('data-cell-key'), type:el.getAttribute('data-bet-type'), covered:(el.getAttribute('data-covered')||'').split(',').filter(Boolean), x:r.left, y:r.top, w:r.width, h:r.height}; })")
                     # Require a populated board so an empty catalog cannot pass this regression silently.
                     assert cells, 'no roulette bet cells rendered'
                     # Require every bet cell to expose a non-zero hit region.
@@ -5068,8 +5131,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         selector=f'[data-cell-key="{key}"]'
                         # Capture the exact wager POST triggered by activating this cell.
                         with page.expect_request(lambda request: request.url.endswith('/api/v1/games/roulette/bets') and request.method=='POST', timeout=5000) as request_info:
-                            # Activate the cell semantically so intentionally-stacked corner spots cannot intercept the pointer.
-                            page.dispatch_event(selector, 'click')
+                            # Activate the cell through Playwright's real actionability-checked pointer path. (issue #348)
+                            page.get_by_test_id('roulette-table').locator(selector).click()
                         # Read the posted bet body for identity verification.
                         body=request_info.value.post_data_json
                         # Require the posted bet type to match the clicked cell's canonical type.
@@ -5080,16 +5143,76 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         page.wait_for_timeout(25)
                     # Capture the exact "2nd 12" wager the issue reported as mismatched.
                     with page.expect_request(lambda request: request.url.endswith('/api/v1/games/roulette/bets') and request.method=='POST', timeout=5000) as second_dozen_info:
-                        # Activate the reported second-dozen hit target directly.
-                        page.dispatch_event('[data-cell-key="dozen:2"]', 'click')
+                        # Activate the reported second-dozen hit target through the real pointer path.
+                        page.locator('[data-cell-key="dozen:2"]').click()
                     # Read the second-dozen wager body.
                     second_dozen=second_dozen_info.value.post_data_json
                     # Require "2nd 12" to post the dozen covering exactly 13 through 24.
                     assert second_dozen['bet_type']=='dozen' and {str(number) for number in second_dozen['covered_numbers']}=={str(number) for number in range(13,25)}, '2nd 12 did not post the 13-24 dozen'
                     # Refund every audit wager so the board returns to its pre-audit betting state.
-                    page.locator('#clear').click(); page.wait_for_timeout(150)
+                    clear_roulette_audit_bets()
+                    # Resolve the governed disclosure that owns wheel-mode and zero-rule settings.
+                    rules_disclosure=page.get_by_test_id('roulette-rules-disclosure')
+                    # Open advanced settings through the visible summary before exercising its native select controls.
+                    if rules_disclosure.get_attribute('open') is None: rules_disclosure.locator('summary').click()
+                    # Require the real mode field to become visible rather than bypassing disclosure actionability.
+                    page.get_by_test_id('roulette-mode').wait_for(state='visible', timeout=5000)
+                    # Audit every zero-zone special in both supported wheel modes so no catalog combination can share a pointer target. (issue #348)
+                    for wheel_mode,expected_count in (('single',6),('double',10)):
+                        # Read the current rendered wheel mode before deciding whether an asynchronous settings request is required.
+                        current_mode=page.get_by_test_id('roulette-mode').input_value()
+                        # Change modes only when needed so every expected response corresponds to a real state transition.
+                        if current_mode!=wheel_mode:
+                            # Capture the documented settings response that owns the catalog rerender.
+                            with page.expect_response(lambda response: response.url.endswith('/api/v1/games/roulette/settings') and response.request.method=='POST', timeout=5000) as settings_info:
+                                # Select the requested wheel mode through the rendered control.
+                                page.get_by_test_id('roulette-mode').select_option(wheel_mode)
+                            # Require the mode transition to succeed before reading its zero-zone catalog.
+                            assert settings_info.value.ok, f'Roulette {wheel_mode} mode settings request failed'
+                        # Require the semantic visibility state to survive the mode-owned rerender.
+                        assert page.locator('#toggleSpots').get_attribute('aria-pressed')=='true', f'Roulette {wheel_mode} mode hid inside spots after rerender'
+                        # Read only the mode-specific zero-zone targets and their real pointer rectangles.
+                        zero_cells=page.evaluate("() => [...document.querySelectorAll('[data-betid][data-bet-type=zero_split],[data-betid][data-bet-type=trio],[data-betid][data-bet-type=first_four],[data-betid][data-bet-type=top_line]')].map(el => { const r=el.getBoundingClientRect(); return {key:el.getAttribute('data-cell-key'), type:el.getAttribute('data-bet-type'), covered:(el.getAttribute('data-covered')||'').split(',').filter(Boolean), x:r.left, y:r.top, w:r.width, h:r.height}; })")
+                        # Require the complete authoritative single- or double-zero special inventory.
+                        assert len(zero_cells)==expected_count, f'Roulette {wheel_mode} exposed {len(zero_cells)} of {expected_count} zero-zone controls'
+                        # Compare every zero-zone pointer rectangle against every later one exactly once.
+                        for outer in range(len(zero_cells)):
+                            # Visit later targets only so a rectangle never compares with itself.
+                            for inner in range(outer+1,len(zero_cells)):
+                                # Resolve the two physical pointer targets under review.
+                                first=zero_cells[outer]; second=zero_cells[inner]
+                                # Measure real horizontal overlap between the transformed viewport rectangles.
+                                overlap_x=max(0,min(first['x']+first['w'],second['x']+second['w'])-max(first['x'],second['x']))
+                                # Measure real vertical overlap between the transformed viewport rectangles.
+                                overlap_y=max(0,min(first['y']+first['h'],second['y']+second['h'])-max(first['y'],second['y']))
+                                # Reject stacked zero-zone controls before pointer activation can become ambiguous.
+                                assert overlap_x*overlap_y<=2, f"Roulette {wheel_mode} overlaps {first['key']} and {second['key']}"
+                        # Index the mode-owned identities before request-body verification.
+                        zero_identity={cell['key']:cell for cell in zero_cells}
+                        # Pointer-click every zero-zone control rather than sampling one covered-number size.
+                        for key in zero_identity:
+                            # Build the stable selector that survives each wager-owned rerender.
+                            selector=f'[data-cell-key="{key}"]'
+                            # Capture the exact wager request emitted by the real pointer activation.
+                            with page.expect_request(lambda request: request.url.endswith('/api/v1/games/roulette/bets') and request.method=='POST', timeout=5000) as zero_request:
+                                # Exercise Playwright visibility, stability, hit testing, and pointer dispatch together.
+                                page.locator(selector).click()
+                            # Read the mode-specific wager body without relying on localized labels.
+                            body=zero_request.value.post_data_json
+                            # Require the backend bet type to match the exact target identity.
+                            assert body['bet_type']==zero_identity[key]['type'], f"{wheel_mode} {key}: posted wrong bet type"
+                            # Require the backend covered pockets to match the exact target identity.
+                            assert {str(number) for number in body['covered_numbers']}=={str(number) for number in zero_identity[key]['covered']}, f"{wheel_mode} {key}: covered mismatch"
+                        # Refund this mode's complete zero-zone audit before changing the table or continuing the suite.
+                        clear_roulette_audit_bets()
+                    # Reacquire the disclosure after mode-owned rerenders so test cleanup targets the current DOM node.
+                    rules_disclosure=page.get_by_test_id('roulette-rules-disclosure')
+                    # Restore the documented collapsed state through the visible summary for downstream test isolation.
+                    if rules_disclosure.get_attribute('open') is not None: rules_disclosure.locator('summary').click()
+                    # Require advanced settings to be hidden again before handing the shared page to the next case.
+                    page.get_by_test_id('roulette-mode').wait_for(state='hidden', timeout=5000)
                 # Record the exhaustive Roulette hit-target integrity and geometry regression.
-                run_case('BR-ROU-HITMAP-001',['ROU-005','ROU-013','ROU-014','ROU-015','ROU-016','ROU-017','ROU-044','ROU-045','ROU-057','TEST-053'],roulette_hit_target_integrity)
+                run_case('BR-ROU-HITMAP-001',['ROU-002','ROU-005','ROU-007','ROU-011','ROU-012','ROU-013','ROU-014','ROU-015','ROU-016','ROU-017','ROU-044','ROU-045','ROU-057','TEST-053','TEST-092'],roulette_hit_target_integrity)
                 # Prove leaving Roulette with an open, un-spun bet refunds the stake rather than stranding it. (issue #246)
                 def roulette_refund_on_leave():
                     # Read the authoritative current-user token balance straight from the session endpoint so the assertion never depends on shell DOM refresh timing. (issue #246)
@@ -6344,6 +6467,165 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.set_viewport_size({'width':1920,'height':1080}); page.evaluate("async () => { const i18n = await import('/core/i18n.js'); await i18n.setLocale('en-US', { persistLocal: false }); }")
                 # Record Admin authorization presentation, runtime-disabled status, isolation, and evidence.
                 run_case('BR-ADMIN-OAUTH-001',['OAUTH-002','OAUTH-006','TEST-045'],admin_oauth_browser)
+                # Define secret-free transactional-mail diagnostics across all governed locales, viewports, and states. (issue #330)
+                def admin_mail_browser():
+                    # Define all four visual-matrix viewports, including the narrow mobile Admin layout.
+                    viewports={'desktop_primary':{'width':1920,'height':1080},'desktop_compact':{'width':1440,'height':900},'tablet':{'width':1024,'height':900},'mobile':{'width':390,'height':844}}
+                    # Build the stable aggregate delivery shape required by the v2 contract.
+                    empty_summary={'sending':0,'sent':0,'retry_wait':0,'failed':0,'suppressed':0,'uncertain':0,'disabled':0,'release_held':0,'misconfigured':0}
+                    # Enumerate the exact matrix rows and low-cardinality diagnostic payloads.
+                    scenarios=[
+                        # Prove the intentionally disabled repository default.
+                        ('operations_mail_disabled','disabled','disabled',['feature_disabled'],0),
+                        # Prove actionable incomplete configuration without secrets.
+                        ('operations_mail_misconfigured','misconfigured','postmark',['sender_identity_invalid','provider_credential_missing'],0),
+                        # Prove complete configuration remains visibly held from provider/network release.
+                        ('operations_mail_release_held','release_held','postmark',['network_release_held'],0),
+                        # Prove de-identified suppression aggregates without recipient rows.
+                        ('operations_mail_suppression_summary','release_held','postmark',['network_release_held'],7),
+                    ]
+                    # Exercise each state in both governed Admin locales.
+                    for locale in ('en-US','ru-RU'):
+                        # Switch locale without modifying an external browser preference.
+                        page.evaluate("async locale => { const i18n = await import('/core/i18n.js'); await i18n.setLocale(locale, { persistLocal: false }); }", locale)
+                        # Render each contract-published acceptance state independently.
+                        for matrix_state,status,provider,reasons,suppressed_count in scenarios:
+                            # Clone the aggregate summary so the suppression scenario can carry one bounded count.
+                            summary=dict(empty_summary); summary['suppressed']=suppressed_count
+                            # Publish only the documented response envelope and low-cardinality values.
+                            payload={'ok':True,'data':{'schema_version':'transactional-mail-readiness.v2','provider':provider,'status':status,'checks':{'feature_enabled':status!='disabled','network_release_enabled':False,'canonical_origin_https':status in ('release_held','ready'),'sender_identity_configured':status in ('release_held','ready'),'provider_credential_configured':status in ('release_held','ready'),'digest_key_configured':True},'reasons':reasons,'delivery_summary':summary,'suppressed_recipients':suppressed_count}}
+                            # Intercept only the Admin mail diagnostic while Operations and OAuth use the real backend.
+                            page.route('**/api/v2/admin/mail/readiness',lambda route,_request,body=json.dumps(payload): route.fulfill(status=200,content_type='application/json',body=body))
+                            # Refresh the active Operations surface and wait for the exact explicit state card.
+                            page.get_by_test_id('admin-tab-operations').click(); page.get_by_test_id(f'admin-mail-{status}').wait_for(timeout=5000)
+                            # Wait for the repeated release-held suppression scenario to render its new aggregate before evidence.
+                            if matrix_state=='operations_mail_suppression_summary': page.wait_for_function("expected => document.querySelector('[data-testid=\"admin-mail-suppression-summary\"]')?.textContent.includes(expected)",arg=str(suppressed_count))
+                            # Read the rendered card once for data-minimization assertions.
+                            visible_mail=page.get_by_test_id(f'admin-mail-{status}').inner_text()
+                            # Require no environment key, recipient syntax, tokened link, credential, or raw provider response.
+                            assert 'CASINO_' not in visible_mail and '@' not in visible_mail and 'token=' not in visible_mail.lower() and '://' not in visible_mail
+                            # Require the suppression scenario to expose only its localized aggregate count.
+                            if matrix_state=='operations_mail_suppression_summary': assert '7' in page.get_by_test_id('admin-mail-suppression-summary').inner_text()
+                            # Capture exact after-pass evidence for every locale and governed viewport.
+                            for viewport_id,viewport in viewports.items():
+                                # Resize to the exact matrix dimensions before containment checks.
+                                page.set_viewport_size(viewport); page.wait_for_timeout(150)
+                                # Bring the independent mail card into the bounded Admin scroll region.
+                                page.get_by_test_id(f'admin-mail-{status}').scroll_into_view_if_needed()
+                                # Require document, Admin content, and card containment without horizontal overflow.
+                                assert page.evaluate("status => { const content=document.querySelector('.admin-content'); const card=document.querySelector(`[data-testid=\"admin-mail-${status}\"]`); return document.documentElement.scrollWidth <= window.innerWidth + 1 && content.scrollWidth <= content.clientWidth + 1 && card.scrollWidth <= card.clientWidth + 1; }",status)
+                                # Write a paired after-pass screenshot and sidecar for the exact matrix row.
+                                game_evidence(f'after-pass-admin-mail-{matrix_state}-{locale}-{viewport_id}.png','admin',[matrix_state],locale,viewport_id)
+                            # Remove the focused response before installing the next state.
+                            page.unroute('**/api/v2/admin/mail/readiness')
+                    # Restore the real disabled backend response and primary desktop dimensions.
+                    page.set_viewport_size({'width':1920,'height':1080}); page.evaluate("async () => { const i18n = await import('/core/i18n.js'); await i18n.setLocale('en-US', { persistLocal: false }); }"); page.get_by_test_id('admin-refresh').click(); page.get_by_test_id('admin-mail-disabled').wait_for(timeout=5000)
+                # Record dual-gate states, secret-free aggregate diagnostics, responsive containment, and evidence.
+                run_case('BR-ADMIN-MAIL-001',['MAIL-002','MAIL-003','MAIL-005','TEST-090'],admin_mail_browser)
+                # Define masked Admin invitation and account-free redemption evidence across every governed locale and viewport. (issue #332)
+                def invitation_browser():
+                    # Define all four visual-matrix viewports used by both invitation surfaces.
+                    viewports={'desktop_primary':{'width':1920,'height':1080},'desktop_compact':{'width':1440,'height':900},'tablet':{'width':1024,'height':900},'mobile':{'width':390,'height':844}}
+                    # Build one complete masked lifecycle row containing no raw recipient or credential material.
+                    pending_row={'invitation_id':'invite_visual_pending','recipient_hint':'i***@e***.invalid','status':'pending','delivery_status':'sent','locale':'en-US','created_at':'2032-02-03T04:05:06.000Z','updated_at':'2032-02-03T04:05:06.000Z','expires_at':'2032-02-10T04:05:06.000Z','redeemed_at':None,'revoked_at':None,'invited_by':'user_admin_visual','history':[]}
+                    # Derive one terminal row without adding recipient or account identifiers.
+                    redeemed_row={**pending_row,'invitation_id':'invite_visual_redeemed','status':'redeemed','redeemed_at':'2032-02-04T04:05:06.000Z','updated_at':'2032-02-04T04:05:06.000Z'}
+                    # Enumerate exact Admin matrix states and contract-shaped secret-free responses.
+                    scenarios=[
+                        ('invitations_disabled',{'enabled':False,'redemption_enabled':False,'mail_status':'disabled','recovery_required':0,'invitations':[]},'admin-invitations-disabled'),
+                        ('invitations_release_held',{'enabled':True,'redemption_enabled':False,'mail_status':'release_held','recovery_required':0,'invitations':[]},'admin-invitations-release-held'),
+                        ('invitations_empty',{'enabled':True,'redemption_enabled':True,'mail_status':'ready','recovery_required':0,'invitations':[]},'admin-invitations-ready'),
+                        ('invitations_pending',{'enabled':True,'redemption_enabled':True,'mail_status':'ready','recovery_required':0,'invitations':[pending_row]},'admin-invitations-ready'),
+                        ('invitations_redeemed',{'enabled':True,'redemption_enabled':True,'mail_status':'ready','recovery_required':0,'invitations':[redeemed_row]},'admin-invitations-ready'),
+                    ]
+                    # Exercise every Admin invitation state in both installed locales.
+                    for locale in ('en-US','ru-RU'):
+                        # Switch locale through the same runtime used by the visible Admin selector.
+                        page.evaluate("async locale => { const i18n = await import('/core/i18n.js'); await i18n.setLocale(locale, { persistLocal: false }); }",locale)
+                        # Render each exact contract response independently.
+                        for matrix_state,data,test_id in scenarios:
+                            # Wrap the safe data in the standard success envelope.
+                            payload={'ok':True,'data':data}
+                            # Intercept only the invitation list endpoint while all other Admin APIs remain real.
+                            page.route('**/api/v2/admin/invitations?limit=100',lambda route,_request,body=json.dumps(payload): route.fulfill(status=200,content_type='application/json',body=body))
+                            # Open the dedicated tab and wait for the exact readiness card.
+                            page.get_by_test_id('admin-tab-invitations').click(); page.get_by_test_id(test_id).wait_for(timeout=5000)
+                            # Require only masked recipient display and no secret-bearing URL or environment label.
+                            visible_invitation=page.get_by_test_id('admin-invitation-list').inner_text(); assert 'i***@e***.invalid' in visible_invitation or not data['invitations']; assert 'CASINO_' not in visible_invitation and 'token=' not in visible_invitation.lower() and '://' not in visible_invitation and 'invitee@' not in visible_invitation
+                            # Capture every state at all four governed viewports with containment checks.
+                            for viewport_id,viewport in viewports.items():
+                                # Resize to the exact matrix dimensions.
+                                page.set_viewport_size(viewport); page.wait_for_timeout(120)
+                                # Bring the lifecycle region into view inside the Admin scroll surface.
+                                page.get_by_test_id('admin-invitation-list').scroll_into_view_if_needed()
+                                # Require document, Admin content, and lifecycle region containment.
+                                assert page.evaluate("() => { const content=document.querySelector('.admin-content'); const card=document.querySelector('[data-testid=\"admin-invitation-list\"]'); return document.documentElement.scrollWidth <= window.innerWidth + 1 && content.scrollWidth <= content.clientWidth + 1 && card.scrollWidth <= card.clientWidth + 1; }")
+                                # Capture exact after-pass evidence for this state, locale, and viewport.
+                                game_evidence(f'after-pass-admin-{matrix_state}-{locale}-{viewport_id}.png','admin',[matrix_state],locale,viewport_id)
+                            # Remove the focused response before the next state.
+                            page.unroute('**/api/v2/admin/invitations?limit=100')
+                        # Publish one standard API error to prove a bounded localized Admin recovery state.
+                        page.route('**/api/v2/admin/invitations?limit=100',lambda route: route.fulfill(status=200,content_type='application/json',body='{"ok":false,"error":{"code":"INVITATION_UNAVAILABLE","message":"Unavailable"}}'))
+                        # Open and wait for the shared localized Admin load-error card.
+                        page.get_by_test_id('admin-tab-invitations').click(); page.get_by_test_id('admin-load-error').wait_for(timeout=5000)
+                        # Capture the invitation error state at every governed viewport.
+                        for viewport_id,viewport in viewports.items(): page.set_viewport_size(viewport); page.wait_for_timeout(100); game_evidence(f'after-pass-admin-invitations-error-{locale}-{viewport_id}.png','admin',['invitations_error'],locale,viewport_id)
+                        # Remove the error shim before the next locale.
+                        page.unroute('**/api/v2/admin/invitations?limit=100')
+                    # Restore primary dimensions before leaving the Admin session.
+                    page.set_viewport_size(viewports['desktop_primary'])
+                    # Clear the authenticated cookie jar so the account-free public route is exercised honestly.
+                    page.context.clear_cookies()
+                    # Exercise the form, consent, generic error, focus, motion, and zoom states in both locales.
+                    for locale in ('en-US','ru-RU'):
+                        # Navigate with a synthetic bearer that is never rendered or written to evidence metadata.
+                        page.goto(base+'/enroll/invitation?token=synthetic-browser-invitation-bearer',wait_until='networkidle'); page.get_by_test_id('invitation-redemption').wait_for(timeout=5000)
+                        # Switch the visible form locale through its own governed selector.
+                        page.get_by_test_id('invitation-locale').select_option(locale); page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale",arg=locale)
+                        # Capture the empty account-free form and explicit unaccepted-terms state at every viewport.
+                        for viewport_id,viewport in viewports.items():
+                            # Resize before containment and evidence.
+                            page.set_viewport_size(viewport); page.wait_for_timeout(100)
+                            # Require no page-level horizontal overflow.
+                            assert page.evaluate("() => document.documentElement.scrollWidth <= window.innerWidth + 1")
+                            # Capture the empty form and explicit consent boundary together.
+                            game_evidence(f'after-pass-invitation-form-{locale}-{viewport_id}.png','invitation_redemption',['form','terms_unaccepted'],locale,viewport_id)
+                        # Focus the native submit control so keyboard evidence records the exact target.
+                        page.get_by_test_id('invitation-submit').focus(); assert page.evaluate("() => document.activeElement?.getAttribute('data-testid')")=='invitation-submit'
+                        # Capture the keyboard-focus state at primary desktop.
+                        page.set_viewport_size(viewports['desktop_primary']); game_evidence(f'after-pass-invitation-keyboard-focus-{locale}-desktop_primary.png','invitation_redemption',['keyboard_focus'],locale,'desktop_primary')
+                        # Enable reduced motion and capture the unchanged complete form.
+                        page.emulate_media(reduced_motion='reduce'); game_evidence(f'after-pass-invitation-reduced-motion-{locale}-desktop_primary.png','invitation_redemption',['reduced_motion'],locale,'desktop_primary'); page.emulate_media(reduced_motion='no-preference')
+                        # Apply a 200% browser-content zoom proxy and require horizontal containment at the mobile width.
+                        page.set_viewport_size(viewports['mobile']); page.evaluate("() => { document.body.style.zoom='200%'; document.body.style.width='50%'; }"); assert page.evaluate("() => document.documentElement.scrollWidth <= window.innerWidth + 1")
+                        # Capture the explicit zoom acceptance state before restoring scale.
+                        game_evidence(f'after-pass-invitation-zoom-200-{locale}-mobile.png','invitation_redemption',['zoom_200'],locale,'mobile'); page.evaluate("() => { document.body.style.zoom=''; document.body.style.width=''; }")
+                        # Return to primary dimensions for the generic-error interaction.
+                        page.set_viewport_size(viewports['desktop_primary'])
+                        # Intercept only redemption with the exact generic contract error.
+                        page.route('**/api/v2/auth/redeem-invitation',lambda route: route.fulfill(status=400,content_type='application/json',body='{"ok":false,"error":{"code":"VALIDATION_ERROR","message":"invitation could not be redeemed","details":{"reason":"invitation_unavailable"}}}'))
+                        # Fill transient synthetic fields and explicit current terms before submit.
+                        page.get_by_test_id('invitation-email').fill('visual-invitation@example.invalid'); page.get_by_test_id('invitation-display-name').fill('Invited Player'); page.get_by_test_id('invitation-password').fill('Synthetic-Invite-2026!'); page.get_by_test_id('invitation-terms').check(); page.get_by_test_id('invitation-submit').click()
+                        # Wait for the localized generic message, then clear all raw transient fields before evidence.
+                        page.wait_for_function("() => document.querySelector('#invitation-message')?.textContent.trim().length > 0"); page.get_by_test_id('invitation-email').fill(''); page.get_by_test_id('invitation-display-name').fill(''); page.get_by_test_id('invitation-password').fill('')
+                        # Capture the non-enumerating error at every governed viewport.
+                        for viewport_id,viewport in viewports.items(): page.set_viewport_size(viewport); page.wait_for_timeout(100); game_evidence(f'after-pass-invitation-generic-error-{locale}-{viewport_id}.png','invitation_redemption',['generic_error'],locale,viewport_id)
+                        # Remove the generic-error shim before the terminal success response.
+                        page.unroute('**/api/v2/auth/redeem-invitation')
+                    # Exercise terminal success once through a fresh synthetic form and standard identifier-free envelope.
+                    page.goto(base+'/enroll/invitation?token=synthetic-browser-success-bearer',wait_until='networkidle'); page.get_by_test_id('invitation-redemption').wait_for(timeout=5000)
+                    # Intercept the terminal response without creating a real account in the browser copy.
+                    page.route('**/api/v2/auth/redeem-invitation',lambda route: route.fulfill(status=200,content_type='application/json',body='{"ok":true,"data":{"status":"enrolled"}}'))
+                    # Fill current terms and submit through the visible public form.
+                    page.get_by_test_id('invitation-email').fill('visual-success@example.invalid'); page.get_by_test_id('invitation-display-name').fill('Invited Player'); page.get_by_test_id('invitation-password').fill('Synthetic-Invite-2026!'); page.get_by_test_id('invitation-terms').check(); page.get_by_test_id('invitation-submit').click(); page.get_by_test_id('login-gate').wait_for(timeout=5000)
+                    # Require the bearer to be removed from browser history after success.
+                    assert page.url.rstrip('/')==base.rstrip('/') and 'token=' not in page.url
+                    # Capture the identifier-free success return at every governed viewport.
+                    for viewport_id,viewport in viewports.items(): page.set_viewport_size(viewport); page.wait_for_timeout(100); game_evidence(f'after-pass-invitation-success-{viewport_id}.png','invitation_redemption',['success_return_to_login'],'en-US',viewport_id)
+                    # Remove the success shim and restore an authenticated Admin session for following suites.
+                    page.unroute('**/api/v2/auth/redeem-invitation'); page.request.post(base+'/api/v2/auth/login',data={'email':DEFAULT_AUTH_EMAIL,'password':DEFAULT_AUTH_PASSWORD}); page.goto(base+'/admin',wait_until='networkidle'); page.get_by_test_id('admin-tab-operations').wait_for(timeout=5000)
+                # Record the complete Admin/public locale, viewport, state, privacy, keyboard, motion, zoom, and evidence matrix.
+                run_case('BR-INVITE-001',['INVITE-001','INVITE-002','INVITE-003','INVITE-005','TEST-091'],invitation_browser)
                 # Define real-backend Operations states, localization, responsive layout, and evidence.
                 def admin_operations_browser():
                     # Cache the isolated backend's primary storage document for reversible degradation.

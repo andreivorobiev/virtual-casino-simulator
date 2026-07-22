@@ -563,34 +563,6 @@ def register(router):
         return create_admin_user(body)
 
     # Attach this decorator so the following function is registered with the framework.
-    @router.get(r"/api/v1/admin/invitations")
-    # List email invitations for least-privilege Admin inspection. (issue #332)
-    def admin_list_invitations(body, query):
-        # Return the bounded, token-free invitation views.
-        return {"invitations": invitations.listing()}
-
-    # Attach this decorator so the following function is registered with the framework.
-    @router.post(r"/api/v1/admin/invitations")
-    # Send one email invitation without creating any account, player, wallet, or password. (issue #332)
-    def admin_create_invitation(body, query, context):
-        # Create and deliver the invitation, attributing it to the authenticated Admin.
-        return {"invitation": invitations.create(str((body or {}).get("email", "")), invited_by=(context.get("user") or {}).get("user_id", ""))}
-
-    # Attach this decorator so the following function is registered with the framework.
-    @router.post(r"/api/v1/admin/invitations/resend")
-    # Resend one pending invitation with a fresh token, honoring the cooldown. (issue #332)
-    def admin_resend_invitation(body, query):
-        # Resend the identified invitation.
-        return {"invitation": invitations.resend(str((body or {}).get("invitation_id", "")))}
-
-    # Attach this decorator so the following function is registered with the framework.
-    @router.post(r"/api/v1/admin/invitations/revoke")
-    # Revoke one pending invitation so its token can no longer be redeemed. (issue #332)
-    def admin_revoke_invitation(body, query):
-        # Revoke the identified invitation.
-        return {"invitation": invitations.revoke(str((body or {}).get("invitation_id", "")))}
-
-    # Attach this decorator so the following function is registered with the framework.
     @router.get(r"/api/v1/admin/users/(?P<user_id>[^/]+)")
     # Define the admin_user_detail function used by this module.
     def admin_user_detail(body, query, user_id):
@@ -640,6 +612,75 @@ def register(router):
     def admin_users_v2_list(body, query):
         # Return the canonical Admin user collection.
         return {"users": list_admin_users()}
+
+    # Register the additive v2 invitation list and readiness surface without modifying frozen v1. (INVITE-004)
+    @router.get(r"/api/v2/admin/invitations")
+    # Return bounded privacy-safe invitation lifecycle views.
+    def admin_invitations_v2(body, query, context):
+        # Start protected bounded parsing so malformed query values never become server errors.
+        try:
+            # Parse the optional decimal limit while retaining the service-side ceiling.
+            limit = int((query or {}).get("limit", 100))
+        # Convert non-numeric and unbounded query values into the standard validation envelope.
+        except (TypeError, ValueError) as exc:
+            # Raise a value-free request diagnostic.
+            raise ValidationError("Invitation limit must be an integer") from exc
+        # Reject booleans, zero, negatives, and values beyond the published contract.
+        if isinstance((query or {}).get("limit"), bool) or limit < 1 or limit > 200:
+            # Preserve one bounded contract error.
+            raise ValidationError("Invitation limit must be between 1 and 200")
+        # Return readiness plus masked-recipient rows only.
+        return invitations.listing(limit)
+
+    # Register additive v2 Admin issuance behind the centralized Admin and CSRF gates. (INVITE-001)
+    @router.post(r"/api/v2/admin/invitations")
+    # Create and deliver one account-free invitation through approved foundations.
+    def admin_create_invitation_v2(body, query, context):
+        # Reject fields outside the exact v2 contract before transient recipient handling.
+        if set(body or {}) - {"recipient", "locale", "idempotency_key"}:
+            # Preserve a stable validation category without echoing field values.
+            raise ValidationError("Invitation request contains unsupported fields")
+        # Attribute the fixed action to the authenticated Admin from request context.
+        actor_id = str((context.get("user") or {}).get("user_id", ""))
+        # Delegate rate, delivery, privacy, and recovery policy to the invitation service.
+        return invitations.create(str((body or {}).get("recipient", "")), actor_id, locale=str((body or {}).get("locale", "en-US")), idempotency_key=str((body or {}).get("idempotency_key", "")))
+
+    # Register additive v2 resend with an opaque path identifier. (INVITE-001)
+    @router.post(r"/api/v2/admin/invitations/(?P<invitation_id>invite_[A-Za-z0-9_-]+)/resend")
+    # Replace one pending delivery generation through the recoverable saga.
+    def admin_resend_invitation_v2(body, query, context, invitation_id):
+        # Reject fields outside the exact caller-idempotency contract.
+        if set(body or {}) - {"idempotency_key"}:
+            # Keep the Admin error free of supplied values.
+            raise ValidationError("Invitation resend contains unsupported fields")
+        # Attribute the fixed resend action to the authenticated Admin.
+        actor_id = str((context.get("user") or {}).get("user_id", ""))
+        # Delegate cooldown, rate, token replacement, and mail delivery policy.
+        return invitations.resend(invitation_id, actor_id, idempotency_key=str((body or {}).get("idempotency_key", "")))
+
+    # Register additive v2 revocation before a redemption claim can own the invitation. (INVITE-001)
+    @router.post(r"/api/v2/admin/invitations/(?P<invitation_id>invite_[A-Za-z0-9_-]+)/revoke")
+    # Revoke one invitation idempotently even while issuance is disabled.
+    def admin_revoke_invitation_v2(body, query, context, invitation_id):
+        # Reject fields outside the exact caller-idempotency contract.
+        if set(body or {}) - {"idempotency_key"}:
+            # Keep the Admin error free of supplied values.
+            raise ValidationError("Invitation revoke contains unsupported fields")
+        # Attribute the fixed revoke action to the authenticated Admin.
+        actor_id = str((context.get("user") or {}).get("user_id", ""))
+        # Delegate state-first revocation and token invalidation.
+        return invitations.revoke(invitation_id, actor_id, idempotency_key=str((body or {}).get("idempotency_key", "")))
+
+    # Register bounded terminal metadata cleanup under the Admin boundary. (INVITE-006)
+    @router.post(r"/api/v2/admin/invitations/cleanup")
+    # Prune only unambiguously terminal rows beyond retention.
+    def admin_cleanup_invitations_v2(body, query, context):
+        # Require an empty object so cleanup cannot accept destructive caller scope.
+        if body not in ({}, None):
+            # Reject any uncontracted cleanup selector.
+            raise ValidationError("Invitation cleanup contains unsupported fields")
+        # Return only the bounded count removed by fixed policy.
+        return {"removed": invitations.cleanup()}
 
     # Register the published v2 canonical user creation route.
     @router.post(r"/api/v2/admin/users")

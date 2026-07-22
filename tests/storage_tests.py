@@ -15,6 +15,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 # Use synthetic keyed-digest material unrelated to MySQL credentials for live token evidence.
 MYSQL_TOKEN_TEST_KEY = "synthetic-mysql-token-digest-key-material-2026"
+# Use independent synthetic mail digest material for cross-process provider evidence.
+MYSQL_MAIL_TEST_KEY = "synthetic-mysql-mail-digest-key-material-2026"
+# Use one reserved-domain mailbox only inside the disposable MySQL integration database.
+MYSQL_INVITATION_RECIPIENT = "mysql-invitation@example.invalid"
+# Use one policy-compliant synthetic password only inside the disposable integration database.
+MYSQL_INVITATION_PASSWORD = "Synthetic-MySQL-Invite-2026!"
 
 
 # Execute one JSON action call in a separately spawned process.
@@ -121,6 +127,115 @@ def _mysql_token_consume_worker(arguments):
         # Remove the temporary selector when the parent process had none.
         else:
             # Delete only the worker-owned environment entry.
+            os.environ.pop("CASINO_STORAGE_PROVIDER", None)
+
+
+# Record a single in-process fake provider call without external network access.
+class _MySQLMailTransport:
+    # Initialize the bounded call counter.
+    def __init__(self):
+        # Start with no observed provider attempts.
+        self.calls = 0
+
+    # Accept one transient message without retaining any sensitive field.
+    def send(self, message):
+        # Count the invocation while deliberately discarding the payload.
+        self.calls += 1
+
+
+# Submit the same transactional-mail request from one independent MySQL process. (MAIL-004)
+def _mysql_mail_submit_worker(index):
+    # Import the mail service only inside the spawned process.
+    from casino.core import mail
+    # Import provider injection so this worker owns one independent connection pool.
+    from casino.core import storage
+    # Import the configured data root used for the canonical provider document key.
+    from casino.config import DATA_DIR
+
+    # Preserve the inherited provider selector around this bounded proof.
+    previous_provider_name = os.environ.get("CASINO_STORAGE_PROVIDER")
+    # Route the state-store mutation through MySQL for this worker.
+    os.environ["CASINO_STORAGE_PROVIDER"] = "mysql"
+    # Inject a newly constructed provider that shares only the disposable integration database.
+    storage.set_provider_for_tests(storage.MySQLStorageProvider())
+    # Allocate one process-local fake transport so the parent can sum actual invocations.
+    transport = _MySQLMailTransport()
+    # Start protected submission so provider injection is always released.
+    try:
+        # Build one fully ready service using only synthetic reserved-domain values.
+        service = mail.MailService(state_path=DATA_DIR / "mail" / "deliveries.json", enabled=True, network_enabled=True, provider="postmark", digest_key=MYSQL_MAIL_TEST_KEY, canonical_origin="https://casino.example.invalid", from_address="security@casino.example.invalid", sending_domain="casino.example.invalid", provider_token="synthetic-provider-token", transport=transport)
+        # Submit the exact same caller request through every process.
+        receipt = service.submit("password_reset", "mysql-mail@example.invalid", token="synthetic-mysql-mail-bearer", idempotency_key="mysql-mail-shared-idempotency")
+        # Return only caller index, local call count, opaque delivery id, and safe status.
+        return index, transport.calls, receipt["delivery_id"], receipt["status"]
+    # Always release process-local provider state and restore the inherited selector.
+    finally:
+        # Clear the injected provider before the spawned worker exits.
+        storage.set_provider_for_tests(None)
+        # Restore an inherited provider selection exactly when one existed.
+        if previous_provider_name is not None:
+            # Replace the bounded test selector with its original value.
+            os.environ["CASINO_STORAGE_PROVIDER"] = previous_provider_name
+        # Remove only the worker-owned selector when none was inherited.
+        else:
+            # Delete the temporary MySQL selector.
+            os.environ.pop("CASINO_STORAGE_PROVIDER", None)
+
+
+# Report fixed ready mail diagnostics for redemption-only child processes. (INVITE-002)
+class _MySQLInvitationReadyMail:
+    # Return only the fixed readiness field consumed by Admin listing paths.
+    def readiness(self):
+        # Keep the provider/network boundary fully fake in this disposable proof.
+        return {"status": "ready"}
+
+
+# Redeem one invitation idempotently through an independent MySQL process. (INVITE-003)
+def _mysql_invitation_redeem_worker(arguments):
+    # Import the invitation and token services only inside the spawned process.
+    from casino.core import invitations, one_time_tokens, storage
+    # Import the configured data root so every child derives identical provider document keys.
+    from casino.config import DATA_DIR, GUEST_TERMS_VERSION
+    # Import the one generic public error allowed for a losing in-flight observation.
+    from casino.errors import ValidationError
+
+    # Unpack the synthetic bearer and caller key without logging either value.
+    index, token, caller_key = arguments
+    # Preserve the workflow's provider selector around this bounded process proof.
+    previous_provider_name = os.environ.get("CASINO_STORAGE_PROVIDER")
+    # Route every state-store call through the disposable MySQL database.
+    os.environ["CASINO_STORAGE_PROVIDER"] = "mysql"
+    # Inject one independent provider so the child owns its own connections.
+    storage.set_provider_for_tests(storage.MySQLStorageProvider())
+    # Start protected redemption so provider routing is always restored.
+    try:
+        # Build the shared purpose-bound token service over the canonical provider document.
+        token_service = one_time_tokens.TokenService(store_path=DATA_DIR / "auth" / "one_time_tokens.json", digest_key=MYSQL_TOKEN_TEST_KEY, audit_sink=lambda level, event, fields: None)
+        # Build the invitation service with both repository gates enabled only for this disposable test.
+        service = invitations.InvitationService(store_path=DATA_DIR / "auth" / "invitations.json", enabled=True, enrollment_enabled=True, digest_key=MYSQL_MAIL_TEST_KEY, token_service=token_service, mail_service=_MySQLInvitationReadyMail(), audit_sink=lambda event, **fields: None)
+        # Start protected public redemption so a safe race loser becomes serializable evidence.
+        try:
+            # Submit the exact same caller-idempotent request through every independent process.
+            receipt = service.redeem(token, MYSQL_INVITATION_RECIPIENT, MYSQL_INVITATION_PASSWORD, "MySQL Invited Player", "en-US", GUEST_TERMS_VERSION, True, caller_key)
+            # Return only the fixed success state and process index.
+            return index, receipt.get("status") == "enrolled"
+        # Convert a bounded in-flight conflict into the only permitted public error evidence.
+        except ValidationError as error:
+            # Require the generic reason with no recipient, account, or token detail.
+            assert error.details == invitations.GENERIC_REDEMPTION_DETAILS
+            # Report a safely rejected concurrent observation.
+            return index, False
+    # Always release process-local provider state before exit.
+    finally:
+        # Clear the injected provider instance.
+        storage.set_provider_for_tests(None)
+        # Restore an inherited provider selector exactly when one existed.
+        if previous_provider_name is not None:
+            # Replace the test selector with its original value.
+            os.environ["CASINO_STORAGE_PROVIDER"] = previous_provider_name
+        # Remove only the test-owned selector when the parent had none.
+        else:
+            # Delete the bounded process environment entry.
             os.environ.pop("CASINO_STORAGE_PROVIDER", None)
 
 
@@ -467,7 +582,7 @@ def run_mysql_live_provider_path():
     # Import the data root used to derive stable provider document keys.
     from casino.config import DATA_DIR
     # Import core services whose JSON-shaped state must no longer create hybrid files.
-    from casino.core import auth, autoplay, ledger, one_time_tokens, players, state_store, storage
+    from casino.core import auth, autoplay, invitations, ledger, mail, one_time_tokens, players, state_store, storage
 
     # Build the explicitly configured provider without ever reading or displaying its password.
     provider = storage.MySQLStorageProvider()
@@ -537,6 +652,52 @@ def run_mysql_live_provider_path():
             assert token_receipt["token"] not in token_document_text and "mysql-token-subject@example.invalid" not in token_document_text
             # Require exactly one consumed timestamp for the issued opaque record.
             assert sum(1 for row in token_document.get("tokens", []) if row.get("token_id") == token_receipt["token_id"] and row.get("consumed_at")) == 1
+            # Execute twelve duplicate mail submissions through independent MySQL connections and processes.
+            with ProcessPoolExecutor(max_workers=4) as executor:
+                # Materialize every safe worker result so a child failure surfaces in the live gate.
+                mail_results = list(executor.map(_mysql_mail_submit_worker, range(12)))
+            # Require exactly one process to cross the fake provider boundary.
+            assert sum(call_count for _, call_count, _, _ in mail_results) == 1
+            # Require every worker to correlate the same opaque delivery identity.
+            assert len({delivery_id for _, _, delivery_id, _ in mail_results}) == 1
+            # Require every concurrent observation to remain in-flight or terminally sent, never duplicated or failed.
+            assert {status for _, _, _, status in mail_results}.issubset({"sending", "sent"})
+            # Read the final provider document through the already injected parent connection.
+            mail_document = provider.read_document("mail/deliveries.json", mail.default_state)
+            # Serialize only the disposable integration state for raw-material absence assertions.
+            mail_document_text = __import__("json").dumps(mail_document, sort_keys=True)
+            # Require one durable delivery and no raw recipient, bearer, tokened URL, provider credential, or caller key.
+            assert len(mail_document.get("deliveries", {})) == 1 and "mysql-mail@example.invalid" not in mail_document_text and "synthetic-mysql-mail-bearer" not in mail_document_text and "token=" not in mail_document_text and "synthetic-provider-token" not in mail_document_text and "mysql-mail-shared-idempotency" not in mail_document_text
+            # Require the single durable claim to reach its terminal sent state.
+            assert next(iter(mail_document["deliveries"].values()))["status"] == "sent"
+            # Issue one invitation bearer through the already proven token service without invoking live mail.
+            invitation_token = token_service.issue(invitations.PURPOSE, MYSQL_INVITATION_RECIPIENT)
+            # Build one invitation service only to derive the domain-separated recipient verifier.
+            invitation_service = invitations.InvitationService(store_path=DATA_DIR / "auth" / "invitations.json", enabled=True, enrollment_enabled=True, digest_key=MYSQL_MAIL_TEST_KEY, token_service=token_service, mail_service=_MySQLInvitationReadyMail(), audit_sink=lambda event, **fields: None)
+            # Capture one durable instant for the disposable invitation fixture.
+            invitation_now = invitation_service.clock()
+            # Seed the minimum complete pending invitation state through the provider-backed document seam.
+            state_store.write_json(DATA_DIR / "auth" / "invitations.json", {"schema_version": 1, "invitations": [{"invitation_id": "invite_mysql_live", "recipient": MYSQL_INVITATION_RECIPIENT, "recipient_digest": invitation_service._digest("recipient", MYSQL_INVITATION_RECIPIENT), "recipient_hint": "m***@e***.invalid", "status": "pending", "delivery_status": "sent", "delivery_generation": 1, "token_id": invitation_token["token_id"], "mail_delivery_id": "delivery_mysql_live", "locale": "en-US", "invited_by": "user_admin_mysql", "create_idempotency_digest": invitation_service._digest("admin-idempotency", "mysql-live-create-idempotency"), "created_at": invitation_now, "updated_at": invitation_now, "expires_at": invitation_token["expires_at"], "redeemed_at": None, "revoked_at": None, "redemption": None, "history": []}]})
+            # Build repeated exact caller packets without publishing the bearer or replay key.
+            invitation_packets = [(index, invitation_token["token"], "mysql-invitation-redeem-idempotency") for index in range(8)]
+            # Race independent MySQL processes across claim, token consume, identity, wallet, and finalization.
+            with ProcessPoolExecutor(max_workers=4) as executor:
+                # Materialize every bounded result so a child process failure fails this gate.
+                invitation_results = list(executor.map(_mysql_invitation_redeem_worker, invitation_packets))
+            # Require at least one generic success and no duplicate durable account or wallet.
+            assert any(success for _, success in invitation_results)
+            # Read canonical provider-backed users after every worker exits.
+            invitation_users = auth.load_users()
+            # Require exactly one active invitation-owned account and no leaked reservation.
+            assert sum(1 for user_row in invitation_users.get("users", []) if user_row.get("invitation_id") == "invite_mysql_live" and user_row.get("status") == "active") == 1 and invitation_users.get("reservations") == []
+            # Require exactly one deterministic invitation-owned player wallet.
+            assert sum(1 for player_row in players.load_players().get("players", []) if str(player_row.get("player_id", "")).startswith("player_invite_")) == 1
+            # Read the terminal invitation state through the shared provider.
+            invitation_document = state_store.read_json(DATA_DIR / "auth" / "invitations.json", invitations.default_invitations)
+            # Require one terminal redemption and no persisted bearer, password, or caller key.
+            invitation_document_text = __import__("json").dumps(invitation_document, sort_keys=True)
+            # Verify the exact lifecycle result and privacy boundary.
+            assert [row.get("status") for row in invitation_document.get("invitations", [])] == ["redeemed"] and invitation_token["token"] not in invitation_document_text and MYSQL_INVITATION_PASSWORD not in invitation_document_text and "mysql-invitation-redeem-idempotency" not in invitation_document_text
         # Always restore the workflow provider selector after the scoped proof.
         finally:
             # Restore an inherited selector exactly when one existed.

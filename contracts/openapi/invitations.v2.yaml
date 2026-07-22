@@ -1,0 +1,369 @@
+openapi: 3.0.3
+info:
+  title: Casino Private Invitation Enrollment API
+  version: 2.0.0
+  description: >-
+    Disabled-by-default Admin invitation lifecycle and private redemption for restricted-preview
+    enrollment. Repository merge does not authorize live mail, enrollment, deployment, or public signup.
+# Keep the frozen v1 surface unchanged; every invitation route is additive v2.
+paths:
+  /api/v2/admin/invitations:
+    get:
+      operationId: listInvitations
+      security:
+        - cookieSession: []
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+      responses:
+        '200':
+          description: Secret-free invitation readiness and bounded lifecycle list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvitationListEnvelope'
+    post:
+      operationId: createInvitation
+      security:
+        - cookieSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvitationCreateRequest'
+      responses:
+        '200':
+          description: Privacy-safe invitation receipt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvitationEnvelope'
+  /api/v2/admin/invitations/{invitation_id}/resend:
+    post:
+      operationId: resendInvitation
+      security:
+        - cookieSession: []
+      parameters:
+        - $ref: '#/components/parameters/InvitationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IdempotentActionRequest'
+      responses:
+        '200':
+          description: Privacy-safe refreshed invitation receipt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvitationEnvelope'
+  /api/v2/admin/invitations/{invitation_id}/revoke:
+    post:
+      operationId: revokeInvitation
+      security:
+        - cookieSession: []
+      parameters:
+        - $ref: '#/components/parameters/InvitationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IdempotentActionRequest'
+      responses:
+        '200':
+          description: Privacy-safe terminal invitation receipt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvitationEnvelope'
+  /api/v2/admin/invitations/cleanup:
+    post:
+      operationId: cleanupInvitations
+      security:
+        - cookieSession: []
+      responses:
+        '200':
+          description: Count of terminal rows beyond retention removed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CleanupEnvelope'
+  /api/v2/auth/redeem-invitation:
+    post:
+      operationId: redeemInvitation
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RedemptionRequest'
+      responses:
+        '200':
+          description: Identifier-free enrollment success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RedemptionEnvelope'
+        '400':
+          description: One generic response for every disabled, invalid, expired, revoked, replayed, or raced request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericRedemptionError'
+components:
+  securitySchemes:
+    cookieSession:
+      type: apiKey
+      in: cookie
+      name: casino_session
+  parameters:
+    InvitationId:
+      in: path
+      name: invitation_id
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 160
+  schemas:
+    IdempotencyKey:
+      type: string
+      minLength: 16
+      maxLength: 200
+    Locale:
+      type: string
+      enum: [en-US, ru-RU]
+    InvitationStatus:
+      type: string
+      enum: [delivery_failed, expired, pending, redeeming, redeemed, revoked]
+    InvitationCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [recipient, locale, idempotency_key]
+      properties:
+        recipient:
+          type: string
+          format: email
+          maxLength: 254
+          writeOnly: true
+        locale:
+          $ref: '#/components/schemas/Locale'
+        idempotency_key:
+          $ref: '#/components/schemas/IdempotencyKey'
+    IdempotentActionRequest:
+      type: object
+      additionalProperties: false
+      required: [idempotency_key]
+      properties:
+        idempotency_key:
+          $ref: '#/components/schemas/IdempotencyKey'
+    InvitationEvent:
+      type: object
+      additionalProperties: false
+      required: [audit_id, actor_id, reason, old_status, new_status, at]
+      properties:
+        audit_id:
+          type: string
+        actor_id:
+          type: string
+        reason:
+          type: string
+          enum: [admin_invite, admin_resend, admin_revoke, recipient_redeem]
+        old_status:
+          type: string
+          nullable: true
+        new_status:
+          type: string
+        at:
+          type: string
+          format: date-time
+    Invitation:
+      type: object
+      additionalProperties: false
+      required: [invitation_id, recipient_hint, status, delivery_status, locale, created_at, updated_at, expires_at, redeemed_at, revoked_at, invited_by, history]
+      properties:
+        invitation_id:
+          type: string
+        recipient_hint:
+          type: string
+          description: Fixed masked hint; never a raw mailbox.
+        status:
+          $ref: '#/components/schemas/InvitationStatus'
+        delivery_status:
+          type: string
+          nullable: true
+        locale:
+          $ref: '#/components/schemas/Locale'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+        redeemed_at:
+          type: string
+          format: date-time
+          nullable: true
+        revoked_at:
+          type: string
+          format: date-time
+          nullable: true
+        invited_by:
+          type: string
+        history:
+          type: array
+          maxItems: 20
+          items:
+            $ref: '#/components/schemas/InvitationEvent'
+    InvitationListData:
+      type: object
+      additionalProperties: false
+      required: [enabled, redemption_enabled, mail_status, recovery_required, invitations]
+      properties:
+        enabled:
+          type: boolean
+        redemption_enabled:
+          type: boolean
+        mail_status:
+          type: string
+        recovery_required:
+          type: integer
+          minimum: 0
+        invitations:
+          type: array
+          maxItems: 200
+          items:
+            $ref: '#/components/schemas/Invitation'
+    InvitationListEnvelope:
+      type: object
+      additionalProperties: false
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/InvitationListData'
+    InvitationEnvelope:
+      type: object
+      additionalProperties: false
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/Invitation'
+    CleanupEnvelope:
+      type: object
+      additionalProperties: false
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          additionalProperties: false
+          required: [removed]
+          properties:
+            removed:
+              type: integer
+              minimum: 0
+    RedemptionRequest:
+      type: object
+      additionalProperties: false
+      required: [token, email, password, display_name, locale, terms_version, accepted, idempotency_key]
+      properties:
+        token:
+          type: string
+          minLength: 1
+          writeOnly: true
+        email:
+          type: string
+          format: email
+          maxLength: 254
+          writeOnly: true
+        password:
+          type: string
+          minLength: 12
+          maxLength: 128
+          writeOnly: true
+        display_name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        locale:
+          $ref: '#/components/schemas/Locale'
+        terms_version:
+          type: string
+        accepted:
+          type: boolean
+          enum: [true]
+        idempotency_key:
+          $ref: '#/components/schemas/IdempotencyKey'
+    RedemptionEnvelope:
+      type: object
+      additionalProperties: false
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          additionalProperties: false
+          required: [status]
+          properties:
+            status:
+              type: string
+              enum: [enrolled]
+    GenericRedemptionError:
+      type: object
+      additionalProperties: false
+      required: [ok, error]
+      properties:
+        ok:
+          type: boolean
+          enum: [false]
+        error:
+          type: object
+          additionalProperties: false
+          required: [code, message, details]
+          properties:
+            code:
+              type: string
+              enum: [VALIDATION_ERROR]
+            message:
+              type: string
+              enum: [invitation could not be redeemed]
+            details:
+              type: object
+              additionalProperties: false
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+                  enum: [invitation_unavailable]
+x-casino-invitation-boundary:
+  workroom_approval_issue: 24
+  repository_feature_default: disabled
+  redemption_default: disabled
+  api_v1_changed: false
+  live_mail_authorized: false
+  live_enrollment_authorized: false
+  provider_or_network_authorized: false
+  deployment_authorized: false
+  public_signup_or_exposure_authorized: false

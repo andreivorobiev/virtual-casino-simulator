@@ -1,0 +1,51 @@
+{
+  "artifact": "invitation-enrollment",
+  "version": 2,
+  "stage": "disabled-restricted-preview",
+  "authorization": {
+    "repository_merge_approved_in_workroom_issue": 24,
+    "disabled_admin_invitation_authorized": true,
+    "disabled_private_redemption_authorized": true,
+    "live_mail_authorized": false,
+    "live_enrollment_authorized": false,
+    "provider_or_network_authorized": false,
+    "dns_authorized": false,
+    "deployment_authorized": false,
+    "public_signup_or_exposure_authorized": false
+  },
+  "release_gates": {
+    "invitation_issuance_default": false,
+    "redemption_default": false,
+    "mail_feature_default": false,
+    "mail_network_release_default": false,
+    "all_required_for_live_delivery": true
+  },
+  "lifecycle": {
+    "issuance": "recoverable generation state machine",
+    "redemption": "caller-idempotent claim, consume, inactive identity, wallet, activation, finalization saga",
+    "reservation": "account-free email uniqueness reservation before token consumption",
+    "json_atomicity": "cross-process locked document mutations plus deterministic player identity",
+    "mysql_atomicity": "document SELECT FOR UPDATE plus deterministic INSERT IGNORE player identity",
+    "malformed_state": "preserved unchanged for operator recovery",
+    "terminal_retention": "bounded cleanup after full configured retention"
+  },
+  "privacy": {
+    "admin_recipient": "masked hint only",
+    "public_error": "one generic invitation_unavailable reason",
+    "raw_bearer": "never persisted or logged",
+    "password": "validated transiently and stored only through canonical password hashing",
+    "idempotency_key": "domain-separated keyed digest only",
+    "audit": "opaque actor and invitation identifiers with fixed reasons"
+  },
+  "compatibility": {
+    "api_v1_frozen": true,
+    "contract": "contracts/openapi/invitations.v2.yaml",
+    "admin_paths": [
+      "/api/v2/admin/invitations",
+      "/api/v2/admin/invitations/{invitation_id}/resend",
+      "/api/v2/admin/invitations/{invitation_id}/revoke",
+      "/api/v2/admin/invitations/cleanup"
+    ],
+    "public_path": "/api/v2/auth/redeem-invitation"
+  }
+}

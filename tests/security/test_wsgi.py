@@ -39,6 +39,8 @@ class RestrictedPreviewWSGITests(unittest.TestCase):
             environment["CASINO_BOOTSTRAP_ADMIN_EMAIL"] = "preview-admin@example.invalid"
             # Supply a synthetic external token-digest key for this isolated public-startup probe.
             environment["CASINO_TOKEN_DIGEST_KEY"] = "preview-token-digest-key-material-2026-only"
+            # Supply an independent synthetic mail digest key required by public startup.
+            environment["CASINO_MAIL_DIGEST_KEY"] = "preview-mail-digest-key-material-2026-only"
             # Supply a synthetic test-only credential that the probe never prints.
             environment["CASINO_BOOTSTRAP_ADMIN_PASSWORD"] = "synthetic-preview-password"
             # Use a synthetic reserved-domain canonical origin.
@@ -71,7 +73,7 @@ class RestrictedPreviewWSGITests(unittest.TestCase):
             # Build an otherwise valid production environment.
             environment = os.environ.copy()
             # Select the production adapter.
-            environment.update({"CASINO_DEPLOYMENT_MODE": "production", "CASINO_DATA_DIR": str(root / "state"), "CASINO_LOG_DIR": str(root / "logs"), "CASINO_STORAGE_PROVIDER": "json", "CASINO_BOOTSTRAP_ADMIN_EMAIL": "config-admin@example.invalid", "CASINO_BOOTSTRAP_ADMIN_PASSWORD": "synthetic-config-password", "CASINO_TOKEN_DIGEST_KEY": "config-token-digest-key-material-2026-only", "CASINO_TRUSTED_PROXY": "127.0.0.1", "CASINO_RESTRICTED_PREVIEW": "1", "PYTHONDONTWRITEBYTECODE": "1"})
+            environment.update({"CASINO_DEPLOYMENT_MODE": "production", "CASINO_DATA_DIR": str(root / "state"), "CASINO_LOG_DIR": str(root / "logs"), "CASINO_STORAGE_PROVIDER": "json", "CASINO_BOOTSTRAP_ADMIN_EMAIL": "config-admin@example.invalid", "CASINO_BOOTSTRAP_ADMIN_PASSWORD": "synthetic-config-password", "CASINO_TOKEN_DIGEST_KEY": "config-token-digest-key-material-2026-only", "CASINO_MAIL_DIGEST_KEY": "config-mail-digest-key-material-2026-only", "CASINO_TRUSTED_PROXY": "127.0.0.1", "CASINO_RESTRICTED_PREVIEW": "1", "PYTHONDONTWRITEBYTECODE": "1"})
             # Import the production adapter without opening a listener.
             result = subprocess.run([sys.executable, "-c", "import casino.wsgi"], cwd=ROOT, env=environment, capture_output=True, text=True, timeout=20)
         # Require fail-closed startup.

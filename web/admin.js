@@ -86,6 +86,8 @@ async function load(tab = 'dashboard') {
     if (tab === 'players') return playersBots();
     // Branch to the Admin beta-user renderer.
     if (tab === 'users') return users();
+    // Branch to disabled private invitation lifecycle controls. (INVITE-005)
+    if (tab === 'invitations') return invitations();
     // Await Guest Trials so rejected Admin requests stay inside the localized load-error boundary. (issue #317)
     if (tab === 'guests') return await guests();
     // Branch to the ledger renderer.
@@ -254,6 +256,45 @@ async function guests() {
   view.querySelector('#guest-cleanup').onclick = async () => { try { await post('/api/v2/admin/guest-trials/cleanup', {}); toast(t('guests.cleanupComplete', {}, 'admin'), true); } catch (_) { toast(t('guests.cleanupFailed', {}, 'admin')); } await guests(); };
 }
 
+// Render disabled-by-default private invitation readiness, issuance, and lifecycle controls. (INVITE-001, INVITE-005)
+async function invitations() {
+  // Set the localized invitation title and restricted-preview boundary.
+  setTitle(t('invitations.title', {}, 'admin'), t('invitations.subtitle', {}, 'admin'));
+  // Announce loading before the Admin-only diagnostic resolves.
+  view.innerHTML = `<section class="admin-card loading-panel" data-testid="admin-invitation-loading" role="status"><h2>${safe(t('invitations.loadingTitle', {}, 'admin'))}</h2><p>${safe(t('invitations.loadingDetail', {}, 'admin'))}</p></section>`;
+  // Load the bounded, recipient-masked lifecycle list through the additive v2 contract.
+  const data = await api('/api/v2/admin/invitations?limit=100');
+  // Stop a stale request from overwriting a newer selected tab.
+  if (!isActiveTab('invitations')) return;
+  // Normalize invitation rows defensively before rendering.
+  const rows = Array.isArray(data.invitations) ? data.invitations : [];
+  // Select one stable status for the readiness card.
+  const readiness = !data.enabled ? 'disabled' : data.mail_status !== 'ready' ? 'release-held' : data.redemption_enabled ? 'ready' : 'redemption-held';
+  // Render one secret-free readiness card, bounded create form, and keyboard-scrollable lifecycle region.
+  view.innerHTML = `<section class="admin-card" data-testid="admin-invitations-${safe(readiness)}"><h2>${safe(t(`invitations.states.${readiness}`, {}, 'admin'))}</h2><p>${safe(t('invitations.boundary', {}, 'admin'))}</p><dl class="guest-detail-grid"><div><dt>${safe(t('invitations.issuance', {}, 'admin'))}</dt><dd>${safe(data.enabled ? t('common.enabled', {}, 'admin') : t('common.disabled', {}, 'admin'))}</dd></div><div><dt>${safe(t('invitations.redemption', {}, 'admin'))}</dt><dd>${safe(data.redemption_enabled ? t('common.enabled', {}, 'admin') : t('common.disabled', {}, 'admin'))}</dd></div><div><dt>${safe(t('invitations.delivery', {}, 'admin'))}</dt><dd>${safe(humanLabel(data.mail_status || 'unavailable'))}</dd></div><div><dt>${safe(t('invitations.recovery', {}, 'admin'))}</dt><dd>${formatNumber(data.recovery_required || 0)}</dd></div></dl></section><section class="admin-card" data-testid="admin-invitation-create"><h3>${safe(t('invitations.createTitle', {}, 'admin'))}</h3><div class="grid3"><label>${safe(t('invitations.recipient', {}, 'admin'))}<input id="invitation-recipient" type="email" autocomplete="off" maxlength="254" data-testid="admin-invitation-recipient"></label><label>${safe(t('invitations.locale', {}, 'admin'))}<select id="invitation-locale" data-testid="admin-invitation-locale"><option value="en-US">English</option><option value="ru-RU">Русский</option></select></label><button id="invitation-create" type="button" data-testid="admin-invitation-submit" ${data.enabled && data.mail_status === 'ready' ? '' : 'disabled'}>${safe(t('invitations.send', {}, 'admin'))}</button></div><p class="muted">${safe(t('invitations.createHelp', {}, 'admin'))}</p></section><section class="admin-card" data-testid="admin-invitation-list" tabindex="0" role="region" aria-label="${safe(t('invitations.listTitle', {}, 'admin'))}"><h3>${safe(t('invitations.listTitle', {}, 'admin'))}</h3>${rows.length ? table([t('invitations.recipient', {}, 'admin'), t('invitations.status', {}, 'admin'), t('invitations.delivery', {}, 'admin'), t('invitations.locale', {}, 'admin'), t('invitations.updated', {}, 'admin'), t('invitations.actions', {}, 'admin')], rows.map(row => `<tr data-testid="admin-invitation-row" data-status="${safe(row.status)}"><td>${safe(row.recipient_hint || t('invitations.masked', {}, 'admin'))}</td><td>${safe(humanLabel(row.status))}</td><td>${safe(humanLabel(row.delivery_status || 'none'))}</td><td>${safe(row.locale)}</td><td>${safe(row.updated_at || '')}</td><td><button type="button" class="invitation-resend" data-id="${safe(row.invitation_id)}" ${['pending','delivery_failed'].includes(row.status) && data.enabled ? '' : 'disabled'}>${safe(t('invitations.resend', {}, 'admin'))}</button><button type="button" class="invitation-revoke" data-id="${safe(row.invitation_id)}" ${['pending','delivery_failed'].includes(row.status) ? '' : 'disabled'}>${safe(t('invitations.revoke', {}, 'admin'))}</button></td></tr>`)) : emptyState(t('invitations.empty', {}, 'admin'), t('invitations.emptyDetail', {}, 'admin'), 'admin-invitation-empty')}</section>`;
+  // Bind create only when the independently gated delivery foundation is ready.
+  view.querySelector('#invitation-create').onclick = async () => {
+    // Read the transient mailbox only at submit time.
+    const recipientInput = view.querySelector('#invitation-recipient');
+    // Build one caller-owned replay key without exposing it in the DOM.
+    const payload = { recipient: recipientInput.value, locale: view.querySelector('#invitation-locale').value, idempotency_key: crypto.randomUUID() };
+    // Disable duplicate clicks until the exact response settles.
+    view.querySelector('#invitation-create').disabled = true;
+    // Submit through the approved Admin v2 route.
+    await post('/api/v2/admin/invitations', payload);
+    // Clear the raw mailbox before any after-pass evidence can be captured.
+    recipientInput.value = '';
+    // Announce success without repeating the recipient.
+    toast(t('invitations.created', {}, 'admin'), true);
+    // Reload the privacy-safe lifecycle list.
+    await invitations();
+  };
+  // Bind every eligible resend action to one fresh caller idempotency key.
+  view.querySelectorAll('.invitation-resend').forEach(button => { button.onclick = async () => { button.disabled = true; await post(`/api/v2/admin/invitations/${encodeURIComponent(button.dataset.id)}/resend`, { idempotency_key: crypto.randomUUID() }); toast(t('invitations.resent', {}, 'admin'), true); await invitations(); }; });
+  // Bind emergency revoke independently from issuance readiness.
+  view.querySelectorAll('.invitation-revoke').forEach(button => { button.onclick = async () => { button.disabled = true; await post(`/api/v2/admin/invitations/${encodeURIComponent(button.dataset.id)}/revoke`, { idempotency_key: crypto.randomUUID() }); toast(t('invitations.revoked', {}, 'admin'), true); await invitations(); }; });
+}
+
 // Render one de-identified Guest Trials analytics detail record. (issue #317)
 async function showGuestDetail(analyticsId) {
   // Load only the analytics-id route published by the Admin v2 contract.
@@ -419,6 +460,34 @@ function replaceOAuthDiagnosticsCard(data) {
   if (card) card.outerHTML = oauthDiagnosticsCard(data);
 }
 
+// Render transactional-mail diagnostics independently from Operations and OAuth health. (MAIL-003)
+function mailDiagnosticsCard(data) {
+  // Constrain backend status to the five contract-published low-cardinality states.
+  const status = ['disabled', 'misconfigured', 'release_held', 'ready', 'unavailable'].includes(data?.status) ? data.status : 'unavailable';
+  // Constrain the provider label so unexpected backend values never become translation keys.
+  const provider = ['disabled', 'postmark', 'unrecognized'].includes(data?.provider) ? data.provider : 'unrecognized';
+  // Normalize aggregate lifecycle counts without accepting record identifiers or negative values.
+  const summary = data?.delivery_summary && typeof data.delivery_summary === 'object' ? data.delivery_summary : {};
+  // Convert each published aggregate to a bounded non-negative display number.
+  const count = key => Number.isInteger(summary[key]) && summary[key] >= 0 ? summary[key] : 0;
+  // Map only contract-allowlisted reason codes to localized remediation copy.
+  const reasons = Array.isArray(data?.reasons) ? data.reasons.filter(reason => ['feature_disabled', 'provider_not_configured', 'canonical_origin_invalid', 'sender_identity_invalid', 'provider_credential_missing', 'digest_key_invalid', 'network_release_held', 'state_recovery_required'].includes(reason)) : [];
+  // Normalize the de-identified suppression count independently from lifecycle rows.
+  const suppressedRecipients = Number.isInteger(data?.suppressed_recipients) && data.suppressed_recipients >= 0 ? data.suppressed_recipients : 0;
+  // Render one explicit non-color state, aggregate-only lifecycle table, and suppression summary.
+  return `<section class="admin-card ${['misconfigured', 'unavailable'].includes(status) ? 'danger' : ''}" data-testid="admin-mail-${status}"><div class="row"><div><h2>${safe(t('mail.title', {}, 'admin'))}</h2><p>${safe(t(`mail.detail.${status}`, {}, 'admin'))}</p></div><span class="badge">${safe(t(`mail.state.${status}`, {}, 'admin'))}</span></div>${table([t('mail.field', {}, 'admin'), t('mail.value', {}, 'admin')], [`<tr><td>${safe(t('mail.provider', {}, 'admin'))}</td><td>${safe(t(`mail.provider.${provider}`, {}, 'admin'))}</td></tr>`, `<tr><td>${safe(t('mail.sent', {}, 'admin'))}</td><td>${count('sent')}</td></tr>`, `<tr><td>${safe(t('mail.retryWait', {}, 'admin'))}</td><td>${count('retry_wait')}</td></tr>`, `<tr><td>${safe(t('mail.failed', {}, 'admin'))}</td><td>${count('failed')}</td></tr>`, `<tr><td>${safe(t('mail.uncertain', {}, 'admin'))}</td><td>${count('uncertain')}</td></tr>`])}<div data-testid="admin-mail-suppression-summary"><h3>${safe(t('mail.suppressionTitle', {}, 'admin'))}</h3><p>${safe(t('mail.suppressionCount', { count: suppressedRecipients }, 'admin'))}</p></div>${reasons.length ? `<h3>${safe(t('mail.attention', {}, 'admin'))}</h3><ul>${reasons.map(reason => `<li>${safe(t(`mail.reason.${reason}`, {}, 'admin'))}</li>`).join('')}</ul>` : ''}</section>`;
+}
+
+// Replace only the independent mail diagnostic card when its request settles.
+function replaceMailDiagnosticsCard(data) {
+  // Ignore a delayed response after the user has left Operations.
+  if (!isActiveTab('operations')) return;
+  // Find the loading/unavailable or prior mail card by its stable prefix.
+  const card = view.querySelector('[data-testid^="admin-mail-"]');
+  // Replace the mail card without rerendering Operations or OAuth diagnostics.
+  if (card) card.outerHTML = mailDiagnosticsCard(data);
+}
+
 // Define operations to render trusted dependency and heartbeat telemetry for Admin users.
 async function operations() {
   // Set localized Operations chrome before the request so transport failures retain context.
@@ -440,9 +509,11 @@ async function operations() {
     // Format the trusted heartbeat timestamp without exposing raw transport diagnostics.
     const heartbeat = data.last_successful_heartbeat_at ? formatDate(new Date(data.last_successful_heartbeat_at), { dateStyle: 'medium', timeStyle: 'medium' }) : t('operations.unavailable', {}, 'admin');
     // Render live or degraded diagnostics with stable test hooks for EN/RU visual evidence.
-    view.innerHTML = `<section class="admin-card ${data.ready ? '' : 'danger'}" data-testid="admin-operations-${stateKey}"><div class="row"><div><h2>${safe(t(`operations.state.${stateKey}`, {}, 'admin'))}</h2><p>${safe(t(`operations.detail.${stateKey}`, {}, 'admin'))}</p></div><span class="badge" data-testid="admin-operations-state">${safe(t(`operations.symbol.${stateKey}`, {}, 'admin'))} ${safe(t(`operations.state.${stateKey}`, {}, 'admin'))}</span></div>${table([t('operations.field', {}, 'admin'), t('operations.value', {}, 'admin')], [`<tr><td>${safe(t('operations.storage', {}, 'admin'))}</td><td>${safe(providerLabel)}</td></tr>`, `<tr><td>${safe(t('operations.appVersion', {}, 'admin'))}</td><td>${safe(data.build.app_version)}</td></tr>`, `<tr><td>${safe(t('operations.buildSha', {}, 'admin'))}</td><td>${safe(buildSha)}</td></tr>`, `<tr><td>${safe(t('operations.lastHeartbeat', {}, 'admin'))}</td><td>${safe(heartbeat)}</td></tr>`])}${reasonLabels.length ? `<h3>${safe(t('operations.attention', {}, 'admin'))}</h3><ul>${reasonLabels.map(label => `<li>${safe(label)}</li>`).join('')}</ul>` : ''}</section>${oauthDiagnosticsCard(null)}`;
+    view.innerHTML = `<section class="admin-card ${data.ready ? '' : 'danger'}" data-testid="admin-operations-${stateKey}"><div class="row"><div><h2>${safe(t(`operations.state.${stateKey}`, {}, 'admin'))}</h2><p>${safe(t(`operations.detail.${stateKey}`, {}, 'admin'))}</p></div><span class="badge" data-testid="admin-operations-state">${safe(t(`operations.symbol.${stateKey}`, {}, 'admin'))} ${safe(t(`operations.state.${stateKey}`, {}, 'admin'))}</span></div>${table([t('operations.field', {}, 'admin'), t('operations.value', {}, 'admin')], [`<tr><td>${safe(t('operations.storage', {}, 'admin'))}</td><td>${safe(providerLabel)}</td></tr>`, `<tr><td>${safe(t('operations.appVersion', {}, 'admin'))}</td><td>${safe(data.build.app_version)}</td></tr>`, `<tr><td>${safe(t('operations.buildSha', {}, 'admin'))}</td><td>${safe(buildSha)}</td></tr>`, `<tr><td>${safe(t('operations.lastHeartbeat', {}, 'admin'))}</td><td>${safe(heartbeat)}</td></tr>`])}${reasonLabels.length ? `<h3>${safe(t('operations.attention', {}, 'admin'))}</h3><ul>${reasonLabels.map(label => `<li>${safe(label)}</li>`).join('')}</ul>` : ''}</section>${oauthDiagnosticsCard(null)}${mailDiagnosticsCard(null)}`;
     // Start provider diagnostics only after Operations is visible and handle failure locally.
     api('/api/v2/admin/oauth/providers').then(replaceOAuthDiagnosticsCard).catch(() => replaceOAuthDiagnosticsCard(null));
+    // Start secret-free mail diagnostics independently so failure affects only its own card.
+    api('/api/v2/admin/mail/readiness').then(replaceMailDiagnosticsCard).catch(() => replaceMailDiagnosticsCard(null));
   // Convert network or server loss into a client-derived down state without raw error text.
   } catch (error) {
     // Avoid replacing a newer tab after a delayed transport failure.

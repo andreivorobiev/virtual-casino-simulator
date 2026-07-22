@@ -58,6 +58,8 @@ export const del = (path, body = {}) => api(path, { method: 'DELETE', body });
 export const currentUser = () => api('/api/v2/me');
 // Export this symbol so the shell can start an authenticated browser session.
 export const login = body => post('/api/v2/auth/login', body);
+// Redeem one disabled-by-default private invitation through the additive v2 boundary. (INVITE-003)
+export const redeemInvitation = body => post('/api/v2/auth/redeem-invitation', body);
 // Export this symbol so the shell can end the current authenticated browser session.
 export const logout = () => post('/api/v2/auth/logout', {});
 // Start one account-free disposable guest trial from the login surface. (issue #317)

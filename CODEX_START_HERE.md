@@ -268,6 +268,7 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 - [`docs/games/three_card_poker.md`](docs/games/three_card_poker.md) — Three Card Poker isolated game slice
 - [`docs/github_codex_migration_plan.md`](docs/github_codex_migration_plan.md) — GitHub and Codex migration plan
 - [`docs/github_setup_checklist.md`](docs/github_setup_checklist.md) — GitHub setup checklist
+- [`docs/invitation_enrollment.md`](docs/invitation_enrollment.md) — Private invitation enrollment runbook
 - [`docs/issue_prioritization.md`](docs/issue_prioritization.md) — Issue prioritization and label policy
 - [`docs/legal/privacy.md`](docs/legal/privacy.md) — Private Beta Privacy Notice
 - [`docs/legal/README.md`](docs/legal/README.md) — Legal Docs
@@ -290,6 +291,7 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 - [`docs/restricted_preview_edge.md`](docs/restricted_preview_edge.md) — Restricted-preview edge preparation
 - [`docs/restricted_preview_security.md`](docs/restricted_preview_security.md) — Restricted-preview security policy
 - [`docs/server_authority_certification.md`](docs/server_authority_certification.md) — Server-Authority and Hostile-Client Certification
+- [`docs/transactional_mail_runbook.md`](docs/transactional_mail_runbook.md) — Transactional mail runbook
 - [`docs/visual_design_standard.md`](docs/visual_design_standard.md) — Visual Design Standard
 
 ### Mobile integration documentation

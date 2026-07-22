@@ -44,6 +44,8 @@ from casino.admin import register as register_admin
 from casino.bots.api import register as register_bots
 # Import the disabled OAuth registrar for Admin-only secret-safe diagnostics.
 from casino.core.oauth.api import register as register_oauth
+# Import the disabled-by-default transactional-mail Admin readiness registrar. (MAIL-003)
+from casino.core.mail import register as register_mail
 # Import the approved Operations registrar for liveness, readiness, and Admin telemetry.
 from casino.operations import register as register_operations
 # Import required dependency so this module can use its public functions or constants.
@@ -238,14 +240,14 @@ def build_router() -> Router:
 
     # Attach this decorator so the following function is registered with the framework.
     @router.post(r"/api/v2/auth/redeem-invitation")
-    # Redeem an email invitation into a new canonical account when enrollment is enabled. (issue #332)
+    # Redeem an email invitation through the disabled recoverable enrollment boundary. (INVITE-003)
     def auth_redeem_invitation(body, query):
         # Reject any field outside the exact v2 redemption contract before consuming the bearer.
-        if set(body or {}) - {"token", "email", "password"}:
-            # Fail closed on an unexpected field without echoing its value.
-            raise ValidationError("Invitation redemption request contains unsupported fields")
+        if set(body or {}) - {"token", "email", "password", "display_name", "locale", "terms_version", "accepted", "idempotency_key"}:
+            # Fail closed through the same generic envelope used for every public rejection.
+            raise ValidationError("invitation could not be redeemed", dict(invitations.GENERIC_REDEMPTION_DETAILS))
         # Redeem through the invitation lifecycle; disabled enrollment and every abuse case fail closed generically.
-        return invitations.redeem(str((body or {}).get("token", "")), str((body or {}).get("email", "")), str((body or {}).get("password", "")))
+        return invitations.redeem(str((body or {}).get("token", "")), str((body or {}).get("email", "")), str((body or {}).get("password", "")), str((body or {}).get("display_name", "")), str((body or {}).get("locale", "en-US")), str((body or {}).get("terms_version", "")), (body or {}).get("accepted") is True, str((body or {}).get("idempotency_key", "")))
 
     # Attach this decorator so the following function is registered with the framework.
     @router.post(r"/api/v2/auth/guest/end")
@@ -425,6 +427,8 @@ def build_router() -> Router:
     register_games(router)
     # Register only the Admin diagnostic OAuth route; provider action routes remain absent.
     register_oauth(router)
+    # Register only the Admin readiness route; mail consumer flows remain outside this scope.
+    register_mail(router)
     # Register Operations probes after game routes and before the Admin API surface.
     register_operations(router)
     # Execute this statement as part of the module's documented control flow.

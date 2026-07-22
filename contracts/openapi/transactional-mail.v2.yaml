@@ -1,0 +1,132 @@
+openapi: 3.0.3
+info:
+  title: Casino Transactional Mail Diagnostics API
+  version: 2.0.0
+  description: >-
+    Admin-only, secret-free diagnostics for disabled-by-default transactional-mail infrastructure.
+    This contract publishes no consumer submission, callback, bounce, signup, or recovery route.
+# Publish one read-only Admin surface; repository merge does not authorize provider delivery.
+paths:
+  /api/v2/admin/mail/readiness:
+    get:
+      summary: Return sanitized transactional-mail readiness and aggregate lifecycle counts
+      operationId: transactionalMailReadiness
+      security:
+        - cookieSession: []
+      responses:
+        '200':
+          description: Current disabled, misconfigured, release-held, ready, or unavailable state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MailReadinessEnvelope'
+# Freeze every diagnostic field to low-cardinality values that cannot identify a recipient or secret.
+components:
+  securitySchemes:
+    cookieSession:
+      type: apiKey
+      in: cookie
+      name: casino_session
+  schemas:
+    MailStatus:
+      type: string
+      enum: [disabled, misconfigured, release_held, ready, unavailable]
+    MailProvider:
+      type: string
+      enum: [disabled, postmark, unrecognized]
+    MailChecks:
+      type: object
+      additionalProperties: false
+      required: [feature_enabled, network_release_enabled, canonical_origin_https, sender_identity_configured, provider_credential_configured, digest_key_configured]
+      properties:
+        feature_enabled:
+          type: boolean
+        network_release_enabled:
+          type: boolean
+        canonical_origin_https:
+          type: boolean
+        sender_identity_configured:
+          type: boolean
+        provider_credential_configured:
+          type: boolean
+        digest_key_configured:
+          type: boolean
+    MailReason:
+      type: string
+      enum: [feature_disabled, provider_not_configured, canonical_origin_invalid, sender_identity_invalid, provider_credential_missing, digest_key_invalid, network_release_held, state_recovery_required]
+    MailDeliverySummary:
+      type: object
+      additionalProperties: false
+      required: [sending, sent, retry_wait, failed, suppressed, uncertain, disabled, release_held, misconfigured]
+      properties:
+        sending:
+          type: integer
+          minimum: 0
+        sent:
+          type: integer
+          minimum: 0
+        retry_wait:
+          type: integer
+          minimum: 0
+        failed:
+          type: integer
+          minimum: 0
+        suppressed:
+          type: integer
+          minimum: 0
+        uncertain:
+          type: integer
+          minimum: 0
+        disabled:
+          type: integer
+          minimum: 0
+        release_held:
+          type: integer
+          minimum: 0
+        misconfigured:
+          type: integer
+          minimum: 0
+    MailReadinessData:
+      type: object
+      additionalProperties: false
+      required: [schema_version, provider, status, checks, reasons, delivery_summary, suppressed_recipients]
+      properties:
+        schema_version:
+          type: string
+          enum: [transactional-mail-readiness.v2]
+        provider:
+          $ref: '#/components/schemas/MailProvider'
+        status:
+          $ref: '#/components/schemas/MailStatus'
+        checks:
+          $ref: '#/components/schemas/MailChecks'
+        reasons:
+          type: array
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/MailReason'
+        delivery_summary:
+          $ref: '#/components/schemas/MailDeliverySummary'
+        suppressed_recipients:
+          type: integer
+          minimum: 0
+    MailReadinessEnvelope:
+      type: object
+      additionalProperties: false
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/MailReadinessData'
+# Preserve the disabled repository-only authority boundary alongside the route schema.
+x-casino-mail-boundary:
+  repository_feature_default: disabled
+  provider_network_release_default: held
+  live_delivery_authorized: false
+  consumer_routes_published: false
+  api_v1_changed: false
+  persisted_raw_recipient: false
+  persisted_raw_token_or_link: false
+  persisted_provider_response: false

@@ -1,5 +1,7 @@
 # Production application service
 
+Private invitation enrollment remains disabled by default and is governed by [the invitation enrollment runbook](invitation_enrollment.md). Repository merge does not authorize live enrollment, mail/provider release, deployment, or public signup.
+
 Requirement `CORE-023` defines the repository-side production process for the restricted-preview topology. This packet does not install, enable, start, or expose any host service.
 
 ## Supported topology
@@ -30,7 +32,10 @@ A root-managed environment file at `/etc/casino/casino.env` supplies runtime con
 - the selected storage provider and its connection settings;
 - unique bootstrap Admin settings;
 - a unique external `CASINO_TOKEN_DIGEST_KEY` of at least 32 bytes, distinct from every provider or bootstrap credential;
+- a separate unique external `CASINO_MAIL_DIGEST_KEY` of at least 32 bytes, even while transactional mail remains disabled;
 - every credential required by the selected provider.
+
+Transactional mail is additionally fail-closed. `CASINO_MAIL_ENABLED` and the independent `CASINO_MAIL_NETWORK_ENABLED` release switch both default to false; setting only one can never reach the provider adapter. Provider selection, sender identity, canonical origin, verified domain, credentials, and either release switch must not be changed as part of a normal application deployment. Follow `docs/transactional_mail_runbook.md` and obtain the separately durable live-release authority before any such operation.
 
 Deployment-only `CASINO_MYSQL_MIGRATION_*` variables are never part of this file. The tracked unit unsets them defensively, and `docs/mysql_migrations.md` requires the operator to load them only for the proof-gated migration command and remove them before application startup.
 

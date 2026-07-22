@@ -100,3 +100,22 @@ def ensure_player_for_user(user_id: str, display_name: str, player_id: str | Non
     label = display_name.strip() if display_name and display_name.strip() else user_id
     # Return the computed value to the caller.
     return create_player(label, "human", 5000.0)
+
+# Provision one deterministic invited-account player idempotently across JSON and MySQL. (INVITE-003)
+def ensure_invited_player(player_id: str, display_name: str) -> dict:
+    # Require the saga-owned opaque identifier before touching wallet state.
+    if not str(player_id or "").startswith("player_invite_"):
+        # Reject caller-selected or malformed identifiers outside the invitation namespace.
+        raise ValidationError("invited player identifier is invalid")
+    # Normalize the recipient-selected display name without accepting an empty wallet label.
+    label = str(display_name or "").strip()
+    # Reject an empty label before constructing a persistent player row.
+    if not label:
+        # Keep provisioning state unchanged on invalid presentation input.
+        raise ValidationError("display_name is required")
+    # Capture one creation timestamp used only when this is the first successful provision.
+    now = utc_now()
+    # Build the deterministic zero-side-effect row before the provider transaction.
+    player = {"player_id": player_id, "display_name": label, "type": "human", "balance": 5000.0, "created_at": now, "updated_at": now, "status": "active"}
+    # Delegate insert-or-read semantics to the configured JSON or MySQL provider.
+    return get_storage_provider().ensure_player(player)

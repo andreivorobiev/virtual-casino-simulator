@@ -6,16 +6,16 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.40.0
-- core: 9.15.1
+- application: 9.42.0
+- core: 9.17.0
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.0
 - autoplay: 1.1.3
 - audio: 9.1.1
-- admin: 1.7.1
+- admin: 1.9.0
 - operations: 1.0.0
-- roulette: 9.4.5
+- roulette: 9.4.6
 - slots: 9.1.4
 - blackjack: 9.1.3
 - baccarat: 9.1.2
@@ -23,7 +23,7 @@ Historical source baseline: 9.1.0
 - bingo: 9.2.1
 - multi_hand_video_poker: 1.0.1
 - casino_war: 1.0.1
-- big_six_wheel: 1.0.2
+- big_six_wheel: 1.0.3
 - red_dog: 1.0.0
 - dragon_tiger: 1.0.0
 - hi_lo: 1.0.0
@@ -34,7 +34,7 @@ Historical source baseline: 9.1.0
 - sic_bo: 1.0.0
 - chuck_a_luck: 1.0.0
 - craps: 1.0.0
-- crown_and_anchor: 1.0.1
+- crown_and_anchor: 1.0.2
 - over_under_7: 1.0.2
 - plinko: 1.0.1
 - fan_tan: 1.0.2
@@ -45,10 +45,10 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.1
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.47.5
-- docs: 1.47.5
-- contracts: 1.35.0
-- tooling: 1.15.0
+- tests: 1.51.0
+- docs: 1.51.0
+- contracts: 1.37.0
+- tooling: 1.18.0
 - commenting_policy: 1.0.0
 
 ## Requirements
@@ -158,7 +158,7 @@ Historical source baseline: 9.1.0
 - **ROU-042** (Roulette) - PASS: Roulette UI animates wheel and ball while spinning.
 - **ROU-043** (Roulette) - PASS: Roulette UI renders a real table-style layout.
 - **ROU-044** (Roulette) - PASS: Roulette UI allows clicking number cells for straight bets.
-- **ROU-045** (Roulette) - PASS: Roulette UI exposes clickable inside-bet spots.
+- **ROU-045** (Roulette) - PASS: Roulette UI exposes semantically visible, pointer-actionable inside-bet spots with distinct zero-zone targets; hiding the layer removes those spots from pointer and accessibility actionability.
 - **ROU-046** (Roulette) - PASS: Roulette UI draws chips on table spots with amounts.
 - **ROU-047** (Roulette) - PASS: Roulette auto play repeats saved bet templates.
 - **ROU-048** (Roulette) - PASS: Roulette bots can be enabled with strategy and stake settings.
@@ -564,8 +564,8 @@ Historical source baseline: 9.1.0
 - **CAA-001** (Crown and Anchor) - PASS: Three server-authoritative symbol dice implement six coverage targets and transparent one-, two-, and three-hit net payouts.
 - **CAA-002** (Crown and Anchor) - PASS: Authenticated sessions own private reload-safe rounds, settled history, and canonical route restoration.
 - **CAA-003** (Crown and Anchor) - PASS: Aggregate symbol wagers and returned credits use the shared ledger exactly once under durable request identities.
-- **CAA-004** (Application) - PASS: Crown and Anchor supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.
-- **CAA-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Crown and Anchor with requirement, module, version, and visual traceability.
+- **CAA-004** (Application) - PASS: Crown and Anchor supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play with all three dice and all six symbol hit-result panels painted and contained at every governed viewport.
+- **CAA-005** (Tests) - PASS: Catalog, contract, browser, long-suite, and formal TEST-092 discovery include Crown and Anchor with requirement, module, version, visual, and essential-stage traceability.
 - **OU7-001** (Over/Under 7) - PASS: Two server-authoritative dice implement under-seven, exactly-seven, and over-seven outcomes with transparent net and total-return rules.
 - **OU7-002** (Over/Under 7) - PASS: Authenticated sessions own private reload-safe plays, settled history, and canonical route restoration.
 - **OU7-003** (Over/Under 7) - PASS: Aggregate wagers and returned credits use the shared ledger exactly once under durable action identities.
@@ -652,7 +652,7 @@ Historical source baseline: 9.1.0
 - **TEST-050** (Tests) - PASS: Edge evidence covers exact origin and loopback topology, restricted access, replacement forwarding headers, protected ports, ACME preflight, inert service and rollback templates, traversal refusal, listener-free static validation, exact success-envelope validation through the production WSGI/API boundary, pre-network credential refusal, bounded authenticated probes, security headers, certificate age, sanitized output, packaging, and fail-closed negative cases.
 - **TEST-051** (Tests) - PASS: Regression tests exercise 1, 3, 30, and 100 concurrent same-account logins asserting every prior session stays valid with no 401 or 500, and prove per-user cap least-recently-used session eviction.
 - **TEST-052** (Tests) - PASS: Browser regression asserts bounded keyboard-accessible shell navigation, full brand readability without truncation, minimum nav-label readability, no page-level horizontal overflow, and every game control's containment and scroll reachability at the 1920, 1440, 1024, and 390 governed viewports.
-- **TEST-053** (Tests) - PASS: Browser regression clicks every Roulette primary betting region plus a representative inside hotspot per covered-number size and asserts the posted bet_type and covered_numbers match the clicked cell's canonical identity, with non-overlapping, non-zero hit geometry.
+- **TEST-053** (Tests) - PASS: Browser regression uses the real pointer path for every Roulette primary betting region, representative inside sizes, and every single- and double-zero special; it asserts canonical bet_type and covered_numbers plus distinct non-zero hit geometry.
 - **DOC-017** (Documentation) - PASS: A vendor-neutral root handbook documents the complete engineering practice, required capabilities, authority hierarchy, and current-versus-historical status, while the repository start page links every other Markdown file exactly once.
 - **TOOL-006** (Tooling) - PASS: Documentation generation deterministically inventories every tracked or non-ignored Markdown file, updates the bounded root catalog, and fails check mode when the catalog or generated requirements are stale.
 - **DOC-018** (Documentation) - PASS: The repository defines a durable Claude-author/Codex-merge operating model in which Claude composes assigned pull requests and Codex alone reviews integration gates and executes every merge without bypassing owner authority.
@@ -716,9 +716,18 @@ Historical source baseline: 9.1.0
 - **TEST-080** (Tests) - PASS: Focused API tests prove consent rejection creates no state, server-authoritative guest creation, 5,000-token isolation, non-Admin authorization, CSRF and browser-proof enforcement, same-context activity, inactivity and absolute expiry, atomic concurrent capacity, per-session game-action and autoplay bounds, complete-catalog guest state access, irreversible explicit end, wallet and autoplay revocation, and cookie-only non-resumption.
 - **TEST-081** (Tests) - PASS: Exact-head browser evidence verifies guest consent, disclosed temporary/no-cash terms, start, refresh preservation, real game-module entry, End trial, no recovery, and the Admin funnel, games, filters, detail, cleanup health, de-identification, keyboard access, reduced motion, 200 percent zoom, and no horizontal overflow in en-US and ru-RU at 1920x1080, 1440x900, 1024x900, and 390x844.
 - **TEST-088** (Tests) - PASS: Contract and telemetry tests prove the additive v2 paths, full filters, nine-stage funnel, fake-token/game/action/error/latency aggregates, bounded event drill-down, privacy threshold, envelopes, v1 freeze, Admin-only enforcement, allowlisted low-cardinality dimensions, no forbidden identifiers, fixed 30-day raw and 400-day aggregate retention, safe detail lookup, and sanitized cleanup failure plus recovery status.
-- **MAIL-001** (Core) - PASS: A provider-neutral transactional mail boundary builds enrollment and recovery messages for a fixed purpose allowlist, generates browser links from the configured canonical HTTPS origin, rejects open-redirect and host-spoof link paths, and routes through a pluggable transport whose disabled default captures messages locally and never touches the network; a Postmark transport exists but stays inert until the deployment is configured, enabled, and released. Delivery is disabled by default and misconfiguration fails closed.
-- **MAIL-002** (Core) - PASS: The mail boundary never exposes sensitive material: the persisted outbox stores only keyed recipient and token digests plus a token-free canonical link, the deliverable tokened link is returned only in the transient send receipt, readiness reports boolean configuration state without secrets, and no API key, recipient address, raw token, or provider response appears in storage, results, errors, or audit logs.
-- **TEST-090** (Tests) - PASS: Listener-free API-suite evidence verifies the mail boundary is disabled by default, builds canonical HTTPS links while rejecting open redirects, captures a purpose-bound message locally with a token-free stored link, and stores no raw recipient, token, or password.
-- **INVITE-001** (Core) - PASS: An Admin can send, list, resend (with a per-recipient cooldown), and revoke email invitations; each invitation issues a one-time token (via the token platform) delivered through the mail boundary and authorizes enrollment only, never pre-creating an account, player, wallet, or password. Admin invitation endpoints sit behind the standard Admin authorization boundary.
-- **INVITE-002** (Core) - PASS: Invitation redemption is disabled by default and, when enabled, atomically creates one canonical account with a verified email and password only after the bound one-time token is consumed; it never auto-links a social identity by email match. Disabled enrollment, a weak or missing password, a wrong subject, replay, expiry, and revocation all fail closed with one generic non-disclosing error, and the redemption endpoint accepts only the exact token, email, and password fields.
-- **TEST-091** (Tests) - PASS: Listener-free API-suite evidence verifies the invitation lifecycle: create delivers without creating an account, malformed recipients fail closed, redemption is disabled by default, and when enabled a weak password, wrong subject, and replay fail closed while a correct redemption enrolls exactly one canonical account.
+- **MAIL-001** (Core) - PASS: Transactional mail supports only invitation, email verification, password reset, and magic-link purposes; builds fixed-path links from one canonical HTTPS origin; rejects caller-controlled redirects; and keeps provider/network access unreachable unless both the repository feature gate and an independent release gate are enabled.
+- **MAIL-002** (Security) - PASS: Durable mail state, receipts, diagnostics, errors, and logs exclude raw recipients, bearer tokens, tokened URLs, caller idempotency keys, credentials, and provider responses; persistence uses independent keyed HMAC-SHA256 digests, public startup rejects the known digest-key default, and structurally malformed state is preserved for operator recovery.
+- **MAIL-003** (Admin) - PASS: An Admin-only additive v2 readiness route and Operations card distinguish disabled, misconfigured, release-held, ready, and unavailable mail states and expose only fixed booleans, reason codes, and aggregate lifecycle/suppression counts; no consumer send, callback, bounce, signup, or recovery route is published.
+- **MAIL-004** (Core) - PASS: Every submission requires caller idempotency; changed-meaning reuse conflicts; JSON and MySQL perform one atomic delivery claim per attempt; known non-accepted failures use bounded exponential retry; ambiguous results become uncertain and never auto-retry; and per-recipient rate limits, internal bounce/complaint suppression, attempt ceilings, and terminal retention cleanup are enforced.
+- **MAIL-005** (Application) - PASS: Every authorized purpose has matching en-US and ru-RU subjects plus plain-text and semantic HTML alternatives whose action link has meaningful text and whose fixed content is safely escaped.
+- **MAIL-006** (Docs) - PASS: The transactional-mail runbook documents disabled defaults, separate release authority, sender/domain and SPF/DKIM/DMARC posture, canonical-origin and OAuth callback coordination, domain-move revalidation, bounded smoke evidence, rollback, suppression review, and the prohibition on treating repository merge as live authorization.
+- **TEST-090** (Tests) - PASS: Provider-free unit and API tests prove dual-gate inaccessibility, raw-value exclusion, public digest-key hardening, atomic caller idempotency, changed-meaning conflict, bounded retry, ambiguous-result freezing, rate limits, suppression, retention, malformed-state preservation, bilingual templates, Admin-only contract shape, absent consumer routes, and real MySQL cross-process single-claim behavior; exact-head browser evidence covers disabled, misconfigured, release-held, and suppression-summary states in en-US and ru-RU at all four governed viewports.
+- **INVITE-001** (Admin) - PASS: Authenticated Admins can list masked invitation lifecycle records and perform caller-idempotent create, resend, revoke, and fixed-policy cleanup actions through additive v2 routes; actor and recipient rate limits, resend cooldowns, fixed-reason audit history, and bounded retention apply without returning raw recipients, bearers, credentials, or tokened links.
+- **INVITE-002** (Core) - PASS: Invitation issuance and public redemption are independently disabled by default and compose only the purpose-bound one-time-token and transactional-mail foundations; provider delivery additionally requires the mail feature and network-release gates, and repository merge grants no live mail, enrollment, provider, DNS, deployment, or public-signup authority.
+- **INVITE-003** (Core) - PASS: Private invitation redemption validates the invited mailbox, canonical strong password policy, supported locale, explicit current terms version, and caller idempotency before consuming a bearer; an account-free uniqueness reservation and recoverable claim-consume-inactive-user-wallet-activation-finalization saga converge on one active local account and one ledger-backed fake-token wallet across JSON and MySQL processes, while all public failures share one generic response.
+- **INVITE-004** (Contracts) - PASS: The frozen /api/v1 surface publishes no invitation route; exact Admin lifecycle and public redemption requests, responses, generic errors, security boundaries, and disabled authority are defined additively in invitations.v2 and a checked compatibility policy.
+- **INVITE-005** (Application) - PASS: Admin invitation readiness, empty, pending, redeemed, and error states plus the account-free redemption form, explicit terms, keyboard focus, generic error, and terminal success return are accessible and localized in en-US and ru-RU without raw recipient or bearer evidence at desktop-primary, desktop-compact, tablet, mobile, reduced-motion, and 200-percent zoom states.
+- **INVITE-006** (Docs) - PASS: The invitation runbook documents disabled defaults, separate live authority, private-recipient approval, current terms and password policy, rate/cooldown/retention behavior, recovery states, privacy-safe audit, JSON/MySQL operational checks, rollback, and the prohibition on public signup or provider/deployment changes from repository merge.
+- **TEST-091** (Tests) - PASS: Provider-free service and API tests prove disabled defaults, privacy-safe projections, current terms and password enforcement, caller-idempotent token consumption, post-consumption recovery, malformed-state preservation, frozen-v1 compatibility, and independent JSON-process convergence; disposable MySQL CI races claim, consume, account, wallet, and finalization across independent processes; exact-head browser evidence covers every invitation/Admin locale, state, and governed viewport.
+- **TEST-092** (Tests) - PASS: An exact-source browser qualification executes exactly 50,000 completed UI cycles across every catalog game, assigns at least 1,666 cycles to each game, exercises every eligible game control at least 100 times or records an approved ineligible classification, captures all four governed viewports for human review, and rejects unexplained failures, incomplete ranges, incomplete declared non-control stages, source drift, or cleanup residue.

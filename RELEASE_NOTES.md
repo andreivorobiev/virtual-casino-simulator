@@ -1,5 +1,10 @@
 # Virtual Casino Simulator v9.4.0 Release Notes
 
+## Unreleased repository addendum: private invitation enrollment
+
+- Adds disabled-by-default, restricted-preview Admin invitation and private redemption repository code with recoverable JSON/MySQL lifecycle semantics, additive v2 contracts, and EN/RU accessible surfaces (issue #332; Workroom #24).
+- Grants no live mail, enrollment, provider/network, DNS, deployment, public-signup, or unrestricted-exposure authority.
+
 ## Compatible restricted-preview update
 
 - Packages the compatible Casino changes merged after v9.3.0, including gameplay and ledger correctness fixes, durable retry and reconnect behavior, responsive interface improvements, localization coverage, and static-cache parity.
@@ -14,6 +19,12 @@
 - Adds Admin-only de-identified nine-stage funnel, duration/breadth/error-free summaries, fake-token wager/return/net aggregates, game/action/error/latency metrics, bounded allowlisted drill-down, complete filters, privacy-thresholded breakdowns, and observable cleanup with 30-day raw and 400-day daily-aggregate retention; analytics never store auth, player, session, browser-proof, email, network, or user-agent identifiers.
 - Publishes additive v2 auth and Guest Trials Admin contracts while preserving the frozen v1 compatibility boundary, and adds EN/RU exact-head browser-evidence requirements across all four governed viewports.
 - Keeps public signup, live OAuth, deployment, provider, DNS, TLS, firewall, billing, unrestricted exposure, and issue #209 launch outside this repository merge.
+
+## Post-release module addendum: disabled transactional mail
+
+- Adds a provider-neutral transactional-mail foundation for four fixed private enrollment and recovery purposes, with caller idempotency, atomic delivery claims, bounded retry, ambiguous-result freezing, keyed-only persistence, suppression, rate limits, retention, and accessible EN/RU plain-text plus HTML templates.
+- Adds one additive Admin-only v2 readiness contract and responsive Operations diagnostic card while publishing no consumer send, callback, bounce, signup, or recovery route and preserving frozen `/api/v1`.
+- Keeps the repository feature and independent provider/network release switches disabled by default. Workroom #23 authorizes this inert code only; live mail, provider accounts, credentials, DNS/email authentication, deployment, billing, signup, public exposure, and issue #209 remain separately gated.
 
 ## Prior v9.3.0 release record
 

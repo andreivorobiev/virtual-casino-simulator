@@ -115,6 +115,11 @@ class StorageProvider:
         # Raise because concrete providers must preserve update semantics.
         raise NotImplementedError
 
+    # Create one deterministic player exactly once or return its existing compatible row.
+    def ensure_player(self, player: dict) -> dict:
+        # Raise because concrete providers must serialize deterministic player provisioning.
+        raise NotImplementedError
+
     # Execute a ledger transaction and persist the resulting balance atomically.
     def transact_ledger(self, player_id: str, amount: float, transaction_type: str, game: str | None = None, round_id: str | None = None, details: dict | None = None) -> dict:
         # Raise because concrete providers must enforce atomic ledger writes.
@@ -401,6 +406,33 @@ class JsonStorageProvider(StorageProvider):
                         return player
         # Raise a consistent not-found error when no player matched.
         raise NotFoundError(f"Player {player_id} was not found")
+
+    # Create one deterministic player under the same cross-process wallet lock used by updates.
+    def ensure_player(self, player: dict) -> dict:
+        # Guard deterministic provisioning from concurrent threads.
+        with self.lock:
+            # Guard deterministic provisioning from independent processes.
+            with self._ledger_process_lock():
+                # Recover any committed ledger projection before changing the player document.
+                self._recover_committed_actions()
+                # Load the current player collection without seeding unrelated defaults.
+                state = self._load_players_document(lambda: {"schema_version": SCHEMA_VERSION, "players": []})
+                # Return an existing compatible row for an idempotent recovery attempt.
+                for existing in state["players"]:
+                    # Match only the deterministic invited-player identifier.
+                    if existing.get("player_id") == player.get("player_id"):
+                        # Reject an identifier collision with different ownership semantics.
+                        if existing.get("type") != player.get("type"):
+                            # Preserve the existing row and fail the provisioning saga closed.
+                            raise ConflictError("Player provisioning identity conflicts with existing state")
+                        # Return the already provisioned player without resetting balance or timestamps.
+                        return existing
+                # Append a detached copy so caller mutation cannot alter persisted state after return.
+                state["players"].append(dict(player))
+                # Persist the complete deterministic player document while the process lock remains held.
+                self.save_players(state)
+                # Return the newly committed compatible row.
+                return dict(player)
 
     # Return the empty committed-action registry shape used by fresh JSON stores.
     def _empty_action_registry(self) -> dict:
@@ -951,6 +983,52 @@ class MySQLStorageProvider(StorageProvider):
         # Always close the connection after the update attempt.
         finally:
             # Close the MySQL connection for this operation.
+            connection.close()
+
+    # Create one deterministic player under a MySQL primary-key transaction.
+    def ensure_player(self, player: dict) -> dict:
+        # Ensure the relational schema exists before provisioning.
+        self.ensure_ready()
+        # Open one connection for the insert-or-read transaction.
+        connection = self.connect()
+        # Protect rollback and cleanup for every database outcome.
+        try:
+            # Start an explicit transaction so duplicate creators serialize on the primary key.
+            connection.start_transaction()
+            # Open a dictionary cursor for the committed row projection.
+            cursor = connection.cursor(dictionary=True)
+            # Insert the deterministic player once without overwriting any existing wallet state.
+            cursor.execute(
+                "INSERT IGNORE INTO casino_players (player_id, display_name, player_type, balance, created_at, updated_at, status) VALUES (%s, %s, %s, %s, %s, %s, %s)",  # Preserve existing rows on an idempotent replay.
+                (player["player_id"], player["display_name"], player.get("type", "human"), round(float(player.get("balance", 0)), 2), player["created_at"], player["updated_at"], player.get("status", "active")),  # Bind only normalized deterministic fields.
+            )
+            # Lock and read the resulting row before validating compatibility.
+            cursor.execute("SELECT player_id, display_name, player_type, balance, created_at, updated_at, status FROM casino_players WHERE player_id = %s FOR UPDATE", (player["player_id"],))
+            # Resolve the inserted or pre-existing row.
+            row = cursor.fetchone()
+            # Reject an impossible missing row without committing partial state.
+            if row is None:
+                # Raise a stable provisioning conflict for the recoverable caller.
+                raise ConflictError("Player provisioning did not produce durable state")
+            # Convert the relational row into the public storage shape.
+            result = self._player_from_row(row)
+            # Reject a primary-key collision with incompatible player ownership semantics.
+            if result.get("type") != player.get("type"):
+                # Keep the original row unchanged and fail closed.
+                raise ConflictError("Player provisioning identity conflicts with existing state")
+            # Commit either the first insert or the compatible no-op replay.
+            connection.commit()
+            # Return the committed player row.
+            return result
+        # Roll back every failed provisioning attempt.
+        except Exception:
+            # Discard any partial insert or lock state.
+            connection.rollback()
+            # Preserve the original bounded application error.
+            raise
+        # Always release the provider connection.
+        finally:
+            # Close the database connection after commit or rollback.
             connection.close()
 
     # Execute a ledger transaction and player balance update atomically in MySQL.

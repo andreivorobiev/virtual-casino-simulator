@@ -21,7 +21,7 @@ REQUIRED = ["casino", "players", "ledger", "bots", "autoplay", "admin"]
 # Set REQUIRED_V2 to the value needed for the next operation.
 REQUIRED_V2 = [
     # Execute this statement as part of the module's documented control flow.
-    "auth", "admin-users",
+    "auth", "admin-users", "transactional-mail", "invitations",
 ]
 # Point to the mixed-surface Operations contract that cannot use the legacy v1-only skeleton rule.
 OPERATIONS_CONTRACT = CONTRACT_DIR / "operations.v1.yaml"
@@ -31,6 +31,10 @@ PREVIEW_SECURITY_CONTRACT = ROOT / "contracts" / "compatibility" / "restricted-p
 TOKEN_COMPATIBILITY_CONTRACT = ROOT / "contracts" / "compatibility" / "one-time-tokens-infrastructure.json"
 # Point to the component-only v2 token contract that deliberately publishes no routes.
 TOKEN_COMPONENT_CONTRACT = CONTRACT_DIR / "one-time-tokens.v2.yaml"
+# Point to the disabled transactional-mail compatibility policy.
+MAIL_COMPATIBILITY_CONTRACT = ROOT / "contracts" / "compatibility" / "transactional-mail.json"
+# Point to the disabled restricted-preview invitation compatibility policy.
+INVITATION_COMPATIBILITY_CONTRACT = ROOT / "contracts" / "compatibility" / "invitation-enrollment.json"
 
 # Define the main function used by this module.
 def main():
@@ -144,7 +148,7 @@ def main():
             errors.append(f"{PREVIEW_SECURITY_CONTRACT} does not identify the restricted-preview policy")
         # Require exactly the two deliberately anonymous application routes.
         # Preserve only login, explicitly approved disposable guest entry, and liveness as anonymous routes.
-        if preview_security.get("anonymous_routes") != ["/api/v2/auth/login", "/api/v2/auth/guest", "/healthz"]:
+        if preview_security.get("anonymous_routes") != ["/api/v2/auth/login", "/api/v2/auth/guest", "/api/v2/auth/redeem-invitation", "/healthz"]:
             # Fail closed when anonymous route scope expands or changes order.
             errors.append(f"{PREVIEW_SECURITY_CONTRACT} does not preserve the anonymous route allowlist")
         # Require public enrollment and live provider flows to stay disabled.
@@ -211,6 +215,61 @@ def main():
     except OSError as exc:
         # Report only the artifact path and exception class.
         errors.append(f"token component contract could not be validated: {TOKEN_COMPONENT_CONTRACT} ({type(exc).__name__})")
+    # Require the transactional-mail compatibility boundary to remain parseable and exact.
+    try:
+        # Parse the disabled infrastructure policy without reading any runtime mail configuration.
+        mail_policy = json.loads(MAIL_COMPATIBILITY_CONTRACT.read_text(encoding="utf-8"))
+        # Require the permanent identity, stage, purpose allowlist, and frozen v1 boundary.
+        if mail_policy.get("artifact") != "transactional-mail" or mail_policy.get("stage") != "disabled-foundation" or mail_policy.get("purposes") != ["invitation", "email_verification", "password_reset", "magic_link"] or mail_policy.get("compatibility", {}).get("api_v1_frozen") is not True:
+            # Reject renamed, widened, or compatibility-breaking policy records.
+            errors.append(f"{MAIL_COMPATIBILITY_CONTRACT} does not preserve the disabled mail foundation")
+        # Require the exact approved repository-only authority boundary.
+        mail_authorization = mail_policy.get("authorization", {})
+        # Check authorized inert surfaces separately from every denied live capability.
+        if mail_authorization.get("repository_merge_approved_in_workroom_issue") != 23 or mail_authorization.get("disabled_infrastructure_authorized") is not True or mail_authorization.get("admin_readiness_authorized") is not True or any(mail_authorization.get(key) is not False for key in ("consumer_routes_authorized", "live_provider_delivery_authorized", "provider_account_changes_authorized", "credentials_authorized", "dns_or_email_auth_changes_authorized", "deployment_authorized", "public_signup_or_exposure_authorized")):
+            # Reject any contract that widens the exact Workroom #23 approval.
+            errors.append(f"{MAIL_COMPATIBILITY_CONTRACT} does not preserve the Workroom #23 authority boundary")
+        # Require dual gates, at-most-once ambiguous handling, and raw-value exclusion.
+        release_gates = mail_policy.get("release_gates", {})
+        # Validate the two independent false defaults and their combined provider requirement.
+        if release_gates.get("repository_feature_default") is not False or release_gates.get("network_release_default") is not False or release_gates.get("both_required_for_provider_access") is not True:
+            # Reject a policy that could make provider access reachable under one switch.
+            errors.append(f"{MAIL_COMPATIBILITY_CONTRACT} does not preserve independent release gates")
+        # Read the lifecycle and persistence declarations for exact safety anchors.
+        lifecycle = mail_policy.get("delivery_lifecycle", {})
+        persistence = mail_policy.get("persistence", {})
+        # Require caller idempotency, ambiguous-result freezing, and no raw bearer/provider persistence.
+        if lifecycle.get("caller_idempotency_required") is not True or lifecycle.get("one_atomic_transport_claim_per_attempt") is not True or lifecycle.get("ambiguous_result") != "uncertain and never automatically retried" or persistence.get("tokened_url") != "never persisted" or persistence.get("provider_response") != "never persisted or logged":
+            # Reject weakening of delivery duplication or data-minimization policy.
+            errors.append(f"{MAIL_COMPATIBILITY_CONTRACT} does not preserve mail lifecycle safety")
+    # Convert an absent or malformed policy into one stable contract diagnostic.
+    except (OSError, json.JSONDecodeError) as exc:
+        # Report only the checked artifact path and exception class.
+        errors.append(f"mail compatibility policy could not be validated: {MAIL_COMPATIBILITY_CONTRACT} ({type(exc).__name__})")
+    # Require the separately approved disabled invitation compatibility boundary to remain exact.
+    try:
+        # Parse the invitation policy without reading runtime configuration or private state.
+        invitation_policy = json.loads(INVITATION_COMPATIBILITY_CONTRACT.read_text(encoding="utf-8"))
+        # Require permanent artifact identity, stage, and frozen v1 compatibility.
+        if invitation_policy.get("artifact") != "invitation-enrollment" or invitation_policy.get("stage") != "disabled-restricted-preview" or invitation_policy.get("compatibility", {}).get("api_v1_frozen") is not True:
+            # Reject renamed, widened, or compatibility-breaking invitation policy.
+            errors.append(f"{INVITATION_COMPATIBILITY_CONTRACT} does not identify the disabled invitation boundary")
+        # Require the exact Workroom #24 repository-only authorization and every denied live capability.
+        invitation_authorization = invitation_policy.get("authorization", {})
+        # Check the two disabled code surfaces separately from live, provider, deployment, and public authority.
+        if invitation_authorization.get("repository_merge_approved_in_workroom_issue") != 24 or invitation_authorization.get("disabled_admin_invitation_authorized") is not True or invitation_authorization.get("disabled_private_redemption_authorized") is not True or any(invitation_authorization.get(key) is not False for key in ("live_mail_authorized", "live_enrollment_authorized", "provider_or_network_authorized", "dns_authorized", "deployment_authorized", "public_signup_or_exposure_authorized")):
+            # Reject any widening beyond the exact owner-approved disabled repository scope.
+            errors.append(f"{INVITATION_COMPATIBILITY_CONTRACT} does not preserve the Workroom #24 authority boundary")
+        # Require all independent false defaults and frozen generic public error semantics.
+        invitation_gates = invitation_policy.get("release_gates", {})
+        # Check invitation, redemption, mail feature, and mail network gates together.
+        if any(invitation_gates.get(key) is not False for key in ("invitation_issuance_default", "redemption_default", "mail_feature_default", "mail_network_release_default")) or invitation_gates.get("all_required_for_live_delivery") is not True or invitation_policy.get("privacy", {}).get("public_error") != "one generic invitation_unavailable reason":
+            # Reject a policy that makes enrollment reachable or enumerable under one switch.
+            errors.append(f"{INVITATION_COMPATIBILITY_CONTRACT} does not preserve disabled gates and generic errors")
+    # Convert absent or malformed policy into one stable contract diagnostic.
+    except (OSError, json.JSONDecodeError) as exc:
+        # Report only the checked artifact path and exception class.
+        errors.append(f"invitation compatibility policy could not be validated: {INVITATION_COMPATIBILITY_CONTRACT} ({type(exc).__name__})")
     # Set schema_dir to the value needed for the next operation.
     schema_dir = ROOT / "contracts" / "schemas"
     # Iterate through the collection to process each item.
