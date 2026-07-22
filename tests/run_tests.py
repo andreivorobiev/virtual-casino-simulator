@@ -2421,7 +2421,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Render only one allowlisted state through the production status renderer.
                         pwa_page.evaluate("state => window.dispatchEvent(new CustomEvent('casino-pwa-display-state',{detail:{state}}))",pwa_states[state])
                         # Wait until the bounded status renderer exposes the requested state.
-                        pwa_page.wait_for_function("state => document.querySelector('[data-testid=pwa-banner]')?.dataset.state===state",pwa_states[state],timeout=3000)
+                        pwa_page.wait_for_function("state => document.querySelector('[data-testid=pwa-banner]')?.dataset.state===state",arg=pwa_states[state],timeout=3000)
                         # Audit banner containment, readable size, copy, and page overflow before capture.
                         geometry=pwa_page.evaluate("""() => { const banner=document.querySelector('[data-testid=pwa-banner]'); const box=banner.getBoundingClientRect(); return { visible:!banner.hidden, left:box.left, right:box.right, top:box.top, bottom:box.bottom, width:box.width, height:box.height, viewportWidth:innerWidth, overflowX:Math.max(0,document.documentElement.scrollWidth-document.documentElement.clientWidth), text:banner.innerText.trim() }; }""")
                         # Reject hidden, clipped, undersized, overflowing, or raw-key evidence.
@@ -2499,7 +2499,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             # Reload through the locale query so visible copy and sidecar metadata share one source.
                             pwa_page.goto(f'{base}/?locale={pwa_locale}',wait_until='domcontentloaded'); pwa_page.get_by_test_id('lobby').wait_for(timeout=8000)
                             # Wait until the active locale exactly matches the evidence label.
-                            pwa_page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale===locale",pwa_locale,timeout=5000)
+                            pwa_page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale===locale",arg=pwa_locale,timeout=5000)
                             # Visit every governed viewport in stable matrix order.
                             for pwa_viewport_id,pwa_viewport in pwa_viewports.items():
                                 # Resize before state render so responsive layout and wrapping are final.

@@ -194,6 +194,14 @@ class PwaFoundationTests(unittest.TestCase):
         self.assertLess(controller_index, navigation_index)
         # Reject the async polling predicate that previously allowed registration state to race page traffic.
         self.assertNotIn('wait_for_function("async () => (await navigator.serviceWorker.getRegistrations())', pwa_case)
+        # Require Playwright's keyword-only argument boundary for each parameterized PWA display-state wait.
+        self.assertIn("dataset.state===state\",arg=pwa_states[state],timeout=3000", pwa_case)
+        # Require the same keyword-only boundary for locale synchronization before evidence capture.
+        self.assertIn("getLocaleState().locale===locale\",arg=pwa_locale,timeout=5000", pwa_case)
+        # Reject the positional forms that fail before service-worker acceptance can begin.
+        self.assertNotIn("dataset.state===state\",pwa_states[state],timeout=3000", pwa_case)
+        # Reject the locale positional form independently so either regression is diagnosed without a hosted browser.
+        self.assertNotIn("getLocaleState().locale===locale\",pwa_locale,timeout=5000", pwa_case)
 
     # Require page-side offline controls and authoritative reconnect behavior.
     def test_client_fails_closed_and_refreshes_authoritatively(self):
