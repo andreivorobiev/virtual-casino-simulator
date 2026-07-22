@@ -1,6 +1,6 @@
 {
   "module": "application",
-  "version": "9.44.0",
+  "version": "9.45.3",
   "paths": [
     "run.py",
     "pyproject.toml",
@@ -9,9 +9,17 @@
     "modules/__init__.py",
     "web/app.js",
     "web/styles.css",
+    "web/index.html",
+    "web/manifest.webmanifest",
+    "web/sw.js",
     "web/core/i18n.js",
     "web/core/api.js",
+    "web/core/pwa.js",
     "web/core/ui.js",
+    "web/assets/pwa-icon-192.png",
+    "web/assets/pwa-icon-512.png",
+    "web/assets/pwa-maskable-192.png",
+    "web/assets/pwa-maskable-512.png",
     "web/i18n/"
   ],
   "requirements_prefixes": [

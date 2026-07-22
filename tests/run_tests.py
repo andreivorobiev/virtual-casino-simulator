@@ -2378,6 +2378,10 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 return 2
             # Open an isolated browser page so the visible login form must establish its own backend session.
             real_login_page=browser.new_page(viewport={'width':1920,'height':1080})
+            # Retain only sanitized service-worker install diagnostics emitted by the narrowed PWA worker.
+            pwa_worker_diagnostics=[]
+            # Observe console output before first navigation so an early install rejection cannot escape the acceptance record.
+            real_login_page.context.on('console',lambda message: pwa_worker_diagnostics.append(message.text) if message.text.startswith('PWA_INSTALL_FAILURE ') else None)
             # Start protected login verification so the isolated page is always closed before the broad suite.
             try:
                 # Navigate without a seeded cookie so the real backend returns the login gate.
@@ -2392,6 +2396,134 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 real_login_page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Record the focused real-backend browser login regression coverage.
                 run_case('BR-AUTH-BACKEND-001',['AUTH-001','AUTH-002','SESSION-001','OAUTH-006','TEST-045'],lambda: real_login_response['ok'] is True and real_login_response['data']['user']['email']==DEFAULT_AUTH_EMAIL and real_login_page.get_by_test_id('lobby').is_visible())
+                # Prove the narrowed installable and offline-safe PWA foundation without native-install claims. (PWA-001, PWA-002, TEST-095)
+                def pwa_installable_shell():
+                    # Build the exact credential-free static-shell request used by the service worker.
+                    public_shell_request=urllib.request.Request(base+'/index.html',headers={'X-Casino-Public-Shell':'1'})
+                    # Read the public response headers without sharing authenticated browser cookies.
+                    with urllib.request.urlopen(public_shell_request,timeout=12) as public_shell_response:
+                        # Require valid HTML while proving this public cache-fill response cannot bootstrap a CSRF cookie.
+                        assert public_shell_response.status==200 and public_shell_response.headers.get_content_type()=='text/html' and not public_shell_response.headers.get_all('Set-Cookie'),dict(public_shell_response.headers.items())
+                    # Exercise the actual authenticated application page so worker, cache, session, and route storage share one production-shaped context.
+                    pwa_page=real_login_page
+                    # Define every governed viewport for exact visual-matrix evidence.
+                    pwa_viewports={'desktop_primary':{'width':1920,'height':1080},'desktop_compact':{'width':1440,'height':900},'tablet':{'width':1024,'height':900},'mobile':{'width':390,'height':844}}
+                    # Map visual-matrix state IDs to the controller's bounded display protocol.
+                    pwa_states={'cold_start':'cold-start','warm_start':'warm-start','offline':'offline','reconnecting':'reconnecting','update_available':'update','update_failed':'update-failed','stale_client':'stale-client','expired_session':'expired-session','route_restored':'route-restored'}
+                    # Read exact source identity once for every PWA evidence sidecar.
+                    pwa_evidence_commit=subprocess.check_output(['git','rev-parse','HEAD'],cwd=str(ROOT),text=True).strip()
+                    # Prefer the CI head branch and retain a safe detached fallback.
+                    pwa_evidence_branch=os.environ.get('GITHUB_HEAD_REF') or subprocess.check_output(['git','branch','--show-current'],cwd=str(ROOT),text=True).strip() or 'detached'
+                    # Capture one complete PWA shell state with self-describing metadata.
+                    def pwa_evidence(name,state,locale,viewport_id):
+                        # Resolve the exact evidence path beneath the standard browser artifact directory.
+                        target=screenshots/name
+                        # Render only one allowlisted state through the production status renderer.
+                        pwa_page.evaluate("state => window.dispatchEvent(new CustomEvent('casino-pwa-display-state',{detail:{state}}))",pwa_states[state])
+                        # Wait until the bounded status renderer exposes the requested state.
+                        pwa_page.wait_for_function("state => document.querySelector('[data-testid=pwa-banner]')?.dataset.state===state",arg=pwa_states[state],timeout=3000)
+                        # Audit banner containment, readable size, copy, and page overflow before capture.
+                        geometry=pwa_page.evaluate("""() => { const banner=document.querySelector('[data-testid=pwa-banner]'); const box=banner.getBoundingClientRect(); return { visible:!banner.hidden, left:box.left, right:box.right, top:box.top, bottom:box.bottom, width:box.width, height:box.height, viewportWidth:innerWidth, overflowX:Math.max(0,document.documentElement.scrollWidth-document.documentElement.clientWidth), text:banner.innerText.trim() }; }""")
+                        # Reject hidden, clipped, undersized, overflowing, or raw-key evidence.
+                        assert geometry['visible'] and geometry['left']>=-1 and geometry['right']<=geometry['viewportWidth']+1 and geometry['width']>=300 and geometry['height']>=42 and geometry['overflowX']<=1 and geometry['text'] and 'pwa.' not in geometry['text'],geometry
+                        # Capture the complete shell without unrelated transient toast or footer overlays.
+                        pwa_page.screenshot(path=str(target),full_page=True,animations='disabled',style='#toast, .status-bar { visibility: hidden !important; }')
+                        # Bind evidence to exact source, matrix state, locale, viewport, and narrowed platform boundary.
+                        metadata={'evidence_class':'after_pass','branch':pwa_evidence_branch,'commit':pwa_evidence_commit,'surface':'pwa_shell','states':[state],'locale':locale,'viewport':{'id':viewport_id,**pwa_viewports[viewport_id]},'path':str(target.relative_to(ROOT)).replace('\\','/'),'geometry':geometry,'platform_foundation':['android_chrome','ios_safari_home_screen'],'native_install_evidence':False}
+                        # Write the exact metadata beside its image for artifact and provenance audit.
+                        target.with_suffix('.json').write_text(json.dumps(metadata,indent=2,ensure_ascii=False),encoding='utf-8')
+                    # Guarantee offline reset, registration cleanup, cache cleanup, and page closure.
+                    try:
+                        # Use the already-authenticated first-load shell as the genuine cold client without racing installation through a redundant navigation.
+                        assert pwa_page.evaluate("() => document.documentElement.dataset.pwaStart")=='cold-start'
+                        # Await the production registration's fully activated worker before issuing competing manifest, icon, or reload traffic.
+                        registration_identity=pwa_page.evaluate("""async () => { const timeout=new Promise(resolve => setTimeout(async () => { const registrations=await navigator.serviceWorker.getRegistrations(); const worker=registrations[0]?.installing||registrations[0]?.waiting||registrations[0]?.active; resolve({ready:false,state:worker?.state||'missing',scriptUrl:worker?.scriptURL||''}); },20000)); const active=navigator.serviceWorker.ready.then(registration => ({ready:Boolean(registration.active),state:registration.active?.state||'',scriptUrl:registration.active?.scriptURL||''})); return await Promise.race([active,timeout]); }""")
+                        # Require atomic shell installation and activation at the canonical script before a controlled navigation is attempted.
+                        assert registration_identity=={'ready':True,'state':'activated','scriptUrl':f'{base}/sw.js?v=9.4.0'},{'registration':registration_identity,'workerDiagnostics':pwa_worker_diagnostics[-4:]}
+                        # Reload only after activation so the navigation is deterministically controlled even when the initial clients.claim event raced first paint.
+                        pwa_page.reload(wait_until='domcontentloaded'); pwa_page.get_by_test_id('lobby').wait_for(timeout=8000)
+                        # Wait synchronously for the controlled reload and canonical page identity without an async polling predicate.
+                        pwa_page.wait_for_function("() => Boolean(navigator.serviceWorker.controller) && window.CasinoPwa?.version==='9.4.0'",timeout=8000)
+                        # Require the same-context reload to classify as warm rather than a fresh install claim.
+                        assert pwa_page.evaluate("() => document.documentElement.dataset.pwaStart")=='warm-start'
+                        # Read the manifest link and both Android/iOS browser-foundation meta contracts.
+                        head_meta=pwa_page.evaluate("""() => { const link=document.querySelector('link[rel="manifest"]'); const apple=document.querySelector('link[rel="apple-touch-icon"]'); return { manifestHref:link?.getAttribute('href')||null, themeColor:document.querySelector('meta[name="theme-color"]')?.content||null, viewport:document.querySelector('meta[name="viewport"]')?.content||'', appleCapable:document.querySelector('meta[name="apple-mobile-web-app-capable"]')?.content||null, appleIcon:apple?.getAttribute('href')||null, appleSize:apple?.getAttribute('sizes')||null }; }""")
+                        # Require standards-valid linked metadata without claiming a native install.
+                        assert head_meta=={'manifestHref':'/manifest.webmanifest','themeColor':'#03110c','viewport':'width=device-width,initial-scale=1,viewport-fit=cover','appleCapable':'yes','appleIcon':'/assets/pwa-icon-192.png','appleSize':'192x192'},head_meta
+                        # Fetch the manifest and validate complete any-purpose and maskable PNG rows.
+                        manifest=pwa_page.evaluate("async () => (await (await fetch('/manifest.webmanifest')).json())")
+                        # Index the exact icon contract for concise assertions.
+                        icon_rows={(row['src'],row['sizes'],row['purpose'],row['type']) for row in manifest['icons']}
+                        # Require standalone metadata and every reviewed PNG size/purpose pair.
+                        assert manifest['name']=='Virtual Casino Simulator' and manifest['display']=='standalone' and manifest['scope']=='/' and manifest['theme_color']=='#03110c' and icon_rows=={('/assets/pwa-icon-192.png','192x192','any','image/png'),('/assets/pwa-icon-512.png','512x512','any','image/png'),('/assets/pwa-maskable-192.png','192x192','maskable','image/png'),('/assets/pwa-maskable-512.png','512x512','maskable','image/png')},manifest
+                        # Require every icon response to be a nonempty PNG from the exact manifest paths.
+                        icon_responses=pwa_page.evaluate("async icons => Promise.all(icons.map(async icon => { const response=await fetch(icon.src); return { src:icon.src, ok:response.ok, type:response.headers.get('content-type'), bytes:(await response.arrayBuffer()).byteLength }; }))",manifest['icons'])
+                        # Reject missing, mislabeled, or placeholder icon responses.
+                        assert all(row['ok'] and row['type']=='image/png' and row['bytes']>4000 for row in icon_responses),icon_responses
+                        # Read the controlling worker identity without opening CacheStorage through a competing page transaction.
+                        worker_identity=pwa_page.evaluate("async () => { const active=(await navigator.serviceWorker.getRegistrations()).find(reg => reg.active)?.active; return { pageVersion:window.CasinoPwa?.version||'', controller:Boolean(navigator.serviceWorker.controller), scriptUrl:active?.scriptURL||'' }; }")
+                        # Require the active root worker and page to share the canonical packaged version.
+                        assert worker_identity['pageVersion']=='9.4.0' and worker_identity['controller'] and worker_identity['scriptUrl'].endswith('/sw.js?v=9.4.0'),worker_identity
+                        # Fetch an authoritative API path and prove it does not enter any worker cache.
+                        pwa_page.evaluate("async () => { await fetch('/api/v1/casino/state',{credentials:'include'}); }")
+                        # Enter true offline mode and require native fail-closed controls plus a pre-fetch API rejection.
+                        pwa_page.context.set_offline(True); pwa_page.evaluate("() => window.dispatchEvent(new Event('offline'))")
+                        # Wait for the controller to expose the offline boundary.
+                        pwa_page.wait_for_function("() => window.CasinoPwa?.state()==='offline' && document.querySelector('[data-testid=pwa-banner]')?.dataset.state==='offline'",timeout=3000)
+                        # Require the wallet mutation to be natively disabled while local navigation remains available.
+                        assert pwa_page.locator('#wallet-menu-summary').is_enabled() and pwa_page.locator('#add-token-btn').is_disabled()
+                        # Call the public API helper offline and retain only its stable failure code.
+                        offline_result=pwa_page.evaluate("async () => { try { const mod=await import('/core/api.js'); await mod.addUserTokens({amount:1}); return {ok:true}; } catch(error){ return {ok:false,code:error.code||'',message:error.message}; } }")
+                        # Require a fail-closed error before any queued or replayable mutation.
+                        assert offline_result['ok'] is False and offline_result['code']=='OFFLINE',offline_result
+                        # Navigate while truly offline so only the cached index and exact static module allowlist can reconstruct the shell.
+                        pwa_page.goto(f'{base}/games/roulette',wait_until='domcontentloaded',timeout=10000)
+                        # Require the cached shell, PWA controller, and localization runtime without accepting stale authoritative game state.
+                        pwa_page.wait_for_function("() => window.CasinoPwa?.state()==='offline' && document.body?.dataset.testid==='pwa-shell' && Boolean(window.CasinoI18n)",timeout=8000)
+                        # Prove a direct authoritative API request is unavailable rather than served from the worker cache.
+                        direct_offline_api=pwa_page.evaluate("async () => { try { await fetch('/api/v1/casino/state',{credentials:'include'}); return true; } catch (_) { return false; } }")
+                        # Reject any offline API replay or cached authoritative response.
+                        assert direct_offline_api is False
+                        # Restore connectivity and require authoritative session, wallet, catalog, and same-route refresh before controls return.
+                        pwa_page.context.set_offline(False); pwa_page.evaluate("() => window.dispatchEvent(new Event('online'))")
+                        # Require the authoritative reconnect callback to remount the same route.
+                        pwa_page.wait_for_function("() => window.CasinoPwa?.state()==='route-restored' && location.pathname==='/games/roulette' && Boolean(document.querySelector('[data-testid=roulette-premium]'))",timeout=12000)
+                        # Prove a mismatched controlling-worker version produces a bounded stale-client state.
+                        pwa_page.evaluate("() => navigator.serviceWorker.dispatchEvent(new MessageEvent('message',{data:{type:'PWA_VERSION',version:'0.0.0'}}))")
+                        # Require stale-client status without worker or provider mutation.
+                        pwa_page.wait_for_function("() => window.CasinoPwa?.state()==='stale-client'",timeout=3000)
+                        # Return to the shell root before generating the governed visual corpus.
+                        pwa_page.goto(f'{base}/?locale=en-US',wait_until='domcontentloaded'); pwa_page.get_by_test_id('lobby').wait_for(timeout=8000)
+                        # Generate exact EN/RU evidence for every state at every governed viewport.
+                        for pwa_locale in ('en-US','ru-RU'):
+                            # Reload through the locale query so visible copy and sidecar metadata share one source.
+                            pwa_page.goto(f'{base}/?locale={pwa_locale}',wait_until='domcontentloaded'); pwa_page.get_by_test_id('lobby').wait_for(timeout=8000)
+                            # Wait until the active locale exactly matches the evidence label.
+                            pwa_page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale===locale",arg=pwa_locale,timeout=5000)
+                            # Visit every governed viewport in stable matrix order.
+                            for pwa_viewport_id,pwa_viewport in pwa_viewports.items():
+                                # Resize before state render so responsive layout and wrapping are final.
+                                pwa_page.set_viewport_size(pwa_viewport)
+                                # Capture every authorized lifecycle state independently.
+                                for pwa_state in pwa_states:
+                                    # Write one exact-state image and sidecar pair.
+                                    pwa_evidence(f'after-pass-pwa-{pwa_state}-{pwa_locale.lower()}-{pwa_viewport_id}.png',pwa_state,pwa_locale,pwa_viewport_id)
+                        # End the authenticated session through the real API helper before expired-session reconnect proof.
+                        pwa_page.evaluate("async () => { const mod=await import('/core/api.js'); await mod.logout(); }")
+                        # Trigger one offline-to-online transition after server-side logout.
+                        pwa_page.context.set_offline(True); pwa_page.evaluate("() => window.dispatchEvent(new Event('offline'))"); pwa_page.context.set_offline(False); pwa_page.evaluate("() => window.dispatchEvent(new Event('online'))")
+                        # Require stale authenticated UI to be replaced by login and the explicit expired-session state.
+                        pwa_page.wait_for_function("() => window.CasinoPwa?.state()==='expired-session' && Boolean(document.querySelector('[data-testid=login-gate]'))",timeout=10000)
+                    # Always release worker, cache, connectivity, and page state for downstream browser cases.
+                    finally:
+                        # Restore the context network before cleanup requests.
+                        pwa_page.context.set_offline(False)
+                        # Remove only Casino service-worker registrations and caches created by this focused case.
+                        pwa_page.evaluate("async () => { const regs=await navigator.serviceWorker.getRegistrations(); await Promise.all(regs.map(reg => reg.unregister())); const names=await caches.keys(); await Promise.all(names.filter(name => name.startsWith('casino-static-shell-v')).map(name => caches.delete(name))); }")
+                        # Leave the authenticated application page open for the outer deterministic page cleanup.
+                        assert not pwa_page.is_closed()
+                # Execute the narrowed PWA foundation regression and exact-head evidence corpus.
+                run_case('BR-PWA-001',['PWA-001','PWA-002','TEST-095'],pwa_installable_shell)
             # Close the focused page even when its assertions fail.
             finally:
                 # Release the isolated backend-login browser context before the existing broad UI suite.

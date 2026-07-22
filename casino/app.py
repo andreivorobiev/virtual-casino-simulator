@@ -55,6 +55,8 @@ from casino.core import autoplay
 
 # Keep development and browser-test Admin static protection aligned with the production WSGI adapter. (AUTH-008)
 ADMIN_STATIC_PATHS = frozenset({"/admin", "/admin.html", "/admin.js", "/web/admin.js"})
+# Name the exact credential-free worker request marker for cookie-free public shell bytes. (PWA-002)
+PWA_PUBLIC_SHELL_HEADER = "X-Casino-Public-Shell"
 # Define one cache contract consumed by both supported HTTP adapters. (CORE-026)
 CACHE_CONTROL_NO_STORE = "no-store"
 
@@ -620,6 +622,8 @@ class Handler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         # Set path to the value needed for the next operation.
         path = parsed.path
+        # Accept the public-shell marker only when no cookie or authorization proof accompanies it. (PWA-002)
+        public_pwa_shell = self.headers.get(PWA_PUBLIC_SHELL_HEADER) == "1" and not self.headers.get("Cookie") and not self.headers.get("Authorization")
         # Enforce Admin authorization before reading any dedicated Admin HTML or JavaScript bytes. (AUTH-008)
         if path in ADMIN_STATIC_PATHS:
             # Start protected authentication so static authorization failures use the standard envelope.
@@ -675,7 +679,7 @@ class Handler(BaseHTTPRequestHandler):
         # Prevent HTML and lazy JavaScript from surviving a source or route reload. (CORE-026)
         self.send_header("Cache-Control", CACHE_CONTROL_NO_STORE)
         # Bootstrap or refresh one host-only CSRF cookie on the non-Admin application shell. (OAUTH-008)
-        if target.name == "index.html" and urlparse(self.path).path not in ADMIN_STATIC_PATHS:
+        if target.name == "index.html" and urlparse(self.path).path not in ADMIN_STATIC_PATHS and not public_pwa_shell:
             # Reuse an active session's distinct CSRF value without authenticating a context-bound guest cookie.
             bootstrap_token = auth.csrf_token_for_session_cookie(self.headers)
             # Reuse a bounded anonymous double-submit cookie when no session is active.

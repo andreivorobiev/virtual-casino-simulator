@@ -2,12 +2,19 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <title>Virtual Casino Simulator</title>
   <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#03110c">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Casino Sim">
+  <link rel="apple-touch-icon" sizes="192x192" href="/assets/pwa-icon-192.png">
   <link rel="stylesheet" href="/styles.css">
 </head>
-<body class="casino-page">
+<body class="casino-page" data-testid="pwa-shell">
   <!-- Premium shared shell: brand, route navigation, wallet, and add-token affordance. -->
   <header class="casino-topbar" data-testid="premium-topbar">
     <div class="brand-lockup">

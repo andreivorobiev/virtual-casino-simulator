@@ -18,6 +18,15 @@ function cookieValue(name) {
 export async function api(path, options = {}) {
   // Resolve the request method once before applying browser integrity policy.
   const method = String(options.method || (options.body !== undefined ? 'POST' : 'GET')).toUpperCase();
+  // Fail closed before any authoritative request when the browser is explicitly offline. (PWA-002)
+  if (navigator.onLine === false) {
+    // Use one generic message because the localized PWA banner owns player-facing explanation.
+    const error = new Error('Server action unavailable while offline');
+    // Publish a stable low-cardinality code for callers and tests without implying success.
+    error.code = 'OFFLINE';
+    // Stop before fetch so no queued mutation can replay after reconnect.
+    throw error;
+  }
   // Build same-origin JSON headers without retaining credentials outside the browser cookie jar.
   const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
   // Attach the context proof to every later request without copying it to durable local storage.

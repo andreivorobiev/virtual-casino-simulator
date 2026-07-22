@@ -1294,6 +1294,88 @@ label {
   min-height: 48px;
 }
 
+/* Progressive-web-app connectivity and update banner, kept clear of device safe areas. (issue #182) */
+/* Keep the hidden banner fully removed so its fixed layer never intercepts pointer events. */
+#pwa-banner[hidden] {
+  display: none;
+}
+
+#pwa-banner {
+  position: fixed;
+  z-index: 8;
+  top: calc(env(safe-area-inset-top, 0px) + 8px);
+  right: max(env(safe-area-inset-right, 0px), 12px);
+  left: max(env(safe-area-inset-left, 0px), 12px);
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 1px solid rgba(255, 217, 130, 0.5);
+  border-radius: 12px;
+  color: #fff2c2;
+  font-size: 13px;
+  background: rgba(4, 20, 15, 0.96);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(12px);
+}
+
+/* Style the offline state with a distinct, non-alarming cue. */
+#pwa-banner[data-state="offline"] {
+  border-color: rgba(255, 199, 83, 0.6);
+}
+
+/* Distinguish reconnect work without using motion as the only status cue. */
+#pwa-banner[data-state="reconnecting"] {
+  border-color: rgba(110, 190, 255, 0.7);
+}
+
+/* Keep failures and stale-client warnings visibly separate from successful restoration. */
+#pwa-banner[data-state="update-failed"],
+#pwa-banner[data-state="reconnect-failed"],
+#pwa-banner[data-state="stale-client"],
+#pwa-banner[data-state="expired-session"] {
+  border-color: rgba(255, 112, 126, 0.78);
+  color: #ffe1e5;
+}
+
+/* Mark successful online restoration with the existing safe green vocabulary. */
+#pwa-banner[data-state="online"],
+#pwa-banner[data-state="route-restored"] {
+  border-color: rgba(113, 230, 163, 0.68);
+  color: #dcffea;
+}
+
+/* Give the update reload control a clear, compliant touch target. */
+#pwa-banner button {
+  min-height: 44px;
+  padding: 8px 14px;
+}
+
+/* Preserve stable focus visibility for the explicit update action. */
+#pwa-banner button:focus-visible {
+  outline: 3px solid #fff2c2;
+  outline-offset: 3px;
+}
+
+/* Avoid motion-only state changes when the user requests reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  #pwa-banner {
+    scroll-behavior: auto;
+    transition: none;
+  }
+}
+
+/* Stack long localized status copy safely at the governed mobile width. */
+@media (max-width: 560px) {
+  #pwa-banner {
+    align-items: stretch;
+    flex-direction: column;
+    font-size: 14px;
+  }
+}
+
 .status-bar {
   position: fixed;
   z-index: 2;

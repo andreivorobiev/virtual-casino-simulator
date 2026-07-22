@@ -113,5 +113,17 @@
   "guest.badge": "Guest trial",
   "guest.endTrial": "End trial",
   "guest.balanceLabel": "Guest trial · temporary play tokens",
-  "guest.expiryWarning": "Ends after 30 min inactivity, 4 hours, or browser close. No recovery or top-up."
+  "guest.expiryWarning": "Ends after 30 min inactivity, 4 hours, or browser close. No recovery or top-up.",
+  "pwa.coldStart": "Offline-safe app shell is ready.",
+  "pwa.warmStart": "App shell restored in this browser session.",
+  "pwa.offline": "Offline — server actions are disabled until authoritative state is refreshed.",
+  "pwa.reconnecting": "Reconnecting and refreshing wallet and game state…",
+  "pwa.online": "Back online. Authoritative state is current.",
+  "pwa.routeRestored": "Back online. This game screen was refreshed from the server.",
+  "pwa.updateReady": "A verified shell update is ready.",
+  "pwa.reload": "Apply update",
+  "pwa.updateFailed": "The update could not be applied. The current version remains active.",
+  "pwa.staleClient": "This app shell is out of date. Apply the available update before continuing.",
+  "pwa.expiredSession": "Your session expired. Sign in again before using server actions.",
+  "pwa.reconnectFailed": "Authoritative state could not be refreshed. Server actions remain disabled."
 }

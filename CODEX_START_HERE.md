@@ -278,6 +278,7 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 - [`docs/mysql_migrations.md`](docs/mysql_migrations.md) — MySQL migration and DDL-free runtime gate
 - [`docs/oauth_invite_only.md`](docs/oauth_invite_only.md) — Invite-only OAuth operations boundary
 - [`docs/production_service.md`](docs/production_service.md) — Production application service
+- [`docs/pwa_foundation.md`](docs/pwa_foundation.md) — Offline-safe PWA foundation
 - [`docs/recovery.md`](docs/recovery.md) — Encrypted recovery gate
 - [`docs/release_artifacts.md`](docs/release_artifacts.md) — Reproducible release artifacts
 - [`docs/releases/app/9.1.1/api_contract_freeze.md`](docs/releases/app/9.1.1/api_contract_freeze.md) — API contract freeze policy

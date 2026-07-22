@@ -6,8 +6,8 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.44.0
-- core: 9.19.0
+- application: 9.45.3
+- core: 9.19.1
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.0
@@ -45,8 +45,8 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.1
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.53.6
-- docs: 1.53.0
+- tests: 1.54.12
+- docs: 1.54.12
 - contracts: 1.39.0
 - tooling: 1.18.0
 - commenting_policy: 1.0.0
@@ -741,4 +741,7 @@ Historical source baseline: 9.1.0
 - **I18N-005** (Application) - PASS: Player reporting and Admin manual-triage interfaces provide complete en-US and ru-RU labels, privacy disclosure, filters, lifecycle, export, deletion, and manual-only draft copy with no visible resource keys after locale changes.
 - **UX-019** (Application) - PASS: Problem reporting and Admin triage remain keyboard-operable, focus-visible, scroll-contained, touch-sized, readable at 200 percent zoom, reduced-motion safe, and responsive across all governed viewports with paste, drop, file, preview-removal, retry, filter, draft, export, and deletion states.
 - **TEST-094** (Tests) - PASS: Provider-neutral unit, API, JSON-process, and disposable MySQL tests prove recoverable submission, single idempotent winners, durable rates, malformed-state preservation, atomic triage, privacy deletion and retention, metadata-only export, frozen-v1 compatibility, and manual-only publication; browser tests prove complete bilingual player and Admin states across governed viewports.
+- **PWA-001** (Application) - PASS: The restricted-preview browser application publishes a standards-valid web manifest, complete 192- and 512-pixel any-purpose and maskable PNG icon sets, safe-area metadata, and a standalone-capable public shell while remaining fully usable in a normal browser; this repository foundation does not claim native Android or iOS installation acceptance, public hosting, or deployment.
+- **PWA-002** (Application) - PASS: A canonical-release-versioned root-scope service worker caches only one exact credential-free public static-shell allowlist, never intercepts non-GET, API, Admin, authenticated, private, wallet, ledger, outcome, invitation, OAuth, or provider traffic, and preserves the previous complete worker until an explicit update; offline server actions fail closed, and reconnect revalidates session, wallet, catalog, game state, and route before actions are released.
+- **TEST-095** (Tests) - PASS: Browser-free policy tests prove canonical cache identity, exact public-static allowlisting, complete PNG and maskable manifest assets, credential-free cache writes, fail-open request exclusion for non-GET/API/Admin/private traffic, explicit update rollback and cache cleanup, and requirement/version alignment; exact-head browser tests prove cold and warm shell, offline fail-closed actions, reconnect, update and failure, stale-client, expired-session, and route-restoration states in en-US and ru-RU at all four governed viewports with exact evidence provenance and listener cleanup.
 - **TEST-092** (Tests) - PASS: An exact-source browser qualification executes exactly 50,000 completed UI cycles across every catalog game, assigns at least 1,666 cycles to each game, exercises every eligible game control at least 100 times or records an approved ineligible classification, captures all four governed viewports for human review, and rejects unexplained failures, incomplete ranges, incomplete declared non-control stages, source drift, or cleanup residue.

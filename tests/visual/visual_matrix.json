@@ -265,6 +265,39 @@
       ]
     },
     {
+      "id": "pwa_shell",
+      "route": "/",
+      "selector": "[data-testid='pwa-shell'], [data-testid='pwa-banner']",
+      "states": [
+        "cold_start",
+        "warm_start",
+        "offline",
+        "reconnecting",
+        "update_available",
+        "update_failed",
+        "stale_client",
+        "expired_session",
+        "route_restored"
+      ],
+      "locales": [
+        "en-US",
+        "ru-RU"
+      ],
+      "viewports": [
+        "desktop_primary",
+        "desktop_compact",
+        "tablet",
+        "mobile"
+      ],
+      "gates": [
+        "VIS-COPY-001",
+        "VIS-TOKEN-002",
+        "VIS-LAYOUT-003",
+        "VIS-RESPONSIVE-001",
+        "VIS-EVIDENCE-001"
+      ]
+    },
+    {
       "id": "roulette",
       "route": "roulette",
       "selector": "[data-testid='roulette-premium']",
