@@ -6598,6 +6598,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         page.unroute('**/api/v2/admin/invitations?limit=100')
                     # Restore primary dimensions before leaving the Admin session.
                     page.set_viewport_size(viewports['desktop_primary'])
+                    # Record diagnostics boundaries so only the controlled anonymous and generic-error responses can be consumed.
+                    invitation_console_index=len(console_errors); invitation_http_index=len(http_errors); invitation_page_error_index=len(page_errors)
                     # Clear the authenticated cookie jar so the account-free public route is exercised honestly.
                     page.context.clear_cookies()
                     # Exercise the form, consent, generic error, focus, motion, and zoom states in both locales.
@@ -6652,6 +6654,14 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     for viewport_id,viewport in viewports.items(): page.set_viewport_size(viewport); page.wait_for_timeout(100); game_evidence(f'after-pass-invitation-success-{viewport_id}.png','invitation_redemption',['success_return_to_login'],'en-US',viewport_id)
                     # Remove the success shim and restore an authenticated Admin session for following suites.
                     page.unroute('**/api/v2/auth/redeem-invitation'); page.request.post(base+'/api/v2/auth/login',data={'email':DEFAULT_AUTH_EMAIL,'password':DEFAULT_AUTH_PASSWORD}); page.goto(base+'/admin',wait_until='networkidle'); page.get_by_test_id('admin-tab-operations').wait_for(timeout=5000)
+                    # Retain only diagnostics emitted by the controlled account-free invitation journey.
+                    invitation_expected_console=console_errors[invitation_console_index:]; invitation_expected_http=http_errors[invitation_http_index:]; invitation_expected_page_errors=page_errors[invitation_page_error_index:]
+                    # Require exactly three anonymous session probes and two contract-shaped generic redemption rejections.
+                    assert len(invitation_expected_http)==5 and sum(value.startswith('401 ') and value.endswith('/api/v2/me') for value in invitation_expected_http)==3 and sum(value.startswith('400 ') and value.endswith('/api/v2/auth/redeem-invitation') for value in invitation_expected_http)==2, invitation_expected_http
+                    # Require the browser to report no JavaScript failure and only its standard failed-resource console lines.
+                    assert invitation_expected_page_errors==[] and len(invitation_expected_console)==len(invitation_expected_http) and all('Failed to load resource' in value for value in invitation_expected_console), invitation_expected_console+invitation_expected_page_errors
+                    # Remove only the verified controlled diagnostics so every unrelated HTTP or console failure remains fatal.
+                    del console_errors[invitation_console_index:]; del http_errors[invitation_http_index:]
                 # Record the complete Admin/public locale, viewport, state, privacy, keyboard, motion, zoom, and evidence matrix.
                 run_case('BR-INVITE-001',['INVITE-001','INVITE-002','INVITE-003','INVITE-005','TEST-091'],invitation_browser)
                 # Define real-backend Operations states, localization, responsive layout, and evidence.
