@@ -6823,14 +6823,14 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     game_evidence('after-pass-admin-feedback-zoom-200-en-US-desktop_primary.png','admin',['feedback_zoom_200'],'en-US','desktop_primary')
                     # Restore primary desktop before controlled storage-error evidence.
                     page.set_viewport_size({'width':1920,'height':1080})
-                    # Intercept the inbox request with one fixed internal storage failure.
-                    page.route('**/api/v2/admin/feedback/reports',lambda route: route.fulfill(status=503,content_type='application/json',body='{"ok":false,"error":{"code":"STORAGE_UNAVAILABLE","message":"Problem-report storage requires recovery"}}'))
+                    # Intercept only the query-bearing filtered inbox request with one fixed internal storage failure.
+                    feedback_list_pattern='**/api/v2/admin/feedback/reports?*'; page.route(feedback_list_pattern,lambda route: route.fulfill(status=503,content_type='application/json',body='{"ok":false,"error":{"code":"STORAGE_UNAVAILABLE","message":"Problem-report storage requires recovery"}}'))
                     # Trigger the normal Admin error boundary through the visible tab.
                     page.get_by_test_id('admin-tab-feedback').click(); page.get_by_test_id('admin-load-error').wait_for(timeout=5000)
                     # Capture the localized storage-recovery failure without raw state.
                     game_evidence('after-pass-admin-feedback-storage-error-en-US-desktop_primary.png','admin',['feedback_storage_error'],'en-US','desktop_primary')
-                    # Restore the real route and discard the intentional 503 diagnostic.
-                    page.unroute('**/api/v2/admin/feedback/reports'); http_errors.clear()
+                    # Restore the exact filtered-list route and discard the intentional 503 diagnostic.
+                    page.unroute(feedback_list_pattern); http_errors.clear()
                     # Restore the suite default for subsequent Admin cases.
                     page.set_viewport_size({'width':1920,'height':1080})
                 # Execute Admin manual-only triage and evidence acceptance under TEST-094.
