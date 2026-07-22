@@ -1,7 +1,7 @@
 # AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
 #!/usr/bin/env python3
 # Import required dependency so this module can use its public functions or constants.
-import argparse, hashlib, importlib, io, json, os, re, socket, subprocess, sys, tempfile, threading, time, traceback, unittest, urllib.request
+import argparse, base64, hashlib, importlib, io, json, os, re, socket, subprocess, sys, tempfile, threading, time, traceback, unittest, urllib.request
 # Import date arithmetic for fixed-window Guest Trials retention tests.
 from datetime import datetime, timedelta, timezone
 # Import source inspection so browser progress totals follow declared run_case calls automatically.
