@@ -2954,10 +2954,10 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         alternate='ru-RU' if locale=='en-US' else 'en-US'
                         # Switch through the visible shell selector to rerender account methods.
                         page.get_by_test_id('shell-locale-select').select_option(alternate); page.get_by_test_id('shell-locale-select').select_option(locale)
-                        # Wait for the fixed Google row and unlinked action.
-                        page.get_by_test_id('oauth-link-google').wait_for(timeout=5000)
                         # Open the native details account surface when it is currently closed.
                         if not page.locator('#account-menu').evaluate("element => element.open"): page.get_by_test_id('account-menu').click()
+                        # Wait for the fixed Google row to become visible only after its native details owner is open.
+                        page.get_by_test_id('oauth-link-google').wait_for(timeout=5000)
                         # Require explicit confirmation and both provider rows before capture.
                         assert page.get_by_test_id('oauth-link-confirm').is_visible() and page.get_by_test_id('oauth-link-google').is_visible() and page.get_by_test_id('oauth-link-facebook').is_visible()
                         # Focus the native account summary for keyboard-reachability evidence.
