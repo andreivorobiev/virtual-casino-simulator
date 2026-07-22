@@ -2404,6 +2404,8 @@ h3 {
     top: 0;
     z-index: 5;
     flex-direction: row;
+    width: 100%;
+    max-width: 100%;
     padding: 8px;
     overflow-x: auto;
     overflow-y: hidden;
@@ -2428,9 +2430,22 @@ h3 {
 
   .admin-top {
     align-items: flex-start;
+    flex-wrap: wrap;
     gap: 10px;
     min-height: 0;
     padding: 12px;
+  }
+
+  /* Let the heading copy shrink and wrap beside or above Refresh at 200-percent zoom. */
+  .admin-top > div {
+    flex: 1 1 140px;
+    min-width: 0;
+  }
+
+  /* Keep the secondary Refresh action inside the zoomed header width. */
+  .admin-top > button {
+    flex: 0 1 auto;
+    max-width: 100%;
   }
 
   .admin-top h1 {
@@ -2440,6 +2455,12 @@ h3 {
   .admin-content {
     padding: 10px;
     overflow: visible;
+  }
+
+  /* Permit localized card copy to wrap inside the effective half-width zoom proxy. */
+  .admin-card {
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 
   .admin-card-grid,
