@@ -92,8 +92,8 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 
 - [`casino/bots/AGENTS.md`](casino/bots/AGENTS.md) — AGENTS.md - bots module
 - [`casino/core/AGENTS.md`](casino/core/AGENTS.md) — AGENTS.md - core module
-- [`casino/core/oauth/INTEGRATION.md`](casino/core/oauth/INTEGRATION.md) — OAuth disabled-foundation integration for #70
-- [`casino/core/oauth/README.md`](casino/core/oauth/README.md) — OAuth provider abstraction disabled foundation
+- [`casino/core/oauth/INTEGRATION.md`](casino/core/oauth/INTEGRATION.md) — Disabled-by-default invite-only OAuth integration for #326
+- [`casino/core/oauth/README.md`](casino/core/oauth/README.md) — Disabled-by-default invite-only OAuth runtime
 - [`casino/games/acey_deucey/README.md`](casino/games/acey_deucey/README.md) — Acey-Deucey / In-Between game module
 - [`casino/games/baccarat/AGENTS.md`](casino/games/baccarat/AGENTS.md) — AGENTS.md - baccarat module
 - [`casino/games/big_six_wheel/AGENTS.md`](casino/games/big_six_wheel/AGENTS.md) — AGENTS.md - Big Six Wheel module
@@ -276,6 +276,7 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 - [`docs/local_mysql_setup.md`](docs/local_mysql_setup.md) — Local MySQL 8.4 LTS setup
 - [`docs/long_test_suites.md`](docs/long_test_suites.md) — Long Casino Test Suites
 - [`docs/mysql_migrations.md`](docs/mysql_migrations.md) — MySQL migration and DDL-free runtime gate
+- [`docs/oauth_invite_only.md`](docs/oauth_invite_only.md) — Invite-only OAuth operations boundary
 - [`docs/production_service.md`](docs/production_service.md) — Production application service
 - [`docs/recovery.md`](docs/recovery.md) — Encrypted recovery gate
 - [`docs/release_artifacts.md`](docs/release_artifacts.md) — Reproducible release artifacts

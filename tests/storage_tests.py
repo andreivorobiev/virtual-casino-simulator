@@ -21,6 +21,8 @@ MYSQL_MAIL_TEST_KEY = "synthetic-mysql-mail-digest-key-material-2026"
 MYSQL_INVITATION_RECIPIENT = "mysql-invitation@example.invalid"
 # Use one policy-compliant synthetic password only inside the disposable integration database.
 MYSQL_INVITATION_PASSWORD = "Synthetic-MySQL-Invite-2026!"
+# Use independent synthetic OAuth digest material for cross-process flow, link, and rate evidence.
+MYSQL_OAUTH_TEST_KEY = "synthetic-mysql-oauth-digest-key-material-2026"
 
 
 # Execute one JSON action call in a separately spawned process.
@@ -236,6 +238,87 @@ def _mysql_invitation_redeem_worker(arguments):
         # Remove only the test-owned selector when the parent had none.
         else:
             # Delete the bounded process environment entry.
+            os.environ.pop("CASINO_STORAGE_PROVIDER", None)
+
+
+# Execute one OAuth persistence operation through an independent MySQL process. (OAUTH-008, OAUTH-009)
+def _mysql_oauth_worker(arguments):
+    # Import provider-neutral OAuth persistence only inside the spawned process.
+    from casino.core.oauth.identity_links import ExternalIdentityLink
+    # Import the exact durable flow, rate, and identity-link repositories under test.
+    from casino.core.oauth.persistence import OAuthFlowRepository, OAuthRateLimiter, PersistentIdentityLinkRepository
+    # Import the shared storage provider and stable losing-race error classes.
+    from casino.core import storage
+    # Import bounded public conflict and authorization outcomes for serialization.
+    from casino.errors import ConflictError, RateLimitError, UnauthorizedError
+
+    # Unpack the serializable worker operation packet without logging proof values.
+    mode, index, payload = arguments
+    # Preserve the workflow provider selector around this process-isolated operation.
+    previous_provider_name = os.environ.get("CASINO_STORAGE_PROVIDER")
+    # Route every provider document through the disposable MySQL database.
+    os.environ["CASINO_STORAGE_PROVIDER"] = "mysql"
+    # Construct one independent connection-owning provider per process.
+    provider = storage.MySQLStorageProvider()
+    # Start protected operation dispatch so environment routing always returns to its inherited state.
+    try:
+        # Claim and consume the same browser-bound OAuth flow exactly once across processes.
+        if mode == "claim":
+            # Bind one strong-key flow repository to this process's provider.
+            repository = OAuthFlowRepository(provider, MYSQL_OAUTH_TEST_KEY)
+            # Convert the expected losing race into one bounded serializable result.
+            try:
+                # Claim the exact state, callback, and browser binding.
+                record = repository.claim("google", payload["state"], payload["callback"], payload["owner"])
+                # Commit the replay tombstone before reporting the winner.
+                repository.complete(record)
+                # Return only worker index and stable win state.
+                return index, "consumed"
+            # Suppress all proof-bearing failure detail from the worker result.
+            except UnauthorizedError:
+                # Return only the stable losing-race state.
+                return index, "rejected"
+        # Race provider-subject uniqueness between different canonical user identifiers.
+        if mode == "link":
+            # Bind one link repository to this process's provider.
+            repository = PersistentIdentityLinkRepository(provider)
+            # Build a bounded synthetic link with no recipient or provider claim data.
+            link = ExternalIdentityLink(provider="facebook", subject="mysql-oauth-subject", user_id=f"mysql-oauth-user-{index}", created_at="2026-07-22T00:00:00.000Z", updated_at="2026-07-22T00:00:00.000Z")
+            # Convert the expected compound-uniqueness loser to a fixed marker.
+            try:
+                # Save the subject under the provider row-lock transaction.
+                _stored, created = repository.save(link)
+                # Return only whether this worker published the binding.
+                return index, "created" if created else "existing"
+            # Suppress the conflicting user and subject from results.
+            except ConflictError:
+                # Return a fixed conflict state.
+                return index, "conflict"
+        # Race one shared durable limiter bucket across processes.
+        if mode == "rate":
+            # Bind the same three-attempt allowance to every worker process.
+            limiter = OAuthRateLimiter(provider, MYSQL_OAUTH_TEST_KEY, limit=3)
+            # Convert expected excess attempts into a bounded marker.
+            try:
+                # Check and append under the provider's atomic document transaction.
+                limiter.check("mysql-browser-binding", "google", "signin")
+                # Return only the accepted marker.
+                return index, "accepted"
+            # Suppress bucket digests and event state from the losing result.
+            except RateLimitError:
+                # Return only the stable rate-limited marker.
+                return index, "limited"
+        # Reject unreviewed worker modes inside the disposable test process.
+        raise AssertionError("unsupported OAuth worker mode")
+    # Restore process-local provider routing regardless of the operation outcome.
+    finally:
+        # Restore an inherited provider selector when one existed.
+        if previous_provider_name is not None:
+            # Replace only this process's temporary selector.
+            os.environ["CASINO_STORAGE_PROVIDER"] = previous_provider_name
+        # Remove the process-local selector when the parent had none.
+        else:
+            # Delete only this worker's environment entry.
             os.environ.pop("CASINO_STORAGE_PROVIDER", None)
 
 
@@ -583,6 +666,10 @@ def run_mysql_live_provider_path():
     from casino.config import DATA_DIR
     # Import core services whose JSON-shaped state must no longer create hybrid files.
     from casino.core import auth, autoplay, invitations, ledger, mail, one_time_tokens, players, state_store, storage
+    # Import OAuth persistence only inside the explicitly requested disposable MySQL gate.
+    from casino.core.oauth.persistence import FLOW_DOCUMENT_KEY, FLOW_SECRET_DOCUMENT_KEY, OAuthFlowRecord, OAuthFlowRepository, PersistentIdentityLinkRepository
+    # Import UTC helpers for one bounded flow fixture.
+    from datetime import datetime, timedelta, timezone
 
     # Build the explicitly configured provider without ever reading or displaying its password.
     provider = storage.MySQLStorageProvider()
@@ -698,6 +785,74 @@ def run_mysql_live_provider_path():
             invitation_document_text = __import__("json").dumps(invitation_document, sort_keys=True)
             # Verify the exact lifecycle result and privacy boundary.
             assert [row.get("status") for row in invitation_document.get("invitations", [])] == ["redeemed"] and invitation_token["token"] not in invitation_document_text and MYSQL_INVITATION_PASSWORD not in invitation_document_text and "mysql-invitation-redeem-idempotency" not in invitation_document_text
+            # Build one strong-key flow repository over the same disposable MySQL provider.
+            oauth_flows = OAuthFlowRepository(provider, MYSQL_OAUTH_TEST_KEY)
+            # Create opaque synthetic proofs that never leave this live-test process group.
+            oauth_state = "s" * 43
+            # Bind the flow to one fixed reserved-domain callback.
+            oauth_callback = "https://casino.example.test/api/v2/auth/oauth/google/callback"
+            # Bind the flow to one generated-shape browser verifier.
+            oauth_owner = "b" * 64
+            # Read one creation instant for exact expiry ordering.
+            oauth_created = datetime.now(timezone.utc)
+            # Render canonical millisecond UTC timestamps without provider-local time.
+            oauth_stamp = lambda value: value.isoformat(timespec="milliseconds").replace("+00:00", "Z")
+            # Persist one complete pending flow with physically separated metadata and exchange proof documents.
+            oauth_flows.create(OAuthFlowRecord(flow_id="oauth_mysql_flow", provider="google", state=oauth_state, nonce="n" * 43, pkce_verifier="v" * 64, callback_uri=oauth_callback, owner_binding=oauth_owner, action="signin", return_to="/", status="pending", created_at=oauth_stamp(oauth_created), expires_at=oauth_stamp(oauth_created + timedelta(minutes=5))))
+            # Build twelve identical claim packets for independent MySQL processes.
+            oauth_claim_packets = [("claim", index, {"state": oauth_state, "callback": oauth_callback, "owner": oauth_owner}) for index in range(12)]
+            # Race claim and replay-tombstone commit across independent connections.
+            with ProcessPoolExecutor(max_workers=4) as executor:
+                # Materialize every result so child process failure fails the live gate.
+                oauth_claim_results = list(executor.map(_mysql_oauth_worker, oauth_claim_packets))
+            # Require exactly one successful claim/consume and eleven indistinguishable replay losers.
+            assert sum(1 for _, status in oauth_claim_results if status == "consumed") == 1 and sum(1 for _, status in oauth_claim_results if status == "rejected") == 11
+            # Read metadata and proof documents separately after the race.
+            oauth_metadata = provider.read_document(FLOW_DOCUMENT_KEY, {})
+            # Read the proof document independently for physical-separation evidence.
+            oauth_proofs = provider.read_document(FLOW_SECRET_DOCUMENT_KEY, {})
+            # Serialize only in-memory disposable evidence for raw-value absence assertions.
+            oauth_metadata_text = __import__("json").dumps(oauth_metadata, sort_keys=True)
+            # Require no raw state, callback, browser binding, nonce, or PKCE value in metadata.
+            assert all(value not in oauth_metadata_text for value in (oauth_state, oauth_callback, oauth_owner, "n" * 43, "v" * 64))
+            # Require terminal consume to remove the separate proof row while retaining the replay tombstone.
+            assert oauth_proofs.get("secrets") == [] and [row.get("status") for row in oauth_metadata.get("flows", [])] == ["consumed"]
+            # Build competing provider-subject link packets for distinct synthetic canonical users.
+            oauth_link_packets = [("link", index, {}) for index in range(8)]
+            # Race compound uniqueness across independent MySQL connections.
+            with ProcessPoolExecutor(max_workers=4) as executor:
+                # Materialize all winners and conflicts.
+                oauth_link_results = list(executor.map(_mysql_oauth_worker, oauth_link_packets))
+            # Require exactly one provider-subject owner and no idempotent false winner.
+            assert sum(1 for _, status in oauth_link_results if status == "created") == 1 and sum(1 for _, status in oauth_link_results if status == "conflict") == 7
+            # Build eight attempts against one three-event durable rate bucket.
+            oauth_rate_packets = [("rate", index, {}) for index in range(8)]
+            # Race limiter check-and-append across independent processes.
+            with ProcessPoolExecutor(max_workers=4) as executor:
+                # Materialize every bounded limiter decision.
+                oauth_rate_results = list(executor.map(_mysql_oauth_worker, oauth_rate_packets))
+            # Require the shared provider transaction to accept exactly three attempts.
+            assert sum(1 for _, status in oauth_rate_results if status == "accepted") == 3 and sum(1 for _, status in oauth_rate_results if status == "limited") == 5
+            # Seed malformed identity-link evidence to prove a later mutation cannot normalize it away.
+            malformed_oauth_links = {"schema_version": 1, "links": "operator-recovery-required"}
+            # Persist the exact malformed document only inside the disposable integration database.
+            provider.write_document("auth/oauth_identity_links", malformed_oauth_links)
+            # Bind a strict repository to the malformed state.
+            malformed_repository = PersistentIdentityLinkRepository(provider)
+            # Require mutation to fail without replacing the original evidence.
+            try:
+                # Attempt no real link value; the malformed collection must fail before model access.
+                malformed_repository.delete_for_user("google", "mysql-oauth-user")
+            # Accept only the fixed operator-recovery storage failure.
+            except RuntimeError:
+                # Continue to exact state readback.
+                pass
+            # Fail the live gate if malformed state was treated as an empty collection.
+            else:
+                # Surface only a fixed test assertion.
+                raise AssertionError("malformed OAuth storage was normalized")
+            # Require the exact malformed document to remain durable after the rejected mutation.
+            assert provider.read_document("auth/oauth_identity_links", {}) == malformed_oauth_links
         # Always restore the workflow provider selector after the scoped proof.
         finally:
             # Restore an inherited selector exactly when one existed.

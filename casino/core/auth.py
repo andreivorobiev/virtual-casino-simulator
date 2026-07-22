@@ -5,6 +5,8 @@ import base64
 import hashlib
 # Import required dependency so this module can use its public functions or constants.
 import hmac
+# Import regular expressions for exact reviewed public OAuth route matching.
+import re
 # Import required dependency so this module can use its public functions or constants.
 import secrets
 # Import required dependency so this module can use its public functions or constants.
@@ -35,7 +37,7 @@ SESSIONS_PATH = DATA_DIR / "auth" / "sessions.json"
 # Set PASSWORD_ITERATIONS to the value needed for the next operation.
 PASSWORD_ITERATIONS = 120_000
 # Set PUBLIC_API_PATHS to the value needed for the next operation.
-PUBLIC_API_PATHS = {"/api/v2/auth/login", "/api/v2/auth/guest", "/api/v2/auth/redeem-invitation", "/healthz"}
+PUBLIC_API_PATHS = {"/api/v2/auth/login", "/api/v2/auth/guest", "/api/v2/auth/redeem-invitation", "/api/v2/auth/oauth/providers", "/healthz"}
 # Bound the accepted session lifetime to the restricted-preview review interval.
 MAX_SESSION_TTL_SECONDS = 86_400
 # Retain at most one thousand active session records across the single-node preview.
@@ -817,11 +819,15 @@ def _evict_user_sessions_over_cap(state: dict, user_id: str) -> None:
     state["sessions"] = [session for session in state.get("sessions", []) if session.get("session_id") not in evicted_ids]
 
 # Define the create_session function used by this module.
-def create_session(user: dict, client: str = "") -> dict:
+def create_session(user: dict, client: str = "", auth_method: str = "local") -> dict:
     # Set now to the value needed for the next operation.
     now = utc_now()
+    # Accept only password or reviewed provider methods in durable session metadata.
+    if auth_method not in {"local", "google", "facebook"}:
+        # Reject unreviewed authentication authorities before issuing bearer material.
+        raise ValidationError("Session authentication method is invalid")
     # Build the durable session record with independent bearer and CSRF material.
-    session = {"session_id": new_id("session"), "user_id": user["user_id"], "token": secrets.token_urlsafe(32), "csrf_token": new_csrf_token(), "status": "active", "created_at": now, "updated_at": now, "expires_at": session_expiry(), "client": client}
+    session = {"session_id": new_id("session"), "user_id": user["user_id"], "token": secrets.token_urlsafe(32), "csrf_token": new_csrf_token(), "status": "active", "created_at": now, "updated_at": now, "expires_at": session_expiry(), "client": client, "auth_method": auth_method}
     # Define the atomic mutation that preserves concurrent same-user sessions. (SESSION-007)
     def mutate(state: dict) -> dict:
         # Normalize malformed persisted state into the canonical sessions container.
@@ -928,6 +934,14 @@ def authenticate_token(token: str, guest_browser_nonce: str = "") -> tuple[dict,
             if not user or user.get("status") != "active":
                 # Raise an error so invalid input or state is reported explicitly.
                 raise ForbiddenError("User is inactive")
+            # Recheck external-provider rollback, link ownership, and active configuration on every request.
+            if session.get("auth_method", "local") in {"google", "facebook"}:
+                # Import lazily so the core auth module does not create an OAuth import cycle.
+                from casino.core.oauth.service import provider_session_is_authorized
+                # Revoke effective access immediately when a flag, release gate, or durable link disappears.
+                if not provider_session_is_authorized(session, user):
+                    # Reject the provider session without affecting local-password sessions.
+                    raise UnauthorizedError("External provider session is no longer authorized")
             # Refresh the guest's de-identified activity marker so the Admin active-now window stays truthful. (issue #317)
             if is_guest(user):
                 # End an expired absolute-lifetime session before any protected route can resume it.
@@ -1043,6 +1057,43 @@ def revoke_sessions_for_user(user_id: str) -> int:
     # Return only the number of invalidated predecessors.
     return changed["value"]
 
+# Revoke active sessions created through one external provider while preserving local login.
+def revoke_sessions_for_user_method(user_id: str, auth_method: str) -> int:
+    # Reject local or unknown methods because unlink may target external providers only.
+    if auth_method not in {"google", "facebook"}:
+        # Prevent this helper from becoming a broad local-session revocation primitive.
+        raise ValidationError("External session authentication method is invalid")
+    # Count only exact active provider-session changes.
+    changed = {"value": 0}
+    # Define the complete provider-scoped session mutation.
+    def mutate(state: dict) -> dict:
+        # Require recognizable session storage so malformed evidence is never rewritten.
+        if not isinstance(state, dict) or not isinstance(state.get("sessions"), list):
+            # Abort without replacing the recoverable session document.
+            raise RuntimeError("Session storage requires operator recovery")
+        # Inspect every stored session under the shared atomic update lock.
+        for session in state["sessions"]:
+            # Reject malformed rows before any revocation can publish a partial repair.
+            if not isinstance(session, dict):
+                # Preserve the complete document for operator recovery.
+                raise RuntimeError("Session storage requires operator recovery")
+            # Revoke only active records for the exact user and provider method.
+            if session.get("user_id") == user_id and session.get("auth_method") == auth_method and session.get("status") == "active":
+                # Make this provider-authenticated session unusable immediately.
+                session["status"] = "revoked"
+                # Record a bounded audit timestamp without token or user data.
+                session["updated_at"] = utc_now()
+                # Count the exact provider-session revocation.
+                changed["value"] += 1
+        # Preserve the canonical schema marker on commit.
+        state["schema_version"] = SCHEMA_VERSION
+        # Return the complete mutated session document.
+        return state
+    # Persist the provider-scoped revocation atomically.
+    update_json(SESSIONS_PATH, mutate, default_sessions)
+    # Return only the number of revoked sessions.
+    return changed["value"]
+
 # Define the current_user_payload function used by this module.
 def current_user_payload(session: dict, user: dict) -> dict:
     # Set player to the value needed for the next operation.
@@ -1099,5 +1150,9 @@ def clear_cookie_headers(same_site: str = "Lax", secure: bool = False, include_c
 
 # Define the is_public_api_path function used by this module.
 def is_public_api_path(path: str) -> bool:
-    # Return the computed value to the caller.
-    return path in PUBLIC_API_PATHS
+    # Keep fixed public routes on the explicit allowlist.
+    if path in PUBLIC_API_PATHS:
+        # Allow login, guest/redeem, provider availability, and liveness without a session.
+        return True
+    # Allow only exact reviewed Google/Facebook start and callback route shapes.
+    return re.fullmatch(r"/api/v2/auth/oauth/(?:google|facebook)/(?:start|callback)", path) is not None

@@ -1,6 +1,6 @@
-# OAuth disabled-foundation integration for #70
+# Disabled-by-default invite-only OAuth integration for #326
 
-GitHub issue #77 released this branch to integrate only the owner-approved disabled foundation. The shared app, auth contract, login/Admin presentation, requirement registry, visual matrix, test discovery, module descriptors, and manifest now describe the inert provider abstraction without enabling a provider action.
+The earlier disabled foundation remains the base for the Workroom #25-approved repository runtime. The shared app, auth contract, login/current-account/Admin presentation, requirement registry, visual matrix, test discovery, module descriptors, and manifest now describe the disabled-by-default existing-account flow without authorizing live provider access.
 
 ## Exact callback reservation
 
@@ -25,30 +25,36 @@ The isolated diagnostics consume the exact issue #75 names:
 - `CASINO_OAUTH_PUBLIC_BASE_URL`
 - `CASINO_OAUTH_ENABLED_GOOGLE`
 - `CASINO_OAUTH_ENABLED_FACEBOOK`
+- `CASINO_OAUTH_NETWORK_RELEASED_GOOGLE`
+- `CASINO_OAUTH_NETWORK_RELEASED_FACEBOOK`
+- `CASINO_OAUTH_DIGEST_KEY`
 
-Diagnostics expose only presence booleans, status, callback URL, missing setting names, and stable problem codes. Live adapters must not log or serialize configuration objects, raw claims, authorization codes, access or refresh tokens, state, or nonce.
+Diagnostics expose only presence booleans, status, callback URL, release-latch state, missing setting names, and stable problem codes. Adapters must not log or serialize configuration objects, raw claims, authorization codes, access or refresh tokens, state, nonce, or PKCE material.
 
 ## Integrated disabled surface
 
-- `GET /api/v2/admin/oauth/providers` is read-only, uses the standard envelope, repeats the Admin role check at the route boundary, and exposes only allowlisted diagnostics.
-- The login gate renders Google and Facebook as native-disabled controls with no URL or event handler and explains the hold in English and Russian.
+- `GET /api/v2/auth/oauth/providers` exposes boolean availability only.
+- `POST /api/v2/auth/oauth/{google|facebook}/start` and the matching `GET` callback exist only for the exact reviewed providers.
+- `GET /api/v2/me/oauth/providers` and `POST /api/v2/me/oauth/{google|facebook}/unlink` expose boolean current-account link state without provider identity data.
+- `GET /api/v2/admin/oauth/providers` remains read-only, repeats the Admin role check, and exposes only allowlisted diagnostics.
+- Login and current-account controls remain native-disabled unless the applicable provider flag, structurally valid configuration, and independent network-release latch are all true.
 - Admin renders provider configuration status separately from Operations health; OAuth diagnostic failure cannot change `/healthz`, `/readyz`, or `/api/v2/admin/operations` state.
-- Permanent `OAUTH-001` through `OAUTH-006` and `TEST-045` trace configuration, callbacks, mocked claims, identity-link rules, disabled UI, and focused acceptance.
-- Google and Facebook keep `runtime_available=false` even if inert environment configuration is structurally ready.
+- Permanent `OAUTH-001` through `OAUTH-010`, `TEST-045`, and `TEST-093` trace configuration, callbacks, mocked claims, identity-link rules, persistence, disabled UI, and focused acceptance.
+- Google and Facebook keep `runtime_available=false` unless both independent gates are true; both gates default false.
 
-No start, link, callback, exchange, provider SDK, or live transport route is registered. The callback helpers remain pure and service-free. Identity linking remains injected and non-persistent; no user is created and no email-based association occurs.
+The registered routes never create or merge accounts and never link by email. A link start requires the authenticated canonical user, a local-password session, explicit confirmation, CSRF proof, and exact browser/session binding. Callback metadata stores only HMAC proofs, while nonce and PKCE material live in a separate document and survive a recoverable provider-availability failure. Provider transport is unreachable while the independent release latch is false.
 
-## Deferred runtime work
+## Implemented repository safeguards
 
-A later explicitly authorized auth/storage owner must first:
+A disabled flow now:
 
-1. Harden request logging and unexpected-error handling so authorization codes, state, and other callback query data can never enter logs or error payloads.
-2. Preserve duplicate query parameters through routing so the callback validator can reject ambiguity before any exchange.
-3. Persist state, nonce, and PKCE verifier as atomic one-time flow records and reject replay, expiry, provider, callback, and session-owner drift.
-4. Add a dedicated allowlisted identity-link store with atomic uniqueness for `(provider, subject)` and `(provider, user_id)` across every supported storage process.
-5. Implement provider adapters that verify signatures, issuer, audience, expiry, nonce, and applicable PKCE before returning an allowlisted identity.
-6. Add authorization-start, link, and callback contracts/routes only after a separate owner approval releases live runtime work.
+1. Sanitizes access and request logs so callback queries, codes, state, and unexpected exception text never enter logs or payloads.
+2. Preserves duplicate query parameters so callback validation rejects ambiguity before exchange.
+3. Uses atomic JSON/MySQL mutations for flow claims, link uniqueness, replay protection, and durable rate limits.
+4. Preserves malformed storage for recovery instead of replacing it with an empty container.
+5. Verifies provider signature/issuer/audience/expiry and applicable nonce/PKCE rules before accepting an opaque provider subject.
+6. Revokes provider-authenticated sessions when a link is removed or its provider gate closes.
 
 ## Live-enable blockers
 
-Real provider login remains blocked on user-created provider applications and credentials, exact provider-console callback registration, successful real callback testing, an approved owned HTTPS hostname, secure-cookie/deployment hardening under #71, and public privacy, terms, and data-deletion pages. A `configuration_ready` diagnostic cannot bypass any provider-console, callback-test, secure-cookie, legal, or #71 deployment gate. No live enablement or public exposure is authorized by this package.
+Real provider login remains blocked on separate provider-account, credential, callback-console, network-release, security/privacy/data-deletion, rollback, deployment, and owner release approval. A `configuration_ready` diagnostic, repository merge, or deployment cannot bypass those gates. No live enablement, public signup, account creation, DNS change, or unrestricted exposure is authorized by this package.

@@ -95,8 +95,45 @@
         "guest_trial_ended",
         "restricted_preview",
         "oauth_providers_disabled",
+        "oauth_providers_available",
+        "oauth_provider_status_error",
+        "oauth_callback_success",
+        "oauth_callback_error",
         "terms_required",
         "invalid_credentials"
+      ],
+      "locales": [
+        "en-US",
+        "ru-RU"
+      ],
+      "viewports": [
+        "desktop_primary",
+        "desktop_compact",
+        "tablet",
+        "mobile"
+      ],
+      "gates": [
+        "VIS-COPY-001",
+        "VIS-TOKEN-002",
+        "VIS-LAYOUT-003",
+        "VIS-RESPONSIVE-001",
+        "VIS-EVIDENCE-001"
+      ]
+    },
+    {
+      "id": "oauth_account",
+      "route": "/",
+      "selector": "[data-testid='oauth-account-popover']",
+      "states": [
+        "unlinked_available",
+        "unlinked_release_held",
+        "linked",
+        "link_confirmation_required",
+        "unlink_error",
+        "status_error",
+        "callback_success",
+        "callback_error",
+        "refresh_persisted"
       ],
       "locales": [
         "en-US",

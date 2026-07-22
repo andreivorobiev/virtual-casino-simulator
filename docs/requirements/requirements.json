@@ -6224,7 +6224,7 @@
     {
       "id": "OAUTH-001",
       "module": "OAuth",
-      "description": "The provider catalog preserves local password login as the sole runtime-available provider while Google and Facebook remain unavailable regardless of inert configuration readiness.",
+      "description": "The provider catalog preserves local password login while Google and Facebook remain unavailable by default and distinguish structural readiness from an independent false-by-default provider-network release latch.",
       "status": "PASS",
       "api_tests": [
         "API-OAUTH-001",
@@ -6240,8 +6240,8 @@
         "casino/app.py"
       ],
       "introduced_in": "issue-70-disabled-oauth-foundation",
-      "changed_in": "issue-70-disabled-oauth-foundation",
-      "notes": "GitHub issue #77 integrates only the owner-approved disabled foundation; no provider authorization action or live adapter is registered."
+      "changed_in": "issue-326-invite-oauth",
+      "notes": "Workroom #25 authorizes disabled repository code only; no provider is runtime-available until both its configuration and independent network-release gates are explicitly true."
     },
     {
       "id": "OAUTH-002",
@@ -6269,7 +6269,7 @@
     {
       "id": "OAUTH-003",
       "module": "OAuth",
-      "description": "Pure callback helpers preserve the issue #75 route reservation and fail closed on invalid callback origins, ambiguous parameters, state, nonce, authorization codes, and PKCE values without registering a callback route.",
+      "description": "Pure callback helpers fail closed on invalid callback origins, duplicate or ambiguous parameters, state, nonce, authorization codes, and PKCE values; the additive v2 callback route uses those exact helpers and remains inaccessible under default provider gates.",
       "status": "PASS",
       "api_tests": [
         "OAUTH-MOCK-001"
@@ -6281,8 +6281,8 @@
         "casino/core/oauth/INTEGRATION.md"
       ],
       "introduced_in": "issue-70-disabled-oauth-foundation",
-      "changed_in": "issue-70-disabled-oauth-foundation",
-      "notes": "One-time server persistence and callback routing remain deferred behind a separate live-runtime approval and security hardening."
+      "changed_in": "issue-326-invite-oauth",
+      "notes": "Durable recoverable callback lifecycle and routing are specified by OAUTH-008; live provider release remains separately prohibited."
     },
     {
       "id": "OAUTH-004",
@@ -6299,13 +6299,13 @@
         "tests/oauth/test_identity_links.py"
       ],
       "introduced_in": "issue-70-disabled-oauth-foundation",
-      "changed_in": "issue-70-disabled-oauth-foundation",
-      "notes": "Persistent compound uniqueness remains deferred; no JSON, MySQL, signup, user, or player store is mutated by this foundation."
+      "changed_in": "issue-326-invite-oauth",
+      "notes": "The injected foundation remains independently tested; OAUTH-009 adds JSON/MySQL transactional compound uniqueness without signup or email linking."
     },
     {
       "id": "OAUTH-005",
       "module": "OAuth",
-      "description": "Mocked Google and Facebook claim normalization retains only bounded allowlisted identity fields and is not treated as live token, signature, issuer, audience, expiry, nonce, or PKCE verification.",
+      "description": "Google and Facebook adapters normalize only bounded allowlisted identity fields after provider-specific signature/app-binding, issuer, audience, expiry, nonce, and subject checks; provider-free mocks never count as live provider evidence.",
       "status": "PASS",
       "api_tests": [
         "OAUTH-MOCK-001"
@@ -6317,13 +6317,13 @@
         "tests/oauth/test_providers.py"
       ],
       "introduced_in": "issue-70-disabled-oauth-foundation",
-      "changed_in": "issue-70-disabled-oauth-foundation",
-      "notes": "No provider SDK, HTTP client, token endpoint, or client-supplied verified-identity route exists."
+      "changed_in": "issue-326-invite-oauth",
+      "notes": "The provider transport uses fixed reviewed endpoints and cannot be constructed unless the provider-specific network-release latch is true; no client-supplied verified-identity route exists."
     },
     {
       "id": "OAUTH-006",
       "module": "Application",
-      "description": "The English and Russian login gate presents readable native-disabled Google and Facebook controls with no link or handler, while local email/password login behavior remains unchanged.",
+      "description": "The English and Russian login gate keeps Google and Facebook native-disabled under default gates, enables only boolean-reported available providers, and preserves local email/password and guest entry behavior unchanged.",
       "status": "PASS",
       "api_tests": [
         "API-OAUTH-001"
@@ -6344,13 +6344,13 @@
         "tests/visual/visual_matrix.json"
       ],
       "introduced_in": "issue-70-disabled-oauth-foundation",
-      "changed_in": "issue-70-disabled-oauth-foundation",
-      "notes": "Browser acceptance proves disabled controls dispatch no provider request and the Admin card never changes Operations health classification."
+      "changed_in": "issue-326-invite-oauth",
+      "notes": "Browser acceptance covers disabled, available, status-error, current-user linked/unlinked, callback outcome, locale, viewport, refresh, and rollback states without provider network access."
     },
     {
       "id": "TEST-045",
       "module": "Tests",
-      "description": "OAuth regression evidence centrally discovers service-free mocked tests and covers Admin authorization, secret-safe diagnostics, absent action routes, disabled EN/RU controls, unchanged local login, contracts, and listener cleanup.",
+      "description": "OAuth foundation regression evidence covers Admin authorization, secret-safe diagnostics, disabled defaults, EN/RU controls, unchanged local login, contracts, and listener cleanup; TEST-093 owns the additive runtime qualification.",
       "status": "PASS",
       "api_tests": [
         "OAUTH-MOCK-001",
@@ -6368,8 +6368,8 @@
         "contracts/compatibility/oauth-disabled-foundation.json"
       ],
       "introduced_in": "issue-70-disabled-oauth-foundation",
-      "changed_in": "issue-70-disabled-oauth-foundation",
-      "notes": "GitHub issue #77 allocates the permanent IDs for the owner-approved disabled OAuth foundation."
+      "changed_in": "issue-326-invite-oauth",
+      "notes": "This permanent foundation requirement remains active; additive runtime, persistence, and full visual coverage are tracked by OAUTH-007 through OAUTH-010 and TEST-093."
     },
     {
       "id": "SESSION-001",
@@ -8013,7 +8013,7 @@
       "id": "ADMIN-024", "module": "Admin", "description": "Admin HTML, JavaScript, and API surfaces require an active Admin session during restricted preview, and user privilege or status changes revoke existing sessions.", "status": "PASS", "api_tests": ["API-SEC-PREVIEW-001", "API-ADMIN-USERS-001"], "browser_tests": ["BR-SEC-PREVIEW-001"], "implementation_files": ["casino/wsgi.py", "casino/admin.py", "web/admin.html", "web/admin.js"], "introduced_in": "issue-203-restricted-preview-security", "changed_in": "issue-203-restricted-preview-security", "notes": "Manual invitation is the only approved enrollment path at this stage."
     },
     {
-      "id": "AUTH-007", "module": "Core", "description": "Restricted preview exposes local-password login only; public signup and live OAuth authorization, callback, exchange, linking, SDK, and provider transport routes remain absent.", "status": "PASS", "api_tests": ["API-SEC-PREVIEW-001", "OAUTH-MOCK-001"], "browser_tests": ["BR-SEC-PREVIEW-001"], "implementation_files": ["casino/wsgi.py", "casino/core/auth.py", "casino/app.py", "contracts/compatibility/oauth-disabled-foundation.json", "contracts/compatibility/restricted-preview-security.json"], "introduced_in": "issue-203-restricted-preview-security", "changed_in": "issue-203-restricted-preview-security", "notes": "The unrestricted provider launch remains a separately held gate."
+      "id": "AUTH-007", "module": "Core", "description": "Restricted preview keeps public signup absent; additive invite-only OAuth routes remain disabled and provider-network inaccessible by default, create no users, never link by email, and require exact browser/session integrity when separately released.", "status": "PASS", "api_tests": ["API-SEC-PREVIEW-001", "OAUTH-MOCK-001", "API-OAUTH-002"], "browser_tests": ["BR-SEC-PREVIEW-001", "BR-OAUTH-RUNTIME-001"], "implementation_files": ["casino/wsgi.py", "casino/core/auth.py", "casino/app.py", "contracts/compatibility/oauth-disabled-foundation.json", "contracts/compatibility/oauth-invite-only-runtime.json", "contracts/compatibility/restricted-preview-security.json"], "introduced_in": "issue-203-restricted-preview-security", "changed_in": "issue-326-invite-oauth", "notes": "Workroom #25 authorizes disabled repository code only; live provider release, public signup, deployment, DNS, and unrestricted launch remain separately prohibited."
     },
     {
       "id": "AUTH-008", "module": "Core", "description": "The authenticated shared shell renders and keyboard-wires Admin navigation only for an authenticated Admin user; normal-player locale rerenders and restored game routes never expose the affordance, while direct Admin HTML and API access remain server-enforced.", "status": "PASS", "api_tests": ["API-ADMIN-USERS-001"], "browser_tests": ["BR-ADMIN-NAV-AUTH-001"], "implementation_files": ["web/app.js", "casino/app.py", "casino/wsgi.py", "casino/admin.py"], "introduced_in": "issue-251-admin-nav-gate", "changed_in": "issue-251-admin-nav-gate", "notes": "Hiding the shell affordance is presentation hardening; both runtime adapters enforce direct Admin HTML, JavaScript, and API authorization as the security boundary."
@@ -9445,6 +9445,66 @@
       "introduced_in": "issue-332-admin-invitations",
       "changed_in": "issue-332-admin-invitations",
       "notes": "Browser evidence is generated only by exact-head GitHub Actions; no local Playwright, Chromium, provider, or live network run is authorized."
+    },
+    {
+      "id": "OAUTH-007",
+      "module": "OAuth",
+      "description": "Google and Facebook remain independently disabled by default; each provider requires complete secret-safe configuration and a separate false-by-default provider-network release latch before an adapter can be constructed, while Admin and public readiness projections expose only allowlisted low-cardinality facts.",
+      "status": "PASS",
+      "api_tests": ["OAUTH-MOCK-001", "API-OAUTH-002", "API-SEC-PREVIEW-001"],
+      "browser_tests": ["BR-OAUTH-RUNTIME-001", "BR-ADMIN-OAUTH-001"],
+      "implementation_files": ["casino/core/oauth/configuration.py", "casino/core/oauth/api.py", "casino/core/oauth/service.py", "casino/wsgi.py", "contracts/openapi/auth.v2.yaml", "contracts/compatibility/oauth-invite-only-runtime.json"],
+      "introduced_in": "issue-326-invite-oauth",
+      "changed_in": "issue-326-invite-oauth",
+      "notes": "Workroom #25 authorizes repository merge only; provider consoles, credentials, callback registration, network release, deployment, DNS, and public exposure remain out of scope."
+    },
+    {
+      "id": "OAUTH-008",
+      "module": "OAuth",
+      "description": "Authorization-code flows use PKCE S256, strict duplicate-aware state, Google nonce, exact provider/callback/browser/action binding, authenticated user/session binding for explicit links, HMAC-only durable metadata, physically separate nonce/PKCE proofs, cross-process rate limits, recoverable transient exchange claims, terminal replay tombstones, bounded retention, and privacy-safe audit.",
+      "status": "PASS",
+      "api_tests": ["OAUTH-MOCK-001", "API-OAUTH-002", "STORAGE-MYSQL-LIVE-001"],
+      "browser_tests": ["BR-OAUTH-RUNTIME-001"],
+      "implementation_files": ["casino/core/oauth/callbacks.py", "casino/core/oauth/persistence.py", "casino/core/oauth/service.py", "casino/core/oauth/transport.py", "casino/core/storage.py", "casino/router.py", "casino/app.py"],
+      "introduced_in": "issue-326-invite-oauth",
+      "changed_in": "issue-326-invite-oauth",
+      "notes": "Raw state, callback URI, browser binding, user/session ids, nonce, and PKCE verifier never share one durable record or diagnostic/log surface."
+    },
+    {
+      "id": "OAUTH-009",
+      "module": "Core",
+      "description": "An external provider subject links only after explicit confirmation by the exact authenticated active private-invite local-password account; JSON and MySQL transactions enforce provider-subject and provider-user uniqueness across processes, sign-in requires a prior link, provider email is display-only, and no provider flow creates or merges users, players, wallets, or accounts.",
+      "status": "PASS",
+      "api_tests": ["OAUTH-MOCK-001", "API-OAUTH-002", "STORAGE-MYSQL-LIVE-001"],
+      "browser_tests": ["BR-OAUTH-RUNTIME-001"],
+      "implementation_files": ["casino/core/oauth/identity_links.py", "casino/core/oauth/persistence.py", "casino/core/oauth/service.py", "casino/core/auth.py"],
+      "introduced_in": "issue-326-invite-oauth",
+      "changed_in": "issue-326-invite-oauth",
+      "notes": "Identity links retain only provider, provider subject, canonical user id, and bounded timestamps; recipient email and provider claims never select the Casino account."
+    },
+    {
+      "id": "OAUTH-010",
+      "module": "Application",
+      "description": "The disabled-by-default provider login and persistent-account link/unlink surfaces are keyboard accessible, localized in en-US and ru-RU, preserve local-password recovery and guest/invitation flows, revoke matching provider sessions on unlink or release rollback, and expose disabled, available, status-error, linked, unlinked, callback-success, callback-error, refresh, and responsive states without raw identity or bearer evidence.",
+      "status": "PASS",
+      "api_tests": ["API-OAUTH-002"],
+      "browser_tests": ["BR-OAUTH-RUNTIME-001"],
+      "implementation_files": ["web/app.js", "web/core/api.js", "web/index.html", "web/styles.css", "web/i18n/en-US/shell.json", "web/i18n/ru-RU/shell.json", "tests/visual/visual_matrix.json"],
+      "introduced_in": "issue-326-invite-oauth",
+      "changed_in": "issue-326-invite-oauth",
+      "notes": "Exact-head evidence covers all four governed viewports and both locales without provider network access; guests never receive provider-link controls."
+    },
+    {
+      "id": "TEST-093",
+      "module": "Tests",
+      "description": "Provider-free unit, API, JSON-process, and disposable MySQL tests prove dual-gate adapter inaccessibility, proof separation, malformed-state preservation, durable rate limits, recoverable exchange ambiguity, strict callback/link/session binding, no email linking or account creation, compound uniqueness and replay safety, frozen-v1 compatibility, and rollback; exact-head browser evidence covers OAuth readiness and lifecycle states in en-US and ru-RU at every governed viewport.",
+      "status": "PASS",
+      "api_tests": ["OAUTH-MOCK-001", "API-OAUTH-002", "STORAGE-MYSQL-LIVE-001"],
+      "browser_tests": ["BR-OAUTH-RUNTIME-001"],
+      "implementation_files": ["tests/oauth/", "tests/storage_tests.py", "tests/run_tests.py", "tests/visual/visual_matrix.json"],
+      "introduced_in": "issue-326-invite-oauth",
+      "changed_in": "issue-326-invite-oauth",
+      "notes": "Browser evidence is generated only by exact-head GitHub Actions; no local Playwright, Chromium, provider, live network, or production action is authorized."
     },
     {
       "id": "TEST-092",
