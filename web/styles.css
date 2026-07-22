@@ -2602,9 +2602,9 @@ h3 {
      place an anchor-relative popover below the fixed status rail. (OAUTH-010) */
   .account-popover {
     position: fixed;
-    top: auto;
+    top: 14px;
     right: 14px;
-    bottom: 60px;
+    bottom: auto;
     max-height: calc(100dvh - 88px);
   }
 
