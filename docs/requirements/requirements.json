@@ -9579,6 +9579,42 @@
       "notes": "TEST-091 remains owned by invitation enrollment and TEST-092 remains owned by formal 50,000-cycle qualification; local Playwright, Chromium, and heavy QA are not authorized."
     },
     {
+      "id": "PWA-001",
+      "module": "Application",
+      "description": "The restricted-preview browser application publishes a standards-valid web manifest, complete 192- and 512-pixel any-purpose and maskable PNG icon sets, safe-area metadata, and a standalone-capable public shell while remaining fully usable in a normal browser; this repository foundation does not claim native Android or iOS installation acceptance, public hosting, or deployment.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": ["BR-PWA-001"],
+      "implementation_files": ["web/manifest.webmanifest", "web/index.html", "web/assets/pwa-icon-192.png", "web/assets/pwa-icon-512.png", "web/assets/pwa-maskable-192.png", "web/assets/pwa-maskable-512.png", "web/core/pwa.js", "docs/pwa_foundation.md"],
+      "introduced_in": "issue-182-pwa-foundation",
+      "changed_in": "issue-182-pwa-foundation",
+      "notes": "Workroom #29 comment 5049351844 authorizes only this narrowed repository foundation. Full issue #182 remains open while #74 and #168 plus representative Android Chrome and iOS Safari/Home Screen install-relaunch evidence are incomplete."
+    },
+    {
+      "id": "PWA-002",
+      "module": "Application",
+      "description": "A canonical-release-versioned root-scope service worker caches only one exact credential-free public static-shell allowlist, never intercepts non-GET, API, Admin, authenticated, private, wallet, ledger, outcome, invitation, OAuth, or provider traffic, and preserves the previous complete worker until an explicit update; offline server actions fail closed, and reconnect revalidates session, wallet, catalog, game state, and route before actions are released.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": ["BR-PWA-001"],
+      "implementation_files": ["web/sw.js", "web/core/pwa.js", "web/core/api.js", "web/app.js", "casino/app.py", "casino/wsgi.py", "web/i18n/en-US/shell.json", "web/i18n/ru-RU/shell.json", "docs/pwa_foundation.md"],
+      "introduced_in": "issue-182-pwa-foundation",
+      "changed_in": "issue-182-pwa-foundation",
+      "notes": "Install is atomic, activation prunes only prior Casino static-shell caches, update activation is user-requested, stale-client and failed-refresh states are explicit, and no deployment or public exposure is authorized."
+    },
+    {
+      "id": "TEST-095",
+      "module": "Tests",
+      "description": "Browser-free policy tests prove canonical cache identity, exact public-static allowlisting, complete PNG and maskable manifest assets, credential-free cache writes, fail-open request exclusion for non-GET/API/Admin/private traffic, explicit update rollback and cache cleanup, and requirement/version alignment; exact-head browser tests prove cold and warm shell, offline fail-closed actions, reconnect, update and failure, stale-client, expired-session, and route-restoration states in en-US and ru-RU at all four governed viewports with exact evidence provenance and listener cleanup.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": ["BR-PWA-001"],
+      "implementation_files": ["tests/pwa_tests.py", "tests/run_tests.py", "tests/visual/visual_matrix.json"],
+      "introduced_in": "issue-182-pwa-foundation",
+      "changed_in": "issue-182-pwa-foundation",
+      "notes": "TEST-092 remains exclusively owned by formal 50,000-cycle qualification. Android/iOS metadata is checked as a browser foundation only; native install and relaunch evidence remains deferred with full issue #182."
+    },
+    {
       "id": "TEST-092",
       "module": "Tests",
       "description": "An exact-source browser qualification executes exactly 50,000 completed UI cycles across every catalog game, assigns at least 1,666 cycles to each game, exercises every eligible game control at least 100 times or records an approved ineligible classification, captures all four governed viewports for human review, and rejects unexplained failures, incomplete ranges, incomplete declared non-control stages, source drift, or cleanup residue.",

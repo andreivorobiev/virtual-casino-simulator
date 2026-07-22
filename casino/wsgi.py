@@ -36,6 +36,8 @@ BODY_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 PROBE_PATHS = frozenset({"/healthz", "/readyz"})
 # Enumerate packaged Admin assets that share the Admin API authorization boundary.
 ADMIN_STATIC_PATHS = frozenset({"/admin", "/admin.html", "/admin.js", "/web/admin.js"})
+# Name the exact credential-free worker request marker for cookie-free public shell bytes. (PWA-002)
+PWA_PUBLIC_SHELL_HEADER = "X-Casino-Public-Shell"
 
 
 # Classify one request for secret-safe diagnostics without retaining path identifiers.
@@ -284,6 +286,8 @@ class CasinoWSGIApplication:
     def _static(self, environ: dict, start_response, path: str, effective_scheme: str):
         # Convert request headers once for optional session and Admin checks.
         headers = _request_headers(environ)
+        # Accept the public-shell marker only when no cookie or authorization proof accompanies it.
+        public_pwa_shell = headers.get(PWA_PUBLIC_SHELL_HEADER) == "1" and not headers.get("Cookie") and not headers.get("Authorization")
         # Collect only application-owned cookie response headers.
         extra_headers = []
         # Require the same application Admin authority for HTML and JavaScript assets.
@@ -323,7 +327,7 @@ class CasinoWSGIApplication:
             # Select only the known packaged entry document.
             target = WEB_DIR / "index.html"
         # Bootstrap a host-only CSRF cookie on every non-Admin HTML shell response.
-        if target.name == "index.html" and not extra_headers:
+        if target.name == "index.html" and not extra_headers and not public_pwa_shell:
             # Reuse an active session's distinct CSRF value without authenticating a context-bound guest cookie.
             bootstrap_token = auth.csrf_token_for_session_cookie(headers)
             # Reuse a bounded anonymous double-submit cookie when no session is active.

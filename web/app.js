@@ -5,6 +5,8 @@ import { acceptTerms, addUserTokens, api, currentUser, departGuestTrial, endGues
 import { renderTokenBalance, toast, tokens, safe, renderPremiumTag } from './core/ui.js';
 // Import required dependency so the shell can preserve locale across auth and route changes.
 import { getLocaleState, initI18n, onLocaleChange, setLocale, t } from './core/i18n.js';
+// Import the offline-safe shell controller for exact-version updates and authoritative reconnects. (PWA-001, PWA-002)
+import { initPwa } from './core/pwa.js';
 // Import required dependency so this module can preload global voice settings before games mount.
 import { loadVoiceSettings } from './core/voice.js';
 // Import the registered-user problem-report dialog without adding feedback code to the shared shell.
@@ -595,12 +597,16 @@ async function refreshCurrentSession() {
     const session = await currentUser();
     // Enter the authenticated shell or terms step from the returned payload.
     await enterAuthenticated(session);
+    // Confirm that authoritative session refresh succeeded for reconnect handling.
+    return true;
   // Handle missing or expired sessions by showing the browser login gate.
   } catch (_) {
     // Clear the current session so no stale wallet can render.
     currentSession = null;
     // Render the exact account-free invitation path or the normal private-beta login gate.
     if (isInvitationRoute()) renderInvitationGate(); else renderLoginGate();
+    // Report the expired or absent session without exposing backend diagnostics.
+    return false;
   }
 }
 
@@ -822,6 +828,18 @@ async function refreshShellState(options = {}) {
   }
 }
 
+// Rebuild session, wallet, catalog, and the active route before releasing actions after reconnect. (PWA-002)
+async function refreshAfterReconnect() {
+  // Preserve the current or URL-owned route before session refresh rerenders the shell.
+  const restoredRoute = active || routeFromLocation();
+  // Revalidate the browser session before trusting any cached wallet or game state.
+  const authenticated = await refreshCurrentSession();
+  // Keep an expired session at the login boundary with no stale authenticated controls.
+  if (!authenticated || !currentSession || currentSession.terms?.required) return { status: 'expired-session' };
+  // enterAuthenticated already refreshed shell state and remounted the preserved route authoritatively.
+  return { status: restoredRoute === 'lobby' ? 'online' : 'route-restored' };
+}
+
 // Navigate between lobby and game routes while keeping one mounted game at a time.
 export async function navigate(route, options = {}) {
   // Branch when an unauthenticated browser tries to navigate before the auth gate is complete.
@@ -914,6 +932,8 @@ async function init() {
   await initI18n({ domains: ['shell', 'feedback'] });
   // Bind the native problem-report dialog after its translation domain is ready.
   bindFeedbackDialog();
+  // Register the offline-safe shell and keep server actions locked until reconnect refresh completes.
+  initPwa({ onReconnect: refreshAfterReconnect });
   // Recalculate active-route visibility whenever responsive navigation layout changes.
   window.addEventListener('resize', revealActiveNav);
   // Repaint persistent shell text when the locale changes.
