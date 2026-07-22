@@ -2823,6 +2823,12 @@ h3 {
     grid-row: 1;
   }
 
+  /* Extend the account popover across the following logout track so its right edge aligns with
+     the mobile shell gutter instead of pushing its left edge outside the viewport. (OAUTH-010) */
+  .account-popover {
+    right: -56px;
+  }
+
   #logout-btn {
     grid-column: 4;
     grid-row: 1;

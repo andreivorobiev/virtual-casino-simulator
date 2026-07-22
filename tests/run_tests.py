@@ -2946,6 +2946,10 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     oauth_viewports={entry['id']:{'width':entry['width'],'height':entry['height']} for entry in visual_matrix['viewports']}
                     # Require the full responsive matrix before generating any evidence.
                     assert set(oauth_viewports)=={'desktop_primary','desktop_compact','tablet','mobile'}
+                    # Require the account popover to remain fully painted inside the active viewport.
+                    def assert_oauth_account_containment():
+                        # Check both document overflow and the popover's physical viewport bounds.
+                        assert page.evaluate("""() => { const popover=document.querySelector('[data-testid="oauth-account-popover"]'); const bounds=popover.getBoundingClientRect(); return document.documentElement.scrollWidth<=window.innerWidth+1 && popover.scrollWidth<=popover.clientWidth+1 && bounds.left>=13 && bounds.right<=window.innerWidth-13 && bounds.top>=0 && bounds.bottom<=window.innerHeight+1 && bounds.width>=Math.min(300,window.innerWidth-28); }""")
                     # Install one boolean-only unlinked/available current-user response without provider network access.
                     page.route('**/api/v2/me/oauth/providers',lambda route: route.fulfill(status=200,content_type='application/json',body='{"ok":true,"data":{"providers":[{"provider":"google","linked":false,"available":true},{"provider":"facebook","linked":false,"available":false}]}}'))
                     # Exercise current-user unlinked state across both installed locales.
@@ -2966,6 +2970,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         for viewport_id,viewport in oauth_viewports.items():
                             # Resize to the exact matrix dimensions.
                             page.set_viewport_size(viewport); page.wait_for_timeout(100)
+                            # Prove the complete account surface remains painted inside this viewport.
+                            assert_oauth_account_containment()
                             # Require page and account popover containment with all provider actions readable.
                             assert page.evaluate("() => { const popover=document.querySelector('[data-testid=\"oauth-account-popover\"]'); return document.documentElement.scrollWidth<=window.innerWidth+1 && popover.scrollWidth<=popover.clientWidth+1 && popover.getBoundingClientRect().width>=Math.min(300,window.innerWidth-28); }")
                             # Record unlinked available/release-held state without identity data.
@@ -2988,6 +2994,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         for viewport_id,viewport in oauth_viewports.items():
                             # Resize before geometry and capture.
                             page.set_viewport_size(viewport); page.wait_for_timeout(100)
+                            # Prove the complete account surface remains painted inside this viewport.
+                            assert_oauth_account_containment()
                             # Require every native action to remain visible and contained.
                             assert page.get_by_test_id('oauth-link-google').is_visible() and page.evaluate("() => document.documentElement.scrollWidth<=window.innerWidth+1")
                             # Record linked state without provider subject, email, or canonical user id.
@@ -3014,6 +3022,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         for viewport_id,viewport in oauth_viewports.items():
                             # Resize before the error-message containment assertion.
                             page.set_viewport_size(viewport); page.wait_for_timeout(100)
+                            # Prove the complete account surface remains painted inside this viewport.
+                            assert_oauth_account_containment()
                             # Require the complete linked popover and its failure status to remain readable without horizontal spill.
                             assert page.locator('#oauth-account-message').is_visible() and page.evaluate("() => { const popover=document.querySelector('[data-testid=\"oauth-account-popover\"]'); return document.documentElement.scrollWidth<=window.innerWidth+1 && popover.scrollWidth<=popover.clientWidth+1; }")
                             # Record actual unlink-error evidence rather than relabeling a status-load failure.
@@ -3040,6 +3050,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         for viewport_id,viewport in oauth_viewports.items():
                             # Resize to the matrix dimensions.
                             page.set_viewport_size(viewport); page.wait_for_timeout(100)
+                            # Prove the complete account surface remains painted inside this viewport.
+                            assert_oauth_account_containment()
                             # Require the callback acknowledgement and account rows to remain contained.
                             assert page.get_by_test_id('oauth-callback-message').is_visible() and page.evaluate("() => document.documentElement.scrollWidth<=window.innerWidth+1")
                             # Record successful callback and same-session refresh evidence.
@@ -3064,6 +3076,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         for viewport_id,viewport in oauth_viewports.items():
                             # Resize before responsive containment proof.
                             page.set_viewport_size(viewport); page.wait_for_timeout(100)
+                            # Prove the complete account surface remains painted inside this viewport.
+                            assert_oauth_account_containment()
                             # Require the callback error and account rows to remain visible without page-level overflow.
                             assert page.get_by_test_id('oauth-callback-message').is_visible() and page.evaluate("() => document.documentElement.scrollWidth<=window.innerWidth+1")
                             # Record callback-error evidence separately from provider-status loading failures.
@@ -3088,6 +3102,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         for viewport_id,viewport in oauth_viewports.items():
                             # Resize before containment proof.
                             page.set_viewport_size(viewport); page.wait_for_timeout(100)
+                            # Prove the complete account surface remains painted inside this viewport.
+                            assert_oauth_account_containment()
                             # Require the generic failure card to remain usable and contained.
                             assert page.get_by_test_id('oauth-account-popover').is_visible() and page.evaluate("() => document.documentElement.scrollWidth<=window.innerWidth+1")
                             # Record provider-status loading failure without mislabeling unlink or callback behavior.
