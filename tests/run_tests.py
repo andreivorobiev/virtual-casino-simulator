@@ -2400,10 +2400,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     with urllib.request.urlopen(public_shell_request,timeout=12) as public_shell_response:
                         # Require valid HTML while proving this public cache-fill response cannot bootstrap a CSRF cookie.
                         assert public_shell_response.status==200 and public_shell_response.headers.get_content_type()=='text/html' and not public_shell_response.headers.get_all('Set-Cookie'),dict(public_shell_response.headers.items())
-                    # Copy the authenticated storage proof into a normal explicit context that supports extra pages.
-                    pwa_context=browser.new_context(storage_state=real_login_page.context.storage_state())
-                    # Isolate route, worker, offline, and evidence state on one page in that explicit context.
-                    pwa_page=pwa_context.new_page()
+                    # Exercise the actual authenticated application page so worker, cache, session, and route storage share one production-shaped context.
+                    pwa_page=real_login_page
                     # Define every governed viewport for exact visual-matrix evidence.
                     pwa_viewports={'desktop_primary':{'width':1920,'height':1080},'desktop_compact':{'width':1440,'height':900},'tablet':{'width':1024,'height':900},'mobile':{'width':390,'height':844}}
                     # Map visual-matrix state IDs to the controller's bounded display protocol.
@@ -2432,6 +2430,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         target.with_suffix('.json').write_text(json.dumps(metadata,indent=2,ensure_ascii=False),encoding='utf-8')
                     # Guarantee offline reset, registration cleanup, cache cleanup, and page closure.
                     try:
+                        # Remove prior worker/cache state created during login so this case proves one fresh canonical install.
+                        pwa_page.evaluate("async () => { const regs=await navigator.serviceWorker.getRegistrations(); await Promise.all(regs.map(reg => reg.unregister())); const names=await caches.keys(); await Promise.all(names.filter(name => name.startsWith('casino-static-shell-v')).map(name => caches.delete(name))); sessionStorage.removeItem('casino.pwa.warmStart'); }")
                         # Load the authenticated shell where the service worker registers without changing server scope.
                         pwa_page.goto(f'{base}/?locale=en-US',wait_until='networkidle'); pwa_page.get_by_test_id('lobby').wait_for(timeout=8000)
                         # Require a true cold first load before testing same-context warm restoration.
@@ -2454,8 +2454,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         icon_responses=pwa_page.evaluate("async icons => Promise.all(icons.map(async icon => { const response=await fetch(icon.src); return { src:icon.src, ok:response.ok, type:response.headers.get('content-type'), bytes:(await response.arrayBuffer()).byteLength }; }))",manifest['icons'])
                         # Reject missing, mislabeled, or placeholder icon responses.
                         assert all(row['ok'] and row['type']=='image/png' and row['bytes']>4000 for row in icon_responses),icon_responses
-                        # Wait for one active controlling worker and its canonical page version.
-                        pwa_page.wait_for_function("async () => (await navigator.serviceWorker.getRegistrations()).some(reg => reg.active?.state==='activated') && Boolean(navigator.serviceWorker.controller) && window.CasinoPwa?.version==='9.4.0'",timeout=15000)
+                        # Wait for one active controller, canonical page version, and complete canonical cache in the same origin context.
+                        pwa_page.wait_for_function("async () => (await navigator.serviceWorker.getRegistrations()).some(reg => reg.active?.state==='activated') && Boolean(navigator.serviceWorker.controller) && window.CasinoPwa?.version==='9.4.0' && (await caches.keys()).includes('casino-static-shell-v9.4.0')",timeout=20000)
                         # Read the exact canonical cache inventory after atomic installation.
                         cache_inventory=pwa_page.evaluate("""async () => { const names=await caches.keys(); const urls=[]; for(const name of names){ const cache=await caches.open(name); for(const request of await cache.keys()) urls.push(new URL(request.url).pathname); } return { names:names.sort(), urls:[...new Set(urls)].sort() }; }""")
                         # Load the browser-free expected allowlist so cache acceptance cannot drift from policy tests.
@@ -2520,10 +2520,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         pwa_page.context.set_offline(False)
                         # Remove only Casino service-worker registrations and caches created by this focused case.
                         pwa_page.evaluate("async () => { const regs=await navigator.serviceWorker.getRegistrations(); await Promise.all(regs.map(reg => reg.unregister())); const names=await caches.keys(); await Promise.all(names.filter(name => name.startsWith('casino-static-shell-v')).map(name => caches.delete(name))); }")
-                        # Close the isolated PWA page after cleanup completes.
-                        pwa_page.close()
-                        # Release the explicit PWA context after its page, worker, cache, and network cleanup.
-                        pwa_context.close()
+                        # Leave the authenticated application page open for the outer deterministic page cleanup.
+                        assert not pwa_page.is_closed()
                 # Execute the narrowed PWA foundation regression and exact-head evidence corpus.
                 run_case('BR-PWA-001',['PWA-001','PWA-002','TEST-095'],pwa_installable_shell)
             # Close the focused page even when its assertions fail.
