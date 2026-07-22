@@ -2633,7 +2633,8 @@ h3 {
 
   .top-actions {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto auto;
+    /* Reserve one track for wallet, top-up, locale, account methods, and logout so tablet chrome never wraps. */
+    grid-template-columns: minmax(0, 1fr) auto auto auto auto;
     justify-content: stretch;
   }
 
