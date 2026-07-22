@@ -916,6 +916,34 @@ def extract_cookie_token(headers) -> str:
     # Return the computed value to the caller.
     return morsel.value if morsel else ""
 
+
+# Resolve only an active session's CSRF value for a static shell response without authenticating it. (AUTH-007, OAUTH-008)
+def csrf_token_for_session_cookie(headers) -> str:
+    # Read the opaque host-only session cookie without consulting bearer headers.
+    token = extract_cookie_token(headers)
+    # Return no authenticated proof when the browser has no session cookie.
+    if not token:
+        # Preserve anonymous shell bootstrap behavior.
+        return ""
+    # Read a pruned in-memory session view without refreshing activity or persisting state.
+    state = prune_sessions(load_sessions())
+    # Inspect only surviving active sessions for the exact opaque cookie.
+    for session in state.get("sessions", []):
+        # Skip every unrelated or non-active record without exposing identifiers.
+        if session.get("status") != "active" or not hmac.compare_digest(str(session.get("token") or ""), token):
+            # Continue to the next bounded session row.
+            continue
+        # Read the browser-readable session CSRF value without authenticating a guest browser proof.
+        csrf_token = session.get("csrf_token")
+        # Accept only the bounded generated proof shape used by application sessions.
+        if isinstance(csrf_token, str) and 32 <= len(csrf_token) <= 128:
+            # Return the exact session proof for the host-only double-submit cookie.
+            return csrf_token
+        # Reject a malformed matching session without substituting a durable value.
+        return ""
+    # Return no proof when the cookie is expired, revoked, or unknown.
+    return ""
+
 # Define the authenticate_token function used by this module.
 def authenticate_token(token: str, guest_browser_nonce: str = "") -> tuple[dict, dict]:
     # Branch when the token is missing.

@@ -324,20 +324,8 @@ class CasinoWSGIApplication:
             target = WEB_DIR / "index.html"
         # Bootstrap a host-only CSRF cookie on every non-Admin HTML shell response.
         if target.name == "index.html" and not extra_headers:
-            # Prefer an authenticated session's distinct CSRF value when a valid cookie exists.
-            bootstrap_token = ""
-            # Start protected optional authentication so an expired cookie still reaches login.
-            try:
-                # Authenticate only when the request actually carries a session credential.
-                if auth.extract_cookie_token(headers):
-                    # Resolve the durable session without exposing identity data.
-                    session, _user = auth.authenticate_headers(headers)
-                    # Reuse the current session CSRF value for authenticated browser requests.
-                    bootstrap_token = str(session.get("csrf_token") or "")
-            # Treat invalid or expired optional sessions as anonymous shell requests.
-            except CasinoError:
-                # Leave the bootstrap value empty so a fresh anonymous token is issued.
-                bootstrap_token = ""
+            # Reuse an active session's distinct CSRF value without authenticating a context-bound guest cookie.
+            bootstrap_token = auth.csrf_token_for_session_cookie(headers)
             # Reuse a bounded anonymous double-submit cookie when no session is active.
             if not bootstrap_token:
                 # Read only the named cookie rather than reflecting the complete Cookie header.

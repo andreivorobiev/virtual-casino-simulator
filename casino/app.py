@@ -669,20 +669,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Cache-Control", CACHE_CONTROL_NO_STORE)
         # Bootstrap or refresh one host-only CSRF cookie on the non-Admin application shell. (OAUTH-008)
         if target.name == "index.html" and urlparse(self.path).path not in ADMIN_STATIC_PATHS:
-            # Initialize optional authenticated-session proof as absent.
-            bootstrap_token = ""
-            # Start protected optional authentication so an expired session still reaches login.
-            try:
-                # Authenticate only when the request actually carries a session credential.
-                if auth.extract_cookie_token(self.headers):
-                    # Resolve the durable session without exposing identity fields.
-                    session, _user = auth.authenticate_headers(self.headers)
-                    # Reuse the current session's distinct CSRF value.
-                    bootstrap_token = str(session.get("csrf_token") or "")
-            # Treat invalid or expired optional sessions as anonymous shell requests.
-            except CasinoError:
-                # Leave the bootstrap value empty so a fresh anonymous token is issued.
-                bootstrap_token = ""
+            # Reuse an active session's distinct CSRF value without authenticating a context-bound guest cookie.
+            bootstrap_token = auth.csrf_token_for_session_cookie(self.headers)
             # Reuse a bounded anonymous double-submit cookie when no session is active.
             if not bootstrap_token:
                 # Read only the named host cookie rather than the complete Cookie header.

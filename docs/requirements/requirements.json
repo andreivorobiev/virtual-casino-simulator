@@ -9497,7 +9497,7 @@
     {
       "id": "TEST-093",
       "module": "Tests",
-      "description": "Provider-free unit, API, JSON-process, and disposable MySQL tests prove dual-gate adapter inaccessibility, proof separation, malformed-state preservation, durable rate limits, recoverable exchange ambiguity, strict callback/link/session binding, no email linking or account creation, compound uniqueness and replay safety, frozen-v1 compatibility, and rollback; exact-head browser evidence covers OAuth readiness and lifecycle states in en-US and ru-RU at every governed viewport.",
+      "description": "Provider-free unit, API, JSON-process, and disposable MySQL tests prove dual-gate adapter inaccessibility, proof separation, malformed-state preservation, durable rate limits, recoverable exchange ambiguity, strict callback/link/session binding, static-shell CSRF lookup without consuming browser-bound guest sessions, no email linking or account creation, compound uniqueness and replay safety, frozen-v1 compatibility, and rollback; exact-head browser evidence covers OAuth readiness and lifecycle states in en-US and ru-RU at every governed viewport.",
       "status": "PASS",
       "api_tests": ["OAUTH-MOCK-001", "API-OAUTH-002", "STORAGE-MYSQL-LIVE-001"],
       "browser_tests": ["BR-OAUTH-RUNTIME-001"],

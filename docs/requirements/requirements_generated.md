@@ -6,8 +6,8 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.43.0
-- core: 9.18.0
+- application: 9.43.1
+- core: 9.18.1
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.0
@@ -45,7 +45,7 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.1
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.52.1
+- tests: 1.52.2
 - docs: 1.52.0
 - contracts: 1.38.0
 - tooling: 1.18.0
@@ -734,5 +734,5 @@ Historical source baseline: 9.1.0
 - **OAUTH-008** (OAuth) - PASS: Authorization-code flows use PKCE S256, strict duplicate-aware state, Google nonce, exact provider/callback/browser/action binding, authenticated user/session binding for explicit links, HMAC-only durable metadata, physically separate nonce/PKCE proofs, cross-process rate limits, recoverable transient exchange claims, terminal replay tombstones, bounded retention, and privacy-safe audit.
 - **OAUTH-009** (Core) - PASS: An external provider subject links only after explicit confirmation by the exact authenticated active private-invite local-password account; JSON and MySQL transactions enforce provider-subject and provider-user uniqueness across processes, sign-in requires a prior link, provider email is display-only, and no provider flow creates or merges users, players, wallets, or accounts.
 - **OAUTH-010** (Application) - PASS: The disabled-by-default provider login and persistent-account link/unlink surfaces are keyboard accessible, localized in en-US and ru-RU, preserve local-password recovery and guest/invitation flows, revoke matching provider sessions on unlink or release rollback, and expose disabled, available, status-error, linked, unlinked, callback-success, callback-error, refresh, and responsive states without raw identity or bearer evidence.
-- **TEST-093** (Tests) - PASS: Provider-free unit, API, JSON-process, and disposable MySQL tests prove dual-gate adapter inaccessibility, proof separation, malformed-state preservation, durable rate limits, recoverable exchange ambiguity, strict callback/link/session binding, no email linking or account creation, compound uniqueness and replay safety, frozen-v1 compatibility, and rollback; exact-head browser evidence covers OAuth readiness and lifecycle states in en-US and ru-RU at every governed viewport.
+- **TEST-093** (Tests) - PASS: Provider-free unit, API, JSON-process, and disposable MySQL tests prove dual-gate adapter inaccessibility, proof separation, malformed-state preservation, durable rate limits, recoverable exchange ambiguity, strict callback/link/session binding, static-shell CSRF lookup without consuming browser-bound guest sessions, no email linking or account creation, compound uniqueness and replay safety, frozen-v1 compatibility, and rollback; exact-head browser evidence covers OAuth readiness and lifecycle states in en-US and ru-RU at every governed viewport.
 - **TEST-092** (Tests) - PASS: An exact-source browser qualification executes exactly 50,000 completed UI cycles across every catalog game, assigns at least 1,666 cycles to each game, exercises every eligible game control at least 100 times or records an approved ineligible classification, captures all four governed viewports for human review, and rejects unexplained failures, incomplete ranges, incomplete declared non-control stages, source drift, or cleanup residue.
