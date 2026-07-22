@@ -2440,6 +2440,14 @@ h3 {
   .admin-top > div {
     flex: 1 1 140px;
     min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  /* Keep long localized one-word headings inside the effective half-width zoom proxy. */
+  .admin-top h1,
+  .admin-top p {
+    max-width: 100%;
+    overflow-wrap: anywhere;
   }
 
   /* Keep the secondary Refresh action inside the zoomed header width. */
