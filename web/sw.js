@@ -64,8 +64,12 @@ async function fetchPublicAsset(pathname) {
     const response = await fetch(request);
     // Fail installation or runtime caching when the response is not safe public static content.
     if (!isPublicStaticResponse(response)) throw new Error('public static asset rejected');
-    // Return a signal-free cache key plus the validated response so an expired fetch signal cannot affect storage.
-    return { request: new Request(pathname, { method: 'GET', credentials: 'omit' }), response };
+    // Consume the complete body before the next sequential fetch so unread streams cannot exhaust the origin connection pool.
+    const bytes = await response.arrayBuffer();
+    // Reconstruct a detached response that preserves reviewed metadata without retaining the network stream or abort signal.
+    const storedResponse = new Response(bytes, { status: response.status, statusText: response.statusText, headers: response.headers });
+    // Return a signal-free cache key plus detached bytes so an expired fetch signal cannot affect later storage.
+    return { request: new Request(pathname, { method: 'GET', credentials: 'omit' }), response: storedResponse };
   // Release the bounded timer on success, rejection, or abort.
   } finally {
     // Prevent completed fetches from retaining timer callbacks through the rest of installation.

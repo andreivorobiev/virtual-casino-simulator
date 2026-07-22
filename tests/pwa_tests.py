@@ -149,6 +149,12 @@ class PwaFoundationTests(unittest.TestCase):
         self.assertIn("setTimeout(() => controller.abort(), 8000)", worker)
         # Require reviewed sequential fetch order instead of a connection-saturating install fan-out.
         self.assertNotIn("Promise.all(SHELL_ASSETS.map", worker)
+        # Require each network response body to drain before the next sequential request can occupy the origin connection pool.
+        self.assertIn("const bytes = await response.arrayBuffer()", worker)
+        # Require cache storage to receive a detached response rather than an unread network-backed stream.
+        self.assertIn("const storedResponse = new Response(bytes", worker)
+        # Require body materialization to precede returning the response for deferred cache storage.
+        self.assertLess(worker.index("await response.arrayBuffer()"), worker.index("response: storedResponse"))
         # Require one ordered CacheStorage mutation at a time after every response validates.
         self.assertIn("await cache.put(rows[index].request, rows[index].response)", worker)
         # Require clean-install rollback without deleting a prior canonical cache.
