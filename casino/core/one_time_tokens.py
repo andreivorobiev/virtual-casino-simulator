@@ -255,6 +255,8 @@ class TokenService:
             "expires_at": expires_at,
             # Initialize the exactly-once consumption marker.
             "consumed_at": None,
+            # Reserve a caller-owned replay binding for recoverable multi-document consumers.
+            "consume_idempotency_digest": None,
             # Initialize the explicit revocation marker.
             "revoked_at": None,
             # Initialize the bounded failed-or-successful attempt counter.
@@ -362,7 +364,7 @@ class TokenService:
         return receipt
 
     # Consume one bearer exactly once with mandatory purpose and subject binding.
-    def consume(self, purpose: str, token: str, *, subject: str | None = None, session_binding: str = "", subject_active: bool = True) -> dict:
+    def consume(self, purpose: str, token: str, *, subject: str | None = None, session_binding: str = "", subject_active: bool = True, idempotency_key: str = "") -> dict:
         # Reject unknown purpose, empty bearer, absent subject, or malformed activity state uniformly.
         if purpose not in PURPOSES or not str(token or "") or not self._normalize_subject(subject) or not isinstance(subject_active, bool):
             # Preserve the generic public consumption envelope without scanning durable state.
@@ -373,6 +375,14 @@ class TokenService:
         subject_digest = self._digest("subject", self._normalize_subject(subject))
         # Compute an optional session verifier for rows that require browser/session binding.
         session_digest = self._digest("session", session_binding) if session_binding else None
+        # Normalize the optional caller replay key used by recoverable enrollment consumers.
+        normalized_idempotency = str(idempotency_key or "").strip()
+        # Reject malformed replay keys without scanning durable token state.
+        if normalized_idempotency and (len(normalized_idempotency) < 16 or len(normalized_idempotency) > 200 or any(character in normalized_idempotency for character in "\r\n")):
+            # Preserve the generic public consumption envelope for unsafe replay metadata.
+            self._invalid_token()
+        # Digest caller replay metadata independently so the raw key never reaches storage.
+        idempotency_digest = self._digest("consume-idempotency", normalized_idempotency) if normalized_idempotency else None
         # Capture one consume instant for every state decision and timestamp.
         now = self.clock()
         # Hold only non-secret outcome fields across the atomic mutation.
@@ -398,10 +408,22 @@ class TokenService:
                     outcome["reason"] = "revoked"
                     # Stop after resolving the unique verifier.
                     break
-                # Record replay state only for sanitized internal audit.
+                # Return an idempotent success only for the exact prior subject, session, and caller replay key.
                 if row.get("consumed_at"):
-                    # Classify the matching consumed row without mutating it.
-                    outcome["reason"] = "consumed"
+                    # Require an explicit replay key that matches the first successful consumption.
+                    replay_matches = bool(idempotency_digest) and hmac.compare_digest(str(row.get("consume_idempotency_digest", "")), idempotency_digest)
+                    # Preserve subject binding on replay even though the bearer verifier matched.
+                    replay_matches = replay_matches and hmac.compare_digest(str(row.get("subject_digest", "")), subject_digest)
+                    # Preserve any session binding captured by the original issuance.
+                    replay_matches = replay_matches and (not row.get("session_digest") or (session_digest is not None and hmac.compare_digest(str(row.get("session_digest", "")), session_digest)))
+                    # Publish the same opaque receipt only when every recovery binding matches.
+                    if replay_matches:
+                        # Return the original opaque identifiers without changing counters or timestamps.
+                        outcome.update({"token_id": row.get("token_id"), "purpose": purpose, "audit_id": row.get("audit_id")})
+                    # Classify every other replay as consumed for sanitized internal audit.
+                    else:
+                        # Keep the one-time boundary for callers that omit or change the replay key.
+                        outcome["reason"] = "consumed"
                     # Stop after resolving the unique verifier.
                     break
                 # Fail closed on malformed or elapsed expiry.
@@ -452,6 +474,8 @@ class TokenService:
                     break
                 # Stamp exactly-once consumption while the provider mutation remains locked.
                 row["consumed_at"] = now
+                # Bind future recovery only to the explicit caller idempotency key, when supplied.
+                row["consume_idempotency_digest"] = idempotency_digest
                 # Count the successful redemption as a bounded attempt.
                 row["attempts"] = attempts + 1
                 # Publish only opaque success fields to the caller-owned outcome.
@@ -630,9 +654,9 @@ def reissue(purpose: str, subject: str, *, ttl_seconds: int | None = None, sessi
 
 
 # Consume one bearer exactly once with mandatory subject binding.
-def consume(purpose: str, token: str, *, subject: str | None = None, session_binding: str = "", subject_active: bool = True) -> dict:
+def consume(purpose: str, token: str, *, subject: str | None = None, session_binding: str = "", subject_active: bool = True, idempotency_key: str = "") -> dict:
     # Delegate the atomic redemption decision to the production service.
-    return _service().consume(purpose, token, subject=subject, session_binding=session_binding, subject_active=subject_active)
+    return _service().consume(purpose, token, subject=subject, session_binding=session_binding, subject_active=subject_active, idempotency_key=idempotency_key)
 
 
 # Revoke one active token by opaque identifier.

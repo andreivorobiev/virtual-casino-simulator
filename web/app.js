@@ -1,6 +1,6 @@
 // AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
 // Import required dependency so this module can call the frozen API envelope safely.
-import { acceptTerms, addUserTokens, api, currentUser, departGuestTrial, endGuestTrial, guestTrial, logClient, login, logout } from './core/api.js';
+import { acceptTerms, addUserTokens, api, currentUser, departGuestTrial, endGuestTrial, guestTrial, logClient, login, logout, redeemInvitation } from './core/api.js';
 // Import required dependency so this module can render shared wallet and premium UI helpers.
 import { renderTokenBalance, toast, tokens, safe, renderPremiumTag } from './core/ui.js';
 // Import required dependency so the shell can preserve locale across auth and route changes.
@@ -238,6 +238,83 @@ function renderLoginGate(message = '') {
   if (guestButton) guestButton.onclick = handleGuestTrial;
 }
 
+// Report whether the current URL names the separately approved private invitation redemption surface. (INVITE-005)
+function isInvitationRoute() {
+  // Match only the canonical path; all other anonymous paths retain the normal private-beta login gate.
+  return location.pathname.replace(/\/$/, '') === '/enroll/invitation';
+}
+
+// Derive a token-free session key and stable caller idempotency value for reload-safe redemption. (INVITE-003)
+async function invitationIdempotency(token) {
+  // Hash the transient URL bearer with the browser crypto implementation.
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token));
+  // Encode only a short non-secret digest prefix for sessionStorage lookup.
+  const key = `casino.invitation.idempotency.${Array.from(new Uint8Array(digest).slice(0, 12)).map(value => value.toString(16).padStart(2, '0')).join('')}`;
+  // Read an existing same-browser caller key so a lost response can resume safely.
+  const existing = sessionStorage.getItem(key);
+  // Return the stable value when the browser already started this exact bearer flow.
+  if (existing) return existing;
+  // Generate one bounded caller-owned replay key without deriving it from the bearer.
+  const created = crypto.randomUUID();
+  // Persist only the random caller key under the non-secret digest lookup for this browser session.
+  sessionStorage.setItem(key, created);
+  // Return the newly created idempotency value.
+  return created;
+}
+
+// Render the account-free private invitation enrollment form without creating state on page load. (INVITE-003, INVITE-005)
+function renderInvitationGate(message = '', success = false) {
+  // Clear any stale authenticated shell identity while the public route is displayed.
+  window.CasinoCurrentUser = null;
+  // Keep the casino shell and lobby layout locked behind successful enrollment and later login.
+  document.body.classList.remove('lobby-active', 'guest-trial-active');
+  // Apply the established authentication layout at all governed viewports.
+  document.body.classList.add('auth-locked');
+  // Resolve the shared public route outlet.
+  const view = document.getElementById('view');
+  // Remove authenticated region semantics before rendering the account-free form.
+  view.removeAttribute('tabindex'); view.removeAttribute('role'); view.removeAttribute('aria-label'); view.removeAttribute('data-testid');
+  // Apply the shared accessible auth-screen presentation.
+  view.className = 'screen auth-screen';
+  // Render explicit restricted-preview, password, locale, and current-terms fields with one generic live result.
+  view.innerHTML = `<section class="auth-panel" data-testid="invitation-redemption"><p class="eyebrow">${safe(t('invitation.eyebrow', {}, 'shell'))}</p><h1>${safe(t('invitation.title', {}, 'shell'))}</h1><p class="auth-copy">${safe(t('invitation.copy', {}, 'shell'))}</p><form id="invitation-form" class="auth-form"><label>${safe(t('invitation.email', {}, 'shell'))}<input id="invitation-email" data-testid="invitation-email" type="email" autocomplete="email" maxlength="254" required></label><label>${safe(t('invitation.displayName', {}, 'shell'))}<input id="invitation-display-name" data-testid="invitation-display-name" autocomplete="name" maxlength="80" required></label><label>${safe(t('invitation.password', {}, 'shell'))}<input id="invitation-password" data-testid="invitation-password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required></label><label>${safe(t('invitation.language', {}, 'shell'))}<select id="invitation-locale" data-testid="invitation-locale"></select></label><label class="check-row"><input id="invitation-terms" data-testid="invitation-terms" type="checkbox" required><span>${safe(t('invitation.terms', {}, 'shell'))}</span></label><button class="primary" data-testid="invitation-submit" type="submit">${safe(t('invitation.submit', {}, 'shell'))}</button><p id="invitation-message" class="auth-message" role="status" data-success="${success ? 'true' : 'false'}">${safe(message)}</p></form><a href="/" data-testid="invitation-login-link">${safe(t('invitation.back', {}, 'shell'))}</a></section>`;
+  // Populate the locale selector from the governed manifest and rerender in place after a switch.
+  wireLocaleSelect(document.getElementById('invitation-locale'), () => renderInvitationGate(message, success));
+  // Submit through the recovery-safe public handler.
+  document.getElementById('invitation-form').onsubmit = handleInvitationSubmit;
+}
+
+// Submit one explicit invitation redemption while keeping every rejection non-enumerating. (INVITE-003)
+async function handleInvitationSubmit(event) {
+  // Prevent a full page reload that could obscure the caller-idempotent result.
+  event.preventDefault();
+  // Resolve the generic live status outlet.
+  const message = document.getElementById('invitation-message');
+  // Resolve the transient bearer from the canonical URL without copying it to DOM or durable storage.
+  const token = new URL(location.href).searchParams.get('token') || '';
+  // Disable repeated clicks until the exact request settles.
+  const submit = document.querySelector('[data-testid="invitation-submit"]');
+  // Prevent a second in-flight mutation from this form.
+  submit.disabled = true;
+  // Start protected redemption so every failure renders the same localized public message.
+  try {
+    // Build the complete current-terms payload with one reload-stable caller key.
+    const payload = { token, email: document.getElementById('invitation-email').value.trim(), password: document.getElementById('invitation-password').value, display_name: document.getElementById('invitation-display-name').value.trim(), locale: getLocaleState().locale, terms_version: 'private-beta-1', accepted: document.getElementById('invitation-terms').checked === true, idempotency_key: await invitationIdempotency(token) };
+    // Submit only after the browser has collected every explicit enrollment field.
+    await redeemInvitation(payload);
+    // Remove the bearer from browser history immediately after terminal success.
+    history.replaceState({}, '', '/');
+    // Return to login with an identifier-free success prompt.
+    renderLoginGate(t('invitation.success', {}, 'shell'));
+  // Collapse disabled, malformed, expired, revoked, replayed, and raced results into one message.
+  } catch (_) {
+    // Publish no state-specific reason or server text.
+    if (message) message.textContent = t('invitation.unavailable', {}, 'shell');
+    // Re-enable the same form for recoverable exact-key retry.
+    submit.disabled = false;
+  }
+}
+
 // Render the terms acceptance step when the current session still requires it.
 function renderTermsGate(session) {
   // Store the current session so accepted terms can continue into the shell.
@@ -359,8 +436,8 @@ async function refreshCurrentSession() {
   } catch (_) {
     // Clear the current session so no stale wallet can render.
     currentSession = null;
-    // Render the logged-out gate before any route mounts.
-    renderLoginGate();
+    // Render the exact account-free invitation path or the normal private-beta login gate.
+    if (isInvitationRoute()) renderInvitationGate(); else renderLoginGate();
   }
 }
 

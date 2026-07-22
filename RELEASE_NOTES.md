@@ -1,5 +1,10 @@
 # Virtual Casino Simulator v9.4.0 Release Notes
 
+## Unreleased repository addendum: private invitation enrollment
+
+- Adds disabled-by-default, restricted-preview Admin invitation and private redemption repository code with recoverable JSON/MySQL lifecycle semantics, additive v2 contracts, and EN/RU accessible surfaces (issue #332; Workroom #24).
+- Grants no live mail, enrollment, provider/network, DNS, deployment, public-signup, or unrestricted-exposure authority.
+
 ## Compatible restricted-preview update
 
 - Packages the compatible Casino changes merged after v9.3.0, including gameplay and ledger correctness fixes, durable retry and reconnect behavior, responsive interface improvements, localization coverage, and static-cache parity.

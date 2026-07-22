@@ -117,6 +117,37 @@
       ]
     },
     {
+      "id": "invitation_redemption",
+      "route": "/enroll/invitation",
+      "selector": "[data-testid='invitation-redemption']",
+      "states": [
+        "form",
+        "terms_unaccepted",
+        "generic_error",
+        "success_return_to_login",
+        "keyboard_focus",
+        "reduced_motion",
+        "zoom_200"
+      ],
+      "locales": [
+        "en-US",
+        "ru-RU"
+      ],
+      "viewports": [
+        "desktop_primary",
+        "desktop_compact",
+        "tablet",
+        "mobile"
+      ],
+      "gates": [
+        "VIS-COPY-001",
+        "VIS-TOKEN-002",
+        "VIS-LAYOUT-003",
+        "VIS-RESPONSIVE-001",
+        "VIS-EVIDENCE-001"
+      ]
+    },
+    {
       "id": "shell_lobby",
       "route": "/",
       "selector": "[data-testid='premium-topbar'], [data-testid='lobby']",
@@ -464,6 +495,15 @@
         "dashboard",
         "players_and_bots",
         "users",
+        "invitations_disabled",
+        "invitations_release_held",
+        "invitations_empty",
+        "invitations_pending",
+        "invitations_redeemed",
+        "invitations_error",
+        "invitations_keyboard_scroll",
+        "invitations_reduced_motion",
+        "invitations_zoom_200",
         "guest_trials_empty",
         "guest_trials_loading",
         "guest_trials_error",

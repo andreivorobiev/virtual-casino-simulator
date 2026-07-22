@@ -6,6 +6,7 @@
   "anonymous_routes": [
     "/api/v2/auth/login",
     "/api/v2/auth/guest",
+    "/api/v2/auth/redeem-invitation",
     "/healthz"
   ],
   "authenticated_routes": [

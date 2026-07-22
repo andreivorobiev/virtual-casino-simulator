@@ -128,6 +128,8 @@ label {
 
 .casino-page.auth-locked {
   overflow: auto;
+  container-name: auth-page;
+  container-type: inline-size;
 }
 
 .auth-locked .casino-topbar,
@@ -530,6 +532,52 @@ label {
   min-height: 20px;
   margin: 0;
   color: var(--bad);
+}
+
+/* Let every invitation enrollment layer shrink inside the governed mobile 200-percent zoom column. */
+[data-testid="invitation-redemption"],
+[data-testid="invitation-redemption"] .auth-form,
+[data-testid="invitation-redemption"] .auth-form > label {
+  min-width: 0;
+}
+
+/* Wrap localized enrollment copy instead of letting a long word widen the anonymous page. */
+[data-testid="invitation-redemption"] :is(h1, p, label, span, a) {
+  overflow-wrap: anywhere;
+}
+
+/* Override native field minimums while retaining the shared 42-pixel control-height floor. */
+[data-testid="invitation-redemption"] .auth-form > label:not(.check-row) > :is(input, select),
+[data-testid="invitation-redemption"] .auth-form > button {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  word-break: break-word;
+}
+
+/* Reclaim fixed auth padding only when zoom or a genuinely narrow window leaves at most 220 CSS pixels. */
+@container auth-page (max-width: 220px) {
+  .auth-screen:has(> [data-testid="invitation-redemption"]) {
+    padding: 4px;
+  }
+
+  /* Preserve a readable invitation card while leaving enough inline space for native fields. */
+  [data-testid="invitation-redemption"] {
+    gap: 8px;
+    padding: 8px 4px;
+  }
+
+  /* Scale the display heading without reducing form labels or 42-pixel controls. */
+  [data-testid="invitation-redemption"] h1 {
+    font-size: 22px;
+  }
+
+  /* Tighten only vertical form rhythm in the effective zoom column. */
+  [data-testid="invitation-redemption"] .auth-form {
+    gap: 8px;
+  }
 }
 
 /* Disabled OAuth controls communicate provider readiness without exposing an action surface. */
@@ -2085,6 +2133,47 @@ h3 {
   color: var(--gold);
 }
 
+/* Keep the invitation form columns bounded before the phone breakpoint stacks them. (INVITE-005) */
+[data-testid="admin-invitation-create"] .grid3 {
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(120px, auto);
+}
+
+/* Let every invitation form control shrink inside its assigned responsive column. */
+[data-testid="admin-invitation-create"] :is(input, select, button) {
+  width: 100%;
+  min-width: 0;
+}
+
+/* Own wide invitation lifecycle tables inside one named keyboard-scrollable region. */
+[data-testid="admin-invitation-list"] {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x pan-y;
+  scrollbar-color: rgba(255, 217, 130, .42) transparent;
+  scrollbar-width: thin;
+}
+
+/* Preserve readable columns while preventing their width from escaping the bounded region. */
+[data-testid="admin-invitation-list"] .mini-table {
+  min-width: 680px;
+  table-layout: fixed;
+}
+
+/* Wrap opaque lifecycle values without exposing a page-level horizontal overflow. */
+[data-testid="admin-invitation-list"] :is(th, td) {
+  overflow-wrap: anywhere;
+  vertical-align: top;
+}
+
+/* Make keyboard ownership of the lifecycle scroll region visibly apparent. */
+[data-testid="admin-invitation-list"]:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: -4px;
+}
+
 /* Guest Trials controls use bounded low-cardinality filters and keyboard-scrollable tables. */
 .guest-filter-grid {
   display: grid;
@@ -2363,6 +2452,8 @@ h3 {
     top: 0;
     z-index: 5;
     flex-direction: row;
+    width: 100%;
+    max-width: 100%;
     padding: 8px;
     overflow-x: auto;
     overflow-y: hidden;
@@ -2387,9 +2478,30 @@ h3 {
 
   .admin-top {
     align-items: flex-start;
+    flex-wrap: wrap;
     gap: 10px;
     min-height: 0;
     padding: 12px;
+  }
+
+  /* Let the heading copy shrink and wrap beside or above Refresh at 200-percent zoom. */
+  .admin-top > div {
+    flex: 1 1 140px;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  /* Keep long localized one-word headings inside the effective half-width zoom proxy. */
+  .admin-top h1,
+  .admin-top p {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  /* Keep the secondary Refresh action inside the zoomed header width. */
+  .admin-top > button {
+    flex: 0 1 auto;
+    max-width: 100%;
   }
 
   .admin-top h1 {
@@ -2401,9 +2513,20 @@ h3 {
     overflow: visible;
   }
 
+  /* Permit localized card copy to wrap inside the effective half-width zoom proxy. */
+  .admin-card {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
   .admin-card-grid,
   .guest-filter-grid,
   .guest-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Stack the invitation creation form before native input minimums can widen the page. */
+  [data-testid="admin-invitation-create"] .grid3 {
     grid-template-columns: 1fr;
   }
 }

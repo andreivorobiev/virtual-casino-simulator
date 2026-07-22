@@ -26,7 +26,7 @@ from casino.core.state_store import read_json, write_json, update_json
 # Import restricted-preview cookie helpers without coupling the auth store to WSGI.
 from casino.core.security import clear_csrf_cookie_header, csrf_cookie_header, new_csrf_token
 # Import required dependency so this module can use its public functions or constants.
-from casino.errors import ForbiddenError, RateLimitError, UnauthorizedError, ValidationError
+from casino.errors import ConflictError, ForbiddenError, RateLimitError, UnauthorizedError, ValidationError
 
 # Set USERS_PATH to the value needed for the next operation.
 USERS_PATH = DATA_DIR / "auth" / "users.json"
@@ -35,7 +35,7 @@ SESSIONS_PATH = DATA_DIR / "auth" / "sessions.json"
 # Set PASSWORD_ITERATIONS to the value needed for the next operation.
 PASSWORD_ITERATIONS = 120_000
 # Set PUBLIC_API_PATHS to the value needed for the next operation.
-PUBLIC_API_PATHS = {"/api/v2/auth/login", "/api/v2/auth/guest", "/healthz"}
+PUBLIC_API_PATHS = {"/api/v2/auth/login", "/api/v2/auth/guest", "/api/v2/auth/redeem-invitation", "/healthz"}
 # Bound the accepted session lifetime to the restricted-preview review interval.
 MAX_SESSION_TTL_SECONDS = 86_400
 # Retain at most one thousand active session records across the single-node preview.
@@ -58,7 +58,7 @@ def parse_time(value: str) -> datetime:
 # Define the default_users function used by this module.
 def default_users() -> dict:
     # Return the computed value to the caller.
-    return {"schema_version": SCHEMA_VERSION, "users": []}
+    return {"schema_version": SCHEMA_VERSION, "users": [], "reservations": []}
 
 # Define the default_sessions function used by this module.
 def default_sessions() -> dict:
@@ -73,6 +73,8 @@ def load_users() -> dict:
     if not isinstance(state, dict) or "users" not in state:
         # Set state to the value needed for the next operation.
         state = default_users()
+    # Add the compatible reservation collection when reading a pre-invitation identity document.
+    state.setdefault("reservations", [])
     # Return the computed value to the caller.
     return state
 
@@ -121,6 +123,19 @@ def import_auth_state(snapshot: dict) -> None:
 def normalize_email(email: str) -> str:
     # Return the computed value to the caller.
     return (email or "").strip().lower()
+
+# Enforce the explicit password policy used only by public invitation enrollment. (INVITE-003)
+def validate_enrollment_password(password: str) -> None:
+    # Require a bounded string so hashing cannot become an unbounded resource sink.
+    if not isinstance(password, str) or len(password) < 12 or len(password) > 128:
+        # Return one value-free policy error to the invitation facade.
+        raise ValidationError("password does not meet enrollment policy")
+    # Count independent character classes without retaining any derived password material.
+    classes = sum((any(character.islower() for character in password), any(character.isupper() for character in password), any(character.isdigit() for character in password), any(not character.isalnum() for character in password)))
+    # Require at least three classes so long single-pattern passwords do not pass accidentally.
+    if classes < 3:
+        # Keep the policy error free of supplied password details.
+        raise ValidationError("password does not meet enrollment policy")
 
 # Define the hash_password function used by this module.
 def hash_password(password: str, salt: bytes | None = None) -> str:
@@ -211,24 +226,201 @@ def create_user(email: str, password: str, display_name: str, role: str = "playe
     if not password:
         # Raise an error so invalid input or state is reported explicitly.
         raise ValidationError("password is required")
-    # Set state to the value needed for the next operation.
-    state = load_users()
-    # Branch when the following condition is true.
-    if any(user.get("email") == normalized for user in state.get("users", [])):
-        # Raise an error so invalid input or state is reported explicitly.
+    # Read current uniqueness and invitation reservations before allocating a player wallet.
+    current_state = load_users()
+    # Reject a duplicate mailbox before any downstream player side effect.
+    if any(user.get("email") == normalized for user in current_state.get("users", [])):
+        # Preserve the existing canonical account.
         raise ValidationError("email already exists")
+    # Reject a mailbox reserved by an in-progress invitation before creating a player.
+    if any(reservation.get("email") == normalized for reservation in current_state.get("reservations", [])):
+        # Prevent the normal account path from racing the invitation saga.
+        raise ConflictError("email is reserved by an enrollment operation")
     # Set bound_player to the value needed for the next operation.
     bound_player = players.ensure_player_for_user(normalized, display_name, player_id)
     # Set now to the value needed for the next operation.
     now = utc_now()
     # Set user to the value needed for the next operation.
     user = {"user_id": new_id("user"), "email": normalized, "username": normalized, "display_name": display_name.strip() or normalized, "role": role, "roles": [role], "status": "active", "player_id": bound_player["player_id"], "password_hash": hash_password(password), "terms_required": terms_required, "terms_accepted_at": None, "locale": locale or "en-US", "language": locale or "en-US", "created_at": now, "updated_at": now, "identity_provider": "local"}
-    # Execute this statement as part of the module's documented control flow.
-    state.setdefault("users", []).append(user)
-    # Execute this statement as part of the module's documented control flow.
-    save_users(state)
+    # Serialize email uniqueness with invitation reservations instead of using a stale load/save pair.
+    def append_user(state: dict) -> dict:
+        # Preserve legacy documents while rejecting structurally unsafe user collections.
+        if not isinstance(state, dict) or not isinstance(state.get("users"), list):
+            # Fail without replacing recoverable identity data.
+            raise RuntimeError("Authentication user storage is malformed")
+        # Reject a duplicate canonical email inside the provider transaction.
+        if any(stored.get("email") == normalized for stored in state.get("users", [])):
+            # Preserve the existing account without publishing its identity.
+            raise ValidationError("email already exists")
+        # Reject email reservations held by an in-progress invitation redemption.
+        if any(reservation.get("email") == normalized for reservation in state.setdefault("reservations", [])):
+            # Prevent a parallel Admin/user flow from orphaning the invitation saga.
+            raise ConflictError("email is reserved by an enrollment operation")
+        # Append the new canonical identity exactly once.
+        state["users"].append(user)
+        # Return the complete identity document for atomic persistence.
+        return state
+    # Publish the unique identity through the JSON/MySQL document transaction.
+    update_json(USERS_PATH, append_user, default_users)
     # Return the computed value to the caller.
     return user
+
+# Reserve one email for a recoverable invitation saga without creating an account. (INVITE-003)
+def reserve_invited_identity(email: str, invitation_id: str, user_id: str, player_id: str, expires_at: str) -> dict:
+    # Normalize the mailbox used by every account and invitation lookup.
+    normalized = normalize_email(email)
+    # Capture the reservation result outside the provider transaction.
+    result = {}
+    # Insert or replay the exact reservation atomically.
+    def reserve(state: dict) -> dict:
+        # Reject malformed user state rather than repairing it destructively.
+        if not isinstance(state, dict) or not isinstance(state.get("users"), list):
+            # Preserve the original document for operator recovery.
+            raise RuntimeError("Authentication user storage is malformed")
+        # Reject any already-created canonical account with this mailbox.
+        if any(stored.get("email") == normalized and stored.get("invitation_id") != invitation_id for stored in state["users"]):
+            # Keep the conflict generic at the invitation boundary.
+            raise ConflictError("invited identity conflicts with an existing account")
+        # Resolve the compatible reservation collection on older documents.
+        reservations = state.setdefault("reservations", [])
+        # Search for an existing reservation on this mailbox or invitation.
+        for existing in reservations:
+            # Return the exact same saga reservation idempotently.
+            if existing.get("invitation_id") == invitation_id and existing.get("email") == normalized and existing.get("user_id") == user_id and existing.get("player_id") == player_id:
+                # Publish only a detached internal copy.
+                result.update(existing)
+                # Leave the durable reservation unchanged.
+                return state
+            # Reject a different saga holding either the mailbox or deterministic identifiers.
+            if existing.get("email") == normalized or existing.get("invitation_id") == invitation_id or existing.get("user_id") == user_id or existing.get("player_id") == player_id:
+                # Prevent overlapping enrollment ownership.
+                raise ConflictError("invited identity reservation conflicts with existing state")
+        # Build the account-free reservation row with no password or bearer material.
+        reservation = {"invitation_id": invitation_id, "email": normalized, "user_id": user_id, "player_id": player_id, "expires_at": expires_at, "created_at": utc_now()}
+        # Append the reservation inside the same uniqueness decision.
+        reservations.append(reservation)
+        # Publish only the successfully committed metadata to the caller.
+        result.update(reservation)
+        # Return the complete identity document.
+        return state
+    # Persist the account-free reservation through the provider transaction.
+    update_json(USERS_PATH, reserve, default_users)
+    # Return the internal reservation used by the provisioning saga.
+    return result
+
+# Release one invitation reservation only while no canonical invited account exists. (INVITE-003)
+def release_invited_identity(invitation_id: str) -> bool:
+    # Track whether one reservation was removed.
+    result = {"released": False}
+    # Remove the exact account-free reservation atomically.
+    def release(state: dict) -> dict:
+        # Reject malformed user state rather than deleting recoverable identity data.
+        if not isinstance(state, dict) or not isinstance(state.get("users"), list):
+            # Preserve the original document for operator recovery.
+            raise RuntimeError("Authentication user storage is malformed")
+        # Keep a reservation once a canonical account references the same invitation.
+        if any(stored.get("invitation_id") == invitation_id for stored in state["users"]):
+            # Return unchanged state because the provisioning saga owns cleanup.
+            return state
+        # Resolve the compatible reservation collection.
+        reservations = state.setdefault("reservations", [])
+        # Remove only the exact invitation reservation.
+        retained = [reservation for reservation in reservations if reservation.get("invitation_id") != invitation_id]
+        # Publish whether the collection changed.
+        result["released"] = len(retained) != len(reservations)
+        # Store the retained reservation collection.
+        state["reservations"] = retained
+        # Return the complete identity document.
+        return state
+    # Publish the release through the atomic document boundary.
+    update_json(USERS_PATH, release, default_users)
+    # Return whether an account-free reservation changed.
+    return result["released"]
+
+# Provision or resume one invited local account after its token has been consumed. (INVITE-003)
+def provision_invited_user(email: str, password: str, display_name: str, locale: str, terms_version: str, invitation_id: str, user_id: str, player_id: str) -> dict:
+    # Normalize and validate all recipient-selected identity fields before persistence.
+    normalized = normalize_email(email)
+    # Enforce the dedicated enrollment password policy before hashing.
+    validate_enrollment_password(password)
+    # Normalize the bounded visible display name with a mailbox-local fallback.
+    label = str(display_name or "").strip()[:80] or normalized.split("@", 1)[0]
+    # Restrict enrollment locale to the two translated restricted-preview surfaces.
+    accepted_locale = locale if locale in ("en-US", "ru-RU") else "en-US"
+    # Capture one provisioning instant used by the first successful attempt.
+    now = utc_now()
+    # Hash the chosen password before the identity transaction and never persist the raw value.
+    password_hash = hash_password(password)
+    # Publish the durable identity selected by the transaction.
+    result = {}
+    # Create or replay the provisioning identity atomically.
+    def provision(state: dict) -> dict:
+        # Reject malformed user state rather than replacing security-sensitive data.
+        if not isinstance(state, dict) or not isinstance(state.get("users"), list):
+            # Preserve the original document for operator recovery.
+            raise RuntimeError("Authentication user storage is malformed")
+        # Find an idempotent prior provisioning attempt for this invitation.
+        existing = next((stored for stored in state["users"] if stored.get("invitation_id") == invitation_id), None)
+        # Validate and replay the exact prior identity when it exists.
+        if existing is not None:
+            # Reject changed identity bindings or password meaning on a reused saga.
+            if existing.get("email") != normalized or existing.get("user_id") != user_id or existing.get("player_id") != player_id or not verify_password(password, existing.get("password_hash", "")):
+                # Keep the existing account unchanged and fail recovery closed.
+                raise ConflictError("invited identity replay conflicts with existing state")
+            # Publish the compatible existing identity.
+            result.update(existing)
+            # Leave durable state unchanged until final activation below.
+            return state
+        # Reject any unrelated canonical account claiming the invited mailbox.
+        if any(stored.get("email") == normalized for stored in state["users"]):
+            # Preserve the existing account and require operator resolution.
+            raise ConflictError("invited identity conflicts with an existing account")
+        # Require the exact account-free reservation established before token consumption.
+        reservation = next((reserved for reserved in state.setdefault("reservations", []) if reserved.get("invitation_id") == invitation_id and reserved.get("email") == normalized and reserved.get("user_id") == user_id and reserved.get("player_id") == player_id), None)
+        # Fail closed when the recovery boundary is absent or changed.
+        if reservation is None:
+            # Do not create an unreserved account from caller-owned identifiers.
+            raise ConflictError("invited identity reservation is unavailable")
+        # Build an inactive provisioning identity only after successful token consumption.
+        user = {"user_id": user_id, "email": normalized, "username": normalized, "display_name": label, "role": "player", "roles": ["player"], "status": "provisioning", "player_id": player_id, "password_hash": password_hash, "terms_required": False, "terms_accepted_at": now, "terms_accepted_version": terms_version, "terms_acceptance_source": "invitation_redemption", "locale": accepted_locale, "language": accepted_locale, "created_at": now, "updated_at": now, "identity_provider": "local", "invitation_id": invitation_id}
+        # Append the recoverable inactive identity.
+        state["users"].append(user)
+        # Publish the first provisioning result.
+        result.update(user)
+        # Return the complete identity document.
+        return state
+    # Persist or replay the inactive identity under the email reservation.
+    update_json(USERS_PATH, provision, default_users)
+    # Create or replay the deterministic wallet after the inactive identity is durable.
+    players.ensure_invited_player(player_id, label)
+    # Activate the identity and release its reservation in one user-document mutation.
+    def activate(state: dict) -> dict:
+        # Reject malformed state before account activation.
+        if not isinstance(state, dict) or not isinstance(state.get("users"), list):
+            # Preserve the original document for recovery.
+            raise RuntimeError("Authentication user storage is malformed")
+        # Find the exact invited identity to activate.
+        user = next((stored for stored in state["users"] if stored.get("invitation_id") == invitation_id and stored.get("user_id") == user_id), None)
+        # Refuse to activate an absent or mismatched identity.
+        if user is None or user.get("email") != normalized or user.get("player_id") != player_id:
+            # Preserve every existing account and wallet binding.
+            raise ConflictError("invited identity activation is unavailable")
+        # Transition the recoverable identity to an active local account.
+        user["status"] = "active"
+        # Refresh the lifecycle timestamp on first activation or recovery replay.
+        user["updated_at"] = utc_now()
+        # Remove the account-free reservation now that canonical uniqueness is owned by the user row.
+        state["reservations"] = [reserved for reserved in state.setdefault("reservations", []) if reserved.get("invitation_id") != invitation_id]
+        # Publish the active identity to the caller.
+        result.clear()
+        # Copy the complete active identity for the internal saga.
+        result.update(user)
+        # Return the complete identity document.
+        return state
+    # Commit activation and reservation cleanup atomically.
+    update_json(USERS_PATH, activate, default_users)
+    # Return the durable active local account.
+    return result
 
 # Report whether an identity record is a disposable guest-trial principal. (issue #317)
 def is_guest(user: dict) -> bool:

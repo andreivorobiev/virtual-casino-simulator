@@ -1,5 +1,7 @@
 # Production application service
 
+Private invitation enrollment remains disabled by default and is governed by [the invitation enrollment runbook](invitation_enrollment.md). Repository merge does not authorize live enrollment, mail/provider release, deployment, or public signup.
+
 Requirement `CORE-023` defines the repository-side production process for the restricted-preview topology. This packet does not install, enable, start, or expose any host service.
 
 ## Supported topology

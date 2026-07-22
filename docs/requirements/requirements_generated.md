@@ -6,14 +6,14 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.41.0
-- core: 9.16.0
+- application: 9.42.6
+- core: 9.17.1
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.0
 - autoplay: 1.1.3
 - audio: 9.1.1
-- admin: 1.8.0
+- admin: 1.9.1
 - operations: 1.0.0
 - roulette: 9.4.6
 - slots: 9.1.4
@@ -45,10 +45,10 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.1
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.50.9
-- docs: 1.50.2
-- contracts: 1.36.0
-- tooling: 1.17.0
+- tests: 1.51.9
+- docs: 1.51.0
+- contracts: 1.37.0
+- tooling: 1.18.0
 - commenting_policy: 1.0.0
 
 ## Requirements
@@ -723,4 +723,11 @@ Historical source baseline: 9.1.0
 - **MAIL-005** (Application) - PASS: Every authorized purpose has matching en-US and ru-RU subjects plus plain-text and semantic HTML alternatives whose action link has meaningful text and whose fixed content is safely escaped.
 - **MAIL-006** (Docs) - PASS: The transactional-mail runbook documents disabled defaults, separate release authority, sender/domain and SPF/DKIM/DMARC posture, canonical-origin and OAuth callback coordination, domain-move revalidation, bounded smoke evidence, rollback, suppression review, and the prohibition on treating repository merge as live authorization.
 - **TEST-090** (Tests) - PASS: Provider-free unit and API tests prove dual-gate inaccessibility, raw-value exclusion, public digest-key hardening, atomic caller idempotency, changed-meaning conflict, bounded retry, ambiguous-result freezing, rate limits, suppression, retention, malformed-state preservation, bilingual templates, Admin-only contract shape, absent consumer routes, and real MySQL cross-process single-claim behavior; exact-head browser evidence covers disabled, misconfigured, release-held, and suppression-summary states in en-US and ru-RU at all four governed viewports.
+- **INVITE-001** (Admin) - PASS: Authenticated Admins can list masked invitation lifecycle records and perform caller-idempotent create, resend, revoke, and fixed-policy cleanup actions through additive v2 routes; actor and recipient rate limits, resend cooldowns, fixed-reason audit history, and bounded retention apply without returning raw recipients, bearers, credentials, or tokened links.
+- **INVITE-002** (Core) - PASS: Invitation issuance and public redemption are independently disabled by default and compose only the purpose-bound one-time-token and transactional-mail foundations; provider delivery additionally requires the mail feature and network-release gates, and repository merge grants no live mail, enrollment, provider, DNS, deployment, or public-signup authority.
+- **INVITE-003** (Core) - PASS: Private invitation redemption validates the invited mailbox, canonical strong password policy, supported locale, explicit current terms version, and caller idempotency before consuming a bearer; an account-free uniqueness reservation and recoverable claim-consume-inactive-user-wallet-activation-finalization saga converge on one active local account and one ledger-backed fake-token wallet across JSON and MySQL processes, while all public failures share one generic response.
+- **INVITE-004** (Contracts) - PASS: The frozen /api/v1 surface publishes no invitation route; exact Admin lifecycle and public redemption requests, responses, generic errors, security boundaries, and disabled authority are defined additively in invitations.v2 and a checked compatibility policy.
+- **INVITE-005** (Application) - PASS: Admin invitation readiness, empty, pending, redeemed, and error states plus the account-free redemption form, explicit terms, keyboard focus, generic error, and terminal success return are accessible and localized in en-US and ru-RU without raw recipient or bearer evidence at desktop-primary, desktop-compact, tablet, mobile, reduced-motion, and 200-percent zoom states.
+- **INVITE-006** (Docs) - PASS: The invitation runbook documents disabled defaults, separate live authority, private-recipient approval, current terms and password policy, rate/cooldown/retention behavior, recovery states, privacy-safe audit, JSON/MySQL operational checks, rollback, and the prohibition on public signup or provider/deployment changes from repository merge.
+- **TEST-091** (Tests) - PASS: Provider-free service and API tests prove disabled defaults, privacy-safe projections, current terms and password enforcement, caller-idempotent token consumption, post-consumption recovery, malformed-state preservation, frozen-v1 compatibility, and independent JSON-process convergence; disposable MySQL CI races claim, consume, account, wallet, and finalization across independent processes; exact-head browser evidence covers every invitation/Admin locale, state, and governed viewport.
 - **TEST-092** (Tests) - PASS: An exact-source browser qualification executes exactly 50,000 completed UI cycles across every catalog game, assigns at least 1,666 cycles to each game, exercises every eligible game control at least 100 times or records an approved ineligible classification, captures all four governed viewports for human review, and rejects unexplained failures, incomplete ranges, incomplete declared non-control stages, source drift, or cleanup residue.

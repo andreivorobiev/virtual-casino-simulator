@@ -275,7 +275,7 @@ def run_storage_tests(include_live=False, include_migration_live=False):
     # Execute the real-service persistence and concurrent-ledger gate only when explicitly requested.
     if include_live:
         # Map the live integration case to the durable storage and MySQL requirements.
-        run_case('STORAGE-MYSQL-LIVE-001',['STORAGE-001','STORAGE-002','STORAGE-003','STORAGE-004','STORAGE-005','STORAGE-006','MYSQL-001','MYSQL-002','MYSQL-003','MYSQL-004','OTT-001','OTT-002','MAIL-002','MAIL-004','TEST-038','TEST-043','TEST-089','TEST-090'],storage_tests.run_mysql_live_provider_path)
+        run_case('STORAGE-MYSQL-LIVE-001',['STORAGE-001','STORAGE-002','STORAGE-003','STORAGE-004','STORAGE-005','STORAGE-006','MYSQL-001','MYSQL-002','MYSQL-003','MYSQL-004','OTT-001','OTT-002','MAIL-002','MAIL-004','INVITE-003','TEST-038','TEST-043','TEST-089','TEST-090','TEST-091'],storage_tests.run_mysql_live_provider_path)
     # Execute the newly created disposable MySQL 8.4 gate only when explicitly requested.
     if include_migration_live:
         # Import the service-dependent matrix only after the disposable selector is explicit.
@@ -752,8 +752,8 @@ def validate_guest_contracts():
     assert all(route in admin_contract for route in ('/admin/guest-trials:','/admin/guest-trials/sessions:','/admin/guest-trials/sessions/{analytics_id}:','/admin/guest-trials/cleanup:'))
     # Prove the full filters, journey, fake-token, action/error/latency, and bounded timeline schemas are published.
     assert all(term in admin_contract for term in ('GameFilter','CompletedFilter','ErrorCategoryFilter','SinceFilter','UntilFilter','account_cta_selected','ProductMetrics','fake_tokens_only','action_categories','error_categories','latency_buckets','maxItems: 80'))
-    # Prove the anonymous allowlist adds only the approved guest-create route.
-    assert security_contract['anonymous_routes']==['/api/v2/auth/login','/api/v2/auth/guest','/healthz']
+    # Preserve the exact anonymous allowlist including the separately approved disabled private redemption route.
+    assert security_contract['anonymous_routes']==['/api/v2/auth/login','/api/v2/auth/guest','/api/v2/auth/redeem-invitation','/healthz']
     # Prove launch stays held and retention/forbidden fields remain exact.
     assert guest_contract['public_launch_authorized'] is False and guest_contract['wallet']['add_tokens_allowed'] is False and guest_contract['lifecycle']['autoplay_stopped_on_end'] is True and guest_contract['entry']['max_game_actions_per_session']==1000 and guest_contract['entry']['max_concurrent_autoplay_sessions']==1 and guest_contract['admin_telemetry']['raw_retention_days']==30 and guest_contract['admin_telemetry']['aggregate_retention_days']==400 and guest_contract['admin_telemetry']['cleanup_failure_visible'] is True and guest_contract['admin_telemetry']['timeline_event_limit']==80 and guest_contract['admin_telemetry']['responsive_error_cohort_minimum']==5 and guest_contract['admin_telemetry']['export_allowed'] is False and 'browser_nonce' in guest_contract['admin_telemetry']['forbidden_fields']
     # Parse the exact digest freeze map.
@@ -936,6 +936,20 @@ def run_api_tests():
             raise AssertionError('transactional-mail infrastructure suite failed')
     # Record the complete listener-free transactional-mail platform proof.
     run_case('API-MAIL-001',['MAIL-001','MAIL-002','MAIL-003','MAIL-004','MAIL-005','MAIL-006','TEST-090'],run_transactional_mail_tests)
+    # Certify disabled invitation issuance, recoverable enrollment, privacy, and cross-process JSON behavior without a listener. (issue #332)
+    def run_invitation_tests():
+        # Import the focused invitation lifecycle suite lazily so API-only discovery remains lightweight.
+        from tests import invitation_tests
+        # Load exactly the invitation service acceptance class.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(invitation_tests.InvitationServiceTests)
+        # Run the focused service suite with the repository's quiet test runner.
+        result = unittest.TextTestRunner(verbosity=0).run(suite)
+        # Fail the mapped API gate when any lifecycle, privacy, or concurrency assertion fails.
+        if not result.wasSuccessful():
+            # Raise one bounded failure naming no recipient, bearer, or credential material.
+            raise AssertionError('invitation enrollment infrastructure suite failed')
+    # Record the listener-free invitation platform proof under its permanent requirements.
+    run_case('API-INVITE-001',['INVITE-001','INVITE-002','INVITE-003','INVITE-004','INVITE-005','INVITE-006','TEST-091'],run_invitation_tests)
     # Record listener-free disposable-principal lifecycle and browser-binding proof.
     run_case('API-GUEST-LIFECYCLE-001',['GUEST-001','GUEST-002','GUEST-006','TEST-080'],validate_guest_lifecycle)
     # Record listener-free telemetry privacy, milestones, and retention proof.
@@ -1092,6 +1106,28 @@ def run_api_tests():
                 missing=api(base,held_path,ok=False); assert missing['error']['code']=='NOT_FOUND'
         # Record Admin authorization, disabled gates, aggregate diagnostics, and absent consumer routes.
         run_case('API-MAIL-002',['MAIL-001','MAIL-002','MAIL-003','TEST-090'],mail_api)
+        # Define the disabled private invitation API and frozen-v1 compatibility proof. (issue #332)
+        def invitation_api():
+            # Reject anonymous access before any Admin invitation readiness or lifecycle metadata is returned.
+            anonymous=api(base,'/api/v2/admin/invitations',ok=False,auth_token=None); assert anonymous['error']['code']=='UNAUTHORIZED'
+            # Read the repository-default disabled diagnostic through the authenticated Admin session.
+            diagnostic=api(base,'/api/v2/admin/invitations')
+            # Require the exact secret-free list contract with both independent gates held.
+            assert set(diagnostic)=={'enabled','redemption_enabled','mail_status','recovery_required','invitations'} and diagnostic['enabled'] is False and diagnostic['redemption_enabled'] is False and diagnostic['invitations']==[]
+            # Reject issuance before token, mail, invitation, account, or wallet state can be allocated.
+            blocked=api(base,'/api/v2/admin/invitations','POST',{'recipient':'api-invitation@example.invalid','locale':'en-US','idempotency_key':'api-invitation-create-key-0001'},ok=False); assert blocked['error']['code']=='FORBIDDEN'
+            # Exercise a fully shaped disabled public request without an authenticated session.
+            redemption=api(base,'/api/v2/auth/redeem-invitation','POST',{'token':'synthetic-disabled-bearer','email':'api-invitation@example.invalid','password':'Synthetic-Invite-2026!','display_name':'Invited Player','locale':'en-US','terms_version':'private-beta-1','accepted':True,'idempotency_key':'api-invitation-redeem-key-0001'},ok=False,auth_token=None)
+            # Require one non-enumerating message and reason for the disabled request.
+            assert redemption['error']=={'code':'VALIDATION_ERROR','message':'invitation could not be redeemed','details':{'reason':'invitation_unavailable'}}
+            # Require an unsupported field to receive the same generic public envelope.
+            malformed=api(base,'/api/v2/auth/redeem-invitation','POST',{'unexpected':'value'},ok=False,auth_token=None); assert malformed['error']==redemption['error']
+            # Preserve every historical invitation-like v1 path as absent rather than adding a compatibility alias.
+            for frozen_path in ('/api/v1/admin/invitations','/api/v1/auth/redeem-invitation','/api/v1/auth/invitations'):
+                # Require the frozen router to expose no invitation surface.
+                missing=api(base,frozen_path,ok=False); assert missing['error']['code']=='NOT_FOUND'
+        # Record authorization, disabled gates, generic public errors, and frozen-v1 compatibility.
+        run_case('API-INVITE-002',['INVITE-001','INVITE-002','INVITE-003','INVITE-004','TEST-091'],invitation_api)
         # Define the auth_backend function used by this module.
         def auth_backend():
             # Set blocked to the value needed for the next operation.
@@ -6486,6 +6522,156 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.set_viewport_size({'width':1920,'height':1080}); page.evaluate("async () => { const i18n = await import('/core/i18n.js'); await i18n.setLocale('en-US', { persistLocal: false }); }"); page.get_by_test_id('admin-refresh').click(); page.get_by_test_id('admin-mail-disabled').wait_for(timeout=5000)
                 # Record dual-gate states, secret-free aggregate diagnostics, responsive containment, and evidence.
                 run_case('BR-ADMIN-MAIL-001',['MAIL-002','MAIL-003','MAIL-005','TEST-090'],admin_mail_browser)
+                # Define masked Admin invitation and account-free redemption evidence across every governed locale and viewport. (issue #332)
+                def invitation_browser():
+                    # Define all four visual-matrix viewports used by both invitation surfaces.
+                    viewports={'desktop_primary':{'width':1920,'height':1080},'desktop_compact':{'width':1440,'height':900},'tablet':{'width':1024,'height':900},'mobile':{'width':390,'height':844}}
+                    # Build one complete masked lifecycle row containing no raw recipient or credential material.
+                    pending_row={'invitation_id':'invite_visual_pending','recipient_hint':'i***@e***.invalid','status':'pending','delivery_status':'sent','locale':'en-US','created_at':'2032-02-03T04:05:06.000Z','updated_at':'2032-02-03T04:05:06.000Z','expires_at':'2032-02-10T04:05:06.000Z','redeemed_at':None,'revoked_at':None,'invited_by':'user_admin_visual','history':[]}
+                    # Derive one terminal row without adding recipient or account identifiers.
+                    redeemed_row={**pending_row,'invitation_id':'invite_visual_redeemed','status':'redeemed','redeemed_at':'2032-02-04T04:05:06.000Z','updated_at':'2032-02-04T04:05:06.000Z'}
+                    # Enumerate exact Admin matrix states and contract-shaped secret-free responses.
+                    scenarios=[
+                        ('invitations_disabled',{'enabled':False,'redemption_enabled':False,'mail_status':'disabled','recovery_required':0,'invitations':[]},'admin-invitations-disabled'),
+                        ('invitations_release_held',{'enabled':True,'redemption_enabled':False,'mail_status':'release_held','recovery_required':0,'invitations':[]},'admin-invitations-release-held'),
+                        ('invitations_empty',{'enabled':True,'redemption_enabled':True,'mail_status':'ready','recovery_required':0,'invitations':[]},'admin-invitations-ready'),
+                        ('invitations_pending',{'enabled':True,'redemption_enabled':True,'mail_status':'ready','recovery_required':0,'invitations':[pending_row]},'admin-invitations-ready'),
+                        ('invitations_redeemed',{'enabled':True,'redemption_enabled':True,'mail_status':'ready','recovery_required':0,'invitations':[redeemed_row]},'admin-invitations-ready'),
+                    ]
+                    # Exercise every Admin invitation state in both installed locales.
+                    for locale in ('en-US','ru-RU'):
+                        # Switch locale through the same runtime used by the visible Admin selector.
+                        page.evaluate("async locale => { const i18n = await import('/core/i18n.js'); await i18n.setLocale(locale, { persistLocal: false }); }",locale)
+                        # Render each exact contract response independently.
+                        for matrix_state,data,test_id in scenarios:
+                            # Wrap the safe data in the standard success envelope.
+                            payload={'ok':True,'data':data}
+                            # Intercept only the invitation list endpoint while all other Admin APIs remain real.
+                            page.route('**/api/v2/admin/invitations?limit=100',lambda route,_request,body=json.dumps(payload): route.fulfill(status=200,content_type='application/json',body=body))
+                            # Open the dedicated tab and wait for the exact readiness card.
+                            page.get_by_test_id('admin-tab-invitations').click(); page.get_by_test_id(test_id).wait_for(timeout=5000)
+                            # Require only masked recipient display and no secret-bearing URL or environment label.
+                            visible_invitation=page.get_by_test_id('admin-invitation-list').inner_text(); assert 'i***@e***.invalid' in visible_invitation or not data['invitations']; assert 'CASINO_' not in visible_invitation and 'token=' not in visible_invitation.lower() and '://' not in visible_invitation and 'invitee@' not in visible_invitation
+                            # Capture every state at all four governed viewports with containment checks.
+                            for viewport_id,viewport in viewports.items():
+                                # Resize to the exact matrix dimensions.
+                                page.set_viewport_size(viewport); page.wait_for_timeout(120)
+                                # Bring the lifecycle region into view inside the Admin scroll surface.
+                                page.get_by_test_id('admin-invitation-list').scroll_into_view_if_needed()
+                                # Measure page containment plus the bounded lifecycle region's accessibility and scroll ownership.
+                                invitation_geometry=page.evaluate("() => { const content=document.querySelector('.admin-content'); const card=document.querySelector('[data-testid=\"admin-invitation-list\"]'); const contentBox=content.getBoundingClientRect(); const cardBox=card.getBoundingClientRect(); const style=getComputedStyle(card); return { viewport:innerWidth, documentScrollWidth:document.documentElement.scrollWidth, contentClientWidth:content.clientWidth, contentScrollWidth:content.scrollWidth, contentBox:contentBox.toJSON(), cardClientWidth:card.clientWidth, cardScrollWidth:card.scrollWidth, cardBox:cardBox.toJSON(), overflowX:style.overflowX, role:card.getAttribute('role'), tabIndex:card.tabIndex, label:card.getAttribute('aria-label') }; }")
+                                # Require no page/content overflow while allowing only the named card to own an intentional table scroll.
+                                assert invitation_geometry['documentScrollWidth'] <= invitation_geometry['viewport'] + 1 and invitation_geometry['contentScrollWidth'] <= invitation_geometry['contentClientWidth'] + 1 and invitation_geometry['cardBox']['left'] >= invitation_geometry['contentBox']['left'] - 1 and invitation_geometry['cardBox']['right'] <= invitation_geometry['contentBox']['right'] + 1 and invitation_geometry['role']=='region' and invitation_geometry['tabIndex']==0 and invitation_geometry['label'] and (invitation_geometry['cardScrollWidth'] <= invitation_geometry['cardClientWidth'] + 1 or invitation_geometry['overflowX'] in ('auto','scroll')), {'state':matrix_state,'locale':locale,'viewport':viewport_id,'geometry':invitation_geometry}
+                                # Capture exact after-pass evidence for this state, locale, and viewport.
+                                game_evidence(f'after-pass-admin-{matrix_state}-{locale}-{viewport_id}.png','admin',[matrix_state],locale,viewport_id)
+                                # Prove the populated mobile lifecycle table responds to keyboard scrolling without widening the page.
+                                if matrix_state=='invitations_pending' and viewport_id=='mobile':
+                                    # Focus the semantic region before issuing native horizontal navigation keys.
+                                    page.get_by_test_id('admin-invitation-list').focus()
+                                    # Advance the native scroll position through keyboard input rather than script-only movement.
+                                    for _ in range(12): page.keyboard.press('ArrowRight')
+                                    # Wait for Chromium to commit the asynchronous native scroll after the keyboard events.
+                                    page.wait_for_function("() => document.querySelector('[data-testid=\"admin-invitation-list\"]')?.scrollLeft > 0",timeout=2000)
+                                    # Require visible focus, actual horizontal movement, and continued page containment.
+                                    assert page.evaluate("() => { const card=document.querySelector('[data-testid=\"admin-invitation-list\"]'); return document.activeElement===card && card.scrollLeft>0 && document.documentElement.scrollWidth<=innerWidth+1; }")
+                                    # Capture the explicit keyboard-scroll matrix state with masked data only.
+                                    game_evidence(f'after-pass-admin-invitations-keyboard-scroll-{locale}-mobile.png','admin',['invitations_keyboard_scroll'],locale,'mobile')
+                                    # Restore the region to its leading edge before later evidence.
+                                    page.evaluate("() => { document.querySelector('[data-testid=\"admin-invitation-list\"]').scrollLeft=0; }")
+                                    # Capture the complete mobile region under reduced-motion preference.
+                                    page.emulate_media(reduced_motion='reduce'); game_evidence(f'after-pass-admin-invitations-reduced-motion-{locale}-mobile.png','admin',['invitations_reduced_motion'],locale,'mobile'); page.emulate_media(reduced_motion='no-preference')
+                                    # Apply the repository's 200-percent content-zoom proxy and wait for responsive reflow.
+                                    page.set_viewport_size(viewports['desktop_primary']); page.evaluate("() => { document.body.style.zoom='200%'; document.body.style.width='100%'; }"); page.wait_for_timeout(100)
+                                    # Measure the zoomed shell, header, content, and intentional sidebar/list scroll regions.
+                                    zoom_geometry=page.evaluate("() => { const shell=document.querySelector('.admin-shell'); const sidebar=document.querySelector('.admin-sidebar'); const top=document.querySelector('.admin-top'); const content=document.querySelector('.admin-content'); const list=document.querySelector('[data-testid=\"admin-invitation-list\"]'); return { viewport:innerWidth, documentScrollWidth:document.documentElement.scrollWidth, bodyScrollWidth:document.body.scrollWidth, shellClientWidth:shell.clientWidth, shellScrollWidth:shell.scrollWidth, sidebarClientWidth:sidebar.clientWidth, sidebarScrollWidth:sidebar.scrollWidth, topClientWidth:top.clientWidth, topScrollWidth:top.scrollWidth, contentClientWidth:content.clientWidth, contentScrollWidth:content.scrollWidth, listClientWidth:list.clientWidth, listScrollWidth:list.scrollWidth }; }")
+                                    # Require the page, shell, header, and content to remain contained while named regions own any internal scroll.
+                                    assert zoom_geometry['documentScrollWidth']<=zoom_geometry['viewport']+1 and zoom_geometry['bodyScrollWidth']<=zoom_geometry['viewport']+1 and zoom_geometry['shellScrollWidth']<=zoom_geometry['shellClientWidth']+1 and zoom_geometry['topScrollWidth']<=zoom_geometry['topClientWidth']+1 and zoom_geometry['contentScrollWidth']<=zoom_geometry['contentClientWidth']+1 and zoom_geometry['sidebarScrollWidth']>=zoom_geometry['sidebarClientWidth'] and zoom_geometry['listScrollWidth']>=zoom_geometry['listClientWidth'] and zoom_geometry['topClientWidth']>=320 and zoom_geometry['contentClientWidth']>=320 and zoom_geometry['listClientWidth']>=280, {'locale':locale,'viewport':'desktop_primary','zoom':200,'geometry':zoom_geometry}
+                                    # Capture the explicit invitation zoom state before restoring normal scale.
+                                    game_evidence(f'after-pass-admin-invitations-zoom-200-{locale}-desktop_primary.png','admin',['invitations_zoom_200'],locale,'desktop_primary'); page.evaluate("() => { document.body.style.zoom=''; document.body.style.width=''; }")
+                            # Remove the focused response before the next state.
+                            page.unroute('**/api/v2/admin/invitations?limit=100')
+                        # Publish one standard API error to prove a bounded localized Admin recovery state.
+                        page.route('**/api/v2/admin/invitations?limit=100',lambda route: route.fulfill(status=200,content_type='application/json',body='{"ok":false,"error":{"code":"INVITATION_UNAVAILABLE","message":"Unavailable"}}'))
+                        # Open and wait for the shared localized Admin load-error card.
+                        page.get_by_test_id('admin-tab-invitations').click(); page.get_by_test_id('admin-load-error').wait_for(timeout=5000)
+                        # Capture the invitation error state at every governed viewport.
+                        for viewport_id,viewport in viewports.items(): page.set_viewport_size(viewport); page.wait_for_timeout(100); game_evidence(f'after-pass-admin-invitations-error-{locale}-{viewport_id}.png','admin',['invitations_error'],locale,viewport_id)
+                        # Remove the error shim before the next locale.
+                        page.unroute('**/api/v2/admin/invitations?limit=100')
+                    # Restore primary dimensions before leaving the Admin session.
+                    page.set_viewport_size(viewports['desktop_primary'])
+                    # Record diagnostics boundaries so only the controlled anonymous and generic-error responses can be consumed.
+                    invitation_console_index=len(console_errors); invitation_http_index=len(http_errors); invitation_page_error_index=len(page_errors)
+                    # Clear the authenticated cookie jar so the account-free public route is exercised honestly.
+                    page.context.clear_cookies()
+                    # Exercise the form, consent, generic error, focus, motion, and zoom states in both locales.
+                    for locale in ('en-US','ru-RU'):
+                        # Navigate with a synthetic bearer that is never rendered or written to evidence metadata.
+                        page.goto(base+'/enroll/invitation?token=synthetic-browser-invitation-bearer',wait_until='networkidle'); page.get_by_test_id('invitation-redemption').wait_for(timeout=5000)
+                        # Switch the visible form locale through its own governed selector.
+                        page.get_by_test_id('invitation-locale').select_option(locale); page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale",arg=locale)
+                        # Capture the empty account-free form and explicit unaccepted-terms state at every viewport.
+                        for viewport_id,viewport in viewports.items():
+                            # Resize before containment and evidence.
+                            page.set_viewport_size(viewport); page.wait_for_timeout(100)
+                            # Require no page-level horizontal overflow.
+                            assert page.evaluate("() => document.documentElement.scrollWidth <= window.innerWidth + 1")
+                            # Capture the empty form and explicit consent boundary together.
+                            game_evidence(f'after-pass-invitation-form-{locale}-{viewport_id}.png','invitation_redemption',['form','terms_unaccepted'],locale,viewport_id)
+                        # Focus the native submit control so keyboard evidence records the exact target.
+                        page.get_by_test_id('invitation-submit').focus(); assert page.evaluate("() => document.activeElement?.getAttribute('data-testid')")=='invitation-submit'
+                        # Capture the keyboard-focus state at primary desktop.
+                        page.set_viewport_size(viewports['desktop_primary']); game_evidence(f'after-pass-invitation-keyboard-focus-{locale}-desktop_primary.png','invitation_redemption',['keyboard_focus'],locale,'desktop_primary')
+                        # Enable reduced motion and capture the unchanged complete form.
+                        page.emulate_media(reduced_motion='reduce'); game_evidence(f'after-pass-invitation-reduced-motion-{locale}-desktop_primary.png','invitation_redemption',['reduced_motion'],locale,'desktop_primary'); page.emulate_media(reduced_motion='no-preference')
+                        # Apply the repository's 200-percent content-zoom proxy and wait for responsive form reflow.
+                        page.set_viewport_size(viewports['desktop_primary']); page.evaluate("() => { document.body.style.zoom='200%'; document.body.style.width='100%'; }"); page.wait_for_timeout(100)
+                        # Measure the page, panel, form, and every visible enrollment field at the exact zoom state.
+                        public_zoom_geometry=page.evaluate("() => { const panel=document.querySelector('[data-testid=\"invitation-redemption\"]'); const form=document.querySelector('#invitation-form'); const panelBox=panel.getBoundingClientRect(); const formBox=form.getBoundingClientRect(); const controls=[...form.querySelectorAll('input, select, button')].map(control => ({ testId:control.getAttribute('data-testid'), tag:control.tagName.toLowerCase(), clientWidth:control.clientWidth, scrollWidth:control.scrollWidth, box:control.getBoundingClientRect().toJSON() })); return { viewport:innerWidth, documentScrollWidth:document.documentElement.scrollWidth, panelClientWidth:panel.clientWidth, panelScrollWidth:panel.scrollWidth, panelBox:panelBox.toJSON(), formClientWidth:form.clientWidth, formScrollWidth:form.scrollWidth, formBox:formBox.toJSON(), controls }; }")
+                        # Require page/panel/form containment plus every native field fully painted inside the form.
+                        assert public_zoom_geometry['documentScrollWidth']<=public_zoom_geometry['viewport']+1 and public_zoom_geometry['panelScrollWidth']<=public_zoom_geometry['panelClientWidth']+1 and public_zoom_geometry['formScrollWidth']<=public_zoom_geometry['formClientWidth']+1 and public_zoom_geometry['panelBox']['left']>=-1 and public_zoom_geometry['panelBox']['right']<=public_zoom_geometry['viewport']+1 and public_zoom_geometry['panelClientWidth']>=320 and public_zoom_geometry['formClientWidth']>=280 and all(control['box']['left']>=public_zoom_geometry['formBox']['left']-1 and control['box']['right']<=public_zoom_geometry['formBox']['right']+1 and (control['tag']=='select' or control['scrollWidth']<=control['clientWidth']+1) for control in public_zoom_geometry['controls']), {'locale':locale,'viewport':'desktop_primary','zoom':200,'geometry':public_zoom_geometry}
+                        # Capture the explicit zoom acceptance state before restoring scale.
+                        game_evidence(f'after-pass-invitation-zoom-200-{locale}-desktop_primary.png','invitation_redemption',['zoom_200'],locale,'desktop_primary'); page.evaluate("() => { document.body.style.zoom=''; document.body.style.width=''; }")
+                        # Return to primary dimensions for the generic-error interaction.
+                        page.set_viewport_size(viewports['desktop_primary'])
+                        # Intercept only redemption with the exact generic contract error.
+                        page.route('**/api/v2/auth/redeem-invitation',lambda route: route.fulfill(status=400,content_type='application/json',body='{"ok":false,"error":{"code":"VALIDATION_ERROR","message":"invitation could not be redeemed","details":{"reason":"invitation_unavailable"}}}'))
+                        # Fill transient synthetic fields and explicit current terms before submit.
+                        page.get_by_test_id('invitation-email').fill('visual-invitation@example.invalid'); page.get_by_test_id('invitation-display-name').fill('Invited Player'); page.get_by_test_id('invitation-password').fill('Synthetic-Invite-2026!'); page.get_by_test_id('invitation-terms').check(); page.get_by_test_id('invitation-submit').click()
+                        # Wait for the localized generic message, then clear all raw transient fields before evidence.
+                        page.wait_for_function("() => document.querySelector('#invitation-message')?.textContent.trim().length > 0"); page.get_by_test_id('invitation-email').fill(''); page.get_by_test_id('invitation-display-name').fill(''); page.get_by_test_id('invitation-password').fill('')
+                        # Capture the non-enumerating error at every governed viewport.
+                        for viewport_id,viewport in viewports.items(): page.set_viewport_size(viewport); page.wait_for_timeout(100); game_evidence(f'after-pass-invitation-generic-error-{locale}-{viewport_id}.png','invitation_redemption',['generic_error'],locale,viewport_id)
+                        # Remove the generic-error shim before the terminal success response.
+                        page.unroute('**/api/v2/auth/redeem-invitation')
+                    # Exercise terminal success independently in both installed locales with identifier-free responses.
+                    for success_locale in ('en-US','ru-RU'):
+                        # Open a fresh synthetic form whose bearer is never written to screenshots or sidecars.
+                        page.goto(base+'/enroll/invitation?token=synthetic-browser-success-bearer',wait_until='networkidle'); page.get_by_test_id('invitation-redemption').wait_for(timeout=5000)
+                        # Select and verify the exact locale before submitting so evidence metadata matches rendered copy.
+                        page.get_by_test_id('invitation-locale').select_option(success_locale); page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale",arg=success_locale)
+                        # Intercept the terminal response without creating a real account in the browser copy.
+                        page.route('**/api/v2/auth/redeem-invitation',lambda route: route.fulfill(status=200,content_type='application/json',body='{"ok":true,"data":{"status":"enrolled"}}'))
+                        # Fill current terms and submit through the visible public form.
+                        page.get_by_test_id('invitation-email').fill('visual-success@example.invalid'); page.get_by_test_id('invitation-display-name').fill('Invited Player'); page.get_by_test_id('invitation-password').fill('Synthetic-Invite-2026!'); page.get_by_test_id('invitation-terms').check(); page.get_by_test_id('invitation-submit').click(); page.get_by_test_id('login-gate').wait_for(timeout=5000)
+                        # Require the bearer to be removed from browser history after success.
+                        assert page.url.rstrip('/')==base.rstrip('/') and 'token=' not in page.url
+                        # Capture the identifier-free success return at every governed viewport with truthful locale metadata.
+                        for viewport_id,viewport in viewports.items(): page.set_viewport_size(viewport); page.wait_for_timeout(100); game_evidence(f'after-pass-invitation-success-{success_locale}-{viewport_id}.png','invitation_redemption',['success_return_to_login'],success_locale,viewport_id)
+                        # Remove the focused success shim before the next locale or authenticated restoration.
+                        page.unroute('**/api/v2/auth/redeem-invitation')
+                    # Restore an authenticated Admin session for the following browser suites.
+                    page.request.post(base+'/api/v2/auth/login',data={'email':DEFAULT_AUTH_EMAIL,'password':DEFAULT_AUTH_PASSWORD}); page.goto(base+'/admin',wait_until='networkidle'); page.get_by_test_id('admin-tab-operations').wait_for(timeout=5000)
+                    # Retain only diagnostics emitted by the controlled account-free invitation journey.
+                    invitation_expected_console=console_errors[invitation_console_index:]; invitation_expected_http=http_errors[invitation_http_index:]; invitation_expected_page_errors=page_errors[invitation_page_error_index:]
+                    # Require exactly four anonymous session probes and two contract-shaped generic redemption rejections.
+                    assert len(invitation_expected_http)==6 and sum(value.startswith('401 ') and value.endswith('/api/v2/me') for value in invitation_expected_http)==4 and sum(value.startswith('400 ') and value.endswith('/api/v2/auth/redeem-invitation') for value in invitation_expected_http)==2, invitation_expected_http
+                    # Require the browser to report no JavaScript failure and only its standard failed-resource console lines.
+                    assert invitation_expected_page_errors==[] and len(invitation_expected_console)==len(invitation_expected_http) and all('Failed to load resource' in value for value in invitation_expected_console), invitation_expected_console+invitation_expected_page_errors
+                    # Remove only the verified controlled diagnostics so every unrelated HTTP or console failure remains fatal.
+                    del console_errors[invitation_console_index:]; del http_errors[invitation_http_index:]
+                # Record the complete Admin/public locale, viewport, state, privacy, keyboard, motion, zoom, and evidence matrix.
+                run_case('BR-INVITE-001',['INVITE-001','INVITE-002','INVITE-003','INVITE-005','TEST-091'],invitation_browser)
                 # Define real-backend Operations states, localization, responsive layout, and evidence.
                 def admin_operations_browser():
                     # Cache the isolated backend's primary storage document for reversible degradation.

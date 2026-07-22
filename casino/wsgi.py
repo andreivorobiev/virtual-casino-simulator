@@ -154,8 +154,8 @@ def _json_response(start_response, status: int, payload: dict, extra_headers=Non
 
 # Initialize provider-neutral state once during production worker boot.
 def _validate_restricted_preview_routes() -> None:
-    # Require the public-route allowlist to remain exactly login, the owner-approved account-free guest entry, plus sanitized liveness. (issue #317)
-    if auth.PUBLIC_API_PATHS != {"/api/v2/auth/login", "/api/v2/auth/guest", "/healthz"}:
+    # Require exactly login, guest entry, disabled private invitation redemption, and sanitized liveness. (issues #317, #332)
+    if auth.PUBLIC_API_PATHS != {"/api/v2/auth/login", "/api/v2/auth/guest", "/api/v2/auth/redeem-invitation", "/healthz"}:
         # Fail startup rather than allowing compatibility metadata to broaden public access.
         raise RuntimeError("Restricted preview public routes do not match the accepted allowlist")
     # Inspect registered method and pattern pairs without invoking any route.
@@ -204,7 +204,7 @@ def _authorize_request(method: str, path: str, body: dict, headers: dict, client
     context = {"headers": headers, "client": client, "response_headers": [], "secure_cookie": True, "include_csrf_cookie": True, "session_samesite": policy.same_site}
     # Leave only the centrally declared public API and liveness routes anonymous.
     if auth.is_public_api_path(path):
-        # Require exact Origin plus the bootstrap double-submit token for public login.
+        # Require exact Origin plus the bootstrap double-submit token for every anonymous mutation.
         validate_request_integrity(method, headers, policy)
         # Return the anonymous context before session lookup.
         return context
