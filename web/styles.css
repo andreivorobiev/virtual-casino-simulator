@@ -552,7 +552,9 @@ label {
   width: 100%;
   min-width: 0;
   max-width: 100%;
+  overflow-wrap: anywhere;
   white-space: normal;
+  word-break: break-word;
 }
 
 /* Reclaim fixed auth padding only when zoom or a genuinely narrow window leaves at most 220 CSS pixels. */
