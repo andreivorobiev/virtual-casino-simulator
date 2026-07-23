@@ -4699,11 +4699,12 @@
         "docs/release_artifacts.md",
         "contracts/compatibility/app-9.2.0.json",
         "contracts/compatibility/app-9.3.0.json",
-        "contracts/compatibility/app-9.4.0.json"
+        "contracts/compatibility/app-9.4.0.json",
+        "contracts/compatibility/app-9.5.0.json"
       ],
       "introduced_in": "9.2.0",
-      "changed_in": "9.4.0",
-      "notes": "Branch and ordinary manual candidates remain unpublished. The historical one-time owner-dispatched recovery created the retained v9.2.0 predecessor without overwrite or deletion paths. Normal v9.4.0 publication requires the verified retained v9.3.0 predecessor manifest and the protected release gates. Rollback is application-only and never reverses the MySQL schema."
+      "changed_in": "9.5.0",
+      "notes": "Branch and ordinary manual candidates remain unpublished. The historical one-time owner-dispatched recovery created the retained v9.2.0 predecessor without overwrite or deletion paths. Normal v9.5.0 publication requires the verified retained v9.4.0 predecessor manifest and the protected release gates. Rollback is application-only and never reverses the MySQL schema."
     },
     {
       "id": "BOT-001",

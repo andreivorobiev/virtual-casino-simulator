@@ -67,10 +67,10 @@ Verify existing assets without rebuilding:
 python scripts/package_app.py --verify-only --archive dist/virtual_casino_simulator_package.zip --manifest dist/release-manifest.json
 ```
 
-Build a canonical tagged v9.4.0 candidate with the retained immediate v9.3.0 rollback manifest:
+Build a canonical tagged v9.5.0 candidate with the retained immediate v9.4.0 rollback manifest:
 
 ```powershell
-python scripts/make_release.py --release-tag v9.4.0 --previous-manifest previous/release-manifest.json
+python scripts/make_release.py --release-tag v9.5.0 --previous-manifest previous/release-manifest.json
 ```
 
-For v9.4.0, `previous/release-manifest.json` must be the checksum-verified retained v9.3.0 release manifest. The resulting pointer authorizes application-artifact rollback only; it neither rolls back MySQL schema version 2 nor permits deployment, edge activation, or public exposure. The protected v9.2.0 predecessor-recovery path remains a historical, one-time bootstrap control and is not used for ordinary v9.4.0 publication.
+For v9.5.0, `previous/release-manifest.json` must be the checksum-verified retained v9.4.0 release manifest. The resulting pointer authorizes application-artifact rollback only; it neither rolls back MySQL schema version 2 nor permits deployment, edge activation, or public exposure. The protected v9.2.0 predecessor-recovery path remains a historical, one-time bootstrap control and is not used for ordinary v9.5.0 publication.
