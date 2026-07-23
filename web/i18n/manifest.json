@@ -1,47 +1,463 @@
 {
+  "schemaVersion": 2,
+  "registryVersion": "phase-0-locked-25",
   "defaultLocale": "en-US",
   "fallbackLocale": "en-US",
   "aliases": {
     "en": "en-US",
-    "ru": "ru-RU"
+    "zh": "zh-Hans",
+    "hi": "hi-IN",
+    "es": "es-419",
+    "ar": "ar",
+    "fr": "fr-FR",
+    "bn": "bn-BD",
+    "pt": "pt-BR",
+    "ru": "ru-RU",
+    "id": "id-ID",
+    "ur": "ur-PK",
+    "de": "de-DE",
+    "ja": "ja-JP",
+    "pcm": "pcm-NG",
+    "arz": "arz-EG",
+    "ta": "ta-IN",
+    "vi": "vi-VN",
+    "te": "te-IN",
+    "ha": "ha-NG",
+    "tr": "tr-TR",
+    "pnb": "pnb-PK",
+    "sw": "sw-KE",
+    "fil": "fil-PH",
+    "mr": "mr-IN",
+    "yue": "yue-Hant-HK"
   },
   "locales": [
     {
+      "rank": 1,
       "id": "en-US",
       "label": "English",
       "nativeLabel": "English",
       "dir": "ltr",
+      "script": "Latn",
+      "formatLocale": "en-US",
+      "fallbackChain": [
+        "en-US"
+      ],
+      "readiness": "ready",
+      "reviewStatus": "source-reviewed",
       "uiReady": true,
       "voiceReady": true
     },
     {
+      "rank": 2,
+      "id": "zh-Hans",
+      "label": "Mandarin Chinese (Simplified)",
+      "nativeLabel": "简体中文",
+      "dir": "ltr",
+      "script": "Hans",
+      "formatLocale": "zh-Hans",
+      "fallbackChain": [
+        "zh-Hans",
+        "en-US"
+      ],
+      "readiness": "metadata-only",
+      "reviewStatus": "not-started",
+      "uiReady": false,
+      "voiceReady": false
+    },
+    {
+      "rank": 3,
+      "id": "hi-IN",
+      "label": "Hindi",
+      "nativeLabel": "हिन्दी",
+      "dir": "ltr",
+      "script": "Deva",
+      "formatLocale": "hi-IN",
+      "fallbackChain": [
+        "hi-IN",
+        "en-US"
+      ],
+      "readiness": "metadata-only",
+      "reviewStatus": "not-started",
+      "uiReady": false,
+      "voiceReady": false
+    },
+    {
+      "rank": 4,
+      "id": "es-419",
+      "label": "Spanish (Latin America)",
+      "nativeLabel": "Español (Latinoamérica)",
+      "dir": "ltr",
+      "script": "Latn",
+      "formatLocale": "es-419",
+      "fallbackChain": [
+        "es-419",
+        "en-US"
+      ],
+      "readiness": "metadata-only",
+      "reviewStatus": "not-started",
+      "uiReady": false,
+      "voiceReady": false
+    },
+    {
+      "rank": 5,
+      "id": "ar",
+      "label": "Modern Standard Arabic",
+      "nativeLabel": "العربية",
+      "dir": "rtl",
+      "script": "Arab",
+      "formatLocale": "ar",
+      "fallbackChain": [
+        "ar",
+        "en-US"
+      ],
+      "readiness": "metadata-only",
+      "reviewStatus": "not-started",
+      "uiReady": false,
+      "voiceReady": false
+    },
+    {
+      "rank": 6,
+      "id": "fr-FR",
+      "label": "French",
+      "nativeLabel": "Français",
+      "dir": "ltr",
+      "script": "Latn",
+      "formatLocale": "fr-FR",
+      "fallbackChain": [
+        "fr-FR",
+        "en-US"
+      ],
+      "readiness": "metadata-only",
+      "reviewStatus": "not-started",
+      "uiReady": false,
+      "voiceReady": false
+    },
+    {
+      "rank": 7,
+      "id": "bn-BD",
+      "label": "Bengali",
+      "nativeLabel": "বাংলা",
+      "dir": "ltr",
+      "script": "Beng",
+      "formatLocale": "bn-BD",
+      "fallbackChain": [
+        "bn-BD",
+        "en-US"
+      ],
+      "readiness": "metadata-only",
+      "reviewStatus": "not-started",
+      "uiReady": false,
+      "voiceReady": false
+    },
+    {
+      "rank": 8,
+      "id": "pt-BR",
+      "label": "Portuguese (Brazil)",
+      "nativeLabel": "Português (Brasil)",
+      "dir": "ltr",
+      "script": "Latn",
+      "formatLocale": "pt-BR",
+      "fallbackChain": [
+        "pt-BR",
+        "en-US"
+      ],
+      "readiness": "metadata-only",
+      "reviewStatus": "not-started",
+      "uiReady": false,
+      "voiceReady": false
+    },
+    {
+      "rank": 9,
       "id": "ru-RU",
       "label": "Russian",
       "nativeLabel": "Русский",
       "dir": "ltr",
+      "script": "Cyrl",
+      "formatLocale": "ru-RU",
+      "fallbackChain": [
+        "ru-RU",
+        "en-US"
+      ],
+      "readiness": "ready",
+      "reviewStatus": "human-reviewed",
       "uiReady": true,
       "voiceReady": false
+    },
+    {
+      "rank": 10,
+      "id": "id-ID",
+      "label": "Indonesian",
+      "nativeLabel": "Bahasa Indonesia",
+      "dir": "ltr",
+      "script": "Latn",
+      "formatLocale": "id-ID",
+      "fallbackChain": [
+        "id-ID",
+        "en-US"
+      ],
+      "readiness": "metadata-only",
+      "reviewStatus": "not-started",
+      "uiReady": false,
+      "voiceReady": false
+    },
+    {
+      "rank": 11,
+      "id": "ur-PK",
+      "label": "Urdu",
+      "nativeLabel": "اردو",
+      "dir": "rtl",
+      "script": "Arab",
+      "formatLocale": "ur-PK",
+      "fallbackChain": [
+        "ur-PK",
+        "en-US"
+      ],
+      "readiness": "metadata-only",
+      "reviewStatus": "not-started",
+      "uiReady": false,
+      "voiceReady": false
+    },
+    {
+      "rank": 12,
+      "id": "de-DE",
+      "label": "German",
+      "nativeLabel": "Deutsch",
+      "dir": "ltr",
+      "script": "Latn",
+      "formatLocale": "de-DE",
+      "fallbackChain": [
+        "de-DE",
+        "en-US"
+      ],
+      "readiness": "metadata-only",
+      "reviewStatus": "not-started",
+      "uiReady": false,
+      "voiceReady": false
+    },
+    {
+      "rank": 13,
+      "id": "ja-JP",
+      "label": "Japanese",
+      "nativeLabel": "日本語",
+      "dir": "ltr",
+      "script": "Jpan",
+      "formatLocale": "ja-JP",
+      "fallbackChain": [
+        "ja-JP",
+        "en-US"
+      ],
+      "readiness": "metadata-only",
+      "reviewStatus": "not-started",
+      "uiReady": false,
+      "voiceReady": false
+    },
+    {
+      "rank": 14,
+      "id": "pcm-NG",
+      "label": "Nigerian Pidgin",
+      "nativeLabel": "Naijá",
+      "dir": "ltr",
+      "script": "Latn",
+      "formatLocale": "pcm-NG",
+      "fallbackChain": [
+        "pcm-NG",
+        "en-US"
+      ],
+      "readiness": "metadata-only",
+      "reviewStatus": "not-started",
+      "uiReady": false,
+      "voiceReady": false
+    },
+    {
+      "rank": 15,
+      "id": "arz-EG",
+      "label": "Egyptian Arabic",
+      "nativeLabel": "العامية المصرية",
+      "dir": "rtl",
+      "script": "Arab",
+      "formatLocale": "ar-EG",
+      "fallbackChain": [
+        "arz-EG",
+        "ar",
+        "en-US"
+      ],
+      "readiness": "metadata-only",
+      "reviewStatus": "not-started",
+      "uiReady": false,
+      "voiceReady": false
+    },
+    {
+      "rank": 16,
+      "id": "ta-IN",
+      "label": "Tamil",
+      "nativeLabel": "தமிழ்",
+      "dir": "ltr",
+      "script": "Taml",
+      "formatLocale": "ta-IN",
+      "fallbackChain": [
+        "ta-IN",
+        "en-US"
+      ],
+      "readiness": "metadata-only",
+      "reviewStatus": "not-started",
+      "uiReady": false,
+      "voiceReady": false
+    },
+    {
+      "rank": 17,
+      "id": "vi-VN",
+      "label": "Vietnamese",
+      "nativeLabel": "Tiếng Việt",
+      "dir": "ltr",
+      "script": "Latn",
+      "formatLocale": "vi-VN",
+      "fallbackChain": [
+        "vi-VN",
+        "en-US"
+      ],
+      "readiness": "metadata-only",
+      "reviewStatus": "not-started",
+      "uiReady": false,
+      "voiceReady": false
+    },
+    {
+      "rank": 18,
+      "id": "te-IN",
+      "label": "Telugu",
+      "nativeLabel": "తెలుగు",
+      "dir": "ltr",
+      "script": "Telu",
+      "formatLocale": "te-IN",
+      "fallbackChain": [
+        "te-IN",
+        "en-US"
+      ],
+      "readiness": "metadata-only",
+      "reviewStatus": "not-started",
+      "uiReady": false,
+      "voiceReady": false
+    },
+    {
+      "rank": 19,
+      "id": "ha-NG",
+      "label": "Hausa",
+      "nativeLabel": "Hausa",
+      "dir": "ltr",
+      "script": "Latn",
+      "formatLocale": "ha-NG",
+      "fallbackChain": [
+        "ha-NG",
+        "en-US"
+      ],
+      "readiness": "metadata-only",
+      "reviewStatus": "not-started",
+      "uiReady": false,
+      "voiceReady": false
+    },
+    {
+      "rank": 20,
+      "id": "tr-TR",
+      "label": "Turkish",
+      "nativeLabel": "Türkçe",
+      "dir": "ltr",
+      "script": "Latn",
+      "formatLocale": "tr-TR",
+      "fallbackChain": [
+        "tr-TR",
+        "en-US"
+      ],
+      "readiness": "metadata-only",
+      "reviewStatus": "not-started",
+      "uiReady": false,
+      "voiceReady": false
+    },
+    {
+      "rank": 21,
+      "id": "pnb-PK",
+      "label": "Western Punjabi (Shahmukhi)",
+      "nativeLabel": "پنجابی",
+      "dir": "rtl",
+      "script": "Arab",
+      "formatLocale": "ur-PK",
+      "fallbackChain": [
+        "pnb-PK",
+        "ur-PK",
+        "en-US"
+      ],
+      "readiness": "metadata-only",
+      "reviewStatus": "not-started",
+      "uiReady": false,
+      "voiceReady": false
+    },
+    {
+      "rank": 22,
+      "id": "sw-KE",
+      "label": "Swahili",
+      "nativeLabel": "Kiswahili",
+      "dir": "ltr",
+      "script": "Latn",
+      "formatLocale": "sw-KE",
+      "fallbackChain": [
+        "sw-KE",
+        "en-US"
+      ],
+      "readiness": "metadata-only",
+      "reviewStatus": "not-started",
+      "uiReady": false,
+      "voiceReady": false
+    },
+    {
+      "rank": 23,
+      "id": "fil-PH",
+      "label": "Filipino",
+      "nativeLabel": "Filipino",
+      "dir": "ltr",
+      "script": "Latn",
+      "formatLocale": "fil-PH",
+      "fallbackChain": [
+        "fil-PH",
+        "en-US"
+      ],
+      "readiness": "metadata-only",
+      "reviewStatus": "not-started",
+      "uiReady": false,
+      "voiceReady": false
+    },
+    {
+      "rank": 24,
+      "id": "mr-IN",
+      "label": "Marathi",
+      "nativeLabel": "मराठी",
+      "dir": "ltr",
+      "script": "Deva",
+      "formatLocale": "mr-IN",
+      "fallbackChain": [
+        "mr-IN",
+        "en-US"
+      ],
+      "readiness": "metadata-only",
+      "reviewStatus": "not-started",
+      "uiReady": false,
+      "voiceReady": false
+    },
+    {
+      "rank": 25,
+      "id": "yue-Hant-HK",
+      "label": "Cantonese (Traditional, Hong Kong)",
+      "nativeLabel": "廣東話（香港繁體）",
+      "dir": "ltr",
+      "script": "Hant",
+      "formatLocale": "yue-Hant-HK",
+      "fallbackChain": [
+        "yue-Hant-HK",
+        "zh-Hans",
+        "en-US"
+      ],
+      "readiness": "metadata-only",
+      "reviewStatus": "not-started",
+      "uiReady": false,
+      "voiceReady": false
     }
-  ],
-  "plannedLocales": [
-    "es-ES",
-    "zh-CN",
-    "hi-IN",
-    "ar-SA",
-    "pt-BR",
-    "bn-BD",
-    "fr-FR",
-    "de-DE",
-    "ja-JP",
-    "ko-KR",
-    "it-IT",
-    "tr-TR",
-    "vi-VN",
-    "pl-PL",
-    "nl-NL",
-    "sv-SE",
-    "th-TH",
-    "id-ID"
   ],
   "domains": [
     "common",
@@ -49,12 +465,6 @@
     "admin",
     "feedback",
     "core/autoplay",
-    "core/bots",
-    "games/roulette",
-    "games/slots",
-    "games/keno",
-    "games/bingo",
-    "games/blackjack",
-    "games/baccarat"
+    "core/bots"
   ]
 }

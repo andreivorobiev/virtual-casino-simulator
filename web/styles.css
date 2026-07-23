@@ -2952,6 +2952,18 @@ h3 {
     grid-template-columns: 1fr;
   }
 
+  /* Stack formatter controls before long native locale labels can widen the governed phone viewport. */
+  [data-testid="admin-localization-foundation"] .locale-settings-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Bound native selects to the localization card even when the selected label has a long intrinsic width. */
+  [data-testid="admin-localization-foundation"] select {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
   /* Stack the invitation creation form before native input minimums can widen the page. */
   [data-testid="admin-invitation-create"] .grid3 {
     grid-template-columns: 1fr;

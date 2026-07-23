@@ -9573,6 +9573,54 @@
       "notes": "The feedback domain is loaded by both the player shell and Admin application."
     },
     {
+      "id": "I18N-006",
+      "module": "Application",
+      "description": "The Phase 0 localization registry preserves the owner-locked order of 25 translation identities with native labels, direction, script, deterministic formatter locale, fallback chain, resource readiness, and review state while exposing only complete resource packs as selectable interface locales.",
+      "status": "PASS",
+      "api_tests": ["API-I18N-FOUNDATION-001"],
+      "browser_tests": ["BR-I18N-FOUNDATION-001"],
+      "implementation_files": ["web/i18n/manifest.json", "web/core/i18n.js", "web/admin.js", "docs/localization_foundation.md"],
+      "introduced_in": "issue-128-phase-0-localization-foundation",
+      "changed_in": "issue-128-phase-0-localization-foundation",
+      "notes": "Only en-US and ru-RU are ready in Phase 0. Metadata-only identities are never presented as translated or linguistically certified."
+    },
+    {
+      "id": "I18N-007",
+      "module": "Application",
+      "description": "Locale selection and browser-local persistence use ready resource packs, planned identities fall back safely without changing the document language or direction, formatter choices use declared browser-supported identities, and game translation domains are registered from the live catalog rather than a static game allowlist.",
+      "status": "PASS",
+      "api_tests": ["API-I18N-FOUNDATION-001"],
+      "browser_tests": ["BR-I18N-FOUNDATION-001"],
+      "implementation_files": ["web/core/i18n.js", "web/app.js", "web/admin.js", "tests/run_tests.py"],
+      "introduced_in": "issue-128-phase-0-localization-foundation",
+      "changed_in": "issue-128-phase-0-localization-foundation",
+      "notes": "The frozen v1 API is unchanged. Catalog discovery consumes existing additive game descriptors and does not load unvisited translation resources."
+    },
+    {
+      "id": "I18N-008",
+      "module": "Application",
+      "description": "Each future translation wave supplies complete catalog and representative-game copy, bidirectional and script-safe rendering, human review state, and real-backend visual acceptance for every newly ready locale before that locale becomes selectable.",
+      "status": "PLANNED",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": ["tests/visual/visual_matrix.json", "docs/localization_foundation.md"],
+      "introduced_in": "issue-128-phase-0-localization-foundation",
+      "changed_in": "issue-128-phase-0-localization-foundation",
+      "notes": "Phase 0 installs matrix hooks and readiness gates only; it does not claim the 23 held translations, linguistic certification, or future-wave evidence."
+    },
+    {
+      "id": "TEST-100",
+      "module": "Tests",
+      "description": "Localization foundation tests lock all 25 metadata identities and RTL membership, require installed-resource key and placeholder parity across catalog-discovered domains, validate every configured translation and formatter tag in the browser Intl runtime, reject selection of unfinished locales, prove browser-local persistence, and capture the Admin foundation in both installed locales at all four governed viewports.",
+      "status": "PASS",
+      "api_tests": ["API-I18N-FOUNDATION-001"],
+      "browser_tests": ["BR-I18N-FOUNDATION-001"],
+      "implementation_files": ["tests/run_tests.py", "tests/visual/visual_matrix.json"],
+      "introduced_in": "issue-128-phase-0-localization-foundation",
+      "changed_in": "issue-128-phase-0-localization-foundation",
+      "notes": "This collision-free ID was allocated after inspecting live drafts #356, #359, and #361. TEST-091, TEST-092, TEST-094, TEST-095, and TEST-096 retain their existing owners."
+    },
+    {
       "id": "UX-019",
       "module": "Application",
       "description": "Problem reporting and Admin triage remain keyboard-operable, focus-visible, scroll-contained, touch-sized, readable at 200 percent zoom, reduced-motion safe, and responsive across all governed viewports with paste, drop, file, preview-removal, retry, filter, draft, export, and deletion states.",
