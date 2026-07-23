@@ -127,8 +127,16 @@ class PasswordResetServiceTests(unittest.TestCase):
         with mock.patch("casino.core.password_reset.auth.set_user_password", side_effect=canonical_writer):
             # Require the same bearer, mailbox, and replacement to recover idempotently.
             self.assertEqual(self.service.complete(token, mailbox, "RecoverablePassw0rd!9")["status"], "reset")
+        # Read the recovered account after the retry commits.
+        recovered_user = auth.find_user_by_email(mailbox)
         # Require the recovered write to commit the intended credential.
-        self.assertTrue(auth.verify_password("RecoverablePassw0rd!9", auth.find_user_by_email(mailbox)["password_hash"]))
+        self.assertTrue(auth.verify_password("RecoverablePassw0rd!9", recovered_user["password_hash"]))
+        # Capture the committed authority version before replaying the exact successful completion.
+        committed_version = recovered_user["password_version"]
+        # Require an exact post-success replay to return the original minimal receipt.
+        self.assertEqual(self.service.complete(token, mailbox, "RecoverablePassw0rd!9"), {"status": "reset"})
+        # Require the exact replay not to rotate credentials or sessions a second time.
+        self.assertEqual(auth.find_user_by_email(mailbox)["password_version"], committed_version)
 
     # Require a consumed bearer not to authorize a different replacement during recovery retry.
     def test_completion_recovery_rejects_changed_password(self) -> None:

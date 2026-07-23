@@ -172,7 +172,7 @@ class PasswordResetService:
         # Consume the purpose-bound bearer atomically; every abuse path raises.
         try:
             # Require the bearer to match this mailbox, this purpose, and remain unconsumed.
-            consumed = self.token_service.consume(PURPOSE, token, subject=normalized, idempotency_key=self._completion_replay_key(normalized, str(token), str(new_password), str(idempotency_key or "")))
+            consumed = self.token_service.consume(PURPOSE, token, subject=normalized, idempotency_key=self._completion_replay_key(normalized, str(token), str(new_password), str(idempotency_key or "")), include_replay_state=True)
         # Convert expiry, replay, revocation, tampering, and subject mismatch into one generic error.
         except Exception:
             # Fail closed without revealing which condition rejected the bearer.
@@ -183,6 +183,12 @@ class PasswordResetService:
         if not user:
             # Fail closed with the single generic error.
             self._reject("no_recoverable_account")
+        # Return the original minimal success when an exact retry follows an already committed credential write.
+        if consumed.get("replayed") is True and auth.verify_password(str(new_password), str(user.get("password_hash") or "")):
+            # Record only opaque replay completion metadata without rotating credentials or sessions again.
+            self._audit("password_reset_completed", recipient_digest=self._digest(normalized), token_id=consumed.get("token_id"), user_id=user["user_id"], outcome="replayed")
+            # Return the same minimal success as the first committed completion.
+            return {"status": "reset"}
         # Replace the stored credential through the canonical identity boundary.
         auth.set_user_password(user["user_id"], str(new_password), require_reset=False)
         # Record the successful recovery without the bearer, mailbox, or credential.
