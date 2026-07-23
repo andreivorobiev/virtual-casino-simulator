@@ -890,6 +890,19 @@ def run_api_tests():
             raise AssertionError('restricted-preview edge preparation suite failed')
     # Record the listener-free edge templates, validator, observation, and rollback proof.
     run_case('EDGE-PREPARATION-001',['CORE-024','TOOL-005','TEST-050'],run_edge_gate_tests)
+    # Execute the complete Roulette motion-quality proof without opening a listener or a browser.
+    def run_roulette_motion_tests():
+        # Load only the focused rotor and ball motion class.
+        from tests import roulette_motion_tests
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(roulette_motion_tests.RouletteMotionTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused motion proof failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure text secret-safe.
+            raise AssertionError('roulette motion quality suite failed')
+    # Record the listener-free rotor aliasing, coast-down, landing, and reduced-motion proof.
+    run_case('UI-ROU-MOTION-001',['ROU-063','ROU-064','TEST-103'],run_roulette_motion_tests)
     # Discover and execute every focused restricted-preview security module without opening a listener.
     def run_restricted_preview_security_tests():
         # Load the package directory through unittest's standard test discovery.

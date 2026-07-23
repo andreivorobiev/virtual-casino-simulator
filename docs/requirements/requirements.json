@@ -9734,6 +9734,57 @@
       "introduced_in": "issue-334-password-reset",
       "changed_in": "issue-334-password-reset",
       "notes": "Issue #334 enumeration-safety and fail-closed proof."
+    },
+    {
+      "id": "ROU-063",
+      "module": "Roulette",
+      "description": "The Roulette rotor turns smoothly rather than strobing: its spin curve advances the pocket ring by less than one pocket between consecutive 60 Hz frames, never speeds up mid-spin, and comes to rest carrying a small fraction of its opening speed. The deceleration is carried by finely sampled keyframes under linear timing rather than by an easing function, so the sampled curve is the real motion profile.",
+      "status": "PASS",
+      "api_tests": [
+        "UI-ROU-MOTION-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "web/games/roulette.js",
+        "tests/roulette_motion_tests.py"
+      ],
+      "introduced_in": "issue-169-wheel-motion",
+      "changed_in": "issue-169-wheel-motion",
+      "notes": "Allocated for GitHub issue #169. A pocket ring is rotationally near-periodic, so a per-frame step of a pocket or more aliases and reads as jumping or reversing rather than turning."
+    },
+    {
+      "id": "ROU-064",
+      "module": "Roulette",
+      "description": "The rotor and the ball counter-rotate and each spin curve completes a whole number of turns, so neither element pops when its animation ends and the ball comes to rest on the authoritative pocket the ledger settled. Players who request reduced motion receive the authoritative pocket without any rotor, ball, or reveal-orbit animation.",
+      "status": "PASS",
+      "api_tests": [
+        "UI-ROU-MOTION-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "web/games/roulette.js",
+        "tests/roulette_motion_tests.py"
+      ],
+      "introduced_in": "issue-169-wheel-motion",
+      "changed_in": "issue-169-wheel-motion",
+      "notes": "Allocated for GitHub issue #169. The ball previously ended its animation 80 degrees short of a whole turn, so it visibly jumped as the animation released."
+    },
+    {
+      "id": "TEST-103",
+      "module": "Tests",
+      "description": "Listener-free evidence verifies Roulette motion quality directly from the tracked client keyframes: peak per-frame rotor advance stays under one pocket at 60 Hz, the curve only decelerates, the rotor comes to rest, rotor and ball counter-rotate, both curves end on a whole turn, linear timing keeps the sampled keyframes authoritative, the curve is finely sampled, and reduced motion disables both spin animations.",
+      "status": "PASS",
+      "api_tests": [
+        "UI-ROU-MOTION-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/roulette_motion_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-169-wheel-motion",
+      "changed_in": "issue-169-wheel-motion",
+      "notes": "Allocated for GitHub issue #169. Six of these eight assertions fail against the previous shipped curve, so the suite is a real regression guard rather than a restatement of the new values."
     }
   ]
 }
