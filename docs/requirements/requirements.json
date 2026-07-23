@@ -8792,6 +8792,22 @@
       "notes": "Issues #230/#231/#233/#250: the audited behavior is served by the shared resolveCellBet identity plumbing; this requirement pins it with an exhaustive per-type regression."
     },
     {
+      "id": "ROU-062",
+      "module": "Roulette",
+      "description": "Roulette uses one consistent escrow model for unspun wagers: placing an open bet debits the authoritative wallet immediately, and activating the visible Clear bets control refunds the exact pending stake before any spin or table-leave cleanup.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-ROU-REFUND-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-229-232-roulette-clear-refund-closeout",
+      "changed_in": "issue-229-232-roulette-clear-refund-closeout",
+      "notes": "This regression extends the existing leave-table refund proof to the visible Clear bets control and covers issue #229 and issue #232 without changing Roulette game rules."
+    },
+    {
       "id": "TEST-082",
       "module": "Tests",
       "description": "Browser evidence audits all 38 straight pockets, all six FAST BETS shortcuts including a repeat click, all six grid outside cells, every dozen and column cell, one representative of every inside/special marker type, and all eight racetrack/call controls; direct targets must add exactly one correctly labeled row, call controls must match every authoritative response component, and each audited group must finish with a clean refunded slip.",
@@ -9613,6 +9629,22 @@
       "introduced_in": "issue-182-pwa-foundation",
       "changed_in": "issue-182-pwa-foundation",
       "notes": "TEST-092 remains exclusively owned by formal 50,000-cycle qualification. Android/iOS metadata is checked as a browser foundation only; native install and relaunch evidence remains deferred with full issue #182."
+    },
+    {
+      "id": "TEST-096",
+      "module": "Tests",
+      "description": "The Roulette refund browser regression proves the logged deployment-closeout bugs for Clear bets and wager debit timing by placing a visible open wager, requiring the authoritative balance to debit on placement, activating the visible Clear bets control, and requiring the exact stake to be refunded before normal Roulette browser acceptance continues.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-ROU-REFUND-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-229-232-roulette-clear-refund-closeout",
+      "changed_in": "issue-229-232-roulette-clear-refund-closeout",
+      "notes": "TEST-094 is owned by problem reporting/Admin triage and TEST-095 is owned by the PWA foundation; this closeout uses a new permanent test requirement instead of reusing either ID."
     },
     {
       "id": "TEST-092",
