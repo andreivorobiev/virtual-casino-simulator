@@ -364,9 +364,9 @@ class TokenService:
         return receipt
 
     # Consume one bearer exactly once with mandatory purpose and subject binding.
-    def consume(self, purpose: str, token: str, *, subject: str | None = None, session_binding: str = "", subject_active: bool = True, idempotency_key: str = "") -> dict:
+    def consume(self, purpose: str, token: str, *, subject: str | None = None, session_binding: str = "", subject_active: bool = True, idempotency_key: str = "", include_replay_state: bool = False) -> dict:
         # Reject unknown purpose, empty bearer, absent subject, or malformed activity state uniformly.
-        if purpose not in PURPOSES or not str(token or "") or not self._normalize_subject(subject) or not isinstance(subject_active, bool):
+        if purpose not in PURPOSES or not str(token or "") or not self._normalize_subject(subject) or not isinstance(subject_active, bool) or not isinstance(include_replay_state, bool):
             # Preserve the generic public consumption envelope without scanning durable state.
             self._invalid_token()
         # Compute the presented bearer verifier once without retaining the raw token.
@@ -419,7 +419,7 @@ class TokenService:
                     # Publish the same opaque receipt only when every recovery binding matches.
                     if replay_matches:
                         # Return the original opaque identifiers without changing counters or timestamps.
-                        outcome.update({"token_id": row.get("token_id"), "purpose": purpose, "audit_id": row.get("audit_id")})
+                        outcome.update({"token_id": row.get("token_id"), "purpose": purpose, "audit_id": row.get("audit_id"), "replayed": True})
                     # Classify every other replay as consumed for sanitized internal audit.
                     else:
                         # Keep the one-time boundary for callers that omit or change the replay key.
@@ -479,7 +479,7 @@ class TokenService:
                 # Count the successful redemption as a bounded attempt.
                 row["attempts"] = attempts + 1
                 # Publish only opaque success fields to the caller-owned outcome.
-                outcome.update({"token_id": row.get("token_id"), "purpose": purpose, "audit_id": row.get("audit_id")})
+                outcome.update({"token_id": row.get("token_id"), "purpose": purpose, "audit_id": row.get("audit_id"), "replayed": False})
                 # Stop after the unique verifier is consumed.
                 break
             # Return the complete possibly mutated document for atomic persistence.
@@ -496,7 +496,13 @@ class TokenService:
         # Audit success using opaque identifiers only.
         self._audit("info", "one_time_token_consumed", token_id=outcome["token_id"], purpose=purpose, audit_id=outcome.get("audit_id"))
         # Return no bearer, subject, session, or digest material.
-        return {"token_id": outcome["token_id"], "purpose": purpose, "audit_id": outcome.get("audit_id")}
+        receipt = {"token_id": outcome["token_id"], "purpose": purpose, "audit_id": outcome.get("audit_id")}
+        # Expose replay classification only to explicitly approved recoverable state-machine consumers.
+        if include_replay_state:
+            # Add one non-secret boolean without changing the default public receipt contract.
+            receipt["replayed"] = bool(outcome.get("replayed"))
+        # Return the opaque receipt with the optional caller-approved replay classification.
+        return receipt
 
     # Revoke one active token by opaque identifier.
     def revoke(self, token_id: str) -> bool:
@@ -654,9 +660,9 @@ def reissue(purpose: str, subject: str, *, ttl_seconds: int | None = None, sessi
 
 
 # Consume one bearer exactly once with mandatory subject binding.
-def consume(purpose: str, token: str, *, subject: str | None = None, session_binding: str = "", subject_active: bool = True, idempotency_key: str = "") -> dict:
+def consume(purpose: str, token: str, *, subject: str | None = None, session_binding: str = "", subject_active: bool = True, idempotency_key: str = "", include_replay_state: bool = False) -> dict:
     # Delegate the atomic redemption decision to the production service.
-    return _service().consume(purpose, token, subject=subject, session_binding=session_binding, subject_active=subject_active, idempotency_key=idempotency_key)
+    return _service().consume(purpose, token, subject=subject, session_binding=session_binding, subject_active=subject_active, idempotency_key=idempotency_key, include_replay_state=include_replay_state)
 
 
 # Revoke one active token by opaque identifier.

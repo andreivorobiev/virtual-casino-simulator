@@ -9665,6 +9665,74 @@
       "introduced_in": "issue-227-ui-50000-ci-replacement",
       "changed_in": "issue-227-draw-poker-hold-serialization",
       "notes": "The formal qualification runs only on approved non-local GitHub Actions workers; local Playwright, Chromium, and heavy-load execution remain prohibited. Geometry inspection restores every ancestor and window scroll position so one viewport cannot mutate later evidence, route-owned essential-stage contracts cover non-control theater such as Crown and Anchor dice and result panels, Roulette wager/refund rerenders commit before the strict spinning-state observation while the primary shard retries real reachable Rebet states until the literal activation floor is met, and draw-poker workers wait for the complete five-position decision state, balance the hold-control deficit, and observe the persisted held rerender before Draw."
+    },
+    {
+      "id": "RESET-001",
+      "module": "Core",
+      "description": "Email password recovery is disabled by default and, when enabled, is enumeration-safe: initiation returns one identical acknowledgement for existing, unknown, malformed, inactive, credential-free, and rate-limited mailboxes, and mail is submitted only for a recoverable local account. No response, error, or audit event discloses account existence.",
+      "status": "PASS",
+      "api_tests": [
+        "API-RESET-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/password_reset.py",
+        "casino/config.py"
+      ],
+      "introduced_in": "issue-334-password-reset",
+      "changed_in": "issue-334-password-reset",
+      "notes": "Issue #334: composes the #331 token and #330 mail foundations; no password is ever emailed and recovery stays gated until an owner-authorized release."
+    },
+    {
+      "id": "RESET-002",
+      "module": "Core",
+      "description": "Recovery completion consumes a purpose-bound password_reset bearer atomically and only then replaces the stored credential, clears the forced-reset marker, and revokes every existing session for the account. An interrupted credential write is recoverable only by replaying the exact mailbox, bearer, replacement, and caller request; a changed replacement remains rejected, while an exact replay after success returns the original receipt without rotating credential authority again. Disabled recovery, malformed input, weak passwords, expired, replayed, revoked, tampered, wrong-subject bearers, and accounts that became inactive or credential-free all fail closed with one identical generic error; password policy is enforced before the bearer is spent so a weak password cannot burn a valid token.",
+      "status": "PASS",
+      "api_tests": [
+        "API-RESET-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/password_reset.py",
+        "casino/config.py"
+      ],
+      "introduced_in": "issue-334-password-reset",
+      "changed_in": "issue-334-password-reset",
+      "notes": "Issue #334 fail-closed completion boundary with explicit session revocation."
+    },
+    {
+      "id": "RESET-003",
+      "module": "Core",
+      "description": "Recovery never exposes sensitive material: no password, raw bearer, or recipient address appears in results, errors, or audit events, which carry only a keyed recipient digest, token id, user id, outcome, and reason; at most one recovery bearer is ever valid per mailbox because reissue revokes any previously delivered bearer, and a bearer whose delivery is rejected is revoked immediately so no undelivered link stays usable.",
+      "status": "PASS",
+      "api_tests": [
+        "API-RESET-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/password_reset.py",
+        "casino/config.py"
+      ],
+      "introduced_in": "issue-334-password-reset",
+      "changed_in": "issue-334-password-reset",
+      "notes": "Issue #334 data-minimization and anti-flood boundary."
+    },
+    {
+      "id": "TEST-097",
+      "module": "Tests",
+      "description": "Listener-free evidence verifies the recovery lifecycle: disabled-by-default acknowledgement with no delivery, byte-identical initiation responses across existing/unknown/malformed mailboxes with mail only for the recoverable account, credential replacement with forced-reset clearance and predecessor-session revocation, exact-input recovery after an interrupted post-consume credential write, no second credential rotation after an exact successful replay, changed-replacement rejection after interruption, replay and wrong-subject rejection, weak-password rejection without burning the bearer, credential-free accounts silently non-recoverable, and a rejected delivery leaving no usable bearer behind.",
+      "status": "PASS",
+      "api_tests": [
+        "API-RESET-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/password_reset_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-334-password-reset",
+      "changed_in": "issue-334-password-reset",
+      "notes": "Issue #334 enumeration-safety and fail-closed proof."
     }
   ]
 }
