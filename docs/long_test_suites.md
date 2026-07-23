@@ -52,6 +52,18 @@ Do not run parallel long suites against the same checkout. The runner creates a 
 
 `.github/workflows/long-suite-soak.yml` is a manual workflow. GitHub prompts for either Suite `300` or Suite `500`, then launches ten matrix shards with isolated disposable deployment copies. Shard `0` runs browser audio verification; shards `1` through `9` skip browser audio and focus on API/gameplay volume.
 
+## Focused Baccarat 2,000-Round Qualification
+
+Issue #265 has a stricter browser gate than the ordinary Baccarat smoke and the full-catalog allocation: one uninterrupted exact-source session must complete 2,000 consecutive settled-to-wager-ready coups through rendered controls. Acceptance evidence must come from one explicitly authorized `Browser Tests` workflow dispatch at the exact candidate head with `baccarat_sustained_2000=true` and `formal_ui_50000=false`. The hosted job invokes the immutable profile entry point:
+
+```powershell
+python tests/baccarat_sustained.py --output-root logs/test-runs/baccarat_sustained --progress-every 100
+```
+
+`BR-BAC-SUSTAINED-001` fixes the `BAC-026` / `TEST-099` profile at one disposable loopback runtime, one synthetic account, one browser context, exactly 2,000 Baccarat rounds, and one attempt per round. Every round places and clears a visible wager, places a fresh wager, activates the visible Deal control, and requires the next Deal control to become genuinely enabled after settlement. Any missing/replaced Deal target, wager-ready timeout, recovered retry, browser diagnostic, wallet/account isolation failure, incomplete governed screenshot inventory, or listener/runtime cleanup failure makes the report fail. Do not dispatch the hosted profile twice at one head; a failed run must be diagnosed and repaired before a separately authorized rerun.
+
+The terminal report is written under `logs/test-runs/baccarat_sustained/` and records the exact 40-character source commit, `BR-BAC-SUSTAINED-001`, `BAC-026`, `TEST-099`, exact Deal activation count, cycle range, failure counters, isolation, and cleanup status. The profile uses disposable synthetic data only; it must never target restricted preview, production MySQL, live accounts, public endpoints, paid resources, or provider infrastructure.
+
 ## Audio Verification
 
 Browser audio verification is enabled by default. It instruments `speechSynthesis` and `AudioContext` in Playwright, then verifies:

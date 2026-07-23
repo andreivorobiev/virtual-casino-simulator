@@ -9,11 +9,63 @@ from collections import Counter  # Aggregate deterministic per-game allocation t
 from pathlib import Path  # Address temporary shard reports with platform-neutral paths.
 from unittest import mock  # Inject immutable provenance when release tests intentionally omit Git metadata.
 
-from tests import ui_50000  # Exercise the public harness helpers without starting Playwright.
+from tests import baccarat_sustained, ui_50000  # Exercise both public qualification profiles without starting Playwright.
 
 
 # Prove TEST-092 allocation, control classification, and exact-source resume invariants.
 class UI50000HarnessTests(unittest.TestCase):
+    # Build one complete focused Baccarat aggregate for listener-free profile tests.
+    def passing_baccarat_sustained_report(self):
+        deal_signature = 'baccarat::button[data-testid="baccarat-deal"]'  # Match the production control namespace and public test identity.
+        shard = {"status": "PASS", "control_activated_counts": {deal_signature: baccarat_sustained.EXPECTED_ROUNDS}}  # Model one uninterrupted accepted browser shard.
+        return {"status": "PASS", "source_commit": "a" * 40, "requested_cycles": baccarat_sustained.EXPECTED_ROUNDS, "selected_games": ["baccarat"], "worker_count": 1, "attempted_cycles": baccarat_sustained.EXPECTED_ROUNDS, "completed_cycles": baccarat_sustained.EXPECTED_ROUNDS, "failed_cycles": 0, "failed_attempts": 0, "assignment": {"no_gaps_or_duplicates": True}, "game_counts": {"baccarat": {"quota": baccarat_sustained.EXPECTED_ROUNDS, "completed": baccarat_sustained.EXPECTED_ROUNDS, "failed": 0, "failed_attempts": 0, "status": "PASS"}}, "failure_counts": {}, "visual_failures": [], "browser_diagnostics": {"console_errors": {}, "page_errors": {}, "http_failures": {}}, "shards_pass": True, "isolation_ok": True, "listener_cleanup_ok": True, "visuals_complete": True, "shards": [shard]}  # Return every focused acceptance field.
+
+    # Prove the issue #265 profile cannot be shortened, sharded, resumed, or retried.
+    def test_baccarat_sustained_arguments_are_exact_and_retry_free(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:  # Own and clean the test-only output root.
+            arguments = baccarat_sustained.build_arguments(temporary_directory, progress_every=125, headed=True)  # Build the production profile without browser work.
+        self.assertEqual(arguments.total_cycles, 2_000)  # Require the exact issue-owned round count.
+        self.assertEqual(arguments.only_games, "baccarat")  # Prevent unrelated catalog work from diluting the gate.
+        self.assertEqual(arguments.parallel, 1)  # Require one uninterrupted browser session.
+        self.assertEqual(arguments.game_replicas, 1)  # Prevent aggregate fragments from satisfying the consecutive sequence.
+        self.assertEqual(arguments.max_attempts_per_cycle, 1)  # Reject a recovered Deal disappearance or timeout.
+        self.assertFalse(arguments.resume_shards)  # Refuse prior-head and interrupted evidence.
+        self.assertFalse(arguments.keep_deployments)  # Require deterministic runtime cleanup.
+        self.assertEqual(arguments.progress_every, 125)  # Preserve the only requested monitoring override.
+        self.assertTrue(arguments.headed)  # Preserve the explicit local-debug browser choice.
+
+    # Prove a clean 2,000-round aggregate receives the permanent focused identity.
+    def test_baccarat_sustained_accepts_only_complete_clean_report(self):
+        report = self.passing_baccarat_sustained_report()  # Build one complete listener-free aggregate.
+        errors = baccarat_sustained.stamp_report(report)  # Apply the production focused gate.
+        self.assertEqual(errors, [])  # Require every acceptance invariant to pass.
+        self.assertEqual(report["qualification"]["test_id"], "BR-BAC-SUSTAINED-001")  # Publish the stable browser-test identity.
+        self.assertEqual(report["qualification"]["requirements"], ["BAC-026", "TEST-099"])  # Bind the new permanent requirements exactly.
+        self.assertEqual(report["qualification"]["visible_deal_activations"], 2_000)  # Require one public Deal action per coup.
+        self.assertEqual(report["status"], "PASS")  # Keep the top-level aggregate aligned with the focused result.
+
+    # Prove one recovered failure or missing Deal activation makes the focused report red.
+    def test_baccarat_sustained_rejects_interrupted_sequence(self):
+        report = self.passing_baccarat_sustained_report()  # Start from the complete accepted aggregate.
+        report["failed_attempts"] = 1  # Model one Deal disappearance that the general harness might otherwise retry.
+        report["shards"][0]["control_activated_counts"] = {}  # Model a hidden shortcut around the rendered Deal control.
+        errors = baccarat_sustained.stamp_report(report)  # Apply the production focused gate.
+        self.assertIn("one or more Baccarat attempts failed", errors)  # Reject the interrupted sequence.
+        self.assertIn("visible Baccarat Deal activation count is not 2000", errors)  # Reject missing public-control proof.
+        self.assertEqual(report["qualification"]["status"], "FAIL")  # Keep focused evidence red.
+        self.assertEqual(report["status"], "FAIL")  # Keep the aggregate result red as well.
+
+    # Prove the hosted sustained qualification remains one explicit job isolated from the formal 50,000-cycle matrix.
+    def test_baccarat_sustained_workflow_is_single_opt_in_job(self):
+        workflow_path = ui_50000.ROOT / ".github" / "workflows" / "browser-tests.yml"  # Resolve the repository-owned hosted browser workflow.
+        workflow = workflow_path.read_text(encoding="utf-8")  # Read its declarative dispatch contract without launching a browser.
+        self.assertEqual(workflow.count("baccarat_sustained_2000:"), 2)  # Require exactly one input plus one job with the stable identity.
+        self.assertEqual(workflow.count("python tests/baccarat_sustained.py"), 1)  # Prevent duplicate heavy execution inside one dispatch.
+        sustained_job = workflow.split("  baccarat_sustained_2000:", 2)[2].split("  # Distribute the formal issue #227", 1)[0]  # Isolate only the focused hosted job.
+        self.assertIn("inputs.baccarat_sustained_2000 == true", sustained_job)  # Keep the expensive profile behind explicit authorization.
+        self.assertIn("baccarat-sustained-${{ github.sha }}", sustained_job)  # Bind the terminal artifact name to the exact source head.
+        self.assertNotIn("ui_50000.py", sustained_job)  # Prevent the focused dispatch from starting the unrelated 50,000-cycle controller.
+
     # Prove rotating paint is required without treating its intentionally clipped square bounds as stable stage geometry.
     def test_big_six_stage_contract_separates_paint_from_containment(self):
         contract = ui_50000.ESSENTIAL_STAGE_CONTRACTS["big_six_wheel"]  # Read the public harness contract used by every formal viewport.
