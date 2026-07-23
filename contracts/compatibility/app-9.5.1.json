@@ -1,6 +1,25 @@
 {
-  "application": "9.5.1",
+  "app_version": "9.5.1",
   "source_baseline": "9.1.0",
+  "api_compatibility_matrix": "contracts/compatibility/module-api-matrix.json",
+  "release_provenance_requirement": "TOOL-003",
+  "release_channel": "restricted-preview-private-invite",
+  "access_policy": {
+    "admission": "manual-invite",
+    "public_signup": "disabled",
+    "live_oauth": "disabled"
+  },
+  "predecessor": {
+    "app_version": "9.5.0",
+    "compatibility_record": "contracts/compatibility/app-9.5.0.json",
+    "required_artifact": "release-manifest.json"
+  },
+  "rollback": {
+    "scope": "application-only",
+    "database_rollback": "prohibited",
+    "mysql_expected_schema_version": 2,
+    "requires_retained_predecessor_manifest": true
+  },
   "modules": {
     "application": "9.46.2",
     "core": "9.19.2",
@@ -14,7 +33,7 @@
     "roulette": "9.4.7",
     "slots": "9.1.4",
     "blackjack": "9.1.3",
-    "baccarat": "9.1.3",
+    "baccarat": "9.1.2",
     "keno": "9.2.3",
     "bingo": "9.2.1",
     "multi_hand_video_poker": "1.0.1",
@@ -41,11 +60,11 @@
     "casino_holdem": "1.0.1",
     "joker_poker": "1.0.0",
     "texas_holdem_practice_table": "1.0.0",
-    "tests": "1.55.4",
-    "docs": "1.55.4",
+    "tests": "1.55.3",
+    "docs": "1.55.3",
     "contracts": "1.40.1",
-    "tooling": "1.19.1",
+    "tooling": "1.18.0",
     "commenting_policy": "1.0.0"
   },
-  "created_at": "2026-07-09T00:00:00.000000Z"
+  "notes": "Compatible patch release of the accepted protected-main trial-route restoration after v9.5.0; MySQL remains at schema version 2, rollback is application-only, and public signup, live OAuth, provider networking, deployment, and unrestricted public launch remain separately gated."
 }

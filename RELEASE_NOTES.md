@@ -1,4 +1,12 @@
-# Virtual Casino Simulator v9.5.0 Release Notes
+# Virtual Casino Simulator v9.5.1 Release Notes
+
+## Trial-route restoration patch release
+
+- Packages the accepted protected-main trial-route restoration fix as a distinct immutable patch release without including any active worker branch.
+- Keeps MySQL at schema version 2 and permits application-only rollback to the retained, checksum-verified v9.5.0 predecessor; database rollback remains prohibited.
+- Preserves manual-invite admission with invitation delivery, live OAuth and provider networking disabled, and does not authorize deployment, DNS, billing, public exposure, or issue #209 launch.
+
+## Prior v9.5.0 deployment-recovery release
 
 ## Compatible deployment-recovery release
 
