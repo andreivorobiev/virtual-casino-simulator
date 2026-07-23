@@ -1,4 +1,10 @@
-# Virtual Casino Simulator v9.4.0 Release Notes
+# Virtual Casino Simulator v9.5.0 Release Notes
+
+## Compatible deployment-recovery release
+
+- Packages the exact accepted protected-main application state as a distinct compatible release without changing product behavior or including any active worker branch.
+- Keeps MySQL at schema version 2 and permits application-only rollback to the retained, checksum-verified v9.4.0 predecessor; database rollback remains prohibited.
+- Preserves manual-invite admission with invitation delivery, live OAuth and provider networking disabled, and does not authorize deployment, DNS, billing, public exposure, or issue #209 launch.
 
 ## Unreleased repository addendum: manual problem reporting and Admin triage
 
