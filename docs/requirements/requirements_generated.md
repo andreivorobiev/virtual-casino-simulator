@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.46.0
+- application: 9.46.1
 - core: 9.19.2
 - ledger: 9.1.1
 - players: 9.1.0
@@ -45,10 +45,10 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.1
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.55.1
-- docs: 1.55.1
+- tests: 1.55.2
+- docs: 1.55.2
 - contracts: 1.40.0
-- tooling: 1.18.0
+- tooling: 1.19.0
 - commenting_policy: 1.0.0
 
 ## Requirements
@@ -751,3 +751,5 @@ Historical source baseline: 9.1.0
 - **RESET-002** (Core) - PASS: Recovery completion consumes a purpose-bound password_reset bearer atomically and only then replaces the stored credential, clears the forced-reset marker, and revokes every existing session for the account. An interrupted credential write is recoverable only by replaying the exact mailbox, bearer, replacement, and caller request; a changed replacement remains rejected, while an exact replay after success returns the original receipt without rotating credential authority again. Disabled recovery, malformed input, weak passwords, expired, replayed, revoked, tampered, wrong-subject bearers, and accounts that became inactive or credential-free all fail closed with one identical generic error; password policy is enforced before the bearer is spent so a weak password cannot burn a valid token.
 - **RESET-003** (Core) - PASS: Recovery never exposes sensitive material: no password, raw bearer, or recipient address appears in results, errors, or audit events, which carry only a keyed recipient digest, token id, user id, outcome, and reason; at most one recovery bearer is ever valid per mailbox because reissue revokes any previously delivered bearer, and a bearer whose delivery is rejected is revoked immediately so no undelivered link stays usable.
 - **TEST-097** (Tests) - PASS: Listener-free evidence verifies the recovery lifecycle: disabled-by-default acknowledgement with no delivery, byte-identical initiation responses across existing/unknown/malformed mailboxes with mail only for the recoverable account, credential replacement with forced-reset clearance and predecessor-session revocation, exact-input recovery after an interrupted post-consume credential write, no second credential rotation after an exact successful replay, changed-replacement rejection after interruption, replay and wrong-subject rejection, weak-password rejection without burning the bearer, credential-free accounts silently non-recoverable, and a rejected delivery leaving no usable bearer behind.
+- **TOOL-007** (Tooling) - PASS: Deployment tooling derives build provenance from the verified release manifest and writes exactly one non-secret CASINO_BUILD_SHA assignment atomically; any manifest whose recorded commit is not a full lowercase 40-character Git SHA is refused with a non-zero status and no write, and the tracked service unit sources the generated fragment after the operator secret file so a redeployment always exports the running commit.
+- **TEST-098** (Tests) - PASS: Listener-free evidence verifies deployment build provenance: a valid manifest yields exactly one pinned assignment accepted unchanged by the Operations sanitizer, short/uppercase/non-hexadecimal/absent commits fail closed without writing, an unreadable manifest leaves an earlier fragment byte-identical, a redeployment replaces rather than appends the superseded commit, and the tracked unit sources the generated fragment last.

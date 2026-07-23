@@ -44,6 +44,8 @@ from tests import mysql_migration_tests
 from tests import recovery_tests
 # Import listener-free edge policy and sanitized observation tests for the API validation run.
 from tests import edge_gate_tests
+# Import the focused deployment build-provenance suite.
+from tests import release_env_tests
 # Import focused non-finite validation and persistence tests for TEST-055.
 from tests import nonfinite_money_tests
 # Import exact-source 50,000-cycle harness proofs for TEST-092.
@@ -890,6 +892,18 @@ def run_api_tests():
             raise AssertionError('restricted-preview edge preparation suite failed')
     # Record the listener-free edge templates, validator, observation, and rollback proof.
     run_case('EDGE-PREPARATION-001',['CORE-024','TOOL-005','TEST-050'],run_edge_gate_tests)
+    # Execute the complete deployment build-provenance proof without writing any repository file.
+    def run_release_env_tests():
+        # Load only the focused deployment fragment class.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(release_env_tests.ReleaseEnvFragmentTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused provenance proof failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure text secret-safe.
+            raise AssertionError('deployment build provenance suite failed')
+    # Record the listener-free deployment provenance fragment and service-unit ordering proof.
+    run_case('DEPLOY-PROVENANCE-001',['TOOL-007','TEST-098'],run_release_env_tests)
     # Discover and execute every focused restricted-preview security module without opening a listener.
     def run_restricted_preview_security_tests():
         # Load the package directory through unittest's standard test discovery.

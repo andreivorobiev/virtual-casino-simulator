@@ -9733,6 +9733,42 @@
       "introduced_in": "issue-334-password-reset",
       "changed_in": "issue-334-password-reset",
       "notes": "Issue #334 enumeration-safety and fail-closed proof."
+    },
+    {
+      "id": "TOOL-007",
+      "module": "Tooling",
+      "description": "Deployment tooling derives build provenance from the verified release manifest and writes exactly one non-secret CASINO_BUILD_SHA assignment atomically; any manifest whose recorded commit is not a full lowercase 40-character Git SHA is refused with a non-zero status and no write, and the tracked service unit sources the generated fragment after the operator secret file so a redeployment always exports the running commit.",
+      "status": "PASS",
+      "api_tests": [
+        "DEPLOY-PROVENANCE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "scripts/write_release_env.py",
+        "deploy/systemd/casino.service",
+        "docs/production_service.md",
+        "tests/release_env_tests.py"
+      ],
+      "introduced_in": "issue-287-build-provenance",
+      "changed_in": "issue-287-build-provenance",
+      "notes": "Allocated for GitHub issue #287. The runtime still never invokes Git or inspects checkout paths; provenance arrives only as configuration. Anonymous liveness stays free of build metadata under OPS-001."
+    },
+    {
+      "id": "TEST-098",
+      "module": "Tests",
+      "description": "Listener-free evidence verifies deployment build provenance: a valid manifest yields exactly one pinned assignment accepted unchanged by the Operations sanitizer, short/uppercase/non-hexadecimal/absent commits fail closed without writing, an unreadable manifest leaves an earlier fragment byte-identical, a redeployment replaces rather than appends the superseded commit, and the tracked unit sources the generated fragment last.",
+      "status": "PASS",
+      "api_tests": [
+        "DEPLOY-PROVENANCE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/release_env_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-287-build-provenance",
+      "changed_in": "issue-287-build-provenance",
+      "notes": "Allocated for GitHub issue #287. Every fixture is written into an isolated temporary directory; no repository file and no listener is touched."
     }
   ]
 }
