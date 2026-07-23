@@ -37,7 +37,7 @@ from casino.core.state_store import ensure_dirs, migrate_from_v7_if_needed
 # Import required dependency so this module can bootstrap whichever storage provider is configured.
 from casino.core.storage import bootstrap_players, get_storage_provider
 # Import required dependency so this module can use its public functions or constants.
-from casino.core import logger, players, ledger, history, auth, feedback, guest_analytics, invitations
+from casino.core import logger, players, ledger, history, auth, feedback, guest_analytics, invitations, whats_new
 # Import required dependency so this module can use its public functions or constants.
 from casino.games.registry import catalog_summary, list_games, register_games
 # Import required dependency so this module can use its public functions or constants.
@@ -332,6 +332,20 @@ def build_router() -> Router:
     def current_user_accept_terms_alias(body, query, context):
         # Delegate the alias to the same canonical acceptance operation.
         return current_user_accept_terms(body, query, context)
+
+    # Register additive version-aware What's New eligibility reads. (TOUR-001, issue #165)
+    @router.get(r"/api/v2/me/whats-new")
+    # Return only curated localization keys for releases this session has not acknowledged.
+    def current_user_whats_new(body, query, context):
+        # Derive the subject from the session and publish no raw version key.
+        return whats_new.tour_for(context["user"])
+
+    # Register additive server-stamped tour dismissal. (TOUR-002, issue #165)
+    @router.post(r"/api/v2/me/whats-new/dismiss")
+    # Acknowledge the running release without trusting any caller-supplied version.
+    def dismiss_current_user_whats_new(body, query, context):
+        # Stamp the acknowledgement from the canonical application version.
+        return whats_new.dismiss(context["user"])
 
     # Attach the published current-user token credit endpoint.
     @router.post(r"/api/v2/me/tokens/add")

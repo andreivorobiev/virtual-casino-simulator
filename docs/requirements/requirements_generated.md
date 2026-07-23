@@ -6,8 +6,8 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.46.0
-- core: 9.19.2
+- application: 9.46.1
+- core: 9.19.3
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.0
@@ -45,8 +45,8 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.1
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.55.1
-- docs: 1.55.1
+- tests: 1.55.2
+- docs: 1.55.2
 - contracts: 1.40.0
 - tooling: 1.18.0
 - commenting_policy: 1.0.0
@@ -751,3 +751,6 @@ Historical source baseline: 9.1.0
 - **RESET-002** (Core) - PASS: Recovery completion consumes a purpose-bound password_reset bearer atomically and only then replaces the stored credential, clears the forced-reset marker, and revokes every existing session for the account. An interrupted credential write is recoverable only by replaying the exact mailbox, bearer, replacement, and caller request; a changed replacement remains rejected, while an exact replay after success returns the original receipt without rotating credential authority again. Disabled recovery, malformed input, weak passwords, expired, replayed, revoked, tampered, wrong-subject bearers, and accounts that became inactive or credential-free all fail closed with one identical generic error; password policy is enforced before the bearer is spent so a weak password cannot burn a valid token.
 - **RESET-003** (Core) - PASS: Recovery never exposes sensitive material: no password, raw bearer, or recipient address appears in results, errors, or audit events, which carry only a keyed recipient digest, token id, user id, outcome, and reason; at most one recovery bearer is ever valid per mailbox because reissue revokes any previously delivered bearer, and a bearer whose delivery is rejected is revoked immediately so no undelivered link stays usable.
 - **TEST-097** (Tests) - PASS: Listener-free evidence verifies the recovery lifecycle: disabled-by-default acknowledgement with no delivery, byte-identical initiation responses across existing/unknown/malformed mailboxes with mail only for the recoverable account, credential replacement with forced-reset clearance and predecessor-session revocation, exact-input recovery after an interrupted post-consume credential write, no second credential rotation after an exact successful replay, changed-replacement rejection after interruption, replay and wrong-subject rejection, weak-password rejection without burning the bearer, credential-free accounts silently non-recoverable, and a rejected delivery leaving no usable bearer behind.
+- **TOUR-001** (Core) - PASS: What's New tour content is curated release metadata tracked in the repository and referenced only by localization keys, so release copy is owned by the release coordinator rather than by UI logic. An entry becomes eligible only when it carries an explicit show_in_whats_new opt-in that is exactly true; a module or application version bump alone never triggers a tour, and truthy-but-inexact flag values are refused. Entries newer than the running application stay hidden, and an absent, malformed, or hand-broken curated file degrades to no tour rather than raising into a player surface.
+- **TOUR-002** (Core) - PASS: A player who skipped several releases sees one merged tour capped to the most recent meaningful entries with a path to the full changelog, never a stack of separate tours. Dismissal is stamped server-side from the canonical application version rather than any caller-supplied value, persists per authenticated subject so a dismissed release never reappears, is scoped so one subject's dismissal leaves another's tour intact, and fails closed for a session with no durable identity. The player payload publishes localization keys and a merged count only, so no raw version key ever reaches a player surface.
+- **TEST-102** (Tests) - PASS: Listener-free evidence verifies What's New eligibility: curated opt-in selection, version bumps and truthy-but-inexact flags triggering nothing, dismissed releases not returning, several skipped releases merging into one capped newest-first tour, unreleased entries staying hidden, malformed catalogs degrading to no tour, payloads carrying no raw version key, server-stamped dismissal persistence, per-subject dismissal scoping, fail-closed subjectless access, every shipped curated key translated in both locales, and curated entries carrying no consent field.

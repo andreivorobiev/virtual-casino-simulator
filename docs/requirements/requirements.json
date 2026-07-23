@@ -9733,6 +9733,60 @@
       "introduced_in": "issue-334-password-reset",
       "changed_in": "issue-334-password-reset",
       "notes": "Issue #334 enumeration-safety and fail-closed proof."
+    },
+    {
+      "id": "TOUR-001",
+      "module": "Core",
+      "description": "What's New tour content is curated release metadata tracked in the repository and referenced only by localization keys, so release copy is owned by the release coordinator rather than by UI logic. An entry becomes eligible only when it carries an explicit show_in_whats_new opt-in that is exactly true; a module or application version bump alone never triggers a tour, and truthy-but-inexact flag values are refused. Entries newer than the running application stay hidden, and an absent, malformed, or hand-broken curated file degrades to no tour rather than raising into a player surface.",
+      "status": "PASS",
+      "api_tests": [
+        "API-TOUR-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/whats_new.py",
+        "docs/releases/whats_new.json",
+        "casino/app.py"
+      ],
+      "introduced_in": "issue-165-whats-new",
+      "changed_in": "issue-165-whats-new",
+      "notes": "Allocated for GitHub issue #165 following the 2026-07-23 product decision note. Terms and privacy consent remain separate flows and the curated entry shape carries no consent field."
+    },
+    {
+      "id": "TOUR-002",
+      "module": "Core",
+      "description": "A player who skipped several releases sees one merged tour capped to the most recent meaningful entries with a path to the full changelog, never a stack of separate tours. Dismissal is stamped server-side from the canonical application version rather than any caller-supplied value, persists per authenticated subject so a dismissed release never reappears, is scoped so one subject's dismissal leaves another's tour intact, and fails closed for a session with no durable identity. The player payload publishes localization keys and a merged count only, so no raw version key ever reaches a player surface.",
+      "status": "PASS",
+      "api_tests": [
+        "API-TOUR-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/whats_new.py",
+        "casino/app.py",
+        "web/i18n/en-US/shell.json",
+        "web/i18n/ru-RU/shell.json"
+      ],
+      "introduced_in": "issue-165-whats-new",
+      "changed_in": "issue-165-whats-new",
+      "notes": "Allocated for GitHub issue #165. Because the server stamps the acknowledged release, a client never has to send or render a version string."
+    },
+    {
+      "id": "TEST-102",
+      "module": "Tests",
+      "description": "Listener-free evidence verifies What's New eligibility: curated opt-in selection, version bumps and truthy-but-inexact flags triggering nothing, dismissed releases not returning, several skipped releases merging into one capped newest-first tour, unreleased entries staying hidden, malformed catalogs degrading to no tour, payloads carrying no raw version key, server-stamped dismissal persistence, per-subject dismissal scoping, fail-closed subjectless access, every shipped curated key translated in both locales, and curated entries carrying no consent field.",
+      "status": "PASS",
+      "api_tests": [
+        "API-TOUR-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/whats_new_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-165-whats-new",
+      "changed_in": "issue-165-whats-new",
+      "notes": "Allocated for GitHub issue #165. The translation check runs against the shipped curated file, so a release entry added later cannot ship with an untranslated key."
     }
   ]
 }

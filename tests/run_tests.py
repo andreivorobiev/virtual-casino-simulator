@@ -890,6 +890,19 @@ def run_api_tests():
             raise AssertionError('restricted-preview edge preparation suite failed')
     # Record the listener-free edge templates, validator, observation, and rollback proof.
     run_case('EDGE-PREPARATION-001',['CORE-024','TOOL-005','TEST-050'],run_edge_gate_tests)
+    # Execute the complete version-aware What's New eligibility proof without opening a listener.
+    def run_whats_new_tests():
+        # Load only the focused What's New class.
+        from tests import whats_new_tests
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(whats_new_tests.WhatsNewTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused tour proof failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure text secret-safe.
+            raise AssertionError("what's new tour suite failed")
+    # Record the listener-free curated opt-in, merge cap, and dismissal-persistence proof.
+    run_case('API-TOUR-001',['TOUR-001','TOUR-002','TEST-102'],run_whats_new_tests)
     # Discover and execute every focused restricted-preview security module without opening a listener.
     def run_restricted_preview_security_tests():
         # Load the package directory through unittest's standard test discovery.

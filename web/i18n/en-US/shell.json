@@ -125,5 +125,14 @@
   "pwa.updateFailed": "The update could not be applied. The current version remains active.",
   "pwa.staleClient": "This app shell is out of date. Apply the available update before continuing.",
   "pwa.expiredSession": "Your session expired. Sign in again before using server actions.",
-  "pwa.reconnectFailed": "Authoritative state could not be refreshed. Server actions remain disabled."
+  "pwa.reconnectFailed": "Authoritative state could not be refreshed. Server actions remain disabled.",
+  "whatsNew.title": "What's new",
+  "whatsNew.sinceLastVisit": "Updates since you were last here",
+  "whatsNew.mergedCount": "{count} updates",
+  "whatsNew.fullChangelog": "Read the full release notes",
+  "whatsNew.dismiss": "Got it",
+  "whatsNew.entry.9_5_0.title": "Steadier tables and clearer wallet history",
+  "whatsNew.entry.9_5_0.body": "Roulette bet handling, lobby scrolling, and play-token history are more reliable across desktop and mobile.",
+  "whatsNew.entry.9_4_0.title": "Accessibility and layout refinements",
+  "whatsNew.entry.9_4_0.body": "Improved keyboard navigation, touch targets, and reduced-motion behaviour across the simulator."
 }
