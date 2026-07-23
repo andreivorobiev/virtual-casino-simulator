@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.45.3
+- application: 9.46.0
 - core: 9.19.1
 - ledger: 9.1.1
 - players: 9.1.0
@@ -45,8 +45,8 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.1
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.54.13
-- docs: 1.54.13
+- tests: 1.55.0
+- docs: 1.55.0
 - contracts: 1.39.0
 - tooling: 1.18.0
 - commenting_policy: 1.0.0
@@ -747,3 +747,24 @@ Historical source baseline: 9.1.0
 - **TEST-095** (Tests) - PASS: Browser-free policy tests prove canonical cache identity, exact public-static allowlisting, complete PNG and maskable manifest assets, credential-free cache writes, fail-open request exclusion for non-GET/API/Admin/private traffic, explicit update rollback and cache cleanup, and requirement/version alignment; exact-head browser tests prove cold and warm shell, offline fail-closed actions, reconnect, update and failure, stale-client, expired-session, and route-restoration states in en-US and ru-RU at all four governed viewports with exact evidence provenance and listener cleanup.
 - **TEST-096** (Tests) - PASS: The Roulette refund browser regression proves the logged deployment-closeout bugs for Clear bets and wager debit timing by placing a visible open wager, requiring the authoritative balance to debit on placement, activating the visible Clear bets control, and requiring the exact stake to be refunded before normal Roulette browser acceptance continues.
 - **TEST-092** (Tests) - PASS: An exact-source browser qualification executes exactly 50,000 completed UI cycles across every catalog game, assigns at least 1,666 cycles to each game, exercises every eligible game control at least 100 times or records an approved ineligible classification, captures all four governed viewports for human review, and rejects unexplained failures, incomplete ranges, incomplete declared non-control stages, source drift, or cleanup residue.
+- **MOTION-004** (Core) - PASS: A reusable presentation lifecycle enforces idle, locking, running, settling, and settled phases with explicit failed and aborted recovery, one opaque action owner, stale-generation rejection, and exact preservation of an already-authoritative result.
+- **MOTION-005** (Core) - PASS: Immutable named motion profiles validate normal, fast, and reduced budgets and resolve the live reduced-motion preference at each atomic action boundary without arbitrary real-time sleeps.
+- **MOTION-006** (Core) - PLANNED: Every adopted animated action presents one server- or engine-authoritative committed outcome and cannot choose, replace, conceal past capture, duplicate, or financially settle that outcome.
+- **MOTION-007** (Application) - PLANNED: Repeated pointer, keyboard, touch, and autoplay input cannot overlap one atomic animated action, and phase, result, history, wallet, audio, accessibility, and Admin presentation agree on the same round and outcome.
+- **MOTION-008** (Application) - PLANNED: Navigation, locale change, logout, unmount, refresh, browser history, hidden-tab recovery, and API failure cancel presentation-owned timers, listeners, audio, and classes while a committed action restores once and an uncommitted action returns safely.
+- **MOTION-009** (Application) - PLANNED: Adopted motion uses coherent transform and opacity paths with no teleport, reverse jump, blank seam, contradictory reveal, scroll hijack, or control loss; governed traces keep 95th-percentile frame intervals at or below 33 ms, avoid unexplained 150 ms freezes, and hold key geometry within one CSS pixel.
+- **MOTION-010** (Application) - PLANNED: Reduced motion is short and non-repetitive; motion, color, and sound are never the sole result signal; live-region announcements occur once; mute and focus remain stable; and EN/RU copy cannot alter correctness, ownership, layout, or cleanup.
+- **MOTION-011** (Tests) - PLANNED: Every adopted animated surface provides deterministic injected-clock tests, rapid-input and recovery browser tests, normal and reduced-motion traces, EN/RU governed-viewport videos with exact sidecars, zero-residue cleanup, and independent exact-head review.
+- **ROU-063** (Roulette) - PLANNED: One session-bound Roulette spin commits one authoritative pocket and settlement, and wheel, ball, table, result, history, voice, wallet, ledger, and Admin telemetry agree on that pocket and round without overlapping input.
+- **ROU-064** (Roulette) - PLANNED: Roulette uses the complete named physical sequence with default Authentic reveal in 15 to 18 seconds, optional Quick reveal in 8 to 10 seconds, autoplay reveal in 6 to 8 seconds, and a non-spinning reduced-motion reveal in 400 to 800 ms without changing the committed result.
+- **ROU-065** (Roulette) - PLANNED: The rotor and ball counter-rotate with separate continuous velocity profiles; Authentic mode shows at least 16 ball circuits, progressive deceleration, bounded rim departure and contacts, pocket-relative capture, and at least one second of ball-and-pocket co-rotation without teleport or transform reset.
+- **ROU-066** (Roulette) - PLANNED: Roulette locks wagering and mode controls during the atomic spin, conceals the result until visible pocket capture, and then reveals highlight, history, voice, and wallet celebration exactly once with player-facing phase copy.
+- **ROU-067** (Roulette) - PLANNED: Roulette navigation, refresh, autoplay stop, locale change, mute, and API failure recover the authoritative committed round once or a safe pre-commit betting state and leave no duplicate ledger/history event, orbit, glow, timer, sound, or disabled-control residue.
+- **ROU-068** (Tests) - PLANNED: Roulette motion acceptance maps at least 100 committed spins and supplies exact-head frame, transform, capture, alignment, geometry, cleanup, wallet/history/ledger, EN/RU, four-viewport, normal, and reduced-motion video evidence with independent review.
+- **SLOT-030** (Slots) - PLANNED: One session-bound Slots spin commits one authoritative set of reel stops, grid, wins, bonus and progressive state, round, wallet, ledger, history, and telemetry, and repeated input or autoplay cannot overlap or duplicate settlement.
+- **SLOT-031** (Slots) - PLANNED: Five Slots reels move independently and continuously through input lock, acceleration, full-speed travel, staggered deceleration, final stop, result evaluation, credit reveal, and optional bonus transition with no whole-grid swap, blank seam, backward jump, or frozen placeholder.
+- **SLOT-032** (Slots) - PLANNED: Slots reaches the final reel stop in 3.8 to 4.8 seconds for Slow, 2.8 to 3.6 seconds for Medium, 1.6 to 2.2 seconds for Fast, and 400 to 800 ms for reduced motion, with adjacent normal-profile stops staggered by 140 to 240 ms.
+- **SLOT-033** (Slots) - PLANNED: Each stopped reel aligns its visible symbols within one CSS pixel and remains stationary; win lines and highlights begin only after the final stop, preserve symbol identity, remain bounded and non-blocking, and provide non-celebratory loss and reduced-motion alternatives.
+- **SLOT-034** (Slots) - PLANNED: Slots autoplay starts only after settlement, Stop prevents a new spin, and free-spin, wallet, route, refresh, locale, history, API-error, and browser-history recovery preserve the authoritative result without duplicate debit, payout, bonus, or stale presentation residue.
+- **SLOT-035** (Tests) - PLANNED: Slots motion acceptance maps at least 100 committed spins across losses, wins, wilds, scatters, free spins, progressive state, repeated grids, and every speed profile and supplies exact-head transform, stop, alignment, cleanup, EN/RU, four-viewport, normal, and reduced-motion video evidence with independent review.
+- **TEST-097** (Tests) - PASS: Dependency-free deterministic unit tests prove motion timing profiles, reduced-motion resolution, complete lifecycle phase order, authoritative-result identity, overlap rejection, illegal-skip rejection, explicit recovery, stale-generation rejection, and route-disposal invalidation.
