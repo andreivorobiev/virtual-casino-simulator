@@ -1,6 +1,25 @@
 {
-  "application": "9.5.2",
+  "app_version": "9.5.2",
   "source_baseline": "9.1.0",
+  "api_compatibility_matrix": "contracts/compatibility/module-api-matrix.json",
+  "release_provenance_requirement": "TOOL-003",
+  "release_channel": "restricted-preview-private-invite",
+  "access_policy": {
+    "admission": "manual-invite",
+    "public_signup": "disabled",
+    "live_oauth": "disabled"
+  },
+  "predecessor": {
+    "app_version": "9.5.1",
+    "compatibility_record": "contracts/compatibility/app-9.5.1.json",
+    "required_artifact": "release-manifest.json"
+  },
+  "rollback": {
+    "scope": "application-only",
+    "database_rollback": "prohibited",
+    "mysql_expected_schema_version": 2,
+    "requires_retained_predecessor_manifest": true
+  },
   "modules": {
     "application": "9.46.3",
     "core": "9.19.2",
@@ -47,5 +66,5 @@
     "tooling": "1.18.0",
     "commenting_policy": "1.0.0"
   },
-  "created_at": "2026-07-09T00:00:00.000000Z"
+  "notes": "Compatible patch release of the protected guest-trial route-expiry recovery after v9.5.1; PWA static-shell cache identity is rotated so corrected app-shell JavaScript replaces cached v9.5.1 assets, MySQL remains at schema version 2, rollback is application-only, and public signup, live OAuth, provider networking, deployment, and unrestricted public launch remain separately gated."
 }

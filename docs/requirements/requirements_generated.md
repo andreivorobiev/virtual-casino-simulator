@@ -1,12 +1,12 @@
 # Virtual Casino Requirements and Validation
 
-Packaged application release: 9.5.1
+Packaged application release: 9.5.2
 
 Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.46.2
+- application: 9.46.3
 - core: 9.19.2
 - ledger: 9.1.1
 - players: 9.1.0
@@ -45,9 +45,9 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.1
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.55.3
-- docs: 1.55.3
-- contracts: 1.40.1
+- tests: 1.55.4
+- docs: 1.55.4
+- contracts: 1.40.2
 - tooling: 1.18.0
 - commenting_policy: 1.0.0
 
