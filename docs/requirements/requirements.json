@@ -3060,6 +3060,25 @@
       "notes": "The browser assertion reads the first mounted wager-setup drawer before any wager or deal can create the backend shoe."
     },
     {
+      "id": "BAC-026",
+      "module": "Baccarat",
+      "description": "Baccarat preserves one stable visible Deal action and deterministically returns to wager-ready state through 2,000 consecutive settled browser UI coups without a replaced target, timeout, retry, duplicate action, or stranded round.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-BAC-SUSTAINED-001"
+      ],
+      "implementation_files": [
+        "tests/baccarat_sustained.py",
+        "tests/ui_50000.py",
+        "tests/unit/ui_50000_tests.py",
+        "docs/long_test_suites.md"
+      ],
+      "introduced_in": "issue-265-baccarat-sustained-qualification",
+      "changed_in": "issue-265-baccarat-sustained-qualification",
+      "notes": "The exact-source profile uses one disposable loopback runtime, one synthetic account, one browser context, exactly 2,000 rounds, and one attempt per round; any control disappearance, wager-ready timeout, browser diagnostic, isolation failure, or cleanup failure keeps the result red."
+    },
+    {
       "id": "KENO-001",
       "module": "Keno",
       "description": "Keno supports numbers 1 through 80.",
@@ -9645,6 +9664,27 @@
       "introduced_in": "issue-229-232-roulette-clear-refund-closeout",
       "changed_in": "issue-229-232-roulette-clear-refund-closeout",
       "notes": "TEST-094 is owned by problem reporting/Admin triage and TEST-095 is owned by the PWA foundation; this closeout uses a new permanent test requirement instead of reusing either ID."
+    },
+    {
+      "id": "TEST-099",
+      "module": "Tests",
+      "description": "An exact-source browser qualification runs one uninterrupted Baccarat session for exactly 2,000 rendered-control coups, permits only one attempt per round, requires exactly 2,000 accepted visible Deal activations and settled-to-wager-ready transitions, and rejects source drift, gaps, retries, browser diagnostics, wallet/account isolation failures, incomplete governed screenshots, or listener/runtime cleanup residue.",
+      "status": "PASS",
+      "api_tests": [
+        "UI-50000-HARNESS-001"
+      ],
+      "browser_tests": [
+        "BR-BAC-SUSTAINED-001"
+      ],
+      "implementation_files": [
+        "tests/baccarat_sustained.py",
+        "tests/ui_50000.py",
+        "tests/unit/ui_50000_tests.py",
+        "docs/long_test_suites.md"
+      ],
+      "introduced_in": "issue-265-baccarat-sustained-qualification",
+      "changed_in": "issue-265-baccarat-sustained-qualification",
+      "notes": "TEST-091 through TEST-096 retain their existing permanent ownership. This focused profile reuses the accepted full-catalog rendered-control implementation but disables resumption, replication, and per-cycle retries so a recovered control replacement cannot satisfy issue #265."
     },
     {
       "id": "TEST-092",

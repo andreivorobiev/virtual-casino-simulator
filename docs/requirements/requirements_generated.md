@@ -18,7 +18,7 @@ Historical source baseline: 9.1.0
 - roulette: 9.4.7
 - slots: 9.1.4
 - blackjack: 9.1.3
-- baccarat: 9.1.2
+- baccarat: 9.1.3
 - keno: 9.2.3
 - bingo: 9.2.1
 - multi_hand_video_poker: 1.0.1
@@ -45,8 +45,8 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.1
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.54.13
-- docs: 1.54.13
+- tests: 1.54.14
+- docs: 1.54.14
 - contracts: 1.39.0
 - tooling: 1.18.0
 - commenting_policy: 1.0.0
@@ -248,6 +248,7 @@ Historical source baseline: 9.1.0
 - **BAC-023** (Baccarat) - PASS: Baccarat auto play repeats selected bet.
 - **BAC-024** (Baccarat) - PASS: Baccarat writes history rows.
 - **BAC-025** (Baccarat) - PASS: Baccarat's fresh shoe panel shows the configured full shoe capacity before the lazily built shoe receives its first deal.
+- **BAC-026** (Baccarat) - PASS: Baccarat preserves one stable visible Deal action and deterministically returns to wager-ready state through 2,000 consecutive settled browser UI coups without a replaced target, timeout, retry, duplicate action, or stranded round.
 - **KENO-001** (Keno) - PASS: Keno supports numbers 1 through 80.
 - **KENO-002** (Keno) - PASS: Keno allows selecting 1 to 20 spots.
 - **KENO-003** (Keno) - PASS: Keno draws 20 unique numbers.
@@ -746,4 +747,5 @@ Historical source baseline: 9.1.0
 - **PWA-002** (Application) - PASS: A canonical-release-versioned root-scope service worker caches only one exact credential-free public static-shell allowlist, never intercepts non-GET, API, Admin, authenticated, private, wallet, ledger, outcome, invitation, OAuth, or provider traffic, and preserves the previous complete worker until an explicit update; offline server actions fail closed, and reconnect revalidates session, wallet, catalog, game state, and route before actions are released.
 - **TEST-095** (Tests) - PASS: Browser-free policy tests prove canonical cache identity, exact public-static allowlisting, complete PNG and maskable manifest assets, credential-free cache writes, fail-open request exclusion for non-GET/API/Admin/private traffic, explicit update rollback and cache cleanup, and requirement/version alignment; exact-head browser tests prove cold and warm shell, offline fail-closed actions, reconnect, update and failure, stale-client, expired-session, and route-restoration states in en-US and ru-RU at all four governed viewports with exact evidence provenance and listener cleanup.
 - **TEST-096** (Tests) - PASS: The Roulette refund browser regression proves the logged deployment-closeout bugs for Clear bets and wager debit timing by placing a visible open wager, requiring the authoritative balance to debit on placement, activating the visible Clear bets control, and requiring the exact stake to be refunded before normal Roulette browser acceptance continues.
+- **TEST-099** (Tests) - PASS: An exact-source browser qualification runs one uninterrupted Baccarat session for exactly 2,000 rendered-control coups, permits only one attempt per round, requires exactly 2,000 accepted visible Deal activations and settled-to-wager-ready transitions, and rejects source drift, gaps, retries, browser diagnostics, wallet/account isolation failures, incomplete governed screenshots, or listener/runtime cleanup residue.
 - **TEST-092** (Tests) - PASS: An exact-source browser qualification executes exactly 50,000 completed UI cycles across every catalog game, assigns at least 1,666 cycles to each game, exercises every eligible game control at least 100 times or records an approved ineligible classification, captures all four governed viewports for human review, and rejects unexplained failures, incomplete ranges, incomplete declared non-control stages, source drift, or cleanup residue.
