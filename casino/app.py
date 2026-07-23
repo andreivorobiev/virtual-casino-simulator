@@ -37,7 +37,7 @@ from casino.core.state_store import ensure_dirs, migrate_from_v7_if_needed
 # Import required dependency so this module can bootstrap whichever storage provider is configured.
 from casino.core.storage import bootstrap_players, get_storage_provider
 # Import required dependency so this module can use its public functions or constants.
-from casino.core import logger, players, ledger, history, auth, feedback, guest_analytics, invitations
+from casino.core import logger, players, ledger, history, auth, feedback, guest_analytics, invitations, wellness
 # Import required dependency so this module can use its public functions or constants.
 from casino.games.registry import catalog_summary, list_games, register_games
 # Import required dependency so this module can use its public functions or constants.
@@ -332,6 +332,27 @@ def build_router() -> Router:
     def current_user_accept_terms_alias(body, query, context):
         # Delegate the alias to the same canonical acceptance operation.
         return current_user_accept_terms(body, query, context)
+
+    # Register additive opt-in session wellness reads. (WELL-001, issue #167)
+    @router.get(r"/api/v2/me/wellness")
+    # Return the authenticated session's own reminder configuration and accepted bounds.
+    def current_user_wellness(body, query, context):
+        # Publish the subject's opt-in record only.
+        return {"wellness": wellness.read_wellness(context["user"])}
+
+    # Register additive field-allowlisted wellness updates. (WELL-001, issue #167)
+    @router.patch(r"/api/v2/me/wellness")
+    # Apply one validated reminder change to the session's own record only.
+    def update_current_user_wellness(body, query, context):
+        # Bind the subject from the authenticated session rather than accepting caller identity.
+        return {"wellness": wellness.update_wellness(context["user"], body)}
+
+    # Register additive neutral session summaries drawn from committed movements. (WELL-002, issue #167)
+    @router.get(r"/api/v2/me/wellness/summary")
+    # Return plain committed totals for the session's own activity without evaluating them.
+    def current_user_wellness_summary(body, query, context):
+        # Derive the subject from the session and accept only an optional start boundary.
+        return wellness.session_summary(context["user"], since=query.get("since", ""))
 
     # Attach the published current-user token credit endpoint.
     @router.post(r"/api/v2/me/tokens/add")

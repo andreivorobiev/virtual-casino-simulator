@@ -890,6 +890,19 @@ def run_api_tests():
             raise AssertionError('restricted-preview edge preparation suite failed')
     # Record the listener-free edge templates, validator, observation, and rollback proof.
     run_case('EDGE-PREPARATION-001',['CORE-024','TOOL-005','TEST-050'],run_edge_gate_tests)
+    # Execute the complete opt-in session wellness proof without opening a listener.
+    def run_wellness_tests():
+        # Load only the focused session wellness class.
+        from tests import wellness_tests
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(wellness_tests.SessionWellnessTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused wellness proof failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure text secret-safe.
+            raise AssertionError('session wellness suite failed')
+    # Record the listener-free opt-in wellness, reward-free acknowledgement, and neutral-copy proof.
+    run_case('API-WELLNESS-001',['WELL-001','WELL-002','TEST-101'],run_wellness_tests)
     # Discover and execute every focused restricted-preview security module without opening a listener.
     def run_restricted_preview_security_tests():
         # Load the package directory through unittest's standard test discovery.

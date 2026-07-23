@@ -9733,6 +9733,59 @@
       "introduced_in": "issue-334-password-reset",
       "changed_in": "issue-334-password-reset",
       "notes": "Issue #334 enumeration-safety and fail-closed proof."
+    },
+    {
+      "id": "WELL-001",
+      "module": "Core",
+      "description": "Session reminders and suggested stopping points are opt-in and off by default, persist per authenticated subject, and are field-allowlisted so an unsupported or privilege field rejects the whole update. The reminder cadence is bounded at both ends: a floor prevents the product from being configured into countdown pressure and a ceiling keeps an enabled reminder from never arriving, with non-integer, boolean, and out-of-range values all refused. Acknowledging a reminder grants no token, streak, bonus, or other reward and creates no ledger movement.",
+      "status": "PASS",
+      "api_tests": [
+        "API-WELLNESS-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/wellness.py",
+        "casino/app.py",
+        "tests/wellness_tests.py"
+      ],
+      "introduced_in": "issue-167-session-wellness",
+      "changed_in": "issue-167-session-wellness",
+      "notes": "Allocated for GitHub issue #167. Nothing is imposed on a player: both switches default off, and the module offers no mechanism to reward engaging with or dismissing a reminder."
+    },
+    {
+      "id": "WELL-002",
+      "module": "Core",
+      "description": "Session summaries report only the authenticated subject's committed play-token movements as plain totals with an explicit play-tokens-only marker, publish no evaluative verdict field, derive the subject from the session rather than a caller-supplied identifier, and re-filter rows against the subject after the provider read. All player-visible wellness wording ships in the shell resources in English and Russian with identical placeholders and is checked against prohibited deposit, purchase, cash-value, prize, redemption, reward, streak, loss-chasing, and urgency framing.",
+      "status": "PASS",
+      "api_tests": [
+        "API-WELLNESS-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/wellness.py",
+        "web/i18n/en-US/shell.json",
+        "web/i18n/ru-RU/shell.json"
+      ],
+      "introduced_in": "issue-167-session-wellness",
+      "changed_in": "issue-167-session-wellness",
+      "notes": "Allocated for GitHub issue #167. The neutrality check exempts only the mandated no-cash-value disclaimer, which denies cash value rather than implying it; every other use of that vocabulary fails."
+    },
+    {
+      "id": "TEST-101",
+      "module": "Tests",
+      "description": "Listener-free evidence verifies session wellness: opt-in defaults, durable configuration, cadence floor and ceiling with type rejection and accepted boundary values, whole-update rejection for unsupported fields, reward-free acknowledgement proven by an unchanged ledger, committed-total summaries with no verdict field, summaries excluding a populated neighbour, malformed-document recovery, fail-closed subjectless access, prohibited-framing scanning of every shipped wellness string in both locales, and complete EN and RU coverage with identical placeholders.",
+      "status": "PASS",
+      "api_tests": [
+        "API-WELLNESS-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/wellness_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-167-session-wellness",
+      "changed_in": "issue-167-session-wellness",
+      "notes": "Allocated for GitHub issue #167. The copy scan runs against the shipped resource files rather than Python literals, so wording added later is covered automatically."
     }
   ]
 }
