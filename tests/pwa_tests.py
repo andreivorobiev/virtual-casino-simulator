@@ -226,6 +226,33 @@ class PwaFoundationTests(unittest.TestCase):
         # Require route-aware terminal status after enterAuthenticated remounts the route.
         self.assertIn("restoredRoute === 'lobby' ? 'online' : 'route-restored'", app)
 
+    # Require trial deep links to show an immediate route-restoration surface before slow session hydration.
+    def test_initial_game_route_restore_placeholder_precedes_session_refresh(self):
+        # Read the application shell source without launching a browser.
+        app = (ROOT / "web" / "app.js").read_text(encoding="utf-8")
+        # Isolate bootstrapping so the startup order cannot be satisfied by reconnect code.
+        init_block = app[app.index("async function init()"):app.index("// Poll shell state periodically")]
+        # Require the startup placeholder helper to remain present.
+        self.assertIn("function renderInitialRouteRestore()", app)
+        # Require the placeholder to use the browser route rather than a stale active route.
+        self.assertIn("const restoredRoute = routeFromLocation()", app)
+        # Require the placeholder to render inside the governed game-screen outlet.
+        self.assertIn("view.className = 'screen game-screen'", app)
+        # Require stable test identity for browser diagnostics and future acceptance evidence.
+        self.assertIn('data-testid="route-restore-loading"', app)
+        # Require localized route-restoration copy instead of a blank or raw loading panel.
+        self.assertIn("t('routeRestore.title'", app)
+        # Locate i18n initialization because route copy depends on the loaded shell dictionary.
+        i18n_index = init_block.index("await initI18n")
+        # Locate the immediate placeholder render in the startup path.
+        placeholder_index = init_block.index("renderInitialRouteRestore()")
+        # Locate current-user refresh, which can be slow on hosted trial sessions.
+        session_index = init_block.index("await refreshCurrentSession()")
+        # Require i18n before placeholder so EN/RU startup copy is available.
+        self.assertLess(i18n_index, placeholder_index)
+        # Require the placeholder before session refresh so direct game routes never sit visually blank.
+        self.assertLess(placeholder_index, session_index)
+
     # Require the full narrowed EN/RU and governed-viewport visual matrix.
     def test_visual_matrix_owns_narrowed_pwa_states(self):
         # Load the authoritative executable visual matrix.
