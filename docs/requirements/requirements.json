@@ -9733,6 +9733,59 @@
       "introduced_in": "issue-334-password-reset",
       "changed_in": "issue-334-password-reset",
       "notes": "Issue #334 enumeration-safety and fail-closed proof."
+    },
+    {
+      "id": "USER-006",
+      "module": "Core",
+      "description": "Every authenticated persistent user has a personal preference record covering locale and sound that defaults deterministically, applies a supported locale only, rejects unknown fields and non-boolean sound, refuses a stale revision so a slower client cannot overwrite a newer value, persists atomically through the configured provider, survives restart, and degrades to canonical defaults when persisted state is malformed. Guest trials receive the same defaults for the life of their session but no durable record is ever created for them.",
+      "status": "PASS",
+      "api_tests": [
+        "API-SETTINGS-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/user_settings.py",
+        "casino/app.py",
+        "tests/user_settings_tests.py"
+      ],
+      "introduced_in": "issue-352-my-settings",
+      "changed_in": "issue-352-my-settings",
+      "notes": "Allocated for GitHub issue #352. The subject is always derived from the authenticated session, never from a caller-supplied identifier, and the field allowlist means no privilege or identity field can ride along with a valid preference change."
+    },
+    {
+      "id": "USER-007",
+      "module": "Core",
+      "description": "Personal activity reads publish only the authenticated session's own bounded, newest-first, paginated events drawn from the authoritative ledger rather than a second history authority. Page size is clamped to a fixed ceiling, hostile page indices clamp instead of wrapping the slice, an optional game filter never widens the subject boundary, and each row carries only allowlisted presentation fields so durable identifiers, Admin telemetry, and internal audit material are never exposed.",
+      "status": "PASS",
+      "api_tests": [
+        "API-SETTINGS-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/user_settings.py",
+        "casino/app.py",
+        "tests/user_settings_tests.py"
+      ],
+      "introduced_in": "issue-352-my-settings",
+      "changed_in": "issue-352-my-settings",
+      "notes": "Allocated for GitHub issue #352. Rows are re-filtered against the session subject after the provider read so a provider-side change can never leak another player."
+    },
+    {
+      "id": "TEST-099",
+      "module": "Tests",
+      "description": "Listener-free evidence verifies personal settings and self-history: defaults before any write, durable save with an advancing revision, cross-subject isolation, rejection of unsupported locales, non-boolean sound, unknown and privilege fields, and empty patches without persisting, stale-revision conflict, malformed-document recovery, session-local guest behaviour with no durable record, self-history excluding another subject, bounded and stable pagination, clamped hostile pagination inputs, subject-safe game filtering, and fail-closed subjectless access.",
+      "status": "PASS",
+      "api_tests": [
+        "API-SETTINGS-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/user_settings_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-352-my-settings",
+      "changed_in": "issue-352-my-settings",
+      "notes": "Allocated for GitHub issue #352. Each test seeds its own uniquely addressed subject plus an unrelated neighbour so every privacy assertion is checked against real adjacent data."
     }
   ]
 }

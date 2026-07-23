@@ -890,6 +890,19 @@ def run_api_tests():
             raise AssertionError('restricted-preview edge preparation suite failed')
     # Record the listener-free edge templates, validator, observation, and rollback proof.
     run_case('EDGE-PREPARATION-001',['CORE-024','TOOL-005','TEST-050'],run_edge_gate_tests)
+    # Execute the complete personal-settings and self-history proof without opening a listener.
+    def run_user_settings_tests():
+        # Load only the focused personal-settings class.
+        from tests import user_settings_tests
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(user_settings_tests.UserSettingsTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused personal-settings proof failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure text secret-safe.
+            raise AssertionError('personal settings and self-history suite failed')
+    # Record the listener-free personal preference, concurrency, and self-only history proof.
+    run_case('API-SETTINGS-001',['USER-006','USER-007','TEST-099'],run_user_settings_tests)
     # Discover and execute every focused restricted-preview security module without opening a listener.
     def run_restricted_preview_security_tests():
         # Load the package directory through unittest's standard test discovery.

@@ -7,7 +7,7 @@ Historical source baseline: 9.1.0
 ## Independent module revisions
 
 - application: 9.46.0
-- core: 9.19.2
+- core: 9.19.3
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.0
@@ -45,8 +45,8 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.1
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.55.1
-- docs: 1.55.1
+- tests: 1.55.2
+- docs: 1.55.2
 - contracts: 1.40.0
 - tooling: 1.18.0
 - commenting_policy: 1.0.0
@@ -751,3 +751,6 @@ Historical source baseline: 9.1.0
 - **RESET-002** (Core) - PASS: Recovery completion consumes a purpose-bound password_reset bearer atomically and only then replaces the stored credential, clears the forced-reset marker, and revokes every existing session for the account. An interrupted credential write is recoverable only by replaying the exact mailbox, bearer, replacement, and caller request; a changed replacement remains rejected, while an exact replay after success returns the original receipt without rotating credential authority again. Disabled recovery, malformed input, weak passwords, expired, replayed, revoked, tampered, wrong-subject bearers, and accounts that became inactive or credential-free all fail closed with one identical generic error; password policy is enforced before the bearer is spent so a weak password cannot burn a valid token.
 - **RESET-003** (Core) - PASS: Recovery never exposes sensitive material: no password, raw bearer, or recipient address appears in results, errors, or audit events, which carry only a keyed recipient digest, token id, user id, outcome, and reason; at most one recovery bearer is ever valid per mailbox because reissue revokes any previously delivered bearer, and a bearer whose delivery is rejected is revoked immediately so no undelivered link stays usable.
 - **TEST-097** (Tests) - PASS: Listener-free evidence verifies the recovery lifecycle: disabled-by-default acknowledgement with no delivery, byte-identical initiation responses across existing/unknown/malformed mailboxes with mail only for the recoverable account, credential replacement with forced-reset clearance and predecessor-session revocation, exact-input recovery after an interrupted post-consume credential write, no second credential rotation after an exact successful replay, changed-replacement rejection after interruption, replay and wrong-subject rejection, weak-password rejection without burning the bearer, credential-free accounts silently non-recoverable, and a rejected delivery leaving no usable bearer behind.
+- **USER-006** (Core) - PASS: Every authenticated persistent user has a personal preference record covering locale and sound that defaults deterministically, applies a supported locale only, rejects unknown fields and non-boolean sound, refuses a stale revision so a slower client cannot overwrite a newer value, persists atomically through the configured provider, survives restart, and degrades to canonical defaults when persisted state is malformed. Guest trials receive the same defaults for the life of their session but no durable record is ever created for them.
+- **USER-007** (Core) - PASS: Personal activity reads publish only the authenticated session's own bounded, newest-first, paginated events drawn from the authoritative ledger rather than a second history authority. Page size is clamped to a fixed ceiling, hostile page indices clamp instead of wrapping the slice, an optional game filter never widens the subject boundary, and each row carries only allowlisted presentation fields so durable identifiers, Admin telemetry, and internal audit material are never exposed.
+- **TEST-099** (Tests) - PASS: Listener-free evidence verifies personal settings and self-history: defaults before any write, durable save with an advancing revision, cross-subject isolation, rejection of unsupported locales, non-boolean sound, unknown and privilege fields, and empty patches without persisting, stale-revision conflict, malformed-document recovery, session-local guest behaviour with no durable record, self-history excluding another subject, bounded and stable pagination, clamped hostile pagination inputs, subject-safe game filtering, and fail-closed subjectless access.
