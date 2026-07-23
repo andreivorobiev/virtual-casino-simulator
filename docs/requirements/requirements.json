@@ -9733,6 +9733,60 @@
       "introduced_in": "issue-334-password-reset",
       "changed_in": "issue-334-password-reset",
       "notes": "Issue #334 enumeration-safety and fail-closed proof."
+    },
+    {
+      "id": "RECEIPT-001",
+      "module": "Core",
+      "description": "Every committed play-token movement is explainable from ledger data alone. Classification is driven by the authoritative signed amount and refined by the committed transaction type, so a movement is never explained from client state and can never disagree with the balance it reports. A stake returned after an interrupted round is explained as an interrupted refund rather than a win, and an unrecognized future transaction type degrades to a correct generic movement explanation rather than a confidently wrong specific one.",
+      "status": "PASS",
+      "api_tests": [
+        "API-RECEIPT-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/receipts.py",
+        "casino/app.py",
+        "tests/receipt_tests.py"
+      ],
+      "introduced_in": "issue-161-outcome-receipts",
+      "changed_in": "issue-161-outcome-receipts",
+      "notes": "Allocated for GitHub issue #161. Deliberately avoids a per-game lookup table because the catalog is still expanding; classification therefore stays correct for games added later without edits to this module."
+    },
+    {
+      "id": "RECEIPT-002",
+      "module": "Core",
+      "description": "Receipts publish localization keys and allowlisted parameters rather than server-rendered prose, carry the play-tokens-only no-cash-value marker, and never expose raw durable identifiers, stack traces, or Admin-only detail; a round is correlated only by a short display reference and a movement with no round publishes none. Self receipt reads derive the subject from the authenticated session, clamp page size and hostile page indices, re-filter rows against the subject after the provider read, and return an explicit empty page for a session with no ledger subject.",
+      "status": "PASS",
+      "api_tests": [
+        "API-RECEIPT-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/receipts.py",
+        "casino/app.py",
+        "web/i18n/en-US/shell.json",
+        "web/i18n/ru-RU/shell.json"
+      ],
+      "introduced_in": "issue-161-outcome-receipts",
+      "changed_in": "issue-161-outcome-receipts",
+      "notes": "Allocated for GitHub issue #161. Every emitted message key ships complete EN and RU copy with identical placeholders so neither locale can silently drop an amount or balance."
+    },
+    {
+      "id": "TEST-100",
+      "module": "Tests",
+      "description": "Listener-free evidence verifies receipt derivation: category selection from the committed amount, an explanation for every committed transaction type harvested from the shipped catalog, honest interrupted-round refunds, safe degradation for unknown future types, exact reconciliation against the committed ledger amount and resulting balance, absence of raw round and player identifiers, empty references for round-free movements, self-only receipt reads against a populated neighbour, clamped pagination, empty pages for subjectless sessions, complete EN and RU copy with identical placeholders, and the play-tokens-only marker.",
+      "status": "PASS",
+      "api_tests": [
+        "API-RECEIPT-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/receipt_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-161-outcome-receipts",
+      "changed_in": "issue-161-outcome-receipts",
+      "notes": "Allocated for GitHub issue #161. The transaction vocabulary is harvested from tracked sources at test time, so a game added later is covered automatically instead of silently escaping the proof."
     }
   ]
 }

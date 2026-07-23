@@ -6,8 +6,8 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.46.0
-- core: 9.19.2
+- application: 9.46.1
+- core: 9.19.3
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.0
@@ -45,8 +45,8 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.1
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.55.1
-- docs: 1.55.1
+- tests: 1.55.2
+- docs: 1.55.2
 - contracts: 1.40.0
 - tooling: 1.18.0
 - commenting_policy: 1.0.0
@@ -751,3 +751,6 @@ Historical source baseline: 9.1.0
 - **RESET-002** (Core) - PASS: Recovery completion consumes a purpose-bound password_reset bearer atomically and only then replaces the stored credential, clears the forced-reset marker, and revokes every existing session for the account. An interrupted credential write is recoverable only by replaying the exact mailbox, bearer, replacement, and caller request; a changed replacement remains rejected, while an exact replay after success returns the original receipt without rotating credential authority again. Disabled recovery, malformed input, weak passwords, expired, replayed, revoked, tampered, wrong-subject bearers, and accounts that became inactive or credential-free all fail closed with one identical generic error; password policy is enforced before the bearer is spent so a weak password cannot burn a valid token.
 - **RESET-003** (Core) - PASS: Recovery never exposes sensitive material: no password, raw bearer, or recipient address appears in results, errors, or audit events, which carry only a keyed recipient digest, token id, user id, outcome, and reason; at most one recovery bearer is ever valid per mailbox because reissue revokes any previously delivered bearer, and a bearer whose delivery is rejected is revoked immediately so no undelivered link stays usable.
 - **TEST-097** (Tests) - PASS: Listener-free evidence verifies the recovery lifecycle: disabled-by-default acknowledgement with no delivery, byte-identical initiation responses across existing/unknown/malformed mailboxes with mail only for the recoverable account, credential replacement with forced-reset clearance and predecessor-session revocation, exact-input recovery after an interrupted post-consume credential write, no second credential rotation after an exact successful replay, changed-replacement rejection after interruption, replay and wrong-subject rejection, weak-password rejection without burning the bearer, credential-free accounts silently non-recoverable, and a rejected delivery leaving no usable bearer behind.
+- **RECEIPT-001** (Core) - PASS: Every committed play-token movement is explainable from ledger data alone. Classification is driven by the authoritative signed amount and refined by the committed transaction type, so a movement is never explained from client state and can never disagree with the balance it reports. A stake returned after an interrupted round is explained as an interrupted refund rather than a win, and an unrecognized future transaction type degrades to a correct generic movement explanation rather than a confidently wrong specific one.
+- **RECEIPT-002** (Core) - PASS: Receipts publish localization keys and allowlisted parameters rather than server-rendered prose, carry the play-tokens-only no-cash-value marker, and never expose raw durable identifiers, stack traces, or Admin-only detail; a round is correlated only by a short display reference and a movement with no round publishes none. Self receipt reads derive the subject from the authenticated session, clamp page size and hostile page indices, re-filter rows against the subject after the provider read, and return an explicit empty page for a session with no ledger subject.
+- **TEST-100** (Tests) - PASS: Listener-free evidence verifies receipt derivation: category selection from the committed amount, an explanation for every committed transaction type harvested from the shipped catalog, honest interrupted-round refunds, safe degradation for unknown future types, exact reconciliation against the committed ledger amount and resulting balance, absence of raw round and player identifiers, empty references for round-free movements, self-only receipt reads against a populated neighbour, clamped pagination, empty pages for subjectless sessions, complete EN and RU copy with identical placeholders, and the play-tokens-only marker.

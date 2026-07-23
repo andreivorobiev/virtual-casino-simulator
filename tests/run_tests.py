@@ -890,6 +890,19 @@ def run_api_tests():
             raise AssertionError('restricted-preview edge preparation suite failed')
     # Record the listener-free edge templates, validator, observation, and rollback proof.
     run_case('EDGE-PREPARATION-001',['CORE-024','TOOL-005','TEST-050'],run_edge_gate_tests)
+    # Execute the complete play-token receipt derivation proof without opening a listener.
+    def run_receipt_tests():
+        # Load only the focused receipt derivation class.
+        from tests import receipt_tests
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(receipt_tests.ReceiptDerivationTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused receipt proof failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure text secret-safe.
+            raise AssertionError('play-token receipt derivation suite failed')
+    # Record the listener-free receipt reconciliation, privacy, and localization proof.
+    run_case('API-RECEIPT-001',['RECEIPT-001','RECEIPT-002','TEST-100'],run_receipt_tests)
     # Discover and execute every focused restricted-preview security module without opening a listener.
     def run_restricted_preview_security_tests():
         # Load the package directory through unittest's standard test discovery.

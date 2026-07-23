@@ -125,5 +125,12 @@
   "pwa.updateFailed": "The update could not be applied. The current version remains active.",
   "pwa.staleClient": "This app shell is out of date. Apply the available update before continuing.",
   "pwa.expiredSession": "Your session expired. Sign in again before using server actions.",
-  "pwa.reconnectFailed": "Authoritative state could not be refreshed. Server actions remain disabled."
+  "pwa.reconnectFailed": "Authoritative state could not be refreshed. Server actions remain disabled.",
+  "receipt.stake": "Staked {amount} play tokens on {game}. Balance after: {balance}.",
+  "receipt.payout": "Won {amount} play tokens on {game}. Balance after: {balance}.",
+  "receipt.refund": "Returned {amount} play tokens from {game}. Balance after: {balance}.",
+  "receipt.refund_after_error": "Returned {amount} play tokens because the {game} round could not be completed. Balance after: {balance}.",
+  "receipt.adjustment": "Adjusted your balance by {amount} play tokens. Balance after: {balance}.",
+  "receipt.reference": "Reference {reference}",
+  "receipt.noCashValue": "Play tokens only - no cash value."
 }

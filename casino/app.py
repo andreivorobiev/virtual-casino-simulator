@@ -37,7 +37,7 @@ from casino.core.state_store import ensure_dirs, migrate_from_v7_if_needed
 # Import required dependency so this module can bootstrap whichever storage provider is configured.
 from casino.core.storage import bootstrap_players, get_storage_provider
 # Import required dependency so this module can use its public functions or constants.
-from casino.core import logger, players, ledger, history, auth, feedback, guest_analytics, invitations
+from casino.core import logger, players, ledger, history, auth, feedback, guest_analytics, invitations, receipts
 # Import required dependency so this module can use its public functions or constants.
 from casino.games.registry import catalog_summary, list_games, register_games
 # Import required dependency so this module can use its public functions or constants.
@@ -332,6 +332,13 @@ def build_router() -> Router:
     def current_user_accept_terms_alias(body, query, context):
         # Delegate the alias to the same canonical acceptance operation.
         return current_user_accept_terms(body, query, context)
+
+    # Register additive self-only explained ledger movements. (RECEIPT-001, issue #161)
+    @router.get(r"/api/v2/me/receipts")
+    # Return only the authenticated session's own explained play-token movements.
+    def current_user_receipts(body, query, context):
+        # Derive the subject from the session and accept only pagination inputs.
+        return receipts.self_receipts(context["user"], page=query.get("page", 1), page_size=query.get("page_size", receipts.DEFAULT_PAGE_SIZE))
 
     # Attach the published current-user token credit endpoint.
     @router.post(r"/api/v2/me/tokens/add")
