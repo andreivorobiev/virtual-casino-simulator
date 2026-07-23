@@ -60,7 +60,11 @@ class UI50000HarnessTests(unittest.TestCase):
         workflow_path = ui_50000.ROOT / ".github" / "workflows" / "browser-tests.yml"  # Resolve the repository-owned hosted browser workflow.
         workflow = workflow_path.read_text(encoding="utf-8")  # Read its declarative dispatch contract without launching a browser.
         self.assertEqual(workflow.count("baccarat_sustained_2000:"), 2)  # Require exactly one input plus one job with the stable identity.
-        self.assertEqual(workflow.count("python tests/baccarat_sustained.py"), 1)  # Prevent duplicate heavy execution inside one dispatch.
+        self.assertEqual(workflow.count("python -m tests.baccarat_sustained"), 1)  # Require the repository-safe module invocation exactly once.
+        self.assertNotIn("python tests/baccarat_sustained.py", workflow)  # Reject the Linux import-path failure reproduced by the first hosted attempt.
+        ordinary_job = workflow.split("  browser_tests:", 1)[1].split("  # Run the focused issue #265", 1)[0]  # Isolate the ordinary browser job from the sustained profile.
+        self.assertIn("github.event_name == 'pull_request' || inputs.formal_ui_50000 == true", ordinary_job)  # Skip redundant ordinary browser work on sustained-only dispatches.
+        self.assertNotIn("baccarat_sustained_2000", ordinary_job)  # Keep the focused run from starting a second browser suite.
         sustained_job = workflow.split("  baccarat_sustained_2000:", 2)[2].split("  # Distribute the formal issue #227", 1)[0]  # Isolate only the focused hosted job.
         self.assertIn("inputs.baccarat_sustained_2000 == true", sustained_job)  # Keep the expensive profile behind explicit authorization.
         self.assertIn("baccarat-sustained-${{ github.sha }}", sustained_job)  # Bind the terminal artifact name to the exact source head.

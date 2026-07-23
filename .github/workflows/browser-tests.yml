@@ -23,7 +23,9 @@ on:
       - 'tests/run_tests.py'
       - 'modules/module-manifest.json'
 jobs:
+  # Run the ordinary suite for PR evidence and retain it as the formal 50,000-cycle prerequisite.
   browser_tests:
+    if: ${{ github.event_name == 'pull_request' || inputs.formal_ui_50000 == true }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -61,7 +63,7 @@ jobs:
         run: python -m playwright install chromium
       - name: Run exact Baccarat sustained qualification
         run: >-
-          python tests/baccarat_sustained.py
+          python -m tests.baccarat_sustained
           --output-root "logs/test-runs/baccarat_sustained"
           --progress-every 100
       - name: Upload terminal Baccarat evidence

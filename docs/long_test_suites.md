@@ -57,7 +57,7 @@ Do not run parallel long suites against the same checkout. The runner creates a 
 Issue #265 has a stricter browser gate than the ordinary Baccarat smoke and the full-catalog allocation: one uninterrupted exact-source session must complete 2,000 consecutive settled-to-wager-ready coups through rendered controls. Acceptance evidence must come from one explicitly authorized `Browser Tests` workflow dispatch at the exact candidate head with `baccarat_sustained_2000=true` and `formal_ui_50000=false`. The hosted job invokes the immutable profile entry point:
 
 ```powershell
-python tests/baccarat_sustained.py --output-root logs/test-runs/baccarat_sustained --progress-every 100
+python -m tests.baccarat_sustained --output-root logs/test-runs/baccarat_sustained --progress-every 100
 ```
 
 `BR-BAC-SUSTAINED-001` fixes the `BAC-026` / `TEST-099` profile at one disposable loopback runtime, one synthetic account, one browser context, exactly 2,000 Baccarat rounds, and one attempt per round. Every round places and clears a visible wager, places a fresh wager, activates the visible Deal control, and requires the next Deal control to become genuinely enabled after settlement. Any missing/replaced Deal target, wager-ready timeout, recovered retry, browser diagnostic, wallet/account isolation failure, incomplete governed screenshot inventory, or listener/runtime cleanup failure makes the report fail. Do not dispatch the hosted profile twice at one head; a failed run must be diagnosed and repaired before a separately authorized rerun.
