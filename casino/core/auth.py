@@ -739,14 +739,14 @@ def update_user_by_id(user_id: str, updater) -> dict:
     raise ValidationError("user was not found")
 
 
-# Define set_user_password so Admin resets produce login-ready canonical credentials.
-def set_user_password(user_id: str, password: str) -> dict:
+# Define set_user_password so Admin and self-service recovery can share canonical credential rotation.
+def set_user_password(user_id: str, password: str, *, require_reset: bool = True) -> dict:
     # Reject empty replacement passwords before hashing.
     if not password:
         # Raise an explicit validation error for the Admin form.
         raise ValidationError("password is required")
-    # Update the canonical password verifier and reset metadata together.
-    return update_user_by_id(user_id, lambda user: user.update({"password_hash": hash_password(password), "password_reset_required": True, "password_version": int(user.get("password_version", 0)) + 1, "password_reset_at": utc_now()}))
+    # Update the canonical password verifier and caller-selected follow-up policy together.
+    return update_user_by_id(user_id, lambda user: user.update({"password_hash": hash_password(password), "password_reset_required": bool(require_reset), "password_version": int(user.get("password_version", 0)) + 1, "password_reset_at": utc_now()}))
 
 
 # Define accept_terms so the browser and Admin share canonical terms metadata.

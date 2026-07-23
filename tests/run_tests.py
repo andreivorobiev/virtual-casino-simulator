@@ -950,6 +950,19 @@ def run_api_tests():
             raise AssertionError('invitation enrollment infrastructure suite failed')
     # Record the listener-free invitation platform proof under its permanent requirements.
     run_case('API-INVITE-001',['INVITE-001','INVITE-002','INVITE-003','INVITE-004','INVITE-005','INVITE-006','TEST-091'],run_invitation_tests)
+    def run_password_reset_tests():
+        # Import the focused recovery suite lazily so API-only discovery stays lightweight.
+        from tests import password_reset_tests
+        # Load exactly the recovery service acceptance class.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(password_reset_tests.PasswordResetServiceTests)
+        # Run the focused service suite with the repository's quiet test runner.
+        result = unittest.TextTestRunner(verbosity=0).run(suite)
+        # Fail the mapped API gate when any enumeration-safety or lifecycle assertion fails.
+        if not result.wasSuccessful():
+            # Raise one bounded failure naming no recipient, bearer, or credential material.
+            raise AssertionError('password recovery infrastructure suite failed')
+    # Record the listener-free password-recovery proof under its permanent requirements.
+    run_case('API-RESET-001',['RESET-001','RESET-002','RESET-003','TEST-097'],run_password_reset_tests)
     # Run provider-neutral feedback lifecycle, concurrency, retention, and image-safety tests. (TEST-094, issue #349)
     def run_feedback_tests():
         # Import the focused suite lazily so unrelated runners do not require image tooling.

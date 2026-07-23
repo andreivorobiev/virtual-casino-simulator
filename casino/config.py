@@ -64,6 +64,8 @@ TOKEN_DIGEST_KEY = os.environ.get("CASINO_TOKEN_DIGEST_KEY", LOCAL_TOKEN_DIGEST_
 TOKEN_MAX_ATTEMPTS = int(os.environ.get("CASINO_TOKEN_MAX_ATTEMPTS", "5"))
 # Retain terminal one-time-token records this many seconds past their end state before cleanup prunes them.
 TOKEN_RETENTION_SECONDS = int(os.environ.get("CASINO_TOKEN_RETENTION_SECONDS", "1209600"))
+# Keep email password recovery disabled until an owner-authorized release enables it. (issue #334)
+PASSWORD_RESET_ENABLED = os.environ.get("CASINO_PASSWORD_RESET_ENABLED", "false").strip().lower() in ("1", "true", "yes", "on")
 # Preserve the developer-only mail digest key so every public startup rejects the known value. (MAIL-002)
 LOCAL_MAIL_DIGEST_KEY = "local-development-transactional-mail-digest-key"
 # Key every durable mail identifier independently from one-time-token verifier material.
