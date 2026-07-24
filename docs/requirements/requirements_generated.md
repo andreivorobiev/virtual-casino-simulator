@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.48.3
+- application: 9.48.4
 - core: 9.19.2
 - ledger: 9.1.1
 - players: 9.1.0
@@ -15,7 +15,7 @@ Historical source baseline: 9.1.0
 - audio: 9.1.1
 - admin: 1.11.0
 - operations: 1.0.0
-- roulette: 9.4.7
+- roulette: 9.4.8
 - slots: 9.1.4
 - blackjack: 9.1.3
 - baccarat: 9.1.3
@@ -45,8 +45,8 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.1
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.57.3
-- docs: 1.57.3
+- tests: 1.57.5
+- docs: 1.57.5
 - contracts: 1.40.2
 - tooling: 1.20.0
 - commenting_policy: 1.0.0
@@ -767,6 +767,8 @@ Historical source baseline: 9.1.0
 - **ROU-066** (Roulette) - PLANNED: Roulette locks wagering and mode controls during the atomic spin, conceals the result until visible pocket capture, and then reveals highlight, history, voice, and wallet celebration exactly once with player-facing phase copy.
 - **ROU-067** (Roulette) - PLANNED: Roulette navigation, refresh, autoplay stop, locale change, mute, and API failure recover the authoritative committed round once or a safe pre-commit betting state and leave no duplicate ledger/history event, orbit, glow, timer, sound, or disabled-control residue.
 - **ROU-068** (Tests) - PLANNED: Roulette motion acceptance maps at least 100 committed spins and supplies exact-head frame, transform, capture, alignment, geometry, cleanup, wallet/history/ledger, EN/RU, four-viewport, normal, and reduced-motion video evidence with independent review.
+- **ROU-069** (Roulette) - PASS: The legacy Roulette rotor presentation avoids the reported strobing regression by using a finely sampled monotonic coast-down under linear timing whose modeled 60 Hz rotor step remains below one European-wheel pocket; the browser runtime exposes that same named linear 3.6-second animation while a spin is resolving.
+- **ROU-070** (Roulette) - PASS: The legacy Roulette rotor and ball counter-rotate through whole-turn animation endpoints so releasing their animation cannot introduce an end-of-spin angular pop, and the browser runtime suppresses rotor, ball, settle, and orbit decoration when reduced motion is requested without changing the authoritative result.
 - **SLOT-030** (Slots) - PLANNED: One session-bound Slots spin commits one authoritative set of reel stops, grid, wins, bonus and progressive state, round, wallet, ledger, history, and telemetry, and repeated input or autoplay cannot overlap or duplicate settlement.
 - **SLOT-031** (Slots) - PLANNED: Five Slots reels move independently and continuously through input lock, acceleration, full-speed travel, staggered deceleration, final stop, result evaluation, credit reveal, and optional bonus transition with no whole-grid swap, blank seam, backward jump, or frozen placeholder.
 - **SLOT-032** (Slots) - PLANNED: Slots reaches the final reel stop in 3.8 to 4.8 seconds for Slow, 2.8 to 3.6 seconds for Medium, 1.6 to 2.2 seconds for Fast, and 400 to 800 ms for reduced motion, with adjacent normal-profile stops staggered by 140 to 240 ms.
@@ -780,3 +782,4 @@ Historical source baseline: 9.1.0
 - **TOOL-007** (Tooling) - PASS: Deployment tooling ships inside every immutable application archive, derives build provenance from the verified release manifest, and writes exactly one non-secret CASINO_BUILD_SHA assignment atomically; any manifest whose recorded commit is not a full lowercase 40-character Git SHA is refused with a non-zero status and no write, and the tracked service unit sources the generated fragment after the operator secret file so a redeployment always exports the running commit.
 - **TEST-098** (Tests) - PASS: Listener-free evidence verifies deployment build provenance: every immutable application archive contains the provenance writer; a valid manifest yields exactly one pinned assignment accepted unchanged by the Operations sanitizer; short/uppercase/non-hexadecimal/absent commits fail closed without writing; unreadable manifests and destination-write failures emit bounded path-free errors while leaving an earlier fragment byte-identical; a redeployment replaces rather than appends the superseded commit; and the tracked unit sources the generated fragment last.
 - **TEST-100** (Tests) - PASS: Dependency-free deterministic unit tests prove motion timing profiles, reduced-motion resolution, complete lifecycle phase order, authoritative-result identity, overlap rejection, illegal-skip rejection, explicit recovery, stale-generation rejection, and route-disposal invalidation.
+- **TEST-102** (Tests) - PASS: Focused listener-free evidence parses the tracked Roulette curves to prove the anti-strobe rotor budget, monotonic coast-down, whole-turn endpoints, counter-rotation, linear timing, fine sampling, and all four reduced-motion suppression rules; the hosted Browser suite independently proves the live spin uses the expected named linear 3.6-second animations with all sampled stops and that reduced-motion media suppresses the mounted rotor and ball channels.

@@ -930,6 +930,20 @@ def run_api_tests():
             raise AssertionError('deployment build provenance suite failed')
     # Record the listener-free deployment provenance fragment and service-unit ordering proof.
     run_case('DEPLOY-PROVENANCE-001',['TOOL-007','TEST-098'],run_release_env_tests)
+    # Execute the bounded Roulette anti-strobe proof without opening a listener or browser.
+    def run_roulette_motion_tests():
+        # Import the focused suite only when its mapped API case runs.
+        from tests import roulette_motion_tests
+        # Load exactly the tracked legacy-curve compatibility assertions.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(roulette_motion_tests.RouletteMotionTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any curve assertion failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure stable.
+            raise AssertionError('roulette motion compatibility suite failed')
+    # Record the listener-free anti-strobe, whole-turn, and reduced-motion proof.
+    run_case('UI-ROU-MOTION-001',['ROU-069','ROU-070','TEST-102'],run_roulette_motion_tests)
     # Discover and execute every focused restricted-preview security module without opening a listener.
     def run_restricted_preview_security_tests():
         # Load the package directory through unittest's standard test discovery.
@@ -5940,6 +5954,16 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 assert 'spinning' in (page.get_by_test_id('roulette-rotor').get_attribute('class') or '')
                 # Verify the ball is still in its animated reveal phase.
                 assert 'spinning' in (page.get_by_test_id('roulette-ball').get_attribute('class') or '')
+                # Read the live CSS Animation identities and sampled keyframes from the resolving spin.
+                roulette_motion_runtime=page.evaluate("""() => { const read = node => { const style = getComputedStyle(node); const animation = node.getAnimations()[0]; return { name: style.animationName, timing: style.animationTimingFunction, duration: style.animationDuration, keyframes: animation?.effect?.getKeyframes().length ?? 0 }; }; return { rotor: read(document.querySelector('[data-testid="roulette-rotor"]')), ball: read(document.querySelector('[data-testid="roulette-ball"]')) }; }""")
+                # Define the hosted runtime proof for the tracked compatibility curves.
+                def roulette_motion_curve_runtime():
+                    # Require the rotor to run the named sampled coast-down without a second easing layer.
+                    assert roulette_motion_runtime['rotor']=={'name':'roulettePremiumWheelSpin','timing':'linear','duration':'3.6s','keyframes':21}
+                    # Require the ball to use its corresponding sampled counter-rotation curve.
+                    assert roulette_motion_runtime['ball']=={'name':'roulettePremiumBallSpin','timing':'linear','duration':'3.6s','keyframes':21}
+                # Record the exact live-animation identity before settlement removes the spinning classes.
+                run_case('BR-ROU-MOTION-CURVE-001',['ROU-069','ROU-070','TEST-102'],roulette_motion_curve_runtime)
                 # Read the spinning-state settlement card before the timed settlement rerender can replace it. (ROU-058, TEST-059)
                 roulette_spinning_settlement_text=page.get_by_test_id('roulette-settlement-card').inner_text()
                 # Define the player-facing spinning copy regression for issue #234.
@@ -6000,6 +6024,18 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 page.wait_for_timeout(700)
                 # Capture settled-state visual evidence for the Roulette worker handback.
                 shot('roulette-premium-settled.png')
+                # Ask the hosted browser to apply the player's reduced-motion preference.
+                page.emulate_media(reduced_motion='reduce')
+                # Probe only the two genuine mounted motion channels after temporarily restoring their spin class.
+                roulette_reduced_motion=page.evaluate("""() => { const rotor=document.querySelector('[data-testid="roulette-rotor"]'); const ball=document.querySelector('[data-testid="roulette-ball"]'); const rotorWasSpinning=rotor.classList.contains('spinning'); const ballWasSpinning=ball.classList.contains('spinning'); rotor.classList.add('spinning'); ball.classList.add('spinning'); const values={rotor:getComputedStyle(rotor).animationName,ball:getComputedStyle(ball).animationName}; rotor.classList.toggle('spinning',rotorWasSpinning); ball.classList.toggle('spinning',ballWasSpinning); return values; }""")
+                # Restore the normal media preference before later Roulette interaction cases continue.
+                page.emulate_media(reduced_motion='no-preference')
+                # Define the reduced-motion runtime portion of the focused browser case.
+                def roulette_reduced_motion_runtime():
+                    # Require both mounted Roulette motion channels to be suppressed by the actual media state.
+                    assert roulette_reduced_motion=={'rotor':'none','ball':'none'}
+                # Extend the focused runtime case with the actual reduced-motion media query result.
+                run_case('BR-ROU-REDUCED-MOTION-001',['ROU-070','TEST-102'],roulette_reduced_motion_runtime)
                 # Restore English before expanding shared controls and capturing route-return evidence.
                 page.evaluate("""async () => { const i18n = await import('/core/i18n.js'); await i18n.setLocale('en-US', { persistLocal: false }); }""")
                 # Expand autoplay through its player-facing disclosure control.

@@ -9927,6 +9927,48 @@
       "notes": "Static screenshots alone cannot satisfy issue #169."
     },
     {
+      "id": "ROU-069",
+      "module": "Roulette",
+      "description": "The legacy Roulette rotor presentation avoids the reported strobing regression by using a finely sampled monotonic coast-down under linear timing whose modeled 60 Hz rotor step remains below one European-wheel pocket; the browser runtime exposes that same named linear 3.6-second animation while a spin is resolving.",
+      "status": "PASS",
+      "api_tests": [
+        "UI-ROU-MOTION-001"
+      ],
+      "browser_tests": [
+        "BR-ROU-MOTION-CURVE-001",
+        "BR-ROU-REDUCED-MOTION-001"
+      ],
+      "implementation_files": [
+        "web/games/roulette.js",
+        "tests/roulette_motion_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-169-wheel-motion-compatibility",
+      "changed_in": "issue-169-wheel-motion-compatibility",
+      "notes": "This bounded compatibility fix does not satisfy or supersede planned ROU-063 through ROU-068, whose complete physical sequence, timing profiles, recovery matrix, 100-spin proof, video evidence, and independent acceptance remain outstanding."
+    },
+    {
+      "id": "ROU-070",
+      "module": "Roulette",
+      "description": "The legacy Roulette rotor and ball counter-rotate through whole-turn animation endpoints so releasing their animation cannot introduce an end-of-spin angular pop, and the browser runtime suppresses rotor, ball, settle, and orbit decoration when reduced motion is requested without changing the authoritative result.",
+      "status": "PASS",
+      "api_tests": [
+        "UI-ROU-MOTION-001"
+      ],
+      "browser_tests": [
+        "BR-ROU-MOTION-CURVE-001",
+        "BR-ROU-REDUCED-MOTION-001"
+      ],
+      "implementation_files": [
+        "web/games/roulette.js",
+        "tests/roulette_motion_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-169-wheel-motion-compatibility",
+      "changed_in": "issue-169-wheel-motion-compatibility",
+      "notes": "This requirement covers only the existing 3.6-second presentation. The planned 400-to-800 ms reduced-motion lifecycle and full authoritative motion adoption remain governed by ROU-064 and the other planned issue #169 requirements."
+    },
+    {
       "id": "SLOT-030",
       "module": "Slots",
       "description": "One session-bound Slots spin commits one authoritative set of reel stops, grid, wins, bonus and progressive state, round, wallet, ledger, history, and telemetry, and repeated input or autoplay cannot overlap or duplicate settlement.",
@@ -10119,6 +10161,26 @@
       "introduced_in": "work-items-21-30-motion-foundation",
       "changed_in": "work-items-21-30-motion-foundation",
       "notes": "TEST-091, TEST-092, TEST-094, TEST-095, TEST-096, TEST-097, TEST-098, and TEST-099 retain their prior permanent ownership or reservation; this new ID covers only the shared motion foundation."
+    },
+    {
+      "id": "TEST-102",
+      "module": "Tests",
+      "description": "Focused listener-free evidence parses the tracked Roulette curves to prove the anti-strobe rotor budget, monotonic coast-down, whole-turn endpoints, counter-rotation, linear timing, fine sampling, and all four reduced-motion suppression rules; the hosted Browser suite independently proves the live spin uses the expected named linear 3.6-second animations with all sampled stops and that reduced-motion media suppresses the mounted rotor and ball channels.",
+      "status": "PASS",
+      "api_tests": [
+        "UI-ROU-MOTION-001"
+      ],
+      "browser_tests": [
+        "BR-ROU-MOTION-CURVE-001",
+        "BR-ROU-REDUCED-MOTION-001"
+      ],
+      "implementation_files": [
+        "tests/roulette_motion_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-169-wheel-motion-compatibility",
+      "changed_in": "issue-169-wheel-motion-compatibility",
+      "notes": "Allocated after TEST-101 became permanent on current main. This proof is intentionally narrower than the planned ROU-068 exact-head video and 100-spin acceptance packet."
     }
   ]
 }
