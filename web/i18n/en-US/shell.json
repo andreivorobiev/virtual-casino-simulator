@@ -153,6 +153,6 @@
   "wellness.summaryNet": "Net: {amount} play tokens",
   "wellness.summaryNote": "Play tokens only - no cash value.",
   "wellness.saved": "Reminder settings saved.",
-  "whatsNew.entry.9_5_2.title": "Session recovery and simulator reliability",
-  "whatsNew.entry.9_5_2.body": "Direct game routes now recover safely after a session expires, alongside reliability improvements across the simulator."
+  "whatsNew.entry.9_5_3.title": "Simulator reliability and transparency",
+  "whatsNew.entry.9_5_3.body": "This update improves game accuracy, session recovery, localization, motion, and server-side transparency while preserving the play-token-only boundary."
 }

@@ -2580,11 +2580,11 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Await the production registration's fully activated worker before issuing competing manifest, icon, or reload traffic.
                         registration_identity=pwa_page.evaluate("""async () => { const timeout=new Promise(resolve => setTimeout(async () => { const registrations=await navigator.serviceWorker.getRegistrations(); const worker=registrations[0]?.installing||registrations[0]?.waiting||registrations[0]?.active; resolve({ready:false,state:worker?.state||'missing',scriptUrl:worker?.scriptURL||''}); },20000)); const active=navigator.serviceWorker.ready.then(registration => ({ready:Boolean(registration.active),state:registration.active?.state||'',scriptUrl:registration.active?.scriptURL||''})); return await Promise.race([active,timeout]); }""")
                         # Require atomic shell installation and activation at the canonical script before a controlled navigation is attempted.
-                        assert registration_identity=={'ready':True,'state':'activated','scriptUrl':f'{base}/sw.js?v=9.5.2'},{'registration':registration_identity,'workerDiagnostics':pwa_worker_diagnostics[-4:]}
+                        assert registration_identity=={'ready':True,'state':'activated','scriptUrl':f'{base}/sw.js?v=9.5.3'},{'registration':registration_identity,'workerDiagnostics':pwa_worker_diagnostics[-4:]}
                         # Reload only after activation so the navigation is deterministically controlled even when the initial clients.claim event raced first paint.
                         pwa_page.reload(wait_until='domcontentloaded'); pwa_page.get_by_test_id('lobby').wait_for(timeout=8000)
                         # Wait synchronously for the controlled reload and canonical page identity without an async polling predicate.
-                        pwa_page.wait_for_function("() => Boolean(navigator.serviceWorker.controller) && window.CasinoPwa?.version==='9.5.2'",timeout=8000)
+                        pwa_page.wait_for_function("() => Boolean(navigator.serviceWorker.controller) && window.CasinoPwa?.version==='9.5.3'",timeout=8000)
                         # Require the same-context reload to classify as warm rather than a fresh install claim.
                         assert pwa_page.evaluate("() => document.documentElement.dataset.pwaStart")=='warm-start'
                         # Read the manifest link and both Android/iOS browser-foundation meta contracts.
@@ -2604,7 +2604,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Read the controlling worker identity without opening CacheStorage through a competing page transaction.
                         worker_identity=pwa_page.evaluate("async () => { const active=(await navigator.serviceWorker.getRegistrations()).find(reg => reg.active)?.active; return { pageVersion:window.CasinoPwa?.version||'', controller:Boolean(navigator.serviceWorker.controller), scriptUrl:active?.scriptURL||'' }; }")
                         # Require the active root worker and page to share the canonical packaged version.
-                        assert worker_identity['pageVersion']=='9.5.2' and worker_identity['controller'] and worker_identity['scriptUrl'].endswith('/sw.js?v=9.5.2'),worker_identity
+                        assert worker_identity['pageVersion']=='9.5.3' and worker_identity['controller'] and worker_identity['scriptUrl'].endswith('/sw.js?v=9.5.3'),worker_identity
                         # Fetch an authoritative API path and prove it does not enter any worker cache.
                         pwa_page.evaluate("async () => { await fetch('/api/v1/casino/state',{credentials:'include'}); }")
                         # Enter true offline mode and require native fail-closed controls plus a pre-fetch API rejection.
@@ -2629,10 +2629,10 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         pwa_page.context.set_offline(False); pwa_page.evaluate("() => window.dispatchEvent(new Event('online'))")
                         # Require the authoritative reconnect callback to remount the same route.
                         pwa_page.wait_for_function("() => window.CasinoPwa?.state()==='route-restored' && location.pathname==='/games/roulette' && Boolean(document.querySelector('[data-testid=roulette-premium]'))",timeout=12000)
-                        # Prove a mismatched controlling-worker version produces a bounded stale-client state.
-                        pwa_page.evaluate("() => navigator.serviceWorker.dispatchEvent(new MessageEvent('message',{data:{type:'PWA_VERSION',version:'0.0.0'}}))")
-                        # Require stale-client status without worker or provider mutation.
-                        pwa_page.wait_for_function("() => window.CasinoPwa?.state()==='stale-client'",timeout=3000)
+                        # Dispatch one synthetic mismatched worker version and read the synchronously committed listener result in the same task.
+                        stale_client_state=pwa_page.evaluate("() => { navigator.serviceWorker.dispatchEvent(new MessageEvent('message',{data:{type:'PWA_VERSION',version:'0.0.0'}})); return window.CasinoPwa?.state()||''; }")
+                        # Require the real message listener to commit stale-client status without an asynchronous reconnect race.
+                        assert stale_client_state=='stale-client',stale_client_state
                         # Return to the shell root before generating the governed visual corpus.
                         pwa_page.goto(f'{base}/?locale=en-US',wait_until='domcontentloaded'); pwa_page.get_by_test_id('lobby').wait_for(timeout=8000)
                         # Generate exact EN/RU evidence for every state at every governed viewport.

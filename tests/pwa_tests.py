@@ -183,7 +183,7 @@ class PwaFoundationTests(unittest.TestCase):
         # Locate the controlled reload performed only after activation completes.
         reload_index = pwa_case.index("pwa_page.reload(wait_until='domcontentloaded')")
         # Locate the synchronous controller assertion after the controlled navigation.
-        controller_index = pwa_case.index("Boolean(navigator.serviceWorker.controller) && window.CasinoPwa?.version==='9.5.2'")
+        controller_index = pwa_case.index("Boolean(navigator.serviceWorker.controller) && window.CasinoPwa?.version==='9.5.3'")
         # Locate the first explicit navigation after readiness; this is the governed offline route proof, not a bootstrap reload race.
         navigation_index = pwa_case.index("pwa_page.goto")
         # Require activation, reload, and controller proof to remain in deterministic lifecycle order.
@@ -202,6 +202,12 @@ class PwaFoundationTests(unittest.TestCase):
         self.assertNotIn("dataset.state===state\",pwa_states[state],timeout=3000", pwa_case)
         # Reject the locale positional form independently so either regression is diagnosed without a hosted browser.
         self.assertNotIn("getLocaleState().locale===locale\",pwa_locale,timeout=5000", pwa_case)
+        # Require the synthetic mismatched worker message and listener-state read to share one synchronous browser task.
+        self.assertIn("dispatchEvent(new MessageEvent('message',{data:{type:'PWA_VERSION',version:'0.0.0'}})); return window.CasinoPwa?.state()||''", pwa_case)
+        # Reject an asynchronous stale-client poll that can lose the short-lived listener result to reconnect completion.
+        self.assertNotIn("wait_for_function(\"() => window.CasinoPwa?.state()==='stale-client'\"", pwa_case)
+        # Require the captured real-listener result to remain fail-closed.
+        self.assertIn("assert stale_client_state=='stale-client',stale_client_state", pwa_case)
 
     # Require page-side offline controls and authoritative reconnect behavior.
     def test_client_fails_closed_and_refreshes_authoritatively(self):
