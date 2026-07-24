@@ -4722,11 +4722,12 @@
         "contracts/compatibility/app-9.4.0.json",
         "contracts/compatibility/app-9.5.0.json",
         "contracts/compatibility/app-9.5.1.json",
-        "contracts/compatibility/app-9.5.2.json"
+        "contracts/compatibility/app-9.5.2.json",
+        "contracts/compatibility/app-9.5.3.json"
       ],
       "introduced_in": "9.2.0",
-      "changed_in": "9.5.2",
-      "notes": "Branch and ordinary manual candidates remain unpublished. The historical one-time owner-dispatched recovery created the retained v9.2.0 predecessor without overwrite or deletion paths. Normal v9.5.2 publication requires the verified retained v9.5.1 predecessor manifest and the protected release gates. Rollback is application-only and never reverses the MySQL schema."
+      "changed_in": "9.5.3",
+      "notes": "Branch and ordinary manual candidates remain unpublished. The historical one-time owner-dispatched recovery created the retained v9.2.0 predecessor without overwrite or deletion paths. Normal v9.5.3 publication requires the verified retained v9.5.2 predecessor manifest and the protected release gates, including exact build-SHA and generated release.env verification. Rollback is application-only and never reverses the MySQL schema."
     },
     {
       "id": "BOT-001",
@@ -10355,7 +10356,7 @@
     {
       "id": "TOUR-001",
       "module": "Core",
-      "description": "The server-only What's New foundation reads curated repository release metadata rather than deriving player content from module or application version changes. An entry is eligible only when its release version is an exact numeric triplet at or below the running application, both localization keys are non-empty, and the release coordinator's show_in_whats_new flag is exactly true. Missing, malformed, future, incomplete, or truthy-but-inexact entries fail closed. The shipped catalog is reconciled to packaged application 9.5.2 and remains explicitly disabled until the player UI, browser evidence, and release-coordinator activation remainder of issue #165 are accepted.",
+      "description": "The server-only What's New foundation reads curated repository release metadata rather than deriving player content from module or application version changes. An entry is eligible only when its release version is an exact numeric triplet at or below the running application, both localization keys are non-empty, and the release coordinator's show_in_whats_new flag is exactly true. Missing, malformed, future, incomplete, or truthy-but-inexact entries fail closed. The shipped catalog is reconciled to packaged application 9.5.3 and remains explicitly disabled until the player UI, browser evidence, and release-coordinator activation remainder of issue #165 are accepted.",
       "status": "PASS",
       "api_tests": [
         "API-TOUR-001"
@@ -10368,7 +10369,7 @@
         "contracts/openapi/user-settings.v2.yaml"
       ],
       "introduced_in": "issue-165-whats-new-foundation",
-      "changed_in": "issue-165-whats-new-foundation",
+      "changed_in": "9.5.3",
       "notes": "This requirement covers only the inactive server and curated-metadata foundation. GitHub issue #165 remains open for player UI, release transitions, responsive and accessibility evidence, reduced motion, and product-owned activation."
     },
     {
@@ -10392,7 +10393,7 @@
     {
       "id": "TEST-106",
       "module": "Tests",
-      "description": "Listener-free isolated-provider evidence verifies exact curated opt-in selection, skipped-release merge ordering and caps, malformed and future metadata fail-closed behavior, missing and malformed catalog recovery, durable per-subject server-stamped dismissal, retry idempotency, populated-neighbour isolation, disposable guest non-persistence, subjectless rejection, raw-version privacy, current packaged 9.5.2 metadata with activation disabled, complete EN/RU release keys, consent-free metadata shape, additive v2 route behavior, hostile caller identity and version inputs being rejected, and exact checked contract digest pinning.",
+      "description": "Listener-free isolated-provider evidence verifies exact curated opt-in selection, skipped-release merge ordering and caps, malformed and future metadata fail-closed behavior, missing and malformed catalog recovery, durable per-subject server-stamped dismissal, retry idempotency, populated-neighbour isolation, disposable guest non-persistence, subjectless rejection, raw-version privacy, current packaged 9.5.3 metadata with activation disabled, complete EN/RU release keys, consent-free metadata shape, additive v2 route behavior, hostile caller identity and version inputs being rejected, and exact checked contract digest pinning.",
       "status": "PASS",
       "api_tests": [
         "API-TOUR-001"
@@ -10403,7 +10404,7 @@
         "tests/run_tests.py"
       ],
       "introduced_in": "issue-165-whats-new-foundation",
-      "changed_in": "issue-165-whats-new-foundation",
+      "changed_in": "9.5.3",
       "notes": "Allocated after TEST-105 became permanent on current main. Every focused write uses an isolated temporary provider and no listener, browser, credential, repository runtime file, provider network, or live system is touched."
     }
   ]

@@ -1,4 +1,14 @@
-# Virtual Casino Simulator v9.5.2 Release Notes
+# Virtual Casino Simulator v9.5.3 Release Notes
+
+## Protected-main reliability and provenance patch release
+
+- Packages the exact accepted protected-main state after v9.5.2 as a distinct immutable patch release, excluding the unrelated TiltSeven marketing-site draft and every unmerged branch.
+- Includes accepted build-SHA and generated `release.env` provenance, Baccarat correctness and sustained qualification, shared motion and localization foundations, Roulette motion safeguards, Admin guest/user separation, and inactive server-only settings, receipts, wellness, and What's New foundations.
+- Rotates the PWA static-shell cache identity to v9.5.3 so existing browsers fetch the current protected application shell instead of continuing to serve cached v9.5.2 assets.
+- Keeps MySQL at schema version 2 and permits application-only rollback to the retained, checksum-verified v9.5.2 predecessor; database rollback remains prohibited.
+- Preserves manual-invite admission with invitation delivery, live OAuth and provider networking disabled, and does not authorize deployment, DNS, billing, public exposure, automatic GitHub publication, or issue #209 launch.
+
+## Prior v9.5.2 guest-session recovery release
 
 ## Guest trial route-expiry recovery patch release
 
