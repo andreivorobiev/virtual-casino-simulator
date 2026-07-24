@@ -4721,11 +4721,12 @@
         "contracts/compatibility/app-9.3.0.json",
         "contracts/compatibility/app-9.4.0.json",
         "contracts/compatibility/app-9.5.0.json",
-        "contracts/compatibility/app-9.5.1.json"
+        "contracts/compatibility/app-9.5.1.json",
+        "contracts/compatibility/app-9.5.2.json"
       ],
       "introduced_in": "9.2.0",
-      "changed_in": "9.5.1",
-      "notes": "Branch and ordinary manual candidates remain unpublished. The historical one-time owner-dispatched recovery created the retained v9.2.0 predecessor without overwrite or deletion paths. Normal v9.5.1 publication requires the verified retained v9.5.0 predecessor manifest and the protected release gates. Rollback is application-only and never reverses the MySQL schema."
+      "changed_in": "9.5.2",
+      "notes": "Branch and ordinary manual candidates remain unpublished. The historical one-time owner-dispatched recovery created the retained v9.2.0 predecessor without overwrite or deletion paths. Normal v9.5.2 publication requires the verified retained v9.5.1 predecessor manifest and the protected release gates. Rollback is application-only and never reverses the MySQL schema."
     },
     {
       "id": "BOT-001",
@@ -9457,8 +9458,8 @@
       "browser_tests": ["BR-INVITE-001"],
       "implementation_files": ["web/admin.html", "web/admin.js", "web/app.js", "web/core/api.js", "web/i18n/en-US/admin.json", "web/i18n/ru-RU/admin.json", "web/i18n/en-US/shell.json", "web/i18n/ru-RU/shell.json", "tests/visual/visual_matrix.json"],
       "introduced_in": "issue-332-admin-invitations",
-      "changed_in": "issue-332-admin-invitations",
-      "notes": "After successful redemption the bearer is removed from browser history before returning to private-beta sign in."
+      "changed_in": "pr-368-expired-session-recovery",
+      "notes": "After successful redemption the bearer is removed from browser history before returning to private-beta sign in; expected anonymous current-user probes never replace the public enrollment form with an authenticated-session expiry gate."
     },
     {
       "id": "INVITE-006",
@@ -9637,8 +9638,8 @@
       "browser_tests": ["BR-PWA-001"],
       "implementation_files": ["web/sw.js", "web/core/pwa.js", "web/core/api.js", "web/app.js", "casino/app.py", "casino/wsgi.py", "web/i18n/en-US/shell.json", "web/i18n/ru-RU/shell.json", "docs/pwa_foundation.md"],
       "introduced_in": "issue-182-pwa-foundation",
-      "changed_in": "issue-182-pwa-foundation",
-      "notes": "Install is atomic, activation prunes only prior Casino static-shell caches, update activation is user-requested, stale-client and failed-refresh states are explicit, and no deployment or public exposure is authorized."
+      "changed_in": "pr-368-expired-session-recovery",
+      "notes": "Install is atomic, activation prunes only prior Casino static-shell caches, update activation is user-requested, stale-client and failed-refresh states are explicit, protected-session expiry clears mounted authenticated chrome, anonymous enrollment remains intact, and no deployment or public exposure is authorized."
     },
     {
       "id": "TEST-095",
@@ -9649,8 +9650,8 @@
       "browser_tests": ["BR-PWA-001"],
       "implementation_files": ["tests/pwa_tests.py", "tests/run_tests.py", "tests/visual/visual_matrix.json"],
       "introduced_in": "issue-182-pwa-foundation",
-      "changed_in": "issue-182-pwa-foundation",
-      "notes": "TEST-092 remains exclusively owned by formal 50,000-cycle qualification. Android/iOS metadata is checked as a browser foundation only; native install and relaunch evidence remains deferred with full issue #182."
+      "changed_in": "pr-368-expired-session-recovery",
+      "notes": "TEST-092 remains exclusively owned by formal 50,000-cycle qualification. Browser-free coverage distinguishes mounted-session expiry from anonymous enrollment probes; Android/iOS metadata is checked as a browser foundation only, and native install and relaunch evidence remains deferred with full issue #182."
     },
     {
       "id": "TEST-096",
