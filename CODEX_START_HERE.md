@@ -274,6 +274,7 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 - [`docs/legal/README.md`](docs/legal/README.md) — Legal Docs
 - [`docs/legal/terms.md`](docs/legal/terms.md) — Private Beta Toy Simulator Terms
 - [`docs/local_mysql_setup.md`](docs/local_mysql_setup.md) — Local MySQL 8.4 LTS setup
+- [`docs/localization_foundation.md`](docs/localization_foundation.md) — Phase 0 localization foundation
 - [`docs/long_test_suites.md`](docs/long_test_suites.md) — Long Casino Test Suites
 - [`docs/motion_acceptance_contract.md`](docs/motion_acceptance_contract.md) — Deterministic motion acceptance contract
 - [`docs/mysql_migrations.md`](docs/mysql_migrations.md) — MySQL migration and DDL-free runtime gate
@@ -309,4 +310,5 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 ### Web-scoped instructions
 
 - [`web/AGENTS.md`](web/AGENTS.md) — AGENTS.md - admin module
+- [`web/assets/fonts/README.md`](web/assets/fonts/README.md) — Native-label font subsets
 <!-- END GENERATED MARKDOWN INDEX -->

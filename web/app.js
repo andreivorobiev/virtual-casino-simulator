@@ -4,7 +4,7 @@ import { acceptTerms, addUserTokens, api, currentUser, departGuestTrial, endGues
 // Import required dependency so this module can render shared wallet and premium UI helpers.
 import { renderTokenBalance, toast, tokens, safe, renderPremiumTag } from './core/ui.js';
 // Import required dependency so the shell can preserve locale across auth and route changes.
-import { getLocaleState, initI18n, onLocaleChange, setLocale, t } from './core/i18n.js';
+import { getLocaleState, initI18n, onLocaleChange, registerI18nDomains, setLocale, t } from './core/i18n.js';
 // Import the offline-safe shell controller for exact-version updates and authoritative reconnects. (PWA-001, PWA-002)
 import { initPwa } from './core/pwa.js';
 // Import required dependency so this module can preload global voice settings before games mount.
@@ -877,6 +877,8 @@ async function refreshShellState(options = {}) {
     latestState = state;
     // Rebuild frontend registration from the same public catalog used by backend registration.
     gameDescriptors = (state.games || []).map(game => descriptorFromCatalog(game));
+    // Register every game-owned translation domain directly from the live catalog without loading unvisited routes.
+    registerI18nDomains(gameDescriptors.map(game => game.i18nDomain));
     // Mark the shell connected and update status values.
     updateShellStatus(state, true);
     // Return state to callers that need initial render data.

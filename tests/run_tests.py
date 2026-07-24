@@ -295,37 +295,63 @@ def i18n_placeholders(value):
 
 # Define the validate_i18n_resources function used by this module.
 def validate_i18n_resources():
-    # Set manifest to the value needed for the next operation.
+    # Load the canonical Phase 0 locale registry.
     manifest=read_i18n_json(ROOT/'web'/'i18n'/'manifest.json')
-    # Set locales to the value needed for the next operation.
-    locales=[locale['id'] for locale in manifest['locales']]
-    # Set domains to the value needed for the next operation.
-    domains=manifest['domains']
-    # Execute this statement as part of the module's documented control flow.
+    # Preserve the owner-locked order so priority and evidence tiers cannot drift silently.
+    locked_locales=('en-US','zh-Hans','hi-IN','es-419','ar','fr-FR','bn-BD','pt-BR','ru-RU','id-ID','ur-PK','de-DE','ja-JP','pcm-NG','arz-EG','ta-IN','vi-VN','te-IN','ha-NG','tr-TR','pnb-PK','sw-KE','fil-PH','mr-IN','yue-Hant-HK')
+    # Read registry entries once for metadata and readiness assertions.
+    registry=manifest['locales']
+    # Resolve the exact selectable resource packs without treating metadata-only identities as translations.
+    ready_locales=[locale['id'] for locale in registry if locale['readiness']=='ready' and locale['uiReady'] is True]
+    # Discover game-owned translation domains from the same canonical catalog used by the runtime.
+    game_domains=[game['frontend']['i18n_domain'] for game in casino_config.GAMES]
+    # Combine base and catalog domains for complete installed-resource parity.
+    domains=[*manifest['domains'],*game_domains]
+    # Require the explicit Phase 0 schema and default/fallback source locale.
+    assert manifest['schemaVersion']==2 and manifest['registryVersion']=='phase-0-locked-25'
+    # Preserve source-locale defaults independently from browser detection.
     assert manifest['defaultLocale']=='en-US'
-    # Execute this statement as part of the module's documented control flow.
-    assert 'ru-RU' in locales
-    # Iterate through the collection to process each item.
+    # Require the exact locked identities, order, and permanent 1-based ranks.
+    assert tuple(locale['id'] for locale in registry)==locked_locales
+    # Reject missing or duplicate rank metadata.
+    assert [locale['rank'] for locale in registry]==list(range(1,26))
+    # Keep only the two actually translated resource packs selectable in Phase 0.
+    assert ready_locales==['en-US','ru-RU']
+    # Preserve all four approved right-to-left identities without activating unfinished resources.
+    assert [locale['id'] for locale in registry if locale['dir']=='rtl']==['ar','ur-PK','arz-EG','pnb-PK']
+    # Require each identity to carry complete script, formatter, fallback, readiness, and review metadata.
+    assert all(locale['script'] and locale['formatLocale'] and locale['reviewStatus'] and locale['readiness'] for locale in registry)
+    # Require fallback chains to start at translation identity and end at the installed source locale.
+    assert all(locale['fallbackChain'][0]==locale['id'] and locale['fallbackChain'][-1]=='en-US' for locale in registry)
+    # Reject aliases that escape the locked registry even though metadata-only aliases are not selectable yet.
+    assert set(manifest['aliases'].values()).issubset(set(locked_locales))
+    # Keep game domains out of the static manifest so the live catalog remains their authority.
+    assert all(not domain.startswith('games/') for domain in manifest['domains'])
+    # Require one unique catalog domain per registered game.
+    assert len(game_domains)==len(set(game_domains))==len(casino_config.GAMES)
+    # Reject resource directories that would falsely imply a planned translation is installed.
+    assert all(not (ROOT/'web'/'i18n'/locale['id']).exists() for locale in registry if not locale['uiReady'])
+    # Validate key and placeholder parity across every base and catalog domain for installed locales.
     for domain in domains:
-        # Set source_path to the value needed for the next operation.
+        # Resolve the English source dictionary from the resource-relative domain.
         source_path=ROOT/'web'/'i18n'/'en-US'/Path(*domain.split('/')).with_suffix('.json')
-        # Set source to the value needed for the next operation.
+        # Read canonical source strings before comparing translations.
         source=read_i18n_json(source_path)
-        # Iterate through the collection to process each item.
-        for locale in locales:
-            # Set candidate_path to the value needed for the next operation.
+        # Compare only actually installed locale packs.
+        for locale in ready_locales:
+            # Resolve the installed candidate dictionary at the same domain path.
             candidate_path=ROOT/'web'/'i18n'/locale/Path(*domain.split('/')).with_suffix('.json')
-            # Set candidate to the value needed for the next operation.
+            # Read the candidate dictionary as strict UTF-8 JSON.
             candidate=read_i18n_json(candidate_path)
-            # Execute this statement as part of the module's documented control flow.
+            # Require exact key parity before any browser can render a raw fallback identifier.
             assert set(candidate)==set(source), f'{locale}/{domain} key mismatch'
-            # Iterate through the collection to process each item.
+            # Validate every translated value and named interpolation contract.
             for key, source_value in source.items():
-                # Set translated_value to the value needed for the next operation.
+                # Read the corresponding translated value.
                 translated_value=candidate[key]
-                # Execute this statement as part of the module's documented control flow.
+                # Reject empty translations that would create blank controls.
                 assert translated_value!='', f'{locale}/{domain}/{key} is empty'
-                # Execute this statement as part of the module's documented control flow.
+                # Preserve placeholder names exactly across each installed locale.
                 assert i18n_placeholders(translated_value)==i18n_placeholders(source_value), f'{locale}/{domain}/{key} placeholder mismatch'
 
 # Run every service-free OAuth test through central discovery so CI cannot miss the package.
@@ -1959,6 +1985,8 @@ def run_api_tests():
 
         # Execute this statement as part of the module's documented control flow.
         run_case('API-I18N-001',['I18N-001','I18N-003'],validate_i18n_resources)
+        # Record collision-free Phase 0 registry, catalog-discovery, and translation-readiness evidence.
+        run_case('API-I18N-FOUNDATION-001',['I18N-006','I18N-007','TEST-101'],validate_i18n_resources)
 
         # Define the bots_audio_autoplay function used by this module.
         def bots_audio_autoplay():
@@ -7580,6 +7608,70 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 page.get_by_test_id('admin-tab-audio').click(); page.get_by_test_id('admin-save-audio').wait_for(timeout=5000)
                 # Execute this statement as part of the module's documented control flow.
                 run_case('BR-AUDIO-001',['AUDIO-002','AUDIO-005'],lambda: page.get_by_test_id('admin-preview-voice').is_visible())
+                # Define the Phase 0 registry, formatter, fallback, discovery, and visual evidence gate.
+                def localization_foundation_browser():
+                    # Open the generic Admin Language/Locale surface.
+                    page.get_by_test_id('admin-tab-language').click()
+                    # Wait for the complete locked registry rather than one hard-coded locale control.
+                    page.get_by_test_id('admin-locale-registry').wait_for(timeout=5000)
+                    # Read the public runtime state used by shell and Admin selectors.
+                    foundation_state=page.evaluate("() => window.CasinoI18n.getLocaleState()")
+                    # Require all 25 metadata identities while exposing only complete English and Russian packs.
+                    assert len(foundation_state['localeRegistry'])==25 and [locale['id'] for locale in foundation_state['locales']]==['en-US','ru-RU']
+                    # Require the visible selector to exclude every metadata-only locale.
+                    assert page.get_by_test_id('admin-language-select').locator('option').count()==2
+                    # Require formatter selection to expose the registry's deterministic Intl identities independently from translations.
+                    assert page.get_by_test_id('admin-format-locale-select').locator('option').count()>=23
+                    # Load every bundled script and fullwidth-punctuation subset before evaluating or capturing the native-label registry.
+                    font_results=page.evaluate("""async () => { const samples=[['Casino Locale CJK','简体中文日本語廣東話香港繁體'],['Casino Locale CJK','（）'],['Casino Locale Devanagari','हिन्दीमराठी'],['Casino Locale Bengali','বাংলা'],['Casino Locale Tamil','தமிழ்'],['Casino Locale Telugu','తెలుగు']]; const rows=[]; for (const [family,text] of samples) { const declaration=`700 18px "${family}"`; const faces=await document.fonts.load(declaration,text); rows.push({family,text,loaded:faces.length>0,ready:document.fonts.check(declaration,text)}); } await document.fonts.ready; return rows; }""")
+                    # Reject hosted evidence when any required native-script asset is absent or not ready.
+                    assert all(result['loaded'] and result['ready'] for result in font_results), font_results
+                    # Validate every locked translation tag and configured formatter with the exact browser Intl runtime.
+                    intl_results=page.evaluate("() => window.CasinoI18n.getLocaleState().localeRegistry.map(locale => { try { const identity=new Intl.Locale(locale.id).toString(); const number=new Intl.NumberFormat(locale.formatLocale).format(12345.67); const date=new Intl.DateTimeFormat(locale.formatLocale).format(new Date('2032-02-03T04:05:06Z')); return { id: locale.id, identity, number, date, ok: Boolean(identity && number && date) }; } catch (error) { return { id: locale.id, ok: false, error: error.name }; } })")
+                    # Fail with bounded identity-only diagnostics if any configured browser formatter is unavailable.
+                    assert all(result['ok'] for result in intl_results), intl_results
+                    # Ask the real authenticated catalog for every current game-owned translation domain.
+                    catalog_result=page.evaluate("async () => { const response=await fetch('/api/v1/casino/state'); const payload=await response.json(); const games=payload.data.games; const i18n=await import('/core/i18n.js'); const discovered=i18n.registerI18nDomains(games.map(game => game.frontend.i18n_domain)); return { gameCount: games.length, gameDomains: games.map(game => game.frontend.i18n_domain), discovered }; }")
+                    # Require every unique live game domain in runtime diagnostics without a static game allowlist.
+                    assert catalog_result['gameCount']==len(set(catalog_result['gameDomains'])) and set(catalog_result['gameDomains']).issubset(set(catalog_result['discovered']))
+                    # Enter browser-default mode before proving a later concrete selector choice takes ownership.
+                    selector_state=page.evaluate("async () => { const i18n=await import('/core/i18n.js'); await i18n.setLocale('browser',{persistLocal:true,nextUseBrowserLocale:true,nextFormatLocale:'browser'}); return await i18n.setLocale('ru-RU',{persistLocal:false}); }")
+                    # Require an explicit ready locale to exit browser-default resolution without a reload.
+                    assert selector_state['locale']=='ru-RU' and selector_state['useBrowserLocale'] is False
+                    # Attempting an unfinished RTL locale must retain the installed English UI and safe LTR root.
+                    fallback_state=page.evaluate("async () => { const i18n=await import('/core/i18n.js'); const state=await i18n.setLocale('ar',{persistLocal:false,nextUseBrowserLocale:false}); return { locale:state.locale, dir:document.documentElement.dir, lang:document.documentElement.lang }; }")
+                    # Reject silent English masquerading as Arabic by requiring explicit selectable-readiness fallback.
+                    assert fallback_state=={'locale':'en-US','dir':'ltr','lang':'en-US'}
+                    # Define every governed Admin viewport for exact-head localization evidence.
+                    localization_viewports={'desktop_primary':{'width':1920,'height':1080},'desktop_compact':{'width':1440,'height':900},'tablet':{'width':1024,'height':900},'mobile':{'width':390,'height':844}}
+                    # Capture the generic registry in both installed locales.
+                    for locale in ('en-US','ru-RU'):
+                        # Switch through the production runtime without persisting beyond the disposable browser copy.
+                        page.evaluate("async locale => { const i18n=await import('/core/i18n.js'); await i18n.setLocale(locale,{persistLocal:true,nextUseBrowserLocale:false}); }",locale)
+                        # Wait for the locale-driven Admin rerender to restore the foundation surface.
+                        page.get_by_test_id('admin-localization-foundation').wait_for(timeout=5000)
+                        # Require all locked entries after each in-place language switch.
+                        assert page.get_by_test_id('admin-locale-registry-entry').count()==25
+                        # Reject replacement characters and unresolved interpolation placeholders in visible foundation copy.
+                        foundation_text=page.get_by_test_id('admin-localization-foundation').inner_text()
+                        # Preserve clean real copy across all native labels and translated headings.
+                        assert '�' not in foundation_text and '{ready}' not in foundation_text and '{total}' not in foundation_text
+                        # Reset both desktop Admin and mobile document scroll owners before evidence capture.
+                        page.evaluate("() => { const content=document.querySelector('.admin-content'); if (content) content.scrollTop=0; window.scrollTo(0,0); }")
+                        # Exercise every required viewport with horizontal containment and after-pass evidence.
+                        for viewport_id,viewport in localization_viewports.items():
+                            # Resize to the exact governed dimensions before layout inspection.
+                            page.set_viewport_size(viewport); page.wait_for_timeout(150)
+                            # Keep each artifact anchored at the foundation heading after responsive ownership changes.
+                            page.evaluate("() => { const content=document.querySelector('.admin-content'); if (content) content.scrollTop=0; window.scrollTo(0,0); }")
+                            # Reject page-level horizontal overflow on the complete registry surface.
+                            assert page.evaluate("() => document.documentElement.scrollWidth <= window.innerWidth + 1")
+                            # Save self-describing full-page evidence so all 25 metadata cards remain reviewable with exact-source provenance.
+                            game_evidence(f'after-pass-admin-localization-foundation-{locale}-{viewport_id}.png','admin',['localization_locked_registry','localization_selector_persistence','localization_formatter_metadata','localization_catalog_domains','localization_safe_fallback'],locale,viewport_id)
+                    # Restore the primary viewport and English without leaving a browser preference behind.
+                    page.set_viewport_size({'width':1920,'height':1080}); page.evaluate("async () => { const i18n=await import('/core/i18n.js'); await i18n.setLocale('en-US',{persistLocal:false,nextUseBrowserLocale:false}); localStorage.removeItem('casino.locale.settings.v1'); }")
+                # Record locked registry, browser Intl, safe fallback, catalog discovery, and governed visual evidence.
+                run_case('BR-I18N-FOUNDATION-001',['I18N-006','I18N-007','TEST-101'],localization_foundation_browser)
                 # Define the admin_i18n function used by this module.
                 def admin_i18n():
                     # Open the new Language/Locale tab.
