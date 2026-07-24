@@ -40,7 +40,7 @@ A registry entry becomes selectable only when `readiness` is `ready`, `uiReady` 
 
 Fallback chains are explicit and terminate at `en-US`. Readiness and review status are separate: `ready` describes technical resource availability, while review metadata records source or human review without claiming linguistic certification.
 
-The locked native labels use compact, bundled OFL-licensed Noto Sans subsets for CJK, Devanagari, Bengali, Tamil, and Telugu glyphs that are not guaranteed on clean hosted Chromium runners. The subsets are local static assets, require no runtime font network access, and cover only the Phase 0 labels; later translation waves must extend the reviewed glyph inventory deliberately.
+The locked native labels use compact, bundled OFL-licensed Noto Sans subsets for CJK, Devanagari, Bengali, Tamil, and Telugu glyphs that are not guaranteed on clean hosted Chromium runners. The CJK range includes the fullwidth parentheses in the complete Cantonese native label rather than delegating them to an unavailable system fallback. The subsets are local static assets, require no runtime font network access, and cover only the Phase 0 labels; later translation waves must extend the reviewed glyph inventory deliberately.
 
 Browser-local language and number/date preferences continue to use `casino.locale.settings.v1`. Display-language choices are limited to ready packs. Number/date formatting can use any configured formatter identity because formatting does not imply translated interface copy.
 

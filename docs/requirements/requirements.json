@@ -9632,7 +9632,7 @@
     {
       "id": "TEST-101",
       "module": "Tests",
-      "description": "Localization foundation tests lock all 25 metadata identities and RTL membership, require installed-resource key and placeholder parity across catalog-discovered domains, validate every configured translation and formatter tag and bundled native-script font in the browser runtime, reject selection of unfinished locales, prove browser-local persistence, and capture the Admin foundation in both installed locales at all four governed viewports.",
+      "description": "Localization foundation tests lock all 25 metadata identities and RTL membership, require installed-resource key and placeholder parity across catalog-discovered domains, validate every configured translation and formatter tag and each complete bundled native-script label including fullwidth punctuation in the browser runtime, reject selection of unfinished locales, prove browser-local persistence, and capture the Admin foundation in both installed locales at all four governed viewports.",
       "status": "PASS",
       "api_tests": ["API-I18N-FOUNDATION-001"],
       "browser_tests": ["BR-I18N-FOUNDATION-001"],

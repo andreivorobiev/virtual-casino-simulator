@@ -5,7 +5,7 @@
   font-weight: 400;
   font-display: swap;
   src: url("/assets/fonts/noto-sans-locale-cjk.woff2") format("woff2");
-  unicode-range: U+4E2D, U+4F53, U+5EE3, U+6587, U+65E5, U+672C, U+6771, U+6E2F, U+7B80, U+7E41, U+8A71, U+8A9E, U+9999, U+9AD4;
+  unicode-range: U+4E2D, U+4F53, U+5EE3, U+6587, U+65E5, U+672C, U+6771, U+6E2F, U+7B80, U+7E41, U+8A71, U+8A9E, U+9999, U+9AD4, U+FF08-FF09;
 }
 
 @font-face {
@@ -14,7 +14,7 @@
   font-weight: 700;
   font-display: swap;
   src: url("/assets/fonts/noto-sans-locale-cjk-700.woff2") format("woff2");
-  unicode-range: U+4E2D, U+4F53, U+5EE3, U+6587, U+65E5, U+672C, U+6771, U+6E2F, U+7B80, U+7E41, U+8A71, U+8A9E, U+9999, U+9AD4;
+  unicode-range: U+4E2D, U+4F53, U+5EE3, U+6587, U+65E5, U+672C, U+6771, U+6E2F, U+7B80, U+7E41, U+8A71, U+8A9E, U+9999, U+9AD4, U+FF08-FF09;
 }
 
 @font-face {
