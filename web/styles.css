@@ -2593,6 +2593,17 @@ h3 {
   outline-offset: -4px;
 }
 
+/* Bound each Create User column before the phone layout stacks the form. (USER-004) */
+[data-testid="admin-user-create"] .grid3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* Let every managed-account form control shrink inside its responsive grid column. */
+[data-testid="admin-user-create"] :is(input:not([type="checkbox"]), select, button) {
+  width: 100%;
+  min-width: 0;
+}
+
 /* Keep the invitation form columns bounded before the phone breakpoint stacks them. (INVITE-005) */
 [data-testid="admin-invitation-create"] .grid3 {
   grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(120px, auto);
@@ -3087,6 +3098,11 @@ h3 {
 
   /* Stack the invitation creation form before native input minimums can widen the page. */
   [data-testid="admin-invitation-create"] .grid3 {
+    grid-template-columns: 1fr;
+  }
+
+  /* Stack managed-account fields so native controls never widen the governed phone viewport. */
+  [data-testid="admin-user-create"] .grid3 {
     grid-template-columns: 1fr;
   }
 }
