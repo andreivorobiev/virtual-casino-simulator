@@ -1,12 +1,24 @@
 """Focused personal-preference and self-only activity tests. (#352, USER-006, USER-007)"""
 
+# Import SHA-256 so the additive v2 contract stays pinned to exact reviewed bytes.
+import hashlib
+# Import JSON parsing for the checked contract digest inventory.
+import json
+# Import temporary directories so tests never touch repository or user runtime state.
+import tempfile
 # Import the standard unittest framework used by the repository's focused suites.
 import unittest
+# Import portable paths for isolated storage and checked contract artifacts.
+from pathlib import Path
 
-# Import the canonical identity boundary for account seeding.
-from casino.core import auth
 # Import the authoritative ledger used to seed self-history fixtures.
 from casino.core import ledger
+# Import the canonical player facade for isolated wallet fixtures.
+from casino.core import players
+# Import the shared self-history boundary for direct compatibility assertions.
+from casino.core import self_history as activity
+# Import provider injection so every test owns its complete durable state.
+from casino.core import storage
 # Import the personal-settings authority under test.
 from casino.core import user_settings
 # Import the configured storage provider for malformed-document fixtures.
@@ -14,17 +26,33 @@ from casino.core.storage import get_storage_provider
 # Import the standard bounded application errors every rejection uses.
 from casino.errors import ConflictError, ValidationError
 
+# Resolve checked contract artifacts independently from the process working directory.
+ROOT = Path(__file__).resolve().parents[1]
+
 
 # Verify personal preferences and self-history stay bounded, validated, and privately scoped.
 class UserSettingsTests(unittest.TestCase):
     # Seed two distinct accounts so every privacy assertion has a real neighbour.
     def setUp(self) -> None:
-        # Derive a per-test mailbox suffix so seeded accounts never collide across the shared store.
-        unique = self.id().rsplit(".", 1)[1]
-        # Create the subject whose settings and history are under test.
-        self.owner = auth.create_user(f"owner.{unique}@example.test", "OwnerPassw0rd!23", "Settings Owner")
-        # Create an unrelated account whose data must never appear.
-        self.other = auth.create_user(f"other.{unique}@example.test", "OtherPassw0rd!23", "Settings Other")
+        # Allocate an automatically cleaned root outside repository runtime state.
+        self.temporary = tempfile.TemporaryDirectory(prefix="casino-user-settings-")
+        # Install one isolated JSON provider for settings, players, and ledger rows.
+        storage.set_provider_for_tests(storage.JsonStorageProvider(Path(self.temporary.name) / "data"))
+        # Create the subject's isolated wallet through the production player facade.
+        owner_player = players.create_player("Settings Owner", "human", 5000)
+        # Create an unrelated neighbour wallet used by every privacy assertion.
+        other_player = players.create_player("Settings Other", "human", 5000)
+        # Build the authenticated subject shape normally supplied by session resolution.
+        self.owner = {"user_id": "user_settings_owner", "player_id": owner_player["player_id"], "role": "player", "roles": ["player"], "status": "active"}
+        # Build the unrelated authenticated subject without creating auth credentials or secrets.
+        self.other = {"user_id": "user_settings_other", "player_id": other_player["player_id"], "role": "player", "roles": ["player"], "status": "active"}
+
+    # Release provider injection and isolated files after every assertion.
+    def tearDown(self) -> None:
+        # Clear the process-global test provider before another suite runs.
+        storage.set_provider_for_tests(None)
+        # Remove only the TemporaryDirectory-owned state root.
+        self.temporary.cleanup()
 
     # Require a fresh account to read canonical defaults rather than failing.
     def test_defaults_apply_before_anything_is_stored(self) -> None:
@@ -103,6 +131,15 @@ class UserSettingsTests(unittest.TestCase):
         # Require a subsequent write to repair only this module's container and succeed.
         self.assertEqual(user_settings.update_settings(self.owner, {"locale": "ru-RU"})["locale"], "ru-RU")
 
+    # Require malformed stored field types to fall back instead of truthy coercion.
+    def test_malformed_stored_field_types_degrade_to_canonical_defaults(self) -> None:
+        # Persist one structurally valid subject record carrying invalid field types.
+        get_storage_provider().write_document(user_settings.SETTINGS_DOCUMENT_KEY, {"users": {self.owner["user_id"]: {"locale": "retired", "sound_enabled": "false", "revision": -4, "updated_at": 123}}})
+        # Read through the production normalizer.
+        settings = user_settings.read_settings(self.owner)
+        # Require every invalid field to use the canonical safe default.
+        self.assertEqual((settings["locale"], settings["sound_enabled"], settings["revision"], settings["updated_at"]), ("en-US", True, 0, None))
+
     # Require guest trials to change settings in session without creating a durable record.
     def test_guest_settings_stay_session_local(self) -> None:
         # Model a disposable guest trial session.
@@ -121,7 +158,7 @@ class UserSettingsTests(unittest.TestCase):
     # Require self-history to return only the session's own rows even with hostile inputs.
     def test_self_history_never_returns_another_subject(self) -> None:
         # Seed one ledger event for each account.
-        ledger.credit(self.owner["player_id"], 100, "OWNER_EVENT", game="roulette")
+        ledger.credit(self.owner["player_id"], 100, "OWNER_EVENT", game="roulette", round_id="round_private_owner_12345678")
         ledger.credit(self.other["player_id"], 250, "OTHER_EVENT", game="slots")
         # Read the owner's own history while supplying a hostile foreign identifier.
         page = user_settings.self_history(self.owner, page=1, page_size=50, game="")
@@ -135,6 +172,12 @@ class UserSettingsTests(unittest.TestCase):
         for row in page["events"]:
             # Require the allowlisted field set exactly.
             self.assertEqual(set(row), set(user_settings.HISTORY_FIELDS))
+        # Serialize the complete response for one raw-identifier privacy check.
+        serialized = json.dumps(page)
+        # Require the durable round id to stay private.
+        self.assertNotIn("round_private_owner_12345678", serialized)
+        # Require the safe short correlation tail to remain usable.
+        self.assertIn("12345678", serialized)
 
     # Require pagination to stay bounded, ordered, and stable across pages.
     def test_history_pagination_is_bounded_and_stable(self) -> None:
@@ -169,6 +212,10 @@ class UserSettingsTests(unittest.TestCase):
         self.assertEqual(page["page"], 1)
         # Require the clamped page to still return the subject's own row.
         self.assertEqual([row["transaction_type"] for row in page["events"]], ["CLAMP_EVENT"])
+        # Request malformed query-string shapes that previously raised into an internal error.
+        malformed = user_settings.self_history(self.owner, page="not-an-integer", page_size="oversized")
+        # Require deterministic defaults instead of a 500-class conversion failure.
+        self.assertEqual((malformed["page"], malformed["page_size"]), (1, activity.DEFAULT_PAGE_SIZE))
 
     # Require the game filter to narrow results without escaping the subject boundary.
     def test_history_game_filter_stays_within_the_subject(self) -> None:
@@ -193,3 +240,34 @@ class UserSettingsTests(unittest.TestCase):
         with self.assertRaises(ValidationError):
             # Attempt the subjectless update.
             user_settings.update_settings({}, {"locale": "ru-RU"})
+
+    # Require the additive route shape and exact checked contract to remain aligned.
+    def test_v2_route_shape_and_contract_digest_are_current(self) -> None:
+        # Import router construction lazily so provider injection is already active.
+        from casino.app import build_router
+        # Build one listener-free route table over the production handlers.
+        router = build_router()
+        # Read personal settings through the exact additive v2 route.
+        settings = router.dispatch("GET", "/api/v2/me/settings", {}, {"user": self.owner})
+        # Require the settings record and supported locale catalog together.
+        self.assertEqual((settings["settings"]["locale"], settings["supported_locales"]), ("en-US", ["en-US", "ru-RU"]))
+        # Update the same session-derived subject without any caller-authored identity field.
+        changed = router.dispatch("PATCH", "/api/v2/me/settings", {"locale": "ru-RU"}, {"user": self.owner})
+        # Require the route to publish the stored revision and value.
+        self.assertEqual((changed["settings"]["locale"], changed["settings"]["revision"]), ("ru-RU", 1))
+        # Read the subject's bounded history through the exact route and hostile query shapes.
+        history = router.dispatch("GET", "/api/v2/me/history?page=bad&page_size=bad", {}, {"user": self.owner})
+        # Require safe pagination defaults and no raw provider rows.
+        self.assertEqual((history["page"], history["page_size"], history["events"]), (1, activity.DEFAULT_PAGE_SIZE, []))
+        # Resolve the checked additive v2 contract.
+        contract_path = ROOT / "contracts" / "openapi" / "user-settings.v2.yaml"
+        # Read the contract bytes once for route and digest checks.
+        contract_bytes = contract_path.read_bytes()
+        # Require all three route operations and exact privacy-safe reference field.
+        contract_text = contract_bytes.decode("utf-8")
+        # Fail when the contract omits any shipped route or republishes raw round identity.
+        self.assertTrue(all(anchor in contract_text for anchor in ("/me/settings:", "/me/history:", "reference:")))
+        # Parse the central exact-byte digest inventory.
+        digests = json.loads((ROOT / "contracts" / "compatibility" / "contract-digests.json").read_text(encoding="utf-8"))
+        # Require the reviewed contract bytes to match the frozen digest.
+        self.assertEqual(digests["contracts/openapi/user-settings.v2.yaml"], hashlib.sha256(contract_bytes).hexdigest())

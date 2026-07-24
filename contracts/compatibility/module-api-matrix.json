@@ -3,13 +3,15 @@
     "contracts/openapi/auth.v2.yaml",
     "contracts/openapi/feedback.v2.yaml",
     "contracts/openapi/invitations.v2.yaml",
-    "contracts/openapi/transactional-mail.v2.yaml"
+    "contracts/openapi/transactional-mail.v2.yaml",
+    "contracts/openapi/user-settings.v2.yaml"
   ],
   "core": [
     "contracts/openapi/auth.v2.yaml",
     "contracts/openapi/feedback.v2.yaml",
     "contracts/openapi/invitations.v2.yaml",
-    "contracts/openapi/transactional-mail.v2.yaml"
+    "contracts/openapi/transactional-mail.v2.yaml",
+    "contracts/openapi/user-settings.v2.yaml"
   ],
   "ledger": [],
   "players": [
@@ -28,7 +30,8 @@
     "contracts/openapi/feedback.v2.yaml",
     "contracts/openapi/invitations.v2.yaml",
     "contracts/openapi/operations.v1.yaml",
-    "contracts/openapi/transactional-mail.v2.yaml"
+    "contracts/openapi/transactional-mail.v2.yaml",
+    "contracts/openapi/user-settings.v2.yaml"
   ],
   "operations": [
     "contracts/openapi/operations.v1.yaml"

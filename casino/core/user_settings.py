@@ -13,8 +13,8 @@ persisted for them: the guest lifecycle stays disposable and no durable personal
 
 # Import the shared UTC formatter for contract-compatible timestamps.
 from casino.core.clock import utc_now
-# Import the authoritative ledger so activity has exactly one source of truth.
-from casino.core import ledger
+# Import the shared self-scoped ledger reader so later receipt views can reuse one privacy boundary.
+from casino.core import self_history as activity
 # Import the configured storage provider for atomic document persistence.
 from casino.core.storage import get_storage_provider
 # Import standard bounded application errors.
@@ -28,14 +28,12 @@ SUPPORTED_LOCALES = ("en-US", "ru-RU")
 DEFAULT_LOCALE = "en-US"
 # Enumerate the only preference fields a caller may ever submit.
 ALLOWED_FIELDS = frozenset({"locale", "sound_enabled"})
-# Bound one page of self-history so a caller can never request an unbounded read.
-MAX_PAGE_SIZE = 50
-# Return a stable default page size when the caller supplies none.
-DEFAULT_PAGE_SIZE = 20
-# Read a bounded ledger window large enough to paginate without loading unbounded history.
-LEDGER_READ_CEILING = 1000
-# Publish only ledger fields that carry no durable identifier or internal audit material.
-HISTORY_FIELDS = ("ts", "game", "round_id", "transaction_type", "amount", "balance_after")
+# Re-export the shared page ceiling for the v2 contract and compatibility callers.
+MAX_PAGE_SIZE = activity.MAX_PAGE_SIZE
+# Re-export the shared default page size for the route adapter.
+DEFAULT_PAGE_SIZE = activity.DEFAULT_PAGE_SIZE
+# Publish only presentation fields that carry no raw durable identifier or internal details.
+HISTORY_FIELDS = ("ts", "game", "reference", "transaction_type", "amount", "balance_after")
 
 
 # Build the default personal preference record for a subject with nothing stored yet.
@@ -62,8 +60,10 @@ def _normalize(record) -> dict:
     if record.get("locale") in SUPPORTED_LOCALES:
         # Adopt the supported stored locale.
         settings["locale"] = record["locale"]
-    # Coerce the stored sound flag to a strict boolean.
-    settings["sound_enabled"] = bool(record.get("sound_enabled", True))
+    # Adopt the stored sound flag only when it remains a strict boolean.
+    if isinstance(record.get("sound_enabled"), bool):
+        # Preserve the valid stored sound preference.
+        settings["sound_enabled"] = record["sound_enabled"]
     # Adopt a stored revision only when it is a usable non-negative integer.
     if isinstance(record.get("revision"), int) and record["revision"] >= 0:
         # Preserve the concurrency revision.
@@ -198,39 +198,34 @@ def update_settings(user, patch) -> dict:
 
 # Reduce one ledger row to the publishable self-history shape.
 def _history_row(row) -> dict:
-    # Copy only allowlisted fields so durable identifiers and internal details never escape.
-    return {field: row.get(field) for field in HISTORY_FIELDS}
+    # Build the explicit presentation row so raw ledger and round identifiers never escape.
+    return {
+        # Publish the committed timestamp for ordering and display.
+        "ts": row.get("ts"),
+        # Publish the catalog game identifier used by safe client filters.
+        "game": row.get("game"),
+        # Publish only a short correlation tail instead of the raw durable round identifier.
+        "reference": activity.display_reference(row.get("round_id")),
+        # Publish the committed movement vocabulary for this server-only foundation.
+        "transaction_type": row.get("transaction_type"),
+        # Publish the authoritative signed fake-token movement.
+        "amount": row.get("amount"),
+        # Publish the authoritative resulting fake-token balance.
+        "balance_after": row.get("balance_after"),
+    }
 
 
 # Read the authenticated session's own bounded, paginated activity.
 def self_history(user, *, page: int = 1, page_size: int = DEFAULT_PAGE_SIZE, game: str = "") -> dict:
     # Derive the subject from the session only, never from a caller-supplied identifier.
     _subject(user)
-    # Resolve the ledger subject bound to this session.
-    player_id = str((user or {}).get("player_id") or "")
-    # Clamp the page size into the accepted bounds so a caller cannot request an unbounded read.
-    size = max(1, min(int(page_size or DEFAULT_PAGE_SIZE), MAX_PAGE_SIZE))
-    # Clamp the page index so a negative or zero page cannot wrap the slice.
-    index = max(1, int(page or 1))
-    # Return an explicit empty page when the session has no ledger subject at all.
-    if not player_id:
-        # Publish a stable empty envelope rather than another user's rows.
-        return {"events": [], "page": index, "page_size": size, "total": 0, "has_more": False, "game": ""}
-    # Read only this player's rows; the provider filter is the authorization boundary.
-    rows = ledger.read_recent(player_id, LEDGER_READ_CEILING)
-    # Drop any row that is not bound to this subject so a provider change can never leak another player.
-    rows = [row for row in rows if str(row.get("player_id") or "") == player_id]
     # Normalize the optional game filter without trusting its type.
     selected = str(game or "").strip()
-    # Apply the game filter when the caller supplied one.
-    if selected:
-        # Keep only rows for the selected game.
-        rows = [row for row in rows if str(row.get("game") or "") == selected]
-    # Order newest first so pagination stays stable and readable.
-    ordered = list(reversed(rows))
-    # Record the filtered total before slicing.
-    total = len(ordered)
-    # Compute the slice start for the requested page.
-    start = (index - 1) * size
-    # Publish the bounded page with its allowlisted fields only.
-    return {"events": [_history_row(row) for row in ordered[start:start + size]], "page": index, "page_size": size, "total": total, "has_more": start + size < total, "game": selected}
+    # Define the optional game filter without weakening the shared ownership boundary.
+    row_filter = (lambda row: str(row.get("game") or "") == selected) if selected else None
+    # Read the reusable owned page shape through the shared privacy boundary.
+    bounded = activity.read_page(user, page=page, page_size=page_size, row_filter=row_filter)
+    # Remove trusted raw rows before publishing the surface-specific envelope.
+    rows = bounded.pop("rows")
+    # Publish the bounded page with only allowlisted presentation fields.
+    return {"events": [_history_row(row) for row in rows], **bounded, "game": selected}
