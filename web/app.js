@@ -43,8 +43,8 @@ window.addEventListener('error', event => logClient('window_error', { message: e
 window.addEventListener('unhandledrejection', event => logClient('unhandled_rejection', { reason: String(event.reason?.message || event.reason) }));
 // Mark a guest page departure so lifecycle cleanup stays observable without ending same-context reloads.
 window.addEventListener('pagehide', () => { if (isGuestSession()) void departGuestTrial().catch(() => {}); });
-// Reset stale authenticated chrome whenever any protected API request proves the browser session is gone.
-window.addEventListener('casino-session-expired', () => renderExpiredSessionGate());
+// Reset stale authenticated chrome only while an authenticated shell is mounted, leaving public enrollment pages intact.
+window.addEventListener('casino-session-expired', () => { if (currentSession) renderExpiredSessionGate(); });
 
 // Normalize the draft v2 current-user payloads without committing to backend internals.
 function normalizeCurrentUser(payload) {
