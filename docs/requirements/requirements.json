@@ -9699,8 +9699,8 @@
       "browser_tests": ["BR-PWA-001"],
       "implementation_files": ["tests/pwa_tests.py", "tests/run_tests.py", "tests/visual/visual_matrix.json"],
       "introduced_in": "issue-182-pwa-foundation",
-      "changed_in": "pr-368-expired-session-recovery",
-      "notes": "TEST-092 remains exclusively owned by formal 50,000-cycle qualification. Browser-free coverage distinguishes mounted-session expiry from anonymous enrollment probes; Android/iOS metadata is checked as a browser foundation only, and native install and relaunch evidence remains deferred with full issue #182."
+      "changed_in": "9.5.3",
+      "notes": "TEST-092 remains exclusively owned by formal 50,000-cycle qualification. Browser-free coverage distinguishes mounted-session expiry from anonymous enrollment probes and requires the synthetic mismatched-worker message plus stale-client listener result to remain in one synchronous browser task; Android/iOS metadata is checked as a browser foundation only, and native install and relaunch evidence remains deferred with full issue #182."
     },
     {
       "id": "TEST-096",

@@ -2629,10 +2629,10 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         pwa_page.context.set_offline(False); pwa_page.evaluate("() => window.dispatchEvent(new Event('online'))")
                         # Require the authoritative reconnect callback to remount the same route.
                         pwa_page.wait_for_function("() => window.CasinoPwa?.state()==='route-restored' && location.pathname==='/games/roulette' && Boolean(document.querySelector('[data-testid=roulette-premium]'))",timeout=12000)
-                        # Prove a mismatched controlling-worker version produces a bounded stale-client state.
-                        pwa_page.evaluate("() => navigator.serviceWorker.dispatchEvent(new MessageEvent('message',{data:{type:'PWA_VERSION',version:'0.0.0'}}))")
-                        # Require stale-client status without worker or provider mutation.
-                        pwa_page.wait_for_function("() => window.CasinoPwa?.state()==='stale-client'",timeout=3000)
+                        # Dispatch one synthetic mismatched worker version and read the synchronously committed listener result in the same task.
+                        stale_client_state=pwa_page.evaluate("() => { navigator.serviceWorker.dispatchEvent(new MessageEvent('message',{data:{type:'PWA_VERSION',version:'0.0.0'}})); return window.CasinoPwa?.state()||''; }")
+                        # Require the real message listener to commit stale-client status without an asynchronous reconnect race.
+                        assert stale_client_state=='stale-client',stale_client_state
                         # Return to the shell root before generating the governed visual corpus.
                         pwa_page.goto(f'{base}/?locale=en-US',wait_until='domcontentloaded'); pwa_page.get_by_test_id('lobby').wait_for(timeout=8000)
                         # Generate exact EN/RU evidence for every state at every governed viewport.
