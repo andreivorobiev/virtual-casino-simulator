@@ -10181,6 +10181,62 @@
       "introduced_in": "issue-169-wheel-motion-compatibility",
       "changed_in": "issue-169-wheel-motion-compatibility",
       "notes": "Allocated after TEST-101 became permanent on current main. This proof is intentionally narrower than the planned ROU-068 exact-head video and 100-spin acceptance packet."
+    },
+    {
+      "id": "USER-006",
+      "module": "Core",
+      "description": "Every authenticated persistent user has a personal locale and sound preference record that defaults deterministically, accepts only the installed locale catalog and strict booleans, rejects unknown fields, supports optimistic revisions, persists atomically through the configured JSON or MySQL document provider, and degrades structurally malformed records to canonical defaults. Guest trials receive a non-persisted response and never create a durable personal-settings document.",
+      "status": "PASS",
+      "api_tests": [
+        "API-SETTINGS-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/user_settings.py",
+        "casino/app.py",
+        "contracts/openapi/user-settings.v2.yaml",
+        "tests/user_settings_tests.py"
+      ],
+      "introduced_in": "issue-352-my-settings-foundation",
+      "changed_in": "issue-352-my-settings-foundation",
+      "notes": "Allocated for the server-only foundation in GitHub issue #352. The subject is derived from the active session, unknown identity or privilege fields reject the complete update, and the broader My Settings UI and browser matrix remain open."
+    },
+    {
+      "id": "USER-007",
+      "module": "Core",
+      "description": "Personal activity reads use one reusable self-scoped ledger pagination boundary: the active session supplies the player subject, provider rows are re-filtered to that subject, malformed or hostile page values are bounded safely, optional game filtering cannot widen ownership, newest-first pages are capped at 50 rows from a bounded source window, and published rows expose only allowlisted presentation fields plus a short correlation tail instead of raw durable identifiers.",
+      "status": "PASS",
+      "api_tests": [
+        "API-SETTINGS-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/self_history.py",
+        "casino/core/user_settings.py",
+        "casino/app.py",
+        "contracts/openapi/user-settings.v2.yaml",
+        "tests/user_settings_tests.py"
+      ],
+      "introduced_in": "issue-352-my-settings-foundation",
+      "changed_in": "issue-352-my-settings-foundation",
+      "notes": "Allocated for the server-only foundation in GitHub issue #352. The shared reader and privacy-safe display reference are intentionally reusable by the deferred player-receipt lane without creating a second ledger authority."
+    },
+    {
+      "id": "TEST-103",
+      "module": "Tests",
+      "description": "Listener-free isolated-provider evidence verifies personal-setting defaults and durable updates, cross-subject isolation, strict locale and sound validation, whole-payload privilege rejection, optimistic conflict handling, malformed-container recovery and malformed-field fallback, guest non-persistence, self-history privacy against a populated neighbour, bounded and disjoint newest-first pagination, safe malformed query handling, game filtering, subjectless rejection, additive v2 route shapes, exact contract digest pinning, and removal of raw durable round identifiers.",
+      "status": "PASS",
+      "api_tests": [
+        "API-SETTINGS-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/user_settings_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-352-my-settings-foundation",
+      "changed_in": "issue-352-my-settings-foundation",
+      "notes": "Allocated after TEST-102 became permanent on current main. Every test uses an isolated temporary provider, and no listener, browser, credential, repository runtime file, provider network, or live system is touched."
     }
   ]
 }

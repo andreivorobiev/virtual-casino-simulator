@@ -944,6 +944,20 @@ def run_api_tests():
             raise AssertionError('roulette motion compatibility suite failed')
     # Record the listener-free anti-strobe, whole-turn, and reduced-motion proof.
     run_case('UI-ROU-MOTION-001',['ROU-069','ROU-070','TEST-102'],run_roulette_motion_tests)
+    # Execute the personal-settings, shared pagination, contract, and privacy proof without a listener.
+    def run_user_settings_tests():
+        # Import the focused suite only when its mapped API case runs.
+        from tests import user_settings_tests
+        # Load exactly the self-service foundation assertions.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(user_settings_tests.UserSettingsTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused assertion failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure stable.
+            raise AssertionError('personal settings and self-history suite failed')
+    # Record the listener-free preference, pagination, contract, and self-only privacy proof.
+    run_case('API-SETTINGS-001',['USER-006','USER-007','TEST-103'],run_user_settings_tests)
     # Discover and execute every focused restricted-preview security module without opening a listener.
     def run_restricted_preview_security_tests():
         # Load the package directory through unittest's standard test discovery.

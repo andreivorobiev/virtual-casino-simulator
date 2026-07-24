@@ -7,7 +7,7 @@ Historical source baseline: 9.1.0
 ## Independent module revisions
 
 - application: 9.48.4
-- core: 9.19.2
+- core: 9.19.3
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.0
@@ -45,10 +45,10 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.1
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.57.5
-- docs: 1.57.5
-- contracts: 1.40.2
-- tooling: 1.20.0
+- tests: 1.57.6
+- docs: 1.57.6
+- contracts: 1.40.3
+- tooling: 1.20.1
 - commenting_policy: 1.0.0
 
 ## Requirements
@@ -783,3 +783,6 @@ Historical source baseline: 9.1.0
 - **TEST-098** (Tests) - PASS: Listener-free evidence verifies deployment build provenance: every immutable application archive contains the provenance writer; a valid manifest yields exactly one pinned assignment accepted unchanged by the Operations sanitizer; short/uppercase/non-hexadecimal/absent commits fail closed without writing; unreadable manifests and destination-write failures emit bounded path-free errors while leaving an earlier fragment byte-identical; a redeployment replaces rather than appends the superseded commit; and the tracked unit sources the generated fragment last.
 - **TEST-100** (Tests) - PASS: Dependency-free deterministic unit tests prove motion timing profiles, reduced-motion resolution, complete lifecycle phase order, authoritative-result identity, overlap rejection, illegal-skip rejection, explicit recovery, stale-generation rejection, and route-disposal invalidation.
 - **TEST-102** (Tests) - PASS: Focused listener-free evidence parses the tracked Roulette curves to prove the anti-strobe rotor budget, monotonic coast-down, whole-turn endpoints, counter-rotation, linear timing, fine sampling, and all four reduced-motion suppression rules; the hosted Browser suite independently proves the live spin uses the expected named linear 3.6-second animations with all sampled stops and that reduced-motion media suppresses the mounted rotor and ball channels.
+- **USER-006** (Core) - PASS: Every authenticated persistent user has a personal locale and sound preference record that defaults deterministically, accepts only the installed locale catalog and strict booleans, rejects unknown fields, supports optimistic revisions, persists atomically through the configured JSON or MySQL document provider, and degrades structurally malformed records to canonical defaults. Guest trials receive a non-persisted response and never create a durable personal-settings document.
+- **USER-007** (Core) - PASS: Personal activity reads use one reusable self-scoped ledger pagination boundary: the active session supplies the player subject, provider rows are re-filtered to that subject, malformed or hostile page values are bounded safely, optional game filtering cannot widen ownership, newest-first pages are capped at 50 rows from a bounded source window, and published rows expose only allowlisted presentation fields plus a short correlation tail instead of raw durable identifiers.
+- **TEST-103** (Tests) - PASS: Listener-free isolated-provider evidence verifies personal-setting defaults and durable updates, cross-subject isolation, strict locale and sound validation, whole-payload privilege rejection, optimistic conflict handling, malformed-container recovery and malformed-field fallback, guest non-persistence, self-history privacy against a populated neighbour, bounded and disjoint newest-first pagination, safe malformed query handling, game filtering, subjectless rejection, additive v2 route shapes, exact contract digest pinning, and removal of raw durable round identifiers.
