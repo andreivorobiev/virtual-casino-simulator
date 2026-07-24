@@ -57,4 +57,4 @@ Phase 0 evidence covers the generic Admin registry and persistence surface in th
 - `I18N-006`: locked registry, metadata, readiness separation, and safe selection.
 - `I18N-007`: persistence, deterministic formatting, deliberate fallback, and catalog-driven domain registration.
 - `I18N-008`: planned translation-wave and visual-acceptance contract.
-- `TEST-100`: API/static and browser/visual foundation evidence.
+- `TEST-101`: API/static and browser/visual foundation evidence.

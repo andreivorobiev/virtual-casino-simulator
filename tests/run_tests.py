@@ -1986,7 +1986,7 @@ def run_api_tests():
         # Execute this statement as part of the module's documented control flow.
         run_case('API-I18N-001',['I18N-001','I18N-003'],validate_i18n_resources)
         # Record collision-free Phase 0 registry, catalog-discovery, and translation-readiness evidence.
-        run_case('API-I18N-FOUNDATION-001',['I18N-006','I18N-007','TEST-100'],validate_i18n_resources)
+        run_case('API-I18N-FOUNDATION-001',['I18N-006','I18N-007','TEST-101'],validate_i18n_resources)
 
         # Define the bots_audio_autoplay function used by this module.
         def bots_audio_autoplay():
@@ -2480,11 +2480,11 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Await the production registration's fully activated worker before issuing competing manifest, icon, or reload traffic.
                         registration_identity=pwa_page.evaluate("""async () => { const timeout=new Promise(resolve => setTimeout(async () => { const registrations=await navigator.serviceWorker.getRegistrations(); const worker=registrations[0]?.installing||registrations[0]?.waiting||registrations[0]?.active; resolve({ready:false,state:worker?.state||'missing',scriptUrl:worker?.scriptURL||''}); },20000)); const active=navigator.serviceWorker.ready.then(registration => ({ready:Boolean(registration.active),state:registration.active?.state||'',scriptUrl:registration.active?.scriptURL||''})); return await Promise.race([active,timeout]); }""")
                         # Require atomic shell installation and activation at the canonical script before a controlled navigation is attempted.
-                        assert registration_identity=={'ready':True,'state':'activated','scriptUrl':f'{base}/sw.js?v=9.5.1'},{'registration':registration_identity,'workerDiagnostics':pwa_worker_diagnostics[-4:]}
+                        assert registration_identity=={'ready':True,'state':'activated','scriptUrl':f'{base}/sw.js?v=9.5.2'},{'registration':registration_identity,'workerDiagnostics':pwa_worker_diagnostics[-4:]}
                         # Reload only after activation so the navigation is deterministically controlled even when the initial clients.claim event raced first paint.
                         pwa_page.reload(wait_until='domcontentloaded'); pwa_page.get_by_test_id('lobby').wait_for(timeout=8000)
                         # Wait synchronously for the controlled reload and canonical page identity without an async polling predicate.
-                        pwa_page.wait_for_function("() => Boolean(navigator.serviceWorker.controller) && window.CasinoPwa?.version==='9.5.1'",timeout=8000)
+                        pwa_page.wait_for_function("() => Boolean(navigator.serviceWorker.controller) && window.CasinoPwa?.version==='9.5.2'",timeout=8000)
                         # Require the same-context reload to classify as warm rather than a fresh install claim.
                         assert pwa_page.evaluate("() => document.documentElement.dataset.pwaStart")=='warm-start'
                         # Read the manifest link and both Android/iOS browser-foundation meta contracts.
@@ -2504,7 +2504,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Read the controlling worker identity without opening CacheStorage through a competing page transaction.
                         worker_identity=pwa_page.evaluate("async () => { const active=(await navigator.serviceWorker.getRegistrations()).find(reg => reg.active)?.active; return { pageVersion:window.CasinoPwa?.version||'', controller:Boolean(navigator.serviceWorker.controller), scriptUrl:active?.scriptURL||'' }; }")
                         # Require the active root worker and page to share the canonical packaged version.
-                        assert worker_identity['pageVersion']=='9.5.1' and worker_identity['controller'] and worker_identity['scriptUrl'].endswith('/sw.js?v=9.5.1'),worker_identity
+                        assert worker_identity['pageVersion']=='9.5.2' and worker_identity['controller'] and worker_identity['scriptUrl'].endswith('/sw.js?v=9.5.2'),worker_identity
                         # Fetch an authoritative API path and prove it does not enter any worker cache.
                         pwa_page.evaluate("async () => { await fetch('/api/v1/casino/state',{credentials:'include'}); }")
                         # Enter true offline mode and require native fail-closed controls plus a pre-fetch API rejection.
@@ -7639,7 +7639,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Reject silent English masquerading as Arabic by requiring explicit selectable-readiness fallback.
                     assert fallback_state=={'locale':'en-US','dir':'ltr','lang':'en-US'}
                     # Define every governed Admin viewport for exact-head localization evidence.
-                    localization_viewports={'desktop-primary':{'width':1920,'height':1080},'desktop-compact':{'width':1440,'height':900},'tablet':{'width':1024,'height':900},'mobile':{'width':390,'height':844}}
+                    localization_viewports={'desktop_primary':{'width':1920,'height':1080},'desktop_compact':{'width':1440,'height':900},'tablet':{'width':1024,'height':900},'mobile':{'width':390,'height':844}}
                     # Capture the generic registry in both installed locales.
                     for locale in ('en-US','ru-RU'):
                         # Switch through the production runtime without persisting beyond the disposable browser copy.
@@ -7662,12 +7662,12 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             page.evaluate("() => { const content=document.querySelector('.admin-content'); if (content) content.scrollTop=0; window.scrollTo(0,0); }")
                             # Reject page-level horizontal overflow on the complete registry surface.
                             assert page.evaluate("() => document.documentElement.scrollWidth <= window.innerWidth + 1")
-                            # Save full-page exact-branch evidence so all 25 metadata cards remain reviewable.
-                            page.screenshot(path=str(screenshots/f'after-pass-admin-localization-foundation-{locale}-{viewport_id}.png'),full_page=True)
+                            # Save self-describing full-page evidence so all 25 metadata cards remain reviewable with exact-source provenance.
+                            game_evidence(f'after-pass-admin-localization-foundation-{locale}-{viewport_id}.png','admin',['localization_locked_registry','localization_selector_persistence','localization_formatter_metadata','localization_catalog_domains','localization_safe_fallback'],locale,viewport_id)
                     # Restore the primary viewport and English without leaving a browser preference behind.
                     page.set_viewport_size({'width':1920,'height':1080}); page.evaluate("async () => { const i18n=await import('/core/i18n.js'); await i18n.setLocale('en-US',{persistLocal:false,nextUseBrowserLocale:false}); localStorage.removeItem('casino.locale.settings.v1'); }")
                 # Record locked registry, browser Intl, safe fallback, catalog discovery, and governed visual evidence.
-                run_case('BR-I18N-FOUNDATION-001',['I18N-006','I18N-007','TEST-100'],localization_foundation_browser)
+                run_case('BR-I18N-FOUNDATION-001',['I18N-006','I18N-007','TEST-101'],localization_foundation_browser)
                 # Define the admin_i18n function used by this module.
                 def admin_i18n():
                     # Open the new Language/Locale tab.

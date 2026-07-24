@@ -26,7 +26,7 @@ collision and dependency planning but do not treat them as merged behavior.
 
 ## Current release context
 
-- Packaged application release: `9.5.1`
+- Packaged application release: `9.5.2`
 - Historical source baseline: `9.1.0`
 - Canonical aggregate source: `modules/module-manifest.json`
 - Independent source-module revisions: `modules/*.json`
@@ -82,7 +82,7 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 - [`ENGINEERING_PRACTICES.md`](ENGINEERING_PRACTICES.md) — Engineering practices
 - [`FIRST_PROMPT_FOR_CODEX.md`](FIRST_PROMPT_FOR_CODEX.md) — First prompt for Codex
 - [`README.md`](README.md) — Virtual Casino Simulator
-- [`RELEASE_NOTES.md`](RELEASE_NOTES.md) — Virtual Casino Simulator v9.5.1 Release Notes
+- [`RELEASE_NOTES.md`](RELEASE_NOTES.md) — Virtual Casino Simulator v9.5.2 Release Notes
 
 ### GitHub contribution templates
 
@@ -276,6 +276,7 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 - [`docs/local_mysql_setup.md`](docs/local_mysql_setup.md) — Local MySQL 8.4 LTS setup
 - [`docs/localization_foundation.md`](docs/localization_foundation.md) — Phase 0 localization foundation
 - [`docs/long_test_suites.md`](docs/long_test_suites.md) — Long Casino Test Suites
+- [`docs/motion_acceptance_contract.md`](docs/motion_acceptance_contract.md) — Deterministic motion acceptance contract
 - [`docs/mysql_migrations.md`](docs/mysql_migrations.md) — MySQL migration and DDL-free runtime gate
 - [`docs/oauth_invite_only.md`](docs/oauth_invite_only.md) — Invite-only OAuth operations boundary
 - [`docs/production_service.md`](docs/production_service.md) — Production application service
