@@ -31,6 +31,87 @@
     "en-US",
     "ru-RU"
   ],
+  "localization_program": {
+    "registry_version": "phase-0-locked-25",
+    "activation_rule": "A locale enters selectable and visual acceptance only after its resource pack is ready; metadata-only identities must fall back to an installed locale.",
+    "smoke_locales": [
+      "en-US",
+      "zh-Hans",
+      "hi-IN",
+      "es-419",
+      "ar",
+      "fr-FR",
+      "bn-BD",
+      "pt-BR",
+      "ru-RU",
+      "id-ID",
+      "ur-PK",
+      "de-DE",
+      "ja-JP",
+      "pcm-NG",
+      "arz-EG",
+      "ta-IN",
+      "vi-VN",
+      "te-IN",
+      "ha-NG",
+      "tr-TR",
+      "pnb-PK",
+      "sw-KE",
+      "fil-PH",
+      "mr-IN",
+      "yue-Hant-HK"
+    ],
+    "deep_script_families": {
+      "arabic_rtl": [
+        "ar",
+        "ur-PK",
+        "arz-EG",
+        "pnb-PK"
+      ],
+      "cjk": [
+        "zh-Hans",
+        "ja-JP",
+        "yue-Hant-HK"
+      ],
+      "indic": [
+        "hi-IN",
+        "bn-BD",
+        "ta-IN",
+        "te-IN",
+        "mr-IN"
+      ],
+      "cyrillic": [
+        "ru-RU"
+      ],
+      "latin_extended": [
+        "en-US",
+        "es-419",
+        "fr-FR",
+        "pt-BR",
+        "id-ID",
+        "de-DE",
+        "pcm-NG",
+        "vi-VN",
+        "ha-NG",
+        "tr-TR",
+        "sw-KE",
+        "fil-PH"
+      ]
+    },
+    "foundation_evidence_locales": [
+      "en-US",
+      "ru-RU"
+    ],
+    "future_translation_gates": [
+      "overflow",
+      "clipping",
+      "tofu",
+      "raw_resource_keys",
+      "english_leakage",
+      "bidi_order",
+      "keyboard_focus"
+    ]
+  },
   "gates": [
     {
       "id": "VIS-COPY-001",
@@ -638,6 +719,11 @@
         "feedback_reduced_motion",
         "feedback_zoom_200",
         "language",
+        "localization_locked_registry",
+        "localization_selector_persistence",
+        "localization_formatter_metadata",
+        "localization_catalog_domains",
+        "localization_safe_fallback",
         "test_results",
         "operations_oauth_disabled",
         "operations_mail_disabled",

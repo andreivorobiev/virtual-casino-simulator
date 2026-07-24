@@ -40,12 +40,16 @@ SEEN_DOCUMENT_KEY = "settings/whats_new"
 DEFAULT_MAX_MERGED_ENTRIES = 3
 
 
-# Parse one dotted release version into a comparable tuple without trusting its shape.
-def _version_key(value) -> tuple:
+# Parse one exact dotted release version into a comparable tuple without trusting its shape.
+def _version_key(value) -> tuple | None:
     # Split the candidate version into its dotted parts.
     parts = str(value or "").split(".")
-    # Build a numeric tuple, treating any non-numeric part as zero so comparison never raises.
-    return tuple(int(part) if part.isdigit() else 0 for part in parts[:3]) + (0,) * max(0, 3 - len(parts))
+    # Refuse incomplete, extended, or non-numeric versions rather than guessing their ordering.
+    if len(parts) != 3 or any(not part.isdigit() for part in parts):
+        # Mark the malformed version unusable.
+        return None
+    # Build the exact numeric comparison tuple.
+    return tuple(int(part) for part in parts)
 
 
 # Load the curated release metadata, tolerating an absent or malformed file.
@@ -62,12 +66,16 @@ def load_catalog() -> dict:
     if not isinstance(catalog, dict):
         # Return the empty catalog shape.
         return {"entries": [], "changelog_path": "", "max_merged_entries": DEFAULT_MAX_MERGED_ENTRIES}
-    # Keep only well-formed entry records.
-    entries = [entry for entry in catalog.get("entries", []) if isinstance(entry, dict) and entry.get("version")]
+    # Read the entry collection without allowing a malformed container to raise.
+    raw_entries = catalog.get("entries", [])
+    # Keep only mapping entries from a real list.
+    entries = [entry for entry in raw_entries if isinstance(entry, dict)] if isinstance(raw_entries, list) else []
     # Read the curated cap, falling back to the module default.
     cap = catalog.get("max_merged_entries")
+    # Bound a valid configured cap to the contract ceiling.
+    bounded_cap = min(cap, DEFAULT_MAX_MERGED_ENTRIES) if isinstance(cap, int) and not isinstance(cap, bool) and cap > 0 else DEFAULT_MAX_MERGED_ENTRIES
     # Publish the normalized catalog.
-    return {"entries": entries, "changelog_path": str(catalog.get("changelog_path") or ""), "max_merged_entries": cap if isinstance(cap, int) and cap > 0 else DEFAULT_MAX_MERGED_ENTRIES}
+    return {"entries": entries, "changelog_path": str(catalog.get("changelog_path") or ""), "max_merged_entries": bounded_cap}
 
 
 # Resolve the durable subject for one authenticated session without trusting caller input.
@@ -80,6 +88,12 @@ def _subject(user) -> str:
         raise ValidationError("What's New requires an authenticated session", {"reason": "no_subject"})
     # Return the session-derived subject.
     return user_id
+
+
+# Report whether one session is a disposable guest trial rather than a persistent account.
+def _is_guest(user) -> bool:
+    # Treat either accepted guest marker as the single disposable-session signal.
+    return str((user or {}).get("role") or "") == "guest" or bool((user or {}).get("guest_analytics_id"))
 
 
 # Read the release this subject has already acknowledged.
@@ -98,16 +112,30 @@ def _last_seen(subject: str) -> str:
 def eligible_entries(last_seen_version: str, catalog=None) -> list:
     # Use the tracked catalog unless an isolated test supplied one.
     resolved = catalog if catalog is not None else load_catalog()
+    # Treat an injected malformed catalog as empty so tests and future callers share fail-closed behavior.
+    if not isinstance(resolved, dict):
+        # Return no eligible entries for an unusable catalog.
+        return []
     # Fall back to the module cap when an injected catalog omits one.
-    cap = resolved.get("max_merged_entries") if isinstance(resolved.get("max_merged_entries"), int) else DEFAULT_MAX_MERGED_ENTRIES
+    configured_cap = resolved.get("max_merged_entries")
+    # Accept only a positive integer cap and refuse booleans, which are integers in Python.
+    cap = min(configured_cap, DEFAULT_MAX_MERGED_ENTRIES) if isinstance(configured_cap, int) and not isinstance(configured_cap, bool) and configured_cap > 0 else DEFAULT_MAX_MERGED_ENTRIES
     # Drop malformed records here too, because a hand-edited curated file must never break a player surface.
-    usable = [entry for entry in resolved.get("entries", []) if isinstance(entry, dict) and entry.get("version")]
+    raw_entries = resolved.get("entries", [])
+    # Require a list so a mapping or string cannot be interpreted as release entries.
+    entries = raw_entries if isinstance(raw_entries, list) else []
+    # Keep only records with an exact comparable release version and non-empty localization keys.
+    usable = [entry for entry in entries if isinstance(entry, dict) and _version_key(entry.get("version")) is not None and str(entry.get("title_key") or "").strip() and str(entry.get("body_key") or "").strip()]
     # Keep only entries the release coordinator explicitly opted in; a version bump alone is never enough.
     opted_in = [entry for entry in usable if entry.get("show_in_whats_new") is True]
     # Drop entries at or below the acknowledged release so a dismissed tour never returns.
-    unseen = [entry for entry in opted_in if not last_seen_version or _version_key(entry["version"]) > _version_key(last_seen_version)]
+    seen_key = _version_key(last_seen_version)
+    # Treat a missing or malformed acknowledgement as first use without ever raising.
+    unseen = [entry for entry in opted_in if seen_key is None or _version_key(entry["version"]) > seen_key]
     # Drop entries newer than the running application so an unreleased tour cannot leak early.
-    current = [entry for entry in unseen if _version_key(entry["version"]) <= _version_key(APP_VERSION)]
+    app_key = _version_key(APP_VERSION)
+    # Fail closed when the canonical application version itself is unexpectedly malformed.
+    current = [entry for entry in unseen if app_key is not None and _version_key(entry["version"]) <= app_key]
     # Order newest first so the cap keeps the most recent meaningful entries.
     ordered = sorted(current, key=lambda entry: _version_key(entry["version"]), reverse=True)
     # Return one merged, capped set rather than a stack of separate tours.
@@ -120,8 +148,10 @@ def tour_for(user) -> dict:
     subject = _subject(user)
     # Load the curated catalog once.
     catalog = load_catalog()
+    # Never persist or display release-tour state for a disposable guest trial.
+    guest = _is_guest(user)
     # Resolve which curated entries remain unacknowledged.
-    entries = eligible_entries(_last_seen(subject), catalog)
+    entries = [] if guest else eligible_entries(_last_seen(subject), catalog)
     # Publish localization keys only so no raw version key ever reaches a player surface.
     return {
         # Show the tour only when at least one curated entry is eligible.
@@ -132,6 +162,8 @@ def tour_for(user) -> dict:
         "merged_count": len(entries),
         # Publish the changelog location so a player can read the full history.
         "changelog_path": catalog["changelog_path"],
+        # Tell clients whether acknowledgement can survive this session.
+        "persisted": not guest,
     }
 
 
@@ -139,6 +171,10 @@ def tour_for(user) -> dict:
 def dismiss(user) -> dict:
     # Derive the subject from the session only.
     subject = _subject(user)
+    # Refuse to create durable release-tour state for a disposable guest trial.
+    if _is_guest(user):
+        # Confirm only a session-local acknowledgement with no timestamp or durable record.
+        return {"dismissed": True, "dismissed_at": None, "persisted": False}
     # Hold the resulting record so it can be published after the atomic mutation.
     resulting = {}
 
@@ -152,8 +188,15 @@ def dismiss(user) -> dict:
         if not isinstance(document.get("users"), dict):
             # Reset only the container this module owns.
             document["users"] = {}
-        # Stamp the canonical running release rather than any caller-supplied value.
-        record = {"last_seen_version": APP_VERSION, "dismissed_at": utc_now()}
+        # Read the current subject record without trusting its stored shape.
+        current = document["users"].get(subject)
+        # Preserve an exact current-release acknowledgement so retries are idempotent.
+        if isinstance(current, dict) and current.get("last_seen_version") == APP_VERSION and isinstance(current.get("dismissed_at"), str):
+            # Reuse the already committed acknowledgement.
+            record = current
+        else:
+            # Stamp the canonical running release rather than any caller-supplied value.
+            record = {"last_seen_version": APP_VERSION, "dismissed_at": utc_now()}
         # Store the acknowledgement for this subject only.
         document["users"][subject] = record
         # Publish the stored record to the caller.
@@ -164,4 +207,4 @@ def dismiss(user) -> dict:
     # Persist the acknowledgement atomically through the configured provider.
     get_storage_provider().update_document(SEEN_DOCUMENT_KEY, mutate, lambda: {"users": {}})
     # Confirm the dismissal without echoing the raw version back to the player surface.
-    return {"dismissed": True, "dismissed_at": resulting.get("dismissed_at")}
+    return {"dismissed": True, "dismissed_at": resulting.get("dismissed_at"), "persisted": True}

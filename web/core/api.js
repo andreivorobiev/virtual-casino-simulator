@@ -5,6 +5,8 @@ const CSRF_COOKIE = 'casino_csrf';
 const UNSAFE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 // Keep the guest browser-context proof in sessionStorage so browser closure destroys it.
 const GUEST_NONCE_KEY = 'casino.guestBrowserNonce';
+// Keep public authentication attempts from broadcasting a protected-session expiry event.
+const SESSION_EXPIRY_PUBLIC_PATHS = ['/api/v2/auth/login', '/api/v2/auth/guest'];
 
 // Read one named cookie without exposing the complete cookie string to logs or storage.
 function cookieValue(name) {
@@ -53,6 +55,12 @@ export async function api(path, options = {}) {
     e.code = payload.error?.code;
     // Set e.details to the value needed for the next operation.
     e.details = payload.error?.details;
+    // Detect protected-session expiry without treating login or guest-start rejections as stale sessions.
+    const sessionExpired = e.code === 'UNAUTHORIZED' && !SESSION_EXPIRY_PUBLIC_PATHS.some(prefix => String(path).startsWith(prefix));
+    // Resolve the browser event constructor through the window object so non-browser test seams stay inert.
+    const SessionExpiredEvent = globalThis.window?.CustomEvent || globalThis.CustomEvent;
+    // Notify the shell after the caller's catch path settles, so game-local cleanup cannot repaint stale chrome last.
+    if (sessionExpired && SessionExpiredEvent) setTimeout(() => globalThis.window?.dispatchEvent?.(new SessionExpiredEvent('casino-session-expired', { detail: { path: String(path) } })), 0);
     // Execute this statement as part of the module's documented control flow.
     throw e;
   }

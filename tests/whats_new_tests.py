@@ -1,23 +1,31 @@
-"""Focused version-aware What's New eligibility tests. (#165, TOUR-001, TOUR-002)"""
+"""Focused server-only What's New eligibility tests. (#165, TOUR-001, TOUR-002, TEST-106)"""
 
-# Import JSON parsing for the curated metadata and shipped resources.
+# Import SHA-256 so the additive v2 contract stays pinned to exact reviewed bytes.
+import hashlib
+# Import JSON parsing for the curated metadata and checked digest inventory.
 import json
-# Import filesystem paths for locating tracked resources.
-import pathlib
+# Import temporary directories so tests never touch repository or user runtime state.
+import tempfile
 # Import the standard unittest framework used by the repository's focused suites.
 import unittest
+# Import portable paths for isolated storage and checked resources.
+from pathlib import Path
+# Import patching so malformed catalog reads can be isolated without changing tracked files.
+from unittest.mock import patch
 
-# Import the canonical application release the module stamps dismissals with.
+# Import the canonical application release used for eligibility and dismissal stamps.
 from casino.config import APP_VERSION
-# Import the canonical identity boundary for account seeding.
-from casino.core import auth
+# Import provider injection so every test owns its complete durable state.
+from casino.core import storage
 # Import the What's New eligibility authority under test.
 from casino.core import whats_new
-# Import the standard bounded application error every rejection uses.
+# Import the configured provider for direct persistence assertions.
+from casino.core.storage import get_storage_provider
+# Import the standard bounded application error every subject rejection uses.
 from casino.errors import ValidationError
 
-# Resolve the repository root for resource inspection.
-ROOT = pathlib.Path(__file__).resolve().parents[1]
+# Resolve checked repository resources independently from the process working directory.
+ROOT = Path(__file__).resolve().parents[1]
 
 
 # Build one isolated curated catalog fixture.
@@ -26,142 +34,215 @@ def catalog(entries, cap=3):
     return {"entries": entries, "changelog_path": "RELEASE_NOTES.md", "max_merged_entries": cap}
 
 
-# Verify tour eligibility follows curated opt-in rather than version churn.
+# Build one complete opted-in entry at a selected release.
+def entry(version, *, enabled=True):
+    # Return the exact release-coordinator-owned entry shape.
+    return {"version": version, "show_in_whats_new": enabled, "title_key": "whatsNew.test.title", "body_key": "whatsNew.test.body"}
+
+
+# Verify the server-only foundation stays curated, private, recoverable, and disabled in shipped metadata.
 class WhatsNewTests(unittest.TestCase):
-    # Seed one account per test so dismissals never collide.
+    # Seed two isolated subjects so dismissal privacy has a populated neighbour.
     def setUp(self) -> None:
-        # Derive a per-test mailbox suffix.
-        unique = self.id().rsplit(".", 1)[1]
-        # Create the subject whose tour state is under test.
-        self.owner = auth.create_user(f"tour.{unique}@example.test", "TourPassw0rd!23", "Tour Owner")
+        # Allocate an automatically cleaned root outside repository runtime state.
+        self.temporary = tempfile.TemporaryDirectory(prefix="casino-whats-new-")
+        # Install one isolated JSON provider for every tour document read and write.
+        storage.set_provider_for_tests(storage.JsonStorageProvider(Path(self.temporary.name) / "data"))
+        # Build the registered account shape normally supplied by session resolution.
+        self.owner = {"user_id": "whats_new_owner", "player_id": "player_whats_new_owner", "role": "player", "roles": ["player"], "status": "active"}
+        # Build an unrelated registered account for cross-subject isolation.
+        self.other = {"user_id": "whats_new_other", "player_id": "player_whats_new_other", "role": "player", "roles": ["player"], "status": "active"}
 
-    # Require an opted-in curated entry to be eligible for a first-time viewer.
-    def test_curated_entry_is_eligible(self) -> None:
-        # Build a catalog with one opted-in entry at the running release.
-        fixture = catalog([{"version": APP_VERSION, "show_in_whats_new": True, "title_key": "t", "body_key": "b"}])
-        # Require the entry to be selected for a viewer who has seen nothing.
-        self.assertEqual([entry["version"] for entry in whats_new.eligible_entries("", fixture)], [APP_VERSION])
+    # Release provider injection and isolated files after every assertion.
+    def tearDown(self) -> None:
+        # Clear the process-global test provider before another suite runs.
+        storage.set_provider_for_tests(None)
+        # Remove only the TemporaryDirectory-owned state root.
+        self.temporary.cleanup()
 
-    # Require a version bump without the explicit opt-in to trigger nothing.
-    def test_version_bump_alone_never_triggers_a_tour(self) -> None:
-        # Build a catalog whose entries were never opted in by the release coordinator.
-        fixture = catalog([{"version": APP_VERSION, "show_in_whats_new": False, "title_key": "t", "body_key": "b"}, {"version": "9.4.0", "title_key": "t", "body_key": "b"}])
-        # Require no entry to be eligible despite both versions being current or older.
-        self.assertEqual(whats_new.eligible_entries("", fixture), [])
-
-    # Require a truthy-but-not-true opt-in value to be refused so only an explicit flag counts.
-    def test_opt_in_must_be_exactly_true(self) -> None:
-        # Enumerate values that are truthy but are not the explicit opt-in.
-        for value in ("true", 1, "yes", [1]):
-            # Isolate each case so a failure names the offending value.
+    # Require eligibility to follow the exact curated opt-in rather than version churn.
+    def test_only_exact_curated_opt_in_is_eligible(self) -> None:
+        # Require one explicitly enabled current-release entry to be selected.
+        self.assertEqual([item["version"] for item in whats_new.eligible_entries("", catalog([entry(APP_VERSION)]))], [APP_VERSION])
+        # Enumerate every value that must not activate a tour.
+        for value in (False, None, "true", 1, "yes", [1]):
+            # Isolate each invalid opt-in shape.
             with self.subTest(value=value):
-                # Build a catalog carrying the ambiguous flag.
-                fixture = catalog([{"version": APP_VERSION, "show_in_whats_new": value, "title_key": "t", "body_key": "b"}])
-                # Require no entry to be eligible.
-                self.assertEqual(whats_new.eligible_entries("", fixture), [])
+                # Require the ambiguous value to select nothing.
+                self.assertEqual(whats_new.eligible_entries("", catalog([entry(APP_VERSION, enabled=value)])), [])
 
-    # Require a dismissed release never to reappear.
-    def test_dismissed_release_does_not_return(self) -> None:
-        # Build a catalog with one opted-in entry at the running release.
-        fixture = catalog([{"version": APP_VERSION, "show_in_whats_new": True, "title_key": "t", "body_key": "b"}])
-        # Require nothing to be eligible once that release is acknowledged.
-        self.assertEqual(whats_new.eligible_entries(APP_VERSION, fixture), [])
-
-    # Require several skipped releases to merge into one capped tour rather than stacking.
-    def test_skipped_releases_merge_into_one_capped_tour(self) -> None:
-        # Build five opted-in entries spanning several releases below the running one.
-        entries = [{"version": f"9.{minor}.0", "show_in_whats_new": True, "title_key": "t", "body_key": "b"} for minor in range(1, 6)]
-        # Select with a cap of three.
+    # Require skipped releases to merge into one capped newest-first result.
+    def test_skipped_releases_are_capped_and_ordered(self) -> None:
+        # Build five complete opted-in entries below or at the running release family.
+        entries = [entry(f"9.{minor}.0") for minor in range(1, 6)]
+        # Select from a viewer whose acknowledgement predates every fixture.
         selected = whats_new.eligible_entries("9.0.0", catalog(entries, cap=3))
-        # Require exactly the cap to be returned rather than every skipped release.
-        self.assertEqual(len(selected), 3)
-        # Require the most recent meaningful entries, newest first.
-        self.assertEqual([entry["version"] for entry in selected], ["9.5.0", "9.4.0", "9.3.0"])
+        # Require only the three newest meaningful entries.
+        self.assertEqual([item["version"] for item in selected], ["9.5.0", "9.4.0", "9.3.0"])
 
-    # Require an entry newer than the running application to stay hidden.
-    def test_unreleased_entries_never_leak_early(self) -> None:
-        # Build a catalog containing a future release.
-        fixture = catalog([{"version": "99.0.0", "show_in_whats_new": True, "title_key": "t", "body_key": "b"}])
-        # Require the unreleased entry to be excluded.
-        self.assertEqual(whats_new.eligible_entries("", fixture), [])
+    # Require future, malformed, incomplete, and badly capped catalogs to fail closed.
+    def test_malformed_and_unreleased_entries_never_surface(self) -> None:
+        # Enumerate unusable release records.
+        malformed = [
+            # Reject missing versions.
+            {"show_in_whats_new": True, "title_key": "t", "body_key": "b"},
+            # Reject incomplete versions.
+            entry("9.5"),
+            # Reject extended versions.
+            entry("9.5.2.1"),
+            # Reject non-numeric versions.
+            entry("release-current"),
+            # Reject entries without a title key.
+            {"version": APP_VERSION, "show_in_whats_new": True, "body_key": "b"},
+            # Reject entries without a body key.
+            {"version": APP_VERSION, "show_in_whats_new": True, "title_key": "t"},
+            # Reject future release metadata.
+            entry("99.0.0"),
+        ]
+        # Require every unusable record to be filtered.
+        self.assertEqual(whats_new.eligible_entries("", catalog(malformed)), [])
+        # Require non-object and non-list catalog shapes to degrade to no entries.
+        self.assertEqual(whats_new.eligible_entries("", "not-a-catalog"), [])
+        # Require a boolean cap to fall back rather than becoming an accidental one-entry limit.
+        selected = whats_new.eligible_entries("", catalog([entry("9.5.0"), entry("9.4.0")], cap=True))
+        # Require the default cap to preserve both eligible fixtures.
+        self.assertEqual(len(selected), 2)
+        # Require an oversized configured cap to remain bounded by the published contract ceiling.
+        oversized = whats_new.eligible_entries("", catalog([entry(f"9.{minor}.0") for minor in range(1, 6)], cap=99))
+        # Require no more than the three contract-bounded entries.
+        self.assertEqual(len(oversized), whats_new.DEFAULT_MAX_MERGED_ENTRIES)
 
-    # Require a malformed or absent curated catalog to degrade to no tour.
-    def test_malformed_catalog_degrades_to_no_tour(self) -> None:
-        # Require a non-object catalog to yield nothing rather than raising.
-        self.assertEqual(whats_new.eligible_entries("", catalog([])), [])
-        # Require entries missing a version to be dropped.
-        self.assertEqual(whats_new.eligible_entries("", catalog([{"show_in_whats_new": True}])), [])
+    # Require a missing or malformed tracked file to degrade to the empty catalog shape.
+    def test_catalog_read_failures_degrade_to_empty(self) -> None:
+        # Point the loader at an absent path inside the isolated temporary root.
+        with patch.object(whats_new, "WHATS_NEW_PATH", Path(self.temporary.name) / "absent.json"):
+            # Require an absent file to publish no eligible entries.
+            self.assertEqual(whats_new.load_catalog()["entries"], [])
+        # Write malformed JSON only inside the isolated temporary root.
+        malformed_path = Path(self.temporary.name) / "malformed.json"
+        # Persist intentionally broken bytes for the protected loader.
+        malformed_path.write_text("{broken", encoding="utf-8")
+        # Point the loader at the isolated malformed file.
+        with patch.object(whats_new, "WHATS_NEW_PATH", malformed_path):
+            # Require parse failure to publish no eligible entries.
+            self.assertEqual(whats_new.load_catalog()["entries"], [])
 
-    # Require the player payload to carry localization keys and never a raw version key.
-    def test_payload_never_exposes_raw_version_keys(self) -> None:
-        # Build the tour payload for the seeded subject.
-        payload = whats_new.tour_for(self.owner)
-        # Serialize the payload for leak inspection.
+    # Require a registered dismissal to be durable, subject-scoped, and retry-idempotent.
+    def test_dismissal_is_server_stamped_private_and_idempotent(self) -> None:
+        # Patch the tracked catalog only in memory so production metadata stays disabled.
+        fixture = catalog([entry(APP_VERSION)])
+        # Offer the opted-in fixture to both registered subjects.
+        with patch.object(whats_new, "load_catalog", return_value=fixture):
+            # Require the owner to see the eligible entry before acknowledgement.
+            self.assertTrue(whats_new.tour_for(self.owner)["show"])
+            # Commit the first server-stamped acknowledgement.
+            first = whats_new.dismiss(self.owner)
+            # Retry the same acknowledgement.
+            second = whats_new.dismiss(self.owner)
+            # Require retry to preserve the original committed timestamp.
+            self.assertEqual(first, second)
+            # Require the acknowledged tour not to return for the owner.
+            self.assertFalse(whats_new.tour_for(self.owner)["show"])
+            # Require the unrelated subject's eligibility to remain intact.
+            self.assertTrue(whats_new.tour_for(self.other)["show"])
+        # Read the isolated document directly for the server-owned release stamp.
+        document = get_storage_provider().read_document(whats_new.SEEN_DOCUMENT_KEY, dict)
+        # Require only the owner record and the canonical running application version.
+        self.assertEqual((set(document["users"]), document["users"][self.owner["user_id"]]["last_seen_version"]), ({self.owner["user_id"]}, APP_VERSION))
+
+    # Require guest trials to see no tour and create no durable acknowledgement.
+    def test_guest_tour_state_is_disposable(self) -> None:
+        # Build the accepted disposable-session markers.
+        guest = {"user_id": "guest_whats_new", "player_id": "player_guest_whats_new", "role": "guest", "guest_analytics_id": "analytics-whats-new"}
+        # Patch an eligible entry to prove the guest boundary wins over catalog opt-in.
+        with patch.object(whats_new, "load_catalog", return_value=catalog([entry(APP_VERSION)])):
+            # Require no tour and an explicit non-persisted lifecycle.
+            self.assertEqual((whats_new.tour_for(guest)["show"], whats_new.tour_for(guest)["persisted"]), (False, False))
+        # Acknowledge for the disposable session.
+        result = whats_new.dismiss(guest)
+        # Require an explicit non-durable result with no durable timestamp.
+        self.assertEqual(result, {"dismissed": True, "dismissed_at": None, "persisted": False})
+        # Require no What's New document to have been created.
+        self.assertEqual(get_storage_provider().read_document(whats_new.SEEN_DOCUMENT_KEY, lambda: {"users": {}}), {"users": {}})
+
+    # Require published payloads to contain presentation keys but no raw version identifiers.
+    def test_payload_exposes_no_raw_version(self) -> None:
+        # Patch one eligible current-release entry.
+        with patch.object(whats_new, "load_catalog", return_value=catalog([entry(APP_VERSION)])):
+            # Build the player-facing payload.
+            payload = whats_new.tour_for(self.owner)
+        # Serialize once for raw-version leak inspection.
         serialized = json.dumps(payload)
-        # Require the running version string to be absent from the player payload.
+        # Require the canonical release identifier to remain server-private.
         self.assertNotIn(APP_VERSION, serialized)
-        # Require every published entry to carry only localization keys.
-        for entry in payload["entries"]:
-            # Require the exact key-only entry shape.
-            self.assertEqual(set(entry), {"title_key", "body_key"})
+        # Require the exact bounded response shape.
+        self.assertEqual(set(payload), {"show", "entries", "merged_count", "changelog_path", "persisted"})
+        # Require entries to contain localization keys only.
+        self.assertEqual(set(payload["entries"][0]), {"title_key", "body_key"})
 
-    # Require dismissal to persist and be stamped from the server's canonical version.
-    def test_dismissal_persists_and_is_server_stamped(self) -> None:
-        # Read the tour before dismissing.
-        before = whats_new.tour_for(self.owner)
-        # Require the shipped catalog to actually offer a tour so the test proves something.
-        self.assertTrue(before["show"])
-        # Dismiss the tour without supplying any version.
-        result = whats_new.dismiss(self.owner)
-        # Require the dismissal to be confirmed.
-        self.assertTrue(result["dismissed"])
-        # Require the tour to be gone on the next read.
-        self.assertFalse(whats_new.tour_for(self.owner)["show"])
-
-    # Require one subject's dismissal to leave another subject's tour intact.
-    def test_dismissal_is_scoped_to_the_subject(self) -> None:
-        # Seed an unrelated account.
-        other = auth.create_user("tour.neighbour@example.test", "OtherPassw0rd!23", "Tour Other")
-        # Dismiss only the owner's tour.
-        whats_new.dismiss(self.owner)
-        # Require the neighbour to still be offered the tour.
-        self.assertTrue(whats_new.tour_for(other)["show"])
-
-    # Require an unauthenticated caller to be refused rather than reading shared state.
+    # Require subjectless calls to fail closed instead of sharing state.
     def test_subjectless_sessions_fail_closed(self) -> None:
-        # Require the read to reject a session without a durable identity.
+        # Require the read to reject a session with no durable subject.
         with self.assertRaises(ValidationError):
             # Attempt the subjectless read.
             whats_new.tour_for({})
-        # Require the dismissal to reject the same session.
+        # Require dismissal to reject the same session.
         with self.assertRaises(ValidationError):
-            # Attempt the subjectless dismissal.
+            # Attempt the subjectless write.
             whats_new.dismiss({})
 
-    # Require the shipped curated catalog to reference only translated keys in both locales.
-    def test_shipped_catalog_keys_are_translated(self) -> None:
+    # Require shipped release metadata to match the packaged release and remain opt-out by default.
+    def test_shipped_catalog_is_current_translated_and_disabled(self) -> None:
         # Load the tracked curated metadata.
         shipped = json.loads((ROOT / "docs" / "releases" / "whats_new.json").read_text(encoding="utf-8"))
+        # Require the catalog to describe only the current packaged release in this server-only slice.
+        self.assertEqual([item["version"] for item in shipped["entries"]], [APP_VERSION])
+        # Require release-coordinator activation to remain explicitly off until player UI is approved.
+        self.assertTrue(all(item.get("show_in_whats_new") is False for item in shipped["entries"]))
         # Load both shipped locales.
         locales = {name: json.loads((ROOT / "web" / "i18n" / name / "shell.json").read_text(encoding="utf-8")) for name in ("en-US", "ru-RU")}
-        # Check every curated entry.
-        for entry in shipped["entries"]:
-            # Check both localization keys the entry references.
-            for key in (entry["title_key"], entry["body_key"]):
-                # Check both shipped locales.
-                for name, resources in locales.items():
-                    # Isolate each case so a failure names the missing key and language.
-                    with self.subTest(key=key, locale=name):
+        # Check each presentation key in both shipped locales.
+        for item in shipped["entries"]:
+            # Require the exact consent-free metadata shape.
+            self.assertEqual(set(item), {"version", "show_in_whats_new", "title_key", "body_key"})
+            # Check both localization keys.
+            for key in (item["title_key"], item["body_key"]):
+                # Check both locales independently.
+                for locale, resources in locales.items():
+                    # Isolate a missing translation precisely.
+                    with self.subTest(key=key, locale=locale):
                         # Require real translated copy rather than a missing or empty key.
                         self.assertTrue(resources.get(key, "").strip())
 
-    # Require the tour to stay clear of terms and privacy consent, which are separate flows.
-    def test_tour_never_carries_consent(self) -> None:
-        # Load the tracked curated metadata.
-        shipped = json.loads((ROOT / "docs" / "releases" / "whats_new.json").read_text(encoding="utf-8"))
-        # Inspect every curated entry for a consent-bearing field.
-        for entry in shipped["entries"]:
-            # Isolate each entry so a failure names the offending release.
-            with self.subTest(version=entry["version"]):
-                # Require only the curated presentation fields.
-                self.assertEqual(set(entry) - {"version", "show_in_whats_new", "title_key", "body_key"}, set())
+    # Require additive routes and exact contract bytes to stay aligned.
+    def test_v2_routes_and_contract_digest_are_current(self) -> None:
+        # Import router construction lazily so isolated provider injection is already active.
+        from casino.app import build_router
+        # Build one listener-free route table over the production handlers.
+        router = build_router()
+        # Patch one eligible entry for an exact route read.
+        with patch.object(whats_new, "load_catalog", return_value=catalog([entry(APP_VERSION)])):
+            # Read through the additive session-bound route.
+            before = router.dispatch("GET", "/api/v2/me/whats-new", {}, {"user": self.owner})
+        # Require the route to offer the injected eligible entry without raw release data.
+        self.assertEqual((before["show"], before["merged_count"], before["persisted"]), (True, 1, True))
+        # Submit hostile caller-authored version and identity fields; the handler must reject both.
+        with self.assertRaises(ValidationError):
+            # Attempt to override server-owned dismissal authority.
+            router.dispatch("POST", "/api/v2/me/whats-new/dismiss", {"version": "99.0.0", "user_id": self.other["user_id"]}, {"user": self.owner})
+        # Dismiss through the exact empty-body contract.
+        dismissed = router.dispatch("POST", "/api/v2/me/whats-new/dismiss", {}, {"user": self.owner})
+        # Require the route to persist only for the server-owned subject.
+        self.assertEqual((dismissed["dismissed"], dismissed["persisted"]), (True, True))
+        # Resolve the shared additive v2 contract.
+        contract_path = ROOT / "contracts" / "openapi" / "user-settings.v2.yaml"
+        # Read exact bytes once for route, schema, and digest verification.
+        contract_bytes = contract_path.read_bytes()
+        # Decode the contract for required What's New anchors.
+        contract_text = contract_bytes.decode("utf-8")
+        # Require both routes, bounded payload schemas, and persistence lifecycle.
+        self.assertTrue(all(anchor in contract_text for anchor in ("/me/whats-new:", "/me/whats-new/dismiss:", "WhatsNewReadEnvelope:", "WhatsNewDismissEnvelope:", "persisted:")))
+        # Parse the exact-byte digest inventory.
+        digests = json.loads((ROOT / "contracts" / "compatibility" / "contract-digests.json").read_text(encoding="utf-8"))
+        # Require the reviewed contract bytes to match the checked digest.
+        self.assertEqual(digests["contracts/openapi/user-settings.v2.yaml"], hashlib.sha256(contract_bytes).hexdigest())

@@ -37,7 +37,7 @@ from casino.core.state_store import ensure_dirs, migrate_from_v7_if_needed
 # Import required dependency so this module can bootstrap whichever storage provider is configured.
 from casino.core.storage import bootstrap_players, get_storage_provider
 # Import required dependency so this module can use its public functions or constants.
-from casino.core import logger, players, ledger, history, auth, feedback, guest_analytics, invitations, whats_new
+from casino.core import logger, players, ledger, history, auth, feedback, guest_analytics, invitations, receipts, user_settings, wellness, whats_new
 # Import required dependency so this module can use its public functions or constants.
 from casino.games.registry import catalog_summary, list_games, register_games
 # Import required dependency so this module can use its public functions or constants.
@@ -333,6 +333,27 @@ def build_router() -> Router:
         # Delegate the alias to the same canonical acceptance operation.
         return current_user_accept_terms(body, query, context)
 
+    # Register additive opt-in session-wellness preference reads. (WELL-001, issue #167)
+    @router.get(r"/api/v2/me/wellness")
+    # Return the authenticated session's own reminder configuration and accepted bounds.
+    def current_user_wellness(body, query, context):
+        # Publish only the session-derived subject's opt-in record.
+        return {"wellness": wellness.read_wellness(context["user"])}
+
+    # Register additive field-allowlisted session-wellness preference updates. (WELL-001, issue #167)
+    @router.patch(r"/api/v2/me/wellness")
+    # Apply one validated reminder change to the session's own record only.
+    def update_current_user_wellness(body, query, context):
+        # Bind the subject from the authenticated session rather than accepting caller identity.
+        return {"wellness": wellness.update_wellness(context["user"], body)}
+
+    # Register additive neutral summaries of committed movements in the active login session. (WELL-002, issue #167)
+    @router.get(r"/api/v2/me/wellness/summary")
+    # Return plain committed totals for the active session without evaluating them.
+    def current_user_wellness_summary(body, query, context):
+        # Use the server-owned login-session boundary rather than a caller-authored timestamp.
+        return wellness.session_summary(context["user"], since=str(context.get("session", {}).get("created_at") or ""))
+
     # Register additive version-aware What's New eligibility reads. (TOUR-001, issue #165)
     @router.get(r"/api/v2/me/whats-new")
     # Return only curated localization keys for releases this session has not acknowledged.
@@ -344,8 +365,40 @@ def build_router() -> Router:
     @router.post(r"/api/v2/me/whats-new/dismiss")
     # Acknowledge the running release without trusting any caller-supplied version.
     def dismiss_current_user_whats_new(body, query, context):
+        # Reject every caller-authored field so subject and release identity remain server-owned.
+        if body:
+            # Fail closed instead of silently accepting hostile or future payload authority.
+            raise ValidationError("What's New dismissal accepts no fields", {"reason": "unsupported_fields", "fields": sorted(body)})
         # Stamp the acknowledgement from the canonical application version.
         return whats_new.dismiss(context["user"])
+
+    # Register additive personal-preference reads outside the frozen v1 surface. (USER-006, issue #352)
+    @router.get(r"/api/v2/me/settings")
+    # Return the authenticated session's own preferences and the supported locale catalog.
+    def current_user_settings(body, query, context):
+        # Publish the subject's record together with the catalog a client needs to render choices.
+        return {"settings": user_settings.read_settings(context["user"]), "supported_locales": list(user_settings.SUPPORTED_LOCALES)}
+
+    # Register additive field-allowlisted personal-preference updates. (USER-006, issue #352)
+    @router.patch(r"/api/v2/me/settings")
+    # Apply one validated preference change to the session's own record only.
+    def update_current_user_settings(body, query, context):
+        # Bind the subject from the authenticated session rather than accepting caller identity.
+        return {"settings": user_settings.update_settings(context["user"], body)}
+
+    # Register additive self-only bounded activity reads. (USER-007, issue #352)
+    @router.get(r"/api/v2/me/history")
+    # Return only the authenticated session's own paginated activity.
+    def current_user_history(body, query, context):
+        # Derive the subject from the session and accept only pagination and filter inputs.
+        return user_settings.self_history(context["user"], page=query.get("page", 1), page_size=query.get("page_size", user_settings.DEFAULT_PAGE_SIZE), game=query.get("game", ""))
+
+    # Register additive self-only explained ledger movements. (RECEIPT-001, RECEIPT-002, issue #161)
+    @router.get(r"/api/v2/me/receipts")
+    # Return only the authenticated session's own bounded play-token movement explanations.
+    def current_user_receipts(body, query, context):
+        # Bind the subject from the session and pass only shared pagination values to the receipt mapper.
+        return receipts.self_receipts(context["user"], page=query.get("page", 1), page_size=query.get("page_size", receipts.DEFAULT_PAGE_SIZE))
 
     # Attach the published current-user token credit endpoint.
     @router.post(r"/api/v2/me/tokens/add")
