@@ -161,8 +161,22 @@ def control_eligibility(signature):
     return False, "unknown surface ownership"  # Exclude only with an explicit malformed/unknown reason.
 
 
+# Identify catalog navigation that is deliberately outside a focused game selection.
+def unselected_catalog_navigation(signature, selected_games):
+    if selected_games is None:  # Preserve the historical fail-closed policy when no explicit test scope is supplied.
+        return False  # Keep default and direct classifier callers strict.
+    namespace, separator, raw_signature = signature.partition("::")  # Split the harness-owned surface namespace once.
+    if namespace != "shell" or not separator:  # Limit this exception to valid persistent-shell identities.
+        return False  # Never exempt game-owned, authentication, malformed, or unscoped controls.
+    for prefix in ("button[data-testid=nav-", "button[data-testid=open-"):  # Recognize only the two governed catalog routing identities.
+        if raw_signature.startswith(prefix) and raw_signature.endswith("]"):  # Require the complete selector shape emitted by the harness.
+            game_id = raw_signature[len(prefix):-1]  # Recover the exact registered game identifier from the selector.
+            return game_id in GAME_IDS and game_id not in selected_games  # Exclude only registered games deliberately omitted from this focused profile.
+    return False  # Keep every other shell identity on its ordinary eligibility path.
+
+
 # Produce mutually exclusive acceptance classifications for every discovered or activated control.
-def classify_control_coverage(seen_counts, activated_counts, minimum=CONTROL_ACTIVATION_FLOOR):
+def classify_control_coverage(seen_counts, activated_counts, minimum=CONTROL_ACTIVATION_FLOOR, selected_games=None):
     classifications = {"exercised": {}, "intentionally_unavailable": {}, "failed": {}, "excluded": {}}  # Keep acceptance and diagnostic classes separate.
     signatures = sorted(set(seen_counts).union(activated_counts))  # Classify the complete discovered-and-activated identity set.
     for signature in signatures:  # Assign every identity exactly once.
@@ -170,6 +184,8 @@ def classify_control_coverage(seen_counts, activated_counts, minimum=CONTROL_ACT
         activated = int(activated_counts.get(signature, 0))  # Read successful UI dispatches.
         opportunities, opportunity_reason = reachable_control_opportunities(signature, seen_counts, activated_counts)  # Adjust only explicitly governed mutually exclusive rare states.
         eligible, reason = control_eligibility(signature)  # Apply the durable surface policy.
+        if unselected_catalog_navigation(signature, selected_games):  # Recognize catalog routes intentionally absent from a focused game run.
+            eligible, reason = False, "unselected registered-game navigation outside focused profile"  # Keep the exact out-of-scope reason visible in terminal evidence.
         evidence = {"seen": seen, "activated": activated, "opportunities": opportunities, "reason": reason}  # Preserve bounded numeric evidence.
         if opportunity_reason:  # Keep the exceptional opportunity calculation explicit in terminal evidence.
             evidence["opportunity_reason"] = opportunity_reason  # Prevent a rare-state exception from becoming an unexplained waiver.
@@ -1145,7 +1161,7 @@ async def run_all(args):
         assigned_ids.extend(range(result["global_cycle_start"], result["global_cycle_end"] + 1))  # Add assigned IDs for overlap/gap checks.
     unique_ids = set(assigned_ids)  # Deduplicate the reconstructed assignment.
     expected_ids = set(range(args.total_cycles))  # Build the exact requested global ID set.
-    control_coverage = classify_control_coverage(seen_counts, activated_counts)  # Classify every discovered or activated control under the durable eligibility policy.
+    control_coverage = classify_control_coverage(seen_counts, activated_counts, selected_games=set(game_ids))  # Scope only registered-game navigation outside an explicit focused selection while preserving all selected and full-catalog floors.
     failed_controls = control_coverage["failed"]  # Keep the red eligible-control evidence explicit for the aggregate gate.
     game_counts = {}  # Aggregate replicated workers back into canonical game outcomes.
     for result in sorted(results, key=lambda item: (item["game_index"], item.get("replica_index", 0))):  # Preserve game and replica order.
