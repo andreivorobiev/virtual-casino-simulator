@@ -7561,8 +7561,10 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         page.get_by_test_id('admin-tab-users').click(); page.get_by_test_id('admin-users-guest-separation').wait_for(timeout=5000)
                         # Retain a stable locator for geometry, translation, and interaction proof.
                         handoff=page.get_by_test_id('admin-users-guest-separation')
-                        # Require the exact locale-owned heading without resource-key leakage.
-                        assert handoff.locator('h3').inner_text()==handoff_headings[locale] and 'users.' not in handoff.inner_text()
+                        # Require the exact locale-owned heading without leaking any handoff resource key.
+                        handoff_text=handoff.inner_text()
+                        # Check only complete governed keys because ordinary English copy may legitimately contain "users.".
+                        assert handoff.locator('h3').inner_text()==handoff_headings[locale] and all(key not in handoff_text for key in ('users.guestSeparationTitle','users.guestSeparationCopy','users.openGuestTrials'))
                         # Require the created account to remain visible while Guest Trials stay absent from managed rows.
                         assert page.locator('tr[data-testid="admin-user-row"][data-email="beta.browser@example.test"]').count()==1 and page.locator('tr[data-testid="admin-user-row"][data-email=""]').count()==0
                         # Exercise every governed responsive width with a bounded readable handoff region.
