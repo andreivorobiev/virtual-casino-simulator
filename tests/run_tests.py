@@ -972,6 +972,20 @@ def run_api_tests():
             raise AssertionError('play-token receipt derivation suite failed')
     # Record the committed-ledger explanation, shared pagination, privacy, and exact-contract proof.
     run_case('API-RECEIPT-001',['RECEIPT-001','RECEIPT-002','TEST-104'],run_receipt_tests)
+    # Execute the opt-in wellness, current-session summary, concurrency, and neutral-copy proof without a listener.
+    def run_wellness_tests():
+        # Import the focused suite only when its mapped API case runs.
+        from tests import wellness_tests
+        # Load exactly the session-wellness foundation assertions.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(wellness_tests.SessionWellnessTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused assertion failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure stable.
+            raise AssertionError('session wellness foundation suite failed')
+    # Record the listener-free opt-in, session-bound, reward-free, and EN/RU neutrality proof.
+    run_case('API-WELLNESS-001',['WELL-001','WELL-002','TEST-105'],run_wellness_tests)
     # Discover and execute every focused restricted-preview security module without opening a listener.
     def run_restricted_preview_security_tests():
         # Load the package directory through unittest's standard test discovery.

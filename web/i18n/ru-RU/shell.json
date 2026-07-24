@@ -135,5 +135,22 @@
   "receipt.refund_after_error": "Возврат {amount} игровых токенов, так как раунд игры {game} не был завершён. Баланс после: {balance}.",
   "receipt.adjustment": "Баланс изменён на {amount} игровых токенов. Баланс после: {balance}.",
   "receipt.reference": "Ссылка {reference}",
-  "receipt.noCashValue": "Только игровые токены - без денежной ценности."
+  "receipt.noCashValue": "Только игровые токены - без денежной ценности.",
+  "wellness.title": "Напоминания о сессии",
+  "wellness.copy": "Дополнительные напоминания о том, сколько длится эта сессия симулятора. Напоминания выключены, пока вы их не включите.",
+  "wellness.enable": "Напоминать, сколько времени я играю",
+  "wellness.breakEnable": "Предлагать момент для остановки",
+  "wellness.interval": "Напоминать каждые",
+  "wellness.intervalUnit": "{minutes} минут",
+  "wellness.intervalRange": "Выберите от {min} до {max} минут.",
+  "wellness.reminder": "Эта сессия симулятора длится {minutes} минут.",
+  "wellness.breakSuggestion": "Это подходящий момент, чтобы остановиться, если вы захотите.",
+  "wellness.dismiss": "Закрыть",
+  "wellness.summaryTitle": "Сводка по сессии",
+  "wellness.summaryMovements": "Движений игровых токенов: {count}",
+  "wellness.summaryStaked": "Поставлено: {amount} игровых токенов",
+  "wellness.summaryReturned": "Возвращено: {amount} игровых токенов",
+  "wellness.summaryNet": "Итог: {amount} игровых токенов",
+  "wellness.summaryNote": "Только игровые токены - без денежной ценности.",
+  "wellness.saved": "Настройки напоминаний сохранены."
 }

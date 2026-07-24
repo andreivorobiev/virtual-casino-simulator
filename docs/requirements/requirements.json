@@ -10294,6 +10294,63 @@
       "introduced_in": "issue-161-outcome-receipts",
       "changed_in": "issue-161-outcome-receipts",
       "notes": "Allocated after TEST-103 became permanent on current main. Every focused test uses an isolated temporary provider; no listener, browser, credential, repository runtime file, provider network, or live system is touched."
+    },
+    {
+      "id": "WELL-001",
+      "module": "Core",
+      "description": "The server-only session-wellness preference foundation is explicitly opt-in and off by default, persists only for authenticated non-guest subjects, accepts only elapsed-reminder, suggested-stopping-point, cadence, and optimistic-revision fields, rejects an entire payload carrying unknown or privilege fields, bounds cadence from 10 through 240 minutes so it cannot become countdown pressure or silently never arrive, and rejects stale concurrent updates. Disposable guest trials receive explicit non-persisted responses and create no durable wellness record. Acknowledging a reminder grants no token, streak, bonus, or reward and creates no ledger movement.",
+      "status": "PASS",
+      "api_tests": [
+        "API-WELLNESS-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/wellness.py",
+        "casino/app.py",
+        "contracts/openapi/user-settings.v2.yaml",
+        "tests/wellness_tests.py"
+      ],
+      "introduced_in": "issue-167-session-wellness",
+      "changed_in": "issue-167-session-wellness",
+      "notes": "Allocated for the server-only foundation in GitHub issue #167. Timer rendering, every-game controls, reload timing, keyboard and screen-reader behavior, reduced-motion behavior, responsive browser evidence, and owner/counsel public-copy review remain open."
+    },
+    {
+      "id": "WELL-002",
+      "module": "Core",
+      "description": "The additive authenticated wellness summary derives its player and active-session start boundary exclusively from server context, reads only a bounded authoritative committed-ledger window, re-filters provider rows to the session player, and reports plain movement, staked, returned, and arithmetic net play-token totals without a verdict, advice, loss-chasing language, or value implication. All drafted wellness copy ships in EN and RU with identical placeholders and is scanned against prohibited deposit, purchase, cash-value, prize, redemption, reward, streak, urgency, and loss-chasing framing.",
+      "status": "PASS",
+      "api_tests": [
+        "API-WELLNESS-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/wellness.py",
+        "casino/app.py",
+        "contracts/openapi/user-settings.v2.yaml",
+        "web/i18n/en-US/shell.json",
+        "web/i18n/ru-RU/shell.json",
+        "tests/wellness_tests.py"
+      ],
+      "introduced_in": "issue-167-session-wellness",
+      "changed_in": "issue-167-session-wellness",
+      "notes": "Allocated for the server-only foundation in GitHub issue #167. The summary does not expose a caller-authored time boundary, and the broader issue remains open for browser-visible controls and public-audience review."
+    },
+    {
+      "id": "TEST-105",
+      "module": "Tests",
+      "description": "Listener-free isolated-provider evidence verifies opt-in defaults, durable registered-user configuration, disposable guest non-persistence, cadence floor and ceiling with strict type rejection, whole-payload unknown-field rejection, optimistic stale-write conflicts, reward-free acknowledgement with an unchanged ledger, neutral active-session totals with no verdict, populated-neighbour privacy, malformed-document recovery, subjectless fail-closed behavior, prohibited-framing scanning across every drafted wellness string, complete EN/RU placeholder parity, server-owned session-bound route behavior, additive v2 contract shape, and exact contract digest pinning.",
+      "status": "PASS",
+      "api_tests": [
+        "API-WELLNESS-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/wellness_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-167-session-wellness",
+      "changed_in": "issue-167-session-wellness",
+      "notes": "Allocated after TEST-104 became permanent on current main. Every focused test uses an isolated temporary provider; no listener, browser, credential, repository runtime file, provider network, or live system is touched."
     }
   ]
 }

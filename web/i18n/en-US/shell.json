@@ -135,5 +135,22 @@
   "receipt.refund_after_error": "Returned {amount} play tokens because the {game} round could not be completed. Balance after: {balance}.",
   "receipt.adjustment": "Adjusted your balance by {amount} play tokens. Balance after: {balance}.",
   "receipt.reference": "Reference {reference}",
-  "receipt.noCashValue": "Play tokens only - no cash value."
+  "receipt.noCashValue": "Play tokens only - no cash value.",
+  "wellness.title": "Session reminders",
+  "wellness.copy": "Optional reminders about how long this simulator session has been running. Reminders are off unless you turn them on.",
+  "wellness.enable": "Remind me how long I have been playing",
+  "wellness.breakEnable": "Include a suggested stopping point",
+  "wellness.interval": "Remind me every",
+  "wellness.intervalUnit": "{minutes} minutes",
+  "wellness.intervalRange": "Choose between {min} and {max} minutes.",
+  "wellness.reminder": "You have been in this simulator session for {minutes} minutes.",
+  "wellness.breakSuggestion": "This is a natural stopping point if you would like one.",
+  "wellness.dismiss": "Close",
+  "wellness.summaryTitle": "Session summary",
+  "wellness.summaryMovements": "{count} play-token movements",
+  "wellness.summaryStaked": "Staked: {amount} play tokens",
+  "wellness.summaryReturned": "Returned: {amount} play tokens",
+  "wellness.summaryNet": "Net: {amount} play tokens",
+  "wellness.summaryNote": "Play tokens only - no cash value.",
+  "wellness.saved": "Reminder settings saved."
 }

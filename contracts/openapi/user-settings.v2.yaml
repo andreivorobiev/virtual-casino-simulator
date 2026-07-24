@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
-  title: Virtual Casino personal settings, self-history, and receipt API
+  title: Virtual Casino personal settings, self-history, receipts, and wellness API
   version: v2
-  description: Additive authenticated self-service foundation for locale, sound, bounded ledger-backed personal history, and ledger-derived play-token receipts. Subjects always come from the active session; caller-authored user or player identifiers are never accepted.
+  description: Additive authenticated self-service foundation for locale, sound, bounded ledger-backed personal history, ledger-derived play-token receipts, opt-in wellness preferences, and neutral active-session summaries. Subjects and session boundaries always come from server-owned context; caller-authored user, player, or session identifiers are never accepted.
 servers:
   - url: /api/v2
 paths:
@@ -126,6 +126,80 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ReceiptEnvelope'
+        '401':
+          description: Authentication required.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /me/wellness:
+    get:
+      summary: Read opt-in wellness preferences for the active session subject.
+      operationId: user_wellness_v2_read
+      security:
+        - cookieSession: []
+      responses:
+        '200':
+          description: Canonical opt-in preferences, cadence bounds, and persistence lifecycle.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WellnessReadEnvelope'
+        '401':
+          description: Authentication required.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+    patch:
+      summary: Atomically update allowlisted opt-in wellness preferences for the active session subject.
+      operationId: user_wellness_v2_update
+      security:
+        - cookieSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WellnessPatch'
+      responses:
+        '200':
+          description: Canonical stored preferences after the update.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WellnessReadEnvelope'
+        '400':
+          description: Malformed, empty, out-of-range, or non-allowlisted update.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '401':
+          description: Authentication required.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Supplied revision is stale.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /me/wellness/summary:
+    get:
+      summary: Read neutral committed play-token totals bounded to the server-owned active login session.
+      operationId: user_wellness_v2_summary
+      security:
+        - cookieSession: []
+      responses:
+        '200':
+          description: Plain active-session movement totals with no verdict, advice, or value framing.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WellnessSummaryEnvelope'
         '401':
           description: Authentication required.
           content:
@@ -314,6 +388,100 @@ components:
               minimum: 0
             has_more:
               type: boolean
+    WellnessSettings:
+      type: object
+      additionalProperties: false
+      required: [enabled, reminder_interval_minutes, break_reminder_enabled, revision, updated_at, min_interval_minutes, max_interval_minutes, persisted]
+      properties:
+        enabled:
+          type: boolean
+          default: false
+          description: Explicit opt-in for elapsed-session reminders.
+        reminder_interval_minutes:
+          type: integer
+          minimum: 10
+          maximum: 240
+          default: 30
+        break_reminder_enabled:
+          type: boolean
+          default: false
+          description: Explicit opt-in for a neutral suggested stopping point.
+        revision:
+          type: integer
+          minimum: 0
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        min_interval_minutes:
+          type: integer
+          enum: [10]
+        max_interval_minutes:
+          type: integer
+          enum: [240]
+        persisted:
+          type: boolean
+          description: False for disposable guest-trial responses.
+    WellnessPatch:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        enabled:
+          type: boolean
+        reminder_interval_minutes:
+          type: integer
+          minimum: 10
+          maximum: 240
+        break_reminder_enabled:
+          type: boolean
+        revision:
+          type: integer
+          minimum: 0
+    WellnessReadEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          required: [wellness]
+          properties:
+            wellness:
+              $ref: '#/components/schemas/WellnessSettings'
+    WellnessSummary:
+      type: object
+      additionalProperties: false
+      required: [movements, staked, returned, net, since, play_tokens_only]
+      properties:
+        movements:
+          type: integer
+          minimum: 0
+        staked:
+          type: number
+          minimum: 0
+        returned:
+          type: number
+          minimum: 0
+        net:
+          type: number
+        since:
+          type: string
+          format: date-time
+        play_tokens_only:
+          type: boolean
+          enum: [true]
+    WellnessSummaryEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/WellnessSummary'
     ErrorEnvelope:
       type: object
       required: [ok, error]

@@ -6,8 +6,8 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.48.5
-- core: 9.19.4
+- application: 9.49.0
+- core: 9.20.0
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.0
@@ -45,9 +45,9 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.1
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.57.7
-- docs: 1.57.7
-- contracts: 1.40.4
+- tests: 1.58.0
+- docs: 1.58.0
+- contracts: 1.41.0
 - tooling: 1.20.1
 - commenting_policy: 1.0.0
 
@@ -789,3 +789,6 @@ Historical source baseline: 9.1.0
 - **RECEIPT-001** (Core) - PASS: Every published play-token receipt is derived only from an authoritative committed ledger movement: its signed amount, committed transaction type, game, timestamp, round binding, and resulting balance. Signed amount determines movement direction and the committed type refines stake, refund, payout, or adjustment classification; an interrupted-round stake return is explained as a refund rather than a win, while an unknown future transaction type degrades to the directionally correct generic category instead of invented game detail.
 - **RECEIPT-002** (Core) - PASS: The additive authenticated v2 receipt read derives its player subject from server session context and reuses the shared self-history privacy boundary: provider rows are re-filtered to that player, malformed or hostile pagination is bounded safely, newest-first pages are capped at 50 rows from a 1,000-row source window, repeated reads are non-mutating, and each published receipt exposes only allowlisted ledger-derived fields, a short correlation tail, localization key, and explicit play-tokens-only marker without raw durable player or round identifiers.
 - **TEST-104** (Tests) - PASS: Listener-free isolated-provider evidence verifies committed-amount receipt classification, every harvested catalog transaction type, honest interrupted refunds, safe unknown-type degradation, exact amount and resulting-balance reconciliation, absence of raw player and round identifiers, round-free references, shared self-only pagination against a populated neighbour, malformed and oversized query handling, subjectless empty pages, stable repeated reads without deduplicating committed movements, complete EN/RU keys and placeholder parity, explicit no-cash-value framing, additive v2 route shape, and exact checked contract digest.
+- **WELL-001** (Core) - PASS: The server-only session-wellness preference foundation is explicitly opt-in and off by default, persists only for authenticated non-guest subjects, accepts only elapsed-reminder, suggested-stopping-point, cadence, and optimistic-revision fields, rejects an entire payload carrying unknown or privilege fields, bounds cadence from 10 through 240 minutes so it cannot become countdown pressure or silently never arrive, and rejects stale concurrent updates. Disposable guest trials receive explicit non-persisted responses and create no durable wellness record. Acknowledging a reminder grants no token, streak, bonus, or reward and creates no ledger movement.
+- **WELL-002** (Core) - PASS: The additive authenticated wellness summary derives its player and active-session start boundary exclusively from server context, reads only a bounded authoritative committed-ledger window, re-filters provider rows to the session player, and reports plain movement, staked, returned, and arithmetic net play-token totals without a verdict, advice, loss-chasing language, or value implication. All drafted wellness copy ships in EN and RU with identical placeholders and is scanned against prohibited deposit, purchase, cash-value, prize, redemption, reward, streak, urgency, and loss-chasing framing.
+- **TEST-105** (Tests) - PASS: Listener-free isolated-provider evidence verifies opt-in defaults, durable registered-user configuration, disposable guest non-persistence, cadence floor and ceiling with strict type rejection, whole-payload unknown-field rejection, optimistic stale-write conflicts, reward-free acknowledgement with an unchanged ledger, neutral active-session totals with no verdict, populated-neighbour privacy, malformed-document recovery, subjectless fail-closed behavior, prohibited-framing scanning across every drafted wellness string, complete EN/RU placeholder parity, server-owned session-bound route behavior, additive v2 contract shape, and exact contract digest pinning.
