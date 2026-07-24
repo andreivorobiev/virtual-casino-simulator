@@ -43,7 +43,7 @@ Deployment-only `CASINO_MYSQL_MIGRATION_*` variables are never part of this file
 
 ### Build provenance
 
-The runtime never invokes Git and never inspects checkout paths, so a deployment can only be pinned to a source commit by supplying `CASINO_BUILD_SHA` as ordinary configuration. Each install therefore regenerates a second, non-secret environment fragment from the verified release manifest:
+The runtime never invokes Git and never inspects checkout paths, so a deployment can only be pinned to a source commit by supplying `CASINO_BUILD_SHA` as ordinary configuration. The immutable application archive is required to contain the provenance writer, and each install therefore regenerates a second, non-secret environment fragment from the verified release manifest:
 
 ```text
 python scripts/write_release_env.py --manifest <verified release-manifest.json> --destination /etc/casino/release.env
