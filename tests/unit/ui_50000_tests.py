@@ -142,6 +142,27 @@ class UI50000HarnessTests(unittest.TestCase):
         self.assertEqual(result["intentionally_unavailable"]["casino_war::button[data-action=war]"]["opportunities"], 64)  # Never report fewer opportunities than the control's actual activations.
         self.assertEqual(result["classified_count"], 6)  # Require complete mutually exclusive accounting.
 
+    # Prove focused profiles exempt only registered navigation for deliberately unselected games.
+    def test_control_coverage_scopes_only_unselected_registered_game_navigation(self):
+        baccarat_nav = "shell::button[data-testid=nav-baccarat]"  # Name selected navigation that must remain subject to the literal floor.
+        roulette_nav = "shell::button[data-testid=nav-roulette]"  # Name registered navigation deliberately omitted from the focused profile.
+        roulette_open = "shell::button[data-testid=open-roulette]"  # Cover the second governed catalog routing identity.
+        unknown_nav = "shell::button[data-testid=nav-not_registered]"  # Model a malformed or future identity that cannot receive an implicit waiver.
+        deal = "baccarat::button[data-testid=baccarat-deal]"  # Keep the selected game-owned action above its floor.
+        seen = Counter({baccarat_nav: 120, roulette_nav: 1, roulette_open: 1, unknown_nav: 1, deal: 2_000})  # Reproduce focused discovery of the complete shell beside repeated Baccarat actions.
+        activated = Counter({baccarat_nav: 120, deal: 2_000})  # Exercise only the selected route and game-owned action.
+        default_result = ui_50000.classify_control_coverage(seen, activated)  # Preserve strict behavior when no focused selection is declared.
+        focused_result = ui_50000.classify_control_coverage(seen, activated, selected_games={"baccarat"})  # Apply the explicit Baccarat-only scope.
+        full_catalog_result = ui_50000.classify_control_coverage(seen, activated, selected_games=set(ui_50000.GAME_IDS))  # Model the formal catalog scope.
+        self.assertIn(roulette_nav, default_result["failed"])  # Keep direct/default TEST-092 classification fail closed.
+        self.assertIn(roulette_nav, full_catalog_result["failed"])  # Keep formal full-catalog navigation under the activation floor.
+        self.assertIn(roulette_nav, focused_result["excluded"])  # Exclude only the omitted registered route from focused acceptance.
+        self.assertIn(roulette_open, focused_result["excluded"])  # Apply the same exact rule to lobby open controls.
+        self.assertEqual(focused_result["excluded"][roulette_nav]["reason"], "unselected registered-game navigation outside focused profile")  # Publish a durable non-waiver explanation.
+        self.assertIn(unknown_nav, focused_result["failed"])  # Refuse to exempt unregistered or malformed catalog identities.
+        self.assertIn(baccarat_nav, focused_result["exercised"])  # Keep selected navigation on the literal floor.
+        self.assertIn(deal, focused_result["exercised"])  # Keep selected game-owned actions fully governed.
+
     # Prove only replicated Roulette continues its deterministic target schedule across worker boundaries.
     def test_coverage_ordinal_continues_roulette_replicas_only(self):
         self.assertEqual(ui_50000.coverage_ordinal("roulette", 0, 417), 417)  # Continue Roulette after the prior replica's exact range.
