@@ -1,13 +1,13 @@
 # Virtual Casino Requirements and Validation
 
-Packaged application release: 9.4.0
+Packaged application release: 9.5.2
 
 Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.46.0
-- core: 9.19.1
+- application: 9.47.0
+- core: 9.19.2
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.0
@@ -18,7 +18,7 @@ Historical source baseline: 9.1.0
 - roulette: 9.4.7
 - slots: 9.1.4
 - blackjack: 9.1.3
-- baccarat: 9.1.2
+- baccarat: 9.1.3
 - keno: 9.2.3
 - bingo: 9.2.1
 - multi_hand_video_poker: 1.0.1
@@ -45,10 +45,10 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.1
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.55.0
-- docs: 1.55.0
-- contracts: 1.39.0
-- tooling: 1.18.0
+- tests: 1.56.0
+- docs: 1.56.0
+- contracts: 1.40.2
+- tooling: 1.19.1
 - commenting_policy: 1.0.0
 
 ## Requirements
@@ -248,6 +248,7 @@ Historical source baseline: 9.1.0
 - **BAC-023** (Baccarat) - PASS: Baccarat auto play repeats selected bet.
 - **BAC-024** (Baccarat) - PASS: Baccarat writes history rows.
 - **BAC-025** (Baccarat) - PASS: Baccarat's fresh shoe panel shows the configured full shoe capacity before the lazily built shoe receives its first deal.
+- **BAC-026** (Baccarat) - PASS: Baccarat preserves one stable visible Deal action and deterministically returns to wager-ready state through 2,000 consecutive settled browser UI coups without a replaced target, timeout, retry, duplicate action, or stranded round.
 - **KENO-001** (Keno) - PASS: Keno supports numbers 1 through 80.
 - **KENO-002** (Keno) - PASS: Keno allows selecting 1 to 20 spots.
 - **KENO-003** (Keno) - PASS: Keno draws 20 unique numbers.
@@ -746,6 +747,7 @@ Historical source baseline: 9.1.0
 - **PWA-002** (Application) - PASS: A canonical-release-versioned root-scope service worker caches only one exact credential-free public static-shell allowlist, never intercepts non-GET, API, Admin, authenticated, private, wallet, ledger, outcome, invitation, OAuth, or provider traffic, and preserves the previous complete worker until an explicit update; offline server actions fail closed, and reconnect revalidates session, wallet, catalog, game state, and route before actions are released.
 - **TEST-095** (Tests) - PASS: Browser-free policy tests prove canonical cache identity, exact public-static allowlisting, complete PNG and maskable manifest assets, credential-free cache writes, fail-open request exclusion for non-GET/API/Admin/private traffic, explicit update rollback and cache cleanup, and requirement/version alignment; exact-head browser tests prove cold and warm shell, offline fail-closed actions, reconnect, update and failure, stale-client, expired-session, and route-restoration states in en-US and ru-RU at all four governed viewports with exact evidence provenance and listener cleanup.
 - **TEST-096** (Tests) - PASS: The Roulette refund browser regression proves the logged deployment-closeout bugs for Clear bets and wager debit timing by placing a visible open wager, requiring the authoritative balance to debit on placement, activating the visible Clear bets control, and requiring the exact stake to be refunded before normal Roulette browser acceptance continues.
+- **TEST-099** (Tests) - PASS: An exact-source browser qualification runs one uninterrupted Baccarat session for exactly 2,000 rendered-control coups, permits only one attempt per round, requires exactly 2,000 accepted visible Deal activations and settled-to-wager-ready transitions, and rejects source drift, gaps, retries, browser diagnostics, wallet/account isolation failures, incomplete governed screenshots, or listener/runtime cleanup residue.
 - **TEST-092** (Tests) - PASS: An exact-source browser qualification executes exactly 50,000 completed UI cycles across every catalog game, assigns at least 1,666 cycles to each game, exercises every eligible game control at least 100 times or records an approved ineligible classification, captures all four governed viewports for human review, and rejects unexplained failures, incomplete ranges, incomplete declared non-control stages, source drift, or cleanup residue.
 - **MOTION-004** (Core) - PASS: A reusable presentation lifecycle enforces idle, locking, running, settling, and settled phases with explicit failed and aborted recovery, one opaque action owner, stale-generation rejection, and exact preservation of an already-authoritative result.
 - **MOTION-005** (Core) - PASS: Immutable named motion profiles validate normal, fast, and reduced budgets and resolve the live reduced-motion preference at each atomic action boundary without arbitrary real-time sleeps.
@@ -767,4 +769,8 @@ Historical source baseline: 9.1.0
 - **SLOT-033** (Slots) - PLANNED: Each stopped reel aligns its visible symbols within one CSS pixel and remains stationary; win lines and highlights begin only after the final stop, preserve symbol identity, remain bounded and non-blocking, and provide non-celebratory loss and reduced-motion alternatives.
 - **SLOT-034** (Slots) - PLANNED: Slots autoplay starts only after settlement, Stop prevents a new spin, and free-spin, wallet, route, refresh, locale, history, API-error, and browser-history recovery preserve the authoritative result without duplicate debit, payout, bonus, or stale presentation residue.
 - **SLOT-035** (Tests) - PLANNED: Slots motion acceptance maps at least 100 committed spins across losses, wins, wilds, scatters, free spins, progressive state, repeated grids, and every speed profile and supplies exact-head transform, stop, alignment, cleanup, EN/RU, four-viewport, normal, and reduced-motion video evidence with independent review.
-- **TEST-097** (Tests) - PASS: Dependency-free deterministic unit tests prove motion timing profiles, reduced-motion resolution, complete lifecycle phase order, authoritative-result identity, overlap rejection, illegal-skip rejection, explicit recovery, stale-generation rejection, and route-disposal invalidation.
+- **RESET-001** (Core) - PASS: Email password recovery is disabled by default and, when enabled, is enumeration-safe: initiation returns one identical acknowledgement for existing, unknown, malformed, inactive, credential-free, and rate-limited mailboxes, and mail is submitted only for a recoverable local account. No response, error, or audit event discloses account existence.
+- **RESET-002** (Core) - PASS: Recovery completion consumes a purpose-bound password_reset bearer atomically and only then replaces the stored credential, clears the forced-reset marker, and revokes every existing session for the account. An interrupted credential write is recoverable only by replaying the exact mailbox, bearer, replacement, and caller request; a changed replacement remains rejected, while an exact replay after success returns the original receipt without rotating credential authority again. Disabled recovery, malformed input, weak passwords, expired, replayed, revoked, tampered, wrong-subject bearers, and accounts that became inactive or credential-free all fail closed with one identical generic error; password policy is enforced before the bearer is spent so a weak password cannot burn a valid token.
+- **RESET-003** (Core) - PASS: Recovery never exposes sensitive material: no password, raw bearer, or recipient address appears in results, errors, or audit events, which carry only a keyed recipient digest, token id, user id, outcome, and reason; at most one recovery bearer is ever valid per mailbox because reissue revokes any previously delivered bearer, and a bearer whose delivery is rejected is revoked immediately so no undelivered link stays usable.
+- **TEST-097** (Tests) - PASS: Listener-free evidence verifies the recovery lifecycle: disabled-by-default acknowledgement with no delivery, byte-identical initiation responses across existing/unknown/malformed mailboxes with mail only for the recoverable account, credential replacement with forced-reset clearance and predecessor-session revocation, exact-input recovery after an interrupted post-consume credential write, no second credential rotation after an exact successful replay, changed-replacement rejection after interruption, replay and wrong-subject rejection, weak-password rejection without burning the bearer, credential-free accounts silently non-recoverable, and a rejected delivery leaving no usable bearer behind.
+- **TEST-100** (Tests) - PASS: Dependency-free deterministic unit tests prove motion timing profiles, reduced-motion resolution, complete lifecycle phase order, authoritative-result identity, overlap rejection, illegal-skip rejection, explicit recovery, stale-generation rejection, and route-disposal invalidation.

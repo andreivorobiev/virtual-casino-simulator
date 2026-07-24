@@ -342,11 +342,11 @@ class ReleaseArtifactTests(unittest.TestCase):
     # Prove the current private-invite compatibility record binds the exact safe predecessor boundary.
     def test_current_release_compatibility_binds_private_invite_predecessor(self):
         # Load the immutable packaged-release compatibility record governed by TOOL-003.
-        compatibility = json.loads((package_app.ROOT / "contracts" / "compatibility" / "app-9.4.0.json").read_text(encoding="utf-8"))
+        compatibility = json.loads((package_app.ROOT / "contracts" / "compatibility" / "app-9.5.2.json").read_text(encoding="utf-8"))
         # Require the canonical release and restricted-preview channel identities.
-        self.assertEqual((compatibility["app_version"], compatibility["release_channel"]), ("9.4.0", "restricted-preview-private-invite"))
+        self.assertEqual((compatibility["app_version"], compatibility["release_channel"]), ("9.5.2", "restricted-preview-private-invite"))
         # Require the exact prior packaged release and retained manifest filename.
-        self.assertEqual(compatibility["predecessor"], {"app_version": "9.3.0", "compatibility_record": "contracts/compatibility/app-9.3.0.json", "required_artifact": "release-manifest.json"})
+        self.assertEqual(compatibility["predecessor"], {"app_version": "9.5.1", "compatibility_record": "contracts/compatibility/app-9.5.1.json", "required_artifact": "release-manifest.json"})
         # Require application-only rollback while preserving the already-applied MySQL v2 boundary.
         self.assertEqual(compatibility["rollback"], {"scope": "application-only", "database_rollback": "prohibited", "mysql_expected_schema_version": 2, "requires_retained_predecessor_manifest": True})
         # Require all broader enrollment surfaces to remain disabled for this release channel.

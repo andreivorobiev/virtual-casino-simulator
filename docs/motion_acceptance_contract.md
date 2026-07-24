@@ -19,7 +19,7 @@ This foundation does not change Roulette or Slots presentation by itself. Their 
 
 The shared family is `MOTION-004` through `MOTION-011`.
 
-- `MOTION-004`, `MOTION-005`, and `TEST-097` are implemented by this foundation.
+- `MOTION-004`, `MOTION-005`, and `TEST-100` are implemented by this foundation.
 - `MOTION-006` through `MOTION-011` remain `PLANNED` until every adopted game proves authoritative result agreement, non-overlap, recovery, layout and performance, accessibility, localization, and governed evidence.
 
 Roulette owns `ROU-063` through `ROU-068`. Slots owns `SLOT-030` through `SLOT-035`. These IDs are permanent and must not be renumbered or reused. They remain `PLANNED`; the earlier existence-only requirements such as `ROU-042`, `ROU-054`, and `SLOT-020` do not satisfy the new quality contract.

@@ -1,4 +1,27 @@
-# Virtual Casino Simulator v9.4.0 Release Notes
+# Virtual Casino Simulator v9.5.2 Release Notes
+
+## Guest trial route-expiry recovery patch release
+
+- Packages the protected-route `UNAUTHORIZED` recovery fix so expired or contextless guest sessions clear stale wallet/topbar chrome and return to the localized expired-session gate.
+- Rotates the PWA static-shell cache identity to v9.5.2 so existing browsers fetch the corrected application shell instead of continuing to serve cached v9.5.1 JavaScript.
+- Keeps MySQL at schema version 2 and permits application-only rollback to the retained, checksum-verified v9.5.1 predecessor; database rollback remains prohibited.
+- Preserves manual-invite admission with invitation delivery, live OAuth and provider networking disabled, and does not authorize deployment, DNS, billing, public exposure, or issue #209 launch.
+
+## Prior v9.5.1 trial-route restoration release
+
+## Trial-route restoration patch release
+
+- Packages the accepted protected-main trial-route restoration fix as a distinct immutable patch release without including any active worker branch.
+- Keeps MySQL at schema version 2 and permits application-only rollback to the retained, checksum-verified v9.5.0 predecessor; database rollback remains prohibited.
+- Preserves manual-invite admission with invitation delivery, live OAuth and provider networking disabled, and does not authorize deployment, DNS, billing, public exposure, or issue #209 launch.
+
+## Prior v9.5.0 deployment-recovery release
+
+## Compatible deployment-recovery release
+
+- Packages the exact accepted protected-main application state as a distinct compatible release without changing product behavior or including any active worker branch.
+- Keeps MySQL at schema version 2 and permits application-only rollback to the retained, checksum-verified v9.4.0 predecessor; database rollback remains prohibited.
+- Preserves manual-invite admission with invitation delivery, live OAuth and provider networking disabled, and does not authorize deployment, DNS, billing, public exposure, or issue #209 launch.
 
 ## Unreleased repository addendum: manual problem reporting and Admin triage
 

@@ -950,6 +950,19 @@ def run_api_tests():
             raise AssertionError('invitation enrollment infrastructure suite failed')
     # Record the listener-free invitation platform proof under its permanent requirements.
     run_case('API-INVITE-001',['INVITE-001','INVITE-002','INVITE-003','INVITE-004','INVITE-005','INVITE-006','TEST-091'],run_invitation_tests)
+    def run_password_reset_tests():
+        # Import the focused recovery suite lazily so API-only discovery stays lightweight.
+        from tests import password_reset_tests
+        # Load exactly the recovery service acceptance class.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(password_reset_tests.PasswordResetServiceTests)
+        # Run the focused service suite with the repository's quiet test runner.
+        result = unittest.TextTestRunner(verbosity=0).run(suite)
+        # Fail the mapped API gate when any enumeration-safety or lifecycle assertion fails.
+        if not result.wasSuccessful():
+            # Raise one bounded failure naming no recipient, bearer, or credential material.
+            raise AssertionError('password recovery infrastructure suite failed')
+    # Record the listener-free password-recovery proof under its permanent requirements.
+    run_case('API-RESET-001',['RESET-001','RESET-002','RESET-003','TEST-097'],run_password_reset_tests)
     # Run provider-neutral feedback lifecycle, concurrency, retention, and image-safety tests. (TEST-094, issue #349)
     def run_feedback_tests():
         # Import the focused suite lazily so unrelated runners do not require image tooling.
@@ -2439,11 +2452,11 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Await the production registration's fully activated worker before issuing competing manifest, icon, or reload traffic.
                         registration_identity=pwa_page.evaluate("""async () => { const timeout=new Promise(resolve => setTimeout(async () => { const registrations=await navigator.serviceWorker.getRegistrations(); const worker=registrations[0]?.installing||registrations[0]?.waiting||registrations[0]?.active; resolve({ready:false,state:worker?.state||'missing',scriptUrl:worker?.scriptURL||''}); },20000)); const active=navigator.serviceWorker.ready.then(registration => ({ready:Boolean(registration.active),state:registration.active?.state||'',scriptUrl:registration.active?.scriptURL||''})); return await Promise.race([active,timeout]); }""")
                         # Require atomic shell installation and activation at the canonical script before a controlled navigation is attempted.
-                        assert registration_identity=={'ready':True,'state':'activated','scriptUrl':f'{base}/sw.js?v=9.4.0'},{'registration':registration_identity,'workerDiagnostics':pwa_worker_diagnostics[-4:]}
+                        assert registration_identity=={'ready':True,'state':'activated','scriptUrl':f'{base}/sw.js?v=9.5.2'},{'registration':registration_identity,'workerDiagnostics':pwa_worker_diagnostics[-4:]}
                         # Reload only after activation so the navigation is deterministically controlled even when the initial clients.claim event raced first paint.
                         pwa_page.reload(wait_until='domcontentloaded'); pwa_page.get_by_test_id('lobby').wait_for(timeout=8000)
                         # Wait synchronously for the controlled reload and canonical page identity without an async polling predicate.
-                        pwa_page.wait_for_function("() => Boolean(navigator.serviceWorker.controller) && window.CasinoPwa?.version==='9.4.0'",timeout=8000)
+                        pwa_page.wait_for_function("() => Boolean(navigator.serviceWorker.controller) && window.CasinoPwa?.version==='9.5.2'",timeout=8000)
                         # Require the same-context reload to classify as warm rather than a fresh install claim.
                         assert pwa_page.evaluate("() => document.documentElement.dataset.pwaStart")=='warm-start'
                         # Read the manifest link and both Android/iOS browser-foundation meta contracts.
@@ -2463,7 +2476,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Read the controlling worker identity without opening CacheStorage through a competing page transaction.
                         worker_identity=pwa_page.evaluate("async () => { const active=(await navigator.serviceWorker.getRegistrations()).find(reg => reg.active)?.active; return { pageVersion:window.CasinoPwa?.version||'', controller:Boolean(navigator.serviceWorker.controller), scriptUrl:active?.scriptURL||'' }; }")
                         # Require the active root worker and page to share the canonical packaged version.
-                        assert worker_identity['pageVersion']=='9.4.0' and worker_identity['controller'] and worker_identity['scriptUrl'].endswith('/sw.js?v=9.4.0'),worker_identity
+                        assert worker_identity['pageVersion']=='9.5.2' and worker_identity['controller'] and worker_identity['scriptUrl'].endswith('/sw.js?v=9.5.2'),worker_identity
                         # Fetch an authoritative API path and prove it does not enter any worker cache.
                         pwa_page.evaluate("async () => { await fetch('/api/v1/casino/state',{credentials:'include'}); }")
                         # Enter true offline mode and require native fail-closed controls plus a pre-fetch API rejection.

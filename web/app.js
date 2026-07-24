@@ -43,6 +43,8 @@ window.addEventListener('error', event => logClient('window_error', { message: e
 window.addEventListener('unhandledrejection', event => logClient('unhandled_rejection', { reason: String(event.reason?.message || event.reason) }));
 // Mark a guest page departure so lifecycle cleanup stays observable without ending same-context reloads.
 window.addEventListener('pagehide', () => { if (isGuestSession()) void departGuestTrial().catch(() => {}); });
+// Reset stale authenticated chrome only while an authenticated shell is mounted, leaving public enrollment pages intact.
+window.addEventListener('casino-session-expired', () => { if (currentSession) renderExpiredSessionGate(); });
 
 // Normalize the draft v2 current-user payloads without committing to backend internals.
 function normalizeCurrentUser(payload) {
@@ -76,6 +78,22 @@ function routeLabel(route) {
   return gameDescriptors.find(game => game.id === route)?.label || route;
 }
 
+// Resolve a route label before the casino catalog has finished hydrating during startup. (PWA-002)
+function routeFallbackLabel(route) {
+  // Prefer the live catalog label once casino state has populated game descriptors.
+  const catalogLabel = routeLabel(route);
+  // Return the catalog label when it has resolved beyond the raw route id.
+  if (catalogLabel !== route) return catalogLabel;
+  // Build the static shell resource key used by reviewed core game labels.
+  const labelKey = `games.${route}.label`;
+  // Resolve the already-loaded shell translation domain without waiting for casino state.
+  const resourceLabel = t(labelKey, {}, 'shell');
+  // Return the localized static label when a resource exists for this game route.
+  if (resourceLabel !== labelKey) return resourceLabel;
+  // Convert future route slugs into readable fallback words instead of showing a raw identifier.
+  return route.split(/[_-]+/).filter(Boolean).map(part => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`).join(' ') || route;
+}
+
 // Resolve the route represented by the current browser location for reload and history restoration.
 function routeFromLocation() {
   // Match canonical reloadable game paths without accepting nested or ambiguous segments.
@@ -88,6 +106,34 @@ function routeFromLocation() {
   if (gameDescriptors.some(game => game.id === hashRoute)) return hashRoute;
   // Treat every non-game static path as the lobby shell route.
   return 'lobby';
+}
+
+// Show a real game-route restoration surface before slow current-user and casino-state calls complete. (issue #317, PWA-002)
+function renderInitialRouteRestore() {
+  // Read the browser-owned route before authenticated state can hydrate the game catalog.
+  const restoredRoute = routeFromLocation();
+  // Leave lobby and the separate invitation enrollment surface on their existing startup paths.
+  if (restoredRoute === 'lobby' || isInvitationRoute()) return;
+  // Read the route outlet that can otherwise sit visually blank during session revalidation.
+  const view = document.getElementById('view');
+  // Stop when the shell outlet is unavailable during a malformed static load.
+  if (!view) return;
+  // Resolve a player-facing game label without depending on the delayed casino-state catalog.
+  const gameLabel = routeFallbackLabel(restoredRoute);
+  // Keep the authenticated route outlet out of the lobby-only flex containment contract.
+  document.body.classList.remove('lobby-active');
+  // Apply the same game-screen class used by authoritative navigation.
+  view.className = 'screen game-screen';
+  // Remove lobby-specific testing identity before rendering the restoration placeholder.
+  view.removeAttribute('data-testid');
+  // Include the bounded game outlet in keyboard flow while the route is restoring.
+  view.tabIndex = 0;
+  // Expose the startup placeholder as the same named game region used after navigation.
+  view.setAttribute('role', 'region');
+  // Name the region consistently with mounted game routes.
+  view.setAttribute('aria-label', safe(t('nav.gamesArea', {}, 'shell') || 'Game area'));
+  // Render immediate, localized progress instead of a blank route while trial/session state hydrates.
+  view.innerHTML = `<div class="panel loading-panel" data-testid="route-restore-loading"><p class="eyebrow">${safe(t('routeRestore.eyebrow', {}, 'shell'))}</p><h2>${safe(t('routeRestore.title', { game: gameLabel }, 'shell'))}</h2><p class="status">${safe(t('routeRestore.copy', {}, 'shell'))}</p></div>`;
 }
 
 // Consume only fixed OAuth completion markers without retaining callback query material. (OAUTH-010)
@@ -189,6 +235,26 @@ function observeGameScrollRegions(view) {
 function isGuestSession() {
   // Recognize a guest only by the server-provided role list so shell affordances never guess.
   return Array.isArray(currentSession?.user?.roles) && currentSession.user.roles.includes('guest');
+}
+
+// Clear every shell-owned authenticated cache before showing the logged-out session-expired gate.
+function renderExpiredSessionGate() {
+  // Stop observing game-only rails before the authenticated route outlet is replaced.
+  gameRailObserver?.disconnect();
+  // Unmount the active game when its lifecycle hook exists so stale rerenders cannot survive sign-out.
+  if (active && loadedGames.has(active)) loadedGames.get(active).unmount?.();
+  // Clear the cached current-user payload so wallet and guest affordances cannot remain visible.
+  currentSession = null;
+  // Clear the public current-user hook used by game helpers and the wallet renderer.
+  window.CasinoCurrentUser = null;
+  // Drop the active route marker so later entry chooses from the browser URL intentionally.
+  active = null;
+  // Clear cached casino state so a later authenticated entry reloads a fresh catalog and wallet rail.
+  latestState = null;
+  // Clear frontend descriptors derived from protected state while the browser is logged out.
+  gameDescriptors = [];
+  // Render the normal login/guest-entry gate with the existing localized expired-session copy.
+  renderLoginGate(t('pwa.expiredSession', {}, 'shell'));
 }
 
 // Keep persistent shell profile and wallet nodes synchronized with the current user.
@@ -894,7 +960,7 @@ export async function navigate(route, options = {}) {
     // Make the bounded game outlet a keyboard-focusable scroll region so every control stays reachable. (issue #221)
     view.tabIndex = 0; view.setAttribute('role', 'region'); view.setAttribute('aria-label', safe(t('nav.gamesArea', {}, 'shell') || 'Game area'));
     // Render a premium loading panel while the dynamic game module loads.
-    view.innerHTML = `<div class="panel loading-panel"><h2>Loading ${safe(routeLabel(targetRoute))}...</h2></div>`;
+    view.innerHTML = `<div class="panel loading-panel"><h2>${safe(t('routeRestore.title', { game: routeLabel(targetRoute) }, 'shell'))}</h2></div>`;
     // Resolve the descriptor for the selected game route.
     const desc = gameDescriptors.find(game => game.id === targetRoute);
     // Load the game class through the module registry.
@@ -907,6 +973,8 @@ export async function navigate(route, options = {}) {
     updateCurrentUserShell();
   // Handle navigation errors with a route-local recovery panel.
   } catch (err) {
+    // Convert any protected-route auth failure into the logged-out recovery gate instead of a stale game error panel.
+    if (err?.code === 'UNAUTHORIZED') { renderExpiredSessionGate(); return; }
     // Write diagnostic output so the current operation can be inspected.
     console.error(err);
     // Record the navigation failure with route context.
@@ -934,6 +1002,8 @@ async function init() {
   bindFeedbackDialog();
   // Register the offline-safe shell and keep server actions locked until reconnect refresh completes.
   initPwa({ onReconnect: refreshAfterReconnect });
+  // Render an immediate restored-game placeholder before slow session and casino-state calls finish.
+  renderInitialRouteRestore();
   // Recalculate active-route visibility whenever responsive navigation layout changes.
   window.addEventListener('resize', revealActiveNav);
   // Repaint persistent shell text when the locale changes.

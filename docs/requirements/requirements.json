@@ -3060,6 +3060,26 @@
       "notes": "The browser assertion reads the first mounted wager-setup drawer before any wager or deal can create the backend shoe."
     },
     {
+      "id": "BAC-026",
+      "module": "Baccarat",
+      "description": "Baccarat preserves one stable visible Deal action and deterministically returns to wager-ready state through 2,000 consecutive settled browser UI coups without a replaced target, timeout, retry, duplicate action, or stranded round.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-BAC-SUSTAINED-001"
+      ],
+      "implementation_files": [
+        "tests/baccarat_sustained.py",
+        "tests/ui_50000.py",
+        "tests/unit/ui_50000_tests.py",
+        ".github/workflows/browser-tests.yml",
+        "docs/long_test_suites.md"
+      ],
+      "introduced_in": "issue-265-baccarat-sustained-qualification",
+      "changed_in": "issue-265-baccarat-sustained-qualification",
+      "notes": "The exact-source profile uses one disposable loopback runtime, one synthetic account, one browser context, exactly 2,000 rounds, and one attempt per round; any control disappearance, wager-ready timeout, browser diagnostic, isolation failure, or cleanup failure keeps the result red."
+    },
+    {
       "id": "KENO-001",
       "module": "Keno",
       "description": "Keno supports numbers 1 through 80.",
@@ -4699,11 +4719,14 @@
         "docs/release_artifacts.md",
         "contracts/compatibility/app-9.2.0.json",
         "contracts/compatibility/app-9.3.0.json",
-        "contracts/compatibility/app-9.4.0.json"
+        "contracts/compatibility/app-9.4.0.json",
+        "contracts/compatibility/app-9.5.0.json",
+        "contracts/compatibility/app-9.5.1.json",
+        "contracts/compatibility/app-9.5.2.json"
       ],
       "introduced_in": "9.2.0",
-      "changed_in": "9.4.0",
-      "notes": "Branch and ordinary manual candidates remain unpublished. The historical one-time owner-dispatched recovery created the retained v9.2.0 predecessor without overwrite or deletion paths. Normal v9.4.0 publication requires the verified retained v9.3.0 predecessor manifest and the protected release gates. Rollback is application-only and never reverses the MySQL schema."
+      "changed_in": "9.5.2",
+      "notes": "Branch and ordinary manual candidates remain unpublished. The historical one-time owner-dispatched recovery created the retained v9.2.0 predecessor without overwrite or deletion paths. Normal v9.5.2 publication requires the verified retained v9.5.1 predecessor manifest and the protected release gates. Rollback is application-only and never reverses the MySQL schema."
     },
     {
       "id": "BOT-001",
@@ -9435,8 +9458,8 @@
       "browser_tests": ["BR-INVITE-001"],
       "implementation_files": ["web/admin.html", "web/admin.js", "web/app.js", "web/core/api.js", "web/i18n/en-US/admin.json", "web/i18n/ru-RU/admin.json", "web/i18n/en-US/shell.json", "web/i18n/ru-RU/shell.json", "tests/visual/visual_matrix.json"],
       "introduced_in": "issue-332-admin-invitations",
-      "changed_in": "issue-332-admin-invitations",
-      "notes": "After successful redemption the bearer is removed from browser history before returning to private-beta sign in."
+      "changed_in": "pr-368-expired-session-recovery",
+      "notes": "After successful redemption the bearer is removed from browser history before returning to private-beta sign in; expected anonymous current-user probes never replace the public enrollment form with an authenticated-session expiry gate."
     },
     {
       "id": "INVITE-006",
@@ -9615,8 +9638,8 @@
       "browser_tests": ["BR-PWA-001"],
       "implementation_files": ["web/sw.js", "web/core/pwa.js", "web/core/api.js", "web/app.js", "casino/app.py", "casino/wsgi.py", "web/i18n/en-US/shell.json", "web/i18n/ru-RU/shell.json", "docs/pwa_foundation.md"],
       "introduced_in": "issue-182-pwa-foundation",
-      "changed_in": "issue-182-pwa-foundation",
-      "notes": "Install is atomic, activation prunes only prior Casino static-shell caches, update activation is user-requested, stale-client and failed-refresh states are explicit, and no deployment or public exposure is authorized."
+      "changed_in": "pr-368-expired-session-recovery",
+      "notes": "Install is atomic, activation prunes only prior Casino static-shell caches, update activation is user-requested, stale-client and failed-refresh states are explicit, protected-session expiry clears mounted authenticated chrome, anonymous enrollment remains intact, and no deployment or public exposure is authorized."
     },
     {
       "id": "TEST-095",
@@ -9627,8 +9650,8 @@
       "browser_tests": ["BR-PWA-001"],
       "implementation_files": ["tests/pwa_tests.py", "tests/run_tests.py", "tests/visual/visual_matrix.json"],
       "introduced_in": "issue-182-pwa-foundation",
-      "changed_in": "issue-182-pwa-foundation",
-      "notes": "TEST-092 remains exclusively owned by formal 50,000-cycle qualification. Android/iOS metadata is checked as a browser foundation only; native install and relaunch evidence remains deferred with full issue #182."
+      "changed_in": "pr-368-expired-session-recovery",
+      "notes": "TEST-092 remains exclusively owned by formal 50,000-cycle qualification. Browser-free coverage distinguishes mounted-session expiry from anonymous enrollment probes; Android/iOS metadata is checked as a browser foundation only, and native install and relaunch evidence remains deferred with full issue #182."
     },
     {
       "id": "TEST-096",
@@ -9645,6 +9668,28 @@
       "introduced_in": "issue-229-232-roulette-clear-refund-closeout",
       "changed_in": "issue-229-232-roulette-clear-refund-closeout",
       "notes": "TEST-094 is owned by problem reporting/Admin triage and TEST-095 is owned by the PWA foundation; this closeout uses a new permanent test requirement instead of reusing either ID."
+    },
+    {
+      "id": "TEST-099",
+      "module": "Tests",
+      "description": "An exact-source browser qualification runs one uninterrupted Baccarat session for exactly 2,000 rendered-control coups, permits only one attempt per round, requires exactly 2,000 accepted visible Deal activations and settled-to-wager-ready transitions, and rejects source drift, gaps, retries, browser diagnostics, wallet/account isolation failures, incomplete governed screenshots, or listener/runtime cleanup residue.",
+      "status": "PASS",
+      "api_tests": [
+        "UI-50000-HARNESS-001"
+      ],
+      "browser_tests": [
+        "BR-BAC-SUSTAINED-001"
+      ],
+      "implementation_files": [
+        "tests/baccarat_sustained.py",
+        "tests/ui_50000.py",
+        "tests/unit/ui_50000_tests.py",
+        ".github/workflows/browser-tests.yml",
+        "docs/long_test_suites.md"
+      ],
+      "introduced_in": "issue-265-baccarat-sustained-qualification",
+      "changed_in": "issue-265-baccarat-sustained-qualification",
+      "notes": "TEST-091 through TEST-096 retain their existing permanent ownership. This focused profile reuses the accepted full-catalog rendered-control implementation but disables resumption, replication, and per-cycle retries so a recovered control replacement cannot satisfy issue #265."
     },
     {
       "id": "TEST-092",
@@ -9906,16 +9951,88 @@
       "notes": "Static screenshots alone cannot satisfy issue #170."
     },
     {
+      "id": "RESET-001",
+      "module": "Core",
+      "description": "Email password recovery is disabled by default and, when enabled, is enumeration-safe: initiation returns one identical acknowledgement for existing, unknown, malformed, inactive, credential-free, and rate-limited mailboxes, and mail is submitted only for a recoverable local account. No response, error, or audit event discloses account existence.",
+      "status": "PASS",
+      "api_tests": [
+        "API-RESET-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/password_reset.py",
+        "casino/config.py"
+      ],
+      "introduced_in": "issue-334-password-reset",
+      "changed_in": "issue-334-password-reset",
+      "notes": "Issue #334: composes the #331 token and #330 mail foundations; no password is ever emailed and recovery stays gated until an owner-authorized release."
+    },
+    {
+      "id": "RESET-002",
+      "module": "Core",
+      "description": "Recovery completion consumes a purpose-bound password_reset bearer atomically and only then replaces the stored credential, clears the forced-reset marker, and revokes every existing session for the account. An interrupted credential write is recoverable only by replaying the exact mailbox, bearer, replacement, and caller request; a changed replacement remains rejected, while an exact replay after success returns the original receipt without rotating credential authority again. Disabled recovery, malformed input, weak passwords, expired, replayed, revoked, tampered, wrong-subject bearers, and accounts that became inactive or credential-free all fail closed with one identical generic error; password policy is enforced before the bearer is spent so a weak password cannot burn a valid token.",
+      "status": "PASS",
+      "api_tests": [
+        "API-RESET-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/password_reset.py",
+        "casino/config.py"
+      ],
+      "introduced_in": "issue-334-password-reset",
+      "changed_in": "issue-334-password-reset",
+      "notes": "Issue #334 fail-closed completion boundary with explicit session revocation."
+    },
+    {
+      "id": "RESET-003",
+      "module": "Core",
+      "description": "Recovery never exposes sensitive material: no password, raw bearer, or recipient address appears in results, errors, or audit events, which carry only a keyed recipient digest, token id, user id, outcome, and reason; at most one recovery bearer is ever valid per mailbox because reissue revokes any previously delivered bearer, and a bearer whose delivery is rejected is revoked immediately so no undelivered link stays usable.",
+      "status": "PASS",
+      "api_tests": [
+        "API-RESET-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/password_reset.py",
+        "casino/config.py"
+      ],
+      "introduced_in": "issue-334-password-reset",
+      "changed_in": "issue-334-password-reset",
+      "notes": "Issue #334 data-minimization and anti-flood boundary."
+    },
+    {
       "id": "TEST-097",
+      "module": "Tests",
+      "description": "Listener-free evidence verifies the recovery lifecycle: disabled-by-default acknowledgement with no delivery, byte-identical initiation responses across existing/unknown/malformed mailboxes with mail only for the recoverable account, credential replacement with forced-reset clearance and predecessor-session revocation, exact-input recovery after an interrupted post-consume credential write, no second credential rotation after an exact successful replay, changed-replacement rejection after interruption, replay and wrong-subject rejection, weak-password rejection without burning the bearer, credential-free accounts silently non-recoverable, and a rejected delivery leaving no usable bearer behind.",
+      "status": "PASS",
+      "api_tests": [
+        "API-RESET-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/password_reset_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-334-password-reset",
+      "changed_in": "issue-334-password-reset",
+      "notes": "Issue #334 enumeration-safety and fail-closed proof."
+    },
+    {
+      "id": "TEST-100",
       "module": "Tests",
       "description": "Dependency-free deterministic unit tests prove motion timing profiles, reduced-motion resolution, complete lifecycle phase order, authoritative-result identity, overlap rejection, illegal-skip rejection, explicit recovery, stale-generation rejection, and route-disposal invalidation.",
       "status": "PASS",
       "api_tests": [],
       "browser_tests": [],
-      "implementation_files": ["tests/unit/dice_motion_primitives.test.mjs", "tests/helpers/motion_test_helpers.mjs", "web/core/motion.js"],
+      "implementation_files": [
+        "tests/unit/dice_motion_primitives.test.mjs",
+        "tests/helpers/motion_test_helpers.mjs",
+        "web/core/motion.js"
+      ],
       "introduced_in": "work-items-21-30-motion-foundation",
       "changed_in": "work-items-21-30-motion-foundation",
-      "notes": "TEST-091, TEST-092, TEST-094, TEST-095, and TEST-096 retain their prior permanent ownership; this new ID covers only the shared motion foundation."
+      "notes": "TEST-091, TEST-092, TEST-094, TEST-095, TEST-096, TEST-097, TEST-098, and TEST-099 retain their prior permanent ownership or reservation; this new ID covers only the shared motion foundation."
     }
   ]
 }
