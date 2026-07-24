@@ -210,6 +210,28 @@ def _user_by_id(state, user_id):
     raise NotFoundError(f"Admin user {user_id} was not found")
 
 
+# Define _is_guest_trial_user so Admin account management can keep temporary marketing users separate.
+def _is_guest_trial_user(user):
+    # Normalize every persisted role so malformed legacy casing cannot expose a temporary principal.
+    roles = {str(role or "").lower() for role in auth.roles_for_user(user)}
+    # Normalize the dedicated identity-provider marker independently from role state.
+    identity_provider = str(user.get("identity_provider") or "").lower()
+    # Exclude canonical and legacy guest markers from account management, even when a partial old row is malformed.
+    return auth.is_guest(user) or bool(user.get("guest")) or identity_provider == "guest" or "guest" in roles
+
+
+# Define _account_user_by_id to reject Guest Trials from regular user-management routes.
+def _account_user_by_id(state, user_id):
+    # Load the requested identity through the existing durable lookup.
+    user = _user_by_id(state, user_id)
+    # Branch when a disposable trial principal is being addressed through the wrong Admin area.
+    if _is_guest_trial_user(user):
+        # Hide guest principals from account-management routes; Guest Trials owns their lifecycle telemetry.
+        raise NotFoundError("Admin account user was not found")
+    # Return the managed account identity to the caller.
+    return user
+
+
 # Define the _ensure_unique_email function used by this module.
 def _ensure_unique_email(state, email):
     # Iterate through persisted users to enforce unique beta account emails.
@@ -236,8 +258,8 @@ def _linked_player(user):
 def _public_admin_user(user):
     # Set player to the linked wallet used for token balance inspection.
     player = _linked_player(user)
-    # Set public_user to a copy that excludes password verifiers.
-    public_user = {k: v for k, v in user.items() if k != "password_hash"}
+    # Set public_user to a copy that excludes password verifiers and guest-only analytics bindings.
+    public_user = {k: v for k, v in user.items() if k not in ("password_hash", "guest_analytics_id")}
     # Set public_user["token_balance"] from the linked player wallet balance.
     public_user["token_balance"] = round(float(player.get("balance", 0)), 2)
     # Set public_user["token_state"] from account and wallet status together.
@@ -262,8 +284,8 @@ def _public_admin_user(user):
 
 # Define the list_admin_users function used by this module.
 def list_admin_users():
-    # Return public user payloads for the Admin user-management table.
-    return [_public_admin_user(user) for user in _load_admin_users()["users"]]
+    # Return public account payloads only so Guest Trials never mix into regular Users.
+    return [_public_admin_user(user) for user in _load_admin_users()["users"] if not _is_guest_trial_user(user)]
 
 
 # Define the create_admin_user function used by this module.
@@ -307,7 +329,7 @@ def create_admin_user(body):
 # Define the set_admin_user_status function used by this module.
 def set_admin_user_status(user_id, status):
     # Load the requested account before applying the canonical auth mutation.
-    current = _user_by_id(_load_admin_users(), user_id)
+    current = _account_user_by_id(_load_admin_users(), user_id)
     # Update status through auth so privilege changes revoke predecessor sessions.
     user = auth.update_user_by_id(user_id, lambda record: record.update({"status": status}))
     # Update the linked player status through the public player service.
@@ -321,7 +343,7 @@ def reset_admin_user_password(user_id, body):
     # Set state to the persisted Admin user registry.
     state = _load_admin_users()
     # Set user to the requested account record.
-    user = _user_by_id(state, user_id)
+    user = _account_user_by_id(state, user_id)
     # Set password to the provided password or generated reset value.
     password = body.get("password") or _temporary_password()
     # Replace the password through the canonical auth service so login sees the reset immediately.
@@ -335,7 +357,7 @@ def update_admin_user_terms(user_id, body):
     # Set state to the persisted Admin user registry.
     state = _load_admin_users()
     # Set user to the requested account record.
-    user = _user_by_id(state, user_id)
+    user = _account_user_by_id(state, user_id)
     # Set accepted to the requested terms acceptance state.
     accepted = _as_bool(body.get("accepted", body.get("terms_accepted")))
     # Store terms state through the canonical auth service used by the browser gate.
@@ -349,7 +371,7 @@ def update_admin_user_locale(user_id, body):
     # Set state to the persisted Admin user registry.
     state = _load_admin_users()
     # Set user to the requested account record.
-    user = _user_by_id(state, user_id)
+    user = _account_user_by_id(state, user_id)
     # Set user["language"] from the Admin locale control payload.
     user["language"] = _clean_text(body.get("language"), "language", required=False, default=user.get("language", "en-US")) or "en-US"
     # Mirror the display language to the canonical v2 locale field.
@@ -368,6 +390,8 @@ def update_admin_user_locale(user_id, body):
 
 # Define update_admin_user so the v2 PATCH contract mutates the canonical identity.
 def update_admin_user(user_id, body):
+    # Reject disposable guest-trial identities before any canonical account mutation can run.
+    _account_user_by_id(_load_admin_users(), user_id)
     # Define the canonical mutation applied to the requested identity.
     def mutate(user):
         # Update active status only when the contract field is present.
@@ -399,7 +423,7 @@ def update_admin_user(user_id, body):
 # Define admin_user_state so v2 inspection stays scoped to one canonical user.
 def admin_user_state(user_id):
     # Load the canonical user and linked player.
-    user = _user_by_id(_load_admin_users(), user_id)
+    user = _account_user_by_id(_load_admin_users(), user_id)
     # Read the linked wallet from the shared player provider.
     player = _linked_player(user)
     # Return only this user's balance, ledger count, and player-scoped game marker.
@@ -618,7 +642,7 @@ def register(router):
         # Set state to the persisted Admin user registry.
         state = _load_admin_users()
         # Return the requested safe user payload.
-        return {"user": _public_admin_user(_user_by_id(state, user_id))}
+        return {"user": _public_admin_user(_account_user_by_id(state, user_id))}
 
     # Attach this decorator so the following function is registered with the framework.
     @router.post(r"/api/v1/admin/users/(?P<user_id>[^/]+)/deactivate")
@@ -745,7 +769,7 @@ def register(router):
     # Define admin_users_v2_detail for one safe identity record.
     def admin_users_v2_detail(body, query, user_id):
         # Return the flat Admin-safe canonical identity.
-        return _public_admin_user(_user_by_id(_load_admin_users(), user_id))
+        return _public_admin_user(_account_user_by_id(_load_admin_users(), user_id))
 
     # Register the published v2 canonical user update route.
     @router.patch(r"/api/v2/admin/users/(?P<user_id>[^/]+)")
