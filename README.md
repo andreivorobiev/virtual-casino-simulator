@@ -29,6 +29,10 @@ The running app is a private beta toy simulator for local play-token use. It is 
 
 Private beta end-user terms and privacy expectations are documented in `docs/legal/terms.md` and `docs/legal/privacy.md`.
 
+## Brand and marketing customization
+
+Marketing and public brand surfaces are separated from the reusable simulator core. Start with `docs/marketing_customization.md` before renaming the app, replacing icons, adding a landing site, changing public domains, or preparing a downstream fork.
+
 ## Run
 
 Windows:
@@ -83,6 +87,7 @@ python scripts/check_comment_density.py
 - `docs/engineering_skills.md`
 - `docs/claude_codex_work_division.md`
 - `docs/codex_parallel_workflow.md`
+- `docs/marketing_customization.md`
 - `docs/legal/README.md`
 - `docs/legal/terms.md`
 - `docs/legal/privacy.md`
