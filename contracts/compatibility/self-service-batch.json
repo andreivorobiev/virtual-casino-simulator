@@ -1,0 +1,57 @@
+{
+  "artifact": "player-self-service-batch",
+  "version": 2,
+  "stage": "server-foundation",
+  "issues": [
+    160,
+    162,
+    164
+  ],
+  "authorization": {
+    "authenticated_replay_read": true,
+    "authenticated_table_profile_read_write": true,
+    "authenticated_catalog_compare": true,
+    "browser_ui_authorized": false,
+    "deployment_authorized": false,
+    "public_exposure_authorized": false,
+    "provider_or_network_changes_authorized": false
+  },
+  "compatibility": {
+    "api_v1_frozen": true,
+    "v1_paths_changed": [],
+    "contract": "contracts/openapi/self-service-batch.v2.yaml",
+    "routes": [
+      "GET /api/v2/me/replays",
+      "GET /api/v2/me/table-profiles/{game}",
+      "PATCH /api/v2/me/table-profiles/{game}",
+      "GET /api/v2/games/compare"
+    ]
+  },
+  "replay": {
+    "authority": "committed history only",
+    "settlement_authority": false,
+    "retention_days": 30,
+    "subject": "authenticated session player",
+    "raw_round_or_player_ids_published": false
+  },
+  "table_profiles": {
+    "subject": "authenticated session user",
+    "scope": "per game",
+    "application": "opt-in",
+    "economics_fields_authorized": false,
+    "json_atomicity": "cross-process locked update_document mutation",
+    "mysql_atomicity": "SELECT FOR UPDATE provider document mutation",
+    "guest_durable_persistence": false
+  },
+  "comparison": {
+    "authority": "read-only canonical game catalog",
+    "catalog_mutation": false,
+    "money_math_published": false,
+    "allowed_attributes": [
+      "category",
+      "ledger_backed",
+      "featured",
+      "localization_ready"
+    ]
+  }
+}

@@ -36,6 +36,26 @@ HISTORY_READ_CEILING = 1000
 ARTIFACT_FIELDS = ("game", "bet_type", "bet_label", "amount", "outcome", "payout", "balance_after")
 
 
+# Parse one caller-controlled pagination value without allowing malformed query text to become a 500.
+def _bounded_positive_int(value, default: int, maximum: int | None = None) -> int:
+    # Start protected conversion because HTTP query values arrive as untrusted strings.
+    try:
+        # Convert integer-compatible values through the canonical Python parser.
+        parsed = int(value)
+    # Replace missing, malformed, or object-shaped values with the documented default.
+    except (TypeError, ValueError):
+        # Preserve one deterministic fallback for every invalid representation.
+        parsed = default
+    # Clamp zero and negative values to the first valid position.
+    parsed = max(1, parsed)
+    # Apply the optional upper bound used by page sizes.
+    if maximum is not None:
+        # Prevent oversized caller values from widening the provider read.
+        parsed = min(parsed, maximum)
+    # Return the normalized positive integer.
+    return parsed
+
+
 # Resolve the ledger subject for one authenticated session without trusting caller input.
 def _subject(user) -> str:
     # Read the session-bound player identity used to scope history.
@@ -104,10 +124,12 @@ def self_replays(user, *, page: int = 1, page_size: int = DEFAULT_PAGE_SIZE, gam
     player_id = _subject(user)
     # Resolve the reference clock, defaulting to now.
     reference = str(now or utc_now())
-    # Clamp the page size into the accepted bounds.
-    size = max(1, min(int(page_size or DEFAULT_PAGE_SIZE), MAX_PAGE_SIZE))
-    # Clamp the page index so a negative or zero page cannot wrap the slice.
-    index = max(1, int(page or 1))
+    # Preserve the historical zero-as-default behavior while rejecting malformed values safely.
+    requested_size = page_size or DEFAULT_PAGE_SIZE
+    # Clamp the caller-controlled page size into the accepted bounds.
+    size = _bounded_positive_int(requested_size, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE)
+    # Clamp the caller-controlled page index so malformed or non-positive values cannot wrap the slice.
+    index = _bounded_positive_int(page, 1)
     # Return an explicit empty page when the session has no ledger subject at all.
     if not player_id:
         # Publish a stable empty envelope rather than another player's rounds.

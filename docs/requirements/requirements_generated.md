@@ -45,10 +45,10 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.1
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.59.7
-- docs: 1.59.7
-- contracts: 1.42.1
-- tooling: 1.20.1
+- tests: 1.59.8
+- docs: 1.59.8
+- contracts: 1.43.0
+- tooling: 1.20.2
 - commenting_policy: 1.0.0
 
 ## Requirements
@@ -800,6 +800,6 @@ Historical source baseline: 9.1.0
 - **PROFILE-001** (Core) - PASS: Each authenticated user has per-game table profiles covering preferred chip denominations, default bet, control visibility, and autoplay defaults. Writes are field-allowlisted so no rule variant, payout, or other economics-changing field can ever be stored, are value-bounded, are revision-checked so a stale client cannot clobber a newer value, persist atomically per game, and a malformed persisted document degrades to defaults and repairs itself on the next write.
 - **PROFILE-002** (Core) - PASS: Table profiles derive the subject from the authenticated session rather than a caller identity, validate the game as a bounded lower-case slug, keep one subject's profile invisible to another account, give guest trials session-local defaults with no durable record, and fail closed for an unauthenticated caller.
 - **COMPARE-001** (Core) - PASS: The Compare Games drawer is a read-only derivation over the existing catalog that publishes only product-safe attributes (category, ledger-backed play-token status, featured placement, localization readiness, and localized labels), never edits the registry, and deliberately excludes house edge, expected return, volatility, probability, and payout math until those are separately reviewed. It bounds the number of compared games, rejects malformed or too-few or too-many requests, and reports unknown games as missing rather than silently omitting them.
-- **TEST-108** (Tests) - PASS: Listener-free evidence verifies the round-replay foundation: artifacts are marked non-settlement and derived from committed history, exclude another subject against a populated neighbour, exclude rounds outside the retention window under an injected clock, hide raw durable identifiers, clamp pagination, and fail closed for a subjectless session.
-- **TEST-109** (Tests) - PASS: Listener-free evidence verifies table profiles: per-game persistence with an advancing revision, rejection of economics-changing and unknown fields, enforcement of value bounds, stale-revision conflict, invalid game-slug rejection, malformed-document recovery, session-local guest behaviour with no durable record, and fail-closed subjectless access.
-- **TEST-110** (Tests) - PASS: Listener-free evidence verifies the Compare Games drawer: money-math attributes are excluded and never present on a row, localization readiness is derived per locale, request bounds reject too-few, too-many, and malformed requests, unknown games are reported as missing, and every added copy namespace ships complete EN and RU strings with identical placeholders.
+- **TEST-108** (Tests) - PASS: Listener-free evidence verifies the round-replay foundation and exact additive route: artifacts are marked non-settlement and derived from committed history, exclude another subject against a populated neighbour, exclude rounds outside the retention window under an injected clock, hide raw durable identifiers, normalize malformed pagination safely, clamp page size, and fail closed for a subjectless session.
+- **TEST-109** (Tests) - PASS: Listener-free evidence verifies table profiles and exact additive read/write routes: per-game persistence with an advancing revision, cross-subject isolation, rejection of economics-changing and unknown fields, enforcement of value bounds, stale-revision conflict, invalid game-slug rejection, malformed-document recovery, session-local guest behaviour with no durable record, and fail-closed subjectless access.
+- **TEST-110** (Tests) - PASS: Listener-free evidence verifies the Compare Games foundation and shared API boundary: money-math attributes are excluded and never present on a row, localization readiness is derived per locale, request bounds reject too-few, too-many, and malformed requests, unknown games are reported as missing, every new route stays authenticated, OpenAPI/compatibility/module ownership/exact-byte digests stay aligned, and every added copy namespace ships complete EN and RU strings with identical placeholders.

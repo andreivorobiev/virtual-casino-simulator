@@ -2,6 +2,8 @@
 
 # Import JSON parsing for the shipped localization resources.
 import json
+# Import hashing so the reviewed OpenAPI bytes are pinned in the compatibility inventory.
+import hashlib
 # Import filesystem paths for locating tracked resources.
 import pathlib
 # Import regular expressions for placeholder parity checks.
@@ -88,6 +90,10 @@ class ReplayFoundationTests(unittest.TestCase):
         self.assertEqual(page["page_size"], replay.MAX_PAGE_SIZE)
         # Require no raw durable round id to leak in the serialized page.
         self.assertNotIn("round_secret_id_0000", json.dumps(page))
+        # Read malformed HTTP-shaped pagination values through the same bounded parser.
+        malformed = replay.self_replays(self.owner, page="bad", page_size="bad")
+        # Require malformed values to use documented defaults rather than becoming a server error.
+        self.assertEqual((malformed["page"], malformed["page_size"]), (1, replay.DEFAULT_PAGE_SIZE))
 
     # Require a subjectless session to receive an empty page rather than shared data.
     def test_subjectless_session_gets_empty_page(self) -> None:
@@ -105,6 +111,8 @@ class TableProfileTests(unittest.TestCase):
         unique = self.id().rsplit(".", 1)[1]
         # Create the subject whose profiles are under test.
         self.owner = auth.create_user(f"profile.{unique}@example.test", "ProfilePassw0rd!23", "Profile Owner")
+        # Create an unrelated account whose profile reads must remain isolated.
+        self.other = auth.create_user(f"profile.other.{unique}@example.test", "OtherPassw0rd!23", "Profile Other")
 
     # Require a saved profile to persist per game and advance the revision.
     def test_profile_persists_per_game(self) -> None:
@@ -116,6 +124,8 @@ class TableProfileTests(unittest.TestCase):
         self.assertEqual((record["default_bet"], record["chip_denominations"], record["revision"]), (25, [1, 5, 25], 1))
         # Require a different game to remain untouched.
         self.assertEqual(table_profiles.read_profile(self.owner, "slots")["default_bet"], 0)
+        # Require an unrelated account to receive defaults rather than the owner's stored value.
+        self.assertEqual(table_profiles.read_profile(self.other, "roulette")["default_bet"], 0)
 
     # Require an economics-changing or unknown field to reject the whole update.
     def test_economics_fields_are_rejected(self) -> None:
@@ -265,3 +275,67 @@ class SelfServiceCopyTests(unittest.TestCase):
                 self.assertTrue(russian.get(key, "").strip())
                 # Require identical placeholder names so neither locale drops a value.
                 self.assertEqual(set(re.findall(r"\{(\w+)\}", english[key])), set(re.findall(r"\{(\w+)\}", russian[key])))
+
+
+# Verify the registered routes, authentication classification, and checked contract stay aligned.
+class SelfServiceApiContractTests(unittest.TestCase):
+    # Seed one persistent account for listener-free route dispatch.
+    def setUp(self) -> None:
+        # Derive a stable per-test mailbox suffix.
+        unique = self.id().rsplit(".", 1)[1]
+        # Create the authenticated subject used by every route-level assertion.
+        self.owner = auth.create_user(f"self.service.api.{unique}@example.test", "SelfServicePassw0rd!23", "Self Service Owner")
+
+    # Require all three server foundations to be reachable only through their exact registered routes.
+    def test_registered_v2_routes_preserve_subject_and_bounds(self) -> None:
+        # Import router construction lazily so the isolated test provider is already active.
+        from casino.app import build_router
+        # Seed one committed owner round for the replay route.
+        history.append_history("roulette", "round_route_replay_12345678", self.owner["player_id"], "straight", "17", 10.0, "win", 20.0, 110.0, {"pocket": 17})
+        # Build the production route table without opening a network listener.
+        router = build_router()
+        # Read malformed HTTP-shaped pagination through the exact replay route.
+        replay_page = router.dispatch("GET", "/api/v2/me/replays?page=bad&page_size=bad", {}, {"user": self.owner})
+        # Require documented defaults plus the committed session-owned replay.
+        self.assertEqual((replay_page["page"], replay_page["page_size"], replay_page["total"]), (1, replay.DEFAULT_PAGE_SIZE, 1))
+        # Update the session-derived table profile without accepting any caller identity.
+        changed = router.dispatch("PATCH", "/api/v2/me/table-profiles/roulette", {"default_bet": 25, "revision": 0}, {"user": self.owner})
+        # Require the exact game, stored value, and advanced revision.
+        self.assertEqual((changed["profile"]["game"], changed["profile"]["default_bet"], changed["profile"]["revision"]), ("roulette", 25, 1))
+        # Read the same profile through the exact additive route.
+        stored = router.dispatch("GET", "/api/v2/me/table-profiles/roulette", {}, {"user": self.owner})
+        # Require the route to return the durable session-owned profile.
+        self.assertEqual((stored["profile"]["default_bet"], stored["profile"]["persisted"]), (25, True))
+        # Read a bounded product-safe comparison through the exact route.
+        comparison = router.dispatch("GET", "/api/v2/games/compare?games=roulette,slots&locale=ru-RU", {}, {"user": self.owner})
+        # Require both requested games, the resolved locale, and the explicit money-math exclusion.
+        self.assertEqual((len(comparison["games"]), comparison["locale"], comparison["games"][0]["includes_money_math"]), (2, "ru-RU", False))
+        # Require every new route to remain outside the centrally declared anonymous allowlist.
+        for path in ("/api/v2/me/replays", "/api/v2/me/table-profiles/roulette", "/api/v2/games/compare"):
+            # Reject accidental public classification before the production gateway.
+            self.assertFalse(auth.is_public_api_path(path))
+
+    # Require OpenAPI, compatibility, module ownership, and exact-byte digests to remain synchronized.
+    def test_contract_compatibility_and_digest_are_current(self) -> None:
+        # Resolve the checked additive v2 contract.
+        contract_path = ROOT / "contracts" / "openapi" / "self-service-batch.v2.yaml"
+        # Read exact bytes once for route anchors and digest verification.
+        contract_bytes = contract_path.read_bytes()
+        # Decode the reviewed contract for exact route and envelope anchors.
+        contract_text = contract_bytes.decode("utf-8")
+        # Require every shipped route plus the standard success and error envelope schemas.
+        self.assertTrue(all(anchor in contract_text for anchor in ("/me/replays:", "/me/table-profiles/{game}:", "/games/compare:", "SuccessEnvelope:", "ErrorEnvelope:")))
+        # Require the frozen v1 namespace to remain absent from this additive v2 contract.
+        self.assertNotIn("/api/v1", contract_text)
+        # Parse the self-service compatibility record.
+        compatibility = json.loads((ROOT / "contracts" / "compatibility" / "self-service-batch.json").read_text(encoding="utf-8"))
+        # Require additive v2 scope, frozen v1, and no browser/deployment authority.
+        self.assertEqual((compatibility["artifact"], compatibility["compatibility"]["api_v1_frozen"], compatibility["authorization"]["deployment_authorized"]), ("player-self-service-batch", True, False))
+        # Parse the module-to-contract ownership matrix.
+        matrix = json.loads((ROOT / "contracts" / "compatibility" / "module-api-matrix.json").read_text(encoding="utf-8"))
+        # Require both runtime owners to declare the new contract.
+        self.assertTrue(all("contracts/openapi/self-service-batch.v2.yaml" in matrix[module] for module in ("application", "core")))
+        # Parse the central exact-byte contract digest inventory.
+        digests = json.loads((ROOT / "contracts" / "compatibility" / "contract-digests.json").read_text(encoding="utf-8"))
+        # Require the reviewed contract bytes to match the checked digest.
+        self.assertEqual(digests["contracts/openapi/self-service-batch.v2.yaml"], hashlib.sha256(contract_bytes).hexdigest())

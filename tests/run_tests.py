@@ -1022,8 +1022,8 @@ def run_api_tests():
         from tests import self_service_batch_tests
         loader = unittest.defaultTestLoader
         suite = unittest.TestSuite()
-        # Add the replay, table-profile, compare, and copy classes.
-        for cls in (self_service_batch_tests.ReplayFoundationTests, self_service_batch_tests.TableProfileTests, self_service_batch_tests.CompareGamesTests, self_service_batch_tests.SelfServiceCopyTests):
+        # Add the replay, table-profile, compare, copy, and API-contract classes.
+        for cls in (self_service_batch_tests.ReplayFoundationTests, self_service_batch_tests.TableProfileTests, self_service_batch_tests.CompareGamesTests, self_service_batch_tests.SelfServiceCopyTests, self_service_batch_tests.SelfServiceApiContractTests):
             # Load each focused class into the combined suite.
             suite.addTests(loader.loadTestsFromTestCase(cls))
         # Execute the combined suite with concise in-process reporting.

@@ -10419,6 +10419,7 @@
       "implementation_files": [
         "casino/core/replay.py",
         "casino/app.py",
+        "contracts/openapi/self-service-batch.v2.yaml",
         "tests/self_service_batch_tests.py"
       ],
       "introduced_in": "issue-162-round-replay",
@@ -10437,6 +10438,7 @@
       "implementation_files": [
         "casino/core/replay.py",
         "casino/app.py",
+        "contracts/openapi/self-service-batch.v2.yaml",
         "tests/self_service_batch_tests.py"
       ],
       "introduced_in": "issue-162-round-replay",
@@ -10455,6 +10457,7 @@
       "implementation_files": [
         "casino/core/table_profiles.py",
         "casino/app.py",
+        "contracts/openapi/self-service-batch.v2.yaml",
         "tests/self_service_batch_tests.py"
       ],
       "introduced_in": "issue-164-table-profiles",
@@ -10473,6 +10476,7 @@
       "implementation_files": [
         "casino/core/table_profiles.py",
         "casino/app.py",
+        "contracts/openapi/self-service-batch.v2.yaml",
         "tests/self_service_batch_tests.py"
       ],
       "introduced_in": "issue-164-table-profiles",
@@ -10491,6 +10495,7 @@
       "implementation_files": [
         "casino/core/game_compare.py",
         "casino/app.py",
+        "contracts/openapi/self-service-batch.v2.yaml",
         "tests/self_service_batch_tests.py"
       ],
       "introduced_in": "issue-160-compare-games",
@@ -10500,7 +10505,7 @@
     {
       "id": "TEST-108",
       "module": "Tests",
-      "description": "Listener-free evidence verifies the round-replay foundation: artifacts are marked non-settlement and derived from committed history, exclude another subject against a populated neighbour, exclude rounds outside the retention window under an injected clock, hide raw durable identifiers, clamp pagination, and fail closed for a subjectless session.",
+      "description": "Listener-free evidence verifies the round-replay foundation and exact additive route: artifacts are marked non-settlement and derived from committed history, exclude another subject against a populated neighbour, exclude rounds outside the retention window under an injected clock, hide raw durable identifiers, normalize malformed pagination safely, clamp page size, and fail closed for a subjectless session.",
       "status": "PASS",
       "api_tests": [
         "API-SELF-SERVICE-BATCH-001"
@@ -10517,7 +10522,7 @@
     {
       "id": "TEST-109",
       "module": "Tests",
-      "description": "Listener-free evidence verifies table profiles: per-game persistence with an advancing revision, rejection of economics-changing and unknown fields, enforcement of value bounds, stale-revision conflict, invalid game-slug rejection, malformed-document recovery, session-local guest behaviour with no durable record, and fail-closed subjectless access.",
+      "description": "Listener-free evidence verifies table profiles and exact additive read/write routes: per-game persistence with an advancing revision, cross-subject isolation, rejection of economics-changing and unknown fields, enforcement of value bounds, stale-revision conflict, invalid game-slug rejection, malformed-document recovery, session-local guest behaviour with no durable record, and fail-closed subjectless access.",
       "status": "PASS",
       "api_tests": [
         "API-SELF-SERVICE-BATCH-001"
@@ -10534,7 +10539,7 @@
     {
       "id": "TEST-110",
       "module": "Tests",
-      "description": "Listener-free evidence verifies the Compare Games drawer: money-math attributes are excluded and never present on a row, localization readiness is derived per locale, request bounds reject too-few, too-many, and malformed requests, unknown games are reported as missing, and every added copy namespace ships complete EN and RU strings with identical placeholders.",
+      "description": "Listener-free evidence verifies the Compare Games foundation and shared API boundary: money-math attributes are excluded and never present on a row, localization readiness is derived per locale, request bounds reject too-few, too-many, and malformed requests, unknown games are reported as missing, every new route stays authenticated, OpenAPI/compatibility/module ownership/exact-byte digests stay aligned, and every added copy namespace ships complete EN and RU strings with identical placeholders.",
       "status": "PASS",
       "api_tests": [
         "API-SELF-SERVICE-BATCH-001"
@@ -10542,7 +10547,11 @@
       "browser_tests": [],
       "implementation_files": [
         "tests/self_service_batch_tests.py",
-        "tests/run_tests.py"
+        "tests/run_tests.py",
+        "contracts/openapi/self-service-batch.v2.yaml",
+        "contracts/compatibility/self-service-batch.json",
+        "contracts/compatibility/contract-digests.json",
+        "contracts/compatibility/module-api-matrix.json"
       ],
       "introduced_in": "issue-160-compare-games",
       "changed_in": "issue-160-compare-games",

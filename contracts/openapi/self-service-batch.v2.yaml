@@ -1,0 +1,372 @@
+# Additive authenticated player self-service contract for issues #160, #162, and #164.
+openapi: 3.0.3
+info:
+  title: Virtual Casino player self-service foundation API
+  version: v2
+  description: Authenticated, additive server foundations for bounded replay evidence, per-game personal table profiles, and product-safe game comparison. The frozen v1 contract is unchanged; replay data has no settlement authority, profile writes cannot alter game economics, and comparison data excludes money math.
+servers:
+  - url: /api/v2
+
+# Every route remains behind the canonical cookie-session gateway.
+paths:
+  /me/replays:
+    get:
+      summary: Read one bounded newest-first page of the active session's replay evidence.
+      operationId: self_service_v2_replays
+      security:
+        - cookieSession: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 25
+            default: 10
+        - name: game
+          in: query
+          schema:
+            type: string
+            maxLength: 40
+            pattern: '^[a-z0-9_-]+$'
+      responses:
+        '200':
+          description: Session-owned replay evidence derived from committed history.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReplaySuccessEnvelope'
+        '401':
+          description: Authentication required.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /me/table-profiles/{game}:
+    parameters:
+      - $ref: '#/components/parameters/Game'
+    get:
+      summary: Read the active session's personal profile for one game.
+      operationId: self_service_v2_table_profile_read
+      security:
+        - cookieSession: []
+      responses:
+        '200':
+          description: Session-owned profile or conservative defaults.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileSuccessEnvelope'
+        '401':
+          description: Authentication required.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+    patch:
+      summary: Atomically update allowlisted non-economic preferences for one game.
+      operationId: self_service_v2_table_profile_update
+      security:
+        - cookieSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfilePatch'
+      responses:
+        '200':
+          description: Canonical profile after the update.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileSuccessEnvelope'
+        '400':
+          description: Malformed, empty, unsupported, or out-of-range update.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '401':
+          description: Authentication required.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Supplied revision is stale.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /games/compare:
+    get:
+      summary: Compare two to six catalog games using product-safe attributes only.
+      operationId: self_service_v2_games_compare
+      security:
+        - cookieSession: []
+      parameters:
+        - name: games
+          in: query
+          required: true
+          description: Comma-separated canonical game identifiers.
+          schema:
+            type: string
+            minLength: 3
+            maxLength: 245
+        - name: locale
+          in: query
+          schema:
+            type: string
+            enum: [en-US, ru-RU]
+            default: en-US
+      responses:
+        '200':
+          description: Read-only comparison with money-math fields explicitly excluded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompareSuccessEnvelope'
+        '400':
+          description: Too few, too many, or malformed game identifiers.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '401':
+          description: Authentication required.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+
+# Shared route parameters and response shapes keep the gateway envelope explicit.
+components:
+  securitySchemes:
+    cookieSession:
+      type: apiKey
+      in: cookie
+      name: casino_session
+  parameters:
+    Game:
+      name: game
+      in: path
+      required: true
+      schema:
+        type: string
+        maxLength: 40
+        pattern: '^[a-z0-9_-]+$'
+  schemas:
+    SuccessEnvelope:
+      type: object
+      required: [ok, data]
+      additionalProperties: false
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+    ErrorEnvelope:
+      type: object
+      required: [ok, error]
+      additionalProperties: false
+      properties:
+        ok:
+          type: boolean
+          enum: [false]
+        error:
+          type: object
+          required: [code, message]
+          additionalProperties: true
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+    ReplaySuccessEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/ReplayPage'
+    ReplayPage:
+      type: object
+      required: [replays, page, page_size, total, has_more, retention_days]
+      additionalProperties: false
+      properties:
+        replays:
+          type: array
+          maxItems: 25
+          items:
+            $ref: '#/components/schemas/ReplayArtifact'
+        page:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 25
+        total:
+          type: integer
+          minimum: 0
+        has_more:
+          type: boolean
+        retention_days:
+          type: integer
+          enum: [30]
+    ReplayArtifact:
+      type: object
+      required: [game, occurred_at, reference, detail, settlement_authority]
+      additionalProperties: true
+      properties:
+        game:
+          type: string
+        occurred_at:
+          type: string
+        reference:
+          type: string
+          maxLength: 8
+        detail:
+          type: object
+        settlement_authority:
+          type: boolean
+          enum: [false]
+    ProfileSuccessEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [profile]
+              additionalProperties: false
+              properties:
+                profile:
+                  $ref: '#/components/schemas/TableProfile'
+    TableProfile:
+      type: object
+      required: [game, chip_denominations, default_bet, show_controls, autoplay_default_rounds, revision, persisted]
+      additionalProperties: true
+      properties:
+        game:
+          type: string
+        chip_denominations:
+          type: array
+          maxItems: 8
+          items:
+            type: integer
+            minimum: 1
+            maximum: 1000000
+        default_bet:
+          type: integer
+          minimum: 0
+          maximum: 1000000
+        show_controls:
+          type: boolean
+        autoplay_default_rounds:
+          type: integer
+          minimum: 0
+          maximum: 100
+        revision:
+          type: integer
+          minimum: 0
+        persisted:
+          type: boolean
+    ProfilePatch:
+      type: object
+      minProperties: 1
+      additionalProperties: false
+      anyOf:
+        - required: [chip_denominations]
+        - required: [default_bet]
+        - required: [show_controls]
+        - required: [autoplay_default_rounds]
+      properties:
+        chip_denominations:
+          type: array
+          maxItems: 8
+          items:
+            type: integer
+            minimum: 1
+            maximum: 1000000
+        default_bet:
+          type: integer
+          minimum: 0
+          maximum: 1000000
+        show_controls:
+          type: boolean
+        autoplay_default_rounds:
+          type: integer
+          minimum: 0
+          maximum: 100
+        revision:
+          type: integer
+          minimum: 0
+    CompareSuccessEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/GameComparison'
+    GameComparison:
+      type: object
+      required: [games, missing, locale, attributes, excludes_money_math]
+      additionalProperties: false
+      properties:
+        games:
+          type: array
+          maxItems: 6
+          items:
+            $ref: '#/components/schemas/GameComparisonRow'
+        missing:
+          type: array
+          maxItems: 6
+          items:
+            type: string
+        locale:
+          type: string
+          enum: [en-US, ru-RU]
+        attributes:
+          type: array
+          items:
+            type: string
+        excludes_money_math:
+          type: array
+          items:
+            type: string
+    GameComparisonRow:
+      type: object
+      required: [id, label, localized_label, category, categories, ledger_backed, featured, localization_ready, includes_money_math]
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        localized_label:
+          type: string
+        category:
+          type: string
+        categories:
+          type: array
+          items:
+            type: string
+        ledger_backed:
+          type: boolean
+          enum: [true]
+        featured:
+          type: boolean
+        localization_ready:
+          type: boolean
+        includes_money_math:
+          type: boolean
+          enum: [false]
