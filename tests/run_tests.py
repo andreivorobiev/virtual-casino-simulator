@@ -1016,6 +1016,24 @@ def run_api_tests():
             raise AssertionError("what's new foundation suite failed")
     # Record the curated opt-in, current disabled catalog, guest lifecycle, privacy, idempotency, route, and contract proof.
     run_case('API-TOUR-001',['TOUR-001','TOUR-002','TEST-106'],run_whats_new_tests)
+    # Execute the complete player self-service batch proof without opening a listener.
+    def run_self_service_batch_tests():
+        # Load the focused self-service classes.
+        from tests import self_service_batch_tests
+        loader = unittest.defaultTestLoader
+        suite = unittest.TestSuite()
+        # Add the replay, table-profile, compare, and copy classes.
+        for cls in (self_service_batch_tests.ReplayFoundationTests, self_service_batch_tests.TableProfileTests, self_service_batch_tests.CompareGamesTests, self_service_batch_tests.SelfServiceCopyTests):
+            # Load each focused class into the combined suite.
+            suite.addTests(loader.loadTestsFromTestCase(cls))
+        # Execute the combined suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused self-service proof failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure text secret-safe.
+            raise AssertionError('player self-service batch suite failed')
+    # Record the listener-free replay, table-profile, and compare proof.
+    run_case('API-SELF-SERVICE-BATCH-001',['REPLAY-001','REPLAY-002','PROFILE-001','PROFILE-002','COMPARE-001','TEST-108','TEST-109','TEST-110'],run_self_service_batch_tests)
     # Discover and execute every focused restricted-preview security module without opening a listener.
     def run_restricted_preview_security_tests():
         # Load the package directory through unittest's standard test discovery.

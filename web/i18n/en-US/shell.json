@@ -154,5 +154,22 @@
   "wellness.summaryNote": "Play tokens only - no cash value.",
   "wellness.saved": "Reminder settings saved.",
   "whatsNew.entry.9_5_3.title": "Simulator reliability and transparency",
-  "whatsNew.entry.9_5_3.body": "This update improves game accuracy, session recovery, localization, motion, and server-side transparency while preserving the play-token-only boundary."
+  "whatsNew.entry.9_5_3.body": "This update improves game accuracy, session recovery, localization, motion, and server-side transparency while preserving the play-token-only boundary.",
+  "replay.title": "Round replay",
+  "replay.empty": "No recent rounds to replay.",
+  "replay.retention": "Replays are kept for {days} days.",
+  "replay.notSettlement": "Replays are a record of past rounds only and have no play-token value.",
+  "profile.title": "Table profile",
+  "profile.chipLayout": "Preferred chips",
+  "profile.defaultBet": "Default bet",
+  "profile.showControls": "Show advanced controls",
+  "profile.autoplayDefault": "Default autoplay rounds",
+  "profile.saved": "Table profile saved.",
+  "profile.perGame": "Saved separately for each game.",
+  "compare.title": "Compare games",
+  "compare.category": "Category",
+  "compare.ledgerBacked": "Play tokens only",
+  "compare.featured": "Featured",
+  "compare.localizationReady": "Your language",
+  "compare.noMoneyMath": "This comparison does not show odds, house edge, or payout math."
 }

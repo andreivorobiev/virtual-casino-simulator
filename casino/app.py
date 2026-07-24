@@ -37,7 +37,7 @@ from casino.core.state_store import ensure_dirs, migrate_from_v7_if_needed
 # Import required dependency so this module can bootstrap whichever storage provider is configured.
 from casino.core.storage import bootstrap_players, get_storage_provider
 # Import required dependency so this module can use its public functions or constants.
-from casino.core import logger, players, ledger, history, auth, feedback, guest_analytics, invitations, receipts, user_settings, wellness, whats_new
+from casino.core import logger, players, ledger, history, auth, feedback, guest_analytics, invitations, receipts, user_settings, wellness, whats_new, replay, table_profiles, game_compare
 # Import required dependency so this module can use its public functions or constants.
 from casino.games.registry import catalog_summary, list_games, register_games
 # Import required dependency so this module can use its public functions or constants.
@@ -399,6 +399,34 @@ def build_router() -> Router:
     def current_user_receipts(body, query, context):
         # Bind the subject from the session and pass only shared pagination values to the receipt mapper.
         return receipts.self_receipts(context["user"], page=query.get("page", 1), page_size=query.get("page_size", receipts.DEFAULT_PAGE_SIZE))
+
+    # Register additive self-only bounded round-replay artifacts. (REPLAY-001, issue #162)
+    @router.get(r"/api/v2/me/replays")
+    # Return only the authenticated session's own bounded, in-retention replay artifacts.
+    def current_user_replays(body, query, context):
+        # Derive the subject from the session and accept only pagination and filter inputs.
+        return replay.self_replays(context["user"], page=query.get("page", 1), page_size=query.get("page_size", replay.DEFAULT_PAGE_SIZE), game=query.get("game", ""))
+
+    # Register additive per-game personal table-profile reads. (PROFILE-001, issue #164)
+    @router.get(r"/api/v2/me/table-profiles/(?P<game>[a-z0-9_-]+)")
+    # Return the authenticated session's own stored profile for one game.
+    def current_user_table_profile(body, query, context, game):
+        # Publish the subject's per-game profile only.
+        return {"profile": table_profiles.read_profile(context["user"], game)}
+
+    # Register additive field-allowlisted per-game table-profile updates. (PROFILE-001, issue #164)
+    @router.patch(r"/api/v2/me/table-profiles/(?P<game>[a-z0-9_-]+)")
+    # Apply one validated profile change to the session's own record for one game only.
+    def update_current_user_table_profile(body, query, context, game):
+        # Bind the subject from the authenticated session rather than accepting caller identity.
+        return {"profile": table_profiles.update_profile(context["user"], game, body)}
+
+    # Register additive product-safe game comparison reads. (COMPARE-001, issue #160)
+    @router.get(r"/api/v2/games/compare")
+    # Return a product-safe comparison of the requested games without any money-math attribute.
+    def compare_games(body, query, context):
+        # Accept only the requested games and locale; the comparison derives from the read-only catalog.
+        return game_compare.compare(query.get("games", ""), locale=query.get("locale", "en-US"))
 
     # Attach the published current-user token credit endpoint.
     @router.post(r"/api/v2/me/tokens/add")

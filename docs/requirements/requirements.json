@@ -10406,6 +10406,147 @@
       "introduced_in": "issue-165-whats-new-foundation",
       "changed_in": "9.5.3",
       "notes": "Allocated after TEST-105 became permanent on current main. Every focused write uses an isolated temporary provider and no listener, browser, credential, repository runtime file, provider network, or live system is touched."
+    },
+    {
+      "id": "REPLAY-001",
+      "module": "Core",
+      "description": "Round-replay artifacts are derived from the already-committed authoritative history rather than a second per-round store, are scoped to the authenticated session's own rounds, are bounded and paginated with a clamped page size, and are retained only for a conservative fixed window. Every artifact declares that it is a replay record with no settlement authority, so it can never act as an alternate wallet or outcome source.",
+      "status": "PASS",
+      "api_tests": [
+        "API-SELF-SERVICE-BATCH-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/replay.py",
+        "casino/app.py",
+        "tests/self_service_batch_tests.py"
+      ],
+      "introduced_in": "issue-162-round-replay",
+      "changed_in": "issue-162-round-replay",
+      "notes": "Allocated for GitHub issue #162. This is the replay-data foundation and viewer feed only; the Practice Rewind sandbox (#159) is a separate layer built on top."
+    },
+    {
+      "id": "REPLAY-002",
+      "module": "Core",
+      "description": "Replay artifacts publish only allowlisted presentation fields plus a bounded compact detail parsed from committed round data, expose no raw durable round or player identifier, correlate a round only by a short display reference, exclude rounds older than the retention window, and return an explicit empty page for a session with no ledger subject while failing closed for an unauthenticated caller.",
+      "status": "PASS",
+      "api_tests": [
+        "API-SELF-SERVICE-BATCH-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/replay.py",
+        "casino/app.py",
+        "tests/self_service_batch_tests.py"
+      ],
+      "introduced_in": "issue-162-round-replay",
+      "changed_in": "issue-162-round-replay",
+      "notes": "Allocated for GitHub issue #162. Retention is evaluated against an injectable reference clock so the window is deterministic under test."
+    },
+    {
+      "id": "PROFILE-001",
+      "module": "Core",
+      "description": "Each authenticated user has per-game table profiles covering preferred chip denominations, default bet, control visibility, and autoplay defaults. Writes are field-allowlisted so no rule variant, payout, or other economics-changing field can ever be stored, are value-bounded, are revision-checked so a stale client cannot clobber a newer value, persist atomically per game, and a malformed persisted document degrades to defaults and repairs itself on the next write.",
+      "status": "PASS",
+      "api_tests": [
+        "API-SELF-SERVICE-BATCH-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/table_profiles.py",
+        "casino/app.py",
+        "tests/self_service_batch_tests.py"
+      ],
+      "introduced_in": "issue-164-table-profiles",
+      "changed_in": "issue-164-table-profiles",
+      "notes": "Allocated for GitHub issue #164. Profiles are per-game and opt-in; this module only stores and returns them and never forces application, and it changes no game economics."
+    },
+    {
+      "id": "PROFILE-002",
+      "module": "Core",
+      "description": "Table profiles derive the subject from the authenticated session rather than a caller identity, validate the game as a bounded lower-case slug, keep one subject's profile invisible to another account, give guest trials session-local defaults with no durable record, and fail closed for an unauthenticated caller.",
+      "status": "PASS",
+      "api_tests": [
+        "API-SELF-SERVICE-BATCH-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/table_profiles.py",
+        "casino/app.py",
+        "tests/self_service_batch_tests.py"
+      ],
+      "introduced_in": "issue-164-table-profiles",
+      "changed_in": "issue-164-table-profiles",
+      "notes": "Allocated for GitHub issue #164. The field allowlist is the guard that prevents an economics-changing variant from riding along with a valid preference change."
+    },
+    {
+      "id": "COMPARE-001",
+      "module": "Core",
+      "description": "The Compare Games drawer is a read-only derivation over the existing catalog that publishes only product-safe attributes (category, ledger-backed play-token status, featured placement, localization readiness, and localized labels), never edits the registry, and deliberately excludes house edge, expected return, volatility, probability, and payout math until those are separately reviewed. It bounds the number of compared games, rejects malformed or too-few or too-many requests, and reports unknown games as missing rather than silently omitting them.",
+      "status": "PASS",
+      "api_tests": [
+        "API-SELF-SERVICE-BATCH-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/game_compare.py",
+        "casino/app.py",
+        "tests/self_service_batch_tests.py"
+      ],
+      "introduced_in": "issue-160-compare-games",
+      "changed_in": "issue-160-compare-games",
+      "notes": "Allocated for GitHub issue #160. It fabricates no attribute it cannot honestly derive from catalog data, so pace and complexity are deferred until catalog metadata records them."
+    },
+    {
+      "id": "TEST-108",
+      "module": "Tests",
+      "description": "Listener-free evidence verifies the round-replay foundation: artifacts are marked non-settlement and derived from committed history, exclude another subject against a populated neighbour, exclude rounds outside the retention window under an injected clock, hide raw durable identifiers, clamp pagination, and fail closed for a subjectless session.",
+      "status": "PASS",
+      "api_tests": [
+        "API-SELF-SERVICE-BATCH-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/self_service_batch_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-162-round-replay",
+      "changed_in": "issue-162-round-replay",
+      "notes": "Allocated for GitHub issue #162."
+    },
+    {
+      "id": "TEST-109",
+      "module": "Tests",
+      "description": "Listener-free evidence verifies table profiles: per-game persistence with an advancing revision, rejection of economics-changing and unknown fields, enforcement of value bounds, stale-revision conflict, invalid game-slug rejection, malformed-document recovery, session-local guest behaviour with no durable record, and fail-closed subjectless access.",
+      "status": "PASS",
+      "api_tests": [
+        "API-SELF-SERVICE-BATCH-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/self_service_batch_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-164-table-profiles",
+      "changed_in": "issue-164-table-profiles",
+      "notes": "Allocated for GitHub issue #164."
+    },
+    {
+      "id": "TEST-110",
+      "module": "Tests",
+      "description": "Listener-free evidence verifies the Compare Games drawer: money-math attributes are excluded and never present on a row, localization readiness is derived per locale, request bounds reject too-few, too-many, and malformed requests, unknown games are reported as missing, and every added copy namespace ships complete EN and RU strings with identical placeholders.",
+      "status": "PASS",
+      "api_tests": [
+        "API-SELF-SERVICE-BATCH-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/self_service_batch_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-160-compare-games",
+      "changed_in": "issue-160-compare-games",
+      "notes": "Allocated for GitHub issue #160."
     }
   ]
 }
