@@ -37,7 +37,7 @@ from casino.core.state_store import ensure_dirs, migrate_from_v7_if_needed
 # Import required dependency so this module can bootstrap whichever storage provider is configured.
 from casino.core.storage import bootstrap_players, get_storage_provider
 # Import required dependency so this module can use its public functions or constants.
-from casino.core import logger, players, ledger, history, auth, feedback, guest_analytics, invitations, receipts, user_settings, wellness
+from casino.core import logger, players, ledger, history, auth, feedback, guest_analytics, invitations, receipts, user_settings, wellness, whats_new
 # Import required dependency so this module can use its public functions or constants.
 from casino.games.registry import catalog_summary, list_games, register_games
 # Import required dependency so this module can use its public functions or constants.
@@ -353,6 +353,24 @@ def build_router() -> Router:
     def current_user_wellness_summary(body, query, context):
         # Use the server-owned login-session boundary rather than a caller-authored timestamp.
         return wellness.session_summary(context["user"], since=str(context.get("session", {}).get("created_at") or ""))
+
+    # Register additive version-aware What's New eligibility reads. (TOUR-001, issue #165)
+    @router.get(r"/api/v2/me/whats-new")
+    # Return only curated localization keys for releases this session has not acknowledged.
+    def current_user_whats_new(body, query, context):
+        # Derive the subject from the session and publish no raw version key.
+        return whats_new.tour_for(context["user"])
+
+    # Register additive server-stamped tour dismissal. (TOUR-002, issue #165)
+    @router.post(r"/api/v2/me/whats-new/dismiss")
+    # Acknowledge the running release without trusting any caller-supplied version.
+    def dismiss_current_user_whats_new(body, query, context):
+        # Reject every caller-authored field so subject and release identity remain server-owned.
+        if body:
+            # Fail closed instead of silently accepting hostile or future payload authority.
+            raise ValidationError("What's New dismissal accepts no fields", {"reason": "unsupported_fields", "fields": sorted(body)})
+        # Stamp the acknowledgement from the canonical application version.
+        return whats_new.dismiss(context["user"])
 
     # Register additive personal-preference reads outside the frozen v1 surface. (USER-006, issue #352)
     @router.get(r"/api/v2/me/settings")

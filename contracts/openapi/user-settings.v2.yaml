@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
-  title: Virtual Casino personal settings, self-history, receipts, and wellness API
+  title: Virtual Casino personal settings, self-history, receipts, wellness, and What's New API
   version: v2
-  description: Additive authenticated self-service foundation for locale, sound, bounded ledger-backed personal history, ledger-derived play-token receipts, opt-in wellness preferences, and neutral active-session summaries. Subjects and session boundaries always come from server-owned context; caller-authored user, player, or session identifiers are never accepted.
+  description: Additive authenticated self-service foundation for locale, sound, bounded ledger-backed personal history, ledger-derived play-token receipts, opt-in wellness preferences, neutral active-session summaries, and curated version-aware What's New eligibility. Subjects, session boundaries, and acknowledged application versions always come from server-owned context; caller-authored user, player, session, or release identifiers are never accepted.
 servers:
   - url: /api/v2
 paths:
@@ -200,6 +200,50 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/WellnessSummaryEnvelope'
+        '401':
+          description: Authentication required.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /me/whats-new:
+    get:
+      summary: Read one capped merged set of explicitly enabled curated release entries for the active session subject.
+      operationId: user_whats_new_v2_read
+      security:
+        - cookieSession: []
+      responses:
+        '200':
+          description: Localization-key-only eligibility with no raw release identifier; disposable guests receive an empty non-persisted result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WhatsNewReadEnvelope'
+        '401':
+          description: Authentication required.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /me/whats-new/dismiss:
+    post:
+      summary: Idempotently acknowledge the canonical running application release for the active session subject.
+      operationId: user_whats_new_v2_dismiss
+      security:
+        - cookieSession: []
+      responses:
+        '200':
+          description: Server-stamped acknowledgement; disposable guests receive a non-persisted result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WhatsNewDismissEnvelope'
+        '400':
+          description: Dismissal accepts no caller-authored fields.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
         '401':
           description: Authentication required.
           content:
@@ -482,6 +526,71 @@ components:
           enum: [true]
         data:
           $ref: '#/components/schemas/WellnessSummary'
+    WhatsNewEntry:
+      type: object
+      additionalProperties: false
+      required: [title_key, body_key]
+      properties:
+        title_key:
+          type: string
+          minLength: 1
+        body_key:
+          type: string
+          minLength: 1
+    WhatsNew:
+      type: object
+      additionalProperties: false
+      required: [show, entries, merged_count, changelog_path, persisted]
+      properties:
+        show:
+          type: boolean
+        entries:
+          type: array
+          maxItems: 3
+          items:
+            $ref: '#/components/schemas/WhatsNewEntry'
+        merged_count:
+          type: integer
+          minimum: 0
+          maximum: 3
+        changelog_path:
+          type: string
+        persisted:
+          type: boolean
+          description: False for disposable guest-trial responses, which never display or store tour state.
+    WhatsNewDismissal:
+      type: object
+      additionalProperties: false
+      required: [dismissed, dismissed_at, persisted]
+      properties:
+        dismissed:
+          type: boolean
+          enum: [true]
+        dismissed_at:
+          type: string
+          format: date-time
+          nullable: true
+        persisted:
+          type: boolean
+          description: False for disposable guest-trial acknowledgements.
+    WhatsNewReadEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/WhatsNew'
+    WhatsNewDismissEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/WhatsNewDismissal'
     ErrorEnvelope:
       type: object
       required: [ok, error]

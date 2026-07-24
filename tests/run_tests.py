@@ -986,6 +986,20 @@ def run_api_tests():
             raise AssertionError('session wellness foundation suite failed')
     # Record the listener-free opt-in, session-bound, reward-free, and EN/RU neutrality proof.
     run_case('API-WELLNESS-001',['WELL-001','WELL-002','TEST-105'],run_wellness_tests)
+    # Execute the curated server-only What's New eligibility proof without opening a listener.
+    def run_whats_new_tests():
+        # Load only the focused What's New foundation assertions.
+        from tests import whats_new_tests
+        # Build the exact focused suite.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(whats_new_tests.WhatsNewTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused tour assertion failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure text secret-safe.
+            raise AssertionError("what's new foundation suite failed")
+    # Record the curated opt-in, current disabled catalog, guest lifecycle, privacy, idempotency, route, and contract proof.
+    run_case('API-TOUR-001',['TOUR-001','TOUR-002','TEST-106'],run_whats_new_tests)
     # Discover and execute every focused restricted-preview security module without opening a listener.
     def run_restricted_preview_security_tests():
         # Load the package directory through unittest's standard test discovery.

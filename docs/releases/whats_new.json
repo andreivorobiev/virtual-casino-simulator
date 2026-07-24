@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "changelog_path": "RELEASE_NOTES.md",
+  "max_merged_entries": 3,
+  "entries": [
+    {
+      "version": "9.5.2",
+      "show_in_whats_new": false,
+      "title_key": "whatsNew.entry.9_5_2.title",
+      "body_key": "whatsNew.entry.9_5_2.body"
+    }
+  ]
+}

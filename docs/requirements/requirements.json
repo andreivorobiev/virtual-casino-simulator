@@ -10351,6 +10351,60 @@
       "introduced_in": "issue-167-session-wellness",
       "changed_in": "issue-167-session-wellness",
       "notes": "Allocated after TEST-104 became permanent on current main. Every focused test uses an isolated temporary provider; no listener, browser, credential, repository runtime file, provider network, or live system is touched."
+    },
+    {
+      "id": "TOUR-001",
+      "module": "Core",
+      "description": "The server-only What's New foundation reads curated repository release metadata rather than deriving player content from module or application version changes. An entry is eligible only when its release version is an exact numeric triplet at or below the running application, both localization keys are non-empty, and the release coordinator's show_in_whats_new flag is exactly true. Missing, malformed, future, incomplete, or truthy-but-inexact entries fail closed. The shipped catalog is reconciled to packaged application 9.5.2 and remains explicitly disabled until the player UI, browser evidence, and release-coordinator activation remainder of issue #165 are accepted.",
+      "status": "PASS",
+      "api_tests": [
+        "API-TOUR-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/whats_new.py",
+        "docs/releases/whats_new.json",
+        "casino/app.py",
+        "contracts/openapi/user-settings.v2.yaml"
+      ],
+      "introduced_in": "issue-165-whats-new-foundation",
+      "changed_in": "issue-165-whats-new-foundation",
+      "notes": "This requirement covers only the inactive server and curated-metadata foundation. GitHub issue #165 remains open for player UI, release transitions, responsive and accessibility evidence, reduced motion, and product-owned activation."
+    },
+    {
+      "id": "TOUR-002",
+      "module": "Core",
+      "description": "An authenticated registered subject receives at most one capped newest-first merged set of explicitly enabled curated entries and a changelog path. Published entries carry localization keys only, never raw release identifiers. Acknowledgement is atomically persisted per server-derived subject, stamped only from the canonical running application version, and retry-idempotent for that release; one subject cannot dismiss another subject's tour. Disposable guest trials receive an empty non-persisted eligibility response and a non-persisted acknowledgement, creating no durable What's New document.",
+      "status": "PASS",
+      "api_tests": [
+        "API-TOUR-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/whats_new.py",
+        "casino/app.py",
+        "contracts/openapi/user-settings.v2.yaml"
+      ],
+      "introduced_in": "issue-165-whats-new-foundation",
+      "changed_in": "issue-165-whats-new-foundation",
+      "notes": "The additive v2 routes accept no caller-authored subject or release identity. Terms, privacy consent, credentials, provider actions, and ledger movement remain outside this feature."
+    },
+    {
+      "id": "TEST-106",
+      "module": "Tests",
+      "description": "Listener-free isolated-provider evidence verifies exact curated opt-in selection, skipped-release merge ordering and caps, malformed and future metadata fail-closed behavior, missing and malformed catalog recovery, durable per-subject server-stamped dismissal, retry idempotency, populated-neighbour isolation, disposable guest non-persistence, subjectless rejection, raw-version privacy, current packaged 9.5.2 metadata with activation disabled, complete EN/RU release keys, consent-free metadata shape, additive v2 route behavior, hostile caller identity and version inputs being rejected, and exact checked contract digest pinning.",
+      "status": "PASS",
+      "api_tests": [
+        "API-TOUR-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/whats_new_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-165-whats-new-foundation",
+      "changed_in": "issue-165-whats-new-foundation",
+      "notes": "Allocated after TEST-105 became permanent on current main. Every focused write uses an isolated temporary provider and no listener, browser, credential, repository runtime file, provider network, or live system is touched."
     }
   ]
 }

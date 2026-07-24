@@ -152,5 +152,7 @@
   "wellness.summaryReturned": "Returned: {amount} play tokens",
   "wellness.summaryNet": "Net: {amount} play tokens",
   "wellness.summaryNote": "Play tokens only - no cash value.",
-  "wellness.saved": "Reminder settings saved."
+  "wellness.saved": "Reminder settings saved.",
+  "whatsNew.entry.9_5_2.title": "Session recovery and simulator reliability",
+  "whatsNew.entry.9_5_2.body": "Direct game routes now recover safely after a session expires, alongside reliability improvements across the simulator."
 }
