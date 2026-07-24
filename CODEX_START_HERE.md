@@ -275,6 +275,7 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 - [`docs/legal/terms.md`](docs/legal/terms.md) — Private Beta Toy Simulator Terms
 - [`docs/local_mysql_setup.md`](docs/local_mysql_setup.md) — Local MySQL 8.4 LTS setup
 - [`docs/long_test_suites.md`](docs/long_test_suites.md) — Long Casino Test Suites
+- [`docs/motion_acceptance_contract.md`](docs/motion_acceptance_contract.md) — Deterministic motion acceptance contract
 - [`docs/mysql_migrations.md`](docs/mysql_migrations.md) — MySQL migration and DDL-free runtime gate
 - [`docs/oauth_invite_only.md`](docs/oauth_invite_only.md) — Invite-only OAuth operations boundary
 - [`docs/production_service.md`](docs/production_service.md) — Production application service
