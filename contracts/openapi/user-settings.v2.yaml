@@ -1,0 +1,325 @@
+openapi: 3.0.3
+info:
+  title: Virtual Casino personal settings, self-history, and receipt API
+  version: v2
+  description: Additive authenticated self-service foundation for locale, sound, bounded ledger-backed personal history, and ledger-derived play-token receipts. Subjects always come from the active session; caller-authored user or player identifiers are never accepted.
+servers:
+  - url: /api/v2
+paths:
+  /me/settings:
+    get:
+      summary: Read the active session's personal preferences and supported locale catalog.
+      operationId: user_settings_v2_read
+      security:
+        - cookieSession: []
+      responses:
+        '200':
+          description: Canonical settings and supported locales.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettingsReadEnvelope'
+        '401':
+          description: Authentication required.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+    patch:
+      summary: Atomically update allowlisted preferences for the active session subject.
+      operationId: user_settings_v2_update
+      security:
+        - cookieSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SettingsPatch'
+      responses:
+        '200':
+          description: Canonical stored settings after the update.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettingsUpdateEnvelope'
+        '400':
+          description: Malformed, empty, unsupported-locale, or non-allowlisted update.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '401':
+          description: Authentication required.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Supplied revision is stale.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /me/history:
+    get:
+      summary: Read one bounded newest-first page of the active session's own ledger-backed activity.
+      operationId: user_settings_v2_history
+      security:
+        - cookieSession: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+        - name: game
+          in: query
+          schema:
+            type: string
+            maxLength: 80
+      responses:
+        '200':
+          description: Self-only activity with privacy-safe display references and pagination metadata.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HistoryEnvelope'
+        '401':
+          description: Authentication required.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /me/receipts:
+    get:
+      summary: Read one bounded newest-first page of ledger-derived explanations for the active session's own play-token movements.
+      operationId: user_receipts_v2_read
+      security:
+        - cookieSession: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+      responses:
+        '200':
+          description: Self-only play-token receipts with privacy-safe display references and shared pagination metadata.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReceiptEnvelope'
+        '401':
+          description: Authentication required.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+components:
+  securitySchemes:
+    cookieSession:
+      type: apiKey
+      in: cookie
+      name: casino_session
+  schemas:
+    Settings:
+      type: object
+      additionalProperties: false
+      required: [locale, sound_enabled, revision, updated_at, persisted]
+      properties:
+        locale:
+          type: string
+          enum: [en-US, ru-RU]
+        sound_enabled:
+          type: boolean
+        revision:
+          type: integer
+          minimum: 0
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        persisted:
+          type: boolean
+    SettingsPatch:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        locale:
+          type: string
+          enum: [en-US, ru-RU]
+        sound_enabled:
+          type: boolean
+        revision:
+          type: integer
+          minimum: 0
+    HistoryEvent:
+      type: object
+      additionalProperties: false
+      required: [ts, game, reference, transaction_type, amount, balance_after]
+      properties:
+        ts:
+          type: string
+          format: date-time
+        game:
+          type: string
+          nullable: true
+        reference:
+          type: string
+          maxLength: 8
+          description: Short uppercase correlation tail; never the raw durable round identifier.
+        transaction_type:
+          type: string
+        amount:
+          type: number
+          description: Signed fake-token movement with no cash value.
+        balance_after:
+          type: number
+          description: Authoritative resulting fake-token balance.
+    SettingsReadEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          required: [settings, supported_locales]
+          properties:
+            settings:
+              $ref: '#/components/schemas/Settings'
+            supported_locales:
+              type: array
+              items:
+                type: string
+                enum: [en-US, ru-RU]
+    SettingsUpdateEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          required: [settings]
+          properties:
+            settings:
+              $ref: '#/components/schemas/Settings'
+    HistoryEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          required: [events, page, page_size, total, has_more, game]
+          properties:
+            events:
+              type: array
+              items:
+                $ref: '#/components/schemas/HistoryEvent'
+            page:
+              type: integer
+              minimum: 1
+            page_size:
+              type: integer
+              minimum: 1
+              maximum: 50
+            total:
+              type: integer
+              minimum: 0
+            has_more:
+              type: boolean
+            game:
+              type: string
+    Receipt:
+      type: object
+      additionalProperties: false
+      required: [category, message_key, game, amount, direction, balance_after, occurred_at, reference, play_tokens_only]
+      properties:
+        category:
+          type: string
+          enum: [stake, refund, payout, adjustment]
+        message_key:
+          type: string
+          enum: [receipt.stake, receipt.refund, receipt.refund_after_error, receipt.payout, receipt.adjustment]
+        game:
+          type: string
+        amount:
+          type: number
+          minimum: 0
+          description: Unsigned magnitude of the authoritative committed play-token movement.
+        direction:
+          type: string
+          enum: [debit, credit]
+        balance_after:
+          type: number
+          description: Authoritative resulting fake-token balance committed by the ledger.
+        occurred_at:
+          type: string
+          format: date-time
+        reference:
+          type: string
+          maxLength: 8
+          description: Short uppercase correlation tail; never the raw durable round identifier.
+        play_tokens_only:
+          type: boolean
+          enum: [true]
+    ReceiptEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          required: [receipts, page, page_size, total, has_more]
+          properties:
+            receipts:
+              type: array
+              items:
+                $ref: '#/components/schemas/Receipt'
+            page:
+              type: integer
+              minimum: 1
+            page_size:
+              type: integer
+              minimum: 1
+              maximum: 50
+            total:
+              type: integer
+              minimum: 0
+            has_more:
+              type: boolean
+    ErrorEnvelope:
+      type: object
+      required: [ok, error]
+      properties:
+        ok:
+          type: boolean
+          enum: [false]
+        error:
+          type: object

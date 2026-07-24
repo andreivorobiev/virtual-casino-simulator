@@ -44,6 +44,8 @@ from tests import mysql_migration_tests
 from tests import recovery_tests
 # Import listener-free edge policy and sanitized observation tests for the API validation run.
 from tests import edge_gate_tests
+# Import the focused deployment build-provenance suite.
+from tests import release_env_tests
 # Import focused non-finite validation and persistence tests for TEST-055.
 from tests import nonfinite_money_tests
 # Import exact-source 50,000-cycle harness proofs for TEST-092.
@@ -295,37 +297,63 @@ def i18n_placeholders(value):
 
 # Define the validate_i18n_resources function used by this module.
 def validate_i18n_resources():
-    # Set manifest to the value needed for the next operation.
+    # Load the canonical Phase 0 locale registry.
     manifest=read_i18n_json(ROOT/'web'/'i18n'/'manifest.json')
-    # Set locales to the value needed for the next operation.
-    locales=[locale['id'] for locale in manifest['locales']]
-    # Set domains to the value needed for the next operation.
-    domains=manifest['domains']
-    # Execute this statement as part of the module's documented control flow.
+    # Preserve the owner-locked order so priority and evidence tiers cannot drift silently.
+    locked_locales=('en-US','zh-Hans','hi-IN','es-419','ar','fr-FR','bn-BD','pt-BR','ru-RU','id-ID','ur-PK','de-DE','ja-JP','pcm-NG','arz-EG','ta-IN','vi-VN','te-IN','ha-NG','tr-TR','pnb-PK','sw-KE','fil-PH','mr-IN','yue-Hant-HK')
+    # Read registry entries once for metadata and readiness assertions.
+    registry=manifest['locales']
+    # Resolve the exact selectable resource packs without treating metadata-only identities as translations.
+    ready_locales=[locale['id'] for locale in registry if locale['readiness']=='ready' and locale['uiReady'] is True]
+    # Discover game-owned translation domains from the same canonical catalog used by the runtime.
+    game_domains=[game['frontend']['i18n_domain'] for game in casino_config.GAMES]
+    # Combine base and catalog domains for complete installed-resource parity.
+    domains=[*manifest['domains'],*game_domains]
+    # Require the explicit Phase 0 schema and default/fallback source locale.
+    assert manifest['schemaVersion']==2 and manifest['registryVersion']=='phase-0-locked-25'
+    # Preserve source-locale defaults independently from browser detection.
     assert manifest['defaultLocale']=='en-US'
-    # Execute this statement as part of the module's documented control flow.
-    assert 'ru-RU' in locales
-    # Iterate through the collection to process each item.
+    # Require the exact locked identities, order, and permanent 1-based ranks.
+    assert tuple(locale['id'] for locale in registry)==locked_locales
+    # Reject missing or duplicate rank metadata.
+    assert [locale['rank'] for locale in registry]==list(range(1,26))
+    # Keep only the two actually translated resource packs selectable in Phase 0.
+    assert ready_locales==['en-US','ru-RU']
+    # Preserve all four approved right-to-left identities without activating unfinished resources.
+    assert [locale['id'] for locale in registry if locale['dir']=='rtl']==['ar','ur-PK','arz-EG','pnb-PK']
+    # Require each identity to carry complete script, formatter, fallback, readiness, and review metadata.
+    assert all(locale['script'] and locale['formatLocale'] and locale['reviewStatus'] and locale['readiness'] for locale in registry)
+    # Require fallback chains to start at translation identity and end at the installed source locale.
+    assert all(locale['fallbackChain'][0]==locale['id'] and locale['fallbackChain'][-1]=='en-US' for locale in registry)
+    # Reject aliases that escape the locked registry even though metadata-only aliases are not selectable yet.
+    assert set(manifest['aliases'].values()).issubset(set(locked_locales))
+    # Keep game domains out of the static manifest so the live catalog remains their authority.
+    assert all(not domain.startswith('games/') for domain in manifest['domains'])
+    # Require one unique catalog domain per registered game.
+    assert len(game_domains)==len(set(game_domains))==len(casino_config.GAMES)
+    # Reject resource directories that would falsely imply a planned translation is installed.
+    assert all(not (ROOT/'web'/'i18n'/locale['id']).exists() for locale in registry if not locale['uiReady'])
+    # Validate key and placeholder parity across every base and catalog domain for installed locales.
     for domain in domains:
-        # Set source_path to the value needed for the next operation.
+        # Resolve the English source dictionary from the resource-relative domain.
         source_path=ROOT/'web'/'i18n'/'en-US'/Path(*domain.split('/')).with_suffix('.json')
-        # Set source to the value needed for the next operation.
+        # Read canonical source strings before comparing translations.
         source=read_i18n_json(source_path)
-        # Iterate through the collection to process each item.
-        for locale in locales:
-            # Set candidate_path to the value needed for the next operation.
+        # Compare only actually installed locale packs.
+        for locale in ready_locales:
+            # Resolve the installed candidate dictionary at the same domain path.
             candidate_path=ROOT/'web'/'i18n'/locale/Path(*domain.split('/')).with_suffix('.json')
-            # Set candidate to the value needed for the next operation.
+            # Read the candidate dictionary as strict UTF-8 JSON.
             candidate=read_i18n_json(candidate_path)
-            # Execute this statement as part of the module's documented control flow.
+            # Require exact key parity before any browser can render a raw fallback identifier.
             assert set(candidate)==set(source), f'{locale}/{domain} key mismatch'
-            # Iterate through the collection to process each item.
+            # Validate every translated value and named interpolation contract.
             for key, source_value in source.items():
-                # Set translated_value to the value needed for the next operation.
+                # Read the corresponding translated value.
                 translated_value=candidate[key]
-                # Execute this statement as part of the module's documented control flow.
+                # Reject empty translations that would create blank controls.
                 assert translated_value!='', f'{locale}/{domain}/{key} is empty'
-                # Execute this statement as part of the module's documented control flow.
+                # Preserve placeholder names exactly across each installed locale.
                 assert i18n_placeholders(translated_value)==i18n_placeholders(source_value), f'{locale}/{domain}/{key} placeholder mismatch'
 
 # Run every service-free OAuth test through central discovery so CI cannot miss the package.
@@ -890,19 +918,60 @@ def run_api_tests():
             raise AssertionError('restricted-preview edge preparation suite failed')
     # Record the listener-free edge templates, validator, observation, and rollback proof.
     run_case('EDGE-PREPARATION-001',['CORE-024','TOOL-005','TEST-050'],run_edge_gate_tests)
-    # Execute the complete play-token receipt derivation proof without opening a listener.
+    # Execute the complete deployment build-provenance proof without writing any repository file.
+    def run_release_env_tests():
+        # Load only the focused deployment fragment class.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(release_env_tests.ReleaseEnvFragmentTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused provenance proof failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure text secret-safe.
+            raise AssertionError('deployment build provenance suite failed')
+    # Record the listener-free deployment provenance fragment and service-unit ordering proof.
+    run_case('DEPLOY-PROVENANCE-001',['TOOL-007','TEST-098'],run_release_env_tests)
+    # Execute the bounded Roulette anti-strobe proof without opening a listener or browser.
+    def run_roulette_motion_tests():
+        # Import the focused suite only when its mapped API case runs.
+        from tests import roulette_motion_tests
+        # Load exactly the tracked legacy-curve compatibility assertions.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(roulette_motion_tests.RouletteMotionTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any curve assertion failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure stable.
+            raise AssertionError('roulette motion compatibility suite failed')
+    # Record the listener-free anti-strobe, whole-turn, and reduced-motion proof.
+    run_case('UI-ROU-MOTION-001',['ROU-069','ROU-070','TEST-102'],run_roulette_motion_tests)
+    # Execute the personal-settings, shared pagination, contract, and privacy proof without a listener.
+    def run_user_settings_tests():
+        # Import the focused suite only when its mapped API case runs.
+        from tests import user_settings_tests
+        # Load exactly the self-service foundation assertions.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(user_settings_tests.UserSettingsTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused assertion failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure stable.
+            raise AssertionError('personal settings and self-history suite failed')
+    # Record the listener-free preference, pagination, contract, and self-only privacy proof.
+    run_case('API-SETTINGS-001',['USER-006','USER-007','TEST-103'],run_user_settings_tests)
+    # Execute ledger-derived receipt classification, privacy, contract, and retry proof without a listener.
     def run_receipt_tests():
-        # Load only the focused receipt derivation class.
+        # Import the focused suite only when its mapped API case runs.
         from tests import receipt_tests
+        # Load exactly the self-only receipt foundation assertions.
         suite = unittest.defaultTestLoader.loadTestsFromTestCase(receipt_tests.ReceiptDerivationTests)
         # Execute the suite with concise in-process reporting.
         result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
-        # Fail the central named case when any focused receipt proof failed or errored.
+        # Fail the central named case when any focused receipt assertion failed or errored.
         if not result.wasSuccessful():
-            # Preserve unittest detail while keeping the named failure text secret-safe.
+            # Preserve unittest detail while keeping the named failure stable.
             raise AssertionError('play-token receipt derivation suite failed')
-    # Record the listener-free receipt reconciliation, privacy, and localization proof.
-    run_case('API-RECEIPT-001',['RECEIPT-001','RECEIPT-002','TEST-100'],run_receipt_tests)
+    # Record the committed-ledger explanation, shared pagination, privacy, and exact-contract proof.
+    run_case('API-RECEIPT-001',['RECEIPT-001','RECEIPT-002','TEST-104'],run_receipt_tests)
     # Discover and execute every focused restricted-preview security module without opening a listener.
     def run_restricted_preview_security_tests():
         # Load the package directory through unittest's standard test discovery.
@@ -1972,6 +2041,8 @@ def run_api_tests():
 
         # Execute this statement as part of the module's documented control flow.
         run_case('API-I18N-001',['I18N-001','I18N-003'],validate_i18n_resources)
+        # Record collision-free Phase 0 registry, catalog-discovery, and translation-readiness evidence.
+        run_case('API-I18N-FOUNDATION-001',['I18N-006','I18N-007','TEST-101'],validate_i18n_resources)
 
         # Define the bots_audio_autoplay function used by this module.
         def bots_audio_autoplay():
@@ -2465,11 +2536,11 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Await the production registration's fully activated worker before issuing competing manifest, icon, or reload traffic.
                         registration_identity=pwa_page.evaluate("""async () => { const timeout=new Promise(resolve => setTimeout(async () => { const registrations=await navigator.serviceWorker.getRegistrations(); const worker=registrations[0]?.installing||registrations[0]?.waiting||registrations[0]?.active; resolve({ready:false,state:worker?.state||'missing',scriptUrl:worker?.scriptURL||''}); },20000)); const active=navigator.serviceWorker.ready.then(registration => ({ready:Boolean(registration.active),state:registration.active?.state||'',scriptUrl:registration.active?.scriptURL||''})); return await Promise.race([active,timeout]); }""")
                         # Require atomic shell installation and activation at the canonical script before a controlled navigation is attempted.
-                        assert registration_identity=={'ready':True,'state':'activated','scriptUrl':f'{base}/sw.js?v=9.5.0'},{'registration':registration_identity,'workerDiagnostics':pwa_worker_diagnostics[-4:]}
+                        assert registration_identity=={'ready':True,'state':'activated','scriptUrl':f'{base}/sw.js?v=9.5.2'},{'registration':registration_identity,'workerDiagnostics':pwa_worker_diagnostics[-4:]}
                         # Reload only after activation so the navigation is deterministically controlled even when the initial clients.claim event raced first paint.
                         pwa_page.reload(wait_until='domcontentloaded'); pwa_page.get_by_test_id('lobby').wait_for(timeout=8000)
                         # Wait synchronously for the controlled reload and canonical page identity without an async polling predicate.
-                        pwa_page.wait_for_function("() => Boolean(navigator.serviceWorker.controller) && window.CasinoPwa?.version==='9.5.0'",timeout=8000)
+                        pwa_page.wait_for_function("() => Boolean(navigator.serviceWorker.controller) && window.CasinoPwa?.version==='9.5.2'",timeout=8000)
                         # Require the same-context reload to classify as warm rather than a fresh install claim.
                         assert pwa_page.evaluate("() => document.documentElement.dataset.pwaStart")=='warm-start'
                         # Read the manifest link and both Android/iOS browser-foundation meta contracts.
@@ -2489,7 +2560,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Read the controlling worker identity without opening CacheStorage through a competing page transaction.
                         worker_identity=pwa_page.evaluate("async () => { const active=(await navigator.serviceWorker.getRegistrations()).find(reg => reg.active)?.active; return { pageVersion:window.CasinoPwa?.version||'', controller:Boolean(navigator.serviceWorker.controller), scriptUrl:active?.scriptURL||'' }; }")
                         # Require the active root worker and page to share the canonical packaged version.
-                        assert worker_identity['pageVersion']=='9.5.0' and worker_identity['controller'] and worker_identity['scriptUrl'].endswith('/sw.js?v=9.5.0'),worker_identity
+                        assert worker_identity['pageVersion']=='9.5.2' and worker_identity['controller'] and worker_identity['scriptUrl'].endswith('/sw.js?v=9.5.2'),worker_identity
                         # Fetch an authoritative API path and prove it does not enter any worker cache.
                         pwa_page.evaluate("async () => { await fetch('/api/v1/casino/state',{credentials:'include'}); }")
                         # Enter true offline mode and require native fail-closed controls plus a pre-fetch API rejection.
@@ -5911,6 +5982,16 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 assert 'spinning' in (page.get_by_test_id('roulette-rotor').get_attribute('class') or '')
                 # Verify the ball is still in its animated reveal phase.
                 assert 'spinning' in (page.get_by_test_id('roulette-ball').get_attribute('class') or '')
+                # Read the live CSS Animation identities and sampled keyframes from the resolving spin.
+                roulette_motion_runtime=page.evaluate("""() => { const read = node => { const style = getComputedStyle(node); const animation = node.getAnimations()[0]; return { name: style.animationName, timing: style.animationTimingFunction, duration: style.animationDuration, keyframes: animation?.effect?.getKeyframes().length ?? 0 }; }; return { rotor: read(document.querySelector('[data-testid="roulette-rotor"]')), ball: read(document.querySelector('[data-testid="roulette-ball"]')) }; }""")
+                # Define the hosted runtime proof for the tracked compatibility curves.
+                def roulette_motion_curve_runtime():
+                    # Require the rotor to run the named sampled coast-down without a second easing layer.
+                    assert roulette_motion_runtime['rotor']=={'name':'roulettePremiumWheelSpin','timing':'linear','duration':'3.6s','keyframes':21}
+                    # Require the ball to use its corresponding sampled counter-rotation curve.
+                    assert roulette_motion_runtime['ball']=={'name':'roulettePremiumBallSpin','timing':'linear','duration':'3.6s','keyframes':21}
+                # Record the exact live-animation identity before settlement removes the spinning classes.
+                run_case('BR-ROU-MOTION-CURVE-001',['ROU-069','ROU-070','TEST-102'],roulette_motion_curve_runtime)
                 # Read the spinning-state settlement card before the timed settlement rerender can replace it. (ROU-058, TEST-059)
                 roulette_spinning_settlement_text=page.get_by_test_id('roulette-settlement-card').inner_text()
                 # Define the player-facing spinning copy regression for issue #234.
@@ -5971,6 +6052,18 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 page.wait_for_timeout(700)
                 # Capture settled-state visual evidence for the Roulette worker handback.
                 shot('roulette-premium-settled.png')
+                # Ask the hosted browser to apply the player's reduced-motion preference.
+                page.emulate_media(reduced_motion='reduce')
+                # Probe only the two genuine mounted motion channels after temporarily restoring their spin class.
+                roulette_reduced_motion=page.evaluate("""() => { const rotor=document.querySelector('[data-testid="roulette-rotor"]'); const ball=document.querySelector('[data-testid="roulette-ball"]'); const rotorWasSpinning=rotor.classList.contains('spinning'); const ballWasSpinning=ball.classList.contains('spinning'); rotor.classList.add('spinning'); ball.classList.add('spinning'); const values={rotor:getComputedStyle(rotor).animationName,ball:getComputedStyle(ball).animationName}; rotor.classList.toggle('spinning',rotorWasSpinning); ball.classList.toggle('spinning',ballWasSpinning); return values; }""")
+                # Restore the normal media preference before later Roulette interaction cases continue.
+                page.emulate_media(reduced_motion='no-preference')
+                # Define the reduced-motion runtime portion of the focused browser case.
+                def roulette_reduced_motion_runtime():
+                    # Require both mounted Roulette motion channels to be suppressed by the actual media state.
+                    assert roulette_reduced_motion=={'rotor':'none','ball':'none'}
+                # Extend the focused runtime case with the actual reduced-motion media query result.
+                run_case('BR-ROU-REDUCED-MOTION-001',['ROU-070','TEST-102'],roulette_reduced_motion_runtime)
                 # Restore English before expanding shared controls and capturing route-return evidence.
                 page.evaluate("""async () => { const i18n = await import('/core/i18n.js'); await i18n.setLocale('en-US', { persistLocal: false }); }""")
                 # Expand autoplay through its player-facing disclosure control.
@@ -7593,6 +7686,70 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 page.get_by_test_id('admin-tab-audio').click(); page.get_by_test_id('admin-save-audio').wait_for(timeout=5000)
                 # Execute this statement as part of the module's documented control flow.
                 run_case('BR-AUDIO-001',['AUDIO-002','AUDIO-005'],lambda: page.get_by_test_id('admin-preview-voice').is_visible())
+                # Define the Phase 0 registry, formatter, fallback, discovery, and visual evidence gate.
+                def localization_foundation_browser():
+                    # Open the generic Admin Language/Locale surface.
+                    page.get_by_test_id('admin-tab-language').click()
+                    # Wait for the complete locked registry rather than one hard-coded locale control.
+                    page.get_by_test_id('admin-locale-registry').wait_for(timeout=5000)
+                    # Read the public runtime state used by shell and Admin selectors.
+                    foundation_state=page.evaluate("() => window.CasinoI18n.getLocaleState()")
+                    # Require all 25 metadata identities while exposing only complete English and Russian packs.
+                    assert len(foundation_state['localeRegistry'])==25 and [locale['id'] for locale in foundation_state['locales']]==['en-US','ru-RU']
+                    # Require the visible selector to exclude every metadata-only locale.
+                    assert page.get_by_test_id('admin-language-select').locator('option').count()==2
+                    # Require formatter selection to expose the registry's deterministic Intl identities independently from translations.
+                    assert page.get_by_test_id('admin-format-locale-select').locator('option').count()>=23
+                    # Load every bundled script and fullwidth-punctuation subset before evaluating or capturing the native-label registry.
+                    font_results=page.evaluate("""async () => { const samples=[['Casino Locale CJK','简体中文日本語廣東話香港繁體'],['Casino Locale CJK','（）'],['Casino Locale Devanagari','हिन्दीमराठी'],['Casino Locale Bengali','বাংলা'],['Casino Locale Tamil','தமிழ்'],['Casino Locale Telugu','తెలుగు']]; const rows=[]; for (const [family,text] of samples) { const declaration=`700 18px "${family}"`; const faces=await document.fonts.load(declaration,text); rows.push({family,text,loaded:faces.length>0,ready:document.fonts.check(declaration,text)}); } await document.fonts.ready; return rows; }""")
+                    # Reject hosted evidence when any required native-script asset is absent or not ready.
+                    assert all(result['loaded'] and result['ready'] for result in font_results), font_results
+                    # Validate every locked translation tag and configured formatter with the exact browser Intl runtime.
+                    intl_results=page.evaluate("() => window.CasinoI18n.getLocaleState().localeRegistry.map(locale => { try { const identity=new Intl.Locale(locale.id).toString(); const number=new Intl.NumberFormat(locale.formatLocale).format(12345.67); const date=new Intl.DateTimeFormat(locale.formatLocale).format(new Date('2032-02-03T04:05:06Z')); return { id: locale.id, identity, number, date, ok: Boolean(identity && number && date) }; } catch (error) { return { id: locale.id, ok: false, error: error.name }; } })")
+                    # Fail with bounded identity-only diagnostics if any configured browser formatter is unavailable.
+                    assert all(result['ok'] for result in intl_results), intl_results
+                    # Ask the real authenticated catalog for every current game-owned translation domain.
+                    catalog_result=page.evaluate("async () => { const response=await fetch('/api/v1/casino/state'); const payload=await response.json(); const games=payload.data.games; const i18n=await import('/core/i18n.js'); const discovered=i18n.registerI18nDomains(games.map(game => game.frontend.i18n_domain)); return { gameCount: games.length, gameDomains: games.map(game => game.frontend.i18n_domain), discovered }; }")
+                    # Require every unique live game domain in runtime diagnostics without a static game allowlist.
+                    assert catalog_result['gameCount']==len(set(catalog_result['gameDomains'])) and set(catalog_result['gameDomains']).issubset(set(catalog_result['discovered']))
+                    # Enter browser-default mode before proving a later concrete selector choice takes ownership.
+                    selector_state=page.evaluate("async () => { const i18n=await import('/core/i18n.js'); await i18n.setLocale('browser',{persistLocal:true,nextUseBrowserLocale:true,nextFormatLocale:'browser'}); return await i18n.setLocale('ru-RU',{persistLocal:false}); }")
+                    # Require an explicit ready locale to exit browser-default resolution without a reload.
+                    assert selector_state['locale']=='ru-RU' and selector_state['useBrowserLocale'] is False
+                    # Attempting an unfinished RTL locale must retain the installed English UI and safe LTR root.
+                    fallback_state=page.evaluate("async () => { const i18n=await import('/core/i18n.js'); const state=await i18n.setLocale('ar',{persistLocal:false,nextUseBrowserLocale:false}); return { locale:state.locale, dir:document.documentElement.dir, lang:document.documentElement.lang }; }")
+                    # Reject silent English masquerading as Arabic by requiring explicit selectable-readiness fallback.
+                    assert fallback_state=={'locale':'en-US','dir':'ltr','lang':'en-US'}
+                    # Define every governed Admin viewport for exact-head localization evidence.
+                    localization_viewports={'desktop_primary':{'width':1920,'height':1080},'desktop_compact':{'width':1440,'height':900},'tablet':{'width':1024,'height':900},'mobile':{'width':390,'height':844}}
+                    # Capture the generic registry in both installed locales.
+                    for locale in ('en-US','ru-RU'):
+                        # Switch through the production runtime without persisting beyond the disposable browser copy.
+                        page.evaluate("async locale => { const i18n=await import('/core/i18n.js'); await i18n.setLocale(locale,{persistLocal:true,nextUseBrowserLocale:false}); }",locale)
+                        # Wait for the locale-driven Admin rerender to restore the foundation surface.
+                        page.get_by_test_id('admin-localization-foundation').wait_for(timeout=5000)
+                        # Require all locked entries after each in-place language switch.
+                        assert page.get_by_test_id('admin-locale-registry-entry').count()==25
+                        # Reject replacement characters and unresolved interpolation placeholders in visible foundation copy.
+                        foundation_text=page.get_by_test_id('admin-localization-foundation').inner_text()
+                        # Preserve clean real copy across all native labels and translated headings.
+                        assert '�' not in foundation_text and '{ready}' not in foundation_text and '{total}' not in foundation_text
+                        # Reset both desktop Admin and mobile document scroll owners before evidence capture.
+                        page.evaluate("() => { const content=document.querySelector('.admin-content'); if (content) content.scrollTop=0; window.scrollTo(0,0); }")
+                        # Exercise every required viewport with horizontal containment and after-pass evidence.
+                        for viewport_id,viewport in localization_viewports.items():
+                            # Resize to the exact governed dimensions before layout inspection.
+                            page.set_viewport_size(viewport); page.wait_for_timeout(150)
+                            # Keep each artifact anchored at the foundation heading after responsive ownership changes.
+                            page.evaluate("() => { const content=document.querySelector('.admin-content'); if (content) content.scrollTop=0; window.scrollTo(0,0); }")
+                            # Reject page-level horizontal overflow on the complete registry surface.
+                            assert page.evaluate("() => document.documentElement.scrollWidth <= window.innerWidth + 1")
+                            # Save self-describing full-page evidence so all 25 metadata cards remain reviewable with exact-source provenance.
+                            game_evidence(f'after-pass-admin-localization-foundation-{locale}-{viewport_id}.png','admin',['localization_locked_registry','localization_selector_persistence','localization_formatter_metadata','localization_catalog_domains','localization_safe_fallback'],locale,viewport_id)
+                    # Restore the primary viewport and English without leaving a browser preference behind.
+                    page.set_viewport_size({'width':1920,'height':1080}); page.evaluate("async () => { const i18n=await import('/core/i18n.js'); await i18n.setLocale('en-US',{persistLocal:false,nextUseBrowserLocale:false}); localStorage.removeItem('casino.locale.settings.v1'); }")
+                # Record locked registry, browser Intl, safe fallback, catalog discovery, and governed visual evidence.
+                run_case('BR-I18N-FOUNDATION-001',['I18N-006','I18N-007','TEST-101'],localization_foundation_browser)
                 # Define the admin_i18n function used by this module.
                 def admin_i18n():
                     # Open the new Language/Locale tab.

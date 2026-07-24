@@ -3060,6 +3060,26 @@
       "notes": "The browser assertion reads the first mounted wager-setup drawer before any wager or deal can create the backend shoe."
     },
     {
+      "id": "BAC-026",
+      "module": "Baccarat",
+      "description": "Baccarat preserves one stable visible Deal action and deterministically returns to wager-ready state through 2,000 consecutive settled browser UI coups without a replaced target, timeout, retry, duplicate action, or stranded round.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-BAC-SUSTAINED-001"
+      ],
+      "implementation_files": [
+        "tests/baccarat_sustained.py",
+        "tests/ui_50000.py",
+        "tests/unit/ui_50000_tests.py",
+        ".github/workflows/browser-tests.yml",
+        "docs/long_test_suites.md"
+      ],
+      "introduced_in": "issue-265-baccarat-sustained-qualification",
+      "changed_in": "issue-265-baccarat-sustained-qualification",
+      "notes": "The exact-source profile uses one disposable loopback runtime, one synthetic account, one browser context, exactly 2,000 rounds, and one attempt per round; any control disappearance, wager-ready timeout, browser diagnostic, isolation failure, or cleanup failure keeps the result red."
+    },
+    {
       "id": "KENO-001",
       "module": "Keno",
       "description": "Keno supports numbers 1 through 80.",
@@ -4700,11 +4720,13 @@
         "contracts/compatibility/app-9.2.0.json",
         "contracts/compatibility/app-9.3.0.json",
         "contracts/compatibility/app-9.4.0.json",
-        "contracts/compatibility/app-9.5.0.json"
+        "contracts/compatibility/app-9.5.0.json",
+        "contracts/compatibility/app-9.5.1.json",
+        "contracts/compatibility/app-9.5.2.json"
       ],
       "introduced_in": "9.2.0",
-      "changed_in": "9.5.0",
-      "notes": "Branch and ordinary manual candidates remain unpublished. The historical one-time owner-dispatched recovery created the retained v9.2.0 predecessor without overwrite or deletion paths. Normal v9.5.0 publication requires the verified retained v9.4.0 predecessor manifest and the protected release gates. Rollback is application-only and never reverses the MySQL schema."
+      "changed_in": "9.5.2",
+      "notes": "Branch and ordinary manual candidates remain unpublished. The historical one-time owner-dispatched recovery created the retained v9.2.0 predecessor without overwrite or deletion paths. Normal v9.5.2 publication requires the verified retained v9.5.1 predecessor manifest and the protected release gates. Rollback is application-only and never reverses the MySQL schema."
     },
     {
       "id": "BOT-001",
@@ -9436,8 +9458,8 @@
       "browser_tests": ["BR-INVITE-001"],
       "implementation_files": ["web/admin.html", "web/admin.js", "web/app.js", "web/core/api.js", "web/i18n/en-US/admin.json", "web/i18n/ru-RU/admin.json", "web/i18n/en-US/shell.json", "web/i18n/ru-RU/shell.json", "tests/visual/visual_matrix.json"],
       "introduced_in": "issue-332-admin-invitations",
-      "changed_in": "issue-332-admin-invitations",
-      "notes": "After successful redemption the bearer is removed from browser history before returning to private-beta sign in."
+      "changed_in": "pr-368-expired-session-recovery",
+      "notes": "After successful redemption the bearer is removed from browser history before returning to private-beta sign in; expected anonymous current-user probes never replace the public enrollment form with an authenticated-session expiry gate."
     },
     {
       "id": "INVITE-006",
@@ -9572,6 +9594,54 @@
       "notes": "The feedback domain is loaded by both the player shell and Admin application."
     },
     {
+      "id": "I18N-006",
+      "module": "Application",
+      "description": "The Phase 0 localization registry preserves the owner-locked order of 25 translation identities with native labels, direction, script, deterministic formatter locale, fallback chain, resource readiness, and review state while exposing only complete resource packs as selectable interface locales.",
+      "status": "PASS",
+      "api_tests": ["API-I18N-FOUNDATION-001"],
+      "browser_tests": ["BR-I18N-FOUNDATION-001"],
+      "implementation_files": ["web/i18n/manifest.json", "web/core/i18n.js", "web/admin.js", "web/styles.css", "web/assets/fonts/", "docs/localization_foundation.md"],
+      "introduced_in": "issue-128-phase-0-localization-foundation",
+      "changed_in": "issue-128-phase-0-localization-foundation",
+      "notes": "Only en-US and ru-RU are ready in Phase 0. Metadata-only identities are never presented as translated or linguistically certified. Compact bundled OFL font subsets keep every locked native label legible on clean hosted runners without runtime font-network access."
+    },
+    {
+      "id": "I18N-007",
+      "module": "Application",
+      "description": "Locale selection and browser-local persistence use ready resource packs, planned identities fall back safely without changing the document language or direction, formatter choices use declared browser-supported identities, and game translation domains are registered from the live catalog rather than a static game allowlist.",
+      "status": "PASS",
+      "api_tests": ["API-I18N-FOUNDATION-001"],
+      "browser_tests": ["BR-I18N-FOUNDATION-001"],
+      "implementation_files": ["web/core/i18n.js", "web/app.js", "web/admin.js", "tests/run_tests.py"],
+      "introduced_in": "issue-128-phase-0-localization-foundation",
+      "changed_in": "issue-128-phase-0-localization-foundation",
+      "notes": "The frozen v1 API is unchanged. Catalog discovery consumes existing additive game descriptors and does not load unvisited translation resources."
+    },
+    {
+      "id": "I18N-008",
+      "module": "Application",
+      "description": "Each future translation wave supplies complete catalog and representative-game copy, bidirectional and script-safe rendering, human review state, and real-backend visual acceptance for every newly ready locale before that locale becomes selectable.",
+      "status": "PLANNED",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": ["tests/visual/visual_matrix.json", "docs/localization_foundation.md"],
+      "introduced_in": "issue-128-phase-0-localization-foundation",
+      "changed_in": "issue-128-phase-0-localization-foundation",
+      "notes": "Phase 0 installs matrix hooks and readiness gates only; it does not claim the 23 held translations, linguistic certification, or future-wave evidence."
+    },
+    {
+      "id": "TEST-101",
+      "module": "Tests",
+      "description": "Localization foundation tests lock all 25 metadata identities and RTL membership, require installed-resource key and placeholder parity across catalog-discovered domains, validate every configured translation and formatter tag and each complete bundled native-script label including fullwidth punctuation in the browser runtime, reject selection of unfinished locales, prove browser-local persistence, and capture the Admin foundation in both installed locales at all four governed viewports.",
+      "status": "PASS",
+      "api_tests": ["API-I18N-FOUNDATION-001"],
+      "browser_tests": ["BR-I18N-FOUNDATION-001"],
+      "implementation_files": ["tests/run_tests.py", "tests/visual/visual_matrix.json", "web/styles.css", "web/assets/fonts/"],
+      "introduced_in": "issue-128-phase-0-localization-foundation",
+      "changed_in": "issue-128-phase-0-localization-foundation",
+      "notes": "This collision-free ID was allocated after reconciling against current main where TEST-100 belongs to the shared motion foundation. TEST-091, TEST-092, TEST-094, TEST-095, TEST-096, TEST-097, TEST-098, TEST-099, and TEST-100 retain their existing owners or reservations."
+    },
+    {
       "id": "UX-019",
       "module": "Application",
       "description": "Problem reporting and Admin triage remain keyboard-operable, focus-visible, scroll-contained, touch-sized, readable at 200 percent zoom, reduced-motion safe, and responsive across all governed viewports with paste, drop, file, preview-removal, retry, filter, draft, export, and deletion states.",
@@ -9616,8 +9686,8 @@
       "browser_tests": ["BR-PWA-001"],
       "implementation_files": ["web/sw.js", "web/core/pwa.js", "web/core/api.js", "web/app.js", "casino/app.py", "casino/wsgi.py", "web/i18n/en-US/shell.json", "web/i18n/ru-RU/shell.json", "docs/pwa_foundation.md"],
       "introduced_in": "issue-182-pwa-foundation",
-      "changed_in": "issue-182-pwa-foundation",
-      "notes": "Install is atomic, activation prunes only prior Casino static-shell caches, update activation is user-requested, stale-client and failed-refresh states are explicit, and no deployment or public exposure is authorized."
+      "changed_in": "pr-368-expired-session-recovery",
+      "notes": "Install is atomic, activation prunes only prior Casino static-shell caches, update activation is user-requested, stale-client and failed-refresh states are explicit, protected-session expiry clears mounted authenticated chrome, anonymous enrollment remains intact, and no deployment or public exposure is authorized."
     },
     {
       "id": "TEST-095",
@@ -9628,8 +9698,8 @@
       "browser_tests": ["BR-PWA-001"],
       "implementation_files": ["tests/pwa_tests.py", "tests/run_tests.py", "tests/visual/visual_matrix.json"],
       "introduced_in": "issue-182-pwa-foundation",
-      "changed_in": "issue-182-pwa-foundation",
-      "notes": "TEST-092 remains exclusively owned by formal 50,000-cycle qualification. Android/iOS metadata is checked as a browser foundation only; native install and relaunch evidence remains deferred with full issue #182."
+      "changed_in": "pr-368-expired-session-recovery",
+      "notes": "TEST-092 remains exclusively owned by formal 50,000-cycle qualification. Browser-free coverage distinguishes mounted-session expiry from anonymous enrollment probes; Android/iOS metadata is checked as a browser foundation only, and native install and relaunch evidence remains deferred with full issue #182."
     },
     {
       "id": "TEST-096",
@@ -9646,6 +9716,28 @@
       "introduced_in": "issue-229-232-roulette-clear-refund-closeout",
       "changed_in": "issue-229-232-roulette-clear-refund-closeout",
       "notes": "TEST-094 is owned by problem reporting/Admin triage and TEST-095 is owned by the PWA foundation; this closeout uses a new permanent test requirement instead of reusing either ID."
+    },
+    {
+      "id": "TEST-099",
+      "module": "Tests",
+      "description": "An exact-source browser qualification runs one uninterrupted Baccarat session for exactly 2,000 rendered-control coups, permits only one attempt per round, requires exactly 2,000 accepted visible Deal activations and settled-to-wager-ready transitions, and rejects source drift, gaps, retries, browser diagnostics, wallet/account isolation failures, incomplete governed screenshots, or listener/runtime cleanup residue.",
+      "status": "PASS",
+      "api_tests": [
+        "UI-50000-HARNESS-001"
+      ],
+      "browser_tests": [
+        "BR-BAC-SUSTAINED-001"
+      ],
+      "implementation_files": [
+        "tests/baccarat_sustained.py",
+        "tests/ui_50000.py",
+        "tests/unit/ui_50000_tests.py",
+        ".github/workflows/browser-tests.yml",
+        "docs/long_test_suites.md"
+      ],
+      "introduced_in": "issue-265-baccarat-sustained-qualification",
+      "changed_in": "issue-265-baccarat-sustained-qualification",
+      "notes": "TEST-091 through TEST-096 retain their existing permanent ownership. This focused profile reuses the accepted full-catalog rendered-control implementation but disables resumption, replication, and per-cycle retries so a recovered control replacement cannot satisfy issue #265."
     },
     {
       "id": "TEST-092",
@@ -9665,6 +9757,288 @@
       "introduced_in": "issue-227-ui-50000-ci-replacement",
       "changed_in": "issue-227-draw-poker-hold-serialization",
       "notes": "The formal qualification runs only on approved non-local GitHub Actions workers; local Playwright, Chromium, and heavy-load execution remain prohibited. Geometry inspection restores every ancestor and window scroll position so one viewport cannot mutate later evidence, route-owned essential-stage contracts cover non-control theater such as Crown and Anchor dice and result panels, Roulette wager/refund rerenders commit before the strict spinning-state observation while the primary shard retries real reachable Rebet states until the literal activation floor is met, and draw-poker workers wait for the complete five-position decision state, balance the hold-control deficit, and observe the persisted held rerender before Draw."
+    },
+    {
+      "id": "MOTION-004",
+      "module": "Core",
+      "description": "A reusable presentation lifecycle enforces idle, locking, running, settling, and settled phases with explicit failed and aborted recovery, one opaque action owner, stale-generation rejection, and exact preservation of an already-authoritative result.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": ["web/core/motion.js", "tests/unit/dice_motion_primitives.test.mjs"],
+      "introduced_in": "work-items-21-30-motion-foundation",
+      "changed_in": "work-items-21-30-motion-foundation",
+      "notes": "Issue #168 foundation only: this controller performs no API call, randomness, wallet mutation, ledger settlement, or game-specific visual change."
+    },
+    {
+      "id": "MOTION-005",
+      "module": "Core",
+      "description": "Immutable named motion profiles validate normal, fast, and reduced budgets and resolve the live reduced-motion preference at each atomic action boundary without arbitrary real-time sleeps.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": ["web/core/motion.js", "tests/unit/dice_motion_primitives.test.mjs"],
+      "introduced_in": "work-items-21-30-motion-foundation",
+      "changed_in": "work-items-21-30-motion-foundation",
+      "notes": "The profile is a deterministic timing seam; each game still owns reviewed budgets and exact-head motion evidence."
+    },
+    {
+      "id": "MOTION-006",
+      "module": "Core",
+      "description": "Every adopted animated action presents one server- or engine-authoritative committed outcome and cannot choose, replace, conceal past capture, duplicate, or financially settle that outcome.",
+      "status": "PLANNED",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": ["web/core/motion.js", "docs/motion_acceptance_contract.md"],
+      "introduced_in": "work-items-21-30-motion-foundation",
+      "changed_in": "work-items-21-30-motion-foundation",
+      "notes": "Issue #168 adoption requirement; it moves to PASS only after affected games and their authoritative surfaces adopt and prove the contract."
+    },
+    {
+      "id": "MOTION-007",
+      "module": "Application",
+      "description": "Repeated pointer, keyboard, touch, and autoplay input cannot overlap one atomic animated action, and phase, result, history, wallet, audio, accessibility, and Admin presentation agree on the same round and outcome.",
+      "status": "PLANNED",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": ["web/core/motion.js", "docs/motion_acceptance_contract.md"],
+      "introduced_in": "work-items-21-30-motion-foundation",
+      "changed_in": "work-items-21-30-motion-foundation",
+      "notes": "Issue #168 requires game-owned browser and ledger agreement evidence before this shared adoption requirement can pass."
+    },
+    {
+      "id": "MOTION-008",
+      "module": "Application",
+      "description": "Navigation, locale change, logout, unmount, refresh, browser history, hidden-tab recovery, and API failure cancel presentation-owned timers, listeners, audio, and classes while a committed action restores once and an uncommitted action returns safely.",
+      "status": "PLANNED",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": ["web/core/motion.js", "docs/motion_acceptance_contract.md"],
+      "introduced_in": "work-items-21-30-motion-foundation",
+      "changed_in": "work-items-21-30-motion-foundation",
+      "notes": "The shared lifecycle invalidates stale tokens, but every adopted game must still prove route, refresh, failure, and persistence behavior."
+    },
+    {
+      "id": "MOTION-009",
+      "module": "Application",
+      "description": "Adopted motion uses coherent transform and opacity paths with no teleport, reverse jump, blank seam, contradictory reveal, scroll hijack, or control loss; governed traces keep 95th-percentile frame intervals at or below 33 ms, avoid unexplained 150 ms freezes, and hold key geometry within one CSS pixel.",
+      "status": "PLANNED",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": ["docs/motion_acceptance_contract.md", "tests/visual/visual_matrix.json"],
+      "introduced_in": "work-items-21-30-motion-foundation",
+      "changed_in": "work-items-21-30-motion-foundation",
+      "notes": "Issue #168 performance and stability evidence must come from the exact adopted game head, not this browser-inert foundation."
+    },
+    {
+      "id": "MOTION-010",
+      "module": "Application",
+      "description": "Reduced motion is short and non-repetitive; motion, color, and sound are never the sole result signal; live-region announcements occur once; mute and focus remain stable; and EN/RU copy cannot alter correctness, ownership, layout, or cleanup.",
+      "status": "PLANNED",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": ["docs/motion_acceptance_contract.md", "tests/visual/visual_matrix.json"],
+      "introduced_in": "work-items-21-30-motion-foundation",
+      "changed_in": "work-items-21-30-motion-foundation",
+      "notes": "Issue #168 accessibility, comfort, localization, and audio acceptance remains game-owned."
+    },
+    {
+      "id": "MOTION-011",
+      "module": "Tests",
+      "description": "Every adopted animated surface provides deterministic injected-clock tests, rapid-input and recovery browser tests, normal and reduced-motion traces, EN/RU governed-viewport videos with exact sidecars, zero-residue cleanup, and independent exact-head review.",
+      "status": "PLANNED",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": ["docs/motion_acceptance_contract.md", "tests/visual/visual_matrix.json"],
+      "introduced_in": "work-items-21-30-motion-foundation",
+      "changed_in": "work-items-21-30-motion-foundation",
+      "notes": "Concept art, static screenshots, known-failing captures, and generic suite success are not sufficient acceptance evidence."
+    },
+    {
+      "id": "ROU-063",
+      "module": "Roulette",
+      "description": "One session-bound Roulette spin commits one authoritative pocket and settlement, and wheel, ball, table, result, history, voice, wallet, ledger, and Admin telemetry agree on that pocket and round without overlapping input.",
+      "status": "PLANNED",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": ["web/games/roulette.js", "docs/motion_acceptance_contract.md"],
+      "introduced_in": "work-items-21-30-motion-foundation",
+      "changed_in": "work-items-21-30-motion-foundation",
+      "notes": "Permanent allocation for issue #169; no Roulette source or frozen v1 contract changes are included in the foundation."
+    },
+    {
+      "id": "ROU-064",
+      "module": "Roulette",
+      "description": "Roulette uses the complete named physical sequence with default Authentic reveal in 15 to 18 seconds, optional Quick reveal in 8 to 10 seconds, autoplay reveal in 6 to 8 seconds, and a non-spinning reduced-motion reveal in 400 to 800 ms without changing the committed result.",
+      "status": "PLANNED",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": ["web/games/roulette.js", "docs/motion_acceptance_contract.md"],
+      "introduced_in": "work-items-21-30-motion-foundation",
+      "changed_in": "work-items-21-30-motion-foundation",
+      "notes": "The owner timing correction supersedes the earlier 7.5 to 9.5 second recommendation."
+    },
+    {
+      "id": "ROU-065",
+      "module": "Roulette",
+      "description": "The rotor and ball counter-rotate with separate continuous velocity profiles; Authentic mode shows at least 16 ball circuits, progressive deceleration, bounded rim departure and contacts, pocket-relative capture, and at least one second of ball-and-pocket co-rotation without teleport or transform reset.",
+      "status": "PLANNED",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": ["web/games/roulette.js", "docs/motion_acceptance_contract.md"],
+      "introduced_in": "work-items-21-30-motion-foundation",
+      "changed_in": "work-items-21-30-motion-foundation",
+      "notes": "Final ball alignment must be within half a pocket arc and two CSS pixels on the controlled viewport."
+    },
+    {
+      "id": "ROU-066",
+      "module": "Roulette",
+      "description": "Roulette locks wagering and mode controls during the atomic spin, conceals the result until visible pocket capture, and then reveals highlight, history, voice, and wallet celebration exactly once with player-facing phase copy.",
+      "status": "PLANNED",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": ["web/games/roulette.js", "docs/motion_acceptance_contract.md"],
+      "introduced_in": "work-items-21-30-motion-foundation",
+      "changed_in": "work-items-21-30-motion-foundation",
+      "notes": "This strengthens existence-only ROU-042 and ROU-054 without changing Roulette mathematics."
+    },
+    {
+      "id": "ROU-067",
+      "module": "Roulette",
+      "description": "Roulette navigation, refresh, autoplay stop, locale change, mute, and API failure recover the authoritative committed round once or a safe pre-commit betting state and leave no duplicate ledger/history event, orbit, glow, timer, sound, or disabled-control residue.",
+      "status": "PLANNED",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": ["web/games/roulette.js", "docs/motion_acceptance_contract.md"],
+      "introduced_in": "work-items-21-30-motion-foundation",
+      "changed_in": "work-items-21-30-motion-foundation",
+      "notes": "Acceptance includes route-away/return and refresh at both pre-commit and post-commit boundaries."
+    },
+    {
+      "id": "ROU-068",
+      "module": "Tests",
+      "description": "Roulette motion acceptance maps at least 100 committed spins and supplies exact-head frame, transform, capture, alignment, geometry, cleanup, wallet/history/ledger, EN/RU, four-viewport, normal, and reduced-motion video evidence with independent review.",
+      "status": "PLANNED",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": ["tests/visual/visual_matrix.json", "docs/motion_acceptance_contract.md"],
+      "introduced_in": "work-items-21-30-motion-foundation",
+      "changed_in": "work-items-21-30-motion-foundation",
+      "notes": "Static screenshots alone cannot satisfy issue #169."
+    },
+    {
+      "id": "ROU-069",
+      "module": "Roulette",
+      "description": "The legacy Roulette rotor presentation avoids the reported strobing regression by using a finely sampled monotonic coast-down under linear timing whose modeled 60 Hz rotor step remains below one European-wheel pocket; the browser runtime exposes that same named linear 3.6-second animation while a spin is resolving.",
+      "status": "PASS",
+      "api_tests": [
+        "UI-ROU-MOTION-001"
+      ],
+      "browser_tests": [
+        "BR-ROU-MOTION-CURVE-001",
+        "BR-ROU-REDUCED-MOTION-001"
+      ],
+      "implementation_files": [
+        "web/games/roulette.js",
+        "tests/roulette_motion_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-169-wheel-motion-compatibility",
+      "changed_in": "issue-169-wheel-motion-compatibility",
+      "notes": "This bounded compatibility fix does not satisfy or supersede planned ROU-063 through ROU-068, whose complete physical sequence, timing profiles, recovery matrix, 100-spin proof, video evidence, and independent acceptance remain outstanding."
+    },
+    {
+      "id": "ROU-070",
+      "module": "Roulette",
+      "description": "The legacy Roulette rotor and ball counter-rotate through whole-turn animation endpoints so releasing their animation cannot introduce an end-of-spin angular pop, and the browser runtime suppresses rotor, ball, settle, and orbit decoration when reduced motion is requested without changing the authoritative result.",
+      "status": "PASS",
+      "api_tests": [
+        "UI-ROU-MOTION-001"
+      ],
+      "browser_tests": [
+        "BR-ROU-MOTION-CURVE-001",
+        "BR-ROU-REDUCED-MOTION-001"
+      ],
+      "implementation_files": [
+        "web/games/roulette.js",
+        "tests/roulette_motion_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-169-wheel-motion-compatibility",
+      "changed_in": "issue-169-wheel-motion-compatibility",
+      "notes": "This requirement covers only the existing 3.6-second presentation. The planned 400-to-800 ms reduced-motion lifecycle and full authoritative motion adoption remain governed by ROU-064 and the other planned issue #169 requirements."
+    },
+    {
+      "id": "SLOT-030",
+      "module": "Slots",
+      "description": "One session-bound Slots spin commits one authoritative set of reel stops, grid, wins, bonus and progressive state, round, wallet, ledger, history, and telemetry, and repeated input or autoplay cannot overlap or duplicate settlement.",
+      "status": "PLANNED",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": ["web/games/slots.js", "docs/motion_acceptance_contract.md"],
+      "introduced_in": "work-items-21-30-motion-foundation",
+      "changed_in": "work-items-21-30-motion-foundation",
+      "notes": "Permanent allocation for issue #170; no Slots source or frozen v1 contract changes are included in the foundation."
+    },
+    {
+      "id": "SLOT-031",
+      "module": "Slots",
+      "description": "Five Slots reels move independently and continuously through input lock, acceleration, full-speed travel, staggered deceleration, final stop, result evaluation, credit reveal, and optional bonus transition with no whole-grid swap, blank seam, backward jump, or frozen placeholder.",
+      "status": "PLANNED",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": ["web/games/slots.js", "docs/motion_acceptance_contract.md"],
+      "introduced_in": "work-items-21-30-motion-foundation",
+      "changed_in": "work-items-21-30-motion-foundation",
+      "notes": "Every stopped reel must retain its exact committed symbols while later reels continue."
+    },
+    {
+      "id": "SLOT-032",
+      "module": "Slots",
+      "description": "Slots reaches the final reel stop in 3.8 to 4.8 seconds for Slow, 2.8 to 3.6 seconds for Medium, 1.6 to 2.2 seconds for Fast, and 400 to 800 ms for reduced motion, with adjacent normal-profile stops staggered by 140 to 240 ms.",
+      "status": "PLANNED",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": ["web/games/slots.js", "docs/motion_acceptance_contract.md"],
+      "introduced_in": "work-items-21-30-motion-foundation",
+      "changed_in": "work-items-21-30-motion-foundation",
+      "notes": "Any committed bonus anticipation is bounded to one additional second and cannot alter the outcome."
+    },
+    {
+      "id": "SLOT-033",
+      "module": "Slots",
+      "description": "Each stopped reel aligns its visible symbols within one CSS pixel and remains stationary; win lines and highlights begin only after the final stop, preserve symbol identity, remain bounded and non-blocking, and provide non-celebratory loss and reduced-motion alternatives.",
+      "status": "PLANNED",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": ["web/games/slots.js", "docs/motion_acceptance_contract.md"],
+      "introduced_in": "work-items-21-30-motion-foundation",
+      "changed_in": "work-items-21-30-motion-foundation",
+      "notes": "Reel-stop and result sounds follow actual phase events, respect mute, avoid autoplay stacking, and cancel on unmount."
+    },
+    {
+      "id": "SLOT-034",
+      "module": "Slots",
+      "description": "Slots autoplay starts only after settlement, Stop prevents a new spin, and free-spin, wallet, route, refresh, locale, history, API-error, and browser-history recovery preserve the authoritative result without duplicate debit, payout, bonus, or stale presentation residue.",
+      "status": "PLANNED",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": ["web/games/slots.js", "docs/motion_acceptance_contract.md"],
+      "introduced_in": "work-items-21-30-motion-foundation",
+      "changed_in": "work-items-21-30-motion-foundation",
+      "notes": "The cabinet, action rail, wallet, and result region remain stable without motion-driven scrolling or overflow."
+    },
+    {
+      "id": "SLOT-035",
+      "module": "Tests",
+      "description": "Slots motion acceptance maps at least 100 committed spins across losses, wins, wilds, scatters, free spins, progressive state, repeated grids, and every speed profile and supplies exact-head transform, stop, alignment, cleanup, EN/RU, four-viewport, normal, and reduced-motion video evidence with independent review.",
+      "status": "PLANNED",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": ["tests/visual/visual_matrix.json", "docs/motion_acceptance_contract.md"],
+      "introduced_in": "work-items-21-30-motion-foundation",
+      "changed_in": "work-items-21-30-motion-foundation",
+      "notes": "Static screenshots alone cannot satisfy issue #170."
     },
     {
       "id": "RESET-001",
@@ -9735,9 +10109,139 @@
       "notes": "Issue #334 enumeration-safety and fail-closed proof."
     },
     {
+      "id": "TOOL-007",
+      "module": "Tooling",
+      "description": "Deployment tooling ships inside every immutable application archive, derives build provenance from the verified release manifest, and writes exactly one non-secret CASINO_BUILD_SHA assignment atomically; any manifest whose recorded commit is not a full lowercase 40-character Git SHA is refused with a non-zero status and no write, and the tracked service unit sources the generated fragment after the operator secret file so a redeployment always exports the running commit.",
+      "status": "PASS",
+      "api_tests": [
+        "DEPLOY-PROVENANCE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "scripts/write_release_env.py",
+        "scripts/package_app.py",
+        "deploy/systemd/casino.service",
+        "docs/production_service.md",
+        "tests/release_env_tests.py"
+      ],
+      "introduced_in": "issue-287-build-provenance",
+      "changed_in": "issue-287-build-provenance",
+      "notes": "Allocated for GitHub issue #287. The runtime still never invokes Git or inspects checkout paths; provenance arrives only as configuration. Anonymous liveness stays free of build metadata under OPS-001."
+    },
+    {
+      "id": "TEST-098",
+      "module": "Tests",
+      "description": "Listener-free evidence verifies deployment build provenance: every immutable application archive contains the provenance writer; a valid manifest yields exactly one pinned assignment accepted unchanged by the Operations sanitizer; short/uppercase/non-hexadecimal/absent commits fail closed without writing; unreadable manifests and destination-write failures emit bounded path-free errors while leaving an earlier fragment byte-identical; a redeployment replaces rather than appends the superseded commit; and the tracked unit sources the generated fragment last.",
+      "status": "PASS",
+      "api_tests": [
+        "DEPLOY-PROVENANCE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/release_env_tests.py",
+        "tests/release_artifact_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-287-build-provenance",
+      "changed_in": "issue-287-build-provenance",
+      "notes": "Allocated for GitHub issue #287. Every fixture is written into an isolated temporary directory; no repository file and no listener is touched."
+    },
+    {
+      "id": "TEST-100",
+      "module": "Tests",
+      "description": "Dependency-free deterministic unit tests prove motion timing profiles, reduced-motion resolution, complete lifecycle phase order, authoritative-result identity, overlap rejection, illegal-skip rejection, explicit recovery, stale-generation rejection, and route-disposal invalidation.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/unit/dice_motion_primitives.test.mjs",
+        "tests/helpers/motion_test_helpers.mjs",
+        "web/core/motion.js"
+      ],
+      "introduced_in": "work-items-21-30-motion-foundation",
+      "changed_in": "work-items-21-30-motion-foundation",
+      "notes": "TEST-091, TEST-092, TEST-094, TEST-095, TEST-096, TEST-097, TEST-098, and TEST-099 retain their prior permanent ownership or reservation; this new ID covers only the shared motion foundation."
+    },
+    {
+      "id": "TEST-102",
+      "module": "Tests",
+      "description": "Focused listener-free evidence parses the tracked Roulette curves to prove the anti-strobe rotor budget, monotonic coast-down, whole-turn endpoints, counter-rotation, linear timing, fine sampling, and all four reduced-motion suppression rules; the hosted Browser suite independently proves the live spin uses the expected named linear 3.6-second animations with all sampled stops and that reduced-motion media suppresses the mounted rotor and ball channels.",
+      "status": "PASS",
+      "api_tests": [
+        "UI-ROU-MOTION-001"
+      ],
+      "browser_tests": [
+        "BR-ROU-MOTION-CURVE-001",
+        "BR-ROU-REDUCED-MOTION-001"
+      ],
+      "implementation_files": [
+        "tests/roulette_motion_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-169-wheel-motion-compatibility",
+      "changed_in": "issue-169-wheel-motion-compatibility",
+      "notes": "Allocated after TEST-101 became permanent on current main. This proof is intentionally narrower than the planned ROU-068 exact-head video and 100-spin acceptance packet."
+    },
+    {
+      "id": "USER-006",
+      "module": "Core",
+      "description": "Every authenticated persistent user has a personal locale and sound preference record that defaults deterministically, accepts only the installed locale catalog and strict booleans, rejects unknown fields, supports optimistic revisions, persists atomically through the configured JSON or MySQL document provider, and degrades structurally malformed records to canonical defaults. Guest trials receive a non-persisted response and never create a durable personal-settings document.",
+      "status": "PASS",
+      "api_tests": [
+        "API-SETTINGS-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/user_settings.py",
+        "casino/app.py",
+        "contracts/openapi/user-settings.v2.yaml",
+        "tests/user_settings_tests.py"
+      ],
+      "introduced_in": "issue-352-my-settings-foundation",
+      "changed_in": "issue-352-my-settings-foundation",
+      "notes": "Allocated for the server-only foundation in GitHub issue #352. The subject is derived from the active session, unknown identity or privilege fields reject the complete update, and the broader My Settings UI and browser matrix remain open."
+    },
+    {
+      "id": "USER-007",
+      "module": "Core",
+      "description": "Personal activity reads use one reusable self-scoped ledger pagination boundary: the active session supplies the player subject, provider rows are re-filtered to that subject, malformed or hostile page values are bounded safely, optional game filtering cannot widen ownership, newest-first pages are capped at 50 rows from a bounded source window, and published rows expose only allowlisted presentation fields plus a short correlation tail instead of raw durable identifiers.",
+      "status": "PASS",
+      "api_tests": [
+        "API-SETTINGS-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/self_history.py",
+        "casino/core/user_settings.py",
+        "casino/app.py",
+        "contracts/openapi/user-settings.v2.yaml",
+        "tests/user_settings_tests.py"
+      ],
+      "introduced_in": "issue-352-my-settings-foundation",
+      "changed_in": "issue-352-my-settings-foundation",
+      "notes": "Allocated for the server-only foundation in GitHub issue #352. The shared reader and privacy-safe display reference are intentionally reusable by the deferred player-receipt lane without creating a second ledger authority."
+    },
+    {
+      "id": "TEST-103",
+      "module": "Tests",
+      "description": "Listener-free isolated-provider evidence verifies personal-setting defaults and durable updates, cross-subject isolation, strict locale and sound validation, whole-payload privilege rejection, optimistic conflict handling, malformed-container recovery and malformed-field fallback, guest non-persistence, self-history privacy against a populated neighbour, bounded and disjoint newest-first pagination, safe malformed query handling, game filtering, subjectless rejection, additive v2 route shapes, exact contract digest pinning, and removal of raw durable round identifiers.",
+      "status": "PASS",
+      "api_tests": [
+        "API-SETTINGS-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/user_settings_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-352-my-settings-foundation",
+      "changed_in": "issue-352-my-settings-foundation",
+      "notes": "Allocated after TEST-102 became permanent on current main. Every test uses an isolated temporary provider, and no listener, browser, credential, repository runtime file, provider network, or live system is touched."
+    },
+    {
       "id": "RECEIPT-001",
       "module": "Core",
-      "description": "Every committed play-token movement is explainable from ledger data alone. Classification is driven by the authoritative signed amount and refined by the committed transaction type, so a movement is never explained from client state and can never disagree with the balance it reports. A stake returned after an interrupted round is explained as an interrupted refund rather than a win, and an unrecognized future transaction type degrades to a correct generic movement explanation rather than a confidently wrong specific one.",
+      "description": "Every published play-token receipt is derived only from an authoritative committed ledger movement: its signed amount, committed transaction type, game, timestamp, round binding, and resulting balance. Signed amount determines movement direction and the committed type refines stake, refund, payout, or adjustment classification; an interrupted-round stake return is explained as a refund rather than a win, while an unknown future transaction type degrades to the directionally correct generic category instead of invented game detail.",
       "status": "PASS",
       "api_tests": [
         "API-RECEIPT-001"
@@ -9746,35 +10250,38 @@
       "implementation_files": [
         "casino/core/receipts.py",
         "casino/app.py",
+        "contracts/openapi/user-settings.v2.yaml",
         "tests/receipt_tests.py"
       ],
       "introduced_in": "issue-161-outcome-receipts",
       "changed_in": "issue-161-outcome-receipts",
-      "notes": "Allocated for GitHub issue #161. Deliberately avoids a per-game lookup table because the catalog is still expanding; classification therefore stays correct for games added later without edits to this module."
+      "notes": "Allocated for the server-only foundation in GitHub issue #161. Receipt rendering, screen-reader announcements, responsive browser evidence, and completed-round game-action explanations beyond committed ledger movements remain open."
     },
     {
       "id": "RECEIPT-002",
       "module": "Core",
-      "description": "Receipts publish localization keys and allowlisted parameters rather than server-rendered prose, carry the play-tokens-only no-cash-value marker, and never expose raw durable identifiers, stack traces, or Admin-only detail; a round is correlated only by a short display reference and a movement with no round publishes none. Self receipt reads derive the subject from the authenticated session, clamp page size and hostile page indices, re-filter rows against the subject after the provider read, and return an explicit empty page for a session with no ledger subject.",
+      "description": "The additive authenticated v2 receipt read derives its player subject from server session context and reuses the shared self-history privacy boundary: provider rows are re-filtered to that player, malformed or hostile pagination is bounded safely, newest-first pages are capped at 50 rows from a 1,000-row source window, repeated reads are non-mutating, and each published receipt exposes only allowlisted ledger-derived fields, a short correlation tail, localization key, and explicit play-tokens-only marker without raw durable player or round identifiers.",
       "status": "PASS",
       "api_tests": [
         "API-RECEIPT-001"
       ],
       "browser_tests": [],
       "implementation_files": [
+        "casino/core/self_history.py",
         "casino/core/receipts.py",
         "casino/app.py",
+        "contracts/openapi/user-settings.v2.yaml",
         "web/i18n/en-US/shell.json",
         "web/i18n/ru-RU/shell.json"
       ],
       "introduced_in": "issue-161-outcome-receipts",
       "changed_in": "issue-161-outcome-receipts",
-      "notes": "Allocated for GitHub issue #161. Every emitted message key ships complete EN and RU copy with identical placeholders so neither locale can silently drop an amount or balance."
+      "notes": "Allocated for the server-only foundation in GitHub issue #161. Frozen v1 remains untouched, and EN/RU resources use identical placeholders for every emitted receipt message key."
     },
     {
-      "id": "TEST-100",
+      "id": "TEST-104",
       "module": "Tests",
-      "description": "Listener-free evidence verifies receipt derivation: category selection from the committed amount, an explanation for every committed transaction type harvested from the shipped catalog, honest interrupted-round refunds, safe degradation for unknown future types, exact reconciliation against the committed ledger amount and resulting balance, absence of raw round and player identifiers, empty references for round-free movements, self-only receipt reads against a populated neighbour, clamped pagination, empty pages for subjectless sessions, complete EN and RU copy with identical placeholders, and the play-tokens-only marker.",
+      "description": "Listener-free isolated-provider evidence verifies committed-amount receipt classification, every harvested catalog transaction type, honest interrupted refunds, safe unknown-type degradation, exact amount and resulting-balance reconciliation, absence of raw player and round identifiers, round-free references, shared self-only pagination against a populated neighbour, malformed and oversized query handling, subjectless empty pages, stable repeated reads without deduplicating committed movements, complete EN/RU keys and placeholder parity, explicit no-cash-value framing, additive v2 route shape, and exact checked contract digest.",
       "status": "PASS",
       "api_tests": [
         "API-RECEIPT-001"
@@ -9786,7 +10293,7 @@
       ],
       "introduced_in": "issue-161-outcome-receipts",
       "changed_in": "issue-161-outcome-receipts",
-      "notes": "Allocated for GitHub issue #161. The transaction vocabulary is harvested from tracked sources at test time, so a game added later is covered automatically instead of silently escaping the proof."
+      "notes": "Allocated after TEST-103 became permanent on current main. Every focused test uses an isolated temporary provider; no listener, browser, credential, repository runtime file, provider network, or live system is touched."
     }
   ]
 }

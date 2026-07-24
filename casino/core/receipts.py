@@ -11,8 +11,8 @@ than a confidently wrong specific one. Receipts publish localization codes and a
 parameters rather than prose, so EN and RU copy stays in the shell resources.
 """
 
-# Import the authoritative ledger so receipts read committed movements only.
-from casino.core import ledger
+# Import the shared self-scoped ledger reader so receipts reuse one privacy and pagination boundary.
+from casino.core import self_history as activity
 
 # Publish one stable code per explained movement category.
 CATEGORY_STAKE = "stake"
@@ -41,14 +41,10 @@ INTERRUPTED_SUFFIX = "_AFTER_ERROR"
 REFUND_MARKER = "REFUND"
 # Recognize the committed vocabulary that adds tokens outside gameplay.
 ADJUSTMENT_MARKERS = ("_ADDED", "_GRANT")
-# Bound one receipt read so a caller can never request an unbounded explanation set.
-MAX_PAGE_SIZE = 50
-# Return a stable default page size when the caller supplies none.
-DEFAULT_PAGE_SIZE = 20
-# Read a bounded ledger window large enough to paginate without loading unbounded history.
-LEDGER_READ_CEILING = 1000
-# Publish a short display reference rather than a raw durable round identifier.
-REFERENCE_LENGTH = 8
+# Re-export the shared page ceiling for the receipt route and compatibility callers.
+MAX_PAGE_SIZE = activity.MAX_PAGE_SIZE
+# Re-export the shared default page size for the receipt route adapter.
+DEFAULT_PAGE_SIZE = activity.DEFAULT_PAGE_SIZE
 
 
 # Classify one committed movement into a player-meaningful category.
@@ -79,14 +75,8 @@ def classify(transaction_type: str, amount: float) -> str:
 
 # Derive a short display reference so a player can correlate a receipt without a raw identifier.
 def _reference(round_id) -> str:
-    # Normalize the committed round value.
-    raw = str(round_id or "")
-    # Publish nothing when the movement is not bound to a round.
-    if not raw:
-        # Return the explicit empty reference.
-        return ""
-    # Return only a short uppercase tail so the durable identifier is never republished.
-    return raw[-REFERENCE_LENGTH:].upper()
+    # Delegate to the one accepted privacy-safe reference boundary shared with personal history.
+    return activity.display_reference(round_id)
 
 
 # Build one player-facing receipt from a committed ledger row.
@@ -100,7 +90,7 @@ def explain(row) -> dict:
     # Classify the movement from committed data only.
     category = classify(transaction_type, amount)
     # Note when a stake was returned because the round could not be completed.
-    interrupted = transaction_type.strip().upper().endswith(INTERRUPTED_SUFFIX)
+    interrupted = category == CATEGORY_REFUND and transaction_type.strip().upper().endswith(INTERRUPTED_SUFFIX)
     # Publish the localization code plus allowlisted parameters the shell will render.
     return {
         # Name the movement category.
@@ -125,24 +115,10 @@ def explain(row) -> dict:
 
 
 # Read the authenticated session's own bounded, explained movements.
-def self_receipts(user, *, page: int = 1, page_size: int = DEFAULT_PAGE_SIZE) -> dict:
-    # Resolve the ledger subject from the session only, never from a caller-supplied identifier.
-    player_id = str((user or {}).get("player_id") or "")
-    # Clamp the page size into the accepted bounds.
-    size = max(1, min(int(page_size or DEFAULT_PAGE_SIZE), MAX_PAGE_SIZE))
-    # Clamp the page index so a negative or zero page cannot wrap the slice.
-    index = max(1, int(page or 1))
-    # Return an explicit empty page when the session has no ledger subject.
-    if not player_id:
-        # Publish a stable empty envelope rather than another player's movements.
-        return {"receipts": [], "page": index, "page_size": size, "total": 0, "has_more": False}
-    # Read only this player's committed movements.
-    rows = ledger.read_recent(player_id, LEDGER_READ_CEILING)
-    # Drop any row not bound to this subject so a provider change can never leak another player.
-    owned = [row for row in rows if str(row.get("player_id") or "") == player_id]
-    # Order newest first so pagination stays stable and readable.
-    ordered = list(reversed(owned))
-    # Compute the slice start for the requested page.
-    start = (index - 1) * size
-    # Publish the bounded page of explanations.
-    return {"receipts": [explain(row) for row in ordered[start:start + size]], "page": index, "page_size": size, "total": len(ordered), "has_more": start + size < len(ordered)}
+def self_receipts(user, *, page=1, page_size=DEFAULT_PAGE_SIZE) -> dict:
+    # Read the reusable owned page through the privacy boundary merged by the My Settings foundation.
+    bounded = activity.read_page(user, page=page, page_size=page_size)
+    # Remove trusted raw ledger rows before publishing the receipt-specific envelope.
+    rows = bounded.pop("rows")
+    # Publish one ledger-derived explanation per committed row plus shared pagination metadata.
+    return {"receipts": [explain(row) for row in rows], **bounded}

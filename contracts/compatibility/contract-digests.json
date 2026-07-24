@@ -34,6 +34,7 @@
   "contracts/openapi/joker_poker.v1.yaml": "84ae12bb90c2880287f49a04a867d09d429d13cfa0ccda0a9780c740c6c50b6b",
   "contracts/openapi/texas_holdem_practice_table.v1.yaml": "9a8917c2092c17b864c3587ba7fc37d6a6e2a5a3d1b93f1be23dc81d99ea0bc4",
   "contracts/openapi/transactional-mail.v2.yaml": "d721dbf64cf4bb88ceba41247d7f091152435ec18f3417d90bca7be29540c0ad",
+  "contracts/openapi/user-settings.v2.yaml": "66678312d8a8329d818e36917315e436226fc09487105687da5d0e2b512d4e39",
   "contracts/openapi/keno.v1.yaml": "3d3af7c097f3e82a4082961724cf11797be9a948a38dcb3c1765db3086f54f2d",
   "contracts/openapi/ledger.v1.yaml": "806bc3c22155d2c99d7551c6f97cb9987e3f84297d6055e8dd1e45d341e31ab1",
   "contracts/openapi/multi_hand_video_poker.v1.yaml": "85b3ef2cd12b03d19b34564b2aeac4fbe0e8dcee7073ffb8350b058d5217983b",

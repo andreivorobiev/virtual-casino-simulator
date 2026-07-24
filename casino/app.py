@@ -37,7 +37,7 @@ from casino.core.state_store import ensure_dirs, migrate_from_v7_if_needed
 # Import required dependency so this module can bootstrap whichever storage provider is configured.
 from casino.core.storage import bootstrap_players, get_storage_provider
 # Import required dependency so this module can use its public functions or constants.
-from casino.core import logger, players, ledger, history, auth, feedback, guest_analytics, invitations, receipts
+from casino.core import logger, players, ledger, history, auth, feedback, guest_analytics, invitations, receipts, user_settings
 # Import required dependency so this module can use its public functions or constants.
 from casino.games.registry import catalog_summary, list_games, register_games
 # Import required dependency so this module can use its public functions or constants.
@@ -333,11 +333,32 @@ def build_router() -> Router:
         # Delegate the alias to the same canonical acceptance operation.
         return current_user_accept_terms(body, query, context)
 
-    # Register additive self-only explained ledger movements. (RECEIPT-001, issue #161)
+    # Register additive personal-preference reads outside the frozen v1 surface. (USER-006, issue #352)
+    @router.get(r"/api/v2/me/settings")
+    # Return the authenticated session's own preferences and the supported locale catalog.
+    def current_user_settings(body, query, context):
+        # Publish the subject's record together with the catalog a client needs to render choices.
+        return {"settings": user_settings.read_settings(context["user"]), "supported_locales": list(user_settings.SUPPORTED_LOCALES)}
+
+    # Register additive field-allowlisted personal-preference updates. (USER-006, issue #352)
+    @router.patch(r"/api/v2/me/settings")
+    # Apply one validated preference change to the session's own record only.
+    def update_current_user_settings(body, query, context):
+        # Bind the subject from the authenticated session rather than accepting caller identity.
+        return {"settings": user_settings.update_settings(context["user"], body)}
+
+    # Register additive self-only bounded activity reads. (USER-007, issue #352)
+    @router.get(r"/api/v2/me/history")
+    # Return only the authenticated session's own paginated activity.
+    def current_user_history(body, query, context):
+        # Derive the subject from the session and accept only pagination and filter inputs.
+        return user_settings.self_history(context["user"], page=query.get("page", 1), page_size=query.get("page_size", user_settings.DEFAULT_PAGE_SIZE), game=query.get("game", ""))
+
+    # Register additive self-only explained ledger movements. (RECEIPT-001, RECEIPT-002, issue #161)
     @router.get(r"/api/v2/me/receipts")
-    # Return only the authenticated session's own explained play-token movements.
+    # Return only the authenticated session's own bounded play-token movement explanations.
     def current_user_receipts(body, query, context):
-        # Derive the subject from the session and accept only pagination inputs.
+        # Bind the subject from the session and pass only shared pagination values to the receipt mapper.
         return receipts.self_receipts(context["user"], page=query.get("page", 1), page_size=query.get("page_size", receipts.DEFAULT_PAGE_SIZE))
 
     # Attach the published current-user token credit endpoint.

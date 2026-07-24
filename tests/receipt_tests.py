@@ -1,20 +1,26 @@
 """Focused play-token receipt derivation tests. (#161, RECEIPT-001, RECEIPT-002)"""
 
-# Import JSON parsing for the shipped localization resources.
+# Import SHA-256 so the additive v2 contract stays pinned to exact reviewed bytes.
+import hashlib
+# Import JSON parsing for the shipped localization resources and digest inventory.
 import json
 # Import filesystem paths for locating tracked resources and sources.
 import pathlib
 # Import regular expressions for harvesting the committed transaction vocabulary.
 import re
+# Import temporary directories so focused tests never touch repository or user runtime state.
+import tempfile
 # Import the standard unittest framework used by the repository's focused suites.
 import unittest
 
-# Import the canonical identity boundary for account seeding.
-from casino.core import auth
 # Import the authoritative ledger used to seed committed movements.
 from casino.core import ledger
+# Import the canonical player facade for isolated wallet fixtures.
+from casino.core import players
 # Import the receipt derivation authority under test.
 from casino.core import receipts
+# Import provider injection so every test owns its complete durable state.
+from casino.core import storage
 
 # Resolve the repository root for resource and source inspection.
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -42,14 +48,27 @@ def committed_transaction_types() -> set:
 
 # Verify receipts explain committed movements without inventing or leaking anything.
 class ReceiptDerivationTests(unittest.TestCase):
-    # Seed one account plus an unrelated neighbour for every privacy assertion.
+    # Seed two isolated players so every privacy assertion has a real neighbour.
     def setUp(self) -> None:
-        # Derive a per-test mailbox suffix so seeded accounts never collide.
-        unique = self.id().rsplit(".", 1)[1]
-        # Create the subject whose receipts are under test.
-        self.owner = auth.create_user(f"receipt.{unique}@example.test", "ReceiptPassw0rd!23", "Receipt Owner")
-        # Create an unrelated account whose movements must never appear.
-        self.other = auth.create_user(f"neighbour.{unique}@example.test", "OtherPassw0rd!23", "Receipt Other")
+        # Allocate an automatically cleaned root outside repository runtime state.
+        self.temporary = tempfile.TemporaryDirectory(prefix="casino-receipts-")
+        # Install one isolated JSON provider for players and committed ledger rows.
+        storage.set_provider_for_tests(storage.JsonStorageProvider(pathlib.Path(self.temporary.name) / "data"))
+        # Create the subject's isolated wallet through the production player facade.
+        owner_player = players.create_player("Receipt Owner", "human", 5000)
+        # Create an unrelated neighbour wallet used by every privacy assertion.
+        other_player = players.create_player("Receipt Other", "human", 5000)
+        # Build the authenticated subject shape normally supplied by session resolution.
+        self.owner = {"user_id": "receipt_owner", "player_id": owner_player["player_id"], "role": "player", "roles": ["player"], "status": "active"}
+        # Build the unrelated authenticated subject without creating auth credentials or secrets.
+        self.other = {"user_id": "receipt_other", "player_id": other_player["player_id"], "role": "player", "roles": ["player"], "status": "active"}
+
+    # Release provider injection and isolated files after every assertion.
+    def tearDown(self) -> None:
+        # Clear the process-global test provider before another suite runs.
+        storage.set_provider_for_tests(None)
+        # Remove only the TemporaryDirectory-owned state root.
+        self.temporary.cleanup()
 
     # Require the signed amount to decide direction and category for the core cases.
     def test_categories_follow_the_committed_amount(self) -> None:
@@ -72,12 +91,14 @@ class ReceiptDerivationTests(unittest.TestCase):
         for transaction_type in sorted(vocabulary):
             # Isolate each case so one failure names the offending type.
             with self.subTest(transaction_type=transaction_type):
-                # Build a receipt for an outgoing movement of this type.
-                receipt = receipts.explain({"transaction_type": transaction_type, "amount": -10.0, "game": "roulette", "balance_after": 90.0, "ts": "2026-07-23T00:00:00Z"})
-                # Require a known category rather than an unclassified fallthrough.
-                self.assertIn(receipt["category"], set(receipts.MESSAGE_KEYS))
-                # Require a localization key rather than server-side prose.
-                self.assertTrue(receipt["message_key"].startswith("receipt."))
+                # Explain both a debit and credit so signed-direction fallback is covered.
+                for amount in (-10.0, 10.0):
+                    # Build a receipt for this committed direction.
+                    receipt = receipts.explain({"transaction_type": transaction_type, "amount": amount, "game": "roulette", "balance_after": 90.0, "ts": "2026-07-23T00:00:00Z"})
+                    # Require a known category rather than an unclassified fallthrough.
+                    self.assertIn(receipt["category"], set(receipts.MESSAGE_KEYS))
+                    # Require a localization key rather than server-side prose.
+                    self.assertTrue(receipt["message_key"].startswith("receipt."))
 
     # Require a refund issued after an interrupted round to say so rather than reading as a win.
     def test_interrupted_rounds_are_explained_honestly(self) -> None:
@@ -124,6 +145,8 @@ class ReceiptDerivationTests(unittest.TestCase):
         self.assertNotIn("round_secret_identifier_12345678", serialized)
         # Require the durable player identifier to be absent.
         self.assertNotIn(self.owner["player_id"], serialized)
+        # Require the exact public allowlist so internal ledger fields and details cannot escape later.
+        self.assertEqual(set(receipt), {"category", "message_key", "game", "amount", "direction", "balance_after", "occurred_at", "reference", "play_tokens_only"})
         # Require only a short correlation reference to be published.
         self.assertEqual(receipt["reference"], "12345678")
 
@@ -162,6 +185,10 @@ class ReceiptDerivationTests(unittest.TestCase):
         self.assertEqual(clamped["page"], 1)
         # Require the clamped page to be full.
         self.assertEqual(len(clamped["receipts"]), 5)
+        # Request malformed HTTP-style pagination inputs through the shared parser.
+        malformed = receipts.self_receipts(self.owner, page="not-a-page", page_size="not-a-size")
+        # Require the documented defaults rather than an internal conversion error.
+        self.assertEqual((malformed["page"], malformed["page_size"]), (1, receipts.DEFAULT_PAGE_SIZE))
 
     # Require a session without a ledger subject to receive an empty page rather than shared data.
     def test_subjectless_sessions_get_an_empty_page(self) -> None:
@@ -207,3 +234,45 @@ class ReceiptDerivationTests(unittest.TestCase):
         receipt = receipts.explain({"transaction_type": "SLOTS_PAYOUT_CREDIT", "amount": 50.0, "game": "slots", "balance_after": 150.0, "ts": "2026-07-23T00:00:00Z"})
         # Require the explicit no-cash-value marker.
         self.assertTrue(receipt["play_tokens_only"])
+
+    # Require repeated reads to be stable and preserve one receipt per committed movement.
+    def test_repeated_reads_preserve_committed_duplicate_movements(self) -> None:
+        # Commit two authoritative movements with identical public categories and distinct round references.
+        ledger.debit(self.owner["player_id"], 5, "ROULETTE_BET_PLACED", game="roulette", round_id="round_duplicate_00000001")
+        # Commit the second movement independently so the receipt view never deduplicates ledger truth.
+        ledger.debit(self.owner["player_id"], 5, "ROULETTE_BET_PLACED", game="roulette", round_id="round_duplicate_00000002")
+        # Read the same bounded page twice without mutating the ledger.
+        first = receipts.self_receipts(self.owner, page=1, page_size=10)
+        # Repeat the read to model retry and refresh behavior.
+        second = receipts.self_receipts(self.owner, page=1, page_size=10)
+        # Require a stable projection with one explanation for each committed movement.
+        self.assertEqual(first, second)
+        # Require both committed correlation tails to remain present and distinct.
+        self.assertEqual([item["reference"] for item in first["receipts"]], ["00000002", "00000001"])
+
+    # Require the additive route shape and exact checked contract to remain aligned.
+    def test_v2_route_shape_and_contract_digest_are_current(self) -> None:
+        # Import router construction lazily so isolated provider injection is already active.
+        from casino.app import build_router
+        # Commit one movement for the route-level projection.
+        ledger.credit(self.owner["player_id"], 25, "SLOTS_PAYOUT_CREDIT", game="slots", round_id="round_route_receipt_12345678")
+        # Build one listener-free route table over the production handlers.
+        router = build_router()
+        # Read the exact additive v2 endpoint with hostile query strings.
+        page = router.dispatch("GET", "/api/v2/me/receipts?page=bad&page_size=bad", {}, {"user": self.owner})
+        # Require safe defaults and the one session-derived receipt.
+        self.assertEqual((page["page"], page["page_size"], page["total"]), (1, receipts.DEFAULT_PAGE_SIZE, 1))
+        # Require the route to publish the expected safe correlation tail.
+        self.assertEqual(page["receipts"][0]["reference"], "12345678")
+        # Resolve and read the checked shared self-service v2 contract.
+        contract_path = ROOT / "contracts" / "openapi" / "user-settings.v2.yaml"
+        # Read exact bytes for route anchors and digest verification.
+        contract_bytes = contract_path.read_bytes()
+        # Decode the contract once for its required receipt route and schemas.
+        contract_text = contract_bytes.decode("utf-8")
+        # Require the shipped route, envelope, privacy marker, and no raw round identifier field.
+        self.assertTrue(all(anchor in contract_text for anchor in ("/me/receipts:", "ReceiptEnvelope:", "play_tokens_only:", "reference:")))
+        # Parse the central exact-byte digest inventory.
+        digests = json.loads((ROOT / "contracts" / "compatibility" / "contract-digests.json").read_text(encoding="utf-8"))
+        # Require the reviewed contract bytes to match the checked digest.
+        self.assertEqual(digests["contracts/openapi/user-settings.v2.yaml"], hashlib.sha256(contract_bytes).hexdigest())
