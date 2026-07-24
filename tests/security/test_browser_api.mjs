@@ -53,3 +53,43 @@ globalThis.sessionStorage.removeItem('casino.guestBrowserNonce');
 await apiModule.api('/api/v2/me');
 // Prove the helper cannot reconstruct or persist the destroyed guest proof.
 assert.equal(calls[3].init.headers['X-Guest-Browser-Nonce'], undefined);
+// Collect browser shell events emitted after protected-session expiry.
+const sessionExpiredEvents = [];
+// Provide a test-local CustomEvent constructor so the browser-only expiry path can run in Node.
+globalThis.CustomEvent = class TestCustomEvent {
+  // Preserve event type and detail exactly as the app shell consumes them.
+  constructor(type, init = {}) { this.type = type; this.detail = init.detail; }
+};
+// Publish the minimal window seam used by the real helper's session-expiry notification.
+globalThis.window = { CustomEvent: globalThis.CustomEvent, dispatchEvent: event => sessionExpiredEvents.push(event) };
+// Replace fetch with a stable protected-session failure envelope for the expiry assertions.
+globalThis.fetch = async (requestPath, init) => {
+  // Continue capturing request initializers while simulating an authoritative 401 response.
+  calls.push({ requestPath, init });
+  // Return the standard API envelope shape used by server-side unauthorized responses.
+  return { ok: false, status: 401, json: async () => ({ ok: false, error: { code: 'UNAUTHORIZED', message: 'Session is invalid or expired' } }) };
+};
+// Require protected API failures to reject through the normal caller path.
+await assert.rejects(() => apiModule.api('/api/v1/games/slots/state'), /Session is invalid or expired/);
+// Let the intentionally deferred shell notification run after the caller catch path.
+await new Promise(resolve => setTimeout(resolve, 0));
+// Require one shell notification so stale authenticated chrome can be cleared.
+assert.equal(sessionExpiredEvents.length, 1);
+// Require the event type to match the app shell listener contract.
+assert.equal(sessionExpiredEvents[0].type, 'casino-session-expired');
+// Require the event detail to identify only the low-sensitivity route path.
+assert.deepEqual(sessionExpiredEvents[0].detail, { path: '/api/v1/games/slots/state' });
+// Reset captured events so public auth failures can prove they remain local.
+sessionExpiredEvents.length = 0;
+// Require login failures to reject without broadcasting protected-session expiry.
+await assert.rejects(() => apiModule.login({ email: 'player@example.test', password: 'bad' }), /Session is invalid or expired/);
+// Let any accidental public-auth notification attempt run before asserting absence.
+await new Promise(resolve => setTimeout(resolve, 0));
+// Prove invalid login stays inside the login panel instead of remounting the expired-session gate.
+assert.equal(sessionExpiredEvents.length, 0);
+// Require guest-start failures to reject without broadcasting protected-session expiry.
+await assert.rejects(() => apiModule.guestTrial({ accepted: true, terms_version: 'private-beta-1' }), /Session is invalid or expired/);
+// Let any accidental guest-auth notification attempt run before asserting absence.
+await new Promise(resolve => setTimeout(resolve, 0));
+// Prove guest-start rejection stays inside the guest-entry panel.
+assert.equal(sessionExpiredEvents.length, 0);

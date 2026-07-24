@@ -1,4 +1,4 @@
-"""Focused Roulette rotor and ball motion-quality tests. (#169, ROU-063, ROU-064)
+"""Focused Roulette rotor and ball motion-quality tests. (#169, ROU-069, ROU-070)
 
 The shipped spin used a heavily front-loaded easing that advanced the rotor by as much as
 17 pockets between consecutive 60 Hz frames. A pocket ring is rotationally near-periodic, so a
@@ -72,7 +72,7 @@ def per_frame_steps(stops: list) -> list:
     return steps
 
 
-# Verify the rotor and ball turn smoothly, land cleanly, and honour reduced motion.
+# Verify the bounded legacy rotor and ball fix without claiming the full planned motion contract.
 class RouletteMotionTests(unittest.TestCase):
     # Require the rotor to advance slowly enough that a pocket ring cannot alias.
     def test_rotor_never_aliases_between_frames(self) -> None:

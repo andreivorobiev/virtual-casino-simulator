@@ -4,7 +4,7 @@ import { acceptTerms, addUserTokens, api, currentUser, departGuestTrial, endGues
 // Import required dependency so this module can render shared wallet and premium UI helpers.
 import { renderTokenBalance, toast, tokens, safe, renderPremiumTag } from './core/ui.js';
 // Import required dependency so the shell can preserve locale across auth and route changes.
-import { getLocaleState, initI18n, onLocaleChange, setLocale, t } from './core/i18n.js';
+import { getLocaleState, initI18n, onLocaleChange, registerI18nDomains, setLocale, t } from './core/i18n.js';
 // Import the offline-safe shell controller for exact-version updates and authoritative reconnects. (PWA-001, PWA-002)
 import { initPwa } from './core/pwa.js';
 // Import required dependency so this module can preload global voice settings before games mount.
@@ -43,6 +43,8 @@ window.addEventListener('error', event => logClient('window_error', { message: e
 window.addEventListener('unhandledrejection', event => logClient('unhandled_rejection', { reason: String(event.reason?.message || event.reason) }));
 // Mark a guest page departure so lifecycle cleanup stays observable without ending same-context reloads.
 window.addEventListener('pagehide', () => { if (isGuestSession()) void departGuestTrial().catch(() => {}); });
+// Reset stale authenticated chrome only while an authenticated shell is mounted, leaving public enrollment pages intact.
+window.addEventListener('casino-session-expired', () => { if (currentSession) renderExpiredSessionGate(); });
 
 // Normalize the draft v2 current-user payloads without committing to backend internals.
 function normalizeCurrentUser(payload) {
@@ -233,6 +235,26 @@ function observeGameScrollRegions(view) {
 function isGuestSession() {
   // Recognize a guest only by the server-provided role list so shell affordances never guess.
   return Array.isArray(currentSession?.user?.roles) && currentSession.user.roles.includes('guest');
+}
+
+// Clear every shell-owned authenticated cache before showing the logged-out session-expired gate.
+function renderExpiredSessionGate() {
+  // Stop observing game-only rails before the authenticated route outlet is replaced.
+  gameRailObserver?.disconnect();
+  // Unmount the active game when its lifecycle hook exists so stale rerenders cannot survive sign-out.
+  if (active && loadedGames.has(active)) loadedGames.get(active).unmount?.();
+  // Clear the cached current-user payload so wallet and guest affordances cannot remain visible.
+  currentSession = null;
+  // Clear the public current-user hook used by game helpers and the wallet renderer.
+  window.CasinoCurrentUser = null;
+  // Drop the active route marker so later entry chooses from the browser URL intentionally.
+  active = null;
+  // Clear cached casino state so a later authenticated entry reloads a fresh catalog and wallet rail.
+  latestState = null;
+  // Clear frontend descriptors derived from protected state while the browser is logged out.
+  gameDescriptors = [];
+  // Render the normal login/guest-entry gate with the existing localized expired-session copy.
+  renderLoginGate(t('pwa.expiredSession', {}, 'shell'));
 }
 
 // Keep persistent shell profile and wallet nodes synchronized with the current user.
@@ -855,6 +877,8 @@ async function refreshShellState(options = {}) {
     latestState = state;
     // Rebuild frontend registration from the same public catalog used by backend registration.
     gameDescriptors = (state.games || []).map(game => descriptorFromCatalog(game));
+    // Register every game-owned translation domain directly from the live catalog without loading unvisited routes.
+    registerI18nDomains(gameDescriptors.map(game => game.i18nDomain));
     // Mark the shell connected and update status values.
     updateShellStatus(state, true);
     // Return state to callers that need initial render data.
@@ -951,6 +975,8 @@ export async function navigate(route, options = {}) {
     updateCurrentUserShell();
   // Handle navigation errors with a route-local recovery panel.
   } catch (err) {
+    // Convert any protected-route auth failure into the logged-out recovery gate instead of a stale game error panel.
+    if (err?.code === 'UNAUTHORIZED') { renderExpiredSessionGate(); return; }
     // Write diagnostic output so the current operation can be inspected.
     console.error(err);
     // Record the navigation failure with route context.

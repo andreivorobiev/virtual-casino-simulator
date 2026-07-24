@@ -53,6 +53,7 @@ ALLOWED_FILES = {
     "scripts/mysql_migrate.py",
     "scripts/recovery.py",
     "scripts/edge_gate.py",
+    "scripts/write_release_env.py",
 }
 # Reject runtime, private, generated, test, and local-evidence directories anywhere.
 FORBIDDEN_PARTS = {
@@ -94,6 +95,7 @@ REQUIRED_FILES = {
     "scripts/mysql_migrate.py",
     "scripts/recovery.py",
     "scripts/edge_gate.py",
+    "scripts/write_release_env.py",
     "casino/core/recovery.py",
     "web/app.js",
     "web/index.html",

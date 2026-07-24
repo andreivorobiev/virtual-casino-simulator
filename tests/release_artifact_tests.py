@@ -60,6 +60,7 @@ class ReleaseArtifactTests(unittest.TestCase):
             "migrations/mysql/catalog.json": migration_catalog.replace("0002_upgrade.json", "0002_action_identity.json"),
             "scripts/mysql_migrate.py": "# Fixture deployment-only migration runner.\n",
             "scripts/recovery.py": "# Fixture encrypted recovery runner.\n",
+            "scripts/write_release_env.py": "# Fixture deployment provenance writer.\n",
             "web/app.js": "// Fixture static application bundle.\n",
             "web/index.html": "<!doctype html><title>Fixture</title>\n",
         }
@@ -199,6 +200,15 @@ class ReleaseArtifactTests(unittest.TestCase):
         self.assertEqual(first_archive.read_bytes(), second_archive.read_bytes())
         # Require identical checksum-bound provenance bytes across output locations.
         self.assertEqual(first_manifest.read_bytes(), second_manifest.read_bytes())
+
+    # Prove the immutable application archive carries the deployment provenance writer required by its service unit.
+    def test_deployment_provenance_writer_is_packaged(self):
+        # Build a structurally valid candidate from the complete required fixture inventory.
+        archive_path, _ = self.build("deployment-provenance")
+        # Open the immutable candidate without extracting host-visible files.
+        with zipfile.ZipFile(archive_path, "r") as archive:
+            # Require the documented post-install command to exist in every release.
+            self.assertIn(f"{package_app.ARCHIVE_ROOT}/scripts/write_release_env.py", archive.namelist())
 
     # Prove untracked private content is never considered by tracked-file packaging.
     def test_untracked_private_content_is_excluded(self):
@@ -342,11 +352,11 @@ class ReleaseArtifactTests(unittest.TestCase):
     # Prove the current private-invite compatibility record binds the exact safe predecessor boundary.
     def test_current_release_compatibility_binds_private_invite_predecessor(self):
         # Load the immutable packaged-release compatibility record governed by TOOL-003.
-        compatibility = json.loads((package_app.ROOT / "contracts" / "compatibility" / "app-9.5.1.json").read_text(encoding="utf-8"))
+        compatibility = json.loads((package_app.ROOT / "contracts" / "compatibility" / "app-9.5.2.json").read_text(encoding="utf-8"))
         # Require the canonical release and restricted-preview channel identities.
-        self.assertEqual((compatibility["app_version"], compatibility["release_channel"]), ("9.5.1", "restricted-preview-private-invite"))
+        self.assertEqual((compatibility["app_version"], compatibility["release_channel"]), ("9.5.2", "restricted-preview-private-invite"))
         # Require the exact prior packaged release and retained manifest filename.
-        self.assertEqual(compatibility["predecessor"], {"app_version": "9.5.0", "compatibility_record": "contracts/compatibility/app-9.5.0.json", "required_artifact": "release-manifest.json"})
+        self.assertEqual(compatibility["predecessor"], {"app_version": "9.5.1", "compatibility_record": "contracts/compatibility/app-9.5.1.json", "required_artifact": "release-manifest.json"})
         # Require application-only rollback while preserving the already-applied MySQL v2 boundary.
         self.assertEqual(compatibility["rollback"], {"scope": "application-only", "database_rollback": "prohibited", "mysql_expected_schema_version": 2, "requires_retained_predecessor_manifest": True})
         # Require all broader enrollment surfaces to remain disabled for this release channel.
