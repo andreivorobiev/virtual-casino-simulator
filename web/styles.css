@@ -2570,6 +2570,40 @@ h3 {
   color: var(--gold);
 }
 
+/* Own the dense managed-account table inside one named keyboard-scrollable region. (USER-004) */
+.admin-users-table-scroll {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x pan-y;
+  scrollbar-color: rgba(255, 217, 130, .42) transparent;
+  scrollbar-width: thin;
+}
+
+/* Retain readable account and action columns without creating page-level horizontal overflow. */
+.admin-users-table-scroll .mini-table {
+  min-width: 1040px;
+}
+
+/* Expose keyboard ownership of the intentional horizontal table scroll. */
+.admin-users-table-scroll:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: -4px;
+}
+
+/* Bound each Create User column before the phone layout stacks the form. (USER-004) */
+[data-testid="admin-user-create"] .grid3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* Let every managed-account form control shrink inside its responsive grid column. */
+[data-testid="admin-user-create"] :is(input:not([type="checkbox"]), select, button) {
+  width: 100%;
+  min-width: 0;
+}
+
 /* Keep the invitation form columns bounded before the phone breakpoint stacks them. (INVITE-005) */
 [data-testid="admin-invitation-create"] .grid3 {
   grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(120px, auto);
@@ -3064,6 +3098,11 @@ h3 {
 
   /* Stack the invitation creation form before native input minimums can widen the page. */
   [data-testid="admin-invitation-create"] .grid3 {
+    grid-template-columns: 1fr;
+  }
+
+  /* Stack managed-account fields so native controls never widen the governed phone viewport. */
+  [data-testid="admin-user-create"] .grid3 {
     grid-template-columns: 1fr;
   }
 }

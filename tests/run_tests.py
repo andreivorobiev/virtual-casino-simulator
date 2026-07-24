@@ -847,6 +847,22 @@ def validate_guest_admin_api(base):
         denied=api(base,'/api/v2/admin/guest-trials',ok=False,auth_token=token,extra_headers=guest_headers)
         # Require the central forbidden envelope rather than an empty or partial Admin response.
         assert denied['error']['code']=='FORBIDDEN'
+        # Read both regular Admin user lists through the authenticated Admin session.
+        account_lists=[api(base,'/api/v1/admin/users')['users'],api(base,'/api/v2/admin/users')['users']]
+        # Prove disposable marketing-trial principals are not mixed into account-management tables.
+        assert all(guest['user']['user_id'] not in {row.get('user_id') for row in rows} and all(row.get('principal_type')!='guest' and 'guest_analytics_id' not in json.dumps(row).lower() for row in rows) for rows in account_lists)
+        # Build every v1 account-detail or mutation route that must reject a Guest Trials principal.
+        guest_v1_account_routes=[('GET',f"/api/v1/admin/users/{guest['user']['user_id']}",None),('POST',f"/api/v1/admin/users/{guest['user']['user_id']}/deactivate",{}),('POST',f"/api/v1/admin/users/{guest['user']['user_id']}/reactivate",{}),('POST',f"/api/v1/admin/users/{guest['user']['user_id']}/password-reset",{}),('POST',f"/api/v1/admin/users/{guest['user']['user_id']}/terms",{'accepted':True}),('POST',f"/api/v1/admin/users/{guest['user']['user_id']}/locale",{'language':'ru-RU','format_locale':'ru-RU','use_browser_locale':False})]
+        # Build every v2 account-detail or mutation route that must preserve the same ownership boundary.
+        guest_v2_account_routes=[('GET',f"/api/v2/admin/users/{guest['user']['user_id']}",None),('PATCH',f"/api/v2/admin/users/{guest['user']['user_id']}",{'display_name':'Not an account'}),('POST',f"/api/v2/admin/users/{guest['user']['user_id']}/password",{'password':'Not-an-account-password-1!'}),('PATCH',f"/api/v2/admin/users/{guest['user']['user_id']}/terms",{'accepted':True,'terms_version':'private-beta-1'}),('GET',f"/api/v2/admin/users/{guest['user']['user_id']}/state",None)]
+        # Exercise the complete account-management surface with the authenticated Admin session.
+        guest_account_denials=[api(base,path,method,body,ok=False) for method,path,body in guest_v1_account_routes+guest_v2_account_routes]
+        # Require every version and mutation family to hide the temporary principal behind the same generic result.
+        assert all(result['error']['code']=='NOT_FOUND' for result in guest_account_denials)
+        # Re-read the disposable principal after hostile Admin account operations.
+        guest_after_denials=api(base,'/api/v2/me',auth_token=token,extra_headers=guest_headers)
+        # Prove the rejected account routes did not mutate or end the Guest Trials principal.
+        assert guest_after_denials['user']['user_id']==guest['user']['user_id'] and guest_after_denials['user']['principal_type']=='guest'
         # Read the Admin summary through the existing authenticated Admin session.
         admin_summary=api(base,'/api/v2/admin/guest-trials')['guest_trials']
         # Require funnel, game, recent, cleanup, and filter surfaces from the v2 contract.
@@ -7533,10 +7549,42 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     user_row.get_by_test_id('admin-user-save-locale').click()
                     # Verify the token balance remains visible after all actions.
                     assert '◈777.00' in user_row.get_by_test_id('admin-user-token-balance').inner_text()
+                    # Enumerate every governed Admin viewport for the account-only handoff evidence.
+                    users_viewports={'desktop_primary':{'width':1920,'height':1080},'desktop_compact':{'width':1440,'height':900},'tablet':{'width':1024,'height':900},'mobile':{'width':390,'height':844}}
+                    # Pin locale-owned handoff headings so Russian evidence cannot silently reuse English copy.
+                    handoff_headings={'en-US':'Guest and marketing trials live separately','ru-RU':'Гостевые и маркетинговые сессии находятся отдельно'}
+                    # Capture the explicit account/Guest Trials boundary in both installed locales.
+                    for locale in ('en-US','ru-RU'):
+                        # Switch the Admin runtime before rerendering the Users surface.
+                        page.evaluate("async locale => { const i18n=await import('/core/i18n.js'); await i18n.setLocale(locale,{persistLocal:false}); }",locale)
+                        # Reload the active Users tab so every new handoff string comes from the selected locale.
+                        page.get_by_test_id('admin-tab-users').click(); page.get_by_test_id('admin-users-guest-separation').wait_for(timeout=5000)
+                        # Retain a stable locator for geometry, translation, and interaction proof.
+                        handoff=page.get_by_test_id('admin-users-guest-separation')
+                        # Require the exact locale-owned heading without leaking any handoff resource key.
+                        handoff_text=handoff.inner_text()
+                        # Check only complete governed keys because ordinary English copy may legitimately contain "users.".
+                        assert handoff.locator('h3').inner_text()==handoff_headings[locale] and all(key not in handoff_text for key in ('users.guestSeparationTitle','users.guestSeparationCopy','users.openGuestTrials'))
+                        # Require the created account to remain visible while Guest Trials stay absent from managed rows.
+                        assert page.locator('tr[data-testid="admin-user-row"][data-email="beta.browser@example.test"]').count()==1 and page.locator('tr[data-testid="admin-user-row"][data-email=""]').count()==0
+                        # Exercise every governed responsive width with a bounded readable handoff region.
+                        for viewport_id,viewport in users_viewports.items():
+                            # Apply the exact visual-matrix dimensions before measuring the changed surface.
+                            page.set_viewport_size(viewport); page.wait_for_timeout(100)
+                            # Measure page, handoff, table-owner, readable-inline, and control containment independently from screenshot success.
+                            handoff_geometry=handoff.evaluate("""element => { const rect=element.getBoundingClientRect(); const tableOwner=document.querySelector('[data-testid="admin-users-managed-table"]'); const tableRect=tableOwner?.getBoundingClientRect(); return { documentContained: document.documentElement.scrollWidth <= window.innerWidth + 1, regionContained: rect.left >= -1 && rect.right <= window.innerWidth + 1, tableOwnerContained: Boolean(tableRect && tableRect.left >= -1 && tableRect.right <= window.innerWidth + 1), readable: rect.width >= Math.min(320, window.innerWidth - 32), controlContained: [...element.querySelectorAll('button')].every(control => { const box=control.getBoundingClientRect(); return box.left >= rect.left - 1 && box.right <= rect.right + 1 && box.width >= 44 && box.height >= 36; }) }; }""")
+                            # Fail closed on document overflow, clipped handoff/table ownership, narrow copy, or an unusable control.
+                            assert all(handoff_geometry.values()),{'locale':locale,'viewport':viewport_id,**handoff_geometry}
+                            # Write one exact-head bounded PNG and sidecar for independent EN/RU human review.
+                            region_evidence(f'after-pass-admin-users-separation-{locale}-{viewport_id}.png','[data-testid="admin-users-guest-separation"]','admin',['users'],locale,viewport_id)
+                        # Follow the visible ownership handoff and require the Guest Trials surface to load.
+                        page.get_by_test_id('admin-open-guest-trials').click(); page.get_by_test_id('admin-guest-filters').wait_for(timeout=5000)
+                    # Restore the suite-default locale and viewport after governed evidence.
+                    page.set_viewport_size(users_viewports['desktop_primary']); page.evaluate("async () => { const i18n=await import('/core/i18n.js'); await i18n.setLocale('en-US',{persistLocal:false}); }")
                     # Verify the existing Language / Locale tab remains reachable.
                     page.get_by_test_id('admin-tab-language').click(); page.get_by_test_id('admin-language-select').wait_for(timeout=5000)
                 # Execute this statement as part of the module's documented control flow.
-                run_case('BR-ADMIN-USERS-001',['ADMIN-USER-PENDING-035','TERMS-PENDING-035','TOKEN-PENDING-035','I18N-003'],admin_users_browser)
+                run_case('BR-ADMIN-USERS-001',['ADMIN-USER-PENDING-035','TERMS-PENDING-035','TOKEN-PENDING-035','I18N-003','USER-004','GUEST-004','TEST-081'],admin_users_browser)
                 # Prove the Admin Guest Trials section reports de-identified account-free telemetry. (issue #317)
                 def admin_guest_trials_browser():
                     # Define every governed Admin viewport, including the issue-required mobile state.

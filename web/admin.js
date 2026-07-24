@@ -239,6 +239,17 @@ function userRows(users) {
   return users.map(user => `<tr data-testid="admin-user-row" data-user="${safe(user.user_id)}" data-email="${safe(user.email)}" data-status="${safe(user.status)}" data-terms="${safe(user.terms_status)}"><td>${safe(user.email)}</td><td>${safe(user.display_name)}</td><td>${safe(user.status)}</td><td data-testid="admin-user-token-balance">${formatMoney(user.token_balance)}</td><td>${safe(user.token_state)}</td><td>${safe(user.terms_status)}</td><td><select class="user-language">${localeOptions(user.language || 'en-US')}</select></td><td><select class="user-format">${formatLocaleOptions(user.format_locale || 'browser')}</select></td><td><button class="save-user-locale" data-user="${safe(user.user_id)}" data-testid="admin-user-save-locale">Save locale</button><button class="toggle-user" data-user="${safe(user.user_id)}" data-action="${user.status === 'active' ? 'deactivate' : 'reactivate'}" data-testid="admin-user-toggle">${user.status === 'active' ? 'Deactivate' : 'Reactivate'}</button><button class="reset-user-password" data-user="${safe(user.user_id)}" data-testid="admin-user-reset">Reset password</button><button class="terms-user" data-user="${safe(user.user_id)}" data-accepted="${user.terms_status !== 'accepted'}" data-testid="admin-user-terms">${user.terms_status === 'accepted' ? 'Clear terms' : 'Accept terms'}</button></td></tr>`);
 }
 
+// Define isManagedAccountUser so the Users tab stays account-only even if a legacy API payload includes guests.
+function isManagedAccountUser(user) {
+  // Normalize role values before checking for a disposable guest principal.
+  const roles = (user?.roles || [user?.role]).map(role => String(role || '').toLowerCase());
+  // Normalize both server-owned identity classifiers before evaluating the fail-closed UI boundary.
+  const principalType = String(user?.principal_type || '').toLowerCase();
+  const identityProvider = String(user?.identity_provider || '').toLowerCase();
+  // Return false for every known guest-trial marker; Guest Trials owns those temporary marketing visitors.
+  return principalType !== 'guest' && identityProvider !== 'guest' && user?.guest !== true && !roles.includes('guest');
+}
+
 // Define users to render the Admin beta-user management workspace.
 async function users() {
   // Set the localized users title and subtitle.
@@ -247,10 +258,18 @@ async function users() {
   const data = await api('/api/v1/admin/users');
   // Stop stale user-management responses from overwriting a newer active tab.
   if (!isActiveTab('users')) return;
+  // Keep the visible table account-only even if an older server returns temporary guest principals.
+  const managedUsers = (data.users || []).filter(isManagedAccountUser);
   // Store password notice so rerenders can show the latest one-time credential.
   const passwordNotice = lastUserPassword ? `<div class="result-box" data-testid="admin-user-temp-password">Latest temporary password: ${safe(lastUserPassword)}</div>` : '';
+  // Build an explicit handoff card so operators know temporary visitors live in Guest Trials.
+  const guestSeparationCard = `<section class="admin-card" data-testid="admin-users-guest-separation"><h3>${safe(t('users.guestSeparationTitle', {}, 'admin'))}</h3><p>${safe(t('users.guestSeparationCopy', {}, 'admin'))}</p><button id="admin_open_guest_trials" type="button" data-testid="admin-open-guest-trials">${safe(t('users.openGuestTrials', {}, 'admin'))}</button></section>`;
+  // Build the account-only table inside one named keyboard-scrollable region, or show the calm empty state.
+  const managedUserTable = managedUsers.length ? `<div class="admin-users-table-scroll" data-testid="admin-users-managed-table" tabindex="0" role="region" aria-label="${safe(t('users.tableTitle', {}, 'admin'))}">${table(['Email', 'Name', 'Status', 'Token balance', 'Token state', 'Terms', 'Language', 'Format', 'Actions'], userRows(managedUsers))}</div>` : emptyState(t('users.emptyTitle', {}, 'admin'), t('users.emptyDetail', {}, 'admin'), 'admin-users-empty');
   // Render creation controls and token-state inspection table.
-  view.innerHTML = `<section class="admin-card"><h3>${safe(t('users.createTitle', {}, 'admin'))}</h3><div class="grid3"><label>Email<input id="admin_user_email" data-testid="admin-user-email" type="email" placeholder="beta@example.test"></label><label>Display name<input id="admin_user_name" data-testid="admin-user-name" placeholder="Beta Player"></label><label>Initial tokens<input id="admin_user_tokens" data-testid="admin-user-tokens" type="number" min="0" step="1" value="5000"></label></div><div class="grid3"><label>Temporary password<input id="admin_user_password" data-testid="admin-user-password" type="text" placeholder="Generate if blank"></label><label>Language<select id="admin_user_language" data-testid="admin-user-language">${localeOptions('en-US')}</select></label><label>Format locale<select id="admin_user_format" data-testid="admin-user-format">${formatLocaleOptions('browser')}</select></label></div><label><input id="admin_user_terms" data-testid="admin-user-terms-initial" type="checkbox"> Terms accepted</label><button id="admin_create_user" data-testid="admin-create-user" class="gold">${safe(t('users.createButton', {}, 'admin'))}</button>${passwordNotice}</section><section class="admin-card"><h3>${safe(t('users.tableTitle', {}, 'admin'))}</h3>${table(['Email', 'Name', 'Status', 'Token balance', 'Token state', 'Terms', 'Language', 'Format', 'Actions'], userRows(data.users || []))}</section>`;
+  view.innerHTML = `${guestSeparationCard}<section class="admin-card" data-testid="admin-user-create"><h3>${safe(t('users.createTitle', {}, 'admin'))}</h3><div class="grid3"><label>Email<input id="admin_user_email" data-testid="admin-user-email" type="email" placeholder="beta@example.test"></label><label>Display name<input id="admin_user_name" data-testid="admin-user-name" placeholder="Beta Player"></label><label>Initial tokens<input id="admin_user_tokens" data-testid="admin-user-tokens" type="number" min="0" step="1" value="5000"></label></div><div class="grid3"><label>Temporary password<input id="admin_user_password" data-testid="admin-user-password" type="text" placeholder="Generate if blank"></label><label>Language<select id="admin_user_language" data-testid="admin-user-language">${localeOptions('en-US')}</select></label><label>Format locale<select id="admin_user_format" data-testid="admin-user-format">${formatLocaleOptions('browser')}</select></label></div><label><input id="admin_user_terms" data-testid="admin-user-terms-initial" type="checkbox"> Terms accepted</label><button id="admin_create_user" data-testid="admin-create-user" class="gold">${safe(t('users.createButton', {}, 'admin'))}</button>${passwordNotice}</section><section class="admin-card" data-testid="admin-users-managed-accounts"><h3>${safe(t('users.tableTitle', {}, 'admin'))}</h3>${managedUserTable}</section>`;
+  // Bind the Guest Trials shortcut after rendering the account-management handoff card.
+  view.querySelector('#admin_open_guest_trials').onclick = () => activate('guests');
   // Bind the create-user button after rendering.
   view.querySelector('#admin_create_user').onclick = createUser;
   // Bind user action buttons after rendering the table.
