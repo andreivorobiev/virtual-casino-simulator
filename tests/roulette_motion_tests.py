@@ -141,11 +141,11 @@ class RouletteMotionTests(unittest.TestCase):
         block = re.search(r"@media \(prefers-reduced-motion: reduce\)\{(.+?)\}'", text, re.S)
         # Require the block to exist at all.
         self.assertIsNotNone(block, "Roulette ships no reduced-motion rule for its spin animations")
-        # Require both spinning animations to be switched off inside it.
-        for selector in ("wheel-ring.spinning", "ball-dot.spinning"):
+        # Require every tracked decorative animation channel to be switched off inside it.
+        for selector in ("wheel-ring.spinning", "ball-dot.spinning", "ball-dot.settled", "roulette-spin-orbit::after"):
             # Isolate each selector so a failure names it.
             with self.subTest(selector=selector):
-                # Require the selector to appear in the reduced-motion block.
+                # Require the selector to appear in the tracked reduced-motion block.
                 self.assertIn(selector, block.group(1))
 
     # Require the curve to be sampled finely enough that linear interpolation stays smooth.

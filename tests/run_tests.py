@@ -6026,14 +6026,14 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 shot('roulette-premium-settled.png')
                 # Ask the hosted browser to apply the player's reduced-motion preference.
                 page.emulate_media(reduced_motion='reduce')
-                # Probe the tracked runtime rules by temporarily applying only the four decorative state classes.
-                roulette_reduced_motion=page.evaluate("""() => { const rotor=document.querySelector('[data-testid="roulette-rotor"]'); const ball=document.querySelector('[data-testid="roulette-ball"]'); const settled=document.querySelector('.roulette-wheel .ball-dot'); const rotorWasSpinning=rotor.classList.contains('spinning'); const ballWasSpinning=ball.classList.contains('spinning'); const ballWasSettled=settled.classList.contains('settled'); const orbit=document.createElement('span'); orbit.className='roulette-spin-orbit'; document.body.appendChild(orbit); rotor.classList.add('spinning'); ball.classList.add('spinning'); settled.classList.add('settled'); const values={rotor:getComputedStyle(rotor).animationName,ball:getComputedStyle(ball).animationName,settled:getComputedStyle(settled).animationName,orbitAfter:getComputedStyle(orbit,'::after').animationName}; rotor.classList.toggle('spinning',rotorWasSpinning); ball.classList.toggle('spinning',ballWasSpinning); settled.classList.toggle('settled',ballWasSettled); orbit.remove(); return values; }""")
+                # Probe only the two genuine mounted motion channels after temporarily restoring their spin class.
+                roulette_reduced_motion=page.evaluate("""() => { const rotor=document.querySelector('[data-testid="roulette-rotor"]'); const ball=document.querySelector('[data-testid="roulette-ball"]'); const rotorWasSpinning=rotor.classList.contains('spinning'); const ballWasSpinning=ball.classList.contains('spinning'); rotor.classList.add('spinning'); ball.classList.add('spinning'); const values={rotor:getComputedStyle(rotor).animationName,ball:getComputedStyle(ball).animationName}; rotor.classList.toggle('spinning',rotorWasSpinning); ball.classList.toggle('spinning',ballWasSpinning); return values; }""")
                 # Restore the normal media preference before later Roulette interaction cases continue.
                 page.emulate_media(reduced_motion='no-preference')
                 # Define the reduced-motion runtime portion of the focused browser case.
                 def roulette_reduced_motion_runtime():
-                    # Require every tracked Roulette decorative motion channel to be suppressed.
-                    assert roulette_reduced_motion=={'rotor':'none','ball':'none','settled':'none','orbitAfter':'none'}
+                    # Require both mounted Roulette motion channels to be suppressed by the actual media state.
+                    assert roulette_reduced_motion=={'rotor':'none','ball':'none'}
                 # Extend the focused runtime case with the actual reduced-motion media query result.
                 run_case('BR-ROU-REDUCED-MOTION-001',['ROU-070','TEST-102'],roulette_reduced_motion_runtime)
                 # Restore English before expanding shared controls and capturing route-return evidence.

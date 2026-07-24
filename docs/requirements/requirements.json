@@ -10165,7 +10165,7 @@
     {
       "id": "TEST-102",
       "module": "Tests",
-      "description": "Focused listener-free evidence parses the tracked Roulette curves to prove the anti-strobe rotor budget, monotonic coast-down, whole-turn endpoints, counter-rotation, linear timing, fine sampling, and reduced-motion rule; the hosted Browser suite independently proves the live spin uses the expected named linear 3.6-second animations with all sampled stops and that reduced-motion media suppresses the four decorative animations.",
+      "description": "Focused listener-free evidence parses the tracked Roulette curves to prove the anti-strobe rotor budget, monotonic coast-down, whole-turn endpoints, counter-rotation, linear timing, fine sampling, and all four reduced-motion suppression rules; the hosted Browser suite independently proves the live spin uses the expected named linear 3.6-second animations with all sampled stops and that reduced-motion media suppresses the mounted rotor and ball channels.",
       "status": "PASS",
       "api_tests": [
         "UI-ROU-MOTION-001"

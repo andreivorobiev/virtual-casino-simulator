@@ -45,8 +45,8 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.1
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.57.4
-- docs: 1.57.4
+- tests: 1.57.5
+- docs: 1.57.5
 - contracts: 1.40.2
 - tooling: 1.20.0
 - commenting_policy: 1.0.0
@@ -782,4 +782,4 @@ Historical source baseline: 9.1.0
 - **TOOL-007** (Tooling) - PASS: Deployment tooling ships inside every immutable application archive, derives build provenance from the verified release manifest, and writes exactly one non-secret CASINO_BUILD_SHA assignment atomically; any manifest whose recorded commit is not a full lowercase 40-character Git SHA is refused with a non-zero status and no write, and the tracked service unit sources the generated fragment after the operator secret file so a redeployment always exports the running commit.
 - **TEST-098** (Tests) - PASS: Listener-free evidence verifies deployment build provenance: every immutable application archive contains the provenance writer; a valid manifest yields exactly one pinned assignment accepted unchanged by the Operations sanitizer; short/uppercase/non-hexadecimal/absent commits fail closed without writing; unreadable manifests and destination-write failures emit bounded path-free errors while leaving an earlier fragment byte-identical; a redeployment replaces rather than appends the superseded commit; and the tracked unit sources the generated fragment last.
 - **TEST-100** (Tests) - PASS: Dependency-free deterministic unit tests prove motion timing profiles, reduced-motion resolution, complete lifecycle phase order, authoritative-result identity, overlap rejection, illegal-skip rejection, explicit recovery, stale-generation rejection, and route-disposal invalidation.
-- **TEST-102** (Tests) - PASS: Focused listener-free evidence parses the tracked Roulette curves to prove the anti-strobe rotor budget, monotonic coast-down, whole-turn endpoints, counter-rotation, linear timing, fine sampling, and reduced-motion rule; the hosted Browser suite independently proves the live spin uses the expected named linear 3.6-second animations with all sampled stops and that reduced-motion media suppresses the four decorative animations.
+- **TEST-102** (Tests) - PASS: Focused listener-free evidence parses the tracked Roulette curves to prove the anti-strobe rotor budget, monotonic coast-down, whole-turn endpoints, counter-rotation, linear timing, fine sampling, and all four reduced-motion suppression rules; the hosted Browser suite independently proves the live spin uses the expected named linear 3.6-second animations with all sampled stops and that reduced-motion media suppresses the mounted rotor and ball channels.
