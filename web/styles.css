@@ -1,3 +1,94 @@
+/* Bundled native-label subsets keep the locked localization registry legible without network fonts. */
+@font-face {
+  font-family: "Casino Locale CJK";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/assets/fonts/noto-sans-locale-cjk.woff2") format("woff2");
+  unicode-range: U+4E2D, U+4F53, U+5EE3, U+6587, U+65E5, U+672C, U+6771, U+6E2F, U+7B80, U+7E41, U+8A71, U+8A9E, U+9999, U+9AD4;
+}
+
+@font-face {
+  font-family: "Casino Locale CJK";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/assets/fonts/noto-sans-locale-cjk-700.woff2") format("woff2");
+  unicode-range: U+4E2D, U+4F53, U+5EE3, U+6587, U+65E5, U+672C, U+6771, U+6E2F, U+7B80, U+7E41, U+8A71, U+8A9E, U+9999, U+9AD4;
+}
+
+@font-face {
+  font-family: "Casino Locale Devanagari";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/assets/fonts/noto-sans-locale-devanagari.woff2") format("woff2");
+  unicode-range: U+0920, U+0926, U+0928, U+092E, U+0930, U+0939, U+093E-0940, U+094D;
+}
+
+@font-face {
+  font-family: "Casino Locale Devanagari";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/assets/fonts/noto-sans-locale-devanagari-700.woff2") format("woff2");
+  unicode-range: U+0920, U+0926, U+0928, U+092E, U+0930, U+0939, U+093E-0940, U+094D;
+}
+
+@font-face {
+  font-family: "Casino Locale Bengali";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/assets/fonts/noto-sans-locale-bengali.woff2") format("woff2");
+  unicode-range: U+0982, U+09AC, U+09B2, U+09BE;
+}
+
+@font-face {
+  font-family: "Casino Locale Bengali";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/assets/fonts/noto-sans-locale-bengali-700.woff2") format("woff2");
+  unicode-range: U+0982, U+09AC, U+09B2, U+09BE;
+}
+
+@font-face {
+  font-family: "Casino Locale Tamil";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/assets/fonts/noto-sans-locale-tamil.woff2") format("woff2");
+  unicode-range: U+0BA4, U+0BAE, U+0BB4, U+0BBF, U+0BCD;
+}
+
+@font-face {
+  font-family: "Casino Locale Tamil";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/assets/fonts/noto-sans-locale-tamil-700.woff2") format("woff2");
+  unicode-range: U+0BA4, U+0BAE, U+0BB4, U+0BBF, U+0BCD;
+}
+
+@font-face {
+  font-family: "Casino Locale Telugu";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/assets/fonts/noto-sans-locale-telugu.woff2") format("woff2");
+  unicode-range: U+0C17, U+0C24, U+0C32, U+0C41, U+0C46;
+}
+
+@font-face {
+  font-family: "Casino Locale Telugu";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/assets/fonts/noto-sans-locale-telugu-700.woff2") format("woff2");
+  unicode-range: U+0C17, U+0C24, U+0C32, U+0C41, U+0C46;
+}
+
 /* Premium casino foundation: palette, typography, and shared shell tokens. */
 :root {
   --bg: #030806;
@@ -21,6 +112,13 @@
   --shadow: rgba(0, 0, 0, 0.56);
   --font-ui: "Segoe UI", Inter, Arial, sans-serif;
   --font-display: Georgia, "Times New Roman", serif;
+  --font-locale-native: "Casino Locale CJK", "Casino Locale Devanagari", "Casino Locale Bengali", "Casino Locale Tamil", "Casino Locale Telugu", var(--font-ui);
+}
+
+/* Use the bundled script subsets only for owner-locked native locale names. */
+[data-locale-card] h3,
+[data-testid="admin-locale-registry-entry"] strong {
+  font-family: var(--font-locale-native);
 }
 
 /* Global document and control reset shared by casino and admin pages. */

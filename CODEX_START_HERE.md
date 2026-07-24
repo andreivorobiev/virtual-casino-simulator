@@ -310,4 +310,5 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 ### Web-scoped instructions
 
 - [`web/AGENTS.md`](web/AGENTS.md) — AGENTS.md - admin module
+- [`web/assets/fonts/README.md`](web/assets/fonts/README.md) — Native-label font subsets
 <!-- END GENERATED MARKDOWN INDEX -->

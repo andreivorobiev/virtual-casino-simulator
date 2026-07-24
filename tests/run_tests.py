@@ -7622,6 +7622,10 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     assert page.get_by_test_id('admin-language-select').locator('option').count()==2
                     # Require formatter selection to expose the registry's deterministic Intl identities independently from translations.
                     assert page.get_by_test_id('admin-format-locale-select').locator('option').count()>=23
+                    # Load every bundled script subset before evaluating or capturing the native-label registry.
+                    font_results=page.evaluate("""async () => { const samples=[['Casino Locale CJK','简体中文日本語廣東話香港繁體'],['Casino Locale Devanagari','हिन्दीमराठी'],['Casino Locale Bengali','বাংলা'],['Casino Locale Tamil','தமிழ்'],['Casino Locale Telugu','తెలుగు']]; const rows=[]; for (const [family,text] of samples) { const declaration=`700 18px "${family}"`; const faces=await document.fonts.load(declaration,text); rows.push({family,loaded:faces.length>0,ready:document.fonts.check(declaration,text)}); } await document.fonts.ready; return rows; }""")
+                    # Reject hosted evidence when any required native-script asset is absent or not ready.
+                    assert all(result['loaded'] and result['ready'] for result in font_results), font_results
                     # Validate every locked translation tag and configured formatter with the exact browser Intl runtime.
                     intl_results=page.evaluate("() => window.CasinoI18n.getLocaleState().localeRegistry.map(locale => { try { const identity=new Intl.Locale(locale.id).toString(); const number=new Intl.NumberFormat(locale.formatLocale).format(12345.67); const date=new Intl.DateTimeFormat(locale.formatLocale).format(new Date('2032-02-03T04:05:06Z')); return { id: locale.id, identity, number, date, ok: Boolean(identity && number && date) }; } catch (error) { return { id: locale.id, ok: false, error: error.name }; } })")
                     # Fail with bounded identity-only diagnostics if any configured browser formatter is unavailable.

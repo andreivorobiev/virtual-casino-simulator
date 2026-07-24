@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.48.0
+- application: 9.48.1
 - core: 9.19.2
 - ledger: 9.1.1
 - players: 9.1.0
@@ -45,8 +45,8 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.1
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.57.0
-- docs: 1.57.0
+- tests: 1.57.1
+- docs: 1.57.1
 - contracts: 1.40.2
 - tooling: 1.19.1
 - commenting_policy: 1.0.0
@@ -744,7 +744,7 @@ Historical source baseline: 9.1.0
 - **I18N-006** (Application) - PASS: The Phase 0 localization registry preserves the owner-locked order of 25 translation identities with native labels, direction, script, deterministic formatter locale, fallback chain, resource readiness, and review state while exposing only complete resource packs as selectable interface locales.
 - **I18N-007** (Application) - PASS: Locale selection and browser-local persistence use ready resource packs, planned identities fall back safely without changing the document language or direction, formatter choices use declared browser-supported identities, and game translation domains are registered from the live catalog rather than a static game allowlist.
 - **I18N-008** (Application) - PLANNED: Each future translation wave supplies complete catalog and representative-game copy, bidirectional and script-safe rendering, human review state, and real-backend visual acceptance for every newly ready locale before that locale becomes selectable.
-- **TEST-101** (Tests) - PASS: Localization foundation tests lock all 25 metadata identities and RTL membership, require installed-resource key and placeholder parity across catalog-discovered domains, validate every configured translation and formatter tag in the browser Intl runtime, reject selection of unfinished locales, prove browser-local persistence, and capture the Admin foundation in both installed locales at all four governed viewports.
+- **TEST-101** (Tests) - PASS: Localization foundation tests lock all 25 metadata identities and RTL membership, require installed-resource key and placeholder parity across catalog-discovered domains, validate every configured translation and formatter tag and bundled native-script font in the browser runtime, reject selection of unfinished locales, prove browser-local persistence, and capture the Admin foundation in both installed locales at all four governed viewports.
 - **UX-019** (Application) - PASS: Problem reporting and Admin triage remain keyboard-operable, focus-visible, scroll-contained, touch-sized, readable at 200 percent zoom, reduced-motion safe, and responsive across all governed viewports with paste, drop, file, preview-removal, retry, filter, draft, export, and deletion states.
 - **TEST-094** (Tests) - PASS: Provider-neutral unit, API, JSON-process, and disposable MySQL tests prove recoverable submission, single idempotent winners, durable rates, malformed-state preservation, atomic triage, privacy deletion and retention, metadata-only export, frozen-v1 compatibility, and manual-only publication; browser tests prove complete bilingual player and Admin states across governed viewports.
 - **PWA-001** (Application) - PASS: The restricted-preview browser application publishes a standards-valid web manifest, complete 192- and 512-pixel any-purpose and maskable PNG icon sets, safe-area metadata, and a standalone-capable public shell while remaining fully usable in a normal browser; this repository foundation does not claim native Android or iOS installation acceptance, public hosting, or deployment.

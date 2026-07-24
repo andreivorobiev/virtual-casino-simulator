@@ -9600,10 +9600,10 @@
       "status": "PASS",
       "api_tests": ["API-I18N-FOUNDATION-001"],
       "browser_tests": ["BR-I18N-FOUNDATION-001"],
-      "implementation_files": ["web/i18n/manifest.json", "web/core/i18n.js", "web/admin.js", "docs/localization_foundation.md"],
+      "implementation_files": ["web/i18n/manifest.json", "web/core/i18n.js", "web/admin.js", "web/styles.css", "web/assets/fonts/", "docs/localization_foundation.md"],
       "introduced_in": "issue-128-phase-0-localization-foundation",
       "changed_in": "issue-128-phase-0-localization-foundation",
-      "notes": "Only en-US and ru-RU are ready in Phase 0. Metadata-only identities are never presented as translated or linguistically certified."
+      "notes": "Only en-US and ru-RU are ready in Phase 0. Metadata-only identities are never presented as translated or linguistically certified. Compact bundled OFL font subsets keep every locked native label legible on clean hosted runners without runtime font-network access."
     },
     {
       "id": "I18N-007",
@@ -9632,11 +9632,11 @@
     {
       "id": "TEST-101",
       "module": "Tests",
-      "description": "Localization foundation tests lock all 25 metadata identities and RTL membership, require installed-resource key and placeholder parity across catalog-discovered domains, validate every configured translation and formatter tag in the browser Intl runtime, reject selection of unfinished locales, prove browser-local persistence, and capture the Admin foundation in both installed locales at all four governed viewports.",
+      "description": "Localization foundation tests lock all 25 metadata identities and RTL membership, require installed-resource key and placeholder parity across catalog-discovered domains, validate every configured translation and formatter tag and bundled native-script font in the browser runtime, reject selection of unfinished locales, prove browser-local persistence, and capture the Admin foundation in both installed locales at all four governed viewports.",
       "status": "PASS",
       "api_tests": ["API-I18N-FOUNDATION-001"],
       "browser_tests": ["BR-I18N-FOUNDATION-001"],
-      "implementation_files": ["tests/run_tests.py", "tests/visual/visual_matrix.json"],
+      "implementation_files": ["tests/run_tests.py", "tests/visual/visual_matrix.json", "web/styles.css", "web/assets/fonts/"],
       "introduced_in": "issue-128-phase-0-localization-foundation",
       "changed_in": "issue-128-phase-0-localization-foundation",
       "notes": "This collision-free ID was allocated after reconciling against current main where TEST-100 belongs to the shared motion foundation. TEST-091, TEST-092, TEST-094, TEST-095, TEST-096, TEST-097, TEST-098, TEST-099, and TEST-100 retain their existing owners or reservations."
