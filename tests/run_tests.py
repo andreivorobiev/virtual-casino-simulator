@@ -958,6 +958,20 @@ def run_api_tests():
             raise AssertionError('personal settings and self-history suite failed')
     # Record the listener-free preference, pagination, contract, and self-only privacy proof.
     run_case('API-SETTINGS-001',['USER-006','USER-007','TEST-103'],run_user_settings_tests)
+    # Execute ledger-derived receipt classification, privacy, contract, and retry proof without a listener.
+    def run_receipt_tests():
+        # Import the focused suite only when its mapped API case runs.
+        from tests import receipt_tests
+        # Load exactly the self-only receipt foundation assertions.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(receipt_tests.ReceiptDerivationTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused receipt assertion failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure stable.
+            raise AssertionError('play-token receipt derivation suite failed')
+    # Record the committed-ledger explanation, shared pagination, privacy, and exact-contract proof.
+    run_case('API-RECEIPT-001',['RECEIPT-001','RECEIPT-002','TEST-104'],run_receipt_tests)
     # Discover and execute every focused restricted-preview security module without opening a listener.
     def run_restricted_preview_security_tests():
         # Load the package directory through unittest's standard test discovery.

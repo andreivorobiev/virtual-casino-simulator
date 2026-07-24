@@ -2,8 +2,8 @@
   "application": "9.5.2",
   "source_baseline": "9.1.0",
   "modules": {
-    "application": "9.48.4",
-    "core": "9.19.3",
+    "application": "9.48.5",
+    "core": "9.19.4",
     "ledger": "9.1.1",
     "players": "9.1.0",
     "bots": "1.1.0",
@@ -41,9 +41,9 @@
     "casino_holdem": "1.0.1",
     "joker_poker": "1.0.0",
     "texas_holdem_practice_table": "1.0.0",
-    "tests": "1.57.6",
-    "docs": "1.57.6",
-    "contracts": "1.40.3",
+    "tests": "1.57.7",
+    "docs": "1.57.7",
+    "contracts": "1.40.4",
     "tooling": "1.20.1",
     "commenting_policy": "1.0.0"
   },

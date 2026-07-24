@@ -263,10 +263,10 @@ class UserSettingsTests(unittest.TestCase):
         contract_path = ROOT / "contracts" / "openapi" / "user-settings.v2.yaml"
         # Read the contract bytes once for route and digest checks.
         contract_bytes = contract_path.read_bytes()
-        # Require all three route operations and exact privacy-safe reference field.
+        # Require every shipped self-service route and the shared privacy-safe reference field.
         contract_text = contract_bytes.decode("utf-8")
         # Fail when the contract omits any shipped route or republishes raw round identity.
-        self.assertTrue(all(anchor in contract_text for anchor in ("/me/settings:", "/me/history:", "reference:")))
+        self.assertTrue(all(anchor in contract_text for anchor in ("/me/settings:", "/me/history:", "/me/receipts:", "reference:")))
         # Parse the central exact-byte digest inventory.
         digests = json.loads((ROOT / "contracts" / "compatibility" / "contract-digests.json").read_text(encoding="utf-8"))
         # Require the reviewed contract bytes to match the frozen digest.

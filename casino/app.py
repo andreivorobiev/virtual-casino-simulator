@@ -37,7 +37,7 @@ from casino.core.state_store import ensure_dirs, migrate_from_v7_if_needed
 # Import required dependency so this module can bootstrap whichever storage provider is configured.
 from casino.core.storage import bootstrap_players, get_storage_provider
 # Import required dependency so this module can use its public functions or constants.
-from casino.core import logger, players, ledger, history, auth, feedback, guest_analytics, invitations, user_settings
+from casino.core import logger, players, ledger, history, auth, feedback, guest_analytics, invitations, receipts, user_settings
 # Import required dependency so this module can use its public functions or constants.
 from casino.games.registry import catalog_summary, list_games, register_games
 # Import required dependency so this module can use its public functions or constants.
@@ -353,6 +353,13 @@ def build_router() -> Router:
     def current_user_history(body, query, context):
         # Derive the subject from the session and accept only pagination and filter inputs.
         return user_settings.self_history(context["user"], page=query.get("page", 1), page_size=query.get("page_size", user_settings.DEFAULT_PAGE_SIZE), game=query.get("game", ""))
+
+    # Register additive self-only explained ledger movements. (RECEIPT-001, RECEIPT-002, issue #161)
+    @router.get(r"/api/v2/me/receipts")
+    # Return only the authenticated session's own bounded play-token movement explanations.
+    def current_user_receipts(body, query, context):
+        # Bind the subject from the session and pass only shared pagination values to the receipt mapper.
+        return receipts.self_receipts(context["user"], page=query.get("page", 1), page_size=query.get("page_size", receipts.DEFAULT_PAGE_SIZE))
 
     # Attach the published current-user token credit endpoint.
     @router.post(r"/api/v2/me/tokens/add")

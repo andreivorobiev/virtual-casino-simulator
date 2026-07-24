@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
-  title: Virtual Casino personal settings and self-history API
+  title: Virtual Casino personal settings, self-history, and receipt API
   version: v2
-  description: Additive authenticated self-service foundation for locale, sound, and bounded ledger-backed personal history. Subjects always come from the active session; caller-authored user or player identifiers are never accepted.
+  description: Additive authenticated self-service foundation for locale, sound, bounded ledger-backed personal history, and ledger-derived play-token receipts. Subjects always come from the active session; caller-authored user or player identifiers are never accepted.
 servers:
   - url: /api/v2
 paths:
@@ -93,6 +93,39 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HistoryEnvelope'
+        '401':
+          description: Authentication required.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /me/receipts:
+    get:
+      summary: Read one bounded newest-first page of ledger-derived explanations for the active session's own play-token movements.
+      operationId: user_receipts_v2_read
+      security:
+        - cookieSession: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+      responses:
+        '200':
+          description: Self-only play-token receipts with privacy-safe display references and shared pagination metadata.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReceiptEnvelope'
         '401':
           description: Authentication required.
           content:
@@ -221,6 +254,66 @@ components:
               type: boolean
             game:
               type: string
+    Receipt:
+      type: object
+      additionalProperties: false
+      required: [category, message_key, game, amount, direction, balance_after, occurred_at, reference, play_tokens_only]
+      properties:
+        category:
+          type: string
+          enum: [stake, refund, payout, adjustment]
+        message_key:
+          type: string
+          enum: [receipt.stake, receipt.refund, receipt.refund_after_error, receipt.payout, receipt.adjustment]
+        game:
+          type: string
+        amount:
+          type: number
+          minimum: 0
+          description: Unsigned magnitude of the authoritative committed play-token movement.
+        direction:
+          type: string
+          enum: [debit, credit]
+        balance_after:
+          type: number
+          description: Authoritative resulting fake-token balance committed by the ledger.
+        occurred_at:
+          type: string
+          format: date-time
+        reference:
+          type: string
+          maxLength: 8
+          description: Short uppercase correlation tail; never the raw durable round identifier.
+        play_tokens_only:
+          type: boolean
+          enum: [true]
+    ReceiptEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          required: [receipts, page, page_size, total, has_more]
+          properties:
+            receipts:
+              type: array
+              items:
+                $ref: '#/components/schemas/Receipt'
+            page:
+              type: integer
+              minimum: 1
+            page_size:
+              type: integer
+              minimum: 1
+              maximum: 50
+            total:
+              type: integer
+              minimum: 0
+            has_more:
+              type: boolean
     ErrorEnvelope:
       type: object
       required: [ok, error]

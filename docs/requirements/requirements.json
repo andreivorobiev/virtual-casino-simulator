@@ -10237,6 +10237,63 @@
       "introduced_in": "issue-352-my-settings-foundation",
       "changed_in": "issue-352-my-settings-foundation",
       "notes": "Allocated after TEST-102 became permanent on current main. Every test uses an isolated temporary provider, and no listener, browser, credential, repository runtime file, provider network, or live system is touched."
+    },
+    {
+      "id": "RECEIPT-001",
+      "module": "Core",
+      "description": "Every published play-token receipt is derived only from an authoritative committed ledger movement: its signed amount, committed transaction type, game, timestamp, round binding, and resulting balance. Signed amount determines movement direction and the committed type refines stake, refund, payout, or adjustment classification; an interrupted-round stake return is explained as a refund rather than a win, while an unknown future transaction type degrades to the directionally correct generic category instead of invented game detail.",
+      "status": "PASS",
+      "api_tests": [
+        "API-RECEIPT-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/receipts.py",
+        "casino/app.py",
+        "contracts/openapi/user-settings.v2.yaml",
+        "tests/receipt_tests.py"
+      ],
+      "introduced_in": "issue-161-outcome-receipts",
+      "changed_in": "issue-161-outcome-receipts",
+      "notes": "Allocated for the server-only foundation in GitHub issue #161. Receipt rendering, screen-reader announcements, responsive browser evidence, and completed-round game-action explanations beyond committed ledger movements remain open."
+    },
+    {
+      "id": "RECEIPT-002",
+      "module": "Core",
+      "description": "The additive authenticated v2 receipt read derives its player subject from server session context and reuses the shared self-history privacy boundary: provider rows are re-filtered to that player, malformed or hostile pagination is bounded safely, newest-first pages are capped at 50 rows from a 1,000-row source window, repeated reads are non-mutating, and each published receipt exposes only allowlisted ledger-derived fields, a short correlation tail, localization key, and explicit play-tokens-only marker without raw durable player or round identifiers.",
+      "status": "PASS",
+      "api_tests": [
+        "API-RECEIPT-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/self_history.py",
+        "casino/core/receipts.py",
+        "casino/app.py",
+        "contracts/openapi/user-settings.v2.yaml",
+        "web/i18n/en-US/shell.json",
+        "web/i18n/ru-RU/shell.json"
+      ],
+      "introduced_in": "issue-161-outcome-receipts",
+      "changed_in": "issue-161-outcome-receipts",
+      "notes": "Allocated for the server-only foundation in GitHub issue #161. Frozen v1 remains untouched, and EN/RU resources use identical placeholders for every emitted receipt message key."
+    },
+    {
+      "id": "TEST-104",
+      "module": "Tests",
+      "description": "Listener-free isolated-provider evidence verifies committed-amount receipt classification, every harvested catalog transaction type, honest interrupted refunds, safe unknown-type degradation, exact amount and resulting-balance reconciliation, absence of raw player and round identifiers, round-free references, shared self-only pagination against a populated neighbour, malformed and oversized query handling, subjectless empty pages, stable repeated reads without deduplicating committed movements, complete EN/RU keys and placeholder parity, explicit no-cash-value framing, additive v2 route shape, and exact checked contract digest.",
+      "status": "PASS",
+      "api_tests": [
+        "API-RECEIPT-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/receipt_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-161-outcome-receipts",
+      "changed_in": "issue-161-outcome-receipts",
+      "notes": "Allocated after TEST-103 became permanent on current main. Every focused test uses an isolated temporary provider; no listener, browser, credential, repository runtime file, provider network, or live system is touched."
     }
   ]
 }
