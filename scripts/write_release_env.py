@@ -75,18 +75,26 @@ def main(argv=None) -> int:
     parser.add_argument("--destination", type=pathlib.Path, required=True, help="Path to the generated release environment fragment")
     # Parse the deployment-supplied arguments.
     args = parser.parse_args(argv)
-    # Start protected derivation so every failure prints one bounded operator message.
+    # Start protected derivation so manifest failures print one bounded operator message.
     try:
         # Resolve the validated commit from the manifest.
         commit = manifest_commit(args.manifest)
     # Convert malformed manifests and unreadable files into a fail-closed exit.
-    except (OSError, ValueError, json.JSONDecodeError) as exc:
-        # Print only the bounded reason so manifest contents never enter deployment logs.
-        print(f"release provenance unavailable: {exc}", file=sys.stderr)
+    except (OSError, ValueError, json.JSONDecodeError):
+        # Print a path-free bounded reason so manifest contents and host layout never enter deployment logs.
+        print("release provenance unavailable: invalid or unreadable release manifest", file=sys.stderr)
         # Fail the deployment step rather than installing an unpinnable release.
         return 1
-    # Persist the single validated assignment.
-    write_fragment(args.destination, render_fragment(commit))
+    # Protect the atomic destination write so host paths cannot escape through a traceback.
+    try:
+        # Persist the single validated assignment.
+        write_fragment(args.destination, render_fragment(commit))
+    # Convert permission, directory, and replacement failures into a bounded deployment failure.
+    except OSError:
+        # Report only the failed stage because deployment host paths are not public evidence.
+        print("release provenance unavailable: destination write failed", file=sys.stderr)
+        # Fail closed while leaving any previously installed fragment untouched.
+        return 1
     # Report the pinned commit so the operator can compare it against the release directory.
     print(f"wrote {BUILD_SHA_ENV} for commit {commit}")
     # Report deployment-step success.

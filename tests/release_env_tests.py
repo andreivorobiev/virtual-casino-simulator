@@ -12,6 +12,8 @@ import pathlib
 import tempfile
 # Import the standard unittest framework used by the repository's focused suites.
 import unittest
+# Import patching support for deterministic destination-write failure evidence.
+from unittest import mock
 
 # Import the deployment provenance tool under test.
 from scripts import write_release_env
@@ -100,6 +102,25 @@ class ReleaseEnvFragmentTests(unittest.TestCase):
         self.assertEqual(self._run(self.root / "absent.json"), 1)
         # Require the earlier fragment to remain byte-identical rather than being truncated.
         self.assertEqual(self.destination.read_text(encoding="utf-8"), "CASINO_BUILD_SHA=" + ("a" * 40) + "\n")
+
+    # Require host-path-bearing destination failures to remain bounded and preserve earlier provenance.
+    def test_destination_failure_is_sanitized_and_preserves_previous_provenance(self) -> None:
+        # Seed a previously generated fragment that must survive the failed replacement.
+        previous_fragment = "CASINO_BUILD_SHA=" + ("a" * 40) + "\n"
+        # Persist the prior fragment before simulating a host-specific write failure.
+        self.destination.write_text(previous_fragment, encoding="utf-8")
+        # Build a valid manifest so execution reaches the destination boundary.
+        manifest = self._manifest({"commit_sha": VALID_COMMIT, "release_tag": "v9.3.1"})
+        # Capture the bounded operator message without printing host details into suite output.
+        stderr = io.StringIO()
+        # Simulate an operating-system error that contains a private host path.
+        with mock.patch.object(write_release_env, "write_fragment", side_effect=OSError(r"C:\private\release.env")), contextlib.redirect_stderr(stderr):
+            # Require the deployment step to fail rather than exposing a traceback.
+            self.assertEqual(write_release_env.main(["--manifest", str(manifest), "--destination", str(self.destination)]), 1)
+        # Require the sanitized message to omit the private host path.
+        self.assertEqual(stderr.getvalue(), "release provenance unavailable: destination write failed\n")
+        # Require the previous proven fragment to remain byte-identical.
+        self.assertEqual(self.destination.read_text(encoding="utf-8"), previous_fragment)
 
     # Require a redeployment to replace the previous commit rather than append to it.
     def test_redeployment_replaces_the_previous_commit(self) -> None:

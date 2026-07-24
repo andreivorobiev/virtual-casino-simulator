@@ -7,6 +7,11 @@ on:
         required: true
         default: false
         type: boolean
+      baccarat_sustained_2000:
+        description: 'Run the authorized exact-source 2,000-round Baccarat qualification'
+        required: true
+        default: false
+        type: boolean
   pull_request:
     # Run browser coverage when UI/runtime code, its harness, or canonical version input changes.
     paths:
@@ -18,7 +23,9 @@ on:
       - 'tests/run_tests.py'
       - 'modules/module-manifest.json'
 jobs:
+  # Run the ordinary suite for PR evidence and retain it as the formal 50,000-cycle prerequisite.
   browser_tests:
+    if: ${{ github.event_name == 'pull_request' || inputs.formal_ui_50000 == true }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -37,6 +44,36 @@ jobs:
         with:
           name: browser-test-artifacts
           path: logs/test-runs/
+
+  # Run the focused issue #265 profile only for its explicit, owner-authorized dispatch.
+  baccarat_sustained_2000:
+    name: Baccarat sustained 2000
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.baccarat_sustained_2000 == true }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      # Pin the one uninterrupted browser session to the exact workflow-dispatch commit.
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dev requirements
+        run: python -m pip install -r requirements-dev.txt
+      - name: Install Playwright Chromium
+        run: python -m playwright install chromium
+      - name: Run exact Baccarat sustained qualification
+        run: >-
+          python -m tests.baccarat_sustained
+          --output-root "logs/test-runs/baccarat_sustained"
+          --progress-every 100
+      - name: Upload terminal Baccarat evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: baccarat-sustained-${{ github.sha }}
+          path: logs/test-runs/baccarat_sustained/
+          if-no-files-found: warn
+          retention-days: 14
 
   # Distribute the formal issue #227 workload only when the explicit dispatch input is true.
   formal_ui_workers:

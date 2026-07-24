@@ -1,6 +1,6 @@
 {
   "module": "application",
-  "version": "9.46.1",
+  "version": "9.48.3",
   "paths": [
     "run.py",
     "pyproject.toml",
@@ -14,17 +14,20 @@
     "web/sw.js",
     "web/core/i18n.js",
     "web/core/api.js",
+    "web/core/motion.js",
     "web/core/pwa.js",
     "web/core/ui.js",
     "web/assets/pwa-icon-192.png",
     "web/assets/pwa-icon-512.png",
     "web/assets/pwa-maskable-192.png",
     "web/assets/pwa-maskable-512.png",
+    "web/assets/fonts/",
     "web/i18n/"
   ],
   "requirements_prefixes": [
     "CORE",
-    "I18N"
+    "I18N",
+    "MOTION"
   ],
   "depends_on": [
     "core",
