@@ -1,6 +1,6 @@
 // Own the root-scope offline-safe static shell without caching private or authoritative data. (PWA-002)
 // Match the canonical packaged application release used by modules/module-manifest.json.
-const APP_VERSION = '9.5.0';
+const APP_VERSION = '9.5.2';
 // Prefix every Casino-owned cache so activation can prune only this application's predecessors.
 const CACHE_PREFIX = 'casino-static-shell-v';
 // Bind the cache identity to the canonical packaged release rather than an ad-hoc counter.

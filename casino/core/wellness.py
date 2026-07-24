@@ -14,10 +14,12 @@ into countdown pressure, and a ceiling exists so a reminder a player enabled sti
 from casino.core.clock import utc_now
 # Import the authoritative ledger so summaries report committed movements only.
 from casino.core import ledger
+# Import the shared self-history ceiling so every personal ledger read stays identically bounded.
+from casino.core import self_history as activity
 # Import the configured storage provider for atomic document persistence.
 from casino.core.storage import get_storage_provider
 # Import standard bounded application errors.
-from casino.errors import ValidationError
+from casino.errors import ConflictError, ValidationError
 
 # Name the wellness document owned by this module.
 WELLNESS_DOCUMENT_KEY = "settings/wellness"
@@ -31,10 +33,6 @@ DEFAULT_INTERVAL_MINUTES = 30
 MIN_INTERVAL_MINUTES = 10
 # Refuse an interval so long that an enabled reminder would never arrive.
 MAX_INTERVAL_MINUTES = 240
-# Bound the committed window one summary may consider.
-SUMMARY_READ_CEILING = 1000
-
-
 # Build the default wellness record for a player who has never configured reminders.
 def default_wellness() -> dict:
     # Return the opt-in defaults with the initial revision.
@@ -55,9 +53,12 @@ def _normalize(record) -> dict:
     if not isinstance(record, dict):
         # Return the defaults for malformed persisted state.
         return wellness
-    # Coerce both stored switches to strict booleans.
-    wellness["enabled"] = bool(record.get("enabled", DEFAULT_ENABLED))
-    wellness["break_reminder_enabled"] = bool(record.get("break_reminder_enabled", DEFAULT_ENABLED))
+    # Inspect both stored switches without allowing truthy malformed values to opt a player in.
+    for flag in ("enabled", "break_reminder_enabled"):
+        # Adopt only a strict stored boolean.
+        if isinstance(record.get(flag), bool):
+            # Preserve the valid stored choice.
+            wellness[flag] = record[flag]
     # Adopt a stored interval only when it is still inside the accepted bounds.
     stored = record.get("reminder_interval_minutes")
     # Require a usable in-range integer before trusting a persisted cadence.
@@ -88,10 +89,20 @@ def _subject(user) -> str:
     return user_id
 
 
+# Report whether one subject is a disposable guest trial rather than a persistent account.
+def _is_guest(user) -> bool:
+    # Treat the accepted guest markers as the single disposable-session signal.
+    return str((user or {}).get("role") or "") == "guest" or bool((user or {}).get("guest_analytics_id"))
+
+
 # Read the wellness preferences bound to the authenticated session.
 def read_wellness(user) -> dict:
     # Derive the subject from the session only.
     subject = _subject(user)
+    # Return non-persisted defaults for a disposable guest trial.
+    if _is_guest(user):
+        # Publish explicit persistence metadata so a client never promises durable guest settings.
+        return {**default_wellness(), "min_interval_minutes": MIN_INTERVAL_MINUTES, "max_interval_minutes": MAX_INTERVAL_MINUTES, "persisted": False}
     # Read the wellness document through the configured provider.
     document = get_storage_provider().read_document(WELLNESS_DOCUMENT_KEY, _default_document)
     # Tolerate a malformed document by treating it as empty rather than failing the read.
@@ -99,7 +110,7 @@ def read_wellness(user) -> dict:
     # Resolve this subject's stored record when the container is usable.
     record = users.get(subject) if isinstance(users, dict) else None
     # Publish the normalized record together with the accepted cadence bounds.
-    return {**_normalize(record), "min_interval_minutes": MIN_INTERVAL_MINUTES, "max_interval_minutes": MAX_INTERVAL_MINUTES}
+    return {**_normalize(record), "min_interval_minutes": MIN_INTERVAL_MINUTES, "max_interval_minutes": MAX_INTERVAL_MINUTES, "persisted": True}
 
 
 # Validate one caller-supplied wellness patch against the field allowlist and cadence bounds.
@@ -150,6 +161,12 @@ def update_wellness(user, patch) -> dict:
     subject = _subject(user)
     # Validate the caller payload before touching storage.
     changes = _validated_patch(patch)
+    # Read the caller's expected revision when it supplied one for optimistic concurrency.
+    expected = patch.get("revision") if isinstance(patch, dict) else None
+    # Keep disposable guest changes non-durable and explicit about that lifecycle.
+    if _is_guest(user):
+        # Return only the validated session-local values without creating a durable account record.
+        return {**default_wellness(), **changes, "min_interval_minutes": MIN_INTERVAL_MINUTES, "max_interval_minutes": MAX_INTERVAL_MINUTES, "persisted": False}
     # Hold the resulting record so it can be published after the atomic mutation.
     resulting = {}
 
@@ -165,6 +182,10 @@ def update_wellness(user, patch) -> dict:
             document["users"] = {}
         # Normalize the current stored record for this subject.
         current = _normalize(document["users"].get(subject))
+        # Reject a stale revision so two sessions cannot silently overwrite one another.
+        if expected is not None and expected != current["revision"]:
+            # Use the standard conflict envelope without revealing stored values.
+            raise ConflictError("Wellness settings were updated by another session")
         # Build the next record from the current values and the validated changes.
         nxt = {**current, **changes, "revision": current["revision"] + 1, "updated_at": utc_now()}
         # Store the next record for this subject only.
@@ -177,7 +198,7 @@ def update_wellness(user, patch) -> dict:
     # Persist the change atomically through the configured provider.
     get_storage_provider().update_document(WELLNESS_DOCUMENT_KEY, mutate, _default_document)
     # Publish the stored record together with the accepted cadence bounds.
-    return {**resulting, "min_interval_minutes": MIN_INTERVAL_MINUTES, "max_interval_minutes": MAX_INTERVAL_MINUTES}
+    return {**resulting, "min_interval_minutes": MIN_INTERVAL_MINUTES, "max_interval_minutes": MAX_INTERVAL_MINUTES, "persisted": True}
 
 
 # Summarize the authenticated session's own committed play-token activity without evaluating it.
@@ -191,7 +212,7 @@ def session_summary(user, *, since: str = "") -> dict:
         # Return a stable zeroed envelope rather than another player's totals.
         return {"movements": 0, "staked": 0.0, "returned": 0.0, "net": 0.0, "since": str(since or ""), "play_tokens_only": True}
     # Read only this player's committed movements.
-    rows = ledger.read_recent(player_id, SUMMARY_READ_CEILING)
+    rows = ledger.read_recent(player_id, activity.LEDGER_READ_CEILING)
     # Drop any row not bound to this subject so a provider change can never leak another player.
     owned = [row for row in rows if str(row.get("player_id") or "") == player_id]
     # Apply the optional start boundary using the committed timestamps.

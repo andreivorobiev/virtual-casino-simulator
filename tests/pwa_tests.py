@@ -183,7 +183,7 @@ class PwaFoundationTests(unittest.TestCase):
         # Locate the controlled reload performed only after activation completes.
         reload_index = pwa_case.index("pwa_page.reload(wait_until='domcontentloaded')")
         # Locate the synchronous controller assertion after the controlled navigation.
-        controller_index = pwa_case.index("Boolean(navigator.serviceWorker.controller) && window.CasinoPwa?.version==='9.5.0'")
+        controller_index = pwa_case.index("Boolean(navigator.serviceWorker.controller) && window.CasinoPwa?.version==='9.5.2'")
         # Locate the first explicit navigation after readiness; this is the governed offline route proof, not a bootstrap reload race.
         navigation_index = pwa_case.index("pwa_page.goto")
         # Require activation, reload, and controller proof to remain in deterministic lifecycle order.
@@ -225,6 +225,43 @@ class PwaFoundationTests(unittest.TestCase):
         self.assertIn("const authenticated = await refreshCurrentSession()", app)
         # Require route-aware terminal status after enterAuthenticated remounts the route.
         self.assertIn("restoredRoute === 'lobby' ? 'online' : 'route-restored'", app)
+        # Require protected API 401s to notify the app shell instead of leaving stale authenticated chrome mounted.
+        self.assertIn("casino-session-expired", api_source)
+        # Require the shell listener to ignore expected anonymous probes on public invitation/login surfaces.
+        self.assertIn("window.addEventListener('casino-session-expired', () => { if (currentSession) renderExpiredSessionGate(); });", app)
+        # Require login and guest-entry failures to stay local to their public auth forms.
+        self.assertIn("SESSION_EXPIRY_PUBLIC_PATHS", api_source)
+        # Require the session-expired shell path to clear cached current-user state before rendering login.
+        self.assertLess(app.index("currentSession = null", app.index("function renderExpiredSessionGate()")), app.index("renderLoginGate(t('pwa.expiredSession'", app.index("function renderExpiredSessionGate()")))
+        # Require protected-route authorization failure handling to precede the generic game-load error panel.
+        self.assertLess(app.index("err?.code === 'UNAUTHORIZED'"), app.index("Could not load ${safe(routeLabel(targetRoute))}"))
+
+    # Require trial deep links to show an immediate route-restoration surface before slow session hydration.
+    def test_initial_game_route_restore_placeholder_precedes_session_refresh(self):
+        # Read the application shell source without launching a browser.
+        app = (ROOT / "web" / "app.js").read_text(encoding="utf-8")
+        # Isolate bootstrapping so the startup order cannot be satisfied by reconnect code.
+        init_block = app[app.index("async function init()"):app.index("// Poll shell state periodically")]
+        # Require the startup placeholder helper to remain present.
+        self.assertIn("function renderInitialRouteRestore()", app)
+        # Require the placeholder to use the browser route rather than a stale active route.
+        self.assertIn("const restoredRoute = routeFromLocation()", app)
+        # Require the placeholder to render inside the governed game-screen outlet.
+        self.assertIn("view.className = 'screen game-screen'", app)
+        # Require stable test identity for browser diagnostics and future acceptance evidence.
+        self.assertIn('data-testid="route-restore-loading"', app)
+        # Require localized route-restoration copy instead of a blank or raw loading panel.
+        self.assertIn("t('routeRestore.title'", app)
+        # Locate i18n initialization because route copy depends on the loaded shell dictionary.
+        i18n_index = init_block.index("await initI18n")
+        # Locate the immediate placeholder render in the startup path.
+        placeholder_index = init_block.index("renderInitialRouteRestore()")
+        # Locate current-user refresh, which can be slow on hosted trial sessions.
+        session_index = init_block.index("await refreshCurrentSession()")
+        # Require i18n before placeholder so EN/RU startup copy is available.
+        self.assertLess(i18n_index, placeholder_index)
+        # Require the placeholder before session refresh so direct game routes never sit visually blank.
+        self.assertLess(placeholder_index, session_index)
 
     # Require the full narrowed EN/RU and governed-viewport visual matrix.
     def test_visual_matrix_owns_narrowed_pwa_states(self):

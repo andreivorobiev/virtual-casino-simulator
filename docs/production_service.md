@@ -41,6 +41,18 @@ Transactional mail is additionally fail-closed. `CASINO_MAIL_ENABLED` and the in
 
 Deployment-only `CASINO_MYSQL_MIGRATION_*` variables are never part of this file. The tracked unit unsets them defensively, and `docs/mysql_migrations.md` requires the operator to load them only for the proof-gated migration command and remove them before application startup.
 
+### Build provenance
+
+The runtime never invokes Git and never inspects checkout paths, so a deployment can only be pinned to a source commit by supplying `CASINO_BUILD_SHA` as ordinary configuration. The immutable application archive is required to contain the provenance writer, and each install therefore regenerates a second, non-secret environment fragment from the verified release manifest:
+
+```text
+python scripts/write_release_env.py --manifest <verified release-manifest.json> --destination /etc/casino/release.env
+```
+
+The tool writes exactly one assignment, `CASINO_BUILD_SHA=<commit>`, taken from the manifest's `source.commit_sha`. It refuses any manifest whose recorded commit is not a full lowercase 40-character Git SHA and exits non-zero without writing, so an unpinnable release fails during installation instead of silently publishing `null` provenance. The write is atomic, so a redeployment either exports the previous commit or the new one and never a partial value.
+
+The tracked unit sources this fragment after `/etc/casino/casino.env` and marks it optional, so a host that has not generated it yet still starts. Because it is read last, a freshly generated fragment always wins over a stale inherited value. The fragment contains no secret, but it is still generated rather than committed, and it must be rewritten on every deployment so `/readyz` and the Admin Operations surface report the commit that is actually running.
+
 The environment file is not a release artifact, must never be committed, and should be readable only by the service manager. Secret values must not appear in the unit, process arguments, screenshots, test output, or release evidence.
 
 ## Supervised lifecycle

@@ -1,24 +1,30 @@
 """Focused opt-in session wellness and neutral-copy tests. (#167, WELL-001, WELL-002)"""
 
-# Import JSON parsing for the shipped localization resources.
+# Import SHA-256 so the additive v2 contract stays pinned to exact reviewed bytes.
+import hashlib
+# Import JSON parsing for the shipped localization resources and digest inventory.
 import json
 # Import filesystem paths for locating tracked resources.
 import pathlib
 # Import regular expressions for placeholder parity checks.
 import re
+# Import temporary directories so focused tests never touch repository runtime state.
+import tempfile
 # Import the standard unittest framework used by the repository's focused suites.
 import unittest
 
-# Import the canonical identity boundary for account seeding.
-from casino.core import auth
 # Import the authoritative ledger used to seed committed movements.
 from casino.core import ledger
+# Import the canonical player facade for isolated wallet fixtures.
+from casino.core import players
+# Import provider injection so every test owns its complete durable state.
+from casino.core import storage
 # Import the session wellness authority under test.
 from casino.core import wellness
 # Import the configured storage provider for malformed-document fixtures.
 from casino.core.storage import get_storage_provider
 # Import the standard bounded application error every rejection uses.
-from casino.errors import ValidationError
+from casino.errors import ConflictError, ValidationError
 
 # Resolve the repository root for resource inspection.
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -32,14 +38,27 @@ EXEMPT_PHRASES = ("no cash value", "без денежной ценности")
 
 # Verify wellness controls stay opt-in, bounded, reward-free, and neutrally worded.
 class SessionWellnessTests(unittest.TestCase):
-    # Seed one account per test so records never collide across the shared store.
+    # Seed two isolated players so persistence and privacy assertions never touch repository state.
     def setUp(self) -> None:
-        # Derive a per-test mailbox suffix.
-        unique = self.id().rsplit(".", 1)[1]
-        # Create the subject whose wellness record is under test.
-        self.owner = auth.create_user(f"wellness.{unique}@example.test", "WellnessPassw0rd!23", "Wellness Owner")
-        # Create an unrelated account whose data must never appear.
-        self.other = auth.create_user(f"neighbour.{unique}@example.test", "OtherPassw0rd!23", "Wellness Other")
+        # Allocate an automatically cleaned root outside repository runtime state.
+        self.temporary = tempfile.TemporaryDirectory(prefix="casino-wellness-")
+        # Install one isolated JSON provider for settings, players, and committed ledger rows.
+        storage.set_provider_for_tests(storage.JsonStorageProvider(pathlib.Path(self.temporary.name) / "data"))
+        # Create the subject's isolated wallet through the production player facade.
+        owner_player = players.create_player("Wellness Owner", "human", 5000)
+        # Create an unrelated neighbour wallet used by the privacy assertion.
+        other_player = players.create_player("Wellness Other", "human", 5000)
+        # Build the authenticated subject shape normally supplied by session resolution.
+        self.owner = {"user_id": "wellness_owner", "player_id": owner_player["player_id"], "role": "player", "roles": ["player"], "status": "active"}
+        # Build the unrelated authenticated subject without creating credentials or secrets.
+        self.other = {"user_id": "wellness_other", "player_id": other_player["player_id"], "role": "player", "roles": ["player"], "status": "active"}
+
+    # Release provider injection and isolated files after every assertion.
+    def tearDown(self) -> None:
+        # Clear the process-global test provider before another suite runs.
+        storage.set_provider_for_tests(None)
+        # Remove only the TemporaryDirectory-owned state root.
+        self.temporary.cleanup()
 
     # Require reminders to be off until a player explicitly opts in.
     def test_reminders_are_opt_in_by_default(self) -> None:
@@ -49,6 +68,8 @@ class SessionWellnessTests(unittest.TestCase):
         self.assertEqual((record["enabled"], record["break_reminder_enabled"]), (False, False))
         # Require a calm default cadence rather than a frequent one.
         self.assertEqual(record["reminder_interval_minutes"], 30)
+        # Require registered-account preferences to advertise durable persistence.
+        self.assertTrue(record["persisted"])
 
     # Require an enabled configuration to persist across a fresh read.
     def test_configuration_persists(self) -> None:
@@ -58,6 +79,32 @@ class SessionWellnessTests(unittest.TestCase):
         record = wellness.read_wellness(self.owner)
         # Require the stored configuration.
         self.assertEqual((record["enabled"], record["reminder_interval_minutes"], record["revision"]), (True, 45, 1))
+
+    # Require stale concurrent writes to fail rather than silently replacing a newer choice.
+    def test_stale_revision_is_rejected(self) -> None:
+        # Commit the first update against the initial revision.
+        first = wellness.update_wellness(self.owner, {"enabled": True, "revision": 0})
+        # Require the durable record to advance exactly once.
+        self.assertEqual(first["revision"], 1)
+        # Attempt another update from the stale initial revision.
+        with self.assertRaises(ConflictError):
+            # Require the optimistic concurrency boundary to reject it.
+            wellness.update_wellness(self.owner, {"break_reminder_enabled": True, "revision": 0})
+        # Require the rejected field to remain unchanged.
+        self.assertFalse(wellness.read_wellness(self.owner)["break_reminder_enabled"])
+
+    # Require disposable guest preferences to stay explicitly non-durable.
+    def test_guest_preferences_never_create_durable_state(self) -> None:
+        # Build the disposable guest subject shape used by restricted-preview sessions.
+        guest = {"user_id": "guest_wellness", "player_id": self.owner["player_id"], "role": "guest", "guest_analytics_id": "guest-proof"}
+        # Apply one valid opt-in choice for the life of the caller's session.
+        changed = wellness.update_wellness(guest, {"enabled": True})
+        # Require the response to state that the value is not persisted.
+        self.assertEqual((changed["enabled"], changed["persisted"]), (True, False))
+        # Require a fresh read to return non-durable defaults rather than a stored guest record.
+        reread = wellness.read_wellness(guest)
+        # Prove no durable preference survived the disposable request.
+        self.assertEqual((reread["enabled"], reread["persisted"]), (False, False))
 
     # Require the cadence floor so reminders can never become countdown pressure.
     def test_reminder_cadence_cannot_become_pressure(self) -> None:
@@ -135,6 +182,12 @@ class SessionWellnessTests(unittest.TestCase):
 
     # Require a malformed persisted document to degrade to defaults rather than raising.
     def test_malformed_state_recovers(self) -> None:
+        # Store truthy malformed fields that must never opt the player in.
+        get_storage_provider().write_document(wellness.WELLNESS_DOCUMENT_KEY, {"users": {self.owner["user_id"]: {"enabled": "false", "break_reminder_enabled": 1, "reminder_interval_minutes": 1}}})
+        # Require every malformed field to fall back to safe defaults.
+        malformed = wellness.read_wellness(self.owner)
+        # Prove malformed truthy values cannot enable reminders or bypass the cadence floor.
+        self.assertEqual((malformed["enabled"], malformed["break_reminder_enabled"], malformed["reminder_interval_minutes"]), (False, False, wellness.DEFAULT_INTERVAL_MINUTES))
         # Corrupt the wellness document with an unusable container.
         get_storage_provider().write_document(wellness.WELLNESS_DOCUMENT_KEY, {"users": "corrupted"})
         # Require the read to fall back to opt-in defaults.
@@ -195,3 +248,38 @@ class SessionWellnessTests(unittest.TestCase):
                 self.assertTrue(russian.get(key, "").strip())
                 # Require identical placeholder names so neither locale drops a value.
                 self.assertEqual(set(re.findall(r"\{(\w+)\}", english[key])), set(re.findall(r"\{(\w+)\}", russian[key])))
+
+    # Require the additive routes, active-session summary boundary, and exact contract digest to stay aligned.
+    def test_v2_route_shape_and_contract_digest_are_current(self) -> None:
+        # Import router construction lazily so isolated provider injection is already active.
+        from casino.app import build_router
+        # Build one listener-free route table over the production handlers.
+        router = build_router()
+        # Build the server-owned active-session metadata used as the summary boundary.
+        context = {"user": self.owner, "session": {"created_at": "2000-01-01T00:00:00.000Z"}}
+        # Read the untouched opt-in configuration through the exact additive v2 route.
+        initial = router.dispatch("GET", "/api/v2/me/wellness", {}, context)
+        # Require both controls to remain off at the API boundary.
+        self.assertEqual((initial["wellness"]["enabled"], initial["wellness"]["break_reminder_enabled"]), (False, False))
+        # Update the same authenticated subject without accepting any caller-authored identity.
+        changed = router.dispatch("PATCH", "/api/v2/me/wellness", {"enabled": True, "reminder_interval_minutes": 45, "revision": 0}, context)
+        # Require the route to publish the stored value and advanced revision.
+        self.assertEqual((changed["wellness"]["enabled"], changed["wellness"]["revision"]), (True, 1))
+        # Commit one movement after the synthetic active-session boundary.
+        ledger.debit(self.owner["player_id"], 10, "ROULETTE_BET_PLACED", game="roulette")
+        # Read the neutral current-session summary through the exact additive route.
+        summary = router.dispatch("GET", "/api/v2/me/wellness/summary?since=1900-01-01T00:00:00Z", {}, context)
+        # Require the server-owned session timestamp to override the hostile caller query.
+        self.assertEqual((summary["since"], summary["staked"], summary["play_tokens_only"]), ("2000-01-01T00:00:00.000Z", 10.0, True))
+        # Resolve and read the checked shared self-service v2 contract.
+        contract_path = ROOT / "contracts" / "openapi" / "user-settings.v2.yaml"
+        # Read exact bytes for route anchors and digest verification.
+        contract_bytes = contract_path.read_bytes()
+        # Decode the contract once for its required wellness routes and schemas.
+        contract_text = contract_bytes.decode("utf-8")
+        # Require the shipped routes, opt-in fields, session summary, and no-cash-value marker.
+        self.assertTrue(all(anchor in contract_text for anchor in ("/me/wellness:", "/me/wellness/summary:", "WellnessSettings:", "break_reminder_enabled:", "play_tokens_only:")))
+        # Parse the central exact-byte digest inventory.
+        digests = json.loads((ROOT / "contracts" / "compatibility" / "contract-digests.json").read_text(encoding="utf-8"))
+        # Require the reviewed contract bytes to match the checked digest.
+        self.assertEqual(digests["contracts/openapi/user-settings.v2.yaml"], hashlib.sha256(contract_bytes).hexdigest())
