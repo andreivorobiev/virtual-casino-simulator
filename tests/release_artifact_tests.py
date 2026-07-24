@@ -60,6 +60,7 @@ class ReleaseArtifactTests(unittest.TestCase):
             "migrations/mysql/catalog.json": migration_catalog.replace("0002_upgrade.json", "0002_action_identity.json"),
             "scripts/mysql_migrate.py": "# Fixture deployment-only migration runner.\n",
             "scripts/recovery.py": "# Fixture encrypted recovery runner.\n",
+            "scripts/write_release_env.py": "# Fixture deployment provenance writer.\n",
             "web/app.js": "// Fixture static application bundle.\n",
             "web/index.html": "<!doctype html><title>Fixture</title>\n",
         }
@@ -199,6 +200,15 @@ class ReleaseArtifactTests(unittest.TestCase):
         self.assertEqual(first_archive.read_bytes(), second_archive.read_bytes())
         # Require identical checksum-bound provenance bytes across output locations.
         self.assertEqual(first_manifest.read_bytes(), second_manifest.read_bytes())
+
+    # Prove the immutable application archive carries the deployment provenance writer required by its service unit.
+    def test_deployment_provenance_writer_is_packaged(self):
+        # Build a structurally valid candidate from the complete required fixture inventory.
+        archive_path, _ = self.build("deployment-provenance")
+        # Open the immutable candidate without extracting host-visible files.
+        with zipfile.ZipFile(archive_path, "r") as archive:
+            # Require the documented post-install command to exist in every release.
+            self.assertIn(f"{package_app.ARCHIVE_ROOT}/scripts/write_release_env.py", archive.namelist())
 
     # Prove untracked private content is never considered by tracked-file packaging.
     def test_untracked_private_content_is_excluded(self):
