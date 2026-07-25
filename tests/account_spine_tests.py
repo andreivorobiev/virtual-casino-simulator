@@ -183,7 +183,7 @@ class ProductAccountSpineTests(unittest.TestCase):
         # Resolve the governed Browser harness so its owner-relative alignment remains reviewable without Chromium.
         browser_harness = (Path(__file__).resolve().parents[1] / "tests" / "run_tests.py").read_text(encoding="utf-8")
         # Require bounded desktop tracks wide enough for the complete Russian role label.
-        self.assertIn("grid-template-columns: minmax(112px, 1fr) minmax(132px, 1.2fr) minmax(136px, 1.2fr);", styles)
+        self.assertIn("grid-template-columns: minmax(112px, 1fr) minmax(180px, 1.5fr) minmax(172px, 1.4fr);", styles)
         # Require every direct grid child to shrink inside its assigned track.
         self.assertIn(".admin-user-access-controls > * {\n  min-width: 0;\n}", styles)
         # Require the mobile breakpoint to wrap the complete group inside the measured scroll owner.
@@ -196,5 +196,7 @@ class ProductAccountSpineTests(unittest.TestCase):
         self.assertIn("grid-template-columns: minmax(104px, 1fr) minmax(152px, 1.45fr);\n    width: 330px;", styles)
         # Require deterministic owner-relative alignment instead of browser-dependent nested table scrollIntoView behavior.
         self.assertIn("owner.scrollLeft += groupRect.left - ownerRect.left - Math.max(0,(owner.clientWidth-groupRect.width)/2)", browser_harness)
-        # Require hosted evidence to fail when role or save copy is clipped despite outer-box containment.
-        self.assertIn("labelsReadable:", browser_harness)
+        # Require hosted evidence to diagnose role and save copy independently when containment is insufficient.
+        self.assertIn("roleTextReadable:", browser_harness)
+        # Require the save action's own text box to remain horizontally readable.
+        self.assertIn("saveTextReadable:", browser_harness)

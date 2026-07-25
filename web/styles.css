@@ -2589,17 +2589,17 @@ h3 {
 
 /* Keep lifecycle, Admin-role, and save controls together as one readable account-access unit. */
 .admin-user-access-cell {
-  min-width: 416px;
+  min-width: 500px;
 }
 
 /* Give every localized control a readable desktop track without widening the page itself. */
 .admin-user-access-controls {
   display: grid;
   grid-template-areas: "status role save";
-  grid-template-columns: minmax(112px, 1fr) minmax(132px, 1.2fr) minmax(136px, 1.2fr);
+  grid-template-columns: minmax(112px, 1fr) minmax(180px, 1.5fr) minmax(172px, 1.4fr);
   align-items: center;
   gap: 8px;
-  width: 416px;
+  width: 500px;
   max-width: 100%;
   min-width: 0;
 }
