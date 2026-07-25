@@ -1165,6 +1165,19 @@ def run_api_tests():
             raise AssertionError('marble race suite failed')
     # Record the listener-free Marble Race win, podium, retry, and house-edge proof.
     run_case('API-MARBLE-RACE-001',['MARBLE-001','MARBLE-002','TEST-122'],run_marble_race_tests)
+    # Execute the Pattern Draw rules and settlement proof without opening a listener.
+    def run_pattern_draw_tests():
+        # Load only the focused Pattern Draw class.
+        from tests import pattern_draw_tests
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(pattern_draw_tests.PatternDrawTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused Pattern Draw proof failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure text secret-safe.
+            raise AssertionError('pattern draw suite failed')
+    # Record the listener-free Pattern Draw line, cross, full, retry, and house-edge proof.
+    run_case('API-PATTERN-DRAW-001',['PATTERN-001','PATTERN-002','TEST-123'],run_pattern_draw_tests)
     # Discover and execute every focused restricted-preview security module without opening a listener.
     def run_restricted_preview_security_tests():
         # Load the package directory through unittest's standard test discovery.

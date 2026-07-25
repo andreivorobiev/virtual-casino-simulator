@@ -11005,6 +11005,45 @@
       "notes": "Allocated for GitHub issue #157."
     },
     {
+      "id": "PATTERN-001",
+      "module": "Pattern Draw",
+      "description": "Pattern Draw lights each cell of a three-by-three grid independently with even odds on the shared exactly-once settlement core, then settles one chosen pattern bet. A draw debits one bounded play-token stake. A line bet wins on any fully lit row, column, or diagonal and pays one point seven five times the stake; a cross bet wins on the fully lit plus shape of the centre and its four edge cells and pays thirty times; and a full bet wins only when all nine cells light and pays a four-hundred-and-eighty-times jackpot. Over the 512 equally likely grids the line wins 282 times, the cross 16 times, and the full grid once, and every multiplier is set below its fair multiple, so all three bets are house-positive. Unknown patterns and non-integer, non-positive, or over-limit stakes are rejected before any wallet movement.",
+      "status": "PASS",
+      "api_tests": [
+        "API-PATTERN-DRAW-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/pattern_draw/rules.py",
+        "casino/games/pattern_draw/engine.py",
+        "casino/games/pattern_draw/api.py",
+        "web/games/pattern_draw.js",
+        "contracts/openapi/pattern_draw.v1.yaml"
+      ],
+      "introduced_in": "issue-155-pattern-draw",
+      "changed_in": "issue-155-pattern-draw",
+      "notes": "Allocated for GitHub issue #155, a catalog-expansion game (#73). The module supplies only pure rules; the shared core owns settlement."
+    },
+    {
+      "id": "PATTERN-002",
+      "module": "Pattern Draw",
+      "description": "Pattern Draw inherits the shared core's exactly-once settlement: one caller-stable request id maps to one draw, a retry replays the identical committed grid and payout without moving the wallet again, and a request id reused with different wager content fails closed. The additive v1 contract exposes only the game-owned state and draws routes and never alters the frozen shared API. Every draw commits a full nine-cell grid, and the published bet catalog reports the honest cell count and pattern multipliers.",
+      "status": "PASS",
+      "api_tests": [
+        "API-PATTERN-DRAW-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/pattern_draw/api.py",
+        "casino/core/simple_game.py",
+        "tests/pattern_draw_tests.py",
+        "tests/game_drivers/pattern_draw.py"
+      ],
+      "introduced_in": "issue-155-pattern-draw",
+      "changed_in": "issue-155-pattern-draw",
+      "notes": "Allocated for GitHub issue #155."
+    },
+    {
       "id": "TEST-115",
       "module": "Tests",
       "description": "Listener-free evidence verifies Color Wheel: a matching colour pays its multiplier, a non-matching colour loses the stake, the gold segment pays its jackpot multiplier, unknown colours and malformed stakes are rejected before any wallet movement, a retried spin replays without double-spending, every colour payout is confirmed house-positive, and the published bet catalog matches the real segment layout and multipliers.",
@@ -11139,6 +11178,23 @@
       "introduced_in": "issue-157-marble-race",
       "changed_in": "issue-157-marble-race",
       "notes": "Allocated for GitHub issue #157."
+    },
+    {
+      "id": "TEST-123",
+      "module": "Tests",
+      "description": "Listener-free evidence verifies Pattern Draw: a completed row wins the line bet and reports the lit line, a grid with no completed line loses the line bet, the lit plus shape wins the cross bet, an all-lit grid wins the full jackpot bet, unknown patterns and malformed stakes are rejected before any wallet movement, a retried draw replays without double-spending, and every pattern bet is confirmed house-positive over all 512 grids.",
+      "status": "PASS",
+      "api_tests": [
+        "API-PATTERN-DRAW-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/pattern_draw_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-155-pattern-draw",
+      "changed_in": "issue-155-pattern-draw",
+      "notes": "Allocated for GitHub issue #155."
     }
   ]
 }
