@@ -1048,6 +1048,19 @@ def run_api_tests():
             raise AssertionError('TiltSeven repository-scaffold suite failed')
     # Record the listener-free bilingual, no-network, no-publication, and visual-ownership proof.
     run_case('STATIC-MARKETING-001',['MARKETING-001','MARKETING-002','MARKETING-003','TEST-107'],run_marketing_site_tests)
+    # Execute the shared simple-game settlement-core proof without opening a listener.
+    def run_simple_game_core_tests():
+        # Load only the focused settlement-core class.
+        from tests import simple_game_tests
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(simple_game_tests.SimpleGameCoreTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused settlement proof failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure text secret-safe.
+            raise AssertionError('simple-game settlement core suite failed')
+    # Record the listener-free exactly-once wager, replay, conflict, and crash-recovery proof.
+    run_case('API-GAMECORE-001',['GAMECORE-001','GAMECORE-002','TEST-114'],run_simple_game_core_tests)
     # Discover and execute every focused restricted-preview security module without opening a listener.
     def run_restricted_preview_security_tests():
         # Load the package directory through unittest's standard test discovery.

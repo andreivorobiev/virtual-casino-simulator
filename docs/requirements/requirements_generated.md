@@ -7,7 +7,7 @@ Historical source baseline: 9.1.0
 ## Independent module revisions
 
 - application: 9.50.4
-- core: 9.22.0
+- core: 9.23.0
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.0
@@ -46,8 +46,8 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.1
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.60.2
-- docs: 1.60.2
+- tests: 1.60.3
+- docs: 1.60.3
 - contracts: 1.43.0
 - tooling: 1.20.3
 - commenting_policy: 1.0.0
@@ -808,3 +808,6 @@ Historical source baseline: 9.1.0
 - **TEST-108** (Tests) - PASS: Listener-free evidence verifies the round-replay foundation and exact additive route: artifacts are marked non-settlement and derived from committed history, exclude another subject against a populated neighbour, exclude rounds outside the retention window under an injected clock, hide raw durable identifiers, normalize malformed pagination safely, clamp page size, and fail closed for a subjectless session.
 - **TEST-109** (Tests) - PASS: Listener-free evidence verifies table profiles and exact additive read/write routes: per-game persistence with an advancing revision, cross-subject isolation, rejection of economics-changing and unknown fields, enforcement of value bounds, stale-revision conflict, invalid game-slug rejection, malformed-document recovery, session-local guest behaviour with no durable record, and fail-closed subjectless access.
 - **TEST-110** (Tests) - PASS: Listener-free evidence verifies the Compare Games foundation and shared API boundary: money-math attributes are excluded and never present on a row, localization readiness is derived per locale, request bounds reject too-few, too-many, and malformed requests, unknown games are reported as missing, every new route stays authenticated, OpenAPI/compatibility/module ownership/exact-byte digests stay aligned, and every added copy namespace ships complete EN and RU strings with identical placeholders.
+- **GAMECORE-001** (Core) - PASS: A shared wager-and-settle core provides one exactly-once ledger settlement path for catalog games: a caller supplies only a pure bet validator and a deterministic resolver, and the core draws server entropy, debits one aggregate wager, settles deterministically, and credits any single aggregate return. The wager debit and the settlement credit are each applied exactly once, guarded by ledger proof plus a request fingerprint, so one caller-stable request id maps to exactly one round and a retry replays the identical committed outcome without moving the wallet again.
+- **GAMECORE-002** (Core) - PASS: The shared settlement core fails closed on every abuse and error path: a request id reused with different wager content is rejected as a conflict rather than double-spending, an action identity can never move two different amounts, a non-positive or malformed wager is rejected before any wallet movement, a missing or malformed request id is rejected, and per-player round state is bounded. The deterministic round identity is game-scoped so one game's proof can never satisfy another game.
+- **TEST-114** (Tests) - PASS: Listener-free evidence verifies the shared simple-game settlement core: winning and losing rounds settle exactly once with correct balances, a retried request replays without double-spending, a request id reused with different content fails closed, settlement recovers deterministically from committed ledger proof after total per-player state loss, invalid wagers and missing request ids are rejected before any wallet movement, and the deterministic round id is stable and game-scoped.
