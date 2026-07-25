@@ -3237,10 +3237,10 @@ h3 {
     padding: 16px 14px 70px;
   }
 
-  /* The lobby status rail now reserves its own flex-flow height, so keep only content breathing room instead
-     of the legacy overlay allowance that can make a complete card taller than the tablet outlet. (issue #318, UX-013) */
+  /* The lobby status rail now reserves its own flex-flow height, so keep only compact content breathing room
+     and leave enough tablet height for a complete filtered card at the native End boundary. (issue #318, UX-013) */
   #view.screen.lobby-screen {
-    padding-bottom: 16px;
+    padding-bottom: 12px;
   }
 
   .lobby {
