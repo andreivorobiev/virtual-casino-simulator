@@ -519,6 +519,18 @@ def list_reports(filters: dict | None = None) -> list[dict]:
     return [_summary(row) for row in reversed(reports) if (not priority or row.get("priority") == priority) and (not status or row.get("status") == status) and (not category or row.get("category") == category) and (not impact or row.get("impact") == impact) and (not locale or row.get("locale") == locale) and (not route or row.get("route") == route) and (not reporter or row.get("reporter_reference") == reporter) and (not created_from or _parse_time(row.get("created_at")) >= created_from) and (not created_to or _parse_time(row.get("created_at")) <= created_to)]
 
 
+# List the authenticated persistent user's own report statuses without exposing retained evidence.
+def list_reporter_reports(user: dict) -> list[dict]:
+    # Reject missing, guest, or anonymous identities before deriving a reporter reference.
+    if not isinstance(user, dict) or not user.get("user_id") or str(user.get("identity_provider") or "").lower() == "guest":
+        # Publish the same registered-only policy used by submission.
+        raise ValidationError("Problem reports currently require a registered account")
+    # Derive the opaque reporter reference exactly as submission does.
+    reporter = _reporter_reference(str(user.get("user_id") or ""))
+    # Return newest-first summaries scoped to that reporter only.
+    return list_reports({"reporter": reporter})
+
+
 # Read one committed report and its Admin-only normalized evidence.
 def detail(report_id: str) -> dict:
     # Resolve authoritative metadata first.
@@ -685,8 +697,8 @@ def github_draft(report_id: str) -> dict:
     title = f"[{report['category'].title()}] {report['summary']}"
     # Build bounded Markdown without notes, identity, or encoded evidence.
     body = "\n".join((f"Internal report: `{report['reference']}`", "", "## What happened", report["actual"], "", "## Expected", report["expected"], "", "## Reproduction context", f"- Route: `{report['route']}`", f"- App version: `{context.get('app_version', APP_VERSION)}`", f"- Locale: `{report['locale']}`", f"- Viewport: `{context.get('viewport_width', 0)} × {context.get('viewport_height', 0)}`", f"- Browser family: `{context.get('browser_family', 'unknown')}`", f"- OS family: `{context.get('os_family', 'unknown')}`", f"- Reduced motion: `{bool(context.get('reduced_motion'))}`", f"- Reporter-selected impact: `{report['impact']}`", f"- Screenshots retained internally: {report['attachment_count']}", "", "Screenshots and reporter identity remain in the Admin inbox. Publication is a separate manual Admin action outside this application."))
-    # Return only reviewable text and governed labels.
-    return {"title": title[:256], "body": body, "labels": list(report.get("labels") or [report["priority"], "bug"]), "source_report_id": report_id, "publication_mode": "manual_only"}
+    # Return only reviewable text, governed labels, and the disabled external-publication switch.
+    return {"title": title[:256], "body": body, "labels": list(report.get("labels") or [report["priority"], "bug"]), "source_report_id": report_id, "publication_mode": "manual_only", "publication_enabled": config.FEEDBACK_GITHUB_PUBLICATION_ENABLED}
 
 
 # Export one privacy-safe Admin metadata manifest without encoded pixels.

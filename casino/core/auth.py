@@ -37,7 +37,7 @@ SESSIONS_PATH = DATA_DIR / "auth" / "sessions.json"
 # Set PASSWORD_ITERATIONS to the value needed for the next operation.
 PASSWORD_ITERATIONS = 120_000
 # Set PUBLIC_API_PATHS to the value needed for the next operation.
-PUBLIC_API_PATHS = {"/api/v2/auth/login", "/api/v2/auth/guest", "/api/v2/auth/redeem-invitation", "/api/v2/auth/oauth/providers", "/healthz"}
+PUBLIC_API_PATHS = {"/api/v2/auth/login", "/api/v2/auth/guest", "/api/v2/auth/redeem-invitation", "/api/v2/auth/enrollment-policy", "/api/v2/auth/signup", "/api/v2/auth/oauth/providers", "/healthz"}
 # Bound the accepted session lifetime to the restricted-preview review interval.
 MAX_SESSION_TTL_SECONDS = 86_400
 # Retain at most one thousand active session records across the single-node preview.

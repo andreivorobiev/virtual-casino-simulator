@@ -34,6 +34,8 @@
   "feedback.submit": "Submit report",
   "feedback.submitting": "Submitting report…",
   "feedback.success": "Report {reference} was submitted.",
+  "feedback.myReports": "My report status",
+  "feedback.myReportsEmpty": "Submitted reports for this account will appear here.",
   "feedback.registeredOnly": "Problem reports currently require a registered account.",
   "feedback.error.imageType": "Use a PNG, JPEG, or WebP image no larger than 12 MB.",
   "feedback.error.imageSize": "This screenshot could not be compressed below the upload limit.",

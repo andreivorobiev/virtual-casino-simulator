@@ -150,8 +150,8 @@ def main():
         if preview_security.get("artifact") != "restricted-preview-security" or preview_security.get("stage") != "restricted-preview":
             # Reject renamed or repurposed policy records.
             errors.append(f"{PREVIEW_SECURITY_CONTRACT} does not identify the restricted-preview policy")
-        # Preserve login, approved guest/invitation entry, disabled provider status/start/callback, and liveness as anonymous routes.
-        if preview_security.get("anonymous_routes") != ["/api/v2/auth/login", "/api/v2/auth/guest", "/api/v2/auth/redeem-invitation", "/api/v2/auth/oauth/providers", "/api/v2/auth/oauth/{google|facebook}/start", "/api/v2/auth/oauth/{google|facebook}/callback", "/healthz"]:
+        # Preserve login, approved guest/invitation entry, disabled enrollment policy/signup, disabled provider status/start/callback, and liveness as anonymous routes.
+        if preview_security.get("anonymous_routes") != ["/api/v2/auth/login", "/api/v2/auth/guest", "/api/v2/auth/redeem-invitation", "/api/v2/auth/enrollment-policy", "/api/v2/auth/signup", "/api/v2/auth/oauth/providers", "/api/v2/auth/oauth/{google|facebook}/start", "/api/v2/auth/oauth/{google|facebook}/callback", "/healthz"]:
             # Fail closed when anonymous route scope expands or changes order.
             errors.append(f"{PREVIEW_SECURITY_CONTRACT} does not preserve the anonymous route allowlist")
         # Require public enrollment and live provider flows to stay disabled.

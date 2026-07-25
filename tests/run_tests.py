@@ -780,8 +780,8 @@ def validate_guest_contracts():
     assert all(route in admin_contract for route in ('/admin/guest-trials:','/admin/guest-trials/sessions:','/admin/guest-trials/sessions/{analytics_id}:','/admin/guest-trials/cleanup:'))
     # Prove the full filters, journey, fake-token, action/error/latency, and bounded timeline schemas are published.
     assert all(term in admin_contract for term in ('GameFilter','CompletedFilter','ErrorCategoryFilter','SinceFilter','UntilFilter','account_cta_selected','ProductMetrics','fake_tokens_only','action_categories','error_categories','latency_buckets','maxItems: 80'))
-    # Preserve the exact anonymous allowlist including private redemption and the reviewed provider-latched OAuth routes. (OAUTH-007)
-    assert security_contract['anonymous_routes']==['/api/v2/auth/login','/api/v2/auth/guest','/api/v2/auth/redeem-invitation','/api/v2/auth/oauth/providers','/api/v2/auth/oauth/{google|facebook}/start','/api/v2/auth/oauth/{google|facebook}/callback','/healthz']
+    # Preserve the exact anonymous allowlist including private redemption, disabled enrollment, and reviewed provider-latched OAuth routes. (OAUTH-007)
+    assert security_contract['anonymous_routes']==['/api/v2/auth/login','/api/v2/auth/guest','/api/v2/auth/redeem-invitation','/api/v2/auth/enrollment-policy','/api/v2/auth/signup','/api/v2/auth/oauth/providers','/api/v2/auth/oauth/{google|facebook}/start','/api/v2/auth/oauth/{google|facebook}/callback','/healthz']
     # Prove launch stays held and retention/forbidden fields remain exact.
     assert guest_contract['public_launch_authorized'] is False and guest_contract['wallet']['add_tokens_allowed'] is False and guest_contract['lifecycle']['autoplay_stopped_on_end'] is True and guest_contract['entry']['max_game_actions_per_session']==1000 and guest_contract['entry']['max_concurrent_autoplay_sessions']==1 and guest_contract['admin_telemetry']['raw_retention_days']==30 and guest_contract['admin_telemetry']['aggregate_retention_days']==400 and guest_contract['admin_telemetry']['cleanup_failure_visible'] is True and guest_contract['admin_telemetry']['timeline_event_limit']==80 and guest_contract['admin_telemetry']['responsive_error_cohort_minimum']==5 and guest_contract['admin_telemetry']['export_allowed'] is False and 'browser_nonce' in guest_contract['admin_telemetry']['forbidden_fields']
     # Parse the exact digest freeze map.
@@ -1047,6 +1047,20 @@ def run_api_tests():
             raise AssertionError('guest conversion suite failed')
     # Record the listener-free explicit, idempotent, wallet-preserving conversion proof.
     run_case('API-CONVERT-001',['CONVERT-001','CONVERT-002','TEST-111'],run_guest_conversion_tests)
+    # Execute the product account-spine proof without opening a listener.
+    def run_account_spine_tests():
+        # Load only the focused product account-spine class.
+        from tests import account_spine_tests
+        # Build a concise unittest suite for direct route and service assertions.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(account_spine_tests.ProductAccountSpineTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused account-spine proof failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure text secret-safe.
+            raise AssertionError('product account-spine suite failed')
+    # Record disabled signup/passkeys, Admin role lifecycle, and reporter-status proof.
+    run_case('API-ACCOUNT-SPINE-001',['AUTH-010','ADMIN-026','FEEDBACK-005','I18N-009','TEST-112'],run_account_spine_tests)
     # Discover and execute every focused restricted-preview security module without opening a listener.
     def run_restricted_preview_security_tests():
         # Load the package directory through unittest's standard test discovery.
@@ -1270,10 +1284,14 @@ def run_api_tests():
                 held=api(base,f'/api/v2/auth/oauth/{held_provider}/start','POST',{'action':'signin','return_to':'/'},ok=False); assert held['error']['code']=='NOT_FOUND'
                 # Require the callback route to remain equally inaccessible before parsing callback proof.
                 callback=api(base,f'/api/v2/auth/oauth/{held_provider}/callback',ok=False); assert callback['error']['code']=='NOT_FOUND'
-            # Require unreviewed account creation, generic linking, and exchange surfaces to remain absent.
-            for missing_path in ('/api/v2/auth/oauth/google/link','/api/v2/auth/oauth/google/exchange','/api/v2/auth/signup'):
+            # Require unreviewed generic linking and exchange surfaces to remain absent.
+            for missing_path in ('/api/v2/auth/oauth/google/link','/api/v2/auth/oauth/google/exchange'):
                 # Dispatch only empty value-free reads and require a closed surface.
                 missing=api(base,missing_path,ok=False); assert missing['error']['code']=='NOT_FOUND'
+            # Require full signup to remain a disabled first-party path rather than an OAuth-created account.
+            signup=api(base,'/api/v2/auth/signup','POST',{'email':'oauth-held@example.invalid','password':'OAuthHeldPassw0rd!','display_name':'Held User','accepted':True,'terms_version':'private-beta-1'},ok=False,auth_token=None)
+            # Require the disabled route to fail closed under repository defaults.
+            assert signup['error']['code']=='FORBIDDEN'
             # Confirm OAuth diagnostics never extend the accepted Operations response shape.
             assert set(api(base,'/api/v2/admin/operations'))=={'schema_version','probe','status','checked_at','last_successful_heartbeat_at','build','ready','storage_provider','checks','reasons'}
         # Record secret-safe Admin diagnostics, absent action routes, and unchanged readiness under permanent IDs.

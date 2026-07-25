@@ -88,6 +88,51 @@ function renderPreviews() {
   outlet.querySelectorAll('[data-remove-feedback-image]').forEach(button => { button.onclick = () => { attachments = attachments.filter((_, index) => index !== Number(button.dataset.removeFeedbackImage)); renderPreviews(); }; });
 }
 
+// Render the current reporter's own report status list inside the dialog.
+function renderReporterStatuses(reports) {
+  // Read or create the status outlet after the diagnostic context copy.
+  let outlet = document.getElementById('report-status-list');
+  // Create the outlet lazily so existing static markup remains compatible.
+  if (!outlet) {
+    // Allocate one compact status section.
+    outlet = document.createElement('section');
+    // Set a stable id for translation and browser evidence.
+    outlet.id = 'report-status-list';
+    // Add a governed test hook for reporter-visible status.
+    outlet.dataset.testid = 'feedback-reporter-status';
+    // Set a live region so post-submit status changes are announced.
+    outlet.setAttribute('aria-live', 'polite');
+    // Insert before the submit status message.
+    document.getElementById('report-message')?.before(outlet);
+  }
+  // Hide the section when the reporter has no durable reports yet.
+  if (!Array.isArray(reports) || reports.length === 0) {
+    // Render an empty but explanatory state.
+    outlet.innerHTML = `<h3>${safe(t('feedback.myReports', {}, 'feedback'))}</h3><p class="muted">${safe(t('feedback.myReportsEmpty', {}, 'feedback'))}</p>`;
+    // Return after the empty-state paint.
+    return;
+  }
+  // Render newest statuses without screenshots or Admin-only notes.
+  outlet.innerHTML = `<h3>${safe(t('feedback.myReports', {}, 'feedback'))}</h3><ul class="report-status-list">${reports.slice(0, 5).map(report => `<li><strong>${safe(report.reference)}</strong> <span>${safe(t(`feedback.status.${report.status}`, {}, 'feedback'))}</span><small>${safe(report.summary)}</small></li>`).join('')}</ul>`;
+}
+
+
+// Load the current reporter's own statuses, hiding failures behind the existing registered-user policy.
+async function loadReporterReports() {
+  // Start protected loading because older servers may not yet expose the status endpoint.
+  try {
+    // Fetch current-user report summaries without Admin evidence.
+    const result = await api('/api/v2/me/feedback/reports');
+    // Render summaries from the standard envelope.
+    renderReporterStatuses(result.reports || []);
+  // Ignore status-load failures because submission remains the primary dialog action.
+  } catch (_) {
+    // Render no persistent error for a status sidebar failure.
+    renderReporterStatuses([]);
+  }
+}
+
+
 // Add pasted, dropped, or selected image files to the current draft.
 async function addFiles(files) {
   // Read the localized live status outlet.
@@ -155,6 +200,8 @@ function openDialog() {
   renderPreviews();
   // Open with browser-owned focus containment.
   dialog?.showModal();
+  // Load this registered reporter's current report statuses.
+  void loadReporterReports();
   // Focus the first task control.
   document.getElementById('report-category')?.focus();
 }
@@ -183,6 +230,8 @@ async function submitReport(event) {
     message.textContent = t('feedback.success', { reference: result.reference }, 'feedback');
     // Mirror success through the persistent shell toast.
     toast(t('feedback.success', { reference: result.reference }, 'feedback'), true);
+    // Refresh the visible reporter-status list so the filed report can be tracked.
+    await loadReporterReports();
     // Retire the action identity only after confirmed success.
     actionKey = '';
     // Close after the live region has time to announce.

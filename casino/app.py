@@ -23,7 +23,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 # Import required dependency so this module can use its public functions or constants.
-from casino.config import DEFAULT_HOST, DEFAULT_PORT, WEB_DIR, DATA_DIR, APP_VERSION, GUEST_AUTOPLAY_MAX_ROUNDS, validate_bootstrap_for_startup
+from casino.config import DEFAULT_HOST, DEFAULT_PORT, WEB_DIR, DATA_DIR, APP_VERSION, GUEST_AUTOPLAY_MAX_ROUNDS, validate_bootstrap_for_startup, SIGNUP_ENABLED, PASSKEYS_ENABLED, INVITATIONS_ENABLED, ENROLLMENT_ENABLED
 # Import required dependency so this module can use its public functions or constants.
 from casino.router import Router
 # Import required dependency so this module can use its public functions or constants.
@@ -106,6 +106,13 @@ def build_router() -> Router:
     def submit_feedback_report_v2(body, query, context):
         # Bind the reporter from the authenticated session rather than accepting caller identity.
         return feedback.submit(context["user"], body)
+
+    # Register additive v2 current-reporter status visibility for converted and registered users.
+    @router.get(r"/api/v2/me/feedback/reports")
+    # Return only the authenticated reporter's own summaries without retained screenshot pixels.
+    def current_user_feedback_reports_v2(body, query, context):
+        # Delegate reporter scoping to the feedback service so guest trials stay non-durable until conversion.
+        return {"reports": feedback.list_reporter_reports(context["user"])}
 
     # Attach this decorator so the following function is registered with the framework.
     @router.post(r"/api/v1/casino/reset")
@@ -260,6 +267,42 @@ def build_router() -> Router:
         # Redeem through the invitation lifecycle; disabled enrollment and every abuse case fail closed generically.
         return invitations.redeem(str((body or {}).get("token", "")), str((body or {}).get("email", "")), str((body or {}).get("password", "")), str((body or {}).get("display_name", "")), str((body or {}).get("locale", "en-US")), str((body or {}).get("terms_version", "")), (body or {}).get("accepted") is True, str((body or {}).get("idempotency_key", "")))
 
+    # Attach a public read-only enrollment policy so browser controls can show disabled gates honestly.
+    @router.get(r"/api/v2/auth/enrollment-policy")
+    # Publish signup, invitation, guest, conversion, and passkey availability without creating identity state.
+    def auth_enrollment_policy(body, query):
+        # Return feature gates only, never environment names, credentials, or operator settings.
+        return {"signup_enabled": SIGNUP_ENABLED, "guest_trials_enabled": auth.GUEST_TRIALS_ENABLED, "invitation_enrollment_enabled": INVITATIONS_ENABLED and ENROLLMENT_ENABLED, "guest_conversion_enabled": True, "passkeys_enabled": PASSKEYS_ENABLED, "canonical_identity": "casino_user_id", "shared_auth_origin": "tiltseven_first_party"}
+
+    # Attach a gated public full-account signup endpoint for the owner-approved future enrollment form.
+    @router.post(r"/api/v2/auth/signup")
+    # Create a local first-party user only when the explicit signup gate is enabled.
+    def auth_signup(body, query, context):
+        # Keep the route present but fail closed until the operator enables signup intentionally.
+        if not SIGNUP_ENABLED:
+            # Reject disabled signup before validating account fields to avoid account enumeration.
+            raise ForbiddenError("Full account signup is disabled")
+        # Reject unsupported fields so public signup cannot smuggle roles, status, wallet, or provider identity.
+        if set(body or {}) - {"email", "password", "display_name", "locale", "terms_version", "accepted"}:
+            # Fail closed through the standard validation envelope.
+            raise ValidationError("Signup request contains unsupported fields")
+        # Require explicit terms acceptance for every full account created through public signup.
+        if (body or {}).get("accepted") is not True:
+            # Reject silent signup attempts.
+            raise ValidationError("Signup requires explicit terms acceptance")
+        # Validate password policy before creating a durable identity.
+        auth.validate_enrollment_password(str((body or {}).get("password", "")))
+        # Create a normal local player account with no Admin privileges and no provider identity.
+        user = auth.create_user(str((body or {}).get("email", "")), str((body or {}).get("password", "")), str((body or {}).get("display_name", "")), role="player", terms_required=False, locale=str((body or {}).get("locale", "en-US")))
+        # Store the accepted terms version on the created account.
+        auth.accept_terms(user["user_id"], str((body or {}).get("terms_version", "")), True, "self_signup")
+        # Create a browser session immediately so the enrollment form can continue into the lobby.
+        result = auth.login(user["email"], str((body or {}).get("password", "")), context.get("client", ""))
+        # Add session and CSRF cookies using the same policy as password login.
+        context.setdefault("response_headers", []).extend(auth.session_cookie_headers(result["session"], context.get("session_samesite", "Lax"), bool(context.get("secure_cookie")), bool(context.get("include_csrf_cookie"))))
+        # Return the current-user payload rather than any raw password or signup internals.
+        return result
+
     # Attach this decorator so the following function is registered with the framework.
     @router.post(r"/api/v2/auth/guest/end")
     # Irreversibly end the authenticated guest's own trial. (issue #317)
@@ -386,6 +429,20 @@ def build_router() -> Router:
         # Bind the subject from the authenticated session rather than accepting caller identity.
         return {"settings": user_settings.update_settings(context["user"], body)}
 
+    # Register the disabled-by-default passkey foundation status for My Settings.
+    @router.get(r"/api/v2/me/passkeys")
+    # Publish passkey readiness without starting a WebAuthn ceremony.
+    def current_user_passkeys(body, query, context):
+        # Return no credential inventory until the certified passkey implementation lands.
+        return {"passkeys": {"enabled": PASSKEYS_ENABLED, "registration_available": False, "authentication_available": False, "credentials": [], "canonical_identity": "casino_user_id"}}
+
+    # Register a fail-closed passkey registration entrypoint so future UI buttons have a governed endpoint.
+    @router.post(r"/api/v2/me/passkeys/register")
+    # Reject registration until WebAuthn challenges, attestation, recovery, and browser evidence are implemented.
+    def current_user_passkey_register(body, query, context):
+        # Preserve the disabled foundation rather than accepting a partial browser credential.
+        raise ForbiddenError("Passkey registration is disabled")
+
     # Register additive self-only bounded activity reads. (USER-007, issue #352)
     @router.get(r"/api/v2/me/history")
     # Return only the authenticated session's own paginated activity.
@@ -432,6 +489,10 @@ def build_router() -> Router:
     @router.post(r"/api/v2/me/convert-guest")
     # Convert the authenticated guest's own trial into a durable full account, preserving its wallet.
     def convert_guest(body, query, context):
+        # Reject unsupported fields so conversion cannot smuggle roles, status, wallet, or provider identity.
+        if set(body or {}) - {"email", "password", "display_name", "locale", "terms_version", "accepted", "idempotency_key"}:
+            # Fail closed before touching conversion state.
+            raise ValidationError("Guest conversion request contains unsupported fields")
         # Bind the guest principal from the authenticated session rather than any caller-supplied identity.
         return guest_conversion.convert(context.get("user") or {}, str((body or {}).get("email", "")), str((body or {}).get("password", "")), str((body or {}).get("display_name", "")), terms_version=str((body or {}).get("terms_version", "")), accepted=(body or {}).get("accepted") is True, locale=str((body or {}).get("locale", "en-US")), idempotency_key=str((body or {}).get("idempotency_key", "")))
 

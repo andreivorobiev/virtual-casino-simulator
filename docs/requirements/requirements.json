@@ -8037,7 +8037,7 @@
       "id": "ADMIN-024", "module": "Admin", "description": "Admin HTML, JavaScript, and API surfaces require an active Admin session during restricted preview, and user privilege or status changes revoke existing sessions.", "status": "PASS", "api_tests": ["API-SEC-PREVIEW-001", "API-ADMIN-USERS-001"], "browser_tests": ["BR-SEC-PREVIEW-001"], "implementation_files": ["casino/wsgi.py", "casino/admin.py", "web/admin.html", "web/admin.js"], "introduced_in": "issue-203-restricted-preview-security", "changed_in": "issue-203-restricted-preview-security", "notes": "Manual invitation is the only approved enrollment path at this stage."
     },
     {
-      "id": "AUTH-007", "module": "Core", "description": "Restricted preview keeps public signup absent; additive invite-only OAuth routes remain disabled and provider-network inaccessible by default, create no users, never link by email, and require exact browser/session integrity when separately released.", "status": "PASS", "api_tests": ["API-SEC-PREVIEW-001", "OAUTH-MOCK-001", "API-OAUTH-002"], "browser_tests": ["BR-SEC-PREVIEW-001", "BR-OAUTH-RUNTIME-001"], "implementation_files": ["casino/wsgi.py", "casino/core/auth.py", "casino/app.py", "contracts/compatibility/oauth-disabled-foundation.json", "contracts/compatibility/oauth-invite-only-runtime.json", "contracts/compatibility/restricted-preview-security.json"], "introduced_in": "issue-203-restricted-preview-security", "changed_in": "issue-326-invite-oauth", "notes": "Workroom #25 authorizes disabled repository code only; live provider release, public signup, deployment, DNS, and unrestricted launch remain separately prohibited."
+      "id": "AUTH-007", "module": "Core", "description": "Restricted preview keeps public signup disabled and fail-closed; additive invite-only OAuth routes remain disabled and provider-network inaccessible by default, create no users, never link by email, and require exact browser/session integrity when separately released.", "status": "PASS", "api_tests": ["API-SEC-PREVIEW-001", "OAUTH-MOCK-001", "API-OAUTH-002"], "browser_tests": ["BR-SEC-PREVIEW-001", "BR-OAUTH-RUNTIME-001"], "implementation_files": ["casino/wsgi.py", "casino/core/auth.py", "casino/app.py", "contracts/compatibility/oauth-disabled-foundation.json", "contracts/compatibility/oauth-invite-only-runtime.json", "contracts/compatibility/restricted-preview-security.json"], "introduced_in": "issue-203-restricted-preview-security", "changed_in": "issue-326-invite-oauth", "notes": "Workroom #25 authorizes disabled repository code only; live provider release, public signup, deployment, DNS, and unrestricted launch remain separately prohibited."
     },
     {
       "id": "AUTH-008", "module": "Core", "description": "The authenticated shared shell renders and keyboard-wires Admin navigation only for an authenticated Admin user; normal-player locale rerenders and restored game routes never expose the affordance, while direct Admin HTML and API access remain server-enforced.", "status": "PASS", "api_tests": ["API-ADMIN-USERS-001"], "browser_tests": ["BR-ADMIN-NAV-AUTH-001"], "implementation_files": ["web/app.js", "casino/app.py", "casino/wsgi.py", "casino/admin.py"], "introduced_in": "issue-251-admin-nav-gate", "changed_in": "issue-251-admin-nav-gate", "notes": "Hiding the shell affordance is presentation hardening; both runtime adapters enforce direct Admin HTML, JavaScript, and API authorization as the security boundary."
@@ -10608,6 +10608,112 @@
       "introduced_in": "issue-378-guest-conversion",
       "changed_in": "issue-378-guest-conversion",
       "notes": "Allocated for GitHub issue #378. Each test resets the identity store so the active-guest capacity never carries between cases."
+    },
+    {
+      "id": "AUTH-010",
+      "module": "Core",
+      "description": "The Casino keeps one canonical first-party identity system keyed by the internal Casino user id for tiltseven.com and casino.tiltseven.com. Guest trials, Admin-created accounts, self-service conversion, disabled public signup, OAuth links, and future passkeys are provider layers over that identity rather than account owners. Public enrollment policy exposes only boolean feature gates; full signup and passkey registration are disabled by default and fail closed without creating users, provider identities, or credentials.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ACCOUNT-SPINE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/config.py",
+        "casino/core/auth.py",
+        "casino/app.py",
+        "web/app.js",
+        "contracts/openapi/auth.v2.yaml",
+        "contracts/compatibility/restricted-preview-security.json",
+        "tests/account_spine_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "product-account-spine",
+      "changed_in": "product-account-spine",
+      "notes": "OCI or provider identity may be added later only as a separately approved authentication adapter; it must not replace the Casino user id as the account authority."
+    },
+    {
+      "id": "ADMIN-026",
+      "module": "Admin",
+      "description": "Admins can promote or remove the Admin role from account users and can set explicit account lifecycle states active, inactive, suspended, or locked. Guest Trials remain excluded from account-management routes, unsupported role values fail closed, every role/status mutation revokes affected sessions through canonical auth privilege tracking, and the server rejects any change that would leave no active Admin. Admin audit events include before/after role, status, display name, and locale metadata for full operator review without exposing password material.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ACCOUNT-SPINE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/admin.py",
+        "web/admin.js",
+        "web/i18n/en-US/admin.json",
+        "web/i18n/ru-RU/admin.json",
+        "contracts/openapi/admin-users.v2.yaml",
+        "tests/account_spine_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "product-account-spine",
+      "changed_in": "product-account-spine",
+      "notes": "The Admin UI exposes the role/lifecycle controls on the managed-account table and retains separate Guest Trials ownership for disposable principals."
+    },
+    {
+      "id": "FEEDBACK-005",
+      "module": "Core",
+      "description": "Problem reporting remains a manual Admin copy-paste workflow: the application prepares sanitized GitHub issue text and labels but never publishes externally unless a future disabled adapter is separately approved. Registered reporters can see their own safe report status summaries; screenshots, Admin notes, audit history, and raw reporter identity remain hidden. Guest trials cannot track abandoned reports unless they first convert into a durable account.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ACCOUNT-SPINE-001",
+        "API-FEEDBACK-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/feedback.py",
+        "casino/app.py",
+        "web/core/feedback.js",
+        "web/i18n/en-US/feedback.json",
+        "web/i18n/ru-RU/feedback.json",
+        "contracts/openapi/feedback.v2.yaml",
+        "tests/feedback_tests.py",
+        "tests/account_spine_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "product-account-spine",
+      "changed_in": "product-account-spine",
+      "notes": "Automatic GitHub publication, credentials, provider networking, and public issue creation remain out of scope for this PR."
+    },
+    {
+      "id": "I18N-009",
+      "module": "Application",
+      "description": "The product account spine preserves the approved EN/RU browser-visible copy while documenting that the full planned-locale program must land as governed waves with native translations, font coverage, visual evidence, and permanent requirement/test allocation before user exposure. No unsupported locale is silently added to account, enrollment, feedback, passkey, or Admin-role flows by this PR.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ACCOUNT-SPINE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "web/i18n/en-US/",
+        "web/i18n/ru-RU/",
+        "docs/requirements/requirements.json",
+        "docs/requirements/requirements_generated.md"
+      ],
+      "introduced_in": "product-account-spine",
+      "changed_in": "product-account-spine",
+      "notes": "This records the owner's all-locales product direction without pretending unreviewed translations are production-ready."
+    },
+    {
+      "id": "TEST-112",
+      "module": "Tests",
+      "description": "Listener-free evidence verifies the product account spine: enrollment policy reports disabled signup and passkeys with guest conversion available, disabled signup creates no account, passkey registration fails closed, Admin role promotion/demotion and lifecycle states preserve last-active-Admin protection, reporter-visible status is account-scoped and attachment-free, and guest status tracking is rejected unless conversion creates a durable account.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ACCOUNT-SPINE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/account_spine_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "product-account-spine",
+      "changed_in": "product-account-spine",
+      "notes": "The suite is listener-free so it can run before hosted browser visual evidence; browser-visible UI remains covered by ordinary Browser Tests on the exact PR head."
     }
   ]
 }
