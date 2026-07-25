@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.51.7
+- application: 9.51.8
 - core: 9.23.0
 - ledger: 9.1.1
 - players: 9.1.0
@@ -45,11 +45,12 @@ Historical source baseline: 9.1.0
 - let_it_ride: 1.0.0
 - casino_holdem: 1.0.1
 - double_bonus_video_poker: 1.0.0
+- mississippi_stud: 1.0.0
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.60.20
-- docs: 1.60.20
-- contracts: 1.45.0
+- tests: 1.60.22
+- docs: 1.60.22
+- contracts: 1.46.0
 - tooling: 1.20.3
 - commenting_policy: 1.0.0
 
@@ -822,3 +823,6 @@ Historical source baseline: 9.1.0
 - **DBVP-001** (Double Bonus Video Poker) - PASS: Double Bonus Video Poker is a single-hand draw video poker on the nine-six pay schedule. The player bets, receives five cards, holds any subset, and draws replacements for the rest; the completed five-card hand is paid by the paytable applied to the bet. Double Bonus rewards four of a kind richly, with four aces paying the most, then four twos through fours, then four fives through kings, while trimming two pair to an even-money return, and the nine-six full house and flush keep the schedule house-positive at about a 0.89 percent edge under optimal play. Deal and draw are exactly-once and reload-safe on the shared ledger and player-scoped state store, and the five replacement cards are committed at deal so a reload cannot change the draw.
 - **DBVP-002** (Double Bonus Video Poker) - PASS: Double Bonus Video Poker inherits the exactly-once, reload-safe orchestration of the shared ledger: one caller-stable action id maps to one deal or one draw, a retry replays the identical settled hand without moving the wallet again, and an action id reused with different hold content fails closed. The replacement pile stays private until the draw completes. The additive v1 contract exposes only the game-owned state, rounds, and decisions routes and never alters the frozen shared API. The published rules report the hand size and the nine-six Double Bonus paytable.
 - **TEST-114** (Tests) - PASS: Listener-free evidence verifies Double Bonus Video Poker: the paytable bands four of a kind into the aces, twos-through-fours, and fives-through-kings tiers and trims two pair to even money, holding three aces and drawing the fourth pays four aces, holding a made hand keeps it through the draw, a busted draw returns nothing, a replayed draw returns the identical settled hand without a second credit, a draw action-id reused with a changed hold fails closed, a reload recovers the committed deal without a duplicate debit, invalid bets and hold positions are rejected, and a large seeded sample confirms the nine-six schedule leaves the game house-positive under a disciplined strategy.
+- **MSTUD-001** (Mississippi Stud) - PASS: Mississippi Stud is a stateful dealer-less five-card stud where the player builds one hand from two hole cards and three community cards. The player posts an ante, then across three betting streets, before each community card is exposed, either folds and forfeits every wager already made or bets one to three times the ante. The completed five-card hand is paid on the total amount wagered: a pair of jacks or better pays even money, richer hands pay up to five hundred to one for a royal flush, a pair of sixes through tens returns every wager as a push, and a pair of fives or lower or no pair loses the whole stake. Deal and each street decision are exactly-once and reload-safe on the shared ledger and player-scoped state store.
+- **MSTUD-002** (Mississippi Stud) - PASS: Mississippi Stud inherits the exactly-once, reload-safe orchestration of the shared ledger across its three betting streets: one caller-stable action id maps to one deal or one street decision, a retry replays the identical advanced or settled round without moving the wallet again, and an action id reused with different wager content fails closed. The community cards stay private and reveal one per settled street, and a fold reveals only the community cards seen so far. The additive v1 contract exposes only the game-owned state, rounds, and decisions routes and never alters the frozen shared API. The published rules report the bet multipliers, the street count, and the winning-hand paytable.
+- **TEST-115** (Tests) - PASS: Listener-free evidence verifies Mississippi Stud: the paytable bands pairs into jacks-or-better wins, sixes-through-tens pushes, and fives-or-lower losses and recognizes a royal flush, a full three-street play pays the paytable on the total wagered amount, a pushing hand returns the whole wager, a losing hand forfeits the stake, the community cards reveal one per settled street, a fold forfeits only the wagers already made, a replayed street bet returns the advanced state without a second debit, a reload recovers committed street bets without duplicates, invalid antes and multipliers are rejected, and a large seeded sample confirms the disciplined strategy leaves the game house-positive. Hosted browser evidence proves the localized public controls, progressive reveal, settlement, reduced-motion state, route restoration, responsive containment, and fixed-feedback non-occlusion.

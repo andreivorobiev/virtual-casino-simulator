@@ -1002,6 +1002,20 @@ def run_api_tests():
             raise AssertionError('double bonus video poker suite failed')
     # Record the Double Bonus paytable, deal-and-draw settlement, replay, recovery, and house-edge proof.
     run_case('API-DOUBLE-BONUS-VIDEO-POKER-001',['DBVP-001','DBVP-002','TEST-114'],run_double_bonus_video_poker_tests)
+    # Execute the Mississippi Stud engine and settlement proof without opening a listener.
+    def run_mississippi_stud_tests():
+        # Import the focused suite only when its mapped API case runs.
+        from tests import mississippi_stud_tests
+        # Load exactly the Mississippi Stud engine and service assertions.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(mississippi_stud_tests.MississippiStudTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused Mississippi Stud assertion failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure stable.
+            raise AssertionError('mississippi stud suite failed')
+    # Record the Mississippi Stud paytable, three-street settlement, replay, recovery, and house-edge proof.
+    run_case('API-MISSISSIPPI-STUD-001',['MSTUD-001','MSTUD-002','TEST-115'],run_mississippi_stud_tests)
     # Execute the opt-in wellness, current-session summary, concurrency, and neutral-copy proof without a listener.
     def run_wellness_tests():
         # Import the focused suite only when its mapped API case runs.
@@ -3964,7 +3978,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Define one assertion that proves the last card and its Play control are fully inside the bounded region.
                     def assert_last_action_reachable():
                         # Compare live rectangles so visibility cannot pass while fixed chrome clips the action.
-                        reachability=page.evaluate("""() => { const region=document.querySelector('[data-testid="lobby-scroll-region"]'); const cards=[...document.querySelectorAll('[data-testid^="card-"]')]; const plays=[...document.querySelectorAll('[data-testid^="open-"]')]; if (!cards.length || !plays.length) return {reachable:false}; const regionRect=region.getBoundingClientRect(); const cardRect=cards.at(-1).getBoundingClientRect(); const playRect=plays.at(-1).getBoundingClientRect(); return {reachable:cardRect.top>=regionRect.top-1 && cardRect.bottom<=regionRect.bottom+1 && playRect.top>=regionRect.top-1 && playRect.bottom<=regionRect.bottom+1,cardBottom:cardRect.bottom,playBottom:playRect.bottom,regionBottom:regionRect.bottom}; }""")
+                        reachability=page.evaluate("""() => { const region=document.querySelector('[data-testid="lobby-scroll-region"]'); const cards=[...document.querySelectorAll('[data-testid^="card-"]')]; const plays=[...document.querySelectorAll('[data-testid^="open-"]')]; if (!cards.length || !plays.length) return {reachable:false}; const card=cards.at(-1); const play=plays.at(-1); const activeCategory=document.querySelector('[data-catalog-category][aria-pressed="true"]'); const regionRect=region.getBoundingClientRect(); const cardRect=card.getBoundingClientRect(); const playRect=play.getBoundingClientRect(); return {reachable:cardRect.top>=regionRect.top-1 && cardRect.bottom<=regionRect.bottom+1 && playRect.top>=regionRect.top-1 && playRect.bottom<=regionRect.bottom+1,category:activeCategory?.dataset.catalogCategory||'',cardTestId:card.dataset.testid||'',cardTop:cardRect.top,cardBottom:cardRect.bottom,cardHeight:cardRect.height,playTop:playRect.top,playBottom:playRect.bottom,regionTop:regionRect.top,regionBottom:regionRect.bottom,regionHeight:regionRect.height}; }""")
                         # Reject partial visibility, footer overlap, and Play controls clipped below the outlet edge.
                         assert reachability['reachable'],reachability
                     # Reset the intentional region to its first catalog row before exercising a new input mode.
@@ -5722,6 +5736,62 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Execute the integrated Double Bonus browser and governed visual gate.
                 run_case('BR-DBVP-001',['DBVP-001','DBVP-002','TEST-114'],double_bonus_video_poker_acceptance)
+                # Define real-backend Mississippi Stud localization, progressive-reveal, settlement, motion, and route acceptance.
+                def mississippi_stud_acceptance():
+                    # Open the catalog-owned route and wait for the stable game selector.
+                    page.get_by_test_id('nav-mississippi_stud').click(); page.get_by_test_id('mississippi-stud').wait_for(timeout=5000)
+                    # Enumerate every viewport governed by the Mississippi Stud visual-matrix row.
+                    required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
+                    # Load exact UTF-8 expectations from both canonical locale resources.
+                    resources={locale:read_i18n_json(ROOT/'web'/'i18n'/locale/'games'/'mississippi_stud.json') for locale in ('en-US','ru-RU')}
+                    # Capture one mounted state across both locales and every governed viewport.
+                    def localized_evidence(prefix,states,expected_street=None,expected_revealed=None):
+                        # Iterate through paired English and Russian resources without discarding the active round.
+                        for locale in ('en-US','ru-RU'):
+                            # Switch the shared locale and wait for the game-owned rerender.
+                            page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_timeout(100)
+                            # Require exact localized phase copy rather than fallback keys or stale English.
+                            if expected_street is None and 'ready' in states:
+                                # Pin the ready prompt before the ledger-backed deal.
+                                assert page.get_by_test_id('mississippi-stud-result').inner_text()==resources[locale]['result.idle']
+                            elif expected_street is not None:
+                                # Pin the localized street label for the current progressive reveal.
+                                assert page.locator('.ms-street').inner_text()==resources[locale]['label.street'].replace('{street}',str(expected_street))
+                            else:
+                                # Require one localized terminal outcome after the authoritative settlement.
+                                assert any(page.get_by_test_id('mississippi-stud-result').inner_text().startswith(resources[locale][f'outcome.{outcome}']) for outcome in ('win','push','lose'))
+                            # Validate containment, visible controls, and after-pass evidence at each exact viewport.
+                            for viewport_id,width,height in required_viewports:
+                                # Resize to the registered evidence dimensions.
+                                page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
+                                # Collect document-fit and fixed-feedback overlap geometry for native controls and rendered text ranges.
+                                card_geometry=page.evaluate("() => { const button=document.querySelector('.report-problem-fab:not([hidden])'); const fixed=button?.getBoundingClientRect(); const hits=[]; const intersects=rect=>fixed&&rect.left<fixed.right&&rect.right>fixed.left&&rect.top<fixed.bottom&&rect.bottom>fixed.top; for(const node of document.querySelectorAll('.msstud input,.msstud button')){if(intersects(node.getBoundingClientRect()))hits.push(`${node.tagName.toLowerCase()}.${node.className}`);} for(const node of document.querySelectorAll('.msstud h3,.msstud h4,.msstud label,.msstud .ms-pays span,.msstud .ms-street,.msstud .ms-result')){const range=document.createRange(); range.selectNodeContents(node); if([...range.getClientRects()].some(intersects))hits.push(`${node.tagName.toLowerCase()}:${node.textContent.trim()}`);} const root=document.querySelector('.msstud')?.getBoundingClientRect(); return {documentFits:document.documentElement.scrollWidth<=window.innerWidth+1,feedbackOverlaps:hits.length,overlapIdentities:hits,readableInlineSize:Math.round(root?.width||0)}; }")
+                                # Collect mounted-content predicates separately from responsive geometry.
+                                mounted_geometry={'gameVisible':page.get_by_test_id('mississippi-stud').is_visible(),'paytableRows':page.locator('.ms-pays div').count(),'paytableVisible':page.locator('.ms-pays').is_visible(),'communityCards':page.locator('.ms-row').nth(1).locator('.playing-card').count() if page.locator('.ms-row').count()>1 else 0}
+                                # Reject page overflow, fixed-feedback occlusion, narrow slivers, and incomplete mounted state with exact diagnostics.
+                                assert card_geometry['documentFits'] and card_geometry['feedbackOverlaps']==0 and card_geometry['readableInlineSize']>=300 and mounted_geometry['gameVisible'] and mounted_geometry['paytableRows']==9 and mounted_geometry['paytableVisible'] and (expected_revealed is None or mounted_geometry['communityCards']==expected_revealed),{'cardGeometry':card_geometry,'mountedGeometry':mounted_geometry,'locale':locale,'viewport':viewport_id}
+                                # Record self-describing exact-head evidence for this state and viewport.
+                                game_evidence(f'after-pass-mississippi-stud-{prefix}-{locale.lower()}-{viewport_id}.png','mississippi_stud',states,locale,viewport_id)
+                        # Restore English desktop controls for the next public action.
+                        page.get_by_test_id('shell-locale-select').select_option('en-US'); page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(100)
+                    # Capture the complete ready machine before the ledger-backed deal.
+                    localized_evidence('ready',['ready'])
+                    # Commit a bounded ante and deal through the public frontend.
+                    page.locator('[data-ante]').fill('1'); page.locator('[data-ante]').press('Tab'); page.locator('[data-deal]').click(); page.get_by_text('Street 1 of 3',exact=True).wait_for(timeout=10000)
+                    # Capture the first decision before any community card is exposed.
+                    localized_evidence('street-one-decision',['street_one_decision'],1,0)
+                    # Bet the first street and require exactly one revealed community card.
+                    page.locator('[data-bet="1"]').click(); page.get_by_text('Street 2 of 3',exact=True).wait_for(timeout=10000); localized_evidence('street-two-decision',['street_two_decision'],2,1)
+                    # Bet the second street and require exactly two revealed community cards.
+                    page.locator('[data-bet="1"]').click(); page.get_by_text('Street 3 of 3',exact=True).wait_for(timeout=10000); localized_evidence('street-three-decision',['street_three_decision'],3,2)
+                    # Settle through the public frontend and capture the complete terminal hand under reduced motion.
+                    page.locator('[data-bet="1"]').click(); page.locator('[data-deal]:not([disabled])').wait_for(timeout=10000); page.emulate_media(reduced_motion='reduce'); localized_evidence('settled-reduced-motion',['settled','reduced_motion'],None,3)
+                    # Reload the canonical route and require restored player-owned terminal state.
+                    page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('mississippi-stud').wait_for(timeout=5000); page.locator('[data-deal]:not([disabled])').wait_for(timeout=5000); localized_evidence('route-restored',['route_restored'],None,3)
+                    # Return to the lobby for downstream browser cases.
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Execute the integrated Mississippi Stud browser and governed visual gate.
+                run_case('BR-MSTUD-001',['MSTUD-001','MSTUD-002','TEST-115'],mississippi_stud_acceptance)
                 # Define registered Texas Hold'em localization, streets, settlement, motion, and route acceptance.
                 def texas_holdem_practice_acceptance():
                     # Open the catalog-owned route and wait for the stable table selector.
@@ -6492,8 +6562,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.reload(wait_until='networkidle'); page.get_by_test_id('slots-payline').wait_for(timeout=5000)
                     # Define a browser-side audit that compares every rendered SVG point with its actual cell center in screen coordinates.
                     def audit_payline_geometry():
-                        # Bring the bounded reel grid into the viewport so elementFromPoint can test symbol identity instead of returning null for off-screen coordinates.
-                        page.get_by_test_id('slot-grid').scroll_into_view_if_needed()
+                        # Center the bounded reel grid so fixed shell actions cannot mask symbol identity during elementFromPoint checks.
+                        page.get_by_test_id('slot-grid').evaluate("grid => grid.scrollIntoView({block:'center',inline:'nearest'})")
                         # Let ResizeObserver and requestAnimationFrame finish the current responsive or zoom alignment.
                         page.wait_for_timeout(120)
                         # Return exact geometry, identity, style, accessibility, and containment diagnostics for all twenty paths.

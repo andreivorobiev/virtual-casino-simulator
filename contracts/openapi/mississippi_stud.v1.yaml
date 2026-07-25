@@ -1,0 +1,178 @@
+openapi: 3.0.3
+# Describe the additive issue-143 Mississippi Stud contract without changing existing v1 operations.
+info:
+  title: Virtual Casino Mississippi Stud API
+  version: v1
+  description: >-
+    Additive issue #143 contract for authenticated Mississippi Stud play. The deal and each of the three
+    street decisions require independent action ids so retries reuse one round and each ante, street bet,
+    or settlement movement commits at most once in the local simulator.
+tags:
+  - name: Mississippi Stud
+    description: Player-scoped dealer-less five-card stud over three betting streets with ledger-only settlement.
+# Define only additive frozen-v1 game endpoints owned by this proposal slice.
+paths:
+  # Expose the player-scoped reload-safe state endpoint.
+  /api/v1/games/mississippi-stud/state:
+    get:
+      tags: [Mississippi Stud]
+      operationId: mississippiStudState
+      summary: Read the authenticated player's reload-safe Mississippi Stud state
+      responses:
+        '200':
+          description: Current game state, fixed rules, and bound player
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StateEnvelope'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  # Deal or replay one ante round awaiting the first street decision.
+  /api/v1/games/mississippi-stud/rounds:
+    post:
+      tags: [Mississippi Stud]
+      operationId: mississippiStudStartRound
+      summary: Deal or replay one ante round awaiting the first betting street
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartRoundRequest'
+      responses:
+        '200':
+          description: A prepared decision-ready round with community cards withheld until each street resolves
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoundEnvelope'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  # Apply or replay one bet-or-fold street decision.
+  /api/v1/games/mississippi-stud/rounds/{round_id}/decisions:
+    post:
+      tags: [Mississippi Stud]
+      operationId: mississippiStudDecision
+      summary: Bet one to three times the ante at the current street or fold the round
+      parameters:
+        - name: round_id
+          in: path
+          required: true
+          schema: {type: string, pattern: '^[A-Za-z0-9_-]+$'}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DecisionRequest'
+      responses:
+        '200':
+          description: The advanced street or the settled hand paid on the total wagered amount
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoundEnvelope'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+# Keep all request, response, and error shapes local to this contract.
+components:
+  responses:
+    ErrorResponse:
+      description: Standard bounded error envelope
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorEnvelope'
+  schemas:
+    # Require a caller-stable action identity and an ante.
+    StartRoundRequest:
+      type: object
+      additionalProperties: false
+      required: [action_id, ante]
+      properties:
+        action_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '^[A-Za-z0-9._:-]+$'
+        request_id:
+          type: string
+          description: Accepted alias for action_id for client convenience.
+        player_id:
+          type: string
+          description: Compatibility field overridden by the authenticated session-bound player resolver.
+        ante:
+          type: number
+          minimum: 0.01
+          maximum: 10000
+    # Require a caller-stable action identity, a decision, and a bet multiplier.
+    DecisionRequest:
+      type: object
+      additionalProperties: false
+      required: [action_id, decision]
+      properties:
+        action_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '^[A-Za-z0-9._:-]+$'
+        request_id:
+          type: string
+          description: Accepted alias for action_id for client convenience.
+        player_id:
+          type: string
+          description: Compatibility field overridden by the authenticated session-bound player resolver.
+        decision:
+          type: string
+          enum: [bet, fold]
+        multiplier:
+          type: integer
+          enum: [1, 2, 3]
+          description: Required only when betting; the one-to-three-times ante street bet.
+    # Specialize the standard success envelope for state reads.
+    StateEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/ApiSuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/GamePayload'
+    # Specialize the standard success envelope for deal and decision actions.
+    RoundEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/ApiSuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/GamePayload'
+    # Describe the common state, rules, player, and round payload.
+    GamePayload:
+      type: object
+      required: [game, state, player, rules]
+      properties:
+        game: {type: string, enum: [mississippi_stud]}
+        state: {type: object, description: Sanitized active and recent rounds with community cards hidden until each street resolves.}
+        player: {type: object, description: Current authenticated player's shared read-only wallet snapshot.}
+        rules: {type: object, description: Decisions, bet multipliers, street count, and the winning-hand paytable.}
+        round: {type: object, description: The prepared, advanced, or settled round, present on deal and decision responses.}
+        replayed: {type: boolean}
+    # Preserve the repository-wide success envelope contract.
+    ApiSuccessEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok: {type: boolean, enum: [true]}
+        data: {type: object}
+    # Preserve the repository-wide error envelope contract.
+    ApiErrorEnvelope:
+      type: object
+      required: [ok, error]
+      properties:
+        ok: {type: boolean, enum: [false]}
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: {type: string}
+            message: {type: string}
+            details: {type: object}
