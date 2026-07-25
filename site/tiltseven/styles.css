@@ -40,6 +40,30 @@ a {
   color: inherit;
 }
 
+/* Keyboard focus remains visible on every interactive element. */
+a:focus-visible {
+  outline: 3px solid var(--gold-soft);
+  outline-offset: 4px;
+}
+
+/* The skip link becomes available only when keyboard focus reaches it. */
+.skip-link {
+  position: fixed;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 20;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  color: #190d04;
+  background: var(--gold-soft);
+  font-weight: 900;
+  transform: translateY(-180%);
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
 img {
   max-width: 100%;
   display: block;
@@ -113,7 +137,6 @@ img {
 .site-nav a:focus-visible {
   color: var(--ivory);
   border-color: var(--line);
-  outline: none;
 }
 
 .site-nav .nav-cta {
@@ -416,6 +439,17 @@ h3 {
 
 .site-footer p {
   margin: 0.25rem 0 0;
+}
+
+/* Reduced-motion users receive immediate navigation and no animated skip-link movement. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .skip-link {
+    transition: none;
+  }
 }
 
 /* Responsive rules keep the page readable without horizontal overflow. */

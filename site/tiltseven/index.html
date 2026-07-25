@@ -10,9 +10,11 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+  <!-- Skip navigation gives keyboard users a direct path to the page content. -->
+  <a class="skip-link" href="#main-content">Skip to content</a>
   <!-- Page shell keeps the public brand site independent from the simulator application. -->
   <header class="site-header" aria-label="TiltSeven">
-    <a class="brand" href="/" aria-label="TiltSeven home">
+    <a class="brand" href="index.html" aria-label="TiltSeven home">
       <img src="assets/tiltseven-mark.svg" alt="" width="56" height="56">
       <span>
         <strong>TiltSeven</strong>
@@ -23,12 +25,13 @@
       <a href="#floor">The floor</a>
       <a href="#safety">Safety</a>
       <a href="#preview">Preview</a>
+      <a href="ru/index.html" lang="ru" hreflang="ru">Русский</a>
       <a class="nav-cta" href="https://casino.tiltseven.com/">Enter casino</a>
     </nav>
   </header>
 
   <!-- Hero states the brand promise and repeats the no-stakes boundary above the fold. -->
-  <main>
+  <main id="main-content" data-testid="marketing-site" tabindex="-1">
     <section class="hero">
       <div class="hero-copy">
         <p class="eyebrow">Private play-token casino simulator</p>
@@ -98,7 +101,7 @@
     <section id="preview" class="section preview">
       <div class="section-heading">
         <p class="eyebrow">Brand direction</p>
-        <h2>Midnight green, warm gold, sharp red, and a sly tilted seven.</h2>
+        <h2>Midnight green, warm gold, sharp red, and a tilted seven.</h2>
       </div>
       <div class="preview-grid">
         <div class="swatch felt"><span>Midnight felt</span></div>

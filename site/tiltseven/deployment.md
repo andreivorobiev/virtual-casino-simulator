@@ -1,50 +1,49 @@
-# TiltSeven deployment notes
+# TiltSeven future publication checklist
 
-Status: draft deployment runbook for the static TiltSeven marketing site.
+Status: repository-only planning material. No publication is authorized by
+this file or by the scaffold that contains it.
 
-## Intended routing
+## Approval boundary
 
-- `tiltseven.com` and `www.tiltseven.com` serve the marketing website from Midphase/StackCP shared hosting.
-- `casino.tiltseven.com` serves the casino simulator application on the existing casino VPS.
-- `luckytilt.com` remains available as a secondary/defensive brand domain until Andrei chooses whether it redirects, hosts a campaign page, or is retired.
+Before any upload or live change, the owner must approve an exact publication
+packet naming:
 
-## DNS expectations
+- the canonical public hostname and redirect policy;
+- the approved hosting account and destination path;
+- DNS and TLS ownership;
+- the exact reviewed Git commit and artifact digest;
+- privacy, analytics, accessibility, and rollback expectations; and
+- the operator authorized to perform and verify the change.
 
-The root domain should point at the Midphase/StackCP shared hosting IP.
+This repository merge does not select those values and must not be read as
+permission to alter a provider account, DNS, TLS, billing, public hosting, or
+the deployed Casino application.
 
-```text
-tiltseven.com.      A      185.146.167.200
-www.tiltseven.com.  CNAME  tiltseven.com.
-casino.tiltseven.com. A    45.63.35.198
-```
+## Candidate preparation
 
-Mail remains on StackMail for `andrei@tiltseven.com`.
+When a later publication packet is approved:
 
-```text
-tiltseven.com. MX 10 mx.stackmail.com.
-tiltseven.com. TXT "v=spf1 include:spf.stackmail.com a mx -all"
-mail.tiltseven.com. CNAME mail.stackmail.com.
-```
+1. Build an immutable archive from the accepted merge commit.
+2. Record the archive digest and the exact file inventory.
+3. Confirm the archive contains only the approved static site files.
+4. Re-run the governed EN/RU visual matrix against the publication candidate.
+5. Verify the Casino link still points to the separately governed canonical
+   Casino origin without changing that deployment.
 
-## TLS expectations
+## Safety checks
 
-- StackCP Free SSL should be active for `tiltseven.com` and `*.tiltseven.com` before Force HTTPS is relied upon.
-- The casino VPS certificate must explicitly include `casino.tiltseven.com` before public links route players there.
-- After StackCP activation, allow up to 30 minutes for the shared-hosting load balancers to deploy the certificate.
+- Keep the site static: no JavaScript, forms, trackers, payment controls, or
+  third-party runtime resources.
+- Preserve the play-token/no-cash-value boundary in both locales.
+- Do not upload repository metadata, environment files, keys, logs, evidence,
+  credentials, or development artifacts.
+- Require trusted HTTPS and correct host routing before making a public link
+  discoverable.
 
-## Upload notes
+## Post-publication verification
 
-Upload the contents of `site/tiltseven/` to the StackCP web root for `tiltseven.com`, preserving the `assets/` directory.
-
-Do not upload repository-private files, `.git`, environment files, keys, logs, screenshots with private data, or development-only artifacts.
-
-## Smoke test
-
-Before declaring the domain ready:
-
-1. Open `https://tiltseven.com`.
-2. Open `https://www.tiltseven.com`.
-3. Confirm both present the same TiltSeven page without certificate warnings.
-4. Confirm the primary CTA points to `https://casino.tiltseven.com/`.
-5. Confirm visible copy says play tokens have no cash value and does not mention deposits, purchases, withdrawals, redemptions, prizes, or transferable value as available features.
-6. Test desktop and mobile widths for horizontal overflow.
+A future owner-approved operator must independently verify the canonical and
+redirect hosts, certificate identity, HSTS behavior, file digest, English and
+Russian rendering, keyboard navigation, responsive containment, safety copy,
+Casino destination, observability, and rollback. Until that packet exists and
+passes, this directory remains an undeployed repository scaffold.

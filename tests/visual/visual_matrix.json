@@ -164,6 +164,33 @@
   ],
   "surfaces": [
     {
+      "id": "marketing_site",
+      "route": "site/tiltseven/index.html",
+      "selector": "main[data-testid='marketing-site']",
+      "states": [
+        "landing",
+        "keyboard_focus",
+        "reduced_motion"
+      ],
+      "locales": [
+        "en-US",
+        "ru-RU"
+      ],
+      "viewports": [
+        "desktop_primary",
+        "desktop_compact",
+        "tablet",
+        "mobile"
+      ],
+      "gates": [
+        "VIS-COPY-001",
+        "VIS-TOKEN-002",
+        "VIS-LAYOUT-003",
+        "VIS-RESPONSIVE-001",
+        "VIS-EVIDENCE-001"
+      ]
+    },
+    {
       "id": "auth",
       "route": "/",
       "selector": "[data-testid='login-gate'], [data-testid='terms-gate']",
