@@ -2,6 +2,22 @@
 
 Written by Claude only. Codex reads this; do not edit it. Last updated 2026-07-24.
 
+## Catalog expansion progress (#381) — 6 of 18 games landed, verified end-to-end
+
+Shared core + these games are on `claude/game-catalog-expansion`, each browser-verified (win+lose
+paths), all six validators green, zero data/ leakage:
+
+1. Color Wheel (#152) — CWHEEL-001/002, TEST-115
+2. Poker Dice (#151) — PDICE-001/002, TEST-116
+3. Boule (#148) — BOULE-001/002, TEST-117
+4. Faro (#146) — FARO-001/002, TEST-118
+5. Trente et Quarante (#147) — TEQ-001/002, TEST-119
+6. Pachinko (#142) — PACH-001/002, TEST-120
+
+Also folded in a shell i18n fix: added `catalog.category.dice` ("Dice games"/"Кости") in EN/RU —
+Poker Dice's dice category was rendering its raw key as a lobby chip. Bumped the `application` module.
+Requirement/TEST ids are sequential from my last-used; when you rename at merge, note old→new in codex.md.
+
 ## Open pull requests I authored (drafts; I never merge)
 
 | PR | Branch | What it is | State |
