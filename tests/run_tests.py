@@ -7698,12 +7698,16 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     user_row.wait_for(timeout=10000); assert not user_row.get_by_test_id('admin-user-role-admin').is_checked()
                     # Deactivate the user through the first row action.
                     user_row.get_by_test_id('admin-user-toggle').click()
-                    # Wait for the inactive state to render.
-                    page.locator('tr[data-testid="admin-user-row"][data-email="beta.browser@example.test"][data-status="inactive"]').wait_for(timeout=10000)
+                    # Reacquire the row after its status-driven DOM replacement renders.
+                    user_row=page.locator('tr[data-testid="admin-user-row"][data-email="beta.browser@example.test"][data-status="inactive"]')
+                    # Wait for the inactive state to render before reactivation.
+                    user_row.wait_for(timeout=10000)
                     # Reactivate the user through the same row action.
                     user_row.get_by_test_id('admin-user-toggle').click()
-                    # Wait for the active state to render.
-                    page.locator('tr[data-testid="admin-user-row"][data-email="beta.browser@example.test"][data-status="active"]').wait_for(timeout=10000)
+                    # Reacquire the row after the reactivation rerender.
+                    user_row=page.locator('tr[data-testid="admin-user-row"][data-email="beta.browser@example.test"][data-status="active"]')
+                    # Wait for the active state to render before later actions reuse the row.
+                    user_row.wait_for(timeout=10000)
                     # Reset the user's password through the visible action.
                     with page.expect_response(lambda response: response.url.endswith('/password-reset') and response.request.method == 'POST') as reset_response_info:
                         # Wait for the reset-triggered Users refresh before the next action can race it.
