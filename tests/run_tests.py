@@ -5576,14 +5576,6 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     caribbean_stud_paytable_text=page.locator('.cs-data').inner_text()
                     # Require the strongest and weakest published Call returns to be visible with localized hand labels.
                     assert 'Call payout schedule' in caribbean_stud_paytable_text and 'Royal flush' in caribbean_stud_paytable_text and '100:1' in caribbean_stud_paytable_text and 'High card' in caribbean_stud_paytable_text and '1:1' in caribbean_stud_paytable_text
-                    # Move keyboard focus from the real ante input to the next public game control.
-                    page.locator('#cs-ante').focus(); page.keyboard.press('Tab')
-                    # Read the actual focused control and computed shared outline.
-                    caribbean_focus=page.evaluate("""() => { const active=document.activeElement; const style=getComputedStyle(active); return {inside:Boolean(active?.closest('[data-testid="caribbean-stud"]')),visible:active?.matches(':focus-visible')||false,width:parseFloat(style.outlineWidth)||0,offset:parseFloat(style.outlineOffset)||0}; }""")
-                    # Require the shared game fallback to be visible on a real keyboard-reached control.
-                    assert caribbean_focus['inside'] and caribbean_focus['visible'] and caribbean_focus['width']>=3 and caribbean_focus['offset']>=2,caribbean_focus
-                    # Record focused exact-head evidence on the representative game surface.
-                    game_evidence('after-pass-game-polish-focus-en-US-desktop_primary.png','caribbean_stud',['ready','keyboard_focus'],'en-US','desktop_primary')
                     # Deal through the public frontend and require private dealer hole cards during the decision.
                     page.locator('#cs-ante').fill('1'); page.locator('[data-action="deal"]').click(); page.wait_for_function("() => document.querySelector('.cs-phase')?.textContent === 'Decision'",timeout=10000); assert page.locator('[aria-label="Face-down dealer card"]').count()==4
                     # Capture the actionable call-or-fold decision.
@@ -5597,7 +5589,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Return to the lobby for downstream browser cases.
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Execute the integrated Caribbean Stud browser and visual gate.
-                run_case('BR-CS-001',['CS-001','CS-002','CS-004','CS-005','CS-006','I18N-010','UX-020','TEST-063','TEST-117'],caribbean_stud_acceptance)
+                run_case('BR-CS-001',['CS-001','CS-002','CS-004','CS-005','CS-006','I18N-010','TEST-063','TEST-117'],caribbean_stud_acceptance)
                 # Define real-backend Let It Ride localization, staged decisions, responsive, motion, and route acceptance.
                 def let_it_ride_acceptance():
                     # Open the catalog-owned route and wait for the stable game selector.
@@ -6461,6 +6453,14 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     assert '\u043e\u0442 1 \u0434\u043e 18' in page.get_by_test_id('roulette-premium').inner_text() and '\u043e\u0442 19 \u0434\u043e 36' in page.get_by_test_id('roulette-premium').inner_text()
                     # Verify shared keyboard scroll semantics survive the localized game rerender.
                     assert page.get_by_test_id('roulette-control-rail').get_attribute('tabindex')=='0'
+                    # Focus the real spin action, move away, and return by keyboard so focus-visible modality is genuine.
+                    page.get_by_test_id('roulette-spin').focus(); page.keyboard.press('Shift+Tab'); page.keyboard.press('Tab')
+                    # Read the actual keyboard-selected control and computed shared fallback outline.
+                    roulette_focus=page.evaluate("""() => { const active=document.activeElement; const style=getComputedStyle(active); return {testid:active?.getAttribute('data-testid'),visible:active?.matches(':focus-visible')||false,width:parseFloat(style.outlineWidth)||0,offset:parseFloat(style.outlineOffset)||0}; }""")
+                    # Require the route without a game-owned focus rule to receive the shared high-contrast fallback.
+                    assert roulette_focus=={'testid':'roulette-spin','visible':True,'width':3,'offset':2},roulette_focus
+                    # Record exact-head evidence of the fallback on a real localized game control.
+                    game_evidence('after-pass-game-polish-focus-roulette-ru-RU-desktop_primary.png','roulette',['betting','keyboard_focus'],'ru-RU','desktop_primary')
                 # Execute this statement as part of the module's documented control flow.
                 run_case('BR-I18N-GAMESTATE-ROU-001',['I18N-001','I18N-002','I18N-010','ROU-046','TEST-117'],roulette_i18n_state)
                 # Capture the authoritative backend spin response while using the visible Roulette action.

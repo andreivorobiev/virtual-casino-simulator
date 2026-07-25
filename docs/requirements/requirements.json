@@ -8421,7 +8421,7 @@
       "status": "PASS",
       "api_tests": [],
       "browser_tests": [
-        "BR-CS-001"
+        "BR-I18N-GAMESTATE-ROU-001"
       ],
       "implementation_files": [
         "tests/run_tests.py"
@@ -11123,7 +11123,7 @@
       ],
       "introduced_in": "pr-393-games-review-improve",
       "changed_in": "pr-393-games-review-improve",
-      "notes": "Hosted evidence uses a real keyboard transition from the Caribbean Stud ante input to a public game control and records the computed focus ring."
+      "notes": "Hosted evidence leaves and returns to the real Roulette spin action by keyboard, on a route with no game-owned focus-visible rule, and records the computed shared fallback ring."
     },
     {
       "id": "TEST-117",
