@@ -10810,6 +10810,45 @@
       "notes": "Allocated for GitHub issue #148."
     },
     {
+      "id": "FARO-001",
+      "module": "Faro",
+      "description": "Faro deals two cards from a standard fifty-two-card deck on the shared exactly-once settlement core: the banker card first, then the player card. A deal debits one bounded play-token stake on a chosen rank from one to thirteen and settles four ways. When the player card matches the chosen rank the bet wins even money for a total return of twice the stake; when the banker card matches it loses the whole stake; when neither matches the whole stake is returned as a push; and when both cards share the chosen rank the historical split returns half the stake. Because the win and lose cases are symmetric, the split half-loss is the entire house edge, about 0.23 percent. Out-of-range ranks and non-integer, non-positive, or over-limit stakes are rejected before any wallet movement.",
+      "status": "PASS",
+      "api_tests": [
+        "API-FARO-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/faro/rules.py",
+        "casino/games/faro/engine.py",
+        "casino/games/faro/api.py",
+        "web/games/faro.js",
+        "contracts/openapi/faro.v1.yaml"
+      ],
+      "introduced_in": "issue-146-faro",
+      "changed_in": "issue-146-faro",
+      "notes": "Allocated for GitHub issue #146, a catalog-expansion game (#73). The module supplies only pure rules; the shared core owns settlement."
+    },
+    {
+      "id": "FARO-002",
+      "module": "Faro",
+      "description": "Faro inherits the shared core's exactly-once settlement: one caller-stable request id maps to one deal, a retry replays the identical committed cards and payout without moving the wallet again, and a request id reused with different wager content fails closed. The additive v1 contract exposes only the game-owned state and deals routes and never alters the frozen shared API. The two dealt cards are always distinct, and the published bet catalog reports honest ranks and win, push, and split multipliers.",
+      "status": "PASS",
+      "api_tests": [
+        "API-FARO-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/faro/api.py",
+        "casino/core/simple_game.py",
+        "tests/faro_tests.py",
+        "tests/game_drivers/faro.py"
+      ],
+      "introduced_in": "issue-146-faro",
+      "changed_in": "issue-146-faro",
+      "notes": "Allocated for GitHub issue #146."
+    },
+    {
       "id": "TEST-115",
       "module": "Tests",
       "description": "Listener-free evidence verifies Color Wheel: a matching colour pays its multiplier, a non-matching colour loses the stake, the gold segment pays its jackpot multiplier, unknown colours and malformed stakes are rejected before any wallet movement, a retried spin replays without double-spending, every colour payout is confirmed house-positive, and the published bet catalog matches the real segment layout and multipliers.",
@@ -10859,6 +10898,23 @@
       "introduced_in": "issue-148-boule",
       "changed_in": "issue-148-boule",
       "notes": "Allocated for GitHub issue #148."
+    },
+    {
+      "id": "TEST-118",
+      "module": "Tests",
+      "description": "Listener-free evidence verifies Faro: a matching player card wins even money, a matching banker card loses the stake, neither matching returns the stake as a push, both cards sharing the chosen rank take half the stake as a split, out-of-range ranks and malformed stakes are rejected before any wallet movement, a retried deal replays without double-spending, and the paytable is confirmed house-positive over all 2652 equally likely two-card deals.",
+      "status": "PASS",
+      "api_tests": [
+        "API-FARO-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/faro_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-146-faro",
+      "changed_in": "issue-146-faro",
+      "notes": "Allocated for GitHub issue #146."
     }
   ]
 }

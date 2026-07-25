@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.50.4
+- application: 9.50.5
 - core: 9.23.0
 - ledger: 9.1.1
 - players: 9.1.0
@@ -46,14 +46,15 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.1
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.60.6
-- docs: 1.60.6
+- tests: 1.60.7
+- docs: 1.60.7
 - contracts: 1.43.0
 - tooling: 1.20.3
 - commenting_policy: 1.0.0
 - color_wheel: 1.0.0
 - poker_dice: 1.0.0
 - boule: 1.0.0
+- faro: 1.0.0
 
 ## Requirements
 
@@ -820,6 +821,9 @@ Historical source baseline: 9.1.0
 - **PDICE-002** (Poker Dice) - PASS: Poker Dice inherits the shared core's exactly-once settlement: one caller-stable request id maps to one roll, a retry replays the identical committed dice and payout without moving the wallet again, and a request id reused with different wager content fails closed. The additive v1 contract exposes only the game-owned state and rolls routes and never alters the frozen shared API. The published paytable reports honest hand categories and multipliers.
 - **BOULE-001** (Boule) - PASS: Boule is the French nine-number wheel built on the shared exactly-once settlement core. A spin debits one bounded play-token stake, draws one server-authoritative number from one to nine, and settles the chosen bet. The four even-money groups low, high, odd, and even each cover four numbers and pay two times the stake; five is the house number belonging to no group, so every even-money bet loses when five is drawn. A straight single-number bet covers one number and pays eight times the stake, including a straight bet on five. Both bet families return eight ninths of the stake on average, a house edge of about 11.1 percent. Unknown bet families, out-of-range numbers, and non-integer, non-positive, or over-limit stakes are rejected before any wallet movement.
 - **BOULE-002** (Boule) - PASS: Boule inherits the shared core's exactly-once settlement: one caller-stable request id maps to one spin, a retry replays the identical committed number and payout without moving the wallet again, and a request id reused with different wager content fails closed. The additive v1 contract exposes only the game-owned state and spins routes and never alters the frozen shared API. The published bet catalog reports honest group coverage, the house number, and multipliers.
+- **FARO-001** (Faro) - PASS: Faro deals two cards from a standard fifty-two-card deck on the shared exactly-once settlement core: the banker card first, then the player card. A deal debits one bounded play-token stake on a chosen rank from one to thirteen and settles four ways. When the player card matches the chosen rank the bet wins even money for a total return of twice the stake; when the banker card matches it loses the whole stake; when neither matches the whole stake is returned as a push; and when both cards share the chosen rank the historical split returns half the stake. Because the win and lose cases are symmetric, the split half-loss is the entire house edge, about 0.23 percent. Out-of-range ranks and non-integer, non-positive, or over-limit stakes are rejected before any wallet movement.
+- **FARO-002** (Faro) - PASS: Faro inherits the shared core's exactly-once settlement: one caller-stable request id maps to one deal, a retry replays the identical committed cards and payout without moving the wallet again, and a request id reused with different wager content fails closed. The additive v1 contract exposes only the game-owned state and deals routes and never alters the frozen shared API. The two dealt cards are always distinct, and the published bet catalog reports honest ranks and win, push, and split multipliers.
 - **TEST-115** (Tests) - PASS: Listener-free evidence verifies Color Wheel: a matching colour pays its multiplier, a non-matching colour loses the stake, the gold segment pays its jackpot multiplier, unknown colours and malformed stakes are rejected before any wallet movement, a retried spin replays without double-spending, every colour payout is confirmed house-positive, and the published bet catalog matches the real segment layout and multipliers.
 - **TEST-116** (Tests) - PASS: Listener-free evidence verifies Poker Dice: each paying hand category pays its exact multiplier, two pair and weaker hands lose the stake, non-integer, non-positive, and out-of-range stakes are rejected before any wallet movement, a retried roll replays without double-spending, the paytable is confirmed house-positive over all 7776 equally likely rolls, and the published paytable matches the real payout table.
 - **TEST-117** (Tests) - PASS: Listener-free evidence verifies Boule: a covered even-money bet pays two times the stake, the house number five loses every even-money bet and is flagged, a straight single-number bet pays eight times the stake including on five, a straight bet on a non-matching number loses, unknown bet families, out-of-range numbers, and malformed stakes are rejected before any wallet movement, a retried spin replays without double-spending, and every bet is confirmed house-positive across all nine numbers.
+- **TEST-118** (Tests) - PASS: Listener-free evidence verifies Faro: a matching player card wins even money, a matching banker card loses the stake, neither matching returns the stake as a push, both cards sharing the chosen rank take half the stake as a split, out-of-range ranks and malformed stakes are rejected before any wallet movement, a retried deal replays without double-spending, and the paytable is confirmed house-positive over all 2652 equally likely two-card deals.

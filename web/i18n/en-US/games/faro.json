@@ -1,0 +1,20 @@
+{
+  "title": "Faro",
+  "card.banker": "Banker",
+  "card.player": "Player",
+  "odds.title": "How it settles",
+  "odds.win": "Player card matches",
+  "odds.push": "Neither matches",
+  "odds.split": "Both match (split)",
+  "odds.lose": "Banker card matches",
+  "stake.title": "Stake",
+  "action.deal": "Deal the cards",
+  "action.dealing": "Dealing…",
+  "result.idle": "Pick a rank and deal.",
+  "outcome.win": "Player card wins!",
+  "outcome.lose": "Banker card takes it.",
+  "outcome.push": "Push — stake returned.",
+  "outcome.split": "Split — half the stake.",
+  "error.load": "Could not load Faro.",
+  "error.deal": "Deal could not be completed."
+}

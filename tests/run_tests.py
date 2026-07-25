@@ -1100,6 +1100,19 @@ def run_api_tests():
             raise AssertionError('boule suite failed')
     # Record the listener-free Boule payout, house-number, retry, and house-edge proof.
     run_case('API-BOULE-001',['BOULE-001','BOULE-002','TEST-117'],run_boule_tests)
+    # Execute the Faro rules and settlement proof without opening a listener.
+    def run_faro_tests():
+        # Load only the focused Faro class.
+        from tests import faro_tests
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(faro_tests.FaroTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused Faro proof failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure text secret-safe.
+            raise AssertionError('faro suite failed')
+    # Record the listener-free Faro win, lose, push, split, retry, and house-edge proof.
+    run_case('API-FARO-001',['FARO-001','FARO-002','TEST-118'],run_faro_tests)
     # Discover and execute every focused restricted-preview security module without opening a listener.
     def run_restricted_preview_security_tests():
         # Load the package directory through unittest's standard test discovery.
