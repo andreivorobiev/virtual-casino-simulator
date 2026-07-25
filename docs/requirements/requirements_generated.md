@@ -48,9 +48,9 @@ Historical source baseline: 9.1.0
 - mississippi_stud: 1.0.0
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- pai_gow_poker: 1.0.0
+- pai_gow_poker: 1.0.1
 - teen_patti: 1.0.0
-- tests: 1.60.24
+- tests: 1.60.25
 - docs: 1.60.24
 - contracts: 1.48.0
 - tooling: 1.20.3
