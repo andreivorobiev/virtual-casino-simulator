@@ -1126,6 +1126,19 @@ def run_api_tests():
             raise AssertionError('trente et quarante suite failed')
     # Record the listener-free Trente et Quarante row, colour, refait, push, retry, and house-edge proof.
     run_case('API-TRENTE-ET-QUARANTE-001',['TEQ-001','TEQ-002','TEST-119'],run_trente_et_quarante_tests)
+    # Execute the Pachinko rules and settlement proof without opening a listener.
+    def run_pachinko_tests():
+        # Load only the focused Pachinko class.
+        from tests import pachinko_tests
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(pachinko_tests.PachinkoTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused Pachinko proof failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure text secret-safe.
+            raise AssertionError('pachinko suite failed')
+    # Record the listener-free Pachinko pocket, push, retry, and house-edge proof.
+    run_case('API-PACHINKO-001',['PACH-001','PACH-002','TEST-120'],run_pachinko_tests)
     # Discover and execute every focused restricted-preview security module without opening a listener.
     def run_restricted_preview_security_tests():
         # Load the package directory through unittest's standard test discovery.

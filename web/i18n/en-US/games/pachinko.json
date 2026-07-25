@@ -1,0 +1,10 @@
+{
+  "title": "Pachinko",
+  "stake.title": "Stake",
+  "action.drop": "Drop the ball",
+  "action.dropping": "Dropping…",
+  "result.idle": "Set a stake and drop the ball.",
+  "result.landed": "Landed on {mult}x.",
+  "error.load": "Could not load Pachinko.",
+  "error.drop": "Drop could not be completed."
+}
