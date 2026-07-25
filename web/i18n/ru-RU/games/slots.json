@@ -37,7 +37,7 @@
   "history.empty": "Последних спинов пока нет.",
   "history.free": "{count} фри",
   "history.inProgress": "Спин выполняется",
-  "history.row": "{id}, {lines} линий",
+  "history.row": "{lines} линий",
   "history.title": "Последние спины",
   "kicker": "Премиум автомат",
   "metrics.freeSpins": "Фриспины",
