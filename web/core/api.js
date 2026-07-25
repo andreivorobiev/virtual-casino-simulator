@@ -73,6 +73,32 @@ export const post = (path, body = {}) => api(path, { method: 'POST', body });
 export const del = (path, body = {}) => api(path, { method: 'DELETE', body });
 // Export this symbol so the shell can read the authenticated v2 current-user payload.
 export const currentUser = () => api('/api/v2/me');
+// Verify logout through a raw current-user probe so the session-expired event does not race the logged-out copy.
+async function sessionStillAuthenticatedAfterLogout() {
+  // Request the authoritative current-user envelope using only browser-managed cookies.
+  const res = await fetch('/api/v2/me', { method: 'GET', credentials: 'include', headers: { Accept: 'application/json' } });
+  // Store payload so the verification can distinguish a real 401 from a broken response.
+  let payload;
+  // Parse the standard envelope before deciding whether logout really completed.
+  try { payload = await res.json(); } catch (_) {
+    // Report malformed verification as an indeterminate logout rather than pretending success.
+    const error = new Error('Logout verification returned invalid JSON');
+    // Publish a stable low-cardinality code for UI and tests.
+    error.code = 'LOGOUT_VERIFY_BAD_JSON';
+    // Stop the caller before it clears authenticated chrome.
+    throw error;
+  }
+  // Treat the planned unauthorized envelope as proof that the session is gone.
+  if (res.status === 401 && payload?.ok === false) return false;
+  // Treat any successful current-user envelope as proof that the session survived logout.
+  if (res.ok && payload?.ok === true) return true;
+  // Build an indeterminate verification error for server or proxy failures.
+  const error = new Error(payload?.error?.message || `Logout verification failed with HTTP ${res.status}`);
+  // Preserve the server code when one exists, otherwise publish the transport status.
+  error.code = payload?.error?.code || `LOGOUT_VERIFY_${res.status}`;
+  // Stop the caller before it clears authenticated chrome.
+  throw error;
+}
 // Export this symbol so the shell can start an authenticated browser session.
 export const login = body => post('/api/v2/auth/login', body);
 // Read boolean-only provider availability for the logged-out sign-in surface. (OAUTH-007)
@@ -86,7 +112,23 @@ export const unlinkOAuth = provider => post(`/api/v2/me/oauth/${encodeURICompone
 // Redeem one disabled-by-default private invitation through the additive v2 boundary. (INVITE-003)
 export const redeemInvitation = body => post('/api/v2/auth/redeem-invitation', body);
 // Export this symbol so the shell can end the current authenticated browser session.
-export const logout = () => post('/api/v2/auth/logout', {});
+export async function logout() {
+  // Ask the backend to revoke the active session and expire both auth cookies.
+  const result = await post('/api/v2/auth/logout', {});
+  // Re-read current user outside the normal helper so verification cannot repaint the wrong gate.
+  const stillAuthenticated = await sessionStillAuthenticatedAfterLogout();
+  // Fail closed when the browser still has a usable session after the logout endpoint returned.
+  if (stillAuthenticated) {
+    // Explain the mismatch without exposing token or cookie material.
+    const error = new Error('Logout did not clear the active browser session');
+    // Publish a stable code so browser-free tests can lock the regression.
+    error.code = 'LOGOUT_STILL_AUTHENTICATED';
+    // Stop the shell from rendering a false logged-out state.
+    throw error;
+  }
+  // Return the backend acknowledgement after the browser independently proved the session is gone.
+  return result;
+}
 // Start one account-free disposable guest trial from the login surface. (issue #317)
 export async function guestTrial(body) {
   // Create the disposable principal only after the caller supplies explicit consent metadata.

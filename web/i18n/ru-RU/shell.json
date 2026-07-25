@@ -15,6 +15,7 @@
   "auth.eyebrow": "Закрытая бета",
   "auth.language": "Язык",
   "auth.loggedOut": "Вы вышли из системы.",
+  "auth.logoutFailed": "Не удалось выйти. Сеанс оставлен активным; попробуйте снова.",
   "auth.oauthDivider": "Внешние поставщики входа",
   "auth.oauthFacebook": "Продолжить с Facebook",
   "auth.oauthGoogle": "Продолжить с Google",

@@ -15,6 +15,7 @@
   "auth.eyebrow": "Private beta",
   "auth.language": "Language",
   "auth.loggedOut": "You have been logged out.",
+  "auth.logoutFailed": "Logout did not complete. Your session is still active; please try again.",
   "auth.oauthDivider": "External identity providers",
   "auth.oauthFacebook": "Continue with Facebook",
   "auth.oauthGoogle": "Continue with Google",
