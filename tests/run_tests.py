@@ -5559,7 +5559,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             # Require the localized game title rather than a fallback key or English leakage.
                             assert page.locator('.cs-header h1').inner_text()==expected_titles[locale]
                             # Require the paytable heading to match the public Call action in the active locale.
-                            assert page.locator('.cs-data h2').first.inner_text()==expected_paytable_titles[locale]
+                            assert page.locator('.cs-data h2').nth(1).inner_text()==expected_paytable_titles[locale]
                             # Validate containment and capture after-pass evidence at every viewport.
                             for viewport_id,width,height in required_viewports:
                                 # Resize to the exact visual matrix dimensions.
