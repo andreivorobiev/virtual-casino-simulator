@@ -1191,6 +1191,19 @@ def run_api_tests():
             raise AssertionError('lucky grid suite failed')
     # Record the listener-free Lucky Grid match, retry, and house-edge proof.
     run_case('API-LUCKY-GRID-001',['LGRID-001','LGRID-002','TEST-124'],run_lucky_grid_tests)
+    # Execute the Daily Draw Lab rules and settlement proof without opening a listener.
+    def run_daily_draw_lab_tests():
+        # Load only the focused Daily Draw Lab class.
+        from tests import daily_draw_lab_tests
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(daily_draw_lab_tests.DailyDrawLabTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused Daily Draw Lab proof failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure text secret-safe.
+            raise AssertionError('daily draw lab suite failed')
+    # Record the listener-free Daily Draw Lab pick, hit, retry, and house-edge proof.
+    run_case('API-DAILY-DRAW-LAB-001',['DDLAB-001','DDLAB-002','TEST-125'],run_daily_draw_lab_tests)
     # Discover and execute every focused restricted-preview security module without opening a listener.
     def run_restricted_preview_security_tests():
         # Load the package directory through unittest's standard test discovery.
