@@ -388,18 +388,20 @@ def set_admin_user_status(user_id, status):
     current = _account_user_by_id(_load_admin_users(), user_id)
     # Normalize the requested lifecycle state.
     requested_status = _clean_status(status)
-    # Load state for last-Admin simulation before committing.
-    state = _load_admin_users()
-    # Simulate the status change in a detached record.
-    simulated = {**current, "status": requested_status}
-    # Reject the transition if it would remove the final active Admin.
-    _require_remaining_admin(state, simulated)
+    # Capture the exact pre-mutation account inside the provider transaction for audit.
+    before = {}
+    # Define the status mutation applied under the identity-document lock.
+    def mutate(record: dict) -> None:
+        # Snapshot the committed pre-change account before replacing its lifecycle state.
+        before.update(dict(record))
+        # Store the validated lifecycle state.
+        record["status"] = requested_status
     # Update status through auth so privilege changes revoke predecessor sessions.
-    user = auth.update_user_by_id(user_id, lambda record: record.update({"status": requested_status}))
+    user = auth.update_user_by_id(user_id, mutate, state_validator=_require_remaining_admin)
     # Update the linked player status through the public player service.
     players.update_player(current["player_id"], lambda player: player.update({"status": requested_status}))
     # Record the full before/after status mutation for Admin audit.
-    _audit_user_change("admin_user_status_changed", current, user)
+    _audit_user_change("admin_user_status_changed", before, user)
     # Return the safe user payload after status change.
     return {"user": _public_admin_user(user)}
 
@@ -457,29 +459,13 @@ def update_admin_user_locale(user_id, body):
 # Define update_admin_user so the v2 PATCH contract mutates the canonical identity.
 def update_admin_user(user_id, body):
     # Reject disposable guest-trial identities before any canonical account mutation can run.
-    current_state = _load_admin_users()
-    # Read the current account for validation, simulation, and audit.
-    current_user = _account_user_by_id(current_state, user_id)
-    # Build a detached simulation for last-Admin lockout protection.
-    simulated_user = dict(current_user)
-    # Simulate active boolean status when present.
-    if "active" in body:
-        # Convert the legacy boolean contract into an account lifecycle state.
-        simulated_user["status"] = "active" if _as_bool(body.get("active")) else "inactive"
-    # Simulate explicit lifecycle status when present.
-    if "status" in body:
-        # Normalize the explicit lifecycle state.
-        simulated_user["status"] = _clean_status(body.get("status"))
-    # Simulate role replacement when present.
-    if "roles" in body:
-        # Normalize only product-approved roles.
-        simulated_user["roles"] = _clean_roles(body.get("roles"))
-        # Preserve the compatible singular primary role.
-        simulated_user["role"] = simulated_user["roles"][0]
-    # Reject the mutation if the simulated registry has no active Admin.
-    _require_remaining_admin(current_state, simulated_user)
+    _account_user_by_id(_load_admin_users(), user_id)
+    # Capture the exact pre-mutation account inside the provider transaction for audit.
+    before = {}
     # Define the canonical mutation applied to the requested identity.
     def mutate(user):
+        # Snapshot the committed pre-change account before applying any requested field.
+        before.update(dict(user))
         # Update active status only when the contract field is present.
         if "active" in body:
             # Map the boolean contract field to the durable status value.
@@ -503,11 +489,11 @@ def update_admin_user(user_id, body):
             # Store one locale across canonical and legacy aliases.
             user["locale"] = user["language"] = _clean_text(body.get("locale"), "locale")
     # Apply the mutation through the canonical auth service.
-    user = auth.update_user_by_id(user_id, mutate)
+    user = auth.update_user_by_id(user_id, mutate, state_validator=_require_remaining_admin)
     # Keep the bound player status aligned with the canonical account status.
     players.update_player(user["player_id"], lambda player: player.update({"status": user.get("status", "active")}))
     # Record the full before/after mutation for Admin audit review.
-    _audit_user_change("admin_user_updated", current_user, user)
+    _audit_user_change("admin_user_updated", before, user)
     # Return the Admin-safe canonical summary.
     return _public_admin_user(user)
 

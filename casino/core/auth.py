@@ -258,6 +258,10 @@ def create_user(email: str, password: str, display_name: str, role: str = "playe
         if any(reservation.get("email") == normalized for reservation in state.setdefault("reservations", [])):
             # Prevent a parallel Admin/user flow from orphaning the invitation saga.
             raise ConflictError("email is reserved by an enrollment operation")
+        # Reject a second durable account adopting the same player inside the provider transaction.
+        if any(stored.get("player_id") == bound_player["player_id"] and not is_guest(stored) for stored in state.get("users", [])):
+            # Preserve exactly one durable account owner for every wallet and ledger identity.
+            raise ConflictError("player is already bound to an account")
         # Append the new canonical identity exactly once.
         state["users"].append(user)
         # Return the complete identity document for atomic persistence.
@@ -712,31 +716,51 @@ def require_admin(user: dict) -> None:
 
 
 # Define update_user_by_id so Admin and current-user flows mutate the canonical identity store.
-def update_user_by_id(user_id: str, updater) -> dict:
-    # Load the canonical user registry before applying an account mutation.
-    state = load_users()
-    # Iterate through identities to find the requested durable account.
-    for user in state.get("users", []):
-        # Branch when the durable user id matches the request.
-        if user.get("user_id") == user_id:
+def update_user_by_id(user_id: str, updater, *, state_validator=None) -> dict:
+    # Capture the committed account and privilege decision outside the provider transaction.
+    result = {"user": None, "privilege_changed": False}
+    # Define the complete identity-document mutation so JSON and MySQL share one atomic boundary.
+    def mutate_state(state: dict) -> dict:
+        # Reject malformed identity storage rather than replacing recoverable account data.
+        if not isinstance(state, dict) or not isinstance(state.get("users"), list):
+            # Preserve the original document for operator recovery.
+            raise RuntimeError("Authentication user storage is malformed")
+        # Iterate through identities to find the requested durable account under the provider lock.
+        for user in state.get("users", []):
+            # Skip every unrelated identity.
+            if user.get("user_id") != user_id:
+                # Continue to the next stored account.
+                continue
             # Snapshot only privilege-bearing fields before the caller mutates the account.
             prior_privileges = tuple(user.get(field) for field in PRIVILEGE_FIELDS)
-            # Apply the caller-owned mutation to the canonical record.
+            # Apply the caller-owned mutation to the canonical record under the same transaction.
             updater(user)
+            # Run an optional state-wide invariant after mutation but before persistence.
+            if state_validator is not None:
+                # Let the validator inspect the complete post-mutation identity document.
+                state_validator(state, user)
             # Snapshot the same fields after mutation for an exact privilege-change decision.
             current_privileges = tuple(user.get(field) for field in PRIVILEGE_FIELDS)
             # Refresh the account audit timestamp after the mutation.
             user["updated_at"] = utc_now()
-            # Persist the canonical registry after a successful mutation.
-            save_users(state)
-            # Invalidate every predecessor when role, status, or credential authority changed.
-            if current_privileges != prior_privileges:
-                # Force the affected identity to authenticate into a freshly rotated session.
-                revoke_sessions_for_user(user_id)
-            # Return the updated durable identity.
-            return user
-    # Raise a validation error when no canonical identity matches.
-    raise ValidationError("user was not found")
+            # Publish a detached committed result for the caller after persistence succeeds.
+            result["user"] = dict(user)
+            # Record whether every predecessor session must be invalidated after commit.
+            result["privilege_changed"] = current_privileges != prior_privileges
+            # Stamp the canonical identity schema before persistence.
+            state["schema_version"] = SCHEMA_VERSION
+            # Return the complete identity document for atomic provider persistence.
+            return state
+        # Raise a validation error when no canonical identity matches.
+        raise ValidationError("user was not found")
+    # Persist the complete read-validate-write sequence through the JSON/MySQL transaction.
+    update_json(USERS_PATH, mutate_state, default_users)
+    # Invalidate every predecessor after a committed role, status, or credential-authority change.
+    if result["privilege_changed"]:
+        # Force the affected identity to authenticate into a freshly rotated session.
+        revoke_sessions_for_user(user_id)
+    # Return the committed detached identity.
+    return result["user"]
 
 
 # Define set_user_password so Admin and self-service recovery can share canonical credential rotation.

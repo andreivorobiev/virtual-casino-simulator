@@ -1,7 +1,13 @@
 """Focused guest-to-account conversion tests. (#378, CONVERT-001/002)"""
 
+# Import a bounded thread pool for deterministic concurrent wallet-ownership proof.
+from concurrent.futures import ThreadPoolExecutor
+# Import a barrier so both account claims reach the atomic identity transaction together.
+import threading
 # Import the standard unittest framework used by the repository's focused suites.
 import unittest
+# Import patching so the concurrent test synchronizes only the account-creation boundary.
+from unittest.mock import patch
 
 # Import the canonical identity, guest, and session boundary under test.
 from casino.core import auth
@@ -42,7 +48,7 @@ class GuestConversionTests(unittest.TestCase):
     # Build a valid conversion payload for this test's unique mailbox.
     def _payload(self, **overrides) -> dict:
         # Start from a complete, valid payload.
-        base = {"email": f"converted.{self.unique}@example.test", "password": "ConvertPassw0rd!23", "display_name": "Converted Player", "terms_version": "v1", "accepted": True}
+        base = {"email": f"converted.{self.unique}@example.test", "password": "ConvertPassw0rd!23", "display_name": "Converted Player", "terms_version": "v1", "accepted": True, "idempotency_key": f"guest-conversion-{self.unique}-key"}
         # Apply any per-test overrides.
         base.update(overrides)
         # Return the payload.
@@ -98,6 +104,52 @@ class GuestConversionTests(unittest.TestCase):
         owners = [u for u in auth.load_users().get("users", []) if u.get("player_id") == self.guest["player_id"] and not auth.is_guest(u)]
         self.assertEqual(len(owners), 1)
 
+    # Require completed conversion replay to reject a different caller operation identity.
+    def test_completed_conversion_rejects_conflicting_idempotency_key(self) -> None:
+        # Complete one conversion with the fixture's stable operation key.
+        guest_conversion.convert(self.guest, **self._payload())
+        # Reload the terminal guest so the persisted operation fingerprint is available.
+        terminal = self._reload_guest()
+        # Reject another key rather than treating a new operation as the original replay.
+        with self.assertRaises(ConflictError):
+            # Attempt the conflicting operation against the same completed guest.
+            guest_conversion.convert(terminal, **self._payload(idempotency_key=f"guest-conversion-{self.unique}-other-key"))
+
+    # Require two concurrent account claims to converge on exactly one owner for the guest wallet.
+    def test_concurrent_conversion_keeps_one_durable_wallet_owner(self) -> None:
+        # Synchronize both callers immediately before the atomic account claim.
+        claim_barrier = threading.Barrier(2)
+        # Retain the production account creator behind the synchronization seam.
+        create_user = auth.create_user
+        # Define one synchronized account creation call used only by this test.
+        def synchronized_create(*args, **kwargs):
+            # Release both contenders only after each passed the pre-claim recovery read.
+            claim_barrier.wait(timeout=5)
+            # Delegate the actual uniqueness decision to the production provider transaction.
+            return create_user(*args, **kwargs)
+        # Define one contender that reports only a completed conversion or bounded conflict.
+        def attempt(index: int):
+            # Start one distinct account claim for the same guest wallet.
+            try:
+                # Return the service result when this contender wins.
+                return ("converted", guest_conversion.convert(self.guest, **self._payload(email=f"concurrent-{index}.{self.unique}@example.test", idempotency_key=f"guest-conversion-{self.unique}-concurrent-{index}")))
+            # Treat the losing different-content claim as the required bounded conflict.
+            except ConflictError:
+                # Return no result payload for the rejected contender.
+                return ("conflict", None)
+        # Patch only the guest-conversion module's shared auth creator during both claims.
+        with patch.object(auth, "create_user", side_effect=synchronized_create):
+            # Execute both contenders through independent threads over the same JSON transaction.
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                # Materialize both outcomes before leaving the patched boundary.
+                outcomes = list(pool.map(attempt, range(2)))
+        # Require exactly one completed account and one rejected conflicting claim.
+        self.assertEqual(sorted(outcome for outcome, _ in outcomes), ["conflict", "converted"])
+        # Read every durable non-guest account attached to the preserved player.
+        owners = [user for user in auth.load_users().get("users", []) if user.get("player_id") == self.guest["player_id"] and not auth.is_guest(user)]
+        # Require the provider transaction to retain exactly one account owner.
+        self.assertEqual(len(owners), 1)
+
     # Require an interrupted conversion (account created, guest unmarked) to recover on retry.
     def test_interrupted_conversion_recovers(self) -> None:
         # Simulate a prior attempt that created the account but never wrote the terminal guest marker.
@@ -106,6 +158,10 @@ class GuestConversionTests(unittest.TestCase):
         result = guest_conversion.convert(self.guest, **self._payload())
         # Require the retry to recover the existing account as a replay.
         self.assertTrue(result["replayed"])
+        # Reload the recovered account so accepted terms are proven in the same identity transaction.
+        account = auth.find_user_by_email(f"converted.{self.unique}@example.test")
+        # Require explicit accepted terms metadata on the recovered durable account.
+        self.assertEqual((account["terms_required"], account["terms_accepted_version"], account["terms_acceptance_source"]), (False, "v1", "guest_conversion"))
         # Require the guest to now be marked terminal.
         self.assertEqual(self._reload_guest()["status"], "converted")
 
@@ -144,6 +200,19 @@ class GuestConversionTests(unittest.TestCase):
                     guest_conversion.convert(self.guest, **self._payload(**overrides))
                 # Require the exact reason.
                 self.assertEqual(raised.exception.details.get("reason"), reason)
+
+    # Require the contract's caller-stable idempotency key before any identity mutation.
+    def test_idempotency_key_is_required_and_bounded(self) -> None:
+        # Enumerate missing, short, oversized, and non-token operation keys.
+        for idempotency_key in ("", "short", "x" * 101, "contains spaces and symbols!"):
+            # Isolate each rejected key so a failure names its shape without echoing secrets.
+            with self.subTest(length=len(idempotency_key)):
+                # Require the bounded validation result.
+                with self.assertRaises(ValidationError) as raised:
+                    # Attempt conversion with the invalid operation key.
+                    guest_conversion.convert(self.guest, **self._payload(idempotency_key=idempotency_key))
+                # Require the exact contract reason and no account side effect.
+                self.assertEqual(raised.exception.details.get("reason"), "invalid_idempotency_key")
 
     # Require a duplicate mailbox already owned by a different account to be rejected.
     def test_duplicate_email_is_rejected(self) -> None:

@@ -1,9 +1,15 @@
 """Focused listener-free tests for the product account-management spine."""
 
+# Import a bounded thread pool for concurrent last-active-Admin proof.
+from concurrent.futures import ThreadPoolExecutor
+# Import a barrier so both Admin mutations pass their public pre-read before the atomic claim.
+import threading
 # Import temporary storage roots for feedback tests that must not touch user data.
 import tempfile
 # Import unittest so the central API runner can execute this focused suite.
 import unittest
+# Import patching so the concurrency test synchronizes only the canonical identity mutation.
+from unittest.mock import patch
 # Import portable paths for isolated provider setup.
 from pathlib import Path
 
@@ -109,6 +115,47 @@ class ProductAccountSpineTests(unittest.TestCase):
         with self.assertRaises(ValidationError):
             # Attempt to suspend the sole remaining owner Admin.
             admin.update_admin_user(owner["user_id"], {"status": "suspended"})
+
+    # Prove concurrent Admin demotions cannot both pass a stale last-active-Admin check.
+    def test_concurrent_admin_demotion_preserves_one_active_admin(self) -> None:
+        # Seed the first active Admin account.
+        owner = self._owner_admin()
+        # Seed a second active Admin through the canonical Admin creation boundary.
+        second = admin.create_admin_user({"email": "second-admin@example.test", "display_name": "Second Admin", "password": "SecondAdminPassw0rd!23", "role": "admin", "terms_accepted": True})["user"]
+        # Synchronize both callers after their account-only pre-read and before the identity transaction.
+        mutation_barrier = threading.Barrier(2)
+        # Retain the production atomic identity updater behind the synchronization seam.
+        update_user = auth.update_user_by_id
+        # Define one synchronized identity update used only by this test.
+        def synchronized_update(*args, **kwargs):
+            # Release both contenders only after each public Admin path reaches the canonical update.
+            mutation_barrier.wait(timeout=5)
+            # Delegate state validation and persistence to the production provider transaction.
+            return update_user(*args, **kwargs)
+        # Define one demotion contender with a bounded outcome.
+        def demote(user_id: str) -> str:
+            # Attempt to remove this account's Admin role.
+            try:
+                # Return the committed outcome when the invariant permits this demotion.
+                admin.update_admin_user(user_id, {"roles": ["player"], "status": "active"})
+                # Mark the one accepted mutation.
+                return "updated"
+            # Treat the losing mutation as the required last-active-Admin rejection.
+            except ValidationError:
+                # Mark the one rejected mutation.
+                return "blocked"
+        # Patch the shared updater so both public Admin calls contend at the atomic boundary.
+        with patch.object(auth, "update_user_by_id", side_effect=synchronized_update):
+            # Execute both demotions concurrently over the same identity document.
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                # Materialize both bounded outcomes before leaving the patched boundary.
+                outcomes = list(pool.map(demote, (owner["user_id"], second["user_id"])))
+        # Require exactly one successful demotion and one invariant rejection.
+        self.assertEqual(sorted(outcomes), ["blocked", "updated"])
+        # Count only active durable accounts that retain the Admin role after both calls.
+        remaining = [user for user in auth.load_users().get("users", []) if user.get("status") == "active" and "admin" in auth.roles_for_user(user)]
+        # Require one active Admin to remain after the concurrent race.
+        self.assertEqual(len(remaining), 1)
 
     # Prove reporter-visible status follows the registered account and rejects abandoned guests.
     def test_reporter_status_is_account_scoped(self) -> None:

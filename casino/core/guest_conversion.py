@@ -12,6 +12,9 @@ returned rather than a second account or a duplicated wallet. No OAuth or provid
 and canonical identity remains the internal Casino user id.
 """
 
+# Import hashing so caller-stable idempotency keys are stored only as one-way fingerprints.
+import hashlib
+
 # Import the canonical identity, session, and player boundary.
 from casino.core import auth
 # Import the player wallet boundary so the preserved balance can be reported.
@@ -76,16 +79,46 @@ def _audit(event: str, **fields) -> None:
     logger.info(event, **fields)
 
 
-# Mark the guest record terminal so it leaves the trial lifecycle and can never reconvert.
-def _mark_guest_converted(guest_user_id: str, account_user_id: str, when: str) -> None:
-    # Mutate only the specific guest record inside the identity document.
-    def mutate(user: dict) -> dict:
+# Atomically record account terms acceptance and the terminal guest conversion marker.
+def _complete_conversion(guest_user_id: str, account_user_id: str, terms_version: str, when: str, idempotency_hash: str) -> dict:
+    # Capture the committed account outside the provider transaction.
+    result = {"account": None}
+    # Mutate both identities inside their shared JSON/MySQL document transaction.
+    def mutate_state(state: dict) -> dict:
+        # Reject malformed identity storage rather than replacing recoverable account data.
+        if not isinstance(state, dict) or not isinstance(state.get("users"), list):
+            # Preserve the original identity document for operator recovery.
+            raise RuntimeError("Authentication user storage is malformed")
+        # Resolve the exact guest and account records inside the locked document.
+        guest = next((user for user in state["users"] if user.get("user_id") == guest_user_id), None)
+        # Resolve only the durable target account selected by the conversion.
+        account = next((user for user in state["users"] if user.get("user_id") == account_user_id and not auth.is_guest(user)), None)
+        # Fail closed when either side of the conversion disappeared.
+        if guest is None or account is None:
+            # Preserve the original document for a recoverable retry.
+            raise ValidationError("Guest conversion identity is unavailable", {"reason": "identity_unavailable"})
+        # Reject a concurrent completion that selected a different durable account.
+        if guest.get("converted_to_user_id") and guest.get("converted_to_user_id") != account_user_id:
+            # Preserve the first committed account owner.
+            raise ConflictError("Guest wallet is already bound to a different account")
+        # Reject a different operation key after another completion won the terminal marker.
+        if guest.get("conversion_idempotency_hash") and guest.get("conversion_idempotency_hash") != idempotency_hash:
+            # Preserve the first committed conversion operation.
+            raise ConflictError("Guest conversion idempotency key conflicts with the completed operation")
+        # Record explicit accepted terms on the durable account in the same transaction.
+        account.update({"terms_required": False, "terms_accepted_at": when, "terms_accepted_version": terms_version, "terms_acceptance_source": "guest_conversion", "updated_at": when})
         # Record the durable conversion link and terminal timestamps.
-        user.update({"status": "converted", "converted_to_user_id": account_user_id, "converted_at": when, "updated_at": when})
-        # Return the mutated guest record.
-        return user
-    # Persist the terminal marker through the atomic identity transaction.
-    auth.update_user_by_id(guest_user_id, mutate)
+        guest.update({"status": "converted", "converted_to_user_id": account_user_id, "converted_at": when, "conversion_idempotency_hash": idempotency_hash, "updated_at": when})
+        # Stamp the canonical schema version before persistence.
+        state["schema_version"] = auth.SCHEMA_VERSION
+        # Publish a detached account result after the transaction commits.
+        result["account"] = dict(account)
+        # Return the complete identity document for atomic provider persistence.
+        return state
+    # Persist terms and terminal identity state as one recoverable provider transaction.
+    update_json(auth.USERS_PATH, mutate_state, auth.default_users)
+    # Return the committed account with accepted terms metadata.
+    return result["account"]
 
 
 # Build the published conversion result without exposing raw internal identifiers in copy.
@@ -96,13 +129,37 @@ def _result(account: dict, *, replayed: bool) -> dict:
     return {"status": "converted", "replayed": replayed, "email": account["email"], "display_name": account["display_name"], "balance": wallet["balance"], "player_preserved": True}
 
 
+# Validate one caller-stable conversion idempotency key without retaining its raw value.
+def _idempotency_hash(value: str) -> str:
+    # Normalize the caller-supplied key before applying contract bounds.
+    key = str(value or "").strip()
+    # Reject missing, oversized, or non-token keys before reading or mutating identity state.
+    if len(key) < 16 or len(key) > 100 or any(character not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-" for character in key):
+        # Return one bounded reason without echoing the supplied key.
+        raise ValidationError("Guest conversion idempotency key is invalid", {"reason": "invalid_idempotency_key"})
+    # Return a one-way fingerprint suitable for durable replay comparison.
+    return hashlib.sha256(key.encode("utf-8")).hexdigest()
+
+
 # Convert an authenticated guest trial into a durable full first-party account.
 def convert(guest, email: str, password: str, display_name: str, *, terms_version: str = "", accepted: bool = False, locale: str = "en-US", idempotency_key: str = "") -> dict:
+    # Validate and fingerprint the required caller-stable operation key before any replay decision.
+    idempotency_hash = _idempotency_hash(idempotency_key)
     # Return the already-created account first so a completed conversion replays even once the guest is terminal.
     prior = _already_converted(guest or {})
     # Publish the stable replay result for a completed conversion before any active-guest requirement.
     if prior is not None:
-        # Return the byte-stable replay without touching identity state again.
+        # Reject a different operation key when the terminal guest records a completed conversion fingerprint.
+        if guest.get("conversion_idempotency_hash") and guest.get("conversion_idempotency_hash") != idempotency_hash:
+            # Fail closed instead of treating another operation as the original replay.
+            raise ConflictError("Guest conversion idempotency key conflicts with the completed operation")
+        # Reject a replay that tries to rename the already-created canonical mailbox.
+        if auth.normalize_email(str(email or "")) != prior.get("email"):
+            # Preserve the original account identity without accepting conflicting content.
+            raise ConflictError("Guest wallet is already bound to a different account")
+        # Revoke any surviving disposable session again so exact replay stays fail-closed.
+        auth.revoke_sessions_for_user(str(guest.get("user_id") or ""))
+        # Return the byte-stable account result without changing conversion identity state.
         return _result(prior, replayed=True)
     # Require the caller to be an active guest before any validation that could leak account state.
     _require_active_guest(guest)
@@ -139,19 +196,37 @@ def convert(guest, email: str, password: str, display_name: str, *, terms_versio
             # Fail closed on a conflicting retry rather than creating a second account.
             raise ConflictError("Guest wallet is already bound to a different account")
         # Complete the interrupted conversion by writing the terminal guest marker.
-        _mark_guest_converted(guest["user_id"], existing_account["user_id"], utc_now())
+        existing_account = _complete_conversion(guest["user_id"], existing_account["user_id"], str(terms_version or ""), utc_now(), idempotency_hash)
+        # Revoke any resumable guest session after the atomic identity completion.
+        auth.revoke_sessions_for_user(guest["user_id"])
         # Record the recovered completion for operators.
         _audit("guest_conversion_recovered", account_user_id=existing_account["user_id"], player_id=player_id)
         # Return the stable replay result.
         return _result(existing_account, replayed=True)
     # Create the full local account adopting the guest's existing player so the wallet and ledger persist.
-    account = auth.create_user(normalized, str(password), str(display_name or "").strip() or normalized, role="player", player_id=player_id, terms_required=False, locale=locale if locale in ("en-US", "ru-RU") else "en-US")
-    # Record the account's explicit terms acceptance on the durable identity.
-    auth.accept_terms(account["user_id"], str(terms_version or ""), True)
+    try:
+        # Create the full local account while atomically preserving one durable owner per player.
+        account = auth.create_user(normalized, str(password), str(display_name or "").strip() or normalized, role="player", player_id=player_id, terms_required=False, locale=locale if locale in ("en-US", "ru-RU") else "en-US")
+    # Recover a concurrent winner or preserve its conflicting-account rejection.
+    except (ConflictError, ValidationError):
+        # Re-read the player owner after the failed atomic account claim.
+        account = _account_on_player(player_id)
+        # Re-raise when no concurrent owner exists or it chose different account content.
+        if account is None or account.get("email") != normalized:
+            # Preserve the original bounded validation or conflict result.
+            raise
+        # Atomically record accepted terms and the terminal marker for the concurrent winner.
+        account = _complete_conversion(guest["user_id"], account["user_id"], str(terms_version or ""), utc_now(), idempotency_hash)
+        # Revoke any resumable guest session after the atomic identity completion.
+        auth.revoke_sessions_for_user(guest["user_id"])
+        # Record the concurrent recovery without exposing supplied credentials or keys.
+        _audit("guest_conversion_concurrent_replay", account_user_id=account["user_id"], player_id=player_id)
+        # Return the converged account as an idempotent replay.
+        return _result(account, replayed=True)
     # Capture the completion time once for consistent terminal markers.
     when = utc_now()
-    # Mark the guest record terminal and linked so it leaves the trial lifecycle and stays out of Admin Users.
-    _mark_guest_converted(guest["user_id"], account["user_id"], when)
+    # Atomically record accepted terms and the terminal guest marker in the shared identity document.
+    account = _complete_conversion(guest["user_id"], account["user_id"], str(terms_version or ""), when, idempotency_hash)
     # Revoke any resumable guest session so the disposable trial credential can never be reused.
     auth.revoke_sessions_for_user(guest["user_id"])
     # Record the successful conversion with only bounded provenance fields.

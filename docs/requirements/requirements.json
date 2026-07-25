@@ -10662,24 +10662,25 @@
     {
       "id": "CONVERT-002",
       "module": "Core",
-      "description": "Conversion is recoverable and idempotent: a completed conversion that is retried replays the same account rather than creating a second account or duplicating the wallet, an interrupted attempt that created the account but not the terminal guest marker is recovered on retry, and a retry that names a different mailbox for an already-bound wallet fails closed. The guest record is marked terminal and linked so it leaves the trial lifecycle and stays out of Admin Users, and audit events carry only bounded provenance with no raw identifier in user-facing copy.",
+      "description": "Conversion is recoverable and idempotent: the required caller-stable operation key is validated and retained only as a one-way fingerprint, a completed exact retry replays the same account rather than creating a second account or duplicating the wallet, an interrupted attempt that created the account but not the terminal guest marker is recovered on retry, and different-key or different-mailbox retries fail closed. JSON/MySQL identity-document transactions enforce exactly one durable account owner for the guest player even under concurrent account claims. The guest record is marked terminal and linked so it leaves the trial lifecycle and stays out of Admin Users, and audit events carry only bounded provenance with no raw identifier in user-facing copy.",
       "status": "PASS",
       "api_tests": [
         "API-CONVERT-001"
       ],
       "browser_tests": [],
       "implementation_files": [
+        "casino/core/auth.py",
         "casino/core/guest_conversion.py",
         "tests/guest_conversion_tests.py"
       ],
       "introduced_in": "issue-378-guest-conversion",
       "changed_in": "issue-378-guest-conversion",
-      "notes": "Allocated for GitHub issue #378. Idempotency is keyed on the durable conversion marker written on the guest record, checked before any active-guest requirement so a terminal guest still replays."
+      "notes": "Allocated for GitHub issue #378. The terminal marker stores only a SHA-256 operation-key fingerprint; raw idempotency keys, passwords, and credentials are never retained or logged."
     },
     {
       "id": "TEST-111",
       "module": "Tests",
-      "description": "Listener-free evidence verifies guest conversion: exact wallet preservation across the adopted player, password login of the converted account, terminal guest marking, idempotent replay on retry with a single owning account, recovery of an interrupted conversion, rejection of a conflicting different-mailbox retry, rejection of a non-guest principal, validation of terms/password/email inputs, and rejection of a duplicate mailbox.",
+      "description": "Listener-free evidence verifies guest conversion: exact wallet preservation across the adopted player, password login of the converted account, terminal guest marking, required bounded idempotency keys, exact replay with a single owning account, rejection of different-key and different-mailbox retries, recovery of an interrupted conversion with terms acceptance, concurrent different-account claims converging on one durable wallet owner, rejection of a non-guest principal, validation of terms/password/email inputs, and rejection of a duplicate mailbox.",
       "status": "PASS",
       "api_tests": [
         "API-CONVERT-001"
@@ -10719,7 +10720,7 @@
     {
       "id": "ADMIN-026",
       "module": "Admin",
-      "description": "Admins can promote or remove the Admin role from account users and can set explicit account lifecycle states active, inactive, suspended, or locked. Guest Trials remain excluded from account-management routes, unsupported role values fail closed, every role/status mutation revokes affected sessions through canonical auth privilege tracking, and the server rejects any change that would leave no active Admin. Admin audit events include before/after role, status, display name, and locale metadata for full operator review without exposing password material.",
+      "description": "Admins can promote or remove the Admin role from account users and can set explicit account lifecycle states active, inactive, suspended, or locked. Guest Trials remain excluded from account-management routes, unsupported role values fail closed, every role/status mutation revokes affected sessions through canonical auth privilege tracking, and the JSON/MySQL identity transaction rejects sequential or concurrent changes that would leave no active Admin. Admin audit events include transaction-accurate before/after role, status, display name, and locale metadata for full operator review without exposing password material.",
       "status": "PASS",
       "api_tests": [
         "API-ACCOUNT-SPINE-001"
@@ -10790,7 +10791,7 @@
     {
       "id": "TEST-112",
       "module": "Tests",
-      "description": "Listener-free evidence verifies the product account spine: enrollment policy reports disabled signup and passkeys with guest conversion available, disabled signup creates no account, passkey registration fails closed, Admin role promotion/demotion and lifecycle states preserve last-active-Admin protection, reporter-visible status is account-scoped and attachment-free, and guest status tracking is rejected unless conversion creates a durable account.",
+      "description": "Listener-free evidence verifies the product account spine: enrollment policy reports disabled signup and passkeys with guest conversion available, disabled signup creates no account, passkey registration fails closed, Admin role promotion/demotion and lifecycle states preserve last-active-Admin protection under concurrent demotions, reporter-visible status is account-scoped and attachment-free, and guest status tracking is rejected unless conversion creates a durable account.",
       "status": "PASS",
       "api_tests": [
         "API-ACCOUNT-SPINE-001"
