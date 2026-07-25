@@ -10850,6 +10850,75 @@
       "introduced_in": "issue-keno-ball-rail-overflow",
       "changed_in": "issue-keno-ball-rail-overflow",
       "notes": "Allocated for the Keno ball-rail overflow fix found during the game review; it reuses the existing governed Keno final-result evidence matrix rather than creating a duplicate surface."
+    },
+    {
+      "id": "DBVP-001",
+      "module": "Double Bonus Video Poker",
+      "description": "Double Bonus Video Poker is a single-hand draw video poker on the nine-six pay schedule. The player bets, receives five cards, holds any subset, and draws replacements for the rest; the completed five-card hand is paid by the paytable applied to the bet. Double Bonus rewards four of a kind richly, with four aces paying the most, then four twos through fours, then four fives through kings, while trimming two pair to an even-money return, and the nine-six full house and flush keep the schedule house-positive at about a 0.89 percent edge under optimal play. Deal and draw are exactly-once and reload-safe on the shared ledger and player-scoped state store, and the five replacement cards are committed at deal so a reload cannot change the draw.",
+      "status": "PASS",
+      "api_tests": [
+        "API-DOUBLE-BONUS-VIDEO-POKER-001"
+      ],
+      "browser_tests": [
+        "BR-DBVP-001"
+      ],
+      "implementation_files": [
+        "casino/games/double_bonus_video_poker/engine.py",
+        "casino/games/double_bonus_video_poker/service.py",
+        "casino/games/double_bonus_video_poker/api.py",
+        "web/games/double_bonus_video_poker.js",
+        "contracts/openapi/double_bonus_video_poker.v1.yaml",
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-131-double-bonus-video-poker",
+      "changed_in": "issue-131-double-bonus-video-poker",
+      "notes": "Allocated for GitHub issue #131, a catalog-expansion poker variant (#73). The service reuses the shared card primitives, five-card evaluator, and ledger with the nine-six house-positive Double Bonus paytable. Exact-head browser evidence covers ready, hold selection, settlement, reduced-motion, and route-restored states in EN/RU at all four governed viewports."
+    },
+    {
+      "id": "DBVP-002",
+      "module": "Double Bonus Video Poker",
+      "description": "Double Bonus Video Poker inherits the exactly-once, reload-safe orchestration of the shared ledger: one caller-stable action id maps to one deal or one draw, a retry replays the identical settled hand without moving the wallet again, and an action id reused with different hold content fails closed. The replacement pile stays private until the draw completes. The additive v1 contract exposes only the game-owned state, rounds, and decisions routes and never alters the frozen shared API. The published rules report the hand size and the nine-six Double Bonus paytable.",
+      "status": "PASS",
+      "api_tests": [
+        "API-DOUBLE-BONUS-VIDEO-POKER-001"
+      ],
+      "browser_tests": [
+        "BR-DBVP-001"
+      ],
+      "implementation_files": [
+        "casino/games/double_bonus_video_poker/service.py",
+        "casino/games/double_bonus_video_poker/api.py",
+        "tests/double_bonus_video_poker_tests.py",
+        "tests/game_drivers/double_bonus_video_poker.py",
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-131-double-bonus-video-poker",
+      "changed_in": "issue-131-double-bonus-video-poker",
+      "notes": "Allocated for GitHub issue #131."
+    },
+    {
+      "id": "TEST-114",
+      "module": "Tests",
+      "description": "Listener-free evidence verifies Double Bonus Video Poker: the paytable bands four of a kind into the aces, twos-through-fours, and fives-through-kings tiers and trims two pair to even money, holding three aces and drawing the fourth pays four aces, holding a made hand keeps it through the draw, a busted draw returns nothing, a replayed draw returns the identical settled hand without a second credit, a draw action-id reused with a changed hold fails closed, a reload recovers the committed deal without a duplicate debit, invalid bets and hold positions are rejected, and a large seeded sample confirms the nine-six schedule leaves the game house-positive under a disciplined strategy.",
+      "status": "PASS",
+      "api_tests": [
+        "API-DOUBLE-BONUS-VIDEO-POKER-001"
+      ],
+      "browser_tests": [
+        "BR-DBVP-001"
+      ],
+      "implementation_files": [
+        "tests/double_bonus_video_poker_tests.py",
+        "tests/run_tests.py",
+        "tests/ui_50000.py",
+        "tests/unit/ui_50000_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-131-double-bonus-video-poker",
+      "changed_in": "issue-131-double-bonus-video-poker",
+      "notes": "Allocated for GitHub issue #131. The governed browser corpus contains exactly forty after-pass Double Bonus images: five states by two locales by four standard viewports."
     }
   ]
 }

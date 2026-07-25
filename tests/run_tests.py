@@ -988,6 +988,20 @@ def run_api_tests():
             raise AssertionError('play-token receipt derivation suite failed')
     # Record the committed-ledger explanation, shared pagination, privacy, and exact-contract proof.
     run_case('API-RECEIPT-001',['RECEIPT-001','RECEIPT-002','TEST-104'],run_receipt_tests)
+    # Execute the Double Bonus Video Poker engine and settlement proof without opening a listener.
+    def run_double_bonus_video_poker_tests():
+        # Import the focused suite only when its mapped API case runs.
+        from tests import double_bonus_video_poker_tests
+        # Load exactly the Double Bonus engine and service assertions.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(double_bonus_video_poker_tests.DoubleBonusVideoPokerTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused Double Bonus assertion failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure stable.
+            raise AssertionError('double bonus video poker suite failed')
+    # Record the Double Bonus paytable, deal-and-draw settlement, replay, recovery, and house-edge proof.
+    run_case('API-DOUBLE-BONUS-VIDEO-POKER-001',['DBVP-001','DBVP-002','TEST-114'],run_double_bonus_video_poker_tests)
     # Execute the opt-in wellness, current-session summary, concurrency, and neutral-copy proof without a listener.
     def run_wellness_tests():
         # Import the focused suite only when its mapped API case runs.
@@ -5662,6 +5676,48 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Execute the integrated Joker Poker browser and visual gate.
                 run_case('BR-JP-001',['JP-001','JP-002','JP-004','JP-005'],joker_poker_acceptance)
+                # Define real-backend Double Bonus localization, hold, draw, responsive, motion, and route acceptance.
+                def double_bonus_video_poker_acceptance():
+                    # Open the catalog-owned route and wait for the stable game selector.
+                    page.get_by_test_id('nav-double_bonus_video_poker').click(); page.get_by_test_id('double-bonus-video-poker').wait_for(timeout=5000)
+                    # Enumerate every viewport governed by the Double Bonus visual-matrix row.
+                    required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
+                    # Load exact UTF-8 expectations from both canonical locale resources.
+                    resources={locale:read_i18n_json(ROOT/'web'/'i18n'/locale/'games'/'double_bonus_video_poker.json') for locale in ('en-US','ru-RU')}
+                    # Capture one mounted state across both locales and every governed viewport.
+                    def localized_evidence(prefix,states):
+                        # Iterate through paired English and Russian resources without discarding the active hand.
+                        for locale in ('en-US','ru-RU'):
+                            # Switch the shared locale and wait for the game-owned rerender.
+                            page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_timeout(100)
+                            # Require exact localized title and phase copy rather than fallback keys or stale English.
+                            phase_key='settled' if 'settled' in states or 'route_restored' in states or 'reduced_motion' in states else 'draw' if 'choose_holds' in states else 'idle'; assert page.locator('.db-header h1').inner_text()==resources[locale]['title'] and page.get_by_test_id('double-bonus-video-poker-phase').inner_text()==resources[locale][f'phase.{phase_key}']
+                            # Validate containment, visible controls, and after-pass evidence at each exact viewport.
+                            for viewport_id,width,height in required_viewports:
+                                # Resize to the registered evidence dimensions.
+                                page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
+                                # Reject page overflow and require the complete game, phase, and paytable to remain visible.
+                                assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.get_by_test_id('double-bonus-video-poker').is_visible() and page.locator('.db-pays div').count()==11 and page.locator('.db-card').last.is_visible()
+                                # Record self-describing exact-head evidence for this state and viewport.
+                                game_evidence(f'after-pass-double-bonus-video-poker-{prefix}-{locale.lower()}-{viewport_id}.png','double_bonus_video_poker',states,locale,viewport_id)
+                        # Restore English desktop controls for the next public action.
+                        page.get_by_test_id('shell-locale-select').select_option('en-US'); page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(100)
+                    # Capture the complete ready machine before the ledger-backed deal.
+                    localized_evidence('ready',['ready'])
+                    # Commit a bounded wager and deal through the public frontend.
+                    page.locator('[data-bet]').fill('1'); page.locator('[data-bet]').press('Tab'); page.locator('[data-deal]').click(); page.get_by_test_id('double-bonus-video-poker-hand').wait_for(timeout=10000); assert page.locator('[data-hold]').count()==5
+                    # Select one visible hold and capture the actionable draw state.
+                    page.locator('[data-hold="0"]').click(); page.locator('[data-hold="0"][aria-pressed="true"]').wait_for(timeout=10000); localized_evidence('choose-holds',['choose_holds'])
+                    # Draw through the public frontend and require one authoritative settled result.
+                    page.locator('[data-draw]').click(); page.locator('[data-deal]:not([disabled])').wait_for(timeout=10000); assert page.get_by_test_id('double-bonus-video-poker-result').is_visible(); localized_evidence('settled',['settled'])
+                    # Capture the stable terminal table under reduced-motion media emulation.
+                    page.emulate_media(reduced_motion='reduce'); localized_evidence('reduced-motion',['settled','reduced_motion'])
+                    # Reload the canonical game route and require restored player-owned terminal state.
+                    page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('double-bonus-video-poker').wait_for(timeout=5000); page.locator('[data-deal]:not([disabled])').wait_for(timeout=5000); localized_evidence('route-restored',['settled','route_restored'])
+                    # Return to the lobby for downstream browser cases.
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Execute the integrated Double Bonus browser and governed visual gate.
+                run_case('BR-DBVP-001',['DBVP-001','DBVP-002','TEST-114'],double_bonus_video_poker_acceptance)
                 # Define registered Texas Hold'em localization, streets, settlement, motion, and route acceptance.
                 def texas_holdem_practice_acceptance():
                     # Open the catalog-owned route and wait for the stable table selector.

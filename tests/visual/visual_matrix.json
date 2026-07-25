@@ -1046,6 +1046,15 @@
       "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
     },
     {
+      "id": "double_bonus_video_poker",
+      "route": "/games/double_bonus_video_poker",
+      "selector": "[data-testid='double-bonus-video-poker']",
+      "states": ["ready", "choose_holds", "settled", "reduced_motion", "route_restored"],
+      "locales": ["en-US", "ru-RU"],
+      "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
+      "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
+    },
+    {
       "id": "texas_holdem_practice_table",
       "route": "/games/texas_holdem_practice_table",
       "selector": "[data-testid='texas-holdem-practice-table']",

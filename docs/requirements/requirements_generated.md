@@ -44,11 +44,12 @@ Historical source baseline: 9.1.0
 - caribbean_stud: 1.0.1
 - let_it_ride: 1.0.0
 - casino_holdem: 1.0.1
+- double_bonus_video_poker: 1.0.0
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.60.13
-- docs: 1.60.13
-- contracts: 1.44.1
+- tests: 1.60.14
+- docs: 1.60.14
+- contracts: 1.45.0
 - tooling: 1.20.3
 - commenting_policy: 1.0.0
 
@@ -818,3 +819,6 @@ Historical source baseline: 9.1.0
 - **TEST-112** (Tests) - PASS: Listener-free evidence verifies the product account spine: enrollment policy reports disabled signup and passkeys with guest conversion available, disabled signup creates no account, passkey registration fails closed, Admin role promotion/demotion and lifecycle states preserve last-active-Admin protection under concurrent demotions, reporter-visible status is account-scoped and attachment-free, and guest status tracking is rejected unless conversion creates a durable account. Exact-head browser evidence also requires the complete status, Admin-role, and save-control group to remain usable and contained in every governed viewport.
 - **KENO-026** (Keno) - PASS: The Keno drawn-ball result rail stays bounded to its column and scrolls horizontally rather than clipping. The rail declares min-width:0 and max-width:100% so it cannot expand to its content width inside the fixed stage, and it enables horizontal-scroll overflow so all twenty drawn balls remain reachable; each ball keeps a fixed size so it stays legible while scrolling. Without these the rightmost drawn numbers were clipped off the page by an ancestor overflow boundary.
 - **TEST-113** (Tests) - PASS: Listener-free evidence pins the Keno drawn-ball rail layout and accessibility contract: the rail can shrink below its content via min-width:0 and is bounded by max-width:100%, it owns named keyboard-reachable horizontal scrolling, and each drawn ball keeps a fixed size. Hosted browser geometry at every governed viewport and EN/RU locale proves the rail stays inside its stage, keeps the twentieth ball visible when the results fit, and makes it fully reachable at the terminal internal-scroll edge when they overflow.
+- **DBVP-001** (Double Bonus Video Poker) - PASS: Double Bonus Video Poker is a single-hand draw video poker on the nine-six pay schedule. The player bets, receives five cards, holds any subset, and draws replacements for the rest; the completed five-card hand is paid by the paytable applied to the bet. Double Bonus rewards four of a kind richly, with four aces paying the most, then four twos through fours, then four fives through kings, while trimming two pair to an even-money return, and the nine-six full house and flush keep the schedule house-positive at about a 0.89 percent edge under optimal play. Deal and draw are exactly-once and reload-safe on the shared ledger and player-scoped state store, and the five replacement cards are committed at deal so a reload cannot change the draw.
+- **DBVP-002** (Double Bonus Video Poker) - PASS: Double Bonus Video Poker inherits the exactly-once, reload-safe orchestration of the shared ledger: one caller-stable action id maps to one deal or one draw, a retry replays the identical settled hand without moving the wallet again, and an action id reused with different hold content fails closed. The replacement pile stays private until the draw completes. The additive v1 contract exposes only the game-owned state, rounds, and decisions routes and never alters the frozen shared API. The published rules report the hand size and the nine-six Double Bonus paytable.
+- **TEST-114** (Tests) - PASS: Listener-free evidence verifies Double Bonus Video Poker: the paytable bands four of a kind into the aces, twos-through-fours, and fives-through-kings tiers and trims two pair to even money, holding three aces and drawing the fourth pays four aces, holding a made hand keeps it through the draw, a busted draw returns nothing, a replayed draw returns the identical settled hand without a second credit, a draw action-id reused with a changed hold fails closed, a reload recovers the committed deal without a duplicate debit, invalid bets and hold positions are rejected, and a large seeded sample confirms the nine-six schedule leaves the game house-positive under a disciplined strategy.
