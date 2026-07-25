@@ -46,11 +46,12 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.1
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.60.3
-- docs: 1.60.3
+- tests: 1.60.4
+- docs: 1.60.4
 - contracts: 1.43.0
 - tooling: 1.20.3
 - commenting_policy: 1.0.0
+- color_wheel: 1.0.0
 
 ## Requirements
 
@@ -811,3 +812,6 @@ Historical source baseline: 9.1.0
 - **GAMECORE-001** (Core) - PASS: A shared wager-and-settle core provides one exactly-once ledger settlement path for catalog games: a caller supplies only a pure bet validator and a deterministic resolver, and the core draws server entropy, debits one aggregate wager, settles deterministically, and credits any single aggregate return. The wager debit and the settlement credit are each applied exactly once, guarded by ledger proof plus a request fingerprint, so one caller-stable request id maps to exactly one round and a retry replays the identical committed outcome without moving the wallet again.
 - **GAMECORE-002** (Core) - PASS: The shared settlement core fails closed on every abuse and error path: a request id reused with different wager content is rejected as a conflict rather than double-spending, an action identity can never move two different amounts, a non-positive or malformed wager is rejected before any wallet movement, a missing or malformed request id is rejected, and per-player round state is bounded. The deterministic round identity is game-scoped so one game's proof can never satisfy another game.
 - **TEST-114** (Tests) - PASS: Listener-free evidence verifies the shared simple-game settlement core: winning and losing rounds settle exactly once with correct balances, a retried request replays without double-spending, a request id reused with different content fails closed, settlement recovers deterministically from committed ledger proof after total per-player state loss, invalid wagers and missing request ids are rejected before any wallet movement, and the deterministic round id is stable and game-scoped.
+- **CWHEEL-001** (Color Wheel) - PASS: Color Wheel is a twenty-segment wheel built on the shared exactly-once settlement core. A spin debits one bounded play-token stake on a chosen colour, draws one server-authoritative landed segment, and credits the colour's total-return multiplier on a match: red and black pay two times, green six times, and gold sixteen times. Every payout is house-positive because each colour's segment probability times its multiplier is below one. Unknown colours and non-integer, non-positive, or over-limit stakes are rejected before any wallet movement.
+- **CWHEEL-002** (Color Wheel) - PASS: Color Wheel inherits the shared core's exactly-once settlement: one caller-stable request id maps to one spin, a retry replays the identical committed landed segment and payout without moving the wallet again, and a request id reused with different wager content fails closed. The additive v1 contract exposes only the game-owned state and spins routes and never alters the frozen shared API. The published bet catalog reports honest segment counts and multipliers.
+- **TEST-115** (Tests) - PASS: Listener-free evidence verifies Color Wheel: a matching colour pays its multiplier, a non-matching colour loses the stake, the gold segment pays its jackpot multiplier, unknown colours and malformed stakes are rejected before any wallet movement, a retried spin replays without double-spending, every colour payout is confirmed house-positive, and the published bet catalog matches the real segment layout and multipliers.

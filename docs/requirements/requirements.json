@@ -10691,6 +10691,62 @@
       "introduced_in": "issue-73-catalog-expansion",
       "changed_in": "issue-73-catalog-expansion",
       "notes": "Introduced for the game-catalog expansion (#73)."
+    },
+    {
+      "id": "CWHEEL-001",
+      "module": "Color Wheel",
+      "description": "Color Wheel is a twenty-segment wheel built on the shared exactly-once settlement core. A spin debits one bounded play-token stake on a chosen colour, draws one server-authoritative landed segment, and credits the colour's total-return multiplier on a match: red and black pay two times, green six times, and gold sixteen times. Every payout is house-positive because each colour's segment probability times its multiplier is below one. Unknown colours and non-integer, non-positive, or over-limit stakes are rejected before any wallet movement.",
+      "status": "PASS",
+      "api_tests": [
+        "API-COLOR-WHEEL-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/color_wheel/rules.py",
+        "casino/games/color_wheel/engine.py",
+        "casino/games/color_wheel/api.py",
+        "web/games/color_wheel.js",
+        "contracts/openapi/color_wheel.v1.yaml"
+      ],
+      "introduced_in": "issue-152-color-wheel",
+      "changed_in": "issue-152-color-wheel",
+      "notes": "Allocated for GitHub issue #152, the first game of the catalog expansion (#73). The module supplies only pure rules; the shared core owns settlement."
+    },
+    {
+      "id": "CWHEEL-002",
+      "module": "Color Wheel",
+      "description": "Color Wheel inherits the shared core's exactly-once settlement: one caller-stable request id maps to one spin, a retry replays the identical committed landed segment and payout without moving the wallet again, and a request id reused with different wager content fails closed. The additive v1 contract exposes only the game-owned state and spins routes and never alters the frozen shared API. The published bet catalog reports honest segment counts and multipliers.",
+      "status": "PASS",
+      "api_tests": [
+        "API-COLOR-WHEEL-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/color_wheel/api.py",
+        "casino/core/simple_game.py",
+        "tests/color_wheel_tests.py",
+        "tests/game_drivers/color_wheel.py"
+      ],
+      "introduced_in": "issue-152-color-wheel",
+      "changed_in": "issue-152-color-wheel",
+      "notes": "Allocated for GitHub issue #152."
+    },
+    {
+      "id": "TEST-115",
+      "module": "Tests",
+      "description": "Listener-free evidence verifies Color Wheel: a matching colour pays its multiplier, a non-matching colour loses the stake, the gold segment pays its jackpot multiplier, unknown colours and malformed stakes are rejected before any wallet movement, a retried spin replays without double-spending, every colour payout is confirmed house-positive, and the published bet catalog matches the real segment layout and multipliers.",
+      "status": "PASS",
+      "api_tests": [
+        "API-COLOR-WHEEL-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/color_wheel_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-152-color-wheel",
+      "changed_in": "issue-152-color-wheel",
+      "notes": "Allocated for GitHub issue #152."
     }
   ]
 }

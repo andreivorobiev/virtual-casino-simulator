@@ -1,0 +1,15 @@
+{
+  "title": "Color Wheel",
+  "bet.title": "Your colour",
+  "bet.red": "Red",
+  "bet.black": "Black",
+  "bet.green": "Green",
+  "bet.gold": "Gold",
+  "stake.title": "Stake",
+  "action.spin": "Spin the wheel",
+  "action.spinning": "Spinning…",
+  "result.idle": "Choose a colour and spin.",
+  "result.landed": "Landed on {color}.",
+  "error.load": "Could not load Color Wheel.",
+  "error.spin": "Spin could not be completed."
+}

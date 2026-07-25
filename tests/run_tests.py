@@ -1061,6 +1061,19 @@ def run_api_tests():
             raise AssertionError('simple-game settlement core suite failed')
     # Record the listener-free exactly-once wager, replay, conflict, and crash-recovery proof.
     run_case('API-GAMECORE-001',['GAMECORE-001','GAMECORE-002','TEST-114'],run_simple_game_core_tests)
+    # Execute the Color Wheel rules and settlement proof without opening a listener.
+    def run_color_wheel_tests():
+        # Load only the focused Color Wheel class.
+        from tests import color_wheel_tests
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(color_wheel_tests.ColorWheelTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused Color Wheel proof failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure text secret-safe.
+            raise AssertionError('color wheel suite failed')
+    # Record the listener-free Color Wheel payout, retry, and house-edge proof.
+    run_case('API-COLOR-WHEEL-001',['CWHEEL-001','CWHEEL-002','TEST-115'],run_color_wheel_tests)
     # Discover and execute every focused restricted-preview security module without opening a listener.
     def run_restricted_preview_security_tests():
         # Load the package directory through unittest's standard test discovery.
