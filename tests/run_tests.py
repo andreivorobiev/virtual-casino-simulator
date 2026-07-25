@@ -1075,6 +1075,19 @@ def run_api_tests():
             raise AssertionError('TiltSeven repository-scaffold suite failed')
     # Record the listener-free bilingual, no-network, no-publication, and visual-ownership proof.
     run_case('STATIC-MARKETING-001',['MARKETING-001','MARKETING-002','MARKETING-003','TEST-107'],run_marketing_site_tests)
+    # Execute the Keno drawn-ball rail layout regression without opening a listener.
+    def run_keno_ball_rail_tests():
+        # Load only the focused Keno ball-rail class.
+        from tests import keno_ball_rail_tests
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(keno_ball_rail_tests.KenoBallRailTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when the ball-rail layout contract regresses.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure text secret-safe.
+            raise AssertionError('keno ball-rail layout suite failed')
+    # Record the listener-free Keno drawn-ball rail overflow regression proof.
+    run_case('UI-KENO-BALL-RAIL-001',['KENO-026','TEST-113'],run_keno_ball_rail_tests)
     # Discover and execute every focused restricted-preview security module without opening a listener.
     def run_restricted_preview_security_tests():
         # Load the package directory through unittest's standard test discovery.
@@ -6647,8 +6660,10 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1')
                             # Bring the bounded game surface into view before capturing the real idle state.
                             page.locator('.keno-premium').scroll_into_view_if_needed()
+                            # Use a bounded board crop on desktop because the shared game-outlet scrollport cannot paint an offscreen full-route locator without transparent padding.
+                            edge_board_evidence_selector='[data-testid="keno-board-scroll"]' if edge_viewport_id in ('desktop_primary','desktop_compact') else '.keno-premium'
                             # Record self-describing idle evidence for this exact locale and viewport.
-                            region_evidence(f'after-pass-keno-edge-idle-{edge_locale.lower()}-{edge_viewport_id}.png','.keno-premium','keno',['edge_idle'],edge_locale,edge_viewport_id)
+                            region_evidence(f'after-pass-keno-edge-idle-{edge_locale.lower()}-{edge_viewport_id}.png',edge_board_evidence_selector,'keno',['edge_idle'],edge_locale,edge_viewport_id)
                             # Select all four corner cells through the same public controls used by a player.
                             for edge_number in (1,10,71,80): page.get_by_test_id(f'keno-num-{edge_number}').click()
                             # Start keyboard traversal from the named board region so the first corner receives true focus-visible state.
@@ -6660,21 +6675,39 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             # Require every intended corner selection to survive rerenders before evidence capture.
                             assert all(page.get_by_test_id(f'keno-num-{edge_number}').get_attribute('aria-pressed')=='true' for edge_number in (1,10,71,80))
                             # Record selected and focus-visible evidence from the real public controls.
-                            region_evidence(f'after-pass-keno-edge-selected-focus-{edge_locale.lower()}-{edge_viewport_id}.png','.keno-premium','keno',['edge_selected_focus_visible'],edge_locale,edge_viewport_id)
+                            region_evidence(f'after-pass-keno-edge-selected-focus-{edge_locale.lower()}-{edge_viewport_id}.png',edge_board_evidence_selector,'keno',['edge_selected_focus_visible'],edge_locale,edge_viewport_id)
                             # Persist one deterministic final draw so caught/latest state does not depend on random outcomes.
                             save_player_game_state('keno',edge_player,final_edge_state)
                             # Reconstruct the route from authoritative history and wait for all twenty final balls.
                             page.reload(wait_until='networkidle'); page.get_by_test_id('keno-premium-hero').wait_for(timeout=5000); page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale",arg=edge_locale); page.wait_for_function("() => document.querySelectorAll('[data-testid=\"keno-drawn-ball\"]').length === 20",timeout=5000)
                             # Require the seeded result to render every draw plus the caught/latest bottom-right edge cell.
                             assert page.locator('.keno-num.drawn').count()==20 and page.locator('.keno-num.catch').count()==1 and page.get_by_test_id('keno-num-80').evaluate("cell => cell.classList.contains('catch') && cell.classList.contains('latest')")
+                            # Measure the completed drawn-ball rail before scrolling so internal overflow cannot masquerade as clipped page content.
+                            rail_probe=page.get_by_test_id('keno-drawn-balls').evaluate("""rail => { const style=getComputedStyle(rail); const box=rail.getBoundingClientRect(); const owner=rail.closest('.keno-stage-panel')?.getBoundingClientRect(); const last=rail.querySelector('[data-testid="keno-drawn-ball"]:last-child')?.getBoundingClientRect(); return {clientWidth:rail.clientWidth,scrollWidth:rail.scrollWidth,scrollLeft:rail.scrollLeft,maxScrollLeft:rail.scrollWidth-rail.clientWidth,minWidth:style.minWidth,maxWidth:style.maxWidth,overflowX:style.overflowX,overflowY:style.overflowY,tabindex:rail.getAttribute('tabindex'),role:rail.getAttribute('role'),label:rail.getAttribute('aria-label'),box:{left:box.left,right:box.right},owner:owner&&{left:owner.left,right:owner.right},last:last&&{left:last.left,right:last.right}}; }""")
+                            # Require one named keyboard-reachable horizontal owner bounded inside the stage whether this viewport needs overflow or fits all balls.
+                            assert rail_probe['minWidth']=='0px' and rail_probe['overflowX'] in ('auto','scroll') and rail_probe['overflowY']=='hidden' and rail_probe['tabindex']=='0' and rail_probe['role']=='region' and rail_probe['label'],rail_probe
+                            # Keep the rail itself inside its clipping ancestor before distinguishing already-visible content from genuine internal overflow.
+                            assert rail_probe['owner'] and rail_probe['box']['left']>=rail_probe['owner']['left']-1 and rail_probe['box']['right']<=rail_probe['owner']['right']+1,rail_probe
+                            # Record whether the rendered locale and viewport genuinely need the rail's horizontal scroll range.
+                            rail_overflows=rail_probe['scrollWidth']>rail_probe['clientWidth']+1
+                            # Require overflowing content to own a positive range; otherwise require the final ball to be fully visible without scrolling.
+                            assert (rail_overflows and rail_probe['maxScrollLeft']>0 and rail_probe['last']['right']>rail_probe['box']['right']) or (not rail_overflows and rail_probe['maxScrollLeft']<=1 and rail_probe['last']['left']>=rail_probe['box']['left']-1 and rail_probe['last']['right']<=rail_probe['box']['right']+1),rail_probe
+                            # Scroll through the public region to the terminal edge and prove the final ball becomes fully reachable.
+                            page.get_by_test_id('keno-drawn-balls').evaluate('rail => { rail.scrollLeft=rail.scrollWidth; rail.focus({preventScroll:true}); }')
+                            # Read the terminal geometry and focus state after the browser commits the scroll position.
+                            rail_terminal=page.get_by_test_id('keno-drawn-balls').evaluate("""rail => { const box=rail.getBoundingClientRect(); const last=rail.querySelector('[data-testid="keno-drawn-ball"]:last-child')?.getBoundingClientRect(); return {scrollLeft:rail.scrollLeft,focused:document.activeElement===rail,box:{left:box.left,right:box.right},last:last&&{left:last.left,right:last.right}}; }""")
+                            # Require the final ball to remain visible when everything fits or become visible at the terminal internal-scroll edge.
+                            assert rail_terminal['focused'] and ((rail_overflows and rail_terminal['scrollLeft']>0) or (not rail_overflows and rail_terminal['scrollLeft']<=1)) and rail_terminal['last']['left']>=rail_terminal['box']['left']-1 and rail_terminal['last']['right']<=rail_terminal['box']['right']+1,rail_terminal
                             # Reveal the right edge through the intended board scroller before final-state capture.
                             page.get_by_test_id('keno-board-scroll').evaluate('scroll => { scroll.scrollLeft=scroll.scrollWidth; }')
+                            # Capture the result rail itself on desktop so the outer game-outlet scrollport cannot pad or hide the exact terminal edge under review.
+                            edge_final_evidence_selector='[data-testid="keno-drawn-balls"]' if edge_viewport_id in ('desktop_primary','desktop_compact') else '.keno-premium'
                             # Record final-draw and caught/latest evidence for this exact locale and viewport.
-                            region_evidence(f'after-pass-keno-edge-final-caught-{edge_locale.lower()}-{edge_viewport_id}.png','.keno-premium','keno',['edge_final_caught'],edge_locale,edge_viewport_id)
+                            region_evidence(f'after-pass-keno-edge-final-caught-{edge_locale.lower()}-{edge_viewport_id}.png',edge_final_evidence_selector,'keno',['edge_final_caught'],edge_locale,edge_viewport_id)
                     # Restore an empty English desktop route so the existing real-draw regression remains independent.
                     save_player_game_state('keno',edge_player,empty_edge_state); page.set_viewport_size({'width':1920,'height':1080}); page.reload(wait_until='networkidle'); page.get_by_test_id('keno-premium-hero').wait_for(timeout=5000); page.get_by_test_id('shell-locale-select').select_option('en-US'); page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'en-US'")
                 # Execute the Keno edge-containment geometry regression.
-                run_case('BR-KENO-EDGE-001',['KENO-025','TEST-078'],keno_edge_containment)
+                run_case('BR-KENO-EDGE-001',['KENO-025','KENO-026','TEST-078','TEST-113'],keno_edge_containment)
                 # Select ten deterministic spots so paytable comparison has a stable row.
                 for spot in [3,8,12,17,24,31,44,55,63,72]: page.get_by_test_id(f'keno-num-{spot}').click()
                 # Store the spot-selection board box for stability assertions.

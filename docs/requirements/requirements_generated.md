@@ -20,7 +20,7 @@ Historical source baseline: 9.1.0
 - slots: 9.1.4
 - blackjack: 9.1.3
 - baccarat: 9.1.3
-- keno: 9.2.3
+- keno: 9.2.4
 - bingo: 9.2.1
 - multi_hand_video_poker: 1.0.1
 - casino_war: 1.0.1
@@ -46,8 +46,8 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.1
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.60.12
-- docs: 1.60.12
+- tests: 1.60.13
+- docs: 1.60.13
 - contracts: 1.44.1
 - tooling: 1.20.3
 - commenting_policy: 1.0.0
@@ -816,3 +816,5 @@ Historical source baseline: 9.1.0
 - **FEEDBACK-005** (Core) - PASS: Problem reporting remains a manual Admin copy-paste workflow: the application prepares sanitized GitHub issue text and labels but never publishes externally unless a future disabled adapter is separately approved. Registered reporters can see their own safe report status summaries; screenshots, Admin notes, audit history, and raw reporter identity remain hidden. Guest trials cannot track abandoned reports unless they first convert into a durable account.
 - **I18N-009** (Application) - PASS: The product account spine preserves the approved EN/RU browser-visible copy while documenting that the full planned-locale program must land as governed waves with native translations, font coverage, visual evidence, and permanent requirement/test allocation before user exposure. No unsupported locale is silently added to account, enrollment, feedback, passkey, or Admin-role flows by this PR.
 - **TEST-112** (Tests) - PASS: Listener-free evidence verifies the product account spine: enrollment policy reports disabled signup and passkeys with guest conversion available, disabled signup creates no account, passkey registration fails closed, Admin role promotion/demotion and lifecycle states preserve last-active-Admin protection under concurrent demotions, reporter-visible status is account-scoped and attachment-free, and guest status tracking is rejected unless conversion creates a durable account. Exact-head browser evidence also requires the complete status, Admin-role, and save-control group to remain usable and contained in every governed viewport.
+- **KENO-026** (Keno) - PASS: The Keno drawn-ball result rail stays bounded to its column and scrolls horizontally rather than clipping. The rail declares min-width:0 and max-width:100% so it cannot expand to its content width inside the fixed stage, and it enables horizontal-scroll overflow so all twenty drawn balls remain reachable; each ball keeps a fixed size so it stays legible while scrolling. Without these the rightmost drawn numbers were clipped off the page by an ancestor overflow boundary.
+- **TEST-113** (Tests) - PASS: Listener-free evidence pins the Keno drawn-ball rail layout and accessibility contract: the rail can shrink below its content via min-width:0 and is bounded by max-width:100%, it owns named keyboard-reachable horizontal scrolling, and each drawn ball keeps a fixed size. Hosted browser geometry at every governed viewport and EN/RU locale proves the rail stays inside its stage, keeps the twentieth ball visible when the results fit, and makes it fully reachable at the terminal internal-scroll edge when they overflow.

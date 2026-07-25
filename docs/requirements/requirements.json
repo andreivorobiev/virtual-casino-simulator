@@ -10809,6 +10809,47 @@
       "introduced_in": "product-account-spine",
       "changed_in": "product-account-spine",
       "notes": "Listener-free service evidence is paired with the exact-head BR-ADMIN-USERS-001 role/lifecycle interaction and eight governed EN/RU Admin images across four standard viewports, with deterministic owner-relative evidence alignment, explicit changed-control containment, and fail-closed label clipping checks inside the named table scroll owner."
+    },
+    {
+      "id": "KENO-026",
+      "module": "Keno",
+      "description": "The Keno drawn-ball result rail stays bounded to its column and scrolls horizontally rather than clipping. The rail declares min-width:0 and max-width:100% so it cannot expand to its content width inside the fixed stage, and it enables horizontal-scroll overflow so all twenty drawn balls remain reachable; each ball keeps a fixed size so it stays legible while scrolling. Without these the rightmost drawn numbers were clipped off the page by an ancestor overflow boundary.",
+      "status": "PASS",
+      "api_tests": [
+        "UI-KENO-BALL-RAIL-001"
+      ],
+      "browser_tests": [
+        "BR-KENO-EDGE-001"
+      ],
+      "implementation_files": [
+        "web/games/keno.js",
+        "tests/keno_ball_rail_tests.py",
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-keno-ball-rail-overflow",
+      "changed_in": "issue-keno-ball-rail-overflow",
+      "notes": "The existing Keno final-result visual-matrix state provides exact-head EN/RU after-pass evidence. Hosted geometry verifies the rail stays inside the stage, exposes a localized keyboard-focusable region, keeps the final ball visible when all twenty results fit, and reveals it at the terminal internal-scroll edge when they overflow."
+    },
+    {
+      "id": "TEST-113",
+      "module": "Tests",
+      "description": "Listener-free evidence pins the Keno drawn-ball rail layout and accessibility contract: the rail can shrink below its content via min-width:0 and is bounded by max-width:100%, it owns named keyboard-reachable horizontal scrolling, and each drawn ball keeps a fixed size. Hosted browser geometry at every governed viewport and EN/RU locale proves the rail stays inside its stage, keeps the twentieth ball visible when the results fit, and makes it fully reachable at the terminal internal-scroll edge when they overflow.",
+      "status": "PASS",
+      "api_tests": [
+        "UI-KENO-BALL-RAIL-001"
+      ],
+      "browser_tests": [
+        "BR-KENO-EDGE-001"
+      ],
+      "implementation_files": [
+        "tests/keno_ball_rail_tests.py",
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-keno-ball-rail-overflow",
+      "changed_in": "issue-keno-ball-rail-overflow",
+      "notes": "Allocated for the Keno ball-rail overflow fix found during the game review; it reuses the existing governed Keno final-result evidence matrix rather than creating a duplicate surface."
     }
   ]
 }
