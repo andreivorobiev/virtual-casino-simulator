@@ -236,7 +236,7 @@ async function fundPracticeOpponents() {
 // Define userRows to render Admin user-management rows.
 function userRows(users) {
   // Return one row per beta user with token, status, terms, and locale controls.
-  return users.map(user => `<tr data-testid="admin-user-row" data-user="${safe(user.user_id)}" data-email="${safe(user.email)}" data-status="${safe(user.status)}" data-terms="${safe(user.terms_status)}"><td>${safe(user.email)}</td><td>${safe(user.display_name)}</td><td>${safe(user.status)}</td><td data-testid="admin-user-token-balance">${formatMoney(user.token_balance)}</td><td>${safe(user.token_state)}</td><td>${safe(user.terms_status)}</td><td><select class="user-language">${localeOptions(user.language || 'en-US')}</select></td><td><select class="user-format">${formatLocaleOptions(user.format_locale || 'browser')}</select></td><td><button class="save-user-locale" data-user="${safe(user.user_id)}" data-testid="admin-user-save-locale">Save locale</button><button class="toggle-user" data-user="${safe(user.user_id)}" data-action="${user.status === 'active' ? 'deactivate' : 'reactivate'}" data-testid="admin-user-toggle">${user.status === 'active' ? 'Deactivate' : 'Reactivate'}</button><button class="reset-user-password" data-user="${safe(user.user_id)}" data-testid="admin-user-reset">Reset password</button><button class="terms-user" data-user="${safe(user.user_id)}" data-accepted="${user.terms_status !== 'accepted'}" data-testid="admin-user-terms">${user.terms_status === 'accepted' ? 'Clear terms' : 'Accept terms'}</button></td></tr>`);
+  return users.map(user => `<tr data-testid="admin-user-row" data-user="${safe(user.user_id)}" data-email="${safe(user.email)}" data-status="${safe(user.status)}" data-terms="${safe(user.terms_status)}"><td>${safe(user.email)}</td><td>${safe(user.display_name)}</td><td class="admin-user-access-cell"><div class="admin-user-access-controls" data-testid="admin-user-access-controls"><select class="user-status" data-testid="admin-user-status">${['active', 'inactive', 'suspended', 'locked'].map(status => option(status, humanLabel(status), user.status)).join('')}</select><label class="check-row"><input class="user-admin-role" data-testid="admin-user-role-admin" type="checkbox" ${(user.roles || []).includes('admin') ? 'checked' : ''}> ${safe(t('users.roleAdmin', {}, 'admin'))}</label><button class="save-user-account" data-user="${safe(user.user_id)}" data-testid="admin-user-save-account">${safe(t('users.saveAccount', {}, 'admin'))}</button></div></td><td data-testid="admin-user-token-balance">${formatMoney(user.token_balance)}</td><td>${safe(user.token_state)}</td><td>${safe(user.terms_status)}</td><td><select class="user-language">${localeOptions(user.language || 'en-US')}</select></td><td><select class="user-format">${formatLocaleOptions(user.format_locale || 'browser')}</select></td><td><button class="save-user-locale" data-user="${safe(user.user_id)}" data-testid="admin-user-save-locale">Save locale</button><button class="toggle-user" data-user="${safe(user.user_id)}" data-action="${user.status === 'active' ? 'deactivate' : 'reactivate'}" data-testid="admin-user-toggle">${user.status === 'active' ? 'Deactivate' : 'Reactivate'}</button><button class="reset-user-password" data-user="${safe(user.user_id)}" data-testid="admin-user-reset">Reset password</button><button class="terms-user" data-user="${safe(user.user_id)}" data-accepted="${user.terms_status !== 'accepted'}" data-testid="admin-user-terms">${user.terms_status === 'accepted' ? 'Clear terms' : 'Accept terms'}</button></td></tr>`);
 }
 
 // Define isManagedAccountUser so the Users tab stays account-only even if a legacy API payload includes guests.
@@ -265,15 +265,17 @@ async function users() {
   // Build an explicit handoff card so operators know temporary visitors live in Guest Trials.
   const guestSeparationCard = `<section class="admin-card" data-testid="admin-users-guest-separation"><h3>${safe(t('users.guestSeparationTitle', {}, 'admin'))}</h3><p>${safe(t('users.guestSeparationCopy', {}, 'admin'))}</p><button id="admin_open_guest_trials" type="button" data-testid="admin-open-guest-trials">${safe(t('users.openGuestTrials', {}, 'admin'))}</button></section>`;
   // Build the account-only table inside one named keyboard-scrollable region, or show the calm empty state.
-  const managedUserTable = managedUsers.length ? `<div class="admin-users-table-scroll" data-testid="admin-users-managed-table" tabindex="0" role="region" aria-label="${safe(t('users.tableTitle', {}, 'admin'))}">${table(['Email', 'Name', 'Status', 'Token balance', 'Token state', 'Terms', 'Language', 'Format', 'Actions'], userRows(managedUsers))}</div>` : emptyState(t('users.emptyTitle', {}, 'admin'), t('users.emptyDetail', {}, 'admin'), 'admin-users-empty');
+  const managedUserTable = managedUsers.length ? `<div class="admin-users-table-scroll" data-testid="admin-users-managed-table" tabindex="0" role="region" aria-label="${safe(t('users.tableTitle', {}, 'admin'))}">${table(['Email', 'Name', t('users.accessControls', {}, 'admin'), 'Token balance', 'Token state', 'Terms', 'Language', 'Format', 'Actions'], userRows(managedUsers))}</div>` : emptyState(t('users.emptyTitle', {}, 'admin'), t('users.emptyDetail', {}, 'admin'), 'admin-users-empty');
   // Render creation controls and token-state inspection table.
-  view.innerHTML = `${guestSeparationCard}<section class="admin-card" data-testid="admin-user-create"><h3>${safe(t('users.createTitle', {}, 'admin'))}</h3><div class="grid3"><label>Email<input id="admin_user_email" data-testid="admin-user-email" type="email" placeholder="beta@example.test"></label><label>Display name<input id="admin_user_name" data-testid="admin-user-name" placeholder="Beta Player"></label><label>Initial tokens<input id="admin_user_tokens" data-testid="admin-user-tokens" type="number" min="0" step="1" value="5000"></label></div><div class="grid3"><label>Temporary password<input id="admin_user_password" data-testid="admin-user-password" type="text" placeholder="Generate if blank"></label><label>Language<select id="admin_user_language" data-testid="admin-user-language">${localeOptions('en-US')}</select></label><label>Format locale<select id="admin_user_format" data-testid="admin-user-format">${formatLocaleOptions('browser')}</select></label></div><label><input id="admin_user_terms" data-testid="admin-user-terms-initial" type="checkbox"> Terms accepted</label><button id="admin_create_user" data-testid="admin-create-user" class="gold">${safe(t('users.createButton', {}, 'admin'))}</button>${passwordNotice}</section><section class="admin-card" data-testid="admin-users-managed-accounts"><h3>${safe(t('users.tableTitle', {}, 'admin'))}</h3>${managedUserTable}</section>`;
+  view.innerHTML = `${guestSeparationCard}<section class="admin-card" data-testid="admin-user-create"><h3>${safe(t('users.createTitle', {}, 'admin'))}</h3><div class="grid3"><label>Email<input id="admin_user_email" data-testid="admin-user-email" type="email" placeholder="beta@example.test"></label><label>Display name<input id="admin_user_name" data-testid="admin-user-name" placeholder="Beta Player"></label><label>Initial tokens<input id="admin_user_tokens" data-testid="admin-user-tokens" type="number" min="0" step="1" value="5000"></label></div><div class="grid3"><label>Temporary password<input id="admin_user_password" data-testid="admin-user-password" type="text" placeholder="Generate if blank"></label><label>${safe(t('users.initialRole', {}, 'admin'))}<select id="admin_user_role" data-testid="admin-user-role"><option value="player">${safe(t('users.rolePlayer', {}, 'admin'))}</option><option value="admin">${safe(t('users.roleAdmin', {}, 'admin'))}</option></select></label><label>Language<select id="admin_user_language" data-testid="admin-user-language">${localeOptions('en-US')}</select></label></div><div class="grid3"><label>Format locale<select id="admin_user_format" data-testid="admin-user-format">${formatLocaleOptions('browser')}</select></label></div><label><input id="admin_user_terms" data-testid="admin-user-terms-initial" type="checkbox"> Terms accepted</label><button id="admin_create_user" data-testid="admin-create-user" class="gold">${safe(t('users.createButton', {}, 'admin'))}</button>${passwordNotice}</section><section class="admin-card" data-testid="admin-users-managed-accounts"><h3>${safe(t('users.tableTitle', {}, 'admin'))}</h3>${managedUserTable}</section>`;
   // Bind the Guest Trials shortcut after rendering the account-management handoff card.
   view.querySelector('#admin_open_guest_trials').onclick = () => activate('guests');
   // Bind the create-user button after rendering.
   view.querySelector('#admin_create_user').onclick = createUser;
   // Bind user action buttons after rendering the table.
   view.querySelectorAll('.toggle-user').forEach(button => button.onclick = () => toggleUser(button));
+  // Bind account role/status saves after rendering the table.
+  view.querySelectorAll('.save-user-account').forEach(button => button.onclick = () => saveUserAccount(button));
   // Bind password reset buttons after rendering the table.
   view.querySelectorAll('.reset-user-password').forEach(button => button.onclick = () => resetUserPassword(button));
   // Bind terms status buttons after rendering the table.
@@ -398,7 +400,7 @@ async function showGuestDetail(analyticsId) {
 // Define createUser to submit a new beta user through Admin.
 async function createUser() {
   // Store payload from the rendered create-user form.
-  const payload = { email: view.querySelector('#admin_user_email').value, display_name: view.querySelector('#admin_user_name').value, initial_tokens: Number(view.querySelector('#admin_user_tokens').value || 0), password: view.querySelector('#admin_user_password').value, language: view.querySelector('#admin_user_language').value, format_locale: view.querySelector('#admin_user_format').value, terms_accepted: view.querySelector('#admin_user_terms').checked };
+  const payload = { email: view.querySelector('#admin_user_email').value, display_name: view.querySelector('#admin_user_name').value, initial_tokens: Number(view.querySelector('#admin_user_tokens').value || 0), password: view.querySelector('#admin_user_password').value, role: view.querySelector('#admin_user_role').value, language: view.querySelector('#admin_user_language').value, format_locale: view.querySelector('#admin_user_format').value, terms_accepted: view.querySelector('#admin_user_terms').checked };
   // Create the user through the Admin API.
   const result = await post('/api/v1/admin/users', payload);
   // Store the one-time password so Admin can hand it to the beta user.
@@ -406,6 +408,24 @@ async function createUser() {
   // Show user creation feedback.
   toast('User created.', true);
   // Refresh the users table with the new account.
+  await users();
+}
+
+// Define saveUserAccount to persist Admin role and lifecycle status controls.
+async function saveUserAccount(button) {
+  // Store the nearest rendered user row for control lookup.
+  const row = button.closest('tr[data-user]');
+  // Build the role list from the explicit Admin checkbox while preserving player membership.
+  const roles = row.querySelector('.user-admin-role').checked ? ['admin'] : ['player'];
+  // Build the v2 account payload with the selected lifecycle status.
+  const payload = { status: row.querySelector('.user-status').value, roles };
+  // Ask for confirmation before changing Admin privileges.
+  if (!window.confirm(t('users.roleConfirm', {}, 'admin'))) return;
+  // Persist through the protected v2 Admin account contract.
+  await api(`/api/v2/admin/users/${encodeURIComponent(button.dataset.user)}`, { method: 'PATCH', body: payload });
+  // Show localized account update feedback.
+  toast(t('users.accountSaved', {}, 'admin'), true);
+  // Refresh the users table after the change.
   await users();
 }
 
