@@ -9,8 +9,8 @@
     "backend": {"register": "casino.games.mississippi_stud.api:register"},
     "frontend": {"module": "./games/mississippi_stud.js", "export": "MississippiStudGame", "ready_testid": "mississippi-stud", "i18n_domain": "games/mississippi_stud", "i18n_probe": "action.deal"},
     "tests": {"long_driver": "tests.game_drivers.mississippi_stud:play"},
-    "translations": {"ru-RU": {"label": "Миссисипи Стад", "kicker": "Покер", "description": "Стад без дилера на три улицы: анте, затем ставка 1x-3x или сброс перед каждой общей картой; финальная рука оплачивается по таблице от пары валетов до роял-флеша ×500, с серверной раздачей и расчётом через журнал жетонов."}},
-    "lobby": {"featured": false, "wide": false, "art_class": "mississippi-stud-art", "symbol": "MS", "kicker": "Poker room", "description": "A dealer-less five-card stud over three betting streets: ante, then bet 1x-3x or fold before each community card, with a paytable from a pair of jacks up to a x500 royal flush, server-authoritative deals, and ledger-backed settlement.", "tags": ["Cards", "Poker", "Strategy", "Ledger-backed"]}
+    "translations": {"ru-RU": {"label": "Миссисипи Стад", "kicker": "Покер", "description": "Покер на три улицы: анте, ставка 1x–3x или сброс перед каждой общей картой, расчёт через журнал жетонов."}},
+    "lobby": {"featured": false, "wide": false, "art_class": "mississippi-stud-art", "symbol": "MS", "kicker": "Poker room", "description": "Three-street poker: ante, bet 1x–3x or fold before each community card, with ledger-backed settlement.", "tags": ["Cards", "Poker", "Strategy", "Ledger-backed"]}
   },
   "depends_on": ["core", "ledger", "players"],
   "may_not_depend_on": ["roulette", "slots", "blackjack", "baccarat", "keno", "bingo", "three_card_poker", "casino_holdem", "caribbean_stud"]
