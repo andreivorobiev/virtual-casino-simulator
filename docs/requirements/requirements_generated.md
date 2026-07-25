@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.51.9
+- application: 9.51.10
 - core: 9.23.0
 - ledger: 9.1.1
 - players: 9.1.0
@@ -48,10 +48,11 @@ Historical source baseline: 9.1.0
 - mississippi_stud: 1.0.0
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- pai_gow_poker: 1.0.0
-- tests: 1.60.23
-- docs: 1.60.23
-- contracts: 1.47.0
+- pai_gow_poker: 1.0.1
+- teen_patti: 1.0.1
+- tests: 1.60.25
+- docs: 1.60.24
+- contracts: 1.48.0
 - tooling: 1.20.3
 - commenting_policy: 1.0.0
 
@@ -832,3 +833,6 @@ Historical source baseline: 9.1.0
 - **MSTUD-001** (Mississippi Stud) - PASS: Mississippi Stud is a stateful dealer-less five-card stud where the player builds one hand from two hole cards and three community cards. The player posts an ante, then across three betting streets, before each community card is exposed, either folds and forfeits every wager already made or bets one to three times the ante. The completed five-card hand is paid on the total amount wagered: a pair of jacks or better pays even money, richer hands pay up to five hundred to one for a royal flush, a pair of sixes through tens returns every wager as a push, and a pair of fives or lower or no pair loses the whole stake. Deal and each street decision are exactly-once and reload-safe on the shared ledger and player-scoped state store.
 - **MSTUD-002** (Mississippi Stud) - PASS: Mississippi Stud inherits the exactly-once, reload-safe orchestration of the shared ledger across its three betting streets: one caller-stable action id maps to one deal or one street decision, a retry replays the identical advanced or settled round without moving the wallet again, and an action id reused with different wager content fails closed. The community cards stay private and reveal one per settled street, and a fold reveals only the community cards seen so far. The additive v1 contract exposes only the game-owned state, rounds, and decisions routes and never alters the frozen shared API. The published rules report the bet multipliers, the street count, and the winning-hand paytable.
 - **TEST-115** (Tests) - PASS: Listener-free evidence verifies Mississippi Stud: the paytable bands pairs into jacks-or-better wins, sixes-through-tens pushes, and fives-or-lower losses and recognizes a royal flush, a full three-street play pays the paytable on the total wagered amount, a pushing hand returns the whole wager, a losing hand forfeits the stake, the community cards reveal one per settled street, a fold forfeits only the wagers already made, a replayed street bet returns the advanced state without a second debit, a reload recovers committed street bets without duplicates, invalid antes and multipliers are rejected, and a large seeded sample confirms the disciplined strategy leaves the game house-positive. Hosted browser evidence proves the localized public controls, progressive reveal, settlement, reduced-motion state, route restoration, responsive containment, and fixed-feedback non-occlusion.
+- **TEENP-001** (Teen Patti) - PASS: Teen Patti Practice is a stateful three-card poker played against the dealer. The player antes, sees three cards, then folds and forfeits the ante or makes a fixed Play wager equal to the ante. The dealer qualifies with a queen-high hand or better; if the dealer does not qualify the ante pays even money and the Play pushes, and if the dealer qualifies the best three-card hand wins both wagers even money with ties pushing. Teen Patti ranks a trail highest, then a pure sequence, a sequence, a colour, a pair, and a high card, so a sequence outranks a colour. A Bonus pays on the player's own trail, pure sequence, or sequence regardless of the dealer. Deal and decision are exactly-once and reload-safe on the shared ledger and player-scoped state store.
+- **TEENP-002** (Teen Patti) - PASS: Teen Patti Practice preserves authenticated player ownership, private dealer cards until showdown, one caller-stable action identity per deal or decision, replay of the identical committed result without another wallet movement, conflict rejection for changed action content, and reload recovery from committed ledger proof. The additive v1 contract exposes only game-owned state, rounds, and decisions routes and retains the standard success and error envelopes. English and Russian public controls remain accessible, responsive, reduced-motion safe, and restorable at the canonical route.
+- **TEST-116** (Tests) - PASS: Listener-free evidence verifies Teen Patti ranking, settlement, dealer qualification, independent Bonus payment, fold privacy, replay idempotency, conflicting action rejection, reload recovery, invalid-input rejection, authenticated route identity, and a seeded house-positive sample. Hosted Browser evidence verifies ready, decision, played settlement, folded privacy, reduced-motion, and canonical route-restored states through public controls in English and Russian at desktop-primary, desktop-compact, tablet, and mobile dimensions.

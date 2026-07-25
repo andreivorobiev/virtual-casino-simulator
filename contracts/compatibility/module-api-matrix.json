@@ -131,6 +131,9 @@
   "pai_gow_poker": [
     "contracts/openapi/pai_gow_poker.v1.yaml"
   ],
+  "teen_patti": [
+    "contracts/openapi/teen_patti.v1.yaml"
+  ],
   "tests": [],
   "docs": [],
   "contracts": [

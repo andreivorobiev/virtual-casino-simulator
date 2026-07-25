@@ -11001,6 +11001,74 @@
       "introduced_in": "issue-143-mississippi-stud",
       "changed_in": "issue-143-mississippi-stud",
       "notes": "Allocated after Keno TEST-113 and Double Bonus TEST-114. The governed browser corpus contains exactly forty-eight after-pass Mississippi Stud images: six evidence moments by two locales by four standard viewports; the settled reduced-motion moment maps to both matrix states."
+    },
+    {
+      "id": "TEENP-001",
+      "module": "Teen Patti",
+      "description": "Teen Patti Practice is a stateful three-card poker played against the dealer. The player antes, sees three cards, then folds and forfeits the ante or makes a fixed Play wager equal to the ante. The dealer qualifies with a queen-high hand or better; if the dealer does not qualify the ante pays even money and the Play pushes, and if the dealer qualifies the best three-card hand wins both wagers even money with ties pushing. Teen Patti ranks a trail highest, then a pure sequence, a sequence, a colour, a pair, and a high card, so a sequence outranks a colour. A Bonus pays on the player's own trail, pure sequence, or sequence regardless of the dealer. Deal and decision are exactly-once and reload-safe on the shared ledger and player-scoped state store.",
+      "status": "PASS",
+      "api_tests": [
+        "API-TEEN-PATTI-001"
+      ],
+      "browser_tests": [
+        "BR-TEEN-PATTI-001"
+      ],
+      "implementation_files": [
+        "casino/games/teen_patti/engine.py",
+        "casino/games/teen_patti/service.py",
+        "casino/games/teen_patti/api.py",
+        "web/games/teen_patti.js",
+        "contracts/openapi/teen_patti.v1.yaml",
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-150-teen-patti",
+      "changed_in": "issue-150-teen-patti",
+      "notes": "Allocated for GitHub issue #150, a catalog-expansion poker variant (#73). The service reuses shared card primitives and the ledger with its own three-card evaluator where a sequence outranks a colour."
+    },
+    {
+      "id": "TEENP-002",
+      "module": "Teen Patti",
+      "description": "Teen Patti Practice preserves authenticated player ownership, private dealer cards until showdown, one caller-stable action identity per deal or decision, replay of the identical committed result without another wallet movement, conflict rejection for changed action content, and reload recovery from committed ledger proof. The additive v1 contract exposes only game-owned state, rounds, and decisions routes and retains the standard success and error envelopes. English and Russian public controls remain accessible, responsive, reduced-motion safe, and restorable at the canonical route.",
+      "status": "PASS",
+      "api_tests": [
+        "API-TEEN-PATTI-001"
+      ],
+      "browser_tests": [
+        "BR-TEEN-PATTI-001"
+      ],
+      "implementation_files": [
+        "casino/games/teen_patti/service.py",
+        "casino/games/teen_patti/api.py",
+        "tests/teen_patti_tests.py",
+        "tests/game_drivers/teen_patti.py",
+        "web/games/teen_patti.js",
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-150-teen-patti",
+      "changed_in": "issue-150-teen-patti",
+      "notes": "Allocated for GitHub issue #150. The governed Browser case exercises real authenticated routes through the public game controls and rejects page overflow or fixed-feedback occlusion at all standard viewports."
+    },
+    {
+      "id": "TEST-116",
+      "module": "Tests",
+      "description": "Listener-free evidence verifies Teen Patti ranking, settlement, dealer qualification, independent Bonus payment, fold privacy, replay idempotency, conflicting action rejection, reload recovery, invalid-input rejection, authenticated route identity, and a seeded house-positive sample. Hosted Browser evidence verifies ready, decision, played settlement, folded privacy, reduced-motion, and canonical route-restored states through public controls in English and Russian at desktop-primary, desktop-compact, tablet, and mobile dimensions.",
+      "status": "PASS",
+      "api_tests": [
+        "API-TEEN-PATTI-001"
+      ],
+      "browser_tests": [
+        "BR-TEEN-PATTI-001"
+      ],
+      "implementation_files": [
+        "tests/teen_patti_tests.py",
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-150-teen-patti",
+      "changed_in": "issue-150-teen-patti",
+      "notes": "Allocated after Mississippi Stud TEST-115. The governed Browser corpus contains exactly forty-eight after-pass Teen Patti images: six evidence moments by two locales by four standard viewports."
     }
   ]
 }

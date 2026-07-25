@@ -1016,6 +1016,20 @@ def run_api_tests():
             raise AssertionError('mississippi stud suite failed')
     # Record the Mississippi Stud paytable, three-street settlement, replay, recovery, and house-edge proof.
     run_case('API-MISSISSIPPI-STUD-001',['MSTUD-001','MSTUD-002','TEST-115'],run_mississippi_stud_tests)
+    # Execute the Teen Patti engine, authenticated routes, and settlement proof without opening a listener.
+    def run_teen_patti_tests():
+        # Import the focused suite only when its mapped API case runs.
+        from tests import teen_patti_tests
+        # Load exactly the Teen Patti engine, service, and direct-route assertions.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(teen_patti_tests.TeenPattiTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused Teen Patti assertion failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure stable.
+            raise AssertionError('teen patti suite failed')
+    # Record the Teen Patti ranking, settlement, replay, recovery, authenticated route, and house-edge proof.
+    run_case('API-TEEN-PATTI-001',['TEENP-001','TEENP-002','TEST-116'],run_teen_patti_tests)
     # Execute the opt-in wellness, current-session summary, concurrency, and neutral-copy proof without a listener.
     def run_wellness_tests():
         # Import the focused suite only when its mapped API case runs.
@@ -5877,6 +5891,62 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Execute the integrated Mississippi Stud browser and governed visual gate.
                 run_case('BR-MSTUD-001',['MSTUD-001','MSTUD-002','TEST-115'],mississippi_stud_acceptance)
+                # Define real-backend Teen Patti localization, decision, settlement, privacy, motion, and route acceptance.
+                def teen_patti_acceptance():
+                    # Open the catalog-owned route and wait for the stable game selector.
+                    page.get_by_test_id('nav-teen_patti').click(); page.get_by_test_id('teen-patti').wait_for(timeout=5000)
+                    # Enumerate every viewport governed by the Teen Patti visual-matrix row.
+                    required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
+                    # Load exact UTF-8 expectations from both canonical locale resources.
+                    resources={locale:read_i18n_json(ROOT/'web'/'i18n'/locale/'games'/'teen_patti.json') for locale in ('en-US','ru-RU')}
+                    # Capture one mounted state across both locales and every governed viewport.
+                    def localized_evidence(prefix,states,expected_result_key=None,terminal_outcomes=(),expected_cards=None):
+                        # Iterate through paired English and Russian resources without discarding the active round.
+                        for locale in ('en-US','ru-RU'):
+                            # Switch the shared locale and wait for the game-owned rerender.
+                            page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_timeout(100)
+                            # Read the current localized result once for exact state classification.
+                            result_text=page.locator('.tp-result').inner_text()
+                            # Require exact ready or decision copy when the state has one fixed resource.
+                            if expected_result_key is not None:
+                                # Pin the expected localized resource rather than fallback keys or stale English.
+                                assert result_text.startswith(resources[locale][expected_result_key]),{'result':result_text,'expected':resources[locale][expected_result_key],'locale':locale}
+                            # Require one allowed localized authoritative terminal outcome when the result is deal-dependent.
+                            elif terminal_outcomes:
+                                # Match only canonical localized outcome prefixes before the appended hand and net details.
+                                assert any(result_text.startswith(resources[locale][f'outcome.{outcome}']) for outcome in terminal_outcomes),{'result':result_text,'outcomes':terminal_outcomes,'locale':locale}
+                            # Validate containment, visible controls, and after-pass evidence at each exact viewport.
+                            for viewport_id,width,height in required_viewports:
+                                # Resize to the registered evidence dimensions.
+                                page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
+                                # Collect document-fit and fixed-feedback overlap geometry for native controls and rendered text ranges.
+                                card_geometry=page.evaluate("() => { const button=document.querySelector('.report-problem-fab:not([hidden])'); const fixed=button?.getBoundingClientRect(); const hits=[]; const intersects=rect=>fixed&&rect.left<fixed.right&&rect.right>fixed.left&&rect.top<fixed.bottom&&rect.bottom>fixed.top; for(const node of document.querySelectorAll('.teenp input,.teenp button')){if(intersects(node.getBoundingClientRect()))hits.push(`${node.tagName.toLowerCase()}.${node.className}`);} for(const node of document.querySelectorAll('.teenp h3,.teenp h4,.teenp label,.teenp .tp-pays span,.teenp .tp-rank,.teenp .tp-result')){const range=document.createRange(); range.selectNodeContents(node); if([...range.getClientRects()].some(intersects))hits.push(`${node.tagName.toLowerCase()}:${node.textContent.trim()}`);} const root=document.querySelector('.teenp')?.getBoundingClientRect(); return {documentFits:document.documentElement.scrollWidth<=window.innerWidth+1,feedbackOverlaps:hits.length,overlapIdentities:hits,readableInlineSize:Math.round(root?.width||0)}; }")
+                                # Collect mounted-content predicates separately from responsive geometry.
+                                mounted_geometry={'gameVisible':page.get_by_test_id('teen-patti').is_visible(),'paytableRows':page.locator('.tp-pays div').count(),'paytableVisible':page.locator('.tp-pays').is_visible(),'rankingVisible':page.locator('.tp-rank').is_visible(),'cards':page.locator('.teenp .playing-card').count()}
+                                # Reject page overflow, fixed-feedback occlusion, narrow slivers, incomplete references, and wrong privacy state with exact diagnostics.
+                                assert card_geometry['documentFits'] and card_geometry['feedbackOverlaps']==0 and card_geometry['readableInlineSize']>=300 and mounted_geometry['gameVisible'] and mounted_geometry['paytableRows']==3 and mounted_geometry['paytableVisible'] and mounted_geometry['rankingVisible'] and (expected_cards is None or mounted_geometry['cards']==expected_cards),{'cardGeometry':card_geometry,'mountedGeometry':mounted_geometry,'locale':locale,'viewport':viewport_id}
+                                # Record self-describing exact-head evidence for this state and viewport.
+                                game_evidence(f'after-pass-teen-patti-{prefix}-{locale.lower()}-{viewport_id}.png','teen_patti',states,locale,viewport_id)
+                        # Restore English desktop controls for the next public action.
+                        page.get_by_test_id('shell-locale-select').select_option('en-US'); page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(100)
+                    # Capture the complete ready table before the ledger-backed deal.
+                    localized_evidence('ready',['ready'],'result.idle',expected_cards=0)
+                    # Commit a bounded ante and deal through the public frontend.
+                    page.locator('[data-ante]').fill('1'); page.locator('[data-ante]').press('Tab'); page.locator('[data-deal]').click(); page.locator('[data-play]:not([disabled])').wait_for(timeout=10000)
+                    # Capture the private decision state with exactly three player cards and no dealer reveal.
+                    localized_evidence('decision',['decision'],'result.decide',expected_cards=3)
+                    # Play through the public action and require a complete six-card showdown.
+                    page.locator('[data-play]').click(); page.locator('[data-deal]:not([disabled])').wait_for(timeout=10000); localized_evidence('play-settled',['play_settled'],terminal_outcomes=('player_win','dealer_win','push','dealer_not_qualified'),expected_cards=6)
+                    # Deal another round and fold through the public action without exposing the dealer.
+                    page.locator('[data-deal]').click(); page.locator('[data-fold]:not([disabled])').wait_for(timeout=10000); page.locator('[data-fold]').click(); page.locator('[data-deal]:not([disabled])').wait_for(timeout=10000); localized_evidence('folded',['folded'],'outcome.folded',expected_cards=3)
+                    # Complete a real showdown with reduced motion enabled.
+                    page.emulate_media(reduced_motion='reduce'); page.locator('[data-deal]').click(); page.locator('[data-play]:not([disabled])').wait_for(timeout=10000); page.locator('[data-play]').click(); page.locator('[data-deal]:not([disabled])').wait_for(timeout=10000); localized_evidence('reduced-motion',['reduced_motion'],terminal_outcomes=('player_win','dealer_win','push','dealer_not_qualified'),expected_cards=6)
+                    # Reload the canonical game route and require restored player-owned terminal state.
+                    page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('teen-patti').wait_for(timeout=5000); page.locator('[data-deal]:not([disabled])').wait_for(timeout=5000); localized_evidence('route-restored',['route_restored'],terminal_outcomes=('player_win','dealer_win','push','dealer_not_qualified'),expected_cards=6)
+                    # Return to the lobby for downstream browser cases.
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Execute the integrated Teen Patti browser and governed visual gate.
+                run_case('BR-TEEN-PATTI-001',['TEENP-001','TEENP-002','TEST-116'],teen_patti_acceptance)
                 # Define registered Texas Hold'em localization, streets, settlement, motion, and route acceptance.
                 def texas_holdem_practice_acceptance():
                     # Open the catalog-owned route and wait for the stable table selector.
