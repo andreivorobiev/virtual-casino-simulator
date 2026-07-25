@@ -988,6 +988,20 @@ def run_api_tests():
             raise AssertionError('play-token receipt derivation suite failed')
     # Record the committed-ledger explanation, shared pagination, privacy, and exact-contract proof.
     run_case('API-RECEIPT-001',['RECEIPT-001','RECEIPT-002','TEST-104'],run_receipt_tests)
+    # Execute the Teen Patti engine and settlement proof without opening a listener.
+    def run_teen_patti_tests():
+        # Import the focused suite only when its mapped API case runs.
+        from tests import teen_patti_tests
+        # Load exactly the Teen Patti engine and service assertions.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(teen_patti_tests.TeenPattiTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused Teen Patti assertion failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure stable.
+            raise AssertionError('teen patti suite failed')
+    # Record the Teen Patti ranking, settlement, replay, recovery, and house-edge proof.
+    run_case('API-TEEN-PATTI-001',['TEENP-001','TEENP-002','TEST-115'],run_teen_patti_tests)
     # Execute the opt-in wellness, current-session summary, concurrency, and neutral-copy proof without a listener.
     def run_wellness_tests():
         # Import the focused suite only when its mapped API case runs.

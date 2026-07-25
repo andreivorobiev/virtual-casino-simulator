@@ -1,0 +1,17 @@
+{
+  "module": "teen_patti",
+  "version": "1.0.0",
+  "paths": ["casino/games/teen_patti/", "web/games/teen_patti.js", "web/i18n/en-US/games/teen_patti.json", "web/i18n/ru-RU/games/teen_patti.json"],
+  "requirements_prefixes": ["TEENP"],
+  "contracts": ["contracts/openapi/teen_patti.v1.yaml"],
+  "game": {
+    "id": "teen_patti", "sort_order": 450, "route": "/games/teen_patti", "label": "Teen Patti Practice", "category": "poker", "categories": ["table", "cards", "poker", "strategy"],
+    "backend": {"register": "casino.games.teen_patti.api:register"},
+    "frontend": {"module": "./games/teen_patti.js", "export": "TeenPattiGame", "ready_testid": "teen-patti", "i18n_domain": "games/teen_patti", "i18n_probe": "action.deal"},
+    "tests": {"long_driver": "tests.game_drivers.teen_patti:play"},
+    "translations": {"ru-RU": {"label": "Тин Патти", "kicker": "Покер", "description": "Трёхкарточный покер против дилера: анте, затем игра или сброс; дилер квалифицируется дамой, последовательность бьёт цвет, бонус за трейл и чистую последовательность, серверная раздача и расчёт через журнал жетонов."}},
+    "lobby": {"featured": false, "wide": false, "art_class": "teen-patti-art", "symbol": "TP", "kicker": "Poker room", "description": "Three-card poker against the dealer: ante, then play or fold; the dealer qualifies with a queen, a sequence beats a colour, and a Bonus pays a trail or pure sequence, with server-authoritative deals and ledger-backed settlement.", "tags": ["Cards", "Poker", "Strategy", "Ledger-backed"]}
+  },
+  "depends_on": ["core", "ledger", "players"],
+  "may_not_depend_on": ["roulette", "slots", "blackjack", "baccarat", "keno", "bingo", "three_card_poker", "casino_holdem", "caribbean_stud"]
+}
