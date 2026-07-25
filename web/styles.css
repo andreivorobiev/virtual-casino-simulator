@@ -3237,10 +3237,10 @@ h3 {
     padding: 16px 14px 70px;
   }
 
-  /* The lobby status rail now reserves its own flex-flow height, so keep only compact content breathing room
-     and leave enough tablet height for a complete filtered card at the native End boundary. (issue #318, UX-013) */
+  /* The lobby status rail now reserves its own flex-flow height, so keep only content breathing room instead
+     of the legacy overlay allowance that can make a complete card taller than the tablet outlet. (issue #318, UX-013) */
   #view.screen.lobby-screen {
-    padding-bottom: 12px;
+    padding-bottom: 16px;
   }
 
   .lobby {
@@ -3344,6 +3344,14 @@ h3 {
   .status-bar .status-item:nth-child(3),
   .status-bar .status-item:nth-child(4) {
     display: none;
+  }
+}
+
+@media (min-width: 901px) and (max-width: 1200px) {
+  /* Keep the scalable route catalog to seven rows at the governed tablet width after the thirty-second game
+     is installed, preserving enough bounded outlet height for every complete filtered card. (CORE-006, UX-013) */
+  .casino-nav {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 }
 
