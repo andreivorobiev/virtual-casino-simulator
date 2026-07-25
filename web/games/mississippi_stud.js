@@ -1,4 +1,4 @@
-// Isolated Teen Patti Practice browser module for GitHub issue #150 without shared shell edits.
+// Isolated Mississippi Stud browser module for GitHub issue #143 without shared shell edits.
 
 // Import session-aware API helpers so compatibility player ids stay subordinate to the session.
 import { api, currentPlayerPath, post, withCurrentPlayer } from '../core/api.js';
@@ -6,29 +6,29 @@ import { api, currentPlayerPath, post, withCurrentPlayer } from '../core/api.js'
 import { refreshBalance, safe, toast } from '../core/ui.js';
 // Import the shared semantic card renderer instead of game-owned card markup.
 import { renderCard } from '../core/cards.js';
-// Import locale loading and lifecycle subscription helpers.
-import { loadI18nDomain, onLocaleChange, t } from '../core/i18n.js';
+// Import locale loading, formatting, and lifecycle subscription helpers.
+import { formatNumber, loadI18nDomain, onLocaleChange, t } from '../core/i18n.js';
 
 // Store the game-owned locale domain used by every visible and accessible string.
-const DOMAIN = 'games/teen_patti';
+const DOMAIN = 'games/mississippi_stud';
 // Store the additive frozen-v1 API root once for all public actions.
-const API_ROOT = '/api/v1/games/teen-patti';
+const API_ROOT = '/api/v1/games/mississippi-stud';
 // Identify the reusable shared stylesheet so card games install it only once.
 const CARD_STYLE_ID = 'casino-shared-card-styles';
 // Preserve the route-local style id so repeated mounts never duplicate CSS.
-const STYLE_ID = 'teen-patti-styles';
-// Preserve the Bonus paytable order independently of object insertion behavior.
-const BONUS_ORDER = ['trail', 'pure_sequence', 'sequence'];
-// Preserve the strongest-first hand ranking for the reference display.
-const RANK_ORDER = ['trail', 'pure_sequence', 'sequence', 'color', 'pair', 'high_card'];
+const STYLE_ID = 'mississippi-stud-styles';
+// Preserve the paytable order independently of object insertion behavior.
+const PAYTABLE_ORDER = ['royal_flush', 'straight_flush', 'four_of_a_kind', 'full_house', 'flush', 'straight', 'three_of_a_kind', 'two_pair', 'pair_jacks_plus'];
+// Offer the three documented street bet sizes.
+const BET_MULTIPLIERS = [1, 2, 3];
 
 // Store the mounted route outlet for deterministic rerenders.
 let root = null;
 // Store the latest authenticated-player state returned by the backend.
 let state = null;
-// Store authoritative game rules for the paytable displays.
+// Store authoritative game rules for paytable displays.
 let rules = {};
-// Store the configured ante before the next round.
+// Store the configured ante wager before the next round.
 let ante = 5;
 // Prevent overlapping atomic browser actions.
 let busy = false;
@@ -42,9 +42,9 @@ let requestCounter = 0;
 let pendingDealId = null;
 // Bind the unresolved deal retry id to one ante.
 let pendingDealAnte = null;
-// Retain an unresolved decision retry id bound to one round and choice.
+// Retain one unresolved decision retry id per street so retries stay stable.
 let pendingDecisionId = null;
-// Bind the unresolved decision retry id to one round and its decision.
+// Bind the unresolved decision retry id to one round, street, and choice.
 let pendingDecisionContext = null;
 
 // Resolve one owned localized string without a visible hard-coded fallback.
@@ -78,7 +78,7 @@ function ensureStyles() {
   // Tag the element so repeated mounts detect and reuse it.
   style.id = STYLE_ID;
   // Render only route-local selectors so no shared class is affected.
-  style.textContent = '.teenp{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;width:100%;min-width:0;min-height:100%;color:var(--text,#f5ead6);align-items:start;} .tp-stage{display:grid;gap:16px;padding:12px;min-width:0;} .tp-row{display:grid;gap:6px;} .tp-row h4{margin:0;color:#e7bc52;text-transform:uppercase;font-size:12px;letter-spacing:.08em;} .tp-cards{display:flex;gap:6px;flex-wrap:wrap;min-width:0;} .tp-cards.win{outline:2px solid #f2d77d;outline-offset:3px;border-radius:8px;} .tp-actions{display:flex;flex-wrap:wrap;gap:8px;} .tp-btn{min-height:44px;padding:0 18px;border:none;border-radius:12px;font-weight:900;font-size:15px;cursor:pointer;} .tp-btn.play{background:linear-gradient(180deg,#0f9c4c,#0a5f2e);color:#fff;} .tp-btn.fold{background:linear-gradient(180deg,#6b6b76,#3a3a42);color:#fff;} .tp-btn.deal{background:linear-gradient(180deg,#d6323d,#8e1822);color:#fff;width:100%;} .tp-btn:disabled{opacity:.55;cursor:not-allowed;} .tp-btn:focus-visible,.tp-field input:focus-visible{outline:3px solid #ffd780;outline-offset:2px;} .tp-panel{display:grid;gap:12px;min-width:0;} .tp-card{padding:14px;border:1px solid rgba(255,217,120,.42);border-radius:16px;background:rgba(0,0,0,.22);} .tp-card h3{margin:0 0 10px;color:#e7bc52;text-transform:uppercase;font-size:12px;letter-spacing:.08em;} .tp-field{display:grid;gap:4px;margin-bottom:10px;} .tp-field label{font-size:12px;font-weight:700;} .tp-field input{min-height:40px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.05);color:#f5ead6;padding:0 10px;font-weight:800;} .tp-pays{display:grid;gap:4px;font-size:12px;font-weight:700;} .tp-pays div{display:flex;justify-content:space-between;} .tp-pays span:last-child{color:#f2d77d;} .tp-rank{font-size:12px;font-weight:700;line-height:1.6;} .tp-result{min-height:24px;font-size:15px;color:#fff2c2;font-weight:800;} .tp-result .net{font-weight:900;} @media (max-width:900px){.teenp{grid-template-columns:1fr;}} @media (max-width:640px){.tp-stage{gap:10px;padding:8px;} .tp-panel{gap:8px;} .tp-card{padding:10px;} .tp-card h3{margin-bottom:6px;} .tp-field{margin-bottom:6px;} .tp-pays,.tp-rank{width:calc(100% - 160px);max-width:calc(100% - 160px);gap:2px;line-height:1.15;} .tp-pays div{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px;min-width:0;} .tp-pays span{min-width:0;overflow-wrap:anywhere;} body:has(.teenp) .report-problem-fab{width:144px;max-width:144px;white-space:normal;line-height:1.1;}} @media(prefers-reduced-motion:reduce){.teenp *{scroll-behavior:auto!important;transition:none!important;animation:none!important;}}';
+  style.textContent = '.msstud{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;width:100%;min-width:0;min-height:100%;color:var(--text,#f5ead6);align-items:start;} .ms-stage{display:grid;gap:16px;padding:12px;min-width:0;} .ms-row{display:grid;gap:6px;} .ms-row h4{margin:0;color:#e7bc52;text-transform:uppercase;font-size:12px;letter-spacing:.08em;} .ms-cards{display:flex;gap:6px;flex-wrap:wrap;min-width:0;} .ms-street{font-weight:900;color:#f2d77d;} .ms-actions{display:flex;flex-wrap:wrap;gap:8px;} .ms-btn{min-height:44px;padding:0 16px;border:none;border-radius:12px;font-weight:900;font-size:15px;cursor:pointer;} .ms-btn.bet{background:linear-gradient(180deg,#0f9c4c,#0a5f2e);color:#fff;} .ms-btn.fold{background:linear-gradient(180deg,#6b6b76,#3a3a42);color:#fff;} .ms-btn.deal{background:linear-gradient(180deg,#d6323d,#8e1822);color:#fff;width:100%;} .ms-btn:disabled{opacity:.55;cursor:not-allowed;} .ms-panel{display:grid;gap:12px;min-width:0;} .ms-card{padding:14px;border:1px solid rgba(255,217,120,.42);border-radius:16px;background:rgba(0,0,0,.22);} .ms-card h3{margin:0 0 10px;color:#e7bc52;text-transform:uppercase;font-size:12px;letter-spacing:.08em;} .ms-field{display:grid;gap:4px;margin-bottom:10px;} .ms-field label{font-size:12px;font-weight:700;} .ms-field input{min-height:40px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.05);color:#f5ead6;padding:0 10px;font-weight:800;} .ms-pays{display:grid;gap:4px;font-size:12px;font-weight:700;} .ms-pays div{display:flex;justify-content:space-between;} .ms-pays span:last-child{color:#f2d77d;} .ms-result{min-height:24px;font-size:15px;color:#fff2c2;font-weight:800;} .ms-result .net{font-weight:900;} @media (max-width:900px){.msstud{grid-template-columns:1fr;}} @media (max-width:640px){.ms-stage{gap:10px;padding:8px;} .ms-panel{gap:8px;} .ms-card{padding:10px;} .ms-card h3{margin-bottom:6px;} .ms-field{margin-bottom:6px;} .ms-pays{width:calc(100% - 160px);max-width:calc(100% - 160px);gap:2px;line-height:1.15;} .ms-pays div{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px;min-width:0;} .ms-pays span{min-width:0;overflow-wrap:anywhere;} body:has(.msstud) .report-problem-fab{width:144px;max-width:144px;white-space:normal;line-height:1.1;}}';
   // Attach the game-owned styles to the document head.
   document.head.append(style);
 }
@@ -100,7 +100,7 @@ function normalizedAnte(value) {
   // Return the lower bound for invalid or undersized values.
   if (!Number.isFinite(parsed) || parsed < 1) return 1;
   // Clamp oversized browser values to the public contract maximum.
-  const bounded = Math.min(parsed, 50000);
+  const bounded = Math.min(parsed, 10000);
   // Round to cents so previews match ledger-compatible request values.
   return Math.round(bounded * 100) / 100;
 }
@@ -131,26 +131,20 @@ function adoptPayload(payload) {
 }
 
 // Build the markup for one labelled row of cards.
-function cardRow(titleKey, cards, win = false) {
+function cardRow(titleKey, cards) {
   // Render each card through the shared renderer.
   const rendered = (cards || []).map(card => renderCard(card)).join('');
   // Return one titled card row.
-  return `<div class="tp-row"><h4>${safe(text(titleKey))}</h4><div class="tp-cards ${win ? 'win' : ''}">${rendered}</div></div>`;
+  return `<div class="ms-row"><h4>${safe(text(titleKey))}</h4><div class="ms-cards">${rendered}</div></div>`;
 }
 
-// Render the Bonus paytable rows.
-function bonusRows() {
-  // Build one row per listed Bonus tier present in the authoritative table.
-  return BONUS_ORDER.filter(name => rules.bonus_multipliers && rules.bonus_multipliers[name] !== undefined).map(name => `<div><span>${safe(text('hand.' + name))}</span><span>${rules.bonus_multipliers[name]}:1</span></div>`).join('');
+// Render the paytable rows for the to-one hand table.
+function paytableRows() {
+  // Build one row per listed hand tier present in the authoritative table.
+  return PAYTABLE_ORDER.filter(name => rules.paytable && rules.paytable[name] !== undefined).map(name => `<div><span>${safe(text('hand.' + name))}</span><span>${rules.paytable[name]}:1</span></div>`).join('');
 }
 
-// Render the strongest-first hand ranking reference.
-function rankingRows() {
-  // Join the localized ranking names in strongest-first order.
-  return RANK_ORDER.map((name, index) => `${index + 1}. ${safe(text('hand.' + name))}`).join('<br>');
-}
-
-// Render the complete Teen Patti route into the outlet.
+// Render the complete Mississippi Stud route into the outlet.
 function render() {
   // Do nothing when the route was already torn down.
   if (!root) return;
@@ -160,10 +154,10 @@ function render() {
   const deciding = round && round.phase === 'decision';
   // Build the stage markup for the current phase.
   const stage = deciding ? decisionStage(round) : round && round.phase === 'settled' ? settledStage(round) : idleStage();
-  // Build the side panel with wager input and paytables.
-  const panel = sidePanel(deciding);
+  // Hide the duplicate wager card once the settled stage already offers Deal again.
+  const panel = sidePanel(deciding || round?.phase === 'settled');
   // Paint the whole route.
-  root.innerHTML = `<section class="teenp" data-testid="teen-patti"><div class="tp-stage">${stage}</div><div class="tp-panel">${panel}</div></section>`;
+  root.innerHTML = `<section class="msstud" data-testid="mississippi-stud"><div class="ms-stage">${stage}</div><div class="ms-panel">${panel}</div></section>`;
   // Wire the interactive controls for the current stage.
   bindEvents();
 }
@@ -171,45 +165,45 @@ function render() {
 // Build the idle stage shown before the first deal.
 function idleStage() {
   // Prompt the player to set the ante and deal.
-  return `<p class="tp-result" data-testid="teen-patti-result" role="status" aria-live="polite">${safe(text('result.idle'))}</p>`;
+  return `<p class="ms-result" data-testid="mississippi-stud-result">${safe(text('result.idle'))}</p>`;
 }
 
-// Build the decision stage showing the player's three cards and the play or fold controls.
+// Build the decision stage showing the hole cards, revealed community, and bet or fold controls.
 function decisionStage(round) {
-  // Render the three player cards.
-  const cards = cardRow('label.your_cards', round.player_cards);
-  // Return the cards, the prompt, and the decision controls.
-  return `${cards}<p class="tp-result" role="status" aria-live="polite">${safe(text('result.decide'))}</p><div class="tp-actions"><button class="tp-btn fold" data-fold="1" type="button" ${busy ? 'disabled' : ''}>${safe(text('action.fold'))}</button><button class="tp-btn play" data-play="1" type="button" ${busy ? 'disabled' : ''}>${safe(text('action.play'))}</button></div>`;
+  // Render the two hole cards.
+  const hole = cardRow('label.hole_cards', round.hole_cards);
+  // Render the community cards revealed so far.
+  const community = cardRow('label.community_cards', round.community_revealed);
+  // Build one bet button per multiplier.
+  const bets = BET_MULTIPLIERS.map(multiplier => `<button class="ms-btn bet" data-bet="${multiplier}" type="button" ${busy ? 'disabled' : ''}>${safe(text('action.bet', { multiplier }))}</button>`).join('');
+  // Return the cards, the street label, and the decision controls.
+  return `${hole}${community}<p class="ms-street">${safe(text('label.street', { street: round.street }))}</p><div class="ms-actions"><button class="ms-btn fold" data-fold="1" type="button" ${busy ? 'disabled' : ''}>${safe(text('action.fold'))}</button>${bets}</div>`;
 }
 
-// Build the settled stage revealing both hands and the result.
+// Build the settled stage revealing the completed hand and the result.
 function settledStage(round) {
-  // Render the player's revealed hand, highlighting a win.
-  const win = round.outcome === 'player_win' || round.outcome === 'dealer_not_qualified';
-  // Render the player's three cards.
-  const player = cardRow('label.your_cards', round.player_cards, win);
-  // Render the dealer's revealed cards when a showdown happened.
-  const dealer = round.dealer_cards ? cardRow('label.dealer_cards', round.dealer_cards) : '';
+  // Render the two hole cards.
+  const hole = cardRow('label.hole_cards', round.hole_cards);
+  // Render every revealed community card.
+  const community = cardRow('label.community_cards', round.community_revealed);
   // Read the settled net movement.
   const net = round.net || 0;
-  // Read the localized hand tier for the player.
-  const tier = round.player_hand ? safe(text('hand.' + round.player_hand.name)) : '';
+  // Compose the outcome and hand tier line.
+  const tier = round.hand_tier ? safe(text('hand.' + round.hand_tier)) : '';
   // Build the outcome result line with a signed net amount.
   const line = `${safe(text('outcome.' + round.outcome))} ${tier} <span class="net">${net >= 0 ? '+' + net : net}</span>`;
-  // Return the revealed hands, the result, and a deal-again control.
-  return `${player}${dealer}<p class="tp-result" data-testid="teen-patti-result" role="status" aria-live="polite">${line}</p><div class="tp-actions"><button class="tp-btn deal" data-deal="1" type="button" ${busy ? 'disabled' : ''}>${safe(text('action.deal_again'))}</button></div>`;
+  // Return the revealed hand, the result, and a deal-again control.
+  return `${hole}${community}<p class="ms-result" data-testid="mississippi-stud-result">${line}</p><div class="ms-actions"><button class="ms-btn deal" data-deal="1" type="button" ${busy ? 'disabled' : ''}>${safe(text('action.deal_again'))}</button></div>`;
 }
 
-// Build the side panel with the ante input and paytables.
-function sidePanel(deciding) {
-  // Hide the ante input while a decision is pending.
-  const wagerCard = deciding ? '' : `<div class="tp-card"><h3>${safe(text('label.ante'))}</h3><div class="tp-field"><label for="tp-ante">${safe(text('label.ante'))}</label><input id="tp-ante" data-ante type="number" min="1" step="1" value="${ante}"></div><button class="tp-btn deal" data-deal="1" type="button" ${busy ? 'disabled' : ''}>${safe(text('action.deal'))}</button></div>`;
-  // Build the Bonus paytable card.
-  const bonus = `<div class="tp-card"><h3>${safe(text('label.bonus'))}</h3><div class="tp-pays">${bonusRows()}</div></div>`;
-  // Build the ranking reference card.
-  const ranking = `<div class="tp-card"><h3>${safe(text('label.ranking'))}</h3><div class="tp-rank">${rankingRows()}</div></div>`;
+// Build the side panel with the ante input and the paytable.
+function sidePanel(hideWager) {
+  // Hide the ante input while a decision is pending or the settled stage owns the replay action.
+  const wagerCard = hideWager ? '' : `<div class="ms-card"><h3>${safe(text('label.ante'))}</h3><div class="ms-field"><label for="ms-ante">${safe(text('label.ante'))}</label><input id="ms-ante" data-ante type="number" min="1" step="1" value="${ante}"></div><button class="ms-btn deal" data-deal="1" type="button" ${busy ? 'disabled' : ''}>${safe(text('action.deal'))}</button></div>`;
+  // Build the paytable card.
+  const paytable = `<div class="ms-card"><h3>${safe(text('label.paytable'))}</h3><div class="ms-pays">${paytableRows()}</div></div>`;
   // Return the stacked side panel.
-  return `${wagerCard}${bonus}${ranking}`;
+  return `${wagerCard}${paytable}`;
 }
 
 // Attach event handlers to the current stage controls.
@@ -223,11 +217,9 @@ function bindEvents() {
   // Bind the fold control to a fold decision.
   const foldButton = root.querySelector('[data-fold]');
   // Attach the fold handler.
-  if (foldButton) foldButton.onclick = () => decide('fold');
-  // Bind the play control to a play decision.
-  const playButton = root.querySelector('[data-play]');
-  // Attach the play handler.
-  if (playButton) playButton.onclick = () => decide('play');
+  if (foldButton) foldButton.onclick = () => decide('fold', 1);
+  // Bind every bet control to a bet decision at its multiplier.
+  root.querySelectorAll('[data-bet]').forEach(button => { button.onclick = () => decide('bet', Number(button.dataset.bet)); });
 }
 
 // Run one guarded atomic action while blocking overlapping requests.
@@ -266,47 +258,47 @@ function deal() {
     // Reuse an unresolved deal id or mint a fresh one bound to the current ante.
     if (!pendingDealId || pendingDealAnte !== ante) {
       // Mint a fresh deal retry id.
-      pendingDealId = nextActionId('tp-deal');
+      pendingDealId = nextActionId('ms-deal');
       // Bind the retry id to the exact ante.
       pendingDealAnte = ante;
     }
     // Post the exactly-once deal with the current ante.
     const payload = await post(`${API_ROOT}/rounds`, withCurrentPlayer({ action_id: pendingDealId, ante }));
-    // Adopt the returned state and reveal the decision stage.
+    // Adopt the returned state and reveal the first street.
     adoptPayload(payload);
   });
 }
 
-// Apply one play or fold decision to the active round.
-function decide(decision) {
+// Apply one bet or fold decision to the active round's current street.
+function decide(decision, multiplier) {
   // Read the active round before acting.
   const round = currentRound();
   // Ignore decisions when no active round awaits one.
   if (!round || round.phase !== 'decision') return;
   // Perform the decision as one guarded action.
   return runAction(async () => {
-    // Reuse an unresolved decision id or mint one bound to this exact decision.
-    if (!pendingDecisionId || pendingDecisionContext?.round_id !== round.round_id || pendingDecisionContext?.decision !== decision) {
+    // Reuse an unresolved decision id or mint one bound to this exact street decision.
+    if (!pendingDecisionId || pendingDecisionContext?.round_id !== round.round_id || pendingDecisionContext?.street !== round.street || pendingDecisionContext?.decision !== decision || pendingDecisionContext?.multiplier !== multiplier) {
       // Mint a fresh decision retry id.
-      pendingDecisionId = nextActionId('tp-decision');
-      // Bind the retry id to the exact round and decision.
-      pendingDecisionContext = { round_id: round.round_id, decision };
+      pendingDecisionId = nextActionId('ms-decision');
+      // Bind the retry id to the exact round, street, and decision.
+      pendingDecisionContext = { round_id: round.round_id, street: round.street, decision, multiplier };
     }
     // Post the exactly-once decision to the round-scoped route.
-    const payload = await post(`${API_ROOT}/rounds/${encodeURIComponent(round.round_id)}/decisions`, withCurrentPlayer({ action_id: pendingDecisionId, decision }));
-    // Adopt the settled result.
+    const payload = await post(`${API_ROOT}/rounds/${encodeURIComponent(round.round_id)}/decisions`, withCurrentPlayer({ action_id: pendingDecisionId, decision, multiplier }));
+    // Adopt the advanced or settled result.
     adoptPayload(payload);
-    // Release the resolved decision retry binding.
+    // Release the resolved decision retry binding so the next street mints a new id.
     pendingDecisionId = null;
     // Release the resolved decision context.
     pendingDecisionContext = null;
   });
 }
 
-// Export the isolated Teen Patti game for the shared shell.
-export const TeenPattiGame = {
+// Export the isolated Mississippi Stud game for the shared shell.
+export const MississippiStudGame = {
   // Expose the stable catalog identifier.
-  id: 'teen_patti',
+  id: 'mississippi_stud',
   // Expose an empty label because the shell provides the localized catalog label.
   label: '',
   // Mount the isolated route into the shared shell outlet.
@@ -327,7 +319,7 @@ export const TeenPattiGame = {
     if (generation !== mountGeneration) return;
     // Repaint localized strings on a locale change unless an action owns the table.
     unsubscribeLocale = onLocaleChange(() => { if (!busy) render(); });
-    // Read reload-safe state so a pending decision or settled result is restored.
+    // Read reload-safe state so a pending street or settled result is restored.
     try {
       // Fetch the current player's game state.
       const payload = await api(currentPlayerPath(`${API_ROOT}/state`));

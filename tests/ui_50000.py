@@ -610,7 +610,7 @@ async def play_game_ui(page, game_id, ordinal, seen_counts, activated_counts, re
         refreshed_bets = await enabled_locators(page, "[data-bet]")  # Re-resolve wager buttons after the clear rerender.
         await click_locator(refreshed_bets[ordinal % len(refreshed_bets)], activated_counts)  # Restore one bounded wager for the coup.
         await terminal_action(page, '[data-testid="baccarat-deal"]', activated_counts)  # Deal and settle the coup.
-    elif game_id in {"multi_hand_video_poker", "jacks_or_better_video_poker", "deuces_wild_video_poker", "joker_poker"}:  # Exercise draw-poker families.
+    elif game_id in {"multi_hand_video_poker", "jacks_or_better_video_poker", "deuces_wild_video_poker", "double_bonus_video_poker", "joker_poker"}:  # Exercise draw-poker families.
         modes = await enabled_locators(page, "[data-hand-count],[data-coin-count]")  # Discover pre-deal mode/coin controls.
         if modes:  # Rotate configuration coverage before the hand locks.
             await click_locator(modes[ordinal % len(modes)], activated_counts)  # Select a rendered compatible mode.

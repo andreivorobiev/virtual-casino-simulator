@@ -12,7 +12,7 @@ from casino.core.cards import shuffled_deck
 # Import the shared ace-high rank values for strategy thresholds.
 from casino.core.poker import RANK_VALUES
 # Import the pure engine and the stateful service under test.
-from casino.games.teen_patti import engine, service
+from casino.games.teen_patti import api, engine, service
 # Import the standard bounded application errors the service raises.
 from casino.errors import ConflictError, InsufficientFundsError, ValidationError
 
@@ -76,6 +76,67 @@ class MemoryState:
         self.docs[player_id] = copy.deepcopy(state)
 
 
+# Capture route decorators without opening a listener.
+class RecordingRouter:
+    # Start with independent GET and POST route maps.
+    def __init__(self):
+        # Retain registered read handlers by exact route pattern.
+        self.get_routes = {}
+        # Retain registered mutation handlers by exact route pattern.
+        self.post_routes = {}
+
+    # Return a decorator that records one GET handler.
+    def get(self, pattern):
+        # Bind the supplied handler to the exact route expression.
+        def decorator(handler):
+            # Record the handler for direct listener-free invocation.
+            self.get_routes[pattern] = handler
+            # Return the handler unchanged like the production router.
+            return handler
+        # Return the recording decorator.
+        return decorator
+
+    # Return a decorator that records one POST handler.
+    def post(self, pattern):
+        # Bind the supplied handler to the exact route expression.
+        def decorator(handler):
+            # Record the handler for direct listener-free invocation.
+            self.post_routes[pattern] = handler
+            # Return the handler unchanged like the production router.
+            return handler
+        # Return the recording decorator.
+        return decorator
+
+
+# Record session-bound service calls made by direct route handlers.
+class RecordingService:
+    # Start with no observed calls.
+    def __init__(self):
+        # Preserve ordered call arguments for exact identity assertions.
+        self.calls = []
+
+    # Record one state read.
+    def state(self, player_id):
+        # Retain the resolved player identity.
+        self.calls.append(("state", player_id))
+        # Return one bounded state projection.
+        return {"state": {"active_round": None}}
+
+    # Record one round creation.
+    def start_round(self, player_id, body):
+        # Retain the resolved player identity and detached request.
+        self.calls.append(("start", player_id, dict(body)))
+        # Return one prepared round projection.
+        return {"round": {"round_id": "round-1", "phase": "decision"}}
+
+    # Record one round decision.
+    def decide(self, player_id, round_id, body):
+        # Retain the resolved player, route id, and detached request.
+        self.calls.append(("decide", player_id, round_id, dict(body)))
+        # Return one settled round projection.
+        return {"round": {"round_id": round_id, "phase": "settled"}}
+
+
 # Build a Teen Patti service bound to in-memory fakes and a fixed fixture.
 def _service(fixture, ledger=None, memory=None):
     # Use the supplied fakes or fresh ones for an isolated round.
@@ -92,6 +153,25 @@ class TeenPattiTests(unittest.TestCase):
     def _key(self, codes):
         # Return the comparison key for a three-card hand.
         return engine.comparison_key(engine.evaluate_three(codes))
+
+    # Require all additive routes to bind the authenticated player over spoofed compatibility fields.
+    def test_routes_bind_authenticated_player(self) -> None:
+        # Build one recording router and service without opening a network listener.
+        router, recording = RecordingRouter(), RecordingService()
+        # Register the exact state, round, and decision handlers.
+        api.register(router, service=recording)
+        # Supply one session-bound player that must override body and query values.
+        context = {"bound_player_id": "session-player"}
+        # Invoke the read route with a hostile query identity.
+        state_payload = router.get_routes[r"/api/v1/games/teen-patti/state"]({}, {"player_id": "query-spoof"}, context)
+        # Invoke the deal route with a hostile body identity.
+        deal_payload = router.post_routes[r"/api/v1/games/teen-patti/rounds"]({"player_id": "body-spoof", "action_id": "deal-route", "ante": 1}, {}, context)
+        # Invoke the round-scoped decision route with another hostile identity.
+        decision_payload = router.post_routes[r"/api/v1/games/teen-patti/rounds/(?P<round_id>[A-Za-z0-9_-]+)/decisions"]({"player_id": "decision-spoof", "action_id": "play-route", "decision": "play"}, {}, "round-1", context)
+        # Require all three handlers to use only the authenticated session identity.
+        self.assertEqual([call[1] for call in recording.calls], ["session-player", "session-player", "session-player"])
+        # Require the registered projections to preserve the expected state machine.
+        self.assertEqual((state_payload["state"]["active_round"], deal_payload["round"]["phase"], decision_payload["round"]["phase"]), (None, "decision", "settled"))
 
     # Require the three-card ranking to place a sequence above a colour and read runs.
     def test_three_card_ranking(self) -> None:

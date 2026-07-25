@@ -3347,6 +3347,23 @@ h3 {
   }
 }
 
+@media (min-width: 901px) and (max-width: 1200px) {
+  /* Keep the scalable route catalog on one native horizontal rail after the thirty-second game is installed,
+     preserving bounded tablet outlet height for game content and fixed shell utilities. (CORE-006, UX-013) */
+  .casino-nav {
+    display: flex;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  /* Size every tablet route control to its complete label while the rail owns horizontal overflow. */
+  .nav-item,
+  .nav-item.admin {
+    flex: 0 0 auto;
+    min-width: 96px;
+  }
+}
+
 @media (max-width: 560px) {
   .auth-panel {
     padding: 22px 18px;
