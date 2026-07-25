@@ -183,7 +183,7 @@ class PwaFoundationTests(unittest.TestCase):
         # Locate the controlled reload performed only after activation completes.
         reload_index = pwa_case.index("pwa_page.reload(wait_until='domcontentloaded')")
         # Locate the synchronous controller assertion after the controlled navigation.
-        controller_index = pwa_case.index("Boolean(navigator.serviceWorker.controller) && window.CasinoPwa?.version==='9.5.3'")
+        controller_index = pwa_case.index("Boolean(navigator.serviceWorker.controller) && window.CasinoPwa?.version==='9.5.4'")
         # Locate the first explicit navigation after readiness; this is the governed offline route proof, not a bootstrap reload race.
         navigation_index = pwa_case.index("pwa_page.goto")
         # Require activation, reload, and controller proof to remain in deterministic lifecycle order.
@@ -237,8 +237,10 @@ class PwaFoundationTests(unittest.TestCase):
         self.assertIn("window.addEventListener('casino-session-expired', () => { if (currentSession) renderExpiredSessionGate(); });", app)
         # Require login and guest-entry failures to stay local to their public auth forms.
         self.assertIn("SESSION_EXPIRY_PUBLIC_PATHS", api_source)
-        # Require the session-expired shell path to clear cached current-user state before rendering login.
-        self.assertLess(app.index("currentSession = null", app.index("function renderExpiredSessionGate()")), app.index("renderLoginGate(t('pwa.expiredSession'", app.index("function renderExpiredSessionGate()")))
+        # Require the shared teardown helper to clear cached current-user state.
+        self.assertIn("currentSession = null", app[app.index("function clearAuthenticatedShellState()"):app.index("function renderExpiredSessionGate()")])
+        # Require the session-expired shell path to run shared teardown before rendering login.
+        self.assertLess(app.index("clearAuthenticatedShellState()", app.index("function renderExpiredSessionGate()")), app.index("renderLoginGate(t('pwa.expiredSession'", app.index("function renderExpiredSessionGate()")))
         # Require protected-route authorization failure handling to precede the generic game-load error panel.
         self.assertLess(app.index("err?.code === 'UNAUTHORIZED'"), app.index("Could not load ${safe(routeLabel(targetRoute))}"))
 

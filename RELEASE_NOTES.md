@@ -1,4 +1,15 @@
-# Virtual Casino Simulator v9.5.3 Release Notes
+# Virtual Casino Simulator v9.5.4 Release Notes
+
+## Logout reliability and account-spine patch release
+
+- Packages the exact accepted protected-main state after v9.5.3 as a distinct immutable patch release, excluding the active Keno, game-catalog, and approval-held security branches.
+- Includes the product account spine with Admin role lifecycle, enrollment controls, feedback-status tracking foundations, and fail-closed Guest Trial separation from Admin user management.
+- Fixes explicit logout so the browser does not paint a false logged-out state when backend session revocation fails; the browser now verifies `/api/v2/me` is unauthorized and refresh cannot resurrect the old session.
+- Rotates the PWA static-shell cache identity to v9.5.4 so existing browsers fetch the corrected logout/session shell instead of continuing to serve cached v9.5.3 assets.
+- Keeps MySQL at schema version 2 and permits application-only rollback to the retained, checksum-verified v9.5.3 predecessor; database rollback remains prohibited.
+- Preserves manual-invite admission with signup, live OAuth, provider networking, DNS, billing, and unrestricted public exposure still separately gated.
+
+## Prior v9.5.3 protected-main release
 
 ## Protected-main reliability and provenance patch release
 
