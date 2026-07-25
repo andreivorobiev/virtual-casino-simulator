@@ -5679,7 +5679,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Capture the complete ready table before the ante-backed deal.
                     localized_evidence('ready',['ready'])
                     # Deal through the public frontend and require seven selectable cards with the private dealer hidden.
-                    page.locator('#pgp-wager').fill('1'); page.locator('#pgp-wager').press('Tab'); page.locator('[data-action="deal"]').click(); page.locator('[data-action="house-way"]:not([disabled])').wait_for(timeout=10000); assert page.locator('.pgp-tile').count()==7 and page.locator('.playing-card--back').count()==7
+                    page.locator('#pgp-wager').fill('1'); page.locator('#pgp-wager').press('Tab'); page.locator('[data-action="deal"]').click(); page.locator('[data-action="house-way"]:not([disabled])').wait_for(timeout=10000); setting_counts={'playerTiles':page.locator('[data-testid="pai-gow-poker"] .pgp-tiles .pgp-tile').count(),'privateDealerCards':page.locator('[data-testid="pai-gow-poker"] .pgp-cards .playing-card--back').count()}; assert setting_counts=={'playerTiles':7,'privateDealerCards':7},setting_counts
                     # Capture the actionable hand-setting stage.
                     localized_evidence('setting',['setting'])
                     # Collect every authoritative win, loss, and push presentation through bounded public play.
