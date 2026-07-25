@@ -6787,8 +6787,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             payline_visible_text=page.get_by_test_id('slots-premium').inner_text(); payline_result_text=page.get_by_test_id('slots-result').inner_text(); payline_history_text=page.get_by_test_id('slots-recent-spins').inner_text()
                             # Normalize locale separators while retaining every visible digit needed for the exact payout comparison.
                             payline_result_digits=''.join(character for character in payline_result_text if character.isdigit()); payline_history_digits=''.join(character for character in payline_history_text if character.isdigit())
-                            # Require the first three detailed lines, the remaining-win count, total payout, and round history to agree with the engine outcome.
-                            line_word='Line' if locale=='en-US' else 'Линия'; assert all(f'{line_word} {number}' in payline_result_text for number in (1,2,3)) and '17' in payline_result_text and str(int(payline_spin['payout'])) in payline_result_digits and payline_spin['round_id'] in payline_history_text and str(int(payline_spin['payout'])) in payline_history_digits
+                            # Require the first three detailed lines, the remaining-win count, and total payout to agree with the engine outcome.
+                            line_word='Line' if locale=='en-US' else 'Линия'; history_lines_word='lines' if locale=='en-US' else 'линий'; assert all(f'{line_word} {number}' in payline_result_text for number in (1,2,3)) and '17' in payline_result_text and str(int(payline_spin['payout'])) in payline_result_digits and f"{payline_spin['active_lines']} {history_lines_word}" in payline_history_text and payline_spin['round_id'] not in payline_history_text and str(int(payline_spin['payout'])) in payline_history_digits
                             # Reject any resource-key leakage from the localized accessible or visible result treatment.
                             assert all(key not in payline_visible_text for key in ('payline.overlayLabel','payline.pathLabel','result.lineWin'))
                             # Capture the complete governed game surface for exact-head acceptance review.
@@ -6808,7 +6808,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Restore the default media preference and route state for the existing Slots regression sequence.
                     page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('slots-payline').wait_for(timeout=5000); require_payline_acceptance(audit_payline_geometry())
                 # Execute the payline-to-reel alignment regression.
-                run_case('BR-SLOTS-PAYLINE-001',['SLOT-029','TEST-077'],slots_payline_alignment)
+                run_case('BR-SLOTS-PAYLINE-001',['SLOT-029','I18N-010','TEST-077','TEST-117'],slots_payline_alignment)
                 # Define the focused line-bet regression using real visible controls and backend requests.
                 def slots_line_bet_validation():
                     # Track only Slots spin requests so input edits can prove they never move tokens by themselves.
