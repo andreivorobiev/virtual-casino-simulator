@@ -6562,8 +6562,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.reload(wait_until='networkidle'); page.get_by_test_id('slots-payline').wait_for(timeout=5000)
                     # Define a browser-side audit that compares every rendered SVG point with its actual cell center in screen coordinates.
                     def audit_payline_geometry():
-                        # Bring the bounded reel grid into the viewport so elementFromPoint can test symbol identity instead of returning null for off-screen coordinates.
-                        page.get_by_test_id('slot-grid').scroll_into_view_if_needed()
+                        # Center the bounded reel grid so fixed shell actions cannot mask symbol identity during elementFromPoint checks.
+                        page.get_by_test_id('slot-grid').evaluate("grid => grid.scrollIntoView({block:'center',inline:'nearest'})")
                         # Let ResizeObserver and requestAnimationFrame finish the current responsive or zoom alignment.
                         page.wait_for_timeout(120)
                         # Return exact geometry, identity, style, accessibility, and containment diagnostics for all twenty paths.
