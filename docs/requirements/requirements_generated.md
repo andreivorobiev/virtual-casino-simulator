@@ -6,8 +6,8 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.50.4
-- core: 9.22.0
+- application: 9.50.5
+- core: 9.22.1
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.0
@@ -45,8 +45,8 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.1
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.59.8
-- docs: 1.59.8
+- tests: 1.59.9
+- docs: 1.59.9
 - contracts: 1.43.0
 - tooling: 1.20.2
 - commenting_policy: 1.0.0
@@ -803,3 +803,6 @@ Historical source baseline: 9.1.0
 - **TEST-108** (Tests) - PASS: Listener-free evidence verifies the round-replay foundation and exact additive route: artifacts are marked non-settlement and derived from committed history, exclude another subject against a populated neighbour, exclude rounds outside the retention window under an injected clock, hide raw durable identifiers, normalize malformed pagination safely, clamp page size, and fail closed for a subjectless session.
 - **TEST-109** (Tests) - PASS: Listener-free evidence verifies table profiles and exact additive read/write routes: per-game persistence with an advancing revision, cross-subject isolation, rejection of economics-changing and unknown fields, enforcement of value bounds, stale-revision conflict, invalid game-slug rejection, malformed-document recovery, session-local guest behaviour with no durable record, and fail-closed subjectless access.
 - **TEST-110** (Tests) - PASS: Listener-free evidence verifies the Compare Games foundation and shared API boundary: money-math attributes are excluded and never present on a row, localization readiness is derived per locale, request bounds reject too-few, too-many, and malformed requests, unknown games are reported as missing, every new route stays authenticated, OpenAPI/compatibility/module ownership/exact-byte digests stay aligned, and every added copy namespace ships complete EN and RU strings with identical placeholders.
+- **CONVERT-001** (Core) - PASS: An authenticated guest trial can be explicitly converted into a durable full first-party account that adopts the guest's existing player, so the authoritative wallet, ledger, and history are preserved in place with no duplicated balance and no orphaned ownership. Conversion is never silent or automatic: it requires the caller to be the active guest, a unique mailbox, a policy-compliant password, and explicit current terms acceptance, and it fails closed for a non-guest principal, a duplicate mailbox, weak password, malformed email, or unaccepted terms. No OAuth or provider identity is created and canonical identity remains the internal Casino user id.
+- **CONVERT-002** (Core) - PASS: Conversion is recoverable and idempotent: a completed conversion that is retried replays the same account rather than creating a second account or duplicating the wallet, an interrupted attempt that created the account but not the terminal guest marker is recovered on retry, and a retry that names a different mailbox for an already-bound wallet fails closed. The guest record is marked terminal and linked so it leaves the trial lifecycle and stays out of Admin Users, and audit events carry only bounded provenance with no raw identifier in user-facing copy.
+- **TEST-111** (Tests) - PASS: Listener-free evidence verifies guest conversion: exact wallet preservation across the adopted player, password login of the converted account, terminal guest marking, idempotent replay on retry with a single owning account, recovery of an interrupted conversion, rejection of a conflicting different-mailbox retry, rejection of a non-guest principal, validation of terms/password/email inputs, and rejection of a duplicate mailbox.

@@ -1034,6 +1034,19 @@ def run_api_tests():
             raise AssertionError('player self-service batch suite failed')
     # Record the listener-free replay, table-profile, and compare proof.
     run_case('API-SELF-SERVICE-BATCH-001',['REPLAY-001','REPLAY-002','PROFILE-001','PROFILE-002','COMPARE-001','TEST-108','TEST-109','TEST-110'],run_self_service_batch_tests)
+    # Execute the complete guest-to-account conversion proof without opening a listener.
+    def run_guest_conversion_tests():
+        # Load only the focused conversion class.
+        from tests import guest_conversion_tests
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(guest_conversion_tests.GuestConversionTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused conversion proof failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure text secret-safe.
+            raise AssertionError('guest conversion suite failed')
+    # Record the listener-free explicit, idempotent, wallet-preserving conversion proof.
+    run_case('API-CONVERT-001',['CONVERT-001','CONVERT-002','TEST-111'],run_guest_conversion_tests)
     # Discover and execute every focused restricted-preview security module without opening a listener.
     def run_restricted_preview_security_tests():
         # Load the package directory through unittest's standard test discovery.
