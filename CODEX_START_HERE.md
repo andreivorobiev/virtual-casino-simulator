@@ -315,4 +315,9 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 
 - [`web/AGENTS.md`](web/AGENTS.md) — AGENTS.md - admin module
 - [`web/assets/fonts/README.md`](web/assets/fonts/README.md) — Native-label font subsets
+
+### site documentation
+
+- [`site/tiltseven/deployment.md`](site/tiltseven/deployment.md) — TiltSeven future publication checklist
+- [`site/tiltseven/README.md`](site/tiltseven/README.md) — TiltSeven marketing site
 <!-- END GENERATED MARKDOWN INDEX -->

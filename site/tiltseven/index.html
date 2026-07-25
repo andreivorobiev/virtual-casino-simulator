@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>TiltSeven — Play the casino floor, without the stakes</title>
+  <meta name="description" content="TiltSeven is a private play-token casino simulator: casino-floor atmosphere, no cash value, no deposits, and no withdrawals.">
+  <meta name="theme-color" content="#06110c">
+  <link rel="icon" type="image/svg+xml" href="assets/tiltseven-mark.svg">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Skip navigation gives keyboard users a direct path to the page content. -->
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <!-- Page shell keeps the public brand site independent from the simulator application. -->
+  <header class="site-header" aria-label="TiltSeven">
+    <a class="brand" href="index.html" aria-label="TiltSeven home">
+      <img src="assets/tiltseven-mark.svg" alt="" width="56" height="56">
+      <span>
+        <strong>TiltSeven</strong>
+        <small>Play tokens only · no cash value</small>
+      </span>
+    </a>
+    <nav class="site-nav" aria-label="Primary">
+      <a href="#floor">The floor</a>
+      <a href="#safety">Safety</a>
+      <a href="#preview">Preview</a>
+      <a href="ru/index.html" lang="ru" hreflang="ru">Русский</a>
+      <a class="nav-cta" href="https://casino.tiltseven.com/">Enter casino</a>
+    </nav>
+  </header>
+
+  <!-- Hero states the brand promise and repeats the no-stakes boundary above the fold. -->
+  <main id="main-content" data-testid="marketing-site" tabindex="-1">
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">Private play-token casino simulator</p>
+        <h1>Play the casino floor, without the stakes.</h1>
+        <p class="lede">TiltSeven turns the casino into a polished simulator: tables, reels, wheels, cards, bots, and ledgers — all for play tokens that never become money or prizes.</p>
+        <div class="hero-actions" aria-label="Primary actions">
+          <a class="button primary" href="https://casino.tiltseven.com/">Enter casino</a>
+          <a class="button secondary" href="#safety">Read the safety promise</a>
+        </div>
+        <p class="fine-print">No deposits. No purchases. No withdrawals. No redemption. No prizes. No transferable value.</p>
+      </div>
+      <div class="hero-card" aria-label="Stylized TiltSeven casino preview">
+        <div class="table-glow"></div>
+        <div class="seven-chip" aria-hidden="true">7</div>
+        <div class="felt-panel">
+          <span>Roulette</span>
+          <span>Slots</span>
+          <span>Keno</span>
+          <span>Blackjack</span>
+        </div>
+        <div class="reel-row" aria-hidden="true">
+          <span>BAR</span>
+          <span>7</span>
+          <span>WLD</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Product cards explain the public site without overpromising availability. -->
+    <section id="floor" class="section">
+      <div class="section-heading">
+        <p class="eyebrow">A casino floor as software</p>
+        <h2>Built for exploring games, not spending money.</h2>
+      </div>
+      <div class="card-grid">
+        <article class="feature-card">
+          <h3>Table games</h3>
+          <p>Roulette, Blackjack, Baccarat, Casino War, Dragon Tiger, Sic Bo, and more — staged like a floor map rather than a spreadsheet.</p>
+        </article>
+        <article class="feature-card">
+          <h3>Reels and draws</h3>
+          <p>Slots, Keno, Bingo, Scratch Cards, and wheel games with clear round states, replayable outcomes, and simulator-first language.</p>
+        </article>
+        <article class="feature-card">
+          <h3>Ledger-backed play</h3>
+          <p>Every token movement belongs to a fake-money ledger so testing, bots, and admin review can see what happened without implying cash value.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- Safety section is intentionally direct because the brand relies on a clean compliance boundary. -->
+    <section id="safety" class="section safety">
+      <div>
+        <p class="eyebrow">The bright line</p>
+        <h2>Casino feel, simulator boundary.</h2>
+        <p>TiltSeven is not a gambling site, payment product, sweepstakes, prize platform, or cash-out experience. Play tokens are fictional simulator units only.</p>
+      </div>
+      <ul class="safety-list" aria-label="Safety commitments">
+        <li>No deposits or payment flow.</li>
+        <li>No purchases or top-up sales.</li>
+        <li>No withdrawals, redemptions, prizes, or cash value.</li>
+        <li>No transfer, sale, trade, exchange, or conversion of play tokens.</li>
+      </ul>
+    </section>
+
+    <!-- Preview section gives Andrei and reviewers a concrete direction before deeper rebrand implementation. -->
+    <section id="preview" class="section preview">
+      <div class="section-heading">
+        <p class="eyebrow">Brand direction</p>
+        <h2>Midnight green, warm gold, sharp red, and a tilted seven.</h2>
+      </div>
+      <div class="preview-grid">
+        <div class="swatch felt"><span>Midnight felt</span></div>
+        <div class="swatch gold"><span>House gold</span></div>
+        <div class="swatch red"><span>Action red</span></div>
+        <div class="swatch ivory"><span>Readable ivory</span></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer repeats ownership boundaries and keeps the simulator entry point obvious. -->
+  <footer class="site-footer">
+    <div>
+      <strong>TiltSeven</strong>
+      <p>Play-token casino simulator. No cash value.</p>
+    </div>
+    <a class="button secondary" href="https://casino.tiltseven.com/">Go to casino.tiltseven.com</a>
+  </footer>
+</body>
+</html>

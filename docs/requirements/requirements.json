@@ -10408,6 +10408,90 @@
       "notes": "Allocated after TEST-105 became permanent on current main. Every focused write uses an isolated temporary provider and no listener, browser, credential, repository runtime file, provider network, or live system is touched."
     },
     {
+      "id": "MARKETING-001",
+      "module": "Marketing Site",
+      "description": "The repository contains an independently owned static TiltSeven landing-page scaffold in English and Russian. Each locale provides semantic header, navigation, main, and footer landmarks; a single top-level heading; keyboard skip navigation; stable accessible names; local-only runtime assets; and responsive containment at every governed viewport. The scaffold uses no JavaScript, forms, trackers, payment controls, or third-party runtime dependency.",
+      "status": "PASS",
+      "api_tests": [
+        "STATIC-MARKETING-001"
+      ],
+      "browser_tests": [
+        "BR-MARKETING-001"
+      ],
+      "implementation_files": [
+        "site/tiltseven/index.html",
+        "site/tiltseven/ru/index.html",
+        "site/tiltseven/styles.css",
+        "site/tiltseven/assets/tiltseven-mark.svg",
+        "modules/marketing_site.json",
+        "tests/visual/visual_matrix.json",
+        "tests/marketing_site_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "pr-372-tiltseven-repository-scaffold",
+      "changed_in": "pr-372-tiltseven-repository-scaffold",
+      "notes": "This is repository-only source and acceptance evidence. It does not authorize or perform public hosting, DNS, TLS, provider, billing, publication, or deployment changes."
+    },
+    {
+      "id": "MARKETING-002",
+      "module": "Marketing Site",
+      "description": "Every locale presents TiltSeven as a play-token casino simulator with no cash value and explicit absence of deposits, purchases, withdrawals, redemption, prizes, transfer, sale, exchange, or conversion. The only absolute hyperlink is the separately governed canonical Casino origin, and acceptance never activates that link or changes the Casino deployment.",
+      "status": "PASS",
+      "api_tests": [
+        "STATIC-MARKETING-001"
+      ],
+      "browser_tests": [
+        "BR-MARKETING-001"
+      ],
+      "implementation_files": [
+        "site/tiltseven/index.html",
+        "site/tiltseven/ru/index.html",
+        "tests/marketing_site_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "pr-372-tiltseven-repository-scaffold",
+      "changed_in": "pr-372-tiltseven-repository-scaffold",
+      "notes": "The browser proof opens checked local files only. It performs no provider request, mail action, public signup, public publication, or live mutation."
+    },
+    {
+      "id": "MARKETING-003",
+      "module": "Marketing Site",
+      "description": "Future publication is fail-closed behind a separate owner-approved packet naming the canonical host, redirects, hosting account and path, DNS and TLS ownership, exact commit and artifact digest, privacy and analytics policy, rollback, operator, and independent verification. Repository documentation contains no operative provider endpoint, credential, live DNS record, deployment claim, or instruction that can be mistaken for current authorization.",
+      "status": "PASS",
+      "api_tests": [
+        "STATIC-MARKETING-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "site/tiltseven/README.md",
+        "site/tiltseven/deployment.md",
+        "tests/marketing_site_tests.py"
+      ],
+      "introduced_in": "pr-372-tiltseven-repository-scaffold",
+      "changed_in": "pr-372-tiltseven-repository-scaffold",
+      "notes": "The publication checklist is planning material only. No public artifact, provider mutation, DNS, TLS, billing, upload, cutover, or deployment occurs in this slice."
+    },
+    {
+      "id": "TEST-107",
+      "module": "Tests",
+      "description": "Listener-free evidence parses both locale documents, local resources, the SVG mark, CSS, module ownership, visual matrix, and publication boundary to reject missing semantics, inaccessible navigation, external runtime dependencies, payment or data-collection surfaces, missing safety language, undeclared network destinations, broken asset paths, provider details, or live deployment claims. Hosted Browser evidence independently opens the checked local English and Russian documents with reduced motion, proves landmark identity, keyboard focus, safety copy, exact Casino destination, local resource completion, minimum readable geometry, and page containment at all four governed viewports, and emits eight exact-head PNG and provenance-sidecar pairs.",
+      "status": "PASS",
+      "api_tests": [
+        "STATIC-MARKETING-001"
+      ],
+      "browser_tests": [
+        "BR-MARKETING-001"
+      ],
+      "implementation_files": [
+        "tests/marketing_site_tests.py",
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "pr-372-tiltseven-repository-scaffold",
+      "changed_in": "pr-372-tiltseven-repository-scaffold",
+      "notes": "TEST-107 is the first free permanent ID after merged TEST-106 and before the separately allocated TEST-108 through TEST-110. The hosted Browser case performs no public navigation or local publication and activates no Casino, provider, DNS, TLS, billing, signup, or deployment behavior."
+    },
+    {
       "id": "REPLAY-001",
       "module": "Core",
       "description": "Round-replay artifacts are derived from the already-committed authoritative history rather than a second per-round store, are scoped to the authenticated session's own rounds, are bounded and paginated with a clamped page size, and are retained only for a conservative fixed window. Every artifact declares that it is a replay record with no settlement authority, so it can never act as an alternate wallet or outcome source.",
@@ -10640,7 +10724,9 @@
       "api_tests": [
         "API-ACCOUNT-SPINE-001"
       ],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-ADMIN-USERS-001"
+      ],
       "implementation_files": [
         "casino/admin.py",
         "web/admin.js",
@@ -10648,7 +10734,8 @@
         "web/i18n/ru-RU/admin.json",
         "contracts/openapi/admin-users.v2.yaml",
         "tests/account_spine_tests.py",
-        "tests/run_tests.py"
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
       ],
       "introduced_in": "product-account-spine",
       "changed_in": "product-account-spine",
@@ -10687,7 +10774,9 @@
       "api_tests": [
         "API-ACCOUNT-SPINE-001"
       ],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-ADMIN-USERS-001"
+      ],
       "implementation_files": [
         "web/i18n/en-US/",
         "web/i18n/ru-RU/",
@@ -10706,14 +10795,17 @@
       "api_tests": [
         "API-ACCOUNT-SPINE-001"
       ],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-ADMIN-USERS-001"
+      ],
       "implementation_files": [
         "tests/account_spine_tests.py",
-        "tests/run_tests.py"
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
       ],
       "introduced_in": "product-account-spine",
       "changed_in": "product-account-spine",
-      "notes": "The suite is listener-free so it can run before hosted browser visual evidence; browser-visible UI remains covered by ordinary Browser Tests on the exact PR head."
+      "notes": "Listener-free service evidence is paired with the exact-head BR-ADMIN-USERS-001 role/lifecycle interaction and eight governed EN/RU Admin images across four standard viewports."
     }
   ]
 }

@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">TiltSeven mark</title>
+  <desc id="desc">A gold seven leaning over a dark casino-table diamond.</desc>
+  <defs>
+    <linearGradient id="felt" x1="24" x2="232" y1="32" y2="232" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0a3b2a"/>
+      <stop offset="0.55" stop-color="#03160f"/>
+      <stop offset="1" stop-color="#010704"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="74" x2="190" y1="42" y2="208" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fff3bd"/>
+      <stop offset="0.42" stop-color="#f3bd4f"/>
+      <stop offset="0.74" stop-color="#b87916"/>
+      <stop offset="1" stop-color="#ffdf7a"/>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <rect width="256" height="256" rx="56" fill="#020806"/>
+  <path d="M128 20 236 128 128 236 20 128Z" fill="url(#felt)" stroke="#f4cf72" stroke-width="6"/>
+  <path d="M72 75c0-11 8-19 19-19h83c8 0 14 3 18 9 4 5 5 13 2 20l-57 125c-4 9-12 14-22 14-16 0-27-16-20-31l43-94H91c-11 0-19-8-19-19v-5Z" fill="url(#gold)" filter="url(#glow)"/>
+  <path d="M85 84h74l-9 20H90c-10 0-18-8-18-18 3-1 7-2 13-2Z" fill="#fff6cd" opacity=".72"/>
+  <circle cx="77" cy="178" r="11" fill="#f6d77b"/>
+  <circle cx="184" cy="66" r="8" fill="#f6d77b"/>
+</svg>
