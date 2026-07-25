@@ -29,12 +29,20 @@ finite, exact hypergeometric for Daily Draw Lab, seeded Monte-Carlo for Trente e
 spec's draft payouts were not house-positive (Pachinko's inverted binomial, Lucky Grid's 1-match pay,
 Daily Draw Lab's stingy table) I retuned to a real edge and documented it in the requirement.
 
-## Remaining: 6 poker variants (#131/#138/#141/#143/#145/#150)
+## Wave 3 poker variants — owner chose FULL stateful services
 
-These are the Wave 3 games and do NOT fit the stateless single-action core (multi-stage ante/raise/fold,
-dealer-qualify, hand ranking). They belong as standalone stateful services like the existing
-`three_card_poker`/`casino_holdem`, not on `simple_game.py`. Holding for owner direction on scope/approach
-before starting — they are a materially larger and different build than the 11 above.
+Building each as a complete multi-stage service like `casino_holdem` (Pattern B: apply_once + fingerprint +
+action_receipts, reload-safe recovery), reusing `casino/core/cards.py` + `casino/core/poker.py` and the
+shared ledger — NOT the stateless core.
+
+- **12. Four Card Poker (#141) — DONE, browser-verified.** FOURCP-001/002, TEST-126. Ante -> deal ->
+  play 1x-3x/fold -> settle vs a six-card dealer; own four-card evaluator (trips > flush/straight); ties to
+  player; Ante Bonus + independent Aces Up; ~4.7% edge under optimal play (Monte-Carlo proven). Routes:
+  `POST /api/v1/games/four-card-poker/rounds` and `.../rounds/{round_id}/decisions`. Tx types
+  FOUR_CARD_POKER_OPENING_DEBIT / _PLAY_DEBIT / _SETTLEMENT_CREDIT.
+
+Remaining 5: Mississippi Stud (#143), Double Bonus VP (#131), Teen Patti (#150), Pai Gow Poker (#138),
+Pai Gow Tiles (#145). Each is a large stateful build; landing them into #381 one at a time.
 
 ## Open pull requests I authored (drafts; I never merge)
 
