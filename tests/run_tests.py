@@ -1152,6 +1152,19 @@ def run_api_tests():
             raise AssertionError('coin pusher suite failed')
     # Record the listener-free Coin Pusher cascade, hold, retry, and house-edge proof.
     run_case('API-COIN-PUSHER-001',['COINP-001','COINP-002','TEST-121'],run_coin_pusher_tests)
+    # Execute the Marble Race rules and settlement proof without opening a listener.
+    def run_marble_race_tests():
+        # Load only the focused Marble Race class.
+        from tests import marble_race_tests
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(marble_race_tests.MarbleRaceTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused Marble Race proof failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure text secret-safe.
+            raise AssertionError('marble race suite failed')
+    # Record the listener-free Marble Race win, podium, retry, and house-edge proof.
+    run_case('API-MARBLE-RACE-001',['MARBLE-001','MARBLE-002','TEST-122'],run_marble_race_tests)
     # Discover and execute every focused restricted-preview security module without opening a listener.
     def run_restricted_preview_security_tests():
         # Load the package directory through unittest's standard test discovery.

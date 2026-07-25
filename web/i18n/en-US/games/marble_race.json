@@ -1,0 +1,20 @@
+{
+  "title": "Marble Race",
+  "bet.title": "Market",
+  "bet.win": "Winner",
+  "bet.podium": "Podium",
+  "pick.title": "Your marble",
+  "marble.red": "Red",
+  "marble.blue": "Blue",
+  "marble.green": "Green",
+  "marble.yellow": "Yellow",
+  "marble.purple": "Purple",
+  "marble.orange": "Orange",
+  "stake.title": "Stake",
+  "action.race": "Start the race",
+  "action.racing": "Racing…",
+  "result.idle": "Pick a marble and race.",
+  "result.finish": "{winner} wins the race!",
+  "error.load": "Could not load Marble Race.",
+  "error.race": "Race could not be completed."
+}

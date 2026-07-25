@@ -10966,6 +10966,45 @@
       "notes": "Allocated for GitHub issue #156."
     },
     {
+      "id": "MARBLE-001",
+      "module": "Marble Race",
+      "description": "Marble Race runs six equally fast marbles that finish in a uniformly random order on the shared exactly-once settlement core. A race debits one bounded play-token stake on one of two markets: a win bet backs a marble to finish first and pays five point seven times the stake, and a podium bet backs a marble to finish in the top three and pays one point nine times the stake. The true odds are five to one and even money, and each payout applies a five percent track takeout, so both markets return 0.95 on average for a house edge of five percent. Unknown markets, out-of-range marbles, and non-integer, non-positive, or over-limit stakes are rejected before any wallet movement.",
+      "status": "PASS",
+      "api_tests": [
+        "API-MARBLE-RACE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/marble_race/rules.py",
+        "casino/games/marble_race/engine.py",
+        "casino/games/marble_race/api.py",
+        "web/games/marble_race.js",
+        "contracts/openapi/marble_race.v1.yaml"
+      ],
+      "introduced_in": "issue-157-marble-race",
+      "changed_in": "issue-157-marble-race",
+      "notes": "Allocated for GitHub issue #157, a catalog-expansion game (#73). The module supplies only pure rules; the shared core owns settlement."
+    },
+    {
+      "id": "MARBLE-002",
+      "module": "Marble Race",
+      "description": "Marble Race inherits the shared core's exactly-once settlement: one caller-stable request id maps to one race, a retry replays the identical committed finishing order and payout without moving the wallet again, and a request id reused with different wager content fails closed. The additive v1 contract exposes only the game-owned state and races routes and never alters the frozen shared API. Every race commits a full six-marble finishing order, and the published bet catalog reports honest marbles, podium size, and multipliers.",
+      "status": "PASS",
+      "api_tests": [
+        "API-MARBLE-RACE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/marble_race/api.py",
+        "casino/core/simple_game.py",
+        "tests/marble_race_tests.py",
+        "tests/game_drivers/marble_race.py"
+      ],
+      "introduced_in": "issue-157-marble-race",
+      "changed_in": "issue-157-marble-race",
+      "notes": "Allocated for GitHub issue #157."
+    },
+    {
       "id": "TEST-115",
       "module": "Tests",
       "description": "Listener-free evidence verifies Color Wheel: a matching colour pays its multiplier, a non-matching colour loses the stake, the gold segment pays its jackpot multiplier, unknown colours and malformed stakes are rejected before any wallet movement, a retried spin replays without double-spending, every colour payout is confirmed house-positive, and the published bet catalog matches the real segment layout and multipliers.",
@@ -11083,6 +11122,23 @@
       "introduced_in": "issue-156-coin-pusher",
       "changed_in": "issue-156-coin-pusher",
       "notes": "Allocated for GitHub issue #156."
+    },
+    {
+      "id": "TEST-122",
+      "module": "Tests",
+      "description": "Listener-free evidence verifies Marble Race: a win bet on the first-place marble pays the win multiplier, a win bet on any other marble loses, a podium bet on a top-three marble pays the podium multiplier, a podium bet outside the top three loses, unknown markets, out-of-range marbles, and malformed stakes are rejected before any wallet movement, a retried race replays without double-spending, and both the win and podium markets are confirmed house-positive over all 720 finishing orders.",
+      "status": "PASS",
+      "api_tests": [
+        "API-MARBLE-RACE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/marble_race_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-157-marble-race",
+      "changed_in": "issue-157-marble-race",
+      "notes": "Allocated for GitHub issue #157."
     }
   ]
 }

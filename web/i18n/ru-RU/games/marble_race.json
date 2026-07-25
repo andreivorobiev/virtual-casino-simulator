@@ -1,0 +1,20 @@
+{
+  "title": "Гонка шариков",
+  "bet.title": "Рынок",
+  "bet.win": "Победитель",
+  "bet.podium": "Подиум",
+  "pick.title": "Ваш шарик",
+  "marble.red": "Красный",
+  "marble.blue": "Синий",
+  "marble.green": "Зелёный",
+  "marble.yellow": "Жёлтый",
+  "marble.purple": "Фиолетовый",
+  "marble.orange": "Оранжевый",
+  "stake.title": "Ставка",
+  "action.race": "Начать гонку",
+  "action.racing": "Гонка…",
+  "result.idle": "Выберите шарик и начните гонку.",
+  "result.finish": "{winner} выигрывает гонку!",
+  "error.load": "Не удалось загрузить Гонку шариков.",
+  "error.race": "Не удалось завершить гонку."
+}
