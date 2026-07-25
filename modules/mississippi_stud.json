@@ -5,7 +5,7 @@
   "requirements_prefixes": ["MSTUD"],
   "contracts": ["contracts/openapi/mississippi_stud.v1.yaml"],
   "game": {
-    "id": "mississippi_stud", "sort_order": 430, "route": "/games/mississippi_stud", "label": "Mississippi Stud", "category": "poker", "categories": ["table", "cards", "poker", "strategy"],
+    "id": "mississippi_stud", "sort_order": 450, "route": "/games/mississippi_stud", "label": "Mississippi Stud", "category": "poker", "categories": ["table", "cards", "poker", "strategy"],
     "backend": {"register": "casino.games.mississippi_stud.api:register"},
     "frontend": {"module": "./games/mississippi_stud.js", "export": "MississippiStudGame", "ready_testid": "mississippi-stud", "i18n_domain": "games/mississippi_stud", "i18n_probe": "action.deal"},
     "tests": {"long_driver": "tests.game_drivers.mississippi_stud:play"},
