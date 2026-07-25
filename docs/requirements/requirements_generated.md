@@ -15,7 +15,7 @@ Historical source baseline: 9.1.0
 - audio: 9.1.1
 - admin: 1.11.3
 - operations: 1.0.0
-- marketing_site: 1.0.2
+- marketing_site: 1.0.3
 - roulette: 9.4.8
 - slots: 9.1.4
 - blackjack: 9.1.3

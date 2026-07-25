@@ -187,7 +187,7 @@ class MarketingSiteTests(unittest.TestCase):
         # Load the dedicated site-module descriptor.
         module = json.loads((ROOT / "modules" / "marketing_site.json").read_text(encoding="utf-8"))
         # Require exact aggregate, descriptor, path, and prefix ownership.
-        self.assertEqual((manifest["modules"]["marketing_site"], module["module"], module["version"], module["paths"], module["requirements_prefixes"]), ("1.0.2", "marketing_site", "1.0.2", ["site/tiltseven/"], ["MARKETING"]))
+        self.assertEqual((manifest["modules"]["marketing_site"], module["module"], module["version"], module["paths"], module["requirements_prefixes"]), ("1.0.3", "marketing_site", "1.0.3", ["site/tiltseven/"], ["MARKETING"]))
         # Load the executable visual inventory.
         matrix = json.loads((ROOT / "tests" / "visual" / "visual_matrix.json").read_text(encoding="utf-8"))
         # Isolate the marketing row.
