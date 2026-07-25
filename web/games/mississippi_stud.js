@@ -154,8 +154,8 @@ function render() {
   const deciding = round && round.phase === 'decision';
   // Build the stage markup for the current phase.
   const stage = deciding ? decisionStage(round) : round && round.phase === 'settled' ? settledStage(round) : idleStage();
-  // Build the side panel with wager input and the paytable.
-  const panel = sidePanel(deciding);
+  // Hide the duplicate wager card once the settled stage already offers Deal again.
+  const panel = sidePanel(deciding || round?.phase === 'settled');
   // Paint the whole route.
   root.innerHTML = `<section class="msstud" data-testid="mississippi-stud"><div class="ms-stage">${stage}</div><div class="ms-panel">${panel}</div></section>`;
   // Wire the interactive controls for the current stage.
@@ -197,9 +197,9 @@ function settledStage(round) {
 }
 
 // Build the side panel with the ante input and the paytable.
-function sidePanel(deciding) {
-  // Hide the ante input while a decision is pending.
-  const wagerCard = deciding ? '' : `<div class="ms-card"><h3>${safe(text('label.ante'))}</h3><div class="ms-field"><label for="ms-ante">${safe(text('label.ante'))}</label><input id="ms-ante" data-ante type="number" min="1" step="1" value="${ante}"></div><button class="ms-btn deal" data-deal="1" type="button" ${busy ? 'disabled' : ''}>${safe(text('action.deal'))}</button></div>`;
+function sidePanel(hideWager) {
+  // Hide the ante input while a decision is pending or the settled stage owns the replay action.
+  const wagerCard = hideWager ? '' : `<div class="ms-card"><h3>${safe(text('label.ante'))}</h3><div class="ms-field"><label for="ms-ante">${safe(text('label.ante'))}</label><input id="ms-ante" data-ante type="number" min="1" step="1" value="${ante}"></div><button class="ms-btn deal" data-deal="1" type="button" ${busy ? 'disabled' : ''}>${safe(text('action.deal'))}</button></div>`;
   // Build the paytable card.
   const paytable = `<div class="ms-card"><h3>${safe(text('label.paytable'))}</h3><div class="ms-pays">${paytableRows()}</div></div>`;
   // Return the stacked side panel.
