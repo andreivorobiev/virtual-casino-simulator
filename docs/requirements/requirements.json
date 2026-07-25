@@ -11069,6 +11069,86 @@
       "introduced_in": "issue-150-teen-patti",
       "changed_in": "issue-150-teen-patti",
       "notes": "Allocated after Mississippi Stud TEST-115. The governed Browser corpus contains exactly forty-eight after-pass Teen Patti images: six evidence moments by two locales by four standard viewports."
+    },
+    {
+      "id": "I18N-010",
+      "module": "Application",
+      "description": "Player-facing game copy uses complete locale-owned terminology and truthful return semantics: Caribbean Stud names the public Call action consistently, Joker Poker and Multi-Hand Video Poker describe total returned credits rather than profit odds, Slots recent history hides raw round identifiers, Russian Roulette uses grammatical range labels, and Russian Baccarat exposes no borrowed English natural or burn terms.",
+      "status": "PASS",
+      "api_tests": [
+        "UI-GAME-POLISH-001"
+      ],
+      "browser_tests": [
+        "BR-CS-001",
+        "BR-JP-001",
+        "BR-MHVP-001",
+        "BR-SLOT-001",
+        "BR-I18N-GAMESTATE-ROU-001",
+        "BR-BAC-COPY-001"
+      ],
+      "implementation_files": [
+        "web/i18n/en-US/games/caribbean_stud.json",
+        "web/i18n/en-US/games/joker_poker.json",
+        "web/i18n/en-US/games/multi_hand_video_poker.json",
+        "web/i18n/en-US/games/slots.json",
+        "web/i18n/ru-RU/games/baccarat.json",
+        "web/i18n/ru-RU/games/caribbean_stud.json",
+        "web/i18n/ru-RU/games/joker_poker.json",
+        "web/i18n/ru-RU/games/multi_hand_video_poker.json",
+        "web/i18n/ru-RU/games/roulette.json",
+        "web/i18n/ru-RU/games/slots.json",
+        "tests/game_polish_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "pr-393-games-review-improve",
+      "changed_in": "pr-393-games-review-improve",
+      "notes": "The correction changes only existing locale values; resource keys and placeholder parity remain stable."
+    },
+    {
+      "id": "UX-020",
+      "module": "Application",
+      "description": "Every semantic button, input, select, and explicitly keyboard-focusable control mounted in the shared game outlet receives a visible high-contrast focus indicator when no more specific game-owned focus-visible treatment applies. The fallback uses zero selector specificity so game modules retain control of stronger intentional focus styles.",
+      "status": "PASS",
+      "api_tests": [
+        "UI-GAME-POLISH-001"
+      ],
+      "browser_tests": [
+        "BR-CS-001"
+      ],
+      "implementation_files": [
+        "web/styles.css",
+        "tests/game_polish_tests.py",
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "pr-393-games-review-improve",
+      "changed_in": "pr-393-games-review-improve",
+      "notes": "Hosted evidence uses a real keyboard transition from the Caribbean Stud ante input to a public game control and records the computed focus ring."
+    },
+    {
+      "id": "TEST-117",
+      "module": "Tests",
+      "description": "Listener-free evidence pins the exact corrected EN/RU copy values, placeholder privacy boundary, grammatical range labels, and zero-specificity shared game focus rule. Hosted Browser evidence renders the corrected Caribbean Stud, Joker Poker, Multi-Hand Video Poker, Slots, Roulette, and Baccarat copy on their real routes, proves a real keyboard-reached game control receives the shared focus ring, captures exact-head governed evidence, and preserves every existing game interaction and visual-matrix gate.",
+      "status": "PASS",
+      "api_tests": [
+        "UI-GAME-POLISH-001"
+      ],
+      "browser_tests": [
+        "BR-CS-001",
+        "BR-JP-001",
+        "BR-MHVP-001",
+        "BR-SLOT-001",
+        "BR-I18N-GAMESTATE-ROU-001",
+        "BR-BAC-COPY-001"
+      ],
+      "implementation_files": [
+        "tests/game_polish_tests.py",
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "pr-393-games-review-improve",
+      "changed_in": "pr-393-games-review-improve",
+      "notes": "Allocated after Teen Patti TEST-116. Stale held PR #381 must reallocate its overlapping draft TEST-117 before it can become actionable."
     }
   ]
 }

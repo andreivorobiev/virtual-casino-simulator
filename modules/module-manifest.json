@@ -2,7 +2,7 @@
   "application": "9.5.4",
   "source_baseline": "9.1.0",
   "modules": {
-    "application": "9.51.10",
+    "application": "9.51.11",
     "core": "9.23.0",
     "ledger": "9.1.1",
     "players": "9.1.0",
@@ -46,8 +46,8 @@
     "texas_holdem_practice_table": "1.0.0",
     "pai_gow_poker": "1.0.1",
     "teen_patti": "1.0.1",
-    "tests": "1.60.25",
-    "docs": "1.60.24",
+    "tests": "1.60.26",
+    "docs": "1.60.25",
     "contracts": "1.48.0",
     "tooling": "1.20.3",
     "commenting_policy": "1.0.0"

@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.51.10
+- application: 9.51.11
 - core: 9.23.0
 - ledger: 9.1.1
 - players: 9.1.0
@@ -50,8 +50,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.0.0
 - pai_gow_poker: 1.0.1
 - teen_patti: 1.0.1
-- tests: 1.60.25
-- docs: 1.60.24
+- tests: 1.60.26
+- docs: 1.60.25
 - contracts: 1.48.0
 - tooling: 1.20.3
 - commenting_policy: 1.0.0
@@ -836,3 +836,6 @@ Historical source baseline: 9.1.0
 - **TEENP-001** (Teen Patti) - PASS: Teen Patti Practice is a stateful three-card poker played against the dealer. The player antes, sees three cards, then folds and forfeits the ante or makes a fixed Play wager equal to the ante. The dealer qualifies with a queen-high hand or better; if the dealer does not qualify the ante pays even money and the Play pushes, and if the dealer qualifies the best three-card hand wins both wagers even money with ties pushing. Teen Patti ranks a trail highest, then a pure sequence, a sequence, a colour, a pair, and a high card, so a sequence outranks a colour. A Bonus pays on the player's own trail, pure sequence, or sequence regardless of the dealer. Deal and decision are exactly-once and reload-safe on the shared ledger and player-scoped state store.
 - **TEENP-002** (Teen Patti) - PASS: Teen Patti Practice preserves authenticated player ownership, private dealer cards until showdown, one caller-stable action identity per deal or decision, replay of the identical committed result without another wallet movement, conflict rejection for changed action content, and reload recovery from committed ledger proof. The additive v1 contract exposes only game-owned state, rounds, and decisions routes and retains the standard success and error envelopes. English and Russian public controls remain accessible, responsive, reduced-motion safe, and restorable at the canonical route.
 - **TEST-116** (Tests) - PASS: Listener-free evidence verifies Teen Patti ranking, settlement, dealer qualification, independent Bonus payment, fold privacy, replay idempotency, conflicting action rejection, reload recovery, invalid-input rejection, authenticated route identity, and a seeded house-positive sample. Hosted Browser evidence verifies ready, decision, played settlement, folded privacy, reduced-motion, and canonical route-restored states through public controls in English and Russian at desktop-primary, desktop-compact, tablet, and mobile dimensions.
+- **I18N-010** (Application) - PASS: Player-facing game copy uses complete locale-owned terminology and truthful return semantics: Caribbean Stud names the public Call action consistently, Joker Poker and Multi-Hand Video Poker describe total returned credits rather than profit odds, Slots recent history hides raw round identifiers, Russian Roulette uses grammatical range labels, and Russian Baccarat exposes no borrowed English natural or burn terms.
+- **UX-020** (Application) - PASS: Every semantic button, input, select, and explicitly keyboard-focusable control mounted in the shared game outlet receives a visible high-contrast focus indicator when no more specific game-owned focus-visible treatment applies. The fallback uses zero selector specificity so game modules retain control of stronger intentional focus styles.
+- **TEST-117** (Tests) - PASS: Listener-free evidence pins the exact corrected EN/RU copy values, placeholder privacy boundary, grammatical range labels, and zero-specificity shared game focus rule. Hosted Browser evidence renders the corrected Caribbean Stud, Joker Poker, Multi-Hand Video Poker, Slots, Roulette, and Baccarat copy on their real routes, proves a real keyboard-reached game control receives the shared focus ring, captures exact-head governed evidence, and preserves every existing game interaction and visual-matrix gate.

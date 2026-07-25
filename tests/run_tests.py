@@ -1030,6 +1030,20 @@ def run_api_tests():
             raise AssertionError('teen patti suite failed')
     # Record the Teen Patti ranking, settlement, replay, recovery, authenticated route, and house-edge proof.
     run_case('API-TEEN-PATTI-001',['TEENP-001','TEENP-002','TEST-116'],run_teen_patti_tests)
+    # Execute the corrected cross-game copy and shared keyboard-focus contract without opening a listener.
+    def run_game_polish_tests():
+        # Import the focused suite only when its mapped API case runs.
+        from tests import game_polish_tests
+        # Load exactly the copy and focus assertions allocated to TEST-117.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(game_polish_tests.GamePolishTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused copy or focus assertion failed.
+        if not result.wasSuccessful():
+            # Preserve one stable diagnostic while unittest retains assertion detail.
+            raise AssertionError('cross-game copy and focus suite failed')
+    # Record the listener-free return semantics, identifier privacy, Russian terminology, and focus proof.
+    run_case('UI-GAME-POLISH-001',['I18N-010','UX-020','TEST-117'],run_game_polish_tests)
     # Execute the opt-in wellness, current-session summary, concurrency, and neutral-copy proof without a listener.
     def run_wellness_tests():
         # Import the focused suite only when its mapped API case runs.
@@ -4346,6 +4360,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.get_by_test_id('nav-multi_hand_video_poker').click(); page.get_by_test_id('multi-hand-video-poker').wait_for(timeout=5000)
                     # Require the canonical route and complete English title before interaction.
                     assert page.url.split('?',1)[0].endswith('/games/multi_hand_video_poker') and page.locator('.mhvp-header h1').inner_text()=='Multi-Hand Video Poker'
+                    # Require the visible push row to state one returned credit rather than one-to-one profit odds.
+                    assert '1× returned' in page.locator('.mhvp-data').inner_text()
                     # Reject raw resource identifiers from the initial player-facing surface.
                     visible_lines={line.strip() for line in page.locator('body').inner_text().splitlines() if line.strip()}
                     # Require representative owned resource keys to stay internal.
@@ -4390,6 +4406,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(150); game_evidence('after-pass-mhvp-route-restored-en-desktop_primary.png','multi_hand_video_poker',['route_restored','settled_10_hands'],'en-US','desktop_primary')
                     # Switch the mounted real game to Russian without losing its persisted state.
                     page.get_by_test_id('shell-locale-select').select_option('ru-RU'); page.wait_for_function("() => document.querySelector('.mhvp-header h1')?.textContent === 'Мультиручный видеопокер'")
+                    # Require the Russian paytable to preserve the same total-return meaning.
+                    assert '\u0432\u043e\u0437\u0432\u0440\u0430\u0442 1×' in page.locator('.mhvp-data').inner_text()
                     # Reject representative English game copy from the Russian player-facing surface.
                     russian_copy=page.get_by_test_id('multi-hand-video-poker').inner_text(); english_phrases=['Multi-Hand Video Poker','Deal hands','Draw cards','Play controls','Paytable','Ready to deal','Choose cards to hold','play tokens']; assert not [phrase for phrase in english_phrases if phrase.lower() in russian_copy.lower()],russian_copy
                     # Select three hands and start a Russian real-backend round for actionable evidence.
@@ -4413,7 +4431,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Return to the lobby so route restoration and existing game interactions start normally.
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Execute real-backend mode, localization, responsive, route, and visual acceptance coverage.
-                run_case('BR-MHVP-001',['MHVP-001','MHVP-002','MHVP-004','MHVP-005'],multi_hand_video_poker_acceptance)
+                run_case('BR-MHVP-001',['MHVP-001','MHVP-002','MHVP-004','MHVP-005','I18N-010','TEST-117'],multi_hand_video_poker_acceptance)
                 # Define real-backend Casino War browser and visual acceptance coverage.
                 def casino_war_acceptance():
                     # Open the catalog-generated route and wait for its module-owned table selector.
@@ -5530,6 +5548,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
                     # Load exact UTF-8 title expectations from the paired canonical resource files.
                     expected_titles={locale:read_i18n_json(ROOT/'web'/'i18n'/locale/'games'/'caribbean_stud.json')['title'] for locale in ('en-US','ru-RU')}
+                    # Load the locale-owned Call heading so screenshots cannot accept stale Raise terminology.
+                    expected_paytable_titles={locale:read_i18n_json(ROOT/'web'/'i18n'/locale/'games'/'caribbean_stud.json')['paytable.title'] for locale in ('en-US','ru-RU')}
                     # Capture one mounted state across both locales and every viewport.
                     def localized_evidence(prefix,states):
                         # Iterate through paired English and Russian game resources.
@@ -5538,6 +5558,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_timeout(100)
                             # Require the localized game title rather than a fallback key or English leakage.
                             assert page.locator('.cs-header h1').inner_text()==expected_titles[locale]
+                            # Require the paytable heading to match the public Call action in the active locale.
+                            assert page.locator('.cs-data h2').first.inner_text()==expected_paytable_titles[locale]
                             # Validate containment and capture after-pass evidence at every viewport.
                             for viewport_id,width,height in required_viewports:
                                 # Resize to the exact visual matrix dimensions.
@@ -5552,8 +5574,16 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     localized_evidence('ready',['ready'])
                     # Read the English return-table panel before any deal mutates the round. (CS-006, TEST-063)
                     caribbean_stud_paytable_text=page.locator('.cs-data').inner_text()
-                    # Require the strongest and weakest published raise odds to be visible with localized hand labels.
-                    assert 'Raise payout schedule' in caribbean_stud_paytable_text and 'Royal flush' in caribbean_stud_paytable_text and '100:1' in caribbean_stud_paytable_text and 'High card' in caribbean_stud_paytable_text and '1:1' in caribbean_stud_paytable_text
+                    # Require the strongest and weakest published Call returns to be visible with localized hand labels.
+                    assert 'Call payout schedule' in caribbean_stud_paytable_text and 'Royal flush' in caribbean_stud_paytable_text and '100:1' in caribbean_stud_paytable_text and 'High card' in caribbean_stud_paytable_text and '1:1' in caribbean_stud_paytable_text
+                    # Move keyboard focus from the real ante input to the next public game control.
+                    page.locator('#cs-ante').focus(); page.keyboard.press('Tab')
+                    # Read the actual focused control and computed shared outline.
+                    caribbean_focus=page.evaluate("""() => { const active=document.activeElement; const style=getComputedStyle(active); return {inside:Boolean(active?.closest('[data-testid="caribbean-stud"]')),visible:active?.matches(':focus-visible')||false,width:parseFloat(style.outlineWidth)||0,offset:parseFloat(style.outlineOffset)||0}; }""")
+                    # Require the shared game fallback to be visible on a real keyboard-reached control.
+                    assert caribbean_focus['inside'] and caribbean_focus['visible'] and caribbean_focus['width']>=3 and caribbean_focus['offset']>=2,caribbean_focus
+                    # Record focused exact-head evidence on the representative game surface.
+                    game_evidence('after-pass-game-polish-focus-en-US-desktop_primary.png','caribbean_stud',['ready','keyboard_focus'],'en-US','desktop_primary')
                     # Deal through the public frontend and require private dealer hole cards during the decision.
                     page.locator('#cs-ante').fill('1'); page.locator('[data-action="deal"]').click(); page.wait_for_function("() => document.querySelector('.cs-phase')?.textContent === 'Decision'",timeout=10000); assert page.locator('[aria-label="Face-down dealer card"]').count()==4
                     # Capture the actionable call-or-fold decision.
@@ -5567,7 +5597,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Return to the lobby for downstream browser cases.
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Execute the integrated Caribbean Stud browser and visual gate.
-                run_case('BR-CS-001',['CS-001','CS-002','CS-004','CS-005','CS-006','TEST-063'],caribbean_stud_acceptance)
+                run_case('BR-CS-001',['CS-001','CS-002','CS-004','CS-005','CS-006','I18N-010','UX-020','TEST-063','TEST-117'],caribbean_stud_acceptance)
                 # Define real-backend Let It Ride localization, staged decisions, responsive, motion, and route acceptance.
                 def let_it_ride_acceptance():
                     # Open the catalog-owned route and wait for the stable game selector.
@@ -5737,6 +5767,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
                     # Load exact UTF-8 title expectations from the paired canonical resource files.
                     expected_titles={locale:read_i18n_json(ROOT/'web'/'i18n'/locale/'games'/'joker_poker.json')['title'] for locale in ('en-US','ru-RU')}
+                    # Load exact total-return wording so both rendered paytables reject profit-odds ambiguity.
+                    expected_returns={locale:read_i18n_json(ROOT/'web'/'i18n'/locale/'games'/'joker_poker.json')['paytable.multiplier'].replace('{value}','1') for locale in ('en-US','ru-RU')}
                     # Capture one mounted state across both locales and every viewport.
                     def localized_evidence(prefix,states):
                         # Iterate through paired English and Russian game resources.
@@ -5745,6 +5777,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_timeout(100)
                             # Require the localized title rather than a fallback key or English leakage.
                             assert page.locator('.jp-header h1').inner_text()==expected_titles[locale]
+                            # Require the visible push row to state one returned credit rather than one-to-one profit odds.
+                            assert expected_returns[locale] in page.locator('.jp-data').inner_text()
                             # Validate containment and capture after-pass evidence at every viewport.
                             for viewport_id,width,height in required_viewports:
                                 # Resize to the exact visual matrix dimensions.
@@ -5788,7 +5822,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Return to the lobby for downstream browser cases.
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Execute the integrated Joker Poker browser and visual gate.
-                run_case('BR-JP-001',['JP-001','JP-002','JP-004','JP-005'],joker_poker_acceptance)
+                run_case('BR-JP-001',['JP-001','JP-002','JP-004','JP-005','I18N-010','TEST-117'],joker_poker_acceptance)
                 # Define real-backend Double Bonus localization, hold, draw, responsive, motion, and route acceptance.
                 def double_bonus_video_poker_acceptance():
                     # Open the catalog-owned route and wait for the stable game selector.
@@ -6423,10 +6457,12 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     assert_no_visible_roulette_keys()
                     # Verify localized Roulette amounts retain explicit fake-money language without the legacy glyph.
                     assert '\u0438\u0433\u0440\u043e\u0432\u044b\u0445 \u0442\u043e\u043a\u0435\u043d\u043e\u0432' in page.get_by_test_id('roulette-premium').inner_text()
+                    # Require grammatical Russian range prepositions on both outside-bet controls.
+                    assert '\u043e\u0442 1 \u0434\u043e 18' in page.get_by_test_id('roulette-premium').inner_text() and '\u043e\u0442 19 \u0434\u043e 36' in page.get_by_test_id('roulette-premium').inner_text()
                     # Verify shared keyboard scroll semantics survive the localized game rerender.
                     assert page.get_by_test_id('roulette-control-rail').get_attribute('tabindex')=='0'
                 # Execute this statement as part of the module's documented control flow.
-                run_case('BR-I18N-GAMESTATE-ROU-001',['I18N-001','I18N-002','ROU-046'],roulette_i18n_state)
+                run_case('BR-I18N-GAMESTATE-ROU-001',['I18N-001','I18N-002','I18N-010','ROU-046','TEST-117'],roulette_i18n_state)
                 # Capture the authoritative backend spin response while using the visible Roulette action.
                 with page.expect_response(lambda response: response.url.endswith('/api/v1/games/roulette/spin') and response.request.method == 'POST') as roulette_spin_response_info:
                     # Spin the wheel through the dominant Roulette UI action.
@@ -6879,6 +6915,20 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     assert slots_state_pill.count()==1 and slots_state_pill.get_attribute('role')=='status' and page.locator('.slots-cabinet-footer button.primary').count()==0
                     # Verify recent spins are shown in the right drawer.
                     assert page.get_by_test_id('slots-recent-spins').is_visible()
+                    # Read the authoritative latest round so its internal identifier can be rejected from rendered history.
+                    slots_latest=page.request.get(base+'/api/v1/games/slots/state').json()['data']['state']['last_spins'][-1]
+                    # Exercise the privacy-safe history row in both installed locales.
+                    for locale in ('en-US','ru-RU'):
+                        # Switch the mounted cabinet through the public locale control.
+                        page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_timeout(100)
+                        # Read the localized history after the route rerenders.
+                        slots_history_text=page.get_by_test_id('slots-recent-spins').inner_text()
+                        # Require the visible row to retain line count while hiding the raw durable round identifier.
+                        assert slots_latest['round_id'] not in slots_history_text and str(slots_latest['active_lines']) in slots_history_text,slots_history_text
+                        # Record focused exact-head evidence for the privacy-safe localized drawer.
+                        game_evidence(f'after-pass-game-polish-slots-{locale}-desktop_primary.png','slots',['idle'],locale,'desktop_primary')
+                    # Restore English before downstream game navigation.
+                    page.get_by_test_id('shell-locale-select').select_option('en-US'); page.wait_for_timeout(100)
                     # Verify the Slots bot capability panel is reserved.
                     assert page.get_by_test_id('slots-bot-panel').is_visible()
                     # Verify the cabinet width stays stable from idle to spinning.
@@ -6896,7 +6946,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Verify the premium Slots route avoids page-level horizontal overflow.
                     assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1')
                 # Execute this statement as part of the module's documented control flow.
-                run_case('BR-SLOT-001',['SLOT-020','SLOT-021','SLOT-022','SLOT-023','SLOT-024','SLOT-025','SLOT-026','SLOT-027','SLOT-028','TEST-064','AUTO-010','LEDGER-025','UX-007','UX-009'],premium_slots)
+                run_case('BR-SLOT-001',['SLOT-020','SLOT-021','SLOT-022','SLOT-023','SLOT-024','SLOT-025','SLOT-026','SLOT-027','SLOT-028','I18N-010','TEST-064','TEST-117','AUTO-010','LEDGER-025','UX-007','UX-009'],premium_slots)
                 # Navigate to Keno and wait for the premium route shell to mount.
                 page.get_by_test_id('nav-keno').click(); page.get_by_test_id('keno-premium-hero').wait_for(timeout=5000)
                 # Prove edge number cells and their state treatments stay inside the visible board bounds instead of being clipped. (issue #320)
@@ -7229,6 +7279,20 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.get_by_test_id('nav-baccarat').click()
                 # Wait for the wager setup state to mount.
                 page.get_by_test_id('baccarat-wager-setup').wait_for(timeout=5000)
+                # Switch the idle table to Russian so the corrected shoe terminology is exact-head browser evidence.
+                page.get_by_test_id('shell-locale-select').select_option('ru-RU'); page.wait_for_timeout(100)
+                # Define the focused Russian Baccarat copy regression before gameplay changes the visible status list.
+                def baccarat_polish_copy():
+                    # Read the complete mounted table so borrowed English terms cannot hide in a secondary status panel.
+                    russian_baccarat_text=page.locator('.bac-shell').inner_text()
+                    # Require the complete localized burn-card wording and reject the former mixed-language token.
+                    assert '\u0412\u0438\u0434\u043d\u0430 \u0441\u0436\u0438\u0433\u0430\u0435\u043c\u0430\u044f \u043a\u0430\u0440\u0442\u0430' in russian_baccarat_text and ' burn' not in russian_baccarat_text
+                    # Record the exact idle-state copy at primary desktop for governed human review.
+                    game_evidence('after-pass-game-polish-baccarat-ru-RU-desktop_primary.png','baccarat',['wagering'],'ru-RU','desktop_primary')
+                # Execute the locale-owned wording check before returning to English gameplay.
+                run_case('BR-BAC-COPY-001',['BAC-020','I18N-010','TEST-117'],baccarat_polish_copy)
+                # Restore English so established Baccarat assertions retain their deterministic labels.
+                page.get_by_test_id('shell-locale-select').select_option('en-US'); page.wait_for_timeout(100)
                 # Read the fresh shoe summary before any wager/deal builds the lazy backend shoe. (BAC-025, TEST-062)
                 baccarat_initial_shoe_text=page.get_by_test_id('baccarat-shoe-summary').inner_text()
                 # Define the focused fresh-shoe display regression for issue #249.
