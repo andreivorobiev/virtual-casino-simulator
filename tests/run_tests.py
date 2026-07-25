@@ -1034,6 +1034,20 @@ def run_api_tests():
             raise AssertionError('player self-service batch suite failed')
     # Record the listener-free replay, table-profile, and compare proof.
     run_case('API-SELF-SERVICE-BATCH-001',['REPLAY-001','REPLAY-002','PROFILE-001','PROFILE-002','COMPARE-001','TEST-108','TEST-109','TEST-110'],run_self_service_batch_tests)
+    # Execute the repository-only static marketing-site proof without a listener.
+    def run_marketing_site_tests():
+        # Import the focused suite only when its mapped static case runs.
+        from tests import marketing_site_tests
+        # Load the complete semantic, resource, accessibility, module, matrix, and publication-boundary class.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(marketing_site_tests.MarketingSiteTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any static-site proof failed or errored.
+        if not result.wasSuccessful():
+            # Preserve detailed unittest output while keeping the named failure stable.
+            raise AssertionError('TiltSeven repository-scaffold suite failed')
+    # Record the listener-free bilingual, no-network, no-publication, and visual-ownership proof.
+    run_case('STATIC-MARKETING-001',['MARKETING-001','MARKETING-002','MARKETING-003','TEST-107'],run_marketing_site_tests)
     # Discover and execute every focused restricted-preview security module without opening a listener.
     def run_restricted_preview_security_tests():
         # Load the package directory through unittest's standard test discovery.
@@ -3036,6 +3050,60 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.get_by_test_id('login-gate').wait_for(timeout=5000)
                 # Record exact HTML and lazy JavaScript parity through the supported development browser adapter.
                 run_case('BR-STATIC-CACHE-001',['CORE-026','TEST-068'],static_cache_parity)
+                # Validate the checked repository-only TiltSeven scaffold without contacting a public host.
+                def marketing_site_browser():
+                    # Define the exact local file used for each governed locale.
+                    locale_paths={'en-US':ROOT/'site'/'tiltseven'/'index.html','ru-RU':ROOT/'site'/'tiltseven'/'ru'/'index.html'}
+                    # Define the locale-owned safety text required in visible browser output.
+                    locale_safety={'en-US':('play tokens','No cash value.'),'ru-RU':('игровыми жетонами','Без денежной ценности.')}
+                    # Read every governed viewport from the authoritative visual matrix.
+                    viewports={entry['id']:{'width':entry['width'],'height':entry['height']} for entry in visual_matrix['viewports']}
+                    # Require the complete desktop, compact, tablet, and mobile inventory.
+                    assert set(viewports)=={'desktop_primary','desktop_compact','tablet','mobile'}
+                    # Emulate reduced motion before loading either static locale document.
+                    page.emulate_media(reduced_motion='reduce')
+                    # Exercise both checked locale documents independently.
+                    for locale,locale_path in locale_paths.items():
+                        # Navigate only to repository bytes through a local file URL.
+                        page.goto(locale_path.resolve().as_uri(),wait_until='load')
+                        # Require the browser to remain on checked local bytes rather than a network origin.
+                        assert page.url.startswith('file:') and page.url.endswith(locale_path.name)
+                        # Wait for the stable marketing landmark before reading copy or geometry.
+                        page.locator('main[data-testid="marketing-site"]').wait_for(timeout=5000)
+                        # Require the authored locale, title, shared stylesheet, and local mark to load.
+                        identity=page.evaluate("""() => ({ lang:document.documentElement.lang, title:document.title, styleSheets:document.styleSheets.length, markComplete:document.querySelector('.brand img')?.complete===true, markWidth:document.querySelector('.brand img')?.naturalWidth||0, scripts:document.scripts.length, forms:document.forms.length })""")
+                        # Reject a missing resource, wrong locale, executable script, or collecting form.
+                        assert identity['lang']==locale.split('-')[0] and identity['title'].startswith('TiltSeven') and identity['styleSheets']==1 and identity['markComplete'] and identity['markWidth']>0 and identity['scripts']==0 and identity['forms']==0,identity
+                        # Read the complete visible copy for exact safety and encoding checks.
+                        visible_text=page.locator('body').inner_text()
+                        # Require both locale-owned safety phrases with no replacement character or unresolved template.
+                        assert all(value in visible_text for value in locale_safety[locale]) and '\uFFFD' not in visible_text and '{{' not in visible_text
+                        # Require exactly three non-activated links to the separately governed Casino origin.
+                        assert page.locator('a[href="https://casino.tiltseven.com/"]').count()==3
+                        # Start keyboard navigation at the document boundary.
+                        page.evaluate("() => document.activeElement?.blur()"); page.keyboard.press('Tab')
+                        # Require the skip link to receive visible keyboard focus.
+                        assert page.locator('.skip-link').evaluate("element => document.activeElement===element && element.getBoundingClientRect().top>=0")
+                        # Exercise every governed viewport with containment, touch-size, and exact-head evidence.
+                        for viewport_id,viewport in viewports.items():
+                            # Resize to the exact named matrix dimensions.
+                            page.set_viewport_size(viewport); page.wait_for_timeout(100)
+                            # Require the document, header, main landmark, and footer to remain horizontally contained.
+                            containment=page.evaluate("""() => { const rows=[document.querySelector('.site-header'),document.querySelector('main[data-testid="marketing-site"]'),document.querySelector('.site-footer')]; return { document:document.documentElement.scrollWidth<=window.innerWidth+1, rows:rows.every(row=>row && row.scrollWidth<=row.clientWidth+1), clientWidth:document.documentElement.clientWidth, mainWidth:rows[1]?.getBoundingClientRect().width||0, primaryHeight:document.querySelector('.button.primary')?.getBoundingClientRect().height||0, navHeight:document.querySelector('.site-nav a')?.getBoundingClientRect().height||0 }; }""")
+                            # Reject overflow, collapsed content, or sub-44-pixel primary navigation controls.
+                            assert containment['document'] and containment['rows'] and containment['mainWidth']>=containment['clientWidth']-2 and containment['primaryHeight']>=44 and containment['navHeight']>=44,containment
+                            # Prove the real mobile and desktop preview labels do not obscure the decorative seven chip.
+                            preview_geometry=page.evaluate("""() => { const chip=document.querySelector('.seven-chip')?.getBoundingClientRect(); const panel=document.querySelector('.felt-panel')?.getBoundingClientRect(); const gap=chip&&panel?panel.top-chip.bottom:0; return { chipBottom:chip?.bottom||0, panelTop:panel?.top||0, gap, separated:Boolean(chip&&panel&&gap>=16) }; }""")
+                            # Fail closed if either governed preview region is missing or lacks a readable separation gap.
+                            assert preview_geometry['separated'],{'viewport':viewport_id,**preview_geometry}
+                            # Capture one complete self-describing after-pass artifact for this locale and viewport.
+                            game_evidence(f'after-pass-marketing-site-{locale.lower()}-{viewport_id}.png','marketing_site',['landing','keyboard_focus','reduced_motion'],locale,viewport_id)
+                    # Restore normal media, the primary viewport, and the local Casino login page for existing cases.
+                    page.emulate_media(reduced_motion='no-preference'); page.set_viewport_size({'width':1920,'height':1080})
+                    # Return to the loopback application without preserving any public-site state.
+                    page.goto(base,wait_until='networkidle'); page.get_by_test_id('login-gate').wait_for(timeout=5000)
+                # Record bilingual semantics, safety, accessibility, containment, and eight governed visual artifacts.
+                run_case('BR-MARKETING-001',['MARKETING-001','MARKETING-002','TEST-107'],marketing_site_browser)
                 # Capture logged-out login evidence for the frontend auth handback.
                 shot('auth_login_gate.png')
                 # Prove the restricted-preview guest surface keeps protected brand chrome absent and metadata out of the public title. (issue #321)

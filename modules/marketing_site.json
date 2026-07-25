@@ -1,0 +1,14 @@
+{
+  "module": "marketing_site",
+  "version": "1.0.2",
+  "paths": [
+    "site/tiltseven/"
+  ],
+  "requirements_prefixes": [
+    "MARKETING"
+  ],
+  "depends_on": [
+    "docs",
+    "tests"
+  ]
+}
