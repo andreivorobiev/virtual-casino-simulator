@@ -1204,6 +1204,19 @@ def run_api_tests():
             raise AssertionError('daily draw lab suite failed')
     # Record the listener-free Daily Draw Lab pick, hit, retry, and house-edge proof.
     run_case('API-DAILY-DRAW-LAB-001',['DDLAB-001','DDLAB-002','TEST-125'],run_daily_draw_lab_tests)
+    # Execute the Four Card Poker engine and settlement proof without opening a listener.
+    def run_four_card_poker_tests():
+        # Load only the focused Four Card Poker class.
+        from tests import four_card_poker_tests
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(four_card_poker_tests.FourCardPokerTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused Four Card Poker proof failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure text secret-safe.
+            raise AssertionError('four card poker suite failed')
+    # Record the listener-free Four Card Poker ranking, settlement, replay, recovery, and house-edge proof.
+    run_case('API-FOUR-CARD-POKER-001',['FOURCP-001','FOURCP-002','TEST-126'],run_four_card_poker_tests)
     # Discover and execute every focused restricted-preview security module without opening a listener.
     def run_restricted_preview_security_tests():
         # Load the package directory through unittest's standard test discovery.

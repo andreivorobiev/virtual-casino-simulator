@@ -11122,6 +11122,45 @@
       "notes": "Allocated for GitHub issue #144."
     },
     {
+      "id": "FOURCP-001",
+      "module": "Four Card Poker",
+      "description": "Four Card Poker is a stateful dealer poker game where the player builds their best four-card hand from five cards and the dealer builds theirs from six, so the dealer wins about two thirds of showdowns in place of any qualification rule. The player posts an ante and an optional Aces Up side bet, sees their cards, then folds or raises with a Play wager of one to three times the ante. On a Play the best four-card hands are compared with ties awarded to the player: a win pays the ante and Play even money and a loss takes both. An Ante Bonus pays on the player's three of a kind or better regardless of the dealer, and the independent Aces Up bet pays on a pair of aces or better whether the player folds or plays. Four-card ranking places three of a kind above a flush and a straight. The disciplined strategy folds every high-card hand and plays a pair or better, leaving a house edge near 4.7 percent under optimal play. Deal and decision commands are exactly-once and reload-safe on the shared ledger and player-scoped state store.",
+      "status": "PASS",
+      "api_tests": [
+        "API-FOUR-CARD-POKER-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/four_card_poker/engine.py",
+        "casino/games/four_card_poker/service.py",
+        "casino/games/four_card_poker/api.py",
+        "web/games/four_card_poker.js",
+        "contracts/openapi/four_card_poker.v1.yaml"
+      ],
+      "introduced_in": "issue-141-four-card-poker",
+      "changed_in": "issue-141-four-card-poker",
+      "notes": "Allocated for GitHub issue #141, a catalog-expansion poker variant (#73). The service reuses the shared card primitives and ledger with its own four-card evaluator."
+    },
+    {
+      "id": "FOURCP-002",
+      "module": "Four Card Poker",
+      "description": "Four Card Poker inherits the exactly-once, reload-safe orchestration of the shared ledger: one caller-stable action id maps to one deal or decision, a retry replays the identical committed round and payout without moving the wallet again, and an action id reused with different wager content fails closed. The dealer's six cards stay private until the showdown, and a fold reveals only the player's best four-card hand. The additive v1 contract exposes only the game-owned state, rounds, and decisions routes and never alters the frozen shared API. The published rules report the play multipliers and the Ante Bonus and Aces Up paytables.",
+      "status": "PASS",
+      "api_tests": [
+        "API-FOUR-CARD-POKER-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/four_card_poker/service.py",
+        "casino/games/four_card_poker/api.py",
+        "tests/four_card_poker_tests.py",
+        "tests/game_drivers/four_card_poker.py"
+      ],
+      "introduced_in": "issue-141-four-card-poker",
+      "changed_in": "issue-141-four-card-poker",
+      "notes": "Allocated for GitHub issue #141."
+    },
+    {
       "id": "TEST-115",
       "module": "Tests",
       "description": "Listener-free evidence verifies Color Wheel: a matching colour pays its multiplier, a non-matching colour loses the stake, the gold segment pays its jackpot multiplier, unknown colours and malformed stakes are rejected before any wallet movement, a retried spin replays without double-spending, every colour payout is confirmed house-positive, and the published bet catalog matches the real segment layout and multipliers.",
@@ -11307,6 +11346,23 @@
       "introduced_in": "issue-144-daily-draw-lab",
       "changed_in": "issue-144-daily-draw-lab",
       "notes": "Allocated for GitHub issue #144."
+    },
+    {
+      "id": "TEST-126",
+      "module": "Tests",
+      "description": "Listener-free evidence verifies Four Card Poker: the four-card ranking places trips above a flush and a straight and recognizes the ace-low wheel, the Aces Up qualifier accepts a pair of aces but rejects a lesser pair, a played pair of aces beats a dealer high card, a weak played hand loses both wagers, a hand tie is awarded to the player, the Ante Bonus pays on the player's trips even in a loss, a fold still settles a winning Aces Up bet, a replayed decision is idempotent, a conflicting action-id reuse fails closed, a reload recovers the committed deal without a duplicate debit, invalid antes and multipliers are rejected, and a large seeded sample confirms the disciplined strategy leaves the game house-positive.",
+      "status": "PASS",
+      "api_tests": [
+        "API-FOUR-CARD-POKER-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/four_card_poker_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-141-four-card-poker",
+      "changed_in": "issue-141-four-card-poker",
+      "notes": "Allocated for GitHub issue #141."
     }
   ]
 }
