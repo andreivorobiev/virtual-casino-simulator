@@ -1074,6 +1074,19 @@ def run_api_tests():
             raise AssertionError('color wheel suite failed')
     # Record the listener-free Color Wheel payout, retry, and house-edge proof.
     run_case('API-COLOR-WHEEL-001',['CWHEEL-001','CWHEEL-002','TEST-115'],run_color_wheel_tests)
+    # Execute the Poker Dice rules and settlement proof without opening a listener.
+    def run_poker_dice_tests():
+        # Load only the focused Poker Dice class.
+        from tests import poker_dice_tests
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(poker_dice_tests.PokerDiceTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused Poker Dice proof failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure text secret-safe.
+            raise AssertionError('poker dice suite failed')
+    # Record the listener-free Poker Dice payout, retry, and house-edge proof.
+    run_case('API-POKER-DICE-001',['PDICE-001','PDICE-002','TEST-116'],run_poker_dice_tests)
     # Discover and execute every focused restricted-preview security module without opening a listener.
     def run_restricted_preview_security_tests():
         # Load the package directory through unittest's standard test discovery.

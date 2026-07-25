@@ -10732,6 +10732,45 @@
       "notes": "Allocated for GitHub issue #152."
     },
     {
+      "id": "PDICE-001",
+      "module": "Poker Dice",
+      "description": "Poker Dice rolls five dice whose six faces are the poker ranks nine, ten, jack, queen, king, and ace, built on the shared exactly-once settlement core. A roll debits one bounded play-token stake, draws five server-authoritative dice, evaluates the best poker category, and credits its total-return multiplier: five of a kind pays eighty times, four of a kind fifteen times, a full house five times, a straight four times, and three of a kind two times, while two pair and weaker hands lose. Every payout is house-positive because over all 7776 equally likely rolls the expected return is 0.9761, a house edge of about 2.39 percent. Non-integer, non-positive, and over-limit stakes are rejected before any wallet movement.",
+      "status": "PASS",
+      "api_tests": [
+        "API-POKER-DICE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/poker_dice/rules.py",
+        "casino/games/poker_dice/engine.py",
+        "casino/games/poker_dice/api.py",
+        "web/games/poker_dice.js",
+        "contracts/openapi/poker_dice.v1.yaml"
+      ],
+      "introduced_in": "issue-151-poker-dice",
+      "changed_in": "issue-151-poker-dice",
+      "notes": "Allocated for GitHub issue #151, a catalog-expansion game (#73). The module supplies only pure rules; the shared core owns settlement."
+    },
+    {
+      "id": "PDICE-002",
+      "module": "Poker Dice",
+      "description": "Poker Dice inherits the shared core's exactly-once settlement: one caller-stable request id maps to one roll, a retry replays the identical committed dice and payout without moving the wallet again, and a request id reused with different wager content fails closed. The additive v1 contract exposes only the game-owned state and rolls routes and never alters the frozen shared API. The published paytable reports honest hand categories and multipliers.",
+      "status": "PASS",
+      "api_tests": [
+        "API-POKER-DICE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/poker_dice/api.py",
+        "casino/core/simple_game.py",
+        "tests/poker_dice_tests.py",
+        "tests/game_drivers/poker_dice.py"
+      ],
+      "introduced_in": "issue-151-poker-dice",
+      "changed_in": "issue-151-poker-dice",
+      "notes": "Allocated for GitHub issue #151."
+    },
+    {
       "id": "TEST-115",
       "module": "Tests",
       "description": "Listener-free evidence verifies Color Wheel: a matching colour pays its multiplier, a non-matching colour loses the stake, the gold segment pays its jackpot multiplier, unknown colours and malformed stakes are rejected before any wallet movement, a retried spin replays without double-spending, every colour payout is confirmed house-positive, and the published bet catalog matches the real segment layout and multipliers.",
@@ -10747,6 +10786,23 @@
       "introduced_in": "issue-152-color-wheel",
       "changed_in": "issue-152-color-wheel",
       "notes": "Allocated for GitHub issue #152."
+    },
+    {
+      "id": "TEST-116",
+      "module": "Tests",
+      "description": "Listener-free evidence verifies Poker Dice: each paying hand category pays its exact multiplier, two pair and weaker hands lose the stake, non-integer, non-positive, and out-of-range stakes are rejected before any wallet movement, a retried roll replays without double-spending, the paytable is confirmed house-positive over all 7776 equally likely rolls, and the published paytable matches the real payout table.",
+      "status": "PASS",
+      "api_tests": [
+        "API-POKER-DICE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/poker_dice_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-151-poker-dice",
+      "changed_in": "issue-151-poker-dice",
+      "notes": "Allocated for GitHub issue #151."
     }
   ]
 }

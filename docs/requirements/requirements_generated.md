@@ -46,12 +46,13 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.1
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.60.4
-- docs: 1.60.4
+- tests: 1.60.5
+- docs: 1.60.5
 - contracts: 1.43.0
 - tooling: 1.20.3
 - commenting_policy: 1.0.0
 - color_wheel: 1.0.0
+- poker_dice: 1.0.0
 
 ## Requirements
 
@@ -814,4 +815,7 @@ Historical source baseline: 9.1.0
 - **TEST-114** (Tests) - PASS: Listener-free evidence verifies the shared simple-game settlement core: winning and losing rounds settle exactly once with correct balances, a retried request replays without double-spending, a request id reused with different content fails closed, settlement recovers deterministically from committed ledger proof after total per-player state loss, invalid wagers and missing request ids are rejected before any wallet movement, and the deterministic round id is stable and game-scoped.
 - **CWHEEL-001** (Color Wheel) - PASS: Color Wheel is a twenty-segment wheel built on the shared exactly-once settlement core. A spin debits one bounded play-token stake on a chosen colour, draws one server-authoritative landed segment, and credits the colour's total-return multiplier on a match: red and black pay two times, green six times, and gold sixteen times. Every payout is house-positive because each colour's segment probability times its multiplier is below one. Unknown colours and non-integer, non-positive, or over-limit stakes are rejected before any wallet movement.
 - **CWHEEL-002** (Color Wheel) - PASS: Color Wheel inherits the shared core's exactly-once settlement: one caller-stable request id maps to one spin, a retry replays the identical committed landed segment and payout without moving the wallet again, and a request id reused with different wager content fails closed. The additive v1 contract exposes only the game-owned state and spins routes and never alters the frozen shared API. The published bet catalog reports honest segment counts and multipliers.
+- **PDICE-001** (Poker Dice) - PASS: Poker Dice rolls five dice whose six faces are the poker ranks nine, ten, jack, queen, king, and ace, built on the shared exactly-once settlement core. A roll debits one bounded play-token stake, draws five server-authoritative dice, evaluates the best poker category, and credits its total-return multiplier: five of a kind pays eighty times, four of a kind fifteen times, a full house five times, a straight four times, and three of a kind two times, while two pair and weaker hands lose. Every payout is house-positive because over all 7776 equally likely rolls the expected return is 0.9761, a house edge of about 2.39 percent. Non-integer, non-positive, and over-limit stakes are rejected before any wallet movement.
+- **PDICE-002** (Poker Dice) - PASS: Poker Dice inherits the shared core's exactly-once settlement: one caller-stable request id maps to one roll, a retry replays the identical committed dice and payout without moving the wallet again, and a request id reused with different wager content fails closed. The additive v1 contract exposes only the game-owned state and rolls routes and never alters the frozen shared API. The published paytable reports honest hand categories and multipliers.
 - **TEST-115** (Tests) - PASS: Listener-free evidence verifies Color Wheel: a matching colour pays its multiplier, a non-matching colour loses the stake, the gold segment pays its jackpot multiplier, unknown colours and malformed stakes are rejected before any wallet movement, a retried spin replays without double-spending, every colour payout is confirmed house-positive, and the published bet catalog matches the real segment layout and multipliers.
+- **TEST-116** (Tests) - PASS: Listener-free evidence verifies Poker Dice: each paying hand category pays its exact multiplier, two pair and weaker hands lose the stake, non-integer, non-positive, and out-of-range stakes are rejected before any wallet movement, a retried roll replays without double-spending, the paytable is confirmed house-positive over all 7776 equally likely rolls, and the published paytable matches the real payout table.

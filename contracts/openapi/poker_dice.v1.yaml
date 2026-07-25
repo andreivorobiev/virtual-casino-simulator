@@ -1,0 +1,195 @@
+openapi: 3.0.3
+# Describe the additive issue-151 Poker Dice contract without changing existing v1 operations.
+info:
+  title: Virtual Casino Poker Dice API
+  version: v1
+  description: Additive session-bound Poker Dice contract for issue 151, built on the shared exactly-once settlement core.
+# Define only game-owned routes; shared router registration remains with issue 77.
+paths:
+  # Expose session-owned reload state and immutable paytable metadata.
+  /api/v1/games/poker-dice/state:
+    get:
+      summary: Read the authenticated player's Poker Dice paytable and recent settled rolls
+      operationId: poker_dice_GET_api_v1_games_poker_dice_state
+      responses:
+        '200':
+          description: Standard success envelope containing game state, player snapshot, and paytable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PokerDiceStateEnvelope'
+        '401':
+          description: Standard error envelope when no authenticated session is available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorEnvelope'
+  # Execute one complete debit, five-die roll, and optional settlement action.
+  /api/v1/games/poker-dice/rolls:
+    post:
+      summary: Execute or replay one atomic ledger-backed Poker Dice roll
+      operationId: poker_dice_POST_api_v1_games_poker_dice_rolls
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PokerDiceRollRequest'
+      responses:
+        '200':
+          description: Standard success envelope containing one settled or safely replayed round
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PokerDiceRollEnvelope'
+        '400':
+          description: Standard error envelope for an invalid stake or request identity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorEnvelope'
+        '401':
+          description: Standard error envelope when no authenticated session is available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorEnvelope'
+        '409':
+          description: Standard error envelope when one request identity is reused with different wager content
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorEnvelope'
+# Keep all request, response, round, and standard-envelope shapes local to this contract.
+components:
+  schemas:
+    # Require a caller-stable action identity and a bounded whole-roll stake.
+    PokerDiceRollRequest:
+      type: object
+      additionalProperties: false
+      required: [request_id, stake]
+      properties:
+        request_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '^[A-Za-z0-9._:-]+$'
+          description: Stable caller-generated identity reused only when retrying the same roll action.
+        player_id:
+          type: string
+          description: Compatibility field overridden by the authenticated session-bound player resolver.
+        stake:
+          type: integer
+          minimum: 1
+          maximum: 100000
+          description: Fake-money play-token stake for the whole roll; never currency or redeemable value.
+    # Specialize the standard success envelope for state reads.
+    PokerDiceStateEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/ApiSuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/PokerDicePayload'
+    # Specialize the standard success envelope for atomic roll actions.
+    PokerDiceRollEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/ApiSuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              allOf:
+                - $ref: '#/components/schemas/PokerDicePayload'
+                - type: object
+                  required: [round, replayed, ledger]
+                  properties:
+                    round: {$ref: '#/components/schemas/PokerDiceRound'}
+                    replayed: {type: boolean}
+                    ledger: {$ref: '#/components/schemas/PokerDiceLedgerEvidence'}
+    # Describe the common state, player, and immutable paytable payload.
+    PokerDicePayload:
+      type: object
+      required: [game, state, player, bet_catalog]
+      properties:
+        game: {type: string, enum: [poker_dice]}
+        state: {type: object}
+        player:
+          type: object
+          description: Current authenticated player's shared read-only wallet snapshot.
+        bet_catalog:
+          type: object
+          description: Dice count, poker-rank faces, and per-hand multipliers.
+    # Describe one immutable settled round returned on original and replayed requests.
+    PokerDiceRound:
+      type: object
+      required: [round_id, wager, wager_total, entropy, total_return, outcome, detail, net, settled_at]
+      properties:
+        round_id: {type: string}
+        wager:
+          type: object
+          required: [stake]
+          properties:
+            stake: {type: integer, minimum: 1}
+        wager_total: {type: number, minimum: 0.01}
+        entropy:
+          type: object
+          required: [dice]
+          properties:
+            dice:
+              type: array
+              minItems: 5
+              maxItems: 5
+              items: {type: integer, minimum: 0, maximum: 5}
+        total_return: {type: number, minimum: 0}
+        outcome: {type: string, enum: [win, lose]}
+        detail:
+          type: object
+          required: [dice, faces, hand]
+          properties:
+            dice:
+              type: array
+              minItems: 5
+              maxItems: 5
+              items: {type: integer, minimum: 0, maximum: 5}
+            faces:
+              type: array
+              minItems: 5
+              maxItems: 5
+              items: {type: string, enum: ['9', '10', 'J', 'Q', 'K', 'A']}
+            hand:
+              type: string
+              enum: [five_of_a_kind, four_of_a_kind, full_house, straight, three_of_a_kind, bust]
+        net: {type: number}
+        settled_at: {type: string}
+    # Preserve scoped wager and optional return event evidence for the settled round.
+    PokerDiceLedgerEvidence:
+      type: object
+      required: [wager, settlement]
+      properties:
+        wager:
+          type: object
+          description: Committed aggregate wager debit for this authenticated player and round.
+        settlement:
+          type: object
+          nullable: true
+          description: Committed aggregate stake-plus-winnings credit, or null when the roll lost.
+    # Preserve the repository-wide success envelope contract.
+    ApiSuccessEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok: {type: boolean, enum: [true]}
+        data: {type: object}
+    # Preserve the repository-wide error envelope contract.
+    ApiErrorEnvelope:
+      type: object
+      required: [ok, error]
+      properties:
+        ok: {type: boolean, enum: [false]}
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: {type: string}
+            message: {type: string}
+            details: {type: object}
