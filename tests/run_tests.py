@@ -5680,8 +5680,31 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.locator('#pgp-wager').fill('1'); page.locator('#pgp-wager').press('Tab'); page.locator('[data-action="deal"]').click(); page.locator('[data-action="house-way"]:not([disabled])').wait_for(timeout=10000); assert page.locator('.pgp-tile').count()==7 and page.locator('.playing-card--back').count()==7
                     # Capture the actionable hand-setting stage.
                     localized_evidence('setting',['setting'])
-                    # Set by the house way and classify the authoritative shuffled terminal outcome.
-                    page.locator('[data-action="house-way"]').click(); page.wait_for_function("() => document.querySelectorAll('.pgp-history-list li').length >= 1",timeout=10000); terminal=page.locator('.pgp-result').inner_text().lower(); terminal_state='win' if 'win pays' in terminal else ('loss' if 'lost' in terminal else 'push'); localized_evidence(terminal_state,[terminal_state])
+                    # Collect every authoritative win, loss, and push presentation through bounded public play.
+                    captured_terminal_states=set()
+                    # Bound random production deals so a missing terminal class fails closed instead of hanging.
+                    for terminal_attempt in range(30):
+                        # Set the prepared hand by the public house-way action.
+                        page.locator('[data-action="house-way"]').click()
+                        # Wait until settlement re-enables the next canonical deal action.
+                        page.locator('[data-action="deal"]:not([disabled])').wait_for(timeout=10000)
+                        # Read the server-owned latest outcome instead of classifying localized presentation copy.
+                        terminal_state=page.evaluate("async () => (await (await fetch('/api/v1/games/pai-gow-poker/state')).json()).data.state.recent_rounds.slice(-1)[0].outcome")
+                        # Capture the first governed corpus for each distinct terminal result.
+                        if terminal_state not in captured_terminal_states:
+                            # Record all locale and viewport combinations while this authoritative result is mounted.
+                            localized_evidence(terminal_state,[terminal_state])
+                            # Retain the result identity so repeated random outcomes do not duplicate evidence.
+                            captured_terminal_states.add(terminal_state)
+                        # Stop once all three published outcome paths have been exercised.
+                        if captured_terminal_states=={'win','loss','push'}:
+                            break
+                        # Deal another real round when one terminal class remains unobserved.
+                        page.locator('[data-action="deal"]').click()
+                        # Wait for the next prepared hand before continuing bounded public play.
+                        page.locator('[data-action="house-way"]:not([disabled])').wait_for(timeout=10000)
+                    # Require complete terminal coverage rather than accepting one random outcome.
+                    assert captured_terminal_states=={'win','loss','push'}
                     # Complete a second real round by the house way while reduced motion is active.
                     page.emulate_media(reduced_motion='reduce'); page.locator('[data-action="deal"]').click(); page.locator('[data-action="house-way"]:not([disabled])').wait_for(timeout=10000); page.locator('[data-action="house-way"]').click(); page.wait_for_function("() => document.querySelectorAll('.pgp-history-list li').length >= 2",timeout=10000); localized_evidence('reduced-motion',['reduced_motion'])
                     # Reload the canonical route and require restored player-owned history.

@@ -5,7 +5,7 @@ The joker is a bug: it completes straights, flushes, and straight flushes, and
 otherwise plays as an ace. Copies (ties on a hand) go to the dealer, and winning
 even-money bets pay a five percent house commission.
 
-Requirements: PGPOK-001, PGPOK-002.
+Requirements: PGP-001, PGP-002.
 """
 
 # Import deterministic hashing for stable round ids and math for wager bounds.
