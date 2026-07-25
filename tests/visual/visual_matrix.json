@@ -411,6 +411,7 @@
       "selector": "[data-testid='roulette-premium']",
       "states": [
         "betting",
+        "keyboard_focus",
         "spinning",
         "settled",
         "route_restored"

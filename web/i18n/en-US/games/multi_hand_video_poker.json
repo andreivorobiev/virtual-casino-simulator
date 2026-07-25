@@ -25,7 +25,7 @@
   "outcomes.straight_flush": "Straight flush",
   "outcomes.three_of_a_kind": "Three of a kind",
   "outcomes.two_pair": "Two pair",
-  "paytable.multiplier": "{value} to 1",
+  "paytable.multiplier": "{value}× returned",
   "paytable.note": "Each hand is evaluated independently. Returned credits are settled together through the play-token ledger.",
   "paytable.result": "Result",
   "paytable.return": "Return",

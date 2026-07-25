@@ -826,6 +826,12 @@ label {
   outline-offset: -4px;
 }
 
+/* Provide a zero-specificity keyboard focus ring for any in-game control that does not define its own, so every game route stays keyboard-legible on the dark felt. Wrapped in :where() so any game-owned :focus-visible rule still wins. */
+:where(#view.screen.game-screen button, #view.screen.game-screen input, #view.screen.game-screen select, #view.screen.game-screen [tabindex]):focus-visible {
+  outline: 3px solid #ffd780;
+  outline-offset: 2px;
+}
+
 /* Preserve Roulette's tested desktop three-panel table layout while other game routes use the outlet scroll. */
 #view.screen.game-screen:has(.roulette-premium) {
   overflow: hidden;

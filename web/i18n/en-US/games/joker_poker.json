@@ -37,7 +37,7 @@
   "outcomes.three_of_a_kind": "Three of a kind",
   "outcomes.two_pair": "Two pair",
   "outcomes.wild_royal_flush": "Wild royal flush",
-  "paytable.multiplier": "{value} to 1",
+  "paytable.multiplier": "{value}× returned",
   "paytable.note": "The joker is wild. Returned credits are settled through the play-token ledger.",
   "paytable.result": "Result",
   "paytable.return": "Return",

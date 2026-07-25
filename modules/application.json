@@ -1,6 +1,6 @@
 {
   "module": "application",
-  "version": "9.51.10",
+  "version": "9.51.11",
   "paths": [
     "run.py",
     "pyproject.toml",
