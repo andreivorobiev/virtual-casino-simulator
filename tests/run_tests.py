@@ -988,6 +988,20 @@ def run_api_tests():
             raise AssertionError('play-token receipt derivation suite failed')
     # Record the committed-ledger explanation, shared pagination, privacy, and exact-contract proof.
     run_case('API-RECEIPT-001',['RECEIPT-001','RECEIPT-002','TEST-104'],run_receipt_tests)
+    # Execute the Double Bonus Video Poker engine and settlement proof without opening a listener.
+    def run_double_bonus_video_poker_tests():
+        # Import the focused suite only when its mapped API case runs.
+        from tests import double_bonus_video_poker_tests
+        # Load exactly the Double Bonus engine and service assertions.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(double_bonus_video_poker_tests.DoubleBonusVideoPokerTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused Double Bonus assertion failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure stable.
+            raise AssertionError('double bonus video poker suite failed')
+    # Record the Double Bonus paytable, deal-and-draw settlement, replay, recovery, and house-edge proof.
+    run_case('API-DOUBLE-BONUS-VIDEO-POKER-001',['DBVP-001','DBVP-002','TEST-114'],run_double_bonus_video_poker_tests)
     # Execute the Mississippi Stud engine and settlement proof without opening a listener.
     def run_mississippi_stud_tests():
         # Import the focused suite only when its mapped API case runs.
@@ -1001,7 +1015,7 @@ def run_api_tests():
             # Preserve unittest detail while keeping the named failure stable.
             raise AssertionError('mississippi stud suite failed')
     # Record the Mississippi Stud paytable, three-street settlement, replay, recovery, and house-edge proof.
-    run_case('API-MISSISSIPPI-STUD-001',['MSTUD-001','MSTUD-002','TEST-113'],run_mississippi_stud_tests)
+    run_case('API-MISSISSIPPI-STUD-001',['MSTUD-001','MSTUD-002','TEST-115'],run_mississippi_stud_tests)
     # Execute the opt-in wellness, current-session summary, concurrency, and neutral-copy proof without a listener.
     def run_wellness_tests():
         # Import the focused suite only when its mapped API case runs.
@@ -1089,6 +1103,19 @@ def run_api_tests():
             raise AssertionError('TiltSeven repository-scaffold suite failed')
     # Record the listener-free bilingual, no-network, no-publication, and visual-ownership proof.
     run_case('STATIC-MARKETING-001',['MARKETING-001','MARKETING-002','MARKETING-003','TEST-107'],run_marketing_site_tests)
+    # Execute the Keno drawn-ball rail layout regression without opening a listener.
+    def run_keno_ball_rail_tests():
+        # Load only the focused Keno ball-rail class.
+        from tests import keno_ball_rail_tests
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(keno_ball_rail_tests.KenoBallRailTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when the ball-rail layout contract regresses.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure text secret-safe.
+            raise AssertionError('keno ball-rail layout suite failed')
+    # Record the listener-free Keno drawn-ball rail overflow regression proof.
+    run_case('UI-KENO-BALL-RAIL-001',['KENO-026','TEST-113'],run_keno_ball_rail_tests)
     # Discover and execute every focused restricted-preview security module without opening a listener.
     def run_restricted_preview_security_tests():
         # Load the package directory through unittest's standard test discovery.
@@ -5663,6 +5690,108 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Execute the integrated Joker Poker browser and visual gate.
                 run_case('BR-JP-001',['JP-001','JP-002','JP-004','JP-005'],joker_poker_acceptance)
+                # Define real-backend Double Bonus localization, hold, draw, responsive, motion, and route acceptance.
+                def double_bonus_video_poker_acceptance():
+                    # Open the catalog-owned route and wait for the stable game selector.
+                    page.get_by_test_id('nav-double_bonus_video_poker').click(); page.get_by_test_id('double-bonus-video-poker').wait_for(timeout=5000)
+                    # Enumerate every viewport governed by the Double Bonus visual-matrix row.
+                    required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
+                    # Load exact UTF-8 expectations from both canonical locale resources.
+                    resources={locale:read_i18n_json(ROOT/'web'/'i18n'/locale/'games'/'double_bonus_video_poker.json') for locale in ('en-US','ru-RU')}
+                    # Capture one mounted state across both locales and every governed viewport.
+                    def localized_evidence(prefix,states):
+                        # Iterate through paired English and Russian resources without discarding the active hand.
+                        for locale in ('en-US','ru-RU'):
+                            # Switch the shared locale and wait for the game-owned rerender.
+                            page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_timeout(100)
+                            # Require exact localized title and phase copy rather than fallback keys or stale English.
+                            phase_key='settled' if 'settled' in states or 'route_restored' in states or 'reduced_motion' in states else 'draw' if 'choose_holds' in states else 'idle'; assert page.locator('.db-header h1').inner_text()==resources[locale]['title'] and page.get_by_test_id('double-bonus-video-poker-phase').inner_text()==resources[locale][f'phase.{phase_key}']
+                            # Validate containment, visible controls, and after-pass evidence at each exact viewport.
+                            for viewport_id,width,height in required_viewports:
+                                # Resize to the registered evidence dimensions.
+                                page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
+                                # Collect document-fit and fixed-feedback overlap geometry for native controls and rendered text ranges.
+                                card_geometry=page.evaluate("() => { const button=document.querySelector('.report-problem-fab:not([hidden])'); const fixed=button?.getBoundingClientRect(); const hits=[]; const intersects=rect=>fixed&&rect.left<fixed.right&&rect.right>fixed.left&&rect.top<fixed.bottom&&rect.bottom>fixed.top; for(const node of document.querySelectorAll('.db-card input,.db-card button')){if(intersects(node.getBoundingClientRect()))hits.push(`${node.tagName.toLowerCase()}.${node.className}`);} for(const node of document.querySelectorAll('.db-card h3,.db-card label,.db-card .db-pays span')){const range=document.createRange(); range.selectNodeContents(node); if([...range.getClientRects()].some(intersects))hits.push(`${node.tagName.toLowerCase()}:${node.textContent.trim()}`);} return {documentFits:document.documentElement.scrollWidth<=window.innerWidth+1,feedbackOverlaps:hits.length,overlapIdentities:hits}; }")
+                                # Collect mounted-content predicates separately from the responsive geometry.
+                                mounted_geometry={'gameVisible':page.get_by_test_id('double-bonus-video-poker').is_visible(),'paytableRows':page.locator('.db-pays div').count(),'paytableVisible':page.locator('.db-paytable').is_visible()}
+                                # Reject page overflow, obscured paytable content, and incomplete mounted state with exact diagnostics.
+                                assert card_geometry=={'documentFits':True,'feedbackOverlaps':0,'overlapIdentities':[]} and mounted_geometry=={'gameVisible':True,'paytableRows':11,'paytableVisible':True},{'cardGeometry':card_geometry,'mountedGeometry':mounted_geometry,'locale':locale,'viewport':viewport_id}
+                                # Record self-describing exact-head evidence for this state and viewport.
+                                game_evidence(f'after-pass-double-bonus-video-poker-{prefix}-{locale.lower()}-{viewport_id}.png','double_bonus_video_poker',states,locale,viewport_id)
+                        # Restore English desktop controls for the next public action.
+                        page.get_by_test_id('shell-locale-select').select_option('en-US'); page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(100)
+                    # Capture the complete ready machine before the ledger-backed deal.
+                    localized_evidence('ready',['ready'])
+                    # Commit a bounded wager and deal through the public frontend.
+                    page.locator('[data-bet]').fill('1'); page.locator('[data-bet]').press('Tab'); page.locator('[data-deal]').click(); page.get_by_test_id('double-bonus-video-poker-hand').wait_for(timeout=10000); assert page.locator('[data-hold]').count()==5
+                    # Select one visible hold and capture the actionable draw state.
+                    page.locator('[data-hold="0"]').click(); page.locator('[data-hold="0"][aria-pressed="true"]').wait_for(timeout=10000); localized_evidence('choose-holds',['choose_holds'])
+                    # Draw through the public frontend and require one authoritative settled result.
+                    page.locator('[data-draw]').click(); page.locator('[data-deal]:not([disabled])').wait_for(timeout=10000); assert page.get_by_test_id('double-bonus-video-poker-result').is_visible(); localized_evidence('settled',['settled'])
+                    # Capture the stable terminal table under reduced-motion media emulation.
+                    page.emulate_media(reduced_motion='reduce'); localized_evidence('reduced-motion',['settled','reduced_motion'])
+                    # Reload the canonical game route and require restored player-owned terminal state.
+                    page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('double-bonus-video-poker').wait_for(timeout=5000); page.locator('[data-deal]:not([disabled])').wait_for(timeout=5000); localized_evidence('route-restored',['settled','route_restored'])
+                    # Return to the lobby for downstream browser cases.
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Execute the integrated Double Bonus browser and governed visual gate.
+                run_case('BR-DBVP-001',['DBVP-001','DBVP-002','TEST-114'],double_bonus_video_poker_acceptance)
+                # Define real-backend Mississippi Stud localization, progressive-reveal, settlement, motion, and route acceptance.
+                def mississippi_stud_acceptance():
+                    # Open the catalog-owned route and wait for the stable game selector.
+                    page.get_by_test_id('nav-mississippi_stud').click(); page.get_by_test_id('mississippi-stud').wait_for(timeout=5000)
+                    # Enumerate every viewport governed by the Mississippi Stud visual-matrix row.
+                    required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
+                    # Load exact UTF-8 expectations from both canonical locale resources.
+                    resources={locale:read_i18n_json(ROOT/'web'/'i18n'/locale/'games'/'mississippi_stud.json') for locale in ('en-US','ru-RU')}
+                    # Capture one mounted state across both locales and every governed viewport.
+                    def localized_evidence(prefix,states,expected_street=None,expected_revealed=None):
+                        # Iterate through paired English and Russian resources without discarding the active round.
+                        for locale in ('en-US','ru-RU'):
+                            # Switch the shared locale and wait for the game-owned rerender.
+                            page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_timeout(100)
+                            # Require exact localized phase copy rather than fallback keys or stale English.
+                            if expected_street is None and 'ready' in states:
+                                # Pin the ready prompt before the ledger-backed deal.
+                                assert page.get_by_test_id('mississippi-stud-result').inner_text()==resources[locale]['result.idle']
+                            elif expected_street is not None:
+                                # Pin the localized street label for the current progressive reveal.
+                                assert page.locator('.ms-street').inner_text()==resources[locale]['label.street'].replace('{street}',str(expected_street))
+                            else:
+                                # Require one localized terminal outcome after the authoritative settlement.
+                                assert any(page.get_by_test_id('mississippi-stud-result').inner_text().startswith(resources[locale][f'outcome.{outcome}']) for outcome in ('win','push','lose'))
+                            # Validate containment, visible controls, and after-pass evidence at each exact viewport.
+                            for viewport_id,width,height in required_viewports:
+                                # Resize to the registered evidence dimensions.
+                                page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
+                                # Collect document-fit and fixed-feedback overlap geometry for native controls and rendered text ranges.
+                                card_geometry=page.evaluate("() => { const button=document.querySelector('.report-problem-fab:not([hidden])'); const fixed=button?.getBoundingClientRect(); const hits=[]; const intersects=rect=>fixed&&rect.left<fixed.right&&rect.right>fixed.left&&rect.top<fixed.bottom&&rect.bottom>fixed.top; for(const node of document.querySelectorAll('.msstud input,.msstud button')){if(intersects(node.getBoundingClientRect()))hits.push(`${node.tagName.toLowerCase()}.${node.className}`);} for(const node of document.querySelectorAll('.msstud h3,.msstud h4,.msstud label,.msstud .ms-pays span,.msstud .ms-street,.msstud .ms-result')){const range=document.createRange(); range.selectNodeContents(node); if([...range.getClientRects()].some(intersects))hits.push(`${node.tagName.toLowerCase()}:${node.textContent.trim()}`);} const root=document.querySelector('.msstud')?.getBoundingClientRect(); return {documentFits:document.documentElement.scrollWidth<=window.innerWidth+1,feedbackOverlaps:hits.length,overlapIdentities:hits,readableInlineSize:Math.round(root?.width||0)}; }")
+                                # Collect mounted-content predicates separately from responsive geometry.
+                                mounted_geometry={'gameVisible':page.get_by_test_id('mississippi-stud').is_visible(),'paytableRows':page.locator('.ms-pays div').count(),'paytableVisible':page.locator('.ms-pays').is_visible(),'communityCards':page.locator('.ms-row').nth(1).locator('.playing-card').count() if page.locator('.ms-row').count()>1 else 0}
+                                # Reject page overflow, fixed-feedback occlusion, narrow slivers, and incomplete mounted state with exact diagnostics.
+                                assert card_geometry['documentFits'] and card_geometry['feedbackOverlaps']==0 and card_geometry['readableInlineSize']>=300 and mounted_geometry['gameVisible'] and mounted_geometry['paytableRows']==9 and mounted_geometry['paytableVisible'] and (expected_revealed is None or mounted_geometry['communityCards']==expected_revealed),{'cardGeometry':card_geometry,'mountedGeometry':mounted_geometry,'locale':locale,'viewport':viewport_id}
+                                # Record self-describing exact-head evidence for this state and viewport.
+                                game_evidence(f'after-pass-mississippi-stud-{prefix}-{locale.lower()}-{viewport_id}.png','mississippi_stud',states,locale,viewport_id)
+                        # Restore English desktop controls for the next public action.
+                        page.get_by_test_id('shell-locale-select').select_option('en-US'); page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(100)
+                    # Capture the complete ready machine before the ledger-backed deal.
+                    localized_evidence('ready',['ready'])
+                    # Commit a bounded ante and deal through the public frontend.
+                    page.locator('[data-ante]').fill('1'); page.locator('[data-ante]').press('Tab'); page.locator('[data-deal]').click(); page.get_by_text('Street 1 of 3',exact=True).wait_for(timeout=10000)
+                    # Capture the first decision before any community card is exposed.
+                    localized_evidence('street-one-decision',['street_one_decision'],1,0)
+                    # Bet the first street and require exactly one revealed community card.
+                    page.locator('[data-bet="1"]').click(); page.get_by_text('Street 2 of 3',exact=True).wait_for(timeout=10000); localized_evidence('street-two-decision',['street_two_decision'],2,1)
+                    # Bet the second street and require exactly two revealed community cards.
+                    page.locator('[data-bet="1"]').click(); page.get_by_text('Street 3 of 3',exact=True).wait_for(timeout=10000); localized_evidence('street-three-decision',['street_three_decision'],3,2)
+                    # Settle through the public frontend and capture the complete terminal hand under reduced motion.
+                    page.locator('[data-bet="1"]').click(); page.locator('[data-deal]:not([disabled])').wait_for(timeout=10000); page.emulate_media(reduced_motion='reduce'); localized_evidence('settled-reduced-motion',['settled','reduced_motion'],None,3)
+                    # Reload the canonical route and require restored player-owned terminal state.
+                    page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('mississippi-stud').wait_for(timeout=5000); page.locator('[data-deal]:not([disabled])').wait_for(timeout=5000); localized_evidence('route-restored',['route_restored'],None,3)
+                    # Return to the lobby for downstream browser cases.
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Execute the integrated Mississippi Stud browser and governed visual gate.
+                run_case('BR-MSTUD-001',['MSTUD-001','MSTUD-002','TEST-115'],mississippi_stud_acceptance)
                 # Define registered Texas Hold'em localization, streets, settlement, motion, and route acceptance.
                 def texas_holdem_practice_acceptance():
                     # Open the catalog-owned route and wait for the stable table selector.
@@ -6661,8 +6790,10 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1')
                             # Bring the bounded game surface into view before capturing the real idle state.
                             page.locator('.keno-premium').scroll_into_view_if_needed()
+                            # Use a bounded board crop on desktop because the shared game-outlet scrollport cannot paint an offscreen full-route locator without transparent padding.
+                            edge_board_evidence_selector='[data-testid="keno-board-scroll"]' if edge_viewport_id in ('desktop_primary','desktop_compact') else '.keno-premium'
                             # Record self-describing idle evidence for this exact locale and viewport.
-                            region_evidence(f'after-pass-keno-edge-idle-{edge_locale.lower()}-{edge_viewport_id}.png','.keno-premium','keno',['edge_idle'],edge_locale,edge_viewport_id)
+                            region_evidence(f'after-pass-keno-edge-idle-{edge_locale.lower()}-{edge_viewport_id}.png',edge_board_evidence_selector,'keno',['edge_idle'],edge_locale,edge_viewport_id)
                             # Select all four corner cells through the same public controls used by a player.
                             for edge_number in (1,10,71,80): page.get_by_test_id(f'keno-num-{edge_number}').click()
                             # Start keyboard traversal from the named board region so the first corner receives true focus-visible state.
@@ -6674,21 +6805,39 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             # Require every intended corner selection to survive rerenders before evidence capture.
                             assert all(page.get_by_test_id(f'keno-num-{edge_number}').get_attribute('aria-pressed')=='true' for edge_number in (1,10,71,80))
                             # Record selected and focus-visible evidence from the real public controls.
-                            region_evidence(f'after-pass-keno-edge-selected-focus-{edge_locale.lower()}-{edge_viewport_id}.png','.keno-premium','keno',['edge_selected_focus_visible'],edge_locale,edge_viewport_id)
+                            region_evidence(f'after-pass-keno-edge-selected-focus-{edge_locale.lower()}-{edge_viewport_id}.png',edge_board_evidence_selector,'keno',['edge_selected_focus_visible'],edge_locale,edge_viewport_id)
                             # Persist one deterministic final draw so caught/latest state does not depend on random outcomes.
                             save_player_game_state('keno',edge_player,final_edge_state)
                             # Reconstruct the route from authoritative history and wait for all twenty final balls.
                             page.reload(wait_until='networkidle'); page.get_by_test_id('keno-premium-hero').wait_for(timeout=5000); page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale",arg=edge_locale); page.wait_for_function("() => document.querySelectorAll('[data-testid=\"keno-drawn-ball\"]').length === 20",timeout=5000)
                             # Require the seeded result to render every draw plus the caught/latest bottom-right edge cell.
                             assert page.locator('.keno-num.drawn').count()==20 and page.locator('.keno-num.catch').count()==1 and page.get_by_test_id('keno-num-80').evaluate("cell => cell.classList.contains('catch') && cell.classList.contains('latest')")
+                            # Measure the completed drawn-ball rail before scrolling so internal overflow cannot masquerade as clipped page content.
+                            rail_probe=page.get_by_test_id('keno-drawn-balls').evaluate("""rail => { const style=getComputedStyle(rail); const box=rail.getBoundingClientRect(); const owner=rail.closest('.keno-stage-panel')?.getBoundingClientRect(); const last=rail.querySelector('[data-testid="keno-drawn-ball"]:last-child')?.getBoundingClientRect(); return {clientWidth:rail.clientWidth,scrollWidth:rail.scrollWidth,scrollLeft:rail.scrollLeft,maxScrollLeft:rail.scrollWidth-rail.clientWidth,minWidth:style.minWidth,maxWidth:style.maxWidth,overflowX:style.overflowX,overflowY:style.overflowY,tabindex:rail.getAttribute('tabindex'),role:rail.getAttribute('role'),label:rail.getAttribute('aria-label'),box:{left:box.left,right:box.right},owner:owner&&{left:owner.left,right:owner.right},last:last&&{left:last.left,right:last.right}}; }""")
+                            # Require one named keyboard-reachable horizontal owner bounded inside the stage whether this viewport needs overflow or fits all balls.
+                            assert rail_probe['minWidth']=='0px' and rail_probe['overflowX'] in ('auto','scroll') and rail_probe['overflowY']=='hidden' and rail_probe['tabindex']=='0' and rail_probe['role']=='region' and rail_probe['label'],rail_probe
+                            # Keep the rail itself inside its clipping ancestor before distinguishing already-visible content from genuine internal overflow.
+                            assert rail_probe['owner'] and rail_probe['box']['left']>=rail_probe['owner']['left']-1 and rail_probe['box']['right']<=rail_probe['owner']['right']+1,rail_probe
+                            # Record whether the rendered locale and viewport genuinely need the rail's horizontal scroll range.
+                            rail_overflows=rail_probe['scrollWidth']>rail_probe['clientWidth']+1
+                            # Require overflowing content to own a positive range; otherwise require the final ball to be fully visible without scrolling.
+                            assert (rail_overflows and rail_probe['maxScrollLeft']>0 and rail_probe['last']['right']>rail_probe['box']['right']) or (not rail_overflows and rail_probe['maxScrollLeft']<=1 and rail_probe['last']['left']>=rail_probe['box']['left']-1 and rail_probe['last']['right']<=rail_probe['box']['right']+1),rail_probe
+                            # Scroll through the public region to the terminal edge and prove the final ball becomes fully reachable.
+                            page.get_by_test_id('keno-drawn-balls').evaluate('rail => { rail.scrollLeft=rail.scrollWidth; rail.focus({preventScroll:true}); }')
+                            # Read the terminal geometry and focus state after the browser commits the scroll position.
+                            rail_terminal=page.get_by_test_id('keno-drawn-balls').evaluate("""rail => { const box=rail.getBoundingClientRect(); const last=rail.querySelector('[data-testid="keno-drawn-ball"]:last-child')?.getBoundingClientRect(); return {scrollLeft:rail.scrollLeft,focused:document.activeElement===rail,box:{left:box.left,right:box.right},last:last&&{left:last.left,right:last.right}}; }""")
+                            # Require the final ball to remain visible when everything fits or become visible at the terminal internal-scroll edge.
+                            assert rail_terminal['focused'] and ((rail_overflows and rail_terminal['scrollLeft']>0) or (not rail_overflows and rail_terminal['scrollLeft']<=1)) and rail_terminal['last']['left']>=rail_terminal['box']['left']-1 and rail_terminal['last']['right']<=rail_terminal['box']['right']+1,rail_terminal
                             # Reveal the right edge through the intended board scroller before final-state capture.
                             page.get_by_test_id('keno-board-scroll').evaluate('scroll => { scroll.scrollLeft=scroll.scrollWidth; }')
+                            # Capture the result rail itself on desktop so the outer game-outlet scrollport cannot pad or hide the exact terminal edge under review.
+                            edge_final_evidence_selector='[data-testid="keno-drawn-balls"]' if edge_viewport_id in ('desktop_primary','desktop_compact') else '.keno-premium'
                             # Record final-draw and caught/latest evidence for this exact locale and viewport.
-                            region_evidence(f'after-pass-keno-edge-final-caught-{edge_locale.lower()}-{edge_viewport_id}.png','.keno-premium','keno',['edge_final_caught'],edge_locale,edge_viewport_id)
+                            region_evidence(f'after-pass-keno-edge-final-caught-{edge_locale.lower()}-{edge_viewport_id}.png',edge_final_evidence_selector,'keno',['edge_final_caught'],edge_locale,edge_viewport_id)
                     # Restore an empty English desktop route so the existing real-draw regression remains independent.
                     save_player_game_state('keno',edge_player,empty_edge_state); page.set_viewport_size({'width':1920,'height':1080}); page.reload(wait_until='networkidle'); page.get_by_test_id('keno-premium-hero').wait_for(timeout=5000); page.get_by_test_id('shell-locale-select').select_option('en-US'); page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'en-US'")
                 # Execute the Keno edge-containment geometry regression.
-                run_case('BR-KENO-EDGE-001',['KENO-025','TEST-078'],keno_edge_containment)
+                run_case('BR-KENO-EDGE-001',['KENO-025','KENO-026','TEST-078','TEST-113'],keno_edge_containment)
                 # Select ten deterministic spots so paytable comparison has a stable row.
                 for spot in [3,8,12,17,24,31,44,55,63,72]: page.get_by_test_id(f'keno-num-{spot}').click()
                 # Store the spot-selection board box for stability assertions.
