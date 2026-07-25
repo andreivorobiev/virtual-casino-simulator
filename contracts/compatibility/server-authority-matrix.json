@@ -17,7 +17,7 @@
     "android",
     "ios"
   ],
-  "catalog_game_count": 36,
+  "catalog_game_count": 37,
   "action_source": "state-changing operations in each module-owned OpenAPI v1 contract",
   "protected_fields": [
     "user_id",
@@ -1583,6 +1583,37 @@
         {
           "method": "POST",
           "path": "/api/v1/games/pachinko/drops",
+          "client_intent": "openapi_request_schema_and_path_choices_only",
+          "server_validation": "authenticated_route_and_game_service",
+          "engine_outcome": "server_game_engine",
+          "storage_transaction": "storage_and_ledger_when_financial",
+          "response_projection": "server_authoritative_projection"
+        }
+      ],
+      "assurances": [
+        "raw_api_mutation",
+        "cross_user_isolation",
+        "legal_action_and_turn",
+        "rng_outcome_and_payout",
+        "wallet_and_ledger",
+        "replay_conflict_lost_response_restart",
+        "concurrency",
+        "admin_authority",
+        "client_tamper_refresh"
+      ],
+      "evidence": [
+        "tests/run_tests.py",
+        "tests/run_tests.py",
+        "tests/storage_tests.py"
+      ]
+    },
+    {
+      "game_id": "coin_pusher",
+      "contract": "contracts/openapi/coin_pusher.v1.yaml",
+      "actions": [
+        {
+          "method": "POST",
+          "path": "/api/v1/games/coin-pusher/drops",
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",

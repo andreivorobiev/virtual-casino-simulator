@@ -10927,6 +10927,45 @@
       "notes": "Allocated for GitHub issue #142."
     },
     {
+      "id": "COINP-001",
+      "module": "Coin Pusher",
+      "description": "Coin Pusher drops a coin onto a shelf on the shared exactly-once settlement core. The shelf holds a random pile of earlier coins and the dropped coin advances the pile by a random push; when the filled height reaches the tipping threshold of twelve the overflowing coins cascade off the front edge and pay out, more falling coins paying a larger multiplier up to a sixteen-times jackpot on a full four-coin cascade, while a pile that stays below the threshold pays nothing. A drop debits one bounded play-token stake. Across all forty-eight equally likely shelf-and-push combinations the expected return is 0.9583, a house edge of about 4.17 percent. The shelf is simulated fresh from committed randomness each drop rather than persisted across rounds. Non-integer, non-positive, and over-limit stakes are rejected before any wallet movement.",
+      "status": "PASS",
+      "api_tests": [
+        "API-COIN-PUSHER-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/coin_pusher/rules.py",
+        "casino/games/coin_pusher/engine.py",
+        "casino/games/coin_pusher/api.py",
+        "web/games/coin_pusher.js",
+        "contracts/openapi/coin_pusher.v1.yaml"
+      ],
+      "introduced_in": "issue-156-coin-pusher",
+      "changed_in": "issue-156-coin-pusher",
+      "notes": "Allocated for GitHub issue #156, a catalog-expansion game (#73). The module supplies only pure rules; the shared core owns settlement."
+    },
+    {
+      "id": "COINP-002",
+      "module": "Coin Pusher",
+      "description": "Coin Pusher inherits the shared core's exactly-once settlement: one caller-stable request id maps to one drop, a retry replays the identical committed shelf and payout without moving the wallet again, and a request id reused with different wager content fails closed. The additive v1 contract exposes only the game-owned state and drops routes and never alters the frozen shared API. Every drop commits its shelf fill and push, and the published catalog reports the honest threshold and cascade multipliers.",
+      "status": "PASS",
+      "api_tests": [
+        "API-COIN-PUSHER-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/coin_pusher/api.py",
+        "casino/core/simple_game.py",
+        "tests/coin_pusher_tests.py",
+        "tests/game_drivers/coin_pusher.py"
+      ],
+      "introduced_in": "issue-156-coin-pusher",
+      "changed_in": "issue-156-coin-pusher",
+      "notes": "Allocated for GitHub issue #156."
+    },
+    {
       "id": "TEST-115",
       "module": "Tests",
       "description": "Listener-free evidence verifies Color Wheel: a matching colour pays its multiplier, a non-matching colour loses the stake, the gold segment pays its jackpot multiplier, unknown colours and malformed stakes are rejected before any wallet movement, a retried spin replays without double-spending, every colour payout is confirmed house-positive, and the published bet catalog matches the real segment layout and multipliers.",
@@ -11027,6 +11066,23 @@
       "introduced_in": "issue-142-pachinko",
       "changed_in": "issue-142-pachinko",
       "notes": "Allocated for GitHub issue #142."
+    },
+    {
+      "id": "TEST-121",
+      "module": "Tests",
+      "description": "Listener-free evidence verifies Coin Pusher: a pile below the threshold cascades nothing and loses, a single tipped coin pays its small multiplier, a full four-coin cascade pays the sixteen-times jackpot, non-integer, non-positive, and out-of-range stakes are rejected before any wallet movement, a retried drop replays without double-spending, and the cascade table is confirmed house-positive over all forty-eight equally likely shelf-and-push combinations.",
+      "status": "PASS",
+      "api_tests": [
+        "API-COIN-PUSHER-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/coin_pusher_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-156-coin-pusher",
+      "changed_in": "issue-156-coin-pusher",
+      "notes": "Allocated for GitHub issue #156."
     }
   ]
 }

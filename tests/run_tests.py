@@ -1139,6 +1139,19 @@ def run_api_tests():
             raise AssertionError('pachinko suite failed')
     # Record the listener-free Pachinko pocket, push, retry, and house-edge proof.
     run_case('API-PACHINKO-001',['PACH-001','PACH-002','TEST-120'],run_pachinko_tests)
+    # Execute the Coin Pusher rules and settlement proof without opening a listener.
+    def run_coin_pusher_tests():
+        # Load only the focused Coin Pusher class.
+        from tests import coin_pusher_tests
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(coin_pusher_tests.CoinPusherTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused Coin Pusher proof failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure text secret-safe.
+            raise AssertionError('coin pusher suite failed')
+    # Record the listener-free Coin Pusher cascade, hold, retry, and house-edge proof.
+    run_case('API-COIN-PUSHER-001',['COINP-001','COINP-002','TEST-121'],run_coin_pusher_tests)
     # Discover and execute every focused restricted-preview security module without opening a listener.
     def run_restricted_preview_security_tests():
         # Load the package directory through unittest's standard test discovery.

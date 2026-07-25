@@ -1,0 +1,184 @@
+openapi: 3.0.3
+# Describe the additive issue-156 Coin Pusher contract without changing existing v1 operations.
+info:
+  title: Virtual Casino Coin Pusher API
+  version: v1
+  description: Additive session-bound Coin Pusher contract for issue 156, built on the shared exactly-once settlement core.
+# Define only game-owned routes; shared router registration remains with issue 77.
+paths:
+  # Expose session-owned reload state and immutable payout metadata.
+  /api/v1/games/coin-pusher/state:
+    get:
+      summary: Read the authenticated player's Coin Pusher payout catalog and recent settled drops
+      operationId: coin_pusher_GET_api_v1_games_coin_pusher_state
+      responses:
+        '200':
+          description: Standard success envelope containing game state, player snapshot, and payout catalog
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CoinPusherStateEnvelope'
+        '401':
+          description: Standard error envelope when no authenticated session is available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorEnvelope'
+  # Execute one complete debit, shelf drop, and optional settlement action.
+  /api/v1/games/coin-pusher/drops:
+    post:
+      summary: Execute or replay one atomic ledger-backed Coin Pusher drop
+      operationId: coin_pusher_POST_api_v1_games_coin_pusher_drops
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CoinPusherDropRequest'
+      responses:
+        '200':
+          description: Standard success envelope containing one settled or safely replayed round
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CoinPusherDropEnvelope'
+        '400':
+          description: Standard error envelope for an invalid stake or request identity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorEnvelope'
+        '401':
+          description: Standard error envelope when no authenticated session is available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorEnvelope'
+        '409':
+          description: Standard error envelope when one request identity is reused with different wager content
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorEnvelope'
+# Keep all request, response, round, and standard-envelope shapes local to this contract.
+components:
+  schemas:
+    # Require a caller-stable action identity and a bounded whole-drop stake.
+    CoinPusherDropRequest:
+      type: object
+      additionalProperties: false
+      required: [request_id, stake]
+      properties:
+        request_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '^[A-Za-z0-9._:-]+$'
+          description: Stable caller-generated identity reused only when retrying the same drop action.
+        player_id:
+          type: string
+          description: Compatibility field overridden by the authenticated session-bound player resolver.
+        stake:
+          type: integer
+          minimum: 1
+          maximum: 100000
+          description: Fake-money play-token stake for the whole drop; never currency or redeemable value.
+    # Specialize the standard success envelope for state reads.
+    CoinPusherStateEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/ApiSuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/CoinPusherPayload'
+    # Specialize the standard success envelope for atomic drop actions.
+    CoinPusherDropEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/ApiSuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              allOf:
+                - $ref: '#/components/schemas/CoinPusherPayload'
+                - type: object
+                  required: [round, replayed, ledger]
+                  properties:
+                    round: {$ref: '#/components/schemas/CoinPusherRound'}
+                    replayed: {type: boolean}
+                    ledger: {$ref: '#/components/schemas/CoinPusherLedgerEvidence'}
+    # Describe the common state, player, and immutable payout metadata payload.
+    CoinPusherPayload:
+      type: object
+      required: [game, state, player, bet_catalog]
+      properties:
+        game: {type: string, enum: [coin_pusher]}
+        state: {type: object}
+        player:
+          type: object
+          description: Current authenticated player's shared read-only wallet snapshot.
+        bet_catalog:
+          type: object
+          description: Tipping threshold and the per-cascade multipliers.
+    # Describe one immutable settled round returned on original and replayed requests.
+    CoinPusherRound:
+      type: object
+      required: [round_id, wager, wager_total, entropy, total_return, outcome, detail, net, settled_at]
+      properties:
+        round_id: {type: string}
+        wager:
+          type: object
+          required: [stake]
+          properties:
+            stake: {type: integer, minimum: 1}
+        wager_total: {type: number, minimum: 0.01}
+        entropy:
+          type: object
+          required: [shelf_start, push]
+          properties:
+            shelf_start: {type: integer, minimum: 0, maximum: 11}
+            push: {type: integer, minimum: 0, maximum: 3}
+        total_return: {type: number, minimum: 0}
+        outcome: {type: string, enum: [win, lose]}
+        detail:
+          type: object
+          required: [shelf_start, push, filled, coins, multiplier]
+          properties:
+            shelf_start: {type: integer, minimum: 0, maximum: 11}
+            push: {type: integer, minimum: 0, maximum: 3}
+            filled: {type: integer, minimum: 1, maximum: 15}
+            coins: {type: integer, minimum: 0, maximum: 4}
+            multiplier: {type: number, minimum: 0}
+        net: {type: number}
+        settled_at: {type: string}
+    # Preserve scoped wager and optional return event evidence for the settled round.
+    CoinPusherLedgerEvidence:
+      type: object
+      required: [wager, settlement]
+      properties:
+        wager:
+          type: object
+          description: Committed aggregate wager debit for this authenticated player and round.
+        settlement:
+          type: object
+          nullable: true
+          description: Committed aggregate cascade credit, or null when nothing tipped over.
+    # Preserve the repository-wide success envelope contract.
+    ApiSuccessEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok: {type: boolean, enum: [true]}
+        data: {type: object}
+    # Preserve the repository-wide error envelope contract.
+    ApiErrorEnvelope:
+      type: object
+      required: [ok, error]
+      properties:
+        ok: {type: boolean, enum: [false]}
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: {type: string}
+            message: {type: string}
+            details: {type: object}
