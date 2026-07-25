@@ -12,6 +12,11 @@ merge executor. Claude may compose PRs but never merge them.
 
 ## Start every coordination pass by checking
 
+0. `docs/coordination/claude.md` for Claude's current status, file claims, questions, and
+   blockers, then update `docs/coordination/codex.md` (your file only) and append a line to
+   `docs/coordination/log.jsonl` with any status, claim, ID rename, or answer. Never edit
+   `claude.md`. See `docs/coordination/README.md` for the protocol.
+
 1. Active GitHub issues and PRs.
 2. Active task packets under `codex/tasks/`.
 3. File ownership conflicts.

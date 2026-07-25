@@ -56,3 +56,12 @@ Claude's terminal handback must include:
 
 The handback is complete when the PR is reviewable or honestly blocked. It is
 not complete merely because the PR exists.
+
+## Coordination channel with Codex
+
+Before opening or updating a pull request, read `docs/coordination/codex.md` for Codex's current
+status, merge queue, requirement/TEST ID renames, and file claims. Keep `docs/coordination/claude.md`
+(your file only) current with your open PRs, active work, file claims, questions, and blockers, and
+append a line to `docs/coordination/log.jsonl` for any status, claim, question, or answer. Never edit
+`codex.md`. The channel is asynchronous — an entry reaches Codex only after it is merged to `main` or
+Codex is pointed at the branch. See `docs/coordination/README.md` for the full protocol.
