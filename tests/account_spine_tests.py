@@ -176,19 +176,25 @@ class ProductAccountSpineTests(unittest.TestCase):
             # Attempt to list reports for the guest.
             feedback.list_reporter_reports(guest)
 
-    # Prove localized Admin access labels cannot widen their responsive grid tracks.
+    # Prove localized Admin access labels stay readable inside responsive grid tracks.
     def test_admin_access_grid_bounds_localized_controls(self) -> None:
         # Resolve the repository stylesheet without starting a browser or listener.
         styles = (Path(__file__).resolve().parents[1] / "web" / "styles.css").read_text(encoding="utf-8")
         # Resolve the governed Browser harness so its owner-relative alignment remains reviewable without Chromium.
         browser_harness = (Path(__file__).resolve().parents[1] / "tests" / "run_tests.py").read_text(encoding="utf-8")
-        # Require fractional zero-minimum tracks so intrinsic Russian copy cannot widen the table cell.
-        self.assertIn("grid-template-columns: minmax(0, 1.05fr) minmax(0, .9fr) minmax(0, 1.2fr);", styles)
+        # Require bounded desktop tracks wide enough for the complete Russian role label.
+        self.assertIn("grid-template-columns: minmax(112px, 1fr) minmax(132px, 1.2fr) minmax(136px, 1.2fr);", styles)
         # Require every direct grid child to shrink inside its assigned track.
         self.assertIn(".admin-user-access-controls > * {\n  min-width: 0;\n}", styles)
-        # Bound the complete group below the governed mobile scroll owner's measured inline size.
-        self.assertIn("gap: 8px;\n  width: 330px;\n  max-width: 100%;\n  min-width: 0;", styles)
-        # Require long localized role and save labels to wrap instead of overflowing the named scroll owner.
-        self.assertIn(".admin-user-access-controls .save-user-account {\n  width: 100%;\n  white-space: normal;\n  overflow-wrap: anywhere;", styles)
+        # Require the mobile breakpoint to wrap the complete group inside the measured scroll owner.
+        self.assertIn('"status role"\n      "save save";', styles)
+        # Require a one-line role track so translated text cannot collapse into a vertical sliver.
+        self.assertIn(".admin-user-access-controls .check-row {\n  grid-area: role;\n  width: 100%;\n  white-space: nowrap;", styles)
+        # Require the save action to wrap only at ordinary word boundaries.
+        self.assertIn(".admin-user-access-controls .save-user-account {\n  grid-area: save;\n  width: 100%;\n  white-space: normal;\n  overflow-wrap: break-word;", styles)
+        # Bound the complete mobile group below the governed scroll owner's measured inline size.
+        self.assertIn("grid-template-columns: minmax(104px, 1fr) minmax(152px, 1.45fr);\n    width: 330px;", styles)
         # Require deterministic owner-relative alignment instead of browser-dependent nested table scrollIntoView behavior.
         self.assertIn("owner.scrollLeft += groupRect.left - ownerRect.left - Math.max(0,(owner.clientWidth-groupRect.width)/2)", browser_harness)
+        # Require hosted evidence to fail when role or save copy is clipped despite outer-box containment.
+        self.assertIn("labelsReadable:", browser_harness)

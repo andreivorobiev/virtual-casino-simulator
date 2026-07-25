@@ -10741,7 +10741,7 @@
       ],
       "introduced_in": "product-account-spine",
       "changed_in": "product-account-spine",
-      "notes": "The Admin UI keeps lifecycle, Admin role, and save controls together inside the managed table's named horizontal-scroll owner so the complete action remains visible and readable on desktop, tablet, and mobile evidence."
+      "notes": "The Admin UI keeps lifecycle, Admin role, and save controls together inside the managed table's named horizontal-scroll owner. Desktop tracks retain readable localized labels, while the governed phone breakpoint wraps the save action onto a full-width second row so Russian copy cannot collapse into a vertical sliver."
     },
     {
       "id": "FEEDBACK-005",
@@ -10807,7 +10807,7 @@
       ],
       "introduced_in": "product-account-spine",
       "changed_in": "product-account-spine",
-      "notes": "Listener-free service evidence is paired with the exact-head BR-ADMIN-USERS-001 role/lifecycle interaction and eight governed EN/RU Admin images across four standard viewports, with deterministic owner-relative evidence alignment and explicit changed-control containment inside the named table scroll owner."
+      "notes": "Listener-free service evidence is paired with the exact-head BR-ADMIN-USERS-001 role/lifecycle interaction and eight governed EN/RU Admin images across four standard viewports, with deterministic owner-relative evidence alignment, explicit changed-control containment, and fail-closed label clipping checks inside the named table scroll owner."
     }
   ]
 }
