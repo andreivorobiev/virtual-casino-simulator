@@ -1913,6 +1913,18 @@ def run_api_tests():
             casino_holdem_state_a=api(base,f'/api/v1/games/casino-holdem/state?player_id={user_b["player_id"]}',auth_token=token_a); casino_holdem_state_b=api(base,f'/api/v1/games/casino-holdem/state?player_id={user_a["player_id"]}',auth_token=token_b); assert casino_holdem_state_a['state']['recent_rounds'][-1]['round_id']==casino_holdem_a['round']['round_id'] and casino_holdem_state_b['state']['recent_rounds'][-1]['round_id']==casino_holdem_b['round']['round_id']
             # Require one ante debit, one call debit, and at most one returned-token credit for the replayed round.
             casino_holdem_ledger_a=api(base,f'/api/v1/players/{user_a["player_id"]}/ledger',auth_token=token_a)['ledger']; casino_holdem_events_a=[row for row in casino_holdem_ledger_a if row.get('game')=='casino_holdem' and row.get('round_id')==casino_holdem_a['round']['round_id']]; assert sum(row.get('transaction_type')=='CASINO_HOLDEM_ANTE_DEBIT' for row in casino_holdem_events_a)==1 and sum(row.get('transaction_type')=='CASINO_HOLDEM_CALL_DEBIT' for row in casino_holdem_events_a)==1 and sum(row.get('transaction_type')=='CASINO_HOLDEM_SETTLEMENT_CREDIT' for row in casino_holdem_events_a)<=1
+            # Prepare two session-bound Pai Gow Poker rounds while hostile body identities challenge ownership.
+            pai_gow_poker_deal_a=api(base,'/api/v1/games/pai-gow-poker/rounds','POST',{'player_id':user_b['player_id'],'action_id':'wallet-pai-gow-poker-deal-a','ante':1},auth_token=token_a); pai_gow_poker_deal_b=api(base,'/api/v1/games/pai-gow-poker/rounds','POST',{'player_id':user_a['player_id'],'action_id':'wallet-pai-gow-poker-deal-b','ante':1},auth_token=token_b)
+            # Set both private seven-card hands by the house way through independent session-bound actions.
+            pai_gow_poker_a=api(base,f'/api/v1/games/pai-gow-poker/rounds/{pai_gow_poker_deal_a["round"]["round_id"]}/decisions','POST',{'player_id':user_b['player_id'],'action_id':'wallet-pai-gow-poker-decision-a','set':'house_way'},auth_token=token_a); pai_gow_poker_b=api(base,f'/api/v1/games/pai-gow-poker/rounds/{pai_gow_poker_deal_b["round"]["round_id"]}/decisions','POST',{'player_id':user_a['player_id'],'action_id':'wallet-pai-gow-poker-decision-b','set':'house_way'},auth_token=token_b)
+            # Replay one terminal action and reject a changed ante meaning under the original opening identity.
+            pai_gow_poker_a_replay=api(base,f'/api/v1/games/pai-gow-poker/rounds/{pai_gow_poker_deal_a["round"]["round_id"]}/decisions','POST',{'player_id':user_b['player_id'],'action_id':'wallet-pai-gow-poker-decision-a','set':'house_way'},auth_token=token_a); pai_gow_poker_conflict=api(base,'/api/v1/games/pai-gow-poker/rounds','POST',{'player_id':user_b['player_id'],'action_id':'wallet-pai-gow-poker-deal-a','ante':2},ok=False,auth_token=token_a)
+            # Require private dealer cards before setting, seven dealt cards, bound ownership, independent rounds, exact replay, and conflict closure.
+            assert 'dealer_high' not in pai_gow_poker_deal_a['round'] and len(pai_gow_poker_deal_a['round']['player_cards'])==7 and pai_gow_poker_a['round']['player_id']==user_a['player_id'] and pai_gow_poker_b['round']['player_id']==user_b['player_id'] and pai_gow_poker_a['round']['round_id']!=pai_gow_poker_b['round']['round_id'] and pai_gow_poker_a_replay['replayed'] is True and pai_gow_poker_a_replay['round']==pai_gow_poker_a['round'] and pai_gow_poker_conflict['error']['code']=='CONFLICT'
+            # Read both private states with hostile query identities and require isolated settled history.
+            pai_gow_poker_state_a=api(base,f'/api/v1/games/pai-gow-poker/state?player_id={user_b["player_id"]}',auth_token=token_a); pai_gow_poker_state_b=api(base,f'/api/v1/games/pai-gow-poker/state?player_id={user_a["player_id"]}',auth_token=token_b); assert pai_gow_poker_state_a['state']['recent_rounds'][-1]['round_id']==pai_gow_poker_a['round']['round_id'] and pai_gow_poker_state_b['state']['recent_rounds'][-1]['round_id']==pai_gow_poker_b['round']['round_id']
+            # Require one ante debit and at most one returned-token credit for the replayed round.
+            pai_gow_poker_ledger_a=api(base,f'/api/v1/players/{user_a["player_id"]}/ledger',auth_token=token_a)['ledger']; pai_gow_poker_events_a=[row for row in pai_gow_poker_ledger_a if row.get('game')=='pai_gow_poker' and row.get('round_id')==pai_gow_poker_a['round']['round_id']]; assert sum(row.get('transaction_type')=='PAI_GOW_POKER_ANTE_DEBIT' for row in pai_gow_poker_events_a)==1 and sum(row.get('transaction_type')=='PAI_GOW_POKER_SETTLEMENT_CREDIT' for row in pai_gow_poker_events_a)<=1
             # Prepare two session-bound Joker Poker hands while hostile body identities challenge ownership.
             joker_poker_deal_a=api(base,'/api/v1/games/joker-poker/rounds','POST',{'player_id':user_b['player_id'],'action_id':'wallet-joker-poker-deal-a','wager':1},auth_token=token_a); joker_poker_deal_b=api(base,'/api/v1/games/joker-poker/rounds','POST',{'player_id':user_a['player_id'],'action_id':'wallet-joker-poker-deal-b','wager':1},auth_token=token_b)
             # Persist independent hold selections through the public session-bound route.
@@ -2015,6 +2027,8 @@ def run_api_tests():
             integrity_state['let_it_ride_rounds']={user_a['player_id']:let_it_ride_a['round']['round_id'],user_b['player_id']:let_it_ride_b['round']['round_id']}
             # Retain Casino Hold'em round ids by authenticated player for process-restart verification.
             integrity_state['casino_holdem_rounds']={user_a['player_id']:casino_holdem_a['round']['round_id'],user_b['player_id']:casino_holdem_b['round']['round_id']}
+            # Retain Pai Gow Poker round ids by authenticated player for process-restart verification.
+            integrity_state['pai_gow_poker_rounds']={user_a['player_id']:pai_gow_poker_a['round']['round_id'],user_b['player_id']:pai_gow_poker_b['round']['round_id']}
             # Retain Joker Poker round ids by authenticated player for process-restart verification.
             integrity_state['joker_poker_rounds']={user_a['player_id']:joker_poker_a['round']['round_id'],user_b['player_id']:joker_poker_b['round']['round_id']}
             # Retain Texas Hold'em hand ids by authenticated player for process-restart verification.
@@ -2065,6 +2079,8 @@ def run_api_tests():
         run_case('API-LIR-001',['LIR-001','LIR-002','LIR-003'],lambda: assert_condition(True,'Let It Ride integration evidence missing'))
         # Record Casino Hold'em rules, session, hidden cards, ledger, replay, and two-user coverage.
         run_case('API-CH-001',['CH-001','CH-002','CH-003'],lambda: assert_condition(True,"Casino Hold'em integration evidence missing"))
+        # Record Pai Gow Poker session, ledger, settlement, and retry coverage under its permanent test id.
+        run_case('API-PGP-001',['PGP-001','PGP-002','PGP-003'],lambda: assert_condition(True,'Pai Gow Poker integration evidence missing'))
         # Record Joker Poker rules, session, private draw pool, ledger, replay, and two-user coverage.
         run_case('API-JP-001',['JP-001','JP-002','JP-003'],lambda: assert_condition(True,'Joker Poker integration evidence missing'))
         # Record Texas Hold'em rules, session privacy, four-wallet ledger settlement, replay, and two-user coverage.
@@ -2137,6 +2153,8 @@ def run_api_tests():
                 let_it_ride_state=api(base,'/api/v1/games/let-it-ride/state',auth_token=token); assert any(row['round_id']==integrity_state['let_it_ride_rounds'][expected['player_id']] for row in let_it_ride_state['state']['rounds'])
                 # Read and verify this user's settled Casino Hold'em round after the real process restart.
                 casino_holdem_state=api(base,'/api/v1/games/casino-holdem/state',auth_token=token); assert any(row['round_id']==integrity_state['casino_holdem_rounds'][expected['player_id']] for row in casino_holdem_state['state']['recent_rounds'])
+                # Read and verify this user's settled Pai Gow Poker round after the real process restart.
+                pai_gow_poker_state=api(base,'/api/v1/games/pai-gow-poker/state',auth_token=token); assert any(row['round_id']==integrity_state['pai_gow_poker_rounds'][expected['player_id']] for row in pai_gow_poker_state['state']['recent_rounds'])
                 # Read and verify this user's settled Joker Poker hand after the real process restart.
                 joker_poker_state=api(base,'/api/v1/games/joker-poker/state',auth_token=token); assert any(row['round_id']==integrity_state['joker_poker_rounds'][expected['player_id']] for row in joker_poker_state['state']['recent_rounds'])
                 # Read and verify this user's settled Texas Hold'em hand after the real process restart.
@@ -2148,7 +2166,7 @@ def run_api_tests():
             # Verify both users produced persisted private history across the history-producing games.
             assert all(count>0 for count in integrity_state['history_game_counts'])
         # Record the live restart persistence regression under the same integrity requirements.
-        run_case('API-WALLET-RESTART-001',['SESSION-003','USER-001','TOKEN-003','TOKEN-004','TEST-039','MHVP-002','CW-002','BIG-SIX-002','RD-002','DT-002','HILO-002','SCRATCH-002','SIC-BO-002','CHUCK-002','CRAPS-002','CAA-002','OU7-002','PLINKO-002','FAN-TAN-002','AB-002','AD-002','CS-002','LIR-002','CH-002','JP-002','THPT-002'],wallet_restart_persistence)
+        run_case('API-WALLET-RESTART-001',['SESSION-003','USER-001','TOKEN-003','TOKEN-004','TEST-039','MHVP-002','CW-002','BIG-SIX-002','RD-002','DT-002','HILO-002','SCRATCH-002','SIC-BO-002','CHUCK-002','CRAPS-002','CAA-002','OU7-002','PLINKO-002','FAN-TAN-002','AB-002','AD-002','CS-002','LIR-002','CH-002','PGP-002','JP-002','THPT-002'],wallet_restart_persistence)
         # Define the core function used by this module.
         def core():
             # Load the casino state that publishes packaged and game-module version metadata.
@@ -5630,6 +5648,48 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Execute the integrated Casino Hold'em browser and visual gate.
                 run_case('BR-CH-001',['CH-001','CH-002','CH-004','CH-005','CH-006','TEST-084'],casino_holdem_acceptance)
+                # Define real-backend Pai Gow Poker localization, setting, responsive, motion, and route acceptance.
+                def pai_gow_poker_acceptance():
+                    # Open the catalog-owned route and wait for the stable game selector.
+                    page.get_by_test_id('nav-pai_gow_poker').click(); page.get_by_test_id('pai-gow-poker').wait_for(timeout=5000)
+                    # Enumerate all governed viewport dimensions.
+                    required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
+                    # Load exact UTF-8 title expectations from the paired canonical resource files.
+                    expected_titles={locale:read_i18n_json(ROOT/'web'/'i18n'/locale/'games'/'pai_gow_poker.json')['title'] for locale in ('en-US','ru-RU')}
+                    # Capture one mounted state across both locales and every viewport.
+                    def localized_evidence(prefix,states):
+                        # Iterate through paired English and Russian game resources.
+                        for locale in ('en-US','ru-RU'):
+                            # Switch locale without discarding the active hand or settled history.
+                            page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_timeout(100)
+                            # Require the localized title rather than a fallback key or English leakage.
+                            assert page.locator('.pgp-header h1').inner_text()==expected_titles[locale]
+                            # Validate containment and capture after-pass evidence at every viewport.
+                            for viewport_id,width,height in required_viewports:
+                                # Resize to the exact visual matrix dimensions.
+                                page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
+                                # Reject horizontal overflow and require the mounted Pai Gow Poker table.
+                                assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.get_by_test_id('pai-gow-poker').is_visible()
+                                # Record self-describing evidence for this state and viewport.
+                                game_evidence(f'after-pass-pai-gow-poker-{prefix}-{locale.lower()}-{viewport_id}.png','pai_gow_poker',states,locale,viewport_id)
+                        # Restore English desktop controls for the next public action.
+                        page.get_by_test_id('shell-locale-select').select_option('en-US'); page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(100)
+                    # Capture the complete ready table before the ante-backed deal.
+                    localized_evidence('ready',['ready'])
+                    # Deal through the public frontend and require seven selectable cards with the private dealer hidden.
+                    page.locator('#pgp-wager').fill('1'); page.locator('#pgp-wager').press('Tab'); page.locator('[data-action="deal"]').click(); page.locator('[data-action="house-way"]:not([disabled])').wait_for(timeout=10000); assert page.locator('.pgp-tile').count()==7 and page.locator('.playing-card--back').count()==7
+                    # Capture the actionable hand-setting stage.
+                    localized_evidence('setting',['setting'])
+                    # Set by the house way and classify the authoritative shuffled terminal outcome.
+                    page.locator('[data-action="house-way"]').click(); page.wait_for_function("() => document.querySelectorAll('.pgp-history-list li').length >= 1",timeout=10000); terminal=page.locator('.pgp-result').inner_text().lower(); terminal_state='win' if 'win pays' in terminal else ('loss' if 'lost' in terminal else 'push'); localized_evidence(terminal_state,[terminal_state])
+                    # Complete a second real round by the house way while reduced motion is active.
+                    page.emulate_media(reduced_motion='reduce'); page.locator('[data-action="deal"]').click(); page.locator('[data-action="house-way"]:not([disabled])').wait_for(timeout=10000); page.locator('[data-action="house-way"]').click(); page.wait_for_function("() => document.querySelectorAll('.pgp-history-list li').length >= 2",timeout=10000); localized_evidence('reduced-motion',['reduced_motion'])
+                    # Reload the canonical route and require restored player-owned history.
+                    page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('pai-gow-poker').wait_for(timeout=5000); assert page.locator('.pgp-history-list li').count()>=2; localized_evidence('route-restored',['route_restored'])
+                    # Return to the lobby for downstream browser cases.
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Execute the integrated Pai Gow Poker browser and visual gate.
+                run_case('BR-PGP-001',['PGP-001','PGP-002','PGP-004','PGP-005'],pai_gow_poker_acceptance)
                 # Define real-backend Joker Poker localization, hold, draw, responsive, motion, and route acceptance.
                 def joker_poker_acceptance():
                     # Open the catalog-owned route and wait for the stable game selector.

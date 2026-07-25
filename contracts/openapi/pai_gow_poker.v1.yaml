@@ -1,0 +1,180 @@
+openapi: 3.0.3
+# Describe the additive issue-138 Pai Gow Poker contract without changing existing v1 operations.
+info:
+  title: Virtual Casino Pai Gow Poker API
+  version: v1
+  description: >-
+    Additive issue #138 contract for authenticated Pai Gow Poker play. The deal and set commands
+    require independent action ids so retries reuse one round and each ante or settlement movement
+    commits at most once in the local simulator.
+tags:
+  - name: Pai Gow Poker
+    description: Player-scoped seven-card poker set into a five-card high hand and a two-card low hand against a house-way dealer.
+# Define only additive frozen-v1 game endpoints owned by this proposal slice.
+paths:
+  # Expose the player-scoped reload-safe state endpoint.
+  /api/v1/games/pai-gow-poker/state:
+    get:
+      tags: [Pai Gow Poker]
+      operationId: paiGowPokerState
+      summary: Read the authenticated player's reload-safe Pai Gow Poker state
+      responses:
+        '200':
+          description: Current game state, fixed rules, and bound player
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StateEnvelope'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  # Deal or replay one ante round awaiting a hand-setting decision.
+  /api/v1/games/pai-gow-poker/rounds:
+    post:
+      tags: [Pai Gow Poker]
+      operationId: paiGowPokerStartRound
+      summary: Deal or replay one ante round awaiting a hand-setting decision
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartRoundRequest'
+      responses:
+        '200':
+          description: A prepared decision-ready round with private dealer cards withheld
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoundEnvelope'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  # Apply or replay one hand-setting decision.
+  /api/v1/games/pai-gow-poker/rounds/{round_id}/decisions:
+    post:
+      tags: [Pai Gow Poker]
+      operationId: paiGowPokerDecision
+      summary: Set the seven-card hand and settle the active round
+      parameters:
+        - name: round_id
+          in: path
+          required: true
+          schema: {type: string, pattern: '^[A-Za-z0-9_-]+$'}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DecisionRequest'
+      responses:
+        '200':
+          description: A settled round revealing the dealer and the resolved outcome
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoundEnvelope'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+# Keep all request, response, and error shapes local to this contract.
+components:
+  responses:
+    ErrorResponse:
+      description: Standard bounded error envelope
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorEnvelope'
+  schemas:
+    # Require a caller-stable action identity and an ante.
+    StartRoundRequest:
+      type: object
+      additionalProperties: false
+      required: [action_id, ante]
+      properties:
+        action_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '^[A-Za-z0-9._:-]+$'
+        request_id:
+          type: string
+          description: Accepted alias for action_id for client convenience.
+        player_id:
+          type: string
+          description: Compatibility field overridden by the authenticated session-bound player resolver.
+        ante:
+          type: number
+          minimum: 0.01
+          maximum: 100000
+    # Require a caller-stable action identity and a hand-setting choice.
+    DecisionRequest:
+      type: object
+      additionalProperties: false
+      required: [action_id, set]
+      properties:
+        action_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '^[A-Za-z0-9._:-]+$'
+        request_id:
+          type: string
+          description: Accepted alias for action_id for client convenience.
+        player_id:
+          type: string
+          description: Compatibility field overridden by the authenticated session-bound player resolver.
+        set:
+          description: Two distinct card positions for the low hand, or the house-way sentinel.
+          oneOf:
+            - type: array
+              items: {type: integer, minimum: 0, maximum: 6}
+              minItems: 2
+              maxItems: 2
+            - type: string
+              enum: [house_way]
+    # Specialize the standard success envelope for state reads.
+    StateEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/ApiSuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/GamePayload'
+    # Specialize the standard success envelope for deal and decision actions.
+    RoundEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/ApiSuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/GamePayload'
+    # Describe the common state, rules, player, and round payload.
+    GamePayload:
+      type: object
+      required: [game, state, player, rules]
+      properties:
+        game: {type: string, enum: [pai_gow_poker]}
+        state: {type: object, description: Sanitized active and recent rounds with dealer cards hidden until showdown.}
+        player: {type: object, description: Current authenticated player's shared read-only wallet snapshot.}
+        rules: {type: object, description: Decisions, hand ranking, joker rule, commission, and copies-to-dealer policy.}
+        round: {type: object, description: The prepared or settled round, present on deal and decision responses.}
+        replayed: {type: boolean}
+    # Preserve the repository-wide success envelope contract.
+    ApiSuccessEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok: {type: boolean, enum: [true]}
+        data: {type: object}
+    # Preserve the repository-wide error envelope contract.
+    ApiErrorEnvelope:
+      type: object
+      required: [ok, error]
+      properties:
+        ok: {type: boolean, enum: [false]}
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: {type: string}
+            message: {type: string}
+            details: {type: object}
