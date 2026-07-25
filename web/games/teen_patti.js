@@ -196,8 +196,8 @@ function settledStage(round) {
   const tier = round.player_hand ? safe(text('hand.' + round.player_hand.name)) : '';
   // Build the outcome result line with a signed net amount.
   const line = `${safe(text('outcome.' + round.outcome))} ${tier} <span class="net">${net >= 0 ? '+' + net : net}</span>`;
-  // Return the revealed hands, the result, and a deal-again control.
-  return `${player}${dealer}<p class="tp-result" data-testid="teen-patti-result" role="status" aria-live="polite">${line}</p><div class="tp-actions"><button class="tp-btn deal" data-deal="1" type="button" ${busy ? 'disabled' : ''}>${safe(text('action.deal_again'))}</button></div>`;
+  // Return the revealed hands and result while the single wager-panel deal action remains authoritative.
+  return `${player}${dealer}<p class="tp-result" data-testid="teen-patti-result" role="status" aria-live="polite">${line}</p>`;
 }
 
 // Build the side panel with the ante input and paytables.
