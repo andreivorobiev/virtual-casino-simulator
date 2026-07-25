@@ -988,6 +988,20 @@ def run_api_tests():
             raise AssertionError('play-token receipt derivation suite failed')
     # Record the committed-ledger explanation, shared pagination, privacy, and exact-contract proof.
     run_case('API-RECEIPT-001',['RECEIPT-001','RECEIPT-002','TEST-104'],run_receipt_tests)
+    # Execute the Mississippi Stud engine and settlement proof without opening a listener.
+    def run_mississippi_stud_tests():
+        # Import the focused suite only when its mapped API case runs.
+        from tests import mississippi_stud_tests
+        # Load exactly the Mississippi Stud engine and service assertions.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(mississippi_stud_tests.MississippiStudTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused Mississippi Stud assertion failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure stable.
+            raise AssertionError('mississippi stud suite failed')
+    # Record the Mississippi Stud paytable, three-street settlement, replay, recovery, and house-edge proof.
+    run_case('API-MISSISSIPPI-STUD-001',['MSTUD-001','MSTUD-002','TEST-113'],run_mississippi_stud_tests)
     # Execute the opt-in wellness, current-session summary, concurrency, and neutral-copy proof without a listener.
     def run_wellness_tests():
         # Import the focused suite only when its mapped API case runs.
