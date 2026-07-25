@@ -7,7 +7,7 @@ Historical source baseline: 9.1.0
 ## Independent module revisions
 
 - application: 9.51.11
-- core: 9.23.0
+- core: 9.24.0
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.0
@@ -50,8 +50,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.0.0
 - pai_gow_poker: 1.0.1
 - teen_patti: 1.0.1
-- tests: 1.60.26
-- docs: 1.60.25
+- tests: 1.60.27
+- docs: 1.60.26
 - contracts: 1.48.0
 - tooling: 1.20.3
 - commenting_policy: 1.0.0
@@ -839,3 +839,7 @@ Historical source baseline: 9.1.0
 - **I18N-010** (Application) - PASS: Player-facing game copy uses complete locale-owned terminology and truthful return semantics: Caribbean Stud names the public Call action consistently, Joker Poker and Multi-Hand Video Poker describe total returned credits rather than profit odds, Slots recent history hides raw round identifiers, Russian Roulette uses grammatical range labels, and Russian Baccarat exposes no borrowed English natural or burn terms.
 - **UX-020** (Application) - PASS: Every semantic button, input, select, and explicitly keyboard-focusable control mounted in the shared game outlet receives a visible high-contrast focus indicator when no more specific game-owned focus-visible treatment applies. The fallback uses zero selector specificity so game modules retain control of stronger intentional focus styles.
 - **TEST-117** (Tests) - PASS: Listener-free evidence pins the exact corrected EN/RU copy values, placeholder privacy boundary, grammatical range labels, and zero-specificity shared game focus rule. Hosted Browser evidence renders the corrected Caribbean Stud, Joker Poker, Multi-Hand Video Poker, Slots, Roulette, and Baccarat copy on their real routes, proves a real keyboard-reached game control receives the shared focus ring, captures exact-head governed evidence, and preserves every existing game interaction and visual-matrix gate.
+- **MAGIC-001** (Core) - PASS: Optional passwordless magic-link login is disabled by default and composes the purpose-bound one-time-token platform and the transactional-mail foundation. A magic-link bearer is bound to the fixed magic_link token purpose, so it can never be accepted as an invitation, verification, password-reset, or OAuth token and vice versa. Enabling the method in production is a separate owner-approved release step, and no public HTTP route is registered until then.
+- **MAGIC-002** (Core) - PASS: Magic-link initiation is enumeration-safe: existing, unknown, malformed, and inactive mailboxes all receive one byte-identical acknowledgement, and a link is delivered only for an active local account. Reissue keeps at most one login bearer valid per mailbox, a bearer whose delivery is rejected is revoked immediately so no undelivered link stays usable, and per-recipient send throttling remains in the mail foundation. No response, error, or audit event discloses account existence.
+- **MAGIC-003** (Core) - PASS: Magic-link completion consumes a purpose-bound bearer atomically and only then creates a session for the active local account; disabled login, malformed input, expired, replayed, revoked, tampered, wrong-subject bearers, and accounts that became inactive between initiation and completion all fail closed with one identical generic error. Audit events carry only a keyed recipient digest, token id, user id, session id, outcome, and reason, and never a raw bearer, mailbox, or credential.
+- **TEST-118** (Tests) - PASS: Listener-free evidence verifies the disabled passwordless magic-link lifecycle: disabled-by-default acknowledgement with no delivery, byte-identical initiation across existing, unknown, and malformed mailboxes with mail only for the eligible local account, session creation on completion verified through token authentication, replay and wrong-subject rejection, cross-purpose bearer isolation against password-reset consumption, silent ineligibility of inactive and credential-free social-only accounts, and a rejected delivery leaving no usable bearer behind. Suite emails are uniquely namespaced under a magic-link-only domain so repeated and full-suite runs never collide.
