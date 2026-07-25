@@ -1,0 +1,95 @@
+# Additive authenticated Guest Trial to full account conversion contract for issue #378.
+openapi: 3.0.3
+info:
+  title: Virtual Casino guest-to-account conversion API
+  version: v2
+  description: Authenticated, additive, idempotent conversion of a Guest Trial into a durable full first-party account. The frozen v1 contract is unchanged. The new account adopts the guest's existing player, so the authoritative wallet, ledger, and history are preserved in place with no duplication and no orphaned ownership. Conversion is never silent, creates no OAuth or provider identity, and keeps the internal Casino user id as canonical identity.
+servers:
+  - url: /api/v2
+
+# The route remains behind the canonical cookie-session gateway and requires an active guest principal.
+paths:
+  /me/convert-guest:
+    post:
+      summary: Convert the authenticated guest's own trial into a durable full account, preserving its wallet.
+      operationId: guest_conversion_v2_convert
+      security:
+        - cookieSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+                - accepted
+              additionalProperties: false
+              properties:
+                email:
+                  type: string
+                  format: email
+                  maxLength: 254
+                  description: Unique mailbox for the new first-party account.
+                password:
+                  type: string
+                  description: Policy-compliant enrollment password; never logged or echoed.
+                display_name:
+                  type: string
+                  maxLength: 120
+                terms_version:
+                  type: string
+                  maxLength: 64
+                accepted:
+                  type: boolean
+                  description: Must be true; explicit current terms acceptance is required.
+                locale:
+                  type: string
+                  enum: [en-US, ru-RU]
+                  default: en-US
+                idempotency_key:
+                  type: string
+                  maxLength: 128
+      responses:
+        '200':
+          description: Conversion completed, or an idempotent replay of a prior completion.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  data:
+                    type: object
+                    additionalProperties: false
+                    properties:
+                      status:
+                        type: string
+                        enum: [converted]
+                      replayed:
+                        type: boolean
+                      email:
+                        type: string
+                      display_name:
+                        type: string
+                      balance:
+                        type: number
+                        description: The preserved play-token balance carried over from the guest.
+                      player_preserved:
+                        type: boolean
+        '400':
+          description: Not a guest, unaccepted terms, weak password, malformed email, or an unbound guest.
+        '401':
+          description: No authenticated session.
+        '409':
+          description: The guest wallet is already bound to a different account.
+
+# Reuse the shared cookie-session security scheme defined across the v2 surface.
+components:
+  securitySchemes:
+    cookieSession:
+      type: apiKey
+      in: cookie
+      name: casino_session

@@ -21,7 +21,7 @@ REQUIRED = ["casino", "players", "ledger", "bots", "autoplay", "admin"]
 # Set REQUIRED_V2 to the value needed for the next operation.
 REQUIRED_V2 = [
     # Execute this statement as part of the module's documented control flow.
-    "auth", "admin-users", "transactional-mail", "invitations", "feedback", "user-settings", "self-service-batch",
+    "auth", "admin-users", "transactional-mail", "invitations", "feedback", "user-settings", "self-service-batch", "guest-conversion",
 ]
 # Point to the mixed-surface Operations contract that cannot use the legacy v1-only skeleton rule.
 OPERATIONS_CONTRACT = CONTRACT_DIR / "operations.v1.yaml"

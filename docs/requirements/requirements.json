@@ -10640,6 +10640,59 @@
       "introduced_in": "issue-160-compare-games",
       "changed_in": "issue-160-compare-games",
       "notes": "Allocated for GitHub issue #160."
+    },
+    {
+      "id": "CONVERT-001",
+      "module": "Core",
+      "description": "An authenticated guest trial can be explicitly converted into a durable full first-party account that adopts the guest's existing player, so the authoritative wallet, ledger, and history are preserved in place with no duplicated balance and no orphaned ownership. Conversion is never silent or automatic: it requires the caller to be the active guest, a unique mailbox, a policy-compliant password, and explicit current terms acceptance, and it fails closed for a non-guest principal, a duplicate mailbox, weak password, malformed email, or unaccepted terms. No OAuth or provider identity is created and canonical identity remains the internal Casino user id. The public endpoint is documented in contracts/openapi/guest-conversion.v2.yaml.",
+      "status": "PASS",
+      "api_tests": [
+        "API-CONVERT-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/guest_conversion.py",
+        "casino/app.py",
+        "contracts/openapi/guest-conversion.v2.yaml",
+        "tests/guest_conversion_tests.py"
+      ],
+      "introduced_in": "issue-378-guest-conversion",
+      "changed_in": "issue-378-guest-conversion",
+      "notes": "Allocated for GitHub issue #378. Because the new account adopts the guest player id, there is nothing to migrate; the player identity never changes and only the user identity is upgraded."
+    },
+    {
+      "id": "CONVERT-002",
+      "module": "Core",
+      "description": "Conversion is recoverable and idempotent: a completed conversion that is retried replays the same account rather than creating a second account or duplicating the wallet, an interrupted attempt that created the account but not the terminal guest marker is recovered on retry, and a retry that names a different mailbox for an already-bound wallet fails closed. The guest record is marked terminal and linked so it leaves the trial lifecycle and stays out of Admin Users, and audit events carry only bounded provenance with no raw identifier in user-facing copy.",
+      "status": "PASS",
+      "api_tests": [
+        "API-CONVERT-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/guest_conversion.py",
+        "tests/guest_conversion_tests.py"
+      ],
+      "introduced_in": "issue-378-guest-conversion",
+      "changed_in": "issue-378-guest-conversion",
+      "notes": "Allocated for GitHub issue #378. Idempotency is keyed on the durable conversion marker written on the guest record, checked before any active-guest requirement so a terminal guest still replays."
+    },
+    {
+      "id": "TEST-112",
+      "module": "Tests",
+      "description": "Listener-free evidence verifies guest conversion: exact wallet preservation across the adopted player, password login of the converted account, terminal guest marking, idempotent replay on retry with a single owning account, recovery of an interrupted conversion, rejection of a conflicting different-mailbox retry, rejection of a non-guest principal, validation of terms/password/email inputs, and rejection of a duplicate mailbox.",
+      "status": "PASS",
+      "api_tests": [
+        "API-CONVERT-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/guest_conversion_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-378-guest-conversion",
+      "changed_in": "issue-378-guest-conversion",
+      "notes": "Allocated for GitHub issue #378. Each test resets the identity store so the active-guest capacity never carries between cases."
     }
   ]
 }

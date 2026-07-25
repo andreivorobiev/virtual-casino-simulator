@@ -37,7 +37,7 @@ from casino.core.state_store import ensure_dirs, migrate_from_v7_if_needed
 # Import required dependency so this module can bootstrap whichever storage provider is configured.
 from casino.core.storage import bootstrap_players, get_storage_provider
 # Import required dependency so this module can use its public functions or constants.
-from casino.core import logger, players, ledger, history, auth, feedback, guest_analytics, invitations, receipts, user_settings, wellness, whats_new, replay, table_profiles, game_compare
+from casino.core import logger, players, ledger, history, auth, feedback, guest_analytics, invitations, receipts, user_settings, wellness, whats_new, replay, table_profiles, game_compare, guest_conversion
 # Import required dependency so this module can use its public functions or constants.
 from casino.games.registry import catalog_summary, list_games, register_games
 # Import required dependency so this module can use its public functions or constants.
@@ -427,6 +427,13 @@ def build_router() -> Router:
     def compare_games(body, query, context):
         # Accept only the requested games and locale; the comparison derives from the read-only catalog.
         return game_compare.compare(query.get("games", ""), locale=query.get("locale", "en-US"))
+
+    # Register additive authenticated guest-to-account conversion. (CONVERT-001, issue #378)
+    @router.post(r"/api/v2/me/convert-guest")
+    # Convert the authenticated guest's own trial into a durable full account, preserving its wallet.
+    def convert_guest(body, query, context):
+        # Bind the guest principal from the authenticated session rather than any caller-supplied identity.
+        return guest_conversion.convert(context.get("user") or {}, str((body or {}).get("email", "")), str((body or {}).get("password", "")), str((body or {}).get("display_name", "")), terms_version=str((body or {}).get("terms_version", "")), accepted=(body or {}).get("accepted") is True, locale=str((body or {}).get("locale", "en-US")), idempotency_key=str((body or {}).get("idempotency_key", "")))
 
     # Attach the published current-user token credit endpoint.
     @router.post(r"/api/v2/me/tokens/add")
