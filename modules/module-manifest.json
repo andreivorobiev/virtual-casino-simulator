@@ -43,8 +43,8 @@
     "double_bonus_video_poker": "1.0.0",
     "joker_poker": "1.0.0",
     "texas_holdem_practice_table": "1.0.0",
-    "tests": "1.60.16",
-    "docs": "1.60.16",
+    "tests": "1.60.17",
+    "docs": "1.60.17",
     "contracts": "1.45.0",
     "tooling": "1.20.3",
     "commenting_policy": "1.0.0"
