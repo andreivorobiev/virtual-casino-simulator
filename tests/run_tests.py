@@ -5696,8 +5696,10 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             for viewport_id,width,height in required_viewports:
                                 # Resize to the registered evidence dimensions.
                                 page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
-                                # Reject page overflow and require the complete game, phase, and paytable to remain visible.
-                                assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.get_by_test_id('double-bonus-video-poker').is_visible() and page.locator('.db-pays div').count()==11 and page.locator('.db-card').last.is_visible()
+                                # Count any paytable heading or row still covered by the fixed problem-reporting affordance.
+                                paytable_feedback_overlaps=page.evaluate("() => { const button=document.querySelector('.report-problem-fab:not([hidden])'); if(!button)return 0; const fixed=button.getBoundingClientRect(); return [...document.querySelectorAll('.db-paytable h3,.db-paytable .db-pays > div')].filter(node=>{const row=node.getBoundingClientRect(); return row.left<fixed.right&&row.right>fixed.left&&row.top<fixed.bottom&&row.bottom>fixed.top;}).length; }")
+                                # Reject page overflow, obscured paytable content, and incomplete mounted state.
+                                assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and paytable_feedback_overlaps==0 and page.get_by_test_id('double-bonus-video-poker').is_visible() and page.locator('.db-pays div').count()==11 and page.locator('.db-paytable').is_visible()
                                 # Record self-describing exact-head evidence for this state and viewport.
                                 game_evidence(f'after-pass-double-bonus-video-poker-{prefix}-{locale.lower()}-{viewport_id}.png','double_bonus_video_poker',states,locale,viewport_id)
                         # Restore English desktop controls for the next public action.
