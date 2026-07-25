@@ -710,6 +710,7 @@
         "dashboard",
         "players_and_bots",
         "users",
+        "users_account_role_status",
         "invitations_disabled",
         "invitations_release_held",
         "invitations_empty",

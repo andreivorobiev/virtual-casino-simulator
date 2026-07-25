@@ -32,6 +32,10 @@ REQ_PATH = DOCS_DIR / "requirements.json"
 TEST_RESULTS_PATH = LOG_DIR / "test-runs" / "latest_results.json"
 # Set ADMIN_USERS_PATH to the value needed for the next operation.
 ADMIN_USERS_PATH = DATA_DIR / "admin_users.json"
+# Enumerate product-approved account lifecycle states for Admin-visible accounts.
+ACCOUNT_STATUSES = frozenset({"active", "inactive", "suspended", "locked"})
+# Enumerate product-approved roles; Guest Trial markers are never valid Admin account roles.
+ACCOUNT_ROLES = frozenset({"player", "admin"})
 
 # Parse one bounded Guest Trials list limit for v2 Admin routes.
 def _guest_limit(value) -> int:
@@ -182,6 +186,56 @@ def _clean_text(value, field, *, required=True, default=""):
     return text
 
 
+# Normalize a role list for account-only Admin mutations.
+def _clean_roles(value) -> list[str]:
+    # Collapse absent or empty role input to the regular player role.
+    supplied = value if isinstance(value, list) else [value]
+    # Normalize each supplied role and discard blanks before validation.
+    roles = [str(role or "").strip().lower() for role in supplied if str(role or "").strip()]
+    # Default account identities to player when no role remains.
+    roles = roles or ["player"]
+    # Reject Guest Trial or arbitrary role values before privilege mutation.
+    if any(role not in ACCOUNT_ROLES for role in roles):
+        # Raise a bounded validation message without echoing caller role text.
+        raise ValidationError("User role is invalid")
+    # Preserve stable order while removing duplicates.
+    return list(dict.fromkeys(roles))
+
+
+# Normalize one Admin-visible account status.
+def _clean_status(value) -> str:
+    # Lowercase and trim the requested lifecycle state.
+    status = str(value or "active").strip().lower()
+    # Reject unsupported lifecycle states.
+    if status not in ACCOUNT_STATUSES:
+        # Raise a bounded validation error.
+        raise ValidationError("User status is invalid")
+    # Return the canonical status value.
+    return status
+
+
+# Count active Admin accounts after applying an optional in-memory replacement.
+def _active_admin_count(state: dict, replacement: dict | None = None) -> int:
+    # Build the candidate user list with the replacement record substituted by user id.
+    users = [replacement if replacement and user.get("user_id") == replacement.get("user_id") else user for user in state.get("users", [])]
+    # Count only active non-guest identities with the Admin role.
+    return sum(1 for user in users if not _is_guest_trial_user(user) and user.get("status") == "active" and "admin" in auth.roles_for_user(user))
+
+
+# Reject mutations that would leave the product without any active Admin.
+def _require_remaining_admin(state: dict, replacement: dict) -> None:
+    # Check the simulated post-mutation registry.
+    if _active_admin_count(state, replacement) < 1:
+        # Fail closed before committing a lockout.
+        raise ValidationError("At least one active Admin must remain")
+
+
+# Record full Admin-account mutation metadata in the internal app audit log.
+def _audit_user_change(event: str, before: dict, after: dict) -> None:
+    # Emit before and after role/status/display/locale fields for Admin-only review.
+    logger.info(event, user_id=after.get("user_id"), email=after.get("email"), before={"status": before.get("status"), "roles": before.get("roles"), "display_name": before.get("display_name"), "locale": before.get("locale")}, after={"status": after.get("status"), "roles": after.get("roles"), "display_name": after.get("display_name"), "locale": after.get("locale")})
+
+
 # Define the _as_bool function used by this module.
 def _as_bool(value):
     # Branch when the value is already boolean.
@@ -313,11 +367,13 @@ def create_admin_user(body):
     # Set player to a linked wallet created with zero direct balance.
     player = players.create_player(display_name, "human", 0)
     # Normalize the requested role to the canonical player/Admin vocabulary.
-    role = _clean_text(body.get("role"), "role", required=False, default="player") or "player"
+    role = _clean_roles(body.get("role") or "player")[0]
     # Create the login identity through the same canonical auth service used by session login.
     user = auth.create_user(email, password, display_name, role, player["player_id"], not _as_bool(body.get("terms_accepted")), language)
     # Add Admin-facing locale and credential-rotation metadata to the canonical identity.
     user = auth.update_user_by_id(user["user_id"], lambda record: record.update({"format_locale": format_locale, "use_browser_locale": _as_bool(body.get("use_browser_locale", True)), "password_reset_required": True, "password_version": 1, "terms_accepted_at": utc_now() if _as_bool(body.get("terms_accepted")) else None}))
+    # Record full Admin creation metadata for internal audit review.
+    logger.info("admin_user_created", user_id=user.get("user_id"), email=user.get("email"), roles=user.get("roles"), status=user.get("status"))
     # Branch when Admin grants starting tokens.
     if initial_tokens:
         # Credit the linked wallet through the ledger to preserve token invariants.
@@ -330,10 +386,22 @@ def create_admin_user(body):
 def set_admin_user_status(user_id, status):
     # Load the requested account before applying the canonical auth mutation.
     current = _account_user_by_id(_load_admin_users(), user_id)
+    # Normalize the requested lifecycle state.
+    requested_status = _clean_status(status)
+    # Capture the exact pre-mutation account inside the provider transaction for audit.
+    before = {}
+    # Define the status mutation applied under the identity-document lock.
+    def mutate(record: dict) -> None:
+        # Snapshot the committed pre-change account before replacing its lifecycle state.
+        before.update(dict(record))
+        # Store the validated lifecycle state.
+        record["status"] = requested_status
     # Update status through auth so privilege changes revoke predecessor sessions.
-    user = auth.update_user_by_id(user_id, lambda record: record.update({"status": status}))
+    user = auth.update_user_by_id(user_id, mutate, state_validator=_require_remaining_admin)
     # Update the linked player status through the public player service.
-    players.update_player(current["player_id"], lambda player: player.update({"status": status}))
+    players.update_player(current["player_id"], lambda player: player.update({"status": requested_status}))
+    # Record the full before/after status mutation for Admin audit.
+    _audit_user_change("admin_user_status_changed", before, user)
     # Return the safe user payload after status change.
     return {"user": _public_admin_user(user)}
 
@@ -392,12 +460,20 @@ def update_admin_user_locale(user_id, body):
 def update_admin_user(user_id, body):
     # Reject disposable guest-trial identities before any canonical account mutation can run.
     _account_user_by_id(_load_admin_users(), user_id)
+    # Capture the exact pre-mutation account inside the provider transaction for audit.
+    before = {}
     # Define the canonical mutation applied to the requested identity.
     def mutate(user):
+        # Snapshot the committed pre-change account before applying any requested field.
+        before.update(dict(user))
         # Update active status only when the contract field is present.
         if "active" in body:
             # Map the boolean contract field to the durable status value.
             user["status"] = "active" if _as_bool(body.get("active")) else "inactive"
+        # Update explicit lifecycle status only when the contract field is present.
+        if "status" in body:
+            # Store the canonical account lifecycle state.
+            user["status"] = _clean_status(body.get("status"))
         # Update display name only when the contract field is present.
         if "display_name" in body:
             # Store the validated display name.
@@ -405,17 +481,19 @@ def update_admin_user(user_id, body):
         # Update roles only when the contract field is present.
         if "roles" in body:
             # Normalize the role list and preserve the compatible singular primary role.
-            user["roles"] = [str(role).strip().lower() for role in body.get("roles", []) if str(role).strip()]
+            user["roles"] = _clean_roles(body.get("roles"))
             # Store the primary role for older clients.
-            user["role"] = user["roles"][0] if user["roles"] else "player"
+            user["role"] = user["roles"][0]
         # Update locale metadata only when the contract field is present.
         if "locale" in body:
             # Store one locale across canonical and legacy aliases.
             user["locale"] = user["language"] = _clean_text(body.get("locale"), "locale")
     # Apply the mutation through the canonical auth service.
-    user = auth.update_user_by_id(user_id, mutate)
+    user = auth.update_user_by_id(user_id, mutate, state_validator=_require_remaining_admin)
     # Keep the bound player status aligned with the canonical account status.
     players.update_player(user["player_id"], lambda player: player.update({"status": user.get("status", "active")}))
+    # Record the full before/after mutation for Admin audit review.
+    _audit_user_change("admin_user_updated", before, user)
     # Return the Admin-safe canonical summary.
     return _public_admin_user(user)
 
@@ -759,8 +837,12 @@ def register(router):
     @router.post(r"/api/v2/admin/users")
     # Define admin_users_v2_create for login-ready identity creation.
     def admin_users_v2_create(body, query):
+        # Treat a missing JSON body as an empty mapping before validation.
+        body = body or {}
+        # Normalize role input before mapping the v2 contract to the existing creation helper.
+        roles = _clean_roles(body.get("roles") or body.get("role") or "player")
         # Map the published username field to the canonical email identifier.
-        payload = {**body, "email": body.get("email") or body.get("username"), "display_name": body.get("display_name") or body.get("username"), "role": (body.get("roles") or ["player"])[0], "language": body.get("locale") or "en-US", "initial_tokens": body.get("initial_tokens", 0)}
+        payload = {**body, "email": body.get("email") or body.get("username"), "display_name": body.get("display_name") or body.get("username"), "role": roles[0], "language": body.get("locale") or "en-US", "initial_tokens": body.get("initial_tokens", 0)}
         # Return the flat user summary required by the v2 envelope.
         return create_admin_user(payload)["user"]
 

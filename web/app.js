@@ -343,7 +343,7 @@ function renderLoginGate(message = '') {
   // Resolve explicit caller feedback before a fixed provider completion acknowledgement.
   const authMessage = message || oauthCompletionCopy();
   // Render the browser login gate with private-beta toy-simulator acknowledgement.
-  view.innerHTML = `<section class="auth-panel" data-testid="login-gate"><p class="eyebrow">${safe(t('auth.eyebrow', {}, 'shell'))}</p><h1>${safe(t('auth.title', {}, 'shell'))}</h1><p class="auth-copy">${safe(t('auth.copy', {}, 'shell'))}</p><form id="login-form" class="auth-form"><label>${safe(t('auth.email', {}, 'shell'))}<input id="login-email" data-testid="login-email" type="email" autocomplete="username" required></label><label>${safe(t('auth.password', {}, 'shell'))}<input id="login-password" data-testid="login-password" type="password" autocomplete="current-password" required></label><label>${safe(t('auth.language', {}, 'shell'))}<select id="auth-locale-select" data-testid="auth-locale-select"></select></label><label class="check-row"><input id="login-terms-check" data-testid="login-terms-check" type="checkbox" required><span>${safe(t('auth.termsCheck', {}, 'shell'))}</span></label><button class="primary" data-testid="login-submit" type="submit">${safe(t('auth.submit', {}, 'shell'))}</button><p id="auth-message" class="auth-message" data-testid="oauth-callback-message">${safe(authMessage)}</p></form><div class="auth-guest" data-testid="guest-trial"><button id="guest-trial-button" class="secondary" data-testid="guest-trial-button" type="button">${safe(t('auth.guestCta', {}, 'shell'))}</button><p class="auth-guest-copy" data-testid="guest-trial-copy">${safe(t('auth.guestInfo', {}, 'shell'))}</p></div><section class="oauth-provider-status" data-testid="oauth-providers-disabled" aria-labelledby="oauth-provider-heading"><h2 id="oauth-provider-heading">${safe(t('auth.oauthDivider', {}, 'shell'))}</h2><div class="oauth-provider-grid"><button class="oauth-provider-button" data-testid="oauth-google" type="button" disabled aria-disabled="true">${safe(t('auth.oauthGoogle', {}, 'shell'))}</button><button class="oauth-provider-button" data-testid="oauth-facebook" type="button" disabled aria-disabled="true">${safe(t('auth.oauthFacebook', {}, 'shell'))}</button></div><p class="oauth-provider-copy" data-testid="oauth-provider-message" role="status">${safe(t('auth.oauthUnavailable', {}, 'shell'))}</p></section></section>`;
+  view.innerHTML = `<section class="auth-panel" data-testid="login-gate"><p class="eyebrow">${safe(t('auth.eyebrow', {}, 'shell'))}</p><h1>${safe(t('auth.title', {}, 'shell'))}</h1><p class="auth-copy">${safe(t('auth.copy', {}, 'shell'))}</p><form id="login-form" class="auth-form"><label>${safe(t('auth.email', {}, 'shell'))}<input id="login-email" data-testid="login-email" type="email" autocomplete="username" required></label><label>${safe(t('auth.password', {}, 'shell'))}<input id="login-password" data-testid="login-password" type="password" autocomplete="current-password" required></label><label>${safe(t('auth.language', {}, 'shell'))}<select id="auth-locale-select" data-testid="auth-locale-select"></select></label><label class="check-row"><input id="login-terms-check" data-testid="login-terms-check" type="checkbox" required><span>${safe(t('auth.termsCheck', {}, 'shell'))}</span></label><button class="primary" data-testid="login-submit" type="submit">${safe(t('auth.submit', {}, 'shell'))}</button><p id="auth-message" class="auth-message" data-testid="oauth-callback-message">${safe(authMessage)}</p></form><div class="auth-signup" data-testid="signup-entry"><a class="secondary" href="/enroll/signup" data-testid="signup-entry-link">${safe(t('signup.cta', {}, 'shell'))}</a><p class="auth-guest-copy">${safe(t('signup.entryCopy', {}, 'shell'))}</p></div><div class="auth-guest" data-testid="guest-trial"><button id="guest-trial-button" class="secondary" data-testid="guest-trial-button" type="button">${safe(t('auth.guestCta', {}, 'shell'))}</button><p class="auth-guest-copy" data-testid="guest-trial-copy">${safe(t('auth.guestInfo', {}, 'shell'))}</p></div><section class="oauth-provider-status" data-testid="oauth-providers-disabled" aria-labelledby="oauth-provider-heading"><h2 id="oauth-provider-heading">${safe(t('auth.oauthDivider', {}, 'shell'))}</h2><div class="oauth-provider-grid"><button class="oauth-provider-button" data-testid="oauth-google" type="button" disabled aria-disabled="true">${safe(t('auth.oauthGoogle', {}, 'shell'))}</button><button class="oauth-provider-button" data-testid="oauth-facebook" type="button" disabled aria-disabled="true">${safe(t('auth.oauthFacebook', {}, 'shell'))}</button></div><p class="oauth-provider-copy" data-testid="oauth-provider-message" role="status">${safe(t('auth.oauthUnavailable', {}, 'shell'))}</p></section></section>`;
   // Wire the auth-screen locale selector and rerender the gate after switching.
   wireLocaleSelect(document.getElementById('auth-locale-select'), () => renderLoginGate(message));
   // Wire form submission through the v2 auth login endpoint.
@@ -475,6 +475,12 @@ function isInvitationRoute() {
   return location.pathname.replace(/\/$/, '') === '/enroll/invitation';
 }
 
+// Report whether the current URL names the full-account enrollment surface.
+function isSignupRoute() {
+  // Match only the canonical signup path; all other anonymous paths retain the normal login gate.
+  return location.pathname.replace(/\/$/, '') === '/enroll/signup';
+}
+
 // Derive a token-free session key and stable caller idempotency value for reload-safe redemption. (INVITE-003)
 async function invitationIdempotency(token) {
   // Hash the transient URL bearer with the browser crypto implementation.
@@ -492,6 +498,51 @@ async function invitationIdempotency(token) {
   // Return the newly created idempotency value.
   return created;
 }
+
+// Render the full-account enrollment form while honoring the server-published signup gate.
+async function renderSignupGate(message = '', success = false) {
+  // Clear any stale authenticated shell identity while the public route is displayed.
+  window.CasinoCurrentUser = null;
+  // Keep casino chrome locked behind successful signup and login.
+  document.body.classList.remove('lobby-active', 'guest-trial-active');
+  // Apply the established authentication layout at all governed viewports.
+  document.body.classList.add('auth-locked');
+  // Reset current session before showing the public form.
+  currentSession = null;
+  // Hide registered-user feedback while the browser is anonymous.
+  syncFeedbackReporter(null);
+  // Remove authenticated route semantics from the public outlet.
+  view.removeAttribute('tabindex'); view.removeAttribute('role'); view.removeAttribute('aria-label'); view.removeAttribute('data-testid');
+  // Render a loading form shell while the policy endpoint resolves.
+  view.innerHTML = `<section class="auth-panel" data-testid="signup-enrollment"><p class="eyebrow">${safe(t('signup.eyebrow', {}, 'shell'))}</p><h1>${safe(t('signup.title', {}, 'shell'))}</h1><p class="auth-copy">${safe(t('status.loading', {}, 'shell'))}</p></section>`;
+  // Load policy from the public read-only endpoint.
+  const policy = await api('/api/v2/auth/enrollment-policy');
+  // Determine whether full public signup may submit.
+  const enabled = policy.signup_enabled === true;
+  // Render the complete form with a visible disabled state when signup is held.
+  view.innerHTML = `<section class="auth-panel" data-testid="signup-enrollment" data-signup-enabled="${enabled ? 'true' : 'false'}"><p class="eyebrow">${safe(t('signup.eyebrow', {}, 'shell'))}</p><h1>${safe(t('signup.title', {}, 'shell'))}</h1><p class="auth-copy">${safe(enabled ? t('signup.copy', {}, 'shell') : t('signup.disabledCopy', {}, 'shell'))}</p><form id="signup-form" class="auth-form"><label>${safe(t('auth.email', {}, 'shell'))}<input id="signup-email" data-testid="signup-email" type="email" autocomplete="email" maxlength="254" required></label><label>${safe(t('invitation.displayName', {}, 'shell'))}<input id="signup-display-name" data-testid="signup-display-name" autocomplete="name" maxlength="80" required></label><label>${safe(t('auth.password', {}, 'shell'))}<input id="signup-password" data-testid="signup-password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required></label><label>${safe(t('auth.language', {}, 'shell'))}<select id="signup-locale" data-testid="signup-locale"></select></label><label class="check-row"><input id="signup-terms" data-testid="signup-terms" type="checkbox" required><span>${safe(t('auth.termsCheck', {}, 'shell'))}</span></label><button class="primary" data-testid="signup-submit" type="submit" ${enabled ? '' : 'disabled'}>${safe(t('signup.submit', {}, 'shell'))}</button><p id="signup-message" class="auth-message" role="status" data-success="${success ? 'true' : 'false'}">${safe(message)}</p></form><a href="/" data-testid="signup-login-link">${safe(t('invitation.back', {}, 'shell'))}</a></section>`;
+  // Populate locale options through the shared locale manifest.
+  wireLocaleSelect(document.getElementById('signup-locale'), () => {});
+  // Bind submit to the policy-gated signup API.
+  document.getElementById('signup-form').onsubmit = async event => {
+    // Keep the native form from navigating away.
+    event.preventDefault();
+    // Read the live status element.
+    const status = document.getElementById('signup-message');
+    // Start protected signup so validation errors stay local to the form.
+    try {
+      // Submit the full-account request to the disabled-by-default signup API.
+      const result = await api('/api/v2/auth/signup', { method: 'POST', body: { email: document.getElementById('signup-email').value, password: document.getElementById('signup-password').value, display_name: document.getElementById('signup-display-name').value, locale: document.getElementById('signup-locale').value, terms_version: 'private-beta-1', accepted: document.getElementById('signup-terms').checked } });
+      // Enter the authenticated shell after the server creates the session.
+      await enterAuthenticated(result);
+    // Show one localized enrollment failure without leaking backend details.
+    } catch (_) {
+      // Publish generic failure copy in the form.
+      status.textContent = t('signup.failed', {}, 'shell');
+    }
+  };
+}
+
 
 // Render the account-free private invitation enrollment form without creating state on page load. (INVITE-003, INVITE-005)
 function renderInvitationGate(message = '', success = false) {
@@ -669,8 +720,8 @@ async function refreshCurrentSession() {
   } catch (_) {
     // Clear the current session so no stale wallet can render.
     currentSession = null;
-    // Render the exact account-free invitation path or the normal private-beta login gate.
-    if (isInvitationRoute()) renderInvitationGate(); else renderLoginGate();
+    // Render the exact account-free enrollment path, signup path, or the normal private-beta login gate.
+    if (isInvitationRoute()) renderInvitationGate(); else if (isSignupRoute()) void renderSignupGate(); else renderLoginGate();
     // Report the expired or absent session without exposing backend diagnostics.
     return false;
   }

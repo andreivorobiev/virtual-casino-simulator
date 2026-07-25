@@ -20,6 +20,15 @@ paths:
         '200': { description: Stable internal receipt, content: { application/json: { schema: { $ref: '#/components/schemas/SuccessEnvelope' } } } }
         '400': { description: Invalid, guest, or rate-limited submission, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
         '401': { description: Authentication required, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+  /me/feedback/reports:
+    get:
+      summary: List the current registered reporter's own problem-report statuses without attachments or Admin notes.
+      operationId: feedback_v2_me_report_status
+      security: [{ cookieSession: [] }]
+      responses:
+        '200': { description: Reporter-safe summaries for the authenticated account, content: { application/json: { schema: { $ref: '#/components/schemas/ReporterReportListEnvelope' } } } }
+        '400': { description: Guests and malformed principals cannot track abandoned reports, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+        '401': { description: Authentication required, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
   /admin/feedback/reports:
     get:
       summary: List attachment-free Admin report summaries using exact privacy-safe filters.
@@ -148,6 +157,38 @@ components:
         status: { $ref: '#/components/schemas/Status' }
         admin_notes: { type: string, maxLength: 4000 }
         github_issue_url: { type: string, pattern: '^https://github.com/andreivorobiev/virtual-casino-simulator/issues/[1-9][0-9]*$' }
+    ReporterReportSummary:
+      type: object
+      required: [report_id, reference, category, impact, priority, status, summary, route, locale, reporter_reference, attachment_count, created_at, updated_at, github_issue_url]
+      additionalProperties: false
+      properties:
+        report_id: { type: string }
+        reference: { type: string }
+        category: { $ref: '#/components/schemas/Category' }
+        impact: { $ref: '#/components/schemas/Impact' }
+        priority: { type: string, enum: [P1, P2, P3] }
+        status: { $ref: '#/components/schemas/Status' }
+        summary: { type: string, maxLength: 140 }
+        route: { type: string, maxLength: 181 }
+        locale: { type: string, enum: [en-US, ru-RU] }
+        reporter_reference: { type: string, pattern: '^USR-[A-F0-9]{16}$' }
+        attachment_count: { type: integer, minimum: 0, maximum: 3 }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        github_issue_url: { type: string, nullable: true }
+    ReporterReportListEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [reports]
+          additionalProperties: false
+          properties:
+            reports:
+              type: array
+              items: { $ref: '#/components/schemas/ReporterReportSummary' }
     SuccessEnvelope:
       type: object
       required: [ok, data]

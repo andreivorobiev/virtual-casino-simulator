@@ -7,6 +7,8 @@
     "/api/v2/auth/login",
     "/api/v2/auth/guest",
     "/api/v2/auth/redeem-invitation",
+    "/api/v2/auth/enrollment-policy",
+    "/api/v2/auth/signup",
     "/api/v2/auth/oauth/providers",
     "/api/v2/auth/oauth/{google|facebook}/start",
     "/api/v2/auth/oauth/{google|facebook}/callback",
@@ -21,7 +23,7 @@
     "/api/v2/admin/"
   ],
   "disabled_public_actions": [
-    "signup",
+    "enabled_signup",
     "oauth_exchange",
     "oauth_account_creation",
     "oauth_email_linking"

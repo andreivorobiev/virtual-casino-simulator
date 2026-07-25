@@ -2587,6 +2587,50 @@ h3 {
   min-width: 1040px;
 }
 
+/* Keep lifecycle, Admin-role, and save controls together as one readable account-access unit. */
+.admin-user-access-cell {
+  min-width: 500px;
+}
+
+/* Give every localized control a readable desktop track without widening the page itself. */
+.admin-user-access-controls {
+  display: grid;
+  grid-template-areas: "status role save";
+  grid-template-columns: minmax(112px, 1fr) minmax(180px, 1.5fr) minmax(172px, 1.4fr);
+  align-items: center;
+  gap: 8px;
+  width: 500px;
+  max-width: 100%;
+  min-width: 0;
+}
+
+/* Let long localized labels wrap inside their assigned grid track instead of widening the table. */
+.admin-user-access-controls > * {
+  min-width: 0;
+}
+
+/* Keep the localized Admin role on one readable line inside its bounded track. */
+.admin-user-access-controls .check-row {
+  grid-area: role;
+  width: 100%;
+  white-space: nowrap;
+}
+
+/* Let the localized save action use normal word boundaries inside its bounded track. */
+.admin-user-access-controls .save-user-account {
+  grid-area: save;
+  width: 100%;
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+
+/* Preserve the native lifecycle selector inside its bounded access group. */
+.admin-user-access-controls .user-status {
+  grid-area: status;
+  width: 100%;
+  min-width: 0;
+}
+
 /* Expose keyboard ownership of the intentional horizontal table scroll. */
 .admin-users-table-scroll:focus-visible {
   outline: 2px solid var(--gold);
@@ -3104,6 +3148,20 @@ h3 {
   /* Stack managed-account fields so native controls never widen the governed phone viewport. */
   [data-testid="admin-user-create"] .grid3 {
     grid-template-columns: 1fr;
+  }
+
+  /* Wrap the complete account-access group into two readable rows inside the 336-pixel mobile scroll owner. */
+  .admin-user-access-cell {
+    min-width: 330px;
+  }
+
+  /* Keep status and role together, then give the localized save action the full second row. */
+  .admin-user-access-controls {
+    grid-template-areas:
+      "status role"
+      "save save";
+    grid-template-columns: minmax(104px, 1fr) minmax(152px, 1.45fr);
+    width: 330px;
   }
 }
 

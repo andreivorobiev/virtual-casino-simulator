@@ -34,6 +34,8 @@
   "feedback.submit": "Отправить отчёт",
   "feedback.submitting": "Отправка отчёта…",
   "feedback.success": "Отчёт {reference} отправлен.",
+  "feedback.myReports": "Статус моих отчётов",
+  "feedback.myReportsEmpty": "Отправленные отчёты этого аккаунта появятся здесь.",
   "feedback.registeredOnly": "Отчёты о проблемах пока доступны только зарегистрированным пользователям.",
   "feedback.error.imageType": "Используйте изображение PNG, JPEG или WebP размером не более 12 МБ.",
   "feedback.error.imageSize": "Не удалось сжать снимок до допустимого размера.",

@@ -128,6 +128,12 @@ GUEST_TERMS_VERSION = os.environ.get("CASINO_GUEST_TERMS_VERSION", "private-beta
 INVITATIONS_ENABLED = os.environ.get("CASINO_INVITATIONS_ENABLED", "false").strip().lower() in ("1", "true", "yes", "on")
 # Keep public invitation redemption disabled independently from issuance and mail readiness. (issue #332)
 ENROLLMENT_ENABLED = os.environ.get("CASINO_ENROLLMENT_ENABLED", "false").strip().lower() in ("1", "true", "yes", "on")
+# Keep open full-account signup disabled until owner-controlled public enrollment is ready.
+SIGNUP_ENABLED = os.environ.get("CASINO_SIGNUP_ENABLED", "false").strip().lower() in ("1", "true", "yes", "on")
+# Keep passkey registration and authentication disabled until the WebAuthn ceremony is separately certified.
+PASSKEYS_ENABLED = os.environ.get("CASINO_PASSKEYS_ENABLED", "false").strip().lower() in ("1", "true", "yes", "on")
+# Keep automated GitHub publication disabled unless an operator explicitly installs credentials and release gates.
+FEEDBACK_GITHUB_PUBLICATION_ENABLED = os.environ.get("CASINO_FEEDBACK_GITHUB_PUBLICATION_ENABLED", "false").strip().lower() in ("1", "true", "yes", "on")
 # Suppress repeated delivery actions inside a bounded operator-visible cooldown.
 INVITATION_RESEND_COOLDOWN_SECONDS = int(os.environ.get("CASINO_INVITATION_RESEND_COOLDOWN_SECONDS", "300"))
 # Bound invitation mutations per Admin during one fixed policy window.

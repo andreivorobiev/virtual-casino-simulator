@@ -780,8 +780,8 @@ def validate_guest_contracts():
     assert all(route in admin_contract for route in ('/admin/guest-trials:','/admin/guest-trials/sessions:','/admin/guest-trials/sessions/{analytics_id}:','/admin/guest-trials/cleanup:'))
     # Prove the full filters, journey, fake-token, action/error/latency, and bounded timeline schemas are published.
     assert all(term in admin_contract for term in ('GameFilter','CompletedFilter','ErrorCategoryFilter','SinceFilter','UntilFilter','account_cta_selected','ProductMetrics','fake_tokens_only','action_categories','error_categories','latency_buckets','maxItems: 80'))
-    # Preserve the exact anonymous allowlist including private redemption and the reviewed provider-latched OAuth routes. (OAUTH-007)
-    assert security_contract['anonymous_routes']==['/api/v2/auth/login','/api/v2/auth/guest','/api/v2/auth/redeem-invitation','/api/v2/auth/oauth/providers','/api/v2/auth/oauth/{google|facebook}/start','/api/v2/auth/oauth/{google|facebook}/callback','/healthz']
+    # Preserve the exact anonymous allowlist including private redemption, disabled enrollment, and reviewed provider-latched OAuth routes. (OAUTH-007)
+    assert security_contract['anonymous_routes']==['/api/v2/auth/login','/api/v2/auth/guest','/api/v2/auth/redeem-invitation','/api/v2/auth/enrollment-policy','/api/v2/auth/signup','/api/v2/auth/oauth/providers','/api/v2/auth/oauth/{google|facebook}/start','/api/v2/auth/oauth/{google|facebook}/callback','/healthz']
     # Prove launch stays held and retention/forbidden fields remain exact.
     assert guest_contract['public_launch_authorized'] is False and guest_contract['wallet']['add_tokens_allowed'] is False and guest_contract['lifecycle']['autoplay_stopped_on_end'] is True and guest_contract['entry']['max_game_actions_per_session']==1000 and guest_contract['entry']['max_concurrent_autoplay_sessions']==1 and guest_contract['admin_telemetry']['raw_retention_days']==30 and guest_contract['admin_telemetry']['aggregate_retention_days']==400 and guest_contract['admin_telemetry']['cleanup_failure_visible'] is True and guest_contract['admin_telemetry']['timeline_event_limit']==80 and guest_contract['admin_telemetry']['responsive_error_cohort_minimum']==5 and guest_contract['admin_telemetry']['export_allowed'] is False and 'browser_nonce' in guest_contract['admin_telemetry']['forbidden_fields']
     # Parse the exact digest freeze map.
@@ -1034,6 +1034,33 @@ def run_api_tests():
             raise AssertionError('player self-service batch suite failed')
     # Record the listener-free replay, table-profile, and compare proof.
     run_case('API-SELF-SERVICE-BATCH-001',['REPLAY-001','REPLAY-002','PROFILE-001','PROFILE-002','COMPARE-001','TEST-108','TEST-109','TEST-110'],run_self_service_batch_tests)
+    # Execute the complete guest-to-account conversion proof without opening a listener.
+    def run_guest_conversion_tests():
+        # Load only the focused conversion class.
+        from tests import guest_conversion_tests
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(guest_conversion_tests.GuestConversionTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused conversion proof failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure text secret-safe.
+            raise AssertionError('guest conversion suite failed')
+    # Record the listener-free explicit, idempotent, wallet-preserving conversion proof.
+    run_case('API-CONVERT-001',['CONVERT-001','CONVERT-002','TEST-111'],run_guest_conversion_tests)
+    # Execute the product account-spine proof without opening a listener.
+    def run_account_spine_tests():
+        # Load only the focused product account-spine class.
+        from tests import account_spine_tests
+        # Build a concise unittest suite for direct route and service assertions.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(account_spine_tests.ProductAccountSpineTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused account-spine proof failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure text secret-safe.
+            raise AssertionError('product account-spine suite failed')
+    # Record disabled signup/passkeys, Admin role lifecycle, and reporter-status proof.
+    run_case('API-ACCOUNT-SPINE-001',['AUTH-010','ADMIN-026','FEEDBACK-005','I18N-009','TEST-112'],run_account_spine_tests)
     # Execute the repository-only static marketing-site proof without a listener.
     def run_marketing_site_tests():
         # Import the focused suite only when its mapped static case runs.
@@ -1271,10 +1298,14 @@ def run_api_tests():
                 held=api(base,f'/api/v2/auth/oauth/{held_provider}/start','POST',{'action':'signin','return_to':'/'},ok=False); assert held['error']['code']=='NOT_FOUND'
                 # Require the callback route to remain equally inaccessible before parsing callback proof.
                 callback=api(base,f'/api/v2/auth/oauth/{held_provider}/callback',ok=False); assert callback['error']['code']=='NOT_FOUND'
-            # Require unreviewed account creation, generic linking, and exchange surfaces to remain absent.
-            for missing_path in ('/api/v2/auth/oauth/google/link','/api/v2/auth/oauth/google/exchange','/api/v2/auth/signup'):
+            # Require unreviewed generic linking and exchange surfaces to remain absent.
+            for missing_path in ('/api/v2/auth/oauth/google/link','/api/v2/auth/oauth/google/exchange'):
                 # Dispatch only empty value-free reads and require a closed surface.
                 missing=api(base,missing_path,ok=False); assert missing['error']['code']=='NOT_FOUND'
+            # Require full signup to remain a disabled first-party path rather than an OAuth-created account.
+            signup=api(base,'/api/v2/auth/signup','POST',{'email':'oauth-held@example.invalid','password':'OAuthHeldPassw0rd!','display_name':'Held User','accepted':True,'terms_version':'private-beta-1'},ok=False,auth_token=None)
+            # Require the disabled route to fail closed under repository defaults.
+            assert signup['error']['code']=='FORBIDDEN'
             # Confirm OAuth diagnostics never extend the accepted Operations response shape.
             assert set(api(base,'/api/v2/admin/operations'))=={'schema_version','probe','status','checked_at','last_successful_heartbeat_at','build','ready','storage_provider','checks','reasons'}
         # Record secret-safe Admin diagnostics, absent action routes, and unchanged readiness under permanent IDs.
@@ -7595,14 +7626,90 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     user_row.wait_for(timeout=10000)
                     # Wait for the one-time temporary password notice.
                     page.get_by_test_id('admin-user-temp-password').wait_for(timeout=5000)
+                    # Promote and suspend the synthetic account through the new v2 role/lifecycle controls.
+                    user_row.get_by_test_id('admin-user-role-admin').check()
+                    # Select a non-active lifecycle state so the browser proof covers both new fields.
+                    user_row.get_by_test_id('admin-user-status').select_option('suspended')
+                    # Accept the explicit role/lifecycle confirmation for this controlled Admin mutation.
+                    page.once('dialog',lambda dialog: dialog.accept())
+                    # Wait for both the protected v2 mutation and the account-table refresh it triggers.
+                    with page.expect_response(lambda response: '/api/v2/admin/users/' in response.url and response.request.method == 'PATCH') as account_response_info:
+                        # Wait for the mutation-triggered Users refresh before inspecting persisted controls.
+                        with page.expect_response(lambda response: response.url.endswith('/api/v1/admin/users') and response.request.method == 'GET'):
+                            # Save the selected Admin role and suspended lifecycle state.
+                            user_row.get_by_test_id('admin-user-save-account').click()
+                    # Store the v2 account mutation response for envelope verification.
+                    account_response=account_response_info.value.json()
+                    # Require the standard success envelope from the protected role/lifecycle route.
+                    assert account_response['ok'] is True
+                    # Wait for persisted status and role controls to re-render from the refreshed account.
+                    user_row=page.locator('tr[data-testid="admin-user-row"][data-email="beta.browser@example.test"][data-status="suspended"]')
+                    # Require both selected controls to reflect the canonical persisted account state.
+                    user_row.wait_for(timeout=10000); assert user_row.get_by_test_id('admin-user-role-admin').is_checked() and user_row.get_by_test_id('admin-user-status').input_value()=='suspended'
+                    # Enumerate every governed Admin viewport for the role/lifecycle evidence corpus.
+                    account_viewports={'desktop_primary':{'width':1920,'height':1080},'desktop_compact':{'width':1440,'height':900},'tablet':{'width':1024,'height':900},'mobile':{'width':390,'height':844}}
+                    # Pin the new locale-owned Admin labels so Russian evidence cannot reuse English copy.
+                    account_labels={'en-US':{'role':'Admin','save':'Save account'},'ru-RU':{'role':'Администратор','save':'Сохранить аккаунт'}}
+                    # Capture the persisted role/lifecycle controls in both installed locales.
+                    for locale in ('en-US','ru-RU'):
+                        # Switch the Admin runtime before re-rendering the Users surface.
+                        page.evaluate("async locale => { const i18n=await import('/core/i18n.js'); await i18n.setLocale(locale,{persistLocal:false}); }",locale)
+                        # Reload Users so every role/lifecycle label comes from the selected locale.
+                        page.get_by_test_id('admin-tab-users').click()
+                        # Resolve the refreshed synthetic row and bounded scroll owner.
+                        user_row=page.locator('tr[data-testid="admin-user-row"][data-email="beta.browser@example.test"][data-status="suspended"]')
+                        # Wait for the persisted account row before localization and geometry assertions.
+                        user_row.wait_for(timeout=5000)
+                        # Require the selected role and save action to use exact locale-owned labels.
+                        assert user_row.locator('label.check-row').inner_text().strip()==account_labels[locale]['role'] and user_row.get_by_test_id('admin-user-save-account').inner_text().strip()==account_labels[locale]['save']
+                        # Require the new role/lifecycle resource keys never to leak into visible Admin copy.
+                        account_text=page.get_by_test_id('admin-users-managed-accounts').inner_text()
+                        # Check complete governed keys rather than ordinary words that may appear legitimately.
+                        assert all(key not in account_text for key in ('users.roleAdmin','users.saveAccount','users.roleConfirm','users.accountSaved'))
+                        # Exercise every visual-matrix viewport before recording the exact-head corpus.
+                        for viewport_id,viewport in account_viewports.items():
+                            # Apply exact governed dimensions before measuring the changed Admin surface.
+                            page.set_viewport_size(viewport); page.wait_for_timeout(100)
+                            # Center the exact group with an explicit owner-relative delta because nested table scrollIntoView alignment varies by browser.
+                            page.get_by_test_id('admin-users-managed-accounts').evaluate("""section => { const owner=section.querySelector('[data-testid="admin-users-managed-table"]'); const group=section.querySelector('tr[data-email="beta.browser@example.test"] [data-testid="admin-user-access-controls"]'); const ownerRect=owner?.getBoundingClientRect(); const groupRect=group?.getBoundingClientRect(); if (owner && ownerRect && groupRect) owner.scrollLeft += groupRect.left - ownerRect.left - Math.max(0,(owner.clientWidth-groupRect.width)/2); }""")
+                            # Wait one frame so the explicit scroll position is painted before containment and evidence capture.
+                            page.wait_for_timeout(50)
+                            # Measure document, section, scroll-owner, and changed-control containment independently.
+                            account_geometry=page.get_by_test_id('admin-users-managed-accounts').evaluate("""section => { const sectionRect=section.getBoundingClientRect(); const owner=section.querySelector('[data-testid="admin-users-managed-table"]'); const ownerRect=owner?.getBoundingClientRect(); const row=section.querySelector('tr[data-email="beta.browser@example.test"]'); const group=row?.querySelector('[data-testid="admin-user-access-controls"]'); const groupRect=group?.getBoundingClientRect(); const roleLabel=row?.querySelector('label.check-row'); const save=row?.querySelector('[data-testid="admin-user-save-account"]'); const roleStyle=roleLabel ? getComputedStyle(roleLabel) : null; const controls=[row?.querySelector('[data-testid="admin-user-status"]'),row?.querySelector('[data-testid="admin-user-role-admin"]'),save].filter(Boolean); return { documentContained: document.documentElement.scrollWidth <= window.innerWidth + 1, sectionContained: sectionRect.left >= -1 && sectionRect.right <= window.innerWidth + 1, ownerContained: Boolean(ownerRect && ownerRect.left >= sectionRect.left - 1 && ownerRect.right <= sectionRect.right + 1), controlsUsable: controls.length === 3 && controls.every(control => { const rect=control.getBoundingClientRect(); return rect.width > 0 && rect.height >= 18; }), controlsContained: controls.length === 3 && controls.every(control => { const rect=control.getBoundingClientRect(); return Boolean(ownerRect && rect.left >= ownerRect.left - 1 && rect.right <= ownerRect.right + 1); }), roleTextReadable: Boolean(roleLabel && roleStyle?.whiteSpace === 'nowrap' && roleLabel.scrollWidth <= roleLabel.clientWidth + 1), saveTextReadable: Boolean(save && save.scrollWidth <= save.clientWidth + 1), roleMetrics: roleLabel ? {clientWidth:roleLabel.clientWidth,scrollWidth:roleLabel.scrollWidth,clientHeight:roleLabel.clientHeight,scrollHeight:roleLabel.scrollHeight,whiteSpace:roleStyle?.whiteSpace} : null, saveMetrics: save ? {clientWidth:save.clientWidth,scrollWidth:save.scrollWidth,clientHeight:save.clientHeight,scrollHeight:save.scrollHeight} : null, ownerRect: ownerRect ? {left:ownerRect.left,right:ownerRect.right,width:ownerRect.width,scrollLeft:owner.scrollLeft,clientWidth:owner.clientWidth} : null, groupRect: groupRect ? {left:groupRect.left,right:groupRect.right,width:groupRect.width} : null, controlRects: controls.map(control => { const rect=control.getBoundingClientRect(); return {testid:control.getAttribute('data-testid'),left:rect.left,right:rect.right,width:rect.width}; }) }; }""")
+                            # Fail closed on overflow, clipping, missing controls, or collapsed native inputs.
+                            assert all(account_geometry[key] for key in ('documentContained','sectionContained','ownerContained','controlsUsable','controlsContained','roleTextReadable','saveTextReadable')),{'locale':locale,'viewport':viewport_id,**account_geometry}
+                            # Write one exact-head Admin PNG and sidecar for independent EN/RU human review.
+                            region_evidence(f'after-pass-admin-account-spine-{locale}-{viewport_id}.png','[data-testid="admin-users-managed-accounts"]','admin',['users','users_account_role_status'],locale,viewport_id)
+                    # Restore the suite-default locale and viewport before reverting the synthetic account.
+                    page.set_viewport_size(account_viewports['desktop_primary']); page.evaluate("async () => { const i18n=await import('/core/i18n.js'); await i18n.setLocale('en-US',{persistLocal:false}); }")
+                    # Reload Users and resolve the persisted synthetic account after locale evidence.
+                    page.get_by_test_id('admin-tab-users').click(); user_row=page.locator('tr[data-testid="admin-user-row"][data-email="beta.browser@example.test"][data-status="suspended"]')
+                    # Revert the synthetic account to a player in active state for the existing lifecycle proof.
+                    user_row.get_by_test_id('admin-user-role-admin').uncheck(); user_row.get_by_test_id('admin-user-status').select_option('active')
+                    # Accept the explicit confirmation for the controlled role/lifecycle restoration.
+                    page.once('dialog',lambda dialog: dialog.accept())
+                    # Wait for both the v2 restoration mutation and its account-table refresh.
+                    with page.expect_response(lambda response: '/api/v2/admin/users/' in response.url and response.request.method == 'PATCH'):
+                        # Wait for the refresh before the original deactivate/reactivate sequence begins.
+                        with page.expect_response(lambda response: response.url.endswith('/api/v1/admin/users') and response.request.method == 'GET'):
+                            # Persist the restored player role and active lifecycle status.
+                            user_row.get_by_test_id('admin-user-save-account').click()
+                    # Resolve the active player row after the protected restoration completes.
+                    user_row=page.locator('tr[data-testid="admin-user-row"][data-email="beta.browser@example.test"][data-status="active"]')
+                    # Require the restored row before continuing with legacy account actions.
+                    user_row.wait_for(timeout=10000); assert not user_row.get_by_test_id('admin-user-role-admin').is_checked()
                     # Deactivate the user through the first row action.
                     user_row.get_by_test_id('admin-user-toggle').click()
-                    # Wait for the inactive state to render.
-                    page.locator('tr[data-testid="admin-user-row"][data-email="beta.browser@example.test"][data-status="inactive"]').wait_for(timeout=10000)
+                    # Reacquire the row after its status-driven DOM replacement renders.
+                    user_row=page.locator('tr[data-testid="admin-user-row"][data-email="beta.browser@example.test"][data-status="inactive"]')
+                    # Wait for the inactive state to render before reactivation.
+                    user_row.wait_for(timeout=10000)
                     # Reactivate the user through the same row action.
                     user_row.get_by_test_id('admin-user-toggle').click()
-                    # Wait for the active state to render.
-                    page.locator('tr[data-testid="admin-user-row"][data-email="beta.browser@example.test"][data-status="active"]').wait_for(timeout=10000)
+                    # Reacquire the row after the reactivation rerender.
+                    user_row=page.locator('tr[data-testid="admin-user-row"][data-email="beta.browser@example.test"][data-status="active"]')
+                    # Wait for the active state to render before later actions reuse the row.
+                    user_row.wait_for(timeout=10000)
                     # Reset the user's password through the visible action.
                     with page.expect_response(lambda response: response.url.endswith('/password-reset') and response.request.method == 'POST') as reset_response_info:
                         # Wait for the reset-triggered Users refresh before the next action can race it.
@@ -7670,7 +7777,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Verify the existing Language / Locale tab remains reachable.
                     page.get_by_test_id('admin-tab-language').click(); page.get_by_test_id('admin-language-select').wait_for(timeout=5000)
                 # Execute this statement as part of the module's documented control flow.
-                run_case('BR-ADMIN-USERS-001',['ADMIN-USER-PENDING-035','TERMS-PENDING-035','TOKEN-PENDING-035','I18N-003','USER-004','GUEST-004','TEST-081'],admin_users_browser)
+                run_case('BR-ADMIN-USERS-001',['ADMIN-USER-PENDING-035','TERMS-PENDING-035','TOKEN-PENDING-035','I18N-003','USER-004','GUEST-004','ADMIN-026','I18N-009','TEST-081','TEST-112'],admin_users_browser)
                 # Prove the Admin Guest Trials section reports de-identified account-free telemetry. (issue #317)
                 def admin_guest_trials_browser():
                     # Define every governed Admin viewport, including the issue-required mobile state.

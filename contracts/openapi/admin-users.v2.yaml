@@ -158,6 +158,7 @@ components:
           type: array
           items:
             type: string
+            enum: [player, admin]
         locale:
           type: string
     UpdateUserRequest:
@@ -165,12 +166,16 @@ components:
       properties:
         active:
           type: boolean
+        status:
+          type: string
+          enum: [active, inactive, suspended, locked]
         display_name:
           type: string
         roles:
           type: array
           items:
             type: string
+            enum: [player, admin]
         locale:
           type: string
     ResetPasswordRequest:
@@ -191,7 +196,7 @@ components:
           type: string
     UserSummary:
       type: object
-      required: [user_id, username, active, roles, terms_accepted]
+      required: [user_id, username, active, status, roles, terms_accepted]
       properties:
         user_id:
           type: string
@@ -201,10 +206,14 @@ components:
           type: string
         active:
           type: boolean
+        status:
+          type: string
+          enum: [active, inactive, suspended, locked]
         roles:
           type: array
           items:
             type: string
+            enum: [player, admin]
         locale:
           type: string
         terms_accepted:

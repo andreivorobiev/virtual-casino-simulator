@@ -90,6 +90,46 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+  /auth/enrollment-policy:
+    get:
+      summary: Publish disabled-by-default enrollment, guest, conversion, and passkey availability.
+      operationId: auth_v2_enrollment_policy
+      responses:
+        '200':
+          description: Standard API envelope carrying boolean-only first-party enrollment policy.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnrollmentPolicyEnvelope'
+  /auth/signup:
+    post:
+      summary: Create a first-party account only when the explicit signup feature gate is enabled.
+      operationId: auth_v2_signup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignupRequest'
+      responses:
+        '200':
+          description: Standard API envelope carrying the authenticated new account session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthEnvelope'
+        '400':
+          description: Standard envelope for invalid email, password, locale, terms, or unsupported account fields.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          description: Full-account signup is disabled by default under restricted preview.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
   /admin/oauth/providers:
     get:
       summary: Inspect disabled OAuth provider configuration through the Admin role gate.
@@ -396,6 +436,69 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+  /me/passkeys:
+    get:
+      summary: Return disabled passkey readiness for the current user's My Settings surface.
+      operationId: auth_v2_me_passkeys
+      security:
+        - cookieSession: []
+      responses:
+        '200':
+          description: Standard API envelope carrying no credential material while passkeys are disabled.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PasskeyStatusEnvelope'
+        '401':
+          description: Standard API envelope carrying an authentication error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /me/passkeys/register:
+    post:
+      summary: Fail closed until a certified WebAuthn registration ceremony is implemented.
+      operationId: auth_v2_me_passkeys_register
+      security:
+        - cookieSession: []
+      responses:
+        '403':
+          description: Passkey registration is disabled by default.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /me/convert-guest:
+    post:
+      summary: Explicitly convert the authenticated guest trial into a durable first-party account.
+      operationId: auth_v2_me_convert_guest
+      security:
+        - cookieSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GuestConversionRequest'
+      responses:
+        '200':
+          description: Standard API envelope carrying conversion status and wallet-preservation proof.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GuestConversionEnvelope'
+        '400':
+          description: Conversion requires an active guest, valid account fields, and explicit terms acceptance.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: The guest wallet was already adopted by a different account.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
   /me/tokens/add:
     post:
       summary: Request a ledger-backed play-token credit for an authenticated registered user's bound player.
@@ -539,6 +642,52 @@ components:
         device:
           type: string
           enum: [desktop, tablet, mobile, unknown]
+    EnrollmentPolicy:
+      type: object
+      required: [signup_enabled, guest_trials_enabled, invitation_enrollment_enabled, guest_conversion_enabled, passkeys_enabled, canonical_identity, shared_auth_origin]
+      additionalProperties: false
+      properties:
+        signup_enabled:
+          type: boolean
+        guest_trials_enabled:
+          type: boolean
+        invitation_enrollment_enabled:
+          type: boolean
+        guest_conversion_enabled:
+          type: boolean
+        passkeys_enabled:
+          type: boolean
+        canonical_identity:
+          type: string
+          enum: [casino_user_id]
+        shared_auth_origin:
+          type: string
+          enum: [tiltseven_first_party]
+    SignupRequest:
+      type: object
+      required: [email, password, display_name, accepted, terms_version]
+      additionalProperties: false
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+          minLength: 12
+        display_name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        locale:
+          type: string
+          enum: [en-US, ru-RU]
+        accepted:
+          type: boolean
+          enum: [true]
+        terms_version:
+          type: string
+    LoginRequest:
     LoginRequest:
       type: object
       required: [username, password]
@@ -566,6 +715,75 @@ components:
           minimum: 0.01
         reason:
           type: string
+    GuestConversionRequest:
+      type: object
+      required: [email, password, display_name, accepted, terms_version, idempotency_key]
+      additionalProperties: false
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+          minLength: 12
+        display_name:
+          type: string
+          maxLength: 80
+        locale:
+          type: string
+          enum: [en-US, ru-RU]
+        accepted:
+          type: boolean
+          enum: [true]
+        terms_version:
+          type: string
+        idempotency_key:
+          type: string
+          minLength: 16
+          maxLength: 100
+    GuestConversionResult:
+      type: object
+      required: [status, replayed, email, display_name, balance, player_preserved]
+      additionalProperties: false
+      properties:
+        status:
+          type: string
+          enum: [converted]
+        replayed:
+          type: boolean
+        email:
+          type: string
+          format: email
+        display_name:
+          type: string
+        balance:
+          type: number
+        player_preserved:
+          type: boolean
+          enum: [true]
+    PasskeyStatus:
+      type: object
+      required: [enabled, registration_available, authentication_available, credentials, canonical_identity]
+      additionalProperties: false
+      properties:
+        enabled:
+          type: boolean
+          enum: [false]
+        registration_available:
+          type: boolean
+          enum: [false]
+        authentication_available:
+          type: boolean
+          enum: [false]
+        credentials:
+          type: array
+          maxItems: 0
+          items:
+            type: object
+        canonical_identity:
+          type: string
+          enum: [casino_user_id]
     CurrentUser:
       type: object
       required: [user, player, session, terms]
@@ -742,6 +960,38 @@ components:
           enum: [true]
         data:
           $ref: '#/components/schemas/CurrentUser'
+    EnrollmentPolicyEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/EnrollmentPolicy'
+    GuestConversionEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/GuestConversionResult'
+    PasskeyStatusEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          required: [passkeys]
+          additionalProperties: false
+          properties:
+            passkeys:
+              $ref: '#/components/schemas/PasskeyStatus'
     PlayerEnvelope:
       type: object
       required: [ok, data]

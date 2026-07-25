@@ -119,6 +119,12 @@ class FeedbackServiceTests(unittest.TestCase):
         self.assertNotIn("attachments", feedback.list_reports()[0])
         # Require only an opaque reporter reference in list output.
         self.assertRegex(feedback.list_reports()[0]["reporter_reference"], r"^USR-[A-F0-9]{16}$")
+        # Require the reporter-visible status list to return only summaries, never evidence bytes.
+        own_reports = feedback.list_reporter_reports(self.user)
+        # Require the current reporter to see the submitted reference.
+        self.assertEqual([created["reference"]], [row["reference"] for row in own_reports])
+        # Require reporter status summaries to omit attachment payloads.
+        self.assertNotIn("attachments", own_reports[0])
         # Require raw identity and display name to remain absent from durable state.
         self.assertNotIn("user_feedback_test", str(storage.get_storage_provider().read_document(feedback.STATE_DOCUMENT, {})))
         # Require raw display name to remain absent from durable state.
@@ -141,6 +147,8 @@ class FeedbackServiceTests(unittest.TestCase):
         self.assertIn("P1", draft["labels"])
         # Require the implementation to expose manual-only publication semantics.
         self.assertEqual("manual_only", draft["publication_mode"])
+        # Require automatic publication to remain disabled by default.
+        self.assertFalse(draft["publication_enabled"])
         # Export metadata without encoded pixels.
         exported = feedback.export_report(created["report_id"])
         # Require integrity metadata but no base64 evidence in export output.
@@ -154,6 +162,10 @@ class FeedbackServiceTests(unittest.TestCase):
         with self.assertRaises(ValidationError):
             # Submit through the same production boundary.
             feedback.submit(guest, self._body())
+        # Require guest status tracking to remain unavailable unless the trial converts to an account.
+        with self.assertRaises(ValidationError):
+            # Attempt to list report statuses for the abandoned guest.
+            feedback.list_reporter_reports(guest)
         # Create a registered-user report for priority validation.
         created = feedback.submit(self.user, self._body())
         # Require the repository's prohibited P4 value to be rejected.
