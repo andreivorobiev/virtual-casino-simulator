@@ -10918,7 +10918,7 @@
       ],
       "introduced_in": "issue-131-double-bonus-video-poker",
       "changed_in": "issue-131-double-bonus-video-poker",
-      "notes": "Allocated for GitHub issue #131. The governed browser corpus contains exactly forty after-pass Double Bonus images: five states by two locales by four standard viewports. Geometry fails closed if the fixed problem-reporting affordance intersects any card heading, label, input, action, or payout row."
+      "notes": "Allocated for GitHub issue #131. The governed browser corpus contains exactly forty after-pass Double Bonus images: five states by two locales by four standard viewports. Geometry fails closed if the fixed problem-reporting affordance intersects any native card control or rendered heading, label, or payout text range."
     }
   ]
 }
