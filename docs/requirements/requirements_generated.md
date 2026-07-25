@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.51.7
+- application: 9.51.10
 - core: 9.23.0
 - ledger: 9.1.1
 - players: 9.1.0
@@ -20,7 +20,7 @@ Historical source baseline: 9.1.0
 - slots: 9.1.4
 - blackjack: 9.1.3
 - baccarat: 9.1.3
-- keno: 9.2.3
+- keno: 9.2.4
 - bingo: 9.2.1
 - multi_hand_video_poker: 1.0.1
 - casino_war: 1.0.1
@@ -44,11 +44,15 @@ Historical source baseline: 9.1.0
 - caribbean_stud: 1.0.1
 - let_it_ride: 1.0.0
 - casino_holdem: 1.0.1
+- double_bonus_video_poker: 1.0.0
+- mississippi_stud: 1.0.0
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.60.12
-- docs: 1.60.12
-- contracts: 1.44.1
+- pai_gow_poker: 1.0.1
+- teen_patti: 1.0.1
+- tests: 1.60.25
+- docs: 1.60.24
+- contracts: 1.48.0
 - tooling: 1.20.3
 - commenting_policy: 1.0.0
 
@@ -628,6 +632,11 @@ Historical source baseline: 9.1.0
 - **THPT-003** (Texas Hold'em Practice Table) - PASS: The human and all three funded opponent accounts reserve maximum exposure and receive unused escrow and pot shares only through storage-enforced ledger action identities with Admin-auditable owner context.
 - **THPT-004** (Application) - PASS: Texas Hold'em Practice Table supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play across all governed viewports.
 - **THPT-005** (Tests) - PASS: Catalog, contract, browser, restart, long-suite, funded-opponent, version, requirement, visual, and hostile-client certification evidence remains traceable for Texas Hold'em Practice Table.
+- **PGP-001** (Pai Gow Poker) - PASS: A 53-card joker deck deals seven player cards set into a five-card high hand and a two-card low hand against a house-way dealer, where the low hand may never outrank the high hand, copies go to the dealer, winning both hands pays even money minus a five percent commission, and the semi-wild joker completes straights and flushes and otherwise plays as an ace.
+- **PGP-002** (Pai Gow Poker) - PASS: Authenticated sessions own private reload-safe setting rounds, hidden dealer cards until showdown, durable action receipts, bounded settled history, and canonical route restoration.
+- **PGP-003** (Pai Gow Poker) - PASS: The ante debit and the returned-token settlement credit use the shared ledger exactly once under durable action identities, while losing rounds add no token movement.
+- **PGP-004** (Application) - PASS: Pai Gow Poker supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.
+- **PGP-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Pai Gow Poker with requirement, module, version, and visual traceability.
 - **OPS-001** (Operations) - PASS: Anonymous liveness reports only a fixed live process state without storage access, build metadata, timestamps, heartbeat state, or dependency diagnostics.
 - **OPS-002** (Operations) - PASS: Authenticated readiness checks configured JSON or MySQL storage with bounded waits and returns only allowlisted provider, component state, and fixed degraded reason codes.
 - **OPS-003** (Operations) - PASS: Successful dependency checks advance a monotonic process-local heartbeat timestamp, while later degradation retains the last successful value and restart resets it.
@@ -816,3 +825,14 @@ Historical source baseline: 9.1.0
 - **FEEDBACK-005** (Core) - PASS: Problem reporting remains a manual Admin copy-paste workflow: the application prepares sanitized GitHub issue text and labels but never publishes externally unless a future disabled adapter is separately approved. Registered reporters can see their own safe report status summaries; screenshots, Admin notes, audit history, and raw reporter identity remain hidden. Guest trials cannot track abandoned reports unless they first convert into a durable account.
 - **I18N-009** (Application) - PASS: The product account spine preserves the approved EN/RU browser-visible copy while documenting that the full planned-locale program must land as governed waves with native translations, font coverage, visual evidence, and permanent requirement/test allocation before user exposure. No unsupported locale is silently added to account, enrollment, feedback, passkey, or Admin-role flows by this PR.
 - **TEST-112** (Tests) - PASS: Listener-free evidence verifies the product account spine: enrollment policy reports disabled signup and passkeys with guest conversion available, disabled signup creates no account, passkey registration fails closed, Admin role promotion/demotion and lifecycle states preserve last-active-Admin protection under concurrent demotions, reporter-visible status is account-scoped and attachment-free, and guest status tracking is rejected unless conversion creates a durable account. Exact-head browser evidence also requires the complete status, Admin-role, and save-control group to remain usable and contained in every governed viewport.
+- **KENO-026** (Keno) - PASS: The Keno drawn-ball result rail stays bounded to its column and scrolls horizontally rather than clipping. The rail declares min-width:0 and max-width:100% so it cannot expand to its content width inside the fixed stage, and it enables horizontal-scroll overflow so all twenty drawn balls remain reachable; each ball keeps a fixed size so it stays legible while scrolling. Without these the rightmost drawn numbers were clipped off the page by an ancestor overflow boundary.
+- **TEST-113** (Tests) - PASS: Listener-free evidence pins the Keno drawn-ball rail layout and accessibility contract: the rail can shrink below its content via min-width:0 and is bounded by max-width:100%, it owns named keyboard-reachable horizontal scrolling, and each drawn ball keeps a fixed size. Hosted browser geometry at every governed viewport and EN/RU locale proves the rail stays inside its stage, keeps the twentieth ball visible when the results fit, and makes it fully reachable at the terminal internal-scroll edge when they overflow.
+- **DBVP-001** (Double Bonus Video Poker) - PASS: Double Bonus Video Poker is a single-hand draw video poker on the nine-six pay schedule. The player bets, receives five cards, holds any subset, and draws replacements for the rest; the completed five-card hand is paid by the paytable applied to the bet. Double Bonus rewards four of a kind richly, with four aces paying the most, then four twos through fours, then four fives through kings, while trimming two pair to an even-money return, and the nine-six full house and flush keep the schedule house-positive at about a 0.89 percent edge under optimal play. Deal and draw are exactly-once and reload-safe on the shared ledger and player-scoped state store, and the five replacement cards are committed at deal so a reload cannot change the draw.
+- **DBVP-002** (Double Bonus Video Poker) - PASS: Double Bonus Video Poker inherits the exactly-once, reload-safe orchestration of the shared ledger: one caller-stable action id maps to one deal or one draw, a retry replays the identical settled hand without moving the wallet again, and an action id reused with different hold content fails closed. The replacement pile stays private until the draw completes. The additive v1 contract exposes only the game-owned state, rounds, and decisions routes and never alters the frozen shared API. The published rules report the hand size and the nine-six Double Bonus paytable.
+- **TEST-114** (Tests) - PASS: Listener-free evidence verifies Double Bonus Video Poker: the paytable bands four of a kind into the aces, twos-through-fours, and fives-through-kings tiers and trims two pair to even money, holding three aces and drawing the fourth pays four aces, holding a made hand keeps it through the draw, a busted draw returns nothing, a replayed draw returns the identical settled hand without a second credit, a draw action-id reused with a changed hold fails closed, a reload recovers the committed deal without a duplicate debit, invalid bets and hold positions are rejected, and a large seeded sample confirms the nine-six schedule leaves the game house-positive under a disciplined strategy.
+- **MSTUD-001** (Mississippi Stud) - PASS: Mississippi Stud is a stateful dealer-less five-card stud where the player builds one hand from two hole cards and three community cards. The player posts an ante, then across three betting streets, before each community card is exposed, either folds and forfeits every wager already made or bets one to three times the ante. The completed five-card hand is paid on the total amount wagered: a pair of jacks or better pays even money, richer hands pay up to five hundred to one for a royal flush, a pair of sixes through tens returns every wager as a push, and a pair of fives or lower or no pair loses the whole stake. Deal and each street decision are exactly-once and reload-safe on the shared ledger and player-scoped state store.
+- **MSTUD-002** (Mississippi Stud) - PASS: Mississippi Stud inherits the exactly-once, reload-safe orchestration of the shared ledger across its three betting streets: one caller-stable action id maps to one deal or one street decision, a retry replays the identical advanced or settled round without moving the wallet again, and an action id reused with different wager content fails closed. The community cards stay private and reveal one per settled street, and a fold reveals only the community cards seen so far. The additive v1 contract exposes only the game-owned state, rounds, and decisions routes and never alters the frozen shared API. The published rules report the bet multipliers, the street count, and the winning-hand paytable.
+- **TEST-115** (Tests) - PASS: Listener-free evidence verifies Mississippi Stud: the paytable bands pairs into jacks-or-better wins, sixes-through-tens pushes, and fives-or-lower losses and recognizes a royal flush, a full three-street play pays the paytable on the total wagered amount, a pushing hand returns the whole wager, a losing hand forfeits the stake, the community cards reveal one per settled street, a fold forfeits only the wagers already made, a replayed street bet returns the advanced state without a second debit, a reload recovers committed street bets without duplicates, invalid antes and multipliers are rejected, and a large seeded sample confirms the disciplined strategy leaves the game house-positive. Hosted browser evidence proves the localized public controls, progressive reveal, settlement, reduced-motion state, route restoration, responsive containment, and fixed-feedback non-occlusion.
+- **TEENP-001** (Teen Patti) - PASS: Teen Patti Practice is a stateful three-card poker played against the dealer. The player antes, sees three cards, then folds and forfeits the ante or makes a fixed Play wager equal to the ante. The dealer qualifies with a queen-high hand or better; if the dealer does not qualify the ante pays even money and the Play pushes, and if the dealer qualifies the best three-card hand wins both wagers even money with ties pushing. Teen Patti ranks a trail highest, then a pure sequence, a sequence, a colour, a pair, and a high card, so a sequence outranks a colour. A Bonus pays on the player's own trail, pure sequence, or sequence regardless of the dealer. Deal and decision are exactly-once and reload-safe on the shared ledger and player-scoped state store.
+- **TEENP-002** (Teen Patti) - PASS: Teen Patti Practice preserves authenticated player ownership, private dealer cards until showdown, one caller-stable action identity per deal or decision, replay of the identical committed result without another wallet movement, conflict rejection for changed action content, and reload recovery from committed ledger proof. The additive v1 contract exposes only game-owned state, rounds, and decisions routes and retains the standard success and error envelopes. English and Russian public controls remain accessible, responsive, reduced-motion safe, and restorable at the canonical route.
+- **TEST-116** (Tests) - PASS: Listener-free evidence verifies Teen Patti ranking, settlement, dealer qualification, independent Bonus payment, fold privacy, replay idempotency, conflicting action rejection, reload recovery, invalid-input rejection, authenticated route identity, and a seeded house-positive sample. Hosted Browser evidence verifies ready, decision, played settlement, folded privacy, reduced-motion, and canonical route-restored states through public controls in English and Russian at desktop-primary, desktop-compact, tablet, and mobile dimensions.

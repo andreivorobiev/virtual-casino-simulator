@@ -1,0 +1,17 @@
+{
+  "module": "pai_gow_poker",
+  "version": "1.0.1",
+  "paths": ["casino/games/pai_gow_poker/", "web/games/pai_gow_poker.js", "web/i18n/en-US/games/pai_gow_poker.json", "web/i18n/ru-RU/games/pai_gow_poker.json"],
+  "requirements_prefixes": ["PGP"],
+  "contracts": ["contracts/openapi/pai_gow_poker.v1.yaml"],
+  "game": {
+    "id": "pai_gow_poker", "sort_order": 310, "route": "/games/pai_gow_poker", "label": "Pai Gow Poker", "category": "table", "categories": ["table", "cards", "poker", "strategy"],
+    "backend": {"register": "casino.games.pai_gow_poker.api:register"},
+    "frontend": {"module": "./games/pai_gow_poker.js", "export": "PaiGowPokerGame", "ready_testid": "pai-gow-poker", "i18n_domain": "games/pai_gow_poker", "i18n_probe": "controls.deal"},
+    "tests": {"long_driver": "tests.game_drivers.pai_gow_poker:play"},
+    "translations": {"ru-RU": {"label": "Пай Гоу Покер", "kicker": "Покерный стол", "description": "Разложите семь карт в старшую руку из пяти и младшую из двух против дилера по правилам дома; побеждайте обе руки, копии достаются дилеру, комиссия пять процентов, джокер полудикий.", "tags": ["Карты", "Покер", "Стратегия", "Журнал жетонов"]}},
+    "lobby": {"featured": false, "wide": false, "art_class": "pai-gow-poker-art", "symbol": "PG", "kicker": "Seven-card poker", "description": "Set seven cards into a five-card high hand and a two-card low hand against a house-way dealer, beat both to win even money minus a five percent commission, and settle through the play-token ledger.", "tags": ["Cards", "Poker", "Strategy", "Ledger-backed"]}
+  },
+  "depends_on": ["core", "ledger", "players"],
+  "may_not_depend_on": ["roulette", "slots", "blackjack", "baccarat", "keno", "bingo", "multi_hand_video_poker", "casino_war", "big_six_wheel", "red_dog", "dragon_tiger", "hi_lo", "three_card_poker", "jacks_or_better_video_poker", "deuces_wild_video_poker", "scratch_cards", "sic_bo", "chuck_a_luck", "craps", "crown_and_anchor", "over_under_7", "plinko", "fan_tan", "andar_bahar", "acey_deucey", "caribbean_stud", "let_it_ride", "casino_holdem", "joker_poker", "texas_holdem_practice_table"]
+}

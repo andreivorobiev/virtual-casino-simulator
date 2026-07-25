@@ -72,6 +72,7 @@ Existing games retain sort orders 10 through 60. The approved expansion slots ar
 | 280 | Let It Ride | #134 | Merged PR #178 |
 | 290 | Casino Hold'em | #139 | Merged PR #179 |
 | 300 | Joker Poker | #130 | Released draft PR #177 |
+| 310 | Pai Gow Poker | #138 | Draft PR for issue #138 |
 
 Sort order is catalog presentation metadata, not an authorization to register a placeholder. Only complete game descriptors are loaded.
 
@@ -102,6 +103,8 @@ Permanent game blocks are reserved as follows:
 - `LIR-001` through `LIR-005` for the same five acceptance dimensions for Let It Ride.
 - `CH-001` through `CH-005` for the same five acceptance dimensions for Casino Hold'em.
 - `JP-001` through `JP-005` for the same five acceptance dimensions for Joker Poker.
+- `PGP-001` through `PGP-005` for the same five acceptance dimensions for Pai Gow Poker.
+- `TEENP-001` and `TEENP-002` for Teen Patti rules/state authority and exactly-once settlement, paired with `TEST-116` for listener-free and governed Browser evidence.
 - `THPT-001` through `THPT-005` for rules, session privacy and restart, four-wallet ledger settlement, EN/RU browser behavior, and discovered test/visual/security evidence for Texas Hold'em Practice Table.
 
 New entries begin as `PLANNED`. The integration owner changes an entry to `PASS` only when its mapped real-backend tests and visual evidence have passed. Requirement IDs are never reused or renumbered after allocation.

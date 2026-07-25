@@ -1046,10 +1046,46 @@
       "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
     },
     {
+      "id": "double_bonus_video_poker",
+      "route": "/games/double_bonus_video_poker",
+      "selector": "[data-testid='double-bonus-video-poker']",
+      "states": ["ready", "choose_holds", "settled", "reduced_motion", "route_restored"],
+      "locales": ["en-US", "ru-RU"],
+      "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
+      "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
+    },
+    {
+      "id": "mississippi_stud",
+      "route": "/games/mississippi_stud",
+      "selector": "[data-testid='mississippi-stud']",
+      "states": ["ready", "street_one_decision", "street_two_decision", "street_three_decision", "settled", "reduced_motion", "route_restored"],
+      "locales": ["en-US", "ru-RU"],
+      "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
+      "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
+    },
+    {
       "id": "texas_holdem_practice_table",
       "route": "/games/texas_holdem_practice_table",
       "selector": "[data-testid='texas-holdem-practice-table']",
       "states": ["ready", "preflop_decision", "flop_decision", "turn_decision", "river_decision", "showdown", "folded", "settled", "reduced_motion", "route_restored", "client_tamper_refreshed"],
+      "locales": ["en-US", "ru-RU"],
+      "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
+      "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
+    },
+    {
+      "id": "pai_gow_poker",
+      "route": "/games/pai_gow_poker",
+      "selector": "[data-testid='pai-gow-poker']",
+      "states": ["ready", "setting", "win", "loss", "push", "reduced_motion", "route_restored"],
+      "locales": ["en-US", "ru-RU"],
+      "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
+      "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
+    },
+    {
+      "id": "teen_patti",
+      "route": "/games/teen_patti",
+      "selector": "[data-testid='teen-patti']",
+      "states": ["ready", "decision", "play_settled", "folded", "reduced_motion", "route_restored"],
       "locales": ["en-US", "ru-RU"],
       "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
       "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
