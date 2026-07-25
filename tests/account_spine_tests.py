@@ -186,6 +186,8 @@ class ProductAccountSpineTests(unittest.TestCase):
         self.assertIn("grid-template-columns: minmax(0, 1.05fr) minmax(0, .9fr) minmax(0, 1.2fr);", styles)
         # Require every direct grid child to shrink inside its assigned track.
         self.assertIn(".admin-user-access-controls > * {\n  min-width: 0;\n}", styles)
+        # Bound the complete group below the governed mobile scroll owner's measured inline size.
+        self.assertIn("gap: 8px;\n  width: 330px;\n  max-width: 100%;\n  min-width: 0;", styles)
         # Require long localized role and save labels to wrap instead of overflowing the named scroll owner.
         self.assertIn(".admin-user-access-controls .save-user-account {\n  width: 100%;\n  white-space: normal;\n  overflow-wrap: anywhere;", styles)
         # Require deterministic owner-relative alignment instead of browser-dependent nested table scrollIntoView behavior.
