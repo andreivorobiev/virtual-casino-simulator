@@ -5668,8 +5668,10 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             for viewport_id,width,height in required_viewports:
                                 # Resize to the exact visual matrix dimensions.
                                 page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
-                                # Reject horizontal overflow and require the mounted Pai Gow Poker table.
-                                assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.get_by_test_id('pai-gow-poker').is_visible()
+                                # Measure game controls and rendered copy against the fixed problem-report affordance.
+                                feedback_geometry=page.evaluate("""() => { const button=document.querySelector('.report-problem-fab:not([hidden])'); const fixed=button?.getBoundingClientRect(); const hits=[]; const intersects=rect=>fixed&&rect.left<fixed.right&&rect.right>fixed.left&&rect.top<fixed.bottom&&rect.bottom>fixed.top; for(const node of document.querySelectorAll('.pgp-shell input,.pgp-shell button')){if(intersects(node.getBoundingClientRect()))hits.push(`${node.tagName.toLowerCase()}.${node.className}`);} for(const node of document.querySelectorAll('.pgp-shell h1,.pgp-shell h2,.pgp-shell h3,.pgp-shell p,.pgp-shell li,.pgp-shell label,.pgp-shell legend,.pgp-summary span,.pgp-summary strong')){const range=document.createRange(); range.selectNodeContents(node); if([...range.getClientRects()].some(intersects))hits.push(`${node.tagName.toLowerCase()}:${node.textContent.trim()}`);} return {documentFits:document.documentElement.scrollWidth<=window.innerWidth+1,feedbackOverlaps:hits.length,overlapIdentities:hits}; }""")
+                                # Reject page overflow, fixed-feedback occlusion, and an incomplete mounted table.
+                                assert feedback_geometry=={'documentFits':True,'feedbackOverlaps':0,'overlapIdentities':[]} and page.get_by_test_id('pai-gow-poker').is_visible(),{'feedbackGeometry':feedback_geometry,'locale':locale,'viewport':viewport_id}
                                 # Record self-describing evidence for this state and viewport.
                                 game_evidence(f'after-pass-pai-gow-poker-{prefix}-{locale.lower()}-{viewport_id}.png','pai_gow_poker',states,locale,viewport_id)
                         # Restore English desktop controls for the next public action.

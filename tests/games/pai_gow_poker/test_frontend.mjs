@@ -65,6 +65,10 @@ assert.doesNotMatch(source, /setTimeout|setInterval|requestAnimationFrame/);
 assert.match(source, /prefers-reduced-motion:reduce/);
 // Verify primary controls meet the minimum touch-target height.
 assert.match(source, /min-height:44px/);
+// Verify the mobile control copy reserves the accepted fixed-feedback lane.
+assert.match(source, /\.pgp-controls \.pgp-help,.pgp-controls \.pgp-error\{width:calc\(100% - 160px\)/);
+// Verify the mobile problem-report affordance is bounded to the route-local lane.
+assert.match(source, /body:has\(\.pgp-shell\) \.report-problem-fab\{width:144px;max-width:144px/);
 // Verify responsive stacking preserves control, stage, then data order.
 assert.match(source, /\.pgp-controls\{order:1\}[\s\S]*\.pgp-stage\{order:2[\s\S]*\.pgp-data\{order:3\}/);
 // Verify locale subscription and cleanup are both explicit.
