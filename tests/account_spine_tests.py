@@ -180,9 +180,13 @@ class ProductAccountSpineTests(unittest.TestCase):
     def test_admin_access_grid_bounds_localized_controls(self) -> None:
         # Resolve the repository stylesheet without starting a browser or listener.
         styles = (Path(__file__).resolve().parents[1] / "web" / "styles.css").read_text(encoding="utf-8")
+        # Resolve the governed Browser harness so its owner-relative alignment remains reviewable without Chromium.
+        browser_harness = (Path(__file__).resolve().parents[1] / "tests" / "run_tests.py").read_text(encoding="utf-8")
         # Require fractional zero-minimum tracks so intrinsic Russian copy cannot widen the table cell.
         self.assertIn("grid-template-columns: minmax(0, 1.05fr) minmax(0, .9fr) minmax(0, 1.2fr);", styles)
         # Require every direct grid child to shrink inside its assigned track.
         self.assertIn(".admin-user-access-controls > * {\n  min-width: 0;\n}", styles)
         # Require long localized role and save labels to wrap instead of overflowing the named scroll owner.
         self.assertIn(".admin-user-access-controls .save-user-account {\n  width: 100%;\n  white-space: normal;\n  overflow-wrap: anywhere;", styles)
+        # Require deterministic owner-relative alignment instead of browser-dependent nested table scrollIntoView behavior.
+        self.assertIn("owner.scrollLeft += groupRect.left - ownerRect.left - Math.max(0,(owner.clientWidth-groupRect.width)/2)", browser_harness)
