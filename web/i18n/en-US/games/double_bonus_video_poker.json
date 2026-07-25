@@ -6,7 +6,7 @@
   "result.idle": "Set your bet and deal.",
   "result.draw": "Tap cards to hold, then draw.",
   "label.bet": "Bet",
-  "label.paytable": "Paytable (9/6 Double Bonus)",
+  "label.paytable": "Paytable",
   "label.held": "Held",
   "action.deal": "Deal",
   "action.deal_again": "Deal again",

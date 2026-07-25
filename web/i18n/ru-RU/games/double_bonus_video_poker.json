@@ -6,7 +6,7 @@
   "result.idle": "Задайте ставку и раздайте.",
   "result.draw": "Нажмите на карты, чтобы оставить, затем тяните.",
   "label.bet": "Ставка",
-  "label.paytable": "Таблица выплат (9/6 Double Bonus)",
+  "label.paytable": "Таблица выплат",
   "label.held": "Оставлена",
   "action.deal": "Раздать",
   "action.deal_again": "Раздать снова",
