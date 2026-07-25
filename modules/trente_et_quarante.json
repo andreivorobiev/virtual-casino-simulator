@@ -1,0 +1,17 @@
+{
+  "module": "trente_et_quarante",
+  "version": "1.0.0",
+  "paths": ["casino/games/trente_et_quarante/", "web/games/trente_et_quarante.js", "web/i18n/en-US/games/trente_et_quarante.json", "web/i18n/ru-RU/games/trente_et_quarante.json"],
+  "requirements_prefixes": ["TEQ"],
+  "contracts": ["contracts/openapi/trente_et_quarante.v1.yaml"],
+  "game": {
+    "id": "trente_et_quarante", "sort_order": 350, "route": "/games/trente_et_quarante", "label": "Trente et Quarante", "category": "cards", "categories": ["cards", "table"],
+    "backend": {"register": "casino.games.trente_et_quarante.api:register"},
+    "frontend": {"module": "./games/trente_et_quarante.js", "export": "TrenteEtQuaranteGame", "ready_testid": "trente-et-quarante", "i18n_domain": "games/trente_et_quarante", "i18n_probe": "action.deal"},
+    "tests": {"long_driver": "tests.game_drivers.trente_et_quarante:play"},
+    "translations": {"ru-RU": {"label": "Тридцать и сорок", "kicker": "Карты", "description": "Французская карточная классика: два ряда до 31, ставки на ряд и цвет, серверная раздача и расчёт через журнал жетонов."}},
+    "lobby": {"featured": false, "wide": false, "art_class": "teq-art", "symbol": "&#9829;", "kicker": "Trente et Quarante", "description": "French card classic: two rows dealt to 31, bets on the winning row and colour, server-authoritative deals, and ledger-backed settlement.", "tags": ["Cards", "Table", "Ledger-backed"]}
+  },
+  "depends_on": ["core", "ledger", "players"],
+  "may_not_depend_on": ["roulette", "slots", "blackjack", "baccarat", "keno", "bingo"]
+}

@@ -1113,6 +1113,19 @@ def run_api_tests():
             raise AssertionError('faro suite failed')
     # Record the listener-free Faro win, lose, push, split, retry, and house-edge proof.
     run_case('API-FARO-001',['FARO-001','FARO-002','TEST-118'],run_faro_tests)
+    # Execute the Trente et Quarante rules and settlement proof without opening a listener.
+    def run_trente_et_quarante_tests():
+        # Load only the focused Trente et Quarante class.
+        from tests import trente_et_quarante_tests
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(trente_et_quarante_tests.TrenteEtQuaranteTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused Trente et Quarante proof failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure text secret-safe.
+            raise AssertionError('trente et quarante suite failed')
+    # Record the listener-free Trente et Quarante row, colour, refait, push, retry, and house-edge proof.
+    run_case('API-TRENTE-ET-QUARANTE-001',['TEQ-001','TEQ-002','TEST-119'],run_trente_et_quarante_tests)
     # Discover and execute every focused restricted-preview security module without opening a listener.
     def run_restricted_preview_security_tests():
         # Load the package directory through unittest's standard test discovery.
