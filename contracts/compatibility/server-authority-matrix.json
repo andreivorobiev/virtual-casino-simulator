@@ -1422,12 +1422,12 @@
       ]
     },
     {
-      "game_id": "mississippi_stud",
-      "contract": "contracts/openapi/mississippi_stud.v1.yaml",
+      "game_id": "double_bonus_video_poker",
+      "contract": "contracts/openapi/double_bonus_video_poker.v1.yaml",
       "actions": [
         {
           "method": "POST",
-          "path": "/api/v1/games/mississippi-stud/rounds",
+          "path": "/api/v1/games/double-bonus-video-poker/rounds",
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
@@ -1436,7 +1436,7 @@
         },
         {
           "method": "POST",
-          "path": "/api/v1/games/mississippi-stud/rounds/{round_id}/decisions",
+          "path": "/api/v1/games/double-bonus-video-poker/rounds/{round_id}/decisions",
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
@@ -1462,12 +1462,12 @@
       ]
     },
     {
-      "game_id": "double_bonus_video_poker",
-      "contract": "contracts/openapi/double_bonus_video_poker.v1.yaml",
+      "game_id": "mississippi_stud",
+      "contract": "contracts/openapi/mississippi_stud.v1.yaml",
       "actions": [
         {
           "method": "POST",
-          "path": "/api/v1/games/double-bonus-video-poker/rounds",
+          "path": "/api/v1/games/mississippi-stud/rounds",
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
@@ -1476,7 +1476,7 @@
         },
         {
           "method": "POST",
-          "path": "/api/v1/games/double-bonus-video-poker/rounds/{round_id}/decisions",
+          "path": "/api/v1/games/mississippi-stud/rounds/{round_id}/decisions",
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",
