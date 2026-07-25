@@ -158,7 +158,7 @@ class MarketingSiteTests(unittest.TestCase):
         # Require reduced-motion and both responsive transition points.
         self.assertTrue(all(anchor in css for anchor in ("prefers-reduced-motion: reduce", "@media (max-width: 980px)", "@media (max-width: 640px)")))
         # Keep enough mobile preview height and lower-panel separation for the decorative chip to remain unobscured.
-        self.assertRegex(css, r"@media \(max-width: 640px\)[\s\S]*?\.hero-card\s*\{\s*min-height:\s*40rem;\s*\}[\s\S]*?\.felt-panel\s*\{\s*bottom:\s*20%;\s*\}")
+        self.assertRegex(css, r"@media \(max-width: 640px\)[\s\S]*?\.hero-card\s*\{\s*min-height:\s*44rem;\s*\}[\s\S]*?\.felt-panel\s*\{\s*bottom:\s*20%;\s*\}")
         # Reject horizontal page scrolling and remote CSS resources.
         self.assertTrue("overflow-x: hidden" in css and not re.search(r"url\(\s*['\"]?https?://", css, re.IGNORECASE))
 
@@ -187,7 +187,7 @@ class MarketingSiteTests(unittest.TestCase):
         # Load the dedicated site-module descriptor.
         module = json.loads((ROOT / "modules" / "marketing_site.json").read_text(encoding="utf-8"))
         # Require exact aggregate, descriptor, path, and prefix ownership.
-        self.assertEqual((manifest["modules"]["marketing_site"], module["module"], module["version"], module["paths"], module["requirements_prefixes"]), ("1.0.1", "marketing_site", "1.0.1", ["site/tiltseven/"], ["MARKETING"]))
+        self.assertEqual((manifest["modules"]["marketing_site"], module["module"], module["version"], module["paths"], module["requirements_prefixes"]), ("1.0.2", "marketing_site", "1.0.2", ["site/tiltseven/"], ["MARKETING"]))
         # Load the executable visual inventory.
         matrix = json.loads((ROOT / "tests" / "visual" / "visual_matrix.json").read_text(encoding="utf-8"))
         # Isolate the marketing row.

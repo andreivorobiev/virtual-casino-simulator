@@ -15,7 +15,7 @@ Historical source baseline: 9.1.0
 - audio: 9.1.1
 - admin: 1.11.3
 - operations: 1.0.0
-- marketing_site: 1.0.1
+- marketing_site: 1.0.2
 - roulette: 9.4.8
 - slots: 9.1.4
 - blackjack: 9.1.3
@@ -46,8 +46,8 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.1
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.60.1
-- docs: 1.60.1
+- tests: 1.60.2
+- docs: 1.60.2
 - contracts: 1.43.0
 - tooling: 1.20.3
 - commenting_policy: 1.0.0
