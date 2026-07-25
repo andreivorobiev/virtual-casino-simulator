@@ -1144,6 +1144,20 @@ def run_api_tests():
             raise AssertionError('keno ball-rail layout suite failed')
     # Record the listener-free Keno drawn-ball rail overflow regression proof.
     run_case('UI-KENO-BALL-RAIL-001',['KENO-026','TEST-113'],run_keno_ball_rail_tests)
+    # Execute the complete disabled passwordless magic-link proof without opening a listener.
+    def run_magic_link_tests():
+        # Load only the focused magic-link class.
+        from tests import magic_link_tests
+        # Build the focused listener-free security suite.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(magic_link_tests.MagicLinkServiceTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused magic-link proof failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure text secret-safe.
+            raise AssertionError('passwordless magic-link suite failed')
+    # Record the listener-free disabled passwordless-login lifecycle proof.
+    run_case('API-MAGIC-LINK-001',['MAGIC-001','MAGIC-002','MAGIC-003','TEST-118'],run_magic_link_tests)
     # Discover and execute every focused restricted-preview security module without opening a listener.
     def run_restricted_preview_security_tests():
         # Load the package directory through unittest's standard test discovery.

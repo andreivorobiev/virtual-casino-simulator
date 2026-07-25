@@ -11149,6 +11149,75 @@
       "introduced_in": "pr-393-games-review-improve",
       "changed_in": "pr-393-games-review-improve",
       "notes": "Allocated after Teen Patti TEST-116. Stale held PR #381 must reallocate its overlapping draft TEST-117 before it can become actionable."
+    },
+    {
+      "id": "MAGIC-001",
+      "module": "Core",
+      "description": "Optional passwordless magic-link login is disabled by default and composes the purpose-bound one-time-token platform and the transactional-mail foundation. A magic-link bearer is bound to the fixed magic_link token purpose, so it can never be accepted as an invitation, verification, password-reset, or OAuth token and vice versa. Enabling the method in production is a separate owner-approved release step, and no public HTTP route is registered until then.",
+      "status": "PASS",
+      "api_tests": [
+        "API-MAGIC-LINK-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/magic_link.py",
+        "casino/config.py",
+        "tests/magic_link_tests.py"
+      ],
+      "introduced_in": "issue-337-magic-link",
+      "changed_in": "issue-337-magic-link",
+      "notes": "Allocated for GitHub issue #337. P3 roadmap item; this is the inert implementation only, mirroring the disabled password-recovery service (#334)."
+    },
+    {
+      "id": "MAGIC-002",
+      "module": "Core",
+      "description": "Magic-link initiation is enumeration-safe: existing, unknown, malformed, and inactive mailboxes all receive one byte-identical acknowledgement, and a link is delivered only for an active local account. Reissue keeps at most one login bearer valid per mailbox, a bearer whose delivery is rejected is revoked immediately so no undelivered link stays usable, and per-recipient send throttling remains in the mail foundation. No response, error, or audit event discloses account existence.",
+      "status": "PASS",
+      "api_tests": [
+        "API-MAGIC-LINK-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/magic_link.py",
+        "tests/magic_link_tests.py"
+      ],
+      "introduced_in": "issue-337-magic-link",
+      "changed_in": "issue-337-magic-link",
+      "notes": "Allocated for GitHub issue #337. The generic acknowledgement and the single generic failure envelope are identical across every path."
+    },
+    {
+      "id": "MAGIC-003",
+      "module": "Core",
+      "description": "Magic-link completion consumes a purpose-bound bearer atomically and only then creates a session for the active local account; disabled login, malformed input, expired, replayed, revoked, tampered, wrong-subject bearers, and accounts that became inactive between initiation and completion all fail closed with one identical generic error. Audit events carry only a keyed recipient digest, token id, user id, session id, outcome, and reason, and never a raw bearer, mailbox, or credential.",
+      "status": "PASS",
+      "api_tests": [
+        "API-MAGIC-LINK-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/magic_link.py",
+        "tests/magic_link_tests.py"
+      ],
+      "introduced_in": "issue-337-magic-link",
+      "changed_in": "issue-337-magic-link",
+      "notes": "Allocated for GitHub issue #337. The session is created for the local account through the canonical session factory; magic-link provenance is recorded in the audit trail without modifying the core session authentication-method allowlist."
+    },
+    {
+      "id": "TEST-118",
+      "module": "Tests",
+      "description": "Listener-free evidence verifies the disabled passwordless magic-link lifecycle: disabled-by-default acknowledgement with no delivery, byte-identical initiation across existing, unknown, and malformed mailboxes with mail only for the eligible local account, session creation on completion verified through token authentication, replay and wrong-subject rejection, cross-purpose bearer isolation against password-reset consumption, silent ineligibility of inactive and credential-free social-only accounts, and a rejected delivery leaving no usable bearer behind. Suite emails are uniquely namespaced under a magic-link-only domain so repeated and full-suite runs never collide.",
+      "status": "PASS",
+      "api_tests": [
+        "API-MAGIC-LINK-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/magic_link_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-337-magic-link",
+      "changed_in": "issue-337-magic-link",
+      "notes": "Allocated after TEST-117 during current-main reconciliation of PR #377."
     }
   ]
 }

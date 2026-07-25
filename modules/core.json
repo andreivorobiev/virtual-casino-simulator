@@ -1,6 +1,6 @@
 {
   "module": "core",
-  "version": "9.23.0",
+  "version": "9.24.0",
   "paths": [
     "casino/core/",
     "casino/app.py",
@@ -25,7 +25,8 @@
     "INVITE",
     "MYSQL",
     "STORAGE",
-    "TOUR"
+    "TOUR",
+    "MAGIC"
   ],
   "depends_on": []
 }
