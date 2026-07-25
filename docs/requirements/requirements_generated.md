@@ -6,8 +6,8 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.50.3
-- core: 9.21.0
+- application: 9.50.4
+- core: 9.22.0
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.0
@@ -45,10 +45,10 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.1
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.59.6
-- docs: 1.59.6
-- contracts: 1.42.1
-- tooling: 1.20.1
+- tests: 1.59.8
+- docs: 1.59.8
+- contracts: 1.43.0
+- tooling: 1.20.2
 - commenting_policy: 1.0.0
 
 ## Requirements
@@ -795,3 +795,11 @@ Historical source baseline: 9.1.0
 - **TOUR-001** (Core) - PASS: The server-only What's New foundation reads curated repository release metadata rather than deriving player content from module or application version changes. An entry is eligible only when its release version is an exact numeric triplet at or below the running application, both localization keys are non-empty, and the release coordinator's show_in_whats_new flag is exactly true. Missing, malformed, future, incomplete, or truthy-but-inexact entries fail closed. The shipped catalog is reconciled to packaged application 9.5.3 and remains explicitly disabled until the player UI, browser evidence, and release-coordinator activation remainder of issue #165 are accepted.
 - **TOUR-002** (Core) - PASS: An authenticated registered subject receives at most one capped newest-first merged set of explicitly enabled curated entries and a changelog path. Published entries carry localization keys only, never raw release identifiers. Acknowledgement is atomically persisted per server-derived subject, stamped only from the canonical running application version, and retry-idempotent for that release; one subject cannot dismiss another subject's tour. Disposable guest trials receive an empty non-persisted eligibility response and a non-persisted acknowledgement, creating no durable What's New document.
 - **TEST-106** (Tests) - PASS: Listener-free isolated-provider evidence verifies exact curated opt-in selection, skipped-release merge ordering and caps, malformed and future metadata fail-closed behavior, missing and malformed catalog recovery, durable per-subject server-stamped dismissal, retry idempotency, populated-neighbour isolation, disposable guest non-persistence, subjectless rejection, raw-version privacy, current packaged 9.5.3 metadata with activation disabled, complete EN/RU release keys, consent-free metadata shape, additive v2 route behavior, hostile caller identity and version inputs being rejected, and exact checked contract digest pinning.
+- **REPLAY-001** (Core) - PASS: Round-replay artifacts are derived from the already-committed authoritative history rather than a second per-round store, are scoped to the authenticated session's own rounds, are bounded and paginated with a clamped page size, and are retained only for a conservative fixed window. Every artifact declares that it is a replay record with no settlement authority, so it can never act as an alternate wallet or outcome source.
+- **REPLAY-002** (Core) - PASS: Replay artifacts publish only allowlisted presentation fields plus a bounded compact detail parsed from committed round data, expose no raw durable round or player identifier, correlate a round only by a short display reference, exclude rounds older than the retention window, and return an explicit empty page for a session with no ledger subject while failing closed for an unauthenticated caller.
+- **PROFILE-001** (Core) - PASS: Each authenticated user has per-game table profiles covering preferred chip denominations, default bet, control visibility, and autoplay defaults. Writes are field-allowlisted so no rule variant, payout, or other economics-changing field can ever be stored, are value-bounded, are revision-checked so a stale client cannot clobber a newer value, persist atomically per game, and a malformed persisted document degrades to defaults and repairs itself on the next write.
+- **PROFILE-002** (Core) - PASS: Table profiles derive the subject from the authenticated session rather than a caller identity, validate the game as a bounded lower-case slug, keep one subject's profile invisible to another account, give guest trials session-local defaults with no durable record, and fail closed for an unauthenticated caller.
+- **COMPARE-001** (Core) - PASS: The Compare Games drawer is a read-only derivation over the existing catalog that publishes only product-safe attributes (category, ledger-backed play-token status, featured placement, localization readiness, and localized labels), never edits the registry, and deliberately excludes house edge, expected return, volatility, probability, and payout math until those are separately reviewed. It bounds the number of compared games, rejects malformed or too-few or too-many requests, and reports unknown games as missing rather than silently omitting them.
+- **TEST-108** (Tests) - PASS: Listener-free evidence verifies the round-replay foundation and exact additive route: artifacts are marked non-settlement and derived from committed history, exclude another subject against a populated neighbour, exclude rounds outside the retention window under an injected clock, hide raw durable identifiers, normalize malformed pagination safely, clamp page size, and fail closed for a subjectless session.
+- **TEST-109** (Tests) - PASS: Listener-free evidence verifies table profiles and exact additive read/write routes: per-game persistence with an advancing revision, cross-subject isolation, rejection of economics-changing and unknown fields, enforcement of value bounds, stale-revision conflict, invalid game-slug rejection, malformed-document recovery, session-local guest behaviour with no durable record, and fail-closed subjectless access.
+- **TEST-110** (Tests) - PASS: Listener-free evidence verifies the Compare Games foundation and shared API boundary: money-math attributes are excluded and never present on a row, localization readiness is derived per locale, request bounds reject too-few, too-many, and malformed requests, unknown games are reported as missing, every new route stays authenticated, OpenAPI/compatibility/module ownership/exact-byte digests stay aligned, and every added copy namespace ships complete EN and RU strings with identical placeholders.
