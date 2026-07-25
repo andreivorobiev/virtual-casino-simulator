@@ -23,6 +23,7 @@
   "contracts/openapi/craps.v1.yaml": "1efe301348e53badaa4c69474847de4b1317bf528b483236b622fff76689469e",
   "contracts/openapi/crown_and_anchor.v1.yaml": "edf4abb85e91709a9253d06d6d2ec728216c04274146d5afb1c945f71b1eb0fe",
   "contracts/openapi/over_under_7.v1.yaml": "a05d10a2058abdd5048d16c8c7beea3370d10b0373cab03190072a071ae98a8c",
+  "contracts/openapi/pai_gow_poker.v1.yaml": "c14394a9ddcd474e04c65db201ef75de42b66dd5b9f6c43bfd77b9414f74e795",
   "contracts/openapi/plinko.v1.yaml": "863912fab67562e68334f3259ffba20a65ad8162ff710b0c7e33f7e281d2b1fd",
   "contracts/openapi/fan_tan.v1.yaml": "397007b7b87da4267731a8d98cbedb3c752e5ffb02be767335feefc42d54e351",
   "contracts/openapi/feedback.v2.yaml": "818cf33160ae661e1c594d2e1cb37be6ce4a56adfba174929f6237d3ee8c59dc",

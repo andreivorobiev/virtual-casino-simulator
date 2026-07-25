@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.51.8
+- application: 9.51.9
 - core: 9.23.0
 - ledger: 9.1.1
 - players: 9.1.0
@@ -48,9 +48,10 @@ Historical source baseline: 9.1.0
 - mississippi_stud: 1.0.0
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.60.22
-- docs: 1.60.22
-- contracts: 1.46.0
+- pai_gow_poker: 1.0.0
+- tests: 1.60.23
+- docs: 1.60.23
+- contracts: 1.47.0
 - tooling: 1.20.3
 - commenting_policy: 1.0.0
 
@@ -630,6 +631,11 @@ Historical source baseline: 9.1.0
 - **THPT-003** (Texas Hold'em Practice Table) - PASS: The human and all three funded opponent accounts reserve maximum exposure and receive unused escrow and pot shares only through storage-enforced ledger action identities with Admin-auditable owner context.
 - **THPT-004** (Application) - PASS: Texas Hold'em Practice Table supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play across all governed viewports.
 - **THPT-005** (Tests) - PASS: Catalog, contract, browser, restart, long-suite, funded-opponent, version, requirement, visual, and hostile-client certification evidence remains traceable for Texas Hold'em Practice Table.
+- **PGP-001** (Pai Gow Poker) - PASS: A 53-card joker deck deals seven player cards set into a five-card high hand and a two-card low hand against a house-way dealer, where the low hand may never outrank the high hand, copies go to the dealer, winning both hands pays even money minus a five percent commission, and the semi-wild joker completes straights and flushes and otherwise plays as an ace.
+- **PGP-002** (Pai Gow Poker) - PASS: Authenticated sessions own private reload-safe setting rounds, hidden dealer cards until showdown, durable action receipts, bounded settled history, and canonical route restoration.
+- **PGP-003** (Pai Gow Poker) - PASS: The ante debit and the returned-token settlement credit use the shared ledger exactly once under durable action identities, while losing rounds add no token movement.
+- **PGP-004** (Application) - PASS: Pai Gow Poker supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.
+- **PGP-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Pai Gow Poker with requirement, module, version, and visual traceability.
 - **OPS-001** (Operations) - PASS: Anonymous liveness reports only a fixed live process state without storage access, build metadata, timestamps, heartbeat state, or dependency diagnostics.
 - **OPS-002** (Operations) - PASS: Authenticated readiness checks configured JSON or MySQL storage with bounded waits and returns only allowlisted provider, component state, and fixed degraded reason codes.
 - **OPS-003** (Operations) - PASS: Successful dependency checks advance a monotonic process-local heartbeat timestamp, while later degradation retains the last successful value and restart resets it.
