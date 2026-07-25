@@ -3537,8 +3537,12 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 run_case('BR-AUTH-LOCALE-001',['I18N-003','AUTH-UI-001'],lambda: route_before_locale and page.get_by_test_id('lobby').is_visible() and page.locator('#balance').inner_text()=='5,250.50')
                 # Logout through the shell control to verify the browser returns to the login gate.
                 page.get_by_test_id('logout').click(); page.get_by_test_id('login-gate').wait_for(timeout=5000)
+                # Probe the current-user endpoint after visible logout so the browser cannot hide a surviving cookie.
+                logout_me_status=page.evaluate("async () => { const response=await fetch('/api/v2/me', {credentials:'include'}); return {status:response.status, ok:(await response.json()).ok}; }")
+                # Reload the browser document to prove current-user bootstrapping does not resurrect the old session.
+                page.reload(wait_until='networkidle'); page.get_by_test_id('login-gate').wait_for(timeout=5000)
                 # Execute this statement as part of the module's documented control flow.
-                run_case('BR-AUTH-LOGOUT-001',['AUTH-UI-001'],lambda: page.get_by_test_id('login-gate').is_visible() and not page.get_by_test_id('premium-topbar').is_visible())
+                run_case('BR-AUTH-LOGOUT-001',['AUTH-UI-001','SESSION-006'],lambda: logout_me_status['status']==401 and logout_me_status['ok'] is False and page.get_by_test_id('login-gate').is_visible() and not page.get_by_test_id('premium-topbar').is_visible())
                 # Re-login after logout so the existing browser suite can continue authenticated.
                 page.get_by_test_id('login-email').fill('demo@example.local'); page.get_by_test_id('login-password').fill('password'); page.get_by_test_id('login-terms-check').check(); page.get_by_test_id('login-submit').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Store the normal-player shell results so the later Admin session can complete one two-role acceptance case.

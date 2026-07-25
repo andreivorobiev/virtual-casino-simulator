@@ -237,8 +237,8 @@ function isGuestSession() {
   return Array.isArray(currentSession?.user?.roles) && currentSession.user.roles.includes('guest');
 }
 
-// Clear every shell-owned authenticated cache before showing the logged-out session-expired gate.
-function renderExpiredSessionGate() {
+// Clear every shell-owned authenticated cache before showing any logged-out gate.
+function clearAuthenticatedShellState() {
   // Stop observing game-only rails before the authenticated route outlet is replaced.
   gameRailObserver?.disconnect();
   // Unmount the active game when its lifecycle hook exists so stale rerenders cannot survive sign-out.
@@ -253,6 +253,14 @@ function renderExpiredSessionGate() {
   latestState = null;
   // Clear frontend descriptors derived from protected state while the browser is logged out.
   gameDescriptors = [];
+  // Hide registered-user reporting whenever authenticated identity has been discarded.
+  syncFeedbackReporter(null);
+}
+
+// Clear every shell-owned authenticated cache before showing the logged-out session-expired gate.
+function renderExpiredSessionGate() {
+  // Reuse the same teardown path that explicit logout uses so refresh and route recovery cannot diverge.
+  clearAuthenticatedShellState();
   // Render the normal login/guest-entry gate with the existing localized expired-session copy.
   renderLoginGate(t('pwa.expiredSession', {}, 'shell'));
 }
@@ -1046,16 +1054,34 @@ async function init() {
   logoutButton.onclick = async () => {
     // Detect a guest so the persistent control ends the trial with no recovery instead of logging out.
     const guestSession = isGuestSession();
-    // Start protected teardown so a stale session still ends locally on any backend error.
-    try { await (guestSession ? endGuestTrial() : logout()); } catch (_) {}
-    // Clear the current session after the backend teardown attempt completes.
-    currentSession = null;
-    // Clear the public current-user hook after teardown.
-    window.CasinoCurrentUser = null;
-    // Reset the active route so a later entry starts at the lobby.
-    active = null;
-    // Return to the login gate, noting the ended guest trial where applicable.
-    renderLoginGate(t(guestSession ? 'auth.guestEnded' : 'auth.loggedOut', {}, 'shell'));
+    // Resolve the localized success message before teardown clears guest identity.
+    const loggedOutMessage = t(guestSession ? 'auth.guestEnded' : 'auth.loggedOut', {}, 'shell');
+    // Start protected teardown so the UI only claims logout after the backend session is gone.
+    try {
+      // Revoke the durable session or disposable guest trial through the backend-owned endpoint.
+      await (guestSession ? endGuestTrial() : logout());
+      // Clear the complete authenticated shell after successful server-side teardown.
+      clearAuthenticatedShellState();
+      // Return to the login gate, noting the ended guest trial where applicable.
+      renderLoginGate(loggedOutMessage);
+    // Keep the authenticated shell honest when the backend did not confirm session teardown.
+    } catch (err) {
+      // Treat an already-expired session as logged out because there is no live cookie to preserve.
+      if (err?.code === 'UNAUTHORIZED') {
+        // Clear authenticated chrome because the server has already rejected the old session.
+        clearAuthenticatedShellState();
+        // Return to the logged-out gate with the normal logout acknowledgement.
+        renderLoginGate(loggedOutMessage);
+        // Stop before recording a false logout failure.
+        return;
+      }
+      // Show one localized failure instead of pretending the cookie was revoked.
+      toast(t('auth.logoutFailed', {}, 'shell'));
+      // Record the low-cardinality logout failure for Admin diagnostics without leaking cookie data.
+      await logClient('logout_error', { code: err?.code || 'UNKNOWN', message: err?.message || 'Logout failed' });
+      // Revalidate the session so the user sees the real state after a failed logout attempt.
+      await refreshCurrentSession();
+    }
   };
   // Start protected bootstrapping so the app can still show a friendly error toast.
   try {

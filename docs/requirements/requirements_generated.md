@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.50.4
+- application: 9.50.5
 - core: 9.22.0
 - ledger: 9.1.1
 - players: 9.1.0
@@ -46,8 +46,8 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.1
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.60.2
-- docs: 1.60.2
+- tests: 1.60.3
+- docs: 1.60.3
 - contracts: 1.43.0
 - tooling: 1.20.3
 - commenting_policy: 1.0.0
