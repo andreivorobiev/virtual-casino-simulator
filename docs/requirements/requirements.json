@@ -11044,6 +11044,45 @@
       "notes": "Allocated for GitHub issue #155."
     },
     {
+      "id": "LGRID-001",
+      "module": "Lucky Grid",
+      "description": "Lucky Grid hides three prizes on random distinct cells of a nine-cell board on the shared exactly-once settlement core, then settles the player's three picks by how many land on a prize. A reveal debits one bounded play-token stake. Matching all three prizes pays a twenty-five-times jackpot, matching two pays three times, and matching one or none pays nothing. Over the eighty-four equally likely prize placements a fixed set of picks matches all three once, two eighteen times, one forty-five times, and none twenty times, so the paytable returns 0.9405 on average for a house edge of about six percent. Pick sets that are not three distinct in-range cells and non-integer, non-positive, or over-limit stakes are rejected before any wallet movement.",
+      "status": "PASS",
+      "api_tests": [
+        "API-LUCKY-GRID-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/lucky_grid/rules.py",
+        "casino/games/lucky_grid/engine.py",
+        "casino/games/lucky_grid/api.py",
+        "web/games/lucky_grid.js",
+        "contracts/openapi/lucky_grid.v1.yaml"
+      ],
+      "introduced_in": "issue-153-lucky-grid",
+      "changed_in": "issue-153-lucky-grid",
+      "notes": "Allocated for GitHub issue #153, a catalog-expansion game (#73). The module supplies only pure rules; the shared core owns settlement."
+    },
+    {
+      "id": "LGRID-002",
+      "module": "Lucky Grid",
+      "description": "Lucky Grid inherits the shared core's exactly-once settlement: one caller-stable request id maps to one reveal, a retry replays the identical committed prizes and payout without moving the wallet again, and a request id reused with different wager content fails closed. The additive v1 contract exposes only the game-owned state and reveals routes and never alters the frozen shared API. Every reveal commits three distinct prize cells, and the published bet catalog reports the honest board size, pick count, and match multipliers.",
+      "status": "PASS",
+      "api_tests": [
+        "API-LUCKY-GRID-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/lucky_grid/api.py",
+        "casino/core/simple_game.py",
+        "tests/lucky_grid_tests.py",
+        "tests/game_drivers/lucky_grid.py"
+      ],
+      "introduced_in": "issue-153-lucky-grid",
+      "changed_in": "issue-153-lucky-grid",
+      "notes": "Allocated for GitHub issue #153."
+    },
+    {
       "id": "TEST-115",
       "module": "Tests",
       "description": "Listener-free evidence verifies Color Wheel: a matching colour pays its multiplier, a non-matching colour loses the stake, the gold segment pays its jackpot multiplier, unknown colours and malformed stakes are rejected before any wallet movement, a retried spin replays without double-spending, every colour payout is confirmed house-positive, and the published bet catalog matches the real segment layout and multipliers.",
@@ -11195,6 +11234,23 @@
       "introduced_in": "issue-155-pattern-draw",
       "changed_in": "issue-155-pattern-draw",
       "notes": "Allocated for GitHub issue #155."
+    },
+    {
+      "id": "TEST-124",
+      "module": "Tests",
+      "description": "Listener-free evidence verifies Lucky Grid: matching all three prizes pays the twenty-five-times jackpot, matching two pays the smaller multiple, matching one or none loses, pick sets that are not three distinct in-range cells and malformed stakes are rejected before any wallet movement, a retried reveal replays without double-spending, and the paytable is confirmed house-positive over all eighty-four prize placements.",
+      "status": "PASS",
+      "api_tests": [
+        "API-LUCKY-GRID-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/lucky_grid_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-153-lucky-grid",
+      "changed_in": "issue-153-lucky-grid",
+      "notes": "Allocated for GitHub issue #153."
     }
   ]
 }

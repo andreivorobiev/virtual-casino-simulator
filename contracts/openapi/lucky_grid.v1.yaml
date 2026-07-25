@@ -1,0 +1,208 @@
+openapi: 3.0.3
+# Describe the additive issue-153 Lucky Grid contract without changing existing v1 operations.
+info:
+  title: Virtual Casino Lucky Grid API
+  version: v1
+  description: Additive session-bound Lucky Grid contract for issue 153, built on the shared exactly-once settlement core.
+# Define only game-owned routes; shared router registration remains with issue 77.
+paths:
+  # Expose session-owned reload state and immutable bet metadata.
+  /api/v1/games/lucky-grid/state:
+    get:
+      summary: Read the authenticated player's Lucky Grid bet catalog and recent settled reveals
+      operationId: lucky_grid_GET_api_v1_games_lucky_grid_state
+      responses:
+        '200':
+          description: Standard success envelope containing game state, player snapshot, and bet catalog
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LuckyStateEnvelope'
+        '401':
+          description: Standard error envelope when no authenticated session is available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorEnvelope'
+  # Execute one complete debit, prize reveal, and optional settlement action.
+  /api/v1/games/lucky-grid/reveals:
+    post:
+      summary: Execute or replay one atomic ledger-backed Lucky Grid reveal
+      operationId: lucky_grid_POST_api_v1_games_lucky_grid_reveals
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LuckyRevealRequest'
+      responses:
+        '200':
+          description: Standard success envelope containing one settled or safely replayed round
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LuckyRevealEnvelope'
+        '400':
+          description: Standard error envelope for invalid picks or stake or request identity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorEnvelope'
+        '401':
+          description: Standard error envelope when no authenticated session is available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorEnvelope'
+        '409':
+          description: Standard error envelope when one request identity is reused with different wager content
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorEnvelope'
+# Keep all request, response, round, and standard-envelope shapes local to this contract.
+components:
+  schemas:
+    # Require a caller-stable action identity, three picks, and a bounded stake.
+    LuckyRevealRequest:
+      type: object
+      additionalProperties: false
+      required: [request_id, picks, stake]
+      properties:
+        request_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '^[A-Za-z0-9._:-]+$'
+          description: Stable caller-generated identity reused only when retrying the same reveal action.
+        player_id:
+          type: string
+          description: Compatibility field overridden by the authenticated session-bound player resolver.
+        picks:
+          type: array
+          minItems: 3
+          maxItems: 3
+          uniqueItems: true
+          items: {type: integer, minimum: 0, maximum: 8}
+          description: Three distinct chosen cell indices.
+        stake:
+          type: integer
+          minimum: 1
+          maximum: 100000
+          description: Fake-money play-token stake; never currency or redeemable value.
+    # Specialize the standard success envelope for state reads.
+    LuckyStateEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/ApiSuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/LuckyPayload'
+    # Specialize the standard success envelope for atomic reveal actions.
+    LuckyRevealEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/ApiSuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              allOf:
+                - $ref: '#/components/schemas/LuckyPayload'
+                - type: object
+                  required: [round, replayed, ledger]
+                  properties:
+                    round: {$ref: '#/components/schemas/LuckyRound'}
+                    replayed: {type: boolean}
+                    ledger: {$ref: '#/components/schemas/LuckyLedgerEvidence'}
+    # Describe the common state, player, and immutable bet metadata payload.
+    LuckyPayload:
+      type: object
+      required: [game, state, player, bet_catalog]
+      properties:
+        game: {type: string, enum: [lucky_grid]}
+        state: {type: object}
+        player:
+          type: object
+          description: Current authenticated player's shared read-only wallet snapshot.
+        bet_catalog:
+          type: object
+          description: Cell count, pick count, and the per-match multipliers.
+    # Describe one immutable settled round returned on original and replayed requests.
+    LuckyRound:
+      type: object
+      required: [round_id, wager, wager_total, entropy, total_return, outcome, detail, net, settled_at]
+      properties:
+        round_id: {type: string}
+        wager:
+          type: object
+          required: [picks, stake]
+          properties:
+            picks:
+              type: array
+              minItems: 3
+              maxItems: 3
+              items: {type: integer, minimum: 0, maximum: 8}
+            stake: {type: integer, minimum: 1}
+        wager_total: {type: number, minimum: 0.01}
+        entropy:
+          type: object
+          required: [prizes]
+          properties:
+            prizes:
+              type: array
+              minItems: 3
+              maxItems: 3
+              items: {type: integer, minimum: 0, maximum: 8}
+        total_return: {type: number, minimum: 0}
+        outcome: {type: string, enum: [win, lose]}
+        detail:
+          type: object
+          required: [prizes, picks, matched, match_count]
+          properties:
+            prizes:
+              type: array
+              minItems: 3
+              maxItems: 3
+              items: {type: integer, minimum: 0, maximum: 8}
+            picks:
+              type: array
+              minItems: 3
+              maxItems: 3
+              items: {type: integer, minimum: 0, maximum: 8}
+            matched:
+              type: array
+              items: {type: integer, minimum: 0, maximum: 8}
+            match_count: {type: integer, minimum: 0, maximum: 3}
+        net: {type: number}
+        settled_at: {type: string}
+    # Preserve scoped wager and optional return event evidence for the settled round.
+    LuckyLedgerEvidence:
+      type: object
+      required: [wager, settlement]
+      properties:
+        wager:
+          type: object
+          description: Committed aggregate wager debit for this authenticated player and round.
+        settlement:
+          type: object
+          nullable: true
+          description: Committed aggregate return credit, or null when the reveal lost.
+    # Preserve the repository-wide success envelope contract.
+    ApiSuccessEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok: {type: boolean, enum: [true]}
+        data: {type: object}
+    # Preserve the repository-wide error envelope contract.
+    ApiErrorEnvelope:
+      type: object
+      required: [ok, error]
+      properties:
+        ok: {type: boolean, enum: [false]}
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: {type: string}
+            message: {type: string}
+            details: {type: object}

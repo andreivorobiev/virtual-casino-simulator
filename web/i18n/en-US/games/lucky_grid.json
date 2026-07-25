@@ -1,0 +1,14 @@
+{
+  "title": "Lucky Grid",
+  "pay.title": "Payouts",
+  "pay.matches": "{count} matches",
+  "pick.remaining": "Pick {count} more cell(s)",
+  "result.ready": "Reveal the prizes.",
+  "result.win": "{count} matches!",
+  "result.lose": "Only {count} matches.",
+  "stake.title": "Stake",
+  "action.reveal": "Reveal prizes",
+  "action.revealing": "Revealing…",
+  "error.load": "Could not load Lucky Grid.",
+  "error.reveal": "Reveal could not be completed."
+}

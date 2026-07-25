@@ -1,0 +1,17 @@
+{
+  "module": "lucky_grid",
+  "version": "1.0.0",
+  "paths": ["casino/games/lucky_grid/", "web/games/lucky_grid.js", "web/i18n/en-US/games/lucky_grid.json", "web/i18n/ru-RU/games/lucky_grid.json"],
+  "requirements_prefixes": ["LGRID"],
+  "contracts": ["contracts/openapi/lucky_grid.v1.yaml"],
+  "game": {
+    "id": "lucky_grid", "sort_order": 400, "route": "/games/lucky_grid", "label": "Lucky Grid", "category": "arcade", "categories": ["arcade", "instant"],
+    "backend": {"register": "casino.games.lucky_grid.api:register"},
+    "frontend": {"module": "./games/lucky_grid.js", "export": "LuckyGridGame", "ready_testid": "lucky-grid", "i18n_domain": "games/lucky_grid", "i18n_probe": "action.reveal"},
+    "tests": {"long_driver": "tests.game_drivers.lucky_grid:play"},
+    "translations": {"ru-RU": {"label": "Счастливая сетка", "kicker": "Аркада", "description": "Выберите три ячейки из девяти и найдите три спрятанных приза: три совпадения дают джекпот ×25, серверным результатом и расчётом через журнал жетонов."}},
+    "lobby": {"featured": false, "wide": false, "art_class": "lucky-grid-art", "symbol": "&#9733;", "kicker": "Lucky grid", "description": "Pick three of nine cells and match three hidden prizes; three matches pay a x25 jackpot, with server-authoritative reveals and ledger-backed settlement.", "tags": ["Arcade", "Quick play", "Ledger-backed"]}
+  },
+  "depends_on": ["core", "ledger", "players"],
+  "may_not_depend_on": ["roulette", "slots", "blackjack", "baccarat", "keno", "bingo"]
+}
