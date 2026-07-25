@@ -3092,6 +3092,10 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             containment=page.evaluate("""() => { const rows=[document.querySelector('.site-header'),document.querySelector('main[data-testid="marketing-site"]'),document.querySelector('.site-footer')]; return { document:document.documentElement.scrollWidth<=window.innerWidth+1, rows:rows.every(row=>row && row.scrollWidth<=row.clientWidth+1), clientWidth:document.documentElement.clientWidth, mainWidth:rows[1]?.getBoundingClientRect().width||0, primaryHeight:document.querySelector('.button.primary')?.getBoundingClientRect().height||0, navHeight:document.querySelector('.site-nav a')?.getBoundingClientRect().height||0 }; }""")
                             # Reject overflow, collapsed content, or sub-44-pixel primary navigation controls.
                             assert containment['document'] and containment['rows'] and containment['mainWidth']>=containment['clientWidth']-2 and containment['primaryHeight']>=44 and containment['navHeight']>=44,containment
+                            # Prove the real mobile and desktop preview labels do not obscure the decorative seven chip.
+                            preview_geometry=page.evaluate("""() => { const chip=document.querySelector('.seven-chip')?.getBoundingClientRect(); const panel=document.querySelector('.felt-panel')?.getBoundingClientRect(); return { chipBottom:chip?.bottom||0, panelTop:panel?.top||0, separated:Boolean(chip&&panel&&chip.bottom<=panel.top) }; }""")
+                            # Fail closed if either governed preview region is missing or overlaps at this viewport.
+                            assert preview_geometry['separated'],preview_geometry
                             # Capture one complete self-describing after-pass artifact for this locale and viewport.
                             game_evidence(f'after-pass-marketing-site-{locale.lower()}-{viewport_id}.png','marketing_site',['landing','keyboard_focus','reduced_motion'],locale,viewport_id)
                     # Restore normal media, the primary viewport, and the local Casino login page for existing cases.

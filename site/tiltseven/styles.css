@@ -511,10 +511,10 @@ h3 {
   }
 
   .hero-card {
-    min-height: 32rem;
+    min-height: 40rem;
   }
 
   .felt-panel {
-    bottom: 27%;
+    bottom: 20%;
   }
 }
