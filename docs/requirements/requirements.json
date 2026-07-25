@@ -10720,7 +10720,7 @@
     {
       "id": "ADMIN-026",
       "module": "Admin",
-      "description": "Admins can promote or remove the Admin role from account users and can set explicit account lifecycle states active, inactive, suspended, or locked. Guest Trials remain excluded from account-management routes, unsupported role values fail closed, every role/status mutation revokes affected sessions through canonical auth privilege tracking, and the JSON/MySQL identity transaction rejects sequential or concurrent changes that would leave no active Admin. Admin audit events include transaction-accurate before/after role, status, display name, and locale metadata for full operator review without exposing password material.",
+      "description": "Admins can promote or remove the Admin role from account users and can set explicit account lifecycle states active, inactive, suspended, or locked through one readable grouped access control at every governed viewport. Guest Trials remain excluded from account-management routes, unsupported role values fail closed, every role/status mutation revokes affected sessions through canonical auth privilege tracking, and the JSON/MySQL identity transaction rejects sequential or concurrent changes that would leave no active Admin. Admin audit events include transaction-accurate before/after role, status, display name, and locale metadata for full operator review without exposing password material.",
       "status": "PASS",
       "api_tests": [
         "API-ACCOUNT-SPINE-001"
@@ -10731,6 +10731,7 @@
       "implementation_files": [
         "casino/admin.py",
         "web/admin.js",
+        "web/styles.css",
         "web/i18n/en-US/admin.json",
         "web/i18n/ru-RU/admin.json",
         "contracts/openapi/admin-users.v2.yaml",
@@ -10740,7 +10741,7 @@
       ],
       "introduced_in": "product-account-spine",
       "changed_in": "product-account-spine",
-      "notes": "The Admin UI exposes the role/lifecycle controls on the managed-account table and retains separate Guest Trials ownership for disposable principals."
+      "notes": "The Admin UI keeps lifecycle, Admin role, and save controls together inside the managed table's named horizontal-scroll owner so the complete action remains visible and readable on desktop, tablet, and mobile evidence."
     },
     {
       "id": "FEEDBACK-005",
@@ -10791,7 +10792,7 @@
     {
       "id": "TEST-112",
       "module": "Tests",
-      "description": "Listener-free evidence verifies the product account spine: enrollment policy reports disabled signup and passkeys with guest conversion available, disabled signup creates no account, passkey registration fails closed, Admin role promotion/demotion and lifecycle states preserve last-active-Admin protection under concurrent demotions, reporter-visible status is account-scoped and attachment-free, and guest status tracking is rejected unless conversion creates a durable account.",
+      "description": "Listener-free evidence verifies the product account spine: enrollment policy reports disabled signup and passkeys with guest conversion available, disabled signup creates no account, passkey registration fails closed, Admin role promotion/demotion and lifecycle states preserve last-active-Admin protection under concurrent demotions, reporter-visible status is account-scoped and attachment-free, and guest status tracking is rejected unless conversion creates a durable account. Exact-head browser evidence also requires the complete status, Admin-role, and save-control group to remain usable and contained in every governed viewport.",
       "status": "PASS",
       "api_tests": [
         "API-ACCOUNT-SPINE-001"
@@ -10806,7 +10807,7 @@
       ],
       "introduced_in": "product-account-spine",
       "changed_in": "product-account-spine",
-      "notes": "Listener-free service evidence is paired with the exact-head BR-ADMIN-USERS-001 role/lifecycle interaction and eight governed EN/RU Admin images across four standard viewports."
+      "notes": "Listener-free service evidence is paired with the exact-head BR-ADMIN-USERS-001 role/lifecycle interaction and eight governed EN/RU Admin images across four standard viewports, with explicit changed-control containment inside the named table scroll owner."
     }
   ]
 }

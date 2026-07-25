@@ -2587,6 +2587,25 @@ h3 {
   min-width: 1040px;
 }
 
+/* Keep lifecycle, Admin-role, and save controls together as one readable account-access unit. */
+.admin-user-access-cell {
+  min-width: 330px;
+}
+
+/* Fit all three related controls inside one phone-width horizontal-scroll viewport. */
+.admin-user-access-controls {
+  display: grid;
+  grid-template-columns: minmax(112px, 1fr) minmax(88px, auto) minmax(110px, auto);
+  align-items: center;
+  gap: 8px;
+}
+
+/* Preserve the native lifecycle selector inside its bounded access group. */
+.admin-user-access-controls .user-status {
+  width: 100%;
+  min-width: 0;
+}
+
 /* Expose keyboard ownership of the intentional horizontal table scroll. */
 .admin-users-table-scroll:focus-visible {
   outline: 2px solid var(--gold);

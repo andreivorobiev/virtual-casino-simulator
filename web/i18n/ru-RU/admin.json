@@ -40,6 +40,7 @@
   "users.initialRole": "Начальная роль",
   "users.rolePlayer": "Игрок",
   "users.roleAdmin": "Администратор",
+  "users.accessControls": "Доступ к аккаунту",
   "users.saveAccount": "Сохранить аккаунт",
   "users.roleConfirm": "Сохранить роль и жизненный цикл этого аккаунта?",
   "users.accountSaved": "Роль и статус аккаунта сохранены.",

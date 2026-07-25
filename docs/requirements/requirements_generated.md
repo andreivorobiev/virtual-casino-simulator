@@ -6,14 +6,14 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.51.0
+- application: 9.51.1
 - core: 9.23.0
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.0
 - autoplay: 1.1.3
 - audio: 9.1.1
-- admin: 1.12.0
+- admin: 1.12.1
 - operations: 1.0.0
 - marketing_site: 1.0.2
 - roulette: 9.4.8
@@ -46,8 +46,8 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.1
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.60.4
-- docs: 1.60.4
+- tests: 1.60.5
+- docs: 1.60.5
 - contracts: 1.44.0
 - tooling: 1.20.3
 - commenting_policy: 1.0.0
@@ -812,7 +812,7 @@ Historical source baseline: 9.1.0
 - **CONVERT-002** (Core) - PASS: Conversion is recoverable and idempotent: the required caller-stable operation key is validated and retained only as a one-way fingerprint, a completed exact retry replays the same account rather than creating a second account or duplicating the wallet, an interrupted attempt that created the account but not the terminal guest marker is recovered on retry, and different-key or different-mailbox retries fail closed. JSON/MySQL identity-document transactions enforce exactly one durable account owner for the guest player even under concurrent account claims. The guest record is marked terminal and linked so it leaves the trial lifecycle and stays out of Admin Users, and audit events carry only bounded provenance with no raw identifier in user-facing copy.
 - **TEST-111** (Tests) - PASS: Listener-free evidence verifies guest conversion: exact wallet preservation across the adopted player, password login of the converted account, terminal guest marking, required bounded idempotency keys, exact replay with a single owning account, rejection of different-key and different-mailbox retries, recovery of an interrupted conversion with terms acceptance, concurrent different-account claims converging on one durable wallet owner, rejection of a non-guest principal, validation of terms/password/email inputs, and rejection of a duplicate mailbox.
 - **AUTH-010** (Core) - PASS: The Casino keeps one canonical first-party identity system keyed by the internal Casino user id for tiltseven.com and casino.tiltseven.com. Guest trials, Admin-created accounts, self-service conversion, disabled public signup, OAuth links, and future passkeys are provider layers over that identity rather than account owners. Public enrollment policy exposes only boolean feature gates; full signup and passkey registration are disabled by default and fail closed without creating users, provider identities, or credentials.
-- **ADMIN-026** (Admin) - PASS: Admins can promote or remove the Admin role from account users and can set explicit account lifecycle states active, inactive, suspended, or locked. Guest Trials remain excluded from account-management routes, unsupported role values fail closed, every role/status mutation revokes affected sessions through canonical auth privilege tracking, and the JSON/MySQL identity transaction rejects sequential or concurrent changes that would leave no active Admin. Admin audit events include transaction-accurate before/after role, status, display name, and locale metadata for full operator review without exposing password material.
+- **ADMIN-026** (Admin) - PASS: Admins can promote or remove the Admin role from account users and can set explicit account lifecycle states active, inactive, suspended, or locked through one readable grouped access control at every governed viewport. Guest Trials remain excluded from account-management routes, unsupported role values fail closed, every role/status mutation revokes affected sessions through canonical auth privilege tracking, and the JSON/MySQL identity transaction rejects sequential or concurrent changes that would leave no active Admin. Admin audit events include transaction-accurate before/after role, status, display name, and locale metadata for full operator review without exposing password material.
 - **FEEDBACK-005** (Core) - PASS: Problem reporting remains a manual Admin copy-paste workflow: the application prepares sanitized GitHub issue text and labels but never publishes externally unless a future disabled adapter is separately approved. Registered reporters can see their own safe report status summaries; screenshots, Admin notes, audit history, and raw reporter identity remain hidden. Guest trials cannot track abandoned reports unless they first convert into a durable account.
 - **I18N-009** (Application) - PASS: The product account spine preserves the approved EN/RU browser-visible copy while documenting that the full planned-locale program must land as governed waves with native translations, font coverage, visual evidence, and permanent requirement/test allocation before user exposure. No unsupported locale is silently added to account, enrollment, feedback, passkey, or Admin-role flows by this PR.
-- **TEST-112** (Tests) - PASS: Listener-free evidence verifies the product account spine: enrollment policy reports disabled signup and passkeys with guest conversion available, disabled signup creates no account, passkey registration fails closed, Admin role promotion/demotion and lifecycle states preserve last-active-Admin protection under concurrent demotions, reporter-visible status is account-scoped and attachment-free, and guest status tracking is rejected unless conversion creates a durable account.
+- **TEST-112** (Tests) - PASS: Listener-free evidence verifies the product account spine: enrollment policy reports disabled signup and passkeys with guest conversion available, disabled signup creates no account, passkey registration fails closed, Admin role promotion/demotion and lifecycle states preserve last-active-Admin protection under concurrent demotions, reporter-visible status is account-scoped and attachment-free, and guest status tracking is rejected unless conversion creates a durable account. Exact-head browser evidence also requires the complete status, Admin-role, and save-control group to remain usable and contained in every governed viewport.
