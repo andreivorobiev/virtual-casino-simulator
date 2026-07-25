@@ -1,0 +1,177 @@
+openapi: 3.0.3
+# Describe the additive issue-131 Double Bonus Video Poker contract without changing existing v1 operations.
+info:
+  title: Virtual Casino Double Bonus Video Poker API
+  version: v1
+  description: >-
+    Additive issue #131 contract for authenticated Double Bonus Video Poker play. The deal and the draw
+    require independent action ids so retries reuse one round and each wager or settlement movement commits
+    at most once in the local simulator.
+tags:
+  - name: Double Bonus Video Poker
+    description: Player-scoped single-hand draw video poker on the nine-six Double Bonus schedule with ledger-only settlement.
+# Define only additive frozen-v1 game endpoints owned by this proposal slice.
+paths:
+  # Expose the player-scoped reload-safe state endpoint.
+  /api/v1/games/double-bonus-video-poker/state:
+    get:
+      tags: [Double Bonus Video Poker]
+      operationId: doubleBonusVideoPokerState
+      summary: Read the authenticated player's reload-safe Double Bonus state
+      responses:
+        '200':
+          description: Current game state, fixed rules, and bound player
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StateEnvelope'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  # Deal or replay one bet round awaiting the hold-and-draw decision.
+  /api/v1/games/double-bonus-video-poker/rounds:
+    post:
+      tags: [Double Bonus Video Poker]
+      operationId: doubleBonusVideoPokerStartRound
+      summary: Deal or replay one bet round awaiting a hold-and-draw
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartRoundRequest'
+      responses:
+        '200':
+          description: A prepared draw-ready round with the replacement pile withheld
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoundEnvelope'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  # Apply or replay one hold-and-draw decision.
+  /api/v1/games/double-bonus-video-poker/rounds/{round_id}/decisions:
+    post:
+      tags: [Double Bonus Video Poker]
+      operationId: doubleBonusVideoPokerDecision
+      summary: Hold the chosen cards, draw replacements, and settle the paytable
+      parameters:
+        - name: round_id
+          in: path
+          required: true
+          schema: {type: string, pattern: '^[A-Za-z0-9_-]+$'}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DecisionRequest'
+      responses:
+        '200':
+          description: The settled hand paid by the paytable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoundEnvelope'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+# Keep all request, response, and error shapes local to this contract.
+components:
+  responses:
+    ErrorResponse:
+      description: Standard bounded error envelope
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorEnvelope'
+  schemas:
+    # Require a caller-stable action identity and a bet.
+    StartRoundRequest:
+      type: object
+      additionalProperties: false
+      required: [action_id, bet]
+      properties:
+        action_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '^[A-Za-z0-9._:-]+$'
+        request_id:
+          type: string
+          description: Accepted alias for action_id for client convenience.
+        player_id:
+          type: string
+          description: Compatibility field overridden by the authenticated session-bound player resolver.
+        bet:
+          type: number
+          minimum: 0.01
+          maximum: 100000
+    # Require a caller-stable action identity and an optional hold selection.
+    DecisionRequest:
+      type: object
+      additionalProperties: false
+      required: [action_id]
+      properties:
+        action_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '^[A-Za-z0-9._:-]+$'
+        request_id:
+          type: string
+          description: Accepted alias for action_id for client convenience.
+        player_id:
+          type: string
+          description: Compatibility field overridden by the authenticated session-bound player resolver.
+        hold:
+          type: array
+          maxItems: 5
+          uniqueItems: true
+          items: {type: integer, minimum: 0, maximum: 4}
+          description: The zero-based hand positions to keep; an omitted or empty list draws five fresh cards.
+    # Specialize the standard success envelope for state reads.
+    StateEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/ApiSuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/GamePayload'
+    # Specialize the standard success envelope for deal and draw actions.
+    RoundEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/ApiSuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/GamePayload'
+    # Describe the common state, rules, player, and round payload.
+    GamePayload:
+      type: object
+      required: [game, state, player, rules]
+      properties:
+        game: {type: string, enum: [double_bonus_video_poker]}
+        state: {type: object, description: Sanitized active and recent rounds with the replacement pile hidden until the draw.}
+        player: {type: object, description: Current authenticated player's shared read-only wallet snapshot.}
+        rules: {type: object, description: Hand size and the nine-six Double Bonus paytable.}
+        round: {type: object, description: The prepared or settled round, present on deal and draw responses.}
+        replayed: {type: boolean}
+    # Preserve the repository-wide success envelope contract.
+    ApiSuccessEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok: {type: boolean, enum: [true]}
+        data: {type: object}
+    # Preserve the repository-wide error envelope contract.
+    ApiErrorEnvelope:
+      type: object
+      required: [ok, error]
+      properties:
+        ok: {type: boolean, enum: [false]}
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: {type: string}
+            message: {type: string}
+            details: {type: object}
