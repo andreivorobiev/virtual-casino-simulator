@@ -42,13 +42,14 @@
     "casino_holdem": "1.0.1",
     "joker_poker": "1.0.0",
     "texas_holdem_practice_table": "1.0.0",
-    "tests": "1.60.5",
-    "docs": "1.60.5",
+    "tests": "1.60.6",
+    "docs": "1.60.6",
     "contracts": "1.43.0",
     "tooling": "1.20.3",
     "commenting_policy": "1.0.0",
     "color_wheel": "1.0.0",
-    "poker_dice": "1.0.0"
+    "poker_dice": "1.0.0",
+    "boule": "1.0.0"
   },
   "created_at": "2026-07-09T00:00:00.000000Z"
 }

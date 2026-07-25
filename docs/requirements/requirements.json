@@ -10771,6 +10771,45 @@
       "notes": "Allocated for GitHub issue #151."
     },
     {
+      "id": "BOULE-001",
+      "module": "Boule",
+      "description": "Boule is the French nine-number wheel built on the shared exactly-once settlement core. A spin debits one bounded play-token stake, draws one server-authoritative number from one to nine, and settles the chosen bet. The four even-money groups low, high, odd, and even each cover four numbers and pay two times the stake; five is the house number belonging to no group, so every even-money bet loses when five is drawn. A straight single-number bet covers one number and pays eight times the stake, including a straight bet on five. Both bet families return eight ninths of the stake on average, a house edge of about 11.1 percent. Unknown bet families, out-of-range numbers, and non-integer, non-positive, or over-limit stakes are rejected before any wallet movement.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BOULE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/boule/rules.py",
+        "casino/games/boule/engine.py",
+        "casino/games/boule/api.py",
+        "web/games/boule.js",
+        "contracts/openapi/boule.v1.yaml"
+      ],
+      "introduced_in": "issue-148-boule",
+      "changed_in": "issue-148-boule",
+      "notes": "Allocated for GitHub issue #148, a catalog-expansion game (#73). The module supplies only pure rules; the shared core owns settlement."
+    },
+    {
+      "id": "BOULE-002",
+      "module": "Boule",
+      "description": "Boule inherits the shared core's exactly-once settlement: one caller-stable request id maps to one spin, a retry replays the identical committed number and payout without moving the wallet again, and a request id reused with different wager content fails closed. The additive v1 contract exposes only the game-owned state and spins routes and never alters the frozen shared API. The published bet catalog reports honest group coverage, the house number, and multipliers.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BOULE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/games/boule/api.py",
+        "casino/core/simple_game.py",
+        "tests/boule_tests.py",
+        "tests/game_drivers/boule.py"
+      ],
+      "introduced_in": "issue-148-boule",
+      "changed_in": "issue-148-boule",
+      "notes": "Allocated for GitHub issue #148."
+    },
+    {
       "id": "TEST-115",
       "module": "Tests",
       "description": "Listener-free evidence verifies Color Wheel: a matching colour pays its multiplier, a non-matching colour loses the stake, the gold segment pays its jackpot multiplier, unknown colours and malformed stakes are rejected before any wallet movement, a retried spin replays without double-spending, every colour payout is confirmed house-positive, and the published bet catalog matches the real segment layout and multipliers.",
@@ -10803,6 +10842,23 @@
       "introduced_in": "issue-151-poker-dice",
       "changed_in": "issue-151-poker-dice",
       "notes": "Allocated for GitHub issue #151."
+    },
+    {
+      "id": "TEST-117",
+      "module": "Tests",
+      "description": "Listener-free evidence verifies Boule: a covered even-money bet pays two times the stake, the house number five loses every even-money bet and is flagged, a straight single-number bet pays eight times the stake including on five, a straight bet on a non-matching number loses, unknown bet families, out-of-range numbers, and malformed stakes are rejected before any wallet movement, a retried spin replays without double-spending, and every bet is confirmed house-positive across all nine numbers.",
+      "status": "PASS",
+      "api_tests": [
+        "API-BOULE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/boule_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-148-boule",
+      "changed_in": "issue-148-boule",
+      "notes": "Allocated for GitHub issue #148."
     }
   ]
 }

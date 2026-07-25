@@ -1087,6 +1087,19 @@ def run_api_tests():
             raise AssertionError('poker dice suite failed')
     # Record the listener-free Poker Dice payout, retry, and house-edge proof.
     run_case('API-POKER-DICE-001',['PDICE-001','PDICE-002','TEST-116'],run_poker_dice_tests)
+    # Execute the Boule rules and settlement proof without opening a listener.
+    def run_boule_tests():
+        # Load only the focused Boule class.
+        from tests import boule_tests
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(boule_tests.BouleTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused Boule proof failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure text secret-safe.
+            raise AssertionError('boule suite failed')
+    # Record the listener-free Boule payout, house-number, retry, and house-edge proof.
+    run_case('API-BOULE-001',['BOULE-001','BOULE-002','TEST-117'],run_boule_tests)
     # Discover and execute every focused restricted-preview security module without opening a listener.
     def run_restricted_preview_security_tests():
         # Load the package directory through unittest's standard test discovery.

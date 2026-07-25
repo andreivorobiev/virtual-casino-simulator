@@ -46,13 +46,14 @@ Historical source baseline: 9.1.0
 - casino_holdem: 1.0.1
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
-- tests: 1.60.5
-- docs: 1.60.5
+- tests: 1.60.6
+- docs: 1.60.6
 - contracts: 1.43.0
 - tooling: 1.20.3
 - commenting_policy: 1.0.0
 - color_wheel: 1.0.0
 - poker_dice: 1.0.0
+- boule: 1.0.0
 
 ## Requirements
 
@@ -817,5 +818,8 @@ Historical source baseline: 9.1.0
 - **CWHEEL-002** (Color Wheel) - PASS: Color Wheel inherits the shared core's exactly-once settlement: one caller-stable request id maps to one spin, a retry replays the identical committed landed segment and payout without moving the wallet again, and a request id reused with different wager content fails closed. The additive v1 contract exposes only the game-owned state and spins routes and never alters the frozen shared API. The published bet catalog reports honest segment counts and multipliers.
 - **PDICE-001** (Poker Dice) - PASS: Poker Dice rolls five dice whose six faces are the poker ranks nine, ten, jack, queen, king, and ace, built on the shared exactly-once settlement core. A roll debits one bounded play-token stake, draws five server-authoritative dice, evaluates the best poker category, and credits its total-return multiplier: five of a kind pays eighty times, four of a kind fifteen times, a full house five times, a straight four times, and three of a kind two times, while two pair and weaker hands lose. Every payout is house-positive because over all 7776 equally likely rolls the expected return is 0.9761, a house edge of about 2.39 percent. Non-integer, non-positive, and over-limit stakes are rejected before any wallet movement.
 - **PDICE-002** (Poker Dice) - PASS: Poker Dice inherits the shared core's exactly-once settlement: one caller-stable request id maps to one roll, a retry replays the identical committed dice and payout without moving the wallet again, and a request id reused with different wager content fails closed. The additive v1 contract exposes only the game-owned state and rolls routes and never alters the frozen shared API. The published paytable reports honest hand categories and multipliers.
+- **BOULE-001** (Boule) - PASS: Boule is the French nine-number wheel built on the shared exactly-once settlement core. A spin debits one bounded play-token stake, draws one server-authoritative number from one to nine, and settles the chosen bet. The four even-money groups low, high, odd, and even each cover four numbers and pay two times the stake; five is the house number belonging to no group, so every even-money bet loses when five is drawn. A straight single-number bet covers one number and pays eight times the stake, including a straight bet on five. Both bet families return eight ninths of the stake on average, a house edge of about 11.1 percent. Unknown bet families, out-of-range numbers, and non-integer, non-positive, or over-limit stakes are rejected before any wallet movement.
+- **BOULE-002** (Boule) - PASS: Boule inherits the shared core's exactly-once settlement: one caller-stable request id maps to one spin, a retry replays the identical committed number and payout without moving the wallet again, and a request id reused with different wager content fails closed. The additive v1 contract exposes only the game-owned state and spins routes and never alters the frozen shared API. The published bet catalog reports honest group coverage, the house number, and multipliers.
 - **TEST-115** (Tests) - PASS: Listener-free evidence verifies Color Wheel: a matching colour pays its multiplier, a non-matching colour loses the stake, the gold segment pays its jackpot multiplier, unknown colours and malformed stakes are rejected before any wallet movement, a retried spin replays without double-spending, every colour payout is confirmed house-positive, and the published bet catalog matches the real segment layout and multipliers.
 - **TEST-116** (Tests) - PASS: Listener-free evidence verifies Poker Dice: each paying hand category pays its exact multiplier, two pair and weaker hands lose the stake, non-integer, non-positive, and out-of-range stakes are rejected before any wallet movement, a retried roll replays without double-spending, the paytable is confirmed house-positive over all 7776 equally likely rolls, and the published paytable matches the real payout table.
+- **TEST-117** (Tests) - PASS: Listener-free evidence verifies Boule: a covered even-money bet pays two times the stake, the house number five loses every even-money bet and is flagged, a straight single-number bet pays eight times the stake including on five, a straight bet on a non-matching number loses, unknown bet families, out-of-range numbers, and malformed stakes are rejected before any wallet movement, a retried spin replays without double-spending, and every bet is confirmed house-positive across all nine numbers.
