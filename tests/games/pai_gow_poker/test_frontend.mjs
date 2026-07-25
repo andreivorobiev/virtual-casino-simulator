@@ -65,6 +65,8 @@ assert.doesNotMatch(source, /setTimeout|setInterval|requestAnimationFrame/);
 assert.match(source, /prefers-reduced-motion:reduce/);
 // Verify primary controls meet the minimum touch-target height.
 assert.match(source, /min-height:44px/);
+// Verify compact desktop and tablet layouts reserve the accepted fixed-feedback gutter.
+assert.match(source, /@media\(min-width:561px\) and \(max-width:1600px\)\{\.pgp-shell\{padding-right:160px\}\}/);
 // Verify the mobile control copy reserves the accepted fixed-feedback lane.
 assert.match(source, /\.pgp-controls \.pgp-help,.pgp-controls \.pgp-error\{width:calc\(100% - 160px\)/);
 // Verify the mobile problem-report affordance is bounded to the route-local lane.
