@@ -1,0 +1,17 @@
+{
+  "module": "boule",
+  "version": "1.0.0",
+  "paths": ["casino/games/boule/", "web/games/boule.js", "web/i18n/en-US/games/boule.json", "web/i18n/ru-RU/games/boule.json"],
+  "requirements_prefixes": ["BOULE"],
+  "contracts": ["contracts/openapi/boule.v1.yaml"],
+  "game": {
+    "id": "boule", "sort_order": 330, "route": "/games/boule", "label": "Boule", "category": "wheel", "categories": ["wheel", "instant"],
+    "backend": {"register": "casino.games.boule.api:register"},
+    "frontend": {"module": "./games/boule.js", "export": "BouleGame", "ready_testid": "boule", "i18n_domain": "games/boule", "i18n_probe": "action.spin"},
+    "tests": {"long_driver": "tests.game_drivers.boule:play"},
+    "translations": {"ru-RU": {"label": "Буль", "kicker": "Колесо", "description": "Французская буль на девять номеров с пятёркой как номером казино, серверным результатом и расчётом через журнал жетонов."}},
+    "lobby": {"featured": false, "wide": false, "art_class": "boule-art", "symbol": "&#9312;", "kicker": "Boule", "description": "French nine-number wheel where five is the house number, with server-authoritative draws and ledger-backed settlement.", "tags": ["Wheel", "Quick play", "Ledger-backed"]}
+  },
+  "depends_on": ["core", "ledger", "players"],
+  "may_not_depend_on": ["roulette", "slots", "blackjack", "baccarat", "keno", "bingo"]
+}

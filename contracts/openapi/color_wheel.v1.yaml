@@ -1,0 +1,185 @@
+openapi: 3.0.3
+# Describe the additive issue-152 Color Wheel contract without changing existing v1 operations.
+info:
+  title: Virtual Casino Color Wheel API
+  version: v1
+  description: Additive session-bound Color Wheel contract for issue 152, built on the shared exactly-once settlement core.
+# Define only game-owned routes; shared router registration remains with issue 77.
+paths:
+  # Expose session-owned reload state and immutable colour-bet metadata.
+  /api/v1/games/color-wheel/state:
+    get:
+      summary: Read the authenticated player's Color Wheel bet catalog and recent settled spins
+      operationId: color_wheel_GET_api_v1_games_color_wheel_state
+      responses:
+        '200':
+          description: Standard success envelope containing game state, player snapshot, and bet catalog
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ColorWheelStateEnvelope'
+        '401':
+          description: Standard error envelope when no authenticated session is available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorEnvelope'
+  # Execute one complete debit, twenty-segment spin, and optional settlement action.
+  /api/v1/games/color-wheel/spins:
+    post:
+      summary: Execute or replay one atomic ledger-backed Color Wheel spin
+      operationId: color_wheel_POST_api_v1_games_color_wheel_spins
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ColorWheelSpinRequest'
+      responses:
+        '200':
+          description: Standard success envelope containing one settled or safely replayed round
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ColorWheelSpinEnvelope'
+        '400':
+          description: Standard error envelope for invalid colour or stake or request identity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorEnvelope'
+        '401':
+          description: Standard error envelope when no authenticated session is available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorEnvelope'
+        '409':
+          description: Standard error envelope when one request identity is reused with different wager content
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorEnvelope'
+# Keep all request, response, round, and standard-envelope shapes local to this contract.
+components:
+  schemas:
+    # Require a caller-stable action identity, a colour, and a bounded stake.
+    ColorWheelSpinRequest:
+      type: object
+      additionalProperties: false
+      required: [request_id, color, stake]
+      properties:
+        request_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '^[A-Za-z0-9._:-]+$'
+          description: Stable caller-generated identity reused only when retrying the same spin action.
+        player_id:
+          type: string
+          description: Compatibility field overridden by the authenticated session-bound player resolver.
+        color:
+          type: string
+          enum: [red, black, green, gold]
+        stake:
+          type: integer
+          minimum: 1
+          maximum: 100000
+          description: Fake-money play-token stake; never currency or redeemable value.
+    # Specialize the standard success envelope for state reads.
+    ColorWheelStateEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/ApiSuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/ColorWheelPayload'
+    # Specialize the standard success envelope for atomic spin actions.
+    ColorWheelSpinEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/ApiSuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              allOf:
+                - $ref: '#/components/schemas/ColorWheelPayload'
+                - type: object
+                  required: [round, replayed, ledger]
+                  properties:
+                    round: {$ref: '#/components/schemas/ColorWheelRound'}
+                    replayed: {type: boolean}
+                    ledger: {$ref: '#/components/schemas/ColorWheelLedgerEvidence'}
+    # Describe the common state, player, and immutable bet metadata payload.
+    ColorWheelPayload:
+      type: object
+      required: [game, state, player, bet_catalog]
+      properties:
+        game: {type: string, enum: [color_wheel]}
+        state: {type: object}
+        player:
+          type: object
+          description: Current authenticated player's shared read-only wallet snapshot.
+        bet_catalog:
+          type: object
+          description: Segment count and per-colour multipliers.
+    # Describe one immutable settled round returned on original and replayed requests.
+    ColorWheelRound:
+      type: object
+      required: [round_id, wager, wager_total, entropy, total_return, outcome, detail, net, settled_at]
+      properties:
+        round_id: {type: string}
+        wager:
+          type: object
+          required: [color, stake]
+          properties:
+            color: {type: string, enum: [red, black, green, gold]}
+            stake: {type: integer, minimum: 1}
+        wager_total: {type: number, minimum: 0.01}
+        entropy:
+          type: object
+          required: [segment, color]
+          properties:
+            segment: {type: integer, minimum: 0, maximum: 19}
+            color: {type: string, enum: [red, black, green, gold]}
+        total_return: {type: number, minimum: 0}
+        outcome: {type: string, enum: [win, lose]}
+        detail:
+          type: object
+          required: [segment, color]
+          properties:
+            segment: {type: integer, minimum: 0, maximum: 19}
+            color: {type: string, enum: [red, black, green, gold]}
+        net: {type: number}
+        settled_at: {type: string}
+    # Preserve scoped wager and optional return event evidence for the settled round.
+    ColorWheelLedgerEvidence:
+      type: object
+      required: [wager, settlement]
+      properties:
+        wager:
+          type: object
+          description: Committed aggregate wager debit for this authenticated player and round.
+        settlement:
+          type: object
+          nullable: true
+          description: Committed aggregate stake-plus-winnings credit, or null when the spin lost.
+    # Preserve the repository-wide success envelope contract.
+    ApiSuccessEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok: {type: boolean, enum: [true]}
+        data: {type: object}
+    # Preserve the repository-wide error envelope contract.
+    ApiErrorEnvelope:
+      type: object
+      required: [ok, error]
+      properties:
+        ok: {type: boolean, enum: [false]}
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: {type: string}
+            message: {type: string}
+            details: {type: object}

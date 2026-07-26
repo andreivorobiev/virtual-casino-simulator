@@ -1,0 +1,15 @@
+{
+  "title": "Pattern Draw",
+  "bet.title": "Pattern",
+  "bet.line": "Any line",
+  "bet.cross": "Cross",
+  "bet.full": "Full grid",
+  "stake.title": "Stake",
+  "action.draw": "Draw the grid",
+  "action.drawing": "Drawing…",
+  "result.idle": "Pick a pattern and draw.",
+  "result.hit": "{bet} hit!",
+  "result.miss": "No pattern.",
+  "error.load": "Could not load Pattern Draw.",
+  "error.draw": "Draw could not be completed."
+}

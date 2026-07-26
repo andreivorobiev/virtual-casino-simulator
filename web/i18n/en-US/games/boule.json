@@ -1,0 +1,16 @@
+{
+  "title": "Boule",
+  "bet.title": "Even-money bets",
+  "bet.low": "Low (1-4)",
+  "bet.high": "High (6-9)",
+  "bet.odd": "Odd",
+  "bet.even": "Even",
+  "stake.title": "Stake",
+  "action.spin": "Spin the boule",
+  "action.spinning": "Spinning…",
+  "result.idle": "Pick a bet and spin.",
+  "result.win": "Number {number} wins!",
+  "result.lose": "Number {number}.",
+  "error.load": "Could not load Boule.",
+  "error.spin": "Spin could not be completed."
+}

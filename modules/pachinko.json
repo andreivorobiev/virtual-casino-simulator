@@ -1,0 +1,17 @@
+{
+  "module": "pachinko",
+  "version": "1.0.0",
+  "paths": ["casino/games/pachinko/", "web/games/pachinko.js", "web/i18n/en-US/games/pachinko.json", "web/i18n/ru-RU/games/pachinko.json"],
+  "requirements_prefixes": ["PACH"],
+  "contracts": ["contracts/openapi/pachinko.v1.yaml"],
+  "game": {
+    "id": "pachinko", "sort_order": 360, "route": "/games/pachinko", "label": "Pachinko", "category": "arcade", "categories": ["arcade", "instant"],
+    "backend": {"register": "casino.games.pachinko.api:register"},
+    "frontend": {"module": "./games/pachinko.js", "export": "PachinkoGame", "ready_testid": "pachinko", "i18n_domain": "games/pachinko", "i18n_probe": "action.drop"},
+    "tests": {"long_driver": "tests.game_drivers.pachinko:play"},
+    "translations": {"ru-RU": {"label": "Пачинко", "kicker": "Аркада", "description": "Шар падает через двенадцать рядов штырьков в один из тринадцати карманов с джекпотом ×100 по краям, серверным результатом и расчётом через журнал жетонов."}},
+    "lobby": {"featured": false, "wide": false, "art_class": "pachinko-art", "symbol": "&#9679;", "kicker": "Pachinko", "description": "Drop a ball through twelve rows of pins into one of thirteen pockets with a x100 jackpot on the rare edges, server-authoritative drops, and ledger-backed settlement.", "tags": ["Arcade", "Quick play", "Ledger-backed"]}
+  },
+  "depends_on": ["core", "ledger", "players"],
+  "may_not_depend_on": ["roulette", "slots", "blackjack", "baccarat", "keno", "bingo"]
+}

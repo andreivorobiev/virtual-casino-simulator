@@ -1,0 +1,191 @@
+openapi: 3.0.3
+# Describe the additive issue-148 Boule contract without changing existing v1 operations.
+info:
+  title: Virtual Casino Boule API
+  version: v1
+  description: Additive session-bound Boule contract for issue 148, built on the shared exactly-once settlement core.
+# Define only game-owned routes; shared router registration remains with issue 77.
+paths:
+  # Expose session-owned reload state and immutable bet metadata.
+  /api/v1/games/boule/state:
+    get:
+      summary: Read the authenticated player's Boule bet catalog and recent settled spins
+      operationId: boule_GET_api_v1_games_boule_state
+      responses:
+        '200':
+          description: Standard success envelope containing game state, player snapshot, and bet catalog
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BouleStateEnvelope'
+        '401':
+          description: Standard error envelope when no authenticated session is available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorEnvelope'
+  # Execute one complete debit, nine-number draw, and optional settlement action.
+  /api/v1/games/boule/spins:
+    post:
+      summary: Execute or replay one atomic ledger-backed Boule spin
+      operationId: boule_POST_api_v1_games_boule_spins
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BouleSpinRequest'
+      responses:
+        '200':
+          description: Standard success envelope containing one settled or safely replayed round
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BouleSpinEnvelope'
+        '400':
+          description: Standard error envelope for an invalid bet, number, or stake or request identity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorEnvelope'
+        '401':
+          description: Standard error envelope when no authenticated session is available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorEnvelope'
+        '409':
+          description: Standard error envelope when one request identity is reused with different wager content
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorEnvelope'
+# Keep all request, response, round, and standard-envelope shapes local to this contract.
+components:
+  schemas:
+    # Require a caller-stable action identity, a bet family, and a bounded stake.
+    BouleSpinRequest:
+      type: object
+      additionalProperties: false
+      required: [request_id, bet, stake]
+      properties:
+        request_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '^[A-Za-z0-9._:-]+$'
+          description: Stable caller-generated identity reused only when retrying the same spin action.
+        player_id:
+          type: string
+          description: Compatibility field overridden by the authenticated session-bound player resolver.
+        bet:
+          type: string
+          enum: [low, high, odd, even, number]
+          description: One of the four even-money groups, or number for a straight single-number bet.
+        number:
+          type: integer
+          minimum: 1
+          maximum: 9
+          description: Required only when bet is number; the chosen one-to-nine straight number.
+        stake:
+          type: integer
+          minimum: 1
+          maximum: 100000
+          description: Fake-money play-token stake; never currency or redeemable value.
+    # Specialize the standard success envelope for state reads.
+    BouleStateEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/ApiSuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/BoulePayload'
+    # Specialize the standard success envelope for atomic spin actions.
+    BouleSpinEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/ApiSuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              allOf:
+                - $ref: '#/components/schemas/BoulePayload'
+                - type: object
+                  required: [round, replayed, ledger]
+                  properties:
+                    round: {$ref: '#/components/schemas/BouleRound'}
+                    replayed: {type: boolean}
+                    ledger: {$ref: '#/components/schemas/BouleLedgerEvidence'}
+    # Describe the common state, player, and immutable bet metadata payload.
+    BoulePayload:
+      type: object
+      required: [game, state, player, bet_catalog]
+      properties:
+        game: {type: string, enum: [boule]}
+        state: {type: object}
+        player:
+          type: object
+          description: Current authenticated player's shared read-only wallet snapshot.
+        bet_catalog:
+          type: object
+          description: Numbers, house number, even-money groups, and the straight multiplier.
+    # Describe one immutable settled round returned on original and replayed requests.
+    BouleRound:
+      type: object
+      required: [round_id, wager, wager_total, entropy, total_return, outcome, detail, net, settled_at]
+      properties:
+        round_id: {type: string}
+        wager:
+          type: object
+          required: [bet, stake]
+          properties:
+            bet: {type: string, enum: [low, high, odd, even, number]}
+            number: {type: integer, minimum: 1, maximum: 9}
+            stake: {type: integer, minimum: 1}
+        wager_total: {type: number, minimum: 0.01}
+        entropy:
+          type: object
+          required: [number]
+          properties:
+            number: {type: integer, minimum: 1, maximum: 9}
+        total_return: {type: number, minimum: 0}
+        outcome: {type: string, enum: [win, lose]}
+        detail:
+          type: object
+          required: [number, house_number]
+          properties:
+            number: {type: integer, minimum: 1, maximum: 9}
+            house_number: {type: boolean}
+        net: {type: number}
+        settled_at: {type: string}
+    # Preserve scoped wager and optional return event evidence for the settled round.
+    BouleLedgerEvidence:
+      type: object
+      required: [wager, settlement]
+      properties:
+        wager:
+          type: object
+          description: Committed aggregate wager debit for this authenticated player and round.
+        settlement:
+          type: object
+          nullable: true
+          description: Committed aggregate stake-plus-winnings credit, or null when the spin lost.
+    # Preserve the repository-wide success envelope contract.
+    ApiSuccessEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok: {type: boolean, enum: [true]}
+        data: {type: object}
+    # Preserve the repository-wide error envelope contract.
+    ApiErrorEnvelope:
+      type: object
+      required: [ok, error]
+      properties:
+        ok: {type: boolean, enum: [false]}
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: {type: string}
+            message: {type: string}
+            details: {type: object}

@@ -1075,6 +1075,114 @@
       "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
     },
     {
+      "id": "color_wheel",
+      "route": "/games/color_wheel",
+      "selector": "[data-testid='color-wheel']",
+      "states": ["ready"],
+      "locales": ["en-US", "ru-RU"],
+      "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
+      "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
+    },
+    {
+      "id": "poker_dice",
+      "route": "/games/poker_dice",
+      "selector": "[data-testid='poker-dice']",
+      "states": ["ready"],
+      "locales": ["en-US", "ru-RU"],
+      "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
+      "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
+    },
+    {
+      "id": "boule",
+      "route": "/games/boule",
+      "selector": "[data-testid='boule']",
+      "states": ["ready"],
+      "locales": ["en-US", "ru-RU"],
+      "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
+      "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
+    },
+    {
+      "id": "faro",
+      "route": "/games/faro",
+      "selector": "[data-testid='faro']",
+      "states": ["ready"],
+      "locales": ["en-US", "ru-RU"],
+      "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
+      "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
+    },
+    {
+      "id": "trente_et_quarante",
+      "route": "/games/trente_et_quarante",
+      "selector": "[data-testid='trente-et-quarante']",
+      "states": ["ready"],
+      "locales": ["en-US", "ru-RU"],
+      "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
+      "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
+    },
+    {
+      "id": "pachinko",
+      "route": "/games/pachinko",
+      "selector": "[data-testid='pachinko']",
+      "states": ["ready"],
+      "locales": ["en-US", "ru-RU"],
+      "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
+      "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
+    },
+    {
+      "id": "coin_pusher",
+      "route": "/games/coin_pusher",
+      "selector": "[data-testid='coin-pusher']",
+      "states": ["ready"],
+      "locales": ["en-US", "ru-RU"],
+      "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
+      "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
+    },
+    {
+      "id": "marble_race",
+      "route": "/games/marble_race",
+      "selector": "[data-testid='marble-race']",
+      "states": ["ready"],
+      "locales": ["en-US", "ru-RU"],
+      "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
+      "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
+    },
+    {
+      "id": "pattern_draw",
+      "route": "/games/pattern_draw",
+      "selector": "[data-testid='pattern-draw']",
+      "states": ["ready"],
+      "locales": ["en-US", "ru-RU"],
+      "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
+      "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
+    },
+    {
+      "id": "lucky_grid",
+      "route": "/games/lucky_grid",
+      "selector": "[data-testid='lucky-grid']",
+      "states": ["ready"],
+      "locales": ["en-US", "ru-RU"],
+      "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
+      "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
+    },
+    {
+      "id": "daily_draw_lab",
+      "route": "/games/daily_draw_lab",
+      "selector": "[data-testid='daily-draw-lab']",
+      "states": ["ready"],
+      "locales": ["en-US", "ru-RU"],
+      "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
+      "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
+    },
+    {
+      "id": "four_card_poker",
+      "route": "/games/four_card_poker",
+      "selector": "[data-testid='four-card-poker']",
+      "states": ["ready"],
+      "locales": ["en-US", "ru-RU"],
+      "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
+      "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
+    },
+    {
       "id": "pai_gow_poker",
       "route": "/games/pai_gow_poker",
       "selector": "[data-testid='pai-gow-poker']",

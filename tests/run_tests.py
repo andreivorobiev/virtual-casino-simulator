@@ -1131,6 +1131,175 @@ def run_api_tests():
             raise AssertionError('TiltSeven repository-scaffold suite failed')
     # Record the listener-free bilingual, no-network, no-publication, and visual-ownership proof.
     run_case('STATIC-MARKETING-001',['MARKETING-001','MARKETING-002','MARKETING-003','TEST-107'],run_marketing_site_tests)
+    # Execute the shared simple-game settlement-core proof without opening a listener.
+    def run_simple_game_core_tests():
+        # Load only the focused settlement-core class.
+        from tests import simple_game_tests
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(simple_game_tests.SimpleGameCoreTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused settlement proof failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure text secret-safe.
+            raise AssertionError('simple-game settlement core suite failed')
+    # Record the listener-free exactly-once wager, replay, conflict, and crash-recovery proof.
+    run_case('API-GAMECORE-001',['GAMECORE-001','GAMECORE-002','TEST-127'],run_simple_game_core_tests)
+    # Execute the Color Wheel rules and settlement proof without opening a listener.
+    def run_color_wheel_tests():
+        # Load only the focused Color Wheel class.
+        from tests import color_wheel_tests
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(color_wheel_tests.ColorWheelTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused Color Wheel proof failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure text secret-safe.
+            raise AssertionError('color wheel suite failed')
+    # Record the listener-free Color Wheel payout, retry, and house-edge proof.
+    run_case('API-COLOR-WHEEL-001',['CWHEEL-001','CWHEEL-002','TEST-128'],run_color_wheel_tests)
+    # Execute the Poker Dice rules and settlement proof without opening a listener.
+    def run_poker_dice_tests():
+        # Load only the focused Poker Dice class.
+        from tests import poker_dice_tests
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(poker_dice_tests.PokerDiceTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused Poker Dice proof failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure text secret-safe.
+            raise AssertionError('poker dice suite failed')
+    # Record the listener-free Poker Dice payout, retry, and house-edge proof.
+    run_case('API-POKER-DICE-001',['PDICE-001','PDICE-002','TEST-129'],run_poker_dice_tests)
+    # Execute the Boule rules and settlement proof without opening a listener.
+    def run_boule_tests():
+        # Load only the focused Boule class.
+        from tests import boule_tests
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(boule_tests.BouleTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused Boule proof failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure text secret-safe.
+            raise AssertionError('boule suite failed')
+    # Record the listener-free Boule payout, house-number, retry, and house-edge proof.
+    run_case('API-BOULE-001',['BOULE-001','BOULE-002','TEST-130'],run_boule_tests)
+    # Execute the Faro rules and settlement proof without opening a listener.
+    def run_faro_tests():
+        # Load only the focused Faro class.
+        from tests import faro_tests
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(faro_tests.FaroTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused Faro proof failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure text secret-safe.
+            raise AssertionError('faro suite failed')
+    # Record the listener-free Faro win, lose, push, split, retry, and house-edge proof.
+    run_case('API-FARO-001',['FARO-001','FARO-002','TEST-131'],run_faro_tests)
+    # Execute the Trente et Quarante rules and settlement proof without opening a listener.
+    def run_trente_et_quarante_tests():
+        # Load only the focused Trente et Quarante class.
+        from tests import trente_et_quarante_tests
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(trente_et_quarante_tests.TrenteEtQuaranteTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused Trente et Quarante proof failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure text secret-safe.
+            raise AssertionError('trente et quarante suite failed')
+    # Record the listener-free Trente et Quarante row, colour, refait, push, retry, and house-edge proof.
+    run_case('API-TRENTE-ET-QUARANTE-001',['TEQ-001','TEQ-002','TEST-119'],run_trente_et_quarante_tests)
+    # Execute the Pachinko rules and settlement proof without opening a listener.
+    def run_pachinko_tests():
+        # Load only the focused Pachinko class.
+        from tests import pachinko_tests
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(pachinko_tests.PachinkoTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused Pachinko proof failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure text secret-safe.
+            raise AssertionError('pachinko suite failed')
+    # Record the listener-free Pachinko pocket, push, retry, and house-edge proof.
+    run_case('API-PACHINKO-001',['PACH-001','PACH-002','TEST-120'],run_pachinko_tests)
+    # Execute the Coin Pusher rules and settlement proof without opening a listener.
+    def run_coin_pusher_tests():
+        # Load only the focused Coin Pusher class.
+        from tests import coin_pusher_tests
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(coin_pusher_tests.CoinPusherTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused Coin Pusher proof failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure text secret-safe.
+            raise AssertionError('coin pusher suite failed')
+    # Record the listener-free Coin Pusher cascade, hold, retry, and house-edge proof.
+    run_case('API-COIN-PUSHER-001',['COINP-001','COINP-002','TEST-121'],run_coin_pusher_tests)
+    # Execute the Marble Race rules and settlement proof without opening a listener.
+    def run_marble_race_tests():
+        # Load only the focused Marble Race class.
+        from tests import marble_race_tests
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(marble_race_tests.MarbleRaceTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused Marble Race proof failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure text secret-safe.
+            raise AssertionError('marble race suite failed')
+    # Record the listener-free Marble Race win, podium, retry, and house-edge proof.
+    run_case('API-MARBLE-RACE-001',['MARBLE-001','MARBLE-002','TEST-122'],run_marble_race_tests)
+    # Execute the Pattern Draw rules and settlement proof without opening a listener.
+    def run_pattern_draw_tests():
+        # Load only the focused Pattern Draw class.
+        from tests import pattern_draw_tests
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(pattern_draw_tests.PatternDrawTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused Pattern Draw proof failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure text secret-safe.
+            raise AssertionError('pattern draw suite failed')
+    # Record the listener-free Pattern Draw line, cross, full, retry, and house-edge proof.
+    run_case('API-PATTERN-DRAW-001',['PATTERN-001','PATTERN-002','TEST-123'],run_pattern_draw_tests)
+    # Execute the Lucky Grid rules and settlement proof without opening a listener.
+    def run_lucky_grid_tests():
+        # Load only the focused Lucky Grid class.
+        from tests import lucky_grid_tests
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(lucky_grid_tests.LuckyGridTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused Lucky Grid proof failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure text secret-safe.
+            raise AssertionError('lucky grid suite failed')
+    # Record the listener-free Lucky Grid match, retry, and house-edge proof.
+    run_case('API-LUCKY-GRID-001',['LGRID-001','LGRID-002','TEST-124'],run_lucky_grid_tests)
+    # Execute the Daily Draw Lab rules and settlement proof without opening a listener.
+    def run_daily_draw_lab_tests():
+        # Load only the focused Daily Draw Lab class.
+        from tests import daily_draw_lab_tests
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(daily_draw_lab_tests.DailyDrawLabTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused Daily Draw Lab proof failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure text secret-safe.
+            raise AssertionError('daily draw lab suite failed')
+    # Record the listener-free Daily Draw Lab pick, hit, retry, and house-edge proof.
+    run_case('API-DAILY-DRAW-LAB-001',['DDLAB-001','DDLAB-002','TEST-125'],run_daily_draw_lab_tests)
+    # Execute the Four Card Poker engine and settlement proof without opening a listener.
+    def run_four_card_poker_tests():
+        # Load only the focused Four Card Poker class.
+        from tests import four_card_poker_tests
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(four_card_poker_tests.FourCardPokerTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused Four Card Poker proof failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure text secret-safe.
+            raise AssertionError('four card poker suite failed')
+    # Record the listener-free Four Card Poker ranking, settlement, replay, recovery, and house-edge proof.
+    run_case('API-FOUR-CARD-POKER-001',['FOURCP-001','FOURCP-002','TEST-126'],run_four_card_poker_tests)
     # Execute the Keno drawn-ball rail layout regression without opening a listener.
     def run_keno_ball_rail_tests():
         # Load only the focused Keno ball-rail class.
@@ -4312,6 +4481,54 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Execute catalog-driven frontend driver discovery for all current games.
                 run_case('BR-CATALOG-DISCOVERY-001',['CORE-021','TEST-042','UX-011'],catalog_route_discovery)
+                # Define the governed ready-state visual proof for the twelve catalog-expansion games. (issue #73)
+                def catalog_expansion_visuals():
+                    # Preserve the controller-owned expansion order so missing or duplicate registrations fail closed.
+                    expansion_ids=('color_wheel','poker_dice','boule','faro','trente_et_quarante','pachinko','coin_pusher','marble_race','pattern_draw','lucky_grid','daily_draw_lab','four_card_poker')
+                    # Resolve each registered descriptor instead of duplicating route, ready-test, or locale-domain metadata.
+                    expansion_games=[next(game for game in casino_config.GAMES if game['id']==game_id) for game_id in expansion_ids]
+                    # Require one unique registry entry for every approved expansion game.
+                    assert len(expansion_games)==12 and len({game['id'] for game in expansion_games})==12
+                    # Exercise both governed locales because each expansion route owns an independent resource domain.
+                    for locale in ('en-US','ru-RU'):
+                        # Select the locale through the real player-shell control.
+                        page.get_by_test_id('shell-locale-select').select_option(locale)
+                        # Wait until the public locale state confirms the requested rerender.
+                        page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale",arg=locale)
+                        # Exercise every governed visual-matrix viewport for each expansion route.
+                        for viewport_id,width,height in (('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)):
+                            # Apply the exact governed viewport before mounting a route.
+                            page.set_viewport_size({'width':width,'height':height})
+                            # Walk the registered expansion games without bypassing shell navigation.
+                            for game in expansion_games:
+                                # Open the game through the catalog-owned route control.
+                                page.get_by_test_id(f"nav-{game['id']}").click()
+                                # Wait for the module-owned readiness marker before visual or localization assertions.
+                                page.get_by_test_id(game['frontend']['ready_testid']).wait_for(timeout=5000)
+                                # Let the stable ready layout settle without exercising game mechanics.
+                                page.wait_for_timeout(100)
+                                # Require the canonical reloadable route declared by the module descriptor.
+                                assert page.url.split('?',1)[0].endswith(game['route']),{'game':game['id'],'route':page.url}
+                                # Audit every visible player-facing string against the route's loaded resource domain.
+                                localization=page.evaluate(route_i18n_audit_script,{'domain':game['frontend']['i18n_domain'],'interpolationKey':game['frontend']['i18n_probe']})
+                                # Require route-domain loading, zero missing keys, and no raw or malformed localized output.
+                                assert game['frontend']['i18n_domain'] in localization['state']['loadedDomains'] and localization['state']['missingKeyCount']==0 and not localization['rawKeys'] and not localization['unresolvedPlaceholders'] and not localization['replacementCharacters'] and not localization['invalidValues'] and localization['titleVisible'],{'game':game['id'],'locale':locale,'localization':localization}
+                                # Measure ready-state containment, operability, and fixed feedback-control clearance.
+                                geometry=page.evaluate("""readyTestId => { const root=document.querySelector(`[data-testid="${readyTestId}"]`); const fixed=document.querySelector('.report-problem-fab:not([hidden])')?.getBoundingClientRect(); const intersects=rect=>fixed&&rect.left<fixed.right&&rect.right>fixed.left&&rect.top<fixed.bottom&&rect.bottom>fixed.top; const visible=node=>{const style=getComputedStyle(node);return style.display!=='none'&&style.visibility!=='hidden'&&node.getClientRects().length>0;}; const hits=[]; for(const node of root?.querySelectorAll('button,input,select,a[href],[role="button"]')||[]){if(visible(node)&&intersects(node.getBoundingClientRect()))hits.push(node.getAttribute('data-testid')||node.getAttribute('data-action')||node.tagName.toLowerCase());} for(const node of root?.querySelectorAll('h1,h2,h3,h4,p,li,label,legend,span,strong')||[]){if(!visible(node))continue;const range=document.createRange();range.selectNodeContents(node);if([...range.getClientRects()].some(intersects))hits.push(`${node.tagName.toLowerCase()}:${node.textContent.trim()}`);} const box=root?.getBoundingClientRect(); const enabled=[...(root?.querySelectorAll('button:not([disabled]),input:not([disabled]),select:not([disabled]),a[href],[role="button"]')||[])].filter(visible); return {documentFits:document.documentElement.scrollWidth<=window.innerWidth+1,gameVisible:Boolean(root&&visible(root)),readableInlineSize:Math.round(box?.width||0),enabledControls:enabled.length,feedbackOverlaps:[...new Set(hits)]}; }""",game['frontend']['ready_testid'])
+                                # Require a visible, operable, horizontally contained route with no feedback-button collision.
+                                assert geometry['documentFits'] and geometry['gameVisible'] and geometry['readableInlineSize']>=280 and geometry['enabledControls']>0 and not geometry['feedbackOverlaps'],{'game':game['id'],'locale':locale,'viewport':viewport_id,'geometry':geometry}
+                                # Capture one governed after-pass PNG and provenance sidecar for this route/locale/viewport.
+                                game_evidence(f"after-pass-catalog-expansion-{game['id']}-{locale}-{viewport_id}.png",game['id'],['ready'],locale,viewport_id)
+                    # Restore English before returning to the canonical lobby state.
+                    page.get_by_test_id('shell-locale-select').select_option('en-US')
+                    # Wait for the English shell rerender before restoring desktop geometry.
+                    page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'en-US'")
+                    # Restore the primary desktop viewport expected by later browser cases.
+                    page.set_viewport_size({'width':1920,'height':1080})
+                    # Return to the lobby after all governed expansion artifacts are complete.
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Execute the expansion matrix under each game-specific permanent test allocation.
+                run_case('BR-CATALOG-EXPANSION-001',['CWHEEL-001','CWHEEL-002','PDICE-001','PDICE-002','BOULE-001','BOULE-002','FARO-001','FARO-002','TEQ-001','TEQ-002','PACH-001','PACH-002','COINP-001','COINP-002','MARBLE-001','MARBLE-002','PATTERN-001','PATTERN-002','LGRID-001','LGRID-002','DDLAB-001','DDLAB-002','FOURCP-001','FOURCP-002','TEST-119','TEST-120','TEST-121','TEST-122','TEST-123','TEST-124','TEST-125','TEST-126','TEST-128','TEST-129','TEST-130','TEST-131'],catalog_expansion_visuals)
                 # Store the browser audit that proves every game control is reachable inside a scroll region at one viewport. (issue #221)
                 nav_reach_script=r"""(rootSel) => {
                   // Resolve the mounted game root or fall back to the shared route outlet.

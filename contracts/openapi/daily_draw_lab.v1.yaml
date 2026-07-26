@@ -1,0 +1,208 @@
+openapi: 3.0.3
+# Describe the additive issue-144 Daily Draw Lab contract without changing existing v1 operations.
+info:
+  title: Virtual Casino Daily Draw Lab API
+  version: v1
+  description: Additive session-bound Daily Draw Lab contract for issue 144, built on the shared exactly-once settlement core.
+# Define only game-owned routes; shared router registration remains with issue 77.
+paths:
+  # Expose session-owned reload state and immutable bet metadata.
+  /api/v1/games/daily-draw-lab/state:
+    get:
+      summary: Read the authenticated player's Daily Draw Lab bet catalog and recent settled draws
+      operationId: daily_draw_lab_GET_api_v1_games_daily_draw_lab_state
+      responses:
+        '200':
+          description: Standard success envelope containing game state, player snapshot, and bet catalog
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DailyStateEnvelope'
+        '401':
+          description: Standard error envelope when no authenticated session is available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorEnvelope'
+  # Execute one complete debit, number draw, and optional settlement action.
+  /api/v1/games/daily-draw-lab/draws:
+    post:
+      summary: Execute or replay one atomic ledger-backed Daily Draw Lab draw
+      operationId: daily_draw_lab_POST_api_v1_games_daily_draw_lab_draws
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DailyDrawRequest'
+      responses:
+        '200':
+          description: Standard success envelope containing one settled or safely replayed round
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DailyDrawEnvelope'
+        '400':
+          description: Standard error envelope for invalid picks or stake or request identity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorEnvelope'
+        '401':
+          description: Standard error envelope when no authenticated session is available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorEnvelope'
+        '409':
+          description: Standard error envelope when one request identity is reused with different wager content
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorEnvelope'
+# Keep all request, response, round, and standard-envelope shapes local to this contract.
+components:
+  schemas:
+    # Require a caller-stable action identity, one to five picks, and a bounded stake.
+    DailyDrawRequest:
+      type: object
+      additionalProperties: false
+      required: [request_id, picks, stake]
+      properties:
+        request_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '^[A-Za-z0-9._:-]+$'
+          description: Stable caller-generated identity reused only when retrying the same draw action.
+        player_id:
+          type: string
+          description: Compatibility field overridden by the authenticated session-bound player resolver.
+        picks:
+          type: array
+          minItems: 1
+          maxItems: 5
+          uniqueItems: true
+          items: {type: integer, minimum: 1, maximum: 30}
+          description: One to five distinct marked numbers.
+        stake:
+          type: integer
+          minimum: 1
+          maximum: 100000
+          description: Fake-money play-token stake; never currency or redeemable value.
+    # Specialize the standard success envelope for state reads.
+    DailyStateEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/ApiSuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/DailyPayload'
+    # Specialize the standard success envelope for atomic draw actions.
+    DailyDrawEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/ApiSuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              allOf:
+                - $ref: '#/components/schemas/DailyPayload'
+                - type: object
+                  required: [round, replayed, ledger]
+                  properties:
+                    round: {$ref: '#/components/schemas/DailyRound'}
+                    replayed: {type: boolean}
+                    ledger: {$ref: '#/components/schemas/DailyLedgerEvidence'}
+    # Describe the common state, player, and immutable bet metadata payload.
+    DailyPayload:
+      type: object
+      required: [game, state, player, bet_catalog]
+      properties:
+        game: {type: string, enum: [daily_draw_lab]}
+        state: {type: object}
+        player:
+          type: object
+          description: Current authenticated player's shared read-only wallet snapshot.
+        bet_catalog:
+          type: object
+          description: Pool, draw size, pick bounds, and per-pick-count paytables.
+    # Describe one immutable settled round returned on original and replayed requests.
+    DailyRound:
+      type: object
+      required: [round_id, wager, wager_total, entropy, total_return, outcome, detail, net, settled_at]
+      properties:
+        round_id: {type: string}
+        wager:
+          type: object
+          required: [picks, stake]
+          properties:
+            picks:
+              type: array
+              minItems: 1
+              maxItems: 5
+              items: {type: integer, minimum: 1, maximum: 30}
+            stake: {type: integer, minimum: 1}
+        wager_total: {type: number, minimum: 0.01}
+        entropy:
+          type: object
+          required: [drawn]
+          properties:
+            drawn:
+              type: array
+              minItems: 5
+              maxItems: 5
+              items: {type: integer, minimum: 1, maximum: 30}
+        total_return: {type: number, minimum: 0}
+        outcome: {type: string, enum: [win, lose]}
+        detail:
+          type: object
+          required: [drawn, picks, hit, hit_count]
+          properties:
+            drawn:
+              type: array
+              minItems: 5
+              maxItems: 5
+              items: {type: integer, minimum: 1, maximum: 30}
+            picks:
+              type: array
+              minItems: 1
+              maxItems: 5
+              items: {type: integer, minimum: 1, maximum: 30}
+            hit:
+              type: array
+              items: {type: integer, minimum: 1, maximum: 30}
+            hit_count: {type: integer, minimum: 0, maximum: 5}
+        net: {type: number}
+        settled_at: {type: string}
+    # Preserve scoped wager and optional return event evidence for the settled round.
+    DailyLedgerEvidence:
+      type: object
+      required: [wager, settlement]
+      properties:
+        wager:
+          type: object
+          description: Committed aggregate wager debit for this authenticated player and round.
+        settlement:
+          type: object
+          nullable: true
+          description: Committed aggregate return credit, or null when the draw returned nothing.
+    # Preserve the repository-wide success envelope contract.
+    ApiSuccessEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok: {type: boolean, enum: [true]}
+        data: {type: object}
+    # Preserve the repository-wide error envelope contract.
+    ApiErrorEnvelope:
+      type: object
+      required: [ok, error]
+      properties:
+        ok: {type: boolean, enum: [false]}
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: {type: string}
+            message: {type: string}
+            details: {type: object}

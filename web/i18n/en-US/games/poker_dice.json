@@ -1,0 +1,17 @@
+{
+  "title": "Poker Dice",
+  "paytable.title": "Paytable",
+  "hand.five_of_a_kind": "Five of a kind",
+  "hand.four_of_a_kind": "Four of a kind",
+  "hand.full_house": "Full house",
+  "hand.straight": "Straight",
+  "hand.three_of_a_kind": "Three of a kind",
+  "stake.title": "Stake",
+  "action.roll": "Roll the dice",
+  "action.rolling": "Rolling…",
+  "result.idle": "Set a stake and roll the dice.",
+  "result.win": "{hand}!",
+  "result.lose": "No paying hand.",
+  "error.load": "Could not load Poker Dice.",
+  "error.roll": "Roll could not be completed."
+}

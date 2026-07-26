@@ -17,7 +17,7 @@
     "android",
     "ios"
   ],
-  "catalog_game_count": 34,
+  "catalog_game_count": 46,
   "action_source": "state-changing operations in each module-owned OpenAPI v1 contract",
   "protected_fields": [
     "user_id",
@@ -1422,6 +1422,37 @@
       ]
     },
     {
+      "game_id": "color_wheel",
+      "contract": "contracts/openapi/color_wheel.v1.yaml",
+      "actions": [
+        {
+          "method": "POST",
+          "path": "/api/v1/games/color-wheel/spins",
+          "client_intent": "openapi_request_schema_and_path_choices_only",
+          "server_validation": "authenticated_route_and_game_service",
+          "engine_outcome": "server_game_engine",
+          "storage_transaction": "storage_and_ledger_when_financial",
+          "response_projection": "server_authoritative_projection"
+        }
+      ],
+      "assurances": [
+        "raw_api_mutation",
+        "cross_user_isolation",
+        "legal_action_and_turn",
+        "rng_outcome_and_payout",
+        "wallet_and_ledger",
+        "replay_conflict_lost_response_restart",
+        "concurrency",
+        "admin_authority",
+        "client_tamper_refresh"
+      ],
+      "evidence": [
+        "tests/run_tests.py",
+        "tests/run_tests.py",
+        "tests/storage_tests.py"
+      ]
+    },
+    {
       "game_id": "pai_gow_poker",
       "contract": "contracts/openapi/pai_gow_poker.v1.yaml",
       "actions": [
@@ -1457,6 +1488,356 @@
       ],
       "evidence": [
         "tests/games/pai_gow_poker/test_api.py",
+        "tests/run_tests.py",
+        "tests/storage_tests.py"
+      ]
+    },
+    {
+      "game_id": "poker_dice",
+      "contract": "contracts/openapi/poker_dice.v1.yaml",
+      "actions": [
+        {
+          "method": "POST",
+          "path": "/api/v1/games/poker-dice/rolls",
+          "client_intent": "openapi_request_schema_and_path_choices_only",
+          "server_validation": "authenticated_route_and_game_service",
+          "engine_outcome": "server_game_engine",
+          "storage_transaction": "storage_and_ledger_when_financial",
+          "response_projection": "server_authoritative_projection"
+        }
+      ],
+      "assurances": [
+        "raw_api_mutation",
+        "cross_user_isolation",
+        "legal_action_and_turn",
+        "rng_outcome_and_payout",
+        "wallet_and_ledger",
+        "replay_conflict_lost_response_restart",
+        "concurrency",
+        "admin_authority",
+        "client_tamper_refresh"
+      ],
+      "evidence": [
+        "tests/run_tests.py",
+        "tests/run_tests.py",
+        "tests/storage_tests.py"
+      ]
+    },
+    {
+      "game_id": "boule",
+      "contract": "contracts/openapi/boule.v1.yaml",
+      "actions": [
+        {
+          "method": "POST",
+          "path": "/api/v1/games/boule/spins",
+          "client_intent": "openapi_request_schema_and_path_choices_only",
+          "server_validation": "authenticated_route_and_game_service",
+          "engine_outcome": "server_game_engine",
+          "storage_transaction": "storage_and_ledger_when_financial",
+          "response_projection": "server_authoritative_projection"
+        }
+      ],
+      "assurances": [
+        "raw_api_mutation",
+        "cross_user_isolation",
+        "legal_action_and_turn",
+        "rng_outcome_and_payout",
+        "wallet_and_ledger",
+        "replay_conflict_lost_response_restart",
+        "concurrency",
+        "admin_authority",
+        "client_tamper_refresh"
+      ],
+      "evidence": [
+        "tests/run_tests.py",
+        "tests/run_tests.py",
+        "tests/storage_tests.py"
+      ]
+    },
+    {
+      "game_id": "faro",
+      "contract": "contracts/openapi/faro.v1.yaml",
+      "actions": [
+        {
+          "method": "POST",
+          "path": "/api/v1/games/faro/deals",
+          "client_intent": "openapi_request_schema_and_path_choices_only",
+          "server_validation": "authenticated_route_and_game_service",
+          "engine_outcome": "server_game_engine",
+          "storage_transaction": "storage_and_ledger_when_financial",
+          "response_projection": "server_authoritative_projection"
+        }
+      ],
+      "assurances": [
+        "raw_api_mutation",
+        "cross_user_isolation",
+        "legal_action_and_turn",
+        "rng_outcome_and_payout",
+        "wallet_and_ledger",
+        "replay_conflict_lost_response_restart",
+        "concurrency",
+        "admin_authority",
+        "client_tamper_refresh"
+      ],
+      "evidence": [
+        "tests/run_tests.py",
+        "tests/run_tests.py",
+        "tests/storage_tests.py"
+      ]
+    },
+    {
+      "game_id": "trente_et_quarante",
+      "contract": "contracts/openapi/trente_et_quarante.v1.yaml",
+      "actions": [
+        {
+          "method": "POST",
+          "path": "/api/v1/games/trente-et-quarante/coups",
+          "client_intent": "openapi_request_schema_and_path_choices_only",
+          "server_validation": "authenticated_route_and_game_service",
+          "engine_outcome": "server_game_engine",
+          "storage_transaction": "storage_and_ledger_when_financial",
+          "response_projection": "server_authoritative_projection"
+        }
+      ],
+      "assurances": [
+        "raw_api_mutation",
+        "cross_user_isolation",
+        "legal_action_and_turn",
+        "rng_outcome_and_payout",
+        "wallet_and_ledger",
+        "replay_conflict_lost_response_restart",
+        "concurrency",
+        "admin_authority",
+        "client_tamper_refresh"
+      ],
+      "evidence": [
+        "tests/run_tests.py",
+        "tests/run_tests.py",
+        "tests/storage_tests.py"
+      ]
+    },
+    {
+      "game_id": "pachinko",
+      "contract": "contracts/openapi/pachinko.v1.yaml",
+      "actions": [
+        {
+          "method": "POST",
+          "path": "/api/v1/games/pachinko/drops",
+          "client_intent": "openapi_request_schema_and_path_choices_only",
+          "server_validation": "authenticated_route_and_game_service",
+          "engine_outcome": "server_game_engine",
+          "storage_transaction": "storage_and_ledger_when_financial",
+          "response_projection": "server_authoritative_projection"
+        }
+      ],
+      "assurances": [
+        "raw_api_mutation",
+        "cross_user_isolation",
+        "legal_action_and_turn",
+        "rng_outcome_and_payout",
+        "wallet_and_ledger",
+        "replay_conflict_lost_response_restart",
+        "concurrency",
+        "admin_authority",
+        "client_tamper_refresh"
+      ],
+      "evidence": [
+        "tests/run_tests.py",
+        "tests/run_tests.py",
+        "tests/storage_tests.py"
+      ]
+    },
+    {
+      "game_id": "coin_pusher",
+      "contract": "contracts/openapi/coin_pusher.v1.yaml",
+      "actions": [
+        {
+          "method": "POST",
+          "path": "/api/v1/games/coin-pusher/drops",
+          "client_intent": "openapi_request_schema_and_path_choices_only",
+          "server_validation": "authenticated_route_and_game_service",
+          "engine_outcome": "server_game_engine",
+          "storage_transaction": "storage_and_ledger_when_financial",
+          "response_projection": "server_authoritative_projection"
+        }
+      ],
+      "assurances": [
+        "raw_api_mutation",
+        "cross_user_isolation",
+        "legal_action_and_turn",
+        "rng_outcome_and_payout",
+        "wallet_and_ledger",
+        "replay_conflict_lost_response_restart",
+        "concurrency",
+        "admin_authority",
+        "client_tamper_refresh"
+      ],
+      "evidence": [
+        "tests/run_tests.py",
+        "tests/run_tests.py",
+        "tests/storage_tests.py"
+      ]
+    },
+    {
+      "game_id": "marble_race",
+      "contract": "contracts/openapi/marble_race.v1.yaml",
+      "actions": [
+        {
+          "method": "POST",
+          "path": "/api/v1/games/marble-race/races",
+          "client_intent": "openapi_request_schema_and_path_choices_only",
+          "server_validation": "authenticated_route_and_game_service",
+          "engine_outcome": "server_game_engine",
+          "storage_transaction": "storage_and_ledger_when_financial",
+          "response_projection": "server_authoritative_projection"
+        }
+      ],
+      "assurances": [
+        "raw_api_mutation",
+        "cross_user_isolation",
+        "legal_action_and_turn",
+        "rng_outcome_and_payout",
+        "wallet_and_ledger",
+        "replay_conflict_lost_response_restart",
+        "concurrency",
+        "admin_authority",
+        "client_tamper_refresh"
+      ],
+      "evidence": [
+        "tests/run_tests.py",
+        "tests/run_tests.py",
+        "tests/storage_tests.py"
+      ]
+    },
+    {
+      "game_id": "pattern_draw",
+      "contract": "contracts/openapi/pattern_draw.v1.yaml",
+      "actions": [
+        {
+          "method": "POST",
+          "path": "/api/v1/games/pattern-draw/draws",
+          "client_intent": "openapi_request_schema_and_path_choices_only",
+          "server_validation": "authenticated_route_and_game_service",
+          "engine_outcome": "server_game_engine",
+          "storage_transaction": "storage_and_ledger_when_financial",
+          "response_projection": "server_authoritative_projection"
+        }
+      ],
+      "assurances": [
+        "raw_api_mutation",
+        "cross_user_isolation",
+        "legal_action_and_turn",
+        "rng_outcome_and_payout",
+        "wallet_and_ledger",
+        "replay_conflict_lost_response_restart",
+        "concurrency",
+        "admin_authority",
+        "client_tamper_refresh"
+      ],
+      "evidence": [
+        "tests/run_tests.py",
+        "tests/run_tests.py",
+        "tests/storage_tests.py"
+      ]
+    },
+    {
+      "game_id": "lucky_grid",
+      "contract": "contracts/openapi/lucky_grid.v1.yaml",
+      "actions": [
+        {
+          "method": "POST",
+          "path": "/api/v1/games/lucky-grid/reveals",
+          "client_intent": "openapi_request_schema_and_path_choices_only",
+          "server_validation": "authenticated_route_and_game_service",
+          "engine_outcome": "server_game_engine",
+          "storage_transaction": "storage_and_ledger_when_financial",
+          "response_projection": "server_authoritative_projection"
+        }
+      ],
+      "assurances": [
+        "raw_api_mutation",
+        "cross_user_isolation",
+        "legal_action_and_turn",
+        "rng_outcome_and_payout",
+        "wallet_and_ledger",
+        "replay_conflict_lost_response_restart",
+        "concurrency",
+        "admin_authority",
+        "client_tamper_refresh"
+      ],
+      "evidence": [
+        "tests/run_tests.py",
+        "tests/run_tests.py",
+        "tests/storage_tests.py"
+      ]
+    },
+    {
+      "game_id": "daily_draw_lab",
+      "contract": "contracts/openapi/daily_draw_lab.v1.yaml",
+      "actions": [
+        {
+          "method": "POST",
+          "path": "/api/v1/games/daily-draw-lab/draws",
+          "client_intent": "openapi_request_schema_and_path_choices_only",
+          "server_validation": "authenticated_route_and_game_service",
+          "engine_outcome": "server_game_engine",
+          "storage_transaction": "storage_and_ledger_when_financial",
+          "response_projection": "server_authoritative_projection"
+        }
+      ],
+      "assurances": [
+        "raw_api_mutation",
+        "cross_user_isolation",
+        "legal_action_and_turn",
+        "rng_outcome_and_payout",
+        "wallet_and_ledger",
+        "replay_conflict_lost_response_restart",
+        "concurrency",
+        "admin_authority",
+        "client_tamper_refresh"
+      ],
+      "evidence": [
+        "tests/run_tests.py",
+        "tests/run_tests.py",
+        "tests/storage_tests.py"
+      ]
+    },
+    {
+      "game_id": "four_card_poker",
+      "contract": "contracts/openapi/four_card_poker.v1.yaml",
+      "actions": [
+        {
+          "method": "POST",
+          "path": "/api/v1/games/four-card-poker/rounds",
+          "client_intent": "openapi_request_schema_and_path_choices_only",
+          "server_validation": "authenticated_route_and_game_service",
+          "engine_outcome": "server_game_engine",
+          "storage_transaction": "storage_and_ledger_when_financial",
+          "response_projection": "server_authoritative_projection"
+        },
+        {
+          "method": "POST",
+          "path": "/api/v1/games/four-card-poker/rounds/{round_id}/decisions",
+          "client_intent": "openapi_request_schema_and_path_choices_only",
+          "server_validation": "authenticated_route_and_game_service",
+          "engine_outcome": "server_game_engine",
+          "storage_transaction": "storage_and_ledger_when_financial",
+          "response_projection": "server_authoritative_projection"
+        }
+      ],
+      "assurances": [
+        "raw_api_mutation",
+        "cross_user_isolation",
+        "legal_action_and_turn",
+        "rng_outcome_and_payout",
+        "wallet_and_ledger",
+        "replay_conflict_lost_response_restart",
+        "concurrency",
+        "admin_authority",
+        "client_tamper_refresh"
+      ],
+      "evidence": [
+        "tests/run_tests.py",
         "tests/run_tests.py",
         "tests/storage_tests.py"
       ]

@@ -1,0 +1,183 @@
+openapi: 3.0.3
+# Describe the additive issue-141 Four Card Poker contract without changing existing v1 operations.
+info:
+  title: Virtual Casino Four Card Poker API
+  version: v1
+  description: >-
+    Additive issue #141 contract for authenticated Four Card Poker play. Deal and decision commands
+    require independent action ids so retries reuse one round and each opening, play, or settlement
+    movement commits at most once in the local simulator.
+tags:
+  - name: Four Card Poker
+    description: Player-scoped four-card dealer poker with a six-card dealer, variable play raise, Ante Bonus, and Aces Up.
+# Define only additive frozen-v1 game endpoints owned by this proposal slice.
+paths:
+  # Expose the player-scoped reload-safe state endpoint.
+  /api/v1/games/four-card-poker/state:
+    get:
+      tags: [Four Card Poker]
+      operationId: fourCardPokerState
+      summary: Read the authenticated player's reload-safe Four Card Poker state
+      responses:
+        '200':
+          description: Current game state, fixed rules, and bound player
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StateEnvelope'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  # Deal or replay one ante-and-Aces-Up round.
+  /api/v1/games/four-card-poker/rounds:
+    post:
+      tags: [Four Card Poker]
+      operationId: fourCardPokerStartRound
+      summary: Deal or replay one ante-and-Aces-Up round awaiting a play or fold
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartRoundRequest'
+      responses:
+        '200':
+          description: A prepared decision-ready round with private dealer cards withheld
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoundEnvelope'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  # Apply or replay one play-or-fold decision.
+  /api/v1/games/four-card-poker/rounds/{round_id}/decisions:
+    post:
+      tags: [Four Card Poker]
+      operationId: fourCardPokerDecision
+      summary: Play one to three times the ante or fold the active round
+      parameters:
+        - name: round_id
+          in: path
+          required: true
+          schema: {type: string, pattern: '^[A-Za-z0-9_-]+$'}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DecisionRequest'
+      responses:
+        '200':
+          description: A settled round revealing the dealer and the resolved outcome
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoundEnvelope'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+# Keep all request, response, and error shapes local to this contract.
+components:
+  responses:
+    ErrorResponse:
+      description: Standard bounded error envelope
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorEnvelope'
+  schemas:
+    # Require a caller-stable action identity, an ante, and an optional Aces Up bet.
+    StartRoundRequest:
+      type: object
+      additionalProperties: false
+      required: [action_id, ante]
+      properties:
+        action_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '^[A-Za-z0-9._:-]+$'
+        request_id:
+          type: string
+          description: Accepted alias for action_id for client convenience.
+        player_id:
+          type: string
+          description: Compatibility field overridden by the authenticated session-bound player resolver.
+        ante:
+          type: number
+          minimum: 0.01
+          maximum: 100000
+        aces_up:
+          type: number
+          minimum: 0
+          maximum: 100000
+          description: Optional independent side bet; zero declines it.
+    # Require a caller-stable action identity, a decision, and a play multiplier.
+    DecisionRequest:
+      type: object
+      additionalProperties: false
+      required: [action_id, decision]
+      properties:
+        action_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '^[A-Za-z0-9._:-]+$'
+        request_id:
+          type: string
+          description: Accepted alias for action_id for client convenience.
+        player_id:
+          type: string
+          description: Compatibility field overridden by the authenticated session-bound player resolver.
+        decision:
+          type: string
+          enum: [play, fold]
+        multiplier:
+          type: integer
+          enum: [1, 2, 3]
+          description: Required only when playing; the one-to-three-times ante raise.
+    # Specialize the standard success envelope for state reads.
+    StateEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/ApiSuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/GamePayload'
+    # Specialize the standard success envelope for deal and decision actions.
+    RoundEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/ApiSuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/GamePayload'
+    # Describe the common state, rules, player, and round payload.
+    GamePayload:
+      type: object
+      required: [game, state, player, rules]
+      properties:
+        game: {type: string, enum: [four_card_poker]}
+        state: {type: object, description: Sanitized active and recent rounds with dealer cards hidden until showdown.}
+        player: {type: object, description: Current authenticated player's shared read-only wallet snapshot.}
+        rules: {type: object, description: Decisions, play multipliers, Ante Bonus, and Aces Up paytables.}
+        round: {type: object, description: The prepared or settled round, present on deal and decision responses.}
+        replayed: {type: boolean}
+    # Preserve the repository-wide success envelope contract.
+    ApiSuccessEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok: {type: boolean, enum: [true]}
+        data: {type: object}
+    # Preserve the repository-wide error envelope contract.
+    ApiErrorEnvelope:
+      type: object
+      required: [ok, error]
+      properties:
+        ok: {type: boolean, enum: [false]}
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: {type: string}
+            message: {type: string}
+            details: {type: object}

@@ -1,0 +1,16 @@
+{
+  "title": "Буль",
+  "bet.title": "Ставки на равные деньги",
+  "bet.low": "Малые (1-4)",
+  "bet.high": "Большие (6-9)",
+  "bet.odd": "Нечёт",
+  "bet.even": "Чёт",
+  "stake.title": "Ставка",
+  "action.spin": "Крутить буль",
+  "action.spinning": "Вращение…",
+  "result.idle": "Выберите ставку и крутите.",
+  "result.win": "Число {number} выигрывает!",
+  "result.lose": "Число {number}.",
+  "error.load": "Не удалось загрузить Буль.",
+  "error.spin": "Не удалось завершить вращение."
+}

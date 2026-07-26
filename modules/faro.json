@@ -1,0 +1,17 @@
+{
+  "module": "faro",
+  "version": "1.0.0",
+  "paths": ["casino/games/faro/", "web/games/faro.js", "web/i18n/en-US/games/faro.json", "web/i18n/ru-RU/games/faro.json"],
+  "requirements_prefixes": ["FARO"],
+  "contracts": ["contracts/openapi/faro.v1.yaml"],
+  "game": {
+    "id": "faro", "sort_order": 340, "route": "/games/faro", "label": "Faro", "category": "cards", "categories": ["cards", "instant"],
+    "backend": {"register": "casino.games.faro.api:register"},
+    "frontend": {"module": "./games/faro.js", "export": "FaroGame", "ready_testid": "faro", "i18n_domain": "games/faro", "i18n_probe": "action.deal"},
+    "tests": {"long_driver": "tests.game_drivers.faro:play"},
+    "translations": {"ru-RU": {"label": "Фараон", "kicker": "Карты", "description": "Историческая карточная игра: банкирская и игровая карты, ставка на ранг, серверная раздача и расчёт через журнал жетонов."}},
+    "lobby": {"featured": false, "wide": false, "art_class": "faro-art", "symbol": "&#9824;", "kicker": "Faro", "description": "Historic card game: banker and player cards, a bet on a rank, server-authoritative deals, and ledger-backed settlement.", "tags": ["Cards", "Quick play", "Ledger-backed"]}
+  },
+  "depends_on": ["core", "ledger", "players"],
+  "may_not_depend_on": ["roulette", "slots", "blackjack", "baccarat", "keno", "bingo"]
+}

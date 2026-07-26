@@ -1,0 +1,17 @@
+{
+  "module": "marble_race",
+  "version": "1.0.0",
+  "paths": ["casino/games/marble_race/", "web/games/marble_race.js", "web/i18n/en-US/games/marble_race.json", "web/i18n/ru-RU/games/marble_race.json"],
+  "requirements_prefixes": ["MARBLE"],
+  "contracts": ["contracts/openapi/marble_race.v1.yaml"],
+  "game": {
+    "id": "marble_race", "sort_order": 380, "route": "/games/marble_race", "label": "Marble Race", "category": "arcade", "categories": ["arcade", "instant"],
+    "backend": {"register": "casino.games.marble_race.api:register"},
+    "frontend": {"module": "./games/marble_race.js", "export": "MarbleRaceGame", "ready_testid": "marble-race", "i18n_domain": "games/marble_race", "i18n_probe": "action.race"},
+    "tests": {"long_driver": "tests.game_drivers.marble_race:play"},
+    "translations": {"ru-RU": {"label": "Гонка шариков", "kicker": "Аркада", "description": "Шесть шариков в гонке: ставка на победителя или подиум с 5% удержанием трека, серверным результатом и расчётом через журнал жетонов."}},
+    "lobby": {"featured": false, "wide": false, "art_class": "marble-race-art", "symbol": "&#9679;", "kicker": "Marble race", "description": "Six marbles race in random order; bet a marble to win or to reach the podium, with a 5% track takeout, server-authoritative races, and ledger-backed settlement.", "tags": ["Arcade", "Quick play", "Ledger-backed"]}
+  },
+  "depends_on": ["core", "ledger", "players"],
+  "may_not_depend_on": ["roulette", "slots", "blackjack", "baccarat", "keno", "bingo"]
+}

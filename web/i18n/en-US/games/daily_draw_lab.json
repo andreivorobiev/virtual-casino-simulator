@@ -1,0 +1,14 @@
+{
+  "title": "Daily Draw Lab",
+  "pay.title": "Payouts",
+  "pay.hits": "{count} hits",
+  "pay.empty": "Mark numbers to see payouts.",
+  "pick.hint": "Marked {count}/5 numbers",
+  "result.win": "{count} hits!",
+  "result.lose": "{count} hits.",
+  "stake.title": "Stake",
+  "action.draw": "Run the draw",
+  "action.drawing": "Drawing…",
+  "error.load": "Could not load Daily Draw Lab.",
+  "error.draw": "Draw could not be completed."
+}

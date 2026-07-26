@@ -1,0 +1,17 @@
+{
+  "module": "four_card_poker",
+  "version": "1.0.1",
+  "paths": ["casino/games/four_card_poker/", "web/games/four_card_poker.js", "web/i18n/en-US/games/four_card_poker.json", "web/i18n/ru-RU/games/four_card_poker.json"],
+  "requirements_prefixes": ["FOURCP"],
+  "contracts": ["contracts/openapi/four_card_poker.v1.yaml"],
+  "game": {
+    "id": "four_card_poker", "sort_order": 420, "route": "/games/four_card_poker", "label": "Four Card Poker", "category": "poker", "categories": ["table", "cards", "poker", "strategy"],
+    "backend": {"register": "casino.games.four_card_poker.api:register"},
+    "frontend": {"module": "./games/four_card_poker.js", "export": "FourCardPokerGame", "ready_testid": "four-card-poker", "i18n_domain": "games/four_card_poker", "i18n_probe": "action.deal"},
+    "tests": {"long_driver": "tests.game_drivers.four_card_poker:play"},
+    "translations": {"ru-RU": {"label": "Четырёхкарточный покер", "kicker": "Покер", "description": "Дилер с шестью картами против пяти карт игрока: анте, ставка 1x-3x или сброс, бонус анте и сайд-бет Aces Up с серверной раздачей и расчётом через журнал жетонов."}},
+    "lobby": {"featured": false, "wide": false, "art_class": "four-card-poker-art", "symbol": "4C", "kicker": "Poker room", "description": "Beat a six-card dealer with your best four-card hand: ante, then play 1x-3x or fold, with an Ante Bonus and an Aces Up side bet, server-authoritative deals, and ledger-backed settlement.", "tags": ["Cards", "Poker", "Strategy", "Ledger-backed"]}
+  },
+  "depends_on": ["core", "ledger", "players"],
+  "may_not_depend_on": ["roulette", "slots", "blackjack", "baccarat", "keno", "bingo", "three_card_poker", "casino_holdem", "caribbean_stud"]
+}

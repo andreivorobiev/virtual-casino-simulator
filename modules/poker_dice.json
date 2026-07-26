@@ -1,0 +1,17 @@
+{
+  "module": "poker_dice",
+  "version": "1.0.0",
+  "paths": ["casino/games/poker_dice/", "web/games/poker_dice.js", "web/i18n/en-US/games/poker_dice.json", "web/i18n/ru-RU/games/poker_dice.json"],
+  "requirements_prefixes": ["PDICE"],
+  "contracts": ["contracts/openapi/poker_dice.v1.yaml"],
+  "game": {
+    "id": "poker_dice", "sort_order": 320, "route": "/games/poker_dice", "label": "Poker Dice", "category": "dice", "categories": ["dice", "instant"],
+    "backend": {"register": "casino.games.poker_dice.api:register"},
+    "frontend": {"module": "./games/poker_dice.js", "export": "PokerDiceGame", "ready_testid": "poker-dice", "i18n_domain": "games/poker_dice", "i18n_probe": "action.roll"},
+    "tests": {"long_driver": "tests.game_drivers.poker_dice:play"},
+    "translations": {"ru-RU": {"label": "Покер на костях", "kicker": "Кости", "description": "Пять покерных костей за один бросок с серверным результатом и расчётом через журнал жетонов: платят тройка и выше."}},
+    "lobby": {"featured": false, "wide": false, "art_class": "poker-dice-art", "symbol": "&#9860;", "kicker": "Poker dice", "description": "Roll five poker dice in one throw with server-authoritative results and ledger-backed settlement; three of a kind and up pay.", "tags": ["Dice", "Quick play", "Ledger-backed"]}
+  },
+  "depends_on": ["core", "ledger", "players"],
+  "may_not_depend_on": ["roulette", "slots", "blackjack", "baccarat", "keno", "bingo"]
+}

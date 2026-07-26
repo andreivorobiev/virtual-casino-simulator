@@ -1,0 +1,17 @@
+{
+  "module": "color_wheel",
+  "version": "1.0.1",
+  "paths": ["casino/games/color_wheel/", "web/games/color_wheel.js", "web/i18n/en-US/games/color_wheel.json", "web/i18n/ru-RU/games/color_wheel.json"],
+  "requirements_prefixes": ["CWHEEL"],
+  "contracts": ["contracts/openapi/color_wheel.v1.yaml"],
+  "game": {
+    "id": "color_wheel", "sort_order": 310, "route": "/games/color_wheel", "label": "Color Wheel", "category": "wheel", "categories": ["wheel", "instant"],
+    "backend": {"register": "casino.games.color_wheel.api:register"},
+    "frontend": {"module": "./games/color_wheel.js", "export": "ColorWheelGame", "ready_testid": "color-wheel", "i18n_domain": "games/color_wheel", "i18n_probe": "action.spin"},
+    "tests": {"long_driver": "tests.game_drivers.color_wheel:play"},
+    "translations": {"ru-RU": {"label": "Цветное колесо", "kicker": "Колесо", "description": "Колесо на двадцать сегментов со ставками на красное, чёрное, зелёное и золото, серверным результатом и расчётом через журнал жетонов."}},
+    "lobby": {"featured": false, "wide": false, "art_class": "color-wheel-art", "symbol": "&#9679;", "kicker": "Color wheel", "description": "Twenty-segment wheel with red, black, green, and gold colour bets, server-authoritative results, and ledger-backed settlement.", "tags": ["Wheel", "Quick play", "Ledger-backed"]}
+  },
+  "depends_on": ["core", "ledger", "players"],
+  "may_not_depend_on": ["roulette", "slots", "blackjack", "baccarat", "keno", "bingo"]
+}

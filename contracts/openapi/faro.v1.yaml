@@ -1,0 +1,189 @@
+openapi: 3.0.3
+# Describe the additive issue-146 Faro contract without changing existing v1 operations.
+info:
+  title: Virtual Casino Faro API
+  version: v1
+  description: Additive session-bound Faro contract for issue 146, built on the shared exactly-once settlement core.
+# Define only game-owned routes; shared router registration remains with issue 77.
+paths:
+  # Expose session-owned reload state and immutable bet metadata.
+  /api/v1/games/faro/state:
+    get:
+      summary: Read the authenticated player's Faro bet catalog and recent settled deals
+      operationId: faro_GET_api_v1_games_faro_state
+      responses:
+        '200':
+          description: Standard success envelope containing game state, player snapshot, and bet catalog
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FaroStateEnvelope'
+        '401':
+          description: Standard error envelope when no authenticated session is available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorEnvelope'
+  # Execute one complete debit, two-card deal, and optional settlement action.
+  /api/v1/games/faro/deals:
+    post:
+      summary: Execute or replay one atomic ledger-backed Faro deal
+      operationId: faro_POST_api_v1_games_faro_deals
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FaroDealRequest'
+      responses:
+        '200':
+          description: Standard success envelope containing one settled or safely replayed round
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FaroDealEnvelope'
+        '400':
+          description: Standard error envelope for an invalid rank or stake or request identity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorEnvelope'
+        '401':
+          description: Standard error envelope when no authenticated session is available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorEnvelope'
+        '409':
+          description: Standard error envelope when one request identity is reused with different wager content
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorEnvelope'
+# Keep all request, response, round, and standard-envelope shapes local to this contract.
+components:
+  schemas:
+    # Require a caller-stable action identity, a chosen rank, and a bounded stake.
+    FaroDealRequest:
+      type: object
+      additionalProperties: false
+      required: [request_id, rank, stake]
+      properties:
+        request_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '^[A-Za-z0-9._:-]+$'
+          description: Stable caller-generated identity reused only when retrying the same deal action.
+        player_id:
+          type: string
+          description: Compatibility field overridden by the authenticated session-bound player resolver.
+        rank:
+          type: integer
+          minimum: 1
+          maximum: 13
+          description: Chosen rank from one (ace) to thirteen (king).
+        stake:
+          type: integer
+          minimum: 1
+          maximum: 100000
+          description: Fake-money play-token stake; never currency or redeemable value.
+    # Specialize the standard success envelope for state reads.
+    FaroStateEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/ApiSuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/FaroPayload'
+    # Specialize the standard success envelope for atomic deal actions.
+    FaroDealEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/ApiSuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              allOf:
+                - $ref: '#/components/schemas/FaroPayload'
+                - type: object
+                  required: [round, replayed, ledger]
+                  properties:
+                    round: {$ref: '#/components/schemas/FaroRound'}
+                    replayed: {type: boolean}
+                    ledger: {$ref: '#/components/schemas/FaroLedgerEvidence'}
+    # Describe the common state, player, and immutable bet metadata payload.
+    FaroPayload:
+      type: object
+      required: [game, state, player, bet_catalog]
+      properties:
+        game: {type: string, enum: [faro]}
+        state: {type: object}
+        player:
+          type: object
+          description: Current authenticated player's shared read-only wallet snapshot.
+        bet_catalog:
+          type: object
+          description: Selectable ranks and the win, push, and split multipliers.
+    # Describe one immutable settled round returned on original and replayed requests.
+    FaroRound:
+      type: object
+      required: [round_id, wager, wager_total, entropy, total_return, outcome, detail, net, settled_at]
+      properties:
+        round_id: {type: string}
+        wager:
+          type: object
+          required: [rank, stake]
+          properties:
+            rank: {type: integer, minimum: 1, maximum: 13}
+            stake: {type: integer, minimum: 1}
+        wager_total: {type: number, minimum: 0.01}
+        entropy:
+          type: object
+          required: [banker, player, banker_rank, player_rank]
+          properties:
+            banker: {type: integer, minimum: 0, maximum: 51}
+            player: {type: integer, minimum: 0, maximum: 51}
+            banker_rank: {type: integer, minimum: 0, maximum: 12}
+            player_rank: {type: integer, minimum: 0, maximum: 12}
+        total_return: {type: number, minimum: 0}
+        outcome: {type: string, enum: [win, lose, push, split]}
+        detail:
+          type: object
+          required: [banker, player]
+          properties:
+            banker: {type: string, enum: ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']}
+            player: {type: string, enum: ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']}
+        net: {type: number}
+        settled_at: {type: string}
+    # Preserve scoped wager and optional return event evidence for the settled round.
+    FaroLedgerEvidence:
+      type: object
+      required: [wager, settlement]
+      properties:
+        wager:
+          type: object
+          description: Committed aggregate wager debit for this authenticated player and round.
+        settlement:
+          type: object
+          nullable: true
+          description: Committed aggregate return credit, or null when the deal returned nothing.
+    # Preserve the repository-wide success envelope contract.
+    ApiSuccessEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok: {type: boolean, enum: [true]}
+        data: {type: object}
+    # Preserve the repository-wide error envelope contract.
+    ApiErrorEnvelope:
+      type: object
+      required: [ok, error]
+      properties:
+        ok: {type: boolean, enum: [false]}
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: {type: string}
+            message: {type: string}
+            details: {type: object}

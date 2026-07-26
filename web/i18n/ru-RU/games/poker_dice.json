@@ -1,0 +1,17 @@
+{
+  "title": "Покер на костях",
+  "paytable.title": "Таблица выплат",
+  "hand.five_of_a_kind": "Пять одинаковых",
+  "hand.four_of_a_kind": "Каре",
+  "hand.full_house": "Фулл-хаус",
+  "hand.straight": "Стрит",
+  "hand.three_of_a_kind": "Тройка",
+  "stake.title": "Ставка",
+  "action.roll": "Бросить кости",
+  "action.rolling": "Бросок…",
+  "result.idle": "Задайте ставку и бросьте кости.",
+  "result.win": "{hand}!",
+  "result.lose": "Нет выигрышной комбинации.",
+  "error.load": "Не удалось загрузить Покер на костях.",
+  "error.roll": "Не удалось завершить бросок."
+}

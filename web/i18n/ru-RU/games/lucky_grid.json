@@ -1,0 +1,14 @@
+{
+  "title": "Счастливая сетка",
+  "pay.title": "Выплаты",
+  "pay.matches": "{count} совпадений",
+  "pick.remaining": "Выберите ещё {count} ячеек",
+  "result.ready": "Откройте призы.",
+  "result.win": "{count} совпадений!",
+  "result.lose": "Только {count} совпадений.",
+  "stake.title": "Ставка",
+  "action.reveal": "Открыть призы",
+  "action.revealing": "Открытие…",
+  "error.load": "Не удалось загрузить Счастливую сетку.",
+  "error.reveal": "Не удалось завершить открытие."
+}
