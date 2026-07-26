@@ -169,6 +169,8 @@
   "whatsNew.entry.9_5_5.body": "This release packages the accepted game catalog and correctness updates, localized Admin ledger labels, and a refreshed offline shell.",
   "whatsNew.entry.0_9_5_5.title": "Private-beta versioning and deployment runbook",
   "whatsNew.entry.0_9_5_5.body": "This release moves the app to four-part private-beta versions, reserves 0.9.6.0 for the next large Claude product bundle, and documents the production pipeline in one plain-English runbook.",
+  "whatsNew.entry.0_9_5_6.title": "Documentation truth pass and release recovery",
+  "whatsNew.entry.0_9_5_6.body": "This release packages the accepted documentation truth pass as the current private-beta patch while keeping 0.9.6.0 reserved for the next large Claude product bundle.",
   "replay.title": "Round replay",
   "replay.empty": "No recent rounds to replay.",
   "replay.retention": "Replays are kept for {days} days.",
