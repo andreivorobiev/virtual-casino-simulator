@@ -24,6 +24,7 @@
   "board.title": "Позиции для ставок",
   "controls.clear": "Очистить ставки",
   "controls.lockedHelp": "Эта точная ставка заблокирована, пока текущее действие не рассчитано или безопасно возобновлено.",
+  "controls.repeat": "Повторить ставку",
   "controls.resume": "Возобновить бросок",
   "controls.rolling": "Кости бросаются…",
   "controls.selectedCount": "Выбрано позиций",

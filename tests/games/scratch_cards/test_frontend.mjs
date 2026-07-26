@@ -83,3 +83,20 @@ test('issue 87 source keeps accessible reveals timer-free', async () => {
   // Verify no hard-coded English primary action appears inside rendered markup.
   assert.doesNotMatch(source, />Start card</);
 });
+
+
+// Verify the one-click repeat-bet control re-buys the last settled wager without a timer.
+test('issue 87 source exposes a timer-free repeat-bet control', async () => {
+  // Read the complete frontend source for static policy checks.
+  const source = await readFile(new URL('../../../web/games/scratch_cards.js', import.meta.url), 'utf8');
+  // Verify a secondary repeat button renders with its owned class and semantic action.
+  assert.match(source, /class="scratch-repeat" data-action="repeat"/);
+  // Verify the module remembers the exact committed wager for one-click repeat.
+  assert.match(source, /lastBet = \{ wager: request\.wager \}/);
+  // Verify a dedicated repeat action re-applies the wager and re-buys one card.
+  assert.match(source, /async function repeat\(\)/);
+  // Verify the repeat control resolves its label from the owned locale domain.
+  assert.match(source, /text\('controls\.repeat'\)/);
+  // Verify repeat introduces no raw or parallel timing primitive.
+  assert.doesNotMatch(source, /repeat[\s\S]{0,200}(?:setTimeout|setInterval|requestAnimationFrame)/);
+});

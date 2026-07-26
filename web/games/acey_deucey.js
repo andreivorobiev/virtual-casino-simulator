@@ -34,6 +34,8 @@ let pendingAction = null;
 let lastErrorKey = null;
 // Allocate fallback action identities when randomUUID is unavailable.
 let actionCounter = 0;
+// Retain the last settled wager so one click can repeat an identical opening bet.
+let lastBet = null;
 
 // Resolve one localized string from the game-owned domain.
 function text(key, params = {}) {
@@ -147,10 +149,12 @@ function controlsHtml() {
   const playDisabled = !canDecide || busy || Boolean(pendingAction && pendingAction.kind !== 'play');
   // Disable pass while no boundary decision is open.
   const passDisabled = !canDecide || busy || Boolean(pendingAction && pendingAction.kind !== 'pass');
+  // Enable one-click repeat only outside an open round when a prior settled wager exists and nothing is in flight.
+  const repeatDisabled = busy || Boolean(activeRound) || Boolean(pendingAction) || !lastBet;
   // Explain unresolved retry state when present.
   const retryHelp = pendingAction ? '<p class="acey-retry" role="status">' + safe(text('controls.retryHelp')) + '</p>' : '';
   // Return stable controls whose positions do not change between phases.
-  return '<aside class="acey-panel acey-controls" aria-label="' + safe(text('controls.title')) + '"><h2>' + safe(text('controls.title')) + '</h2><label for="acey-wager">' + safe(text('controls.wager')) + '</label><input id="acey-wager" type="number" min="0.01" max="100000" step="0.01" value="' + safe(wager) + '"' + (wagerDisabled ? ' disabled' : '') + '><button type="button" data-action="deal"' + (dealDisabled ? ' disabled' : '') + '>' + safe(pendingAction?.kind === 'deal' ? text('controls.retryDeal') : text('controls.deal')) + '</button><button type="button" data-action="play"' + (playDisabled ? ' disabled' : '') + '>' + safe(pendingAction?.kind === 'play' ? text('controls.retryPlay') : text('controls.play')) + '</button><button type="button" data-action="pass"' + (passDisabled ? ' disabled' : '') + '>' + safe(pendingAction?.kind === 'pass' ? text('controls.retryPass') : text('controls.pass')) + '</button><p class="acey-help">' + safe(text('controls.help')) + '</p>' + retryHelp + '<p class="acey-error" role="alert" data-error>' + (lastErrorKey ? safe(text(lastErrorKey)) : '') + '</p></aside>';
+  return '<aside class="acey-panel acey-controls" aria-label="' + safe(text('controls.title')) + '"><h2>' + safe(text('controls.title')) + '</h2><label for="acey-wager">' + safe(text('controls.wager')) + '</label><input id="acey-wager" type="number" min="0.01" max="100000" step="0.01" value="' + safe(wager) + '"' + (wagerDisabled ? ' disabled' : '') + '><button type="button" data-action="deal"' + (dealDisabled ? ' disabled' : '') + '>' + safe(pendingAction?.kind === 'deal' ? text('controls.retryDeal') : text('controls.deal')) + '</button><button type="button" class="acey-repeat" data-action="repeat"' + (repeatDisabled ? ' disabled' : '') + '>' + safe(text('controls.repeat')) + '</button><button type="button" data-action="play"' + (playDisabled ? ' disabled' : '') + '>' + safe(pendingAction?.kind === 'play' ? text('controls.retryPlay') : text('controls.play')) + '</button><button type="button" data-action="pass"' + (passDisabled ? ' disabled' : '') + '>' + safe(pendingAction?.kind === 'pass' ? text('controls.retryPass') : text('controls.pass')) + '</button><p class="acey-help">' + safe(text('controls.help')) + '</p>' + retryHelp + '<p class="acey-error" role="alert" data-error>' + (lastErrorKey ? safe(text(lastErrorKey)) : '') + '</p></aside>';
 }
 
 // Render the three-card stage with a protected third card until play.
@@ -216,7 +220,7 @@ function dataHtml() {
 // Return scoped responsive and reduced-motion styles.
 function stylesHtml() {
   // Define compact operational layout without editing shared CSS.
-  return '<style>/* Define the Acey-Deucey game layout and responsive regions. */.acey-shell{display:grid;gap:16px;min-width:0}.acey-header{display:flex;align-items:end;justify-content:space-between;gap:16px}.acey-header h1{margin:0}.acey-eyebrow{margin:0 0 4px;color:var(--muted,#b8c8c1)}.acey-phase{padding:7px 12px;border:1px solid rgba(255,215,128,.45);border-radius:999px;color:var(--gold,#f6d47a)}.acey-layout{display:grid;grid-template-columns:minmax(210px,.72fr) minmax(520px,2.2fr) minmax(240px,.86fr);gap:16px;align-items:start}.acey-panel,.acey-stage{border:1px solid rgba(255,215,128,.24);border-radius:12px;background:rgba(4,31,24,.9);padding:16px}.acey-controls,.acey-data{display:grid;align-content:start;gap:12px}.acey-controls input,.acey-controls button{min-height:44px}.acey-controls button[data-action=play]{background:var(--red,#a51f2d);color:#fff}.acey-help,.acey-retry,.acey-empty{color:var(--muted,#b8c8c1)}.acey-error{min-height:1.4em;margin:0;color:#ffd1d1}.acey-stage{display:grid;align-content:center;gap:22px;min-width:0;min-height:430px;background:radial-gradient(circle at 50% 42%,rgba(28,112,82,.44),rgba(3,24,18,.96) 70%)}.acey-stage-cards{display:grid;grid-template-columns:minmax(120px,1fr) minmax(120px,1fr) minmax(120px,1fr);gap:clamp(12px,3vw,34px);align-items:center;justify-items:center}.acey-stage-cards article{display:grid;justify-items:center;gap:12px}.acey-stage-cards h3{margin:0}.acey-stage-cards .playing-card{flex:none;width:clamp(4.3rem,8vw,7.2rem);font-size:clamp(1rem,2.4vw,1.7rem)}.acey-result{min-height:2.8em;margin:0;text-align:center}.acey-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}.acey-summary span{display:grid;gap:5px;padding:10px;border-radius:8px;background:rgba(255,255,255,.05)}.acey-summary strong{overflow-wrap:anywhere}.acey-data section{display:grid;gap:10px}.acey-data ul{margin:0;padding-left:1.1rem}.acey-data li+li{margin-top:7px}.acey-history-list{display:grid;gap:8px;max-height:285px;margin:0;padding:0;overflow:auto;list-style:none;scrollbar-width:thin}.acey-history-list li{display:grid;grid-template-columns:1fr auto;gap:8px;padding:9px;border-radius:8px;background:rgba(0,0,0,.2)}.acey-shell button:focus-visible,.acey-shell input:focus-visible,.acey-history-list:focus-visible{outline:3px solid #ffd780;outline-offset:2px}@media(max-width:1100px){.acey-layout{grid-template-columns:1fr}.acey-controls{order:1}.acey-stage{order:2;min-height:360px}.acey-data{order:3}}@media(max-width:560px){.acey-header{align-items:start;flex-direction:column}.acey-panel,.acey-stage{padding:12px}.acey-stage{min-height:330px}.acey-stage-cards{grid-template-columns:1fr 1fr 1fr;gap:8px}.acey-stage-cards .playing-card{width:clamp(3.6rem,21vw,5.4rem)}.acey-summary{grid-template-columns:1fr 1fr}}@media(prefers-reduced-motion:reduce){.acey-shell *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}</style>';
+  return '<style>/* Define the Acey-Deucey game layout and responsive regions. */.acey-shell{display:grid;gap:16px;min-width:0}.acey-header{display:flex;align-items:end;justify-content:space-between;gap:16px}.acey-header h1{margin:0}.acey-eyebrow{margin:0 0 4px;color:var(--muted,#b8c8c1)}.acey-phase{padding:7px 12px;border:1px solid rgba(255,215,128,.45);border-radius:999px;color:var(--gold,#f6d47a)}.acey-layout{display:grid;grid-template-columns:minmax(210px,.72fr) minmax(520px,2.2fr) minmax(240px,.86fr);gap:16px;align-items:start}.acey-panel,.acey-stage{border:1px solid rgba(255,215,128,.24);border-radius:12px;background:rgba(4,31,24,.9);padding:16px}.acey-controls,.acey-data{display:grid;align-content:start;gap:12px}.acey-controls input,.acey-controls button{min-height:44px}.acey-controls button[data-action=play]{background:var(--red,#a51f2d);color:#fff}.acey-repeat{min-height:44px;background:transparent;color:#ffd780;border:1px solid rgba(255,215,128,.55)}.acey-repeat:disabled{opacity:.5}.acey-help,.acey-retry,.acey-empty{color:var(--muted,#b8c8c1)}.acey-error{min-height:1.4em;margin:0;color:#ffd1d1}.acey-stage{display:grid;align-content:center;gap:22px;min-width:0;min-height:430px;background:radial-gradient(circle at 50% 42%,rgba(28,112,82,.44),rgba(3,24,18,.96) 70%)}.acey-stage-cards{display:grid;grid-template-columns:minmax(120px,1fr) minmax(120px,1fr) minmax(120px,1fr);gap:clamp(12px,3vw,34px);align-items:center;justify-items:center}.acey-stage-cards article{display:grid;justify-items:center;gap:12px}.acey-stage-cards h3{margin:0}.acey-stage-cards .playing-card{flex:none;width:clamp(4.3rem,8vw,7.2rem);font-size:clamp(1rem,2.4vw,1.7rem)}.acey-result{min-height:2.8em;margin:0;text-align:center}.acey-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}.acey-summary span{display:grid;gap:5px;padding:10px;border-radius:8px;background:rgba(255,255,255,.05)}.acey-summary strong{overflow-wrap:anywhere}.acey-data section{display:grid;gap:10px}.acey-data ul{margin:0;padding-left:1.1rem}.acey-data li+li{margin-top:7px}.acey-history-list{display:grid;gap:8px;max-height:285px;margin:0;padding:0;overflow:auto;list-style:none;scrollbar-width:thin}.acey-history-list li{display:grid;grid-template-columns:1fr auto;gap:8px;padding:9px;border-radius:8px;background:rgba(0,0,0,.2)}.acey-shell button:focus-visible,.acey-shell input:focus-visible,.acey-history-list:focus-visible{outline:3px solid #ffd780;outline-offset:2px}@media(max-width:1100px){.acey-layout{grid-template-columns:1fr}.acey-controls{order:1}.acey-stage{order:2;min-height:360px}.acey-data{order:3}}@media(max-width:560px){.acey-header{align-items:start;flex-direction:column}.acey-panel,.acey-stage{padding:12px}.acey-stage{min-height:330px}.acey-stage-cards{grid-template-columns:1fr 1fr 1fr;gap:8px}.acey-stage-cards .playing-card{width:clamp(3.6rem,21vw,5.4rem)}.acey-summary{grid-template-columns:1fr 1fr}}@media(prefers-reduced-motion:reduce){.acey-shell *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}</style>';
 }
 
 // Bind semantic controls after each render.
@@ -231,6 +235,8 @@ function bindEvents() {
     button.onclick = () => {
       // Read the semantic action kind.
       const kind = button.dataset.action;
+      // Route the one-click repeat to its dedicated fresh-round handler.
+      if (kind === 'repeat') { repeat(); return; }
       // Update the wager from the control before play.
       wager = wagerValue(wagerInput?.value ?? wager);
       // Preserve unresolved identity for exact retry.
@@ -328,8 +334,28 @@ async function play() {
   rules = payload.rules || rules;
   // Clear the retry identity after success.
   pendingAction = null;
+  // Remember the committed wager so one click can repeat an identical opening bet.
+  lastBet = { wager: request.wager };
   // Refresh the shared wallet after debit and optional payout.
   await refreshBalance();
+}
+
+// Open one fresh round with the previously settled wager without replaying play or pass.
+async function repeat() {
+  // Ignore repeat while an action is in flight or an unresolved retry owns state.
+  if (busy || pendingAction) return;
+  // Ignore repeat before any settled wager exists or while a round is still open.
+  if (!lastBet || state?.active_round) return;
+  // Restore the previous wager into module state so the next play reuses the same stake.
+  wager = wagerValue(lastBet.wager);
+  // Reflect the restored wager in the control when it is present.
+  const wagerInput = root?.querySelector('#acey-wager');
+  // Update the visible wager input only when the frame currently renders it.
+  if (wagerInput) wagerInput.value = String(wager);
+  // Prepare a fresh deal retry identity mirroring a deal click.
+  pendingAction = { kind: 'deal', actionId: nextActionId('deal'), roundId: state?.active_round?.round_id, wager };
+  // Execute the shared free-deal action to open the identical opening round.
+  await runAction(deal);
 }
 
 // Pass or replay one no-wager close.
@@ -370,6 +396,8 @@ export const AceyDeuceyGame = {
     lastErrorKey = null;
     // Clear retry identity because server state is authoritative on mount.
     pendingAction = null;
+    // Reset the repeatable wager so a new session never inherits a prior bet.
+    lastBet = null;
     // Install shared card presentation.
     ensureSharedCardStyles();
     // Capture this mount for async guards.
@@ -388,6 +416,10 @@ export const AceyDeuceyGame = {
     state = payload.state;
     // Cache fixed rule metadata.
     rules = payload.rules || {};
+    // Recover a repeatable wager from the newest settled round so repeat survives a reload.
+    const recovered = [...(state?.recent_rounds || [])].reverse().find(item => item?.phase === 'settled' && item?.wager);
+    // Restore the repeatable wager only when a prior settled round exposes its committed stake.
+    if (recovered?.wager) lastBet = { wager: Number(recovered.wager) };
     // Render the complete surface.
     render();
     // Align the wallet with any recovered ledger state.
@@ -411,6 +443,8 @@ export const AceyDeuceyGame = {
     pendingAction = null;
     // Clear localized error state.
     lastErrorKey = null;
+    // Clear the repeatable wager so the next session starts fresh.
+    lastBet = null;
     // No timers or global event listeners are owned by this module.
   },
 };

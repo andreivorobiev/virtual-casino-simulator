@@ -58,6 +58,8 @@ const ROUTE_CSS = [
   '.cal-wager-total{display:flex;justify-content:space-between;gap:8px;min-height:42px;padding:10px;border:1px solid rgba(255,255,255,.12);border-radius:11px;background:rgba(255,255,255,.04);}', // Reserve a stable aggregate wager summary.
   '.cal-roll{width:100%;min-height:48px;border:0;border-radius:12px;background:#a7192b;color:#fff;font-weight:900;}', // Use the governed red treatment for the primary action.
   '.cal-roll:disabled{opacity:.58;cursor:not-allowed;}', // Keep unavailable action state visible and understandable.
+  '.cal-repeat{width:100%;min-height:46px;border:1px solid rgba(255,215,128,.55);border-radius:12px;background:transparent;color:#ffd780;font-weight:800;}', // Present the repeat action as a secondary gold-outline control beside the primary roll.
+  '.cal-repeat:disabled{opacity:.5;cursor:not-allowed;}', // Keep the unavailable repeat state readable.
   '.cal-error{min-height:38px;margin:0;color:#ffb9b9;line-height:1.35;}', // Reserve localized validation feedback without shifting controls.
   '.cal-stage{display:grid;grid-template-rows:auto minmax(220px,1fr) auto;gap:14px;overflow:hidden;place-items:stretch;}', // Keep the full dice stage visible without a nested scrollbar.
   '.cal-stage-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;}', // Keep the stage heading and round total aligned.
@@ -98,6 +100,8 @@ let betCatalog = [];
 let latestRound = null;
 // Store locally edited wager amounts until an atomic roll is submitted.
 let wagers = {};
+// Retain the last settled wager map so one click can re-place the identical roll.
+let lastBet = null;
 // Store the current machine-readable UI phase independently of localization.
 let phase = 'ready';
 // Store the in-flight action guard so duplicate clicks cannot overlap.
@@ -391,10 +395,11 @@ export function viewMarkup({ translate = tx } = {}) {
   const totalText = displayedTotal === null ? translate('stage.totalWaiting') : translate('stage.total', { total: displayedTotal }); // Reserve the total chip in every phase.
   const wagerTotal = tokenAmount(activeWagerTotal(), translate); // Format the current aggregate wager.
   const rollDisabled = rolling || activeWagerTotal() <= 0; // Disable duplicate or empty actions.
+  const repeatDisabled = rolling || Boolean(pendingPayload) || !lastBet; // Enable one-click repeat only with a prior wager map and no in-flight or unresolved retry.
   const actionKey = rolling ? 'action.rolling' : pendingPayload ? 'action.retry' : 'action.roll'; // Keep retry state explicit after ambiguity.
   const retryNote = pendingPayload ? `<p class="cal-retry-note">${safe(translate('retry.saved'))}</p>` : '<p class="cal-retry-note">&nbsp;</p>'; // Reserve retry guidance without moving controls.
   const visibleError = errorKey ? translate(errorKey) : ''; // Resolve only game-owned failure copy.
-  return `<section class="cal-shell" data-testid="chuck-a-luck" data-phase="${safe(phase)}" data-reduced-motion="${reducedMotionActive}"><header class="cal-header"><div><h1>${safe(translate('title'))}</h1><p>${safe(translate('subtitle'))}</p></div><span class="cal-phase" data-testid="chuck-a-luck-phase" role="status" aria-live="polite">${safe(translate(`phase.${phase}`))}</span></header><div class="cal-layout"><aside class="panel control-rail cal-panel cal-controls" aria-label="${safe(translate('controls.aria'))}"><h2>${safe(translate('controls.title'))}</h2><p id="cal-help" class="cal-help">${safe(translate('controls.help'))}</p><fieldset aria-describedby="cal-help"><legend>${safe(translate('controls.wagers'))}</legend>${wagerControlsHtml(translate)}</fieldset><div class="cal-wager-total"><span>${safe(translate('controls.total'))}</span><strong data-wager-total>${safe(wagerTotal)}</strong></div><button type="button" class="cal-roll" data-roll${rollDisabled ? ' disabled' : ''}>${safe(translate(actionKey))}</button>${retryNote}<p class="cal-error" data-error aria-live="polite">${safe(visibleError)}</p></aside><main class="panel game-stage cal-panel cal-stage" aria-label="${safe(translate('stage.aria'))}"><div class="cal-stage-heading"><h2>${safe(translate('stage.title'))}</h2><span class="cal-total-chip">${safe(totalText)}</span></div>${diceTrayHtml(translate)}${resultHtml(translate)}</main><aside class="panel details-drawer cal-panel cal-data" aria-label="${safe(translate('data.aria'))}"><section><h2>${safe(translate('paytable.title'))}</h2><p class="cal-help">${safe(translate('paytable.help'))}</p>${paytableHtml(translate)}</section><section><h2>${safe(translate('history.title'))}</h2><div class="cal-history">${historyHtml(translate)}</div></section></aside></div></section>`; // Return the complete browser surface.
+  return `<section class="cal-shell" data-testid="chuck-a-luck" data-phase="${safe(phase)}" data-reduced-motion="${reducedMotionActive}"><header class="cal-header"><div><h1>${safe(translate('title'))}</h1><p>${safe(translate('subtitle'))}</p></div><span class="cal-phase" data-testid="chuck-a-luck-phase" role="status" aria-live="polite">${safe(translate(`phase.${phase}`))}</span></header><div class="cal-layout"><aside class="panel control-rail cal-panel cal-controls" aria-label="${safe(translate('controls.aria'))}"><h2>${safe(translate('controls.title'))}</h2><p id="cal-help" class="cal-help">${safe(translate('controls.help'))}</p><fieldset aria-describedby="cal-help"><legend>${safe(translate('controls.wagers'))}</legend>${wagerControlsHtml(translate)}</fieldset><div class="cal-wager-total"><span>${safe(translate('controls.total'))}</span><strong data-wager-total>${safe(wagerTotal)}</strong></div><button type="button" class="cal-roll" data-roll${rollDisabled ? ' disabled' : ''}>${safe(translate(actionKey))}</button><button type="button" class="cal-repeat" data-action="repeat"${repeatDisabled ? ' disabled' : ''}>${safe(translate('controls.repeat'))}</button>${retryNote}<p class="cal-error" data-error aria-live="polite">${safe(visibleError)}</p></aside><main class="panel game-stage cal-panel cal-stage" aria-label="${safe(translate('stage.aria'))}"><div class="cal-stage-heading"><h2>${safe(translate('stage.title'))}</h2><span class="cal-total-chip">${safe(totalText)}</span></div>${diceTrayHtml(translate)}${resultHtml(translate)}</main><aside class="panel details-drawer cal-panel cal-data" aria-label="${safe(translate('data.aria'))}"><section><h2>${safe(translate('paytable.title'))}</h2><p class="cal-help">${safe(translate('paytable.help'))}</p>${paytableHtml(translate)}</section><section><h2>${safe(translate('history.title'))}</h2><div class="cal-history">${historyHtml(translate)}</div></section></aside></div></section>`; // Return the complete browser surface.
 }
 
 // Update one rendered wager total and primary-action availability without replacing focused inputs.
@@ -427,6 +432,8 @@ function render() {
   });
   const rollButton = root.querySelector('[data-roll]'); // Resolve the current primary action.
   if (rollButton) rollButton.onclick = roll; // Submit through the one retry-safe public action.
+  const repeatButton = root.querySelector('[data-action="repeat"]'); // Resolve the secondary repeat action.
+  if (repeatButton) repeatButton.onclick = repeat; // Re-place the last settled wager map with one click.
 }
 
 // Apply one authoritative state payload while preserving local unsent wagers.
@@ -436,6 +443,7 @@ function applyStatePayload(payload) {
   betCatalog = Array.isArray(payload?.bet_catalog) ? payload.bet_catalog : []; // Store the six server payout entries.
   const rounds = Array.isArray(gameState.recent_rounds) ? gameState.recent_rounds : []; // Normalize recent history once.
   latestRound = rounds.length ? rounds[rounds.length - 1] : null; // Restore the newest authoritative settlement.
+  lastBet = latestRound?.wagers ? { wagers: { ...latestRound.wagers } } : null; // Recover a repeatable wager map so repeat survives a reload.
   phase = latestRound ? 'settled' : 'ready'; // Restore a player-facing phase without replaying animation.
   previewDice = latestRound ? normalizedDice(latestRound.dice) : [...INITIAL_DICE]; // Keep the tray aligned with restored server state.
 }
@@ -487,6 +495,7 @@ async function roll() {
     player = response?.player || player; // Adopt the returned authenticated player summary.
     betCatalog = Array.isArray(response?.bet_catalog) ? response.bet_catalog : betCatalog; // Adopt the returned payout catalog.
     latestRound = response?.round || null; // Store the authoritative settled round before reveal.
+    lastBet = { wagers: { ...(latestRound?.wagers || requestWagers) } }; // Remember the settled wager map so one click can repeat the same roll.
     const finalDice = normalizedDice(latestRound?.dice); // Read only the three server-authored final faces.
     // Schedule final presentation through reduced-motion-aware route ownership.
     scheduleReveal({ timerScope: activeScope, onReveal: () => {
@@ -513,6 +522,16 @@ async function roll() {
   }
 }
 
+// Re-place the last settled wager map and re-fire one roll without a timer.
+async function repeat() {
+  // Ignore repeat while rolling, holding an unresolved retry, or without a prior wager map.
+  if (rolling || pendingPayload || !lastBet) return;
+  // Restore the full previous wager map into the local control state.
+  wagers = { ...lastBet.wagers };
+  // Fire the shared retry-safe roll action with the restored wagers.
+  await roll();
+}
+
 // Export the catalog-discovered lazy module contract expected by shared integration.
 export const ChuckALuckGame = {
   id: 'chuck_a_luck', // Expose the stable module identifier without visible hard-coded copy.
@@ -520,6 +539,7 @@ export const ChuckALuckGame = {
   // Mount resources and authenticated state into the shared route outlet.
   async mount(node) {
     root = node; // Store this mount before asynchronous initialization.
+    lastBet = null; // Reset the repeatable wager map so a new mount never inherits a stale one before load reconciles history.
     ensureStyles(); // Install the route-scoped responsive styles once.
     motionScope = createMotionTimerScope(); // Create lifecycle-bound reduced-motion timer ownership.
     const mountedRoot = root; // Capture this mount across locale and state loading.
@@ -556,6 +576,7 @@ export const ChuckALuckGame = {
     player = null; // Drop the inactive authenticated summary.
     betCatalog = []; // Drop the inactive payout catalog.
     latestRound = null; // Require the next mount to restore authoritative state.
+    lastBet = null; // Clear the repeatable wager map so the next session starts fresh.
     previewDice = [...INITIAL_DICE]; // Reset decorative presentation only.
   },
 };

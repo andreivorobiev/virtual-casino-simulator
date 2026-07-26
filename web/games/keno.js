@@ -47,6 +47,8 @@ let botData = { bots: [], capabilities: { supports_bots: false, strategies: [] }
 let lastBotActions = [];
 // Store whether a draw request or reveal animation is active.
 let drawBusy = false;
+// Store the last committed spots and amount so one click can repeat the same ticket.
+let lastBet = null;
 // Store the locale unsubscribe callback so remounts do not leak subscriptions.
 let localeUnsubscribe = null;
 
@@ -80,6 +82,8 @@ function ensureStyles() {
   style.textContent = '/* Keno premium layout: route-local wrapper, hero metrics, and fixed game stage. */ .keno-premium{display:grid;grid-template-rows:auto minmax(0,1fr);gap:10px;width:100%;max-width:100%;height:100%;min-width:0;min-height:0;} .keno-hero{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:end;min-width:0;min-height:104px;padding:10px 2px 4px;} .keno-eyebrow{margin:0 0 4px;color:var(--gold);font-weight:900;text-transform:uppercase;letter-spacing:0;font-size:13px;} .keno-hero-title{margin:0;color:#fff2c2;font-family:var(--font-display);font-size:34px;line-height:1.05;letter-spacing:0;} .keno-metric-strip{display:grid;grid-template-columns:repeat(4,minmax(126px,1fr));gap:10px;min-width:min(720px,100%);} .keno-metric{min-height:74px;padding:12px 14px;border:1px solid rgba(255,217,120,.35);border-radius:16px;background:rgba(0,0,0,.24);box-shadow:inset 0 0 0 1px rgba(255,255,255,.03);} .keno-metric strong{display:block;color:#fff2c2;font-size:15px;} .keno-metric span{display:block;margin-top:7px;color:#f5f0d0;font-size:12px;} /* Keno premium panels: preserve the shared three-column shell while keeping internal scroll areas. */ .keno-layout{width:100%;max-width:100%;min-width:0;min-height:0;} .keno-control-panel,.keno-stage-panel,.keno-detail-panel{min-width:0;border-color:rgba(255,217,120,.46);} .keno-stage-panel{overflow:hidden;} .keno-control-panel{display:grid;align-content:start;gap:10px;} .keno-ticket-metrics{display:grid;grid-template-columns:1fr 1fr;gap:8px;} .keno-command-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;} .keno-button-pair{display:grid;grid-template-columns:1fr 1fr;gap:10px;} .keno-action-card{padding:10px;border:1px solid var(--border-soft);border-radius:14px;background:rgba(255,255,255,.045);} .keno-action-card .row{justify-content:space-between;} .keno-action-card strong{color:#fff2c2;} .keno-board-shell{width:100%;max-width:100%;min-width:0;padding:14px;overflow:hidden;border:1px solid rgba(255,217,120,.48);border-radius:18px;background:rgba(0,0,0,.18);} .keno-board-scroll{box-sizing:border-box;width:100%;max-width:100%;min-width:0;padding:0;overflow-x:auto;overflow-y:hidden;overscroll-behavior-inline:contain;touch-action:pan-x pan-y;scroll-padding:32px;} .keno-premium-board{box-sizing:border-box;width:max(100%,696px);grid-template-columns:repeat(10,minmax(54px,1fr));gap:8px;min-width:696px;min-height:584px;padding:32px 44px 32px 32px;} .keno-premium-board .keno-num{min-height:58px;font-size:20px;font-weight:1000;transition:transform .18s ease,box-shadow .18s ease,background .18s ease,outline-color .18s ease;} .keno-premium-board .keno-num:focus-visible{outline:3px solid #fff2c2;outline-offset:3px;} .keno-premium-board .keno-num:disabled{opacity:1;color:inherit;} .keno-premium-board .keno-num.selected:disabled{color:#1d1300;} .keno-premium-board .keno-num.catch:disabled{color:#00240e;} .keno-premium-board .keno-num.latest{transform:scale(1.05);box-shadow:0 0 22px rgba(255,238,179,.66);animation:kenoPop .55s ease;} .keno-ball-rail{display:flex;align-items:center;gap:8px;min-width:0;max-width:100%;min-height:76px;margin:14px 0 0;padding:12px 14px;overflow-x:auto;overflow-y:hidden;overscroll-behavior-inline:contain;border:1px solid var(--border-soft);border-radius:14px;background:rgba(0,0,0,.16);} .keno-ball-rail .ball{flex:0 0 auto;} .keno-ball-rail .ball{min-width:44px;min-height:44px;border-radius:999px;color:#1d1300;background:linear-gradient(160deg,#fff4bd,#d8a72d);font-weight:1000;} .keno-ball-rail .ball.latest{box-shadow:0 0 24px rgba(255,238,179,.82);transform:scale(1.12);} .keno-progress-track{height:12px;overflow:hidden;border-radius:999px;background:rgba(255,255,255,.08);} .keno-progress-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#b41b29,#ffd978);transition:width .2s ease;} .keno-ticket-chip-row,.keno-drawn-chip-row{display:flex;flex-wrap:wrap;gap:6px;} .keno-ticket-chip{display:inline-grid;place-items:center;min-width:32px;min-height:30px;padding:0 8px;border-radius:8px;color:#1d1300;background:var(--gold);font-weight:900;} .keno-drawn-chip{display:inline-grid;place-items:center;min-width:32px;min-height:30px;padding:0 8px;border-radius:8px;color:#fff2c2;background:rgba(255,217,120,.16);font-weight:900;} .keno-paytable-list,.keno-history-list{display:grid;gap:8px;} .keno-pay-row,.keno-history-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;padding:10px;border:1px solid var(--border-soft);border-radius:12px;background:rgba(0,0,0,.14);} .keno-history-row>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;} .keno-pay-row.active{border-color:var(--gold);background:rgba(255,217,120,.13);box-shadow:0 0 0 1px rgba(255,217,120,.16);} .keno-result-copy{min-height:82px;} @keyframes kenoPop{0%{transform:scale(.92);opacity:.55;}100%{transform:scale(1.05);opacity:1;}} @media (max-width:1200px){.keno-premium{height:auto;}.keno-hero{grid-template-columns:1fr;align-items:start;}.keno-metric-strip{grid-template-columns:repeat(2,minmax(0,1fr));min-width:0;}.keno-stage-panel{overflow:hidden!important;}.keno-premium-board{min-height:534px;}} @media (max-width:560px){.keno-hero-title{font-size:28px;}.keno-metric-strip,.keno-ticket-metrics,.keno-button-pair,.keno-command-grid{grid-template-columns:1fr;}.keno-board-shell{padding:10px;}.keno-premium-board{width:max(100%,688px);min-width:688px;min-height:516px;}}';
   // Let compact desktop Keno grow into the single game-outlet scroller instead of clipping lower board rows inside fixed panels.
   style.textContent += '/* Compact desktop containment: preserve one outer vertical scroller while the board retains horizontal ownership. */ @media (min-width:1201px) and (max-height:950px){.keno-premium{height:auto;overflow:visible;}.keno-layout{grid-template-rows:auto;height:auto;overflow:visible;contain:none;}.keno-control-panel,.keno-stage-panel,.keno-detail-panel{height:auto;overflow:visible;}}';
+  // Present the secondary repeat action as a full-width gold-outline control beside the primary draw button.
+  style.textContent += '/* Keno repeat action: transparent gold-outline secondary control with a readable disabled state. */ .keno-repeat{width:100%;min-height:46px;border:1px solid rgba(255,217,120,.55);border-radius:12px;background:transparent;color:#ffd780;font-weight:900;} .keno-repeat:disabled{opacity:.5;cursor:not-allowed;}';
   // Append the style block to the document head for the mounted Keno route.
   document.head.append(style);
 }
@@ -259,6 +263,10 @@ async function load() {
   displayedDraw = lastDraw?.drawn ? [...lastDraw.drawn] : [];
   // Initialize selected spots from open tickets or the latest human result.
   syncSelectionFromState();
+  // Recover a repeatable ticket from the newest settled human result so repeat survives a reload.
+  const restoredResult = (latestStoredDraw()?.results || []).find(item => item.ticket?.player_id === currentPlayerId());
+  // Restore the repeatable spots and amount only when a settled human result is present.
+  lastBet = restoredResult?.ticket?.spots ? { spots: sortedNumbers(restoredResult.ticket.spots), amount: restoredResult.ticket.amount } : null;
   // Load bot panel data before the first visible render.
   await refreshBotData();
   // Render the premium Keno route.
@@ -355,6 +363,10 @@ async function draw(show = true) {
     applyKenoPayload(data);
     // Store the draw payload for result and drawer surfaces.
     lastDraw = data.draw;
+    // Store the settled current-player result so the repeatable ticket comes from an authoritative round.
+    const settledHuman = data.settlements.find(settlement => settlement.result.ticket.player_id === currentPlayerId());
+    // Remember the exact spots and amount just settled so one click can repeat the same ticket.
+    if (settledHuman?.result?.ticket) lastBet = { spots: sortedNumbers(settledHuman.result.ticket.spots), amount: settledHuman.result.ticket.amount };
     // Clear reveal state before the first animated ball appears.
     displayedDraw = [];
     // Render the empty draw rail so the board size is locked before reveal.
@@ -396,6 +408,18 @@ async function draw(show = true) {
     // Render the completed or restored draw state.
     render();
   }
+}
+
+// Define repeat to re-apply the last committed ticket and re-fire one draw without a timer.
+async function repeat() {
+  // Ignore repeat while a draw is active or before any prior ticket has settled.
+  if (drawBusy || !lastBet) return;
+  // Restore the previous spot selection into the local control state.
+  selected = new Set(lastBet.spots);
+  // Restore the previous ticket amount into the local control state.
+  amount = lastBet.amount;
+  // Fire the shared draw action with the restored spots and amount.
+  await draw(true);
 }
 
 // Define toggleSpot to update the draft human ticket selection.
@@ -551,16 +575,24 @@ function ticketMetricsHtml() {
   return `<div class="keno-ticket-metrics">${renderShellMetric(tx('ticket.amount'), moneyText(displayAmount))}${renderShellMetric(secondaryLabel, secondaryValue)}</div>`;
 }
 
+// Define repeatButtonHtml to render the one-click repeat control after the primary draw button.
+function repeatButtonHtml() {
+  // Disable the repeat control while a draw is active or before any prior ticket has settled.
+  const repeatDisabled = drawBusy || !lastBet;
+  // Return the secondary repeat button that re-fires the last committed spots and amount.
+  return `<button type="button" class="keno-repeat" data-action="repeat"${repeatDisabled ? ' disabled' : ''}>${safe(tx('controls.repeat'))}</button>`;
+}
+
 // Define ticketControlsHtml to render phase-aware ticket action buttons.
 function ticketControlsHtml() {
   // Store whether the completed result actions should be shown.
   const resultMode = activePhase() === 'result';
   // Branch for replay and new-ticket controls after a completed result.
-  if (resultMode) return `<div class="keno-button-pair"><button id="draw" data-testid="keno-draw" type="button" class="gold">${safe(tx('controls.replay'))}</button><button id="newTicket" data-testid="keno-new-ticket" type="button" class="primary">${safe(tx('controls.newTicket'))}</button></div>`;
+  if (resultMode) return `<div class="keno-button-pair"><button id="draw" data-testid="keno-draw" type="button" class="gold">${safe(tx('controls.replay'))}</button><button id="newTicket" data-testid="keno-new-ticket" type="button" class="primary">${safe(tx('controls.newTicket'))}</button></div>${repeatButtonHtml()}`;
   // Store disabled markup for controls that cannot run during an active draw.
   const disabled = drawBusy ? 'disabled' : '';
   // Return spot-selection ticket controls.
-  return `<div class="keno-command-grid"><button id="quick5" type="button" ${disabled}>${safe(tx('controls.quickPick5'))}</button><button id="quick10" type="button" ${disabled}>${safe(tx('controls.quickPick10'))}</button><button id="clearSel" type="button" ${disabled}>${safe(tx('controls.clear'))}</button></div><div class="keno-button-pair action-row"><button id="buy" data-testid="keno-buy" type="button" class="gold" ${disabled}>${safe(tx('controls.buy'))}</button><button id="draw" data-testid="keno-draw" type="button" class="primary" ${disabled}>${safe(drawBusy ? tx('controls.drawing') : tx('controls.draw'))}</button></div>`;
+  return `<div class="keno-command-grid"><button id="quick5" type="button" ${disabled}>${safe(tx('controls.quickPick5'))}</button><button id="quick10" type="button" ${disabled}>${safe(tx('controls.quickPick10'))}</button><button id="clearSel" type="button" ${disabled}>${safe(tx('controls.clear'))}</button></div><div class="keno-button-pair action-row"><button id="buy" data-testid="keno-buy" type="button" class="gold" ${disabled}>${safe(tx('controls.buy'))}</button><button id="draw" data-testid="keno-draw" type="button" class="primary" ${disabled}>${safe(drawBusy ? tx('controls.drawing') : tx('controls.draw'))}</button></div>${repeatButtonHtml()}`;
 }
 
 // Define ticketPanelHtml to render the left Keno control rail.
@@ -782,6 +814,8 @@ function bindEvents() {
   root.querySelector('#draw')?.addEventListener('click', () => draw(true));
   // Wire the new-ticket control when result mode is present.
   root.querySelector('#newTicket')?.addEventListener('click', newTicket);
+  // Wire the one-click repeat that re-fires the previous spots and amount.
+  root.querySelector('[data-action="repeat"]')?.addEventListener('click', repeat);
   // Wire every cancel button to the ticket refund API.
   root.querySelectorAll('[data-clear]').forEach(button => { button.onclick = () => clearTicket(button.dataset.clear); });
   // Mount the shared autoplay control plane into the reserved Keno rail.
@@ -810,6 +844,8 @@ export const KenoGame = {
   async mount(node) {
     // Store the shared shell route outlet.
     root = node;
+    // Reset the repeatable ticket so a new mount never inherits a stale one before load reconciles history.
+    lastBet = null;
     // Install route-local premium styles before the first render.
     ensureStyles();
     // Subscribe to locale changes so Keno text updates without remounting gameplay state.
@@ -825,6 +861,8 @@ export const KenoGame = {
     if (localeUnsubscribe) localeUnsubscribe();
     // Clear the locale unsubscribe reference for the next mount.
     localeUnsubscribe = null;
+    // Clear the repeatable ticket so the next session starts fresh.
+    lastBet = null;
     // Clear the route outlet reference.
     root = null;
   }

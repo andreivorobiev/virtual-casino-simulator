@@ -30,6 +30,8 @@ let unsubscribeLocale = null;
 let pendingDrop = null;
 // Retain the drop currently replayed by the stage.
 let currentDrop = null;
+// Retain the last committed wager so one click can repeat the same drop.
+let lastBet = null;
 // Retain a localized error resource key for the reserved route error region.
 let lastErrorKey = null;
 // Allocate stable fallback identities when randomUUID is unavailable.
@@ -161,12 +163,14 @@ function stageHtml(drop) {
 function controlsHtml() {
   // Lock configuration while a request is busy or retryable.
   const locked = busy || Boolean(pendingDrop);
+  // Enable the one-click repeat only when a prior drop exists and no request or retry is active.
+  const repeatDisabled = busy || Boolean(pendingDrop) || !lastBet;
   // Change the drop label when the same unresolved action can be retried.
   const dropLabel = pendingDrop ? text('controls.retryDrop') : text('controls.drop');
   // Explain why configuration remains locked after an ambiguous response.
   const retryHelp = pendingDrop ? '<p class="plinko-retry" role="status">' + safe(text('controls.retryHelp')) + '</p>' : '';
   // Return a stable control rail whose primary action never moves between phases.
-  return '<aside class="plinko-panel plinko-controls" aria-label="' + safe(text('controls.title')) + '"><h2>' + safe(text('controls.title')) + '</h2><label for="plinko-wager">' + safe(text('controls.wager')) + '</label><input id="plinko-wager" type="number" min="0.01" max="100000" step="0.01" value="' + safe(wager) + '"' + (locked ? ' disabled' : '') + '><button type="button" class="plinko-primary" data-action="drop"' + (busy ? ' disabled' : '') + '>' + safe(dropLabel) + '</button>' + retryHelp + '<p class="plinko-help">' + safe(text('controls.help')) + '</p><p class="plinko-error" role="alert" data-error>' + (lastErrorKey ? safe(text(lastErrorKey)) : '') + '</p></aside>';
+  return '<aside class="plinko-panel plinko-controls" aria-label="' + safe(text('controls.title')) + '"><h2>' + safe(text('controls.title')) + '</h2><label for="plinko-wager">' + safe(text('controls.wager')) + '</label><input id="plinko-wager" type="number" min="0.01" max="100000" step="0.01" value="' + safe(wager) + '"' + (locked ? ' disabled' : '') + '><button type="button" class="plinko-primary" data-action="drop"' + (busy ? ' disabled' : '') + '>' + safe(dropLabel) + '</button><button type="button" class="plinko-repeat" data-action="repeat"' + (repeatDisabled ? ' disabled' : '') + '>' + safe(text('controls.repeat')) + '</button>' + retryHelp + '<p class="plinko-help">' + safe(text('controls.help')) + '</p><p class="plinko-error" role="alert" data-error>' + (lastErrorKey ? safe(text(lastErrorKey)) : '') + '</p></aside>';
 }
 
 // Render wager and settlement facts in one reserved summary region.
@@ -219,7 +223,7 @@ function dataHtml(drop) {
 // Return scoped responsive styles without modifying the shared application stylesheet.
 function stylesHtml() {
   // Define dominant stage, stable controls, responsive stack, focus, and reduced-motion rules.
-  return '<style>/* Establish the Plinko control-stage-data hierarchy. */.plinko-shell{display:grid;gap:16px;min-width:0}.plinko-header{display:flex;align-items:end;justify-content:space-between;gap:16px}.plinko-header h1{margin:0}.plinko-eyebrow{margin:0 0 4px;color:var(--muted,#b8c8c1)}.plinko-phase{padding:7px 12px;border:1px solid rgba(255,215,128,.45);border-radius:999px;color:var(--gold,#f6d47a)}.plinko-layout{display:grid;grid-template-columns:minmax(210px,.7fr) minmax(540px,2.4fr) minmax(250px,.85fr);gap:16px;align-items:start}.plinko-panel,.plinko-stage{border:1px solid rgba(255,215,128,.24);border-radius:16px;background:rgba(6,29,32,.88);padding:16px}.plinko-controls,.plinko-data{display:grid;align-content:start;gap:13px}.plinko-controls h2,.plinko-data h2{margin:0}.plinko-controls input,.plinko-controls button{min-height:44px}.plinko-primary{background:var(--red,#a51f2d);color:#fff}.plinko-help,.plinko-retry,.plinko-empty{color:var(--muted,#b8c8c1)}.plinko-error{min-height:1.4em;margin:0;color:#ffd1d1}.plinko-stage{position:relative;display:grid;grid-template-rows:1fr auto auto;gap:16px;min-height:470px;overflow:hidden;background:radial-gradient(circle at 50% 18%,rgba(47,117,132,.45),rgba(5,21,24,.96) 68%)}.plinko-pegs{position:relative;min-height:330px}.plinko-peg{position:absolute;left:var(--peg-x);top:var(--peg-y);width:10px;height:10px;border-radius:50%;background:#f6d47a;box-shadow:0 0 0 3px rgba(246,212,122,.12)}.plinko-puck{position:absolute;left:var(--puck-x);top:var(--puck-y);width:22px;height:22px;border-radius:50%;background:#e94057;box-shadow:0 0 18px rgba(233,64,87,.8);transform:translate(-50%,-50%);animation:plinko-drop .8s ease-out both}.plinko-buckets{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:6px}.plinko-bucket{display:grid;place-items:center;min-height:42px;border:1px solid rgba(255,255,255,.16);border-radius:8px;background:rgba(255,255,255,.06);font-weight:700}.plinko-bucket.is-hit{outline:3px solid #ffd780;background:rgba(165,31,45,.65)}.plinko-result{min-height:2.8em;margin:0;text-align:center}.plinko-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.plinko-summary span{display:grid;gap:5px;padding:10px;border-radius:10px;background:rgba(255,255,255,.05)}.plinko-summary strong{overflow-wrap:anywhere}.plinko-rules{margin:0;padding-left:1.1rem}.plinko-rules li+li{margin-top:7px}.plinko-history-list{display:grid;gap:8px;max-height:245px;margin:0;padding:0;overflow:auto;list-style:none;scrollbar-width:thin}.plinko-history-list li{display:grid;grid-template-columns:1fr auto;gap:8px;padding:9px;border-radius:9px;background:rgba(0,0,0,.2)}.plinko-shell button:focus-visible,.plinko-shell input:focus-visible,.plinko-history-list:focus-visible{outline:3px solid #ffd780;outline-offset:2px}@keyframes plinko-drop{from{left:50%;top:7%;opacity:.75}to{left:var(--puck-x);top:var(--puck-y);opacity:1}}/* Stack controls, stage, and data on compact screens. */@media(max-width:1100px){.plinko-layout{grid-template-columns:1fr}.plinko-controls{order:1}.plinko-stage{order:2;min-height:390px}.plinko-data{order:3}}/* Prevent bucket and summary clipping on mobile. */@media(max-width:520px){.plinko-header{align-items:start;flex-direction:column}.plinko-panel,.plinko-stage{padding:12px}.plinko-stage{min-height:340px}.plinko-pegs{min-height:250px}.plinko-buckets{gap:3px}.plinko-bucket{font-size:.78rem;min-height:36px}.plinko-summary{grid-template-columns:1fr}.plinko-history-list li{grid-template-columns:1fr}}/* Make replay instant for reduced-motion users. */@media(prefers-reduced-motion:reduce){.plinko-shell *{scroll-behavior:auto!important;transition:none!important;animation:none!important}.plinko-puck{animation:none!important}}</style>';
+  return '<style>/* Establish the Plinko control-stage-data hierarchy. */.plinko-shell{display:grid;gap:16px;min-width:0}.plinko-header{display:flex;align-items:end;justify-content:space-between;gap:16px}.plinko-header h1{margin:0}.plinko-eyebrow{margin:0 0 4px;color:var(--muted,#b8c8c1)}.plinko-phase{padding:7px 12px;border:1px solid rgba(255,215,128,.45);border-radius:999px;color:var(--gold,#f6d47a)}.plinko-layout{display:grid;grid-template-columns:minmax(210px,.7fr) minmax(540px,2.4fr) minmax(250px,.85fr);gap:16px;align-items:start}.plinko-panel,.plinko-stage{border:1px solid rgba(255,215,128,.24);border-radius:16px;background:rgba(6,29,32,.88);padding:16px}.plinko-controls,.plinko-data{display:grid;align-content:start;gap:13px}.plinko-controls h2,.plinko-data h2{margin:0}.plinko-controls input,.plinko-controls button{min-height:44px}.plinko-primary{background:var(--red,#a51f2d);color:#fff}.plinko-repeat{background:transparent;color:#ffd780;border:1px solid rgba(255,215,128,.55)}.plinko-repeat:disabled{opacity:.5}.plinko-help,.plinko-retry,.plinko-empty{color:var(--muted,#b8c8c1)}.plinko-error{min-height:1.4em;margin:0;color:#ffd1d1}.plinko-stage{position:relative;display:grid;grid-template-rows:1fr auto auto;gap:16px;min-height:470px;overflow:hidden;background:radial-gradient(circle at 50% 18%,rgba(47,117,132,.45),rgba(5,21,24,.96) 68%)}.plinko-pegs{position:relative;min-height:330px}.plinko-peg{position:absolute;left:var(--peg-x);top:var(--peg-y);width:10px;height:10px;border-radius:50%;background:#f6d47a;box-shadow:0 0 0 3px rgba(246,212,122,.12)}.plinko-puck{position:absolute;left:var(--puck-x);top:var(--puck-y);width:22px;height:22px;border-radius:50%;background:#e94057;box-shadow:0 0 18px rgba(233,64,87,.8);transform:translate(-50%,-50%);animation:plinko-drop .8s ease-out both}.plinko-buckets{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:6px}.plinko-bucket{display:grid;place-items:center;min-height:42px;border:1px solid rgba(255,255,255,.16);border-radius:8px;background:rgba(255,255,255,.06);font-weight:700}.plinko-bucket.is-hit{outline:3px solid #ffd780;background:rgba(165,31,45,.65)}.plinko-result{min-height:2.8em;margin:0;text-align:center}.plinko-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.plinko-summary span{display:grid;gap:5px;padding:10px;border-radius:10px;background:rgba(255,255,255,.05)}.plinko-summary strong{overflow-wrap:anywhere}.plinko-rules{margin:0;padding-left:1.1rem}.plinko-rules li+li{margin-top:7px}.plinko-history-list{display:grid;gap:8px;max-height:245px;margin:0;padding:0;overflow:auto;list-style:none;scrollbar-width:thin}.plinko-history-list li{display:grid;grid-template-columns:1fr auto;gap:8px;padding:9px;border-radius:9px;background:rgba(0,0,0,.2)}.plinko-shell button:focus-visible,.plinko-shell input:focus-visible,.plinko-history-list:focus-visible{outline:3px solid #ffd780;outline-offset:2px}@keyframes plinko-drop{from{left:50%;top:7%;opacity:.75}to{left:var(--puck-x);top:var(--puck-y);opacity:1}}/* Stack controls, stage, and data on compact screens. */@media(max-width:1100px){.plinko-layout{grid-template-columns:1fr}.plinko-controls{order:1}.plinko-stage{order:2;min-height:390px}.plinko-data{order:3}}/* Prevent bucket and summary clipping on mobile. */@media(max-width:520px){.plinko-header{align-items:start;flex-direction:column}.plinko-panel,.plinko-stage{padding:12px}.plinko-stage{min-height:340px}.plinko-pegs{min-height:250px}.plinko-buckets{gap:3px}.plinko-bucket{font-size:.78rem;min-height:36px}.plinko-summary{grid-template-columns:1fr}.plinko-history-list li{grid-template-columns:1fr}}/* Make replay instant for reduced-motion users. */@media(prefers-reduced-motion:reduce){.plinko-shell *{scroll-behavior:auto!important;transition:none!important;animation:none!important}.plinko-puck{animation:none!important}}</style>';
 }
 
 // Bind semantic controls after each deterministic route render.
@@ -239,6 +243,22 @@ function bindEvents() {
     // Execute the prepared request through shared busy and error handling.
     runAction(drop);
   };
+  // Read the secondary one-click repeat control.
+  const repeatButton = root?.querySelector('[data-action="repeat"]');
+  // Re-fire the previous drop with the same committed wager.
+  if (repeatButton) repeatButton.onclick = () => repeat();
+}
+
+// Re-apply the last committed wager and re-fire one idempotent drop without a timer.
+function repeat() {
+  // Ignore repeat while busy, holding an unresolved retry, or without a prior drop.
+  if (busy || pendingDrop || !lastBet) return;
+  // Restore the previous stake into the local configuration.
+  wager = lastBet.wager;
+  // Prepare a fresh exactly-once identity for the restored wager.
+  pendingDrop = { actionId: nextActionId(), wager };
+  // Execute the prepared request through shared busy and error handling.
+  runAction(drop);
 }
 
 // Render all game-owned regions from authenticated server state and locale resources.
@@ -306,6 +326,8 @@ async function drop() {
   currentDrop = payload.drop;
   // Adopt the committed wager from the returned drop.
   wager = payload.drop?.wager || request.wager;
+  // Remember the settled wager so the next round can repeat with one click.
+  if (payload.drop) lastBet = { wager: payload.drop.wager };
   // Clear the retry identity only after a successful response proves the drop.
   pendingDrop = null;
   // Refresh the persistent authenticated wallet after debit and settlement.
@@ -330,6 +352,8 @@ export const PlinkoGame = {
     pendingDrop = null;
     // Clear the replay target until state loads.
     currentDrop = null;
+    // Clear the repeatable wager so another session never inherits it.
+    lastBet = null;
     // Capture this mount node for asynchronous route replacement guards.
     const mountedRoot = root;
     // Load active and fallback game dictionaries before rendering visible copy.
@@ -346,6 +370,10 @@ export const PlinkoGame = {
     state = payload.state;
     // Cache the documented fixed rule metadata.
     rules = payload.rules || rules;
+    // Recover a repeatable wager from the newest settled drop so repeat survives a reload.
+    const restored = latestDrop();
+    // Restore the repeatable configuration only when a settled drop is present.
+    if (restored) lastBet = { wager: restored.wager };
     // Render the complete game-owned browser surface.
     render();
     // Align the persistent wallet with any recovered ledger marker.
@@ -369,6 +397,8 @@ export const PlinkoGame = {
     pendingDrop = null;
     // Clear the committed replay target after teardown.
     currentDrop = null;
+    // Clear the repeatable wager so the next session starts fresh.
+    lastBet = null;
     // Clear the reserved localized error state.
     lastErrorKey = null;
     // No timers or global event listeners are owned by this game.

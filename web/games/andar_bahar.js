@@ -36,6 +36,8 @@ let unsubscribeLocale = null;
 let pendingPlay = null;
 // Retain a localized error resource key for the reserved route error region.
 let lastErrorKey = null;
+// Retain the last committed side and stake so one click can repeat it.
+let lastBet = null;
 // Allocate stable fallback identities when randomUUID is unavailable.
 let actionCounter = 0;
 
@@ -147,8 +149,10 @@ function controlsHtml() {
   const retryHelp = pendingPlay ? '<p class="andar-retry" role="status">' + safe(text('controls.retryHelp')) + '</p>' : '';
   // Change the play label when the same unresolved action can be retried.
   const playLabel = pendingPlay ? text('controls.retryPlay') : text('controls.play');
+  // Enable the one-click repeat only when a prior bet exists and no request or retry is active.
+  const repeatDisabled = busy || Boolean(pendingPlay) || !lastBet;
   // Return a stable control rail whose primary action never moves between phases.
-  return '<aside class="andar-panel andar-controls" aria-label="' + safe(text('controls.title')) + '"><h2>' + safe(text('controls.title')) + '</h2><label for="andar-wager">' + safe(text('controls.wager')) + '</label><input id="andar-wager" type="number" min="0.01" max="100000" step="0.01" value="' + safe(wager) + '"' + (inputDisabled ? ' disabled' : '') + '><fieldset><legend>' + safe(text('controls.sideLegend')) + '</legend><div class="andar-sides">' + sideButtons + '</div></fieldset><button type="button" class="andar-primary" data-action="play"' + (busy ? ' disabled' : '') + '>' + safe(playLabel) + '</button><p class="andar-help">' + safe(text('controls.help')) + '</p>' + retryHelp + '<p class="andar-error" role="alert" data-error>' + (lastErrorKey ? safe(text(lastErrorKey)) : '') + '</p></aside>';
+  return '<aside class="andar-panel andar-controls" aria-label="' + safe(text('controls.title')) + '"><h2>' + safe(text('controls.title')) + '</h2><label for="andar-wager">' + safe(text('controls.wager')) + '</label><input id="andar-wager" type="number" min="0.01" max="100000" step="0.01" value="' + safe(wager) + '"' + (inputDisabled ? ' disabled' : '') + '><fieldset><legend>' + safe(text('controls.sideLegend')) + '</legend><div class="andar-sides">' + sideButtons + '</div></fieldset><button type="button" class="andar-primary" data-action="play"' + (busy ? ' disabled' : '') + '>' + safe(playLabel) + '</button><button type="button" class="andar-repeat" data-action="repeat"' + (repeatDisabled ? ' disabled' : '') + '>' + safe(text('controls.repeat')) + '</button><p class="andar-help">' + safe(text('controls.help')) + '</p>' + retryHelp + '<p class="andar-error" role="alert" data-error>' + (lastErrorKey ? safe(text(lastErrorKey)) : '') + '</p></aside>';
 }
 
 // Render the match card and transparent alternating sequence.
@@ -220,7 +224,7 @@ function dataHtml() {
 // Return scoped responsive styles without modifying the shared application stylesheet.
 function stylesHtml() {
   // Define the dominant stage, stable controls, responsive stack, focus, and reduced-motion rules.
-  return '<style>/* Establish the game header and desktop control-stage-data hierarchy. */.andar-shell{display:grid;gap:16px;min-width:0}.andar-header{display:flex;align-items:end;justify-content:space-between;gap:16px}.andar-header h1{margin:0}.andar-eyebrow{margin:0 0 4px;color:var(--muted,#b8c8c1)}.andar-phase{padding:7px 12px;border:1px solid rgba(255,215,128,.45);border-radius:999px;color:var(--gold,#f6d47a)}.andar-layout{display:grid;grid-template-columns:minmax(210px,.7fr) minmax(560px,2.5fr) minmax(230px,.8fr);gap:16px;align-items:start}.andar-panel,.andar-stage{border:1px solid rgba(255,215,128,.24);border-radius:16px;background:rgba(3,29,20,.86);padding:16px}.andar-controls,.andar-data{display:grid;align-content:start;gap:13px}.andar-controls h2,.andar-data h2{margin:0}.andar-controls fieldset{margin:0;padding:0;border:0}.andar-controls legend{margin-bottom:8px}.andar-controls input,.andar-controls button{min-height:44px}.andar-primary{background:var(--red,#a51f2d);color:#fff}.andar-sides{display:grid;grid-template-columns:1fr 1fr;gap:10px}.andar-sides [aria-pressed=true]{outline:2px solid #ffd780;background:rgba(255,215,128,.14)}.andar-help,.andar-retry,.andar-empty{color:var(--muted,#b8c8c1)}.andar-error{min-height:1.4em;margin:0;color:#ffd1d1}.andar-stage{display:grid;align-content:center;gap:18px;min-width:0;min-height:450px;background:radial-gradient(circle at 50% 35%,rgba(28,112,73,.42),rgba(3,24,17,.96) 72%)}.andar-match-card{display:grid;justify-items:center;gap:10px}.andar-match-card h3{margin:0}.andar-match-card .playing-card{flex:none;width:clamp(4.8rem,8vw,7.2rem);font-size:clamp(1.1rem,2.5vw,1.8rem)}.andar-sequence{display:flex;gap:10px;min-height:118px;margin:0;padding:8px;overflow-x:auto;list-style:none;scrollbar-width:thin}.andar-dealt-card{display:grid;flex:0 0 82px;justify-items:center;gap:6px;padding:8px;border:1px solid rgba(255,255,255,.12);border-radius:10px;background:rgba(0,0,0,.18)}.andar-dealt-card span{font-size:.82rem;text-align:center}.andar-dealt-card .playing-card{width:4.2rem;font-size:1rem}.andar-match{border-color:#ffd780;background:rgba(255,215,128,.14)}.andar-result{min-height:2.8em;margin:0;text-align:center}.andar-summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px}.andar-summary span{display:grid;gap:5px;padding:10px;border-radius:10px;background:rgba(255,255,255,.05)}.andar-summary strong{overflow-wrap:anywhere}.andar-data section{display:grid;gap:10px}.andar-rules{margin:0;padding-left:1.1rem}.andar-rules li+li{margin-top:7px}.andar-history-list{display:grid;gap:8px;max-height:285px;margin:0;padding:0;overflow:auto;list-style:none;scrollbar-width:thin}.andar-history-list li{display:grid;grid-template-columns:1fr auto;gap:8px;padding:9px;border-radius:9px;background:rgba(0,0,0,.2)}.andar-shell button:focus-visible,.andar-shell input:focus-visible,.andar-history-list:focus-visible,.andar-sequence:focus-visible{outline:3px solid #ffd780;outline-offset:2px}/* Stack controls, stage, and data on compact screens. */@media(max-width:1100px){.andar-layout{grid-template-columns:1fr}.andar-controls{order:1}.andar-stage{order:2;min-height:380px}.andar-data{order:3}}/* Prevent card, summary, and action clipping on mobile. */@media(max-width:560px){.andar-header{align-items:start;flex-direction:column}.andar-panel,.andar-stage{padding:12px}.andar-stage{min-height:340px}.andar-summary{grid-template-columns:1fr 1fr}.andar-sides{grid-template-columns:1fr}.andar-history-list li{grid-template-columns:1fr}.andar-dealt-card{flex-basis:74px}}/* Remove decorative motion for reduced-motion users. */@media(prefers-reduced-motion:reduce){.andar-shell *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}</style>';
+  return '<style>/* Establish the game header and desktop control-stage-data hierarchy. */.andar-shell{display:grid;gap:16px;min-width:0}.andar-header{display:flex;align-items:end;justify-content:space-between;gap:16px}.andar-header h1{margin:0}.andar-eyebrow{margin:0 0 4px;color:var(--muted,#b8c8c1)}.andar-phase{padding:7px 12px;border:1px solid rgba(255,215,128,.45);border-radius:999px;color:var(--gold,#f6d47a)}.andar-layout{display:grid;grid-template-columns:minmax(210px,.7fr) minmax(560px,2.5fr) minmax(230px,.8fr);gap:16px;align-items:start}.andar-panel,.andar-stage{border:1px solid rgba(255,215,128,.24);border-radius:16px;background:rgba(3,29,20,.86);padding:16px}.andar-controls,.andar-data{display:grid;align-content:start;gap:13px}.andar-controls h2,.andar-data h2{margin:0}.andar-controls fieldset{margin:0;padding:0;border:0}.andar-controls legend{margin-bottom:8px}.andar-controls input,.andar-controls button{min-height:44px}.andar-primary{background:var(--red,#a51f2d);color:#fff}.andar-repeat{background:transparent;color:#ffd780;border:1px solid rgba(255,215,128,.55)}.andar-repeat:disabled{opacity:.5}.andar-sides{display:grid;grid-template-columns:1fr 1fr;gap:10px}.andar-sides [aria-pressed=true]{outline:2px solid #ffd780;background:rgba(255,215,128,.14)}.andar-help,.andar-retry,.andar-empty{color:var(--muted,#b8c8c1)}.andar-error{min-height:1.4em;margin:0;color:#ffd1d1}.andar-stage{display:grid;align-content:center;gap:18px;min-width:0;min-height:450px;background:radial-gradient(circle at 50% 35%,rgba(28,112,73,.42),rgba(3,24,17,.96) 72%)}.andar-match-card{display:grid;justify-items:center;gap:10px}.andar-match-card h3{margin:0}.andar-match-card .playing-card{flex:none;width:clamp(4.8rem,8vw,7.2rem);font-size:clamp(1.1rem,2.5vw,1.8rem)}.andar-sequence{display:flex;gap:10px;min-height:118px;margin:0;padding:8px;overflow-x:auto;list-style:none;scrollbar-width:thin}.andar-dealt-card{display:grid;flex:0 0 82px;justify-items:center;gap:6px;padding:8px;border:1px solid rgba(255,255,255,.12);border-radius:10px;background:rgba(0,0,0,.18)}.andar-dealt-card span{font-size:.82rem;text-align:center}.andar-dealt-card .playing-card{width:4.2rem;font-size:1rem}.andar-match{border-color:#ffd780;background:rgba(255,215,128,.14)}.andar-result{min-height:2.8em;margin:0;text-align:center}.andar-summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px}.andar-summary span{display:grid;gap:5px;padding:10px;border-radius:10px;background:rgba(255,255,255,.05)}.andar-summary strong{overflow-wrap:anywhere}.andar-data section{display:grid;gap:10px}.andar-rules{margin:0;padding-left:1.1rem}.andar-rules li+li{margin-top:7px}.andar-history-list{display:grid;gap:8px;max-height:285px;margin:0;padding:0;overflow:auto;list-style:none;scrollbar-width:thin}.andar-history-list li{display:grid;grid-template-columns:1fr auto;gap:8px;padding:9px;border-radius:9px;background:rgba(0,0,0,.2)}.andar-shell button:focus-visible,.andar-shell input:focus-visible,.andar-history-list:focus-visible,.andar-sequence:focus-visible{outline:3px solid #ffd780;outline-offset:2px}/* Stack controls, stage, and data on compact screens. */@media(max-width:1100px){.andar-layout{grid-template-columns:1fr}.andar-controls{order:1}.andar-stage{order:2;min-height:380px}.andar-data{order:3}}/* Prevent card, summary, and action clipping on mobile. */@media(max-width:560px){.andar-header{align-items:start;flex-direction:column}.andar-panel,.andar-stage{padding:12px}.andar-stage{min-height:340px}.andar-summary{grid-template-columns:1fr 1fr}.andar-sides{grid-template-columns:1fr}.andar-history-list li{grid-template-columns:1fr}.andar-dealt-card{flex-basis:74px}}/* Remove decorative motion for reduced-motion users. */@media(prefers-reduced-motion:reduce){.andar-shell *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}</style>';
 }
 
 // Bind semantic controls after each deterministic route render.
@@ -245,6 +249,22 @@ function bindEvents() {
     // Execute the prepared request through shared busy and error handling.
     runAction(play);
   };
+  // Bind the one-click repeat that re-fires the previous bet.
+  root?.querySelector('[data-action="repeat"]')?.addEventListener('click', repeat);
+}
+
+// Re-apply the last committed side and stake and re-fire one play without a timer.
+async function repeat() {
+  // Ignore repeat while busy, holding an unresolved retry, or without a prior bet.
+  if (busy || pendingPlay || !lastBet) return;
+  // Restore the previous side target into the local configuration.
+  selectedSide = lastBet.bet;
+  // Restore the previous stake into the local configuration.
+  wager = lastBet.wager;
+  // Prepare the exact same idempotent play identity and immutable inputs.
+  pendingPlay = { actionId: nextActionId(), wager, side: selectedSide };
+  // Fire the shared exactly-once play action with the restored bet.
+  await runAction(play);
 }
 
 // Render all game-owned regions from authenticated server state and locale resources.
@@ -312,6 +332,10 @@ async function play() {
   wager = payload.round?.wager || request.wager;
   // Adopt the selected side from the returned round.
   selectedSide = payload.round?.selected_side || request.side;
+  // Remember the settled side and stake so the next round can repeat with one click.
+  const settled = currentRound();
+  // Capture the repeatable configuration only from a fully settled round.
+  if (settled) lastBet = { bet: settled.selected_side, wager: settled.wager };
   // Clear the retry identity only after a successful response proves the play.
   pendingPlay = null;
   // Refresh the persistent authenticated wallet after the debit and optional payout.
@@ -334,6 +358,8 @@ export const AndarBaharGame = {
     lastErrorKey = null;
     // Clear retry identities because reload-safe server state reconciles committed actions.
     pendingPlay = null;
+    // Reset the repeatable bet so another session never inherits it.
+    lastBet = null;
     // Install shared accessible card presentation once.
     ensureSharedCardStyles();
     // Capture this mount node for asynchronous route replacement guards.
@@ -352,6 +378,10 @@ export const AndarBaharGame = {
     state = payload.state;
     // Cache the documented fixed rule metadata.
     rules = payload.rules || {};
+    // Recover a repeatable bet from the newest settled round so repeat survives a reload.
+    const restored = currentRound();
+    // Restore the repeatable configuration only when a settled round is present.
+    if (restored) lastBet = { bet: restored.selected_side, wager: restored.wager };
     // Render the complete game-owned browser surface.
     render();
     // Align the persistent wallet with any recovered ledger marker.
@@ -373,6 +403,8 @@ export const AndarBaharGame = {
     busy = false;
     // Forget route-local retry identities after server state becomes the recovery source.
     pendingPlay = null;
+    // Clear the repeatable bet so the next session starts fresh.
+    lastBet = null;
     // Clear the reserved localized error state.
     lastErrorKey = null;
     // No timers or global event listeners are owned by this game.
