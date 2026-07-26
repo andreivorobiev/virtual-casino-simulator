@@ -25,6 +25,8 @@ let drawBusy = false;
 let localeUnsubscribe = null;
 // Retain the last settled grid so a repaint after the draw keeps showing the pattern.
 let shownGrid = null;
+// Retain the last committed pattern and stake so one click can repeat the same draw.
+let lastBet = null;
 
 // Translate one game-domain key with an optional fallback.
 const tx = (key, params, fallback) => t(key, params || {}, 'games/pattern_draw') || fallback || key;
@@ -38,7 +40,7 @@ function ensureStyles() {
   // Tag the element so repeated mounts detect and reuse it.
   style.id = STYLE_ID;
   // Render only route-local selectors so no shared class is affected.
-  style.textContent = '.pattern{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;width:100%;min-width:0;min-height:100%;color:var(--text,#f5ead6);align-items:start;} .pd-stage{display:grid;justify-items:center;gap:14px;padding:12px;min-width:0;} .pd-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:min(280px,72vw);} .pd-cell{aspect-ratio:1;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);transition:background .2s ease,box-shadow .2s ease;} .pd-cell.on{background:radial-gradient(circle at 40% 34%,#fff3bd,#e7bd58);box-shadow:0 0 12px rgba(231,189,88,.6);} .pd-panel{display:grid;gap:12px;min-width:0;} .pd-card{padding:14px;border:1px solid rgba(255,217,120,.42);border-radius:16px;background:rgba(0,0,0,.22);} .pd-card h3{margin:0 0 10px;color:#e7bc52;text-transform:uppercase;font-size:12px;letter-spacing:.08em;} .pd-bets{display:grid;gap:8px;} .pd-bet{display:flex;justify-content:space-between;padding:10px;border:2px solid transparent;border-radius:12px;background:rgba(255,255,255,.05);color:#f5ead6;font-weight:900;cursor:pointer;text-transform:capitalize;} .pd-bet small{font-weight:700;color:#f2d77d;} .pd-bet[aria-pressed="true"]{border-color:#fff2c2;box-shadow:0 0 0 2px rgba(255,242,194,.5);} .pd-chips{display:flex;flex-wrap:wrap;gap:8px;} .pd-chip{min-width:44px;min-height:40px;padding:0 10px;border:1px solid var(--border-soft,rgba(255,255,255,.18));border-radius:10px;background:rgba(255,255,255,.05);color:#f5ead6;font-weight:900;cursor:pointer;} .pd-chip[aria-pressed="true"]{border-color:#e7bd58;background:rgba(231,189,88,.16);color:#fff2c2;} .pd-draw{width:100%;min-height:48px;border:none;border-radius:14px;background:linear-gradient(180deg,#9b59b6,#6c3483);color:#fff;font-weight:900;font-size:16px;cursor:pointer;} .pd-draw:disabled{opacity:.55;cursor:not-allowed;} .pd-result{min-height:24px;font-size:15px;color:#fff2c2;text-align:center;} .pd-result .net{font-weight:900;} @media (max-width:900px){.pattern{grid-template-columns:1fr;}}';
+  style.textContent = '.pattern{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;width:100%;min-width:0;min-height:100%;color:var(--text,#f5ead6);align-items:start;} .pd-stage{display:grid;justify-items:center;gap:14px;padding:12px;min-width:0;} .pd-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:min(280px,72vw);} .pd-cell{aspect-ratio:1;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);transition:background .2s ease,box-shadow .2s ease;} .pd-cell.on{background:radial-gradient(circle at 40% 34%,#fff3bd,#e7bd58);box-shadow:0 0 12px rgba(231,189,88,.6);} .pd-panel{display:grid;gap:12px;min-width:0;} .pd-card{padding:14px;border:1px solid rgba(255,217,120,.42);border-radius:16px;background:rgba(0,0,0,.22);} .pd-card h3{margin:0 0 10px;color:#e7bc52;text-transform:uppercase;font-size:12px;letter-spacing:.08em;} .pd-bets{display:grid;gap:8px;} .pd-bet{display:flex;justify-content:space-between;padding:10px;border:2px solid transparent;border-radius:12px;background:rgba(255,255,255,.05);color:#f5ead6;font-weight:900;cursor:pointer;text-transform:capitalize;} .pd-bet small{font-weight:700;color:#f2d77d;} .pd-bet[aria-pressed="true"]{border-color:#fff2c2;box-shadow:0 0 0 2px rgba(255,242,194,.5);} .pd-chips{display:flex;flex-wrap:wrap;gap:8px;} .pd-chip{min-width:44px;min-height:40px;padding:0 10px;border:1px solid var(--border-soft,rgba(255,255,255,.18));border-radius:10px;background:rgba(255,255,255,.05);color:#f5ead6;font-weight:900;cursor:pointer;} .pd-chip[aria-pressed="true"]{border-color:#e7bd58;background:rgba(231,189,88,.16);color:#fff2c2;} .pd-draw{width:100%;min-height:48px;border:none;border-radius:14px;background:linear-gradient(180deg,#9b59b6,#6c3483);color:#fff;font-weight:900;font-size:16px;cursor:pointer;} .pd-draw:disabled{opacity:.55;cursor:not-allowed;} .pd-repeat{width:100%;min-height:46px;border:1px solid rgba(255,217,120,.55);border-radius:12px;background:transparent;color:#ffd780;font-weight:900;cursor:pointer;} .pd-repeat:disabled{opacity:.5;cursor:not-allowed;} .pd-result{min-height:24px;font-size:15px;color:#fff2c2;text-align:center;} .pd-result .net{font-weight:900;} @media (max-width:900px){.pattern{grid-template-columns:1fr;}}';
   // Attach the game-owned styles to the document head.
   document.head.appendChild(style);
 }
@@ -60,7 +62,7 @@ function render(resultText) {
   // Build the chip selector.
   const chips = CHIPS.map(value => `<button class="pd-chip" data-chip="${value}" type="button" aria-pressed="${stake === value}">${value}</button>`).join('');
   // Paint the whole route.
-  root.innerHTML = `<section class="pattern" data-testid="pattern-draw"><div class="pd-stage"><div class="pd-grid" data-testid="pattern-draw-grid">${cells}</div><p class="pd-result" data-testid="pattern-draw-result" role="status">${resultText || safe(tx('result.idle', null, 'Pick a pattern and draw.'))}</p></div><div class="pd-panel"><div class="pd-card"><h3>${safe(tx('bet.title', null, 'Pattern'))}</h3><div class="pd-bets">${bets}</div></div><div class="pd-card"><h3>${safe(tx('stake.title', null, 'Stake'))}</h3><div class="pd-chips">${chips}</div></div><button class="pd-draw" data-testid="pattern-draw-draw" type="button" ${drawBusy ? 'disabled' : ''}>${safe(drawBusy ? tx('action.drawing', null, 'Drawing…') : tx('action.draw', null, 'Draw the grid'))}</button></div></section>`;
+  root.innerHTML = `<section class="pattern" data-testid="pattern-draw"><div class="pd-stage"><div class="pd-grid" data-testid="pattern-draw-grid">${cells}</div><p class="pd-result" data-testid="pattern-draw-result" role="status">${resultText || safe(tx('result.idle', null, 'Pick a pattern and draw.'))}</p></div><div class="pd-panel"><div class="pd-card"><h3>${safe(tx('bet.title', null, 'Pattern'))}</h3><div class="pd-bets">${bets}</div></div><div class="pd-card"><h3>${safe(tx('stake.title', null, 'Stake'))}</h3><div class="pd-chips">${chips}</div></div><button class="pd-draw" data-testid="pattern-draw-draw" type="button" ${drawBusy ? 'disabled' : ''}>${safe(drawBusy ? tx('action.drawing', null, 'Drawing…') : tx('action.draw', null, 'Draw the grid'))}</button><button class="pd-repeat" data-testid="pattern-draw-repeat" type="button" ${(drawBusy || !lastBet) ? 'disabled' : ''}>${safe(tx('controls.repeat', null, 'Repeat bet'))}</button></div></section>`;
   // Wire the pattern bet buttons.
   root.querySelectorAll('[data-bet]').forEach(btn => { btn.onclick = () => { selectedBet = btn.dataset.bet; render(); }; });
   // Wire the chip buttons.
@@ -69,6 +71,10 @@ function render(resultText) {
   const drawBtn = root.querySelector('[data-testid="pattern-draw-draw"]');
   // Attach the draw handler only when a draw is not already running.
   if (drawBtn) drawBtn.onclick = draw;
+  // Wire the one-click repeat that re-fires the last committed pattern and stake.
+  const repeatBtn = root.querySelector('[data-testid="pattern-draw-repeat"]');
+  // Attach the repeat handler so a settled bet can be replayed with one click.
+  if (repeatBtn) repeatBtn.onclick = repeat;
 }
 
 // Load session-bound state and render the first frame.
@@ -76,7 +82,11 @@ async function load() {
   // Read authoritative state so the render reflects the server, not client guesses.
   try {
     // Fetch the game state through the frozen v1 endpoint.
-    await api('/api/v1/games/pattern-draw/state');
+    const data = await api('/api/v1/games/pattern-draw/state');
+    // Read the newest settled round so repeat can survive a reload.
+    const restored = data?.state?.recent_rounds?.[0]?.public;
+    // Recover the repeatable pattern and stake only when a settled round is present.
+    lastBet = restored ? { bet: restored.detail.bet, stake: restored.wager_total } : null;
   } catch (err) {
     // Surface a load failure without breaking the shell.
     toast(tx('error.load', null, 'Could not load Pattern Draw.'), 'error');
@@ -100,6 +110,8 @@ async function draw() {
     const round = response.round;
     // Reveal the authoritative committed grid so the cells light up.
     shownGrid = round.detail.grid;
+    // Remember the exact settled pattern and stake so one click can repeat the same draw.
+    lastBet = { bet: round.detail.bet, stake: round.wager_total };
     // Repaint immediately so the drawn grid is visible during the reveal.
     render();
     // Wait for the decorative reveal to finish before announcing the result.
@@ -126,6 +138,18 @@ async function draw() {
   }
 }
 
+// Replay the last committed pattern and stake with one click.
+async function repeat() {
+  // Ignore repeat while a draw is running or before any prior round has settled.
+  if (drawBusy || !root || !lastBet) return;
+  // Restore the previous pattern selection into the local control state.
+  selectedBet = lastBet.bet;
+  // Restore the previous stake into the local control state.
+  stake = lastBet.stake;
+  // Fire the shared draw action with the restored pattern and stake.
+  await draw();
+}
+
 // Export the isolated Pattern Draw game for the shared shell.
 export const PatternDrawGame = {
   // Expose the stable catalog identifier.
@@ -134,6 +158,8 @@ export const PatternDrawGame = {
   async mount(node) {
     // Store the current route outlet.
     root = node;
+    // Reset the repeatable bet so a new mount never inherits a stale one before load reconciles history.
+    lastBet = null;
     // Install game-owned styles.
     ensureStyles();
     // Load both locales through the game-owned lazy domain before visible render.
@@ -153,5 +179,7 @@ export const PatternDrawGame = {
     root = null;
     // Reset the in-flight guard because teardown cancelled any presentation.
     drawBusy = false;
+    // Clear the repeatable bet so the next session starts fresh.
+    lastBet = null;
   },
 };

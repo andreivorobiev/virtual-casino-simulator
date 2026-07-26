@@ -5,6 +5,7 @@
   "pay.coins": "{count} coins",
   "stake.title": "Stake",
   "action.drop": "Drop a coin",
+  "controls.repeat": "Repeat bet",
   "action.dropping": "Dropping…",
   "result.idle": "Set a stake and drop a coin.",
   "result.cascade": "{coins} coins cascaded off!",

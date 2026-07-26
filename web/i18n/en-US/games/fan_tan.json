@@ -7,6 +7,7 @@
   "controls.aria": "Fan-Tan wager controls",
   "controls.title": "Residue wagers",
   "controls.help": "Choose one or more final residues. Each correct residue returns the stake plus 3 to 1.",
+  "controls.repeat": "Repeat bet",
   "wager.input": "Wager on residue {residue}",
   "residue.label": "Residue {residue}",
   "odds.net": "{odds} to 1 net",

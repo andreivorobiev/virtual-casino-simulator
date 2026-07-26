@@ -8,6 +8,7 @@
   "stake.title": "Ставка",
   "action.spin": "Крутить колесо",
   "action.spinning": "Вращение…",
+  "controls.repeat": "Повторить ставку",
   "result.idle": "Выберите цвет и крутите.",
   "result.landed": "Выпало на {color}.",
   "error.load": "Не удалось загрузить Цветное колесо.",

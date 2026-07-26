@@ -14,6 +14,7 @@
   "stake.title": "Stake",
   "action.deal": "Deal the coup",
   "action.dealing": "Dealing…",
+  "controls.repeat": "Repeat bet",
   "result.idle": "Pick a bet and deal.",
   "outcome.win": "Your bet wins!",
   "outcome.lose": "The other side wins.",

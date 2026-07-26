@@ -29,6 +29,8 @@ let spinBusy = false;
 let localeUnsubscribe = null;
 // Retain the last drawn number so a repaint after the draw keeps showing the result.
 let shownNumber = null;
+// Retain the last settled bet config so one click can re-place and re-spin it.
+let lastBet = null;
 
 // Translate one game-domain key with an optional fallback.
 const tx = (key, params, fallback) => t(key, params || {}, 'games/boule') || fallback || key;
@@ -50,7 +52,7 @@ function ensureStyles() {
   // Tag the element so repeated mounts detect and reuse it.
   style.id = STYLE_ID;
   // Render only route-local selectors so no shared class is affected.
-  style.textContent = '.boule{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;width:100%;min-width:0;min-height:100%;color:var(--text,#f5ead6);align-items:start;} .bl-stage{display:grid;justify-items:center;gap:16px;padding:12px;min-width:0;} .bl-drum{width:120px;height:120px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 38% 32%,#14622f,#062713);border:6px solid #e7bd58;box-shadow:0 12px 34px rgba(0,0,0,.45);font-size:48px;font-weight:900;color:#fff2c2;} .bl-drum.rolling{animation:bl-pulse .3s linear infinite;} @keyframes bl-pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.06);}} .bl-numbers{display:grid;grid-template-columns:repeat(9,1fr);gap:6px;width:100%;max-width:420px;min-width:0;} .bl-num{min-height:44px;border:2px solid transparent;border-radius:10px;background:rgba(255,255,255,.06);color:#f5ead6;font-weight:900;cursor:pointer;} .bl-num.house{background:rgba(231,189,88,.16);color:#f2d77d;} .bl-num[aria-pressed="true"]{border-color:#fff2c2;box-shadow:0 0 0 2px rgba(255,242,194,.5);} .bl-panel{display:grid;gap:12px;min-width:0;} .bl-card{padding:14px;border:1px solid rgba(255,217,120,.42);border-radius:16px;background:rgba(0,0,0,.22);} .bl-card h3{margin:0 0 10px;color:#e7bc52;text-transform:uppercase;font-size:12px;letter-spacing:.08em;} .bl-bets{display:grid;grid-template-columns:1fr 1fr;gap:8px;} .bl-bet{display:grid;gap:2px;padding:10px;border:2px solid transparent;border-radius:12px;background:rgba(255,255,255,.05);color:#f5ead6;font-weight:900;cursor:pointer;text-align:left;} .bl-bet small{font-weight:700;opacity:.8;font-size:11px;} .bl-bet[aria-pressed="true"]{border-color:#fff2c2;box-shadow:0 0 0 2px rgba(255,242,194,.5);} .bl-chips{display:flex;flex-wrap:wrap;gap:8px;} .bl-chip{min-width:44px;min-height:40px;padding:0 10px;border:1px solid var(--border-soft,rgba(255,255,255,.18));border-radius:10px;background:rgba(255,255,255,.05);color:#f5ead6;font-weight:900;cursor:pointer;} .bl-chip[aria-pressed="true"]{border-color:#e7bd58;background:rgba(231,189,88,.16);color:#fff2c2;} .bl-spin{width:100%;min-height:48px;border:none;border-radius:14px;background:linear-gradient(180deg,#0f9c4c,#0a5f2e);color:#fff;font-weight:900;font-size:16px;cursor:pointer;} .bl-spin:disabled{opacity:.55;cursor:not-allowed;} .bl-result{min-height:44px;font-size:15px;color:#fff2c2;text-align:center;} .bl-result .net{font-weight:900;} @media (prefers-reduced-motion:reduce){.bl-drum.rolling{animation:none;}} @media (max-width:900px){.boule{grid-template-columns:1fr;}}';
+  style.textContent = '.boule{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;width:100%;min-width:0;min-height:100%;color:var(--text,#f5ead6);align-items:start;} .bl-stage{display:grid;justify-items:center;gap:16px;padding:12px;min-width:0;} .bl-drum{width:120px;height:120px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 38% 32%,#14622f,#062713);border:6px solid #e7bd58;box-shadow:0 12px 34px rgba(0,0,0,.45);font-size:48px;font-weight:900;color:#fff2c2;} .bl-drum.rolling{animation:bl-pulse .3s linear infinite;} @keyframes bl-pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.06);}} .bl-numbers{display:grid;grid-template-columns:repeat(9,1fr);gap:6px;width:100%;max-width:420px;min-width:0;} .bl-num{min-height:44px;border:2px solid transparent;border-radius:10px;background:rgba(255,255,255,.06);color:#f5ead6;font-weight:900;cursor:pointer;} .bl-num.house{background:rgba(231,189,88,.16);color:#f2d77d;} .bl-num[aria-pressed="true"]{border-color:#fff2c2;box-shadow:0 0 0 2px rgba(255,242,194,.5);} .bl-panel{display:grid;gap:12px;min-width:0;} .bl-card{padding:14px;border:1px solid rgba(255,217,120,.42);border-radius:16px;background:rgba(0,0,0,.22);} .bl-card h3{margin:0 0 10px;color:#e7bc52;text-transform:uppercase;font-size:12px;letter-spacing:.08em;} .bl-bets{display:grid;grid-template-columns:1fr 1fr;gap:8px;} .bl-bet{display:grid;gap:2px;padding:10px;border:2px solid transparent;border-radius:12px;background:rgba(255,255,255,.05);color:#f5ead6;font-weight:900;cursor:pointer;text-align:left;} .bl-bet small{font-weight:700;opacity:.8;font-size:11px;} .bl-bet[aria-pressed="true"]{border-color:#fff2c2;box-shadow:0 0 0 2px rgba(255,242,194,.5);} .bl-chips{display:flex;flex-wrap:wrap;gap:8px;} .bl-chip{min-width:44px;min-height:40px;padding:0 10px;border:1px solid var(--border-soft,rgba(255,255,255,.18));border-radius:10px;background:rgba(255,255,255,.05);color:#f5ead6;font-weight:900;cursor:pointer;} .bl-chip[aria-pressed="true"]{border-color:#e7bd58;background:rgba(231,189,88,.16);color:#fff2c2;} .bl-spin{width:100%;min-height:48px;border:none;border-radius:14px;background:linear-gradient(180deg,#0f9c4c,#0a5f2e);color:#fff;font-weight:900;font-size:16px;cursor:pointer;} .bl-spin:disabled{opacity:.55;cursor:not-allowed;} .bl-repeat{width:100%;min-height:46px;margin-top:8px;border:1px solid rgba(255,215,128,.55);border-radius:14px;background:transparent;color:#ffd780;font-weight:900;font-size:15px;cursor:pointer;} .bl-repeat:disabled{opacity:.5;cursor:not-allowed;} .bl-result{min-height:44px;font-size:15px;color:#fff2c2;text-align:center;} .bl-result .net{font-weight:900;} @media (prefers-reduced-motion:reduce){.bl-drum.rolling{animation:none;}} @media (max-width:900px){.boule{grid-template-columns:1fr;}}';
   // Attach the game-owned styles to the document head.
   document.head.appendChild(style);
 }
@@ -73,8 +75,10 @@ function render(resultText) {
   const bets = ['low', 'high', 'odd', 'even'].map(name => `<button class="bl-bet" data-bet="${name}" type="button" aria-pressed="${isSelected(name)}"><span>${safe(tx('bet.' + name, null, name))}</span><small>${EVEN_MONEY[name].join(' ')} &middot; 2x</small></button>`).join('');
   // Build the chip selector.
   const chips = CHIPS.map(value => `<button class="bl-chip" data-chip="${value}" type="button" aria-pressed="${stake === value}">${value}</button>`).join('');
+  // Enable the one-click repeat only when a prior settled bet exists and no spin is running.
+  const repeatDisabled = spinBusy || !lastBet;
   // Paint the whole route.
-  root.innerHTML = `<section class="boule" data-testid="boule"><div class="bl-stage"><div class="bl-drum${spinBusy ? ' rolling' : ''}" data-testid="boule-drum">${drum}</div><div class="bl-numbers">${numbers}</div><p class="bl-result" data-testid="boule-result" role="status">${resultText || safe(tx('result.idle', null, 'Pick a bet and spin.'))}</p></div><div class="bl-panel"><div class="bl-card"><h3>${safe(tx('bet.title', null, 'Even-money bets'))}</h3><div class="bl-bets">${bets}</div></div><div class="bl-card"><h3>${safe(tx('stake.title', null, 'Stake'))}</h3><div class="bl-chips">${chips}</div></div><button class="bl-spin" data-testid="boule-spin" type="button" ${spinBusy ? 'disabled' : ''}>${safe(spinBusy ? tx('action.spinning', null, 'Spinning…') : tx('action.spin', null, 'Spin the boule'))}</button></div></section>`;
+  root.innerHTML = `<section class="boule" data-testid="boule"><div class="bl-stage"><div class="bl-drum${spinBusy ? ' rolling' : ''}" data-testid="boule-drum">${drum}</div><div class="bl-numbers">${numbers}</div><p class="bl-result" data-testid="boule-result" role="status">${resultText || safe(tx('result.idle', null, 'Pick a bet and spin.'))}</p></div><div class="bl-panel"><div class="bl-card"><h3>${safe(tx('bet.title', null, 'Even-money bets'))}</h3><div class="bl-bets">${bets}</div></div><div class="bl-card"><h3>${safe(tx('stake.title', null, 'Stake'))}</h3><div class="bl-chips">${chips}</div></div><button class="bl-spin" data-testid="boule-spin" type="button" ${spinBusy ? 'disabled' : ''}>${safe(spinBusy ? tx('action.spinning', null, 'Spinning…') : tx('action.spin', null, 'Spin the boule'))}</button><button type="button" class="bl-repeat" data-action="repeat"${repeatDisabled ? ' disabled' : ''}>${safe(tx('controls.repeat', null, 'Repeat bet'))}</button></div></section>`;
   // Wire the even-money bet buttons.
   root.querySelectorAll('[data-bet]').forEach(btn => { btn.onclick = () => { selectedBet = { bet: btn.dataset.bet }; render(); }; });
   // Wire the straight-number cells.
@@ -85,6 +89,22 @@ function render(resultText) {
   const spinBtn = root.querySelector('[data-testid="boule-spin"]');
   // Attach the spin handler only when a spin is not already running.
   if (spinBtn) spinBtn.onclick = spin;
+  // Wire the one-click repeat that re-places the previous bet.
+  const repeatBtn = root.querySelector('[data-action="repeat"]');
+  // Attach the repeat handler so a settled bet can be replayed with one click.
+  if (repeatBtn) repeatBtn.onclick = repeat;
+}
+
+// Re-place the last settled bet and re-fire one spin without a timer.
+async function repeat() {
+  // Ignore repeat while a spin is resolving or before any settled bet exists.
+  if (spinBusy || !root || !lastBet) return;
+  // Restore the previous even-money family or straight-number selection.
+  selectedBet = lastBet.number === undefined ? { bet: lastBet.bet } : { bet: lastBet.bet, number: lastBet.number };
+  // Restore the previous stake.
+  stake = lastBet.stake;
+  // Re-fire the shared exactly-once spin with the restored bet.
+  await spin();
 }
 
 // Load session-bound state and render the first frame.
@@ -92,7 +112,11 @@ async function load() {
   // Read authoritative state so the render reflects the server, not client guesses.
   try {
     // Fetch the game state through the frozen v1 endpoint.
-    await api('/api/v1/games/boule/state');
+    const payload = await api('/api/v1/games/boule/state');
+    // Recover the repeatable bet from the newest settled round so repeat survives a reload.
+    const recovered = payload?.state?.recent_rounds?.[0]?.public?.wager;
+    // Restore the repeatable config only when a settled round is present.
+    if (recovered) lastBet = { ...recovered };
   } catch (err) {
     // Surface a load failure without breaking the shell.
     toast(tx('error.load', null, 'Could not load Boule.'), 'error');
@@ -118,6 +142,8 @@ async function spin() {
     await new Promise(resolve => setTimeout(resolve, DRAW_MS));
     // Reveal the authoritative drawn number.
     shownNumber = round.detail.number;
+    // Remember the authoritative settled bet config so one click can repeat it.
+    lastBet = { ...round.wager };
     // Refresh the shell wallet after settlement credits are applied.
     await refreshBalance();
     // Read whether the round paid.
@@ -148,6 +174,8 @@ export const BouleGame = {
   async mount(node) {
     // Store the current route outlet.
     root = node;
+    // Reset the repeatable bet so another session never inherits it before recovery.
+    lastBet = null;
     // Install game-owned styles.
     ensureStyles();
     // Load both locales through the game-owned lazy domain before visible render.
@@ -165,6 +193,8 @@ export const BouleGame = {
     localeUnsubscribe = null;
     // Clear the outlet so stale async work cannot repaint another route.
     root = null;
+    // Clear the repeatable bet so the next session starts fresh.
+    lastBet = null;
     // Reset the in-flight guard because teardown cancelled any presentation.
     spinBusy = false;
   },

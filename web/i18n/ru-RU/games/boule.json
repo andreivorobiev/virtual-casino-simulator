@@ -8,6 +8,7 @@
   "stake.title": "Ставка",
   "action.spin": "Крутить буль",
   "action.spinning": "Вращение…",
+  "controls.repeat": "Повторить ставку",
   "result.idle": "Выберите ставку и крутите.",
   "result.win": "Число {number} выигрывает!",
   "result.lose": "Число {number}.",

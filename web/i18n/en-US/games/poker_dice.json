@@ -9,6 +9,7 @@
   "stake.title": "Stake",
   "action.roll": "Roll the dice",
   "action.rolling": "Rolling…",
+  "controls.repeat": "Repeat bet",
   "result.idle": "Set a stake and roll the dice.",
   "result.win": "{hand}!",
   "result.lose": "No paying hand.",
