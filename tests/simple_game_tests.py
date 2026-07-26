@@ -71,6 +71,8 @@ class SimpleGameCoreTests(unittest.TestCase):
         result = _game(forced_face=3).play(self.pid, {"request_id": "r-win", "face": 3, "stake": 10})
         # Require the winning outcome and a 50-token return on a 10 stake at 5x.
         self.assertEqual((result["round"]["outcome"], result["round"]["total_return"]), ("win", 50))
+        # Require both wallet movements to use storage-enforced atomic action identities.
+        self.assertEqual((result["ledger"]["wager"]["details"]["ledger_action_key"], result["ledger"]["settlement"]["details"]["ledger_action_key"]), (f'{result["round"]["round_id"]}:wager', f'{result["round"]["round_id"]}:settlement'))
         # Require the wallet to reflect exactly minus-stake plus-return once.
         self.assertEqual(self._balance(), 1000.0 - 10 + 50)
 

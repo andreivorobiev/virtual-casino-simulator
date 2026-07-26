@@ -104,16 +104,29 @@ class _LedgerGateway:
                 return existing, True
             # Add action and fingerprint proof to the game-owned audit details.
             event_details = {**details, "idempotency_key": action_key, "request_fingerprint": request_fingerprint}
-            # Route a negative signed amount through the only approved debit service.
-            if amount < 0:
-                # Commit the aggregate wager debit with full player, game, and round dimensions.
-                event = ledger.debit(player_id, abs(amount), transaction_type, self.game_id, round_id, event_details)
-            # Route a positive signed amount through the only approved credit service.
-            else:
-                # Commit the aggregate settlement credit with the same dimensions.
-                event = ledger.credit(player_id, amount, transaction_type, self.game_id, round_id, event_details)
-            # Return the freshly committed event and explicit first-write evidence.
-            return event, False
+            # Start protected storage-enforced settlement so a concurrent process cannot double-spend.
+            try:
+                # Route a negative signed amount through the storage-atomic debit identity.
+                if amount < 0:
+                    # Commit or replay the aggregate wager debit across threads, processes, and providers.
+                    return ledger.debit_once(player_id, abs(amount), transaction_type, action_key, self.game_id, round_id, event_details)
+                # Route a positive signed amount through the storage-atomic credit identity.
+                # Commit or replay the aggregate settlement credit across threads, processes, and providers.
+                return ledger.credit_once(player_id, amount, transaction_type, action_key, self.game_id, round_id, event_details)
+            # Recover a same-request race whose losing caller proposed different tentative entropy.
+            except ConflictError:
+                # Re-read the winning process's immutable proof under the game-owned request fingerprint.
+                recovered = self.find(player_id=player_id, round_id=round_id, transaction_type=transaction_type, action_key=action_key, request_fingerprint=request_fingerprint)
+                # Re-raise a genuine semantic conflict when no compatible proof committed.
+                if recovered is None:
+                    # Preserve the storage provider's fail-closed conflict.
+                    raise
+                # Reject a recovered identity whose signed amount differs from this request.
+                if round(float(recovered.get("amount", 0)), 2) != round(float(amount), 2):
+                    # Fail closed because a raced identity cannot authorize another amount.
+                    raise ConflictError(f"{self.game_id} ledger action amount conflicts with committed proof")
+                # Return the compatible winning event as an explicit replay.
+                return recovered, True
 
 
 # Coordinate authenticated state, server entropy, and exactly-once ledger settlement for one game.
