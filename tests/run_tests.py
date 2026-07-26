@@ -1087,7 +1087,7 @@ def run_api_tests():
             # Preserve unittest detail while keeping the named failure text secret-safe.
             raise AssertionError('simple-game settlement core suite failed')
     # Record the listener-free exactly-once wager, replay, conflict, and crash-recovery proof.
-    run_case('API-GAMECORE-001',['GAMECORE-001','GAMECORE-002','TEST-114'],run_simple_game_core_tests)
+    run_case('API-GAMECORE-001',['GAMECORE-001','GAMECORE-002','TEST-127'],run_simple_game_core_tests)
     # Execute the Color Wheel rules and settlement proof without opening a listener.
     def run_color_wheel_tests():
         # Load only the focused Color Wheel class.
@@ -1100,7 +1100,7 @@ def run_api_tests():
             # Preserve unittest detail while keeping the named failure text secret-safe.
             raise AssertionError('color wheel suite failed')
     # Record the listener-free Color Wheel payout, retry, and house-edge proof.
-    run_case('API-COLOR-WHEEL-001',['CWHEEL-001','CWHEEL-002','TEST-115'],run_color_wheel_tests)
+    run_case('API-COLOR-WHEEL-001',['CWHEEL-001','CWHEEL-002','TEST-128'],run_color_wheel_tests)
     # Execute the Poker Dice rules and settlement proof without opening a listener.
     def run_poker_dice_tests():
         # Load only the focused Poker Dice class.
@@ -1113,7 +1113,7 @@ def run_api_tests():
             # Preserve unittest detail while keeping the named failure text secret-safe.
             raise AssertionError('poker dice suite failed')
     # Record the listener-free Poker Dice payout, retry, and house-edge proof.
-    run_case('API-POKER-DICE-001',['PDICE-001','PDICE-002','TEST-116'],run_poker_dice_tests)
+    run_case('API-POKER-DICE-001',['PDICE-001','PDICE-002','TEST-129'],run_poker_dice_tests)
     # Execute the Boule rules and settlement proof without opening a listener.
     def run_boule_tests():
         # Load only the focused Boule class.
@@ -1126,7 +1126,7 @@ def run_api_tests():
             # Preserve unittest detail while keeping the named failure text secret-safe.
             raise AssertionError('boule suite failed')
     # Record the listener-free Boule payout, house-number, retry, and house-edge proof.
-    run_case('API-BOULE-001',['BOULE-001','BOULE-002','TEST-117'],run_boule_tests)
+    run_case('API-BOULE-001',['BOULE-001','BOULE-002','TEST-130'],run_boule_tests)
     # Execute the Faro rules and settlement proof without opening a listener.
     def run_faro_tests():
         # Load only the focused Faro class.
@@ -1139,7 +1139,7 @@ def run_api_tests():
             # Preserve unittest detail while keeping the named failure text secret-safe.
             raise AssertionError('faro suite failed')
     # Record the listener-free Faro win, lose, push, split, retry, and house-edge proof.
-    run_case('API-FARO-001',['FARO-001','FARO-002','TEST-118'],run_faro_tests)
+    run_case('API-FARO-001',['FARO-001','FARO-002','TEST-131'],run_faro_tests)
     # Execute the Trente et Quarante rules and settlement proof without opening a listener.
     def run_trente_et_quarante_tests():
         # Load only the focused Trente et Quarante class.

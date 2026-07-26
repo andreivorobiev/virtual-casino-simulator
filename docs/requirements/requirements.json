@@ -10677,7 +10677,7 @@
       "notes": "Introduced for the game-catalog expansion (#73). The crash-recovery guarantee is proven by wiping per-player state mid-round and confirming settlement recovers from committed ledger proof without a second wallet movement."
     },
     {
-      "id": "TEST-114",
+      "id": "TEST-127",
       "module": "Tests",
       "description": "Listener-free evidence verifies the shared simple-game settlement core: winning and losing rounds settle exactly once with correct balances, a retried request replays without double-spending, a request id reused with different content fails closed, settlement recovers deterministically from committed ledger proof after total per-player state loss, invalid wagers and missing request ids are rejected before any wallet movement, and the deterministic round id is stable and game-scoped.",
       "status": "PASS",
@@ -11162,7 +11162,7 @@
       "notes": "Allocated for GitHub issue #141."
     },
     {
-      "id": "TEST-115",
+      "id": "TEST-128",
       "module": "Tests",
       "description": "Listener-free evidence verifies Color Wheel: a matching colour pays its multiplier, a non-matching colour loses the stake, the gold segment pays its jackpot multiplier, unknown colours and malformed stakes are rejected before any wallet movement, a retried spin replays without double-spending, every colour payout is confirmed house-positive, and the published bet catalog matches the real segment layout and multipliers.",
       "status": "PASS",
@@ -11179,7 +11179,7 @@
       "notes": "Allocated for GitHub issue #152."
     },
     {
-      "id": "TEST-116",
+      "id": "TEST-129",
       "module": "Tests",
       "description": "Listener-free evidence verifies Poker Dice: each paying hand category pays its exact multiplier, two pair and weaker hands lose the stake, non-integer, non-positive, and out-of-range stakes are rejected before any wallet movement, a retried roll replays without double-spending, the paytable is confirmed house-positive over all 7776 equally likely rolls, and the published paytable matches the real payout table.",
       "status": "PASS",
@@ -11196,7 +11196,7 @@
       "notes": "Allocated for GitHub issue #151."
     },
     {
-      "id": "TEST-117",
+      "id": "TEST-130",
       "module": "Tests",
       "description": "Listener-free evidence verifies Boule: a covered even-money bet pays two times the stake, the house number five loses every even-money bet and is flagged, a straight single-number bet pays eight times the stake including on five, a straight bet on a non-matching number loses, unknown bet families, out-of-range numbers, and malformed stakes are rejected before any wallet movement, a retried spin replays without double-spending, and every bet is confirmed house-positive across all nine numbers.",
       "status": "PASS",
@@ -11213,7 +11213,7 @@
       "notes": "Allocated for GitHub issue #148."
     },
     {
-      "id": "TEST-118",
+      "id": "TEST-131",
       "module": "Tests",
       "description": "Listener-free evidence verifies Faro: a matching player card wins even money, a matching banker card loses the stake, neither matching returns the stake as a push, both cards sharing the chosen rank take half the stake as a split, out-of-range ranks and malformed stakes are rejected before any wallet movement, a retried deal replays without double-spending, and the paytable is confirmed house-positive over all 2652 equally likely two-card deals.",
       "status": "PASS",

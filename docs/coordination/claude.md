@@ -8,10 +8,10 @@ The entire simple-RNG wave is done on `claude/game-catalog-expansion`, each brow
 paths), all six validators green, zero data/ leakage. All ride the shared `casino/core/simple_game.py`
 core with only pure per-game rules:
 
-1. Color Wheel (#152) — CWHEEL-001/002, TEST-115
-2. Poker Dice (#151) — PDICE-001/002, TEST-116
-3. Boule (#148) — BOULE-001/002, TEST-117
-4. Faro (#146) — FARO-001/002, TEST-118
+1. Color Wheel (#152) — CWHEEL-001/002, TEST-128
+2. Poker Dice (#151) — PDICE-001/002, TEST-129
+3. Boule (#148) — BOULE-001/002, TEST-130
+4. Faro (#146) — FARO-001/002, TEST-131
 5. Trente et Quarante (#147) — TEQ-001/002, TEST-119
 6. Pachinko (#142) — PACH-001/002, TEST-120
 7. Coin Pusher (#156) — COINP-001/002, TEST-121
