@@ -1313,6 +1313,20 @@ def run_api_tests():
             raise AssertionError('keno ball-rail layout suite failed')
     # Record the listener-free Keno drawn-ball rail overflow regression proof.
     run_case('UI-KENO-BALL-RAIL-001',['KENO-026','TEST-113'],run_keno_ball_rail_tests)
+    # Execute the production Admin label rules, EN/RU resources, and surface wiring without opening a listener or browser.
+    def run_admin_ledger_label_tests():
+        # Import the focused listener-free suite only when its mapped case runs.
+        from tests import admin_ledger_label_tests
+        # Load exactly the production-rule, resource-parity, and renderer-wiring assertions.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(admin_ledger_label_tests.AdminLedgerLabelTests)
+        # Execute the dependency-free suite with concise standard output.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the mapped central case when any focused assertion failed or errored.
+        if not result.wasSuccessful():
+            # Keep the named failure stable while unittest retains assertion detail.
+            raise AssertionError('Admin ledger label suite failed')
+    # Record the listener-free enum normalization, locale-resource, fallback, and surface-wiring proof.
+    run_case('UI-ADMIN-LEDGER-LABELS-001',['ADMIN-027','TEST-132'],run_admin_ledger_label_tests)
     # Execute the complete disabled passwordless magic-link proof without opening a listener.
     def run_magic_link_tests():
         # Load only the focused magic-link class.
@@ -7766,6 +7780,46 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         assert module_table.locator('tr').filter(has_text=expected['module']).filter(has_text=expected['revision']).count()==1
                 # Execute the mapped Admin dashboard and packaged-release browser regression.
                 run_case('BR-ADMIN-001',['ADMIN-001','ADMIN-003','ADMIN-004','ADMIN-010','ADMIN-014','TEST-023'],admin_dashboard_browser)
+                # Define the localized Admin ledger-label and responsive evidence regression. (issue #74)
+                def admin_ledger_labels_browser():
+                    # Store the exact governed Admin viewports required by the visual matrix.
+                    admin_ledger_viewports={'desktop_primary':{'width':1920,'height':1080},'desktop_compact':{'width':1440,'height':900},'tablet':{'width':1024,'height':900},'mobile':{'width':390,'height':844}}
+                    # Exercise both installed Admin locales independently.
+                    for admin_ledger_locale in ('en-US','ru-RU'):
+                        # Switch the shared runtime and let the active tab rerender in the requested locale.
+                        page.evaluate("async locale => { const i18n=await import('/core/i18n.js'); await i18n.setLocale(locale,{persistLocal:false}); }",admin_ledger_locale)
+                        # Inspect Dashboard and full Ledger at every governed viewport.
+                        for admin_ledger_viewport_id,admin_ledger_viewport in admin_ledger_viewports.items():
+                            # Apply exact visual-matrix geometry before rendering either ledger surface.
+                            page.set_viewport_size(admin_ledger_viewport)
+                            # Open Dashboard and wait for at least one real ledger event from the preceding browser actions.
+                            page.locator('[data-tab="dashboard"]').click(); page.locator('[data-testid="admin-ledger-event"]').first.wait_for(timeout=5000)
+                            # Read every visible localized Dashboard action label.
+                            dashboard_labels=page.locator('[data-testid="admin-ledger-event"]').all_inner_texts()
+                            # Require readable labels with no raw enum separators or source-style all-caps action phrase.
+                            assert dashboard_labels and all('_' not in label and not label.replace('·','').replace(' ','').isupper() for label in dashboard_labels),(admin_ledger_locale,admin_ledger_viewport_id,dashboard_labels)
+                            # Require Russian action copy to contain Cyrillic rather than English fallback labels.
+                            if admin_ledger_locale=='ru-RU': assert all(re.search(r'[А-Яа-яЁё]',label) for label in dashboard_labels),(admin_ledger_viewport_id,dashboard_labels)
+                            # Require the complete page to remain contained at the changed Dashboard table.
+                            assert page.evaluate("() => document.documentElement.scrollWidth <= window.innerWidth + 1"),(admin_ledger_locale,admin_ledger_viewport_id,'dashboard')
+                            # Capture exact-head Dashboard label evidence for human EN/RU review.
+                            game_evidence(f'after-pass-admin-ledger-dashboard-{admin_ledger_locale}-{admin_ledger_viewport_id}.png','admin',['dashboard'],admin_ledger_locale,admin_ledger_viewport_id)
+                            # Open the complete Ledger and wait for its independently rendered localized action cells.
+                            page.locator('[data-tab="ledger"]').click(); page.locator('[data-testid="admin-ledger-event"]').first.wait_for(timeout=5000)
+                            # Read every visible localized full-ledger action label.
+                            ledger_labels=page.locator('[data-testid="admin-ledger-event"]').all_inner_texts()
+                            # Require the full audit surface to enforce the same raw-enum and casing boundary.
+                            assert ledger_labels and all('_' not in label and not label.replace('·','').replace(' ','').isupper() for label in ledger_labels),(admin_ledger_locale,admin_ledger_viewport_id,ledger_labels)
+                            # Require Russian full-ledger actions to remain locale-backed.
+                            if admin_ledger_locale=='ru-RU': assert all(re.search(r'[А-Яа-яЁё]',label) for label in ledger_labels),(admin_ledger_viewport_id,ledger_labels)
+                            # Require the changed full Ledger page to remain contained at every governed viewport.
+                            assert page.evaluate("() => document.documentElement.scrollWidth <= window.innerWidth + 1"),(admin_ledger_locale,admin_ledger_viewport_id,'ledger')
+                            # Capture exact-head full Ledger evidence for human EN/RU review.
+                            game_evidence(f'after-pass-admin-ledger-full-{admin_ledger_locale}-{admin_ledger_viewport_id}.png','admin',['ledger'],admin_ledger_locale,admin_ledger_viewport_id)
+                    # Restore the suite's default Admin locale, viewport, and Dashboard state.
+                    page.set_viewport_size({'width':1920,'height':1080}); page.evaluate("async () => { const i18n=await import('/core/i18n.js'); await i18n.setLocale('en-US',{persistLocal:false}); }"); page.locator('[data-tab="dashboard"]').click()
+                # Execute the exact-head localized Admin event-label and sixteen-image acceptance case.
+                run_case('BR-ADMIN-LEDGER-LABELS-001',['ADMIN-027','TEST-132'],admin_ledger_labels_browser)
                 # Define Admin inbox, evidence, triage, manual draft, export, and responsive acceptance. (issue #349)
                 def admin_feedback_browser():
                     # Open the dedicated Admin feedback surface and wait for its attachment-free list.

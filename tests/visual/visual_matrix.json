@@ -709,6 +709,7 @@
       "selector": "#admin.admin-shell",
       "states": [
         "dashboard",
+        "ledger",
         "players_and_bots",
         "users",
         "users_account_role_status",
