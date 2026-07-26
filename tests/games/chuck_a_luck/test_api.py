@@ -61,10 +61,14 @@ class ChuckALuckApiTests(unittest.TestCase):
         body = {"player_id": "spoofed-player", "request_id": "api-1", "wagers": {"one": 5}}
         # Dispatch through the real shared session resolver and isolated route.
         result = self.router.dispatch("POST", "/api/v1/games/chuck-a-luck/rolls", body, context=self.context)
-        # Require the shared router to replace the untrusted compatibility field.
-        self.assertEqual("session-player", body["player_id"])
-        # Require the service to receive the bound identity and full action payload.
-        self.assertEqual(("session-player", body), self.service.roll_calls[0])
+        # Read the identity and sanitized payload the shared router actually handed the service.
+        bound_player, received_body = self.service.roll_calls[0]
+        # Require the router to bind the service call to the session player, not the spoofed compatibility field.
+        self.assertEqual("session-player", bound_player)
+        # Require the sanitized service payload to carry the bound identity in place of the spoof.
+        self.assertEqual("session-player", received_body["player_id"])
+        # Require the full retry-safe wager body to survive sanitization intact.
+        self.assertEqual(({"one": 5}, "api-1"), (received_body["wagers"], received_body["request_id"]))
         # Require raw settled data rather than a nested game-owned envelope.
         self.assertEqual("settled", result["round"]["status"])
 
