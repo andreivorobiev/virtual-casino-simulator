@@ -91,19 +91,19 @@ function ensureCardStyles() {
 const GAME_CSS = [
   '.dragon-tiger{display:grid;gap:14px;min-width:0}', // Establish one stable route surface.
   '.dt-header{display:flex;align-items:end;justify-content:space-between;gap:14px}.dt-header h1{margin:0}', // Keep title and phase compact.
-  '.dt-phase{min-height:38px;padding:8px 12px;border:1px solid rgba(255,215,128,.45);border-radius:999px}', // Reserve status space.
+  '.dt-phase{min-height:38px;padding:8px 12px;border:1px solid var(--gold);border-radius:999px}', // Reserve status space.
   '.dt-layout{display:grid;grid-template-columns:minmax(220px,.72fr) minmax(520px,2.25fr) minmax(230px,.72fr);gap:16px;align-items:start}', // Make the stage wider than both rails.
-  '.dt-panel{min-width:0;padding:16px;border:1px solid rgba(255,215,128,.25);border-radius:16px;background:rgba(3,29,20,.86)}', // Distinguish each zone.
+  '.dt-panel{min-width:0;padding:16px;border:1px solid var(--border);border-radius:16px;background:rgba(20,10,34,.86)}', // Distinguish each zone.
   '.dt-controls,.dt-data{display:grid;align-content:start;gap:12px}.dt-bets{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}', // Organize control and data rails.
-  '.dt-bet,.dt-deal{min-height:46px}.dt-bet.is-selected{outline:3px solid #ffd780;outline-offset:2px}.dt-deal{background:#a51f2d;color:#fff}', // Preserve touch size and non-color selection.
-  '.dt-stage{display:grid;gap:18px;min-height:430px;background:radial-gradient(circle at 50% 45%,rgba(22,112,72,.5),rgba(3,28,19,.96) 70%)}', // Provide a dominant table stage.
+  '.dt-bet,.dt-deal{min-height:46px}.dt-bet.is-selected{outline:3px solid var(--gold);outline-offset:2px}.dt-deal{background:#a51f2d;color:#fff}', // Preserve touch size and non-color selection.
+  '.dt-stage{display:grid;gap:18px;min-height:430px;background:radial-gradient(circle at 50% 45%,rgba(35,17,61,.5),rgba(21,10,36,.96) 70%)}', // Provide a dominant table stage.
   '.dt-stage-head{display:flex;align-items:start;justify-content:space-between;gap:12px}.dt-stage-head h2{margin:0}', // Keep result and bet context aligned.
   '.dt-hands{display:grid;grid-template-columns:1fr 1fr;gap:clamp(18px,5vw,70px);align-items:center;min-height:250px}', // Balance both card sides.
   '.dt-hand{display:grid;justify-items:center;gap:12px;padding:18px;border:1px solid rgba(255,255,255,.14);border-radius:14px}.dt-hand h3{margin:0}', // Give each side a labeled card bay.
   '.dt-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.dt-stat{padding:10px;border-radius:10px;background:rgba(0,0,0,.2)}.dt-stat span{display:block;color:var(--muted,#b8c8c1);font-size:.78rem}', // Align wager results.
   '.dt-history{display:grid;gap:8px}.dt-history-row{display:grid;grid-template-columns:1fr auto;gap:5px;padding:9px;border-radius:9px;background:rgba(0,0,0,.18)}.dt-history-row small{display:block}', // Keep bounded history readable.
   '.dt-muted{color:var(--muted,#b8c8c1)}.dt-selected{display:block;font-size:.72rem}', // Style secondary localized copy.
-  '.dragon-tiger button:focus-visible,.dragon-tiger input:focus-visible{outline:3px solid #ffd780;outline-offset:2px}', // Preserve keyboard focus.
+  '.dragon-tiger button:focus-visible,.dragon-tiger input:focus-visible{outline:3px solid var(--gold);outline-offset:2px}', // Preserve keyboard focus.
   '@media(max-width:1200px){.dt-layout{grid-template-columns:1fr}.dt-controls{order:1}.dt-stage{order:2}.dt-data{order:3}.dt-stage{min-height:auto}}', // Stack control, stage, then data.
   '@media(max-width:520px){.dt-header{align-items:start;flex-direction:column}.dt-panel{padding:12px}.dt-hands,.dt-summary{grid-template-columns:1fr}.dt-bets{grid-template-columns:1fr}.dt-stage{min-height:0}}', // Prevent mobile clipping.
   '@media(prefers-reduced-motion:reduce){.dragon-tiger *{animation:none!important;scroll-behavior:auto!important;transition:none!important}}', // Remove decorative motion.

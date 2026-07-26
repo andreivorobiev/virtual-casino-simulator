@@ -31,28 +31,28 @@ const ROUTE_CSS = [
   '.craps-header{display:flex;align-items:end;justify-content:space-between;gap:16px;min-width:0;padding:2px;}', // Place title and actionable phase in the first hierarchy level.
   '.craps-header h1{margin:0;color:var(--gold,#ffd978);font-family:var(--font-display);font-size:clamp(34px,4vw,54px);line-height:1;}', // Give the game a strong localized title without consuming stage height.
   '.craps-header p{max-width:760px;margin:5px 0 0;color:var(--muted,#b8c8c1);}', // Keep the localized explanation subordinate to the title.
-  '.craps-eyebrow{color:#fff2c2!important;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.09em;}', // Present the table family as a restrained casino eyebrow.
-  '.craps-phase{flex:0 0 auto;padding:8px 13px;border:1px solid rgba(255,217,120,.45);border-radius:999px;background:rgba(4,27,19,.92);color:#fff2c2;font-weight:900;}', // Reserve a stable concise phase chip across every round state.
+  '.craps-eyebrow{color:var(--gold)!important;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.09em;}', // Present the table family as a restrained casino eyebrow.
+  '.craps-phase{flex:0 0 auto;padding:8px 13px;border:1px solid var(--gold);border-radius:999px;background:var(--panel-strong);color:var(--gold);font-weight:900;}', // Reserve a stable concise phase chip across every round state.
   '.craps-layout{grid-template-columns:minmax(225px,.68fr) minmax(620px,2.55fr) minmax(245px,.74fr);gap:14px;}', // Keep the felt wider and visually stronger than both support rails combined.
   '.craps-control,.craps-data{display:grid;align-content:start;gap:13px;padding:15px;}', // Separate controls and data into clear subordinate rail regions.
-  '.craps-control h2,.craps-data h2,.craps-data h3{margin:0;color:#ffe7a6;}', // Give every support region an explicit readable heading.
+  '.craps-control h2,.craps-data h2,.craps-data h3{margin:0;color:var(--gold);}', // Give every support region an explicit readable heading.
   '.craps-field{display:grid;gap:6px;min-width:0;}', // Keep labels visibly connected to their semantic fields.
   '.craps-field span{color:var(--muted,#b8c8c1);font-size:12px;font-weight:900;}', // Present configuration labels without debug-tool styling.
   '.craps-field input,.craps-field select{width:100%;min-width:0;min-height:42px;}', // Preserve governed keyboard and touch target dimensions.
-  '.craps-primary{width:100%;min-height:48px;border-color:#e5b74f;background:linear-gradient(180deg,#c72b38,#861620);color:#fff;font-weight:1000;}', // Use the governed red treatment for the one primary action.
+  '.craps-primary{width:100%;min-height:48px;border-color:var(--gold);background:linear-gradient(180deg,#c72b38,#861620);color:#fff;font-weight:1000;}', // Use the governed red treatment for the one primary action.
   '.craps-primary:disabled{opacity:.62;cursor:not-allowed;}', // Keep disabled controls readable while the phase explains why.
   '.craps-retry-hint,.craps-rule-list{margin:0;color:var(--muted,#b8c8c1);font-size:12px;}', // Keep retry and rules guidance present but visually secondary.
-  '.craps-error{min-height:38px;margin:0;color:#ffbcbc;}', // Reserve error space so failures never resize the stage.
-  '.craps-stage{display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:14px;padding:15px;overflow:hidden;background:radial-gradient(circle at 50% 45%,rgba(37,128,82,.38),transparent 58%),linear-gradient(155deg,#073d29,#031b13);}', // Make the code-native felt the dominant game surface.
+  '.craps-error{min-height:38px;margin:0;color:var(--bad);}', // Reserve error space so failures never resize the stage.
+  '.craps-stage{display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:14px;padding:15px;overflow:hidden;background:radial-gradient(circle at 50% 45%,rgba(20,10,34,.38),transparent 58%),linear-gradient(155deg,var(--felt),var(--bg));}', // Make the code-native felt the dominant game surface.
   '.craps-stage-head{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:48px;}', // Keep table identity and point puck stable above the dice.
-  '.craps-stage-head h2{margin:0;color:#fff0b8;font-family:var(--font-display);font-size:30px;}', // Emphasize the localized table label within the dominant stage.
-  '.craps-point{min-width:112px;padding:9px 12px;border:2px solid #efe8d8;border-radius:999px;background:#131816;color:#fff;text-align:center;font-weight:1000;}', // Use a text-bearing puck so point state never depends on color alone.
+  '.craps-stage-head h2{margin:0;color:var(--gold);font-family:var(--font-display);font-size:30px;}', // Emphasize the localized table label within the dominant stage.
+  '.craps-point{min-width:112px;padding:9px 12px;border:2px solid #efe8d8;border-radius:999px;background:var(--felt);color:#fff;text-align:center;font-weight:1000;}', // Use a text-bearing puck so point state never depends on color alone.
   '.craps-point.is-on{background:#f1e8d0;color:#16120b;box-shadow:0 0 24px rgba(255,230,160,.34);}', // Reinforce an active point while preserving its visible text.
-  '.craps-felt{position:relative;display:grid;grid-template-rows:auto minmax(190px,1fr);gap:18px;min-height:420px;padding:24px;border:2px solid rgba(255,217,120,.58);border-radius:22px;background:linear-gradient(145deg,rgba(17,105,69,.94),rgba(5,55,36,.98));box-shadow:inset 0 0 70px rgba(0,0,0,.24);}', // Build one complete responsive table without a nested scroll surface.
+  '.craps-felt{position:relative;display:grid;grid-template-rows:auto minmax(190px,1fr);gap:18px;min-height:420px;padding:24px;border:2px solid var(--gold);border-radius:22px;background:linear-gradient(145deg,var(--felt2),var(--felt));box-shadow:inset 0 0 70px rgba(0,0,0,.24);}', // Build one complete responsive table without a nested scroll surface.
   '.craps-bet-zones{display:grid;grid-template-columns:1fr 1fr;gap:13px;}', // Keep the two supported contract bets equally discoverable.
-  '.craps-bet-zone{display:grid;place-items:center;min-height:86px;padding:12px;border:2px solid rgba(255,255,255,.22);border-radius:14px;color:#fff4d5;font-weight:1000;text-align:center;}', // Present wager areas as table furniture rather than raw fields.
-  '.craps-bet-zone.is-selected{border-color:#ffe18a;outline:3px solid rgba(255,225,138,.28);outline-offset:2px;background:rgba(255,217,120,.13);}', // Show the active wager with outline and text beyond color alone.
-  '.craps-zone-marker{display:block;margin-top:5px;color:#fff7d8;font-size:11px;font-weight:800;}', // Add a readable active-wager marker for non-color selection evidence.
+  '.craps-bet-zone{display:grid;place-items:center;min-height:86px;padding:12px;border:2px solid rgba(255,255,255,.22);border-radius:14px;color:var(--text);font-weight:1000;text-align:center;}', // Present wager areas as table furniture rather than raw fields.
+  '.craps-bet-zone.is-selected{border-color:var(--gold);outline:3px solid var(--border);outline-offset:2px;background:rgba(255,217,120,.13);}', // Show the active wager with outline and text beyond color alone.
+  '.craps-zone-marker{display:block;margin-top:5px;color:var(--muted);font-size:11px;font-weight:800;}', // Add a readable active-wager marker for non-color selection evidence.
   '.craps-dice-bay{display:grid;place-items:center;align-content:center;gap:14px;min-height:220px;border:1px solid rgba(255,255,255,.15);border-radius:18px;background:rgba(0,0,0,.16);}', // Reserve a fixed dice area through ready, rolling, and settled phases.
   '.craps-dice{display:flex;justify-content:center;gap:22px;min-height:112px;}', // Keep the authoritative pair centered and stable.
   '.craps-die{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);width:104px;height:104px;padding:14px;border:3px solid #f3e9d2;border-radius:18px;background:linear-gradient(145deg,#fffdf5,#dbcda9);box-shadow:0 16px 28px rgba(0,0,0,.38);}', // Draw reliable dice through CSS and semantic markup.
@@ -61,8 +61,8 @@ const ROUTE_CSS = [
   '.craps-pip{align-self:center;justify-self:center;width:16px;height:16px;border-radius:50%;background:#16130f;box-shadow:inset 0 2px 2px rgba(255,255,255,.18);}', // Render each pip as a code-native circle.
   '.craps-pip.tl{grid-area:1/1}.craps-pip.tc{grid-area:1/2}.craps-pip.tr{grid-area:1/3}.craps-pip.ml{grid-area:2/1}.craps-pip.mc{grid-area:2/2}.craps-pip.mr{grid-area:2/3}.craps-pip.bl{grid-area:3/1}.craps-pip.bc{grid-area:3/2}.craps-pip.br{grid-area:3/3}', // Map named pip positions onto the die grid.
   '.craps-result{display:grid;place-items:center;gap:5px;min-height:74px;text-align:center;}', // Reserve one polite live result region without shifting the felt.
-  '.craps-result strong{color:#fff0b8;font-size:22px;}', // Make the actionable result immediately scannable.
-  '.craps-settlement{display:grid;gap:4px;min-height:74px;padding:12px;border:1px solid rgba(255,217,120,.28);border-radius:14px;background:rgba(0,0,0,.18);}', // Keep the lower result summary fixed across phase changes.
+  '.craps-result strong{color:var(--gold);font-size:22px;}', // Make the actionable result immediately scannable.
+  '.craps-settlement{display:grid;gap:4px;min-height:74px;padding:12px;border:1px solid var(--border);border-radius:14px;background:rgba(0,0,0,.18);}', // Keep the lower result summary fixed across phase changes.
   '.craps-data-section{display:grid;gap:9px;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,.1);}', // Separate current wager, history, and rules without nested panels.
   '.craps-data-section:last-child{padding-bottom:0;border-bottom:0;}', // Avoid an unnecessary terminal divider.
   '.craps-metrics{display:grid;gap:7px;}', // Align current wager values in predictable rows.
@@ -71,7 +71,7 @@ const ROUTE_CSS = [
   '.craps-history{display:grid;gap:2px;}', // Let the parent data rail own all intentional scrolling.
   '.craps-history-row span small{display:block;margin-top:3px;color:var(--muted,#b8c8c1);}', // Keep wager detail subordinate to the localized outcome.
   '.craps-rule-list{display:grid;gap:8px;padding-left:18px;}', // Present the compact game rule summary as readable prose.
-  '.craps-shell button:focus-visible,.craps-shell input:focus-visible,.craps-shell select:focus-visible,.craps-control:focus-visible,.craps-data:focus-visible{outline:3px solid #ffd978;outline-offset:2px;}', // Preserve clear keyboard focus on controls and scroll rails.
+  '.craps-shell button:focus-visible,.craps-shell input:focus-visible,.craps-shell select:focus-visible,.craps-control:focus-visible,.craps-data:focus-visible{outline:3px solid var(--gold);outline-offset:2px;}', // Preserve clear keyboard focus on controls and scroll rails.
   '@keyframes crapsDieTumble{0%{opacity:.62;transform:rotate(-7deg) scale(.92)}100%{opacity:1;transform:rotate(0) scale(1)}}', // Animate only transform and opacity to avoid layout movement.
   '@media(max-width:1200px){.craps-shell{height:auto}.craps-layout{grid-template-columns:1fr;grid-template-rows:auto;height:auto;overflow:visible;contain:none}.craps-control{order:1}.craps-stage{order:2;min-height:620px}.craps-data{order:3}.craps-control,.craps-data{overflow:visible}}', // Switch to document scrolling in the governed control-stage-data order.
   '@media(max-width:560px){.craps-header{align-items:start;flex-direction:column}.craps-layout{gap:12px}.craps-stage,.craps-control,.craps-data{padding:12px}.craps-felt{min-height:390px;padding:14px}.craps-bet-zones{grid-template-columns:1fr}.craps-die{width:82px;height:82px;padding:11px}.craps-pip{width:12px;height:12px}.craps-dice{gap:13px}.craps-stage-head{align-items:start;flex-direction:column}}', // Fit all essential controls and dice inside the required mobile viewport.
