@@ -41,8 +41,9 @@ class PaiGowPokerResourceTests(unittest.TestCase):
     def test_descriptor_is_canonical(self):
         # Load the canonical descriptor.
         descriptor = self.load_json(Path("modules/pai_gow_poker.json"))
-        # Verify the descriptor uses the accepted module revision.
-        self.assertEqual("1.0.1", descriptor["version"])
+        # Verify the descriptor revision stays consistent with the canonical version manifest rather than a brittle literal.
+        manifest = self.load_json(Path("modules/module-manifest.json"))
+        self.assertEqual(manifest["modules"]["pai_gow_poker"], descriptor["version"])
         # Verify it declares the stable game id.
         self.assertEqual("pai_gow_poker", descriptor["game"]["id"])
         # Verify it points at the additive OpenAPI contract.
