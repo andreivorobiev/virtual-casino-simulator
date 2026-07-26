@@ -27,6 +27,8 @@ let drawBusy = false;
 let localeUnsubscribe = null;
 // Retain the last settled draw so a repaint keeps showing drawn numbers and hits.
 let shownDraw = null;
+// Retain the last committed picks and stake so one click can repeat the same draw.
+let lastBet = null;
 
 // Translate one game-domain key with an optional fallback.
 const tx = (key, params, fallback) => t(key, params || {}, 'games/daily_draw_lab') || fallback || key;
@@ -40,7 +42,7 @@ function ensureStyles() {
   // Tag the element so repeated mounts detect and reuse it.
   style.id = STYLE_ID;
   // Render only route-local selectors so no shared class is affected.
-  style.textContent = '.daily{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;width:100%;min-width:0;min-height:100%;color:var(--text,#f5ead6);align-items:start;} .dd-stage{display:grid;justify-items:center;gap:12px;padding:12px;min-width:0;} .dd-board{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;width:min(420px,86vw);} .dd-num{aspect-ratio:1;border-radius:10px;background:rgba(255,255,255,.06);border:2px solid rgba(255,255,255,.1);color:#f5ead6;font-weight:900;font-size:14px;cursor:pointer;display:grid;place-items:center;} .dd-num[aria-pressed="true"]{border-color:#fff2c2;background:rgba(231,189,88,.16);color:#fff2c2;} .dd-num.drawn{background:rgba(61,122,214,.35);border-color:#7bb0ff;} .dd-num.hit{background:radial-gradient(circle at 40% 34%,#bff0cf,#0f9c4c);color:#052312;border-color:#fff2c2;} .dd-panel{display:grid;gap:12px;min-width:0;} .dd-card{padding:14px;border:1px solid rgba(255,217,120,.42);border-radius:16px;background:rgba(0,0,0,.22);} .dd-card h3{margin:0 0 10px;color:#e7bc52;text-transform:uppercase;font-size:12px;letter-spacing:.08em;} .dd-pays{display:grid;gap:4px;font-size:12px;font-weight:700;} .dd-pays div{display:flex;justify-content:space-between;} .dd-pays span:last-child{color:#f2d77d;} .dd-chips{display:flex;flex-wrap:wrap;gap:8px;} .dd-chip{min-width:44px;min-height:40px;padding:0 10px;border:1px solid var(--border-soft,rgba(255,255,255,.18));border-radius:10px;background:rgba(255,255,255,.05);color:#f5ead6;font-weight:900;cursor:pointer;} .dd-chip[aria-pressed="true"]{border-color:#e7bd58;background:rgba(231,189,88,.16);color:#fff2c2;} .dd-go{width:100%;min-height:48px;border:none;border-radius:14px;background:linear-gradient(180deg,#3d7ad6,#1f4a8c);color:#fff;font-weight:900;font-size:16px;cursor:pointer;} .dd-go:disabled{opacity:.55;cursor:not-allowed;} .dd-result{min-height:24px;font-size:15px;color:#fff2c2;text-align:center;} .dd-result .net{font-weight:900;} @media (max-width:900px){.daily{grid-template-columns:1fr;}}';
+  style.textContent = '.daily{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;width:100%;min-width:0;min-height:100%;color:var(--text,#f5ead6);align-items:start;} .dd-stage{display:grid;justify-items:center;gap:12px;padding:12px;min-width:0;} .dd-board{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;width:min(420px,86vw);} .dd-num{aspect-ratio:1;border-radius:10px;background:rgba(255,255,255,.06);border:2px solid rgba(255,255,255,.1);color:#f5ead6;font-weight:900;font-size:14px;cursor:pointer;display:grid;place-items:center;} .dd-num[aria-pressed="true"]{border-color:#fff2c2;background:rgba(231,189,88,.16);color:#fff2c2;} .dd-num.drawn{background:rgba(61,122,214,.35);border-color:#7bb0ff;} .dd-num.hit{background:radial-gradient(circle at 40% 34%,#bff0cf,#0f9c4c);color:#052312;border-color:#fff2c2;} .dd-panel{display:grid;gap:12px;min-width:0;} .dd-card{padding:14px;border:1px solid rgba(255,217,120,.42);border-radius:16px;background:rgba(0,0,0,.22);} .dd-card h3{margin:0 0 10px;color:#e7bc52;text-transform:uppercase;font-size:12px;letter-spacing:.08em;} .dd-pays{display:grid;gap:4px;font-size:12px;font-weight:700;} .dd-pays div{display:flex;justify-content:space-between;} .dd-pays span:last-child{color:#f2d77d;} .dd-chips{display:flex;flex-wrap:wrap;gap:8px;} .dd-chip{min-width:44px;min-height:40px;padding:0 10px;border:1px solid var(--border-soft,rgba(255,255,255,.18));border-radius:10px;background:rgba(255,255,255,.05);color:#f5ead6;font-weight:900;cursor:pointer;} .dd-chip[aria-pressed="true"]{border-color:#e7bd58;background:rgba(231,189,88,.16);color:#fff2c2;} .dd-go{width:100%;min-height:48px;border:none;border-radius:14px;background:linear-gradient(180deg,#3d7ad6,#1f4a8c);color:#fff;font-weight:900;font-size:16px;cursor:pointer;} .dd-go:disabled{opacity:.55;cursor:not-allowed;} .dd-repeat{width:100%;min-height:46px;border:1px solid rgba(255,217,120,.55);border-radius:14px;background:transparent;color:#ffd780;font-weight:900;cursor:pointer;} .dd-repeat:disabled{opacity:.5;cursor:not-allowed;} .dd-result{min-height:24px;font-size:15px;color:#fff2c2;text-align:center;} .dd-result .net{font-weight:900;} @media (max-width:900px){.daily{grid-template-columns:1fr;}}';
   // Attach the game-owned styles to the document head.
   document.head.appendChild(style);
 }
@@ -92,7 +94,7 @@ function render(resultText) {
   // Report the mark hint.
   const hint = tx('pick.hint', { count: picks.length }, `Marked ${picks.length}/5`);
   // Paint the whole route.
-  root.innerHTML = `<section class="daily" data-testid="daily-draw-lab"><div class="dd-stage"><div class="dd-board" data-testid="daily-draw-lab-board">${nums}</div><p class="dd-result" data-testid="daily-draw-lab-result" role="status">${resultText || safe(hint)}</p></div><div class="dd-panel"><div class="dd-card"><h3>${safe(tx('pay.title', null, 'Payouts'))}</h3><div class="dd-pays">${paytableRows()}</div></div><div class="dd-card"><h3>${safe(tx('stake.title', null, 'Stake'))}</h3><div class="dd-chips">${chips}</div></div><button class="dd-go" data-testid="daily-draw-lab-go" type="button" ${drawBusy || picks.length < 1 ? 'disabled' : ''}>${safe(drawBusy ? tx('action.drawing', null, 'Drawing…') : tx('action.draw', null, 'Run the draw'))}</button></div></section>`;
+  root.innerHTML = `<section class="daily" data-testid="daily-draw-lab"><div class="dd-stage"><div class="dd-board" data-testid="daily-draw-lab-board">${nums}</div><p class="dd-result" data-testid="daily-draw-lab-result" role="status">${resultText || safe(hint)}</p></div><div class="dd-panel"><div class="dd-card"><h3>${safe(tx('pay.title', null, 'Payouts'))}</h3><div class="dd-pays">${paytableRows()}</div></div><div class="dd-card"><h3>${safe(tx('stake.title', null, 'Stake'))}</h3><div class="dd-chips">${chips}</div></div><button class="dd-go" data-testid="daily-draw-lab-go" type="button" ${drawBusy || picks.length < 1 ? 'disabled' : ''}>${safe(drawBusy ? tx('action.drawing', null, 'Drawing…') : tx('action.draw', null, 'Run the draw'))}</button><button class="dd-repeat" data-testid="daily-draw-lab-repeat" type="button" ${drawBusy || !lastBet ? 'disabled' : ''}>${safe(tx('controls.repeat', null, 'Repeat bet'))}</button></div></section>`;
   // Wire the number mark buttons.
   root.querySelectorAll('[data-number]').forEach(btn => { btn.onclick = () => { if (!drawBusy) toggleMark(Number(btn.dataset.number)); }; });
   // Wire the chip buttons.
@@ -101,6 +103,10 @@ function render(resultText) {
   const goBtn = root.querySelector('[data-testid="daily-draw-lab-go"]');
   // Attach the draw handler only when at least one number is marked.
   if (goBtn) goBtn.onclick = run;
+  // Wire the one-click repeat that re-fires the last committed picks and stake.
+  const repeatBtn = root.querySelector('[data-testid="daily-draw-lab-repeat"]');
+  // Attach the repeat handler; the button stays disabled until a prior draw settles.
+  if (repeatBtn) repeatBtn.onclick = repeat;
 }
 
 // Load session-bound state and render the first frame.
@@ -108,7 +114,11 @@ async function load() {
   // Read authoritative state so the render reflects the server, not client guesses.
   try {
     // Fetch the game state through the frozen v1 endpoint.
-    await api('/api/v1/games/daily-draw-lab/state');
+    const data = await api('/api/v1/games/daily-draw-lab/state');
+    // Read the compact newest-first recent-round history retained per player.
+    const rounds = data?.state?.recent_rounds || [];
+    // Recover a repeatable bet from the newest settled round so repeat survives a reload.
+    if (rounds.length && rounds[0]?.public?.wager) lastBet = { picks: [...rounds[0].public.wager.picks], stake: rounds[0].public.wager.stake };
   } catch (err) {
     // Surface a load failure without breaking the shell.
     toast(tx('error.load', null, 'Could not load Daily Draw Lab.'), 'error');
@@ -132,6 +142,8 @@ async function run() {
     const round = response.round;
     // Reveal the authoritative committed draw and hits.
     shownDraw = round.detail;
+    // Remember the exact committed picks and stake so one click can repeat the same draw.
+    lastBet = { picks: [...round.wager.picks], stake: round.wager.stake };
     // Repaint immediately so the drawn numbers and hits show during the reveal.
     render();
     // Wait for the decorative reveal to finish before announcing the result.
@@ -160,6 +172,18 @@ async function run() {
   }
 }
 
+// Re-apply the last committed picks and stake and re-fire one draw without a timer.
+async function repeat() {
+  // Ignore repeat while a draw is active, after teardown, or before any prior draw has settled.
+  if (drawBusy || !root || !lastBet) return;
+  // Restore the previous marks into the local selection.
+  picks = [...lastBet.picks];
+  // Restore the previous stake into the local selection.
+  stake = lastBet.stake;
+  // Fire the shared exactly-once draw action with the restored picks and stake.
+  await run();
+}
+
 // Export the isolated Daily Draw Lab game for the shared shell.
 export const DailyDrawLabGame = {
   // Expose the stable catalog identifier.
@@ -170,6 +194,8 @@ export const DailyDrawLabGame = {
     root = node;
     // Reset the marks for a fresh mount.
     picks = [];
+    // Reset the repeatable bet so a new mount never inherits a stale one before load reconciles history.
+    lastBet = null;
     // Install game-owned styles.
     ensureStyles();
     // Load both locales through the game-owned lazy domain before visible render.
@@ -189,5 +215,7 @@ export const DailyDrawLabGame = {
     root = null;
     // Reset the in-flight guard because teardown cancelled any presentation.
     drawBusy = false;
+    // Clear the repeatable bet so the next session starts fresh.
+    lastBet = null;
   },
 };
