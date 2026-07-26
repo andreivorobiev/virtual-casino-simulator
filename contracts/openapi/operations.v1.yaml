@@ -29,6 +29,7 @@ paths:
       operationId: operationsReadiness
       security:
         - cookieSession: []
+        - monitorBearer: []
       responses:
         '200':
           description: All required dependencies are ready
@@ -50,6 +51,7 @@ paths:
       operationId: operationsHeartbeat
       security:
         - cookieSession: []
+        - monitorBearer: []
       responses:
         '200':
           description: Current healthy or degraded Admin-authorized diagnostics
@@ -72,6 +74,10 @@ components:
       type: apiKey
       in: cookie
       name: casino_session
+    monitorBearer:
+      type: http
+      scheme: bearer
+      description: Root-managed deployment monitor token accepted only for /readyz and /api/v2/admin/operations.
   schemas:
     BuildMetadata:
       type: object

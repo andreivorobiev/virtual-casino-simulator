@@ -28,6 +28,10 @@
     "fixed degraded reason code",
     "probe and last-success timestamps"
   ],
+  "trusted_authentication": [
+    "normal Admin session",
+    "root-managed monitor bearer accepted only by GET /readyz and GET /api/v2/admin/operations"
+  ],
   "forbidden_diagnostics": [
     "raw exception text or class",
     "credentials, tokens, DSNs, hosts, or database names",

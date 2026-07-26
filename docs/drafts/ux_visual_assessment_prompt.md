@@ -41,7 +41,7 @@ Call out conflicts between the existing authority and the drafts, including the
 
 ## Live-product scope
 
-Use the deployed private-preview application at `https://casino.andvor.com/`
+Use the deployed private-preview application at `https://casino.tiltseven.com/`
 and the authenticated session supplied by the owner. Never request or repeat a
 password, token, session identifier, or other secret in chat or in the report.
 Do not inspect cookies, local storage, password stores, or session storage.

@@ -47,6 +47,8 @@ VALIDATIONS = [
     [sys.executable, "-m", "unittest", "tests.recovery_tests"],
     # Validate deterministic artifact, exclusion, smoke, and rollback behavior.
     [sys.executable, "-m", "unittest", "tests.release_artifact_tests"],
+    # Validate protected-main production deployment workflow policy without SSH or GitHub mutation.
+    [sys.executable, "-m", "unittest", "tests.cicd_deployment_tests"],
     # Validate listener-free WSGI parity, fail-closed configuration, and service hardening.
     [sys.executable, "-m", "unittest", "tests.production_service_tests"],
 ]

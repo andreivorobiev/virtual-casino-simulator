@@ -700,8 +700,10 @@ class Handler(BaseHTTPRequestHandler):
             context = {"headers": self.headers, "client": self.client_address[0], "response_headers": [], "secure_cookie": False, "include_csrf_cookie": True, "session_samesite": "Lax"}
             # Branch when the request targets a protected API route.
             if not auth.is_public_api_path(path):
-                # Set session,user to the value needed for the next operation.
-                session, user = auth.authenticate_headers(self.headers)
+                # Resolve a root-managed monitor token only for the two read-only deployment probes.
+                monitor_identity = auth.authenticate_monitor_headers(self.headers, path) if self.command == "GET" else None
+                # Set session,user to the monitor identity or the normal browser/API session.
+                session, user = monitor_identity or auth.authenticate_headers(self.headers)
                 # Set context["session"] to the value needed for the next operation.
                 context["session"] = session
                 # Set context["user"] to the value needed for the next operation.

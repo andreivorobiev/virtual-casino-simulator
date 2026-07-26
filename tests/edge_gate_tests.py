@@ -50,17 +50,17 @@ class EdgeGateTests(unittest.TestCase):
         self.policy_path.write_text(json.dumps(policy, indent=2) + "\n", encoding="utf-8")
 
     # Return deterministic successful endpoint evidence for the three exact probes.
-    def green_fetcher(self, url, cookie, timeout, maximum_body_bytes):
+    def green_fetcher(self, url, monitor_header, timeout, maximum_body_bytes):
         # Assert the monitor retains its reviewed timeout and body bounds.
         self.assertEqual((timeout, maximum_body_bytes), (5, 65536))
         # Return the anonymous minimal liveness record without requiring a cookie.
         if url.endswith("/healthz"):
             # Prove the secret is not sent to anonymous liveness.
-            self.assertIsNone(cookie)
+            self.assertIsNone(monitor_header)
             # Return the real production success envelope around the exact OPS-001 liveness value.
             return 200, copy.deepcopy(GREEN_HEADERS), {"ok": True, "data": {"status": "live"}}
-        # Require the synthetic cookie for both authenticated operational probes.
-        self.assertEqual(cookie, "casino_session=synthetic-monitor-value")
+        # Require the synthetic bearer credential for both authenticated operational probes.
+        self.assertEqual(monitor_header, ("Authorization", "Bearer synthetic-monitor-value"))
         # Return sanitized MySQL readiness for the authenticated readiness path.
         if url.endswith("/readyz"):
             # Include only allowlisted state plus one permitted extra telemetry field.
@@ -135,18 +135,32 @@ class EdgeGateTests(unittest.TestCase):
             # Validate the deliberately unsafe isolated packet.
             edge_gate.validate_policy(self.policy_path, self.root)
 
-    # Prove the monitor refuses missing session material before any network call.
-    def test_observe_requires_cookie_before_network(self):
+    # Prove the monitor refuses missing credential material before any network call.
+    def test_observe_requires_credential_before_network(self):
         # Validate the isolated packet using only static reads.
         policy = edge_gate.validate_policy(self.policy_path, self.root)
         # Make any attempted fetch fail the test before returning evidence.
         fetcher = mock.Mock(side_effect=AssertionError("network attempted"))
-        # Require the fixed missing-cookie category.
-        with self.assertRaisesRegex(edge_gate.EdgeGateError, "^cookie_missing$"):
+        # Require the fixed missing-credential category.
+        with self.assertRaisesRegex(edge_gate.EdgeGateError, "^credential_missing$"):
             # Attempt observation without inherited secret material.
             edge_gate.observe(policy, None, fetcher=fetcher, certificate_checker=mock.Mock())
         # Prove refusal happened before the first endpoint request.
         fetcher.assert_not_called()
+
+    # Prove the preferred bearer variable wins over the legacy cookie fallback.
+    def test_monitor_header_prefers_authorization(self):
+        # Supply both possible root-managed credentials in one synthetic environment.
+        header = edge_gate._monitor_header_from_environment({edge_gate.AUTHORIZATION_ENV: "Bearer synthetic-monitor-value", edge_gate.COOKIE_ENV: "casino_session=legacy"})
+        # Require the bearer header to be selected for authenticated probes.
+        self.assertEqual(header, ("Authorization", "Bearer synthetic-monitor-value"))
+
+    # Prove old monitor-cookie environments remain compatible during rollout.
+    def test_monitor_header_accepts_legacy_cookie_fallback(self):
+        # Supply only the historical cookie variable used by existing hosts.
+        header = edge_gate._monitor_header_from_environment({edge_gate.COOKIE_ENV: "casino_session=synthetic-monitor-value"})
+        # Require the fallback to retain the exact cookie header shape.
+        self.assertEqual(header, ("Cookie", "casino_session=synthetic-monitor-value"))
 
     # Prove only the exact standard success envelope can reach probe-field comparison.
     def test_success_envelope_fails_closed(self):
@@ -180,7 +194,7 @@ class EdgeGateTests(unittest.TestCase):
         handler = edge_gate._NoRedirect()
         # Require no follow-up request for a representative HTTPS redirect.
         redirected = handler.redirect_request(None, None, 302, "redirect", {}, "https://other.example.invalid/b")
-        # Prove the handler returns no request object that could carry the monitor cookie.
+        # Prove the handler returns no request object that could carry the monitor credential.
         self.assertIsNone(redirected)
 
     # Prove green observation emits only the fixed sanitized evidence schema.
@@ -191,8 +205,8 @@ class EdgeGateTests(unittest.TestCase):
         evidence = edge_gate.observe(
             # Supply only the reviewed policy mapping.
             policy,
-            # Supply a synthetic cookie that never leaves the test process.
-            "casino_session=synthetic-monitor-value",
+            # Supply a synthetic bearer that never leaves the test process.
+            ("Authorization", "Bearer synthetic-monitor-value"),
             # Replace network access with deterministic in-memory endpoint evidence.
             fetcher=self.green_fetcher,
             # Return a healthy whole-day certificate lifetime without a socket.
@@ -207,9 +221,9 @@ class EdgeGateTests(unittest.TestCase):
         # Serialize once to prove no origin, route, body, header, or cookie value is retained.
         serialized = json.dumps(evidence, sort_keys=True)
         # Reject the canonical host and synthetic secret from sanitized evidence.
-        self.assertNotIn("casino.andvor.com", serialized)
-        # Reject the cookie name and value from sanitized evidence.
-        self.assertNotIn("casino_session", serialized)
+        self.assertNotIn("casino.tiltseven.com", serialized)
+        # Reject monitor header names and values from sanitized evidence.
+        self.assertNotIn("Authorization", serialized)
         # Reject endpoint paths and response telemetry from sanitized evidence.
         self.assertNotIn("readyz", serialized)
         # Reject response header names from sanitized evidence.
@@ -225,8 +239,8 @@ class EdgeGateTests(unittest.TestCase):
             edge_gate.observe(
                 # Supply only the reviewed policy mapping.
                 policy,
-                # Supply a synthetic cookie that never leaves the test process.
-                "casino_session=synthetic-monitor-value",
+                # Supply a synthetic bearer that never leaves the test process.
+                ("Authorization", "Bearer synthetic-monitor-value"),
                 # Replace endpoint network access with green in-memory evidence.
                 fetcher=self.green_fetcher,
                 # Return one day less than the fourteen-day requirement.
@@ -255,8 +269,8 @@ class EdgeGateTests(unittest.TestCase):
             edge_gate.observe(
                 # Supply only the reviewed policy mapping.
                 policy,
-                # Supply a synthetic cookie that never leaves the test process.
-                "casino_session=synthetic-monitor-value",
+                # Supply a synthetic bearer that never leaves the test process.
+                ("Authorization", "Bearer synthetic-monitor-value"),
                 # Use the one deliberately degraded response fixture.
                 fetcher=degraded_fetcher,
                 # Avoid a socket because readiness must fail first.

@@ -210,6 +210,18 @@ def _authorize_request(method: str, path: str, body: dict, headers: dict, client
         validate_request_integrity(method, headers, policy)
         # Return the anonymous context before session lookup.
         return context
+    # Resolve the root-managed deployment monitor token only for the reviewed read-only probes.
+    monitor_identity = auth.authenticate_monitor_headers(headers, path) if method == "GET" else None
+    # Branch when deployment supplied the Operations-only monitor bearer.
+    if monitor_identity is not None:
+        # Publish the ephemeral monitor session to the route context without persisting it.
+        context["session"], context["user"] = monitor_identity
+        # Enforce the normal Admin gate for the Admin Operations route.
+        if path.startswith("/api/v1/admin/") or path.startswith("/api/v2/admin/"):
+            # Reuse the same Admin role predicate as browser sessions.
+            auth.require_admin(context["user"])
+        # Return before normal identity-provider checks because monitor auth is not a user login.
+        return context
     # Authenticate the direct request headers through the canonical session service.
     session, user = auth.authenticate_headers(headers)
     # Require a distinct per-session CSRF secret for every authenticated mutation.

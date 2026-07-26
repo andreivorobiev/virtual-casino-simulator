@@ -4725,11 +4725,12 @@
         "contracts/compatibility/app-9.5.2.json",
         "contracts/compatibility/app-9.5.3.json",
         "contracts/compatibility/app-9.5.4.json",
-        "contracts/compatibility/app-9.5.5.json"
+        "contracts/compatibility/app-9.5.5.json",
+        "contracts/compatibility/app-9.5.6.json"
       ],
       "introduced_in": "9.2.0",
-      "changed_in": "9.5.5",
-      "notes": "Branch and ordinary manual candidates remain unpublished. The historical one-time owner-dispatched recovery created the retained v9.2.0 predecessor without overwrite or deletion paths. Normal v9.5.5 publication requires the verified retained v9.5.4 predecessor manifest and the protected release gates, including exact build-SHA and generated release.env verification. Rollback is application-only and never reverses the MySQL schema."
+      "changed_in": "9.5.6",
+      "notes": "Branch and ordinary manual candidates remain unpublished. The historical one-time owner-dispatched recovery created the retained v9.2.0 predecessor without overwrite or deletion paths. Normal v9.5.6 publication requires the verified retained v9.5.5 predecessor manifest and the protected release gates, including exact build-SHA and generated release.env verification. Rollback is application-only and never reverses the MySQL schema."
     },
     {
       "id": "BOT-001",
@@ -7998,6 +7999,9 @@
       "id": "OPS-005", "module": "Operations", "description": "Copied-deployment smoke records the loopback child PID and port, probes anonymous liveness plus authenticated readiness and Admin telemetry, verifies sanitized build provenance, stops the child, and proves the port closed.", "status": "PASS", "api_tests": ["API-OPS-001", "LONG-SUITE-100"], "browser_tests": ["BR-OPS-001"], "implementation_files": ["tests/long_suites.py", "tests/run_tests.py", "codex/tasks/artifacts/issue-72-operations-foundation/validation.md"], "introduced_in": "issue-72-operations-foundation", "changed_in": "issue-72-operations-foundation", "notes": "The harness always binds 127.0.0.1 on an OS-assigned port and records exact listener cleanup."
     },
     {
+      "id": "OPS-006", "module": "Operations", "description": "Production readiness and Admin Operations accept a root-managed SHA-256-verified monitor bearer only for GET /readyz and GET /api/v2/admin/operations, while every other API route continues to require a normal authenticated session.", "status": "PASS", "api_tests": ["SERVICE-WSGI-001", "EDGE-PREPARATION-001"], "browser_tests": [], "implementation_files": ["casino/core/auth.py", "casino/app.py", "casino/wsgi.py", "contracts/openapi/operations.v1.yaml", "contracts/compatibility/operations-foundation.json", "scripts/edge_gate.py", "tests/production_wsgi_probe.py", "tests/production_service_tests.py", "tests/edge_gate_tests.py"], "introduced_in": "cicd-main-deploy", "changed_in": "cicd-main-deploy", "notes": "The monitor token is not a browser login, is never stored in cleartext by the application, is omitted from anonymous liveness, and cannot access /api/v2/me, gameplay, account, or mutation routes."
+    },
+    {
       "id": "TEST-044", "module": "Tests", "description": "Operations regression evidence covers anonymous and authenticated policy, healthy and degraded dependencies, Admin authorization, EN/RU responsive states, copied deployment, and listener cleanup.", "status": "PASS", "api_tests": ["API-OPS-001", "LONG-SUITE-100"], "browser_tests": ["BR-OPS-001"], "implementation_files": ["tests/operations/", "tests/run_tests.py", "tests/long_suites.py", "tests/visual/visual_matrix.json"], "introduced_in": "issue-72-operations-foundation", "changed_in": "issue-72-operations-foundation", "notes": "Allocated by GitHub issue #77 for the accepted issue #72 implementation and shared integration gate."
     },
     {
@@ -8081,13 +8085,13 @@
       "id": "TEST-049", "module": "Tests", "description": "Recovery evidence covers exact signed allowlists, independent key roles, chunk and terminal tampering, stale and failed evidence, retention, age, computed RPO/RTO, backup acknowledgement ordering, encrypted staging, clean restore, timeout, partial emission, quarantine, cleanup failure, redaction, packaging, and listener closure.", "status": "PASS", "api_tests": ["RECOVERY-POLICY-001"], "browser_tests": [], "implementation_files": ["tests/recovery_tests.py", "tests/run_tests.py", "tests/release_artifact_tests.py"], "introduced_in": "issue-205-recovery-gate", "changed_in": "issue-205-recovery-gate", "notes": "All repository evidence is synthetic, isolated, secret-safe, and listener-free; no live provider, database, service, or host state is mutated."
     },
     {
-      "id": "CORE-024", "module": "Application", "description": "A reviewed restricted-preview edge packet binds the complete same-origin application to the exact canonical HTTPS host, proxies only to the supervised IPv4 loopback upstream, preserves restricted enrollment and authenticated operational boundaries, preflights ACME reload and application-edge rollback, and prohibits database rollback.", "status": "PASS", "api_tests": ["EDGE-PREPARATION-001"], "browser_tests": [], "implementation_files": ["deploy/edge/restricted-preview.json", "deploy/nginx/casino.conf.template", "deploy/acme/casino-renewal-hook.sh.template", "deploy/systemd/casino-edge-monitor.service.template", "deploy/systemd/casino-edge-monitor.timer.template", "deploy/rollback/casino-edge-rollback.sh.template", "docs/restricted_preview_edge.md"], "introduced_in": "issue-206-edge-preparation", "changed_in": "issue-206-edge-preparation", "notes": "Repository preparation only; DNS, certificate issuance, nginx or service activation, firewall changes, deployment, and public exposure remain held by issue #201."
+      "id": "CORE-024", "module": "Application", "description": "A reviewed restricted-preview edge packet binds the complete same-origin application to the exact canonical TiltSeven HTTPS host, proxies only to the supervised IPv4 loopback upstream, preserves restricted enrollment and authenticated operational boundaries, preflights ACME reload and application-edge rollback, and prohibits database rollback.", "status": "PASS", "api_tests": ["EDGE-PREPARATION-001"], "browser_tests": [], "implementation_files": ["deploy/edge/restricted-preview.json", "deploy/nginx/casino.conf.template", "deploy/acme/casino-renewal-hook.sh.template", "deploy/systemd/casino-edge-monitor.service.template", "deploy/systemd/casino-edge-monitor.timer.template", "deploy/rollback/casino-edge-rollback.sh.template", "docs/restricted_preview_edge.md"], "introduced_in": "issue-206-edge-preparation", "changed_in": "cicd-main-deploy", "notes": "Canonical origin is https://casino.tiltseven.com; casino.andvor.com is retained only as an alternate edge server name during transition and is not the application authority."
     },
     {
-      "id": "TOOL-005", "module": "Tooling", "description": "Edge tooling validates the exact inert policy and templates without network, process, listener, or write activity, and provides an optional read-only HTTPS observer whose output is strictly allowlisted and excludes origins, addresses, paths, headers, bodies, cookies, credentials, and provider identifiers.", "status": "PASS", "api_tests": ["EDGE-PREPARATION-001"], "browser_tests": [], "implementation_files": ["scripts/edge_gate.py", "scripts/package_app.py", "deploy/edge/restricted-preview.json", "docs/restricted_preview_edge.md"], "introduced_in": "issue-206-edge-preparation", "changed_in": "issue-206-edge-preparation", "notes": "The observe command requires external root-managed session material, performs GET requests only after static validation, and has no activation, rendering, issuance, provider, firewall, service, or database command."
+      "id": "TOOL-005", "module": "Tooling", "description": "Edge tooling validates the exact inert policy and templates without network, process, listener, or write activity, and provides an optional read-only HTTPS observer whose output is strictly allowlisted and excludes origins, addresses, paths, headers, bodies, cookies, credentials, and provider identifiers.", "status": "PASS", "api_tests": ["EDGE-PREPARATION-001"], "browser_tests": [], "implementation_files": ["scripts/edge_gate.py", "scripts/package_app.py", "deploy/edge/restricted-preview.json", "docs/restricted_preview_edge.md"], "introduced_in": "issue-206-edge-preparation", "changed_in": "cicd-main-deploy", "notes": "The observe command prefers external root-managed Authorization bearer material, retains the legacy cookie fallback for rollout, performs GET requests only after static validation, and has no activation, rendering, issuance, provider, firewall, service, or database command."
     },
     {
-      "id": "TEST-050", "module": "Tests", "description": "Edge evidence covers exact origin and loopback topology, restricted access, replacement forwarding headers, protected ports, ACME preflight, inert service and rollback templates, traversal refusal, listener-free static validation, exact success-envelope validation through the production WSGI/API boundary, pre-network credential refusal, bounded authenticated probes, security headers, certificate age, sanitized output, packaging, and fail-closed negative cases.", "status": "PASS", "api_tests": ["EDGE-PREPARATION-001", "SERVICE-WSGI-001"], "browser_tests": [], "implementation_files": ["tests/edge_gate_tests.py", "tests/production_wsgi_probe.py", "tests/run_tests.py", "tests/release_artifact_tests.py", "scripts/package_app.py"], "introduced_in": "issue-206-edge-preparation", "changed_in": "issue-206-edge-preparation", "notes": "All repository evidence is isolated, synthetic, non-mutating, and listener-free; live DNS, TLS, service, firewall, deployment, and public exposure proof remain external cutover gates."
+      "id": "TEST-050", "module": "Tests", "description": "Edge evidence covers exact origin and loopback topology, restricted access, replacement forwarding headers, protected ports, ACME preflight, inert service and rollback templates, traversal refusal, listener-free static validation, exact success-envelope validation through the production WSGI/API boundary, pre-network credential refusal, bounded authenticated probes through preferred bearer and legacy cookie monitor credentials, security headers, certificate age, sanitized output, packaging, and fail-closed negative cases.", "status": "PASS", "api_tests": ["EDGE-PREPARATION-001", "SERVICE-WSGI-001"], "browser_tests": [], "implementation_files": ["tests/edge_gate_tests.py", "tests/production_wsgi_probe.py", "tests/run_tests.py", "tests/release_artifact_tests.py", "scripts/package_app.py"], "introduced_in": "issue-206-edge-preparation", "changed_in": "cicd-main-deploy", "notes": "All repository evidence is isolated, synthetic, non-mutating, and listener-free; live DNS, TLS, service, firewall, deployment, and public exposure proof remain external cutover gates."
     },
     {
       "id": "TEST-051",
@@ -10165,6 +10169,45 @@
       "notes": "Allocated for GitHub issue #287. Every fixture is written into an isolated temporary directory; no repository file and no listener is touched."
     },
     {
+      "id": "TOOL-008",
+      "module": "Tooling",
+      "description": "Protected-main CI/CD publishes or reuses the immutable GitHub Release for the exact merged commit, refuses packaged-version tag reuse across different commits, deploys only hosted release assets over SSH, writes build provenance, switches /opt/casino/current atomically, verifies production through the edge observer, and rolls back the application symlink and release fragment if post-cutover health fails.",
+      "status": "PASS",
+      "api_tests": [
+        "DEPLOY-CICD-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        ".github/workflows/deploy-production.yml",
+        "scripts/make_release.py",
+        "scripts/write_release_env.py",
+        "scripts/edge_gate.py",
+        "docs/production_service.md",
+        "tests/cicd_deployment_tests.py"
+      ],
+      "introduced_in": "cicd-main-deploy",
+      "changed_in": "cicd-main-deploy",
+      "notes": "The workflow has no manual dispatch path; deployment requires scoped SSH secrets and uses the root-managed monitor bearer for readiness rather than a browser login."
+    },
+    {
+      "id": "TEST-133",
+      "module": "Tests",
+      "description": "Listener-free CI/CD evidence verifies the production workflow's protected-main trigger, immutable version-conflict refusal, predecessor-manifest rollback requirement, hosted-asset download and verification, scoped SSH secret usage, generated release.env installation, post-cutover edge observation, and application rollback path.",
+      "status": "PASS",
+      "api_tests": [
+        "DEPLOY-CICD-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/cicd_deployment_tests.py",
+        ".github/workflows/deploy-production.yml",
+        "scripts/make_release.py"
+      ],
+      "introduced_in": "cicd-main-deploy",
+      "changed_in": "cicd-main-deploy",
+      "notes": "This proof reads inert workflow text only; it does not open SSH, publish a release, deploy, mutate DNS, or run a browser."
+    },
+    {
       "id": "TEST-100",
       "module": "Tests",
       "description": "Dependency-free deterministic unit tests prove motion timing profiles, reduced-motion resolution, complete lifecycle phase order, authoritative-result identity, overlap rejection, illegal-skip rejection, explicit recovery, stale-generation rejection, and route-disposal invalidation.",
@@ -10373,7 +10416,7 @@
     {
       "id": "TOUR-001",
       "module": "Core",
-      "description": "The server-only What's New foundation reads curated repository release metadata rather than deriving player content from module or application version changes. An entry is eligible only when its release version is an exact numeric triplet at or below the running application, both localization keys are non-empty, and the release coordinator's show_in_whats_new flag is exactly true. Missing, malformed, future, incomplete, or truthy-but-inexact entries fail closed. The shipped catalog is reconciled to packaged application 9.5.5 and remains explicitly disabled until the player UI, browser evidence, and release-coordinator activation remainder of issue #165 are accepted.",
+      "description": "The server-only What's New foundation reads curated repository release metadata rather than deriving player content from module or application version changes. An entry is eligible only when its release version is an exact numeric triplet at or below the running application, both localization keys are non-empty, and the release coordinator's show_in_whats_new flag is exactly true. Missing, malformed, future, incomplete, or truthy-but-inexact entries fail closed. The shipped catalog is reconciled to packaged application 9.5.6 and remains explicitly disabled until the player UI, browser evidence, and release-coordinator activation remainder of issue #165 are accepted.",
       "status": "PASS",
       "api_tests": [
         "API-TOUR-001"
@@ -10410,7 +10453,7 @@
     {
       "id": "TEST-106",
       "module": "Tests",
-      "description": "Listener-free isolated-provider evidence verifies exact curated opt-in selection, skipped-release merge ordering and caps, malformed and future metadata fail-closed behavior, missing and malformed catalog recovery, durable per-subject server-stamped dismissal, retry idempotency, populated-neighbour isolation, disposable guest non-persistence, subjectless rejection, raw-version privacy, current packaged 9.5.5 metadata with activation disabled, complete EN/RU release keys, consent-free metadata shape, additive v2 route behavior, hostile caller identity and version inputs being rejected, and exact checked contract digest pinning.",
+      "description": "Listener-free isolated-provider evidence verifies exact curated opt-in selection, skipped-release merge ordering and caps, malformed and future metadata fail-closed behavior, missing and malformed catalog recovery, durable per-subject server-stamped dismissal, retry idempotency, populated-neighbour isolation, disposable guest non-persistence, subjectless rejection, raw-version privacy, current packaged 9.5.6 metadata with activation disabled, complete EN/RU release keys, consent-free metadata shape, additive v2 route behavior, hostile caller identity and version inputs being rejected, and exact checked contract digest pinning.",
       "status": "PASS",
       "api_tests": [
         "API-TOUR-001"

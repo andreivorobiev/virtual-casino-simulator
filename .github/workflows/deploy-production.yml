@@ -1,0 +1,220 @@
+name: Production Deploy
+
+# Deploy every accepted protected-main merge without a second human dispatch.
+on:
+  push:
+    branches:
+      - main
+
+# Serialize production so two protected-main pushes cannot race the symlink or rollback target.
+concurrency:
+  group: production-deploy-main
+  cancel-in-progress: false
+
+jobs:
+  publish-release:
+    name: Publish exact-main release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      app_version: ${{ steps.release_identity.outputs.app_version }}
+      release_tag: ${{ steps.release_identity.outputs.release_tag }}
+    steps:
+      # Check out exactly the merged protected-main commit that triggered this deployment.
+      - name: Check out exact protected main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.sha }}
+      # Use the supported production Python for validation, packaging, and smoke checks.
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      # Install validation dependencies before running the release driver.
+      - name: Install validation requirements
+        run: python -m pip install -r requirements-dev.txt
+      # Install the recovery extra required by copied-release smoke verification.
+      - name: Install recovery verification dependency
+        run: python -m pip install ".[recovery]"
+      # Resolve the canonical package version and its immutable tag from repository metadata.
+      - name: Resolve release identity
+        id: release_identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          app_version="$(python -c 'import json; from pathlib import Path; print(json.loads(Path("modules/module-manifest.json").read_text(encoding="utf-8"))["application"])')"
+          printf 'app_version=%s\n' "${app_version}" >> "${GITHUB_OUTPUT}"
+          printf 'release_tag=v%s\n' "${app_version}" >> "${GITHUB_OUTPUT}"
+      # Refuse a main merge whose package version already belongs to a different protected commit.
+      - name: Verify immutable version is deployable
+        env:
+          RELEASE_TAG: ${{ steps.release_identity.outputs.release_tag }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag_target="$(git ls-remote --tags origin "refs/tags/${RELEASE_TAG}" | awk '{print $1}')"
+          if test -n "${tag_target}" && test "${tag_target}" != "${GITHUB_SHA}"; then
+            echo "Packaged version ${RELEASE_TAG} already points to another commit; bump the packaged version before merging."
+            exit 1
+          fi
+      # Download the retained predecessor manifest needed for application-only rollback.
+      - name: Download predecessor release manifest
+        env:
+          RELEASE_TAG: ${{ steps.release_identity.outputs.release_tag }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          previous_tag="$(gh api "repos/${GITHUB_REPOSITORY}/releases?per_page=100" | jq -r --arg current "${RELEASE_TAG}" '[.[] | select(.draft == false and .prerelease == false and .tag_name != $current)][0].tag_name // empty')"
+          test -n "${previous_tag}"
+          mkdir -p previous
+          gh release download "${previous_tag}" --pattern release-manifest.json --dir previous --clobber
+      # Build a checksum-bound release candidate from exact protected-main source bytes.
+      - name: Build exact-main release candidate
+        env:
+          RELEASE_TAG: ${{ steps.release_identity.outputs.release_tag }}
+        run: python scripts/make_release.py --release-tag "${RELEASE_TAG}" --previous-manifest previous/release-manifest.json
+      # Publish immutable assets once, or verify/download them when a rerun targets the same commit.
+      - name: Publish or reuse immutable GitHub Release
+        env:
+          RELEASE_TAG: ${{ steps.release_identity.outputs.release_tag }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh release view "${RELEASE_TAG}" --json tagName,targetCommitish,isDraft,isPrerelease,assets > release-existing.json 2>/dev/null; then
+            jq -e --arg tag "${RELEASE_TAG}" --arg commit "${GITHUB_SHA}" '.tagName == $tag and .targetCommitish == $commit and .isDraft == false and .isPrerelease == false and ([.assets[].name] | sort) == (["checksums.txt", "release-manifest.json", "virtual_casino_simulator_package.zip"] | sort)' release-existing.json
+          else
+            printf '%s\n' "Automated protected-main deployment for ${RELEASE_TAG} at ${GITHUB_SHA}." "Rollback is application-only and database rollback is prohibited." > release-notes.md
+            gh release create "${RELEASE_TAG}" --target "${GITHUB_SHA}" --title "Virtual Casino Simulator ${RELEASE_TAG}" --notes-file release-notes.md --draft --latest dist/virtual_casino_simulator_package.zip dist/release-manifest.json dist/checksums.txt
+            gh release edit "${RELEASE_TAG}" --draft=false --latest=true
+          fi
+          rm -rf published
+          mkdir published
+          gh release download "${RELEASE_TAG}" --pattern virtual_casino_simulator_package.zip --pattern release-manifest.json --pattern checksums.txt --dir published --clobber
+      # Verify hosted release bytes after publication so deployment never uses local filesystem artifacts.
+      - name: Verify hosted release assets
+        env:
+          RELEASE_TAG: ${{ steps.release_identity.outputs.release_tag }}
+        shell: bash
+        run: python scripts/package_app.py --verify-only --archive published/virtual_casino_simulator_package.zip --manifest published/release-manifest.json --expected-commit "${GITHUB_SHA}" --expected-tag "${RELEASE_TAG}" --require-rollback
+      # Pass the verified hosted assets to the deployment job without rebuilding them.
+      - name: Upload deployable hosted assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-release-assets
+          path: published/
+          if-no-files-found: error
+          retention-days: 7
+
+  deploy-production:
+    name: Deploy production
+    needs:
+      - publish-release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      # Download the exact hosted assets verified by the publication job.
+      - name: Download deployable hosted assets
+        uses: actions/download-artifact@v4
+        with:
+          name: production-release-assets
+          path: published
+      # Prepare a strict SSH client from repository secrets without printing key material.
+      - name: Prepare SSH
+        env:
+          CASINO_DEPLOY_SSH_HOST: ${{ secrets.CASINO_DEPLOY_SSH_HOST }}
+          CASINO_DEPLOY_SSH_PORT: ${{ secrets.CASINO_DEPLOY_SSH_PORT }}
+          CASINO_DEPLOY_SSH_USER: ${{ secrets.CASINO_DEPLOY_SSH_USER }}
+          CASINO_DEPLOY_SSH_KEY: ${{ secrets.CASINO_DEPLOY_SSH_KEY }}
+          CASINO_DEPLOY_KNOWN_HOSTS: ${{ secrets.CASINO_DEPLOY_KNOWN_HOSTS }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CASINO_DEPLOY_SSH_HOST}"
+          test -n "${CASINO_DEPLOY_SSH_USER}"
+          test -n "${CASINO_DEPLOY_SSH_KEY}"
+          test -n "${CASINO_DEPLOY_KNOWN_HOSTS}"
+          mkdir -p "${HOME}/.ssh"
+          printf '%s\n' "${CASINO_DEPLOY_SSH_KEY}" > "${HOME}/.ssh/id_ed25519"
+          chmod 600 "${HOME}/.ssh/id_ed25519"
+          printf '%s\n' "${CASINO_DEPLOY_KNOWN_HOSTS}" > "${HOME}/.ssh/known_hosts"
+          chmod 600 "${HOME}/.ssh/known_hosts"
+      # Upload only the verified hosted assets into one commit-named staging directory.
+      - name: Upload release assets
+        env:
+          CASINO_DEPLOY_SSH_HOST: ${{ secrets.CASINO_DEPLOY_SSH_HOST }}
+          CASINO_DEPLOY_SSH_PORT: ${{ secrets.CASINO_DEPLOY_SSH_PORT }}
+          CASINO_DEPLOY_SSH_USER: ${{ secrets.CASINO_DEPLOY_SSH_USER }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          port="${CASINO_DEPLOY_SSH_PORT:-22}"
+          remote="${CASINO_DEPLOY_SSH_USER}@${CASINO_DEPLOY_SSH_HOST}"
+          staging="/tmp/casino-cicd-${GITHUB_SHA}"
+          ssh -p "${port}" "${remote}" "sudo install -d -m 0700 '${staging}' && sudo chown '${CASINO_DEPLOY_SSH_USER}' '${staging}'"
+          scp -P "${port}" published/virtual_casino_simulator_package.zip published/release-manifest.json published/checksums.txt "${remote}:${staging}/"
+      # Switch production atomically and roll back automatically if post-cutover health fails.
+      - name: Activate release and verify production
+        env:
+          CASINO_DEPLOY_SSH_HOST: ${{ secrets.CASINO_DEPLOY_SSH_HOST }}
+          CASINO_DEPLOY_SSH_PORT: ${{ secrets.CASINO_DEPLOY_SSH_PORT }}
+          CASINO_DEPLOY_SSH_USER: ${{ secrets.CASINO_DEPLOY_SSH_USER }}
+          RELEASE_TAG: ${{ needs.publish-release.outputs.release_tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          port="${CASINO_DEPLOY_SSH_PORT:-22}"
+          remote="${CASINO_DEPLOY_SSH_USER}@${CASINO_DEPLOY_SSH_HOST}"
+          ssh -p "${port}" "${remote}" "sudo bash -s" -- "${GITHUB_SHA}" "${RELEASE_TAG}" <<'REMOTE_DEPLOY'
+          set -euo pipefail
+          release_sha="$1"
+          release_tag="$2"
+          staging="/tmp/casino-cicd-${release_sha}"
+          release_root="/opt/casino/releases/${release_sha}"
+          prior_release="$(readlink -f /opt/casino/current || true)"
+          prior_env="$(mktemp)"
+          if test -f /etc/casino/release.env; then
+            cp -p /etc/casino/release.env "${prior_env}"
+          else
+            : > "${prior_env}"
+          fi
+          rollback() {
+            if test -n "${prior_release}" && test -d "${prior_release}"; then
+              ln -sfn "${prior_release}" /opt/casino/current.next
+              mv -Tf /opt/casino/current.next /opt/casino/current
+              if test -s "${prior_env}"; then
+                install -m 0640 -o root -g root "${prior_env}" /etc/casino/release.env
+              else
+                rm -f /etc/casino/release.env
+              fi
+              systemctl restart casino || true
+              systemctl reload nginx || true
+            fi
+          }
+          trap rollback ERR
+          cd "${staging}"
+          sha256sum -c checksums.txt
+          if ! test -d "${release_root}"; then
+            tmp_release="/opt/casino/releases/.${release_sha}.tmp"
+            rm -rf "${tmp_release}"
+            mkdir -p "${tmp_release}"
+            unzip -q virtual_casino_simulator_package.zip -d "${tmp_release}"
+            mv "${tmp_release}/virtual_casino_simulator" "${release_root}"
+            rmdir "${tmp_release}"
+          fi
+          /opt/casino/venv/bin/python "${release_root}/scripts/package_app.py" --verify-only --archive "${staging}/virtual_casino_simulator_package.zip" --manifest "${staging}/release-manifest.json" --expected-commit "${release_sha}" --expected-tag "${release_tag}" --require-rollback
+          /opt/casino/venv/bin/python "${release_root}/scripts/write_release_env.py" --manifest "${staging}/release-manifest.json" --destination "${staging}/release.env"
+          install -m 0640 -o root -g root "${staging}/release.env" /etc/casino/release.env
+          ln -sfn "${release_root}" /opt/casino/current.next
+          mv -Tf /opt/casino/current.next /opt/casino/current
+          systemctl restart casino
+          systemctl reload nginx
+          bash -lc 'set -a; . /etc/casino/edge-monitor.env; set +a; /opt/casino/venv/bin/python /opt/casino/current/scripts/edge_gate.py observe --policy /opt/casino/current/deploy/edge/restricted-preview.json'
+          rm -rf "${staging}" "${prior_env}"
+          trap - ERR
+          REMOTE_DEPLOY

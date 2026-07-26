@@ -21,6 +21,8 @@ from scripts.edge_gate import validated_success_data
 
 # Preserve the synthetic exact origin configured by the parent test.
 ORIGIN = "https://casino.example.invalid"
+# Preserve the synthetic monitor token whose hash is supplied only to this child process.
+MONITOR_TOKEN = "synthetic-edge-monitor-token"
 
 
 # Call the WSGI adapter directly without creating any network listener.
@@ -108,6 +110,33 @@ health_payload = json.loads(health["body"].decode("utf-8"))
 assert health_payload == {"ok": True, "data": {"status": "live"}}
 # Require the edge observer to accept and unwrap the real production liveness envelope.
 assert validated_success_data(health_payload) == {"status": "live"}
+
+# Exercise root-managed monitor-token readiness without creating a browser or Admin session.
+monitor_readiness = request("GET", "/readyz", headers={"Authorization": f"Bearer {MONITOR_TOKEN}"})
+# Require the purpose-built monitor principal to pass only the readiness gate.
+assert monitor_readiness["status"] == "200 OK"
+# Parse the monitor-readiness response after transport validation.
+monitor_readiness_payload = json.loads(monitor_readiness["body"].decode("utf-8"))
+# Require the monitor path to expose only the same sanitized readiness data as an Admin session.
+monitor_readiness_data = validated_success_data(monitor_readiness_payload)
+# Require the synthetic JSON dependency to report ready through the monitor boundary.
+assert monitor_readiness_data["ready"] is True and monitor_readiness_data["storage_provider"] == "json"
+
+# Exercise root-managed monitor-token Admin Operations without granting broader Admin API access.
+monitor_operations = request("GET", "/api/v2/admin/operations", headers={"Authorization": f"Bearer {MONITOR_TOKEN}"})
+# Require the monitor principal to pass only the Operations heartbeat gate.
+assert monitor_operations["status"] == "200 OK"
+# Parse the monitor-operations response after status validation.
+monitor_operations_payload = json.loads(monitor_operations["body"].decode("utf-8"))
+# Require the packaged edge observer to unwrap the real monitor Operations data object.
+monitor_operations_data = validated_success_data(monitor_operations_payload)
+# Require the monitor Operations body to expose the ready state expected by deployment.
+assert monitor_operations_data["ready"] is True
+
+# Prove the monitor bearer cannot act as a general application session.
+monitor_current_user = request("GET", "/api/v2/me", headers={"Authorization": f"Bearer {MONITOR_TOKEN}"})
+# Require every non-monitor route to reject the monitor token as unauthenticated.
+assert monitor_current_user["status"] == "401 Unauthorized"
 
 # Bootstrap one anonymous double-submit token through the packaged shell.
 bootstrap = request("GET", "/")

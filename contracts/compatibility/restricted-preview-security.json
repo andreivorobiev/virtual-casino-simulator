@@ -2,7 +2,7 @@
   "artifact": "restricted-preview-security",
   "version": 1,
   "stage": "restricted-preview",
-  "canonical_origin": "https://casino.andvor.com",
+  "canonical_origin": "https://casino.tiltseven.com",
   "anonymous_routes": [
     "/api/v2/auth/login",
     "/api/v2/auth/guest",
@@ -53,6 +53,7 @@
     "oauth_provider_network_release_flags_default_false": true,
     "oauth_existing_private_invite_accounts_only": true,
     "admin_requires_admin_session": true,
+    "monitor_bearer_limited_to_operations": true,
     "guest_trials_restricted_preview_only": true,
     "guest_browser_context_proof_required": true,
     "guest_admin_telemetry_deidentified": true

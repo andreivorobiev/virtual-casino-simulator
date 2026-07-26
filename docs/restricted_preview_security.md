@@ -4,10 +4,10 @@ Requirements `SEC-010`, `SESSION-006`, `ADMIN-024`, `AUTH-007`, and `TEST-047` d
 
 ## Required production configuration
 
-The released hostname is documented as `https://casino.andvor.com`, but it remains inactive until the separate edge cutover packet is approved. Production startup requires:
+The released Casino hostname is `https://casino.tiltseven.com`. Production startup requires:
 
 - `CASINO_RESTRICTED_PREVIEW=1`;
-- `CASINO_CANONICAL_ORIGIN=https://casino.andvor.com`;
+- `CASINO_CANONICAL_ORIGIN=https://casino.tiltseven.com`;
 - `CASINO_TRUSTED_PROXY` set to exactly one loopback IP used by the separately approved edge proxy;
 - `CASINO_SESSION_SAMESITE=Strict` or `Lax`;
 - bounded `CASINO_MAX_BODY_BYTES`, `CASINO_RATE_LIMIT_REQUESTS`, and `CASINO_RATE_LIMIT_WINDOW_SECONDS` values when the reviewed defaults are unsuitable.
@@ -22,7 +22,7 @@ Every `POST`, `PUT`, `PATCH`, and `DELETE` requires both the exact configured Or
 
 ## Restricted access
 
-Anonymous application access is limited to `/healthz`, `/api/v2/auth/login`, the owner-approved repository-only guest and invitation-redemption routes, boolean OAuth availability, and the exact Google/Facebook start/callback shapes. Readiness remains authenticated. Admin HTML, JavaScript, and APIs require an active Admin session. Public signup and provider-created accounts remain absent. The OAuth routes are disabled and provider-network inaccessible by default; they become executable only if both provider-specific gates and every future external release condition are separately satisfied. First linking requires the exact authenticated existing private-invite local-password account and explicit confirmation, and later sign-in requires its prior provider-subject link. Provider email never selects an account. Invitation and local-password recovery remain authoritative; a guest is never a registered account and cannot be recovered, converted, or linked.
+Anonymous application access is limited to `/healthz`, `/api/v2/auth/login`, the owner-approved repository-only guest and invitation-redemption routes, boolean OAuth availability, and the exact Google/Facebook start/callback shapes. Readiness remains authenticated through either a normal Admin session or the root-managed deployment monitor bearer token accepted only by `/readyz` and `/api/v2/admin/operations`. Admin HTML, JavaScript, and all other Admin APIs require an active Admin session. Public signup and provider-created accounts remain absent. The OAuth routes are disabled and provider-network inaccessible by default; they become executable only if both provider-specific gates and every future external release condition are separately satisfied. First linking requires the exact authenticated existing private-invite local-password account and explicit confirmation, and later sign-in requires its prior provider-subject link. Provider email never selects an account. Invitation and local-password recovery remain authoritative; a guest is never a registered account and cannot be recovered, converted, or linked.
 
 ## Disposable guest-trial boundary
 

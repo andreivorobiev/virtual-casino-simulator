@@ -10,7 +10,7 @@ The canonical machine-readable source is deploy/edge/restricted-preview.json. It
 
 - manual invitations are the only enrollment path;
 - public signup and live OAuth remain disabled;
-- readiness and Admin Operations require an authenticated Admin session;
+- readiness and Admin Operations require an authenticated Admin session or the root-managed monitor bearer token;
 - anonymous liveness exposes only the fixed live state;
 - Host, X-Forwarded-For, and X-Forwarded-Proto are replaced with edge-owned values; and
 - all other reviewed forwarding headers are cleared before the request reaches the application.
@@ -23,7 +23,7 @@ The deploy/nginx/casino.conf.template source contains the future HTTP-01 challen
 
 The deploy/acme/casino-renewal-hook.sh.template source validates nginx before reload. Certificate account creation, issuance, renewal configuration, and provider interaction are absent from this repository packet.
 
-The deploy/systemd/casino-edge-monitor service and timer templates describe an unprivileged, read-only, bounded observation job. They are not enabled. The service reads its authenticated monitor cookie only from a root-managed external environment file and sends it only to the two policy-declared authenticated same-origin probes.
+The deploy/systemd/casino-edge-monitor service and timer templates describe an unprivileged, read-only, bounded observation job. They are not enabled. The service reads its monitor authorization header from a root-managed external environment file and sends it only to the two policy-declared authenticated same-origin probes. Existing hosts may keep the legacy cookie variable during rollout, but the preferred credential is `CASINO_EDGE_MONITOR_AUTHORIZATION=Bearer ...`.
 
 The deploy/rollback/casino-edge-rollback.sh.template source requires a complete operator-rendered nginx preflight configuration for the previous site source, switches application and edge links, restarts the supervised application, reloads nginx, and requires a sanitized observation. Any failed restart, reload, or observation restores both prior links and attempts to recover the pre-rollback processes. It never invokes MySQL, migrations, recovery, backup, DNS, ACME issuance, or firewall tooling.
 
@@ -41,11 +41,11 @@ The focused TEST-050 suite proves this listener-free behavior and negative cases
 
 ## Sanitized observation
 
-The observe command is intended only after the separately approved HTTPS cutover has supplied a root-managed CASINO_EDGE_MONITOR_COOKIE value:
+The observe command is intended only after the approved HTTPS cutover has supplied `CASINO_EDGE_MONITOR_AUTHORIZATION` in the root-managed monitor environment:
 
     python scripts/edge_gate.py observe
 
-Observation performs GET requests only. It verifies the default trusted TLS chain and hostname, checks whole remaining certificate days, reads at most 65,536 response bytes, and requires the #203 security headers. It sends no cookie to anonymous liveness. It sends the external cookie only to readiness and Admin Operations.
+Observation performs GET requests only. It verifies the default trusted TLS chain and hostname, checks whole remaining certificate days, reads at most 65,536 response bytes, and requires the #203 security headers. It sends no credential to anonymous liveness. It sends the external monitor header only to readiness and Admin Operations.
 
 Success output contains only a fixed schema, pass state, UTC observation time, whole certificate days remaining, and three boolean check names. Failure output contains one fixed category. URLs, addresses, headers, response bodies, cookies, credentials, provider values, identifiers, and filesystem paths are never emitted.
 
