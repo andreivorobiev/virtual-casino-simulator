@@ -246,10 +246,14 @@ admin_html = request("GET", "/admin", headers={"Cookie": f"casino_session={admin
 # Require the immutable Admin document only after application authorization.
 assert admin_html["status"] == "200 OK" and b"adminView" in admin_html["body"]
 
-# Prove signup remains absent even for an authenticated Admin request.
+# Prove signup remains present only as a disabled enrollment endpoint even for an authenticated Admin request.
 signup = request("POST", "/api/v2/auth/signup", {"email": "held@example.invalid", "password": "held"}, mutation_headers(admin_csrf, admin_token))
-# Require route absence rather than provider or account mutation.
-assert signup["status"] == "404 Not Found"
+# Require the disabled route to fail closed rather than creating account state.
+assert signup["status"] == "403 Forbidden" and decoded(signup)["error"]["code"] == "FORBIDDEN"
+# Read the public enrollment policy without authenticating a user.
+signup_policy = request("GET", "/api/v2/auth/enrollment-policy")
+# Require the enrollment surface to publish disabled signup and passkeys while retaining conversion availability.
+assert signup_policy["status"] == "200 OK" and decoded(signup_policy)["data"]["signup_enabled"] is False and decoded(signup_policy)["data"]["passkeys_enabled"] is False and decoded(signup_policy)["data"]["guest_conversion_enabled"] is True
 # Prove the wrong HTTP method remains absent on the exact OAuth start path.
 oauth_start = request("GET", "/api/v2/auth/oauth/google/start", headers={"Authorization": f"Bearer {admin_token}"})
 # Require method-level route absence without treating it as provider readiness.

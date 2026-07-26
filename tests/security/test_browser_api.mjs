@@ -53,6 +53,46 @@ globalThis.sessionStorage.removeItem('casino.guestBrowserNonce');
 await apiModule.api('/api/v2/me');
 // Prove the helper cannot reconstruct or persist the destroyed guest proof.
 assert.equal(calls[3].init.headers['X-Guest-Browser-Nonce'], undefined);
+// Reset captured calls before exercising explicit registered logout verification.
+calls.length = 0;
+// Simulate a successful logout followed by an authoritative unauthenticated current-user probe.
+globalThis.fetch = async (requestPath, init) => {
+  // Capture the exact transport options used by logout and verification.
+  calls.push({ requestPath, init });
+  // Acknowledge the backend logout request with the standard empty success payload.
+  if (requestPath === '/api/v2/auth/logout') return { ok: true, json: async () => ({ ok: true, data: { logged_out: true } }) };
+  // Prove the follow-up current-user probe sees no usable session cookie.
+  if (requestPath === '/api/v2/me') return { ok: false, status: 401, json: async () => ({ ok: false, error: { code: 'UNAUTHORIZED', message: 'Session is invalid or expired' } }) };
+  // Reject any accidental extra request so the test remains exact.
+  throw new Error(`Unexpected logout verification request ${requestPath}`);
+};
+// Require logout to resolve only after the current-user verification is unauthenticated.
+await apiModule.logout();
+// Require the state-changing logout request to carry the browser CSRF proof.
+assert.equal(calls[0].init.headers['X-CSRF-Token'], 'browser-csrf-proof');
+// Require the verification probe to read the current-user endpoint after logout.
+assert.equal(calls[1].requestPath, '/api/v2/me');
+// Require the verification probe to use browser-managed cookies without sending CSRF.
+assert.equal(calls[1].init.credentials, 'include');
+// Require the verification probe to remain a read-only request.
+assert.equal(calls[1].init.method, 'GET');
+// Reset captured calls before proving a surviving session fails closed.
+calls.length = 0;
+// Simulate a backend logout acknowledgement that leaves /api/v2/me authenticated.
+globalThis.fetch = async (requestPath, init) => {
+  // Capture the request so the fail-closed path can be inspected.
+  calls.push({ requestPath, init });
+  // Return normal logout success for the first call.
+  if (requestPath === '/api/v2/auth/logout') return { ok: true, json: async () => ({ ok: true, data: { logged_out: true } }) };
+  // Return a still-authenticated current-user envelope to model the refresh-resurrection bug.
+  if (requestPath === '/api/v2/me') return { ok: true, status: 200, json: async () => ({ ok: true, data: { user: { email: 'demo@example.local' } } }) };
+  // Reject any accidental extra request so the test remains exact.
+  throw new Error(`Unexpected logout verification request ${requestPath}`);
+};
+// Require the helper to reject instead of letting the shell paint a false logged-out screen.
+await assert.rejects(() => apiModule.logout(), error => error.code === 'LOGOUT_STILL_AUTHENTICATED');
+// Require the failed verification to have performed exactly the logout call and one current-user probe.
+assert.deepEqual(calls.map(call => call.requestPath), ['/api/v2/auth/logout', '/api/v2/me']);
 // Collect browser shell events emitted after protected-session expiry.
 const sessionExpiredEvents = [];
 // Provide a test-local CustomEvent constructor so the browser-only expiry path can run in Node.

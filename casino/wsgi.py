@@ -156,16 +156,16 @@ def _json_response(start_response, status: int, payload: dict, extra_headers=Non
 
 # Initialize provider-neutral state once during production worker boot.
 def _validate_restricted_preview_routes() -> None:
-    # Require exactly the reviewed anonymous fixed routes plus separately matched OAuth paths. (issues #317, #326, #332)
-    if auth.PUBLIC_API_PATHS != {"/api/v2/auth/login", "/api/v2/auth/guest", "/api/v2/auth/redeem-invitation", "/api/v2/auth/oauth/providers", "/healthz"}:
+    # Require exactly the reviewed anonymous fixed routes plus separately matched OAuth paths. (issues #317, #326, #332, #378)
+    if auth.PUBLIC_API_PATHS != {"/api/v2/auth/login", "/api/v2/auth/guest", "/api/v2/auth/redeem-invitation", "/api/v2/auth/enrollment-policy", "/api/v2/auth/signup", "/api/v2/auth/oauth/providers", "/healthz"}:
         # Fail startup rather than allowing compatibility metadata to broaden public access.
         raise RuntimeError("Restricted preview public routes do not match the accepted allowlist")
     # Inspect registered method and pattern pairs without invoking any route.
     for route in ROUTER.routes:
         # Normalize the pattern only for fixed forbidden-route detection.
         pattern = str(route.pattern).lower()
-        # Reject any signup or public registration route during restricted preview.
-        if "signup" in pattern or "/register" in pattern:
+        # Reject any unreviewed signup or public registration route during restricted preview.
+        if (("signup" in pattern and pattern != "/api/v2/auth/signup") or ("/register" in pattern and pattern != "/api/v2/me/passkeys/register")):
             # Keep the diagnostic free of private route or configuration details.
             raise RuntimeError("Restricted preview does not permit signup routes")
         # Reject every OAuth action route outside the exact reviewed disabled-by-default v2 shapes.
@@ -184,7 +184,7 @@ def _initialize_runtime() -> SecurityPolicy:
     auth.validate_session_bounds()
     # Require the explicit canonical origin, proxy, cookie, body, and rate policy.
     policy = SecurityPolicy.from_environment()
-    # Prove signup remains absent and every disabled-by-default OAuth route matches the reviewed v2 allowlist.
+    # Prove signup remains disabled and every disabled-by-default OAuth route matches the reviewed v2 allowlist.
     _validate_restricted_preview_routes()
     # Create only the configured external data and log directories.
     ensure_dirs()
