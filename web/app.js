@@ -7,6 +7,8 @@ import { renderTokenBalance, toast, tokens, safe, renderPremiumTag } from './cor
 import { getLocaleState, initI18n, onLocaleChange, registerI18nDomains, setLocale, t } from './core/i18n.js';
 // Import the offline-safe shell controller for exact-version updates and authoritative reconnects. (PWA-001, PWA-002)
 import { initPwa } from './core/pwa.js';
+// Import the active brand and its runtime token applier so one config skins the app.
+import { activeBrand, applyBrand } from './core/brand.js';
 // Import required dependency so this module can preload global voice settings before games mount.
 import { loadVoiceSettings } from './core/voice.js';
 // Import the registered-user problem-report dialog without adding feedback code to the shared shell.
@@ -306,8 +308,12 @@ function updateCurrentUserShell() {
   const localeSelect = document.getElementById('shell-locale-select');
   // Wire the persistent locale selector without remounting games.
   wireLocaleSelect(localeSelect, () => { renderNav(); updateCurrentUserShell(); if (active === 'lobby') navigate('lobby'); });
-  // Localize the persistent brand and wallet labels that remain mounted across routes.
-  setStatusText('shell-brand-title', t('brand.title', {}, 'shell'));
+  // Show the active brand name from the brand config so rebranding stays a one-file change.
+  setStatusText('shell-brand-title', activeBrand.name);
+  // Render the active brand mark glyph inside the brand badge.
+  const brandMark = document.querySelector('.brand-mark');
+  // Set the mark only when the static lockup element is present.
+  if (brandMark) brandMark.textContent = activeBrand.mark;
   // Keep the compact subtitle aligned with the selected shell locale.
   setStatusText('shell-brand-subtitle', t('brand.subtitle', {}, 'shell'));
   // Localize the visible wallet balance caption.
@@ -1057,6 +1063,8 @@ export async function navigate(route, options = {}) {
 
 // Initialize shell state, wallet behavior, and the first lobby route.
 async function init() {
+  // Apply the active brand's design tokens and theme colour before first paint.
+  applyBrand(activeBrand);
   // Initialize i18n before any auth or shell markup renders.
   await initI18n({ domains: ['shell', 'feedback'] });
   // Bind the native problem-report dialog after its translation domain is ready.
