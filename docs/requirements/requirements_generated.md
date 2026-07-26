@@ -55,7 +55,7 @@ Historical source baseline: 9.1.0
 - contracts: 1.48.0
 - tooling: 1.20.3
 - commenting_policy: 1.0.0
-- color_wheel: 1.0.0
+- color_wheel: 1.0.1
 - poker_dice: 1.0.0
 - boule: 1.0.0
 - faro: 1.0.0
