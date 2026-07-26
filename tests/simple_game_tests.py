@@ -115,8 +115,12 @@ class SimpleGameCoreTests(unittest.TestCase):
     def test_recovers_from_committed_entropy_after_state_loss(self) -> None:
         # Use a mutable in-memory state so it can be wiped mid-round to simulate a crash.
         store = {}
+        # Supply different first and retry draws so any accidental entropy redraw changes the outcome.
+        draws = iter((4, 2))
+        # Supply different first and retry timestamps so public replay identity is also proven.
+        timestamps = iter(("2026-07-26T00:00:00Z", "2026-07-26T00:01:00Z"))
         # Build a game whose state loader and saver use the wipeable store.
-        game = SimpleWagerGame(game_id="unit_flip", wager_transaction_type="UNIT_FLIP_WAGER_DEBIT", settlement_transaction_type="UNIT_FLIP_SETTLEMENT_CREDIT", entropy=_entropy, resolve=_resolve, validate_bet=_validate_bet, entropy_source=lambda n: 2, state_loader=lambda p: store.get(p, {"game": "unit_flip", "recent_rounds": []}), state_saver=lambda p, s: store.__setitem__(p, s))
+        game = SimpleWagerGame(game_id="unit_flip", wager_transaction_type="UNIT_FLIP_WAGER_DEBIT", settlement_transaction_type="UNIT_FLIP_SETTLEMENT_CREDIT", entropy=_entropy, resolve=_resolve, validate_bet=_validate_bet, entropy_source=lambda n: next(draws), clock=lambda: next(timestamps), state_loader=lambda p: store.get(p, {"game": "unit_flip", "recent_rounds": []}), state_saver=lambda p, s: store.__setitem__(p, s))
         # Play a winning round.
         first = game.play(self.pid, {"request_id": "r-crash", "face": 3, "stake": 10})
         # Record the balance after the first settlement.
@@ -125,8 +129,10 @@ class SimpleGameCoreTests(unittest.TestCase):
         store.clear()
         # Replay the same request after state loss so proof must come from the ledger alone.
         second = game.play(self.pid, {"request_id": "r-crash", "face": 3, "stake": 10})
-        # Require the recovered outcome to equal the original committed outcome.
-        self.assertEqual(second["round"]["total_return"], first["round"]["total_return"])
+        # Require the recovered public round to equal the original committed outcome and timestamp exactly.
+        self.assertEqual(second["round"], first["round"])
+        # Require state-loss recovery to report that the committed wager proof was replayed.
+        self.assertTrue(second["replayed"])
         # Require the wallet not to have moved a second time despite the lost state.
         self.assertEqual(self._balance(), after_first)
 

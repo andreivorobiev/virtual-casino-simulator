@@ -201,14 +201,28 @@ class SimpleWagerGame:
                 ledger_events = self._round_ledger(player_id, existing)
                 # Return the identical replayed round with explicit replay evidence.
                 return {"round": existing["public"], "replayed": True, "ledger": ledger_events, **self.state(player_id)}
-            # Draw the authoritative server entropy for this fresh round.
-            entropy = self._entropy(self._entropy_source)
-            # Build the audit details that commit the wager and its entropy for deterministic recovery.
-            wager_details = {"request_id": request_id, "wager": wager, "entropy": entropy}
-            # Apply the aggregate wager debit exactly once, committing the entropy in its proof.
-            self._ledger_gateway.apply_once(player_id=player_id, amount=-wager_total, transaction_type=self.wager_transaction_type, round_id=round_id, action_key=self._action_key(round_id, "wager"), request_fingerprint=fingerprint, details=wager_details)
+            # Draw tentative server entropy that becomes authoritative only if this request writes the wager proof.
+            tentative_entropy = self._entropy(self._entropy_source)
+            # Capture one tentative settlement timestamp alongside the entropy for exact crash-recovery replay.
+            tentative_settled_at = self._clock()
+            # Build the audit details that commit the wager, entropy, and public timestamp for deterministic recovery.
+            wager_details = {"request_id": request_id, "wager": wager, "entropy": tentative_entropy, "settled_at": tentative_settled_at}
+            # Apply or recover the aggregate wager debit and retain its authoritative committed proof.
+            wager_event, wager_replayed = self._ledger_gateway.apply_once(player_id=player_id, amount=-wager_total, transaction_type=self.wager_transaction_type, round_id=round_id, action_key=self._action_key(round_id, "wager"), request_fingerprint=fingerprint, details=wager_details)
+            # Read only the committed proof because a retry's tentative entropy must never replace the first draw.
+            committed_wager_details = wager_event.get("details") or {}
+            # Recover the exact normalized wager recorded with the debit.
+            committed_wager = committed_wager_details.get("wager")
+            # Recover the exact entropy recorded before the first debit.
+            entropy = committed_wager_details.get("entropy")
+            # Recover the exact public timestamp recorded before the first debit.
+            settled_at = committed_wager_details.get("settled_at")
+            # Fail closed if a malformed proof cannot reconstruct the identical authoritative round.
+            if committed_wager != wager or entropy is None or not isinstance(settled_at, str) or not settled_at:
+                # Reject incomplete or inconsistent proof rather than redrawing or fabricating settlement state.
+                raise ConflictError(f"{self.game_id} committed wager proof is incomplete")
             # Resolve the deterministic outcome from the committed wager and committed entropy.
-            settlement = self._resolve(wager, entropy)
+            settlement = self._resolve(committed_wager, entropy)
             # Read the total return the resolver computed.
             total_return = round(float(settlement.get("total_return", 0)), 2)
             # Apply the aggregate settlement credit exactly once when the round returned value.
@@ -218,7 +232,7 @@ class SimpleWagerGame:
                 # Commit the single aggregate credit exactly once.
                 self._ledger_gateway.apply_once(player_id=player_id, amount=total_return, transaction_type=self.settlement_transaction_type, round_id=round_id, action_key=self._action_key(round_id, "settlement"), request_fingerprint=fingerprint, details=settlement_details)
             # Build the public round record retained in compact player state.
-            public_round = {"round_id": round_id, "wager": wager, "wager_total": wager_total, "entropy": entropy, "total_return": total_return, "outcome": settlement.get("outcome"), "detail": settlement.get("detail", {}), "net": round(total_return - wager_total, 2), "settled_at": self._clock()}
+            public_round = {"round_id": round_id, "wager": committed_wager, "wager_total": wager_total, "entropy": entropy, "total_return": total_return, "outcome": settlement.get("outcome"), "detail": settlement.get("detail", {}), "net": round(total_return - wager_total, 2), "settled_at": settled_at}
             # Build the compact stored round with replay and fingerprint bookkeeping.
             stored_round = {"request_id": request_id, "request_fingerprint": fingerprint, "round_id": round_id, "total_return": total_return, "public": public_round}
             # Prepend the new round and bound the retained history.
@@ -228,7 +242,7 @@ class SimpleWagerGame:
             # Rebuild the freshly committed ledger events for the response.
             ledger_events = self._round_ledger(player_id, stored_round)
             # Return the settled round, its ledger proof, and the refreshed public state.
-            return {"round": public_round, "replayed": False, "ledger": ledger_events, **self.state(player_id)}
+            return {"round": public_round, "replayed": wager_replayed, "ledger": ledger_events, **self.state(player_id)}
 
     # Rebuild the committed ledger events for one round from stored proof.
     def _round_ledger(self, player_id: str, stored_round: dict) -> dict:
