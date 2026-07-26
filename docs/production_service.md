@@ -55,6 +55,20 @@ The tracked unit sources this fragment after `/etc/casino/casino.env` and marks 
 
 The environment file is not a release artifact, must never be committed, and should be readable only by the service manager. Secret values must not appear in the unit, process arguments, screenshots, test output, or release evidence.
 
+## Protected-main CI/CD
+
+Every push to protected `main` runs `.github/workflows/deploy-production.yml`. The workflow reads the packaged application version from `modules/module-manifest.json`, refuses to proceed when that immutable `vX.Y.Z` tag already belongs to a different commit, builds a rollback-eligible release from exact protected-main bytes, publishes or reuses the matching GitHub Release assets, downloads the hosted assets back, and deploys only those hosted bytes to production. This makes the hosted Release artifact the deployment source of truth rather than a local checkout or runner filesystem.
+
+The production job requires repository secrets for the SSH target, user, private key, optional port, and known-hosts entry. It uploads only `virtual_casino_simulator_package.zip`, `release-manifest.json`, and `checksums.txt` into a commit-named staging directory. On the host it verifies checksums, verifies the package against the exact commit and tag, writes `/etc/casino/release.env` from the manifest, atomically repoints `/opt/casino/current`, restarts the service, reloads nginx, and runs `scripts/edge_gate.py observe`. Any failure after the prior release is known triggers an application rollback to the previous symlink and release environment fragment. Database rollback remains prohibited.
+
+The monitor environment file should prefer:
+
+```text
+CASINO_EDGE_MONITOR_AUTHORIZATION=Bearer <root-managed-random-token>
+```
+
+The application stores only `CASINO_EDGE_MONITOR_TOKEN_SHA256` in `/etc/casino/casino.env`, and that token is accepted only for `GET /readyz` and `GET /api/v2/admin/operations`. It is not an Admin browser login and cannot access `/api/v2/me`, gameplay, account, or mutation routes. Existing hosts may retain `CASINO_EDGE_MONITOR_COOKIE` as a compatibility fallback while the bearer value is installed.
+
 ## Supervised lifecycle
 
 The tracked template at `deploy/systemd/casino.service` provides the service identity, environment-file guard, atomic-symlink guard, immutable working directory, writable-root allowlist, restart policy, bounded graceful stop, capability removal, and journald routing. The production command is:

@@ -1,8 +1,8 @@
 {
   "schema": "casino.edge-policy.v1",
   "stage": "repository-preparation-only",
-  "canonical_origin": "https://casino.andvor.com",
-  "canonical_host": "casino.andvor.com",
+  "canonical_origin": "https://casino.tiltseven.com",
+  "canonical_host": "casino.tiltseven.com",
   "upstream": {
     "scheme": "http",
     "host": "127.0.0.1",
@@ -21,7 +21,7 @@
   },
   "proxy": {
     "request_headers": {
-      "Host": "casino.andvor.com",
+      "Host": "casino.tiltseven.com",
       "X-Forwarded-For": "$remote_addr",
       "X-Forwarded-Proto": "https"
     },
@@ -40,6 +40,15 @@
     "timeout_seconds": 5,
     "maximum_body_bytes": 65536,
     "minimum_certificate_days_remaining": 14,
+    "authentication": {
+      "preferred_header": "Authorization",
+      "preferred_environment": "CASINO_EDGE_MONITOR_AUTHORIZATION",
+      "fallback_cookie_environment": "CASINO_EDGE_MONITOR_COOKIE",
+      "authenticated_paths": [
+        "/readyz",
+        "/api/v2/admin/operations"
+      ]
+    },
     "required_response_headers": {
       "Content-Security-Policy": "present",
       "X-Content-Type-Options": "nosniff",

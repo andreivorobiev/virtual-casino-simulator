@@ -142,6 +142,10 @@ def main():
         if operations_text.count("- cookieSession: []") != 2:
             # Report authentication drift without exposing any runtime configuration.
             errors.append(f"{OPERATIONS_CONTRACT} does not protect readiness and Admin telemetry")
+        # Require readiness and Admin telemetry to expose the bounded deployment monitor scheme.
+        if operations_text.count("- monitorBearer: []") != 2 or "accepted only for /readyz and /api/v2/admin/operations" not in operations_text:
+            # Report monitor-auth drift without exposing any runtime configuration.
+            errors.append(f"{OPERATIONS_CONTRACT} does not preserve the deployment monitor boundary")
     # Require the restricted-preview policy artifact to remain parseable and exact.
     try:
         # Parse the checked policy without evaluating any runtime configuration.
@@ -157,7 +161,7 @@ def main():
         # Require public enrollment and live provider flows to stay disabled.
         access_policy = preview_security.get("access_policy", {})
         # Check each non-public stage switch explicitly.
-        if access_policy.get("public_signup") is not False or access_policy.get("live_oauth") is not False or access_policy.get("admin_requires_admin_session") is not True or access_policy.get("oauth_provider_flags_default_false") is not True or access_policy.get("oauth_provider_network_release_flags_default_false") is not True or access_policy.get("oauth_existing_private_invite_accounts_only") is not True:
+        if access_policy.get("public_signup") is not False or access_policy.get("live_oauth") is not False or access_policy.get("admin_requires_admin_session") is not True or access_policy.get("monitor_bearer_limited_to_operations") is not True or access_policy.get("oauth_provider_flags_default_false") is not True or access_policy.get("oauth_provider_network_release_flags_default_false") is not True or access_policy.get("oauth_existing_private_invite_accounts_only") is not True:
             # Report access-policy drift without runtime details.
             errors.append(f"{PREVIEW_SECURITY_CONTRACT} does not preserve restricted-preview access")
         # Require exact request integrity rather than advisory browser behavior.

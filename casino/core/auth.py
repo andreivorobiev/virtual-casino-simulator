@@ -7,6 +7,8 @@ import hashlib
 import hmac
 # Import regular expressions for exact reviewed public OAuth route matching.
 import re
+# Import process environment access for the root-managed deployment monitor credential.
+import os
 # Import required dependency so this module can use its public functions or constants.
 import secrets
 # Import required dependency so this module can use its public functions or constants.
@@ -46,6 +48,12 @@ MAX_STORED_SESSIONS = 1_000
 MAX_SESSIONS_PER_USER = 256
 # Enumerate durable account fields whose change invalidates existing privileges.
 PRIVILEGE_FIELDS = ("role", "roles", "status", "password_hash", "password_version")
+# Name the hash-only monitor-token setting used by production deployment checks.
+EDGE_MONITOR_TOKEN_SHA256_ENV = "CASINO_EDGE_MONITOR_TOKEN_SHA256"
+# Accept only one complete lowercase SHA-256 digest for the monitor-token verifier.
+EDGE_MONITOR_TOKEN_HASH_PATTERN = re.compile(r"^[0-9a-f]{64}$")
+# Limit the monitor principal to the two read-only Operations probes required by deployment.
+MONITOR_AUTH_PATHS = frozenset({"/readyz", "/api/v2/admin/operations"})
 
 # Define the utc_datetime function used by this module.
 def utc_datetime() -> datetime:
@@ -917,6 +925,55 @@ def extract_bearer_token(headers) -> str:
         return auth_header.split(" ", 1)[1].strip()
     # Return the computed value to the caller.
     return ""
+
+
+# Read a valid root-managed monitor token verifier without caching deployment secrets.
+def monitor_token_digest(environ=None) -> str:
+    # Use the live process environment unless a focused test supplies a synthetic mapping.
+    current_environment = os.environ if environ is None else environ
+    # Normalize only whitespace and case around the public digest representation.
+    digest = str(current_environment.get(EDGE_MONITOR_TOKEN_SHA256_ENV, "")).strip().lower()
+    # Return no verifier unless the operator supplied one exact SHA-256 digest.
+    if not EDGE_MONITOR_TOKEN_HASH_PATTERN.fullmatch(digest):
+        # Preserve disabled behavior for local runs and malformed production configuration.
+        return ""
+    # Return the validated digest without exposing the underlying monitor token.
+    return digest
+
+
+# Authenticate one root-managed monitor token only for read-only Operations probes.
+def authenticate_monitor_headers(headers, path: str, environ=None) -> tuple[dict, dict] | None:
+    # Refuse every route outside the deployment-observation allowlist before reading credentials.
+    if path not in MONITOR_AUTH_PATHS:
+        # Return no monitor identity so ordinary session authentication remains authoritative.
+        return None
+    # Read the hash-only verifier from the supplied environment boundary.
+    expected_digest = monitor_token_digest(environ)
+    # Keep the monitor credential disabled unless deployment configuration explicitly supplies a verifier.
+    if not expected_digest:
+        # Return no monitor identity so missing configuration cannot grant access.
+        return None
+    # Extract the same bearer shape used by normal API clients without accepting cookies.
+    token = extract_bearer_token(headers)
+    # Reject missing, multiline, or unbounded bearer material before hashing it.
+    if not token or "\r" in token or "\n" in token or len(token) > 4096:
+        # Return no monitor identity so invalid material follows the normal unauthenticated path.
+        return None
+    # Hash the supplied token so comparison never stores or echoes plaintext bearer material.
+    supplied_digest = hashlib.sha256(token.encode("utf-8")).hexdigest()
+    # Compare the two fixed-length digests with constant-time semantics.
+    if not hmac.compare_digest(supplied_digest, expected_digest):
+        # Return no monitor identity so unrelated bearer sessions are resolved normally.
+        return None
+    # Capture one timestamp for the ephemeral request-local monitor session.
+    now = utc_now()
+    # Build a non-persistent session facade that carries no reusable token, CSRF proof, or client data.
+    session = {"session_id": "edge-monitor", "user_id": "edge-monitor", "status": "active", "created_at": now, "updated_at": now, "expires_at": now, "auth_method": "edge_monitor"}
+    # Build the smallest Admin-compatible identity for the Operations authorization gate.
+    user = {"user_id": "edge-monitor", "email": None, "username": "edge-monitor", "display_name": "Edge Monitor", "role": "admin", "roles": ["admin"], "status": "active", "player_id": "edge-monitor", "identity_provider": "edge_monitor", "monitor": True}
+    # Return the ephemeral principal for this one read-only request only.
+    return session, user
+
 
 # Define the extract_cookie_token function used by this module.
 def extract_cookie_token(headers) -> str:

@@ -12,6 +12,7 @@ Group=casino-monitor
 WorkingDirectory=/opt/casino/current
 EnvironmentFile=/etc/casino/edge-monitor.env
 ExecStartPre=/usr/bin/test -L /opt/casino/current
+# Require a root-managed file containing CASINO_EDGE_MONITOR_AUTHORIZATION or the legacy cookie fallback.
 ExecStartPre=/usr/bin/test -r /etc/casino/edge-monitor.env
 ExecStart=/opt/casino/venv/bin/python /opt/casino/current/scripts/edge_gate.py observe --policy /opt/casino/current/deploy/edge/restricted-preview.json
 TimeoutStartSec=20s

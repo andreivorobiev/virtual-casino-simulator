@@ -45,6 +45,8 @@ class ProductionServiceTests(unittest.TestCase):
         environment["CASINO_BOOTSTRAP_ADMIN_PASSWORD"] = "synthetic-service-probe-password"
         # Supply the restricted-preview canonical origin through a reserved test domain.
         environment["CASINO_CANONICAL_ORIGIN"] = "https://casino.example.invalid"
+        # Supply only a hash of the synthetic monitor bearer used by the child readiness probe.
+        environment["CASINO_EDGE_MONITOR_TOKEN_SHA256"] = "eef030561320bbeb84bbf72c8c3a82f1ca2db8f9e8f9a1d66867ac886a6fb10c"
         # Trust only the exact direct loopback proxy address.
         environment["CASINO_TRUSTED_PROXY"] = "127.0.0.1"
         # Enable the explicitly released restricted-preview security stage.

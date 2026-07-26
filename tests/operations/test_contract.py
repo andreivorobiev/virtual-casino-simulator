@@ -33,8 +33,12 @@ class OperationsContractTests(unittest.TestCase):
         self.assertIn("/api/v2/admin/operations:", text)
         # Verify liveness is the only anonymous Operations surface.
         self.assertEqual(1, text.count("security: []"))
-        # Verify readiness and Admin diagnostics both require the session security scheme.
+        # Verify readiness and Admin diagnostics both accept the session security scheme.
         self.assertEqual(2, text.count("- cookieSession: []"))
+        # Verify readiness and Admin diagnostics both accept only the monitor bearer as their machine credential.
+        self.assertEqual(2, text.count("- monitorBearer: []"))
+        # Verify the monitor bearer is documented as limited to Operations probes.
+        self.assertIn("accepted only for /readyz and /api/v2/admin/operations", text)
         # Verify the degraded contract uses the fixed standard error identity and HTTP status.
         self.assertIn("'503':", text)
         # Verify the error code matches the runtime route policy.
@@ -73,8 +77,8 @@ class OperationsContractTests(unittest.TestCase):
     def test_module_descriptor_is_promoted_into_shared_registry(self):
         # Parse the canonical shared Operations module descriptor.
         module = json.loads(MODULE_PATH.read_text(encoding="utf-8"))
-        # Verify module identity, initial revision, and future permanent requirement prefix.
-        self.assertEqual(("operations", "1.0.0", ["OPS"]), (module["module"], module["version"], module["requirements_prefixes"]))
+        # Verify module identity, current revision, and future permanent requirement prefix.
+        self.assertEqual(("operations", "1.1.0", ["OPS"]), (module["module"], module["version"], module["requirements_prefixes"]))
         # Verify the descriptor owns only the isolated Operations package.
         self.assertEqual(["casino/operations/"], module["paths"])
         # Verify the new OpenAPI file is the module's declared public contract.

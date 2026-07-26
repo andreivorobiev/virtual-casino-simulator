@@ -1,12 +1,14 @@
-# Virtual Casino Simulator v9.5.5 Release Notes
+# Virtual Casino Simulator v9.5.6 Release Notes
 
 ## Game catalog and accepted-foundations patch release
 
-- Packages the exact accepted protected-main state after v9.5.4 as a distinct immutable patch release, excluding every unmerged branch and pull request.
+- Packages the exact accepted protected-main state after v9.5.5 as a distinct immutable patch release, excluding every unmerged branch and pull request.
 - Includes the accepted expanded game catalog, focused game-review corrections, Keno result-ball containment fix, and localized Admin ledger-event labels.
 - Includes the disabled optional passwordless magic-link server foundation while preserving manual-invite admission and keeping mail/provider networking release-held.
-- Rotates the PWA static-shell cache identity to v9.5.5 so existing browsers fetch the accepted catalog and shell state instead of continuing to serve cached v9.5.4 assets.
-- Keeps MySQL at schema version 2 and permits application-only rollback to the retained, checksum-verified v9.5.4 predecessor; database rollback remains prohibited.
+- Enables protected-main CI/CD so a merge to `main` publishes the exact immutable GitHub Release, deploys hosted release assets to production, verifies readiness through the Operations monitor, and rolls back the application symlink if post-cutover health fails.
+- Records `https://casino.tiltseven.com` as the canonical Casino origin in the restricted-preview edge policy and nginx template.
+- Replaces expiring browser-session monitor readiness with a root-managed bearer accepted only by `/readyz` and `/api/v2/admin/operations`; the legacy cookie variable remains a rollout fallback.
+- Keeps MySQL at schema version 2 and permits application-only rollback to the retained, checksum-verified v9.5.5 predecessor; database rollback remains prohibited.
 - Preserves signup, live OAuth, provider networking, DNS, billing, and unrestricted public exposure as separately gated.
 
 ## Prior v9.5.4 protected-main release

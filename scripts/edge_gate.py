@@ -6,7 +6,7 @@ import argparse
 import datetime
 # Import JSON support for the declarative edge policy and bounded HTTP responses.
 import json
-# Import environment access for the externally managed monitor session cookie.
+# Import environment access for the externally managed monitor credential.
 import os
 # Import portable paths for repository-contained policy and template validation.
 import pathlib
@@ -25,8 +25,10 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 DEFAULT_POLICY = ROOT / "deploy" / "edge" / "restricted-preview.json"
 # Name the root-managed environment value without ever printing its contents.
 COOKIE_ENV = "CASINO_EDGE_MONITOR_COOKIE"
+# Name the preferred root-managed bearer value without ever printing its contents.
+AUTHORIZATION_ENV = "CASINO_EDGE_MONITOR_AUTHORIZATION"
 # Keep all policy failures in a fixed secret-safe category vocabulary.
-ALLOWED_ERROR_CODES = {"access_policy", "certificate_age", "certificate_unavailable", "cookie_missing", "endpoint_body", "endpoint_headers", "endpoint_status", "endpoint_unavailable", "ingress_policy", "invalid_policy", "monitoring_policy", "origin_policy", "proxy_policy", "rollback_policy", "template_content", "template_path", "upstream_policy"}
+ALLOWED_ERROR_CODES = {"access_policy", "certificate_age", "certificate_unavailable", "credential_missing", "endpoint_body", "endpoint_headers", "endpoint_status", "endpoint_unavailable", "ingress_policy", "invalid_policy", "monitoring_policy", "origin_policy", "proxy_policy", "rollback_policy", "template_content", "template_path", "upstream_policy"}
 # Define the complete fixed probe contract so additional public or privileged routes fail closed.
 EXPECTED_PROBES = [("liveness", "/healthz", False, 200, {"status": "live"}), ("readiness", "/readyz", True, 200, {"ready": True, "storage_provider": "mysql"}), ("admin_operations", "/api/v2/admin/operations", True, 200, {"ready": True})]
 # Define the exact hardened response headers already emitted by the #203 application boundary.
@@ -120,9 +122,9 @@ def validate_policy(policy_path=DEFAULT_POLICY, root=ROOT):
     # Refuse any policy that claims deployment or activation has already occurred.
     _require(policy.get("stage") == "repository-preparation-only", "invalid_policy")
     # Bind the edge to the owner-confirmed same-origin HTTPS hostname only.
-    _require(policy.get("canonical_origin") == "https://casino.andvor.com", "origin_policy")
+    _require(policy.get("canonical_origin") == "https://casino.tiltseven.com", "origin_policy")
     # Require the matching canonical Host value consumed by #203.
-    _require(policy.get("canonical_host") == "casino.andvor.com", "origin_policy")
+    _require(policy.get("canonical_host") == "casino.tiltseven.com", "origin_policy")
     # Require the complete application upstream to remain plain HTTP on fixed IPv4 loopback.
     _require(policy.get("upstream") == {"scheme": "http", "host": "127.0.0.1", "port": 8765}, "upstream_policy")
     # Extract the ingress policy for exact port and SSH-boundary checks.
@@ -138,7 +140,7 @@ def validate_policy(policy_path=DEFAULT_POLICY, root=ROOT):
     # Extract the proxy header contract for exact replacement and clearing checks.
     proxy = policy.get("proxy", {})
     # Replace Host and trusted forwarding headers with edge-owned canonical values.
-    _require(proxy.get("request_headers") == {"Host": "casino.andvor.com", "X-Forwarded-For": "$remote_addr", "X-Forwarded-Proto": "https"}, "proxy_policy")
+    _require(proxy.get("request_headers") == {"Host": "casino.tiltseven.com", "X-Forwarded-For": "$remote_addr", "X-Forwarded-Proto": "https"}, "proxy_policy")
     # Clear every other forwarding header so client-supplied chains cannot cross #203.
     _require(proxy.get("cleared_request_headers") == ["Forwarded", "X-Forwarded-Host", "X-Forwarded-Port"], "proxy_policy")
     # Require HTTP-01, nginx preflight, and keep-current-on-failure ACME behavior.
@@ -153,6 +155,8 @@ def validate_policy(policy_path=DEFAULT_POLICY, root=ROOT):
     _require(monitoring.get("minimum_certificate_days_remaining") == 14, "monitoring_policy")
     # Require the exact #203 response security header contract.
     _require(monitoring.get("required_response_headers") == EXPECTED_HEADERS, "monitoring_policy")
+    # Prefer a bearer monitor token and retain the legacy cookie name only as an explicit compatibility fallback.
+    _require(monitoring.get("authentication") == {"preferred_header": "Authorization", "preferred_environment": AUTHORIZATION_ENV, "fallback_cookie_environment": COOKIE_ENV, "authenticated_paths": ["/readyz", "/api/v2/admin/operations"]}, "monitoring_policy")
     # Convert the JSON probe mappings to stable tuples for one exact comparison.
     probes = [(item.get("name"), item.get("path"), item.get("authenticated"), item.get("expected_status"), item.get("expected_json")) for item in monitoring.get("probes", []) if isinstance(item, dict)]
     # Reject missing, reordered, additional, public, or weakened probe declarations.
@@ -166,7 +170,7 @@ def validate_policy(policy_path=DEFAULT_POLICY, root=ROOT):
     # Read the nginx source only after its path has passed exact declaration checks.
     nginx = _read_template(root, expected_templates["nginx"])
     # Require exact loopback, ACME, redirect, TLS, forwarding, clearing, and bounded proxy behavior.
-    _validate_template(nginx, ("server 127.0.0.1:8765;", "listen 80;", "listen 443 ssl http2;", "server_name casino.andvor.com;", "location ^~ /.well-known/acme-challenge/", "return 308 https://casino.andvor.com$request_uri;", "ssl_certificate __TLS_FULLCHAIN_PATH__;", "ssl_certificate_key __TLS_PRIVATE_KEY_PATH__;", "proxy_pass http://casino_restricted_preview;", "proxy_set_header Host casino.andvor.com;", "proxy_set_header X-Forwarded-For $remote_addr;", "proxy_set_header X-Forwarded-Proto https;", "proxy_set_header Forwarded \"\";", "proxy_set_header X-Forwarded-Host \"\";", "proxy_set_header X-Forwarded-Port \"\";", "client_max_body_size 1m;"), ("$proxy_add_x_forwarded_for", "listen 8765", "listen 8877", "listen 3306", "proxy_pass http://0.0.0.0"))
+    _validate_template(nginx, ("server 127.0.0.1:8765;", "listen 80;", "listen 443 ssl http2;", "server_name casino.tiltseven.com casino.andvor.com;", "location ^~ /.well-known/acme-challenge/", "return 308 https://casino.tiltseven.com$request_uri;", "ssl_certificate __TLS_FULLCHAIN_PATH__;", "ssl_certificate_key __TLS_PRIVATE_KEY_PATH__;", "proxy_pass http://casino_restricted_preview;", "proxy_set_header Host casino.tiltseven.com;", "proxy_set_header X-Forwarded-For $remote_addr;", "proxy_set_header X-Forwarded-Proto https;", "proxy_set_header Forwarded \"\";", "proxy_set_header X-Forwarded-Host \"\";", "proxy_set_header X-Forwarded-Port \"\";", "client_max_body_size 1m;"), ("$proxy_add_x_forwarded_for", "listen 8765", "listen 8877", "listen 3306", "proxy_pass http://0.0.0.0"))
     # Read and validate the renewal hook without invoking nginx or a certificate client.
     renewal = _read_template(root, expected_templates["acme_renewal_hook"])
     # Require fail-before-reload behavior and prohibit issuance from the renewal hook.
@@ -187,14 +191,34 @@ def validate_policy(policy_path=DEFAULT_POLICY, root=ROOT):
     return policy
 
 
+# Validate one externally managed monitor credential before any endpoint request.
+def _monitor_header_from_environment(environ=None):
+    # Use the live process environment unless a focused test supplies synthetic values.
+    current_environment = os.environ if environ is None else environ
+    # Read the preferred Authorization value without ever logging it.
+    authorization = str(current_environment.get(AUTHORIZATION_ENV, "")).strip()
+    # Prefer the bearer monitor token so deployment no longer depends on expiring browser cookies.
+    if authorization:
+        # Refuse malformed or unbounded authorization material before any network call.
+        _require(authorization.startswith("Bearer ") and "\r" not in authorization and "\n" not in authorization and len(authorization) <= 4096, "credential_missing")
+        # Return the exact header name and value to the request builder only.
+        return ("Authorization", authorization)
+    # Read the legacy cookie value only when the preferred bearer value is absent.
+    cookie = str(current_environment.get(COOKIE_ENV, "")).strip()
+    # Refuse missing, malformed, multiline, or unbounded legacy cookie material before any network call.
+    _require("=" in cookie and "\r" not in cookie and "\n" not in cookie and len(cookie) <= 4096, "credential_missing")
+    # Return the exact legacy header name and value to the request builder only.
+    return ("Cookie", cookie)
+
+
 # Fetch one bounded HTTPS JSON response and return only data needed for policy comparisons.
-def _fetch_json(url, cookie, timeout, maximum_body_bytes):
-    # Build the fixed read-only request headers without attaching a cookie to anonymous liveness.
+def _fetch_json(url, monitor_header, timeout, maximum_body_bytes):
+    # Build the fixed read-only request headers without attaching credentials to anonymous liveness.
     headers = {"Accept": "application/json"}
-    # Add the externally managed session cookie only to explicitly authenticated probes.
-    if cookie is not None:
+    # Add the externally managed monitor credential only to explicitly authenticated probes.
+    if monitor_header is not None:
         # Pass the secret directly to the request object without logging or persisting it.
-        headers["Cookie"] = cookie
+        headers[monitor_header[0]] = monitor_header[1]
     # Construct one GET request so monitoring cannot mutate application state.
     request = urllib.request.Request(url, method="GET", headers=headers)
     # Build a dedicated client that refuses every redirect before it can copy authenticated headers.
@@ -264,9 +288,9 @@ def _certificate_days_remaining(host, timeout, now_epoch):
 
 
 # Run the three reviewed read-only probes and return a fixed sanitized evidence shape.
-def observe(policy, cookie, fetcher=_fetch_json, certificate_checker=_certificate_days_remaining, now_epoch=None):
-    # Refuse missing, malformed, multiline, or unbounded session material before any network call.
-    _require(isinstance(cookie, str) and "=" in cookie and "\r" not in cookie and "\n" not in cookie and len(cookie) <= 4096, "cookie_missing")
+def observe(policy, monitor_header, fetcher=_fetch_json, certificate_checker=_certificate_days_remaining, now_epoch=None):
+    # Refuse missing, malformed, or unbounded monitor material before any network call.
+    _require(isinstance(monitor_header, tuple) and len(monitor_header) == 2 and monitor_header[0] in {"Authorization", "Cookie"} and isinstance(monitor_header[1], str) and "\r" not in monitor_header[1] and "\n" not in monitor_header[1] and len(monitor_header[1]) <= 4096, "credential_missing")
     # Use the caller clock for deterministic tests or the current epoch for normal operation.
     observed_epoch = time.time() if now_epoch is None else now_epoch
     # Extract only the already validated monitoring and origin values.
@@ -275,10 +299,10 @@ def observe(policy, cookie, fetcher=_fetch_json, certificate_checker=_certificat
     checks = {}
     # Execute only the exact three GET probes in their reviewed order.
     for probe in monitoring["probes"]:
-        # Attach the secret cookie only when the declarative probe requires authentication.
-        probe_cookie = cookie if probe["authenticated"] else None
+        # Attach the secret monitor header only when the declarative probe requires authentication.
+        probe_monitor_header = monitor_header if probe["authenticated"] else None
         # Fetch a bounded response from the exact same-origin path.
-        status, headers, payload = fetcher(policy["canonical_origin"] + probe["path"], probe_cookie, monitoring["timeout_seconds"], monitoring["maximum_body_bytes"])
+        status, headers, payload = fetcher(policy["canonical_origin"] + probe["path"], probe_monitor_header, monitoring["timeout_seconds"], monitoring["maximum_body_bytes"])
         # Require the exact reviewed HTTP status without accepting redirects.
         _require(status == probe["expected_status"], "endpoint_status")
         # Validate and unwrap the exact standard success envelope before inspecting operational fields.
@@ -337,10 +361,10 @@ def main(argv=None):
             _emit({"schema": "casino.edge-validation.v1", "status": "pass", "checks": ["access", "acme", "monitoring", "proxy", "rollback", "templates", "upstream"]})
             # Exit successfully after the non-mutating static pass.
             return 0
-        # Read the monitor cookie from the inherited root-managed environment only.
-        cookie = os.environ.get(COOKIE_ENV)
+        # Read the monitor credential from the inherited root-managed environment only.
+        monitor_header = _monitor_header_from_environment()
         # Run the reviewed read-only observation and emit its sanitized result.
-        _emit(observe(policy, cookie))
+        _emit(observe(policy, monitor_header))
         # Exit successfully only after every live read-only gate passes.
         return 0
     # Convert every expected policy and observation failure to one fixed JSON record.

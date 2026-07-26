@@ -167,6 +167,8 @@
   "whatsNew.entry.9_5_3.body": "This update improves game accuracy, session recovery, localization, motion, and server-side transparency while preserving the play-token-only boundary.",
   "whatsNew.entry.9_5_5.title": "Expanded game catalog",
   "whatsNew.entry.9_5_5.body": "This release packages the accepted game catalog and correctness updates, localized Admin ledger labels, and a refreshed offline shell.",
+  "whatsNew.entry.9_5_6.title": "Automatic production deployment",
+  "whatsNew.entry.9_5_6.body": "This release makes protected-main merges deploy through the governed production pipeline, keeps TiltSeven as the canonical Casino host, and uses a durable operations-only readiness credential.",
   "replay.title": "Round replay",
   "replay.empty": "No recent rounds to replay.",
   "replay.retention": "Replays are kept for {days} days.",
