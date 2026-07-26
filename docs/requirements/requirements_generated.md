@@ -6,14 +6,14 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.51.11
+- application: 9.51.12
 - core: 9.24.0
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.0
 - autoplay: 1.1.3
 - audio: 9.1.1
-- admin: 1.12.1
+- admin: 1.12.2
 - operations: 1.0.0
 - marketing_site: 1.0.2
 - roulette: 9.4.8
@@ -50,8 +50,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.0.0
 - pai_gow_poker: 1.0.1
 - teen_patti: 1.0.1
-- tests: 1.60.27
-- docs: 1.60.26
+- tests: 1.60.28
+- docs: 1.60.27
 - contracts: 1.48.0
 - tooling: 1.20.3
 - commenting_policy: 1.0.0
@@ -843,3 +843,5 @@ Historical source baseline: 9.1.0
 - **MAGIC-002** (Core) - PASS: Magic-link initiation is enumeration-safe: existing, unknown, malformed, and inactive mailboxes all receive one byte-identical acknowledgement, and a link is delivered only for an active local account. Reissue keeps at most one login bearer valid per mailbox, a bearer whose delivery is rejected is revoked immediately so no undelivered link stays usable, and per-recipient send throttling remains in the mail foundation. No response, error, or audit event discloses account existence.
 - **MAGIC-003** (Core) - PASS: Magic-link completion consumes a purpose-bound bearer atomically and only then creates a session for the active local account; disabled login, malformed input, expired, replayed, revoked, tampered, wrong-subject bearers, and accounts that became inactive between initiation and completion all fail closed with one identical generic error. Audit events carry only a keyed recipient digest, token id, user id, session id, outcome, and reason, and never a raw bearer, mailbox, or credential.
 - **TEST-118** (Tests) - PASS: Listener-free evidence verifies the disabled passwordless magic-link lifecycle: disabled-by-default acknowledgement with no delivery, byte-identical initiation across existing, unknown, and malformed mailboxes with mail only for the eligible local account, session creation on completion verified through token authentication, replay and wrong-subject rejection, cross-purpose bearer isolation against password-reset consumption, silent ineligibility of inactive and credential-free social-only accounts, and a rejected delivery leaving no usable bearer behind. Suite emails are uniquely namespaced under a magic-link-only domain so repeated and full-suite runs never collide.
+- **ADMIN-027** (Admin) - PASS: Dashboard and the full Admin Ledger render canonical transaction identities as explicit locale-resource-backed operator labels. Ordered suffix classification preserves the game dimension and distinguishes common wager, purchase, settlement, payout, refund, escrow, insurance, and token actions; future unknown identities fail closed to a generic localized ledger-operation label instead of exposing raw all-caps English enums. The complete audit record retains player, game, round, amount, and before/after balances.
+- **TEST-132** (Tests) - PASS: Listener-free Python and Node evidence inspects or executes the exact production Admin label helper module and proves all-caps normalization, acronym preservation, ordered movement classification, generic unknown-event fallback, complete EN/RU resource parity, and Dashboard/full-Ledger helper wiring. Hosted exact-head browser acceptance exercises both installed locales at all four governed Admin viewports, rejects raw enum separators and all-caps action labels, requires Cyrillic Russian action copy, verifies page containment, and captures sixteen matching Dashboard/Ledger image-sidecar pairs for human review.

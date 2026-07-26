@@ -11218,6 +11218,52 @@
       "introduced_in": "issue-337-magic-link",
       "changed_in": "issue-337-magic-link",
       "notes": "Allocated after TEST-117 during current-main reconciliation of PR #377."
+    },
+    {
+      "id": "ADMIN-027",
+      "module": "Admin",
+      "description": "Dashboard and the full Admin Ledger render canonical transaction identities as explicit locale-resource-backed operator labels. Ordered suffix classification preserves the game dimension and distinguishes common wager, purchase, settlement, payout, refund, escrow, insurance, and token actions; future unknown identities fail closed to a generic localized ledger-operation label instead of exposing raw all-caps English enums. The complete audit record retains player, game, round, amount, and before/after balances.",
+      "status": "PASS",
+      "api_tests": [
+        "UI-ADMIN-LEDGER-LABELS-001"
+      ],
+      "browser_tests": [
+        "BR-ADMIN-LEDGER-LABELS-001"
+      ],
+      "implementation_files": [
+        "web/admin.js",
+        "web/core/admin_labels.js",
+        "web/i18n/en-US/admin.json",
+        "web/i18n/ru-RU/admin.json",
+        "tests/admin_ledger_label_tests.py",
+        "tests/unit/admin_ledger_labels.test.mjs",
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-74-admin-ledger-labels",
+      "changed_in": "issue-74-admin-ledger-labels",
+      "notes": "This closes only the released, reproducible P2 Admin event-label remainder recorded under umbrella issue #74. It does not claim the separate responsive-Admin, legacy reduced-motion, Roulette/Baccarat touch-target, or game-motion programs."
+    },
+    {
+      "id": "TEST-132",
+      "module": "Tests",
+      "description": "Listener-free Python and Node evidence inspects or executes the exact production Admin label helper module and proves all-caps normalization, acronym preservation, ordered movement classification, generic unknown-event fallback, complete EN/RU resource parity, and Dashboard/full-Ledger helper wiring. Hosted exact-head browser acceptance exercises both installed locales at all four governed Admin viewports, rejects raw enum separators and all-caps action labels, requires Cyrillic Russian action copy, verifies page containment, and captures sixteen matching Dashboard/Ledger image-sidecar pairs for human review.",
+      "status": "PASS",
+      "api_tests": [
+        "UI-ADMIN-LEDGER-LABELS-001"
+      ],
+      "browser_tests": [
+        "BR-ADMIN-LEDGER-LABELS-001"
+      ],
+      "implementation_files": [
+        "tests/admin_ledger_label_tests.py",
+        "tests/unit/admin_ledger_labels.test.mjs",
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-74-admin-ledger-labels",
+      "changed_in": "issue-74-admin-ledger-labels",
+      "notes": "TEST-132 is the live next-free identifier after the active game-catalog PR reserved TEST-119 through TEST-131. Browser evidence is hosted only; local Playwright or Chromium is not part of this repair."
     }
   ]
 }
