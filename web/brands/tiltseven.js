@@ -8,6 +8,8 @@ export const tiltseven = {
   name: "TiltSeven",
   // Provide the compact mark glyph rendered inside the brand badge.
   mark: "7",
+  // Provide the lobby hero venue name, kept distinct from the app wordmark above.
+  venue: "The Neon Pit",
   // Provide the design language name for internal reference only.
   direction: "Neon Pit",
   // Map every themeable CSS custom property to this brand's value.

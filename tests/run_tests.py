@@ -4073,7 +4073,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Verify the status/trust rail from the approved lobby is visible.
                     assert page.get_by_test_id('lobby-trust-rail').is_visible()
                     # Verify the premium lobby headline renders in the first route view.
-                    assert page.get_by_text('Midnight Ledger Casino').is_visible()
+                    assert page.get_by_text('The Neon Pit').is_visible()
                     # Verify the Roulette card still exposes its route action.
                     assert page.get_by_test_id('open-roulette').is_visible()
                     # Verify the catalog advertises one authoritative game count with no contradictory roadmap target. (issue #235)
