@@ -29,7 +29,7 @@ from casino.router import Router
 # Import required dependency so this module can use its public functions or constants.
 from casino.errors import CasinoError, ConflictError, ForbiddenError, ValidationError
 # Import strict JSON-number handling shared with the production WSGI adapter.
-from casino.core.validation import reject_nonfinite_json_constant
+from casino.core.validation import reject_nonfinite_json_constant, require_amount
 # Import host-only CSRF bootstrap helpers shared with the production adapter. (OAUTH-008)
 from casino.core.security import CSRF_COOKIE, cookie_value, csrf_cookie_header, new_csrf_token
 # Import required dependency so this module can use its public functions or constants.
@@ -185,13 +185,16 @@ def build_router() -> Router:
     # Attach this decorator so the following function is registered with the framework.
     @router.post(r"/api/v1/players/(?P<player_id>[^/]+)/add-money")
     # Define the add_money function used by this module.
-    def add_money(body, query, player_id):
-        # Set amount to the value needed for the next operation.
-        amount = float(body.get("amount", 0))
-        # Branch when the following condition is true.
-        if amount <= 0:
-            # Raise an error so invalid input or state is reported explicitly.
-            raise ValidationError("Add-money amount must be positive")
+    def add_money(body, query, context, player_id):
+        # Apply the same guest wallet freeze the v2 token route enforces. Without the context parameter
+        # this legacy route received no session at all, so a guest could top up its own disposable
+        # wallet through it and defeat the non-purchasable guest design. (issues #317, #410)
+        if auth.is_guest(context.get("user") or {}):
+            # Reject even play-token-only credits because guest value must stay disposable.
+            raise ForbiddenError("Guest trial balances cannot be increased")
+        # Bound the credit through the shared money gate so this route cannot mint an amount no wager
+        # could ever produce, and so NaN and infinity are rejected before reaching the ledger. (#410)
+        amount = require_amount(body.get("amount", 0))
         # Set ev to the value needed for the next operation.
         ev = ledger.credit(player_id, amount, "FAKE_MONEY_ADDED", None, None, {})
         # Return the computed value to the caller.

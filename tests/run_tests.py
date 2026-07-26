@@ -278,6 +278,10 @@ def run_storage_tests(include_live=False, include_migration_live=False):
     run_case('STORAGE-JSON-IDEMPOTENCY-001',['LEDGER-026','STORAGE-005','STORAGE-006','TEST-043'],storage_tests.run_json_action_idempotency)
     # Execute funded practice-opponent debit, refund, payout, restart, owner, and process evidence.
     run_case('STORAGE-PRACTICE-OPPONENT-001',['BOT-009','BOT-010','BOT-011','ADMIN-023','LEDGER-026','STORAGE-005','STORAGE-006'],storage_tests.run_practice_opponent_accounting)
+    # Prove player creation preserves committed ledger history and never reverts a balance. (#402)
+    run_case('STORAGE-LEDGER-GUARD-001',['STORAGE-008','LEDGER-001','CORE-017'],storage_tests.run_player_creation_preserves_ledger)
+    # Prove client-supplied table rules and token credits stay inside their declared domains. (#404, #410)
+    run_case('STORAGE-TABLE-RULES-001',['LEDGER-029','TOKEN-006'],storage_tests.run_table_rule_authority)
     # Execute the MySQL schema and atomic ledger-provider path test without requiring a live service.
     run_case('STORAGE-MYSQL-001',['CORE-017','LEDGER-001','LEDGER-007','LEDGER-009'],storage_tests.run_mysql_schema_provider_path)
     # Execute the real-service persistence and concurrent-ledger gate only when explicitly requested.

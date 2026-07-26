@@ -2,7 +2,7 @@
 # Import required dependency so this module can use its public functions or constants.
 from casino.core.state_store import load_player_game_state, save_player_game_state
 # Import required dependency so this module can use its public functions or constants.
-from casino.core.validation import require_amount, require_player_id
+from casino.core.validation import apply_rule_updates, require_amount, require_player_id
 # Import required dependency so this module can use its public functions or constants.
 from casino.core import ledger, players, logger
 # Import required dependency so this module can use its public functions or constants.
@@ -14,6 +14,25 @@ from casino.errors import ValidationError, ConflictError
 
 # Set GAME_ID to the value needed for the next operation.
 GAME_ID = "blackjack"
+
+# Declare the legal domain of every client-settable table rule so the settings route cannot persist a
+# value that settlement math or shoe construction would then trust. (issue #404)
+RULE_DOMAIN = {
+    # Restrict the shoe to real table sizes; an unbounded count would allocate 52*decks card strings.
+    "decks": {"kind": "int", "min": 1, "max": 8},
+    # Allow only the soft-17 switch as a true boolean.
+    "dealer_hits_soft_17": {"kind": "bool"},
+    # Restrict the natural payout to the three published table offers (3:2, 6:5, 1:1) that the UI shows.
+    "blackjack_payout": {"kind": "enum", "values": [1.5, 1.2, 1]},
+    # Bound resplitting to the standard maximum of four hands.
+    "max_split_hands": {"kind": "int", "min": 1, "max": 4},
+    # Allow only the double-after-split switch as a true boolean.
+    "double_after_split": {"kind": "bool"},
+    # Allow only the late-surrender switch as a true boolean.
+    "late_surrender": {"kind": "bool"},
+    # Allow only the split-aces switch as a true boolean.
+    "split_aces_one_card": {"kind": "bool"},
+}
 
 # Define the request_player_id function used by this module.
 def request_player_id(body, query) -> str:
@@ -97,10 +116,9 @@ def register(router):
             raise ConflictError("Finish active blackjack rounds before changing table rules")
         # Set rules to the value needed for the next operation.
         rules = state.setdefault("rules", engine.default_state()["rules"])
-        # Iterate through the collection to process each item.
-        for key in ["decks", "dealer_hits_soft_17", "blackjack_payout", "max_split_hands", "double_after_split", "late_surrender", "split_aces_one_card"]:
-            # Branch when the following condition is true.
-            if key in body: rules[key] = body[key]
+        # Validate every caller-supplied rule against its declared domain before it can reach payout
+        # math, because these values are read directly by natural_payout_due and make_shoe (issue #404).
+        apply_rule_updates(body, rules, RULE_DOMAIN)
         # Execute this statement as part of the module's documented control flow.
         save_player_game_state(GAME_ID, player_id, state)
         # Return the computed value to the caller.
