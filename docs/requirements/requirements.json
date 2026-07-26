@@ -7976,7 +7976,7 @@
       "id": "PGP-003", "module": "Pai Gow Poker", "description": "The ante debit and the returned-token settlement credit use the shared ledger exactly once under durable action identities, while losing rounds add no token movement.", "status": "PASS", "api_tests": ["API-PGP-001"], "browser_tests": [], "implementation_files": ["casino/games/pai_gow_poker/service.py", "casino/core/ledger.py", "tests/games/pai_gow_poker/test_api.py", "tests/run_tests.py"], "introduced_in": "game-expansion-pai-gow-poker", "changed_in": "game-expansion-pai-gow-poker", "notes": "No game code mutates balances directly and conflicting retries fail closed."
     },
     {
-      "id": "PGP-004", "module": "Application", "description": "Pai Gow Poker supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.", "status": "PASS", "api_tests": [], "browser_tests": ["BR-PGP-001"], "implementation_files": ["web/games/pai_gow_poker.js", "web/i18n/en-US/games/pai_gow_poker.json", "web/i18n/ru-RU/games/pai_gow_poker.json", "tests/visual/visual_matrix.json", "tests/run_tests.py"], "introduced_in": "game-expansion-pai-gow-poker", "changed_in": "game-expansion-pai-gow-poker", "notes": "Evidence covers both locales, every governed viewport, all seven visual states, and fail-closed fixed-feedback non-occlusion geometry."
+      "id": "PGP-004", "module": "Application", "description": "Pai Gow Poker supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.", "status": "PASS", "api_tests": [], "browser_tests": ["BR-PGP-001"], "implementation_files": ["web/games/pai_gow_poker.js", "web/i18n/en-US/games/pai_gow_poker.json", "web/i18n/ru-RU/games/pai_gow_poker.json", "tests/visual/visual_matrix.json", "tests/run_tests.py"], "introduced_in": "game-expansion-pai-gow-poker", "changed_in": "pr381-pai-gow-feedback-clearance", "notes": "Evidence covers both locales, every governed viewport, all seven visual states, and fail-closed fixed-feedback non-occlusion geometry, including the desktop-primary Russian settled-history clearance."
     },
     {
       "id": "PGP-005", "module": "Tests", "description": "Catalog, contract, browser, and long-suite discovery include Pai Gow Poker with requirement, module, version, and visual traceability.", "status": "PASS", "api_tests": ["API-CATALOG-001", "LONG-SUITE-100"], "browser_tests": ["BR-CATALOG-DISCOVERY-001", "BR-PGP-001"], "implementation_files": ["modules/pai_gow_poker.json", "modules/module-manifest.json", "contracts/compatibility/module-api-matrix.json", "tests/game_drivers/pai_gow_poker.py", "tests/visual/visual_matrix.json", "tests/run_tests.py"], "introduced_in": "game-expansion-pai-gow-poker", "changed_in": "game-expansion-pai-gow-poker", "notes": "Descriptor sort order 310 and the catalog-discovered long driver are canonical."
@@ -10716,7 +10716,9 @@
       "api_tests": [
         "API-COLOR-WHEEL-001"
       ],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-CATALOG-EXPANSION-001"
+      ],
       "implementation_files": [
         "casino/games/color_wheel/rules.py",
         "casino/games/color_wheel/engine.py",
@@ -10736,7 +10738,9 @@
       "api_tests": [
         "API-COLOR-WHEEL-001"
       ],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-CATALOG-EXPANSION-001"
+      ],
       "implementation_files": [
         "casino/games/color_wheel/api.py",
         "casino/core/simple_game.py",
@@ -10755,7 +10759,9 @@
       "api_tests": [
         "API-POKER-DICE-001"
       ],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-CATALOG-EXPANSION-001"
+      ],
       "implementation_files": [
         "casino/games/poker_dice/rules.py",
         "casino/games/poker_dice/engine.py",
@@ -10775,7 +10781,9 @@
       "api_tests": [
         "API-POKER-DICE-001"
       ],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-CATALOG-EXPANSION-001"
+      ],
       "implementation_files": [
         "casino/games/poker_dice/api.py",
         "casino/core/simple_game.py",
@@ -10794,7 +10802,9 @@
       "api_tests": [
         "API-BOULE-001"
       ],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-CATALOG-EXPANSION-001"
+      ],
       "implementation_files": [
         "casino/games/boule/rules.py",
         "casino/games/boule/engine.py",
@@ -10814,7 +10824,9 @@
       "api_tests": [
         "API-BOULE-001"
       ],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-CATALOG-EXPANSION-001"
+      ],
       "implementation_files": [
         "casino/games/boule/api.py",
         "casino/core/simple_game.py",
@@ -10833,7 +10845,9 @@
       "api_tests": [
         "API-FARO-001"
       ],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-CATALOG-EXPANSION-001"
+      ],
       "implementation_files": [
         "casino/games/faro/rules.py",
         "casino/games/faro/engine.py",
@@ -10853,7 +10867,9 @@
       "api_tests": [
         "API-FARO-001"
       ],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-CATALOG-EXPANSION-001"
+      ],
       "implementation_files": [
         "casino/games/faro/api.py",
         "casino/core/simple_game.py",
@@ -10872,7 +10888,9 @@
       "api_tests": [
         "API-TRENTE-ET-QUARANTE-001"
       ],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-CATALOG-EXPANSION-001"
+      ],
       "implementation_files": [
         "casino/games/trente_et_quarante/rules.py",
         "casino/games/trente_et_quarante/engine.py",
@@ -10892,7 +10910,9 @@
       "api_tests": [
         "API-TRENTE-ET-QUARANTE-001"
       ],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-CATALOG-EXPANSION-001"
+      ],
       "implementation_files": [
         "casino/games/trente_et_quarante/api.py",
         "casino/core/simple_game.py",
@@ -10911,7 +10931,9 @@
       "api_tests": [
         "API-PACHINKO-001"
       ],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-CATALOG-EXPANSION-001"
+      ],
       "implementation_files": [
         "casino/games/pachinko/rules.py",
         "casino/games/pachinko/engine.py",
@@ -10931,7 +10953,9 @@
       "api_tests": [
         "API-PACHINKO-001"
       ],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-CATALOG-EXPANSION-001"
+      ],
       "implementation_files": [
         "casino/games/pachinko/api.py",
         "casino/core/simple_game.py",
@@ -10950,7 +10974,9 @@
       "api_tests": [
         "API-COIN-PUSHER-001"
       ],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-CATALOG-EXPANSION-001"
+      ],
       "implementation_files": [
         "casino/games/coin_pusher/rules.py",
         "casino/games/coin_pusher/engine.py",
@@ -10970,7 +10996,9 @@
       "api_tests": [
         "API-COIN-PUSHER-001"
       ],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-CATALOG-EXPANSION-001"
+      ],
       "implementation_files": [
         "casino/games/coin_pusher/api.py",
         "casino/core/simple_game.py",
@@ -10989,7 +11017,9 @@
       "api_tests": [
         "API-MARBLE-RACE-001"
       ],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-CATALOG-EXPANSION-001"
+      ],
       "implementation_files": [
         "casino/games/marble_race/rules.py",
         "casino/games/marble_race/engine.py",
@@ -11009,7 +11039,9 @@
       "api_tests": [
         "API-MARBLE-RACE-001"
       ],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-CATALOG-EXPANSION-001"
+      ],
       "implementation_files": [
         "casino/games/marble_race/api.py",
         "casino/core/simple_game.py",
@@ -11028,7 +11060,9 @@
       "api_tests": [
         "API-PATTERN-DRAW-001"
       ],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-CATALOG-EXPANSION-001"
+      ],
       "implementation_files": [
         "casino/games/pattern_draw/rules.py",
         "casino/games/pattern_draw/engine.py",
@@ -11048,7 +11082,9 @@
       "api_tests": [
         "API-PATTERN-DRAW-001"
       ],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-CATALOG-EXPANSION-001"
+      ],
       "implementation_files": [
         "casino/games/pattern_draw/api.py",
         "casino/core/simple_game.py",
@@ -11067,7 +11103,9 @@
       "api_tests": [
         "API-LUCKY-GRID-001"
       ],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-CATALOG-EXPANSION-001"
+      ],
       "implementation_files": [
         "casino/games/lucky_grid/rules.py",
         "casino/games/lucky_grid/engine.py",
@@ -11087,7 +11125,9 @@
       "api_tests": [
         "API-LUCKY-GRID-001"
       ],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-CATALOG-EXPANSION-001"
+      ],
       "implementation_files": [
         "casino/games/lucky_grid/api.py",
         "casino/core/simple_game.py",
@@ -11106,7 +11146,9 @@
       "api_tests": [
         "API-DAILY-DRAW-LAB-001"
       ],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-CATALOG-EXPANSION-001"
+      ],
       "implementation_files": [
         "casino/games/daily_draw_lab/rules.py",
         "casino/games/daily_draw_lab/engine.py",
@@ -11126,7 +11168,9 @@
       "api_tests": [
         "API-DAILY-DRAW-LAB-001"
       ],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-CATALOG-EXPANSION-001"
+      ],
       "implementation_files": [
         "casino/games/daily_draw_lab/api.py",
         "casino/core/simple_game.py",
@@ -11145,7 +11189,9 @@
       "api_tests": [
         "API-FOUR-CARD-POKER-001"
       ],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-CATALOG-EXPANSION-001"
+      ],
       "implementation_files": [
         "casino/games/four_card_poker/engine.py",
         "casino/games/four_card_poker/service.py",
@@ -11165,7 +11211,9 @@
       "api_tests": [
         "API-FOUR-CARD-POKER-001"
       ],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-CATALOG-EXPANSION-001"
+      ],
       "implementation_files": [
         "casino/games/four_card_poker/service.py",
         "casino/games/four_card_poker/api.py",
@@ -11184,7 +11232,9 @@
       "api_tests": [
         "API-COLOR-WHEEL-001"
       ],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-CATALOG-EXPANSION-001"
+      ],
       "implementation_files": [
         "tests/color_wheel_tests.py",
         "tests/run_tests.py"
@@ -11201,7 +11251,9 @@
       "api_tests": [
         "API-POKER-DICE-001"
       ],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-CATALOG-EXPANSION-001"
+      ],
       "implementation_files": [
         "tests/poker_dice_tests.py",
         "tests/run_tests.py"
@@ -11218,7 +11270,9 @@
       "api_tests": [
         "API-BOULE-001"
       ],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-CATALOG-EXPANSION-001"
+      ],
       "implementation_files": [
         "tests/boule_tests.py",
         "tests/run_tests.py"
@@ -11235,7 +11289,9 @@
       "api_tests": [
         "API-FARO-001"
       ],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-CATALOG-EXPANSION-001"
+      ],
       "implementation_files": [
         "tests/faro_tests.py",
         "tests/run_tests.py"
@@ -11252,7 +11308,9 @@
       "api_tests": [
         "API-TRENTE-ET-QUARANTE-001"
       ],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-CATALOG-EXPANSION-001"
+      ],
       "implementation_files": [
         "tests/trente_et_quarante_tests.py",
         "tests/run_tests.py"
@@ -11269,7 +11327,9 @@
       "api_tests": [
         "API-PACHINKO-001"
       ],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-CATALOG-EXPANSION-001"
+      ],
       "implementation_files": [
         "tests/pachinko_tests.py",
         "tests/run_tests.py"
@@ -11286,7 +11346,9 @@
       "api_tests": [
         "API-COIN-PUSHER-001"
       ],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-CATALOG-EXPANSION-001"
+      ],
       "implementation_files": [
         "tests/coin_pusher_tests.py",
         "tests/run_tests.py"
@@ -11303,7 +11365,9 @@
       "api_tests": [
         "API-MARBLE-RACE-001"
       ],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-CATALOG-EXPANSION-001"
+      ],
       "implementation_files": [
         "tests/marble_race_tests.py",
         "tests/run_tests.py"
@@ -11320,7 +11384,9 @@
       "api_tests": [
         "API-PATTERN-DRAW-001"
       ],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-CATALOG-EXPANSION-001"
+      ],
       "implementation_files": [
         "tests/pattern_draw_tests.py",
         "tests/run_tests.py"
@@ -11337,7 +11403,9 @@
       "api_tests": [
         "API-LUCKY-GRID-001"
       ],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-CATALOG-EXPANSION-001"
+      ],
       "implementation_files": [
         "tests/lucky_grid_tests.py",
         "tests/run_tests.py"
@@ -11354,7 +11422,9 @@
       "api_tests": [
         "API-DAILY-DRAW-LAB-001"
       ],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-CATALOG-EXPANSION-001"
+      ],
       "implementation_files": [
         "tests/daily_draw_lab_tests.py",
         "tests/run_tests.py"
@@ -11371,7 +11441,9 @@
       "api_tests": [
         "API-FOUR-CARD-POKER-001"
       ],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-CATALOG-EXPANSION-001"
+      ],
       "implementation_files": [
         "tests/four_card_poker_tests.py",
         "tests/run_tests.py"

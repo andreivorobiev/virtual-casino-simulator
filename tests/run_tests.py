@@ -4481,6 +4481,54 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Execute catalog-driven frontend driver discovery for all current games.
                 run_case('BR-CATALOG-DISCOVERY-001',['CORE-021','TEST-042','UX-011'],catalog_route_discovery)
+                # Define the governed ready-state visual proof for the twelve catalog-expansion games. (issue #73)
+                def catalog_expansion_visuals():
+                    # Preserve the controller-owned expansion order so missing or duplicate registrations fail closed.
+                    expansion_ids=('color_wheel','poker_dice','boule','faro','trente_et_quarante','pachinko','coin_pusher','marble_race','pattern_draw','lucky_grid','daily_draw_lab','four_card_poker')
+                    # Resolve each registered descriptor instead of duplicating route, ready-test, or locale-domain metadata.
+                    expansion_games=[next(game for game in casino_config.GAMES if game['id']==game_id) for game_id in expansion_ids]
+                    # Require one unique registry entry for every approved expansion game.
+                    assert len(expansion_games)==12 and len({game['id'] for game in expansion_games})==12
+                    # Exercise both governed locales because each expansion route owns an independent resource domain.
+                    for locale in ('en-US','ru-RU'):
+                        # Select the locale through the real player-shell control.
+                        page.get_by_test_id('shell-locale-select').select_option(locale)
+                        # Wait until the public locale state confirms the requested rerender.
+                        page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale",arg=locale)
+                        # Exercise every governed visual-matrix viewport for each expansion route.
+                        for viewport_id,width,height in (('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)):
+                            # Apply the exact governed viewport before mounting a route.
+                            page.set_viewport_size({'width':width,'height':height})
+                            # Walk the registered expansion games without bypassing shell navigation.
+                            for game in expansion_games:
+                                # Open the game through the catalog-owned route control.
+                                page.get_by_test_id(f"nav-{game['id']}").click()
+                                # Wait for the module-owned readiness marker before visual or localization assertions.
+                                page.get_by_test_id(game['frontend']['ready_testid']).wait_for(timeout=5000)
+                                # Let the stable ready layout settle without exercising game mechanics.
+                                page.wait_for_timeout(100)
+                                # Require the canonical reloadable route declared by the module descriptor.
+                                assert page.url.split('?',1)[0].endswith(game['route']),{'game':game['id'],'route':page.url}
+                                # Audit every visible player-facing string against the route's loaded resource domain.
+                                localization=page.evaluate(route_i18n_audit_script,{'domain':game['frontend']['i18n_domain'],'interpolationKey':game['frontend']['i18n_probe']})
+                                # Require route-domain loading, zero missing keys, and no raw or malformed localized output.
+                                assert game['frontend']['i18n_domain'] in localization['state']['loadedDomains'] and localization['state']['missingKeyCount']==0 and not localization['rawKeys'] and not localization['unresolvedPlaceholders'] and not localization['replacementCharacters'] and not localization['invalidValues'] and localization['titleVisible'],{'game':game['id'],'locale':locale,'localization':localization}
+                                # Measure ready-state containment, operability, and fixed feedback-control clearance.
+                                geometry=page.evaluate("""readyTestId => { const root=document.querySelector(`[data-testid="${readyTestId}"]`); const fixed=document.querySelector('.report-problem-fab:not([hidden])')?.getBoundingClientRect(); const intersects=rect=>fixed&&rect.left<fixed.right&&rect.right>fixed.left&&rect.top<fixed.bottom&&rect.bottom>fixed.top; const visible=node=>{const style=getComputedStyle(node);return style.display!=='none'&&style.visibility!=='hidden'&&node.getClientRects().length>0;}; const hits=[]; for(const node of root?.querySelectorAll('button,input,select,a[href],[role="button"]')||[]){if(visible(node)&&intersects(node.getBoundingClientRect()))hits.push(node.getAttribute('data-testid')||node.getAttribute('data-action')||node.tagName.toLowerCase());} for(const node of root?.querySelectorAll('h1,h2,h3,h4,p,li,label,legend,span,strong')||[]){if(!visible(node))continue;const range=document.createRange();range.selectNodeContents(node);if([...range.getClientRects()].some(intersects))hits.push(`${node.tagName.toLowerCase()}:${node.textContent.trim()}`);} const box=root?.getBoundingClientRect(); const enabled=[...(root?.querySelectorAll('button:not([disabled]),input:not([disabled]),select:not([disabled]),a[href],[role="button"]')||[])].filter(visible); return {documentFits:document.documentElement.scrollWidth<=window.innerWidth+1,gameVisible:Boolean(root&&visible(root)),readableInlineSize:Math.round(box?.width||0),enabledControls:enabled.length,feedbackOverlaps:[...new Set(hits)]}; }""",game['frontend']['ready_testid'])
+                                # Require a visible, operable, horizontally contained route with no feedback-button collision.
+                                assert geometry['documentFits'] and geometry['gameVisible'] and geometry['readableInlineSize']>=280 and geometry['enabledControls']>0 and not geometry['feedbackOverlaps'],{'game':game['id'],'locale':locale,'viewport':viewport_id,'geometry':geometry}
+                                # Capture one governed after-pass PNG and provenance sidecar for this route/locale/viewport.
+                                game_evidence(f"after-pass-catalog-expansion-{game['id']}-{locale}-{viewport_id}.png",game['id'],['ready'],locale,viewport_id)
+                    # Restore English before returning to the canonical lobby state.
+                    page.get_by_test_id('shell-locale-select').select_option('en-US')
+                    # Wait for the English shell rerender before restoring desktop geometry.
+                    page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'en-US'")
+                    # Restore the primary desktop viewport expected by later browser cases.
+                    page.set_viewport_size({'width':1920,'height':1080})
+                    # Return to the lobby after all governed expansion artifacts are complete.
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Execute the expansion matrix under each game-specific permanent test allocation.
+                run_case('BR-CATALOG-EXPANSION-001',['CWHEEL-001','CWHEEL-002','PDICE-001','PDICE-002','BOULE-001','BOULE-002','FARO-001','FARO-002','TEQ-001','TEQ-002','PACH-001','PACH-002','COINP-001','COINP-002','MARBLE-001','MARBLE-002','PATTERN-001','PATTERN-002','LGRID-001','LGRID-002','DDLAB-001','DDLAB-002','FOURCP-001','FOURCP-002','TEST-119','TEST-120','TEST-121','TEST-122','TEST-123','TEST-124','TEST-125','TEST-126','TEST-128','TEST-129','TEST-130','TEST-131'],catalog_expansion_visuals)
                 # Store the browser audit that proves every game control is reachable inside a scroll region at one viewport. (issue #221)
                 nav_reach_script=r"""(rootSel) => {
                   // Resolve the mounted game root or fall back to the shared route outlet.

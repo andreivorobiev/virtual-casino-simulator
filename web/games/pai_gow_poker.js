@@ -333,8 +333,10 @@ function render() {
   const header = '<header class="pgp-header"><div><p class="pgp-eyebrow">' + safe(text('eyebrow')) + '</p><h1>' + safe(text('title')) + '</h1></div><span class="pgp-phase" role="status">' + safe(phaseLabel(roundItem)) + '</span></header>';
   // Build the control-stage-data layout in responsive reading order.
   const layout = '<div class="pgp-layout">' + controlsHtml() + '<main class="pgp-stage" aria-label="' + safe(text('stage.title')) + '">' + stageHtml(roundItem) + summaryHtml(roundItem) + '</main>' + dataHtml() + '</div>';
+  // Extend the fixed-feedback clearance through desktop-primary so localized history rows never sit beneath the report control.
+  const wideDesktopFeedbackClearance = '<style>@media(min-width:1601px) and (max-width:2200px){.pgp-shell{padding-right:176px}body:has(.pgp-shell) .report-problem-fab{width:144px;max-width:144px;white-space:normal;line-height:1.1}}</style>';
   // Replace the route outlet atomically so stage and controls cannot drift.
-  root.innerHTML = stylesHtml() + '<section class="pgp-shell" data-testid="pai-gow-poker">' + header + layout + '</section>';
+  root.innerHTML = stylesHtml() + wideDesktopFeedbackClearance + '<section class="pgp-shell" data-testid="pai-gow-poker">' + header + layout + '</section>';
   // Attach handlers to the newly rendered semantic controls.
   bindEvents();
 }
