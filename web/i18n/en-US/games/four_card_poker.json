@@ -1,4 +1,5 @@
 {
+  "title": "Four Card Poker",
   "tokens.amount": "{amount} tokens",
   "result.idle": "Set your ante and deal.",
   "result.decide": "Fold, or play 1x to 3x your ante.",

@@ -1,6 +1,6 @@
 {
   "module": "four_card_poker",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "paths": ["casino/games/four_card_poker/", "web/games/four_card_poker.js", "web/i18n/en-US/games/four_card_poker.json", "web/i18n/ru-RU/games/four_card_poker.json"],
   "requirements_prefixes": ["FOURCP"],
   "contracts": ["contracts/openapi/four_card_poker.v1.yaml"],
