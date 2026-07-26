@@ -6,6 +6,7 @@
   "controls.deal": "Deal opening card",
   "controls.higher": "Higher",
   "controls.lower": "Lower",
+  "controls.repeat": "Repeat bet",
   "controls.retryDeal": "Retry deal",
   "controls.retryHelp": "The previous response was incomplete. Retry the same action safely.",
   "controls.title": "Play controls",

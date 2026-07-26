@@ -7,6 +7,7 @@
   "controls.aria": "Big Six wager controls",
   "controls.title": "Wagers",
   "controls.help": "Enter play tokens beside every symbol you want to cover.",
+  "controls.repeat": "Repeat bet",
   "stage.aria": "Big Six wheel stage",
   "data.aria": "Big Six paytable and history",
   "action.spin": "Spin wheel",

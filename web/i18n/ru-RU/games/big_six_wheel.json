@@ -7,6 +7,7 @@
   "controls.aria": "Управление ставками Big Six",
   "controls.title": "Ставки",
   "controls.help": "Введите игровые жетоны рядом с каждым выбранным символом.",
+  "controls.repeat": "Повторить ставку",
   "stage.aria": "Игровое колесо Big Six",
   "data.aria": "Таблица выплат и история Big Six",
   "action.spin": "Запустить колесо",

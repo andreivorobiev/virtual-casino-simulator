@@ -3,6 +3,7 @@
   "action.rolling": "Rolling...",
   "controls.aria": "Over/Under 7 wagers",
   "controls.help": "Choose under seven, exactly seven, over seven, or cover multiple outcomes with play tokens.",
+  "controls.repeat": "Repeat bet",
   "controls.title": "Wagers",
   "data.aria": "Over/Under 7 paytable and history",
   "error.playFailed": "The dice play could not be completed.",

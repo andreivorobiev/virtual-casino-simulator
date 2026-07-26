@@ -25,6 +25,8 @@ let root = null;
 let state = null;
 // Prevent duplicate clicks from starting overlapping atomic actions.
 let busy = false;
+// Retain the last committed ante so one click can repeat the same initial wager.
+let lastBet = null;
 // Retain the locale unsubscribe callback for leak-free unmount.
 let unsubscribeLocale = null;
 
@@ -171,7 +173,7 @@ function localizedCard(card) {
 // Return scoped styles that keep the center table visually dominant.
 function styleHtml() {
   // Keep the desktop card stage visually stronger than both support rails.
-  const desktop = '.casino-war{display:grid;gap:14px;min-height:0}.cw-header{display:flex;align-items:end;justify-content:space-between;gap:16px}.cw-header h1{margin:0}.cw-phase{padding:7px 12px;border:1px solid rgba(255,215,128,.45);border-radius:999px;color:var(--gold,#f6d47a)}.cw-layout{display:grid;grid-template-columns:minmax(210px,.72fr) minmax(500px,2.2fr) minmax(210px,.72fr);gap:14px;min-height:0}.cw-panel{min-width:0;border:1px solid rgba(255,215,128,.24);border-radius:16px;background:rgba(5,32,23,.9);padding:16px}.cw-controls,.cw-history{display:grid;align-content:start;gap:14px}.cw-controls label{display:grid;gap:7px}.cw-controls select,.cw-controls button{min-height:44px}.cw-actions{display:grid;gap:10px}.cw-actions.dual{grid-template-columns:1fr 1fr}.cw-primary{background:var(--red,#a92a38);color:#fff}.cw-stage{display:grid;grid-template-rows:auto 1fr auto;gap:18px;min-width:0;background:radial-gradient(circle at 50% 35%,rgba(28,112,72,.38),rgba(3,24,17,.96) 68%)}.cw-stage-head{display:flex;justify-content:space-between;gap:12px}.cw-stage-head h2{margin:0}.cw-table{display:grid;grid-template-columns:1fr 1fr;gap:clamp(18px,5vw,64px);align-items:center;justify-items:center;min-height:310px}.cw-hand{display:grid;justify-items:center;gap:12px}.cw-hand h3{margin:0}.cw-card-empty{width:clamp(3.25rem,10vw,6.5rem);aspect-ratio:5/7;border:2px dashed rgba(255,255,255,.24);border-radius:.65rem}.cw-war-row{display:grid;grid-template-columns:1fr 1fr;gap:18px;padding-top:14px;border-top:1px solid rgba(255,255,255,.12)}.cw-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.cw-stat{padding:10px;border-radius:10px;background:rgba(0,0,0,.2)}.cw-stat strong{overflow-wrap:anywhere}.cw-stat span,.cw-history time{display:block;color:var(--muted,#b8c7c0);font-size:.78rem}.cw-history-list{display:grid;gap:9px;max-height:420px;overflow:auto;scrollbar-width:thin}.cw-history-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,7.5rem);gap:5px;padding:10px;border-radius:10px;background:rgba(0,0,0,.18)}.cw-history-row>span{text-align:right;overflow-wrap:anywhere}.cw-rules{margin:0;padding-left:1.1rem}.cw-rules li+li{margin-top:8px}.cw-muted{color:var(--muted,#b8c7c0)}';
+  const desktop = '.casino-war{display:grid;gap:14px;min-height:0}.cw-header{display:flex;align-items:end;justify-content:space-between;gap:16px}.cw-header h1{margin:0}.cw-phase{padding:7px 12px;border:1px solid rgba(255,215,128,.45);border-radius:999px;color:var(--gold,#f6d47a)}.cw-layout{display:grid;grid-template-columns:minmax(210px,.72fr) minmax(500px,2.2fr) minmax(210px,.72fr);gap:14px;min-height:0}.cw-panel{min-width:0;border:1px solid rgba(255,215,128,.24);border-radius:16px;background:rgba(5,32,23,.9);padding:16px}.cw-controls,.cw-history{display:grid;align-content:start;gap:14px}.cw-controls label{display:grid;gap:7px}.cw-controls select,.cw-controls button{min-height:44px}.cw-actions{display:grid;gap:10px}.cw-actions.dual{grid-template-columns:1fr 1fr}.cw-primary{background:var(--red,#a92a38);color:#fff}.cw-repeat{background:transparent;color:#ffd780;border:1px solid #ffd780;min-height:44px}.cw-repeat:disabled{opacity:.5}.cw-stage{display:grid;grid-template-rows:auto 1fr auto;gap:18px;min-width:0;background:radial-gradient(circle at 50% 35%,rgba(28,112,72,.38),rgba(3,24,17,.96) 68%)}.cw-stage-head{display:flex;justify-content:space-between;gap:12px}.cw-stage-head h2{margin:0}.cw-table{display:grid;grid-template-columns:1fr 1fr;gap:clamp(18px,5vw,64px);align-items:center;justify-items:center;min-height:310px}.cw-hand{display:grid;justify-items:center;gap:12px}.cw-hand h3{margin:0}.cw-card-empty{width:clamp(3.25rem,10vw,6.5rem);aspect-ratio:5/7;border:2px dashed rgba(255,255,255,.24);border-radius:.65rem}.cw-war-row{display:grid;grid-template-columns:1fr 1fr;gap:18px;padding-top:14px;border-top:1px solid rgba(255,255,255,.12)}.cw-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.cw-stat{padding:10px;border-radius:10px;background:rgba(0,0,0,.2)}.cw-stat strong{overflow-wrap:anywhere}.cw-stat span,.cw-history time{display:block;color:var(--muted,#b8c7c0);font-size:.78rem}.cw-history-list{display:grid;gap:9px;max-height:420px;overflow:auto;scrollbar-width:thin}.cw-history-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,7.5rem);gap:5px;padding:10px;border-radius:10px;background:rgba(0,0,0,.18)}.cw-history-row>span{text-align:right;overflow-wrap:anywhere}.cw-rules{margin:0;padding-left:1.1rem}.cw-rules li+li{margin-top:8px}.cw-muted{color:var(--muted,#b8c7c0)}';
   // Stack controls, stage, and data on tablet widths.
   const tablet = '@media (max-width:1100px){.cw-layout{grid-template-columns:1fr}.cw-controls{order:1}.cw-stage{order:2}.cw-history{order:3}.cw-table{min-height:260px}}';
   // Prevent clipping and horizontal overflow on mobile.
@@ -186,14 +188,16 @@ function styleHtml() {
 function controlsHtml(roundItem) {
   // Determine whether the current phase requires a tie decision.
   const decision = roundItem?.phase === 'war_decision';
+  // Enable the one-click repeat only outside a decision, with a prior ante and no busy or unresolved deal retry.
+  const repeatDisabled = busy || pendingCommands.has('deal') || !lastBet;
   // Build localized wager options without embedding visible English.
   const options = WAGERS.map(value => `<option value="${value}">${safe(tokenAmount(value))}</option>`).join('');
   // Render decision controls only while an initial tie is actionable.
   const actions = decision
     // Offer both allowed tie decisions together.
     ? `<div class="cw-actions dual"><button type="button" data-action="surrender" ${busy ? 'disabled' : ''}>${safe(text('controls.surrender'))}</button><button type="button" class="cw-primary" data-action="war" ${busy ? 'disabled' : ''}>${safe(text('controls.war'))}</button></div>`
-    // Offer the next deal outside the tie-decision phase.
-    : `<div class="cw-actions"><button type="button" class="cw-primary" data-action="deal" ${busy ? 'disabled' : ''}>${safe(roundItem ? text('controls.dealNext') : text('controls.deal'))}</button></div>`;
+    // Offer the next deal plus a one-click repeat of the last ante outside the tie-decision phase.
+    : `<div class="cw-actions"><button type="button" class="cw-primary" data-action="deal" ${busy ? 'disabled' : ''}>${safe(roundItem ? text('controls.dealNext') : text('controls.deal'))}</button><button type="button" class="cw-repeat" data-action="repeat" ${repeatDisabled ? 'disabled' : ''}>${safe(text('controls.repeat'))}</button></div>`;
   // Return the stable control panel with wager and primary action above the fold.
   return `<section class="cw-panel cw-controls" aria-label="${safe(text('controls.region'))}"><h2>${safe(text('controls.title'))}</h2><label>${safe(text('controls.wager'))}<select data-testid="casino-war-wager" ${decision || busy ? 'disabled' : ''}>${options}</select></label>${actions}<p class="cw-muted">${safe(decision ? text('controls.tieHelp') : text('controls.readyHelp'))}</p><h3>${safe(text('rules.title'))}</h3><ul class="cw-rules"><li>${safe(text('rules.highCard'))}</li><li>${safe(text('rules.surrender'))}</li><li>${safe(text('rules.war'))}</li><li>${safe(text('rules.secondTie'))}</li></ul></section>`;
 }
@@ -260,6 +264,8 @@ async function deal() {
     clearCommand('deal');
     // Store the returned player-scoped public state.
     state = payload.state;
+    // Remember the committed ante so the next round can repeat the same initial wager with one click.
+    lastBet = { wager: command.payload.wager };
     // Refresh the shell wallet after ledger debit and optional credit.
     await refreshBalance();
   // Surface standard API failures through the shared toast outlet.
@@ -318,10 +324,24 @@ async function decide(decision) {
   }
 }
 
+// Re-apply the last committed ante and start one fresh round without a timer.
+async function repeat() {
+  // Ignore repeat while a command is busy, a deal retry is unresolved, or no prior ante exists.
+  if (busy || pendingCommands.has('deal') || !lastBet) return;
+  // Resolve the wager control that deal reads its amount from.
+  const wagerControl = root?.querySelector('[data-testid="casino-war-wager"]');
+  // Restore the previous ante onto the wager control so deal charges the same amount.
+  if (wagerControl) wagerControl.value = lastBet.wager;
+  // Fire the shared exactly-once deal action with the restored ante.
+  await deal();
+}
+
 // Bind controls created by the latest render.
 function bindEvents() {
   // Bind the initial or next-round action when present.
   root?.querySelector('[data-action="deal"]')?.addEventListener('click', deal);
+  // Bind the one-click repeat that re-fires a new round with the previous ante.
+  root?.querySelector('[data-action="repeat"]')?.addEventListener('click', repeat);
   // Bind surrender without creating a game-owned timer.
   root?.querySelector('[data-action="surrender"]')?.addEventListener('click', () => decide('surrender'));
   // Bind war through the matching-wager API action.
@@ -336,6 +356,8 @@ export const CasinoWarGame = {
   async mount(node) {
     // Retain the shell-provided mount node.
     root = node;
+    // Reset the repeatable ante so another session never inherits it before recovery.
+    lastBet = null;
     // Install shared card presentation once.
     ensureSharedCardStyles();
     // Load both active and fallback Casino War dictionaries before rendering.
@@ -346,6 +368,10 @@ export const CasinoWarGame = {
     const payload = await api(currentPlayerPath(`${API_ROOT}/state`));
     // Store the public state for initial rendering.
     state = payload.state;
+    // Recover a repeatable ante from the newest round so repeat survives a reload.
+    const restored = currentRound();
+    // Restore the repeatable wager only when a prior round is present.
+    if (restored?.wager) lastBet = { wager: Number(restored.wager) };
     // Reconcile any unresolved retry identities against the authoritative ledger and current ownership on mount. (issue #261)
     reconcileCommands();
     // Render the table only after localized copy is ready.
@@ -361,6 +387,8 @@ export const CasinoWarGame = {
     unsubscribeLocale = null;
     // Clear state so another user's later mount cannot reuse prior data.
     state = null;
+    // Clear the repeatable ante so the next session starts fresh.
+    lastBet = null;
     // Release every unresolved retry identity so a later mount or a different session cannot inherit one. (issue #261)
     clearAllCommands();
     // Release the DOM reference; this module owns no timers to cancel.

@@ -25,6 +25,8 @@ let root = null;
 let state = null;
 // Prevent overlapping atomic commands from repeated clicks.
 let busy = false;
+// Retain the last committed opening ante so one click can repeat the same round.
+let lastBet = null;
 // Retain retry keys after uncertain failures so a retry cannot duplicate settlement.
 let retryActionIds = new Map();
 // Retain the locale unsubscribe callback for leak-free route changes.
@@ -132,7 +134,7 @@ function localizedCard(card) {
 // Return scoped layout rules that keep the card stage visually dominant.
 function styleHtml() {
   // Define desktop hierarchy, accessible scroll treatment, and stable reserved regions.
-  const desktop = '.red-dog{display:grid;gap:14px;min-width:0;min-height:0}.rd-header{display:flex;align-items:end;justify-content:space-between;gap:16px}.rd-header h1,.rd-panel h2,.rd-panel h3{margin:0}.rd-phase{min-height:34px;padding:7px 12px;border:1px solid rgba(255,215,128,.45);border-radius:999px;color:var(--gold,#f6d47a)}.rd-layout{display:grid;grid-template-columns:minmax(210px,.72fr) minmax(500px,2.25fr) minmax(210px,.72fr);gap:14px;min-width:0;min-height:0}.rd-panel{min-width:0;border:1px solid rgba(255,215,128,.24);border-radius:16px;background:rgba(5,32,23,.9);padding:16px}.rd-controls,.rd-data{display:grid;align-content:start;gap:14px}.rd-controls label{display:grid;gap:7px}.rd-controls select,.rd-controls button{min-height:44px}.rd-actions{display:grid;gap:10px}.rd-actions--decision{grid-template-columns:1fr 1fr}.rd-primary{background:var(--red,#a92a38);color:#fff}.rd-stage{display:grid;grid-template-rows:auto minmax(310px,1fr) auto;gap:18px;background:radial-gradient(circle at 50% 38%,rgba(30,119,76,.42),rgba(3,24,17,.96) 70%)}.rd-stage-head{display:flex;align-items:start;justify-content:space-between;gap:12px;min-height:58px}.rd-stage-head p{margin:0}.rd-spread{display:grid;place-items:center;min-width:72px;min-height:52px;padding:7px;border:1px solid rgba(255,215,128,.42);border-radius:12px;text-align:center}.rd-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:center;justify-items:center;gap:clamp(12px,3vw,34px)}.rd-card-slot{display:grid;justify-items:center;align-content:center;gap:10px;min-width:0}.rd-card-slot h3{font-size:.9rem;text-align:center}.rd-card-empty{width:clamp(3.25rem,8vw,6.5rem);aspect-ratio:5/7;border:2px dashed rgba(255,255,255,.26);border-radius:.65rem}.rd-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;min-height:76px}.rd-stat{min-width:0;padding:10px;border-radius:10px;background:rgba(0,0,0,.2)}.rd-stat span,.rd-history-wager{display:block;color:var(--muted,#b8c7c0);font-size:.78rem}.rd-stat strong{overflow-wrap:anywhere}.rd-data-scroll{display:grid;gap:14px;max-height:475px;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;touch-action:pan-y}.rd-data-scroll:focus-visible{outline:3px solid var(--gold,#f6d47a);outline-offset:3px}.rd-paytable{width:100%;border-collapse:collapse}.rd-paytable th,.rd-paytable td{padding:7px 5px;border-bottom:1px solid rgba(255,255,255,.1);text-align:left}.rd-history-list{display:grid;gap:9px}.rd-history-row{display:grid;grid-template-columns:1fr auto;gap:5px;padding:10px;border-radius:10px;background:rgba(0,0,0,.18)}.rd-rules{margin:0;padding-left:1.1rem}.rd-rules li+li{margin-top:8px}.rd-muted{color:var(--muted,#b8c7c0)}.rd-busy{min-height:22px}';
+  const desktop = '.red-dog{display:grid;gap:14px;min-width:0;min-height:0}.rd-header{display:flex;align-items:end;justify-content:space-between;gap:16px}.rd-header h1,.rd-panel h2,.rd-panel h3{margin:0}.rd-phase{min-height:34px;padding:7px 12px;border:1px solid rgba(255,215,128,.45);border-radius:999px;color:var(--gold,#f6d47a)}.rd-layout{display:grid;grid-template-columns:minmax(210px,.72fr) minmax(500px,2.25fr) minmax(210px,.72fr);gap:14px;min-width:0;min-height:0}.rd-panel{min-width:0;border:1px solid rgba(255,215,128,.24);border-radius:16px;background:rgba(5,32,23,.9);padding:16px}.rd-controls,.rd-data{display:grid;align-content:start;gap:14px}.rd-controls label{display:grid;gap:7px}.rd-controls select,.rd-controls button{min-height:44px}.rd-actions{display:grid;gap:10px}.rd-actions--decision{grid-template-columns:1fr 1fr}.rd-primary{background:var(--red,#a92a38);color:#fff}.rd-repeat{min-height:44px;background:transparent;color:#ffd780;border:1px solid rgba(255,215,128,.55)}.rd-repeat:disabled{opacity:.5}.rd-stage{display:grid;grid-template-rows:auto minmax(310px,1fr) auto;gap:18px;background:radial-gradient(circle at 50% 38%,rgba(30,119,76,.42),rgba(3,24,17,.96) 70%)}.rd-stage-head{display:flex;align-items:start;justify-content:space-between;gap:12px;min-height:58px}.rd-stage-head p{margin:0}.rd-spread{display:grid;place-items:center;min-width:72px;min-height:52px;padding:7px;border:1px solid rgba(255,215,128,.42);border-radius:12px;text-align:center}.rd-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:center;justify-items:center;gap:clamp(12px,3vw,34px)}.rd-card-slot{display:grid;justify-items:center;align-content:center;gap:10px;min-width:0}.rd-card-slot h3{font-size:.9rem;text-align:center}.rd-card-empty{width:clamp(3.25rem,8vw,6.5rem);aspect-ratio:5/7;border:2px dashed rgba(255,255,255,.26);border-radius:.65rem}.rd-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;min-height:76px}.rd-stat{min-width:0;padding:10px;border-radius:10px;background:rgba(0,0,0,.2)}.rd-stat span,.rd-history-wager{display:block;color:var(--muted,#b8c7c0);font-size:.78rem}.rd-stat strong{overflow-wrap:anywhere}.rd-data-scroll{display:grid;gap:14px;max-height:475px;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;touch-action:pan-y}.rd-data-scroll:focus-visible{outline:3px solid var(--gold,#f6d47a);outline-offset:3px}.rd-paytable{width:100%;border-collapse:collapse}.rd-paytable th,.rd-paytable td{padding:7px 5px;border-bottom:1px solid rgba(255,255,255,.1);text-align:left}.rd-history-list{display:grid;gap:9px}.rd-history-row{display:grid;grid-template-columns:1fr auto;gap:5px;padding:10px;border-radius:10px;background:rgba(0,0,0,.18)}.rd-rules{margin:0;padding-left:1.1rem}.rd-rules li+li{margin-top:8px}.rd-muted{color:var(--muted,#b8c7c0)}.rd-busy{min-height:22px}';
   // Stack controls, stage, and data for tablet-width interaction.
   const tablet = '@media (max-width:1100px){.rd-layout{grid-template-columns:1fr}.rd-controls{order:1}.rd-stage{order:2}.rd-data{order:3}.rd-stage{grid-template-rows:auto minmax(260px,1fr) auto}.rd-data-scroll{max-height:none;overflow:visible}}';
   // Prevent clipped controls, cards, and summaries on the mobile viewport.
@@ -147,14 +149,16 @@ function styleHtml() {
 function controlsHtml(roundItem) {
   // Detect the only phase where call and raise choices are available.
   const decision = roundItem?.phase === 'raise_decision';
+  // Enable the one-click repeat only outside the decision phase when a prior ante exists and nothing is in flight.
+  const repeatDisabled = busy || !lastBet;
   // Build localized wager options without hard-coded visible units.
   const options = WAGERS.map(value => `<option value="${value}">${safe(tokenAmount(value))}</option>`).join('');
   // Render the phase-appropriate primary actions in a stable reserved region.
   const actions = decision
     // Offer call and matching raise together after a valid spread.
     ? `<div class="rd-actions rd-actions--decision"><button type="button" data-action="call" ${busy ? 'disabled' : ''}>${safe(text('controls.call'))}</button><button type="button" class="rd-primary" data-action="raise" ${busy ? 'disabled' : ''}>${safe(text('controls.raise'))}</button></div>`
-    // Offer the next opening outside the decision phase.
-    : `<div class="rd-actions"><button type="button" class="rd-primary" data-action="deal" ${busy ? 'disabled' : ''}>${safe(roundItem ? text('controls.dealNext') : text('controls.deal'))}</button></div>`;
+    // Offer the next opening and a one-click repeat outside the decision phase.
+    : `<div class="rd-actions"><button type="button" class="rd-primary" data-action="deal" ${busy ? 'disabled' : ''}>${safe(roundItem ? text('controls.dealNext') : text('controls.deal'))}</button><button type="button" class="rd-repeat" data-action="repeat" ${repeatDisabled ? 'disabled' : ''}>${safe(text('controls.repeat'))}</button></div>`;
   // Return accessible controls and concise table rules above the rail fold.
   return `<section class="rd-panel rd-controls" aria-label="${safe(text('controls.region'))}"><h2>${safe(text('controls.title'))}</h2><label>${safe(text('controls.wager'))}<select data-testid="red-dog-wager" ${decision || busy ? 'disabled' : ''}>${options}</select></label>${actions}<p class="rd-muted">${safe(decision ? text('controls.decisionHelp') : text('controls.readyHelp'))}</p><p class="rd-muted rd-busy" role="status" aria-live="polite">${busy ? safe(text('controls.busy')) : ''}</p><h3>${safe(text('rules.title'))}</h3><ul class="rd-rules"><li>${safe(text('rules.objective'))}</li><li>${safe(text('rules.consecutive'))}</li><li>${safe(text('rules.pair'))}</li><li>${safe(text('rules.raise'))}</li></ul></section>`;
 }
@@ -262,6 +266,20 @@ async function deal() {
   const commandKey = `deal:${wager}`;
   // Submit only wager and idempotency data; session identity is implicit.
   await runCommand(commandKey, `${API_ROOT}/rounds`, { wager });
+  // Remember the committed ante only when the deal succeeded and the retry id was cleared.
+  if (root && !retryActionIds.has(commandKey)) lastBet = { wager };
+}
+
+// Re-apply the last committed ante and open one identical round without a timer.
+async function repeat() {
+  // Ignore repeat while a command is in flight or before any ante has been committed.
+  if (busy || !lastBet) return;
+  // Restore the previous ante into the wager control so deal reads the repeated stake.
+  const wagerSelect = root?.querySelector('[data-testid="red-dog-wager"]');
+  // Apply the stored ante only when the enabled wager control is present.
+  if (wagerSelect) wagerSelect.value = String(lastBet.wager);
+  // Fire the shared opening action with the restored ante, never replaying a raise.
+  await deal();
 }
 
 // Complete one spread decision with or without a matching raise.
@@ -280,6 +298,8 @@ async function decide(decision) {
 function bindEvents() {
   // Bind the opening action when the table is not awaiting a decision.
   root?.querySelector('[data-action="deal"]')?.addEventListener('click', deal);
+  // Bind the one-click repeat that re-opens a round with the previous ante.
+  root?.querySelector('[data-action="repeat"]')?.addEventListener('click', repeat);
   // Bind call to the public no-raise decision endpoint.
   root?.querySelector('[data-action="call"]')?.addEventListener('click', () => decide('call'));
   // Bind raise to the matching-wager decision endpoint.
@@ -294,6 +314,8 @@ export const RedDogGame = {
   async mount(node) {
     // Retain the shell-provided mount node before asynchronous loading.
     root = node;
+    // Reset the repeatable ante so a new session never inherits a prior bet.
+    lastBet = null;
     // Install shared card presentation exactly once for this route.
     ensureSharedCardStyles();
     // Load active and fallback Red Dog dictionaries before rendering copy.
@@ -308,6 +330,10 @@ export const RedDogGame = {
     if (root !== node) return;
     // Store the public state for initial rendering.
     state = payload.state;
+    // Recover a repeatable ante from the newest settled round so repeat survives a reload.
+    const recovered = state?.rounds?.[0];
+    // Restore the repeatable ante only when a prior round exposes its committed wager.
+    if (recovered?.wager) lastBet = { wager: Number(recovered.wager) };
     // Render only after localized copy and recovered state are both ready.
     render();
     // Align the shared wallet with any recovered ledger movement.
@@ -329,6 +355,8 @@ export const RedDogGame = {
     retryActionIds = new Map();
     // Clear state so another authenticated user cannot reuse prior data.
     state = null;
+    // Clear the repeatable ante so the next session starts fresh.
+    lastBet = null;
     // Release the DOM reference; this module owns no timers to cancel.
     root = null;
     // Release the in-flight visual lock for a future mount.

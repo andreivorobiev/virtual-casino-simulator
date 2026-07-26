@@ -63,6 +63,12 @@ assert.match(source, /motionScope\?\.dispose\(\)/);
 assert.match(source, /await refreshBalance\(\)/);
 // Reject direct hard-coded English labels inside generated markup.
 assert.doesNotMatch(source, />\s*(Roll dice|Under 7|Exactly 7|Over 7)\s*</);
+// Verify the one-click repeat control is present in generated markup.
+assert.match(source, /data-action="repeat"/);
+// Verify the repeat label exists in both required locales.
+assert.ok(english['controls.repeat']?.trim(), 'controls.repeat missing from English');
+// Verify the repeat label exists in the Russian locale.
+assert.ok(russian['controls.repeat']?.trim(), 'controls.repeat missing from Russian');
 // Verify representative visible and ARIA strings exist in both locales.
 for (const key of ['title', 'controls.title', 'action.play', 'stage.aria', 'history.empty', 'error.playFailed']) {
   // Require non-empty English value.

@@ -34,6 +34,8 @@ let unsubscribeLocale = null;
 let pendingDeal = null;
 // Retain an unresolved guess identity, round, and direction for safe retry.
 let pendingGuess = null;
+// Retain the last settled wager so one click can repeat the same bet as a new round.
+let lastBet = null;
 // Retain a localized error resource key for the reserved route error region.
 let lastErrorKey = null;
 // Allocate stable fallback identities when randomUUID is unavailable.
@@ -148,6 +150,8 @@ function controlsHtml() {
   const wagerDisabled = Boolean(activeRound) || busy || Boolean(pendingDeal);
   // Keep the deal action available for the exact same unresolved retry.
   const dealDisabled = Boolean(activeRound) || busy;
+  // Enable the one-click repeat only when a prior settled bet exists and a fresh round can start.
+  const repeatDisabled = dealDisabled || Boolean(pendingDeal) || Boolean(pendingGuess) || !lastBet;
   // Read the unresolved direction so the opposite semantic action stays disabled.
   const pendingDirection = pendingGuess?.guess || null;
   // Build both accessible direction controls from one canonical value list.
@@ -163,7 +167,7 @@ function controlsHtml() {
   // Change the deal label when the same unresolved action can be retried.
   const dealLabel = pendingDeal ? text('controls.retryDeal') : text('controls.deal');
   // Return a stable control rail whose primary actions never move between phases.
-  return '<aside class="hilo-panel hilo-controls" aria-label="' + safe(text('controls.title')) + '"><h2>' + safe(text('controls.title')) + '</h2><label for="hilo-wager">' + safe(text('controls.wager')) + '</label><input id="hilo-wager" type="number" min="0.01" max="100000" step="0.01" value="' + safe(wager) + '"' + (wagerDisabled ? ' disabled' : '') + '><button type="button" class="hilo-primary" data-action="deal"' + (dealDisabled ? ' disabled' : '') + '>' + safe(dealLabel) + '</button><fieldset' + (canGuess ? '' : ' disabled') + '><legend>' + safe(text('controls.choose')) + '</legend><div class="hilo-guesses">' + guessButtons + '</div></fieldset><p class="hilo-help">' + safe(text('controls.chooseHelp')) + '</p>' + retryHelp + '<p class="hilo-error" role="alert" data-error>' + (lastErrorKey ? safe(text(lastErrorKey)) : '') + '</p></aside>';
+  return '<aside class="hilo-panel hilo-controls" aria-label="' + safe(text('controls.title')) + '"><h2>' + safe(text('controls.title')) + '</h2><label for="hilo-wager">' + safe(text('controls.wager')) + '</label><input id="hilo-wager" type="number" min="0.01" max="100000" step="0.01" value="' + safe(wager) + '"' + (wagerDisabled ? ' disabled' : '') + '><button type="button" class="hilo-primary" data-action="deal"' + (dealDisabled ? ' disabled' : '') + '>' + safe(dealLabel) + '</button><button type="button" class="hilo-repeat" data-action="repeat"' + (repeatDisabled ? ' disabled' : '') + '>' + safe(text('controls.repeat')) + '</button><fieldset' + (canGuess ? '' : ' disabled') + '><legend>' + safe(text('controls.choose')) + '</legend><div class="hilo-guesses">' + guessButtons + '</div></fieldset><p class="hilo-help">' + safe(text('controls.chooseHelp')) + '</p>' + retryHelp + '<p class="hilo-error" role="alert" data-error>' + (lastErrorKey ? safe(text(lastErrorKey)) : '') + '</p></aside>';
 }
 
 // Render the visible opening card and protected next-card reveal.
@@ -229,7 +233,7 @@ function dataHtml() {
 // Return scoped responsive styles without modifying the shared application stylesheet.
 function stylesHtml() {
   // Define the dominant stage, stable controls, responsive stack, focus, and reduced-motion rules.
-  return '<style>/* Establish the game header and desktop control-stage-data hierarchy. */.hilo-shell{display:grid;gap:16px;min-width:0}.hilo-header{display:flex;align-items:end;justify-content:space-between;gap:16px}.hilo-header h1{margin:0}.hilo-eyebrow{margin:0 0 4px;color:var(--muted,#b8c8c1)}.hilo-phase{padding:7px 12px;border:1px solid rgba(255,215,128,.45);border-radius:999px;color:var(--gold,#f6d47a)}.hilo-layout{display:grid;grid-template-columns:minmax(210px,.7fr) minmax(520px,2.4fr) minmax(230px,.8fr);gap:16px;align-items:start}.hilo-panel,.hilo-stage{border:1px solid rgba(255,215,128,.24);border-radius:16px;background:rgba(3,29,20,.86);padding:16px}.hilo-controls,.hilo-data{display:grid;align-content:start;gap:13px}.hilo-controls h2,.hilo-data h2{margin:0}.hilo-controls fieldset{margin:0;padding:0;border:0}.hilo-controls legend{margin-bottom:8px}.hilo-controls input,.hilo-controls button{min-height:44px}.hilo-primary{background:var(--red,#a51f2d);color:#fff}.hilo-guesses{display:grid;grid-template-columns:1fr 1fr;gap:10px}.hilo-help,.hilo-retry,.hilo-empty{color:var(--muted,#b8c8c1)}.hilo-error{min-height:1.4em;margin:0;color:#ffd1d1}.hilo-stage{display:grid;align-content:center;gap:22px;min-width:0;min-height:430px;background:radial-gradient(circle at 50% 40%,rgba(29,117,76,.4),rgba(3,24,17,.96) 70%)}.hilo-stage-cards{display:grid;grid-template-columns:minmax(120px,1fr) auto minmax(120px,1fr);gap:clamp(14px,4vw,48px);align-items:center;justify-items:center}.hilo-card-slot{display:grid;justify-items:center;gap:12px}.hilo-card-slot h3{margin:0}.hilo-card-slot .playing-card{flex:none;width:clamp(4.5rem,9vw,7.5rem);font-size:clamp(1.1rem,2.5vw,1.8rem)}.hilo-comparison{display:grid;place-items:center;width:48px;height:48px;border:1px solid rgba(255,215,128,.5);border-radius:50%;font-size:1.6rem;color:var(--gold,#f6d47a)}.hilo-result{min-height:2.8em;margin:0;text-align:center}.hilo-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}.hilo-summary span{display:grid;gap:5px;padding:10px;border-radius:10px;background:rgba(255,255,255,.05)}.hilo-summary strong{overflow-wrap:anywhere}.hilo-data section{display:grid;gap:10px}.hilo-rules{margin:0;padding-left:1.1rem}.hilo-rules li+li{margin-top:7px}.hilo-history-list{display:grid;gap:8px;max-height:285px;margin:0;padding:0;overflow:auto;list-style:none;scrollbar-width:thin}.hilo-history-list li{display:grid;grid-template-columns:1fr auto;gap:8px;padding:9px;border-radius:9px;background:rgba(0,0,0,.2)}.hilo-shell button:focus-visible,.hilo-shell input:focus-visible,.hilo-history-list:focus-visible{outline:3px solid #ffd780;outline-offset:2px}/* Stack controls, stage, and data on compact screens. */@media(max-width:1100px){.hilo-layout{grid-template-columns:1fr}.hilo-controls{order:1}.hilo-stage{order:2;min-height:360px}.hilo-data{order:3}}/* Prevent card, summary, and action clipping on mobile. */@media(max-width:520px){.hilo-header{align-items:start;flex-direction:column}.hilo-panel,.hilo-stage{padding:12px}.hilo-stage{min-height:320px}.hilo-stage-cards{grid-template-columns:1fr 40px 1fr;gap:8px}.hilo-card-slot .playing-card{width:clamp(3.8rem,22vw,5.5rem)}.hilo-summary{grid-template-columns:1fr 1fr}.hilo-guesses{grid-template-columns:1fr}.hilo-history-list li{grid-template-columns:1fr}}/* Remove decorative motion for reduced-motion users. */@media(prefers-reduced-motion:reduce){.hilo-shell *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}</style>';
+  return '<style>/* Establish the game header and desktop control-stage-data hierarchy. */.hilo-shell{display:grid;gap:16px;min-width:0}.hilo-header{display:flex;align-items:end;justify-content:space-between;gap:16px}.hilo-header h1{margin:0}.hilo-eyebrow{margin:0 0 4px;color:var(--muted,#b8c8c1)}.hilo-phase{padding:7px 12px;border:1px solid rgba(255,215,128,.45);border-radius:999px;color:var(--gold,#f6d47a)}.hilo-layout{display:grid;grid-template-columns:minmax(210px,.7fr) minmax(520px,2.4fr) minmax(230px,.8fr);gap:16px;align-items:start}.hilo-panel,.hilo-stage{border:1px solid rgba(255,215,128,.24);border-radius:16px;background:rgba(3,29,20,.86);padding:16px}.hilo-controls,.hilo-data{display:grid;align-content:start;gap:13px}.hilo-controls h2,.hilo-data h2{margin:0}.hilo-controls fieldset{margin:0;padding:0;border:0}.hilo-controls legend{margin-bottom:8px}.hilo-controls input,.hilo-controls button{min-height:44px}.hilo-primary{background:var(--red,#a51f2d);color:#fff}.hilo-repeat{min-height:44px;background:transparent;color:#ffd780;border:1px solid rgba(255,215,128,.55)}.hilo-repeat:disabled{opacity:.5}.hilo-guesses{display:grid;grid-template-columns:1fr 1fr;gap:10px}.hilo-help,.hilo-retry,.hilo-empty{color:var(--muted,#b8c8c1)}.hilo-error{min-height:1.4em;margin:0;color:#ffd1d1}.hilo-stage{display:grid;align-content:center;gap:22px;min-width:0;min-height:430px;background:radial-gradient(circle at 50% 40%,rgba(29,117,76,.4),rgba(3,24,17,.96) 70%)}.hilo-stage-cards{display:grid;grid-template-columns:minmax(120px,1fr) auto minmax(120px,1fr);gap:clamp(14px,4vw,48px);align-items:center;justify-items:center}.hilo-card-slot{display:grid;justify-items:center;gap:12px}.hilo-card-slot h3{margin:0}.hilo-card-slot .playing-card{flex:none;width:clamp(4.5rem,9vw,7.5rem);font-size:clamp(1.1rem,2.5vw,1.8rem)}.hilo-comparison{display:grid;place-items:center;width:48px;height:48px;border:1px solid rgba(255,215,128,.5);border-radius:50%;font-size:1.6rem;color:var(--gold,#f6d47a)}.hilo-result{min-height:2.8em;margin:0;text-align:center}.hilo-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}.hilo-summary span{display:grid;gap:5px;padding:10px;border-radius:10px;background:rgba(255,255,255,.05)}.hilo-summary strong{overflow-wrap:anywhere}.hilo-data section{display:grid;gap:10px}.hilo-rules{margin:0;padding-left:1.1rem}.hilo-rules li+li{margin-top:7px}.hilo-history-list{display:grid;gap:8px;max-height:285px;margin:0;padding:0;overflow:auto;list-style:none;scrollbar-width:thin}.hilo-history-list li{display:grid;grid-template-columns:1fr auto;gap:8px;padding:9px;border-radius:9px;background:rgba(0,0,0,.2)}.hilo-shell button:focus-visible,.hilo-shell input:focus-visible,.hilo-history-list:focus-visible{outline:3px solid #ffd780;outline-offset:2px}/* Stack controls, stage, and data on compact screens. */@media(max-width:1100px){.hilo-layout{grid-template-columns:1fr}.hilo-controls{order:1}.hilo-stage{order:2;min-height:360px}.hilo-data{order:3}}/* Prevent card, summary, and action clipping on mobile. */@media(max-width:520px){.hilo-header{align-items:start;flex-direction:column}.hilo-panel,.hilo-stage{padding:12px}.hilo-stage{min-height:320px}.hilo-stage-cards{grid-template-columns:1fr 40px 1fr;gap:8px}.hilo-card-slot .playing-card{width:clamp(3.8rem,22vw,5.5rem)}.hilo-summary{grid-template-columns:1fr 1fr}.hilo-guesses{grid-template-columns:1fr}.hilo-history-list li{grid-template-columns:1fr}}/* Remove decorative motion for reduced-motion users. */@media(prefers-reduced-motion:reduce){.hilo-shell *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}</style>';
 }
 
 // Bind semantic controls after each deterministic route render.
@@ -249,6 +253,10 @@ function bindEvents() {
     // Execute the prepared request through shared busy and error handling.
     runAction(deal);
   };
+  // Read the secondary repeat action control rendered beside the deal button.
+  const repeatButton = root?.querySelector('[data-action="repeat"]');
+  // Re-fire the last committed wager as a fresh round through the shared repeat path.
+  if (repeatButton) repeatButton.onclick = () => { repeat(); };
   // Bind both directional actions through one public guess path.
   root?.querySelectorAll('[data-guess]').forEach(button => {
     // Prepare or retry only the same round and direction after an ambiguous response.
@@ -358,12 +366,28 @@ async function submitGuess() {
   state = payload.state;
   // Refresh fixed rules when the response includes them.
   rules = payload.rules || rules;
+  // Read the newest settled round so the next click can repeat the same wager.
+  const settled = currentRound();
+  // Remember the settled wager only after a fully settled round proves the bet.
+  if (settled && settled.phase === 'settled') lastBet = { wager: settled.wager };
   // Clear the retry identity only after the settled response is available.
   pendingGuess = null;
   // Clear any obsolete deal identity after terminal settlement.
   pendingDeal = null;
   // Refresh the persistent authenticated wallet after payout, refund, or loss.
   await refreshBalance();
+}
+
+// Re-open one fresh round with the last settled wager through the shared deal path.
+async function repeat() {
+  // Ignore repeat while busy, mid-round, holding an unresolved retry, detached, or without a prior bet.
+  if (busy || !root || state?.active_round || pendingDeal || pendingGuess || !lastBet) return;
+  // Restore the previous stake into the local wager configuration.
+  wager = wagerValue(lastBet.wager);
+  // Prepare a fresh idempotent deal identity carrying the restored stake.
+  pendingDeal = { actionId: nextActionId(), wager };
+  // Execute the prepared deal through shared busy and error handling.
+  await runAction(deal);
 }
 
 // Export the catalog-owned lazy game module contract.
@@ -384,6 +408,8 @@ export const HiLoGame = {
     pendingDeal = null;
     // Clear any prior guess identity before reading current server state.
     pendingGuess = null;
+    // Clear any repeatable bet so another session never inherits it before recovery.
+    lastBet = null;
     // Install shared accessible card presentation once.
     ensureSharedCardStyles();
     // Capture this mount node for asynchronous route replacement guards.
@@ -404,6 +430,10 @@ export const HiLoGame = {
     rules = payload.rules || {};
     // Restore the active round wager into the locked control when present.
     wager = state?.active_round?.wager || wager;
+    // Recover a repeatable wager from the newest settled round so repeat survives a reload.
+    const restored = state?.recent_rounds?.slice(-1)[0] || null;
+    // Restore the repeatable configuration only when a prior settled round is present.
+    if (restored) lastBet = { wager: restored.wager };
     // Render the complete game-owned browser surface.
     render();
     // Align the persistent wallet with any recovered ledger marker.
@@ -427,6 +457,8 @@ export const HiLoGame = {
     pendingDeal = null;
     // Forget the route-local guess identity after teardown.
     pendingGuess = null;
+    // Forget the repeatable bet so the next session starts fresh.
+    lastBet = null;
     // Clear the reserved localized error state.
     lastErrorKey = null;
     // No timers or global event listeners are owned by this game.

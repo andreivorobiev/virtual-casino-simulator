@@ -31,6 +31,8 @@ const ROUTE_CSS = [
   '.crown-anchor__bet input{min-height:42px;min-width:0;}', // Preserve touch usability.
   '.crown-anchor__play{min-height:46px;border:0;border-radius:8px;color:white;background:#9f1f2e;font-weight:800;}', // Use a strong primary action.
   '.crown-anchor__play:disabled{opacity:.58;cursor:not-allowed;}', // Keep disabled state readable.
+  '.crown-anchor__repeat{min-height:46px;border:1px solid #ffd780;border-radius:8px;color:#ffd780;background:transparent;font-weight:800;}', // Offer a secondary repeat action distinct from the primary play button.
+  '.crown-anchor__repeat:disabled{opacity:.5;cursor:not-allowed;}', // Keep the repeat disabled state readable.
   '.crown-anchor__stage{display:grid;grid-template-rows:auto auto auto;align-content:center;gap:16px;min-width:0;overflow:hidden;}', // Center complete bounded theater rows without allowing intrinsic width to escape the panel.
   '.crown-anchor__dice{display:grid;grid-template-columns:repeat(3,minmax(74px,1fr));gap:12px;width:100%;min-width:0;}', // Reserve three stable dice slots inside the stage width.
   '.crown-anchor__die{display:grid;place-items:center;aspect-ratio:1;border:2px solid #f2c55c;border-radius:8px;background:#f8f0d5;color:#15211d;font-size:clamp(22px,4vw,44px);font-weight:900;transition:transform .9s ease;}', // Render symbol dice as text.
@@ -65,6 +67,8 @@ let motionScope = null;
 let reducedMotionActive = false;
 // Store whether dice are currently in the decorative reveal state.
 let diceRolling = false;
+// Store the last committed multi-symbol wager map so one click can repeat the identical bet.
+let lastBet = null;
 // Store the locale subscription cleanup callback.
 let localeUnsubscribe = null;
 
@@ -236,9 +240,11 @@ function historyHtml(translate = tx) {
 }
 
 // Return the complete route markup using only localized visible strings.
-export function viewMarkup({ translate = tx } = {}) {
+export function viewMarkup({ translate = tx, repeatable = lastBet } = {}) {
   // Resolve and escape through an injected translator for deterministic locale tests.
   const translated = (key, params = {}) => safe(translate(key, params));
+  // Disable the one-click repeat until a prior settled bet exists and no request or retry is active.
+  const repeatDisabled = playPending || Boolean(pendingRequestId) || !repeatable;
   // Resolve the visible dice faces or deterministic placeholder preview.
   const faces = latestRound?.faces || previewFaces('crown-and-anchor-waiting');
   // Resolve net result detail only when a backend settlement exists.
@@ -246,7 +252,7 @@ export function viewMarkup({ translate = tx } = {}) {
   // Render the three fixed dice slots with accessible labels.
   const diceHtml = faces.map((face, index) => `<div class="crown-anchor__die" data-die="${index}" data-rolling="${diceRolling}" data-reduced-motion="${reducedMotionActive}" aria-label="${safe(translate('die.aria', { index: index + 1, symbol: symbolForFace(face, translate) }))}">${safe(symbolForFace(face, translate))}</div>`).join('');
   // Return a three-zone layout aligned with the visual design standard.
-  return `<section class="crown-anchor" data-testid="crown-and-anchor"><header class="crown-anchor__header"><div><h1>${translated('title')}</h1><p>${translated('subtitle')}</p></div><span class="crown-anchor__phase" data-testid="crown-and-anchor-phase">${translated(phase)}</span></header><div class="crown-anchor__layout"><section class="crown-anchor__panel crown-anchor__controls" aria-label="${translated('controls.aria')}"><h2>${translated('controls.title')}</h2><p>${translated('controls.help')}</p>${wagerControlsHtml(translate)}<button class="crown-anchor__play" data-play type="button"${playPending ? ' disabled' : ''}>${translated(playPending ? 'action.rolling' : 'action.play')}</button><p class="crown-anchor__error" data-error aria-live="polite"></p></section><section class="crown-anchor__panel crown-anchor__stage" aria-label="${translated('stage.aria')}"><div class="crown-anchor__dice" aria-live="polite">${diceHtml}</div><div class="crown-anchor__table">${symbolTableHtml(translate)}</div><div class="crown-anchor__result" aria-live="polite"><strong>${translated(latestRound ? 'result.settled' : 'result.waiting')}</strong><span>${resultDetail}</span></div></section><aside class="crown-anchor__panel crown-anchor__data" aria-label="${translated('data.aria')}"><section><h2>${translated('paytable.title')}</h2>${paytableHtml(translate)}</section><section><h2>${translated('history.title')}</h2><div class="crown-anchor__history" tabindex="0" aria-label="${translated('history.aria')}">${historyHtml(translate)}</div></section></aside></div></section>`;
+  return `<section class="crown-anchor" data-testid="crown-and-anchor"><header class="crown-anchor__header"><div><h1>${translated('title')}</h1><p>${translated('subtitle')}</p></div><span class="crown-anchor__phase" data-testid="crown-and-anchor-phase">${translated(phase)}</span></header><div class="crown-anchor__layout"><section class="crown-anchor__panel crown-anchor__controls" aria-label="${translated('controls.aria')}"><h2>${translated('controls.title')}</h2><p>${translated('controls.help')}</p>${wagerControlsHtml(translate)}<button class="crown-anchor__play" data-play type="button"${playPending ? ' disabled' : ''}>${translated(playPending ? 'action.rolling' : 'action.play')}</button><button class="crown-anchor__repeat" data-action="repeat" type="button"${repeatDisabled ? ' disabled' : ''}>${translated('controls.repeat')}</button><p class="crown-anchor__error" data-error aria-live="polite"></p></section><section class="crown-anchor__panel crown-anchor__stage" aria-label="${translated('stage.aria')}"><div class="crown-anchor__dice" aria-live="polite">${diceHtml}</div><div class="crown-anchor__table">${symbolTableHtml(translate)}</div><div class="crown-anchor__result" aria-live="polite"><strong>${translated(latestRound ? 'result.settled' : 'result.waiting')}</strong><span>${resultDetail}</span></div></section><aside class="crown-anchor__panel crown-anchor__data" aria-label="${translated('data.aria')}"><section><h2>${translated('paytable.title')}</h2>${paytableHtml(translate)}</section><section><h2>${translated('history.title')}</h2><div class="crown-anchor__history" tabindex="0" aria-label="${translated('history.aria')}">${historyHtml(translate)}</div></section></aside></div></section>`;
 }
 
 // Render the route and reconnect its game-owned inputs after DOM replacement.
@@ -259,6 +265,18 @@ function render() {
   root.querySelectorAll('[data-wager]').forEach(input => { input.oninput = () => { const amount = Number(input.value); if (Number.isFinite(amount) && amount > 0) wagers[input.dataset.wager] = amount; else delete wagers[input.dataset.wager]; }; });
   // Wire the one atomic play action.
   root.querySelector('[data-play]').onclick = playRound;
+  // Wire the one-click repeat that re-fires the previous multi-symbol bet.
+  root.querySelector('[data-action="repeat"]').onclick = repeat;
+}
+
+// Re-apply the last committed wager map and re-fire one round without a timer.
+async function repeat() {
+  // Ignore repeat while a request is in flight, an ambiguous retry is unresolved, or no prior bet exists.
+  if (playPending || pendingRequestId || !lastBet) return;
+  // Restore the entire previous multi-symbol wager map into the local controls.
+  wagers = { ...lastBet.wagers };
+  // Fire the shared exactly-once play action with the restored bet.
+  await playRound();
 }
 
 // Load session-bound state from the additive v1 game endpoint.
@@ -269,6 +287,8 @@ async function load() {
   reconcilePendingRequest();
   // Restore the latest real result without inventing a settled round.
   latestRound = gameState.recent_rounds?.length ? gameState.recent_rounds[gameState.recent_rounds.length - 1] : null;
+  // Recover a repeatable wager map from the newest settled round so repeat survives a reload.
+  lastBet = latestRound?.wagers && Object.keys(latestRound.wagers).length ? { wagers: { ...latestRound.wagers } } : null;
   // Render after rules and history resources are available.
   render();
 }
@@ -310,6 +330,8 @@ async function playRound() {
     if (root !== mountedRoot || motionScope !== activeScope) return;
     // Store the authoritative settlement before starting decorative presentation.
     latestRound = response.round;
+    // Remember the exact settled multi-symbol wager map so the next round can repeat it with one click.
+    if (latestRound?.wagers && Object.keys(latestRound.wagers).length) lastBet = { wagers: { ...latestRound.wagers } };
     // Treat platform reduced motion as route-local CSS evidence.
     reducedMotionActive = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true;
     // Schedule the final reveal through the shared motion scope.
@@ -345,6 +367,8 @@ export const CrownAndAnchorGame = {
   async mount(node) {
     // Store the current route outlet before asynchronous initialization.
     root = node;
+    // Reset the repeatable bet so a fresh mount never inherits a prior session's wager map.
+    lastBet = null;
     // Install game-owned styles without changing shared CSS.
     ensureStyles();
     // Create one lifecycle-bound timer scope for this mount.
@@ -372,6 +396,8 @@ export const CrownAndAnchorGame = {
     playPending = false;
     // Reset dice reveal state for the next mount.
     diceRolling = false;
+    // Clear the repeatable bet so the next session starts fresh.
+    lastBet = null;
     // Release any unresolved retry identity so a later mount or a different session cannot inherit it; remount reloads authoritative state. (issue #261)
     clearPendingRequest();
   },
