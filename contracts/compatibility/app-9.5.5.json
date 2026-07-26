@@ -1,6 +1,25 @@
 {
-  "application": "9.5.5",
+  "app_version": "9.5.5",
   "source_baseline": "9.1.0",
+  "api_compatibility_matrix": "contracts/compatibility/module-api-matrix.json",
+  "release_provenance_requirement": "TOOL-003",
+  "release_channel": "restricted-preview-private-invite",
+  "access_policy": {
+    "admission": "manual-invite",
+    "public_signup": "disabled",
+    "live_oauth": "disabled"
+  },
+  "predecessor": {
+    "app_version": "9.5.4",
+    "compatibility_record": "contracts/compatibility/app-9.5.4.json",
+    "required_artifact": "release-manifest.json"
+  },
+  "rollback": {
+    "scope": "application-only",
+    "database_rollback": "prohibited",
+    "mysql_expected_schema_version": 2,
+    "requires_retained_predecessor_manifest": true
+  },
   "modules": {
     "application": "9.51.15",
     "core": "9.24.0",
@@ -64,5 +83,5 @@
     "daily_draw_lab": "1.0.0",
     "four_card_poker": "1.0.1"
   },
-  "created_at": "2026-07-09T00:00:00.000000Z"
+  "notes": "Compatible patch release of the exact accepted protected-main state after v9.5.4; the accepted game catalog and correctness updates, localized Admin ledger-event labels, and disabled optional magic-link foundation are packaged with a rotated PWA cache identity, MySQL stays at schema version 2, rollback is application-only, and public signup, live OAuth, provider networking, deployment, and unrestricted public launch remain separately gated."
 }
