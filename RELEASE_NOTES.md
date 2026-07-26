@@ -22,6 +22,17 @@
 - Keeps MySQL at schema version 2 and permits application-only rollback to the retained, checksum-verified v9.5.5 predecessor; database rollback remains prohibited.
 - Preserves signup, live OAuth, provider networking, DNS, billing, and unrestricted public exposure as separately gated.
 
+## Prior v9.5.5 protected-main release
+
+## Accepted catalog and disabled magic-link patch release
+
+- Packages the exact accepted protected-main state after v9.5.4 as a distinct immutable patch release.
+- Includes the accepted game catalog and correctness updates, localized Admin ledger-event labels, and the disabled optional magic-link foundation.
+- Rotates the PWA static-shell cache identity so existing browsers fetch the current protected application shell instead of continuing to serve cached v9.5.4 assets.
+- Keeps MySQL at schema version 2 and permits application-only rollback to the retained, checksum-verified v9.5.4 predecessor; database rollback remains prohibited.
+- Preserves manual-invite admission with public signup, live OAuth, provider networking, deployment, and unrestricted public exposure still separately gated.
+- This section was reconstructed from `contracts/compatibility/app-9.5.5.json`; the original v9.5.5 entry was missing from this record.
+
 ## Prior v9.5.4 protected-main release
 
 ## Logout reliability and account-spine patch release

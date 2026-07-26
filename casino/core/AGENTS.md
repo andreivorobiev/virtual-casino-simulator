@@ -4,11 +4,17 @@ Scope this Codex conversation to the `core` module unless the task explicitly li
 
 ## Allowed areas
 
+The owned path set is declared by `modules/core.json`; that descriptor is authoritative if this
+list ever drifts from it.
+
 - `casino/core/`
 - `casino/app.py`
+- `casino/wsgi.py`
 - `casino/router.py`
 - `casino/errors.py`
 - `casino/config.py`
+- `casino/module_versions.py`
+- `casino/games/registry.py`
 
 ## Rules
 

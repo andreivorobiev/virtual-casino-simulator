@@ -1,6 +1,6 @@
 # Private Beta Toy Simulator Terms
 
-Pending requirement IDs from issue #35: TERMS-001, TERMS-002, TERMS-003, TERMS-004, LIC-002.
+Requirements: TERMS-001, TERMS-002, TERMS-003, TERMS-004, LIC-002 (registered in `docs/requirements/requirements.json`, which is authoritative for their current status).
 
 These terms apply to private beta use of the running Virtual Casino Simulator app. The Apache-2.0 source-code license in `../../LICENSE` governs copying, modifying, and distributing the repository source code.
 

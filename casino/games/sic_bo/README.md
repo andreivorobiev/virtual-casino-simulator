@@ -36,4 +36,4 @@ These links document three dice, the eight wager families used by the 50 positio
 
 Existing impacted IDs: `CORE-008` through `CORE-012`, `CORE-022`, `LEDGER-005`, `LEDGER-006`, `LEDGER-007`, `LEDGER-009`, `LEDGER-023`, `SESSION-005`, `I18N-001`, `I18N-002`, `DICE-001`, `MOTION-001` through `MOTION-003`, `UX-001`, `UX-002`, `UX-003`, `UX-004`, `UX-006`, and `UX-009`.
 
-Issue #88 has no permanent game-specific IDs yet. `INTEGRATION.md` proposes the standard five-part `SIC-BO-001` through `SIC-BO-005` block for #77 to allocate centrally; this worker does not claim those IDs as registered requirements.
+Permanent Sic Bo requirements `SIC-BO-001` through `SIC-BO-005` are registered in `docs/requirements/requirements.json` and cover rules, session/reload safety, ledger retry safety, EN/RU responsive UI, and discovered acceptance evidence.

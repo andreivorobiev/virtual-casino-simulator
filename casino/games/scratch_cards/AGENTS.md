@@ -4,7 +4,7 @@ Scope future changes to the isolated `scratch_cards` game unless the #77 integra
 
 ## Rules
 
-- Read the root `AGENTS.md`, this file, `README.md`, `docs/games/scratch_cards.md`, and `codex/tasks/artifacts/issue-87-scratch-cards/scratch_cards.module.proposal.json` before editing.
+- Read the root `AGENTS.md`, this file, `README.md`, `docs/games/scratch_cards.md`, and `modules/scratch_cards.json` before editing.
 - Preserve the documented 3-by-3 match-three prize profile or version and document an intentional rules change.
 - Keep this package independent from every other game package.
 - Route every wager and payout through `casino/core/ledger.py`; never mutate balances directly.

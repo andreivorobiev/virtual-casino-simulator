@@ -81,7 +81,10 @@ for owner review.
 ## Label taxonomy
 
 Use only existing repository labels unless the owner explicitly approves a new
-label.
+label. The groups below cover priority, severity, category, area, origin, and
+workflow. They are not exhaustive of every label in use: `stack-rank:NNN`
+labels also appear on triaged issues (see `docs/coordination/codex.md`). Leave
+labels outside these groups in place rather than removing them as invented.
 
 ### Priority — exactly one
 

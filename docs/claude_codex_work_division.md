@@ -1,9 +1,9 @@
 # Claude and Codex work-division proposal
 
-Status: proposed default operating model under issue #267. The owner-mandated
-merge boundary in this document is fixed: Claude composes pull requests and
-Codex performs every repository merge. Other allocation details may be tuned by
-the owner without weakening repository gates.
+Status: adopted default operating model (originally proposed under issue #267).
+The owner-mandated merge boundary in this document is fixed: Claude composes
+pull requests and Codex performs every repository merge. Other allocation
+details may be tuned by the owner without weakening repository gates.
 
 ## Objectives
 

@@ -14,7 +14,8 @@
 
 ## Requirements
 - Validated IDs: `BJ-002`, `BJ-003`, `BJ-004`, `BJ-005`, `BJ-006`, `BJ-007`, `BJ-012`, `BJ-015`, `BJ-016`, `BJ-017`, `BJ-018`, `BJ-019`, `BJ-026`.
-- Module/version impact: tests module patch bump from `1.1.1` to `1.1.2`.
+- Module/version impact: patch bump of the tests module, starting from whatever `modules/tests.json`
+  currently holds (authoritative; do not hardcode a version in this packet).
 
 ## Scope
 - Impacted modules: tests.

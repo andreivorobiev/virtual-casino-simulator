@@ -6,7 +6,7 @@ Parents: #66 and #73. Shared integration owner: #77. Catalog foundation: #81.
 
 ## Requirement traceability
 
-Issue #87 does not yet have a coordinator-allocated permanent requirement block. This worker does not invent or add permanent IDs. The descriptor's `SCRATCH` prefix is a provisional integration proposal only; #77 must allocate the final game-specific block before acceptance.
+Permanent requirements `SCRATCH-001` through `SCRATCH-005` are registered in `docs/requirements/requirements.json` and cover rules, authenticated reload-safe API state, ledger/retry safety, EN/RU responsive UI, and catalog/contract/browser/long-suite/visual evidence. The descriptor's `SCRATCH` prefix is declared in `modules/scratch_cards.json`.
 
 Existing impacted requirements read before implementation are:
 
@@ -15,8 +15,6 @@ Existing impacted requirements read before implementation are:
 - Ledger: `LEDGER-005`, `LEDGER-006`, `LEDGER-007`, `LEDGER-009`, and `LEDGER-023`.
 - UI/i18n: `I18N-001`, `I18N-002`, `UX-001`, `UX-006`, `UX-009`, and `UX-010`.
 - Discovery/tests: `TEST-012`, `TEST-039`, and `TEST-042`.
-
-#77 should allocate five permanent Scratch Cards acceptance dimensions covering rules, authenticated reload-safe API state, ledger/retry safety, EN/RU responsive UI, and catalog/contract/browser/long-suite/visual evidence. No candidate ID numbers are claimed here.
 
 ## Explicit rules profile
 
@@ -71,19 +69,19 @@ The surface uses semantic prize-cell buttons, stable ARIA names, a polite phase/
 
 The #96 card renderer is intentionally not used because scratch tickets are not standard playing cards. The #97 motion timer scope is also unnecessary because reveal persistence is direct and timer-free; this avoids creating a parallel timing primitive.
 
-## #77 integration handoff
+## #77 integration
 
-The issue-owned descriptor artifact at `codex/tasks/artifacts/issue-87-scratch-cards/scratch_cards.module.proposal.json` proposes `scratch_cards` version `1.0.0`, canonical route `/games/scratch_cards`, existing categories `instant` and `machine`, and reserved sort order `130`. It intentionally remains outside `modules/` so this draft cannot auto-install the game before #77 integration.
+The canonical descriptor at `modules/scratch_cards.json` owns the module version, route `/games/scratch_cards`, existing categories `instant` and `machine`, and sort order `130`.
 
-#77 must still:
+#77 completed integration:
 
-- add `scratch_cards: 1.0.0` to `modules/module-manifest.json` from the then-current accepted base;
-- allocate and register permanent game-specific requirement IDs plus generated documentation;
-- add the OpenAPI contract to compatibility matrix and digest metadata;
-- add the central visual row and any central test-discovery/version revisions;
-- run the real copied-deployment catalog/API/browser/long-suite gate;
-- capture exact-head `after_pass` EN/RU evidence at all four required viewports.
+- the `scratch_cards` revision in `modules/module-manifest.json`;
+- permanent requirements `SCRATCH-001` through `SCRATCH-005` plus generated documentation;
+- the OpenAPI contract in compatibility matrix and digest metadata;
+- the central visual row and central test-discovery/version revisions;
+- the real copied-deployment catalog/API/browser/long-suite gate;
+- exact-head `after_pass` EN/RU evidence at all four required viewports.
 
-Proposed visual row: surface `scratch_cards`, route `/games/scratch_cards`, selector `[data-testid='scratch-cards']`, states `ready`, `revealing`, `settled_win`, `settled_no_win`, `reduced_motion`, and `route_restored`; both locales; desktop primary, desktop compact, tablet, and mobile; the standard copy, token-language, layout, hierarchy, responsive, evidence, and catalog gates.
+Registered visual row: surface `scratch_cards`, route `/games/scratch_cards`, selector `[data-testid='scratch-cards']`, states `ready`, `revealing`, `settled_win`, `settled_no_win`, `reduced_motion`, and `route_restored`; both locales; desktop primary, desktop compact, tablet, and mobile; the standard copy, token-language, layout, hierarchy, responsive, evidence, and catalog gates.
 
-No shared manifest, central requirement registry, compatibility inventory, visual matrix, shell, router, test runner, or generated documentation is changed by this slice.
+The shared manifest, requirement registry, compatibility inventory, visual matrix, and catalog-driven test discovery all carry Scratch Cards on current main.

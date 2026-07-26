@@ -1,8 +1,8 @@
 # Sic Bo integration handoff for #77
 
-This isolated branch intentionally does not add `modules/sic_bo.json`. Current main immediately loads every game descriptor under `modules/`, while canonical revision lookup requires the matching `modules/module-manifest.json` entry. The user reserved that aggregate manifest and all central catalog acceptance files for #77, so the descriptor and revision must land together.
+Sic Bo is integrated through the #77 lane. The canonical descriptor now lives at `modules/sic_bo.json`, and its matching revision is recorded in `modules/module-manifest.json`. Main loads every game descriptor under `modules/`, while canonical revision lookup requires the matching manifest entry, so the descriptor and revision landed together. The descriptor below reproduces that accepted catalog contract.
 
-## Proposed module descriptor
+## Module descriptor
 
 ```json
 {
@@ -55,7 +55,7 @@ This isolated branch intentionally does not add `modules/sic_bo.json`. Current m
 }
 ```
 
-The descriptor uses only existing shell category IDs, so it does not require new global EN/RU category strings. #77 must add `"sic_bo": "1.0.0"` to `modules/module-manifest.json` atomically with the descriptor and recalculate shared application/tests/docs/contracts revisions from then-current `main`.
+The descriptor uses only existing shell category IDs, so it does not require new global EN/RU category strings. #77 added the matching `sic_bo` entry to `modules/module-manifest.json` atomically with the descriptor and recalculated shared application/tests/docs/contracts revisions from then-current `main`.
 
 ## Proposed requirement block
 
@@ -78,7 +78,7 @@ Issue #88 currently has no permanent game-specific allocation. The #77 requireme
 5. Discover the existing `tests.game_drivers.sic_bo:play` driver without adding a hardcoded allowlist.
 6. Run real-backend catalog/API/browser/Long Suite 100, both locales, all four standard viewports, and named `after_pass` evidence.
 
-The reserved sort order places Sic Bo after Scratch Cards (`130`) and before Chuck-a-Luck (`150`). This is catalog presentation order, not merge authorization. Current `main` contains predecessor descriptors through Hi-Lo while the central sequence still lists Sic Bo as reserved; the coordinator must explicitly release Sic Bo integration later.
+The sort order places Sic Bo after Scratch Cards (`130`) and before Chuck-a-Luck (`150`). This is catalog presentation order, not merge authorization. Sic Bo integration has since been released: the descriptor, manifest revision, permanent requirements, and visual row are all present on main.
 
 ## Multi-process follow-up
 

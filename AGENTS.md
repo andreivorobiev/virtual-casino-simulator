@@ -115,12 +115,18 @@ python scripts/bootstrap_repo.py
 python verify_rules.py
 python tests/run_tests.py --api
 python tests/run_tests.py --browser
+python scripts/validate_game_catalog.py
 python scripts/validate_contracts.py
 python scripts/validate_module_boundaries.py
 python scripts/validate_requirements.py
 python scripts/validate_versions.py
+python scripts/generate_docs.py --check
 python scripts/check_comment_density.py
 ```
+
+`validate_game_catalog.py` and `generate_docs.py --check` are enforced by CI
+(`.github/workflows/ci.yml`, `.github/workflows/docs.yml`); a change that skips them can pass this
+list locally and still fail the build.
 
 ## Definition of done
 

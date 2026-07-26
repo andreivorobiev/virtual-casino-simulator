@@ -4,7 +4,7 @@ Issue #191 treats every browser, PWA, Android, and iOS client as an untrusted pr
 
 ## Machine-readable inventory
 
-`contracts/compatibility/server-authority-matrix.json` is generated from the canonical registered catalog and each module-owned OpenAPI v1 contract. It explicitly lists every state-changing method/path pair for all 30 currently registered games and assigns its client-intent, server-validation, engine-outcome, storage/ledger, and response-projection owners.
+`contracts/compatibility/server-authority-matrix.json` is generated from the canonical registered catalog and each module-owned OpenAPI v1 contract. It explicitly lists every state-changing method/path pair for each currently registered game (the exact total is `catalog_game_count` in that generated artifact) and assigns its client-intent, server-validation, engine-outcome, storage/ledger, and response-projection owners.
 
 Run `python scripts/generate_server_authority_matrix.py` after an authorized catalog or contract mutation. `python scripts/validate_contracts.py` and `API-SEC-001` fail closed when the checked artifact differs from the catalog, a game lacks a mutation action, evidence disappears, or the protected-field policy drifts.
 

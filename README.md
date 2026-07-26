@@ -4,7 +4,7 @@ Packaged application release: `0.9.5.5`
 
 Historical source baseline: `9.1.0`
 
-Local play-token browser casino simulator with Roulette, Slots, Blackjack, Baccarat, Keno, American Bingo, isolated game state, ledger-backed wallet accounting, authenticated private-beta users, Admin telemetry, and optional JSON or MySQL persistence.
+Local play-token browser casino simulator with a descriptor-driven catalog of isolated games (Roulette, Slots, Blackjack, Baccarat, Keno, American Bingo and many more; the canonical catalog is discovered from the `modules/*.json` descriptors), isolated game state, ledger-backed wallet accounting, authenticated private-beta users, Admin telemetry, and optional JSON or MySQL persistence.
 
 ## Current repository status
 
@@ -73,8 +73,11 @@ python tests/run_tests.py --browser
 Repository validation:
 
 ```bash
+python scripts/validate_game_catalog.py
 python scripts/validate_requirements.py
 python scripts/validate_versions.py
+python scripts/validate_contracts.py
+python scripts/validate_module_boundaries.py
 python scripts/generate_docs.py --check
 python scripts/check_comment_density.py
 ```

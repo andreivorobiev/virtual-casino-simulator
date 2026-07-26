@@ -38,4 +38,4 @@ The frontend module is `web/games/casino_holdem.js`. It owns no timers, clears l
 
 ## #77 Traceability
 
-Shared integration issue #77 owns the canonical descriptor, manifest and independent revisions, permanent requirements and generated docs, compatibility digest/matrix, visual row, central API/browser/restart coverage, and catalog-discovered Long Suite acceptance. The packaged application remains `9.1.1`; this compatible addition advances only the independent source-module revisions.
+Shared integration issue #77 owns the canonical descriptor, manifest and independent revisions, permanent requirements and generated docs, compatibility digest/matrix, visual row, central API/browser/restart coverage, and catalog-discovered Long Suite acceptance. The packaged application release is owned by `pyproject.toml` and `modules/module-manifest.json`; this compatible addition advanced only the independent source-module revisions.

@@ -75,7 +75,7 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 ### Repository root
 
 - [`AGENTS.md`](AGENTS.md) — AGENTS.md - Virtual Casino Simulator repository instructions
-- [`ARCHITECTURE.md`](ARCHITECTURE.md) — Virtual Casino Simulator v9.1.0 Architecture
+- [`ARCHITECTURE.md`](ARCHITECTURE.md) — Virtual Casino Simulator Architecture
 - [`CHANGELOG.md`](CHANGELOG.md) — Changelog
 - [`CLAUDE.md`](CLAUDE.md) — Claude repository adapter
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — Contributing
@@ -315,7 +315,7 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 
 ### Web-scoped instructions
 
-- [`web/AGENTS.md`](web/AGENTS.md) — AGENTS.md - admin module
+- [`web/AGENTS.md`](web/AGENTS.md) — AGENTS.md - web browser shell
 - [`web/assets/fonts/README.md`](web/assets/fonts/README.md) — Native-label font subsets
 
 ### site documentation

@@ -1,5 +1,7 @@
 # Issue #91 isolated handoff evidence
 
+**Historical.** Records the isolated #91 slice at handoff to #77. Jacks or Better Video Poker has since been integrated; for current state see `modules/jacks_or_better_video_poker.json`, `modules/module-manifest.json`, and `docs/requirements/requirements.json`.
+
 Branch: `codex/issue-91-jacks-or-better-video-poker`
 
 Base at implementation start: `0a1ebc2d7d034bb855ad968215bc61adcd18f4c9` (`origin/main`)
@@ -18,7 +20,7 @@ Base at implementation start: `0a1ebc2d7d034bb855ad968215bc61adcd18f4c9` (`origi
 
 The implemented slice consumes confirmed requirements `CARD-001`, `CARD-002`, `POKER-001`, `POKER-002`, `CORE-011`, `LEDGER-005`, `LEDGER-006`, `LEDGER-007`, `CORE-021`, `CORE-022`, `SESSION-005`, `UX-010`, `I18N-001`, `I18N-002`, and `TEST-042`.
 
-`JOBVP-001` through `JOBVP-005` are an issue-local proposal only. They represent game rules, session/reload safety, ledger retry safety, EN/RU browser behavior, and integration evidence respectively. `API-JOBVP-001` and `BR-JOBVP-001` are likewise proposed focused test mappings. Issue #77 must allocate permanent requirements and test IDs before central traceability can be accepted.
+`JOBVP-001` through `JOBVP-005` were allocated by #77 and are registered in `docs/requirements/requirements.json` at `PASS`. They represent game rules, session/reload safety, ledger retry safety, EN/RU browser behavior, and integration evidence respectively, with `API-JOBVP-001` and `BR-JOBVP-001` mapped as their focused test IDs.
 
 ## Shared integration intentionally blocked
 
@@ -31,7 +33,7 @@ The following work remains owned by integration issue #77 and is not performed b
 - Add central game-specific API/browser requirement mappings or test-runner wiring only if catalog discovery proves a narrow integration gap.
 - Capture and accept central real-backend EN/RU browser evidence from the exact integrated head.
 
-The proposal is intentionally stored at `codex/tasks/artifacts/issue-91-jacks-or-better-video-poker/jacks_or_better_video_poker.module.proposal.json` so catalog discovery cannot install it before #77 supplies the aggregate revision and other shared records in one coordinated change. This placement keeps `scripts/validate_versions.py` and `scripts/validate_game_catalog.py` green on the isolated branch while preserving the complete `1.0.0` proposal for integration.
+The proposal was parked in this artifact directory so catalog discovery could not install it before #77 supplied the aggregate revision and other shared records in one coordinated change. That placement kept `scripts/validate_versions.py` and `scripts/validate_game_catalog.py` green on the isolated branch. #77 later promoted it to `modules/jacks_or_better_video_poker.json` together with its `jacks_or_better_video_poker` manifest revision, and the parked proposal file was removed at that time.
 
 ## Proposed visual matrix row for #77
 

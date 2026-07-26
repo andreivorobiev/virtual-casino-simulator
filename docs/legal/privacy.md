@@ -1,6 +1,6 @@
 # Private Beta Privacy Notice
 
-Pending requirement IDs from issue #35: TERMS-004, TERMS-001, TERMS-002.
+Requirements: TERMS-004, TERMS-001, TERMS-002 (registered in `docs/requirements/requirements.json`, which is authoritative for their current status).
 
 This privacy notice describes private beta use of the running Virtual Casino Simulator app. The app is a local toy simulator for fake-money play, not a gambling site and not a real-money wagering service.
 

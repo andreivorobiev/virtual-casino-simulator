@@ -17,6 +17,6 @@ All aggregate wager debits and returned-token credits use `casino.core.ledger`. 
 
 ## Canonical integration
 
-The descriptor at `modules/fan_tan.json` owns module version `1.0.0`, route `/games/fan_tan`, sort order `240`, paired EN/RU resources, the additive contract, and `tests.game_drivers.fan_tan:play`. Permanent requirements `FAN-TAN-001` through `FAN-TAN-005` map rules, session/restart behavior, ledger safety, browser localization, and catalog-wide evidence.
+The descriptor at `modules/fan_tan.json` owns the module version, route `/games/fan_tan`, sort order `240`, paired EN/RU resources, the additive contract, and `tests.game_drivers.fan_tan:play`. Permanent requirements `FAN-TAN-001` through `FAN-TAN-005` map rules, session/restart behavior, ledger safety, browser localization, and catalog-wide evidence.
 
 The visual surface `fan_tan` covers `ready`, `counting`, `settled`, `reduced_motion`, and `route_restored` in both locales at desktop primary, desktop compact, tablet, and mobile viewports. Shared registration remains catalog-driven; no bespoke router, shell, or long-suite allowlist is required.
