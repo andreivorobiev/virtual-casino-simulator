@@ -352,11 +352,21 @@ class ReleaseArtifactTests(unittest.TestCase):
     # Prove the current private-invite compatibility record binds the exact safe predecessor boundary.
     def test_current_release_compatibility_binds_private_invite_predecessor(self):
         # Load the immutable packaged-release compatibility record governed by TOOL-003.
-        compatibility = json.loads((package_app.ROOT / "contracts" / "compatibility" / "app-0.9.5.6.json").read_text(encoding="utf-8"))
+        compatibility = json.loads((package_app.ROOT / "contracts" / "compatibility" / "app-0.9.5.7.json").read_text(encoding="utf-8"))
         # Require the canonical release and restricted-preview channel identities.
-        self.assertEqual((compatibility["app_version"], compatibility["release_channel"]), ("0.9.5.6", "restricted-preview-private-invite"))
+        self.assertEqual((compatibility["app_version"], compatibility["release_channel"]), ("0.9.5.7", "restricted-preview-private-invite"))
         # Require the exact prior packaged release and retained manifest filename.
-        self.assertEqual(compatibility["predecessor"], {"app_version": "0.9.5.5", "compatibility_record": "contracts/compatibility/app-0.9.5.5.json", "required_artifact": "release-manifest.json"})
+        self.assertEqual(
+            compatibility["predecessor"],
+            {
+                "app_version": "0.9.5.5",
+                "compatibility_record": "contracts/compatibility/app-0.9.5.5.json",
+                "required_artifact": "release-manifest.json",
+                "source_commit_sha": "986103c42a5784c31568425573019eb83465f481",
+                "artifact_sha256": "b8b3e9e8c669c3d189a59a10f2c8d6fbb5e2116a7e38f4a03c735597460b54bf",
+                "manifest_sha256": "25a520b62a2347b719f93d45425cc29b023520187c1437f70a942544f28179f6",
+            },
+        )
         # Require application-only rollback while preserving the already-applied MySQL v2 boundary.
         self.assertEqual(compatibility["rollback"], {"scope": "application-only", "database_rollback": "prohibited", "mysql_expected_schema_version": 2, "requires_retained_predecessor_manifest": True})
         # Require all broader enrollment surfaces to remain disabled for this release channel.

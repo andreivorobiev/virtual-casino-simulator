@@ -51,6 +51,8 @@ The recovered v9.2.0 manifest is intentionally not rollback-eligible itself beca
 
 Each publication-eligible manifest records the immediately previous retained release version, commit, archive checksum, and manifest checksum. Before rollback, verify the retained manifest and archive, install the prior archive into a new immutable release directory, run the same clean-copy verification, then atomically repoint the application release selector according to the separately approved deployment procedure.
 
+The compatibility record, not GitHub release-list ordering, selects the retained predecessor. A published release with incorrect rollback provenance remains immutable and is superseded by a new patch identity; its assets and tag are never replaced in place. v0.9.5.7 therefore retains checksum-verified v0.9.5.5 as its declared application-only predecessor and intentionally does not use the defective v0.9.5.6 rollback pointer.
+
 This gate covers application artifact rollback only. A predecessor may be selected only when its manifest accepts the already-applied MySQL migration version. Database or schema rollback is intentionally outside `TOOL-003` and must follow the separately accepted migration and recovery gates. A candidate without a valid prior manifest remains useful for branch validation but is not eligible for immutable publication.
 
 ## Local commands
@@ -67,10 +69,10 @@ Verify existing assets without rebuilding:
 python scripts/package_app.py --verify-only --archive dist/virtual_casino_simulator_package.zip --manifest dist/release-manifest.json
 ```
 
-Build a canonical tagged v0.9.5.6 candidate with the retained immediate v0.9.5.5 rollback manifest:
+Build a canonical tagged v0.9.5.7 candidate with the retained v0.9.5.5 rollback manifest selected by compatibility policy:
 
 ```powershell
-python scripts/make_release.py --release-tag v0.9.5.6 --previous-manifest previous/release-manifest.json
+python scripts/make_release.py --release-tag v0.9.5.7 --previous-manifest previous/release-manifest.json
 ```
 
-For v0.9.5.6, `previous/release-manifest.json` must be the checksum-verified retained v0.9.5.5 release manifest. The resulting pointer authorizes application-artifact rollback only; it neither rolls back MySQL schema version 2 nor permits deployment, edge activation, or public exposure. The protected v9.2.0 predecessor-recovery path remains a historical, one-time bootstrap control and is not used for ordinary v0.9.5.6 publication.
+For v0.9.5.7, `previous/release-manifest.json` must be the checksum-verified retained v0.9.5.5 release manifest declared by `contracts/compatibility/app-0.9.5.7.json`. `scripts/resolve_release_predecessor.py` derives that exact tag and verifies the downloaded manifest before packaging. The immutable v0.9.5.6 assets are not replaced or used as rollback provenance because their recorded predecessor is inconsistent with repository policy. The resulting v0.9.5.7 pointer authorizes application-artifact rollback only; it neither rolls back MySQL schema version 2 nor permits provider, DNS, billing, signup, OAuth, mail, edge, or public-exposure changes.

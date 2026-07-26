@@ -1,4 +1,16 @@
-# Virtual Casino Simulator v0.9.5.6 Release Notes
+# Virtual Casino Simulator v0.9.5.7 Release Notes
+
+## Deterministic rollback-provenance and monitor-recovery patch
+
+- Supersedes the immutable but non-deployable v0.9.5.6 publication with a new patch identity; the existing v0.9.5.6 tag and assets remain untouched.
+- Removes GitHub release-list ordering from rollback selection and derives the exact predecessor only from the current compatibility record.
+- Verifies the downloaded predecessor manifest's application version, immutable tag, and full source commit before building the candidate.
+- Retains checksum-verified v0.9.5.5 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Adds a secret-safe root-operator tool that validates the split monitor bearer/digest and can explicitly repair only the digest assignment without printing either value.
+- Makes production activation validate the monitor pairing before moving the release symlink; the workflow never performs automatic credential repair.
+- Preserves private-invite admission and does not authorize provider, DNS, billing, public signup, live OAuth, mail activation, unrestricted exposure, or GitHub-hosted SSH allowlist expansion.
+
+## Prior v0.9.5.6 documentation release
 
 ## Documentation truth-pass and release-recovery patch
 
