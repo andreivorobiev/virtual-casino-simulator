@@ -78,6 +78,7 @@
   "controls.baseWager": "Fixed wager unit",
   "controls.reserved": "Maximum hand reserve",
   "controls.startHand": "Start practice hand",
+  "controls.repeat": "Repeat bet",
   "controls.call": "Call and reveal",
   "controls.fold": "Fold hand",
   "controls.help": "Each call uses one unit already held in the hand reserve. Practice opponents answer immediately.",

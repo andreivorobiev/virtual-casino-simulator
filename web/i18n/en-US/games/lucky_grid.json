@@ -9,6 +9,7 @@
   "stake.title": "Stake",
   "action.reveal": "Reveal prizes",
   "action.revealing": "Revealing…",
+  "controls.repeat": "Repeat bet",
   "error.load": "Could not load Lucky Grid.",
   "error.reveal": "Reveal could not be completed."
 }

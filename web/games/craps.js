@@ -40,6 +40,7 @@ const ROUTE_CSS = [
   '.craps-field span{color:var(--muted,#b8c8c1);font-size:12px;font-weight:900;}', // Present configuration labels without debug-tool styling.
   '.craps-field input,.craps-field select{width:100%;min-width:0;min-height:42px;}', // Preserve governed keyboard and touch target dimensions.
   '.craps-primary{width:100%;min-height:48px;border-color:#e5b74f;background:linear-gradient(180deg,#c72b38,#861620);color:#fff;font-weight:1000;}', // Use the governed red treatment for the one primary action.
+  '.craps-repeat{width:100%;min-height:44px;background:transparent;color:#ffd780;border:1px solid rgba(255,215,128,.55);font-weight:900;}.craps-repeat:disabled{opacity:.5;cursor:not-allowed;}', // Give the secondary repeat action a distinct low-emphasis treatment.
   '.craps-primary:disabled{opacity:.62;cursor:not-allowed;}', // Keep disabled controls readable while the phase explains why.
   '.craps-retry-hint,.craps-rule-list{margin:0;color:var(--muted,#b8c8c1);font-size:12px;}', // Keep retry and rules guidance present but visually secondary.
   '.craps-error{min-height:38px;margin:0;color:#ffbcbc;}', // Reserve error space so failures never resize the stage.
@@ -89,6 +90,8 @@ let betTypes = [...DEFAULT_BET_TYPES];
 let selectedBetType = DEFAULT_BET_TYPES[0];
 // Store the locally entered play-token wager before the next round starts.
 let wager = 5;
+// Store the last committed bet type and wager so one click can repeat the opening bet.
+let lastBet = null;
 // Store the most recently returned round even after settlement archives it.
 let displayedRound = null;
 // Store the most recently returned roll for authoritative presentation.
@@ -267,7 +270,7 @@ function currentRoll(model, roundItem) {
 // Snapshot mutable module state for deterministic pure markup generation.
 function currentModel() {
   // Return one shallow presentation snapshot without exposing mutation helpers.
-  return { state: gameState, betTypes, selectedBetType, wager, displayedRound, displayedRoll, visibleDice, busyAction, presentationPhase, errorKey, reducedMotionActive };
+  return { state: gameState, betTypes, selectedBetType, wager, displayedRound, displayedRoll, visibleDice, busyAction, presentationPhase, errorKey, reducedMotionActive, repeatable: lastBet };
 }
 
 // Render one semantic die from code-native pips and a localized accessible name.
@@ -297,7 +300,7 @@ function controlsHtml(model, translate) {
   // Choose localized pending or ready action copy without exposing internal state.
   const actionKey = model.busyAction === action ? `controls.${action}Pending` : `controls.${action}`;
   // Return the keyboard-readable control rail with one stable primary action.
-  return `<section class="panel control-rail craps-control" tabindex="0" role="region" aria-label="${safe(translate('controls.aria'))}"><h2>${safe(translate('controls.title'))}</h2><label class="craps-field" for="craps-bet-type"><span>${safe(translate('controls.betType'))}</span><select id="craps-bet-type" data-testid="craps-bet-type"${configurationDisabled ? ' disabled' : ''}>${options}</select></label><label class="craps-field" for="craps-wager"><span>${safe(translate('controls.wager'))}</span><input id="craps-wager" data-testid="craps-wager" type="number" min="0.01" max="100000" step="0.01" inputmode="decimal" value="${safe(amount)}"${configurationDisabled ? ' disabled' : ''}></label><button type="button" class="craps-primary" data-action="${action}" data-testid="craps-${action}"${model.busyAction ? ' disabled' : ''}>${safe(translate(actionKey))}</button><p class="craps-retry-hint">${safe(translate('controls.retryHint'))}</p><p class="craps-error" data-testid="craps-error" aria-live="polite">${model.errorKey ? safe(translate(model.errorKey)) : ''}</p></section>`;
+  return `<section class="panel control-rail craps-control" tabindex="0" role="region" aria-label="${safe(translate('controls.aria'))}"><h2>${safe(translate('controls.title'))}</h2><label class="craps-field" for="craps-bet-type"><span>${safe(translate('controls.betType'))}</span><select id="craps-bet-type" data-testid="craps-bet-type"${configurationDisabled ? ' disabled' : ''}>${options}</select></label><label class="craps-field" for="craps-wager"><span>${safe(translate('controls.wager'))}</span><input id="craps-wager" data-testid="craps-wager" type="number" min="0.01" max="100000" step="0.01" inputmode="decimal" value="${safe(amount)}"${configurationDisabled ? ' disabled' : ''}></label><button type="button" class="craps-primary" data-action="${action}" data-testid="craps-${action}"${model.busyAction ? ' disabled' : ''}>${safe(translate(actionKey))}</button>${action === 'start' ? `<button type="button" class="craps-repeat" data-action="repeat" data-testid="craps-repeat"${model.busyAction || !model.repeatable ? ' disabled' : ''}>${safe(translate('controls.repeat'))}</button>` : ''}<p class="craps-retry-hint">${safe(translate('controls.retryHint'))}</p><p class="craps-error" data-testid="craps-error" aria-live="polite">${model.errorKey ? safe(translate(model.errorKey)) : ''}</p></section>`;
 }
 
 // Return the dominant felt, authoritative dice, point puck, and stable result region.
@@ -370,6 +373,8 @@ function render() {
   root.querySelector('[data-action="start"]')?.addEventListener('click', startRound);
   // Wire active-round rolls through the public session-bound action.
   root.querySelector('[data-action="roll"]')?.addEventListener('click', rollRound);
+  // Bind the one-click repeat that re-starts a round with the previous bet.
+  root.querySelector('[data-action="repeat"]')?.addEventListener('click', repeat);
 }
 
 // Load reload-safe state for the authenticated session and repaint the route.
@@ -410,11 +415,35 @@ async function load() {
   selectedBetType = gameState.active_round?.bet_type || selectedBetType;
   // Align the wager field to an active restored debit when present.
   wager = gameState.active_round?.wager || wager;
+  // Recover a repeatable opening bet from the newest round so repeat survives a reload.
+  const recovered = gameState.recent_rounds?.slice(-1)[0];
+  // Restore the repeatable bet type and wager only when a prior round records them.
+  if (recovered && recovered.bet_type && recovered.wager) lastBet = { bet_type: recovered.bet_type, wager: recovered.wager };
   // Render only after state and locale resources are ready.
   render();
 }
 
 // Start one wagered round with a retry identity retained across ambiguous failures.
+// Start a fresh round re-using the previous bet type and wager with one click.
+async function repeat() {
+  // Ignore repeat while an action is busy, a round is active, or no prior bet exists.
+  if (busyAction || gameState.active_round || !lastBet) return;
+  // Restore the previous bet type into local state and the mounted control.
+  selectedBetType = lastBet.bet_type;
+  // Restore the previous wager into local state and the mounted control.
+  wager = lastBet.wager;
+  // Reflect the restored bet type on the select so startRound re-reads it.
+  const betTypeField = root?.querySelector('#craps-bet-type');
+  // Apply the restored bet type value when the control is present.
+  if (betTypeField) betTypeField.value = selectedBetType;
+  // Reflect the restored wager on the input so startRound re-reads it.
+  const wagerField = root?.querySelector('#craps-wager');
+  // Apply the restored wager value when the control is present.
+  if (wagerField) wagerField.value = wager;
+  // Fire the shared start path with the restored opening bet.
+  await startRound();
+}
+
 async function startRound() {
   // Ignore overlapping or stale start events.
   if (busyAction || gameState.active_round) return;
@@ -446,6 +475,8 @@ async function startRound() {
     if (root !== mountedRoot || motionScope !== activeScope) return;
     // Apply the committed player-scoped round and state payload.
     applyPayload(payload);
+    // Remember the committed opening bet so the next round can repeat it with one click.
+    lastBet = { bet_type: selectedBetType, wager };
     // Clear the identity only after the server response proves recovery.
     pendingStartRequestId = null;
     // Reset stale dice before the new come-out roll.
@@ -555,6 +586,8 @@ export const CrapsGame = {
   async mount(node) {
     // Store the current shared-shell route outlet.
     root = node;
+    // Clear any repeatable bet so a new session never inherits another player's opening bet.
+    lastBet = null;
     // Install route-owned styling before first paint.
     ensureStyles();
     // Dispose a defensive stale scope before creating this mount's owner.
@@ -598,5 +631,7 @@ export const CrapsGame = {
     presentationPhase = null;
     // Clear cosmetic dice so remount restores only server state.
     visibleDice = null;
+    // Clear the repeatable opening bet so the next session starts fresh.
+    lastBet = null;
   },
 };

@@ -13,6 +13,7 @@
   "stake.title": "Stake",
   "action.race": "Start the race",
   "action.racing": "Racing…",
+  "action.repeat": "Repeat bet",
   "result.idle": "Pick a marble and race.",
   "result.finish": "{winner} wins the race!",
   "error.load": "Could not load Marble Race.",

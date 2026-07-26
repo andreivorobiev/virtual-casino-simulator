@@ -11,6 +11,7 @@
   "controls.title": "Управление игрой",
   "controls.betType": "Тип ставки",
   "controls.wager": "Ставка",
+  "controls.repeat": "Повторить ставку",
   "controls.start": "Сделать ставку",
   "controls.startPending": "Ставка размещается",
   "controls.roll": "Бросить кости",

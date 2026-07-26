@@ -27,6 +27,8 @@ let root = null;
 let state = null;
 // Prevent overlapping atomic commands from repeated clicks.
 let busy = false;
+// Retain the last committed base wager so one click can repeat the same round.
+let lastBet = null;
 // Retain retry keys after uncertain failures so a retry cannot duplicate settlement.
 let retryActionIds = new Map();
 // Retain the locale unsubscribe callback for leak-free route changes.
@@ -134,7 +136,7 @@ function localizedCard(card) {
 // Return scoped layout rules that keep the card stage visually dominant.
 function styleHtml() {
   // Define desktop hierarchy, accessible scroll treatment, and stable reserved regions.
-  const desktop = '.let-it-ride{display:grid;gap:14px;min-width:0;min-height:0}.let-it-ride *{box-sizing:border-box;max-width:100%}.lir-header{display:flex;align-items:end;justify-content:space-between;gap:16px}.lir-header h1,.lir-panel h2,.lir-panel h3{margin:0}.lir-phase{min-height:34px;padding:7px 12px;border:1px solid rgba(255,215,128,.45);border-radius:999px;color:var(--gold,#f6d47a)}.lir-layout{display:grid;grid-template-columns:minmax(210px,.72fr) minmax(520px,2.3fr) minmax(230px,.78fr);gap:14px;min-width:0}.lir-panel{min-width:0;border:1px solid rgba(255,215,128,.24);border-radius:16px;background:rgba(5,32,23,.9);padding:16px}.lir-controls,.lir-data{display:grid;align-content:start;gap:14px}.lir-controls label{display:grid;gap:7px}.lir-controls select,.lir-controls button{min-height:44px}.lir-action-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.lir-primary{background:var(--red,#a92a38);color:#fff}.lir-stage{display:grid;grid-template-rows:auto minmax(300px,1fr) auto;gap:18px;background:radial-gradient(circle at 50% 38%,rgba(28,112,78,.38),rgba(3,24,17,.96) 70%)}.lir-stage-head{display:flex;align-items:start;justify-content:space-between;gap:12px;min-height:58px}.lir-stage-head p{margin:0}.lir-units{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;min-width:180px}.lir-unit{padding:9px;border:1px solid rgba(255,255,255,.14);border-radius:10px;text-align:center}.lir-unit--withdrawn{opacity:.65}.lir-cards{display:grid;gap:18px;align-content:center}.lir-card-row{display:flex;justify-content:center;flex-wrap:wrap;gap:clamp(10px,2vw,22px)}.lir-card-slot{display:grid;justify-items:center;align-content:center;gap:10px;min-width:0}.lir-card-slot h3{font-size:.9rem;text-align:center}.lir-card-empty{width:clamp(3.25rem,8vw,6.5rem);aspect-ratio:5/7;border:2px dashed rgba(255,255,255,.26);border-radius:.65rem}.lir-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;min-height:76px}.lir-stat{min-width:0;padding:10px;border-radius:10px;background:rgba(0,0,0,.2)}.lir-stat span,.lir-history-wager{display:block;color:var(--muted,#b8c7c0);font-size:.78rem}.lir-stat strong{overflow-wrap:anywhere}.lir-data-scroll{display:grid;gap:14px;max-height:475px;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;touch-action:pan-y}.lir-data-scroll:focus-visible{outline:3px solid var(--gold,#f6d47a);outline-offset:3px}.lir-paytable{width:100%;border-collapse:collapse;table-layout:fixed}.lir-paytable th,.lir-paytable td{padding:7px 5px;border-bottom:1px solid rgba(255,255,255,.1);text-align:left;overflow-wrap:anywhere}.lir-history-list{display:grid;gap:9px;min-width:0}.lir-history-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px;min-width:0;padding:10px;border-radius:10px;background:rgba(0,0,0,.18)}.lir-history-row>*{min-width:0;overflow-wrap:anywhere}.lir-rules{margin:0;padding-left:1.1rem}.lir-rules li+li{margin-top:8px}.lir-muted{color:var(--muted,#b8c7c0)}.lir-busy{min-height:22px}';
+  const desktop = '.let-it-ride{display:grid;gap:14px;min-width:0;min-height:0}.let-it-ride *{box-sizing:border-box;max-width:100%}.lir-header{display:flex;align-items:end;justify-content:space-between;gap:16px}.lir-header h1,.lir-panel h2,.lir-panel h3{margin:0}.lir-phase{min-height:34px;padding:7px 12px;border:1px solid rgba(255,215,128,.45);border-radius:999px;color:var(--gold,#f6d47a)}.lir-layout{display:grid;grid-template-columns:minmax(210px,.72fr) minmax(520px,2.3fr) minmax(230px,.78fr);gap:14px;min-width:0}.lir-panel{min-width:0;border:1px solid rgba(255,215,128,.24);border-radius:16px;background:rgba(5,32,23,.9);padding:16px}.lir-controls,.lir-data{display:grid;align-content:start;gap:14px}.lir-controls label{display:grid;gap:7px}.lir-controls select,.lir-controls button{min-height:44px}.lir-action-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.lir-primary{background:var(--red,#a92a38);color:#fff}.lir-repeat{min-height:44px;background:transparent;color:#ffd780;border:1px solid rgba(255,215,128,.55)}.lir-repeat:disabled{opacity:.5}.lir-stage{display:grid;grid-template-rows:auto minmax(300px,1fr) auto;gap:18px;background:radial-gradient(circle at 50% 38%,rgba(28,112,78,.38),rgba(3,24,17,.96) 70%)}.lir-stage-head{display:flex;align-items:start;justify-content:space-between;gap:12px;min-height:58px}.lir-stage-head p{margin:0}.lir-units{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;min-width:180px}.lir-unit{padding:9px;border:1px solid rgba(255,255,255,.14);border-radius:10px;text-align:center}.lir-unit--withdrawn{opacity:.65}.lir-cards{display:grid;gap:18px;align-content:center}.lir-card-row{display:flex;justify-content:center;flex-wrap:wrap;gap:clamp(10px,2vw,22px)}.lir-card-slot{display:grid;justify-items:center;align-content:center;gap:10px;min-width:0}.lir-card-slot h3{font-size:.9rem;text-align:center}.lir-card-empty{width:clamp(3.25rem,8vw,6.5rem);aspect-ratio:5/7;border:2px dashed rgba(255,255,255,.26);border-radius:.65rem}.lir-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;min-height:76px}.lir-stat{min-width:0;padding:10px;border-radius:10px;background:rgba(0,0,0,.2)}.lir-stat span,.lir-history-wager{display:block;color:var(--muted,#b8c7c0);font-size:.78rem}.lir-stat strong{overflow-wrap:anywhere}.lir-data-scroll{display:grid;gap:14px;max-height:475px;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;touch-action:pan-y}.lir-data-scroll:focus-visible{outline:3px solid var(--gold,#f6d47a);outline-offset:3px}.lir-paytable{width:100%;border-collapse:collapse;table-layout:fixed}.lir-paytable th,.lir-paytable td{padding:7px 5px;border-bottom:1px solid rgba(255,255,255,.1);text-align:left;overflow-wrap:anywhere}.lir-history-list{display:grid;gap:9px;min-width:0}.lir-history-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px;min-width:0;padding:10px;border-radius:10px;background:rgba(0,0,0,.18)}.lir-history-row>*{min-width:0;overflow-wrap:anywhere}.lir-rules{margin:0;padding-left:1.1rem}.lir-rules li+li{margin-top:8px}.lir-muted{color:var(--muted,#b8c7c0)}.lir-busy{min-height:22px}';
   // Stack controls, stage, and data for tablet-width interaction.
   const tablet = '@media (max-width:1100px){.lir-layout{grid-template-columns:1fr}.lir-controls{order:1}.lir-stage{order:2}.lir-data{order:3}.lir-stage{grid-template-rows:auto minmax(260px,1fr) auto}.lir-data-scroll{max-height:none;overflow:visible}}';
   // Prevent clipped controls, cards, and summaries on the mobile viewport.
@@ -153,8 +155,10 @@ function controlsHtml(roundItem) {
   const options = WAGERS.map(value => `<option value="${value}">${safe(tokenAmount(value))}</option>`).join('');
   // Render decision actions only while an eligible wager can be pulled back.
   const decisionActions = decisionStage ? `<div class="lir-action-grid"><button type="button" data-decision="pull" data-stage="${decisionStage}" ${busy ? 'disabled' : ''}>${safe(text('controls.pull'))}</button><button type="button" class="lir-primary" data-decision="ride" data-stage="${decisionStage}" ${busy ? 'disabled' : ''}>${safe(text('controls.ride'))}</button></div>` : '';
-  // Render a new deal action when no round is awaiting decisions.
-  const dealAction = decisionStage ? '' : `<button type="button" class="lir-primary" data-action="deal" ${busy ? 'disabled' : ''}>${safe(roundItem ? text('controls.dealNext') : text('controls.deal'))}</button>`;
+  // Enable the one-click repeat only outside the decision phases when a prior base wager exists and nothing is in flight.
+  const repeatDisabled = busy || !lastBet;
+  // Render a new deal action plus a one-click repeat when no round is awaiting decisions.
+  const dealAction = decisionStage ? '' : `<button type="button" class="lir-primary" data-action="deal" ${busy ? 'disabled' : ''}>${safe(roundItem ? text('controls.dealNext') : text('controls.deal'))}</button><button type="button" class="lir-repeat" data-action="repeat" ${repeatDisabled ? 'disabled' : ''}>${safe(text('controls.repeat'))}</button>`;
   // Return accessible controls and concise table rules above the rail fold.
   return `<section class="lir-panel lir-controls" aria-label="${safe(text('controls.region'))}"><h2>${safe(text('controls.title'))}</h2><label>${safe(text('controls.wager'))}<select data-testid="let-it-ride-wager" ${decisionStage || busy ? 'disabled' : ''}>${options}</select></label>${decisionActions}${dealAction}<p class="lir-muted">${safe(decisionStage ? text(`controls.${decisionStage}Help`) : text('controls.readyHelp'))}</p><p class="lir-muted lir-busy" role="status" aria-live="polite">${busy ? safe(text('controls.busy')) : ''}</p><h3>${safe(text('rules.title'))}</h3><ul class="lir-rules"><li>${safe(text('rules.threeWagers'))}</li><li>${safe(text('rules.firstDecision'))}</li><li>${safe(text('rules.secondDecision'))}</li><li>${safe(text('rules.qualifier'))}</li></ul></section>`;
 }
@@ -254,6 +258,10 @@ async function runCommand(commandKey, path, body) {
     state = payload.state;
     // Refresh the shell wallet after any ledger debit, refund, or payout.
     await refreshBalance();
+    // Read the round produced by this command to detect a completed settlement.
+    const settledRound = currentRound();
+    // Remember the per-spot base wager only after the round settles so one click can repeat it.
+    if (settledRound?.phase === 'settled' && settledRound.wager) lastBet = { wager: Number(settledRound.wager) };
   // Replace transport diagnostics with owned localized copy.
   } catch (_) {
     // Show one stable localized failure while keeping the command id for retry.
@@ -277,6 +285,18 @@ async function deal() {
   await runCommand(commandKey, `${API_ROOT}/rounds`, { wager });
 }
 
+// Re-apply the last committed base wager and open one identical round without a timer.
+async function repeat() {
+  // Ignore repeat while a command is in flight, before any base wager exists, or during an active round.
+  if (busy || !lastBet || state?.active_round) return;
+  // Restore the previous base wager into the wager control so deal reads the repeated stake.
+  const wagerSelect = root?.querySelector('[data-testid="let-it-ride-wager"]');
+  // Apply the stored base wager only when the enabled wager control is present.
+  if (wagerSelect) wagerSelect.value = String(lastBet.wager);
+  // Fire the shared opening action with the restored base wager, never replaying a pull-back decision.
+  await deal();
+}
+
 // Complete one staged ride-or-pull decision.
 async function decide(stage, decision) {
   // Read the current actionable round before disabling controls.
@@ -293,6 +313,8 @@ async function decide(stage, decision) {
 function bindEvents() {
   // Bind the opening action when the table is not awaiting a decision.
   root?.querySelector('[data-action="deal"]')?.addEventListener('click', deal);
+  // Bind the one-click repeat that re-opens a round with the previous base wager.
+  root?.querySelector('[data-action="repeat"]')?.addEventListener('click', repeat);
   // Bind both ride and pull buttons for the active decision stage.
   root?.querySelectorAll('[data-decision]').forEach(button => {
     // Submit the selected staged decision through the public API.
@@ -308,6 +330,8 @@ export const LetItRideGame = {
   async mount(node) {
     // Retain the shell-provided mount node before asynchronous loading.
     root = node;
+    // Reset the repeatable base wager so a new session never inherits a prior bet.
+    lastBet = null;
     // Install shared card presentation exactly once for this route.
     ensureSharedCardStyles();
     // Load active and fallback Let It Ride dictionaries before rendering copy.
@@ -322,6 +346,10 @@ export const LetItRideGame = {
     if (root !== node) return;
     // Store the public state for initial rendering.
     state = payload.state;
+    // Recover a repeatable base wager from the newest retained round so repeat survives a reload.
+    const recovered = state?.rounds?.[0];
+    // Restore the repeatable base wager only when a prior round exposes its committed base wager.
+    if (recovered?.wager) lastBet = { wager: Number(recovered.wager) };
     // Render only after localized copy and recovered state are both ready.
     render();
     // Align the shared wallet with any recovered ledger movement.
@@ -343,6 +371,8 @@ export const LetItRideGame = {
     retryActionIds = new Map();
     // Clear state so another authenticated user cannot reuse prior data.
     state = null;
+    // Clear the repeatable base wager so the next session starts fresh.
+    lastBet = null;
     // Release the DOM reference; this module owns no timers to cancel.
     root = null;
     // Release the in-flight visual lock for a future mount.

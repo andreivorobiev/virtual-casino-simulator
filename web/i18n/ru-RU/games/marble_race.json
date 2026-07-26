@@ -13,6 +13,7 @@
   "stake.title": "Ставка",
   "action.race": "Начать гонку",
   "action.racing": "Гонка…",
+  "action.repeat": "Повторить ставку",
   "result.idle": "Выберите шарик и начните гонку.",
   "result.finish": "{winner} выигрывает гонку!",
   "error.load": "Не удалось загрузить Гонку шариков.",

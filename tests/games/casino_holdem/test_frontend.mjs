@@ -73,8 +73,20 @@ assert.match(source, /if \(unsubscribeLocale\) unsubscribeLocale\(\)/);
 assert.ok((source.match(/await refreshBalance\(\)/g) || []).length >= 3);
 // Reject direct hard-coded English action labels inside generated markup.
 assert.doesNotMatch(source, />\s*(Deal flop|Call|Fold|Retry deal)\s*</);
+// Verify the one-click repeat retains the last committed ante for a fresh round.
+assert.match(source, /let lastBet = null/);
+// Verify a successful settle captures the committed ante outside the decision phase.
+assert.match(source, /settledRound\.phase !== 'decision'\) lastBet = \{ wager: settledRound\.wager \}/);
+// Verify the repeat action re-deals through the shared deal path without replaying a decision.
+assert.match(source, /async function repeat\(\)[\s\S]*pendingDeal = \{ actionId: nextActionId\(\), wager \}[\s\S]*await runAction\(deal\)/);
+// Verify the repeat control renders with its own semantic hook and gold class.
+assert.match(source, /class="choldem-repeat" data-action="repeat"/);
+// Verify the repeat control uses the transparent gold treatment and disabled dimming.
+assert.match(source, /\.choldem-repeat\{min-height:44px;background:transparent;color:#ffd780;border:1px solid rgba\(255,215,128,\.55\)\}\.choldem-repeat:disabled\{opacity:\.5\}/);
+// Verify the repeat label resolves through the game-owned locale, not hard-coded markup.
+assert.doesNotMatch(source, />\s*(Repeat bet|Повторить ставку)\s*</);
 // Verify representative visible and ARIA strings exist in both locales.
-for (const key of ['title', 'controls.deal', 'controls.call', 'controls.fold', 'cards.faceDown', 'cards.cardLabel', 'stage.title', 'errors.actionFailed']) {
+for (const key of ['title', 'controls.deal', 'controls.call', 'controls.fold', 'controls.repeat', 'cards.faceDown', 'cards.cardLabel', 'stage.title', 'errors.actionFailed']) {
   // Require a non-empty English value for the probed key.
   assert.ok(english[key]?.trim(), key + ' missing from English');
   // Require a non-empty Russian value for the probed key.

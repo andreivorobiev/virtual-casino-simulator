@@ -30,6 +30,8 @@ let state = null;
 let rules = {};
 // Store the configured ante wager before the next round.
 let ante = 5;
+// Retain the last committed ante so one click can repeat the same round.
+let lastBet = null;
 // Prevent overlapping atomic browser actions.
 let busy = false;
 // Store the locale cleanup callback so unmount releases subscriptions.
@@ -78,7 +80,7 @@ function ensureStyles() {
   // Tag the element so repeated mounts detect and reuse it.
   style.id = STYLE_ID;
   // Render only route-local selectors so no shared class is affected.
-  style.textContent = '.msstud{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;width:100%;min-width:0;min-height:100%;color:var(--text,#f5ead6);align-items:start;} .ms-stage{display:grid;gap:16px;padding:12px;min-width:0;} .ms-row{display:grid;gap:6px;} .ms-row h4{margin:0;color:#e7bc52;text-transform:uppercase;font-size:12px;letter-spacing:.08em;} .ms-cards{display:flex;gap:6px;flex-wrap:wrap;min-width:0;} .ms-street{font-weight:900;color:#f2d77d;} .ms-actions{display:flex;flex-wrap:wrap;gap:8px;} .ms-btn{min-height:44px;padding:0 16px;border:none;border-radius:12px;font-weight:900;font-size:15px;cursor:pointer;} .ms-btn.bet{background:linear-gradient(180deg,#0f9c4c,#0a5f2e);color:#fff;} .ms-btn.fold{background:linear-gradient(180deg,#6b6b76,#3a3a42);color:#fff;} .ms-btn.deal{background:linear-gradient(180deg,#d6323d,#8e1822);color:#fff;width:100%;} .ms-btn:disabled{opacity:.55;cursor:not-allowed;} .ms-panel{display:grid;gap:12px;min-width:0;} .ms-card{padding:14px;border:1px solid rgba(255,217,120,.42);border-radius:16px;background:rgba(0,0,0,.22);} .ms-card h3{margin:0 0 10px;color:#e7bc52;text-transform:uppercase;font-size:12px;letter-spacing:.08em;} .ms-field{display:grid;gap:4px;margin-bottom:10px;} .ms-field label{font-size:12px;font-weight:700;} .ms-field input{min-height:40px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.05);color:#f5ead6;padding:0 10px;font-weight:800;} .ms-pays{display:grid;gap:4px;font-size:12px;font-weight:700;} .ms-pays div{display:flex;justify-content:space-between;} .ms-pays span:last-child{color:#f2d77d;} .ms-result{min-height:24px;font-size:15px;color:#fff2c2;font-weight:800;} .ms-result .net{font-weight:900;} @media (max-width:900px){.msstud{grid-template-columns:1fr;}} @media (max-width:640px){.ms-stage{gap:10px;padding:8px;} .ms-panel{gap:8px;} .ms-card{padding:10px;} .ms-card h3{margin-bottom:6px;} .ms-field{margin-bottom:6px;} .ms-pays{width:calc(100% - 160px);max-width:calc(100% - 160px);gap:2px;line-height:1.15;} .ms-pays div{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px;min-width:0;} .ms-pays span{min-width:0;overflow-wrap:anywhere;} body:has(.msstud) .report-problem-fab{width:144px;max-width:144px;white-space:normal;line-height:1.1;}}';
+  style.textContent = '.msstud{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;width:100%;min-width:0;min-height:100%;color:var(--text,#f5ead6);align-items:start;} .ms-stage{display:grid;gap:16px;padding:12px;min-width:0;} .ms-row{display:grid;gap:6px;} .ms-row h4{margin:0;color:#e7bc52;text-transform:uppercase;font-size:12px;letter-spacing:.08em;} .ms-cards{display:flex;gap:6px;flex-wrap:wrap;min-width:0;} .ms-street{font-weight:900;color:#f2d77d;} .ms-actions{display:flex;flex-wrap:wrap;gap:8px;} .ms-btn{min-height:44px;padding:0 16px;border:none;border-radius:12px;font-weight:900;font-size:15px;cursor:pointer;} .ms-btn.bet{background:linear-gradient(180deg,#0f9c4c,#0a5f2e);color:#fff;} .ms-btn.fold{background:linear-gradient(180deg,#6b6b76,#3a3a42);color:#fff;} .ms-btn.deal{background:linear-gradient(180deg,#d6323d,#8e1822);color:#fff;width:100%;} .ms-btn.ms-repeat{width:100%;background:transparent;color:#f2d77d;border:1px solid rgba(255,217,120,.55);} .ms-btn:disabled{opacity:.55;cursor:not-allowed;} .ms-panel{display:grid;gap:12px;min-width:0;} .ms-card{padding:14px;border:1px solid rgba(255,217,120,.42);border-radius:16px;background:rgba(0,0,0,.22);} .ms-card h3{margin:0 0 10px;color:#e7bc52;text-transform:uppercase;font-size:12px;letter-spacing:.08em;} .ms-field{display:grid;gap:4px;margin-bottom:10px;} .ms-field label{font-size:12px;font-weight:700;} .ms-field input{min-height:40px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.05);color:#f5ead6;padding:0 10px;font-weight:800;} .ms-pays{display:grid;gap:4px;font-size:12px;font-weight:700;} .ms-pays div{display:flex;justify-content:space-between;} .ms-pays span:last-child{color:#f2d77d;} .ms-result{min-height:24px;font-size:15px;color:#fff2c2;font-weight:800;} .ms-result .net{font-weight:900;} @media (max-width:900px){.msstud{grid-template-columns:1fr;}} @media (max-width:640px){.ms-stage{gap:10px;padding:8px;} .ms-panel{gap:8px;} .ms-card{padding:10px;} .ms-card h3{margin-bottom:6px;} .ms-field{margin-bottom:6px;} .ms-pays{width:calc(100% - 160px);max-width:calc(100% - 160px);gap:2px;line-height:1.15;} .ms-pays div{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px;min-width:0;} .ms-pays span{min-width:0;overflow-wrap:anywhere;} body:has(.msstud) .report-problem-fab{width:144px;max-width:144px;white-space:normal;line-height:1.1;}}';
   // Attach the game-owned styles to the document head.
   document.head.append(style);
 }
@@ -180,6 +182,14 @@ function decisionStage(round) {
   return `${hole}${community}<p class="ms-street">${safe(text('label.street', { street: round.street }))}</p><div class="ms-actions"><button class="ms-btn fold" data-fold="1" type="button" ${busy ? 'disabled' : ''}>${safe(text('action.fold'))}</button>${bets}</div>`;
 }
 
+// Build the secondary one-click repeat control that opens a new round with the last committed ante.
+function repeatButton() {
+  // Disable repeat while busy, without a stored ante, or while a round is still active.
+  const disabled = busy || !lastBet || Boolean(state?.active_round);
+  // Return the secondary repeat control rendered after the primary deal button.
+  return `<button class="ms-btn ms-repeat" data-repeat="1" type="button" ${disabled ? 'disabled' : ''}>${safe(text('controls.repeat'))}</button>`;
+}
+
 // Build the settled stage revealing the completed hand and the result.
 function settledStage(round) {
   // Render the two hole cards.
@@ -192,14 +202,14 @@ function settledStage(round) {
   const tier = round.hand_tier ? safe(text('hand.' + round.hand_tier)) : '';
   // Build the outcome result line with a signed net amount.
   const line = `${safe(text('outcome.' + round.outcome))} ${tier} <span class="net">${net >= 0 ? '+' + net : net}</span>`;
-  // Return the revealed hand, the result, and a deal-again control.
-  return `${hole}${community}<p class="ms-result" data-testid="mississippi-stud-result">${line}</p><div class="ms-actions"><button class="ms-btn deal" data-deal="1" type="button" ${busy ? 'disabled' : ''}>${safe(text('action.deal_again'))}</button></div>`;
+  // Return the revealed hand, the result, and a deal-again control with a one-click repeat.
+  return `${hole}${community}<p class="ms-result" data-testid="mississippi-stud-result">${line}</p><div class="ms-actions"><button class="ms-btn deal" data-deal="1" type="button" ${busy ? 'disabled' : ''}>${safe(text('action.deal_again'))}</button>${repeatButton()}</div>`;
 }
 
 // Build the side panel with the ante input and the paytable.
 function sidePanel(hideWager) {
   // Hide the ante input while a decision is pending or the settled stage owns the replay action.
-  const wagerCard = hideWager ? '' : `<div class="ms-card"><h3>${safe(text('label.ante'))}</h3><div class="ms-field"><label for="ms-ante">${safe(text('label.ante'))}</label><input id="ms-ante" data-ante type="number" min="1" step="1" value="${ante}"></div><button class="ms-btn deal" data-deal="1" type="button" ${busy ? 'disabled' : ''}>${safe(text('action.deal'))}</button></div>`;
+  const wagerCard = hideWager ? '' : `<div class="ms-card"><h3>${safe(text('label.ante'))}</h3><div class="ms-field"><label for="ms-ante">${safe(text('label.ante'))}</label><input id="ms-ante" data-ante type="number" min="1" step="1" value="${ante}"></div><button class="ms-btn deal" data-deal="1" type="button" ${busy ? 'disabled' : ''}>${safe(text('action.deal'))}</button>${repeatButton()}</div>`;
   // Build the paytable card.
   const paytable = `<div class="ms-card"><h3>${safe(text('label.paytable'))}</h3><div class="ms-pays">${paytableRows()}</div></div>`;
   // Return the stacked side panel.
@@ -214,6 +224,10 @@ function bindEvents() {
   if (anteInput) anteInput.onchange = () => { ante = normalizedAnte(anteInput.value); };
   // Bind every deal control to the deal action.
   root.querySelectorAll('[data-deal]').forEach(button => { button.onclick = deal; });
+  // Bind the one-click repeat control to reopen a round with the last committed ante.
+  const repeatBtn = root.querySelector('[data-repeat]');
+  // Attach the repeat handler when the control is present.
+  if (repeatBtn) repeatBtn.onclick = repeat;
   // Bind the fold control to a fold decision.
   const foldButton = root.querySelector('[data-fold]');
   // Attach the fold handler.
@@ -235,6 +249,13 @@ async function runAction(worker) {
   try {
     // Perform the network action.
     await worker();
+    // Capture the committed ante after a successful settle so one click can repeat the same round.
+    if (generation === mountGeneration) {
+      // Read the newest round the action produced.
+      const settledRound = currentRound();
+      // Remember the ante only when the newest round has settled, never during an open decision.
+      if (settledRound && settledRound.phase === 'settled') lastBet = { ante: settledRound.ante };
+    }
   } catch (error) {
     // Surface a bounded error to the player.
     if (generation === mountGeneration) toast(error?.message || text('error.action'), 'error');
@@ -267,6 +288,16 @@ function deal() {
     // Adopt the returned state and reveal the first street.
     adoptPayload(payload);
   });
+}
+
+// Re-apply the last committed ante and open one identical round without replaying any street decision.
+async function repeat() {
+  // Ignore repeat while busy, mid-retry, without a stored ante, or during an active round.
+  if (busy || pendingDealId || pendingDecisionId || !lastBet || state?.active_round) return;
+  // Restore the committed ante so the shared deal path reads the repeated stake.
+  ante = normalizedAnte(lastBet.ante);
+  // Open one identical round through the shared deal action, never replaying a bet or fold.
+  await deal();
 }
 
 // Apply one bet or fold decision to the active round's current street.
@@ -307,6 +338,8 @@ export const MississippiStudGame = {
     mountGeneration += 1;
     // Store the current route outlet.
     root = node;
+    // Reset the repeatable ante so a new session never inherits a prior bet.
+    lastBet = null;
     // Install shared and route-local styles.
     ensureSharedCardStyles();
     // Install the compact route-local styles.
@@ -325,6 +358,10 @@ export const MississippiStudGame = {
       const payload = await api(currentPlayerPath(`${API_ROOT}/state`));
       // Adopt the loaded state.
       adoptPayload(payload);
+      // Recover a repeatable ante from the newest settled round so repeat survives a reload.
+      const recovered = state?.recent_rounds?.slice(-1)[0];
+      // Restore the repeatable ante only when a prior settled round exposes its committed ante.
+      if (recovered?.phase === 'settled' && recovered.ante != null) lastBet = { ante: Number(recovered.ante) };
     } catch (error) {
       // Surface a load failure without breaking the shell.
       if (generation === mountGeneration) toast(text('error.load'), 'error');
@@ -348,6 +385,8 @@ export const MississippiStudGame = {
     state = null;
     // Clear cached rules.
     rules = {};
+    // Clear the repeatable ante so the next session starts fresh.
+    lastBet = null;
     // Clear the outlet so stale async work cannot repaint another route.
     root = null;
     // Reset the in-flight guard because teardown cancelled any presentation.

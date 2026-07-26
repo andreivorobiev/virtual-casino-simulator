@@ -11,6 +11,7 @@
   "controls.title": "Play controls",
   "controls.betType": "Wager type",
   "controls.wager": "Wager",
+  "controls.repeat": "Repeat bet",
   "controls.start": "Place wager",
   "controls.startPending": "Placing wager",
   "controls.roll": "Roll dice",
