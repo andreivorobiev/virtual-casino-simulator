@@ -1740,6 +1740,15 @@ label {
     padding-right: 160px;
   }
 
+  /* Let catalog actions shrink and wrap inside the reserved column instead of honoring an intrinsic label
+     width that can push a flex or grid child back underneath the fixed report control. */
+  :is(.pd-panel, .bl-panel, .fr-panel, .teq-panel, .pk-panel, .cp-panel, .mr-panel, .lg-panel, .dd-panel, .fcp-panel) :is(button, input, select) {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+
   /* Give the catalog routes one predictable report-control width that matches their reserved column. */
   body:has(:is(.poker-dice, .boule, .faro, .teq, .pachinko, .coinp, .marble, .pattern, .lucky, .daily, .fourcp)) .report-problem-fab {
     width: 144px;
