@@ -7967,6 +7967,21 @@
       "id": "THPT-005", "module": "Tests", "description": "Catalog, contract, browser, restart, long-suite, funded-opponent, version, requirement, visual, and hostile-client certification evidence remains traceable for Texas Hold'em Practice Table.", "status": "PASS", "api_tests": ["API-CATALOG-001", "API-THPT-001", "API-SEC-001", "LONG-SUITE-100"], "browser_tests": ["BR-CATALOG-DISCOVERY-001", "BR-THPT-001", "BR-SEC-001"], "implementation_files": ["modules/texas_holdem_practice_table.json", "modules/module-manifest.json", "contracts/compatibility/module-api-matrix.json", "contracts/compatibility/server-authority-matrix.json", "tests/game_drivers/texas_holdem_practice_table.py", "tests/visual/visual_matrix.json", "tests/run_tests.py"], "introduced_in": "game-expansion-texas-holdem-practice-table", "changed_in": "game-expansion-texas-holdem-practice-table", "notes": "Descriptor sort order 200 and every mutation action are included in the accepted SEC-001 through SEC-009 certification matrix."
     },
     {
+      "id": "PGP-001", "module": "Pai Gow Poker", "description": "A 53-card joker deck deals seven player cards set into a five-card high hand and a two-card low hand against a house-way dealer, where the low hand may never outrank the high hand, copies go to the dealer, winning both hands pays even money minus a five percent commission, and the semi-wild joker completes straights and flushes and otherwise plays as an ace.", "status": "PASS", "api_tests": ["API-PGP-001"], "browser_tests": ["BR-PGP-001"], "implementation_files": ["casino/games/pai_gow_poker/engine.py", "web/games/pai_gow_poker.js"], "introduced_in": "game-expansion-pai-gow-poker", "changed_in": "game-expansion-pai-gow-poker", "notes": "Issue #73 allocates the permanent distinct rules requirement for issue #138."
+    },
+    {
+      "id": "PGP-002", "module": "Pai Gow Poker", "description": "Authenticated sessions own private reload-safe setting rounds, hidden dealer cards until showdown, durable action receipts, bounded settled history, and canonical route restoration.", "status": "PASS", "api_tests": ["API-PGP-001", "API-WALLET-RESTART-001"], "browser_tests": ["BR-PGP-001"], "implementation_files": ["casino/games/pai_gow_poker/api.py", "casino/games/pai_gow_poker/service.py", "web/app.js", "tests/run_tests.py"], "introduced_in": "game-expansion-pai-gow-poker", "changed_in": "game-expansion-pai-gow-poker", "notes": "Session context overrides caller player ids, dealer cards remain hidden until settlement, and committed results survive reload and process restart."
+    },
+    {
+      "id": "PGP-003", "module": "Pai Gow Poker", "description": "The ante debit and the returned-token settlement credit use the shared ledger exactly once under durable action identities, while losing rounds add no token movement.", "status": "PASS", "api_tests": ["API-PGP-001"], "browser_tests": [], "implementation_files": ["casino/games/pai_gow_poker/service.py", "casino/core/ledger.py", "tests/games/pai_gow_poker/test_api.py", "tests/run_tests.py"], "introduced_in": "game-expansion-pai-gow-poker", "changed_in": "game-expansion-pai-gow-poker", "notes": "No game code mutates balances directly and conflicting retries fail closed."
+    },
+    {
+      "id": "PGP-004", "module": "Application", "description": "Pai Gow Poker supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.", "status": "PASS", "api_tests": [], "browser_tests": ["BR-PGP-001"], "implementation_files": ["web/games/pai_gow_poker.js", "web/i18n/en-US/games/pai_gow_poker.json", "web/i18n/ru-RU/games/pai_gow_poker.json", "tests/visual/visual_matrix.json", "tests/run_tests.py"], "introduced_in": "game-expansion-pai-gow-poker", "changed_in": "game-expansion-pai-gow-poker", "notes": "Evidence covers both locales, every governed viewport, all seven visual states, and fail-closed fixed-feedback non-occlusion geometry."
+    },
+    {
+      "id": "PGP-005", "module": "Tests", "description": "Catalog, contract, browser, and long-suite discovery include Pai Gow Poker with requirement, module, version, and visual traceability.", "status": "PASS", "api_tests": ["API-CATALOG-001", "LONG-SUITE-100"], "browser_tests": ["BR-CATALOG-DISCOVERY-001", "BR-PGP-001"], "implementation_files": ["modules/pai_gow_poker.json", "modules/module-manifest.json", "contracts/compatibility/module-api-matrix.json", "tests/game_drivers/pai_gow_poker.py", "tests/visual/visual_matrix.json", "tests/run_tests.py"], "introduced_in": "game-expansion-pai-gow-poker", "changed_in": "game-expansion-pai-gow-poker", "notes": "Descriptor sort order 310 and the catalog-discovered long driver are canonical."
+    },
+    {
       "id": "OPS-001", "module": "Operations", "description": "Anonymous liveness reports only a fixed live process state without storage access, build metadata, timestamps, heartbeat state, or dependency diagnostics.", "status": "PASS", "api_tests": ["API-OPS-001"], "browser_tests": [], "implementation_files": ["casino/operations/service.py", "casino/operations/api.py", "casino/app.py", "casino/core/auth.py", "contracts/openapi/operations.v1.yaml"], "introduced_in": "issue-72-operations-foundation", "changed_in": "issue-72-operations-foundation", "notes": "Allocated by GitHub issue #77 for issue #72; /healthz is the only anonymous Operations route."
     },
     {
@@ -8406,7 +8421,7 @@
       "status": "PASS",
       "api_tests": [],
       "browser_tests": [
-        "BR-CS-001"
+        "BR-I18N-GAMESTATE-ROU-001"
       ],
       "implementation_files": [
         "tests/run_tests.py"
@@ -11532,6 +11547,400 @@
       "introduced_in": "product-account-spine",
       "changed_in": "product-account-spine",
       "notes": "Listener-free service evidence is paired with the exact-head BR-ADMIN-USERS-001 role/lifecycle interaction and eight governed EN/RU Admin images across four standard viewports, with deterministic owner-relative evidence alignment, explicit changed-control containment, and fail-closed label clipping checks inside the named table scroll owner."
+    },
+    {
+      "id": "KENO-026",
+      "module": "Keno",
+      "description": "The Keno drawn-ball result rail stays bounded to its column and scrolls horizontally rather than clipping. The rail declares min-width:0 and max-width:100% so it cannot expand to its content width inside the fixed stage, and it enables horizontal-scroll overflow so all twenty drawn balls remain reachable; each ball keeps a fixed size so it stays legible while scrolling. Without these the rightmost drawn numbers were clipped off the page by an ancestor overflow boundary.",
+      "status": "PASS",
+      "api_tests": [
+        "UI-KENO-BALL-RAIL-001"
+      ],
+      "browser_tests": [
+        "BR-KENO-EDGE-001"
+      ],
+      "implementation_files": [
+        "web/games/keno.js",
+        "tests/keno_ball_rail_tests.py",
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-keno-ball-rail-overflow",
+      "changed_in": "issue-keno-ball-rail-overflow",
+      "notes": "The existing Keno final-result visual-matrix state provides exact-head EN/RU after-pass evidence. Hosted geometry verifies the rail stays inside the stage, exposes a localized keyboard-focusable region, keeps the final ball visible when all twenty results fit, and reveals it at the terminal internal-scroll edge when they overflow."
+    },
+    {
+      "id": "TEST-113",
+      "module": "Tests",
+      "description": "Listener-free evidence pins the Keno drawn-ball rail layout and accessibility contract: the rail can shrink below its content via min-width:0 and is bounded by max-width:100%, it owns named keyboard-reachable horizontal scrolling, and each drawn ball keeps a fixed size. Hosted browser geometry at every governed viewport and EN/RU locale proves the rail stays inside its stage, keeps the twentieth ball visible when the results fit, and makes it fully reachable at the terminal internal-scroll edge when they overflow.",
+      "status": "PASS",
+      "api_tests": [
+        "UI-KENO-BALL-RAIL-001"
+      ],
+      "browser_tests": [
+        "BR-KENO-EDGE-001"
+      ],
+      "implementation_files": [
+        "tests/keno_ball_rail_tests.py",
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-keno-ball-rail-overflow",
+      "changed_in": "issue-keno-ball-rail-overflow",
+      "notes": "Allocated for the Keno ball-rail overflow fix found during the game review; it reuses the existing governed Keno final-result evidence matrix rather than creating a duplicate surface."
+    },
+    {
+      "id": "DBVP-001",
+      "module": "Double Bonus Video Poker",
+      "description": "Double Bonus Video Poker is a single-hand draw video poker on the nine-six pay schedule. The player bets, receives five cards, holds any subset, and draws replacements for the rest; the completed five-card hand is paid by the paytable applied to the bet. Double Bonus rewards four of a kind richly, with four aces paying the most, then four twos through fours, then four fives through kings, while trimming two pair to an even-money return, and the nine-six full house and flush keep the schedule house-positive at about a 0.89 percent edge under optimal play. Deal and draw are exactly-once and reload-safe on the shared ledger and player-scoped state store, and the five replacement cards are committed at deal so a reload cannot change the draw.",
+      "status": "PASS",
+      "api_tests": [
+        "API-DOUBLE-BONUS-VIDEO-POKER-001"
+      ],
+      "browser_tests": [
+        "BR-DBVP-001"
+      ],
+      "implementation_files": [
+        "casino/games/double_bonus_video_poker/engine.py",
+        "casino/games/double_bonus_video_poker/service.py",
+        "casino/games/double_bonus_video_poker/api.py",
+        "web/games/double_bonus_video_poker.js",
+        "contracts/openapi/double_bonus_video_poker.v1.yaml",
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-131-double-bonus-video-poker",
+      "changed_in": "issue-131-double-bonus-video-poker",
+      "notes": "Allocated for GitHub issue #131, a catalog-expansion poker variant (#73). The service reuses the shared card primitives, five-card evaluator, and ledger with the nine-six house-positive Double Bonus paytable. Exact-head browser evidence covers ready, hold selection, settlement, reduced-motion, and route-restored states in EN/RU at all four governed viewports."
+    },
+    {
+      "id": "DBVP-002",
+      "module": "Double Bonus Video Poker",
+      "description": "Double Bonus Video Poker inherits the exactly-once, reload-safe orchestration of the shared ledger: one caller-stable action id maps to one deal or one draw, a retry replays the identical settled hand without moving the wallet again, and an action id reused with different hold content fails closed. The replacement pile stays private until the draw completes. The additive v1 contract exposes only the game-owned state, rounds, and decisions routes and never alters the frozen shared API. The published rules report the hand size and the nine-six Double Bonus paytable.",
+      "status": "PASS",
+      "api_tests": [
+        "API-DOUBLE-BONUS-VIDEO-POKER-001"
+      ],
+      "browser_tests": [
+        "BR-DBVP-001"
+      ],
+      "implementation_files": [
+        "casino/games/double_bonus_video_poker/service.py",
+        "casino/games/double_bonus_video_poker/api.py",
+        "tests/double_bonus_video_poker_tests.py",
+        "tests/game_drivers/double_bonus_video_poker.py",
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-131-double-bonus-video-poker",
+      "changed_in": "issue-131-double-bonus-video-poker",
+      "notes": "Allocated for GitHub issue #131."
+    },
+    {
+      "id": "TEST-114",
+      "module": "Tests",
+      "description": "Listener-free evidence verifies Double Bonus Video Poker: the paytable bands four of a kind into the aces, twos-through-fours, and fives-through-kings tiers and trims two pair to even money, holding three aces and drawing the fourth pays four aces, holding a made hand keeps it through the draw, a busted draw returns nothing, a replayed draw returns the identical settled hand without a second credit, a draw action-id reused with a changed hold fails closed, a reload recovers the committed deal without a duplicate debit, invalid bets and hold positions are rejected, and a large seeded sample confirms the nine-six schedule leaves the game house-positive under a disciplined strategy.",
+      "status": "PASS",
+      "api_tests": [
+        "API-DOUBLE-BONUS-VIDEO-POKER-001"
+      ],
+      "browser_tests": [
+        "BR-DBVP-001"
+      ],
+      "implementation_files": [
+        "tests/double_bonus_video_poker_tests.py",
+        "tests/run_tests.py",
+        "tests/ui_50000.py",
+        "tests/unit/ui_50000_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-131-double-bonus-video-poker",
+      "changed_in": "issue-131-double-bonus-video-poker",
+      "notes": "Allocated for GitHub issue #131. The governed browser corpus contains exactly forty after-pass Double Bonus images: five states by two locales by four standard viewports. Geometry fails closed if the fixed problem-reporting affordance intersects any native card control or rendered heading, label, or payout text range."
+    },
+    {
+      "id": "MSTUD-001",
+      "module": "Mississippi Stud",
+      "description": "Mississippi Stud is a stateful dealer-less five-card stud where the player builds one hand from two hole cards and three community cards. The player posts an ante, then across three betting streets, before each community card is exposed, either folds and forfeits every wager already made or bets one to three times the ante. The completed five-card hand is paid on the total amount wagered: a pair of jacks or better pays even money, richer hands pay up to five hundred to one for a royal flush, a pair of sixes through tens returns every wager as a push, and a pair of fives or lower or no pair loses the whole stake. Deal and each street decision are exactly-once and reload-safe on the shared ledger and player-scoped state store.",
+      "status": "PASS",
+      "api_tests": [
+        "API-MISSISSIPPI-STUD-001"
+      ],
+      "browser_tests": [
+        "BR-MSTUD-001"
+      ],
+      "implementation_files": [
+        "casino/games/mississippi_stud/engine.py",
+        "casino/games/mississippi_stud/service.py",
+        "casino/games/mississippi_stud/api.py",
+        "web/games/mississippi_stud.js",
+        "contracts/openapi/mississippi_stud.v1.yaml",
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-143-mississippi-stud",
+      "changed_in": "issue-143-mississippi-stud",
+      "notes": "Allocated for GitHub issue #143, a catalog-expansion poker variant. The service reuses shared card primitives, the five-card evaluator, and the ledger for its three-street state machine. Exact-head browser evidence covers ready, all three decision streets, settlement, reduced motion, and route restoration in EN/RU at all four governed viewports."
+    },
+    {
+      "id": "MSTUD-002",
+      "module": "Mississippi Stud",
+      "description": "Mississippi Stud inherits the exactly-once, reload-safe orchestration of the shared ledger across its three betting streets: one caller-stable action id maps to one deal or one street decision, a retry replays the identical advanced or settled round without moving the wallet again, and an action id reused with different wager content fails closed. The community cards stay private and reveal one per settled street, and a fold reveals only the community cards seen so far. The additive v1 contract exposes only the game-owned state, rounds, and decisions routes and never alters the frozen shared API. The published rules report the bet multipliers, the street count, and the winning-hand paytable.",
+      "status": "PASS",
+      "api_tests": [
+        "API-MISSISSIPPI-STUD-001"
+      ],
+      "browser_tests": [
+        "BR-MSTUD-001"
+      ],
+      "implementation_files": [
+        "casino/games/mississippi_stud/service.py",
+        "casino/games/mississippi_stud/api.py",
+        "tests/mississippi_stud_tests.py",
+        "tests/game_drivers/mississippi_stud.py",
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-143-mississippi-stud",
+      "changed_in": "issue-143-mississippi-stud",
+      "notes": "Allocated for GitHub issue #143."
+    },
+    {
+      "id": "TEST-115",
+      "module": "Tests",
+      "description": "Listener-free evidence verifies Mississippi Stud: the paytable bands pairs into jacks-or-better wins, sixes-through-tens pushes, and fives-or-lower losses and recognizes a royal flush, a full three-street play pays the paytable on the total wagered amount, a pushing hand returns the whole wager, a losing hand forfeits the stake, the community cards reveal one per settled street, a fold forfeits only the wagers already made, a replayed street bet returns the advanced state without a second debit, a reload recovers committed street bets without duplicates, invalid antes and multipliers are rejected, and a large seeded sample confirms the disciplined strategy leaves the game house-positive. Hosted browser evidence proves the localized public controls, progressive reveal, settlement, reduced-motion state, route restoration, responsive containment, and fixed-feedback non-occlusion.",
+      "status": "PASS",
+      "api_tests": [
+        "API-MISSISSIPPI-STUD-001"
+      ],
+      "browser_tests": [
+        "BR-MSTUD-001"
+      ],
+      "implementation_files": [
+        "tests/mississippi_stud_tests.py",
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-143-mississippi-stud",
+      "changed_in": "issue-143-mississippi-stud",
+      "notes": "Allocated after Keno TEST-113 and Double Bonus TEST-114. The governed browser corpus contains exactly forty-eight after-pass Mississippi Stud images: six evidence moments by two locales by four standard viewports; the settled reduced-motion moment maps to both matrix states."
+    },
+    {
+      "id": "TEENP-001",
+      "module": "Teen Patti",
+      "description": "Teen Patti Practice is a stateful three-card poker played against the dealer. The player antes, sees three cards, then folds and forfeits the ante or makes a fixed Play wager equal to the ante. The dealer qualifies with a queen-high hand or better; if the dealer does not qualify the ante pays even money and the Play pushes, and if the dealer qualifies the best three-card hand wins both wagers even money with ties pushing. Teen Patti ranks a trail highest, then a pure sequence, a sequence, a colour, a pair, and a high card, so a sequence outranks a colour. A Bonus pays on the player's own trail, pure sequence, or sequence regardless of the dealer. Deal and decision are exactly-once and reload-safe on the shared ledger and player-scoped state store.",
+      "status": "PASS",
+      "api_tests": [
+        "API-TEEN-PATTI-001"
+      ],
+      "browser_tests": [
+        "BR-TEEN-PATTI-001"
+      ],
+      "implementation_files": [
+        "casino/games/teen_patti/engine.py",
+        "casino/games/teen_patti/service.py",
+        "casino/games/teen_patti/api.py",
+        "web/games/teen_patti.js",
+        "contracts/openapi/teen_patti.v1.yaml",
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-150-teen-patti",
+      "changed_in": "issue-150-teen-patti",
+      "notes": "Allocated for GitHub issue #150, a catalog-expansion poker variant (#73). The service reuses shared card primitives and the ledger with its own three-card evaluator where a sequence outranks a colour."
+    },
+    {
+      "id": "TEENP-002",
+      "module": "Teen Patti",
+      "description": "Teen Patti Practice preserves authenticated player ownership, private dealer cards until showdown, one caller-stable action identity per deal or decision, replay of the identical committed result without another wallet movement, conflict rejection for changed action content, and reload recovery from committed ledger proof. The additive v1 contract exposes only game-owned state, rounds, and decisions routes and retains the standard success and error envelopes. English and Russian public controls remain accessible, responsive, reduced-motion safe, and restorable at the canonical route.",
+      "status": "PASS",
+      "api_tests": [
+        "API-TEEN-PATTI-001"
+      ],
+      "browser_tests": [
+        "BR-TEEN-PATTI-001"
+      ],
+      "implementation_files": [
+        "casino/games/teen_patti/service.py",
+        "casino/games/teen_patti/api.py",
+        "tests/teen_patti_tests.py",
+        "tests/game_drivers/teen_patti.py",
+        "web/games/teen_patti.js",
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-150-teen-patti",
+      "changed_in": "issue-150-teen-patti",
+      "notes": "Allocated for GitHub issue #150. The governed Browser case exercises real authenticated routes through the public game controls and rejects page overflow or fixed-feedback occlusion at all standard viewports."
+    },
+    {
+      "id": "TEST-116",
+      "module": "Tests",
+      "description": "Listener-free evidence verifies Teen Patti ranking, settlement, dealer qualification, independent Bonus payment, fold privacy, replay idempotency, conflicting action rejection, reload recovery, invalid-input rejection, authenticated route identity, and a seeded house-positive sample. Hosted Browser evidence verifies ready, decision, played settlement, folded privacy, reduced-motion, and canonical route-restored states through public controls in English and Russian at desktop-primary, desktop-compact, tablet, and mobile dimensions.",
+      "status": "PASS",
+      "api_tests": [
+        "API-TEEN-PATTI-001"
+      ],
+      "browser_tests": [
+        "BR-TEEN-PATTI-001"
+      ],
+      "implementation_files": [
+        "tests/teen_patti_tests.py",
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "issue-150-teen-patti",
+      "changed_in": "issue-150-teen-patti",
+      "notes": "Allocated after Mississippi Stud TEST-115. The governed Browser corpus contains exactly forty-eight after-pass Teen Patti images: six evidence moments by two locales by four standard viewports."
+    },
+    {
+      "id": "I18N-010",
+      "module": "Application",
+      "description": "Player-facing game copy uses complete locale-owned terminology and truthful return semantics: Caribbean Stud names the public Call action consistently, Joker Poker and Multi-Hand Video Poker describe total returned credits rather than profit odds, Slots recent history hides raw round identifiers, Russian Roulette uses grammatical range labels, and Russian Baccarat exposes no borrowed English natural or burn terms.",
+      "status": "PASS",
+      "api_tests": [
+        "UI-GAME-POLISH-001"
+      ],
+      "browser_tests": [
+        "BR-CS-001",
+        "BR-JP-001",
+        "BR-MHVP-001",
+        "BR-SLOT-001",
+        "BR-I18N-GAMESTATE-ROU-001",
+        "BR-BAC-COPY-001"
+      ],
+      "implementation_files": [
+        "web/i18n/en-US/games/caribbean_stud.json",
+        "web/i18n/en-US/games/joker_poker.json",
+        "web/i18n/en-US/games/multi_hand_video_poker.json",
+        "web/i18n/en-US/games/slots.json",
+        "web/i18n/ru-RU/games/baccarat.json",
+        "web/i18n/ru-RU/games/caribbean_stud.json",
+        "web/i18n/ru-RU/games/joker_poker.json",
+        "web/i18n/ru-RU/games/multi_hand_video_poker.json",
+        "web/i18n/ru-RU/games/roulette.json",
+        "web/i18n/ru-RU/games/slots.json",
+        "tests/game_polish_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "pr-393-games-review-improve",
+      "changed_in": "pr-393-games-review-improve",
+      "notes": "The correction changes only existing locale values; resource keys and placeholder parity remain stable."
+    },
+    {
+      "id": "UX-020",
+      "module": "Application",
+      "description": "Every semantic button, input, select, and explicitly keyboard-focusable control mounted in the shared game outlet receives a visible high-contrast focus indicator when no more specific game-owned focus-visible treatment applies. The fallback uses zero selector specificity so game modules retain control of stronger intentional focus styles.",
+      "status": "PASS",
+      "api_tests": [
+        "UI-GAME-POLISH-001"
+      ],
+      "browser_tests": [
+        "BR-CS-001"
+      ],
+      "implementation_files": [
+        "web/styles.css",
+        "tests/game_polish_tests.py",
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "pr-393-games-review-improve",
+      "changed_in": "pr-393-games-review-improve",
+      "notes": "Hosted evidence leaves and returns to the real Roulette spin action by keyboard, on a route with no game-owned focus-visible rule, and records the computed shared fallback ring."
+    },
+    {
+      "id": "TEST-117",
+      "module": "Tests",
+      "description": "Listener-free evidence pins the exact corrected EN/RU copy values, placeholder privacy boundary, grammatical range labels, and zero-specificity shared game focus rule. Hosted Browser evidence renders the corrected Caribbean Stud, Joker Poker, Multi-Hand Video Poker, Slots, Roulette, and Baccarat copy on their real routes, proves a real keyboard-reached game control receives the shared focus ring, captures exact-head governed evidence, and preserves every existing game interaction and visual-matrix gate.",
+      "status": "PASS",
+      "api_tests": [
+        "UI-GAME-POLISH-001"
+      ],
+      "browser_tests": [
+        "BR-CS-001",
+        "BR-JP-001",
+        "BR-MHVP-001",
+        "BR-SLOT-001",
+        "BR-I18N-GAMESTATE-ROU-001",
+        "BR-BAC-COPY-001"
+      ],
+      "implementation_files": [
+        "tests/game_polish_tests.py",
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json"
+      ],
+      "introduced_in": "pr-393-games-review-improve",
+      "changed_in": "pr-393-games-review-improve",
+      "notes": "Allocated after Teen Patti TEST-116. Stale held PR #381 must reallocate its overlapping draft TEST-117 before it can become actionable."
+    },
+    {
+      "id": "MAGIC-001",
+      "module": "Core",
+      "description": "Optional passwordless magic-link login is disabled by default and composes the purpose-bound one-time-token platform and the transactional-mail foundation. A magic-link bearer is bound to the fixed magic_link token purpose, so it can never be accepted as an invitation, verification, password-reset, or OAuth token and vice versa. Enabling the method in production is a separate owner-approved release step, and no public HTTP route is registered until then.",
+      "status": "PASS",
+      "api_tests": [
+        "API-MAGIC-LINK-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/magic_link.py",
+        "casino/config.py",
+        "tests/magic_link_tests.py"
+      ],
+      "introduced_in": "issue-337-magic-link",
+      "changed_in": "issue-337-magic-link",
+      "notes": "Allocated for GitHub issue #337. P3 roadmap item; this is the inert implementation only, mirroring the disabled password-recovery service (#334)."
+    },
+    {
+      "id": "MAGIC-002",
+      "module": "Core",
+      "description": "Magic-link initiation is enumeration-safe: existing, unknown, malformed, and inactive mailboxes all receive one byte-identical acknowledgement, and a link is delivered only for an active local account. Reissue keeps at most one login bearer valid per mailbox, a bearer whose delivery is rejected is revoked immediately so no undelivered link stays usable, and per-recipient send throttling remains in the mail foundation. No response, error, or audit event discloses account existence.",
+      "status": "PASS",
+      "api_tests": [
+        "API-MAGIC-LINK-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/magic_link.py",
+        "tests/magic_link_tests.py"
+      ],
+      "introduced_in": "issue-337-magic-link",
+      "changed_in": "issue-337-magic-link",
+      "notes": "Allocated for GitHub issue #337. The generic acknowledgement and the single generic failure envelope are identical across every path."
+    },
+    {
+      "id": "MAGIC-003",
+      "module": "Core",
+      "description": "Magic-link completion consumes a purpose-bound bearer atomically and only then creates a session for the active local account; disabled login, malformed input, expired, replayed, revoked, tampered, wrong-subject bearers, and accounts that became inactive between initiation and completion all fail closed with one identical generic error. Audit events carry only a keyed recipient digest, token id, user id, session id, outcome, and reason, and never a raw bearer, mailbox, or credential.",
+      "status": "PASS",
+      "api_tests": [
+        "API-MAGIC-LINK-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/magic_link.py",
+        "tests/magic_link_tests.py"
+      ],
+      "introduced_in": "issue-337-magic-link",
+      "changed_in": "issue-337-magic-link",
+      "notes": "Allocated for GitHub issue #337. The session is created for the local account through the canonical session factory; magic-link provenance is recorded in the audit trail without modifying the core session authentication-method allowlist."
+    },
+    {
+      "id": "TEST-118",
+      "module": "Tests",
+      "description": "Listener-free evidence verifies the disabled passwordless magic-link lifecycle: disabled-by-default acknowledgement with no delivery, byte-identical initiation across existing, unknown, and malformed mailboxes with mail only for the eligible local account, session creation on completion verified through token authentication, replay and wrong-subject rejection, cross-purpose bearer isolation against password-reset consumption, silent ineligibility of inactive and credential-free social-only accounts, and a rejected delivery leaving no usable bearer behind. Suite emails are uniquely namespaced under a magic-link-only domain so repeated and full-suite runs never collide.",
+      "status": "PASS",
+      "api_tests": [
+        "API-MAGIC-LINK-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/magic_link_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-337-magic-link",
+      "changed_in": "issue-337-magic-link",
+      "notes": "Allocated after TEST-117 during current-main reconciliation of PR #377."
     }
   ]
 }

@@ -117,10 +117,11 @@ class UI50000HarnessTests(unittest.TestCase):
             assigned_ids.extend(range(cycle_start, cycle_start + quota))  # Rebuild the worker's contiguous global range.
         self.assertEqual(sum(per_game.values()), 50_000)  # Require the exact formal total.
         self.assertEqual(len(per_game), len(ui_50000.GAME_IDS))  # Require every registered game exactly once in the aggregate.
-        self.assertGreaterEqual(min(per_game.values()), 1_666)  # Require the issue-owned per-game floor.
+        expected_floor = 50_000 // len(ui_50000.GAME_IDS)  # Derive the honest catalog-wide floor from the current registered game count.
+        self.assertGreaterEqual(min(per_game.values()), expected_floor)  # Require every game to receive at least its exact balanced share.
         self.assertEqual(set(assigned_ids), set(range(50_000)))  # Require no missing or duplicate global identities.
         self.assertEqual(len(assigned_ids), len(set(assigned_ids)))  # Reject overlapping replica ranges.
-        self.assertEqual(len(allocations), 33)  # Pin the current 30-game catalog plus three additional Roulette replicas for the workflow matrix.
+        self.assertEqual(len(allocations), len(ui_50000.GAME_IDS) + 3)  # Pin one shard per game plus three additional Roulette replicas.
 
     # Prove namespacing prevents identical generic selectors from merging across games.
     def test_control_signatures_keep_module_ownership(self):

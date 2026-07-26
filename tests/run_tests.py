@@ -988,6 +988,62 @@ def run_api_tests():
             raise AssertionError('play-token receipt derivation suite failed')
     # Record the committed-ledger explanation, shared pagination, privacy, and exact-contract proof.
     run_case('API-RECEIPT-001',['RECEIPT-001','RECEIPT-002','TEST-104'],run_receipt_tests)
+    # Execute the Double Bonus Video Poker engine and settlement proof without opening a listener.
+    def run_double_bonus_video_poker_tests():
+        # Import the focused suite only when its mapped API case runs.
+        from tests import double_bonus_video_poker_tests
+        # Load exactly the Double Bonus engine and service assertions.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(double_bonus_video_poker_tests.DoubleBonusVideoPokerTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused Double Bonus assertion failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure stable.
+            raise AssertionError('double bonus video poker suite failed')
+    # Record the Double Bonus paytable, deal-and-draw settlement, replay, recovery, and house-edge proof.
+    run_case('API-DOUBLE-BONUS-VIDEO-POKER-001',['DBVP-001','DBVP-002','TEST-114'],run_double_bonus_video_poker_tests)
+    # Execute the Mississippi Stud engine and settlement proof without opening a listener.
+    def run_mississippi_stud_tests():
+        # Import the focused suite only when its mapped API case runs.
+        from tests import mississippi_stud_tests
+        # Load exactly the Mississippi Stud engine and service assertions.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(mississippi_stud_tests.MississippiStudTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused Mississippi Stud assertion failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure stable.
+            raise AssertionError('mississippi stud suite failed')
+    # Record the Mississippi Stud paytable, three-street settlement, replay, recovery, and house-edge proof.
+    run_case('API-MISSISSIPPI-STUD-001',['MSTUD-001','MSTUD-002','TEST-115'],run_mississippi_stud_tests)
+    # Execute the Teen Patti engine, authenticated routes, and settlement proof without opening a listener.
+    def run_teen_patti_tests():
+        # Import the focused suite only when its mapped API case runs.
+        from tests import teen_patti_tests
+        # Load exactly the Teen Patti engine, service, and direct-route assertions.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(teen_patti_tests.TeenPattiTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused Teen Patti assertion failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure stable.
+            raise AssertionError('teen patti suite failed')
+    # Record the Teen Patti ranking, settlement, replay, recovery, authenticated route, and house-edge proof.
+    run_case('API-TEEN-PATTI-001',['TEENP-001','TEENP-002','TEST-116'],run_teen_patti_tests)
+    # Execute the corrected cross-game copy and shared keyboard-focus contract without opening a listener.
+    def run_game_polish_tests():
+        # Import the focused suite only when its mapped API case runs.
+        from tests import game_polish_tests
+        # Load exactly the copy and focus assertions allocated to TEST-117.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(game_polish_tests.GamePolishTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused copy or focus assertion failed.
+        if not result.wasSuccessful():
+            # Preserve one stable diagnostic while unittest retains assertion detail.
+            raise AssertionError('cross-game copy and focus suite failed')
+    # Record the listener-free return semantics, identifier privacy, Russian terminology, and focus proof.
+    run_case('UI-GAME-POLISH-001',['I18N-010','UX-020','TEST-117'],run_game_polish_tests)
     # Execute the opt-in wellness, current-session summary, concurrency, and neutral-copy proof without a listener.
     def run_wellness_tests():
         # Import the focused suite only when its mapped API case runs.
@@ -1244,6 +1300,33 @@ def run_api_tests():
             raise AssertionError('four card poker suite failed')
     # Record the listener-free Four Card Poker ranking, settlement, replay, recovery, and house-edge proof.
     run_case('API-FOUR-CARD-POKER-001',['FOURCP-001','FOURCP-002','TEST-126'],run_four_card_poker_tests)
+    # Execute the Keno drawn-ball rail layout regression without opening a listener.
+    def run_keno_ball_rail_tests():
+        # Load only the focused Keno ball-rail class.
+        from tests import keno_ball_rail_tests
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(keno_ball_rail_tests.KenoBallRailTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when the ball-rail layout contract regresses.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure text secret-safe.
+            raise AssertionError('keno ball-rail layout suite failed')
+    # Record the listener-free Keno drawn-ball rail overflow regression proof.
+    run_case('UI-KENO-BALL-RAIL-001',['KENO-026','TEST-113'],run_keno_ball_rail_tests)
+    # Execute the complete disabled passwordless magic-link proof without opening a listener.
+    def run_magic_link_tests():
+        # Load only the focused magic-link class.
+        from tests import magic_link_tests
+        # Build the focused listener-free security suite.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(magic_link_tests.MagicLinkServiceTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused magic-link proof failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure text secret-safe.
+            raise AssertionError('passwordless magic-link suite failed')
+    # Record the listener-free disabled passwordless-login lifecycle proof.
+    run_case('API-MAGIC-LINK-001',['MAGIC-001','MAGIC-002','MAGIC-003','TEST-118'],run_magic_link_tests)
     # Discover and execute every focused restricted-preview security module without opening a listener.
     def run_restricted_preview_security_tests():
         # Load the package directory through unittest's standard test discovery.
@@ -2041,6 +2124,18 @@ def run_api_tests():
             casino_holdem_state_a=api(base,f'/api/v1/games/casino-holdem/state?player_id={user_b["player_id"]}',auth_token=token_a); casino_holdem_state_b=api(base,f'/api/v1/games/casino-holdem/state?player_id={user_a["player_id"]}',auth_token=token_b); assert casino_holdem_state_a['state']['recent_rounds'][-1]['round_id']==casino_holdem_a['round']['round_id'] and casino_holdem_state_b['state']['recent_rounds'][-1]['round_id']==casino_holdem_b['round']['round_id']
             # Require one ante debit, one call debit, and at most one returned-token credit for the replayed round.
             casino_holdem_ledger_a=api(base,f'/api/v1/players/{user_a["player_id"]}/ledger',auth_token=token_a)['ledger']; casino_holdem_events_a=[row for row in casino_holdem_ledger_a if row.get('game')=='casino_holdem' and row.get('round_id')==casino_holdem_a['round']['round_id']]; assert sum(row.get('transaction_type')=='CASINO_HOLDEM_ANTE_DEBIT' for row in casino_holdem_events_a)==1 and sum(row.get('transaction_type')=='CASINO_HOLDEM_CALL_DEBIT' for row in casino_holdem_events_a)==1 and sum(row.get('transaction_type')=='CASINO_HOLDEM_SETTLEMENT_CREDIT' for row in casino_holdem_events_a)<=1
+            # Prepare two session-bound Pai Gow Poker rounds while hostile body identities challenge ownership.
+            pai_gow_poker_deal_a=api(base,'/api/v1/games/pai-gow-poker/rounds','POST',{'player_id':user_b['player_id'],'action_id':'wallet-pai-gow-poker-deal-a','ante':1},auth_token=token_a); pai_gow_poker_deal_b=api(base,'/api/v1/games/pai-gow-poker/rounds','POST',{'player_id':user_a['player_id'],'action_id':'wallet-pai-gow-poker-deal-b','ante':1},auth_token=token_b)
+            # Set both private seven-card hands by the house way through independent session-bound actions.
+            pai_gow_poker_a=api(base,f'/api/v1/games/pai-gow-poker/rounds/{pai_gow_poker_deal_a["round"]["round_id"]}/decisions','POST',{'player_id':user_b['player_id'],'action_id':'wallet-pai-gow-poker-decision-a','set':'house_way'},auth_token=token_a); pai_gow_poker_b=api(base,f'/api/v1/games/pai-gow-poker/rounds/{pai_gow_poker_deal_b["round"]["round_id"]}/decisions','POST',{'player_id':user_a['player_id'],'action_id':'wallet-pai-gow-poker-decision-b','set':'house_way'},auth_token=token_b)
+            # Replay one terminal action and reject a changed ante meaning under the original opening identity.
+            pai_gow_poker_a_replay=api(base,f'/api/v1/games/pai-gow-poker/rounds/{pai_gow_poker_deal_a["round"]["round_id"]}/decisions','POST',{'player_id':user_b['player_id'],'action_id':'wallet-pai-gow-poker-decision-a','set':'house_way'},auth_token=token_a); pai_gow_poker_conflict=api(base,'/api/v1/games/pai-gow-poker/rounds','POST',{'player_id':user_b['player_id'],'action_id':'wallet-pai-gow-poker-deal-a','ante':2},ok=False,auth_token=token_a)
+            # Require private dealer cards before setting, seven dealt cards, bound ownership, independent rounds, exact replay, and conflict closure.
+            assert 'dealer_high' not in pai_gow_poker_deal_a['round'] and len(pai_gow_poker_deal_a['round']['player_cards'])==7 and pai_gow_poker_a['round']['player_id']==user_a['player_id'] and pai_gow_poker_b['round']['player_id']==user_b['player_id'] and pai_gow_poker_a['round']['round_id']!=pai_gow_poker_b['round']['round_id'] and pai_gow_poker_a_replay['replayed'] is True and pai_gow_poker_a_replay['round']==pai_gow_poker_a['round'] and pai_gow_poker_conflict['error']['code']=='CONFLICT'
+            # Read both private states with hostile query identities and require isolated settled history.
+            pai_gow_poker_state_a=api(base,f'/api/v1/games/pai-gow-poker/state?player_id={user_b["player_id"]}',auth_token=token_a); pai_gow_poker_state_b=api(base,f'/api/v1/games/pai-gow-poker/state?player_id={user_a["player_id"]}',auth_token=token_b); assert pai_gow_poker_state_a['state']['recent_rounds'][-1]['round_id']==pai_gow_poker_a['round']['round_id'] and pai_gow_poker_state_b['state']['recent_rounds'][-1]['round_id']==pai_gow_poker_b['round']['round_id']
+            # Require one ante debit and at most one returned-token credit for the replayed round.
+            pai_gow_poker_ledger_a=api(base,f'/api/v1/players/{user_a["player_id"]}/ledger',auth_token=token_a)['ledger']; pai_gow_poker_events_a=[row for row in pai_gow_poker_ledger_a if row.get('game')=='pai_gow_poker' and row.get('round_id')==pai_gow_poker_a['round']['round_id']]; assert sum(row.get('transaction_type')=='PAI_GOW_POKER_ANTE_DEBIT' for row in pai_gow_poker_events_a)==1 and sum(row.get('transaction_type')=='PAI_GOW_POKER_SETTLEMENT_CREDIT' for row in pai_gow_poker_events_a)<=1
             # Prepare two session-bound Joker Poker hands while hostile body identities challenge ownership.
             joker_poker_deal_a=api(base,'/api/v1/games/joker-poker/rounds','POST',{'player_id':user_b['player_id'],'action_id':'wallet-joker-poker-deal-a','wager':1},auth_token=token_a); joker_poker_deal_b=api(base,'/api/v1/games/joker-poker/rounds','POST',{'player_id':user_a['player_id'],'action_id':'wallet-joker-poker-deal-b','wager':1},auth_token=token_b)
             # Persist independent hold selections through the public session-bound route.
@@ -2143,6 +2238,8 @@ def run_api_tests():
             integrity_state['let_it_ride_rounds']={user_a['player_id']:let_it_ride_a['round']['round_id'],user_b['player_id']:let_it_ride_b['round']['round_id']}
             # Retain Casino Hold'em round ids by authenticated player for process-restart verification.
             integrity_state['casino_holdem_rounds']={user_a['player_id']:casino_holdem_a['round']['round_id'],user_b['player_id']:casino_holdem_b['round']['round_id']}
+            # Retain Pai Gow Poker round ids by authenticated player for process-restart verification.
+            integrity_state['pai_gow_poker_rounds']={user_a['player_id']:pai_gow_poker_a['round']['round_id'],user_b['player_id']:pai_gow_poker_b['round']['round_id']}
             # Retain Joker Poker round ids by authenticated player for process-restart verification.
             integrity_state['joker_poker_rounds']={user_a['player_id']:joker_poker_a['round']['round_id'],user_b['player_id']:joker_poker_b['round']['round_id']}
             # Retain Texas Hold'em hand ids by authenticated player for process-restart verification.
@@ -2193,6 +2290,8 @@ def run_api_tests():
         run_case('API-LIR-001',['LIR-001','LIR-002','LIR-003'],lambda: assert_condition(True,'Let It Ride integration evidence missing'))
         # Record Casino Hold'em rules, session, hidden cards, ledger, replay, and two-user coverage.
         run_case('API-CH-001',['CH-001','CH-002','CH-003'],lambda: assert_condition(True,"Casino Hold'em integration evidence missing"))
+        # Record Pai Gow Poker session, ledger, settlement, and retry coverage under its permanent test id.
+        run_case('API-PGP-001',['PGP-001','PGP-002','PGP-003'],lambda: assert_condition(True,'Pai Gow Poker integration evidence missing'))
         # Record Joker Poker rules, session, private draw pool, ledger, replay, and two-user coverage.
         run_case('API-JP-001',['JP-001','JP-002','JP-003'],lambda: assert_condition(True,'Joker Poker integration evidence missing'))
         # Record Texas Hold'em rules, session privacy, four-wallet ledger settlement, replay, and two-user coverage.
@@ -2265,6 +2364,8 @@ def run_api_tests():
                 let_it_ride_state=api(base,'/api/v1/games/let-it-ride/state',auth_token=token); assert any(row['round_id']==integrity_state['let_it_ride_rounds'][expected['player_id']] for row in let_it_ride_state['state']['rounds'])
                 # Read and verify this user's settled Casino Hold'em round after the real process restart.
                 casino_holdem_state=api(base,'/api/v1/games/casino-holdem/state',auth_token=token); assert any(row['round_id']==integrity_state['casino_holdem_rounds'][expected['player_id']] for row in casino_holdem_state['state']['recent_rounds'])
+                # Read and verify this user's settled Pai Gow Poker round after the real process restart.
+                pai_gow_poker_state=api(base,'/api/v1/games/pai-gow-poker/state',auth_token=token); assert any(row['round_id']==integrity_state['pai_gow_poker_rounds'][expected['player_id']] for row in pai_gow_poker_state['state']['recent_rounds'])
                 # Read and verify this user's settled Joker Poker hand after the real process restart.
                 joker_poker_state=api(base,'/api/v1/games/joker-poker/state',auth_token=token); assert any(row['round_id']==integrity_state['joker_poker_rounds'][expected['player_id']] for row in joker_poker_state['state']['recent_rounds'])
                 # Read and verify this user's settled Texas Hold'em hand after the real process restart.
@@ -2276,7 +2377,7 @@ def run_api_tests():
             # Verify both users produced persisted private history across the history-producing games.
             assert all(count>0 for count in integrity_state['history_game_counts'])
         # Record the live restart persistence regression under the same integrity requirements.
-        run_case('API-WALLET-RESTART-001',['SESSION-003','USER-001','TOKEN-003','TOKEN-004','TEST-039','MHVP-002','CW-002','BIG-SIX-002','RD-002','DT-002','HILO-002','SCRATCH-002','SIC-BO-002','CHUCK-002','CRAPS-002','CAA-002','OU7-002','PLINKO-002','FAN-TAN-002','AB-002','AD-002','CS-002','LIR-002','CH-002','JP-002','THPT-002'],wallet_restart_persistence)
+        run_case('API-WALLET-RESTART-001',['SESSION-003','USER-001','TOKEN-003','TOKEN-004','TEST-039','MHVP-002','CW-002','BIG-SIX-002','RD-002','DT-002','HILO-002','SCRATCH-002','SIC-BO-002','CHUCK-002','CRAPS-002','CAA-002','OU7-002','PLINKO-002','FAN-TAN-002','AB-002','AD-002','CS-002','LIR-002','CH-002','PGP-002','JP-002','THPT-002'],wallet_restart_persistence)
         # Define the core function used by this module.
         def core():
             # Load the casino state that publishes packaged and game-module version metadata.
@@ -4106,7 +4207,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Define one assertion that proves the last card and its Play control are fully inside the bounded region.
                     def assert_last_action_reachable():
                         # Compare live rectangles so visibility cannot pass while fixed chrome clips the action.
-                        reachability=page.evaluate("""() => { const region=document.querySelector('[data-testid="lobby-scroll-region"]'); const cards=[...document.querySelectorAll('[data-testid^="card-"]')]; const plays=[...document.querySelectorAll('[data-testid^="open-"]')]; if (!cards.length || !plays.length) return {reachable:false}; const regionRect=region.getBoundingClientRect(); const cardRect=cards.at(-1).getBoundingClientRect(); const playRect=plays.at(-1).getBoundingClientRect(); return {reachable:cardRect.top>=regionRect.top-1 && cardRect.bottom<=regionRect.bottom+1 && playRect.top>=regionRect.top-1 && playRect.bottom<=regionRect.bottom+1,cardBottom:cardRect.bottom,playBottom:playRect.bottom,regionBottom:regionRect.bottom}; }""")
+                        reachability=page.evaluate("""() => { const region=document.querySelector('[data-testid="lobby-scroll-region"]'); const cards=[...document.querySelectorAll('[data-testid^="card-"]')]; const plays=[...document.querySelectorAll('[data-testid^="open-"]')]; if (!cards.length || !plays.length) return {reachable:false}; const card=cards.at(-1); const play=plays.at(-1); const activeCategory=document.querySelector('[data-catalog-category][aria-pressed="true"]'); const regionRect=region.getBoundingClientRect(); const cardRect=card.getBoundingClientRect(); const playRect=play.getBoundingClientRect(); return {reachable:cardRect.top>=regionRect.top-1 && cardRect.bottom<=regionRect.bottom+1 && playRect.top>=regionRect.top-1 && playRect.bottom<=regionRect.bottom+1,category:activeCategory?.dataset.catalogCategory||'',cardTestId:card.dataset.testid||'',cardTop:cardRect.top,cardBottom:cardRect.bottom,cardHeight:cardRect.height,playTop:playRect.top,playBottom:playRect.bottom,regionTop:regionRect.top,regionBottom:regionRect.bottom,regionHeight:regionRect.height}; }""")
                         # Reject partial visibility, footer overlap, and Play controls clipped below the outlet edge.
                         assert reachability['reachable'],reachability
                     # Reset the intentional region to its first catalog row before exercising a new input mode.
@@ -4442,6 +4543,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.get_by_test_id('nav-multi_hand_video_poker').click(); page.get_by_test_id('multi-hand-video-poker').wait_for(timeout=5000)
                     # Require the canonical route and complete English title before interaction.
                     assert page.url.split('?',1)[0].endswith('/games/multi_hand_video_poker') and page.locator('.mhvp-header h1').inner_text()=='Multi-Hand Video Poker'
+                    # Require the visible push row to state one returned credit rather than one-to-one profit odds.
+                    assert '1× returned' in page.locator('.mhvp-data').inner_text()
                     # Reject raw resource identifiers from the initial player-facing surface.
                     visible_lines={line.strip() for line in page.locator('body').inner_text().splitlines() if line.strip()}
                     # Require representative owned resource keys to stay internal.
@@ -4486,6 +4589,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(150); game_evidence('after-pass-mhvp-route-restored-en-desktop_primary.png','multi_hand_video_poker',['route_restored','settled_10_hands'],'en-US','desktop_primary')
                     # Switch the mounted real game to Russian without losing its persisted state.
                     page.get_by_test_id('shell-locale-select').select_option('ru-RU'); page.wait_for_function("() => document.querySelector('.mhvp-header h1')?.textContent === 'Мультиручный видеопокер'")
+                    # Require the Russian paytable to preserve the same total-return meaning.
+                    assert '\u0432\u043e\u0437\u0432\u0440\u0430\u0442 1×' in page.locator('.mhvp-data').inner_text()
                     # Reject representative English game copy from the Russian player-facing surface.
                     russian_copy=page.get_by_test_id('multi-hand-video-poker').inner_text(); english_phrases=['Multi-Hand Video Poker','Deal hands','Draw cards','Play controls','Paytable','Ready to deal','Choose cards to hold','play tokens']; assert not [phrase for phrase in english_phrases if phrase.lower() in russian_copy.lower()],russian_copy
                     # Select three hands and start a Russian real-backend round for actionable evidence.
@@ -4509,7 +4614,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Return to the lobby so route restoration and existing game interactions start normally.
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Execute real-backend mode, localization, responsive, route, and visual acceptance coverage.
-                run_case('BR-MHVP-001',['MHVP-001','MHVP-002','MHVP-004','MHVP-005'],multi_hand_video_poker_acceptance)
+                run_case('BR-MHVP-001',['MHVP-001','MHVP-002','MHVP-004','MHVP-005','I18N-010','TEST-117'],multi_hand_video_poker_acceptance)
                 # Define real-backend Casino War browser and visual acceptance coverage.
                 def casino_war_acceptance():
                     # Open the catalog-generated route and wait for its module-owned table selector.
@@ -5626,6 +5731,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
                     # Load exact UTF-8 title expectations from the paired canonical resource files.
                     expected_titles={locale:read_i18n_json(ROOT/'web'/'i18n'/locale/'games'/'caribbean_stud.json')['title'] for locale in ('en-US','ru-RU')}
+                    # Load the locale-owned Call heading so screenshots cannot accept stale Raise terminology.
+                    expected_paytable_titles={locale:read_i18n_json(ROOT/'web'/'i18n'/locale/'games'/'caribbean_stud.json')['paytable.title'] for locale in ('en-US','ru-RU')}
                     # Capture one mounted state across both locales and every viewport.
                     def localized_evidence(prefix,states):
                         # Iterate through paired English and Russian game resources.
@@ -5634,6 +5741,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_timeout(100)
                             # Require the localized game title rather than a fallback key or English leakage.
                             assert page.locator('.cs-header h1').inner_text()==expected_titles[locale]
+                            # Require the paytable heading to match the public Call action in the active locale.
+                            assert page.locator('.cs-data h2').nth(1).inner_text()==expected_paytable_titles[locale]
                             # Validate containment and capture after-pass evidence at every viewport.
                             for viewport_id,width,height in required_viewports:
                                 # Resize to the exact visual matrix dimensions.
@@ -5648,8 +5757,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     localized_evidence('ready',['ready'])
                     # Read the English return-table panel before any deal mutates the round. (CS-006, TEST-063)
                     caribbean_stud_paytable_text=page.locator('.cs-data').inner_text()
-                    # Require the strongest and weakest published raise odds to be visible with localized hand labels.
-                    assert 'Raise payout schedule' in caribbean_stud_paytable_text and 'Royal flush' in caribbean_stud_paytable_text and '100:1' in caribbean_stud_paytable_text and 'High card' in caribbean_stud_paytable_text and '1:1' in caribbean_stud_paytable_text
+                    # Require the strongest and weakest published Call returns to be visible with localized hand labels.
+                    assert 'Call payout schedule' in caribbean_stud_paytable_text and 'Royal flush' in caribbean_stud_paytable_text and '100:1' in caribbean_stud_paytable_text and 'High card' in caribbean_stud_paytable_text and '1:1' in caribbean_stud_paytable_text
                     # Deal through the public frontend and require private dealer hole cards during the decision.
                     page.locator('#cs-ante').fill('1'); page.locator('[data-action="deal"]').click(); page.wait_for_function("() => document.querySelector('.cs-phase')?.textContent === 'Decision'",timeout=10000); assert page.locator('[aria-label="Face-down dealer card"]').count()==4
                     # Capture the actionable call-or-fold decision.
@@ -5663,7 +5772,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Return to the lobby for downstream browser cases.
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Execute the integrated Caribbean Stud browser and visual gate.
-                run_case('BR-CS-001',['CS-001','CS-002','CS-004','CS-005','CS-006','TEST-063'],caribbean_stud_acceptance)
+                run_case('BR-CS-001',['CS-001','CS-002','CS-004','CS-005','CS-006','I18N-010','TEST-063','TEST-117'],caribbean_stud_acceptance)
                 # Define real-backend Let It Ride localization, staged decisions, responsive, motion, and route acceptance.
                 def let_it_ride_acceptance():
                     # Open the catalog-owned route and wait for the stable game selector.
@@ -5758,6 +5867,73 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Execute the integrated Casino Hold'em browser and visual gate.
                 run_case('BR-CH-001',['CH-001','CH-002','CH-004','CH-005','CH-006','TEST-084'],casino_holdem_acceptance)
+                # Define real-backend Pai Gow Poker localization, setting, responsive, motion, and route acceptance.
+                def pai_gow_poker_acceptance():
+                    # Open the catalog-owned route and wait for the stable game selector.
+                    page.get_by_test_id('nav-pai_gow_poker').click(); page.get_by_test_id('pai-gow-poker').wait_for(timeout=5000)
+                    # Enumerate all governed viewport dimensions.
+                    required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
+                    # Load exact UTF-8 title expectations from the paired canonical resource files.
+                    expected_titles={locale:read_i18n_json(ROOT/'web'/'i18n'/locale/'games'/'pai_gow_poker.json')['title'] for locale in ('en-US','ru-RU')}
+                    # Capture one mounted state across both locales and every viewport.
+                    def localized_evidence(prefix,states):
+                        # Iterate through paired English and Russian game resources.
+                        for locale in ('en-US','ru-RU'):
+                            # Switch locale without discarding the active hand or settled history.
+                            page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_timeout(100)
+                            # Require the localized title rather than a fallback key or English leakage.
+                            assert page.locator('.pgp-header h1').inner_text()==expected_titles[locale]
+                            # Validate containment and capture after-pass evidence at every viewport.
+                            for viewport_id,width,height in required_viewports:
+                                # Resize to the exact visual matrix dimensions.
+                                page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
+                                # Measure game controls and rendered copy against the fixed problem-report affordance.
+                                feedback_geometry=page.evaluate("""() => { const button=document.querySelector('.report-problem-fab:not([hidden])'); const fixed=button?.getBoundingClientRect(); const hits=[]; const intersects=rect=>fixed&&rect.left<fixed.right&&rect.right>fixed.left&&rect.top<fixed.bottom&&rect.bottom>fixed.top; for(const node of document.querySelectorAll('.pgp-shell input,.pgp-shell button')){if(intersects(node.getBoundingClientRect()))hits.push(`${node.tagName.toLowerCase()}.${node.className}`);} for(const node of document.querySelectorAll('.pgp-shell h1,.pgp-shell h2,.pgp-shell h3,.pgp-shell p,.pgp-shell li,.pgp-shell label,.pgp-shell legend,.pgp-summary span,.pgp-summary strong')){const range=document.createRange(); range.selectNodeContents(node); if([...range.getClientRects()].some(intersects))hits.push(`${node.tagName.toLowerCase()}:${node.textContent.trim()}`);} return {documentFits:document.documentElement.scrollWidth<=window.innerWidth+1,feedbackOverlaps:hits.length,overlapIdentities:hits}; }""")
+                                # Reject page overflow, fixed-feedback occlusion, and an incomplete mounted table.
+                                assert feedback_geometry=={'documentFits':True,'feedbackOverlaps':0,'overlapIdentities':[]} and page.get_by_test_id('pai-gow-poker').is_visible(),{'feedbackGeometry':feedback_geometry,'locale':locale,'viewport':viewport_id}
+                                # Record self-describing evidence for this state and viewport.
+                                game_evidence(f'after-pass-pai-gow-poker-{prefix}-{locale.lower()}-{viewport_id}.png','pai_gow_poker',states,locale,viewport_id)
+                        # Restore English desktop controls for the next public action.
+                        page.get_by_test_id('shell-locale-select').select_option('en-US'); page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(100)
+                    # Capture the complete ready table before the ante-backed deal.
+                    localized_evidence('ready',['ready'])
+                    # Deal through the public frontend and require seven selectable cards with the private dealer hidden.
+                    page.locator('#pgp-wager').fill('1'); page.locator('#pgp-wager').press('Tab'); page.locator('[data-action="deal"]').click(); page.locator('[data-action="house-way"]:not([disabled])').wait_for(timeout=10000); setting_counts={'playerTiles':page.locator('[data-testid="pai-gow-poker"] .pgp-tiles .pgp-tile').count(),'privateDealerCards':page.locator('[data-testid="pai-gow-poker"] .pgp-cards .playing-card--back').count()}; assert setting_counts=={'playerTiles':7,'privateDealerCards':7},setting_counts
+                    # Capture the actionable hand-setting stage.
+                    localized_evidence('setting',['setting'])
+                    # Collect every authoritative win, loss, and push presentation through bounded public play.
+                    captured_terminal_states=set()
+                    # Bound random production deals so a missing terminal class fails closed instead of hanging.
+                    for terminal_attempt in range(30):
+                        # Set the prepared hand by the public house-way action.
+                        page.locator('[data-action="house-way"]').click()
+                        # Wait until settlement re-enables the next canonical deal action.
+                        page.locator('[data-action="deal"]:not([disabled])').wait_for(timeout=10000)
+                        # Read the server-owned latest outcome instead of classifying localized presentation copy.
+                        terminal_state=page.evaluate("async () => (await (await fetch('/api/v1/games/pai-gow-poker/state')).json()).data.state.recent_rounds.slice(-1)[0].outcome")
+                        # Capture the first governed corpus for each distinct terminal result.
+                        if terminal_state not in captured_terminal_states:
+                            # Record all locale and viewport combinations while this authoritative result is mounted.
+                            localized_evidence(terminal_state,[terminal_state])
+                            # Retain the result identity so repeated random outcomes do not duplicate evidence.
+                            captured_terminal_states.add(terminal_state)
+                        # Stop once all three published outcome paths have been exercised.
+                        if captured_terminal_states=={'win','loss','push'}:
+                            break
+                        # Deal another real round when one terminal class remains unobserved.
+                        page.locator('[data-action="deal"]').click()
+                        # Wait for the next prepared hand before continuing bounded public play.
+                        page.locator('[data-action="house-way"]:not([disabled])').wait_for(timeout=10000)
+                    # Require complete terminal coverage rather than accepting one random outcome.
+                    assert captured_terminal_states=={'win','loss','push'}
+                    # Complete a second real round by the house way while reduced motion is active.
+                    page.emulate_media(reduced_motion='reduce'); page.locator('[data-action="deal"]').click(); page.locator('[data-action="house-way"]:not([disabled])').wait_for(timeout=10000); page.locator('[data-action="house-way"]').click(); page.wait_for_function("() => document.querySelectorAll('.pgp-history-list li').length >= 2",timeout=10000); localized_evidence('reduced-motion',['reduced_motion'])
+                    # Reload the canonical route and require restored player-owned history.
+                    page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('pai-gow-poker').wait_for(timeout=5000); assert page.locator('.pgp-history-list li').count()>=2; localized_evidence('route-restored',['route_restored'])
+                    # Return to the lobby for downstream browser cases.
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Execute the integrated Pai Gow Poker browser and visual gate.
+                run_case('BR-PGP-001',['PGP-001','PGP-002','PGP-004','PGP-005'],pai_gow_poker_acceptance)
                 # Define real-backend Joker Poker localization, hold, draw, responsive, motion, and route acceptance.
                 def joker_poker_acceptance():
                     # Open the catalog-owned route and wait for the stable game selector.
@@ -5766,6 +5942,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
                     # Load exact UTF-8 title expectations from the paired canonical resource files.
                     expected_titles={locale:read_i18n_json(ROOT/'web'/'i18n'/locale/'games'/'joker_poker.json')['title'] for locale in ('en-US','ru-RU')}
+                    # Load exact total-return wording so both rendered paytables reject profit-odds ambiguity.
+                    expected_returns={locale:read_i18n_json(ROOT/'web'/'i18n'/locale/'games'/'joker_poker.json')['paytable.multiplier'].replace('{value}','1') for locale in ('en-US','ru-RU')}
                     # Capture one mounted state across both locales and every viewport.
                     def localized_evidence(prefix,states):
                         # Iterate through paired English and Russian game resources.
@@ -5774,6 +5952,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_timeout(100)
                             # Require the localized title rather than a fallback key or English leakage.
                             assert page.locator('.jp-header h1').inner_text()==expected_titles[locale]
+                            # Require the visible push row to state one returned credit rather than one-to-one profit odds.
+                            assert expected_returns[locale] in page.locator('.jp-data').inner_text()
                             # Validate containment and capture after-pass evidence at every viewport.
                             for viewport_id,width,height in required_viewports:
                                 # Resize to the exact visual matrix dimensions.
@@ -5817,7 +5997,165 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Return to the lobby for downstream browser cases.
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Execute the integrated Joker Poker browser and visual gate.
-                run_case('BR-JP-001',['JP-001','JP-002','JP-004','JP-005'],joker_poker_acceptance)
+                run_case('BR-JP-001',['JP-001','JP-002','JP-004','JP-005','I18N-010','TEST-117'],joker_poker_acceptance)
+                # Define real-backend Double Bonus localization, hold, draw, responsive, motion, and route acceptance.
+                def double_bonus_video_poker_acceptance():
+                    # Open the catalog-owned route and wait for the stable game selector.
+                    page.get_by_test_id('nav-double_bonus_video_poker').click(); page.get_by_test_id('double-bonus-video-poker').wait_for(timeout=5000)
+                    # Enumerate every viewport governed by the Double Bonus visual-matrix row.
+                    required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
+                    # Load exact UTF-8 expectations from both canonical locale resources.
+                    resources={locale:read_i18n_json(ROOT/'web'/'i18n'/locale/'games'/'double_bonus_video_poker.json') for locale in ('en-US','ru-RU')}
+                    # Capture one mounted state across both locales and every governed viewport.
+                    def localized_evidence(prefix,states):
+                        # Iterate through paired English and Russian resources without discarding the active hand.
+                        for locale in ('en-US','ru-RU'):
+                            # Switch the shared locale and wait for the game-owned rerender.
+                            page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_timeout(100)
+                            # Require exact localized title and phase copy rather than fallback keys or stale English.
+                            phase_key='settled' if 'settled' in states or 'route_restored' in states or 'reduced_motion' in states else 'draw' if 'choose_holds' in states else 'idle'; assert page.locator('.db-header h1').inner_text()==resources[locale]['title'] and page.get_by_test_id('double-bonus-video-poker-phase').inner_text()==resources[locale][f'phase.{phase_key}']
+                            # Validate containment, visible controls, and after-pass evidence at each exact viewport.
+                            for viewport_id,width,height in required_viewports:
+                                # Resize to the registered evidence dimensions.
+                                page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
+                                # Collect document-fit and fixed-feedback overlap geometry for native controls and rendered text ranges.
+                                card_geometry=page.evaluate("() => { const button=document.querySelector('.report-problem-fab:not([hidden])'); const fixed=button?.getBoundingClientRect(); const hits=[]; const intersects=rect=>fixed&&rect.left<fixed.right&&rect.right>fixed.left&&rect.top<fixed.bottom&&rect.bottom>fixed.top; for(const node of document.querySelectorAll('.db-card input,.db-card button')){if(intersects(node.getBoundingClientRect()))hits.push(`${node.tagName.toLowerCase()}.${node.className}`);} for(const node of document.querySelectorAll('.db-card h3,.db-card label,.db-card .db-pays span')){const range=document.createRange(); range.selectNodeContents(node); if([...range.getClientRects()].some(intersects))hits.push(`${node.tagName.toLowerCase()}:${node.textContent.trim()}`);} return {documentFits:document.documentElement.scrollWidth<=window.innerWidth+1,feedbackOverlaps:hits.length,overlapIdentities:hits}; }")
+                                # Collect mounted-content predicates separately from the responsive geometry.
+                                mounted_geometry={'gameVisible':page.get_by_test_id('double-bonus-video-poker').is_visible(),'paytableRows':page.locator('.db-pays div').count(),'paytableVisible':page.locator('.db-paytable').is_visible()}
+                                # Reject page overflow, obscured paytable content, and incomplete mounted state with exact diagnostics.
+                                assert card_geometry=={'documentFits':True,'feedbackOverlaps':0,'overlapIdentities':[]} and mounted_geometry=={'gameVisible':True,'paytableRows':11,'paytableVisible':True},{'cardGeometry':card_geometry,'mountedGeometry':mounted_geometry,'locale':locale,'viewport':viewport_id}
+                                # Record self-describing exact-head evidence for this state and viewport.
+                                game_evidence(f'after-pass-double-bonus-video-poker-{prefix}-{locale.lower()}-{viewport_id}.png','double_bonus_video_poker',states,locale,viewport_id)
+                        # Restore English desktop controls for the next public action.
+                        page.get_by_test_id('shell-locale-select').select_option('en-US'); page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(100)
+                    # Capture the complete ready machine before the ledger-backed deal.
+                    localized_evidence('ready',['ready'])
+                    # Commit a bounded wager and deal through the public frontend.
+                    page.locator('[data-bet]').fill('1'); page.locator('[data-bet]').press('Tab'); page.locator('[data-deal]').click(); page.get_by_test_id('double-bonus-video-poker-hand').wait_for(timeout=10000); assert page.locator('[data-hold]').count()==5
+                    # Select one visible hold and capture the actionable draw state.
+                    page.locator('[data-hold="0"]').click(); page.locator('[data-hold="0"][aria-pressed="true"]').wait_for(timeout=10000); localized_evidence('choose-holds',['choose_holds'])
+                    # Draw through the public frontend and require one authoritative settled result.
+                    page.locator('[data-draw]').click(); page.locator('[data-deal]:not([disabled])').wait_for(timeout=10000); assert page.get_by_test_id('double-bonus-video-poker-result').is_visible(); localized_evidence('settled',['settled'])
+                    # Capture the stable terminal table under reduced-motion media emulation.
+                    page.emulate_media(reduced_motion='reduce'); localized_evidence('reduced-motion',['settled','reduced_motion'])
+                    # Reload the canonical game route and require restored player-owned terminal state.
+                    page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('double-bonus-video-poker').wait_for(timeout=5000); page.locator('[data-deal]:not([disabled])').wait_for(timeout=5000); localized_evidence('route-restored',['settled','route_restored'])
+                    # Return to the lobby for downstream browser cases.
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Execute the integrated Double Bonus browser and governed visual gate.
+                run_case('BR-DBVP-001',['DBVP-001','DBVP-002','TEST-114'],double_bonus_video_poker_acceptance)
+                # Define real-backend Mississippi Stud localization, progressive-reveal, settlement, motion, and route acceptance.
+                def mississippi_stud_acceptance():
+                    # Open the catalog-owned route and wait for the stable game selector.
+                    page.get_by_test_id('nav-mississippi_stud').click(); page.get_by_test_id('mississippi-stud').wait_for(timeout=5000)
+                    # Enumerate every viewport governed by the Mississippi Stud visual-matrix row.
+                    required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
+                    # Load exact UTF-8 expectations from both canonical locale resources.
+                    resources={locale:read_i18n_json(ROOT/'web'/'i18n'/locale/'games'/'mississippi_stud.json') for locale in ('en-US','ru-RU')}
+                    # Capture one mounted state across both locales and every governed viewport.
+                    def localized_evidence(prefix,states,expected_street=None,expected_revealed=None):
+                        # Iterate through paired English and Russian resources without discarding the active round.
+                        for locale in ('en-US','ru-RU'):
+                            # Switch the shared locale and wait for the game-owned rerender.
+                            page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_timeout(100)
+                            # Require exact localized phase copy rather than fallback keys or stale English.
+                            if expected_street is None and 'ready' in states:
+                                # Pin the ready prompt before the ledger-backed deal.
+                                assert page.get_by_test_id('mississippi-stud-result').inner_text()==resources[locale]['result.idle']
+                            elif expected_street is not None:
+                                # Pin the localized street label for the current progressive reveal.
+                                assert page.locator('.ms-street').inner_text()==resources[locale]['label.street'].replace('{street}',str(expected_street))
+                            else:
+                                # Require one localized terminal outcome after the authoritative settlement.
+                                assert any(page.get_by_test_id('mississippi-stud-result').inner_text().startswith(resources[locale][f'outcome.{outcome}']) for outcome in ('win','push','lose'))
+                            # Validate containment, visible controls, and after-pass evidence at each exact viewport.
+                            for viewport_id,width,height in required_viewports:
+                                # Resize to the registered evidence dimensions.
+                                page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
+                                # Collect document-fit and fixed-feedback overlap geometry for native controls and rendered text ranges.
+                                card_geometry=page.evaluate("() => { const button=document.querySelector('.report-problem-fab:not([hidden])'); const fixed=button?.getBoundingClientRect(); const hits=[]; const intersects=rect=>fixed&&rect.left<fixed.right&&rect.right>fixed.left&&rect.top<fixed.bottom&&rect.bottom>fixed.top; for(const node of document.querySelectorAll('.msstud input,.msstud button')){if(intersects(node.getBoundingClientRect()))hits.push(`${node.tagName.toLowerCase()}.${node.className}`);} for(const node of document.querySelectorAll('.msstud h3,.msstud h4,.msstud label,.msstud .ms-pays span,.msstud .ms-street,.msstud .ms-result')){const range=document.createRange(); range.selectNodeContents(node); if([...range.getClientRects()].some(intersects))hits.push(`${node.tagName.toLowerCase()}:${node.textContent.trim()}`);} const root=document.querySelector('.msstud')?.getBoundingClientRect(); return {documentFits:document.documentElement.scrollWidth<=window.innerWidth+1,feedbackOverlaps:hits.length,overlapIdentities:hits,readableInlineSize:Math.round(root?.width||0)}; }")
+                                # Collect mounted-content predicates separately from responsive geometry.
+                                mounted_geometry={'gameVisible':page.get_by_test_id('mississippi-stud').is_visible(),'paytableRows':page.locator('.ms-pays div').count(),'paytableVisible':page.locator('.ms-pays').is_visible(),'communityCards':page.locator('.ms-row').nth(1).locator('.playing-card').count() if page.locator('.ms-row').count()>1 else 0}
+                                # Reject page overflow, fixed-feedback occlusion, narrow slivers, and incomplete mounted state with exact diagnostics.
+                                assert card_geometry['documentFits'] and card_geometry['feedbackOverlaps']==0 and card_geometry['readableInlineSize']>=300 and mounted_geometry['gameVisible'] and mounted_geometry['paytableRows']==9 and mounted_geometry['paytableVisible'] and (expected_revealed is None or mounted_geometry['communityCards']==expected_revealed),{'cardGeometry':card_geometry,'mountedGeometry':mounted_geometry,'locale':locale,'viewport':viewport_id}
+                                # Record self-describing exact-head evidence for this state and viewport.
+                                game_evidence(f'after-pass-mississippi-stud-{prefix}-{locale.lower()}-{viewport_id}.png','mississippi_stud',states,locale,viewport_id)
+                        # Restore English desktop controls for the next public action.
+                        page.get_by_test_id('shell-locale-select').select_option('en-US'); page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(100)
+                    # Capture the complete ready machine before the ledger-backed deal.
+                    localized_evidence('ready',['ready'])
+                    # Commit a bounded ante and deal through the public frontend.
+                    page.locator('[data-ante]').fill('1'); page.locator('[data-ante]').press('Tab'); page.locator('[data-deal]').click(); page.get_by_text('Street 1 of 3',exact=True).wait_for(timeout=10000)
+                    # Capture the first decision before any community card is exposed.
+                    localized_evidence('street-one-decision',['street_one_decision'],1,0)
+                    # Bet the first street and require exactly one revealed community card.
+                    page.locator('[data-bet="1"]').click(); page.get_by_text('Street 2 of 3',exact=True).wait_for(timeout=10000); localized_evidence('street-two-decision',['street_two_decision'],2,1)
+                    # Bet the second street and require exactly two revealed community cards.
+                    page.locator('[data-bet="1"]').click(); page.get_by_text('Street 3 of 3',exact=True).wait_for(timeout=10000); localized_evidence('street-three-decision',['street_three_decision'],3,2)
+                    # Settle through the public frontend and capture the complete terminal hand under reduced motion.
+                    page.locator('[data-bet="1"]').click(); page.locator('[data-deal]:not([disabled])').wait_for(timeout=10000); page.emulate_media(reduced_motion='reduce'); localized_evidence('settled-reduced-motion',['settled','reduced_motion'],None,3)
+                    # Reload the canonical route and require restored player-owned terminal state.
+                    page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('mississippi-stud').wait_for(timeout=5000); page.locator('[data-deal]:not([disabled])').wait_for(timeout=5000); localized_evidence('route-restored',['route_restored'],None,3)
+                    # Return to the lobby for downstream browser cases.
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Execute the integrated Mississippi Stud browser and governed visual gate.
+                run_case('BR-MSTUD-001',['MSTUD-001','MSTUD-002','TEST-115'],mississippi_stud_acceptance)
+                # Define real-backend Teen Patti localization, decision, settlement, privacy, motion, and route acceptance.
+                def teen_patti_acceptance():
+                    # Open the catalog-owned route and wait for the stable game selector.
+                    page.get_by_test_id('nav-teen_patti').click(); page.get_by_test_id('teen-patti').wait_for(timeout=5000)
+                    # Enumerate every viewport governed by the Teen Patti visual-matrix row.
+                    required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
+                    # Load exact UTF-8 expectations from both canonical locale resources.
+                    resources={locale:read_i18n_json(ROOT/'web'/'i18n'/locale/'games'/'teen_patti.json') for locale in ('en-US','ru-RU')}
+                    # Capture one mounted state across both locales and every governed viewport.
+                    def localized_evidence(prefix,states,expected_result_key=None,terminal_outcomes=(),expected_cards=None):
+                        # Iterate through paired English and Russian resources without discarding the active round.
+                        for locale in ('en-US','ru-RU'):
+                            # Switch the shared locale and wait for the game-owned rerender.
+                            page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_timeout(100)
+                            # Read the current localized result once for exact state classification.
+                            result_text=page.locator('.tp-result').inner_text()
+                            # Require exact ready or decision copy when the state has one fixed resource.
+                            if expected_result_key is not None:
+                                # Pin the expected localized resource rather than fallback keys or stale English.
+                                assert result_text.startswith(resources[locale][expected_result_key]),{'result':result_text,'expected':resources[locale][expected_result_key],'locale':locale}
+                            # Require one allowed localized authoritative terminal outcome when the result is deal-dependent.
+                            elif terminal_outcomes:
+                                # Match only canonical localized outcome prefixes before the appended hand and net details.
+                                assert any(result_text.startswith(resources[locale][f'outcome.{outcome}']) for outcome in terminal_outcomes),{'result':result_text,'outcomes':terminal_outcomes,'locale':locale}
+                            # Validate containment, visible controls, and after-pass evidence at each exact viewport.
+                            for viewport_id,width,height in required_viewports:
+                                # Resize to the registered evidence dimensions.
+                                page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
+                                # Collect document-fit and fixed-feedback overlap geometry for native controls and rendered text ranges.
+                                card_geometry=page.evaluate("() => { const button=document.querySelector('.report-problem-fab:not([hidden])'); const fixed=button?.getBoundingClientRect(); const hits=[]; const intersects=rect=>fixed&&rect.left<fixed.right&&rect.right>fixed.left&&rect.top<fixed.bottom&&rect.bottom>fixed.top; for(const node of document.querySelectorAll('.teenp input,.teenp button')){if(intersects(node.getBoundingClientRect()))hits.push(`${node.tagName.toLowerCase()}.${node.className}`);} for(const node of document.querySelectorAll('.teenp h3,.teenp h4,.teenp label,.teenp .tp-pays span,.teenp .tp-rank,.teenp .tp-result')){const range=document.createRange(); range.selectNodeContents(node); if([...range.getClientRects()].some(intersects))hits.push(`${node.tagName.toLowerCase()}:${node.textContent.trim()}`);} const root=document.querySelector('.teenp')?.getBoundingClientRect(); return {documentFits:document.documentElement.scrollWidth<=window.innerWidth+1,feedbackOverlaps:hits.length,overlapIdentities:hits,readableInlineSize:Math.round(root?.width||0)}; }")
+                                # Collect mounted-content predicates separately from responsive geometry.
+                                mounted_geometry={'gameVisible':page.get_by_test_id('teen-patti').is_visible(),'paytableRows':page.locator('.tp-pays div').count(),'paytableVisible':page.locator('.tp-pays').is_visible(),'rankingVisible':page.locator('.tp-rank').is_visible(),'cards':page.locator('.teenp .playing-card').count()}
+                                # Reject page overflow, fixed-feedback occlusion, narrow slivers, incomplete references, and wrong privacy state with exact diagnostics.
+                                assert card_geometry['documentFits'] and card_geometry['feedbackOverlaps']==0 and card_geometry['readableInlineSize']>=300 and mounted_geometry['gameVisible'] and mounted_geometry['paytableRows']==3 and mounted_geometry['paytableVisible'] and mounted_geometry['rankingVisible'] and (expected_cards is None or mounted_geometry['cards']==expected_cards),{'cardGeometry':card_geometry,'mountedGeometry':mounted_geometry,'locale':locale,'viewport':viewport_id}
+                                # Record self-describing exact-head evidence for this state and viewport.
+                                game_evidence(f'after-pass-teen-patti-{prefix}-{locale.lower()}-{viewport_id}.png','teen_patti',states,locale,viewport_id)
+                        # Restore English desktop controls for the next public action.
+                        page.get_by_test_id('shell-locale-select').select_option('en-US'); page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(100)
+                    # Capture the complete ready table before the ledger-backed deal.
+                    localized_evidence('ready',['ready'],'result.idle',expected_cards=0)
+                    # Commit a bounded ante and deal through the public frontend.
+                    page.locator('[data-ante]').fill('1'); page.locator('[data-ante]').press('Tab'); page.locator('[data-deal]').click(); page.locator('[data-play]:not([disabled])').wait_for(timeout=10000)
+                    # Capture the private decision state with exactly three player cards and no dealer reveal.
+                    localized_evidence('decision',['decision'],'result.decide',expected_cards=3)
+                    # Play through the public action and require a complete six-card showdown.
+                    page.locator('[data-play]').click(); page.locator('[data-deal]:not([disabled])').wait_for(timeout=10000); localized_evidence('play-settled',['play_settled'],terminal_outcomes=('player_win','dealer_win','push','dealer_not_qualified'),expected_cards=6)
+                    # Deal another round and fold through the public action without exposing the dealer.
+                    page.locator('[data-deal]').click(); page.locator('[data-fold]:not([disabled])').wait_for(timeout=10000); page.locator('[data-fold]').click(); page.locator('[data-deal]:not([disabled])').wait_for(timeout=10000); localized_evidence('folded',['folded'],'outcome.folded',expected_cards=3)
+                    # Complete a real showdown with reduced motion enabled.
+                    page.emulate_media(reduced_motion='reduce'); page.locator('[data-deal]').click(); page.locator('[data-play]:not([disabled])').wait_for(timeout=10000); page.locator('[data-play]').click(); page.locator('[data-deal]:not([disabled])').wait_for(timeout=10000); localized_evidence('reduced-motion',['reduced_motion'],terminal_outcomes=('player_win','dealer_win','push','dealer_not_qualified'),expected_cards=6)
+                    # Reload the canonical game route and require restored player-owned terminal state.
+                    page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('teen-patti').wait_for(timeout=5000); page.locator('[data-deal]:not([disabled])').wait_for(timeout=5000); localized_evidence('route-restored',['route_restored'],terminal_outcomes=('player_win','dealer_win','push','dealer_not_qualified'),expected_cards=6)
+                    # Return to the lobby for downstream browser cases.
+                    page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Execute the integrated Teen Patti browser and governed visual gate.
+                run_case('BR-TEEN-PATTI-001',['TEENP-001','TEENP-002','TEST-116'],teen_patti_acceptance)
                 # Define registered Texas Hold'em localization, streets, settlement, motion, and route acceptance.
                 def texas_holdem_practice_acceptance():
                     # Open the catalog-owned route and wait for the stable table selector.
@@ -6294,10 +6632,20 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     assert_no_visible_roulette_keys()
                     # Verify localized Roulette amounts retain explicit fake-money language without the legacy glyph.
                     assert '\u0438\u0433\u0440\u043e\u0432\u044b\u0445 \u0442\u043e\u043a\u0435\u043d\u043e\u0432' in page.get_by_test_id('roulette-premium').inner_text()
+                    # Require grammatical Russian range prepositions on both outside-bet controls.
+                    assert '\u043e\u0442 1 \u0434\u043e 18' in page.get_by_test_id('roulette-premium').inner_text() and '\u043e\u0442 19 \u0434\u043e 36' in page.get_by_test_id('roulette-premium').inner_text()
                     # Verify shared keyboard scroll semantics survive the localized game rerender.
                     assert page.get_by_test_id('roulette-control-rail').get_attribute('tabindex')=='0'
+                    # Focus the real spin action, move away, and return by keyboard so focus-visible modality is genuine.
+                    page.get_by_test_id('roulette-spin').focus(); page.keyboard.press('Shift+Tab'); page.keyboard.press('Tab')
+                    # Read the actual keyboard-selected control and computed shared fallback outline.
+                    roulette_focus=page.evaluate("""() => { const active=document.activeElement; const style=getComputedStyle(active); return {testid:active?.getAttribute('data-testid'),visible:active?.matches(':focus-visible')||false,width:parseFloat(style.outlineWidth)||0,offset:parseFloat(style.outlineOffset)||0}; }""")
+                    # Require the route without a game-owned focus rule to receive the shared high-contrast fallback.
+                    assert roulette_focus=={'testid':'roulette-spin','visible':True,'width':3,'offset':2},roulette_focus
+                    # Record exact-head evidence of the fallback on a real localized game control.
+                    game_evidence('after-pass-game-polish-focus-roulette-ru-RU-desktop_primary.png','roulette',['betting','keyboard_focus'],'ru-RU','desktop_primary')
                 # Execute this statement as part of the module's documented control flow.
-                run_case('BR-I18N-GAMESTATE-ROU-001',['I18N-001','I18N-002','ROU-046'],roulette_i18n_state)
+                run_case('BR-I18N-GAMESTATE-ROU-001',['I18N-001','I18N-002','I18N-010','ROU-046','TEST-117'],roulette_i18n_state)
                 # Capture the authoritative backend spin response while using the visible Roulette action.
                 with page.expect_response(lambda response: response.url.endswith('/api/v1/games/roulette/spin') and response.request.method == 'POST') as roulette_spin_response_info:
                     # Spin the wheel through the dominant Roulette UI action.
@@ -6588,8 +6936,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.reload(wait_until='networkidle'); page.get_by_test_id('slots-payline').wait_for(timeout=5000)
                     # Define a browser-side audit that compares every rendered SVG point with its actual cell center in screen coordinates.
                     def audit_payline_geometry():
-                        # Bring the bounded reel grid into the viewport so elementFromPoint can test symbol identity instead of returning null for off-screen coordinates.
-                        page.get_by_test_id('slot-grid').scroll_into_view_if_needed()
+                        # Center the bounded reel grid so fixed shell actions cannot mask symbol identity during elementFromPoint checks.
+                        page.get_by_test_id('slot-grid').evaluate("grid => grid.scrollIntoView({block:'center',inline:'nearest'})")
                         # Let ResizeObserver and requestAnimationFrame finish the current responsive or zoom alignment.
                         page.wait_for_timeout(120)
                         # Return exact geometry, identity, style, accessibility, and containment diagnostics for all twenty paths.
@@ -6622,8 +6970,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             payline_visible_text=page.get_by_test_id('slots-premium').inner_text(); payline_result_text=page.get_by_test_id('slots-result').inner_text(); payline_history_text=page.get_by_test_id('slots-recent-spins').inner_text()
                             # Normalize locale separators while retaining every visible digit needed for the exact payout comparison.
                             payline_result_digits=''.join(character for character in payline_result_text if character.isdigit()); payline_history_digits=''.join(character for character in payline_history_text if character.isdigit())
-                            # Require the first three detailed lines, the remaining-win count, total payout, and round history to agree with the engine outcome.
-                            line_word='Line' if locale=='en-US' else 'Линия'; assert all(f'{line_word} {number}' in payline_result_text for number in (1,2,3)) and '17' in payline_result_text and str(int(payline_spin['payout'])) in payline_result_digits and payline_spin['round_id'] in payline_history_text and str(int(payline_spin['payout'])) in payline_history_digits
+                            # Require the first three detailed lines, the remaining-win count, and total payout to agree with the engine outcome.
+                            line_word='Line' if locale=='en-US' else 'Линия'; history_lines_word='lines' if locale=='en-US' else 'линий'; assert all(f'{line_word} {number}' in payline_result_text for number in (1,2,3)) and '17' in payline_result_text and str(int(payline_spin['payout'])) in payline_result_digits and f"{payline_spin['active_lines']} {history_lines_word}" in payline_history_text and payline_spin['round_id'] not in payline_history_text and str(int(payline_spin['payout'])) in payline_history_digits
                             # Reject any resource-key leakage from the localized accessible or visible result treatment.
                             assert all(key not in payline_visible_text for key in ('payline.overlayLabel','payline.pathLabel','result.lineWin'))
                             # Capture the complete governed game surface for exact-head acceptance review.
@@ -6643,7 +6991,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Restore the default media preference and route state for the existing Slots regression sequence.
                     page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('slots-payline').wait_for(timeout=5000); require_payline_acceptance(audit_payline_geometry())
                 # Execute the payline-to-reel alignment regression.
-                run_case('BR-SLOTS-PAYLINE-001',['SLOT-029','TEST-077'],slots_payline_alignment)
+                run_case('BR-SLOTS-PAYLINE-001',['SLOT-029','I18N-010','TEST-077','TEST-117'],slots_payline_alignment)
                 # Define the focused line-bet regression using real visible controls and backend requests.
                 def slots_line_bet_validation():
                     # Track only Slots spin requests so input edits can prove they never move tokens by themselves.
@@ -6750,6 +7098,20 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     assert slots_state_pill.count()==1 and slots_state_pill.get_attribute('role')=='status' and page.locator('.slots-cabinet-footer button.primary').count()==0
                     # Verify recent spins are shown in the right drawer.
                     assert page.get_by_test_id('slots-recent-spins').is_visible()
+                    # Read the authoritative latest round so its internal identifier can be rejected from rendered history.
+                    slots_latest=page.request.get(base+'/api/v1/games/slots/state').json()['data']['state']['last_spins'][-1]
+                    # Exercise the privacy-safe history row in both installed locales.
+                    for locale in ('en-US','ru-RU'):
+                        # Switch the mounted cabinet through the public locale control.
+                        page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_timeout(100)
+                        # Read the localized history after the route rerenders.
+                        slots_history_text=page.get_by_test_id('slots-recent-spins').inner_text()
+                        # Require the visible row to retain line count while hiding the raw durable round identifier.
+                        assert slots_latest['round_id'] not in slots_history_text and str(slots_latest['active_lines']) in slots_history_text,slots_history_text
+                        # Record focused exact-head evidence for the privacy-safe localized drawer.
+                        game_evidence(f'after-pass-game-polish-slots-{locale}-desktop_primary.png','slots',['idle'],locale,'desktop_primary')
+                    # Restore English before downstream game navigation.
+                    page.get_by_test_id('shell-locale-select').select_option('en-US'); page.wait_for_timeout(100)
                     # Verify the Slots bot capability panel is reserved.
                     assert page.get_by_test_id('slots-bot-panel').is_visible()
                     # Verify the cabinet width stays stable from idle to spinning.
@@ -6767,7 +7129,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Verify the premium Slots route avoids page-level horizontal overflow.
                     assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1')
                 # Execute this statement as part of the module's documented control flow.
-                run_case('BR-SLOT-001',['SLOT-020','SLOT-021','SLOT-022','SLOT-023','SLOT-024','SLOT-025','SLOT-026','SLOT-027','SLOT-028','TEST-064','AUTO-010','LEDGER-025','UX-007','UX-009'],premium_slots)
+                run_case('BR-SLOT-001',['SLOT-020','SLOT-021','SLOT-022','SLOT-023','SLOT-024','SLOT-025','SLOT-026','SLOT-027','SLOT-028','I18N-010','TEST-064','TEST-117','AUTO-010','LEDGER-025','UX-007','UX-009'],premium_slots)
                 # Navigate to Keno and wait for the premium route shell to mount.
                 page.get_by_test_id('nav-keno').click(); page.get_by_test_id('keno-premium-hero').wait_for(timeout=5000)
                 # Prove edge number cells and their state treatments stay inside the visible board bounds instead of being clipped. (issue #320)
@@ -6816,8 +7178,10 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1')
                             # Bring the bounded game surface into view before capturing the real idle state.
                             page.locator('.keno-premium').scroll_into_view_if_needed()
+                            # Use a bounded board crop on desktop because the shared game-outlet scrollport cannot paint an offscreen full-route locator without transparent padding.
+                            edge_board_evidence_selector='[data-testid="keno-board-scroll"]' if edge_viewport_id in ('desktop_primary','desktop_compact') else '.keno-premium'
                             # Record self-describing idle evidence for this exact locale and viewport.
-                            region_evidence(f'after-pass-keno-edge-idle-{edge_locale.lower()}-{edge_viewport_id}.png','.keno-premium','keno',['edge_idle'],edge_locale,edge_viewport_id)
+                            region_evidence(f'after-pass-keno-edge-idle-{edge_locale.lower()}-{edge_viewport_id}.png',edge_board_evidence_selector,'keno',['edge_idle'],edge_locale,edge_viewport_id)
                             # Select all four corner cells through the same public controls used by a player.
                             for edge_number in (1,10,71,80): page.get_by_test_id(f'keno-num-{edge_number}').click()
                             # Start keyboard traversal from the named board region so the first corner receives true focus-visible state.
@@ -6829,21 +7193,39 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             # Require every intended corner selection to survive rerenders before evidence capture.
                             assert all(page.get_by_test_id(f'keno-num-{edge_number}').get_attribute('aria-pressed')=='true' for edge_number in (1,10,71,80))
                             # Record selected and focus-visible evidence from the real public controls.
-                            region_evidence(f'after-pass-keno-edge-selected-focus-{edge_locale.lower()}-{edge_viewport_id}.png','.keno-premium','keno',['edge_selected_focus_visible'],edge_locale,edge_viewport_id)
+                            region_evidence(f'after-pass-keno-edge-selected-focus-{edge_locale.lower()}-{edge_viewport_id}.png',edge_board_evidence_selector,'keno',['edge_selected_focus_visible'],edge_locale,edge_viewport_id)
                             # Persist one deterministic final draw so caught/latest state does not depend on random outcomes.
                             save_player_game_state('keno',edge_player,final_edge_state)
                             # Reconstruct the route from authoritative history and wait for all twenty final balls.
                             page.reload(wait_until='networkidle'); page.get_by_test_id('keno-premium-hero').wait_for(timeout=5000); page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale",arg=edge_locale); page.wait_for_function("() => document.querySelectorAll('[data-testid=\"keno-drawn-ball\"]').length === 20",timeout=5000)
                             # Require the seeded result to render every draw plus the caught/latest bottom-right edge cell.
                             assert page.locator('.keno-num.drawn').count()==20 and page.locator('.keno-num.catch').count()==1 and page.get_by_test_id('keno-num-80').evaluate("cell => cell.classList.contains('catch') && cell.classList.contains('latest')")
+                            # Measure the completed drawn-ball rail before scrolling so internal overflow cannot masquerade as clipped page content.
+                            rail_probe=page.get_by_test_id('keno-drawn-balls').evaluate("""rail => { const style=getComputedStyle(rail); const box=rail.getBoundingClientRect(); const owner=rail.closest('.keno-stage-panel')?.getBoundingClientRect(); const last=rail.querySelector('[data-testid="keno-drawn-ball"]:last-child')?.getBoundingClientRect(); return {clientWidth:rail.clientWidth,scrollWidth:rail.scrollWidth,scrollLeft:rail.scrollLeft,maxScrollLeft:rail.scrollWidth-rail.clientWidth,minWidth:style.minWidth,maxWidth:style.maxWidth,overflowX:style.overflowX,overflowY:style.overflowY,tabindex:rail.getAttribute('tabindex'),role:rail.getAttribute('role'),label:rail.getAttribute('aria-label'),box:{left:box.left,right:box.right},owner:owner&&{left:owner.left,right:owner.right},last:last&&{left:last.left,right:last.right}}; }""")
+                            # Require one named keyboard-reachable horizontal owner bounded inside the stage whether this viewport needs overflow or fits all balls.
+                            assert rail_probe['minWidth']=='0px' and rail_probe['overflowX'] in ('auto','scroll') and rail_probe['overflowY']=='hidden' and rail_probe['tabindex']=='0' and rail_probe['role']=='region' and rail_probe['label'],rail_probe
+                            # Keep the rail itself inside its clipping ancestor before distinguishing already-visible content from genuine internal overflow.
+                            assert rail_probe['owner'] and rail_probe['box']['left']>=rail_probe['owner']['left']-1 and rail_probe['box']['right']<=rail_probe['owner']['right']+1,rail_probe
+                            # Record whether the rendered locale and viewport genuinely need the rail's horizontal scroll range.
+                            rail_overflows=rail_probe['scrollWidth']>rail_probe['clientWidth']+1
+                            # Require overflowing content to own a positive range; otherwise require the final ball to be fully visible without scrolling.
+                            assert (rail_overflows and rail_probe['maxScrollLeft']>0 and rail_probe['last']['right']>rail_probe['box']['right']) or (not rail_overflows and rail_probe['maxScrollLeft']<=1 and rail_probe['last']['left']>=rail_probe['box']['left']-1 and rail_probe['last']['right']<=rail_probe['box']['right']+1),rail_probe
+                            # Scroll through the public region to the terminal edge and prove the final ball becomes fully reachable.
+                            page.get_by_test_id('keno-drawn-balls').evaluate('rail => { rail.scrollLeft=rail.scrollWidth; rail.focus({preventScroll:true}); }')
+                            # Read the terminal geometry and focus state after the browser commits the scroll position.
+                            rail_terminal=page.get_by_test_id('keno-drawn-balls').evaluate("""rail => { const box=rail.getBoundingClientRect(); const last=rail.querySelector('[data-testid="keno-drawn-ball"]:last-child')?.getBoundingClientRect(); return {scrollLeft:rail.scrollLeft,focused:document.activeElement===rail,box:{left:box.left,right:box.right},last:last&&{left:last.left,right:last.right}}; }""")
+                            # Require the final ball to remain visible when everything fits or become visible at the terminal internal-scroll edge.
+                            assert rail_terminal['focused'] and ((rail_overflows and rail_terminal['scrollLeft']>0) or (not rail_overflows and rail_terminal['scrollLeft']<=1)) and rail_terminal['last']['left']>=rail_terminal['box']['left']-1 and rail_terminal['last']['right']<=rail_terminal['box']['right']+1,rail_terminal
                             # Reveal the right edge through the intended board scroller before final-state capture.
                             page.get_by_test_id('keno-board-scroll').evaluate('scroll => { scroll.scrollLeft=scroll.scrollWidth; }')
+                            # Capture the result rail itself on desktop so the outer game-outlet scrollport cannot pad or hide the exact terminal edge under review.
+                            edge_final_evidence_selector='[data-testid="keno-drawn-balls"]' if edge_viewport_id in ('desktop_primary','desktop_compact') else '.keno-premium'
                             # Record final-draw and caught/latest evidence for this exact locale and viewport.
-                            region_evidence(f'after-pass-keno-edge-final-caught-{edge_locale.lower()}-{edge_viewport_id}.png','.keno-premium','keno',['edge_final_caught'],edge_locale,edge_viewport_id)
+                            region_evidence(f'after-pass-keno-edge-final-caught-{edge_locale.lower()}-{edge_viewport_id}.png',edge_final_evidence_selector,'keno',['edge_final_caught'],edge_locale,edge_viewport_id)
                     # Restore an empty English desktop route so the existing real-draw regression remains independent.
                     save_player_game_state('keno',edge_player,empty_edge_state); page.set_viewport_size({'width':1920,'height':1080}); page.reload(wait_until='networkidle'); page.get_by_test_id('keno-premium-hero').wait_for(timeout=5000); page.get_by_test_id('shell-locale-select').select_option('en-US'); page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'en-US'")
                 # Execute the Keno edge-containment geometry regression.
-                run_case('BR-KENO-EDGE-001',['KENO-025','TEST-078'],keno_edge_containment)
+                run_case('BR-KENO-EDGE-001',['KENO-025','KENO-026','TEST-078','TEST-113'],keno_edge_containment)
                 # Select ten deterministic spots so paytable comparison has a stable row.
                 for spot in [3,8,12,17,24,31,44,55,63,72]: page.get_by_test_id(f'keno-num-{spot}').click()
                 # Store the spot-selection board box for stability assertions.
@@ -7080,6 +7462,20 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.get_by_test_id('nav-baccarat').click()
                 # Wait for the wager setup state to mount.
                 page.get_by_test_id('baccarat-wager-setup').wait_for(timeout=5000)
+                # Switch the idle table to Russian so the corrected shoe terminology is exact-head browser evidence.
+                page.get_by_test_id('shell-locale-select').select_option('ru-RU'); page.wait_for_timeout(100)
+                # Define the focused Russian Baccarat copy regression before gameplay changes the visible status list.
+                def baccarat_polish_copy():
+                    # Read the complete mounted table so borrowed English terms cannot hide in a secondary status panel.
+                    russian_baccarat_text=page.locator('.bac-shell').inner_text()
+                    # Require the complete localized burn-card wording and reject the former mixed-language token.
+                    assert '\u0412\u0438\u0434\u043d\u0430 \u0441\u0436\u0438\u0433\u0430\u0435\u043c\u0430\u044f \u043a\u0430\u0440\u0442\u0430' in russian_baccarat_text and ' burn' not in russian_baccarat_text
+                    # Record the exact idle-state copy at primary desktop for governed human review.
+                    game_evidence('after-pass-game-polish-baccarat-ru-RU-desktop_primary.png','baccarat',['wagering'],'ru-RU','desktop_primary')
+                # Execute the locale-owned wording check before returning to English gameplay.
+                run_case('BR-BAC-COPY-001',['BAC-020','I18N-010','TEST-117'],baccarat_polish_copy)
+                # Restore English so established Baccarat assertions retain their deterministic labels.
+                page.get_by_test_id('shell-locale-select').select_option('en-US'); page.wait_for_timeout(100)
                 # Read the fresh shoe summary before any wager/deal builds the lazy backend shoe. (BAC-025, TEST-062)
                 baccarat_initial_shoe_text=page.get_by_test_id('baccarat-shoe-summary').inner_text()
                 # Define the focused fresh-shoe display regression for issue #249.

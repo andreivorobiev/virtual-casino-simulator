@@ -826,6 +826,12 @@ label {
   outline-offset: -4px;
 }
 
+/* Provide a zero-specificity keyboard focus ring for any in-game control that does not define its own, so every game route stays keyboard-legible on the dark felt. Wrapped in :where() so any game-owned :focus-visible rule still wins. */
+:where(#view.screen.game-screen button, #view.screen.game-screen input, #view.screen.game-screen select, #view.screen.game-screen [tabindex]):focus-visible {
+  outline: 3px solid #ffd780;
+  outline-offset: 2px;
+}
+
 /* Preserve Roulette's tested desktop three-panel table layout while other game routes use the outlet scroll. */
 #view.screen.game-screen:has(.roulette-premium) {
   overflow: hidden;
@@ -3344,6 +3350,23 @@ h3 {
   .status-bar .status-item:nth-child(3),
   .status-bar .status-item:nth-child(4) {
     display: none;
+  }
+}
+
+@media (min-width: 901px) and (max-width: 1200px) {
+  /* Keep the scalable route catalog on one native horizontal rail after the thirty-second game is installed,
+     preserving bounded tablet outlet height for game content and fixed shell utilities. (CORE-006, UX-013) */
+  .casino-nav {
+    display: flex;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  /* Size every tablet route control to its complete label while the rail owns horizontal overflow. */
+  .nav-item,
+  .nav-item.admin {
+    flex: 0 0 auto;
+    min-width: 96px;
   }
 }
 

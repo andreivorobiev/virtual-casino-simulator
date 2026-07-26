@@ -17,7 +17,7 @@
     "android",
     "ios"
   ],
-  "catalog_game_count": 42,
+  "catalog_game_count": 46,
   "action_source": "state-changing operations in each module-owned OpenAPI v1 contract",
   "protected_fields": [
     "user_id",
@@ -1453,6 +1453,46 @@
       ]
     },
     {
+      "game_id": "pai_gow_poker",
+      "contract": "contracts/openapi/pai_gow_poker.v1.yaml",
+      "actions": [
+        {
+          "method": "POST",
+          "path": "/api/v1/games/pai-gow-poker/rounds",
+          "client_intent": "openapi_request_schema_and_path_choices_only",
+          "server_validation": "authenticated_route_and_game_service",
+          "engine_outcome": "server_game_engine",
+          "storage_transaction": "storage_and_ledger_when_financial",
+          "response_projection": "server_authoritative_projection"
+        },
+        {
+          "method": "POST",
+          "path": "/api/v1/games/pai-gow-poker/rounds/{round_id}/decisions",
+          "client_intent": "openapi_request_schema_and_path_choices_only",
+          "server_validation": "authenticated_route_and_game_service",
+          "engine_outcome": "server_game_engine",
+          "storage_transaction": "storage_and_ledger_when_financial",
+          "response_projection": "server_authoritative_projection"
+        }
+      ],
+      "assurances": [
+        "raw_api_mutation",
+        "cross_user_isolation",
+        "legal_action_and_turn",
+        "rng_outcome_and_payout",
+        "wallet_and_ledger",
+        "replay_conflict_lost_response_restart",
+        "concurrency",
+        "admin_authority",
+        "client_tamper_refresh"
+      ],
+      "evidence": [
+        "tests/games/pai_gow_poker/test_api.py",
+        "tests/run_tests.py",
+        "tests/storage_tests.py"
+      ]
+    },
+    {
       "game_id": "poker_dice",
       "contract": "contracts/openapi/poker_dice.v1.yaml",
       "actions": [
@@ -1778,6 +1818,126 @@
         {
           "method": "POST",
           "path": "/api/v1/games/four-card-poker/rounds/{round_id}/decisions",
+          "client_intent": "openapi_request_schema_and_path_choices_only",
+          "server_validation": "authenticated_route_and_game_service",
+          "engine_outcome": "server_game_engine",
+          "storage_transaction": "storage_and_ledger_when_financial",
+          "response_projection": "server_authoritative_projection"
+        }
+      ],
+      "assurances": [
+        "raw_api_mutation",
+        "cross_user_isolation",
+        "legal_action_and_turn",
+        "rng_outcome_and_payout",
+        "wallet_and_ledger",
+        "replay_conflict_lost_response_restart",
+        "concurrency",
+        "admin_authority",
+        "client_tamper_refresh"
+      ],
+      "evidence": [
+        "tests/run_tests.py",
+        "tests/run_tests.py",
+        "tests/storage_tests.py"
+      ]
+    },
+    {
+      "game_id": "double_bonus_video_poker",
+      "contract": "contracts/openapi/double_bonus_video_poker.v1.yaml",
+      "actions": [
+        {
+          "method": "POST",
+          "path": "/api/v1/games/double-bonus-video-poker/rounds",
+          "client_intent": "openapi_request_schema_and_path_choices_only",
+          "server_validation": "authenticated_route_and_game_service",
+          "engine_outcome": "server_game_engine",
+          "storage_transaction": "storage_and_ledger_when_financial",
+          "response_projection": "server_authoritative_projection"
+        },
+        {
+          "method": "POST",
+          "path": "/api/v1/games/double-bonus-video-poker/rounds/{round_id}/decisions",
+          "client_intent": "openapi_request_schema_and_path_choices_only",
+          "server_validation": "authenticated_route_and_game_service",
+          "engine_outcome": "server_game_engine",
+          "storage_transaction": "storage_and_ledger_when_financial",
+          "response_projection": "server_authoritative_projection"
+        }
+      ],
+      "assurances": [
+        "raw_api_mutation",
+        "cross_user_isolation",
+        "legal_action_and_turn",
+        "rng_outcome_and_payout",
+        "wallet_and_ledger",
+        "replay_conflict_lost_response_restart",
+        "concurrency",
+        "admin_authority",
+        "client_tamper_refresh"
+      ],
+      "evidence": [
+        "tests/run_tests.py",
+        "tests/run_tests.py",
+        "tests/storage_tests.py"
+      ]
+    },
+    {
+      "game_id": "mississippi_stud",
+      "contract": "contracts/openapi/mississippi_stud.v1.yaml",
+      "actions": [
+        {
+          "method": "POST",
+          "path": "/api/v1/games/mississippi-stud/rounds",
+          "client_intent": "openapi_request_schema_and_path_choices_only",
+          "server_validation": "authenticated_route_and_game_service",
+          "engine_outcome": "server_game_engine",
+          "storage_transaction": "storage_and_ledger_when_financial",
+          "response_projection": "server_authoritative_projection"
+        },
+        {
+          "method": "POST",
+          "path": "/api/v1/games/mississippi-stud/rounds/{round_id}/decisions",
+          "client_intent": "openapi_request_schema_and_path_choices_only",
+          "server_validation": "authenticated_route_and_game_service",
+          "engine_outcome": "server_game_engine",
+          "storage_transaction": "storage_and_ledger_when_financial",
+          "response_projection": "server_authoritative_projection"
+        }
+      ],
+      "assurances": [
+        "raw_api_mutation",
+        "cross_user_isolation",
+        "legal_action_and_turn",
+        "rng_outcome_and_payout",
+        "wallet_and_ledger",
+        "replay_conflict_lost_response_restart",
+        "concurrency",
+        "admin_authority",
+        "client_tamper_refresh"
+      ],
+      "evidence": [
+        "tests/run_tests.py",
+        "tests/run_tests.py",
+        "tests/storage_tests.py"
+      ]
+    },
+    {
+      "game_id": "teen_patti",
+      "contract": "contracts/openapi/teen_patti.v1.yaml",
+      "actions": [
+        {
+          "method": "POST",
+          "path": "/api/v1/games/teen-patti/rounds",
+          "client_intent": "openapi_request_schema_and_path_choices_only",
+          "server_validation": "authenticated_route_and_game_service",
+          "engine_outcome": "server_game_engine",
+          "storage_transaction": "storage_and_ledger_when_financial",
+          "response_projection": "server_authoritative_projection"
+        },
+        {
+          "method": "POST",
+          "path": "/api/v1/games/teen-patti/rounds/{round_id}/decisions",
           "client_intent": "openapi_request_schema_and_path_choices_only",
           "server_validation": "authenticated_route_and_game_service",
           "engine_outcome": "server_game_engine",

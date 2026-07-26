@@ -1,0 +1,174 @@
+openapi: 3.0.3
+# Describe the additive issue-150 Teen Patti contract without changing existing v1 operations.
+info:
+  title: Virtual Casino Teen Patti API
+  version: v1
+  description: >-
+    Additive issue #150 contract for authenticated Teen Patti Practice play. The deal and decision commands
+    require independent action ids so retries reuse one round and each ante, play, or settlement movement
+    commits at most once in the local simulator.
+tags:
+  - name: Teen Patti
+    description: Player-scoped three-card dealer poker with a queen-high dealer qualification and ledger-only settlement.
+# Define only additive frozen-v1 game endpoints owned by this proposal slice.
+paths:
+  # Expose the player-scoped reload-safe state endpoint.
+  /api/v1/games/teen-patti/state:
+    get:
+      tags: [Teen Patti]
+      operationId: teenPattiState
+      summary: Read the authenticated player's reload-safe Teen Patti state
+      responses:
+        '200':
+          description: Current game state, fixed rules, and bound player
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StateEnvelope'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  # Deal or replay one ante round awaiting a play or fold.
+  /api/v1/games/teen-patti/rounds:
+    post:
+      tags: [Teen Patti]
+      operationId: teenPattiStartRound
+      summary: Deal or replay one ante round awaiting a play or fold
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartRoundRequest'
+      responses:
+        '200':
+          description: A prepared decision-ready round with private dealer cards withheld
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoundEnvelope'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  # Apply or replay one play-or-fold decision.
+  /api/v1/games/teen-patti/rounds/{round_id}/decisions:
+    post:
+      tags: [Teen Patti]
+      operationId: teenPattiDecision
+      summary: Play the fixed-ante wager or fold the active round
+      parameters:
+        - name: round_id
+          in: path
+          required: true
+          schema: {type: string, pattern: '^[A-Za-z0-9_-]+$'}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DecisionRequest'
+      responses:
+        '200':
+          description: A settled round revealing the dealer and the resolved outcome
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoundEnvelope'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+# Keep all request, response, and error shapes local to this contract.
+components:
+  responses:
+    ErrorResponse:
+      description: Standard bounded error envelope
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorEnvelope'
+  schemas:
+    # Require a caller-stable action identity and an ante.
+    StartRoundRequest:
+      type: object
+      additionalProperties: false
+      required: [action_id, ante]
+      properties:
+        action_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '^[A-Za-z0-9._:-]+$'
+        request_id:
+          type: string
+          description: Accepted alias for action_id for client convenience.
+        player_id:
+          type: string
+          description: Compatibility field overridden by the authenticated session-bound player resolver.
+        ante:
+          type: number
+          minimum: 0.01
+          maximum: 50000
+    # Require a caller-stable action identity and a decision.
+    DecisionRequest:
+      type: object
+      additionalProperties: false
+      required: [action_id, decision]
+      properties:
+        action_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '^[A-Za-z0-9._:-]+$'
+        request_id:
+          type: string
+          description: Accepted alias for action_id for client convenience.
+        player_id:
+          type: string
+          description: Compatibility field overridden by the authenticated session-bound player resolver.
+        decision:
+          type: string
+          enum: [play, fold]
+    # Specialize the standard success envelope for state reads.
+    StateEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/ApiSuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/GamePayload'
+    # Specialize the standard success envelope for deal and decision actions.
+    RoundEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/ApiSuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/GamePayload'
+    # Describe the common state, rules, player, and round payload.
+    GamePayload:
+      type: object
+      required: [game, state, player, rules]
+      properties:
+        game: {type: string, enum: [teen_patti]}
+        state: {type: object, description: Sanitized active and recent rounds with dealer cards hidden until showdown.}
+        player: {type: object, description: Current authenticated player's shared read-only wallet snapshot.}
+        rules: {type: object, description: Decisions, dealer qualification, Bonus paytable, and hand ranking.}
+        round: {type: object, description: The prepared or settled round, present on deal and decision responses.}
+        replayed: {type: boolean}
+    # Preserve the repository-wide success envelope contract.
+    ApiSuccessEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok: {type: boolean, enum: [true]}
+        data: {type: object}
+    # Preserve the repository-wide error envelope contract.
+    ApiErrorEnvelope:
+      type: object
+      required: [ok, error]
+      properties:
+        ok: {type: boolean, enum: [false]}
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: {type: string}
+            message: {type: string}
+            details: {type: object}

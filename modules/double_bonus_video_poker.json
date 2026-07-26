@@ -1,0 +1,17 @@
+{
+  "module": "double_bonus_video_poker",
+  "version": "1.0.0",
+  "paths": ["casino/games/double_bonus_video_poker/", "web/games/double_bonus_video_poker.js", "web/i18n/en-US/games/double_bonus_video_poker.json", "web/i18n/ru-RU/games/double_bonus_video_poker.json"],
+  "requirements_prefixes": ["DBVP"],
+  "contracts": ["contracts/openapi/double_bonus_video_poker.v1.yaml"],
+  "game": {
+    "id": "double_bonus_video_poker", "sort_order": 440, "route": "/games/double_bonus_video_poker", "label": "Double Bonus Video Poker", "category": "poker", "categories": ["poker", "reels", "strategy"],
+    "backend": {"register": "casino.games.double_bonus_video_poker.api:register"},
+    "frontend": {"module": "./games/double_bonus_video_poker.js", "export": "DoubleBonusVideoPokerGame", "ready_testid": "double-bonus-video-poker", "i18n_domain": "games/double_bonus_video_poker", "i18n_probe": "action.deal"},
+    "tests": {"long_driver": "tests.game_drivers.double_bonus_video_poker:play"},
+    "translations": {"ru-RU": {"label": "Double Bonus Видеопокер", "kicker": "Видеопокер", "description": "Одиночная раздача видеопокера 9/6 Double Bonus: ставка, раздача пяти карт, выбор оставляемых, добор и выплата по таблице с богатыми каре, серверной раздачей и расчётом через журнал жетонов."}},
+    "lobby": {"featured": false, "wide": false, "art_class": "double-bonus-video-poker-art", "symbol": "DB", "kicker": "Video poker", "description": "A single-hand 9/6 Double Bonus draw video poker: bet, get five cards, hold any, draw, and pay by a paytable that rewards four of a kind, with server-authoritative deals and ledger-backed settlement.", "tags": ["Poker", "Video poker", "Strategy", "Ledger-backed"]}
+  },
+  "depends_on": ["core", "ledger", "players"],
+  "may_not_depend_on": ["roulette", "slots", "blackjack", "baccarat", "keno", "bingo", "three_card_poker", "casino_holdem", "caribbean_stud"]
+}

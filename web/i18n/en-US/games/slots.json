@@ -37,7 +37,7 @@
   "history.empty": "No recent spins yet.",
   "history.free": "{count} free",
   "history.inProgress": "Spin in progress",
-  "history.row": "{id}, {lines} lines",
+  "history.row": "{lines} lines",
   "history.title": "Recent spins",
   "kicker": "Premium machine",
   "metrics.freeSpins": "Free spins",

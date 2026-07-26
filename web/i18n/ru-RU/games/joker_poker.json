@@ -37,7 +37,7 @@
   "outcomes.three_of_a_kind": "Тройка",
   "outcomes.two_pair": "Две пары",
   "outcomes.wild_royal_flush": "Роял-флеш с джокером",
-  "paytable.multiplier": "{value} к 1",
+  "paytable.multiplier": "возврат {value}×",
   "paytable.note": "Джокер считается дикой картой. Возврат жетонов проходит через реестр игровых жетонов.",
   "paytable.result": "Результат",
   "paytable.return": "Возврат",
