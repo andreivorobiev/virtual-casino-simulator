@@ -1,5 +1,9 @@
 # Premium Shell, Lobby, Admin Prerenders
 
+**Historical snapshot.** Records the proposal artifacts as captured for issue #7; the app and its
+game catalog have moved on since. For the current game set see `casino.config.GAMES` /
+`casino/games/`, and for current requirement state see `docs/requirements/requirements.json`.
+
 Issue: https://github.com/andreivorobiev/virtual-casino-simulator/issues/7
 
 Scope: proposal artifacts only. No production files under `web/`, `casino/`, `contracts/`, `tests/`, `docs/requirements/`, or `modules/` were edited.
@@ -26,7 +30,7 @@ Shared source styling lives in `premium-shell.css`. Local raster assets live und
 
 ## State Coverage
 
-- Lobby: all six current games, fake-money messaging, balance, ledger/status rail, bots/autoplay/stat tags.
+- Lobby: the six games that existed when this prerender was captured (Roulette, Slots, Keno, Bingo, Blackjack, Baccarat), fake-money messaging, balance, ledger/status rail, bots/autoplay/stat tags. The live catalog is now much larger; see `casino.config.GAMES`.
 - Shared shell: active Roulette route, human balance, round controls, autoplay readiness, reserved result area, action dock, right-side ledger/status rail.
 - Admin dashboard: app version, players, bots, active autoplay, errors, requirements, recent ledger, sessions, telemetry logs.
 - Admin Language/Locale: English/Russian selection, future language catalog, region/number/currency/date/fallback controls, browser persistence toggles, preview strings.

@@ -1,6 +1,8 @@
 # GitHub and Codex migration plan
 
-This repository is prepared to become the GitHub source of truth for the Virtual Casino Simulator.
+**Historical.** Records the plan as written for the 9.1.1 bootstrap; the migration is complete and the steps below are already done. Retained for provenance and archived at `docs/releases/app/9.1.1/github_codex_migration_plan.md`. For the current operating model see `AGENTS.md` and `CODEX_START_HERE.md`.
+
+This repository was prepared to become the GitHub source of truth for the Virtual Casino Simulator.
 
 ## Operating model
 
@@ -20,4 +22,4 @@ This repository is prepared to become the GitHub source of truth for the Virtual
 
 ## First Codex task
 
-Use `FIRST_PROMPT_FOR_CODEX.md`. The first task is repository bootstrap validation only.
+The bootstrap task was `FIRST_PROMPT_FOR_CODEX.md`, scoped to repository bootstrap validation only. It has been completed; a new agent starts from `CODEX_START_HERE.md` instead.

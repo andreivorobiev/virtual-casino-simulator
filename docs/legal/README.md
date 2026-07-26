@@ -1,6 +1,6 @@
 # Legal Docs
 
-Pending requirement IDs from issue #35: LIC-001, LIC-002, TERMS-001, TERMS-002, TERMS-003, TERMS-004.
+Requirements: LIC-001, LIC-002, TERMS-001, TERMS-002, TERMS-003, TERMS-004 (registered in `docs/requirements/requirements.json`, which is authoritative for their current status).
 
 This folder separates source-code licensing from private beta use of the running app.
 

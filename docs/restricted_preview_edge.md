@@ -10,7 +10,7 @@ The canonical machine-readable source is deploy/edge/restricted-preview.json. It
 
 - manual invitations are the only enrollment path;
 - public signup and live OAuth remain disabled;
-- readiness and Admin Operations require an authenticated Admin session or the root-managed monitor bearer token;
+- Admin Operations (`/api/v2/admin/operations`) requires an authenticated Admin session or the root-managed monitor bearer token; readiness (`/readyz`) requires an authenticated session or that bearer, but is not restricted to the Admin role — it sits outside the `/api/v1/admin/` and `/api/v2/admin/` prefixes that `auth.require_admin` gates (`casino/wsgi.py:238`), so any authenticated principal can read the readiness payload;
 - anonymous liveness exposes only the fixed live state;
 - Host, X-Forwarded-For, and X-Forwarded-Proto are replaced with edge-owned values; and
 - all other reviewed forwarding headers are cleared before the request reaches the application.

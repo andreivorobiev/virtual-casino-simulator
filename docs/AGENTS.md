@@ -4,9 +4,20 @@ Scope this Codex conversation to the `docs` module unless the task explicitly li
 
 ## Allowed areas
 
+The owned path set is declared by `modules/docs.json`; that descriptor is authoritative if this
+list ever drifts from it.
+
 - `docs/`
+- `AGENTS.md`
+- `CLAUDE.md`
+- `CODEX_START_HERE.md` (the catalog between the `GENERATED MARKDOWN INDEX` markers is produced by
+  `scripts/generate_docs.py` — regenerate it, never hand-edit that block)
+- `ENGINEERING_PRACTICES.md`
 - `ARCHITECTURE.md`
 - `RELEASE_NOTES.md`
+- `LICENSE`
+- `NOTICE`
+- `CONTRIBUTING.md`
 
 ## Rules
 

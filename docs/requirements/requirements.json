@@ -4422,8 +4422,8 @@
       "api_tests": [],
       "browser_tests": [],
       "implementation_files": [
-        "docs/requirements_validation_v9.pdf",
-        "docs/requirements_validation_v9.md",
+        "docs/requirements_validation_v9_1.pdf",
+        "docs/requirements_validation_v9_1.md",
         "docs/requirements.json",
         "RELEASE_NOTES.md"
       ],
@@ -4437,8 +4437,8 @@
       "api_tests": [],
       "browser_tests": [],
       "implementation_files": [
-        "docs/requirements_validation_v9.pdf",
-        "docs/requirements_validation_v9.md",
+        "docs/requirements_validation_v9_1.pdf",
+        "docs/requirements_validation_v9_1.md",
         "docs/requirements.json",
         "RELEASE_NOTES.md"
       ],
@@ -4454,8 +4454,8 @@
       ],
       "browser_tests": [],
       "implementation_files": [
-        "docs/requirements_validation_v9.pdf",
-        "docs/requirements_validation_v9.md",
+        "docs/requirements_validation_v9_1.pdf",
+        "docs/requirements_validation_v9_1.md",
         "docs/requirements.json",
         "RELEASE_NOTES.md"
       ],
@@ -4471,8 +4471,8 @@
       ],
       "browser_tests": [],
       "implementation_files": [
-        "docs/requirements_validation_v9.pdf",
-        "docs/requirements_validation_v9.md",
+        "docs/requirements_validation_v9_1.pdf",
+        "docs/requirements_validation_v9_1.md",
         "docs/requirements.json",
         "RELEASE_NOTES.md"
       ],
@@ -4486,8 +4486,8 @@
       "api_tests": [],
       "browser_tests": [],
       "implementation_files": [
-        "docs/requirements_validation_v9.pdf",
-        "docs/requirements_validation_v9.md",
+        "docs/requirements_validation_v9_1.pdf",
+        "docs/requirements_validation_v9_1.md",
         "docs/requirements.json",
         "RELEASE_NOTES.md"
       ],
@@ -4503,8 +4503,8 @@
       ],
       "browser_tests": [],
       "implementation_files": [
-        "docs/requirements_validation_v9.pdf",
-        "docs/requirements_validation_v9.md",
+        "docs/requirements_validation_v9_1.pdf",
+        "docs/requirements_validation_v9_1.md",
         "docs/requirements.json",
         "RELEASE_NOTES.md"
       ],
@@ -4518,8 +4518,8 @@
       "api_tests": [],
       "browser_tests": [],
       "implementation_files": [
-        "docs/requirements_validation_v9.pdf",
-        "docs/requirements_validation_v9.md",
+        "docs/requirements_validation_v9_1.pdf",
+        "docs/requirements_validation_v9_1.md",
         "docs/requirements.json",
         "RELEASE_NOTES.md"
       ],
@@ -4533,8 +4533,8 @@
       "api_tests": [],
       "browser_tests": [],
       "implementation_files": [
-        "docs/requirements_validation_v9.pdf",
-        "docs/requirements_validation_v9.md",
+        "docs/requirements_validation_v9_1.pdf",
+        "docs/requirements_validation_v9_1.md",
         "docs/requirements.json",
         "RELEASE_NOTES.md"
       ],
@@ -4565,8 +4565,8 @@
       "api_tests": [],
       "browser_tests": [],
       "implementation_files": [
-        "docs/requirements_validation_v9.pdf",
-        "docs/requirements_validation_v9.md",
+        "docs/requirements_validation_v9_1.pdf",
+        "docs/requirements_validation_v9_1.md",
         "docs/requirements.json",
         "RELEASE_NOTES.md"
       ],
@@ -4580,8 +4580,8 @@
       "api_tests": [],
       "browser_tests": [],
       "implementation_files": [
-        "docs/requirements_validation_v9.pdf",
-        "docs/requirements_validation_v9.md",
+        "docs/requirements_validation_v9_1.pdf",
+        "docs/requirements_validation_v9_1.md",
         "docs/requirements.json",
         "RELEASE_NOTES.md"
       ],
@@ -4595,8 +4595,8 @@
       "api_tests": [],
       "browser_tests": [],
       "implementation_files": [
-        "docs/requirements_validation_v9.pdf",
-        "docs/requirements_validation_v9.md",
+        "docs/requirements_validation_v9_1.pdf",
+        "docs/requirements_validation_v9_1.md",
         "docs/requirements.json",
         "RELEASE_NOTES.md"
       ],
@@ -4610,8 +4610,8 @@
       "api_tests": [],
       "browser_tests": [],
       "implementation_files": [
-        "docs/requirements_validation_v9.pdf",
-        "docs/requirements_validation_v9.md",
+        "docs/requirements_validation_v9_1.pdf",
+        "docs/requirements_validation_v9_1.md",
         "docs/requirements.json",
         "RELEASE_NOTES.md"
       ],
@@ -4625,8 +4625,8 @@
       "api_tests": [],
       "browser_tests": [],
       "implementation_files": [
-        "docs/requirements_validation_v9.pdf",
-        "docs/requirements_validation_v9.md",
+        "docs/requirements_validation_v9_1.pdf",
+        "docs/requirements_validation_v9_1.md",
         "docs/requirements.json",
         "RELEASE_NOTES.md"
       ],
@@ -4640,8 +4640,8 @@
       "api_tests": [],
       "browser_tests": [],
       "implementation_files": [
-        "docs/requirements_validation_v9.pdf",
-        "docs/requirements_validation_v9.md",
+        "docs/requirements_validation_v9_1.pdf",
+        "docs/requirements_validation_v9_1.md",
         "docs/requirements.json",
         "RELEASE_NOTES.md"
       ],
@@ -7766,7 +7766,7 @@
       "id": "CRAPS-002", "module": "Craps", "description": "Authenticated sessions own private reload-safe rounds, roll actions, recovery state, history, and canonical route restoration.", "status": "PASS", "api_tests": ["API-CRAPS-001", "API-WALLET-RESTART-001"], "browser_tests": ["BR-CRAPS-001"], "implementation_files": ["casino/games/craps/api.py", "web/app.js", "tests/run_tests.py"], "introduced_in": "game-expansion-craps", "changed_in": "game-expansion-craps", "notes": "Session context overrides caller player ids and terminal actions remain replayable after archival."
     },
     {
-      "id": "CRAPS-003", "module": "Craps", "description": "Wagers, payouts, and refunds use the shared ledger exactly once under durable request identities.", "status": "PASS", "api_tests": ["API-CRAPS-001"], "browser_tests": [], "implementation_files": ["casino/games/craps/api.py", "casino/core/ledger.py", "tests/games/craps/test_craps.py", "tests/run_tests.py"], "introduced_in": "game-expansion-craps", "changed_in": "game-expansion-craps", "notes": "No game code mutates balances directly and conflicting retries fail closed."
+      "id": "CRAPS-003", "module": "Craps", "description": "Wagers, payouts, and refunds use the shared ledger exactly once under durable request identities.", "status": "PASS", "api_tests": ["API-CRAPS-001"], "browser_tests": [], "implementation_files": ["casino/games/craps/api.py", "casino/core/ledger.py", "tests/games/craps/test_api.py", "tests/run_tests.py"], "introduced_in": "game-expansion-craps", "changed_in": "game-expansion-craps", "notes": "No game code mutates balances directly and conflicting retries fail closed."
     },
     {
       "id": "CRAPS-004", "module": "Application", "description": "Craps supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.", "status": "PASS", "api_tests": [], "browser_tests": ["BR-CRAPS-001"], "implementation_files": ["web/games/craps.js", "web/i18n/en-US/games/craps.json", "web/i18n/ru-RU/games/craps.json", "tests/visual/visual_matrix.json", "tests/run_tests.py"], "introduced_in": "game-expansion-craps", "changed_in": "game-expansion-craps", "notes": "Evidence covers both locales and every governed viewport."

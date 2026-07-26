@@ -10,7 +10,7 @@ The long-suite runner lives at `tests/long_suites.py` and is intended for deploy
 | `300` | 300 | 20 | 20 |
 | `500` | 500 | 30 | 30 |
 
-Every scenario plays all six games: Roulette, Slots, Blackjack, Baccarat, Keno, and Bingo. The runner also touches Admin audio settings, autoplay start/stop, and the requirements registry so the JSON report can prove requirement touch counts.
+Every scenario plays every game in the catalog, not a fixed subset: `load_game_drivers()` iterates `casino.config.GAMES` rather than a central allowlist, so the per-scenario work grows with the descriptor-driven catalog. Size a run accordingly. The runner also touches Admin audio settings, autoplay start/stop, and the requirements registry so the JSON report can prove requirement touch counts.
 
 ## Deployment-Style Run
 

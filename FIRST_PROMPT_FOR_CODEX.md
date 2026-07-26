@@ -1,5 +1,10 @@
 # First prompt for Codex
 
+**Historical.** This is the completed v9.1.1 repository-bootstrap prompt, retained for provenance;
+it is not current guidance and its command block is no longer the required validation set. Start
+from `CODEX_START_HERE.md`, the root `AGENTS.md`, and `ENGINEERING_PRACTICES.md` instead. A
+byte-identical copy lives at `codex/prompts/01_first_validation_pr.md`.
+
 You are working in the `virtual-casino-simulator` repository.
 
 ## Task: Repository Bootstrap Validation v9.1.1

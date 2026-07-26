@@ -52,9 +52,9 @@ Every token movement goes through `casino/core/ledger.py`; the game never writes
 
 The adapter targets the supported single-process local simulator and serializes state/ledger recovery with a process-local lock. A future multi-process deployment would require a unique idempotency key enforced atomically by shared storage before making the same guarantee.
 
-## Proposed permanent requirements
+## Permanent requirements
 
-The #77 integration owner retains permanent allocation and status authority. This slice proposes:
+The permanent block registered in `docs/requirements/requirements.json` is:
 
 - `TCP-001`: one-deck Three Card Poker implements the documented rankings, dealer qualification, Ante/Play decisions, Ante Bonus A, and Pair Plus C.
 - `TCP-002`: additive v1 endpoints bind the authenticated player and preserve private reload-safe round state with hidden dealer cards before settlement.
@@ -64,18 +64,17 @@ The #77 integration owner retains permanent allocation and status authority. Thi
 
 Existing cross-cutting requirements include `API-001`, `CARD-001`, `CARD-002`, `CORE-008`, `CORE-009`, `CORE-010`, `CORE-021`, `I18N-001`, `I18N-002`, `LEDGER-005`, `LEDGER-006`, `LEDGER-007`, `LEDGER-009`, `LEDGER-023`, `POKER-001`, `SESSION-005`, `STORAGE-001`, `STORAGE-002`, and `TEST-042`.
 
-## Integration handoff for #77
+## #77 integration
 
-The issue-owned descriptor proposal at `codex/tasks/artifacts/issue-93-three-card-poker/three_card_poker.module.proposal.json` preserves module version `1.0.0`, catalog sort order `190`, and canonical route `/games/three_card_poker` without auto-installing the game before shared integration. Packaged application release impact is None.
+The canonical descriptor at `modules/three_card_poker.json` owns the module version, catalog sort order `190`, and route `/games/three_card_poker`. Packaged application release impact was None.
 
-Before acceptance, #77 must:
+#77 completed integration:
 
-- promote the proposal to `modules/three_card_poker.json`, add `three_card_poker: 1.0.0` to `modules/module-manifest.json`, and recalculate shared module revisions from the then-current accepted `main`;
-- allocate `TCP-001` through `TCP-005`, update central and generated requirements, and map permanent API/browser test IDs;
-- add the OpenAPI contract to the compatibility matrix and contract digest;
-- add the `three_card_poker` visual-matrix row and game-specific real-backend API/browser coverage;
-- run catalog discovery, the module-owned long driver, full API/browser suites, and Long Suite 100;
-- capture honest EN/RU `after_pass` evidence for every assigned state and viewport; and
-- record any listener PID and loopback port other than 8765 or 8877, stop it, and verify closure.
+- descriptor promotion to `modules/three_card_poker.json`, the `three_card_poker` revision in `modules/module-manifest.json`, and recalculated shared module revisions;
+- permanent requirements `TCP-001` through `TCP-005`, central and generated requirements, and mapped API/browser test IDs;
+- the OpenAPI contract in the compatibility matrix and contract digest;
+- the `three_card_poker` visual-matrix row and game-specific real-backend API/browser coverage;
+- catalog discovery, the module-owned long driver, full API/browser suites, and Long Suite 100;
+- EN/RU `after_pass` evidence for every assigned state and viewport.
 
-No shared manifest, requirements registry, compatibility inventory, visual matrix, shell resource, central runner, or generated documentation is changed by this isolated slice.
+The shared manifest, requirement registry, compatibility inventory, visual matrix, and catalog-driven test discovery all carry Three Card Poker on current main.

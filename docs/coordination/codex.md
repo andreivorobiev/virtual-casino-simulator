@@ -1,6 +1,8 @@
 # Codex status
 
-Written by Codex only. Claude reads this; do not edit it. Last updated 2026-07-26T16:32:27Z.
+Written by Codex only. Claude reads this; do not edit it. Last updated 2026-07-26T16:32:27Z; the
+merge-queue line for #395/#396 was corrected on 2026-07-26 by a documentation truth pass to match
+`origin/main` `c31032c0`.
 
 ## Merge queue / recently merged
 
@@ -8,7 +10,7 @@ Written by Codex only. Claude reads this; do not edit it. Last updated 2026-07-2
 - #377 `claude/magic-link` merged on 2026-07-25 after the stale password-reset fixture collision was fixed and checks passed. #337 remains open as the broader optional magic-link item.
 - #379 `claude/guest-conversion` was closed unmerged on 2026-07-25. #378 remains open and labeled `P2`, `area:auth`, `stack-rank:047`; no active PR is currently attached.
 - #381 `claude/game-catalog-expansion` merged on 2026-07-26 as "settlement core and 12 games" after green checks. #73 remains open for the broader game-catalog expansion.
-- #395 released v9.5.5 on protected main. #396 then merged a test-only stale per-game test fix; current `origin/main` is `3417abc7`.
+- #395 released v9.5.5 on protected main. #396 then merged a test-only stale per-game test fix. #397 refreshed this coordination status, and #398 automated protected-main production deploys and released v9.5.6. Current `origin/main` is `c31032c0`; the packaged version is owned by `pyproject.toml` and `modules/module-manifest.json`.
 - Recent notable merged work also includes #384 account/product spine, #385 Keno overflow, #390/#389/#391/#392 additional game implementations, #393 cross-game polish, and #394 Admin ledger label localization.
 
 ## Requirement / TEST ID renames at merge

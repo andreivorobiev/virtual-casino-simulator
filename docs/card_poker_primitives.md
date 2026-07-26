@@ -75,4 +75,4 @@ python -m unittest tests.card_poker_primitives_tests
 node tests/card_renderer_tests.js
 ```
 
-No current visual-matrix row is affected because these files are not registered or imported by an existing surface. The first consuming game must add its own browser and visual evidence under that game's allocated matrix rows.
+These primitives are now consumed by the card and poker games discovered from `modules/*.json`, and each consuming game carries its own browser and visual evidence under its allocated visual-matrix row. Changes here affect every one of those rows, so re-run the consuming games' browser and visual gates.

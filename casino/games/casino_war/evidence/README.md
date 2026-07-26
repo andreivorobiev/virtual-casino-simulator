@@ -1,6 +1,8 @@
 # Casino War isolated evidence
 
-Evidence class: development validation only. This directory contains no `after_pass` acceptance screenshot because the game is deliberately not registered in the shared catalog/router/web shell while #110/#77 own those files. A screenshot from a hand-wired or stale page would violate `docs/visual_design_standard.md`.
+**Historical.** Records the isolated pre-integration validation run on branch `codex/game-casino-war`. Casino War has since been integrated; for current state see `modules/casino_war.json`, `modules/module-manifest.json`, and `tests/visual/visual_matrix.json`.
+
+Evidence class: development validation only. This directory contains no `after_pass` acceptance screenshot; the accepted real-backend `after_pass` evidence for the registered `casino_war` visual-matrix surface is produced by the shared browser runner. A screenshot from a hand-wired or stale page would violate `docs/visual_design_standard.md`.
 
 ## Implemented surfaces
 

@@ -13,9 +13,10 @@ tests, labels, or issues and does not approve the proposal.
    interaction behavior, content, accessibility, trust, and recovery.
 2. Keep `docs/visual_design_standard.md` as the required presentation, layout,
    responsive, and visual-evidence companion rather than duplicating it.
-3. Approve WCAG 2.2 AA as the accessibility target and a 44 by 44 CSS-pixel
-   minimum for primary touch actions. The current visual standard says 42 CSS
-   pixels, so implementation would reconcile that difference explicitly.
+3. Approve WCAG 2.2 AA as the accessibility target. The primary touch-target
+   minimum is already settled at 42 CSS pixels by issue #283, with 44
+   recommended for newly designed surfaces, so this draft adopts that floor
+   rather than reopening it.
 4. Approve a blocking UX governance check for every browser-visible pull
    request, including explicit guideline IDs, affected flows and states, tests,
    and `after_pass` evidence.
@@ -224,8 +225,9 @@ The target is WCAG 2.2 Level AA for supported user-facing surfaces.
 - Dynamic status changes use appropriate announcements without excessive noise.
 - Color is not the only indicator of selection, phase, success, loss, warning,
   or error.
-- Primary touch actions are at least 44 by 44 CSS pixels; closely spaced targets
-  provide sufficient separation.
+- Primary touch actions are at least 42 by 42 CSS pixels (issue #283), with 44
+  by 44 recommended for newly designed surfaces; closely spaced targets provide
+  sufficient separation.
 - Content remains usable at 200% browser zoom and with text enlargement.
 - Animation respects `prefers-reduced-motion` and offers an equivalent clear
   state transition.
@@ -362,8 +364,9 @@ recovery, settlement clarity, content, and cross-surface UX consistency.
 8. Add browser-test mapping for stable controls, duplicate-action protection,
    retry idempotency, loading/error/recovery states, keyboard operation,
    reduced motion, responsive behavior, and EN/RU parity.
-9. Reconcile the proposed 44-pixel primary touch target with the current
-   42-pixel visual rule.
+9. Adopt the resolved touch-target rule from issue #283: a 42 CSS-pixel floor
+   for primary and high-frequency controls, with 44 recommended for newly
+   designed surfaces (`docs/visual_design_standard.md`).
 10. Document the exception process and non-waivable UX gates.
 
 ### Acceptance criteria

@@ -1,5 +1,7 @@
 # Virtual Casino Simulator 9.1.0 Requirements and Validation Report
 
+**Historical snapshot.** This hand-maintained report records the requirement registry as it stood at the 9.1.0 documentation redesign and is no longer kept in step with the repository. The canonical current registry is `docs/requirements/requirements.json`, rendered as `docs/requirements/requirements_generated.md`; the packaged application release and module revisions are owned by `pyproject.toml` and `modules/module-manifest.json`. Treat every count, status, and revision below as a 9.1.0-era value rather than current state.
+
 **Release:** Control Plane + UX Stabilization Release  
 **Generated:** 2026-07-08T17:33:50Z  
 **Document revision:** 9.1.0-docs-redesign
@@ -7,6 +9,8 @@
 This redesigned documentation uses separated architecture views, cleaner Mermaid diagrams, and a readable full requirement registry. The PDF version uses a landscape layout so diagrams and tables do not collide.
 
 ## Executive summary
+
+The counts below are the 9.1.0 snapshot totals. Current totals are derived from `docs/requirements/requirements.json` and rendered in `docs/requirements/requirements_generated.md`.
 
 - Requirements tracked: **552**
 - PASS: **536**
@@ -373,6 +377,8 @@ The new planned requirements supersede the local-only, unauthenticated, or fake-
 
 ## Module revisions
 
+Module revisions are owned by `modules/module-manifest.json` and rendered in `docs/requirements/requirements_generated.md`. The table below is the 9.1.0 snapshot; it does not track later revision bumps or the modules registered since.
+
 | Module | Revision |
 |---|---:|
 | Core | 9.1.0 |
@@ -509,14 +515,16 @@ flowchart LR
 | TEST-029 | Tests | API tests verify server-registered autoplay session lifecycle. | PASS | API-CONTROL-001 |
 | TEST-030 | Tests | Test results remain visible in Admin. | PASS |  |
 
-## Full requirement registry
+## Partial requirement registry (original module groups)
+
+The sections below cover only the original module groups and omit every requirement group added later, including the expansion games. The complete registry is `docs/requirements/requirements.json`, rendered in `docs/requirements/requirements_generated.md`; look up any ID there rather than concluding from this section that it does not exist.
 
 ### Admin
 
 | ID | Requirement | Status | API tests | Browser tests |
 |---|---|---|---|---|
 | ADMIN-001 | Admin console is available at /admin. | PASS | API-ADMIN-001 | BR-ADMIN-001 |
-| ADMIN-002 | Admin console is unauthenticated for local use. | PASS | API-ADMIN-001 |  |
+| ADMIN-002 | Admin console is unauthenticated for local use. | SUPERSEDED | API-ADMIN-001 |  |
 | ADMIN-003 | Admin overview shows version and requirement counts. | PASS | API-ADMIN-001 | BR-ADMIN-001 |
 | ADMIN-004 | Admin modules tab shows module revision numbers. | PASS | API-ADMIN-001 |  |
 | ADMIN-005 | Admin players tab shows player balances. | PASS | API-ADMIN-001 |  |
@@ -625,7 +633,7 @@ flowchart LR
 | BINGO-021 | Bingo auto play calls until a winner. | PASS | API-BINGO-001 | BR-BINGO-001 |
 | BINGO-022 | Bingo UI shows the authoritative cards in play and a truthful disabled busy boundary while a purchase resolves. | PASS | API-BINGO-001 | BR-BINGO-001, BR-BINGO-PURCHASE-001 |
 | BINGO-023 | Bingo writes history rows. | PASS | API-BINGO-001 |  |
-| BINGO-024 | Bingo remains fake-money only. | PASS | API-BINGO-001 |  |
+| BINGO-024 | Bingo remains fake-money only. | SUPERSEDED | API-BINGO-001 |  |
 
 ### Blackjack
 
@@ -684,7 +692,7 @@ flowchart LR
 | CORE-001 | Application runs locally in a browser from one-click launchers. | PASS |  |  |
 | CORE-002 | Windows launcher starts the local Python server. | PASS |  |  |
 | CORE-003 | macOS launcher starts the local Python server. | PASS |  |  |
-| CORE-004 | Application remains fake-money only with no real payment flows. | PASS |  |  |
+| CORE-004 | Application remains fake-money only with no real payment flows. | SUPERSEDED |  |  |
 | CORE-005 | Lobby loads independently of all individual game modules. | PASS | API-CORE-001 | BR-LOBBY-001 |
 | CORE-006 | Top navigation exposes all games equally. | PASS |  | BR-LOBBY-001 |
 | CORE-007 | Admin navigation is available without replacing game navigation. | PASS |  |  |
@@ -747,7 +755,7 @@ flowchart LR
 | KENO-018 | Keno auto play repeats selected ticket. | PASS |  | BR-KENO-001 |
 | KENO-019 | Keno speed control supports slow/medium/fast. | PASS |  | BR-KENO-001 |
 | KENO-020 | Keno writes history rows. | PASS | API-KENO-001 | BR-KENO-001 |
-| KENO-021 | Keno remains fake-money only. | PASS |  | BR-KENO-001 |
+| KENO-021 | Keno remains fake-money only. | SUPERSEDED |  | BR-KENO-001 |
 | KENO-022 | Keno browser tests avoid ambiguous text selectors. | PASS |  | BR-KENO-001 |
 | KENO-023 | Keno history rows constrain long draw IDs so they do not overlap the result summary. | PASS |  | BR-KENO-001 |
 
@@ -755,8 +763,8 @@ flowchart LR
 
 | ID | Requirement | Status | API tests | Browser tests |
 |---|---|---|---|---|
-| LEDGER-001 | Each player has a persistent fake-money balance. | PASS |  | BR-BAC-MUTATION-001 |
-| LEDGER-002 | Human player exists by default. | PASS |  |  |
+| LEDGER-001 | Each player has a persistent fake-money balance. | SUPERSEDED |  | BR-BAC-MUTATION-001 |
+| LEDGER-002 | Human player exists by default. | SUPERSEDED |  |  |
 | LEDGER-003 | Three bot players exist by default. | PASS |  |  |
 | LEDGER-004 | Add-money requires a positive amount. | PASS |  |  |
 | LEDGER-005 | All betting debits go through the ledger service. | PASS | API-ROU-001 |  |
@@ -892,7 +900,7 @@ flowchart LR
 | SLOT-023 | Slots auto play repeats selected line setup. | PASS |  | BR-SLOT-001 |
 | SLOT-024 | Slots speed control supports slow/medium/fast. | PASS |  | BR-SLOT-001 |
 | SLOT-025 | Slots sounds play during spin. | PASS |  | BR-SLOT-001 |
-| SLOT-026 | Slots remains fake-money only. | PASS |  | BR-SLOT-001 |
+| SLOT-026 | Slots remains fake-money only. | SUPERSEDED |  | BR-SLOT-001 |
 
 ### Testing
 

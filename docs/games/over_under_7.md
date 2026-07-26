@@ -16,6 +16,6 @@ All wagers and returned play tokens go through `casino.core.ledger`. The game ne
 
 ## Canonical Integration
 
-The descriptor at `modules/over_under_7.json` owns module version `1.0.0`, route `/games/over_under_7`, sort order `220`, paired EN/RU resources, the additive contract, and `tests.game_drivers.over_under_7:play`. Permanent requirements `OU7-001` through `OU7-005` map rules, session/restart behavior, ledger safety, browser localization, and catalog-wide evidence.
+The descriptor at `modules/over_under_7.json` owns the module version, route `/games/over_under_7`, sort order `220`, paired EN/RU resources, the additive contract, and `tests.game_drivers.over_under_7:play`. Permanent requirements `OU7-001` through `OU7-005` map rules, session/restart behavior, ledger safety, browser localization, and catalog-wide evidence.
 
 The visual surface `over_under_7` covers `ready`, `rolling`, `settled`, `reduced_motion`, and `route_restored` in both locales at desktop primary, desktop compact, tablet, and mobile viewports. Shared registration remains catalog-driven; no bespoke router, shell, or long-suite allowlist is required.

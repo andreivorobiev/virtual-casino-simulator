@@ -1,5 +1,7 @@
 # Codex Task Packet: Private User Game Sessions
 
+**Historical.** This packet records the plan for issue #42 as written under epic #34, when the catalog held six games. It is not an active instruction. The current catalog is whatever `casino/games/` contains, which is now much larger, so the six-game enumerations below are the original scope rather than today's. For current requirement status see `docs/requirements/requirements.json`.
+
 ## Task
 
 - Issue: https://github.com/andreivorobiev/virtual-casino-simulator/issues/42

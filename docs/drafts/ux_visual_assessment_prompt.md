@@ -36,8 +36,10 @@ Read these files completely before testing:
 
 Treat the production visual standard as authoritative. Treat both files under
 `docs/drafts/` as proposals under owner review, not as already-approved policy.
-Call out conflicts between the existing authority and the drafts, including the
-42-versus-44-CSS-pixel touch-target rule.
+Call out conflicts between the existing authority and the drafts. Note that the
+42-versus-44-CSS-pixel touch-target rule was already resolved by issue #283 in
+favor of a 42-pixel floor (`docs/visual_design_standard.md`); measure controls
+against 42, not 44.
 
 ## Live-product scope
 
@@ -91,9 +93,11 @@ purchase, deposit, withdrawal, redemption, transfer, prize, or provider action.
 
 Independently reproduce or disprove each observation:
 
-- At 1440 x 900, the shared desktop header forces approximately 31 game
-  destinations into tiny cells, causing game names to overlap and the brand to
-  truncate.
+- At 1440 x 900, the shared desktop header must fit every catalog game
+  destination plus Lobby and Admin into one bounded horizontal scroll region
+  (issue #221); the catalog is discovered from `casino.config.GAMES`. Verify
+  that game names are neither overlapped nor unreachable and that the brand
+  does not truncate.
 - At 1440 x 900, lobby category controls expose a native horizontal scrollbar,
   and the availability count can collide with category buttons.
 - At 390 x 844, the add-token control can geometrically overlap the locale
@@ -108,8 +112,8 @@ Independently reproduce or disprove each observation:
 - Russian localization may be incomplete, leaving English headings, tags, and
   actions mixed into the localized experience.
 - The desktop sign-in panel may clip or overflow at approximately 1280 x 720.
-- Several game controls may be smaller than the proposed 44 x 44 CSS-pixel
-  target.
+- Several game controls may be smaller than the adopted 42 CSS-pixel touch
+  target floor (issue #283).
 
 For each, capture viewport/locale-specific evidence and determine whether the
 root cause is local, template-wide, or shared-shell-wide.

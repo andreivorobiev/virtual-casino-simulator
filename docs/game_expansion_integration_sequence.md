@@ -72,7 +72,9 @@ Existing games retain sort orders 10 through 60. The approved expansion slots ar
 | 280 | Let It Ride | #134 | Merged PR #178 |
 | 290 | Casino Hold'em | #139 | Merged PR #179 |
 | 300 | Joker Poker | #130 | Released draft PR #177 |
-| 310 | Pai Gow Poker | #138 | Draft PR for issue #138 |
+| 310 | Pai Gow Poker | #138 | Merged |
+
+This table records the slots approved under this lane and stops at sort order 310; further games have since been registered at higher sort orders. The live sort-order allocation is owned by the `game.sort_order` field of each `modules/*.json` descriptor, so read those rather than this table when picking or verifying a sort order.
 
 Sort order is catalog presentation metadata, not an authorization to register a placeholder. Only complete game descriptors are loaded.
 
@@ -138,7 +140,7 @@ No game branch is retargeted to another game branch. Every game PR continues to 
 
 ## Version sequencing
 
-Each new game begins at module revision `1.0.0`. The packaged application release remains `9.1.1` unless formal release work is separately assigned. If no intervening pull request changes the shared revisions, the integration sequence reserves:
+Each new game begins at module revision `1.0.0`. The packaged application release is owned by `pyproject.toml` and `modules/module-manifest.json` and does not change unless formal release work is separately assigned; report release impact as `None` by default. If no intervening pull request changes the shared revisions, the integration sequence reserves:
 
 | Integration | Application module | Tests module | Docs module | Contracts module |
 | --- | ---: | ---: | ---: | ---: |
@@ -220,7 +222,7 @@ Required visual states are:
 
 ## Validation and listener gate
 
-The final head runs bootstrap, repository rules, API, browser, full long suite 100, catalog, contract, module-boundary, requirement, version, generated-document, and comment-density validation. Focused smoke checks may run earlier but cannot replace the final set.
+The final head runs bootstrap, repository rules, API, browser, full long suite 100, catalog, contract, module-boundary, requirement, version, generated-document, and comment-density validation. Focused smoke checks may run earlier but cannot replace the final set. Two members of that set do not gate a new game on their own: `scripts/check_comment_density.py` prints warnings and always exits `0`, so it is advisory only, and `verify_rules.py` imports and exercises only the six original engines (roulette, slots, blackjack, baccarat, keno, bingo), so it validates no expansion-game rules. A new game's rule evidence must come from its own engine/API tests and the catalog-discovered long driver.
 
 Any test listener binds only to `127.0.0.1` on an ephemeral port other than 8765. The validation record names its PID and port, stops it after the run, verifies the port is closed, and makes no broad firewall change.
 
