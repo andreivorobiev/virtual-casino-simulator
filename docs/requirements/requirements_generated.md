@@ -51,7 +51,7 @@ Historical source baseline: 9.1.0
 - pai_gow_poker: 1.0.2
 - teen_patti: 1.0.1
 - tests: 1.60.31
-- docs: 1.60.30
+- docs: 1.60.31
 - contracts: 1.48.2
 - tooling: 1.21.0
 - commenting_policy: 1.0.0

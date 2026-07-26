@@ -57,6 +57,8 @@ The environment file is not a release artifact, must never be committed, and sho
 
 ## Protected-main CI/CD
 
+The plain-English deployment checklist is maintained in [the production CI/CD runbook](production_cicd_runbook.md).
+
 Every push to protected `main` runs `.github/workflows/deploy-production.yml`. The workflow reads the packaged application version from `modules/module-manifest.json`, refuses to proceed when that immutable `vX.Y.Z` tag already belongs to a different commit, builds a rollback-eligible release from exact protected-main bytes, publishes or reuses the matching GitHub Release assets, downloads the hosted assets back, and deploys only those hosted bytes to production. This makes the hosted Release artifact the deployment source of truth rather than a local checkout or runner filesystem.
 
 The production job requires repository secrets for the SSH target, user, private key, optional port, and known-hosts entry. It uploads only `virtual_casino_simulator_package.zip`, `release-manifest.json`, and `checksums.txt` into a commit-named staging directory. On the host it verifies checksums, verifies the package against the exact commit and tag, writes `/etc/casino/release.env` from the manifest, atomically repoints `/opt/casino/current`, restarts the service, reloads nginx, and runs `scripts/edge_gate.py observe`. Any failure after the prior release is known triggers an application rollback to the previous symlink and release environment fragment. Database rollback remains prohibited.
