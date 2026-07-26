@@ -22,8 +22,10 @@ GENERATED_REQUIREMENTS = ROOT / "docs" / "requirements" / "requirements_generate
 REQUIREMENTS = ROOT / "docs" / "requirements" / "requirements.json"
 # Point to Python package metadata that must identify the same packaged release.
 PYPROJECT = ROOT / "pyproject.toml"
-# Accept only three-part semantic versions for packaged and module revisions.
-VERSION_RE = re.compile(r"^\d+\.\d+\.\d+$")
+# Accept the four-part packaged release identity used by the private-beta product line.
+APP_VERSION_RE = re.compile(r"^\d+\.\d+\.\d+\.\d+$")
+# Accept only three-part semantic versions for independent module revisions and historical baselines.
+MODULE_VERSION_RE = re.compile(r"^\d+\.\d+\.\d+$")
 # Extract the project version from the package metadata.
 PROJECT_VERSION_RE = re.compile(r'^version\s*=\s*"([^"]+)"', re.MULTILINE)
 # Extract historical source provenance from the package metadata.
@@ -108,12 +110,12 @@ def main():
     source_baseline = data.get("source_baseline", "")
     # Read independent module revisions while tolerating a missing object for diagnostics.
     modules = data.get("modules", {})
-    # Require the packaged application release to use semantic x.y.z form.
-    if not isinstance(packaged_version, str) or not VERSION_RE.fullmatch(packaged_version):
+    # Require the packaged application release to use the product-defined four-part form.
+    if not isinstance(packaged_version, str) or not APP_VERSION_RE.fullmatch(packaged_version):
         # Report a malformed packaged-release value.
-        errors.append("packaged application release is not semantic x.y.z")
+        errors.append("packaged application release is not product x.y.z.p")
     # Require historical source provenance to remain an explicit semantic version.
-    if not isinstance(source_baseline, str) or not VERSION_RE.fullmatch(source_baseline):
+    if not isinstance(source_baseline, str) or not MODULE_VERSION_RE.fullmatch(source_baseline):
         # Report malformed provenance without describing it as a current release.
         errors.append("historical source baseline is not semantic x.y.z")
     # Require the canonical module mapping to remain a non-empty object.
@@ -139,7 +141,7 @@ def main():
     # Validate each canonical module revision and its matching module-specific record.
     for module, version in modules.items():
         # Require every independent module revision to use semantic x.y.z form.
-        if not isinstance(version, str) or not VERSION_RE.fullmatch(version):
+        if not isinstance(version, str) or not MODULE_VERSION_RE.fullmatch(version):
             # Report the module name and malformed value.
             errors.append(f"module {module} version {version} is not semantic x.y.z")
         # Skip file-level checks after the exact-set diagnostic when this file is absent.

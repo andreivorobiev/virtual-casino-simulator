@@ -42,8 +42,8 @@ SIGNATURE_FIELD = "evidence_hmac_sha256"
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 # Accept only the repository's full canonical Git object identity.
 COMMIT_RE = re.compile(r"^[0-9a-f]{40}$")
-# Accept only canonical semantic application versions.
-VERSION_RE = re.compile(r"^\d+\.\d+\.\d+$")
+# Accept legacy three-part and current four-part application versions in recovery evidence.
+VERSION_RE = re.compile(r"^\d+\.\d+\.\d+(?:\.\d+)?$")
 # Bound provider evidence to one day so cutover cannot rely on an old snapshot.
 MAX_PROVIDER_EVIDENCE_AGE_SECONDS = 24 * 60 * 60
 # Require at least seven days of destination retention at acknowledgement.

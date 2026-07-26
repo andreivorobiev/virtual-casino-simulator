@@ -57,7 +57,7 @@ The environment file is not a release artifact, must never be committed, and sho
 
 ## Protected-main CI/CD
 
-The plain-English deployment checklist is maintained in [the production CI/CD runbook](production_cicd_runbook.md).
+The plain-English deployment checklist is maintained in [the production CI/CD runbook](production_cicd_runbook.md). Packaged release-number meaning is maintained in [the release versioning policy](release_versioning.md).
 
 Every push to protected `main` runs `.github/workflows/deploy-production.yml`. The workflow reads the packaged application version from `modules/module-manifest.json`, refuses to proceed when that immutable `vX.Y.Z` tag already belongs to a different commit, builds a rollback-eligible release from exact protected-main bytes, publishes or reuses the matching GitHub Release assets, downloads the hosted assets back, and deploys only those hosted bytes to production. This makes the hosted Release artifact the deployment source of truth rather than a local checkout or runner filesystem.
 

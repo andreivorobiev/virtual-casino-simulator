@@ -1,6 +1,25 @@
 {
-  "application": "0.9.5.5",
+  "app_version": "0.9.5.5",
   "source_baseline": "9.1.0",
+  "api_compatibility_matrix": "contracts/compatibility/module-api-matrix.json",
+  "release_provenance_requirement": "TOOL-003",
+  "release_channel": "restricted-preview-private-invite",
+  "access_policy": {
+    "admission": "manual-invite",
+    "public_signup": "disabled",
+    "live_oauth": "disabled"
+  },
+  "predecessor": {
+    "app_version": "9.5.6",
+    "compatibility_record": "contracts/compatibility/app-9.5.6.json",
+    "required_artifact": "release-manifest.json"
+  },
+  "rollback": {
+    "scope": "application-only",
+    "database_rollback": "prohibited",
+    "mysql_expected_schema_version": 2,
+    "requires_retained_predecessor_manifest": true
+  },
   "modules": {
     "application": "9.51.17",
     "core": "9.24.2",
@@ -64,5 +83,5 @@
     "daily_draw_lab": "1.0.0",
     "four_card_poker": "1.0.1"
   },
-  "created_at": "2026-07-09T00:00:00.000000Z"
+  "notes": "Compatible versioning and documentation release that maps the old 9.5.5 product line to 0.9.5.5, defines the four-part private-beta packaged-release scheme, carries the plain-English production CI/CD runbook, and preserves the protected-main deployment automation, TiltSeven canonical origin, Operations-only monitor bearer, MySQL schema version 2, and application-only rollback boundary introduced in v9.5.6. Rollback is application-only to retained v9.5.6, and public signup, live OAuth, provider networking, DNS, billing, and unrestricted public launch remain separately gated."
 }
