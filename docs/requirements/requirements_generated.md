@@ -66,7 +66,7 @@ Historical source baseline: 9.1.0
 - pattern_draw: 1.0.0
 - lucky_grid: 1.0.0
 - daily_draw_lab: 1.0.0
-- four_card_poker: 1.0.0
+- four_card_poker: 1.0.1
 
 ## Requirements
 
