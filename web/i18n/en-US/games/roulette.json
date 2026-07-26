@@ -44,6 +44,7 @@
   "controls.wheel": "Wheel",
   "controls.zeroRule": "Zero rule",
   "errors.betUnavailable": "That bet is not available.",
+  "errors.actionFailed": "That action could not be completed. Please try again.",
   "header.kicker": "Premium table game",
   "outcomes.en_prison_carry": "En prison",
   "outcomes.half_loss": "Half loss",

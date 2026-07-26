@@ -97,7 +97,11 @@
   </footer>
 
   <!-- Toasts remain outside the route outlet so navigation never destroys feedback. -->
-  <div id="toast" class="toast" hidden></div>
+  <!-- Persistent live region: nearly every game routes success and failure feedback through this one
+       outlet, so without live-region semantics all of it was silent to assistive technology. The
+       attributes stay for the document's lifetime and only the text changes, which is what makes the
+       announcement reliable. (issue #421) -->
+  <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true" hidden></div>
   <script type="module" src="/app.js"></script>
 </body>
 </html>

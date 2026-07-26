@@ -174,8 +174,26 @@ export function withCurrentPlayer(body = {}) {
   // Return a payload that defaults to the active player without replacing caller-supplied ids.
   return { player_id: currentPlayerId(), ...body };
 }
+// Reduce a location to origin and path so no query secret can reach admin-visible client logs.
+// Every window error and unhandled rejection auto-logs this value, and the invitation route carries a
+// single-use enrollment bearer in ?token=..., so the raw href wrote a live credential into telemetry
+// that an admin (or anyone reading exfiltrated logs) could redeem. The OAuth flow already strips its
+// completion markers for the same reason; this closes the equivalent gap. (issue #417)
+function loggableHref() {
+  // Start protected parsing so a malformed URL can never break error reporting.
+  try {
+    // Rebuild from the parsed URL so query and fragment are dropped rather than filtered.
+    const url = new URL(location.href);
+    // Return only the non-secret-bearing portion of the address.
+    return `${url.origin}${url.pathname}`;
+  // Fall back to a fixed placeholder rather than risking the raw address.
+  } catch (_) {
+    // Publish a stable marker so log consumers can distinguish this from a missing field.
+    return 'unavailable';
+  }
+}
 // Export this symbol so other modules can use it through the public module boundary.
 export async function logClient(event, details = {}) {
   // Start protected logic so failures can be handled safely.
-  try { await post('/api/v1/log/client', { event, details, href: location.href, user_agent: navigator.userAgent }); } catch (_) {}
+  try { await post('/api/v1/log/client', { event, details, href: loggableHref(), user_agent: navigator.userAgent }); } catch (_) {}
 }

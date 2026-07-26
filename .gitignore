@@ -43,3 +43,10 @@ id_ed25519*
 *.tfvars
 *.auto.tfvars
 !*.tfvars.example
+
+# Local runtime state written by the running application. These are generated on first run from
+# defaults in casino/core (see players.default_players and ensure_dirs), so they are outputs rather
+# than sources. Tracking them meant every local run dirtied the working tree, invited accidental
+# commits of live wallet state, and put data/auth/sessions.json - which holds plaintext session
+# bearer tokens - one `git add -A` away from being published. (issue #419)
+data/

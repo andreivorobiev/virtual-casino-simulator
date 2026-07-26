@@ -1,6 +1,6 @@
 {
   "module": "bingo",
-  "version": "9.2.1",
+  "version": "9.2.2",
   "paths": [
     "casino/games/bingo/",
     "web/games/bingo.js"
@@ -17,12 +17,44 @@
     "route": "/games/bingo",
     "label": "Bingo",
     "category": "draw",
-    "categories": ["draw", "cards", "social"],
-    "backend": {"register": "casino.games.bingo.api:register"},
-    "frontend": {"module": "./games/bingo.js", "export": "BingoGame", "ready_testid": "premium-bingo", "i18n_domain": "games/bingo", "i18n_probe": "drawer.callsText"},
-    "tests": {"long_driver": "tests.game_drivers.bingo:play"},
-    "translations": {"ru-RU": {"label": "Бинго", "kicker": "Карты", "description": "Американское бинго на 75 шаров с комбинациями, картами ботов, историей вызовов и подсветкой выигрыша."}},
-    "lobby": {"featured": false, "wide": false, "art_class": "bingo-art", "symbol": "&#9638;", "kicker": "Cards", "description": "75-ball American Bingo with patterns, bot cards, call history, and winning pattern highlights.", "tags": ["Bots", "Autoplay", "Stats"]}
+    "categories": [
+      "draw",
+      "cards",
+      "social"
+    ],
+    "backend": {
+      "register": "casino.games.bingo.api:register"
+    },
+    "frontend": {
+      "module": "./games/bingo.js",
+      "export": "BingoGame",
+      "ready_testid": "premium-bingo",
+      "i18n_domain": "games/bingo",
+      "i18n_probe": "drawer.callsText"
+    },
+    "tests": {
+      "long_driver": "tests.game_drivers.bingo:play"
+    },
+    "translations": {
+      "ru-RU": {
+        "label": "\u0411\u0438\u043d\u0433\u043e",
+        "kicker": "\u041a\u0430\u0440\u0442\u044b",
+        "description": "\u0410\u043c\u0435\u0440\u0438\u043a\u0430\u043d\u0441\u043a\u043e\u0435 \u0431\u0438\u043d\u0433\u043e \u043d\u0430 75 \u0448\u0430\u0440\u043e\u0432 \u0441 \u043a\u043e\u043c\u0431\u0438\u043d\u0430\u0446\u0438\u044f\u043c\u0438, \u043a\u0430\u0440\u0442\u0430\u043c\u0438 \u0431\u043e\u0442\u043e\u0432, \u0438\u0441\u0442\u043e\u0440\u0438\u0435\u0439 \u0432\u044b\u0437\u043e\u0432\u043e\u0432 \u0438 \u043f\u043e\u0434\u0441\u0432\u0435\u0442\u043a\u043e\u0439 \u0432\u044b\u0438\u0433\u0440\u044b\u0448\u0430."
+      }
+    },
+    "lobby": {
+      "featured": false,
+      "wide": false,
+      "art_class": "bingo-art",
+      "symbol": "&#9638;",
+      "kicker": "Cards",
+      "description": "75-ball American Bingo with patterns, bot cards, call history, and winning pattern highlights.",
+      "tags": [
+        "Bots",
+        "Autoplay",
+        "Stats"
+      ]
+    }
   },
   "depends_on": [
     "core",

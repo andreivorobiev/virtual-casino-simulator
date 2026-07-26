@@ -9,8 +9,16 @@ export const money = n => formatMoney(n);
 export const tokenAmount = n => Number(n || 0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
 // Export this symbol so auth-aware shell code can render play tokens without real-money currency marks.
 export const tokens = n => tokenAmount(n);
+// Resolve the toast variant from either the legacy boolean flag or an explicit variant name.
+// 19 game modules call toast(message,'error'); a bare truthy check rendered those failures in the
+// success palette because any non-empty string is truthy. Treat only an explicit success signal as
+// success so both spellings are correct and the string form can no longer invert the colour. (#423)
+const toastIsSuccess = variant => variant === true || variant === 'ok' || variant === 'success';
 // Export this symbol so other modules can use it through the public module boundary.
-export function toast(message, ok=false){ const t=document.getElementById('toast'); if(!t)return; t.textContent=message; t.style.background=ok?'#10381f':'#2b1111'; t.style.color=ok?'#c8ffd1':'#ffd3d3'; t.hidden=false; clearTimeout(toast._timer); toast._timer=setTimeout(()=>{t.hidden=true},4500); }
+// The outlet carries its live-region semantics statically in index.html and keeps them for the life of
+// the document; swapping role or aria-live at the same moment the text changes is a known way to make
+// announcements unreliable, so only the text and palette change here. (#421)
+export function toast(message, variant=false){ const t=document.getElementById('toast'); if(!t)return; const ok=toastIsSuccess(variant); t.textContent=message; t.style.background=ok?'#10381f':'#2b1111'; t.style.color=ok?'#c8ffd1':'#ffd3d3'; t.hidden=false; clearTimeout(toast._timer); toast._timer=setTimeout(()=>{t.hidden=true},4500); }
 // Export this symbol so other modules can use it through the public module boundary.
 export async function refreshBalance(){
   // Branch when the authenticated shell owns wallet rendering.

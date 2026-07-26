@@ -166,6 +166,24 @@ const openDisclosures = new Set();
 
 // Resolve a Roulette-owned localized string from the game domain.
 const rt = (key, params = {}) => t(key, params, GAME_DOMAIN);
+// Wrap an action handler so a rejected request reaches the player instead of vanishing.
+// Every wagering control here posted with no catch, so a rejection (most commonly INSUFFICIENT_FUNDS)
+// became an unhandled promise rejection that only reached admin telemetry: the player clicked Bet or
+// Spin and nothing visibly happened. Prefer the server's localized error key when it supplies one, and
+// fall back to a generic localized message rather than showing raw English. (issue #422)
+const guarded = handler => async (...args) => {
+  // Start protected execution so no control can fail silently.
+  try {
+    // Run the original handler unchanged and preserve its resolved value.
+    return await handler(...args);
+  // Surface any rejection through the shared toast outlet.
+  } catch (error) {
+    // Prefer a localized key the backend named, then the generic action failure text.
+    toast(error?.errorKey ? rt(error.errorKey) : rt('errors.actionFailed'));
+    // Report the failure for admin telemetry without altering the player-visible message.
+    logClient('roulette_action_failed', { code: error?.code || null });
+  }
+};
 // Resolve and escape a localized string before inserting it into HTML.
 const text = (key, params = {}) => safe(rt(key, params));
 // Resolve and escape one shared-domain label for progressive disclosure controls.
@@ -932,23 +950,23 @@ function wireControls() {
   // Set the zero-rule select to the current backend state value.
   root.querySelector('#zero').value = state.zero_rule;
   // Wire mode changes to the existing settings endpoint.
-  root.querySelector('#mode').onchange = settings;
+  root.querySelector('#mode').onchange = guarded(settings);
   // Wire zero-rule changes to the existing settings endpoint.
-  root.querySelector('#zero').onchange = settings;
+  root.querySelector('#zero').onchange = guarded(settings);
   // Wire chip buttons while preserving selected chip state.
   root.querySelectorAll('[data-chip]').forEach(button => { button.onclick = () => { chip = Number(button.dataset.chip); render(); updateBotPanel(); }; });
   // Wire every bet cell through its stable identity so clicks resolve and verify by canonical covered numbers, not fragile labels. (issue #222)
-  root.querySelectorAll('[data-cell-key]').forEach(button => { button.onclick = () => placeBetForCell(button); });
+  root.querySelectorAll('[data-cell-key]').forEach(button => { button.onclick = guarded(() => placeBetForCell(button)); });
   // Wire racetrack and call-bet controls to the call-bet endpoint.
-  root.querySelectorAll('[data-call]').forEach(button => { button.onclick = () => placeCall(button.dataset.call); });
+  root.querySelectorAll('[data-call]').forEach(button => { button.onclick = guarded(() => placeCall(button.dataset.call)); });
   // Wire individual bet removal buttons to the clear endpoint.
-  root.querySelectorAll('[data-clear]').forEach(button => { button.onclick = () => clearBet(button.dataset.clear); });
+  root.querySelectorAll('[data-clear]').forEach(button => { button.onclick = guarded(() => clearBet(button.dataset.clear)); });
   // Wire clear-all to the clear endpoint.
-  root.querySelector('#clear').onclick = clearAll;
+  root.querySelector('#clear').onclick = guarded(clearAll);
   // Wire rebet to the rebet endpoint.
-  root.querySelector('#rebet').onclick = rebet;
+  root.querySelector('#rebet').onclick = guarded(rebet);
   // Wire spin to the spin endpoint.
-  root.querySelector('#spin').onclick = () => spin(true);
+  root.querySelector('#spin').onclick = guarded(() => spin(true));
   // Wire spot visibility without touching game state.
   root.querySelector('#toggleSpots').onclick = () => { showSpots = !showSpots; render(); updateBotPanel(); };
   // Preserve player-opened optional control groups across phase and locale rerenders.

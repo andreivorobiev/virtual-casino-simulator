@@ -2256,6 +2256,15 @@ h3 {
   animation: slotPulse .16s linear infinite;
 }
 
+/* Hold the reels steady for players who ask for reduced motion. The spinning state is an infinite
+   ~6Hz oscillation, which is exactly the kind of sustained motion that triggers vestibular symptoms,
+   and it sits in the shared stylesheet so it was not covered by any per-game guard. (issue #421) */
+@media (prefers-reduced-motion: reduce) {
+  .slot-symbol.spinning {
+    animation: none;
+  }
+}
+
 .slot-symbol.win {
   outline: 4px solid var(--gold);
   box-shadow: 0 0 18px var(--gold);

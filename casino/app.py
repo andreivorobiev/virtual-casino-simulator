@@ -724,7 +724,11 @@ class Handler(BaseHTTPRequestHandler):
                         # Raise a forbidden response while leaving read-only terms/current-user routes available.
                         raise ForbiddenError("Terms acceptance is required before play")
                     # Keep global bot configuration and bot-account actions behind the Admin role.
-                    if self.command != "GET" and path.startswith("/api/v1/bots/"):
+                    # Cover both shapes: the dedicated /api/v1/bots/ prefix and the bot sub-routes registered
+                    # under the games prefix (/api/v1/games/<id>/bots/...). The prefix-only check missed the
+                    # latter, so any authenticated player or guest could drive shared bot wallets and the
+                    # global game state other sessions read. (issue #418)
+                    if self.command != "GET" and (path.startswith("/api/v1/bots/") or "/bots/" in path):
                         # Reject normal users before shared bot configuration can be changed.
                         raise ForbiddenError("Admin role is required for bot account configuration")
                     # Replace caller-provided player ids for autoplay actions outside the game router.

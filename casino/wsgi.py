@@ -247,7 +247,11 @@ def _authorize_request(method: str, path: str, body: dict, headers: dict, client
             # Reuse the stable forbidden envelope without disclosing account details.
             raise ForbiddenError("Terms acceptance is required before play")
         # Reserve shared bot mutation for Admin while allowing non-mutating reads.
-        if method != "GET" and path.startswith("/api/v1/bots/"):
+        # Cover both shapes: the dedicated /api/v1/bots/ prefix and the bot sub-routes registered
+        # under the games prefix (/api/v1/games/<id>/bots/...). The prefix-only check missed the
+        # latter, so any authenticated player or guest could drive shared bot wallets and the
+        # global game state other sessions read. (issue #418)
+        if method != "GET" and (path.startswith("/api/v1/bots/") or "/bots/" in path):
             # Reject the request before any shared bot configuration changes.
             raise ForbiddenError("Admin role is required for bot account configuration")
         # Replace caller-authored autoplay player identity with the session binding.
