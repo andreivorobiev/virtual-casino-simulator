@@ -34,6 +34,8 @@ let unsubscribeLocale = null;
 let pendingDeal = null;
 // Retain an unresolved draw identity, round, and hold set for safe retry.
 let pendingDraw = null;
+// Retain the last settled deal wager so one click can open an identical new deal.
+let lastBet = null;
 // Retain a localized error resource key for the reserved route error region.
 let lastErrorKey = null;
 // Allocate stable fallback identities when randomUUID is unavailable.
@@ -219,6 +221,8 @@ function controlsHtml(roundItem) {
   const wagerDisabled = Boolean(state?.active_round) || busy || Boolean(pendingDeal);
   // Keep the deal action available for the exact same unresolved retry.
   const dealDisabled = Boolean(state?.active_round) || busy;
+  // Enable one-click repeat only outside a live hand, when nothing is in flight and a prior wager exists.
+  const repeatDisabled = Boolean(state?.active_round) || busy || Boolean(pendingDeal) || Boolean(pendingDraw) || !lastBet;
   // Enable draw only while the source hand awaits held-card decisions.
   const drawDisabled = !roundItem || roundItem.phase !== 'hold' || busy || Boolean(pendingDeal);
   // Explain why configuration remains locked after an ambiguous response.
@@ -228,7 +232,7 @@ function controlsHtml(roundItem) {
   // Change the draw label when the same unresolved action can be retried.
   const drawLabel = pendingDraw ? text('controls.retryDraw') : text('controls.draw');
   // Return a stable control rail whose primary actions never move between phases.
-  return '<aside class="jp-panel jp-controls" aria-label="' + safe(text('controls.title')) + '"><h2>' + safe(text('controls.title')) + '</h2><label for="jp-wager">' + safe(text('controls.wager')) + '</label><input id="jp-wager" type="number" min="0.01" max="100000" step="0.01" value="' + safe(wager) + '"' + (wagerDisabled ? ' disabled' : '') + '><p class="jp-total">' + safe(text('controls.singleHand')) + ': <strong>' + safe(tokenAmount(wager)) + '</strong></p><button type="button" class="jp-primary" data-action="deal"' + (dealDisabled ? ' disabled' : '') + '>' + safe(dealLabel) + '</button><button type="button" data-action="draw"' + (drawDisabled ? ' disabled' : '') + '>' + safe(drawLabel) + '</button><p class="jp-help">' + safe(text('controls.holdHelp')) + '</p>' + retryHelp + '<p class="jp-error" role="alert" data-error>' + (lastErrorKey ? safe(text(lastErrorKey)) : '') + '</p></aside>';
+  return '<aside class="jp-panel jp-controls" aria-label="' + safe(text('controls.title')) + '"><h2>' + safe(text('controls.title')) + '</h2><label for="jp-wager">' + safe(text('controls.wager')) + '</label><input id="jp-wager" type="number" min="0.01" max="100000" step="0.01" value="' + safe(wager) + '"' + (wagerDisabled ? ' disabled' : '') + '><p class="jp-total">' + safe(text('controls.singleHand')) + ': <strong>' + safe(tokenAmount(wager)) + '</strong></p><button type="button" class="jp-primary" data-action="deal"' + (dealDisabled ? ' disabled' : '') + '>' + safe(dealLabel) + '</button><button type="button" class="jp-repeat" data-action="repeat"' + (repeatDisabled ? ' disabled' : '') + '>' + safe(text('controls.repeat')) + '</button><button type="button" data-action="draw"' + (drawDisabled ? ' disabled' : '') + '>' + safe(drawLabel) + '</button><p class="jp-help">' + safe(text('controls.holdHelp')) + '</p>' + retryHelp + '<p class="jp-error" role="alert" data-error>' + (lastErrorKey ? safe(text(lastErrorKey)) : '') + '</p></aside>';
 }
 
 
@@ -276,7 +280,7 @@ function dataHtml() {
 // Return scoped responsive styles without modifying the shared application stylesheet.
 function stylesHtml() {
   // Define the dominant stage, stable controls, responsive stack, focus, and reduced-motion rules.
-  return '<style>/* Establish the Joker Poker header and desktop control-stage-data hierarchy. */.jp-shell{display:grid;gap:16px;min-width:0}.jp-header{display:flex;align-items:end;justify-content:space-between;gap:16px}.jp-header h1{margin:0}.jp-eyebrow{margin:0 0 4px;color:var(--muted,#b8c8c1)}.jp-phase{padding:7px 12px;border:1px solid rgba(255,215,128,.45);border-radius:999px;color:var(--gold,#f6d47a)}.jp-layout{display:grid;grid-template-columns:minmax(220px,.72fr) minmax(540px,2.4fr) minmax(250px,.88fr);gap:16px;align-items:start}.jp-panel,.jp-stage{border:1px solid rgba(255,215,128,.24);border-radius:16px;background:rgba(3,29,20,.86);padding:16px}.jp-controls,.jp-data{display:grid;align-content:start;gap:13px}.jp-controls h2,.jp-data h2{margin:0}.jp-controls input,.jp-controls button{min-height:44px}.jp-primary{background:var(--red,#a51f2d);color:#fff}.jp-help,.jp-retry,.jp-total,.jp-empty-history,.jp-data p{color:var(--muted,#b8c8c1)}.jp-error{min-height:1.4em;margin:0;color:#ffd1d1}.jp-stage{display:grid;align-content:center;gap:18px;min-width:0;min-height:430px;background:radial-gradient(circle at 50% 35%,rgba(53,101,97,.42),rgba(3,24,17,.96) 70%)}.jp-stage-kicker{margin:0 0 10px;text-align:center}.jp-card-row{display:flex;flex-wrap:wrap;justify-content:center;gap:9px}.jp-card-button{position:relative;min-width:58px;min-height:86px;padding:2px;border:2px solid transparent;background:transparent}.jp-card-button.is-held{border-color:#ffd780;border-radius:10px}.jp-held-label{position:absolute;inset:auto 3px 3px;padding:2px 5px;border-radius:999px;background:#07150f;color:#ffd780;font-size:10px}.jp-joker-card{display:inline-grid;place-items:center;min-width:3.7rem;aspect-ratio:2.5/3.5;border:1px solid rgba(255,255,255,.82);border-radius:8px;background:linear-gradient(145deg,#fcf8e8,#d8f3ef);color:#13261f;font-weight:800;letter-spacing:0}.jp-joker-card--selected{box-shadow:0 0 0 3px #ffd780}.jp-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.jp-summary span{display:grid;gap:5px;padding:10px;border-radius:10px;background:rgba(255,255,255,.05)}.jp-summary strong{overflow-wrap:anywhere}.jp-result{display:grid;gap:10px;padding:12px;border:1px solid rgba(255,255,255,.12);border-radius:12px;background:rgba(0,0,0,.16)}.jp-result header{display:flex;justify-content:space-between;gap:8px}.jp-result h2,.jp-result p{margin:0}.jp-joker-as{text-align:center;color:var(--gold,#f6d47a)}.jp-empty{min-height:330px;display:grid;place-content:center;text-align:center}.jp-data section{display:grid;gap:10px}.jp-data table{width:100%;border-collapse:collapse}.jp-data th,.jp-data td{padding:7px 4px;border-bottom:1px solid rgba(255,255,255,.1);text-align:left}.jp-history-list{display:grid;gap:8px;max-height:260px;margin:0;padding:0;overflow:auto;list-style:none;scrollbar-width:thin}.jp-history-list li{display:grid;grid-template-columns:1fr auto;gap:8px;padding:9px;border-radius:9px;background:rgba(0,0,0,.2)}.jp-shell button:focus-visible,.jp-shell input:focus-visible,.jp-history-list:focus-visible{outline:3px solid #ffd780;outline-offset:2px}/* Stack controls, stage, and data on compact screens. */@media(max-width:1100px){.jp-layout{grid-template-columns:1fr}.jp-controls{order:1}.jp-stage{order:2;min-height:360px}.jp-data{order:3}}/* Prevent card, summary, and action clipping on mobile. */@media(max-width:520px){.jp-header{align-items:start;flex-direction:column}.jp-panel,.jp-stage{padding:12px}.jp-stage{min-height:320px}.jp-card-button{min-width:48px;min-height:72px}.jp-joker-card{min-width:3rem}.jp-summary{grid-template-columns:1fr}.jp-history-list li{grid-template-columns:1fr}}/* Remove decorative motion for reduced-motion users. */@media(prefers-reduced-motion:reduce){.jp-shell *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}</style>';
+  return '<style>/* Establish the Joker Poker header and desktop control-stage-data hierarchy. */.jp-shell{display:grid;gap:16px;min-width:0}.jp-header{display:flex;align-items:end;justify-content:space-between;gap:16px}.jp-header h1{margin:0}.jp-eyebrow{margin:0 0 4px;color:var(--muted,#b8c8c1)}.jp-phase{padding:7px 12px;border:1px solid rgba(255,215,128,.45);border-radius:999px;color:var(--gold,#f6d47a)}.jp-layout{display:grid;grid-template-columns:minmax(220px,.72fr) minmax(540px,2.4fr) minmax(250px,.88fr);gap:16px;align-items:start}.jp-panel,.jp-stage{border:1px solid rgba(255,215,128,.24);border-radius:16px;background:rgba(3,29,20,.86);padding:16px}.jp-controls,.jp-data{display:grid;align-content:start;gap:13px}.jp-controls h2,.jp-data h2{margin:0}.jp-controls input,.jp-controls button{min-height:44px}.jp-primary{background:var(--red,#a51f2d);color:#fff}.jp-repeat{min-height:45px;background:transparent;color:#ffd780;border:1px solid rgba(255,215,128,.55)}.jp-repeat:disabled{opacity:.5}.jp-help,.jp-retry,.jp-total,.jp-empty-history,.jp-data p{color:var(--muted,#b8c8c1)}.jp-error{min-height:1.4em;margin:0;color:#ffd1d1}.jp-stage{display:grid;align-content:center;gap:18px;min-width:0;min-height:430px;background:radial-gradient(circle at 50% 35%,rgba(53,101,97,.42),rgba(3,24,17,.96) 70%)}.jp-stage-kicker{margin:0 0 10px;text-align:center}.jp-card-row{display:flex;flex-wrap:wrap;justify-content:center;gap:9px}.jp-card-button{position:relative;min-width:58px;min-height:86px;padding:2px;border:2px solid transparent;background:transparent}.jp-card-button.is-held{border-color:#ffd780;border-radius:10px}.jp-held-label{position:absolute;inset:auto 3px 3px;padding:2px 5px;border-radius:999px;background:#07150f;color:#ffd780;font-size:10px}.jp-joker-card{display:inline-grid;place-items:center;min-width:3.7rem;aspect-ratio:2.5/3.5;border:1px solid rgba(255,255,255,.82);border-radius:8px;background:linear-gradient(145deg,#fcf8e8,#d8f3ef);color:#13261f;font-weight:800;letter-spacing:0}.jp-joker-card--selected{box-shadow:0 0 0 3px #ffd780}.jp-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.jp-summary span{display:grid;gap:5px;padding:10px;border-radius:10px;background:rgba(255,255,255,.05)}.jp-summary strong{overflow-wrap:anywhere}.jp-result{display:grid;gap:10px;padding:12px;border:1px solid rgba(255,255,255,.12);border-radius:12px;background:rgba(0,0,0,.16)}.jp-result header{display:flex;justify-content:space-between;gap:8px}.jp-result h2,.jp-result p{margin:0}.jp-joker-as{text-align:center;color:var(--gold,#f6d47a)}.jp-empty{min-height:330px;display:grid;place-content:center;text-align:center}.jp-data section{display:grid;gap:10px}.jp-data table{width:100%;border-collapse:collapse}.jp-data th,.jp-data td{padding:7px 4px;border-bottom:1px solid rgba(255,255,255,.1);text-align:left}.jp-history-list{display:grid;gap:8px;max-height:260px;margin:0;padding:0;overflow:auto;list-style:none;scrollbar-width:thin}.jp-history-list li{display:grid;grid-template-columns:1fr auto;gap:8px;padding:9px;border-radius:9px;background:rgba(0,0,0,.2)}.jp-shell button:focus-visible,.jp-shell input:focus-visible,.jp-history-list:focus-visible{outline:3px solid #ffd780;outline-offset:2px}/* Stack controls, stage, and data on compact screens. */@media(max-width:1100px){.jp-layout{grid-template-columns:1fr}.jp-controls{order:1}.jp-stage{order:2;min-height:360px}.jp-data{order:3}}/* Prevent card, summary, and action clipping on mobile. */@media(max-width:520px){.jp-header{align-items:start;flex-direction:column}.jp-panel,.jp-stage{padding:12px}.jp-stage{min-height:320px}.jp-card-button{min-width:48px;min-height:72px}.jp-joker-card{min-width:3rem}.jp-summary{grid-template-columns:1fr}.jp-history-list li{grid-template-columns:1fr}}/* Remove decorative motion for reduced-motion users. */@media(prefers-reduced-motion:reduce){.jp-shell *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}</style>';
 }
 
 
@@ -297,6 +301,10 @@ function bindEvents() {
     // Execute the prepared request through shared busy and error handling.
     runAction(deal);
   };
+  // Read the secondary repeat action control.
+  const repeatButton = root?.querySelector('[data-action="repeat"]');
+  // Reopen an identical new deal with the last settled wager on click.
+  if (repeatButton) repeatButton.onclick = () => repeat();
   // Wire every source card to reload-safe hold persistence.
   root?.querySelectorAll('[data-hold-position]').forEach(button => {
     // Toggle the selected position through the public API.
@@ -392,6 +400,21 @@ async function deal() {
 }
 
 
+// Open one identical new deal with the last settled wager without replaying hold or draw.
+async function repeat() {
+  // Ignore repeat while detached, mid-action, mid-retry, or before any settled wager exists.
+  if (busy || !root || pendingDeal || pendingDraw || !lastBet) return;
+  // Ignore repeat while a round is still awaiting hold or draw decisions.
+  if (state?.active_round) return;
+  // Restore the remembered wager into the locked configuration before dealing.
+  wager = wagerValue(lastBet.wager);
+  // Prepare a fresh deal identity that charges an exactly-once new round.
+  pendingDeal = pendingDeal || { actionId: nextActionId(), wager };
+  // Execute the prepared deal through shared busy and error handling.
+  runAction(deal);
+}
+
+
 // Persist one changed hold position for reload-safe continuation.
 async function toggleHold(position) {
   // Capture the route node so late responses cannot overwrite a later mount.
@@ -431,6 +454,10 @@ async function draw() {
   state = payload.state;
   // Refresh fixed rules when the response includes them.
   rules = payload.rules || rules;
+  // Read the just-settled round so repeat can reopen an identical deal.
+  const settled = currentRound();
+  // Remember only the immutable wager config, never the resolved hold or draw decisions.
+  if (settled?.wager) lastBet = { wager: Number(settled.wager) };
   // Clear the retry identity only after the settled response is available.
   pendingDraw = null;
   // Clear any obsolete deal identity after terminal settlement.
@@ -458,6 +485,8 @@ export const JokerPokerGame = {
     pendingDeal = null;
     // Clear any prior draw identity before reading current server state.
     pendingDraw = null;
+    // Reset the repeatable wager so a new session never inherits a prior bet.
+    lastBet = null;
     // Install shared accessible card presentation once.
     ensureSharedCardStyles();
     // Capture this mount node for asynchronous route replacement guards.
@@ -478,6 +507,10 @@ export const JokerPokerGame = {
     rules = payload.rules || {};
     // Restore the active round wager into the locked control when present.
     wager = state?.active_round?.wager || wager;
+    // Read the newest settled round so repeat survives a reload.
+    const recovered = state?.recent_rounds?.slice(-1)[0];
+    // Recover the repeatable wager only when a prior settled round exposes it.
+    if (recovered?.wager) lastBet = { wager: Number(recovered.wager) };
     // Render the complete game-owned browser surface.
     render();
     // Align the persistent wallet with any recovered ledger marker.
@@ -501,6 +534,8 @@ export const JokerPokerGame = {
     pendingDeal = null;
     // Forget the route-local draw identity after teardown.
     pendingDraw = null;
+    // Forget the repeatable wager so the next session starts fresh.
+    lastBet = null;
     // Clear the reserved localized error state.
     lastErrorKey = null;
     // No timers or global event listeners are owned by this game.

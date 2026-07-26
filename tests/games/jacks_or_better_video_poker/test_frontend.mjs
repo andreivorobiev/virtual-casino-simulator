@@ -75,6 +75,12 @@ assert.match(source, /action_id: pendingDealActionId/);
 assert.match(source, /action_id: pendingDrawActionId/);
 // Verify this route owns no timer that could survive unmount or reload.
 assert.doesNotMatch(source, /setTimeout|setInterval|requestAnimationFrame/);
+// Verify the one-click repeat-bet control is present in production markup.
+assert.match(source, /data-action="repeat"/);
+// Verify both locales expose the repeat-bet control label.
+assert.ok(typeof english['controls.repeat'] === 'string' && english['controls.repeat'].trim());
+// Verify the paired Russian domain also owns the repeat-bet control label.
+assert.ok(typeof russian['controls.repeat'] === 'string' && russian['controls.repeat'].trim());
 // Verify game-owned CSS includes a responsive stacking breakpoint.
 assert.match(source, /@media\(max-width:1180px\)/);
 // Verify game-owned CSS explicitly removes optional motion under user preference.

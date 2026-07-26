@@ -34,6 +34,12 @@ assert.match(source, /pendingDeal = pendingDeal \|\| \{ actionId: nextActionId\(
 assert.match(source, /pendingDraw = pendingDraw \|\| \{ actionId: nextActionId\(\), roundId: activeRound\.round_id, holds:/);
 // Verify the retained draw request snapshots the active held positions.
 assert.ok(source.includes('holds: [...(activeRound.holds || [])]'));
+// Verify the one-click repeat control is rendered as a secondary deal-rail action.
+assert.match(source, /class="jp-repeat" data-action="repeat"/);
+// Verify repeat reopens a fresh deal with the last settled wager instead of replaying draw.
+assert.match(source, /async function repeat\(\)/);
+// Verify repeat stays disabled without a prior settled wager or while a hand is live.
+assert.match(source, /repeatDisabled = Boolean\(state\?\.active_round\) \|\| busy \|\| Boolean\(pendingDeal\) \|\| Boolean\(pendingDraw\) \|\| !lastBet/);
 // Verify this module owns no timer that could survive unmount.
 assert.doesNotMatch(source, /setTimeout|setInterval|requestAnimationFrame/);
 // Verify reduced-motion behavior is included in game-owned styling.

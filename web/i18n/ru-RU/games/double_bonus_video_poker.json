@@ -11,6 +11,7 @@
   "action.deal": "Раздать",
   "action.deal_again": "Раздать снова",
   "action.draw": "Тянуть",
+  "controls.repeat": "Повторить ставку",
   "outcome.win": "Вы выиграли!",
   "outcome.push": "Ничья.",
   "outcome.lose": "Нет выигрыша.",

@@ -41,6 +41,8 @@ let actionCounter = 0;
 let pendingDealActionId = null;
 // Retain the wager paired with an unresolved deal action id so retries cannot conflict.
 let pendingDealWager = null;
+// Retain the last settled deal's wager so one click can repeat an identical hand.
+let lastBet = null;
 // Retain unresolved hold action ids by round and desired selection.
 const pendingHoldActionIds = new Map();
 // Retain unresolved draw action ids by round so payout retries remain exactly-once.
@@ -225,8 +227,10 @@ function controlsHtml(roundItem) {
   const dealDisabled = Boolean(state?.active_round) || busy;
   // Enable draw only while the active hand awaits hold decisions.
   const drawDisabled = !roundItem || roundItem.phase !== 'hold' || busy;
+  // Enable the one-click repeat only outside a mid-hand and after a prior settled wager exists.
+  const repeatDisabled = wagerDisabled || !lastBet;
   // Return the complete stable control rail with fake-money language.
-  return `<aside class="dwvp-panel dwvp-controls" aria-label="${safe(text('controls.title'))}"><h2>${safe(text('controls.title'))}</h2><label for="dwvp-wager">${safe(text('controls.wager'))}</label><input id="dwvp-wager" type="number" min="${MIN_WAGER}" max="${MAX_WAGER}" step="0.01" value="${safe(wager)}"${wagerDisabled ? ' disabled' : ''}><p class="dwvp-total">${safe(text('controls.totalWager'))}: <strong>${safe(tokenAmount(wager))}</strong></p><button type="button" class="dwvp-primary" data-action="deal"${dealDisabled ? ' disabled' : ''}>${safe(text('controls.deal'))}</button><button type="button" data-action="draw"${drawDisabled ? ' disabled' : ''}>${safe(text('controls.draw'))}</button><p class="dwvp-help">${safe(text('controls.holdHelp'))}</p></aside>`;
+  return `<aside class="dwvp-panel dwvp-controls" aria-label="${safe(text('controls.title'))}"><h2>${safe(text('controls.title'))}</h2><label for="dwvp-wager">${safe(text('controls.wager'))}</label><input id="dwvp-wager" type="number" min="${MIN_WAGER}" max="${MAX_WAGER}" step="0.01" value="${safe(wager)}"${wagerDisabled ? ' disabled' : ''}><p class="dwvp-total">${safe(text('controls.totalWager'))}: <strong>${safe(tokenAmount(wager))}</strong></p><button type="button" class="dwvp-primary" data-action="deal"${dealDisabled ? ' disabled' : ''}>${safe(text('controls.deal'))}</button><button type="button" class="dwvp-repeat" data-action="repeat"${repeatDisabled ? ' disabled' : ''}>${safe(text('controls.repeat'))}</button><button type="button" data-action="draw"${drawDisabled ? ' disabled' : ''}>${safe(text('controls.draw'))}</button><p class="dwvp-help">${safe(text('controls.holdHelp'))}</p></aside>`;
 }
 
 
@@ -246,7 +250,7 @@ function stylesHtml() {
     /* Load the shared #96 responsive card presentation for renderCard output. */
     @import url('/core/cards.css');
     /* Scope the issue #92 three-zone layout and component presentation to this game. */
-    .dwvp-shell{display:grid;gap:18px;min-width:0}.dwvp-header{display:flex;align-items:end;justify-content:space-between;gap:12px}.dwvp-header h1{margin:0}.dwvp-phase{padding:7px 12px;border:1px solid rgba(255,215,128,.45);border-radius:999px}.dwvp-layout{display:grid;grid-template-columns:minmax(210px,.72fr) minmax(520px,2.4fr) minmax(230px,.8fr);gap:16px;align-items:start}.dwvp-panel,.dwvp-stage{border:1px solid rgba(255,215,128,.24);border-radius:16px;background:rgba(3,29,20,.82);padding:16px}.dwvp-controls{display:grid;gap:12px}.dwvp-shell button,.dwvp-shell input{min-height:42px}.dwvp-primary{background:#a51f2d;color:#fff}.dwvp-help,.dwvp-total,.dwvp-data p,.dwvp-stage-help{color:var(--muted,#b8c8c1)}.dwvp-stage{display:grid;gap:16px;min-width:0}.dwvp-card-row{display:flex;flex-wrap:wrap;justify-content:center;gap:10px}.dwvp-card-button{position:relative;min-width:72px;min-height:104px;padding:3px;border:2px solid transparent;background:transparent}.dwvp-card-button.is-held{border-color:#ffd780;border-radius:10px}.dwvp-held-label,.dwvp-wild-label{position:absolute;padding:2px 6px;border-radius:999px;background:#07150f;color:#ffd780;font-size:10px}.dwvp-held-label{inset:auto 3px 3px}.dwvp-wild-label{inset:3px 3px auto auto}.dwvp-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.dwvp-summary span{padding:10px;border-radius:10px;background:rgba(255,255,255,.04)}.dwvp-data table{width:100%;border-collapse:collapse}.dwvp-data th,.dwvp-data td{padding:7px 4px;border-bottom:1px solid rgba(255,255,255,.1);text-align:left}.dwvp-empty{min-height:340px;display:grid;place-content:center;text-align:center}.dwvp-stage-help{text-align:center}.dwvp-card-button:focus-visible,.dwvp-shell button:focus-visible,.dwvp-shell input:focus-visible{outline:3px solid #ffd780;outline-offset:2px}@media(max-width:1100px){.dwvp-layout{grid-template-columns:1fr}.dwvp-controls{order:1}.dwvp-stage{order:2}.dwvp-data{order:3}}@media(max-width:520px){.dwvp-header{align-items:start;flex-direction:column}.dwvp-panel,.dwvp-stage{padding:12px}.dwvp-summary{grid-template-columns:1fr}.dwvp-card-button{min-width:52px;min-height:78px}.dwvp-card-row{gap:5px}}@media(prefers-reduced-motion:reduce){.dwvp-shell *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+    .dwvp-shell{display:grid;gap:18px;min-width:0}.dwvp-header{display:flex;align-items:end;justify-content:space-between;gap:12px}.dwvp-header h1{margin:0}.dwvp-phase{padding:7px 12px;border:1px solid rgba(255,215,128,.45);border-radius:999px}.dwvp-layout{display:grid;grid-template-columns:minmax(210px,.72fr) minmax(520px,2.4fr) minmax(230px,.8fr);gap:16px;align-items:start}.dwvp-panel,.dwvp-stage{border:1px solid rgba(255,215,128,.24);border-radius:16px;background:rgba(3,29,20,.82);padding:16px}.dwvp-controls{display:grid;gap:12px}.dwvp-shell button,.dwvp-shell input{min-height:42px}.dwvp-primary{background:#a51f2d;color:#fff}.dwvp-repeat{min-height:44px;background:transparent;color:#ffd780;border:1px solid rgba(255,215,128,.55)}.dwvp-repeat:disabled{opacity:.5}.dwvp-help,.dwvp-total,.dwvp-data p,.dwvp-stage-help{color:var(--muted,#b8c8c1)}.dwvp-stage{display:grid;gap:16px;min-width:0}.dwvp-card-row{display:flex;flex-wrap:wrap;justify-content:center;gap:10px}.dwvp-card-button{position:relative;min-width:72px;min-height:104px;padding:3px;border:2px solid transparent;background:transparent}.dwvp-card-button.is-held{border-color:#ffd780;border-radius:10px}.dwvp-held-label,.dwvp-wild-label{position:absolute;padding:2px 6px;border-radius:999px;background:#07150f;color:#ffd780;font-size:10px}.dwvp-held-label{inset:auto 3px 3px}.dwvp-wild-label{inset:3px 3px auto auto}.dwvp-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.dwvp-summary span{padding:10px;border-radius:10px;background:rgba(255,255,255,.04)}.dwvp-data table{width:100%;border-collapse:collapse}.dwvp-data th,.dwvp-data td{padding:7px 4px;border-bottom:1px solid rgba(255,255,255,.1);text-align:left}.dwvp-empty{min-height:340px;display:grid;place-content:center;text-align:center}.dwvp-stage-help{text-align:center}.dwvp-card-button:focus-visible,.dwvp-shell button:focus-visible,.dwvp-shell input:focus-visible{outline:3px solid #ffd780;outline-offset:2px}@media(max-width:1100px){.dwvp-layout{grid-template-columns:1fr}.dwvp-controls{order:1}.dwvp-stage{order:2}.dwvp-data{order:3}}@media(max-width:520px){.dwvp-header{align-items:start;flex-direction:column}.dwvp-panel,.dwvp-stage{padding:12px}.dwvp-summary{grid-template-columns:1fr}.dwvp-card-button{min-width:52px;min-height:78px}.dwvp-card-row{gap:5px}}@media(prefers-reduced-motion:reduce){.dwvp-shell *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
     /* End the game-owned style block without timers or global listeners. */
   </style>`;
 }
@@ -379,8 +383,27 @@ async function draw() {
   adoptPayload(payload);
   // Clear the draw retry id only after a confirming server response.
   pendingDrawActionIds.delete(roundItem.round_id);
+  // Capture the just-settled deal's committed wager so one click can repeat an identical hand.
+  const settledRound = currentRound();
+  // Remember the repeatable wager only once settlement archived a positive committed stake.
+  if (settledRound?.phase === 'settled' && roundWager(settledRound)) lastBet = { wager: roundWager(settledRound) };
   // Refresh the shared authenticated wallet after payout settlement.
   await refreshBalance();
+}
+
+
+// Re-apply the last settled wager and start one identical new deal without replaying holds.
+async function repeat() {
+  // Ignore repeat while any request, unresolved deal, mid-hand, or absent prior wager blocks a fresh deal.
+  if (busy || pendingDealActionId || state?.active_round || !lastBet) return;
+  // Restore the remembered wager so the preview and next deal use the repeated stake.
+  wager = lastBet.wager;
+  // Align the editable input with the restored wager before the shared busy render replaces it.
+  const wagerInput = root?.querySelector('#dwvp-wager');
+  // Apply the stored wager only when the enabled input is present.
+  if (wagerInput) wagerInput.value = String(lastBet.wager);
+  // Start one new deal with the restored wager through shared busy handling, never replaying holds.
+  await runAction(() => deal(lastBet.wager));
 }
 
 
@@ -406,6 +429,10 @@ function bindEvents() {
     // Validate and submit that exact captured value inside the atomic action wrapper.
     return runAction(() => deal(requestedValue));
   };
+  // Wire the one-click repeat that opens a new deal with the last settled wager.
+  const repeatButton = root.querySelector('[data-action="repeat"]');
+  // Guard and start a repeated deal when its mounted control is available.
+  if (repeatButton) repeatButton.onclick = () => repeat();
   // Wire the draw action through shared busy handling.
   const drawButton = root.querySelector('[data-action="draw"]');
   // Complete the current hand when its mounted control is available.
@@ -428,6 +455,8 @@ export const DeucesWildVideoPokerGame = {
   async mount(node) {
     // Store the route outlet for deterministic subsequent renders.
     root = node;
+    // Reset the repeatable wager so a new session never inherits a prior deal.
+    lastBet = null;
     // Load the paired game-owned locale resources.
     await loadI18nDomain(DOMAIN);
     // Subscribe to locale changes without remounting or losing hold state.
@@ -438,6 +467,10 @@ export const DeucesWildVideoPokerGame = {
     adoptPayload(payload);
     // Restore the active round's wager when reloading a hold decision.
     wager = Number(state?.active_round?.total_wager ?? state?.active_round?.wager ?? state?.active_round?.wager_amount ?? wager);
+    // Recover a repeatable wager from the newest settled round so repeat survives a reload.
+    const recovered = state?.recent_rounds?.slice(-1)[0];
+    // Restore the repeatable wager only when a settled round exposes its committed stake.
+    if (recovered?.phase === 'settled' && roundWager(recovered)) lastBet = { wager: roundWager(recovered) };
     // Render the complete issue #92 surface.
     render();
     // Refresh the shared wallet without rendering game-owned balance text.
@@ -451,6 +484,8 @@ export const DeucesWildVideoPokerGame = {
     unsubscribeLocale = null;
     // Clear cached player state from the inactive route.
     state = null;
+    // Clear the repeatable wager so the next session starts fresh.
+    lastBet = null;
     // Clear the mount node so late promises cannot render into another route.
     root = null;
     // Preserve only unresolved action ids so later retries remain exactly-once safe.

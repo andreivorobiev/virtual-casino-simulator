@@ -65,6 +65,14 @@ assert.match(source, /prefers-reduced-motion:reduce/);
 assert.match(source, /min-height:44px/);
 // Verify responsive stacking preserves control, stage, then data order.
 assert.match(source, /\.cs-controls\{order:1\}[\s\S]*\.cs-stage\{order:2[\s\S]*\.cs-data\{order:3\}/);
+// Verify the module retains the last committed ante for one-click repeat.
+assert.match(source, /let lastBet = null/);
+// Verify the non-decision branch renders the one-click repeat control.
+assert.match(source, /class="cs-repeat" data-action="repeat"/);
+// Verify repeat re-applies the stored ante through the shared deal path and never replays call or fold.
+assert.match(source, /async function repeat\(\)[\s\S]*runAction\(deal\)/);
+// Verify the repeat control carries game-owned styling with a disabled treatment.
+assert.match(source, /\.cs-repeat\{[\s\S]*\.cs-repeat:disabled\{opacity:\.5\}/);
 // Verify locale subscription and cleanup are both explicit.
 assert.match(source, /unsubscribeLocale = onLocaleChange\(\(\) => render\(\)\)/);
 // Verify route teardown invokes the retained locale unsubscribe callback.
@@ -79,7 +87,7 @@ for (const value of Object.values(english)) {
   assert.doesNotMatch(String(value), /\b(cash|deposit|withdraw|dollar|purchase)\b/i);
 }
 // Verify representative visible and ARIA strings exist in both locales.
-for (const key of ['title', 'controls.deal', 'controls.call', 'controls.fold', 'cards.faceDown', 'cards.cardLabel', 'handRanks.royal_flush', 'stage.cardsAria', 'errors.actionFailed']) {
+for (const key of ['title', 'controls.deal', 'controls.call', 'controls.fold', 'controls.repeat', 'cards.faceDown', 'cards.cardLabel', 'handRanks.royal_flush', 'stage.cardsAria', 'errors.actionFailed']) {
   // Require a non-empty English value for the probed key.
   assert.ok(english[key]?.trim(), key + ' missing from English');
   // Require a non-empty Russian value for the probed key.
