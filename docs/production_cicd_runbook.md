@@ -8,7 +8,7 @@ Every protected `main` merge should automatically become the production release.
 
 The browser Admin login and the production monitor login are separate things. Browser login is for a person. The monitor credential is a server-owned bearer token used only by deployment health checks.
 
-Packaged release numbers use the four-part scheme documented in [the release versioning policy](release_versioning.md). The current line is `0.9.5.5`; `0.9.6.0` is reserved for the next large Claude LPR.
+Packaged release numbers use the four-part scheme documented in [the release versioning policy](release_versioning.md). The current line is `0.9.5.6`; `0.9.6.0` is reserved for the next large Claude LPR.
 
 ## What happens after a merge
 

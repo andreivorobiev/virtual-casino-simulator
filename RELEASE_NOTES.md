@@ -1,4 +1,16 @@
-# Virtual Casino Simulator v0.9.5.5 Release Notes
+# Virtual Casino Simulator v0.9.5.6 Release Notes
+
+## Documentation truth-pass and release-recovery patch
+
+- Packages the exact accepted protected-main state after v0.9.5.5 and the documentation truth pass as a distinct immutable patch release, excluding every unmerged branch and pull request.
+- Keeps the four-part private-beta version scheme intact: private-beta epoch `0`, Casino platform line `9`, product wave `5`, and patch `6`.
+- Keeps `0.9.6.0` reserved for the next large Claude LPR by bumping the product-wave slot and resetting the patch slot only when that bundle lands.
+- Carries the plain-English production CI/CD runbook, release-versioning policy, and corrected tracked Markdown documentation as the current protected-main source of truth.
+- Keeps the protected-main CI/CD implementation, TiltSeven canonical origin, Operations-only monitor bearer, MySQL schema 2, and application-only rollback controls from v0.9.5.5 unchanged.
+- Uses retained v0.9.5.5 release assets as the immediate application-only rollback predecessor; database rollback remains prohibited.
+- Preserves signup, live OAuth, provider networking, DNS, billing, and unrestricted public exposure as separately gated.
+
+## Prior v0.9.5.5 four-part protected-main release
 
 ## Four-part private-beta versioning and CI/CD runbook release
 

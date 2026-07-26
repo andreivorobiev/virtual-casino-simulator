@@ -1,6 +1,25 @@
 {
-  "application": "0.9.5.6",
+  "app_version": "0.9.5.6",
   "source_baseline": "9.1.0",
+  "api_compatibility_matrix": "contracts/compatibility/module-api-matrix.json",
+  "release_provenance_requirement": "TOOL-003",
+  "release_channel": "restricted-preview-private-invite",
+  "access_policy": {
+    "admission": "manual-invite",
+    "public_signup": "disabled",
+    "live_oauth": "disabled"
+  },
+  "predecessor": {
+    "app_version": "0.9.5.5",
+    "compatibility_record": "contracts/compatibility/app-0.9.5.5.json",
+    "required_artifact": "release-manifest.json"
+  },
+  "rollback": {
+    "scope": "application-only",
+    "database_rollback": "prohibited",
+    "mysql_expected_schema_version": 2,
+    "requires_retained_predecessor_manifest": true
+  },
   "modules": {
     "application": "9.51.18",
     "core": "9.24.2",
@@ -64,5 +83,5 @@
     "daily_draw_lab": "1.0.0",
     "four_card_poker": "1.0.1"
   },
-  "created_at": "2026-07-09T00:00:00.000000Z"
+  "notes": "Compatible documentation truth-pass and release-recovery patch that packages the exact protected-main Markdown corrections after v0.9.5.5, preserves the four-part private-beta versioning policy, keeps v0.9.6.0 reserved for the next large Claude LPR, and changes no API, runtime admission, MySQL schema, provider, DNS, billing, or public-exposure boundary. Rollback is application-only to retained v0.9.5.5."
 }
