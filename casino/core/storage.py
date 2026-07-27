@@ -1,6 +1,8 @@
 # AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
 # Import annotations so provider type hints can refer to classes declared later.
 from __future__ import annotations
+# Import process-exit hooks so cached MySQL pools release idle connections on shutdown.
+import atexit
 # Import required dependency so action fingerprints are derived from canonical transaction semantics.
 import hashlib
 # Import required dependency so process-lock helpers can be expressed as context managers.
@@ -32,6 +34,8 @@ from casino.core.clock import utc_now
 from casino.core.ids import new_id
 # Import read-only MySQL migration compatibility without exposing deployment credentials.
 from casino.core.mysql_migrations import verify_runtime_compatibility
+# Import the bounded process-local MySQL connection lifecycle.
+from casino.core.mysql_pool import MySQLConnectionPool, MySQLPoolConfig
 # Import required dependency so storage providers surface existing API errors.
 from casino.errors import ConflictError, InsufficientFundsError, NotFoundError, ValidationError
 
@@ -971,10 +975,12 @@ class MySQLStorageProvider(StorageProvider):
     # Store the provider name used by diagnostics and tests.
     name = "mysql"
 
-    # Initialize the MySQL provider from an explicit or environment config.
-    def __init__(self, config: MySQLConfig | None = None) -> None:
+    # Initialize the MySQL provider from explicit or environment connection and pool config.
+    def __init__(self, config: MySQLConfig | None = None, pool_config: MySQLPoolConfig | None = None) -> None:
         # Store the connection configuration without opening a connection yet.
         self.config = config or MySQLConfig.from_env()
+        # Build one lazy bounded pool for this process without opening a physical connection.
+        self._pool = MySQLConnectionPool(self._open_physical_connection, pool_config)
         # Track whether this process has completed exact read-only schema compatibility verification.
         self._ready = False
         # Serialize first-use compatibility verification across concurrent request threads.
@@ -993,12 +999,33 @@ class MySQLStorageProvider(StorageProvider):
         # Return the imported connector module.
         return mysql.connector
 
-    # Open a new MySQL connection using the configured credentials.
-    def connect(self, **overrides):
-        # Merge bounded caller-owned connector options without changing stored credentials.
-        connection_options = {**self.config.kwargs(), **overrides}
-        # Return a new DB-API connection for one provider operation.
+    # Open one physical MySQL connection for the pool using fixed credentials and a bounded timeout.
+    def _open_physical_connection(self, connection_timeout: int):
+        # Add only the validated connector deadline to the configured credentials.
+        connection_options = {**self.config.kwargs(), "connection_timeout": connection_timeout}
+        # Return one new physical DB-API connection to the pool.
         return self._connector().connect(**connection_options)
+
+    # Lease a request-scoped MySQL connection from the bounded process-local pool.
+    def connect(self, **overrides):
+        # Reject connector overrides that could cross credential, database, or session boundaries.
+        if set(overrides) - {"connection_timeout"}:
+            # Raise a fixed validation error without echoing option names or values.
+            raise ValueError("Unsupported MySQL connection override.")
+        # Preserve the established readiness-probe timeout seam while pooling ordinary operations.
+        connection_timeout = overrides.get("connection_timeout")
+        # Return a lease whose close sanitizes and returns the physical connection.
+        return self._pool.acquire(connect_timeout_seconds=connection_timeout)
+
+    # Return the internal secret-free pool evidence used by lifecycle tests and future contracted telemetry.
+    def pool_snapshot(self) -> dict:
+        # Return only fixed low-cardinality gauges, counters, policy, and wait buckets.
+        return self._pool.snapshot()
+
+    # Close idle physical sessions and make this provider reject future checkout.
+    def close_pool(self) -> None:
+        # Delegate fail-safe connection shutdown to the pool.
+        self._pool.close_all()
 
     # Verify the exact MySQL migration state before reads and writes.
     def ensure_ready(self) -> None:
@@ -1789,10 +1816,46 @@ def get_storage_provider() -> StorageProvider:
 def set_provider_for_tests(provider: StorageProvider | None) -> None:
     # Declare provider caches for assignment.
     global _TEST_PROVIDER, _PROVIDER
+    # Preserve test and runtime provider instances before replacing the caches.
+    previous_test_provider = _TEST_PROVIDER
+    # Preserve the regular provider because test injection always invalidates that cache.
+    previous_runtime_provider = _PROVIDER
     # Store the explicit test provider.
     _TEST_PROVIDER = provider
     # Clear the regular cache so later tests rebuild from environment.
     _PROVIDER = None
+    # Close the regular cache, plus a test provider only when test injection is being cleared.
+    providers_to_close = (previous_runtime_provider, previous_test_provider if provider is None else None)
+    # Release eligible replaced MySQL pools without affecting the newly injected provider.
+    for previous_provider in providers_to_close:
+        # Skip empty caches, duplicate references, and the provider now being installed.
+        if previous_provider is None or previous_provider is provider:
+            # Continue to the next cached provider.
+            continue
+        # Resolve the optional lifecycle hook without imposing it on JSON providers.
+        close_pool = getattr(previous_provider, "close_pool", None)
+        # Close idle physical sessions when the replaced provider owns a pool.
+        if callable(close_pool):
+            # Execute the provider-owned shutdown hook.
+            close_pool()
+
+
+# Close process-wide cached MySQL pools during interpreter shutdown.
+def _close_cached_provider_pools() -> None:
+    # Deduplicate current test and runtime provider references by object identity.
+    cached_providers = {id(provider): provider for provider in (_TEST_PROVIDER, _PROVIDER) if provider is not None}
+    # Visit each distinct cached provider once.
+    for provider in cached_providers.values():
+        # Resolve the optional pool lifecycle hook without affecting JSON providers.
+        close_pool = getattr(provider, "close_pool", None)
+        # Close idle physical sessions when this cached provider owns a pool.
+        if callable(close_pool):
+            # Execute the provider-owned shutdown hook.
+            close_pool()
+
+
+# Register one module-level shutdown hook without retaining every test-created provider.
+atexit.register(_close_cached_provider_pools)
 
 
 # Seed players when the configured provider is fresh.

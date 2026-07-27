@@ -281,6 +281,7 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 - [`docs/long_test_suites.md`](docs/long_test_suites.md) — Long Casino Test Suites
 - [`docs/marketing_customization.md`](docs/marketing_customization.md) — Marketing and brand customization
 - [`docs/motion_acceptance_contract.md`](docs/motion_acceptance_contract.md) — Deterministic motion acceptance contract
+- [`docs/mysql_connection_pool.md`](docs/mysql_connection_pool.md) — MySQL connection lifecycle
 - [`docs/mysql_migrations.md`](docs/mysql_migrations.md) — MySQL migration and DDL-free runtime gate
 - [`docs/oauth_invite_only.md`](docs/oauth_invite_only.md) — Invite-only OAuth operations boundary
 - [`docs/production_cicd_runbook.md`](docs/production_cicd_runbook.md) — Production CI/CD runbook

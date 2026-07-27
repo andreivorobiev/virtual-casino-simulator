@@ -111,7 +111,9 @@ implementations selected by configuration:
   transaction with `SELECT ... FOR UPDATE` on the player row; exactly-once settlement is enforced by
   a unique action-identity index. Schema changes go through `casino/core/mysql_migrations.py`, which
   verifies a checksummed migration catalog and uses a fail-closed clean/applying/dirty state machine
-  under an advisory lock.
+  under an advisory lock. `casino/core/mysql_pool.py` provides one lazy bounded physical-connection
+  pool per process; request-scoped leases roll back unfinished work, reset session state, validate
+  without reconnecting, and either return a healthy session or discard it.
 
 ## Money and settlement
 

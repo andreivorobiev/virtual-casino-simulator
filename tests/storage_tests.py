@@ -4,12 +4,16 @@
 import inspect
 # Import required dependency so thread and process ledger calls can overlap safely.
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+# Import JSON so live aggregate pool measurements are emitted without connector or identity detail.
+import json
 # Import environment access so live provider routing can be scoped and restored safely.
 import os
 # Import required dependency so test data can be written outside the real data directory.
 import tempfile
 # Import required dependency so isolated JSON provider paths are platform-safe.
 from pathlib import Path
+# Import monotonic timing for disposable MySQL 1/2/4/8 aggregate measurements.
+import time
 
 # Import required dependency so storage tests can resolve repository files.
 ROOT = Path(__file__).resolve().parents[1]
@@ -706,6 +710,120 @@ def run_mysql_schema_provider_path():
 
 
 # Exercise real MySQL persistence, domain documents, and concurrent ledger locking.
+def _run_mysql_pool_live_measurements(provider):
+    # Store one secret-free aggregate result per governed concurrency level.
+    measurements = []
+    # Capture pool counters before the bounded measurement packet.
+    before_snapshot = provider.pool_snapshot()
+
+    # Execute one request-scoped SELECT through the production pool.
+    def execute_probe(index):
+        # Capture one request-local monotonic start.
+        started_at = time.perf_counter()
+        # Start without a lease so failure cleanup is deterministic.
+        connection = None
+        # Start without a cursor so failure cleanup is deterministic.
+        cursor = None
+        # Start protected MySQL work so every acquired resource is returned.
+        try:
+            # Acquire one request-scoped pooled connection.
+            connection = provider.connect()
+            # Open a connector cursor for one bounded read-only statement.
+            cursor = connection.cursor()
+            # Execute a constant query containing no caller, player, session, or schema identity.
+            cursor.execute("SELECT 1")
+            # Require the disposable service to return the expected constant.
+            assert cursor.fetchone()[0] == 1
+            # Return aggregate elapsed time plus a zero-error marker.
+            return (time.perf_counter() - started_at) * 1000.0, 0
+        # Convert every connector failure into one aggregate error marker without preserving text.
+        except Exception:
+            # Return elapsed time and one safe error count.
+            return (time.perf_counter() - started_at) * 1000.0, 1
+        # Always close cursor and lease resources.
+        finally:
+            # Close the cursor when creation succeeded.
+            if cursor is not None:
+                # Release connector cursor resources.
+                cursor.close()
+            # Return or discard the physical session when checkout succeeded.
+            if connection is not None:
+                # Route cleanup through the production lease.
+                connection.close()
+
+    # Exercise every required concurrency level using the same constant operation.
+    for concurrency in (1, 2, 4, 8):
+        # Capture aggregate wall-clock start for throughput.
+        run_started_at = time.perf_counter()
+        # Execute sixteen bounded operations at this concurrency.
+        with ThreadPoolExecutor(max_workers=concurrency) as executor:
+            # Materialize every result so no worker failure is lost.
+            results = list(executor.map(execute_probe, range(16)))
+        # Capture aggregate wall-clock duration after every lease returned.
+        wall_seconds = time.perf_counter() - run_started_at
+        # Sort only request-local elapsed milliseconds for nearest-rank percentiles.
+        ordered = sorted(result[0] for result in results)
+        # Select the nearest-rank median observation.
+        p50_ms = ordered[((50 * len(ordered) + 99) // 100) - 1]
+        # Select the nearest-rank ninety-fifth-percentile observation.
+        p95_ms = ordered[((95 * len(ordered) + 99) // 100) - 1]
+        # Count failures without retaining connector exception text.
+        errors = sum(result[1] for result in results)
+        # Store only concurrency, aggregate latency, throughput, and error count.
+        measurements.append({"concurrency": concurrency, "p50_ms": round(p50_ms, 3), "p95_ms": round(p95_ms, 3), "throughput_rps": round(len(results) / wall_seconds, 3), "errors": errors})
+    # Acquire one sanitized lease for cross-request session-state evidence.
+    first_connection = provider.connect()
+    # Open one cursor to create a synthetic session-local variable.
+    first_cursor = first_connection.cursor()
+    # Start protected setup so the first lease always returns.
+    try:
+        # Set one synthetic user variable containing no production identity.
+        first_cursor.execute("SET @casino_pool_probe = 1")
+    # Always close the first cursor and lease.
+    finally:
+        # Release the first cursor.
+        first_cursor.close()
+        # Trigger rollback/reset/liveness cleanup before reuse.
+        first_connection.close()
+    # Acquire the next request-scoped lease after session reset.
+    second_connection = provider.connect()
+    # Open one cursor to inspect the synthetic session variable.
+    second_cursor = second_connection.cursor()
+    # Start protected readback so the second lease always returns.
+    try:
+        # Read the variable only to prove reset_session removed cross-request state.
+        second_cursor.execute("SELECT @casino_pool_probe")
+        # Require no synthetic state to cross the request-scoped lease boundary.
+        assert second_cursor.fetchone()[0] is None
+    # Always close the second cursor and lease.
+    finally:
+        # Release the second cursor.
+        second_cursor.close()
+        # Return the verified clean session.
+        second_connection.close()
+    # Capture aggregate pool counters after every measurement and isolation probe.
+    after_snapshot = provider.pool_snapshot()
+    # Require all four governed concurrency rows.
+    assert [row["concurrency"] for row in measurements] == [1, 2, 4, 8]
+    # Require zero live connector errors at every concurrency.
+    assert all(row["errors"] == 0 for row in measurements)
+    # Require the warm single-concurrency latency targets.
+    assert measurements[0]["p50_ms"] <= 100.0 and measurements[0]["p95_ms"] <= 200.0
+    # Require the concurrency-four p95 target.
+    assert measurements[2]["p95_ms"] <= 250.0
+    # Require every throughput row to exceed the recorded pre-pool floor.
+    assert all(row["throughput_rps"] > 3.37 for row in measurements)
+    # Require physical connections to remain bounded by the configured hard capacity.
+    assert after_snapshot["physical_created"] <= after_snapshot["capacity"]
+    # Require the measurement packet to finish with no lease or waiter residue.
+    assert after_snapshot["in_use"] == 0 and after_snapshot["waiting"] == 0
+    # Require no pool exhaustion during the complete live packet.
+    assert after_snapshot["timeout_count"] == before_snapshot["timeout_count"]
+    # Emit only sanitized aggregate evidence for hosted job logs.
+    print("MYSQL_POOL_1_2_4_8 " + json.dumps({"measurements": measurements, "pool": after_snapshot}, sort_keys=True), flush=True)
+
+
+# Exercise real MySQL persistence, domain documents, and concurrent ledger locking.
 def run_mysql_live_provider_path():
     # Import representative provider-backed domains only when live MySQL was requested.
     from casino.bots import profiles
@@ -726,6 +844,8 @@ def run_mysql_live_provider_path():
     try:
         # Clear the dedicated integration database while preserving its schema.
         provider.reset()
+        # Measure the bounded pool on the disposable MySQL service before domain-state concurrency.
+        _run_mysql_pool_live_measurements(provider)
         # Seed fresh private-beta player rows through the provider abstraction.
         players.save_players(players.default_players())
         # Create a real auth user so users and terms acceptance enter the provider document table.
@@ -982,6 +1102,8 @@ def run_mysql_live_provider_path():
     finally:
         # Restore normal provider selection for later API or browser suites.
         storage.set_provider_for_tests(None)
+        # Close the original live provider after every retained-reference assertion has completed.
+        provider.close_pool()
 
 
 # Prove player creation never destroys committed money history or reverts concurrent balances. (issue #402)
