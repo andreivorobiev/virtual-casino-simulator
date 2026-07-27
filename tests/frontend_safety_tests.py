@@ -57,14 +57,24 @@ class FrontendSafetyTests(unittest.TestCase):
         ]
         # Read Git's exact tracked data inventory while allowing prior API cases to create disposable files.
         result = subprocess.run(["git", "ls-files", "--", "data"], cwd=ROOT, capture_output=True, text=True, timeout=20)
-        # Require inventory inspection itself to succeed.
-        self.assertEqual(result.returncode, 0, msg=result.stderr[-1200:])
-        # Normalize every tracked data path to repository-style separators.
-        tracked_data = {line.strip().replace("\\", "/") for line in result.stdout.splitlines() if line.strip()}
-        # Require every mutable artifact to remain absent from the tracked inventory.
-        for relative_path in tracked_runtime_paths:
-            # Fail if repository material reintroduces a mutable runtime snapshot.
-            self.assertNotIn(relative_path, tracked_data)
+        # Branch when a normal checkout exposes exact Git inventory metadata.
+        if result.returncode == 0:
+            # Normalize every tracked data path to repository-style separators.
+            tracked_data = {line.strip().replace("\\", "/") for line in result.stdout.splitlines() if line.strip()}
+            # Require every mutable artifact to remain absent from the tracked inventory.
+            for relative_path in tracked_runtime_paths:
+                # Fail if repository material reintroduces a mutable runtime snapshot.
+                self.assertNotIn(relative_path, tracked_data)
+        # Otherwise validate the canonical package boundary used by exported release-source copies.
+        else:
+            # Import the exact packaging policy available inside the isolated candidate source.
+            from scripts import package_app
+            # Require the complete runtime root to remain forbidden from every archive.
+            self.assertIn("data", package_app.FORBIDDEN_PARTS)
+            # Require no allowed package prefix to admit the generated runtime root.
+            self.assertFalse(any(prefix == "data/" or prefix.startswith("data/") for prefix in package_app.ALLOWED_PREFIXES))
+            # Require no explicit top-level package file to admit a runtime snapshot.
+            self.assertFalse(any(relative_path in package_app.ALLOWED_FILES for relative_path in tracked_runtime_paths))
 
 
 # Run this focused module directly for local diagnostics.
