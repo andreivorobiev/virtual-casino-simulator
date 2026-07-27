@@ -4685,8 +4685,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             page.get_by_test_id(f"nav-{game['id']}").click()
                             # Wait for the independently declared game readiness marker.
                             game_root=page.get_by_test_id(game['frontend']['ready_testid']); game_root.wait_for(timeout=5000)
-                            # Resolve the one visible repeat button inside the mounted route.
-                            repeat_button=game_root.locator(repeat_selector)
+                            # Resolve the one visible repeat button inside the mounted route outlet, because some readiness markers intentionally identify only the visual stage.
+                            repeat_button=page.locator('#view').locator(repeat_selector)
                             # Require one semantic control so duplicate or phase-hidden copies cannot create ambiguity.
                             assert repeat_button.count()==1,{'game':game['id'],'locale':locale,'repeatCount':repeat_button.count()}
                             # Scroll the control into its owned viewport before geometry inspection.
@@ -4694,7 +4694,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             # Require installed-locale copy on the real control.
                             assert repeat_button.is_visible() and repeat_button.inner_text().strip()==locale_copy[locale],{'game':game['id'],'locale':locale,'copy':repeat_button.inner_text()}
                             # Measure touch size, document containment, and fixed feedback-control clearance.
-                            geometry=page.evaluate("""({readyTestId,selector}) => { const root=document.querySelector(`[data-testid="${readyTestId}"]`); const button=root?.querySelector(selector); const rect=button?.getBoundingClientRect(); const feedback=document.querySelector('.report-problem-fab:not([hidden])')?.getBoundingClientRect(); const overlaps=Boolean(rect&&feedback&&rect.left<feedback.right&&rect.right>feedback.left&&rect.top<feedback.bottom&&rect.bottom>feedback.top); return {visible:Boolean(rect&&rect.width>0&&rect.height>0),width:Math.round(rect?.width||0),height:Math.round(rect?.height||0),left:Math.round(rect?.left||0),right:Math.round(rect?.right||0),viewportWidth:innerWidth,documentFits:document.documentElement.scrollWidth<=window.innerWidth+1,feedbackOverlap:overlaps}; }""",{'readyTestId':game['frontend']['ready_testid'],'selector':repeat_selector})
+                            geometry=page.evaluate("""selector => { const root=document.querySelector('#view'); const button=root?.querySelector(selector); const rect=button?.getBoundingClientRect(); const feedback=document.querySelector('.report-problem-fab:not([hidden])')?.getBoundingClientRect(); const overlaps=Boolean(rect&&feedback&&rect.left<feedback.right&&rect.right>feedback.left&&rect.top<feedback.bottom&&rect.bottom>feedback.top); return {visible:Boolean(rect&&rect.width>0&&rect.height>0),width:Math.round(rect?.width||0),height:Math.round(rect?.height||0),left:Math.round(rect?.left||0),right:Math.round(rect?.right||0),viewportWidth:innerWidth,documentFits:document.documentElement.scrollWidth<=window.innerWidth+1,feedbackOverlap:overlaps}; }""",repeat_selector)
                             # Reject hidden, undersized, clipped, overflowing, or feedback-obscured controls.
                             assert geometry['visible'] and geometry['width']>=80 and geometry['height']>=40 and geometry['left']>=-1 and geometry['right']<=geometry['viewportWidth']+1 and geometry['documentFits'] and not geometry['feedbackOverlap'],{'game':game['id'],'locale':locale,'geometry':geometry}
                     # Restore English before executing one real backend-funded repeat.
@@ -4736,7 +4736,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Open the route through its catalog-owned navigation control.
                         page.get_by_test_id(f'nav-{game_id}').click(); game_root=page.get_by_test_id(game['frontend']['ready_testid']); game_root.wait_for(timeout=5000)
                         # Resolve and expose the repeat control before capture.
-                        repeat_button=game_root.locator(repeat_selector); repeat_button.scroll_into_view_if_needed()
+                        repeat_button=page.locator('#view').locator(repeat_selector); repeat_button.scroll_into_view_if_needed()
                         # Require the same localized visible label in the exact evidence frame.
                         assert repeat_button.count()==1 and repeat_button.inner_text().strip()==locale_copy[locale]
                         # Capture the complete game surface with the governed repeat-ready state.
