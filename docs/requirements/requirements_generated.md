@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.51.22
+- application: 9.51.23
 - core: 9.24.3
 - ledger: 9.1.1
 - players: 9.1.0
@@ -16,12 +16,12 @@ Historical source baseline: 9.1.0
 - admin: 1.12.2
 - operations: 1.1.2
 - marketing_site: 1.0.2
-- roulette: 9.4.8
-- slots: 9.1.4
+- roulette: 9.4.9
+- slots: 9.1.5
 - blackjack: 9.1.4
-- baccarat: 9.1.4
-- keno: 9.2.4
-- bingo: 9.2.1
+- baccarat: 9.1.5
+- keno: 9.2.5
+- bingo: 9.2.2
 - multi_hand_video_poker: 1.0.1
 - casino_war: 1.0.1
 - big_six_wheel: 1.0.3
@@ -49,9 +49,9 @@ Historical source baseline: 9.1.0
 - joker_poker: 1.0.0
 - texas_holdem_practice_table: 1.0.0
 - pai_gow_poker: 1.0.2
-- teen_patti: 1.0.1
-- tests: 1.60.39
-- docs: 1.60.39
+- teen_patti: 1.0.2
+- tests: 1.60.40
+- docs: 1.60.40
 - contracts: 1.48.10
 - tooling: 1.21.3
 - commenting_policy: 1.0.0
@@ -903,3 +903,7 @@ Historical source baseline: 9.1.0
 - **TEST-118** (Tests) - PASS: Listener-free evidence verifies the disabled passwordless magic-link lifecycle: disabled-by-default acknowledgement with no delivery, byte-identical initiation across existing, unknown, and malformed mailboxes with mail only for the eligible local account, session creation on completion verified through token authentication, replay and wrong-subject rejection, cross-purpose bearer isolation against password-reset consumption, silent ineligibility of inactive and credential-free social-only accounts, and a rejected delivery leaving no usable bearer behind. Suite emails are uniquely namespaced under a magic-link-only domain so repeated and full-suite runs never collide.
 - **ADMIN-027** (Admin) - PASS: Dashboard and the full Admin Ledger render canonical transaction identities as explicit locale-resource-backed operator labels. Ordered suffix classification preserves the game dimension and distinguishes common wager, purchase, settlement, payout, refund, escrow, insurance, and token actions; future unknown identities fail closed to a generic localized ledger-operation label instead of exposing raw all-caps English enums. The complete audit record retains player, game, round, amount, and before/after balances.
 - **TEST-132** (Tests) - PASS: Listener-free Python and Node evidence inspects or executes the exact production Admin label helper module and proves all-caps normalization, acronym preservation, ordered movement classification, generic unknown-event fallback, complete EN/RU resource parity, and Dashboard/full-Ledger helper wiring. Hosted exact-head browser acceptance exercises both installed locales at all four governed Admin viewports, rejects raw enum separators and all-caps action labels, requires Cyrillic Russian action copy, verifies page containment, and captures sixteen matching Dashboard/Ledger image-sidecar pairs for human review.
+- **SEC-013** (Application) - PASS: Client error telemetry reduces the current address to origin and path before submission, so invitation, OAuth, password-reset, and other query or fragment bearers can never enter Admin-visible client logs; malformed addresses fail closed to a fixed non-sensitive marker.
+- **CORE-028** (Application) - PASS: Mutable players, ledger, history, sessions, per-game state, and other generated runtime outputs remain under the ignored data/ root and are initialized from source defaults, never tracked as repository state or admitted by a broad source add.
+- **UX-021** (Application) - PASS: The persistent shared toast announces feedback through stable polite atomic live-region semantics, classifies only explicit success variants into the success palette, renders string and boolean failures with the error palette, and affected Roulette actions expose localized failures instead of silent rejected promises. Legacy Slots, Baccarat, Bingo, and Keno animation channels stop under reduced motion, and the Teen Patti mobile action rail remains clear of the fixed feedback control.
+- **TEST-136** (Tests) - PASS: Listener-free exact-source evidence executes invitation URL sanitization and toast palette classification, rejects malformed-address disclosure and tracked runtime snapshots, pins stable toast live-region markup, proves affected reduced-motion selectors, requires all governed Roulette actions to use localized rejection handling, and pins Teen Patti mobile action-rail clearance. Hosted exact-head Browser acceptance requalifies the affected English and Russian game surfaces and visual matrix after reconciliation.

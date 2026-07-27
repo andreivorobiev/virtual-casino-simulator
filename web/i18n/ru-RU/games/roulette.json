@@ -44,6 +44,7 @@
   "controls.wheel": "Колесо",
   "controls.zeroRule": "Правило зеро",
   "errors.betUnavailable": "Эта ставка недоступна.",
+  "errors.actionFailed": "Не удалось выполнить действие. Попробуйте ещё раз.",
   "header.kicker": "Премиальный настольный режим",
   "outcomes.en_prison_carry": "En prison",
   "outcomes.half_loss": "Половина проигрыша",

@@ -1,6 +1,6 @@
 {
   "module": "keno",
-  "version": "9.2.4",
+  "version": "9.2.5",
   "paths": [
     "casino/games/keno/",
     "web/games/keno.js",
