@@ -7,7 +7,7 @@ Historical source baseline: 9.1.0
 ## Independent module revisions
 
 - application: 9.53.4
-- core: 9.24.7
+- core: 9.25.1
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.1
@@ -50,8 +50,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.0
 - pai_gow_poker: 1.1.0
 - teen_patti: 1.1.0
-- tests: 1.61.10
-- docs: 1.61.10
+- tests: 1.62.1
+- docs: 1.62.1
 - contracts: 1.48.18
 - tooling: 1.21.4
 - commenting_policy: 1.0.0
@@ -806,7 +806,7 @@ Historical source baseline: 9.1.0
 - **TEST-098** (Tests) - PASS: Listener-free evidence verifies deployment build provenance: every immutable application archive contains the provenance writer; a valid manifest yields exactly one pinned assignment accepted unchanged by the Operations sanitizer; short/uppercase/non-hexadecimal/absent commits fail closed without writing; unreadable manifests and destination-write failures emit bounded path-free errors while leaving an earlier fragment byte-identical; a redeployment replaces rather than appends the superseded commit; and the tracked unit sources the generated fragment last.
 - **TOOL-008** (Tooling) - PASS: Protected-main CI/CD publishes or reuses the immutable GitHub Release for the exact merged commit, refuses packaged-version tag reuse across different commits, resolves rollback only from the current compatibility record, verifies the exact downloaded predecessor manifest, requires every extracted-host workflow script inside the archive, deploys only hosted release assets over SSH, validates the monitor bearer/digest before cutover, writes build provenance, switches /opt/casino/current atomically, loads the monitor Authorization assignment through a non-shell reader for edge observation, and rolls back the application symlink and release fragment if post-cutover health fails.
 - **TEST-133** (Tests) - PASS: Listener-free CI/CD evidence verifies the production workflow's protected-main trigger, immutable version-conflict refusal, compatibility-declared predecessor selection, exact downloaded-manifest binding, rejection of release-list ordering, workflow-derived extracted-host script inventory, hosted-asset download and verification, scoped SSH secret usage, secret-safe monitor pair validation and explicit atomic repair, exact non-shell Authorization handoff, generated release.env installation, post-cutover edge observation, and application rollback path.
-- **STORAGE-008** (Storage) - PASS: Player creation appends one row through the provider's lock-held path and never replaces the whole player document, so committed ledger history and concurrently committed balances always survive; the MySQL player-document replacement refuses to run while ledger rows exist instead of truncating them.
+- **STORAGE-008** (Storage) - PASS: Player creation appends one row through the provider's lock-held path and never replaces the whole player document, so committed ledger history and concurrently committed balances always survive; the compatible MySQL player-document writer inserts only missing supplied rows in one explicit transaction, never deletes or overwrites durable player or ledger rows, rolls back a partial batch on failure, and always closes its operation-scoped connection.
 - **LEDGER-029** (Ledger) - PASS: Client-supplied table rules are validated against a per-game declared domain before they are persisted, so no request can set a payout multiplier, commission, or shoe size that settlement math or shoe construction would then trust.
 - **TOKEN-006** (Tokens) - PASS: Every play-token credit route applies the guest wallet freeze and the shared bounded amount gate, including the legacy v1 add-money route, so a disposable guest session cannot increase its own balance and no route can credit an unbounded amount.
 - **TEST-134** (Tests) - PASS: Provider-isolated JSON, disposable live MySQL, and authenticated API evidence proves player creation preserves committed ledger history and balances, destructive replacement fails closed, hostile Blackjack and Baccarat rule values are rejected at the real route boundary, and guest wallets remain frozen through both v1 and v2 credit routes.

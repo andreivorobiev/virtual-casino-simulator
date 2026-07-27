@@ -1119,41 +1119,33 @@ class MySQLStorageProvider(StorageProvider):
             # Close the MySQL connection for this operation.
             connection.close()
 
-    # Save a full player document into MySQL.
+    # Insert every missing player from one compatible document without replacing durable rows. (STORAGE-008, issue #431)
     def save_players(self, state: dict) -> None:
-        # Ensure schema exists before replacing player rows.
+        # Ensure schema exists before inserting player rows.
         self.ensure_ready()
-        # Open a connection for the replace operation.
+        # Open a connection for the bounded append operation.
         connection = self.connect()
-        # Start protected write logic so the connection is always closed.
+        # Start protected transaction logic so failures roll back and the connection always closes.
         try:
-            # Open a cursor for delete and insert statements.
+            # Start one explicit transaction across all supplied player inserts.
+            connection.start_transaction()
+            # Open a cursor for bounded insert statements.
             cursor = connection.cursor()
-            # Refuse to run as a whole-document replacement while committed money history exists.
-            # casino_ledger holds a FOREIGN KEY to casino_players with no ON DELETE CASCADE, so the only
-            # way this replacement can proceed is by first destroying the ledger. Doing that silently as
-            # a side effect of a player write destroyed the entire audit trail and the exactly-once
-            # action-identity rows, and it was reachable from ordinary player creation (issue #402).
-            # Legitimate callers reach this method only after reset() has already truncated the ledger,
-            # or on a fresh store during bootstrap, so an empty ledger is the correct precondition.
-            cursor.execute("SELECT EXISTS (SELECT 1 FROM casino_ledger)")
-            # Read the existence flag from the single-row result.
-            (has_ledger_rows,) = cursor.fetchone()
-            # Fail closed rather than deleting money history that this operation does not own.
-            if has_ledger_rows:
-                # Direct the caller at the row-scoped path instead of the destructive replacement.
-                raise ConflictError("Refusing to replace the player document while ledger history exists; use ensure_player or reset first")
-            # Clear existing player rows before inserting the provided state.
-            cursor.execute("DELETE FROM casino_players")
-            # Insert each player from the provided state.
+            # Insert each supplied player without deleting or overwriting any existing row.
             for player in state.get("players", []):
-                # Insert a normalized player row.
+                # Insert one normalized player only when its durable identifier is absent.
                 cursor.execute(
-                    "INSERT INTO casino_players (player_id, display_name, player_type, balance, created_at, updated_at, status) VALUES (%s, %s, %s, %s, %s, %s, %s)",  # Insert one replacement player row.
-                    (player["player_id"], player["display_name"], player.get("type", "human"), round(float(player.get("balance", 0)), 2), player.get("created_at", utc_now()), player.get("updated_at", utc_now()), player.get("status", "active")),  # Bind replacement player fields.
+                    "INSERT IGNORE INTO casino_players (player_id, display_name, player_type, balance, created_at, updated_at, status) VALUES (%s, %s, %s, %s, %s, %s, %s)",  # Keep existing wallet and lifecycle state unchanged on a repeated seed.
+                    (player["player_id"], player["display_name"], player.get("type", "human"), round(float(player.get("balance", 0)), 2), player.get("created_at", utc_now()), player.get("updated_at", utc_now()), player.get("status", "active")),  # Bind only the candidate insert fields.
                 )
-            # Commit the replacement as one unit.
+            # Commit all missing-player inserts as one unit.
             connection.commit()
+        # Roll back every partial insert when the driver reports a failure.
+        except Exception:
+            # Restore the complete pre-call player table state.
+            connection.rollback()
+            # Preserve the original provider error for the standard API envelope.
+            raise
         # Always close the connection after saving players.
         finally:
             # Close the MySQL connection for this operation.

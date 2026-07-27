@@ -715,8 +715,6 @@ def run_mysql_live_provider_path():
     from casino.core import auth, autoplay, feedback, invitations, ledger, mail, one_time_tokens, players, state_store, storage
     # Import OAuth persistence only inside the explicitly requested disposable MySQL gate.
     from casino.core.oauth.persistence import FLOW_DOCUMENT_KEY, FLOW_SECRET_DOCUMENT_KEY, OAuthFlowRecord, OAuthFlowRepository, PersistentIdentityLinkRepository
-    # Import the conflict envelope expected when a destructive player replacement is refused. (#402)
-    from casino.errors import ConflictError
     # Import UTC helpers for one bounded flow fixture.
     from datetime import datetime, timedelta, timezone
 
@@ -962,16 +960,24 @@ def run_mysql_live_provider_path():
         assert players.get_player("human")["balance"] == guard_balance, "player creation reverted a committed MySQL balance"
         # Require the new player row to be durably present alongside the seeded players.
         assert any(row["player_id"] == guard_player["player_id"] for row in players.list_players())
-        # Require the destructive whole-document replacement to fail closed while history exists.
-        try:
-            # Attempt the replacement that previously truncated the ledger as a silent side effect.
-            players.save_players(players.default_players())
-            # Fail the case explicitly when the guarded replacement unexpectedly succeeded.
-            raise AssertionError("player document replacement must refuse to run over committed ledger history")
-        # Accept only the published conflict envelope from the fail-closed guard.
-        except ConflictError:
-            # Require the ledger to be intact after the refusal so nothing was partially deleted.
-            assert any(row["ledger_id"] == guard_debit["ledger_id"] for row in ledger.read_recent("human", 10))
+        # Commit one exactly-once action identity before exercising the compatibility document write.
+        guard_action, guard_action_replayed = ledger.debit_once("human", 3, "MYSQL_SAVE_PLAYERS_GUARD", "mysql-save-players-guard", "storage", "round_mysql_save_players", {"issue": 431})
+        # Require the first action call to commit so the replay proof is meaningful.
+        assert guard_action_replayed is False
+        # Capture the balance after every pre-existing durable mutation.
+        guard_action_balance = players.get_player("human")["balance"]
+        # Persist one stale existing row plus one missing row through the compatibility document seam.
+        provider.save_players({"players": [{"player_id": "human", "display_name": "Stale Snapshot", "type": "human", "balance": 999999.0, "created_at": guard_player["created_at"], "updated_at": guard_player["updated_at"], "status": "suspended"}, {"player_id": "mysql_save_players_guard", "display_name": "MySQL Save Players Guard", "type": "guest", "balance": 125.0, "created_at": guard_player["created_at"], "updated_at": guard_player["updated_at"], "status": "active"}]})
+        # Require the stale supplied row to leave the committed wallet and lifecycle state unchanged.
+        assert players.get_player("human")["balance"] == guard_action_balance and players.get_player("human")["status"] == "active"
+        # Require the missing supplied row to be inserted alongside every existing player.
+        assert players.get_player("mysql_save_players_guard")["balance"] == 125.0
+        # Require the ledger event committed before save_players to remain readable.
+        assert any(row["ledger_id"] == guard_debit["ledger_id"] for row in ledger.read_recent("human", 100))
+        # Replay the pre-existing action identity after the compatibility write.
+        replayed_action, replayed = ledger.debit_once("human", 3, "MYSQL_SAVE_PLAYERS_GUARD", "mysql-save-players-guard", "storage", "round_mysql_save_players", {"issue": 431})
+        # Require the exact immutable event to replay without a second wallet mutation.
+        assert replayed is True and replayed_action["ledger_id"] == guard_action["ledger_id"] and players.get_player("human")["balance"] == guard_action_balance
     # Always clear provider injection after the live integration test.
     finally:
         # Restore normal provider selection for later API or browser suites.
@@ -982,8 +988,6 @@ def run_mysql_live_provider_path():
 def run_player_creation_preserves_ledger():
     # Import the public player and ledger services plus storage injection helpers.
     from casino.core import ledger, players, storage
-    # Import the conflict type expected when a destructive replacement is refused.
-    from casino.errors import ConflictError
 
     # Create a temporary workspace so this test never mutates checked-in data files.
     with tempfile.TemporaryDirectory() as tmp:
@@ -1029,12 +1033,131 @@ def run_player_creation_preserves_ledger():
             # Restore normal provider selection for subsequent tests.
             storage.set_provider_for_tests(None)
 
-    # Verify the MySQL replacement path now refuses to destroy money history instead of truncating it.
+    # Verify the MySQL compatibility path now inserts missing rows without destructive replacement.
     replace_source = inspect.getsource(storage.MySQLStorageProvider.save_players)
     # Require the destructive unconditional ledger truncation to be gone from the player write path.
     assert "DELETE FROM casino_ledger" not in replace_source, "player document replacement must not truncate the ledger"
-    # Require an explicit fail-closed guard so the operation cannot proceed over committed history.
-    assert "casino_ledger" in replace_source and "ConflictError" in replace_source
+    # Require insert-only compatibility semantics for every supplied player row.
+    assert "INSERT IGNORE INTO casino_players" in replace_source
+    # Require one explicit transaction with rollback protection around the bounded inserts.
+    assert "start_transaction" in replace_source and "connection.commit()" in replace_source and "connection.rollback()" in replace_source
+
+    # Model the narrow MySQL cursor behavior without opening a network connection. (STORAGE-008, issue #431)
+    class PlayerInsertCursor:
+        # Retain the owning fake connection for transactional row changes.
+        def __init__(self, connection):
+            # Store the connection that owns statements, rows, and the failure seam.
+            self.connection = connection
+
+        # Execute only the bounded insert statement accepted by save_players.
+        def execute(self, statement, parameters):
+            # Record every statement so the test can reject hidden table-wide mutations.
+            self.connection.statements.append(statement)
+            # Count this candidate insert before evaluating the deterministic failure seam.
+            self.connection.execute_count += 1
+            # Raise on the configured insert so rollback must restore earlier rows.
+            if self.connection.fail_on_execute == self.connection.execute_count:
+                # Simulate one ordinary connector failure without exposing credentials or SQL values.
+                raise RuntimeError("synthetic player insert failure")
+            # Require every executed statement to remain the insert-if-missing operation.
+            assert statement.startswith("INSERT IGNORE INTO casino_players")
+            # Unpack the normalized player fields bound by the production provider.
+            player_id, display_name, player_type, balance, created_at, updated_at, status = parameters
+            # Insert only an absent identifier so an existing wallet row is never overwritten.
+            if player_id not in self.connection.rows:
+                # Persist the candidate row in the fake transactional table.
+                self.connection.rows[player_id] = (display_name, player_type, balance, created_at, updated_at, status)
+
+    # Model the transaction lifecycle used by the MySQL provider.
+    class PlayerInsertConnection:
+        # Initialize one fake durable table and optional deterministic failure point.
+        def __init__(self, rows, fail_on_execute=None):
+            # Copy the initial durable rows so caller-owned fixtures cannot be mutated.
+            self.rows = dict(rows)
+            # Retain the insert number that should fail, or no failure when absent.
+            self.fail_on_execute = fail_on_execute
+            # Start with no executed player inserts.
+            self.execute_count = 0
+            # Record statements for bounded-SQL assertions.
+            self.statements = []
+            # Start without an active transaction snapshot.
+            self.snapshot = None
+            # Track every transaction lifecycle decision.
+            self.started = self.committed = self.rolled_back = self.closed = False
+
+        # Start one explicit transaction before any supplied row is inserted.
+        def start_transaction(self):
+            # Record transaction start for the acceptance assertion.
+            self.started = True
+            # Snapshot durable rows so rollback can prove atomic restoration.
+            self.snapshot = dict(self.rows)
+
+        # Return the cursor bound to this transaction.
+        def cursor(self):
+            # Build one lightweight cursor for the production method.
+            return PlayerInsertCursor(self)
+
+        # Commit the complete insert batch.
+        def commit(self):
+            # Record the terminal success decision.
+            self.committed = True
+
+        # Restore the pre-call table after any insert failure.
+        def rollback(self):
+            # Restore every row from the transaction snapshot.
+            self.rows = dict(self.snapshot)
+            # Record the terminal rollback decision.
+            self.rolled_back = True
+
+        # Close the operation-scoped connection.
+        def close(self):
+            # Record mandatory cleanup for success and failure paths.
+            self.closed = True
+
+    # Preserve one existing wallet row that a stale document must never overwrite.
+    existing_row = ("Human", "human", 8123.0, "created", "updated", "active")
+    # Build a successful fake connection over the existing durable row.
+    success_connection = PlayerInsertConnection({"human": existing_row})
+    # Construct the real provider without calling an external database.
+    success_provider = storage.MySQLStorageProvider()
+    # Replace readiness with an inert seam because schema behavior is tested separately.
+    success_provider.ensure_ready = lambda: None
+    # Return the successful fake connection for this one provider call.
+    success_provider.connect = lambda: success_connection
+    # Submit one stale existing player and one genuinely missing player.
+    success_provider.save_players({"players": [{"player_id": "human", "display_name": "Stale Human", "type": "human", "balance": 999999.0, "created_at": "stale", "updated_at": "stale", "status": "suspended"}, {"player_id": "new_player", "display_name": "New Player", "type": "guest", "balance": 250.0, "created_at": "created", "updated_at": "updated", "status": "active"}]})
+    # Require transaction, commit, cleanup, and no rollback on the successful batch.
+    assert success_connection.started and success_connection.committed and success_connection.closed and not success_connection.rolled_back
+    # Require the stale existing wallet row to remain byte-for-byte unchanged.
+    assert success_connection.rows["human"] == existing_row
+    # Require the missing row to be inserted without deleting any durable row.
+    assert success_connection.rows["new_player"][0] == "New Player" and len(success_connection.rows) == 2
+    # Require every observed statement to remain bounded and delete-free.
+    assert success_connection.statements and all("DELETE FROM" not in statement for statement in success_connection.statements)
+
+    # Build a failing fake connection that rejects the second supplied insert.
+    failure_connection = PlayerInsertConnection({"human": existing_row}, fail_on_execute=2)
+    # Construct a separate real provider for failure-path isolation.
+    failure_provider = storage.MySQLStorageProvider()
+    # Replace readiness with the same inert schema seam.
+    failure_provider.ensure_ready = lambda: None
+    # Return the deterministic failing connection for the next provider call.
+    failure_provider.connect = lambda: failure_connection
+    # Start protected failure evidence so the expected connector error is observed.
+    try:
+        # Submit two missing rows so the first insert must be undone when the second fails.
+        failure_provider.save_players({"players": [{"player_id": "first_new", "display_name": "First New", "type": "guest", "balance": 10.0}, {"player_id": "second_new", "display_name": "Second New", "type": "guest", "balance": 20.0}]})
+        # Fail explicitly if the provider swallowed the simulated connector error.
+        raise AssertionError("save_players must preserve the original insert failure")
+    # Accept only the deterministic connector failure from the fake cursor.
+    except RuntimeError as error:
+        # Require the original error rather than an unrelated cleanup failure.
+        assert str(error) == "synthetic player insert failure"
+    # Require rollback and cleanup without a commit after the partial batch failed.
+    assert failure_connection.started and failure_connection.rolled_back and failure_connection.closed and not failure_connection.committed
+    # Require rollback to restore the exact pre-call player table.
+    assert failure_connection.rows == {"human": existing_row}
+
     # Read the public creation path to prove it no longer performs a whole-document rewrite.
     create_source = inspect.getsource(players.create_player)
     # Strip comment text so the check inspects executable statements rather than prose about them.
