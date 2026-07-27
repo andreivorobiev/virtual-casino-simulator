@@ -1,4 +1,18 @@
-# Virtual Casino Simulator v0.9.5.17 Release Notes
+# Virtual Casino Simulator v0.9.5.18 Release Notes
+
+## Transactional, non-destructive MySQL player persistence
+
+- Replaces the remaining whole-document MySQL player writer with one explicit transaction of insert-if-missing statements.
+- Preserves existing player wallet and lifecycle rows instead of deleting or overwriting them from a stale compatibility document.
+- Preserves every committed ledger row and exactly-once action identity while adding genuinely missing players.
+- Rolls back the complete supplied batch when any insert fails and always closes the operation-scoped connection.
+- Adds database-free transaction lifecycle evidence plus disposable live-MySQL wallet, ledger, missing-player, and replay-identity proof under `STORAGE-008`.
+- Changes no API response, database schema, migration, payout rule, or browser-visible product behavior.
+- Rotates the PWA shell identity and keeps curated What's New metadata disabled pending its separately governed UI remainder.
+- Retains exact immutable v0.9.5.17 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation.
+
+## Prior v0.9.5.17 secret-safe nginx timing foundation
 
 ## Secret-safe nginx timing foundation
 
