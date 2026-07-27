@@ -278,7 +278,9 @@ label {
   width: 58px;
   height: 58px;
   flex: 0 0 auto;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  /* Keep the 2px outer box identical to the prior mark so the content-sized brand
+     column (and thus the nav auto-scroll geometry) is unchanged across brands. */
+  border: 2px solid rgba(255, 255, 255, 0.16);
   border-radius: var(--radius);
   color: #ffffff;
   background: linear-gradient(145deg, var(--brand), var(--brand-strong));
