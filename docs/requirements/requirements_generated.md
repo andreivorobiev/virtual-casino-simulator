@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.53.2
+- application: 9.53.3
 - core: 9.24.7
 - ledger: 9.1.1
 - players: 9.1.0
@@ -50,8 +50,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.0
 - pai_gow_poker: 1.1.0
 - teen_patti: 1.1.0
-- tests: 1.61.8
-- docs: 1.61.8
+- tests: 1.61.9
+- docs: 1.61.9
 - contracts: 1.48.17
 - tooling: 1.21.4
 - commenting_policy: 1.0.0
@@ -920,3 +920,5 @@ Historical source baseline: 9.1.0
 - **TOOL-010** (Tooling) - PASS: Contract validation enforces module-to-contract matrix coverage and frozen digest currency for every declared and curated entry, and a merge-safe regeneration mode rebuilds both compatibility artifacts from module descriptors without dropping curated rows or standalone freezes.
 - **UX-022** (Application) - PASS: Each of the forty-three catalog games that previously lacked repeat-bet behavior renders one localized secondary Repeat bet control, keeps it unavailable until a player-owned settled wager configuration exists, and uses one activation to submit a fresh exactly-once game action with that exact base configuration without replaying later draw, hold, call, fold, or hand-setting decisions. Repeat remains guarded while work is active and introduces no parallel timer.
 - **TEST-137** (Tests) - PASS: Listener-free exact-source acceptance pins the complete forty-three-game repeat catalog, paired English and Russian copy, semantic button hooks, settled-wager guards, shared game-action delegation, in-flight exclusion, event wiring, and timer-free execution. Hosted exact-head Browser acceptance renders every control in both locales, proves one real backend-funded exact-configuration repeat, checks containment and fixed-feedback clearance, and captures eight after-pass visual rows across all governed viewport classes.
+- **CORE-029** (Application) - PASS: The repository nginx edge template normalizes arbitrary request methods and paths into fixed low-cardinality families and emits only method family, route family, response status, total request time, and upstream response time as structured timing data, never raw methods, paths, queries, identifiers, client or upstream addresses, headers, cookies, tokens, bodies, byte counts, user-agent, referrer, or application data.
+- **TEST-140** (Tests) - PASS: Listener-free source inspection proves the Casino nginx virtual hosts override the identity-bearing default access log, use the complete fixed route-family set, and expose exactly the five approved timing variables with every raw request, path, query, identity, network, header, cookie, body, and payload field excluded.

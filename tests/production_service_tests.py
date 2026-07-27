@@ -4,6 +4,8 @@
 import os
 # Import portable paths for repository-owned policy inspection.
 import pathlib
+# Import regular expressions for parsing the bounded nginx timing format.
+import re
 # Import run-path support for evaluating the non-listening Gunicorn configuration.
 import runpy
 # Import subprocess execution for import-time and listener-free child probes.
@@ -163,6 +165,39 @@ class ProductionServiceTests(unittest.TestCase):
         self.assertIn("CapabilityBoundingSet=", unit)
         # Require loopback networking without adding issue #203 trusted-proxy policy.
         self.assertIn("RestrictAddressFamilies=AF_UNIX AF_INET", unit)
+
+    # Prove the nginx timing schema keeps only fixed route families and bounded measurements. (CORE-029, TEST-140)
+    def test_nginx_timing_schema_is_low_cardinality_and_secret_safe(self):
+        # Read the inert repository template without rendering, installing, or validating a host configuration.
+        nginx = (ROOT / "deploy" / "nginx" / "casino.conf.template").read_text(encoding="utf-8")
+        # Require arbitrary request methods to collapse into one bounded method family before emission.
+        self.assertIn("map $request_method $casino_method_family {", nginx)
+        # Require classification to consume the normalized method and URI only as internal map inputs.
+        self.assertIn('map "$casino_method_family:$uri" $casino_route_family {', nginx)
+        # Require every approved fixed family needed to separate probes, edge work, privilege, auth, game, general API, static, and rejected shapes.
+        for family in ("probe", "acme", "admin", "auth", "game_api", "api", "static", "unknown"):
+            # Require the fixed family token inside the bounded map rather than a dynamic path-derived output.
+            self.assertRegex(nginx, rf"\b{re.escape(family)};")
+        # Extract only the named log-format declaration so unrelated proxy policy cannot affect privacy assertions.
+        declaration = re.search(r"log_format casino_timing escape=json\s+'(?P<body>[^']+)';", nginx, re.DOTALL)
+        # Fail with one stable diagnostic when the structured timing declaration is missing.
+        self.assertIsNotNone(declaration, msg="casino timing log format is missing")
+        # Read the exact structured body after the presence assertion.
+        body = declaration.group("body")
+        # Extract each complete nginx variable name without confusing approved request timing fields with the raw request variable.
+        variables = set(re.findall(r"\$[A-Za-z0-9_]+", body))
+        # Pin the complete allowlist of nginx variables that may enter one timing row.
+        self.assertEqual(variables, {"$casino_method_family", "$casino_route_family", "$status", "$request_time", "$upstream_response_time"})
+        # Reject exact raw request, path, query, client, host, upstream-address, byte, and body variables from the emitted row.
+        for forbidden in ("$request", "$request_method", "$request_uri", "$uri", "$args", "$query_string", "$remote_addr", "$host", "$server_name", "$upstream_addr", "$request_body", "$bytes_sent"):
+            # Require each prohibited complete variable to remain absent from the log-format body.
+            self.assertNotIn(forbidden, variables)
+        # Reject every request-header and cookie variable family rather than enumerating future field names.
+        for prefix in ("$http_", "$cookie_"):
+            # Require no emitted variable to start with an identity-bearing header or cookie prefix.
+            self.assertFalse(any(variable.startswith(prefix) for variable in variables))
+        # Require both plaintext redirect and HTTPS application servers to override the unsafe default combined access log.
+        self.assertEqual(nginx.count("access_log /var/log/nginx/casino_timing.log casino_timing;"), 2)
 
     # Prove production source contains no development server invocation or proxy-policy expansion.
     def test_adapter_scope_excludes_development_server_and_proxy_policy(self):
