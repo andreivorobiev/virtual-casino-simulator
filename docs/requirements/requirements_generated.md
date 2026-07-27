@@ -6,22 +6,22 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.51.25
-- core: 9.24.4
+- application: 9.51.26
+- core: 9.24.5
 - ledger: 9.1.1
 - players: 9.1.0
-- bots: 1.1.0
+- bots: 1.1.1
 - autoplay: 1.1.3
 - audio: 9.1.1
 - admin: 1.12.2
 - operations: 1.1.2
 - marketing_site: 1.0.2
-- roulette: 9.4.9
-- slots: 9.1.5
-- blackjack: 9.1.4
-- baccarat: 9.1.5
-- keno: 9.2.5
-- bingo: 9.2.2
+- roulette: 9.4.10
+- slots: 9.1.6
+- blackjack: 9.1.5
+- baccarat: 9.1.6
+- keno: 9.2.6
+- bingo: 9.2.3
 - multi_hand_video_poker: 1.0.1
 - casino_war: 1.0.1
 - big_six_wheel: 1.0.3
@@ -34,7 +34,7 @@ Historical source baseline: 9.1.0
 - scratch_cards: 1.0.1
 - sic_bo: 1.0.0
 - chuck_a_luck: 1.0.0
-- craps: 1.0.0
+- craps: 1.0.1
 - crown_and_anchor: 1.0.2
 - over_under_7: 1.0.2
 - plinko: 1.0.1
@@ -47,13 +47,13 @@ Historical source baseline: 9.1.0
 - double_bonus_video_poker: 1.0.0
 - mississippi_stud: 1.0.0
 - joker_poker: 1.0.0
-- texas_holdem_practice_table: 1.0.0
-- pai_gow_poker: 1.0.2
+- texas_holdem_practice_table: 1.0.1
+- pai_gow_poker: 1.0.3
 - teen_patti: 1.0.2
-- tests: 1.60.43
-- docs: 1.60.43
-- contracts: 1.48.12
-- tooling: 1.21.3
+- tests: 1.60.44
+- docs: 1.60.44
+- contracts: 1.48.13
+- tooling: 1.21.4
 - commenting_policy: 1.0.0
 - color_wheel: 1.0.1
 - poker_dice: 1.0.0
@@ -310,7 +310,7 @@ Historical source baseline: 9.1.0
 - **BINGO-018** (Bingo) - PASS: Bingo highlights winning pattern.
 - **BINGO-019** (Bingo) - PASS: Bingo supports bot cards.
 - **BINGO-020** (Bingo) - PASS: Bingo awards payout to the winning card.
-- **BINGO-021** (Bingo) - PASS: Bingo auto play calls until a winner.
+- **BINGO-021** (Bingo) - PASS: Bingo auto play calls until a winner or the bounded per-pattern call cap ends the session as no_win without a payout.
 - **BINGO-022** (Bingo) - PASS: Bingo UI shows the authoritative cards in play and a truthful disabled busy boundary while a purchase resolves.
 - **BINGO-023** (Bingo) - PASS: Bingo writes history rows.
 - **BINGO-024** (Bingo) - SUPERSEDED: Bingo remains fake-money only.
@@ -907,3 +907,14 @@ Historical source baseline: 9.1.0
 - **CORE-028** (Application) - PASS: Mutable players, ledger, history, sessions, per-game state, and other generated runtime outputs remain under the ignored data/ root and are initialized from source defaults, never tracked as repository state or admitted by a broad source add.
 - **UX-021** (Application) - PASS: The persistent shared toast announces feedback through stable polite atomic live-region semantics, classifies only explicit success variants into the success palette, renders string and boolean failures with the error palette, and affected Roulette actions expose localized failures instead of silent rejected promises. Legacy Slots, Baccarat, Bingo, and Keno animation channels stop under reduced motion, and the Teen Patti mobile action rail remains clear of the fixed feedback control.
 - **TEST-136** (Tests) - PASS: Listener-free exact-source evidence executes invitation URL sanitization and toast palette classification, rejects malformed-address disclosure and tracked runtime snapshots, pins stable toast live-region markup, proves affected reduced-motion selectors, requires all governed Roulette actions to use localized rejection handling, and pins Teen Patti mobile action-rail clearance. Hosted exact-head Browser acceptance requalifies the affected English and Russian game surfaces and visual matrix after reconciliation.
+- **AUTH-011** (Core) - PASS: A public GET /api/v2/auth/csrf re-issues the host-only anonymous double-submit cookie, reusing an active session's value or a bounded existing cookie, and the browser client retries a missing double-submit pair exactly once through it before failing closed, so a precached or restarted sign-in surface recovers without a shell reload.
+- **SEC-012** (Core) - PASS: Every game outcome draw uses a non-seedable operating-system CSPRNG or an explicitly injected test generator, never the seedable global Mersenne Twister, and the module-boundary validator rejects any global random-module draw inside game code.
+- **LEDGER-030** (Ledger) - PASS: Legacy blackjack, baccarat, roulette, keno, and bingo settlement and refund credits commit through storage-atomic exactly-once action keys derived from identifiers durable at placement, with history and counters gated on first commitment, so concurrent requests and crash-window recoveries can never double-pay a wager.
+- **STORAGE-009** (Storage) - PASS: JSON ledger reads serve from a stat-guarded incremental tail cache with per-player indexing that stays byte-equivalent to a full reparse, including malformed-line skipping, external appends, and truncation resets, and bootstrap seeding is idempotent per row on both providers.
+- **BINGO-025** (Bingo) - PASS: Bingo sessions seat ledger-funded bot competitor cards and bound calls per pattern, ending as no_win with no payout at the cap, so a session has a real losing outcome, calls are never unbounded, and bot wins pay bot wallets.
+- **PGP-006** (Pai Gow Poker) - PASS: The dealer house way balances toward the strongest legal two-card hand with the five-card hand as tiebreak, so the mirrored maximize-low strategy nets negative for the player under the five percent commission.
+- **THPT-006** (Texas Hold'em Practice Table) - PASS: Practice-table hands pre-flight every seat's reserved solvency before any persistence or debit, compensate each committed escrow exactly once when reconciliation fails, and self-heal a stranded prepared hand on the next request, so bot-wallet exhaustion can neither brick the table nor strand player escrow.
+- **ROU-071** (Roulette) - PASS: Persisted open bets carry the catalog layout kind so outside-bet chips render on their outside cells, with a type-based client fallback for bets persisted before the field existed.
+- **TEST-135** (Tests) - PASS: Requirement-mapped cases fail when their predicate returns false, tautological always-true predicates are refused by a source invariant, requirement-mapped game cases pin per-player server-issued evidence, and every per-game, embedded, and tracked frontend suite executes in continuous integration.
+- **TOOL-009** (Tooling) - PASS: The comment-density gate counts only comment lines and whitespace-delimited inline comments as documentation and fails its workflow below an enforced repository-wide floor.
+- **TOOL-010** (Tooling) - PASS: Contract validation enforces module-to-contract matrix coverage and frozen digest currency for every declared and curated entry, and a merge-safe regeneration mode rebuilds both compatibility artifacts from module descriptors without dropping curated rows or standalone freezes.

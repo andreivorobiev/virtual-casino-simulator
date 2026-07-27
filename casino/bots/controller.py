@@ -259,5 +259,5 @@ def play_round(game_id: str) -> dict:
     if game_id == "keno": return play_keno_round()
     # Branch when the following condition is true.
     if game_id == "bingo": return play_bingo_round()
-    # Raise an error so invalid input or state is reported explicitly.
-    raise ValidationError(f"Bots are not supported for {game_id}")
+    # Reject unsupported games without reflecting the caller-supplied identifier into the public envelope. (issue #418)
+    raise ValidationError("Bots are not supported for the requested game")

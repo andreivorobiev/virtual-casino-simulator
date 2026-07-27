@@ -178,8 +178,8 @@ def register(router):
         state = load_player_game_state(GAME_ID, player_id, engine.default_state)
         # Set bet to the value needed for the next operation.
         bet = engine.remove_bet_from_state(state, bet_id, player_id)
-        # Set cred to the value needed for the next operation.
-        cred = ledger.credit(player_id, bet["amount"], "ROULETTE_BET_REFUND", GAME_ID, bet["round_id"], {"bet_id": bet_id})
+        # Refund each durable bet exactly once so a replayed clear returns the original event instead of minting a second refund. (issue #403)
+        cred, _replayed = ledger.credit_once(player_id, bet["amount"], "ROULETTE_BET_REFUND", f"{bet_id}:refund", GAME_ID, bet["round_id"], {"bet_id": bet_id})
         # Execute this statement as part of the module's documented control flow.
         save_player_game_state(GAME_ID, player_id, state)
         # Return the computed value to the caller.
@@ -201,8 +201,8 @@ def register(router):
         for b in bets:
             # Execute this statement as part of the module's documented control flow.
             open_round["bets"].remove(b)
-            # Execute this statement as part of the module's documented control flow.
-            ledger.credit(player_id, b["amount"], "ROULETTE_BET_REFUND", GAME_ID, b["round_id"], {"bet_id": b["bet_id"]})
+            # Refund each durable bet exactly once under the shared per-bet refund identity so replayed or overlapping clears cannot double-refund. (issue #403)
+            ledger.credit_once(player_id, b["amount"], "ROULETTE_BET_REFUND", f"{b['bet_id']}:refund", GAME_ID, b["round_id"], {"bet_id": b["bet_id"]})
         # Execute this statement as part of the module's documented control flow.
         save_player_game_state(GAME_ID, player_id, state)
         # Return the computed value to the caller.
@@ -232,20 +232,24 @@ def register(router):
             credit_ev = None
             # Set carried to the value needed for the next operation.
             carried = None
+            # Track whether storage replayed an already-committed settlement credit for this durable bet. (issue #403)
+            replayed = False
             # Branch when the following condition is true.
             if res.get("carry"):
                 # Set carried to the value needed for the next operation.
                 carried = engine.carry_en_prison_bet(state, bet)
             # Branch when the prior condition failed and this condition is true.
             elif res["credit"] > 0:
-                # Set credit_ev to the value needed for the next operation.
-                credit_ev = ledger.credit(bet["player_id"], res["credit"], "ROULETTE_SETTLEMENT_CREDIT", GAME_ID, settled["round_id"], {"bet_id": bet["bet_id"], "outcome": res["outcome"], "result": settled["result"]})
+                # Credit each durable bet exactly once, keeping volatile result and outcome fields out of the fingerprinted details so a racing spin fails closed on ConflictError instead of double-paying. (issue #403)
+                credit_ev, replayed = ledger.credit_once(bet["player_id"], res["credit"], "ROULETTE_SETTLEMENT_CREDIT", f"{bet['bet_id']}:settlement", GAME_ID, settled["round_id"], {"bet_id": bet["bet_id"]})
             # Set bal to the value needed for the next operation.
             bal = players.get_player(bet["player_id"])["balance"]
+            # Branch so history rows append only for first-time settlements and replays cannot duplicate them. (issue #403)
+            if not replayed:
+                # Execute this statement as part of the module's documented control flow.
+                append_history(GAME_ID, settled["round_id"], bet["player_id"], bet["type"], bet["label"], bet["amount"], res["outcome"], res["credit"], bal, {"result": settled["result"], "color": settled["result_color"], "covered_numbers": bet["covered_numbers"], "carried_bet": carried})
             # Execute this statement as part of the module's documented control flow.
-            append_history(GAME_ID, settled["round_id"], bet["player_id"], bet["type"], bet["label"], bet["amount"], res["outcome"], res["credit"], bal, {"result": settled["result"], "color": settled["result_color"], "covered_numbers": bet["covered_numbers"], "carried_bet": carried})
-            # Execute this statement as part of the module's documented control flow.
-            settlements.append({"bet": bet, "settlement": res, "ledger": credit_ev, "carried_bet": carried})
+            settlements.append({"bet": bet, "settlement": res, "ledger": credit_ev, "carried_bet": carried, "replayed": replayed})
         # Execute this statement as part of the module's documented control flow.
         save_player_game_state(GAME_ID, player_id, state)
         # Set logger.info("roulette_spin_result", round_id to the value needed for the next operation.

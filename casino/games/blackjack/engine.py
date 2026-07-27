@@ -14,13 +14,15 @@ GAME_ID = "blackjack"
 RANKS = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"]
 # Set SUITS to the value needed for the next operation.
 SUITS = ["♠","♥","♦","♣"]
+# Hold one module-level CSPRNG so production shuffles never use the predictable Mersenne Twister default. (issue #420)
+_SYSTEM_RNG = random.SystemRandom()
 
 # Define the make_shoe function used by this module.
-def make_shoe(decks=6):
+def make_shoe(decks=6, rng=None):
     # Set cards to the value needed for the next operation.
     cards = [r+s for _ in range(int(decks)) for s in SUITS for r in RANKS]
-    # Execute this statement as part of the module's documented control flow.
-    random.shuffle(cards)
+    # Shuffle with an injected deterministic generator in tests or the module CSPRNG in production. (issue #420)
+    (_SYSTEM_RNG if rng is None else rng).shuffle(cards)
     # Return the computed value to the caller.
     return cards
 
@@ -62,17 +64,54 @@ def default_state():
     # Return the computed value to the caller.
     return {"rules": {"decks":6, "dealer_hits_soft_17": False, "blackjack_payout": 1.5, "max_split_hands": 4, "double_after_split": True, "late_surrender": True, "split_aces_one_card": True}, "shoe": [], "rounds": {}}
 
+# Clamp persisted table rules at every consumption point so poisoned state files cannot steer money math or shoe size. (issue #404 read-side)
+def _sanitized_rules(state) -> dict:
+    # Read the house defaults once so every invalid persisted value fails closed to a safe rule.
+    defaults = default_state()["rules"]
+    # Read the persisted rules mapping while treating any non-dict payload as empty.
+    raw = state.get("rules") if isinstance(state, dict) and isinstance(state.get("rules"), dict) else {}
+    # Start from a fresh defaults copy so sanitation never mutates persisted state in place.
+    safe = dict(defaults)
+    # Read the persisted natural payout rate for allowlist validation.
+    payout = raw.get("blackjack_payout")
+    # Accept only the three supported table rates while rejecting bool values because True equals 1. (issue #404 read-side)
+    if not isinstance(payout, bool) and isinstance(payout, (int, float)) and float(payout) in (1.5, 1.2, 1.0):
+        # Keep the operator-selected rate because it is a supported table configuration.
+        safe["blackjack_payout"] = float(payout)
+    # Read the persisted deck count for bounded-integer validation.
+    decks = raw.get("decks")
+    # Accept only true integers between one and eight decks so shoe construction stays bounded. (issue #404 read-side)
+    if not isinstance(decks, bool) and isinstance(decks, int) and 1 <= decks <= 8:
+        # Keep the operator-selected deck count because it is within the supported table range.
+        safe["decks"] = decks
+    # Read the persisted split ceiling for bounded-integer validation.
+    max_split = raw.get("max_split_hands")
+    # Accept only true integers between one and four hands so split exposure stays bounded. (issue #404 read-side)
+    if not isinstance(max_split, bool) and isinstance(max_split, int) and 1 <= max_split <= 4:
+        # Keep the operator-selected split ceiling because it is within the supported table range.
+        safe["max_split_hands"] = max_split
+    # Iterate the strict boolean switches so truthy strings or numbers cannot flip table behavior.
+    for key in ("dealer_hits_soft_17", "double_after_split", "late_surrender", "split_aces_one_card"):
+        # Read one persisted switch for strict type validation.
+        value = raw.get(key)
+        # Accept only genuine booleans and fail every other persisted type closed to the house default. (issue #404 read-side)
+        if isinstance(value, bool):
+            # Keep the operator-selected switch because it is a genuine boolean.
+            safe[key] = value
+    # Return the fully clamped rules mapping for money math and shoe construction.
+    return safe
+
 # Compute the total stake return for one natural at the configured table rate. (BJ-005, BJ-031)
 def natural_payout_due(state, bet) -> float:
-    # Read the compatible table setting while preserving the historical three-to-two default.
-    payout_rate = float(state.get("rules", {}).get("blackjack_payout", 1.5))
+    # Read the clamped table setting so a poisoned persisted rate cannot inflate settlement money. (issue #404 read-side)
+    payout_rate = float(_sanitized_rules(state)["blackjack_payout"])
     # Return the original stake plus the configured natural profit at ledger precision.
     return round(float(bet) * (1 + payout_rate), 2)
 
 # Define the draw function used by this module.
 def draw(state):
-    # Set decks to the value needed for the next operation.
-    decks = int(state.get("rules",{}).get("decks",6))
+    # Read the clamped deck count so a poisoned persisted value cannot explode shoe construction. (issue #404 read-side)
+    decks = _sanitized_rules(state)["decks"]
     # Branch when the following condition is true.
     if len(state.get("shoe", [])) < 52:
         # Set state["shoe"] to the value needed for the next operation.
@@ -223,8 +262,8 @@ def can_double(state, h):
     actions = [a for a in h.get("actions", []) if a not in ("split",)]
     # Branch when the following condition is true.
     if actions: return False
-    # Branch when the following condition is true.
-    if h.get("is_split_hand") and not state.get("rules",{}).get("double_after_split", True): return False
+    # Read the clamped switch so a poisoned persisted value cannot widen doubling exposure. (issue #404 read-side)
+    if h.get("is_split_hand") and not _sanitized_rules(state)["double_after_split"]: return False
     # Branch when the following condition is true.
     if h.get("split_aces_locked"): return False
     # Return the computed value to the caller.
@@ -269,8 +308,8 @@ def split(state, rid):
     if not h or len(h["cards"]) != 2: raise ValidationError("Split requires an active two-card hand")
     # Branch when the following condition is true.
     if card_value(h["cards"][0]) != card_value(h["cards"][1]): raise ValidationError("Cards must have equal blackjack value to split")
-    # Branch when the following condition is true.
-    if len(rnd["hands"]) >= int(state["rules"].get("max_split_hands",4)): raise ValidationError("Maximum split hands reached")
+    # Read the clamped split ceiling so a poisoned persisted value cannot multiply wager exposure. (issue #404 read-side)
+    if len(rnd["hands"]) >= _sanitized_rules(state)["max_split_hands"]: raise ValidationError("Maximum split hands reached")
     # Set c1,c2 to the value needed for the next operation.
     c1,c2 = h["cards"]
     # Set ace_split to the value needed for the next operation.
@@ -279,8 +318,8 @@ def split(state, rid):
     h1 = {"hand_id": h["hand_id"], "cards": [c1, draw(state)], "bet": h["bet"], "status": "active", "is_split_hand": True, "actions": ["split"], "split_from": h["hand_id"]}
     # Set h2 to the value needed for the next operation.
     h2 = {"hand_id": new_id("hand"), "cards": [c2, draw(state)], "bet": h["bet"], "status": "active", "is_split_hand": True, "actions": ["split"], "split_from": h["hand_id"]}
-    # Branch when the following condition is true.
-    if ace_split and state.get("rules",{}).get("split_aces_one_card", True):
+    # Read the clamped switch so a poisoned persisted value cannot change split-ace settlement behavior. (issue #404 read-side)
+    if ace_split and _sanitized_rules(state)["split_aces_one_card"]:
         # Set h1["status"] to the value needed for the next operation.
         h1["status"] = "stand"; h1["split_aces_locked"] = True
         # Set h2["status"] to the value needed for the next operation.
@@ -300,8 +339,8 @@ def split(state, rid):
 def surrender(state, rid):
     # Set rnd to the value needed for the next operation.
     rnd = get_round(state, rid)
-    # Branch when the following condition is true.
-    if not state["rules"].get("late_surrender", True): raise ValidationError("Surrender is disabled")
+    # Read the clamped switch so a poisoned persisted value cannot toggle half-stake surrender returns. (issue #404 read-side)
+    if not _sanitized_rules(state)["late_surrender"]: raise ValidationError("Surrender is disabled")
     # Branch when the following condition is true.
     if rnd["status"] != "player_turn": raise ConflictError("Round is not in player turn")
     # Set h to the value needed for the next operation.
@@ -331,8 +370,8 @@ def dealer_play(state, rnd):
         if total["total"] < 17:
             # Execute this statement as part of the module's documented control flow.
             rnd["dealer"]["cards"].append(draw(state)); continue
-        # Branch when the following condition is true.
-        if total["total"] == 17 and total["soft"] and state["rules"].get("dealer_hits_soft_17"):
+        # Read the clamped switch so a poisoned persisted value cannot alter dealer drawing and outcome money. (issue #404 read-side)
+        if total["total"] == 17 and total["soft"] and _sanitized_rules(state)["dealer_hits_soft_17"]:
             # Execute this statement as part of the module's documented control flow.
             rnd["dealer"]["cards"].append(draw(state)); continue
         # Execute this statement as part of the module's documented control flow.

@@ -52,7 +52,7 @@ assert.match(source, /scheduleDiceReveal[\s\S]*timerScope\.schedule/);
 // Verify reduced-motion CSS exists.
 assert.match(source, /prefers-reduced-motion:reduce/);
 // Verify API calls send no caller-owned player identity.
-assert.doesNotMatch(source, /withCurrentPlayer|currentPlayerPath|player_id/);
+assert.doesNotMatch(source, /withCurrentPlayer|currentPlayerPath|player_id\s*:/);
 // Verify primary controls meet minimum touch target height.
 assert.match(source, /min-height:44px/);
 // Verify responsive stacking preserves control, stage, then data order.

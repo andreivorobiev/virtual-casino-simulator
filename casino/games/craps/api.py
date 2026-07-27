@@ -93,9 +93,9 @@ class CrapsService:
 
     # Read complete same-player ledger history without a fixed recovery horizon.
     def _read_complete_ledger(self, player_id: str) -> list[dict]:
-        # Begin with the former recovery window for efficient ordinary retries.
+        # Begin with the ordinary recovery window while the JSON provider's tail cache prevents file re-parsing. (issue #412)
         limit = 500
-        # Widen until the provider returns fewer rows than requested.
+        # Widen until the provider proves the returned window covers complete player history.
         while True:
             # Read the newest candidate window through the shared ledger API.
             events = self._read_ledger(player_id, limit)
@@ -107,7 +107,7 @@ class CrapsService:
             if len(events) < limit:
                 # Return the full chronological proof collection.
                 return events
-            # Double the window so old proof cannot age beyond a fixed limit.
+            # Double without a fixed ceiling so old exactly-once evidence can never age out.
             limit *= 2
 
     # Find a unique prior ledger event by its deterministic game action key.

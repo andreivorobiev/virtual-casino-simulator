@@ -14,6 +14,8 @@ from casino.errors import ValidationError, ConflictError
 GAME_ID = "roulette"
 # Set EVEN_MONEY_TYPES to the value needed for the next operation.
 EVEN_MONEY_TYPES = {"red","black","odd","even","low","high"}
+# Use operating-system-backed randomness for production wheel results. (issue #420)
+_SYSTEM_RANDOM = random.SystemRandom()
 
 # Define the default_state function used by this module.
 def default_state() -> dict:
@@ -81,8 +83,8 @@ def add_bet_to_state(state: dict, player_id: str, bet_type: str, amount: float, 
         raise ValidationError("Illegal roulette bet", {"bet_type": bet_type, "covered_numbers": covered_numbers})
     # Set r to the value needed for the next operation.
     r = ensure_open_round(state)
-    # Set item to the value needed for the next operation.
-    item = {"bet_id": new_id("bet"), "player_id": player_id, "game":"roulette", "round_id": r["round_id"], "type": bet["type"], "label": label or bet["label"], "covered_numbers": bet["covered_numbers"], "amount": round(float(amount),2), "net_payout": bet["net_payout"], "created_at": utc_now(), "source": source}
+    # Persist the resolved catalog entry's layout kind with each open bet so the frontend can route outside chips to the outside rail. (issue #222)
+    item = {"bet_id": new_id("bet"), "player_id": player_id, "game":"roulette", "round_id": r["round_id"], "type": bet["type"], "label": label or bet["label"], "covered_numbers": bet["covered_numbers"], "amount": round(float(amount),2), "net_payout": bet["net_payout"], "created_at": utc_now(), "source": source, "layout_kind": bet.get("layout_kind")}
     # Execute this statement as part of the module's documented control flow.
     r["bets"].append(item)
     # Return the computed value to the caller.
@@ -134,8 +136,8 @@ def spin_state(state: dict, forced_result: str | None = None) -> dict:
         raise ConflictError("Round is not open")
     # Set legal_results to the value needed for the next operation.
     legal_results = set(wheel(state.get("mode", "double")))
-    # Set result to the value needed for the next operation.
-    result = str(forced_result) if forced_result is not None else random.choice(wheel(state.get("mode", "double")))
+    # Draw the live pocket from the CSPRNG while preserving the deterministic forced-result test hook. (issue #420)
+    result = str(forced_result) if forced_result is not None else _SYSTEM_RANDOM.choice(wheel(state.get("mode", "double")))
     # Branch when the following condition is true.
     if result not in legal_results:
         # Raise an error so invalid input or state is reported explicitly.

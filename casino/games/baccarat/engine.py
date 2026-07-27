@@ -1,5 +1,7 @@
 # AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
 # Import required dependency so this module can use its public functions or constants.
+import math
+# Import required dependency so this module can use its public functions or constants.
 import random
 # Import required dependency so this module can use its public functions or constants.
 from casino.core.ids import new_id
@@ -14,13 +16,15 @@ GAME_ID = "baccarat"
 RANKS = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"]
 # Set SUITS to the value needed for the next operation.
 SUITS = ["♠","♥","♦","♣"]
+# Hold one module-level CSPRNG so production shuffles never use the predictable Mersenne Twister default. (issue #420)
+_SYSTEM_RNG = random.SystemRandom()
 
 # Define the make_shoe function used by this module.
-def make_shoe(decks=8):
+def make_shoe(decks=8, rng=None):
     # Set shoe to the value needed for the next operation.
     shoe = [r+s for _ in range(int(decks)) for s in SUITS for r in RANKS]
-    # Execute this statement as part of the module's documented control flow.
-    random.shuffle(shoe)
+    # Shuffle with an injected deterministic generator in tests or the module CSPRNG in production. (issue #420)
+    (_SYSTEM_RNG if rng is None else rng).shuffle(shoe)
     # Return the computed value to the caller.
     return shoe
 
@@ -44,12 +48,49 @@ def default_state():
     # Return the computed value to the caller.
     return {"rules": {"decks":8, "tie_payout":8, "banker_commission":0.05, "tie_behavior":"push"}, "shoe": [], "shoe_id": None, "coup_number":0, "open_bets": [], "last_coups": []}
 
+# Clamp persisted table rules at every consumption point so poisoned state files cannot steer money math or shoe size. (issue #404 read-side)
+def _sanitized_rules(state) -> dict:
+    # Read the house defaults once so every invalid persisted value fails closed to a safe rule.
+    defaults = default_state()["rules"]
+    # Read the persisted rules mapping while treating any non-dict payload as empty.
+    raw = state.get("rules") if isinstance(state, dict) and isinstance(state.get("rules"), dict) else {}
+    # Start from a fresh defaults copy so sanitation never mutates persisted state in place.
+    safe = dict(defaults)
+    # Read the persisted banker commission for finite bounded validation.
+    commission = raw.get("banker_commission")
+    # Accept only finite non-bool numbers between zero and a quarter so banker payouts stay bounded. (issue #404 read-side)
+    if not isinstance(commission, bool) and isinstance(commission, (int, float)) and math.isfinite(commission) and 0 <= float(commission) <= 0.25:
+        # Keep the operator-selected commission because it is within the supported table range.
+        safe["banker_commission"] = float(commission)
+    # Read the persisted tie payout rate for allowlist validation.
+    tie = raw.get("tie_payout")
+    # Accept only the two supported tie rates while rejecting bool values because they are integers. (issue #404 read-side)
+    if not isinstance(tie, bool) and isinstance(tie, (int, float)) and float(tie) in (8.0, 9.0):
+        # Keep the operator-selected tie rate because it is a supported table configuration.
+        safe["tie_payout"] = float(tie)
+    # Read the persisted deck count for bounded-integer validation.
+    decks = raw.get("decks")
+    # Accept only true integers between one and eight decks so shoe construction stays bounded. (issue #404 read-side)
+    if not isinstance(decks, bool) and isinstance(decks, int) and 1 <= decks <= 8:
+        # Keep the operator-selected deck count because it is within the supported table range.
+        safe["decks"] = decks
+    # Read the persisted cut-card threshold consumed by shoe refills alongside the deck count.
+    cut = raw.get("cut_cards_remaining")
+    # Accept only true integers within the route's bounded two-deck cut range. (issue #404 read-side)
+    if not isinstance(cut, bool) and isinstance(cut, int) and 1 <= cut <= 104:
+        # Keep the operator-selected cut threshold because it is within the supported table range.
+        safe["cut_cards_remaining"] = cut
+    # Return the fully clamped rules mapping for money math and shoe construction.
+    return safe
+
 # Define the ensure_shoe function used by this module.
 def ensure_shoe(state):
+    # Read the clamped rules once so poisoned deck or cut values cannot steer shoe construction. (issue #404 read-side)
+    rules = _sanitized_rules(state)
     # Set decks to the value needed for the next operation.
-    decks = int(state.get("rules",{}).get("decks",8))
+    decks = int(rules["decks"])
     # Set cut to the value needed for the next operation.
-    cut = int(state.get("rules",{}).get("cut_cards_remaining", 14) or 14)
+    cut = int(rules.get("cut_cards_remaining", 14) or 14)
     # Branch when the following condition is true.
     if not state.get("shoe") or len(state["shoe"]) < cut:
         # Set state["shoe"] to the value needed for the next operation.
@@ -170,6 +211,8 @@ def deal_coup(state, force=None):
 
 # Define the settle_bet function used by this module.
 def settle_bet(bet, coup, rules):
+    # Clamp the caller-provided rules so poisoned persisted values cannot reach settlement money math. (issue #404 read-side)
+    rules = _sanitized_rules({"rules": rules})
     # Set amount to the value needed for the next operation.
     amount = float(bet["amount"])
     # Branch when the following condition is true.

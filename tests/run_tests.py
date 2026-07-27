@@ -224,7 +224,7 @@ def run_case(test_id, reqs, fn):
     # Flush the named browser-test start before its body begins.
     if progress: progress.start_item(test_id)
     # Start protected logic so failures can be handled safely.
-    try: fn()
+    try: outcome=fn()
     # Handle the expected failure path for the protected logic.
     except Exception as e:
         # Flush the terminal failure before preserving the existing result and exception.
@@ -233,6 +233,14 @@ def run_case(test_id, reqs, fn):
         record(test_id, reqs, 'FAIL', str(e)); raise
     # Record the normal passing path after the test body returns.
     else:
+        # Fail predicate-shaped case bodies that quietly returned False instead of asserting. (issue #414)
+        if outcome is False:
+            # Flush the terminal failure exactly like a raising case body.
+            if progress: progress.finish_item('FAIL')
+            # Record the mapped failure before raising so the requirement mapping never shows a silent PASS.
+            record(test_id, reqs, 'FAIL', 'case predicate returned False')
+            # Raise the same failure class a raising case body would produce.
+            raise AssertionError(f'{test_id} case predicate returned False')
         # Flush the terminal pass and advance completed/total counts.
         if progress: progress.finish_item('PASS')
         # Preserve the existing mapped PASS result.
@@ -791,7 +799,7 @@ def validate_guest_contracts():
     # Prove the full filters, journey, fake-token, action/error/latency, and bounded timeline schemas are published.
     assert all(term in admin_contract for term in ('GameFilter','CompletedFilter','ErrorCategoryFilter','SinceFilter','UntilFilter','account_cta_selected','ProductMetrics','fake_tokens_only','action_categories','error_categories','latency_buckets','maxItems: 80'))
     # Preserve the exact anonymous allowlist including private redemption, disabled enrollment, and reviewed provider-latched OAuth routes. (OAUTH-007)
-    assert security_contract['anonymous_routes']==['/api/v2/auth/login','/api/v2/auth/guest','/api/v2/auth/redeem-invitation','/api/v2/auth/enrollment-policy','/api/v2/auth/signup','/api/v2/auth/oauth/providers','/api/v2/auth/oauth/{google|facebook}/start','/api/v2/auth/oauth/{google|facebook}/callback','/healthz']
+    assert security_contract['anonymous_routes']==['/api/v2/auth/login','/api/v2/auth/guest','/api/v2/auth/redeem-invitation','/api/v2/auth/enrollment-policy','/api/v2/auth/signup','/api/v2/auth/oauth/providers','/api/v2/auth/csrf','/api/v2/auth/oauth/{google|facebook}/start','/api/v2/auth/oauth/{google|facebook}/callback','/healthz']
     # Prove launch stays held and retention/forbidden fields remain exact.
     assert guest_contract['public_launch_authorized'] is False and guest_contract['wallet']['add_tokens_allowed'] is False and guest_contract['lifecycle']['autoplay_stopped_on_end'] is True and guest_contract['entry']['max_game_actions_per_session']==1000 and guest_contract['entry']['max_concurrent_autoplay_sessions']==1 and guest_contract['admin_telemetry']['raw_retention_days']==30 and guest_contract['admin_telemetry']['aggregate_retention_days']==400 and guest_contract['admin_telemetry']['cleanup_failure_visible'] is True and guest_contract['admin_telemetry']['timeline_event_limit']==80 and guest_contract['admin_telemetry']['responsive_error_cohort_minimum']==5 and guest_contract['admin_telemetry']['export_allowed'] is False and 'browser_nonce' in guest_contract['admin_telemetry']['forbidden_fields']
     # Parse the exact digest freeze map.
@@ -924,6 +932,10 @@ def validate_guest_admin_api(base):
 
 # Define the run_api_tests function used by this module.
 def run_api_tests():
+    # Refuse literal always-true mapped predicates so requirement-mapped cases can never regrow blind spots. (issue #414)
+    runner_source=Path(__file__).read_text(encoding='utf-8')
+    # Fail the whole lane immediately when a tautological mapped predicate reappears anywhere in this runner.
+    assert re.search(r"assert_condition\(\s*True\s*,",runner_source) is None, 'tautological always-true mapped predicate found in tests/run_tests.py'
     # Execute the listener-free TEST-092 allocation, classification, and resume-policy proofs.
     def run_ui_50000_harness_tests():
         # Load only the focused #227 harness test class.
@@ -944,6 +956,22 @@ def run_api_tests():
         if not result.wasSuccessful(): raise AssertionError('non-finite money boundary unit suite failed')
     # Record the listener-free finite validation and persistence proof.
     run_case('MONEY-NONFINITE-UNIT-001',['CORE-025','LEDGER-027','MHVP-006','TEST-055'],run_nonfinite_money_unit_tests)
+    # Build one reusable subprocess host so bundle suites that redirect data directories at import can never pollute this process or the shared API server environment. (issues #403, #405, #411, #412)
+    def run_unit_module(module_name, failure_message):
+        # Execute the focused suite with a fresh interpreter exactly like the security probe host.
+        result=subprocess.run([sys.executable,'-m','unittest',module_name,'-v'],cwd=str(ROOT),capture_output=True,text=True,timeout=600)
+        # Fail the named central case when any focused assertion fails, preserving the child's diagnostic tail.
+        if result.returncode!=0: raise AssertionError(f'{failure_message}: {result.stderr[-1500:]}')
+    # Record the semantics-preserving ledger tail-cache and bootstrap-race proof. (issues #412, #431)
+    run_case('STORAGE-LEDGER-CACHE-001',['STORAGE-009','TEST-135'],lambda: run_unit_module('tests.storage_ledger_cache_tests','ledger cache and bootstrap race suite failed'))
+    # Record the blackjack and baccarat exactly-once settlement, clamp, and entropy proof. (issues #403, #404, #420)
+    run_case('API-LEGACY-SETTLE-001',['LEDGER-030','SEC-012'],lambda: run_unit_module('tests.legacy_settlement_tests','blackjack and baccarat settlement suite failed'))
+    # Record the roulette and keno exactly-once settlement, layout, and entropy proof. (issues #403, #222, #420)
+    run_case('API-LEGACY-SETTLE-002',['LEDGER-030','ROU-071','SEC-012'],lambda: run_unit_module('tests.roulette_keno_settlement_tests','roulette and keno settlement suite failed'))
+    # Record the competitive bounded bingo economics proof. (issue #405)
+    run_case('API-BINGO-ECONOMICS-001',['BINGO-025'],lambda: run_unit_module('tests.bingo_economics_tests','bingo economics suite failed'))
+    # Record the practice-table solvency, compensation, and self-heal proof. (issue #411)
+    run_case('API-THPT-ESCROW-001',['THPT-006'],lambda: run_unit_module('tests.thpt_escrow_tests','practice-table escrow suite failed'))
     # Execute the complete non-mutating edge preparation proof before any test listener starts.
     def run_edge_gate_tests():
         # Load only the focused TEST-050 unit-test class.
@@ -1858,8 +1886,8 @@ def run_api_tests():
             bingo_b_session=api(base,'/api/v1/games/bingo/cards','POST',{'player_id':user_a['player_id'],'amount':5,'pattern':'line'},auth_token=token_b)['session']
             # Complete user B's Bingo session to exercise payout settlement.
             bingo_b=api(base,'/api/v1/games/bingo/auto','POST',{'player_id':user_a['player_id'],'max_calls':75},auth_token=token_b)
-            # Verify Bingo identity binding, refund, and terminal payout paths.
-            assert bingo_a_session['player_id']==user_a['player_id'] and bingo_b_session['player_id']==user_b['player_id'] and bingo_a_refund['refunds'] and bingo_b['session']['status']=='won'
+            # Verify Bingo identity binding, refund, and terminal settlement; competitive sessions may now end without a human win. (issue #405)
+            assert bingo_a_session['player_id']==user_a['player_id'] and bingo_b_session['player_id']==user_b['player_id'] and bingo_a_refund['refunds'] and bingo_b['session']['status'] in ('won','no_win')
             # Deal user A's three-hand video poker round while submitting user B's player id.
             mhvp_a=api(base,'/api/v1/games/multi-hand-video-poker/rounds','POST',{'player_id':user_b['player_id'],'request_id':'wallet-mhvp-a','hand_count':3,'wager_per_hand':1},auth_token=token_a)
             # Replay user A's exact deal request so the live backend must recover one round and one wager debit.
@@ -2297,7 +2325,7 @@ def run_api_tests():
             # Verify normal users cannot mutate shared bot-controller accounts.
             assert api(base,'/api/v1/bots/bot_roulette_1/enable','POST',{},ok=False,auth_token=token_a)['error']['code']=='FORBIDDEN'
             # Store the durable post-game balance and terms state for restart verification.
-            integrity_state.update({'email':'wallet-a@example.local','password':'wallet-a-password','balance':api(base,'/api/v2/me',auth_token=token_a)['player']['token_balance'],'admin_blocked':len(admin_paths),'token_credit_count':len(credits_after)-len(credits_before),'contract_player':added_a,'mhvp_verified':True,'casino_war_verified':True,'big_six_verified':True,'red_dog_verified':True,'dragon_tiger_verified':True,'hi_lo_verified':True,'users':[{'email':'wallet-a@example.local','password':'wallet-a-password','player_id':user_a['player_id'],'balance':wallet_a,'roulette_round':roulette_a['round']['round_id'],'slots_round':slot_a['round_id'],'blackjack_round':blackjack_a['round_id'],'baccarat_round':baccarat_a['coup']['round_id'],'keno_round':keno_a['draw']['round_id'],'bingo_session':bingo_a_session['session_id'],'bingo_completed':False,'mhvp_round':mhvp_a['round']['round_id'],'casino_war_round':casino_war_a['round']['round_id'],'big_six_round':big_six_a['round']['round_id'],'red_dog_round':red_dog_a['round']['round_id'],'dragon_tiger_round':dragon_tiger_a['round']['round_id'],'hi_lo_round':hi_lo_a['round']['round_id']},{'email':'wallet-b@example.local','password':'wallet-b-password','player_id':user_b['player_id'],'balance':wallet_b,'roulette_round':roulette_b['round']['round_id'],'slots_round':slot_b['round_id'],'blackjack_round':blackjack_b['round_id'],'baccarat_round':baccarat_b['coup']['round_id'],'keno_round':keno_b['draw']['round_id'],'bingo_session':bingo_b['session']['session_id'],'bingo_completed':True,'mhvp_round':mhvp_b['round']['round_id'],'casino_war_round':casino_war_b['round']['round_id'],'big_six_round':big_six_b['round']['round_id'],'red_dog_round':red_dog_b['round']['round_id'],'dragon_tiger_round':dragon_tiger_b['round']['round_id'],'hi_lo_round':hi_lo_b['round']['round_id']}],'history_game_counts':[len(history_a),len(history_b)]})
+            integrity_state.update({'email':'wallet-a@example.local','password':'wallet-a-password','balance':api(base,'/api/v2/me',auth_token=token_a)['player']['token_balance'],'admin_blocked':len(admin_paths),'token_credit_count':len(credits_after)-len(credits_before),'contract_player':added_a,'mhvp_verified':True,'casino_war_verified':True,'big_six_verified':True,'red_dog_verified':True,'dragon_tiger_verified':True,'hi_lo_verified':True,'users':[{'email':'wallet-a@example.local','password':'wallet-a-password','player_id':user_a['player_id'],'balance':wallet_a,'roulette_round':roulette_a['round']['round_id'],'slots_round':slot_a['round_id'],'blackjack_round':blackjack_a['round_id'],'baccarat_round':baccarat_a['coup']['round_id'],'keno_round':keno_a['draw']['round_id'],'bingo_session':bingo_a_session['session_id'],'bingo_completed':False,'bingo_history_owned':True,'mhvp_round':mhvp_a['round']['round_id'],'casino_war_round':casino_war_a['round']['round_id'],'big_six_round':big_six_a['round']['round_id'],'red_dog_round':red_dog_a['round']['round_id'],'dragon_tiger_round':dragon_tiger_a['round']['round_id'],'hi_lo_round':hi_lo_a['round']['round_id']},{'email':'wallet-b@example.local','password':'wallet-b-password','player_id':user_b['player_id'],'balance':wallet_b,'roulette_round':roulette_b['round']['round_id'],'slots_round':slot_b['round_id'],'blackjack_round':blackjack_b['round_id'],'baccarat_round':baccarat_b['coup']['round_id'],'keno_round':keno_b['draw']['round_id'],'bingo_session':bingo_b['session']['session_id'],'bingo_completed':True,'bingo_history_owned':bingo_b['session'].get('winner') in (None,user_b['player_id']),'mhvp_round':mhvp_b['round']['round_id'],'casino_war_round':casino_war_b['round']['round_id'],'big_six_round':big_six_b['round']['round_id'],'red_dog_round':red_dog_b['round']['round_id'],'dragon_tiger_round':dragon_tiger_b['round']['round_id'],'hi_lo_round':hi_lo_b['round']['round_id']}],'history_game_counts':[len(history_a),len(history_b)]})
             # Retain Scratch Card ids by authenticated player for process-restart verification.
             integrity_state['scratch_cards']={user_a['player_id']:scratch_a['card']['card_id'],user_b['player_id']:scratch_b['card']['card_id']}
             # Retain Sic Bo round ids by authenticated player for process-restart verification.
@@ -2330,6 +2358,12 @@ def run_api_tests():
             integrity_state['joker_poker_rounds']={user_a['player_id']:joker_poker_a['round']['round_id'],user_b['player_id']:joker_poker_b['round']['round_id']}
             # Retain Texas Hold'em hand ids by authenticated player for process-restart verification.
             integrity_state['texas_holdem_practice_hands']={user_a['player_id']:thpt_a['hand']['hand_id'],user_b['player_id']:thpt_b['hand']['hand_id']}
+            # Retain Three Card Poker round ids by authenticated player so its mapped case pins real evidence. (issue #414)
+            integrity_state['three_card_poker_rounds']={user_a['player_id']:tcp_a['round']['round_id'],user_b['player_id']:tcp_b['round']['round_id']}
+            # Retain Jacks or Better round ids by authenticated player so its mapped case pins real evidence. (issue #414)
+            integrity_state['jacks_or_better_rounds']={user_a['player_id']:jobvp_a['round']['round_id'],user_b['player_id']:jobvp_b['round']['round_id']}
+            # Retain Deuces Wild round ids by authenticated player so its mapped case pins real evidence. (issue #414)
+            integrity_state['deuces_wild_rounds']={user_a['player_id']:dwvp_a['round']['round_id'],user_b['player_id']:dwvp_b['round']['round_id']}
         # Execute the real-backend integrity regression as one mapped API case.
         run_case('API-PRIVATE-SESSION-001',['SESSION-003','USER-001','USER-003','USER-005','TOKEN-004','TEST-039'],wallet_auth_integrity)
         # Record Multi-Hand Video Poker session, mode, ledger, and retry coverage under its permanent test id.
@@ -2344,44 +2378,48 @@ def run_api_tests():
         run_case('API-DT-001',['DT-001','DT-002','DT-003'],lambda: assert_condition(integrity_state['dragon_tiger_verified'],'Dragon Tiger integration evidence missing'))
         # Record Hi-Lo session, ledger, conflict, and retry coverage under its permanent test id.
         run_case('API-HILO-001',['HILO-001','HILO-002','HILO-003'],lambda: assert_condition(integrity_state['hi_lo_verified'],'Hi-Lo integration evidence missing'))
-        # Record Three Card Poker coverage exercised by the integrated private-session regression.
-        run_case('API-TCP-001',['TCP-001','TCP-002','TCP-003'],lambda: assert_condition(True,'Three Card Poker integration evidence missing'))
-        # Record Jacks or Better coverage exercised by the integrated private-session regression.
-        run_case('API-JOBVP-001',['JOBVP-001','JOBVP-002','JOBVP-003'],lambda: assert_condition(True,'Jacks or Better integration evidence missing'))
-        # Record Deuces Wild coverage exercised by the integrated private-session regression.
-        run_case('API-DWVP-001',['DWVP-001','DWVP-002','DWVP-003'],lambda: assert_condition(True,'Deuces Wild integration evidence missing'))
-        # Record Scratch Cards privacy, session, ledger, replay, and two-user coverage.
-        run_case('API-SCRATCH-001',['SCRATCH-001','SCRATCH-002','SCRATCH-003'],lambda: assert_condition(True,'Scratch Cards integration evidence missing'))
-        # Record Sic Bo rules, session, ledger, replay, and two-user coverage.
-        run_case('API-SIC-BO-001',['SIC-BO-001','SIC-BO-002','SIC-BO-003'],lambda: assert_condition(True,'Sic Bo integration evidence missing'))
-        # Record Chuck-a-Luck rules, session, ledger, replay, and two-user coverage.
-        run_case('API-CHUCK-001',['CHUCK-001','CHUCK-002','CHUCK-003'],lambda: assert_condition(True,'Chuck-a-Luck integration evidence missing'))
-        # Record Craps rules, session, ledger, replay, and two-user coverage.
-        run_case('API-CRAPS-001',['CRAPS-001','CRAPS-002','CRAPS-003'],lambda: assert_condition(True,'Craps integration evidence missing'))
-        # Record Crown and Anchor rules, session, ledger, replay, and two-user coverage.
-        run_case('API-CAA-001',['CAA-001','CAA-002','CAA-003'],lambda: assert_condition(True,'Crown and Anchor integration evidence missing'))
-        # Record Over/Under 7 rules, session, ledger, replay, and two-user coverage.
-        run_case('API-OU7-001',['OU7-001','OU7-002','OU7-003'],lambda: assert_condition(True,'Over/Under 7 integration evidence missing'))
-        # Record Plinko rules, session, ledger, replay, and two-user coverage.
-        run_case('API-PLINKO-001',['PLINKO-001','PLINKO-002','PLINKO-003'],lambda: assert_condition(True,'Plinko integration evidence missing'))
-        # Record Fan-Tan rules, session, ledger, replay, and two-user coverage.
-        run_case('API-FAN-TAN-001',['FAN-TAN-001','FAN-TAN-002','FAN-TAN-003'],lambda: assert_condition(True,'Fan-Tan integration evidence missing'))
-        # Record Andar Bahar rules, session, ledger, replay, and two-user coverage.
-        run_case('API-AB-001',['AB-001','AB-002','AB-003'],lambda: assert_condition(True,'Andar Bahar integration evidence missing'))
-        # Record Acey-Deucey rules, session, private result, ledger, replay, and two-user coverage.
-        run_case('API-AD-001',['AD-001','AD-002','AD-003'],lambda: assert_condition(True,'Acey-Deucey integration evidence missing'))
-        # Record Caribbean Stud rules, session, private dealer cards, ledger, replay, and two-user coverage.
-        run_case('API-CS-001',['CS-001','CS-002','CS-003'],lambda: assert_condition(True,'Caribbean Stud integration evidence missing'))
-        # Record Let It Ride rules, session, hidden cards, ledger, replay, and two-user coverage.
-        run_case('API-LIR-001',['LIR-001','LIR-002','LIR-003'],lambda: assert_condition(True,'Let It Ride integration evidence missing'))
-        # Record Casino Hold'em rules, session, hidden cards, ledger, replay, and two-user coverage.
-        run_case('API-CH-001',['CH-001','CH-002','CH-003'],lambda: assert_condition(True,"Casino Hold'em integration evidence missing"))
-        # Record Pai Gow Poker session, ledger, settlement, and retry coverage under its permanent test id.
-        run_case('API-PGP-001',['PGP-001','PGP-002','PGP-003'],lambda: assert_condition(True,'Pai Gow Poker integration evidence missing'))
-        # Record Joker Poker rules, session, private draw pool, ledger, replay, and two-user coverage.
-        run_case('API-JP-001',['JP-001','JP-002','JP-003'],lambda: assert_condition(True,'Joker Poker integration evidence missing'))
-        # Record Texas Hold'em rules, session privacy, four-wallet ledger settlement, replay, and two-user coverage.
-        run_case('API-THPT-001',['THPT-001','THPT-002','THPT-003','THPT-005','BOT-009','BOT-010','BOT-011','LEDGER-026','SEC-001','SEC-002','SEC-003','SEC-004','SEC-005','SEC-006','SEC-008','SEC-009'],lambda: assert_condition(True,"Texas Hold'em Practice integration evidence missing"))
+        # Build one reusable evidence predicate proving both players hold distinct server-issued ids for a game. (issue #414)
+        def game_evidence(key):
+            # Compare stash coverage against the authenticated player set and require per-player distinct server ids.
+            return lambda: assert_condition(set(integrity_state[key])=={u['player_id'] for u in integrity_state['users']} and len(set(integrity_state[key].values()))==2,f'{key} integration evidence missing')
+        # Record Three Card Poker coverage against its retained per-player round ids. (issue #414)
+        run_case('API-TCP-001',['TCP-001','TCP-002','TCP-003'],game_evidence('three_card_poker_rounds'))
+        # Record Jacks or Better coverage against its retained per-player round ids. (issue #414)
+        run_case('API-JOBVP-001',['JOBVP-001','JOBVP-002','JOBVP-003'],game_evidence('jacks_or_better_rounds'))
+        # Record Deuces Wild coverage against its retained per-player round ids. (issue #414)
+        run_case('API-DWVP-001',['DWVP-001','DWVP-002','DWVP-003'],game_evidence('deuces_wild_rounds'))
+        # Record Scratch Cards coverage against its retained per-player card ids. (issue #414)
+        run_case('API-SCRATCH-001',['SCRATCH-001','SCRATCH-002','SCRATCH-003'],game_evidence('scratch_cards'))
+        # Record Sic Bo coverage against its retained per-player round ids. (issue #414)
+        run_case('API-SIC-BO-001',['SIC-BO-001','SIC-BO-002','SIC-BO-003'],game_evidence('sic_bo_rounds'))
+        # Record Chuck-a-Luck coverage against its retained per-player round ids. (issue #414)
+        run_case('API-CHUCK-001',['CHUCK-001','CHUCK-002','CHUCK-003'],game_evidence('chuck_a_luck_rounds'))
+        # Record Craps coverage against its retained per-player round ids. (issue #414)
+        run_case('API-CRAPS-001',['CRAPS-001','CRAPS-002','CRAPS-003'],game_evidence('craps_rounds'))
+        # Record Crown and Anchor coverage against its retained per-player round ids. (issue #414)
+        run_case('API-CAA-001',['CAA-001','CAA-002','CAA-003'],game_evidence('crown_and_anchor_rounds'))
+        # Record Over/Under 7 coverage against its retained per-player round ids. (issue #414)
+        run_case('API-OU7-001',['OU7-001','OU7-002','OU7-003'],game_evidence('over_under_7_rounds'))
+        # Record Plinko coverage against its retained per-player drop ids. (issue #414)
+        run_case('API-PLINKO-001',['PLINKO-001','PLINKO-002','PLINKO-003'],game_evidence('plinko_drops'))
+        # Record Fan-Tan coverage against its retained per-player round ids. (issue #414)
+        run_case('API-FAN-TAN-001',['FAN-TAN-001','FAN-TAN-002','FAN-TAN-003'],game_evidence('fan_tan_rounds'))
+        # Record Andar Bahar coverage against its retained per-player round ids. (issue #414)
+        run_case('API-AB-001',['AB-001','AB-002','AB-003'],game_evidence('andar_bahar_rounds'))
+        # Record Acey-Deucey coverage against its retained per-player round ids. (issue #414)
+        run_case('API-AD-001',['AD-001','AD-002','AD-003'],game_evidence('acey_deucey_rounds'))
+        # Record Caribbean Stud coverage against its retained per-player round ids. (issue #414)
+        run_case('API-CS-001',['CS-001','CS-002','CS-003'],game_evidence('caribbean_stud_rounds'))
+        # Record Let It Ride coverage against its retained per-player round ids. (issue #414)
+        run_case('API-LIR-001',['LIR-001','LIR-002','LIR-003'],game_evidence('let_it_ride_rounds'))
+        # Record Casino Hold'em coverage against its retained per-player round ids. (issue #414)
+        run_case('API-CH-001',['CH-001','CH-002','CH-003'],game_evidence('casino_holdem_rounds'))
+        # Record Pai Gow Poker coverage against its retained per-player round ids. (issue #414)
+        run_case('API-PGP-001',['PGP-001','PGP-002','PGP-003'],game_evidence('pai_gow_poker_rounds'))
+        # Record Joker Poker coverage against its retained per-player round ids. (issue #414)
+        run_case('API-JP-001',['JP-001','JP-002','JP-003'],game_evidence('joker_poker_rounds'))
+        # Record Texas Hold'em coverage against its retained per-player hand ids. (issue #414)
+        run_case('API-THPT-001',['THPT-001','THPT-002','THPT-003','THPT-005','BOT-009','BOT-010','BOT-011','LEDGER-026','SEC-001','SEC-002','SEC-003','SEC-004','SEC-005','SEC-006','SEC-008','SEC-009'],game_evidence('texas_holdem_practice_hands'))
         # Record exact token credit coverage under the permanent test id referenced by TOKEN-003.
         run_case('API-TOKEN-001',['TOKEN-003','TOKEN-004'],lambda: assert_condition(integrity_state['token_credit_count']==1 and integrity_state['contract_player']['token_balance']==250,'token credit contract mismatch'))
         # Record central Admin authorization coverage under the permanent Admin test id.
@@ -2458,8 +2496,10 @@ def run_api_tests():
                 thpt_state=api(base,'/api/v1/games/texas-holdem-practice-table/state',auth_token=token); assert any(row['hand_id']==integrity_state['texas_holdem_practice_hands'][expected['player_id']] for row in thpt_state['state']['recent_hands'])
                 # Read restarted private history and ledger views.
                 restarted_history=api(base,'/api/v1/casino/history',auth_token=token)['history']; restarted_ledger=api(base,f'/api/v1/players/{expected["player_id"]}/ledger',auth_token=token)['ledger']
-                # Verify restarted history includes the user's Bingo settlement and never leaks another player.
-                assert any(row['round_id']==expected['bingo_session'] for row in restarted_history) and all(row['player_id']==expected['player_id'] for row in restarted_history) and all(row['player_id']==expected['player_id'] for row in restarted_ledger)
+                # Match the restarted user's private history against the competitive Bingo outcome owner. (issue #405)
+                bingo_history_visible=any(row['round_id']==expected['bingo_session'] for row in restarted_history)
+                # Require human-owned refunds/wins/no-win outcomes to persist, while bot wins stay absent from another user's private history.
+                assert bingo_history_visible is expected['bingo_history_owned'] and all(row['player_id']==expected['player_id'] for row in restarted_history) and all(row['player_id']==expected['player_id'] for row in restarted_ledger)
             # Verify both users produced persisted private history across the history-producing games.
             assert all(count>0 for count in integrity_state['history_game_counts'])
         # Record the live restart persistence regression under the same integrity requirements.
@@ -2760,8 +2800,8 @@ def run_api_tests():
         def bingo():
             # Set api(base,'/api/v1/games/bingo/cards','POST',{'player_id':'hu to the value needed for the next operation.
             api(base,'/api/v1/games/bingo/cards','POST',{'player_id':'human','amount':5,'pattern':'line'}); r=api(base,'/api/v1/games/bingo/reset','POST',{}); assert r['refunds']
-            # Set api(base,'/api/v1/games/bingo/cards','POST',{'player_id':'hu to the value needed for the next operation.
-            api(base,'/api/v1/games/bingo/cards','POST',{'player_id':'human','amount':5,'pattern':'line'}); a=api(base,'/api/v1/games/bingo/auto','POST',{'max_calls':75}); assert a['session']['status']=='won'
+            # Require a terminal competitive settlement rather than the removed guaranteed human win. (issue #405)
+            api(base,'/api/v1/games/bingo/cards','POST',{'player_id':'human','amount':5,'pattern':'line'}); a=api(base,'/api/v1/games/bingo/auto','POST',{'max_calls':75}); assert a['session']['status'] in ('won','no_win')
         # Execute this statement as part of the module's documented control flow.
         run_case('API-BINGO-001',['BINGO-001','BINGO-010','BINGO-020'],bingo)
         # Define the private_sessions function used by this module.

@@ -45,8 +45,8 @@ assert.match(source, /export const FanTanGame\b/);
 assert.match(source, /id:\s*'fan_tan'/);
 // Verify the browser readiness selector exists in production markup.
 assert.match(source, /data-testid="fan-tan"/);
-// Verify the frontend consumes no caller-owned player identity.
-assert.doesNotMatch(source, /withCurrentPlayer|currentPlayerPath|player_id/);
+// Verify the frontend authors no caller-owned player identity into requests; reading the authenticated shell identity for issue #261 settlement reconciliation stays allowed. (issue #413)
+assert.doesNotMatch(source, /withCurrentPlayer|currentPlayerPath|player_id\s*:/);
 // Verify managed timer scope owns the reduced-motion counting path.
 assert.match(source, /createMotionTimerScope/);
 // Verify route teardown disposes the retained motion scope.

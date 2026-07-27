@@ -133,3 +133,58 @@ await assert.rejects(() => apiModule.guestTrial({ accepted: true, terms_version:
 await new Promise(resolve => setTimeout(resolve, 0));
 // Prove guest-start rejection stays inside the guest-entry panel.
 assert.equal(sessionExpiredEvents.length, 0);
+// Remove the CSRF cookie to model a precached or restarted sign-in surface.
+globalThis.document.cookie = '';
+// Reset captured requests before exercising the one-shot recovery path.
+calls.length = 0;
+// Count bootstrap calls independently so later unsafe requests can prove the fast path.
+let csrfBootstrapCalls = 0;
+// Simulate the public bootstrap setting the browser-managed double-submit cookie.
+globalThis.fetch = async (requestPath, init) => {
+  // Capture both bootstrap and authoritative mutation requests in exact order.
+  calls.push({ requestPath, init });
+  // Reissue the host-only proof without exposing it in a response payload.
+  if (requestPath === '/api/v2/auth/csrf') {
+    // Record the one allowed recovery request.
+    csrfBootstrapCalls += 1;
+    // Model the browser applying Set-Cookie before fetch resolves.
+    globalThis.document.cookie = 'casino_csrf=recovered-csrf-proof';
+    // Return the public bootstrap acknowledgement without credential material.
+    return { ok: true, json: async () => ({ ok: true, data: { csrf_cookie_ready: true } }) };
+  }
+  // Accept only the intended state-changing requests after recovery.
+  if (requestPath === '/api/v2/me/tokens/add') return { ok: true, json: async () => ({ ok: true, data: { accepted: true } }) };
+  // Reject accidental traffic so the recovery contract stays exact.
+  throw new Error(`Unexpected CSRF recovery request ${requestPath}`);
+};
+// Require a missing-cookie mutation to recover before sending authoritative work.
+await apiModule.post('/api/v2/me/tokens/add', { amount: 1 });
+// Prove the bootstrap runs before the mutation rather than retrying after a rejection.
+assert.deepEqual(calls.map(call => call.requestPath), ['/api/v2/auth/csrf', '/api/v2/me/tokens/add']);
+// Require browser-managed credentials and cache bypass on the public recovery call.
+assert.deepEqual(calls[0].init, { credentials: 'include', cache: 'no-store' });
+// Require the recovered cookie value on the first authoritative mutation.
+assert.equal(calls[1].init.headers['X-CSRF-Token'], 'recovered-csrf-proof');
+// Send a second mutation while the recovered proof remains present.
+await apiModule.post('/api/v2/me/tokens/add', { amount: 2 });
+// Prove the existing-cookie fast path avoids a duplicate bootstrap.
+assert.equal(csrfBootstrapCalls, 1);
+// Require the second mutation to retain the recovered double-submit proof.
+assert.equal(calls[2].init.headers['X-CSRF-Token'], 'recovered-csrf-proof');
+// Remove the proof again to exercise fail-closed recovery.
+globalThis.document.cookie = '';
+// Reset captured calls before the unavailable-bootstrap assertion.
+calls.length = 0;
+// Return a successful acknowledgement without setting the required cookie.
+globalThis.fetch = async (requestPath, init) => {
+  // Capture the sole allowed bootstrap attempt.
+  calls.push({ requestPath, init });
+  // Reject any leaked mutation because recovery must stop before authoritative work.
+  if (requestPath !== '/api/v2/auth/csrf') throw new Error(`Mutation escaped failed CSRF recovery: ${requestPath}`);
+  // Model a proxy or policy response that fails to apply Set-Cookie.
+  return { ok: true, json: async () => ({ ok: true, data: { csrf_cookie_ready: true } }) };
+};
+// Require the client to fail closed with the stable recovery code.
+await assert.rejects(() => apiModule.post('/api/v2/me/tokens/add', { amount: 3 }), error => error.code === 'CSRF_BOOTSTRAP_UNAVAILABLE');
+// Prove exactly one recovery call occurred and no mutation was dispatched.
+assert.deepEqual(calls.map(call => call.requestPath), ['/api/v2/auth/csrf']);

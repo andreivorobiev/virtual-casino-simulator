@@ -39,6 +39,126 @@ INVITATION_COMPATIBILITY_CONTRACT = ROOT / "contracts" / "compatibility" / "invi
 OAUTH_COMPATIBILITY_CONTRACT = ROOT / "contracts" / "compatibility" / "oauth-invite-only-runtime.json"
 # Point to the manual-only Workroom-approved feedback compatibility policy.
 FEEDBACK_COMPATIBILITY_CONTRACT = ROOT / "contracts" / "compatibility" / "manual-feedback-reporting.json"
+# Point to the module-to-contract compatibility matrix that must mirror every module descriptor's declared contracts. (issue #415)
+MODULE_API_MATRIX_PATH = ROOT / "contracts" / "compatibility" / "module-api-matrix.json"
+# Point to the frozen-contract digest map that must cover and match every declared contract file. (issue #415)
+CONTRACT_DIGESTS_PATH = ROOT / "contracts" / "compatibility" / "contract-digests.json"
+
+
+# Rebuild the module-to-contract map from the authoritative per-module descriptors. (issue #415)
+def build_module_contract_map():
+    # Collect only modules that declare a contracts list so inert modules stay absent.
+    mapping = {}
+    # Iterate the descriptor directory deterministically so regeneration is stable.
+    for module_path in sorted((ROOT / "modules").glob("*.json")):
+        # Skip the aggregate manifest because it is not a module descriptor.
+        if module_path.stem == "module-manifest":
+            # Continue with the next descriptor.
+            continue
+        # Read the descriptor's declared contract list without trusting absent keys.
+        declared = json.loads(module_path.read_text(encoding="utf-8")).get("contracts", [])
+        # Record only modules that publish at least one contract surface.
+        if declared:
+            # Copy the list so later mutation cannot alias the descriptor content.
+            mapping[module_path.stem] = list(declared)
+    # Return the deterministic module-to-contract map.
+    return mapping
+
+
+# Recompute the digest map covering declared contracts plus every already-frozen extra entry. (issue #415)
+def build_contract_digests(existing):
+    # Import hashing locally so the validator's import surface stays unchanged for other callers.
+    import hashlib
+    # Start from every module-declared contract path.
+    paths = {rel for declared in build_module_contract_map().values() for rel in declared}
+    # Preserve non-module frozen entries so regeneration never silently drops an existing freeze.
+    paths.update(existing.keys())
+    # Compute one current digest per existing contract file.
+    digests = {}
+    # Iterate deterministically so the artifact diff stays reviewable.
+    for rel in sorted(paths):
+        # Resolve the tracked contract file beneath the repository root.
+        target = ROOT / rel
+        # Digest only files that exist; missing files stay absent so the checker reports them.
+        if target.is_file():
+            # Record the exact frozen-byte identity of the contract.
+            digests[rel] = hashlib.sha256(target.read_bytes()).hexdigest()
+    # Return the complete regenerated digest map.
+    return digests
+
+
+# Verify or regenerate both compatibility artifacts against the module descriptors. (issue #415)
+def check_compatibility_artifacts(errors, write=False):
+    # Import hashing locally for the per-file drift comparison.
+    import hashlib
+    # Start protected artifact handling so malformed JSON reports through the normal validator envelope.
+    try:
+        # Parse the tracked matrix artifact.
+        matrix = json.loads(MODULE_API_MATRIX_PATH.read_text(encoding="utf-8"))
+        # Parse the tracked digest artifact.
+        digests = json.loads(CONTRACT_DIGESTS_PATH.read_text(encoding="utf-8"))
+    # Convert absent or malformed artifacts into one stable diagnostic per file.
+    except (OSError, json.JSONDecodeError) as exc:
+        # Report only the artifact family and exception class.
+        errors.append(f"compatibility matrix artifacts could not be parsed ({type(exc).__name__})")
+        # Stop artifact checking because neither comparison is possible.
+        return
+    # Rebuild the authoritative module map once for both modes.
+    expected_matrix = build_module_contract_map()
+    # Regenerate both artifacts in place when the caller asked for repair.
+    if write:
+        # Merge descriptor-declared rows over the tracked matrix so curated non-declaring rows are never dropped.
+        merged_matrix = {**matrix, **expected_matrix}
+        # Write the regenerated matrix with stable formatting for reviewable diffs.
+        MODULE_API_MATRIX_PATH.write_text(json.dumps(merged_matrix, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        # Write the regenerated digest map preserving already-frozen extra entries.
+        CONTRACT_DIGESTS_PATH.write_text(json.dumps(build_contract_digests(digests), indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        # Report the repair without failing the run.
+        print("Regenerated module-api-matrix.json and contract-digests.json from module descriptors.")
+        # Skip checking because the artifacts were just rewritten from source.
+        return
+    # Require every declaring module to appear in the matrix with its exact contract list.
+    for module, declared in expected_matrix.items():
+        # Compare the tracked row against the descriptor's declaration.
+        if matrix.get(module) != declared:
+            # Name the stale module and the regeneration command.
+            errors.append(f"module-api-matrix.json is stale for {module}; run python scripts/validate_contracts.py --write-compatibility")
+    # Require every curated non-declaring row to reference only files that still exist.
+    for module, listed in matrix.items():
+        # Check only rows the descriptors do not own so declaring modules are not double-reported.
+        if module not in expected_matrix:
+            # Iterate the curated row's contract paths.
+            for rel in listed:
+                # Report references to contract files that no longer exist.
+                if not (ROOT / rel).is_file():
+                    # Name the curated row and its dangling reference.
+                    errors.append(f"module-api-matrix.json row {module} references missing contract file {rel}")
+    # Require a present, current digest for every declared contract path.
+    for module, declared in expected_matrix.items():
+        # Iterate each declared contract surface.
+        for rel in declared:
+            # Resolve the tracked contract file.
+            target = ROOT / rel
+            # Report a declared contract whose file is absent.
+            if not target.is_file():
+                # Name the missing file through the module that declares it.
+                errors.append(f"{module} declares missing contract file {rel}")
+                # Continue with the next declared path.
+                continue
+            # Compare the frozen digest against current bytes.
+            if digests.get(rel) != hashlib.sha256(target.read_bytes()).hexdigest():
+                # Name the drifted or missing digest entry and the regeneration command.
+                errors.append(f"contract-digests.json is stale or missing for {rel}; run python scripts/validate_contracts.py --write-compatibility")
+    # Require every already-frozen extra entry to stay current so silent contract drift is impossible.
+    for rel in digests:
+        # Resolve the frozen file for drift comparison.
+        target = ROOT / rel
+        # Report frozen entries whose file disappeared or whose bytes drifted.
+        if not target.is_file() or digests[rel] != hashlib.sha256(target.read_bytes()).hexdigest():
+            # Name the drifted freeze without duplicating the declared-path diagnostics.
+            if not any(rel in declared for declared in expected_matrix.values()):
+                # Report the standalone frozen entry drift.
+                errors.append(f"contract-digests.json is stale for standalone entry {rel}")
 
 # Define the main function used by this module.
 def main():
@@ -154,8 +274,8 @@ def main():
         if preview_security.get("artifact") != "restricted-preview-security" or preview_security.get("stage") != "restricted-preview":
             # Reject renamed or repurposed policy records.
             errors.append(f"{PREVIEW_SECURITY_CONTRACT} does not identify the restricted-preview policy")
-        # Preserve login, approved guest/invitation entry, disabled enrollment policy/signup, disabled provider status/start/callback, and liveness as anonymous routes.
-        if preview_security.get("anonymous_routes") != ["/api/v2/auth/login", "/api/v2/auth/guest", "/api/v2/auth/redeem-invitation", "/api/v2/auth/enrollment-policy", "/api/v2/auth/signup", "/api/v2/auth/oauth/providers", "/api/v2/auth/oauth/{google|facebook}/start", "/api/v2/auth/oauth/{google|facebook}/callback", "/healthz"]:
+        # Preserve login, approved guest/invitation entry, disabled enrollment policy/signup, disabled provider status/start/callback, CSRF recovery, and liveness as anonymous routes. (issue #224)
+        if preview_security.get("anonymous_routes") != ["/api/v2/auth/login", "/api/v2/auth/guest", "/api/v2/auth/redeem-invitation", "/api/v2/auth/enrollment-policy", "/api/v2/auth/signup", "/api/v2/auth/oauth/providers", "/api/v2/auth/csrf", "/api/v2/auth/oauth/{google|facebook}/start", "/api/v2/auth/oauth/{google|facebook}/callback", "/healthz"]:
             # Fail closed when anonymous route scope expands or changes order.
             errors.append(f"{PREVIEW_SECURITY_CONTRACT} does not preserve the anonymous route allowlist")
         # Require public enrollment and live provider flows to stay disabled.
@@ -333,6 +453,8 @@ def main():
     except (OSError, json.JSONDecodeError) as exc:
         # Report only the checked artifact path and exception class.
         errors.append(f"feedback compatibility policy could not be validated: {FEEDBACK_COMPATIBILITY_CONTRACT} ({type(exc).__name__})")
+    # Enforce module-to-contract matrix coverage and frozen digest currency. (issue #415)
+    check_compatibility_artifacts(errors, write="--write-compatibility" in sys.argv)
     # Set schema_dir to the value needed for the next operation.
     schema_dir = ROOT / "contracts" / "schemas"
     # Iterate through the collection to process each item.

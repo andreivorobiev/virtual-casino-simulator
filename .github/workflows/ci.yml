@@ -62,3 +62,16 @@ jobs:
           python scripts/validate_game_catalog.py
           python scripts/validate_requirements.py
           python scripts/validate_versions.py
+      # Provide a JavaScript runtime for the frontend contract suites. (issue #413)
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      # Execute the per-game and embedded module suites that no workflow previously ran. (issue #413)
+      - name: Per-game and embedded Python suites
+        run: |
+          python -m unittest discover -s tests/games -p "test_*.py" -t .
+          python -m unittest discover -s casino/games -p "test_*.py" -t .
+      # Execute every tracked frontend .mjs suite that no workflow previously ran. (issue #413)
+      - name: Frontend module suites
+        run: |
+          node --test "tests/games/**/test_frontend.mjs" "tests/unit/*.test.mjs" "tests/security/test_browser_api.mjs" "casino/games/**/tests/*.mjs"

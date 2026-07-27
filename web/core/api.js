@@ -16,6 +16,27 @@ function cookieValue(name) {
   return segment ? decodeURIComponent(segment.slice(name.length + 1)) : '';
 }
 
+// Recover a missing double-submit cookie once so a precached or restarted browser session is never stranded on the sign-in form. (issue #224)
+async function ensureCsrfCookie() {
+  // Keep the fast path allocation-free when the browser already holds a proof.
+  if (cookieValue(CSRF_COOKIE)) return;
+  // Start protected recovery so a failed bootstrap cannot mask the caller's own error surface.
+  try {
+    // Ask the public bootstrap route to re-issue the host-only cookie without caching the response.
+    await fetch('/api/v2/auth/csrf', { credentials: 'include', cache: 'no-store' });
+  // Convert transport failures into the fail-closed empty-proof path below.
+  } catch (_) { /* the absent-cookie check below reports the stable failure */ }
+  // Fail closed with a stable code when the browser still holds no proof after one recovery attempt.
+  if (!cookieValue(CSRF_COOKIE)) {
+    // Use one generic message so no cookie or policy detail reaches player-facing surfaces.
+    const error = new Error('Security token unavailable; reload the page and try again');
+    // Publish a stable low-cardinality code for callers and tests.
+    error.code = 'CSRF_BOOTSTRAP_UNAVAILABLE';
+    // Stop before the mutation rather than sending an empty proof the server must reject.
+    throw error;
+  }
+}
+
 // Export this symbol so other modules can use it through the public module boundary.
 export async function api(path, options = {}) {
   // Resolve the request method once before applying browser integrity policy.
@@ -35,6 +56,8 @@ export async function api(path, options = {}) {
   const guestNonce = sessionStorage.getItem(GUEST_NONCE_KEY) || '';
   // Publish the proof only while the originating browser context remains alive.
   if (guestNonce) headers['X-Guest-Browser-Nonce'] = guestNonce;
+  // Recover a missing proof before any unsafe request can leave the browser.
+  if (UNSAFE_METHODS.has(method)) await ensureCsrfCookie();
   // Attach the host-only double-submit value to every state-changing browser request.
   if (UNSAFE_METHODS.has(method)) headers['X-CSRF-Token'] = cookieValue(CSRF_COOKIE);
   // Store init so later code can read or update this value.

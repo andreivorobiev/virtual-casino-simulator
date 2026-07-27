@@ -64,6 +64,87 @@ class PaiGowPokerEngineTests(unittest.TestCase):
             # Verify the resulting split never sets the low hand above the high hand.
             self.assertTrue(engine.split_is_legal(arranged["high"], arranged["low"]))
 
+    # Confirm the issue #407 house way sets a pair low instead of dumping the two weakest kickers.
+    def test_house_way_splits_pairs_into_low_hand(self):
+        # Build a two-pair seven-card fixture whose suits cannot complete a flush.
+        seven = ["AS", "AD", "KH", "KC", "9D", "5C", "2H"]
+        # Arrange the fixture by the corrected house way.
+        arranged = engine.set_house_way(seven)
+        # Verify the dealer low hand now holds a pair.
+        self.assertEqual(1, engine.evaluate_two(arranged["low"])[0])
+        # Verify the low hand is no longer the two weakest kickers the old high-first objective dumped there.
+        self.assertNotEqual((0, (5, 2)), engine.evaluate_two(arranged["low"]))
+        # Verify the pair-forward arrangement is still legal.
+        self.assertTrue(engine.split_is_legal(arranged["high"], arranged["low"]))
+
+    # Confirm the issue #407 low-first objective keeps the high hand above the low hand and reports honest scores.
+    def test_house_way_low_first_objective_stays_legal(self):
+        # Use a fixed generator so the sample is reproducible.
+        rng = random.Random(407)
+        # Build the ordered deck once.
+        deck = engine.build_deck_codes()
+        # Check several hundred random seven-card hands.
+        for _ in range(300):
+            # Shuffle an independent copy.
+            shuffled = deck[:]
+            # Randomize the copy.
+            rng.shuffle(shuffled)
+            # Arrange the first seven cards by the house way.
+            arranged = engine.set_house_way(shuffled[:7])
+            # Verify the resulting split never sets the low hand above the high hand.
+            self.assertTrue(engine.split_is_legal(arranged["high"], arranged["low"]))
+            # Verify the published high score matches the returned high hand after the low-first reorder.
+            self.assertEqual(engine.evaluate_five(arranged["high"]), arranged["high_score"])
+            # Verify the published low score matches the returned low hand.
+            self.assertEqual(engine.evaluate_two(arranged["low"]), arranged["low_score"])
+
+    # Confirm the issue #407 maximize-low exploit no longer holds a positive edge through settlement.
+    def test_maximize_low_exploit_edge_is_negative(self):
+        # Track the total player return across both seeded samples.
+        total_net = 0.0
+        # Track the total wagered units for the per-unit edge.
+        total_wagered = 0.0
+        # Replay the documented exploit under two independent seeds.
+        for seed in (999, 12345):
+            # Use a fixed generator so each sample is reproducible.
+            rng = random.Random(seed)
+            # Build the ordered deck once per seed.
+            deck = engine.build_deck_codes()
+            # Settle two thousand seeded exploit hands against the corrected dealer.
+            for _ in range(2000):
+                # Shuffle an independent copy.
+                shuffled = deck[:]
+                # Randomize the copy.
+                rng.shuffle(shuffled)
+                # Deal seven player cards then seven dealer cards without replacement.
+                player_seven, dealer_seven = shuffled[:7], shuffled[7:14]
+                # Rebuild the old exploit: enumerate every legal split and maximize the two-card hand.
+                best = None
+                # Try every two-card low hand the exploit could choose.
+                for i in range(7):
+                    # Pair the first low-card index with every later index.
+                    for j in range(i + 1, 7):
+                        # Collect the candidate low hand.
+                        low = [player_seven[i], player_seven[j]]
+                        # Collect the remaining five cards as the high hand.
+                        high = [player_seven[k] for k in range(7) if k not in (i, j)]
+                        # Skip splits the table would reject.
+                        if not engine.split_is_legal(high, low):
+                            continue
+                        # Rank exploit candidates by the two-card hand first.
+                        candidate = (engine.evaluate_two(low), engine.evaluate_five(high))
+                        # Keep the strongest low-first candidate.
+                        if best is None or candidate > best[0]:
+                            best = (candidate, high, low)
+                # Settle the exploit arrangement against the corrected house-way dealer.
+                result = engine.settle(best[1], best[2], dealer_seven, 1)
+                # Accumulate the returned tokens minus the one-unit ante.
+                total_net += result["payout"] - 1
+                # Accumulate the wagered unit.
+                total_wagered += 1
+        # Verify the former +0.238 per-unit player edge is gone.
+        self.assertLess(total_net / total_wagered, 0)
+
     # Confirm settlement pays a win minus commission, forfeits a loss, and pushes a split.
     def test_settlement_outcomes(self):
         # Build a player hand that beats the dealer on both hands for a clean win.
