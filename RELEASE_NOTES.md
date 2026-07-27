@@ -1,4 +1,18 @@
-# Virtual Casino Simulator v0.9.5.18 Release Notes
+# Virtual Casino Simulator v0.9.5.19 Release Notes
+
+## Bounded MySQL connection lifecycle
+
+- Replaces one physical MySQL connection per storage operation with one lazy, bounded pool per application process.
+- Preserves the established provider seam through request-scoped leases whose `close()` path closes cursors, rolls back unfinished transactions, resets session state, validates without reconnecting, and safely reuses or discards the physical session.
+- Defaults to two physical slots for the current one-worker/two-thread service shape, with validated capacity, checkout-wait, and physical-connect bounds.
+- Prevents inherited sessions from crossing process boundaries, wakes blocked callers during shutdown, and fails closed with fixed secret-free errors on exhaustion, connector failure, or terminal pool closure.
+- Adds internal low-cardinality lifecycle counters and deterministic plus disposable-MySQL 1/2/4/8 evidence with zero errors, exhaustion, or cross-request session leakage.
+- Changes no public API response, database schema, migration, payout rule, or player-visible product behavior.
+- Rotates the PWA shell identity and keeps curated What's New metadata disabled pending its separately governed UI remainder.
+- Retains exact immutable v0.9.5.18 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation.
+
+## Prior v0.9.5.18 transactional player persistence
 
 ## Transactional, non-destructive MySQL player persistence
 

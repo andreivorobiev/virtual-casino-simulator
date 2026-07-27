@@ -193,6 +193,8 @@
   "whatsNew.entry.0_9_5_17.body": "This release adds bounded nginx timing families for operational latency diagnosis without logging raw paths, queries, identities, headers, cookies, or payloads.",
   "whatsNew.entry.0_9_5_18.title": "Transactional player persistence",
   "whatsNew.entry.0_9_5_18.body": "This release inserts only missing player rows in one MySQL transaction without deleting or overwriting wallets, lifecycle state, ledger history, or action identities.",
+  "whatsNew.entry.0_9_5_19.title": "Bounded MySQL connection lifecycle",
+  "whatsNew.entry.0_9_5_19.body": "This release reuses sanitized MySQL sessions through a bounded per-process pool with request-scoped cleanup, fail-closed deadlines, and secret-safe lifecycle evidence.",
   "replay.title": "Round replay",
   "replay.empty": "No recent rounds to replay.",
   "replay.retention": "Replays are kept for {days} days.",
