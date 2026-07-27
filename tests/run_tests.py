@@ -38,6 +38,8 @@ from casino.core.state_store import save_player_game_state, write_json
 from casino.errors import ForbiddenError, RateLimitError, UnauthorizedError, ValidationError
 # Import storage tests so provider parity can run without the broad API suite.
 from tests import storage_tests
+# Import bounded MySQL pool lifecycle and concurrency evidence.
+from tests import mysql_pool_tests
 # Import listener-free migration policy tests for every storage validation run.
 from tests import mysql_migration_tests
 # Import listener-free encrypted recovery policy tests for every storage validation run.
@@ -260,6 +262,14 @@ def assert_condition(value, message):
 
 # Define the run_storage_tests function used by this module.
 def run_storage_tests(include_live=False, include_migration_live=False):
+    # Define one focused unittest runner for bounded MySQL pool lifecycle behavior.
+    def run_mysql_pool_tests():
+        # Load only the STORAGE-010 and TEST-141 pool test class.
+        suite=unittest.defaultTestLoader.loadTestsFromTestCase(mysql_pool_tests.MySQLPoolTests)
+        # Execute the focused suite with concise standard output.
+        result=unittest.TextTestRunner(stream=sys.stdout,verbosity=1).run(suite)
+        # Fail the named central case when any lifecycle or concurrency assertion failed.
+        if not result.wasSuccessful(): raise AssertionError('MySQL connection pool lifecycle suite failed')
     # Define one focused unittest runner for authenticated recovery and clean-target policy.
     def run_recovery_policy_tests():
         # Load only the #205 synthetic recovery test case.
@@ -292,16 +302,18 @@ def run_storage_tests(include_live=False, include_migration_live=False):
     run_case('STORAGE-TABLE-RULES-001',['LEDGER-029','TOKEN-006'],storage_tests.run_table_rule_authority)
     # Execute the MySQL schema and atomic ledger-provider path test without requiring a live service.
     run_case('STORAGE-MYSQL-001',['CORE-017','LEDGER-001','LEDGER-007','LEDGER-009'],storage_tests.run_mysql_schema_provider_path)
+    # Execute bounded capacity, cleanup, fork, observability, and 1/2/4/8 pool evidence without a service.
+    run_case('MYSQL-POOL-001',['STORAGE-010','TEST-141'],run_mysql_pool_tests)
     # Execute the real-service persistence and concurrent-ledger gate only when explicitly requested.
     if include_live:
         # Map the live integration case to the durable storage and MySQL requirements.
-        run_case('STORAGE-MYSQL-LIVE-001',['STORAGE-001','STORAGE-002','STORAGE-003','STORAGE-004','STORAGE-005','STORAGE-006','MYSQL-001','MYSQL-002','MYSQL-003','MYSQL-004','OTT-001','OTT-002','MAIL-002','MAIL-004','INVITE-003','TEST-038','TEST-043','TEST-089','TEST-090','TEST-091'],storage_tests.run_mysql_live_provider_path)
+        run_case('STORAGE-MYSQL-LIVE-001',['STORAGE-001','STORAGE-002','STORAGE-003','STORAGE-004','STORAGE-005','STORAGE-006','STORAGE-010','MYSQL-001','MYSQL-002','MYSQL-003','MYSQL-004','OTT-001','OTT-002','MAIL-002','MAIL-004','INVITE-003','TEST-038','TEST-043','TEST-089','TEST-090','TEST-091','TEST-141'],storage_tests.run_mysql_live_provider_path)
     # Execute the newly created disposable MySQL 8.4 gate only when explicitly requested.
     if include_migration_live:
         # Import the service-dependent matrix only after the disposable selector is explicit.
         from tests.mysql_migration_live import run_mysql_migration_live_matrix
         # Map clean bootstrap, upgrade, refusal, restart, grants, and lock evidence.
-        run_case('MYSQL-MIGRATION-LIVE-001',['MYSQL-005','STORAGE-007','OTT-001','OTT-002','MAIL-002','MAIL-004','TEST-048','TEST-089','TEST-090'],run_mysql_migration_live_matrix)
+        run_case('MYSQL-MIGRATION-LIVE-001',['MYSQL-005','STORAGE-007','STORAGE-010','OTT-001','OTT-002','MAIL-002','MAIL-004','TEST-048','TEST-089','TEST-090','TEST-141'],run_mysql_migration_live_matrix)
 
 # Define the read_i18n_json function used by this module.
 def read_i18n_json(path):

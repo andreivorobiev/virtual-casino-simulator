@@ -20,7 +20,15 @@ Requirement `CORE-029` defines the first bounded observability slice for issue #
 
 The timing format deliberately excludes the raw request line, URI, query string, dynamic resource identifiers, client or upstream address, host, request and response headers, cookies, tokens, bodies, byte counts, user-agent, referrer, and application data. Both the HTTP redirect server and the HTTPS application server explicitly select this format so nginx's identity-bearing default combined format cannot be inherited for the Casino virtual host.
 
-This repository change does not render, copy, enable, reload, or inspect a production nginx configuration. Host installation remains a separately authorized deployment action. Later #323 packages own application percentiles, worker and queue telemetry, MySQL pool metrics, privacy-preserving browser measurements, the isolated benchmark, connection-lifecycle correction, and post-pooling server tuning.
+This repository change does not render, copy, enable, reload, or inspect a production nginx configuration. Host installation remains a separately authorized deployment action. Package B now owns the bounded MySQL connection lifecycle and internal pool measurements documented below. Later #323 packages retain public application percentiles, worker and queue telemetry, privacy-preserving browser measurements, and post-pooling server tuning.
+
+## Bounded MySQL connection lifecycle
+
+Requirement `STORAGE-010` gives each application process one lazy bounded MySQL pool while preserving the existing `MySQLStorageProvider.connect()` and `connection.close()` seams. The current one-worker/two-thread topology therefore defaults to two physical slots per process. Healthy connections are reused only after a non-reconnecting check. Return closes request-owned cursors, rolls back an unfinished transaction, resets session state, validates the same socket, and then makes it idle; uncertain sessions are closed and removed. Checkout waits at most 500 ms by default and fails closed when capacity stays exhausted.
+
+The added `CASINO_MYSQL_POOL_SIZE`, `CASINO_MYSQL_POOL_WAIT_MS`, and `CASINO_MYSQL_CONNECT_TIMEOUT_SECONDS` controls are non-secret, bounded, and documented in [the MySQL connection lifecycle runbook](mysql_connection_pool.md). The internal evidence surface has only capacity/in-use/idle/waiter gauges, fixed lifecycle counters, and fixed wait buckets. It contains no user, session, request, query, host, network, database, credential, connector-text, or free-form labels. This slice does not change the public Operations/readiness contract, schema 2, runtime grants, JSON storage, Gunicorn shape, provider settings, or database rollback prohibition.
+
+`TEST-141` supplies listener-free fake-connector lifecycle evidence plus a disposable-MySQL packet at concurrency 1, 2, 4, and 8. The live packet reports only aggregate p50, p95, throughput, error count, and fixed pool counters; it also proves connector session state does not cross request-scoped leases. Production observation and any worker/thread tuning remain separately authorized.
 
 ## Static asset cache contract
 

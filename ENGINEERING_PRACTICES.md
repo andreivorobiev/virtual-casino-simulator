@@ -230,7 +230,8 @@ retry safety.
 
 JSON and MySQL providers must preserve the documented parity, concurrency,
 persistence, and migration gates. Read `docs/local_mysql_setup.md` and
-`docs/mysql_migrations.md` before storage work. Never test against live or user
+`docs/mysql_migrations.md` before storage work. Read `docs/mysql_connection_pool.md`
+before changing connection acquisition, cleanup, capacity, or server concurrency. Never test against live or user
 data; use disposable isolated state and verify cleanup.
 
 ## Authentication, security, privacy, and secrets
