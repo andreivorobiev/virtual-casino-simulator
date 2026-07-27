@@ -7,7 +7,7 @@ Historical source baseline: 9.1.0
 ## Independent module revisions
 
 - application: 9.51.21
-- core: 9.24.2
+- core: 9.24.3
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.0
@@ -18,8 +18,8 @@ Historical source baseline: 9.1.0
 - marketing_site: 1.0.2
 - roulette: 9.4.8
 - slots: 9.1.4
-- blackjack: 9.1.3
-- baccarat: 9.1.3
+- blackjack: 9.1.4
+- baccarat: 9.1.4
 - keno: 9.2.4
 - bingo: 9.2.1
 - multi_hand_video_poker: 1.0.1
@@ -806,6 +806,9 @@ Historical source baseline: 9.1.0
 - **TEST-098** (Tests) - PASS: Listener-free evidence verifies deployment build provenance: every immutable application archive contains the provenance writer; a valid manifest yields exactly one pinned assignment accepted unchanged by the Operations sanitizer; short/uppercase/non-hexadecimal/absent commits fail closed without writing; unreadable manifests and destination-write failures emit bounded path-free errors while leaving an earlier fragment byte-identical; a redeployment replaces rather than appends the superseded commit; and the tracked unit sources the generated fragment last.
 - **TOOL-008** (Tooling) - PASS: Protected-main CI/CD publishes or reuses the immutable GitHub Release for the exact merged commit, refuses packaged-version tag reuse across different commits, resolves rollback only from the current compatibility record, verifies the exact downloaded predecessor manifest, requires every extracted-host workflow script inside the archive, deploys only hosted release assets over SSH, validates the monitor bearer/digest before cutover, writes build provenance, switches /opt/casino/current atomically, loads the monitor Authorization assignment through a non-shell reader for edge observation, and rolls back the application symlink and release fragment if post-cutover health fails.
 - **TEST-133** (Tests) - PASS: Listener-free CI/CD evidence verifies the production workflow's protected-main trigger, immutable version-conflict refusal, compatibility-declared predecessor selection, exact downloaded-manifest binding, rejection of release-list ordering, workflow-derived extracted-host script inventory, hosted-asset download and verification, scoped SSH secret usage, secret-safe monitor pair validation and explicit atomic repair, exact non-shell Authorization handoff, generated release.env installation, post-cutover edge observation, and application rollback path.
+- **STORAGE-008** (Storage) - PASS: Player creation appends one row through the provider's lock-held path and never replaces the whole player document, so committed ledger history and concurrently committed balances always survive; the MySQL player-document replacement refuses to run while ledger rows exist instead of truncating them.
+- **LEDGER-029** (Ledger) - PASS: Client-supplied table rules are validated against a per-game declared domain before they are persisted, so no request can set a payout multiplier, commission, or shoe size that settlement math or shoe construction would then trust.
+- **TOKEN-006** (Tokens) - PASS: Every play-token credit route applies the guest wallet freeze and the shared bounded amount gate, including the legacy v1 add-money route, so a disposable guest session cannot increase its own balance and no route can credit an unbounded amount.
 - **TEST-100** (Tests) - PASS: Dependency-free deterministic unit tests prove motion timing profiles, reduced-motion resolution, complete lifecycle phase order, authoritative-result identity, overlap rejection, illegal-skip rejection, explicit recovery, stale-generation rejection, and route-disposal invalidation.
 - **TEST-102** (Tests) - PASS: Focused listener-free evidence parses the tracked Roulette curves to prove the anti-strobe rotor budget, monotonic coast-down, whole-turn endpoints, counter-rotation, linear timing, fine sampling, and all four reduced-motion suppression rules; the hosted Browser suite independently proves the live spin uses the expected named linear 3.6-second animations with all sampled stops and that reduced-motion media suppresses the mounted rotor and ball channels.
 - **USER-006** (Core) - PASS: Every authenticated persistent user has a personal locale and sound preference record that defaults deterministically, accepts only the installed locale catalog and strict booleans, rejects unknown fields, supports optimistic revisions, persists atomically through the configured JSON or MySQL document provider, and degrades structurally malformed records to canonical defaults. Guest trials receive a non-persisted response and never create a durable personal-settings document.
