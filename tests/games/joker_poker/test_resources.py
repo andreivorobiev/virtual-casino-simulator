@@ -42,7 +42,7 @@ class JokerPokerResourceTests(unittest.TestCase):
         # Load the canonical auto-discovered descriptor.
         descriptor = self.load_json(Path("modules/joker_poker.json"))
         # Verify the accepted module revision and catalog identity.
-        self.assertEqual(("1.0.1", "joker_poker"), (descriptor["version"], descriptor["game"]["id"]))
+        self.assertEqual(("1.1.0", "joker_poker"), (descriptor["version"], descriptor["game"]["id"]))
         # Verify #77 assigned the collision-free position and permanent prefix.
         self.assertEqual((300, ["JP"]), (descriptor["game"]["sort_order"], descriptor["requirements_prefixes"]))
         # Verify the additive game contract remains declared.
