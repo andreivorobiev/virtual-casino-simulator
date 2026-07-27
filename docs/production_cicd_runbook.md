@@ -8,7 +8,7 @@ Every protected `main` merge should automatically become the production release.
 
 The browser Admin login and the production monitor login are separate things. Browser login is for a person. The monitor credential is a server-owned bearer token used only by deployment health checks.
 
-Packaged release numbers use the four-part scheme documented in [the release versioning policy](release_versioning.md). The current line is `0.9.5.14`; `0.9.6.0` is reserved for the next large Claude LPR.
+Packaged release numbers use the four-part scheme documented in [the release versioning policy](release_versioning.md). The current line is `0.9.5.15`; `0.9.6.0` is reserved for the next large Claude LPR.
 
 ## What happens after a merge
 
@@ -97,6 +97,8 @@ v0.9.5.12 carries the accepted logout and Guest Trial request-integrity continui
 v0.9.5.13 carries the accepted settlement replay, browser request-integrity recovery, competitive Bingo, practice-game recovery, and governed-regression hardening bundle. Its compatibility record retains exact immutable v0.9.5.12 as the application-only predecessor; MySQL remains at schema 2 and database rollback remains prohibited.
 
 v0.9.5.14 carries the accepted TiltSeven Neon Pit identity across the authenticated shell, lobby, PWA metadata, game palettes, and fixed transactional-mail subjects. Its compatibility record retains exact immutable v0.9.5.13 as the application-only predecessor; MySQL remains at schema 2 and database rollback remains prohibited.
+
+v0.9.5.15 carries the accepted localized one-click Repeat bet control across the 43 catalog games that previously lacked it. Its compatibility record retains exact immutable v0.9.5.14 as the application-only predecessor; MySQL remains at schema 2 and database rollback remains prohibited.
 
 ## Historical first-rollout blocker
 
