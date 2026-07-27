@@ -8,7 +8,7 @@ Every protected `main` merge should automatically become the production release.
 
 The browser Admin login and the production monitor login are separate things. Browser login is for a person. The monitor credential is a server-owned bearer token used only by deployment health checks.
 
-Packaged release numbers use the four-part scheme documented in [the release versioning policy](release_versioning.md). The current line is `0.9.5.10`; `0.9.6.0` is reserved for the next large Claude LPR.
+Packaged release numbers use the four-part scheme documented in [the release versioning policy](release_versioning.md). The current line is `0.9.5.11`; `0.9.6.0` is reserved for the next large Claude LPR.
 
 ## What happens after a merge
 
@@ -89,6 +89,8 @@ The immutable v0.9.5.6 release manifest selected a different historical release 
 v0.9.5.9 preserves the fail-closed monitor configuration check before the application symlink moves and supersedes only the unsafe post-restart Bash sourcing boundary. Its compatibility record retains exact immutable v0.9.5.8 as the application-only predecessor. A root operator may use the explicit repair command above to align an intentionally rotated bearer and digest without exposing secret material.
 
 v0.9.5.10 carries the accepted wallet-integrity and table-rule authority fixes without changing the deployment model. Its compatibility record retains exact immutable v0.9.5.9 as the application-only predecessor; MySQL remains at schema 2 and database rollback remains prohibited.
+
+v0.9.5.11 carries the accepted frontend-safety and runtime-state hygiene fixes, including URL-bearer redaction, fail-closed Roulette feedback, persistent live-region semantics, reduced-motion guards, mobile feedback-control clearance, and the required static-shell cache rotation. Its compatibility record retains exact immutable v0.9.5.10 as the application-only predecessor; MySQL remains at schema 2 and database rollback remains prohibited.
 
 ## Historical first-rollout blocker
 

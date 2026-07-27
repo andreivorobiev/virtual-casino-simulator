@@ -1,4 +1,16 @@
-# Virtual Casino Simulator v0.9.5.10 Release Notes
+# Virtual Casino Simulator v0.9.5.11 Release Notes
+
+## Frontend safety and runtime-state hygiene patch
+
+- Removes query strings and fragments from Admin-visible client telemetry so invitation and other URL bearers are not logged.
+- Stops tracking mutable runtime snapshots and ignores the generated `data/` root.
+- Fixes shared failure-toast styling and gives the persistent feedback outlet polite, atomic live-region semantics.
+- Adds localized fail-closed feedback to Roulette actions and reduced-motion suppression to the affected legacy game channels.
+- Keeps Teen Patti mobile actions clear of the fixed feedback control and rotates the static-shell cache identity.
+- Retains exact immutable v0.9.5.10 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider, DNS, billing, public signup, live OAuth, mail, invitation, public-exposure, credential, SSH-ingress, or production mutation.
+
+## Prior v0.9.5.10 wallet and table-rule integrity patch
 
 ## Wallet and table-rule integrity patch
 

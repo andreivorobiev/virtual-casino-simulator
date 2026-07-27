@@ -177,6 +177,8 @@
   "whatsNew.entry.0_9_5_9.body": "This release loads the root-managed monitor credential without shell evaluation, preserves deterministic rollback, and keeps 0.9.6.0 reserved for the next product wave.",
   "whatsNew.entry.0_9_5_10.title": "Wallet and table-rule integrity",
   "whatsNew.entry.0_9_5_10.body": "This release preserves committed ledger history during player creation, bounds Blackjack and Baccarat table rules on the server, keeps guest balances fixed, and retains deterministic rollback.",
+  "whatsNew.entry.0_9_5_11.title": "Safer feedback and runtime state",
+  "whatsNew.entry.0_9_5_11.body": "This release protects URL bearers from client telemetry, makes failures visible and accessible, strengthens reduced-motion behavior, and rotates the offline shell safely.",
   "replay.title": "Round replay",
   "replay.empty": "No recent rounds to replay.",
   "replay.retention": "Replays are kept for {days} days.",
