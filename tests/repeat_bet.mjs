@@ -79,6 +79,8 @@ for (const game of repeatGames) {
     // Prevent a dead helper from masking visible raw CSS in the generated route.
     assert.ok(safeStyleCalls.length >= 2, `${game}: repeat CSS correction wiring`);
   }
+  // Preserve the fixed feedback lane for Teen Patti's bottom-most repeat control on mobile.
+  if (game === 'teen_patti') assert.match(source, /@media \(max-width:640px\)\{\.tp-repeat\{width:calc\(100% - 160px\);max-width:calc\(100% - 160px\);\}\}/, `${game}: mobile feedback clearance`);
   // Extract only the game-owned repeat action for focused safety assertions.
   const repeatBody = functionBody(source, game);
   // Require every repeat action to depend on a previously committed wager snapshot.
