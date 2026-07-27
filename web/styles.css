@@ -121,7 +121,7 @@
   --bad: #ff8fae;
   --admin-blue: #0b1b2a;
   --shadow: rgba(6, 2, 16, 0.6);
-  --font-ui: "Segoe UI", Inter, system-ui, -apple-system, Arial, sans-serif;
+  --font-ui: "Segoe UI", Inter, Arial, sans-serif;
   --font-display: "Segoe UI", system-ui, -apple-system, Roboto, Helvetica, sans-serif;
   --font-locale-native: "Casino Locale CJK", "Casino Locale Devanagari", "Casino Locale Bengali", "Casino Locale Tamil", "Casino Locale Telugu", var(--font-ui);
 }
