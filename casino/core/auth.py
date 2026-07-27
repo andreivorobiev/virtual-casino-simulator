@@ -46,6 +46,10 @@ MAX_SESSION_TTL_SECONDS = 86_400
 MAX_STORED_SESSIONS = 1_000
 # Retain multiple concurrent sessions per account so simultaneous logins never evict each other. (SESSION-007)
 MAX_SESSIONS_PER_USER = 256
+# Name the bootstrap-only authority that can delegate ordinary Admin access. (AUTH-012)
+PLATFORM_OWNER_ROLE = "platform_owner"
+# Enumerate roles that inherit access to the existing Admin surface. (AUTH-012)
+ADMIN_ACCESS_ROLES = frozenset({"admin", PLATFORM_OWNER_ROLE})
 # Enumerate durable account fields whose change invalidates existing privileges.
 PRIVILEGE_FIELDS = ("role", "roles", "status", "password_hash", "password_version")
 # Name the hash-only monitor-token setting used by production deployment checks.
@@ -709,10 +713,16 @@ def roles_for_user(user: dict) -> list[str]:
     return [str(role).lower() for role in (user.get("roles") or [user.get("role", "player")])]
 
 
+# Define is_platform_owner so delegation checks never infer owner authority from Admin access. (AUTH-012)
+def is_platform_owner(user: dict) -> bool:
+    # Require an active canonical identity with the bootstrap-managed owner role.
+    return user.get("status") == "active" and PLATFORM_OWNER_ROLE in roles_for_user(user)
+
+
 # Define is_admin so all Admin APIs share one authorization decision.
 def is_admin(user: dict) -> bool:
-    # Return whether the authenticated active identity has the Admin role.
-    return user.get("status") == "active" and "admin" in roles_for_user(user)
+    # Return whether the active identity has ordinary Admin or inherited platform-owner access.
+    return user.get("status") == "active" and bool(ADMIN_ACCESS_ROLES.intersection(roles_for_user(user)))
 
 
 # Define require_admin so protected Admin endpoints fail closed before dispatch.
@@ -721,6 +731,14 @@ def require_admin(user: dict) -> None:
     if not is_admin(user):
         # Raise the standard forbidden response without exposing Admin data.
         raise ForbiddenError("Admin role is required")
+
+
+# Define require_platform_owner so Admin delegation stays behind the bootstrap authority. (AUTH-012)
+def require_platform_owner(user: dict) -> None:
+    # Reject ordinary Admins and all non-owner identities without exposing role state.
+    if not is_platform_owner(user):
+        # Raise one bounded authorization result for every denied delegation attempt.
+        raise ForbiddenError("Platform owner role is required")
 
 
 # Define update_user_by_id so Admin and current-user flows mutate the canonical identity store.
@@ -790,12 +808,18 @@ def accept_terms(user_id: str, terms_version: str | None = None, accepted: bool 
 def bootstrap_admin_from_env() -> dict:
     # Set existing to the value needed for the next operation.
     existing = find_user_by_email(AUTH_BOOTSTRAP_ADMIN_EMAIL)
-    # Branch when an admin user already exists.
+    # Branch when the configured bootstrap identity already exists.
     if existing:
-        # Return the computed value to the caller.
-        return existing
-    # Return the computed value to the caller.
-    return create_user(AUTH_BOOTSTRAP_ADMIN_EMAIL, AUTH_BOOTSTRAP_ADMIN_PASSWORD, AUTH_BOOTSTRAP_ADMIN_DISPLAY_NAME, "admin", "human", False)
+        # Return the existing identity unchanged once the owner role migration has already landed.
+        if PLATFORM_OWNER_ROLE in roles_for_user(existing):
+            # Avoid needless privilege writes and session revocation on every process start.
+            return existing
+        # Promote only the configured bootstrap identity while preserving its compatible Admin role.
+        return update_user_by_id(existing["user_id"], lambda user: user.update({"role": "admin", "roles": ["admin", PLATFORM_OWNER_ROLE]}))
+    # Create the compatible Admin identity before attaching bootstrap-only owner authority.
+    created = create_user(AUTH_BOOTSTRAP_ADMIN_EMAIL, AUTH_BOOTSTRAP_ADMIN_PASSWORD, AUTH_BOOTSTRAP_ADMIN_DISPLAY_NAME, "admin", "human", False)
+    # Add owner authority atomically so ordinary account creation can never request it.
+    return update_user_by_id(created["user_id"], lambda user: user.update({"role": "admin", "roles": ["admin", PLATFORM_OWNER_ROLE]}))
 
 # Define the session_expiry function used by this module.
 def session_expiry() -> str:

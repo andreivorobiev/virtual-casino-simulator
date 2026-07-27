@@ -1,6 +1,6 @@
 {
   "module": "contracts",
-  "version": "1.48.20",
+  "version": "1.49.0",
   "paths": [
     "contracts/"
   ],

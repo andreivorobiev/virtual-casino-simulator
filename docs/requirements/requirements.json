@@ -11685,7 +11685,7 @@
       "id": "ADMIN-026",
       "module": "Admin",
       "description": "Admins can promote or remove the Admin role from account users and can set explicit account lifecycle states active, inactive, suspended, or locked through one readable grouped access control at every governed viewport. Guest Trials remain excluded from account-management routes, unsupported role values fail closed, every role/status mutation revokes affected sessions through canonical auth privilege tracking, and the JSON/MySQL identity transaction rejects sequential or concurrent changes that would leave no active Admin. Admin audit events include transaction-accurate before/after role, status, display name, and locale metadata for full operator review without exposing password material.",
-      "status": "PASS",
+      "status": "SUPERSEDED",
       "api_tests": [
         "API-ACCOUNT-SPINE-001"
       ],
@@ -11704,8 +11704,8 @@
         "tests/visual/visual_matrix.json"
       ],
       "introduced_in": "product-account-spine",
-      "changed_in": "product-account-spine",
-      "notes": "The Admin UI keeps lifecycle, Admin role, and save controls together inside the managed table's named horizontal-scroll owner. Desktop tracks retain readable localized labels, while the governed phone breakpoint wraps the save action onto a full-width second row so Russian copy cannot collapse into a vertical sliver."
+      "changed_in": "issue-351-owner-rbac-core",
+      "notes": "Superseded by ADMIN-028: ordinary Admins retain bounded account lifecycle access but no longer grant or revoke Admin authority. The platform owner remains the only delegation authority, and the existing responsive account controls remain compatible pending the separate Administrators-area UI slice."
     },
     {
       "id": "FEEDBACK-005",
@@ -12345,6 +12345,42 @@
     {"id":"CORE-029","module":"Application","description":"The repository nginx edge template normalizes arbitrary request methods and paths into fixed low-cardinality families and emits only method family, route family, response status, total request time, and upstream response time as structured timing data, never raw methods, paths, queries, identifiers, client or upstream addresses, headers, cookies, tokens, bodies, byte counts, user-agent, referrer, or application data.","status":"PASS","api_tests":["EDGE-TIMING-001"],"browser_tests":[],"implementation_files":["deploy/nginx/casino.conf.template","docs/production_service.md"],"introduced_in":"issue-323-nginx-latency-observability","changed_in":"issue-323-nginx-latency-observability","notes":"The raw method and normalized URI are consumed only as internal nginx map inputs and never emitted. This repository slice neither installs nor reloads host configuration; application percentiles, worker queues, pool metrics, RUM, benchmarking, connection pooling, and tuning remain later #323 packages."},
     {"id":"TEST-140","module":"Tests","description":"Listener-free source inspection proves the Casino nginx virtual hosts override the identity-bearing default access log, use the complete fixed route-family set, and expose exactly the five approved timing variables with every raw request, path, query, identity, network, header, cookie, body, and payload field excluded.","status":"PASS","api_tests":["EDGE-TIMING-001"],"browser_tests":[],"implementation_files":["tests/production_service_tests.py","deploy/nginx/casino.conf.template"],"introduced_in":"issue-323-nginx-latency-observability","changed_in":"issue-323-nginx-latency-observability","notes":"TEST-140 avoids the active TEST-138 collision between unrelated open branches. The focused proof reads inert repository text only and opens no listener, browser, network, service, or production configuration."},
     {"id":"STORAGE-010","module":"Storage","description":"Each MySQL application process owns one lazy thread-safe physical connection pool with validated capacity one through sixteen, bounded checkout and physical-connect deadlines, non-reconnecting idle liveness checks, request-scoped cursor and lease cleanup, fork/PID isolation, rollback and session reset before reuse, unhealthy-session discard, and terminal process cleanup, while JSON storage, schema version two, DDL-free runtime grants, transaction semantics, and application-only rollback remain unchanged.","status":"PASS","api_tests":["MYSQL-POOL-001","STORAGE-MYSQL-LIVE-001","MYSQL-MIGRATION-LIVE-001"],"browser_tests":[],"implementation_files":["casino/core/mysql_pool.py","casino/core/storage.py","tests/mysql_pool_tests.py","tests/storage_tests.py","tests/run_tests.py"],"introduced_in":"issue-323-mysql-pool-lifecycle","changed_in":"issue-323-mysql-pool-lifecycle","notes":"The default capacity is two for the existing one-worker/two-thread service shape; checkout exhaustion and connector creation fail with fixed secret-free errors, and the internal snapshot exposes only fixed low-cardinality gauges, counters, policy, and wait buckets. Public Operations/readiness contract expansion and Gunicorn worker tuning remain separately governed follow-ups."},
-    {"id":"TEST-141","module":"Tests","description":"Focused fake-connector and disposable-MySQL evidence proves pool configuration bounds, hard capacity, waiter wake and timeout, physical reuse, non-reconnecting dead-session replacement, rollback/reset isolation, cleanup discard, connector failure, PID rebuild, terminal shutdown, provider integration, secret-free metrics, and sanitized p50/p95/throughput/error measurements at concurrency one, two, four, and eight with no exhaustion or cross-request session leakage.","status":"PASS","api_tests":["MYSQL-POOL-001","STORAGE-MYSQL-LIVE-001","MYSQL-MIGRATION-LIVE-001"],"browser_tests":[],"implementation_files":["tests/mysql_pool_tests.py","tests/storage_tests.py","tests/run_tests.py"],"introduced_in":"issue-323-mysql-pool-lifecycle","changed_in":"issue-323-mysql-pool-lifecycle","notes":"The live matrix uses the disposable MySQL 8.4 service and emits only concurrency, aggregate latency percentiles, throughput, error count, and fixed pool counters. It opens no browser or public listener and never records connector text, credentials, host, database, user, query payload, player, or session labels."}
+    {"id":"TEST-141","module":"Tests","description":"Focused fake-connector and disposable-MySQL evidence proves pool configuration bounds, hard capacity, waiter wake and timeout, physical reuse, non-reconnecting dead-session replacement, rollback/reset isolation, cleanup discard, connector failure, PID rebuild, terminal shutdown, provider integration, secret-free metrics, and sanitized p50/p95/throughput/error measurements at concurrency one, two, four, and eight with no exhaustion or cross-request session leakage.","status":"PASS","api_tests":["MYSQL-POOL-001","STORAGE-MYSQL-LIVE-001","MYSQL-MIGRATION-LIVE-001"],"browser_tests":[],"implementation_files":["tests/mysql_pool_tests.py","tests/storage_tests.py","tests/run_tests.py"],"introduced_in":"issue-323-mysql-pool-lifecycle","changed_in":"issue-323-mysql-pool-lifecycle","notes":"The live matrix uses the disposable MySQL 8.4 service and emits only concurrency, aggregate latency percentiles, throughput, error count, and fixed pool counters. It opens no browser or public listener and never records connector text, credentials, host, database, user, query payload, player, or session labels."},
+    {
+      "id": "AUTH-012",
+      "module": "Core",
+      "description": "The configured bootstrap identity is idempotently migrated to a non-assignable platform_owner authority while preserving compatible Admin presentation, every committed migration revokes predecessor sessions, ordinary Admin and monitor identities retain Admin access without owner authority, and repeated process startup never rotates a current owner session.",
+      "status": "PASS",
+      "api_tests": ["API-ACCOUNT-SPINE-001"],
+      "browser_tests": [],
+      "implementation_files": ["casino/core/auth.py", "tests/account_spine_tests.py"],
+      "introduced_in": "issue-351-owner-rbac-core",
+      "changed_in": "issue-351-owner-rbac-core",
+      "notes": "platform_owner is bootstrap-managed and cannot be requested through normal account creation or role payloads. is_admin intentionally treats the owner as an Admin while require_platform_owner keeps delegation authority separate."
+    },
+    {
+      "id": "ADMIN-028",
+      "module": "Admin",
+      "description": "Only the current active platform owner can grant or revoke ordinary Admin authority through additive v2 account mutation, the target must already be an active canonical account, v2 account creation is player-only, platform-owner authority is not caller-assignable or removable, and transaction-scoped JSON/MySQL validation preserves at least one active owner and Admin while recording the canonical actor and revoking affected target sessions.",
+      "status": "PASS",
+      "api_tests": ["API-ACCOUNT-SPINE-001"],
+      "browser_tests": [],
+      "implementation_files": ["casino/admin.py", "casino/core/auth.py", "contracts/openapi/admin-users.v2.yaml", "tests/account_spine_tests.py", "tests/run_tests.py"],
+      "introduced_in": "issue-351-owner-rbac-core",
+      "changed_in": "issue-351-owner-rbac-core",
+      "notes": "Frozen v1 behavior is unchanged. A later #351 compatibility and UI slice must close the legacy direct-Admin-creation policy gap, separate Administrators from regular Users, and add the complete reason, idempotency, session-control, and audit-history experience before the parent issue can close."
+    },
+    {
+      "id": "TEST-138",
+      "module": "Tests",
+      "description": "Listener-free account-spine evidence proves one-time bootstrap-owner migration and session invalidation, owner-only additive-v2 Admin grant and revoke, ordinary-Admin denial, active-target enforcement, last-owner preservation under concurrent mutation, and v2 player-only creation without opening a listener or touching live identity data.",
+      "status": "PASS",
+      "api_tests": ["API-ACCOUNT-SPINE-001"],
+      "browser_tests": [],
+      "implementation_files": ["tests/account_spine_tests.py", "tests/run_tests.py"],
+      "introduced_in": "issue-351-owner-rbac-core",
+      "changed_in": "issue-351-owner-rbac-core",
+      "notes": "Permanent identifiers ADMIN-028, AUTH-012, and TEST-138 were reserved on issue #351 before branch mutation; no existing identifier was deleted or reused."
+    }
   ]
 }

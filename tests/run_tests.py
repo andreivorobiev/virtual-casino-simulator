@@ -1213,8 +1213,8 @@ def run_api_tests():
         if not result.wasSuccessful():
             # Preserve unittest detail while keeping the named failure text secret-safe.
             raise AssertionError('product account-spine suite failed')
-    # Record disabled signup/passkeys, Admin role lifecycle, and reporter-status proof.
-    run_case('API-ACCOUNT-SPINE-001',['AUTH-010','ADMIN-026','FEEDBACK-005','I18N-009','TEST-112'],run_account_spine_tests)
+    # Record disabled signup/passkeys, owner-only Admin delegation, and reporter-status proof.
+    run_case('API-ACCOUNT-SPINE-001',['AUTH-010','AUTH-012','ADMIN-028','FEEDBACK-005','I18N-009','TEST-112','TEST-138'],run_account_spine_tests)
     # Execute the repository-only static marketing-site proof without a listener.
     def run_marketing_site_tests():
         # Import the focused suite only when its mapped static case runs.

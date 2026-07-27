@@ -7,13 +7,13 @@ Historical source baseline: 9.1.0
 ## Independent module revisions
 
 - application: 9.53.6
-- core: 9.25.2
+- core: 9.26.0
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.1
 - autoplay: 1.1.3
 - audio: 9.1.1
-- admin: 1.12.2
+- admin: 1.13.0
 - operations: 1.1.2
 - marketing_site: 1.0.2
 - roulette: 9.4.11
@@ -50,9 +50,9 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.0
 - pai_gow_poker: 1.1.0
 - teen_patti: 1.1.0
-- tests: 1.62.4
-- docs: 1.62.4
-- contracts: 1.48.20
+- tests: 1.63.0
+- docs: 1.63.0
+- contracts: 1.49.0
 - tooling: 1.21.4
 - commenting_policy: 1.0.0
 - color_wheel: 1.1.0
@@ -879,7 +879,7 @@ Historical source baseline: 9.1.0
 - **CONVERT-002** (Core) - PASS: Conversion is recoverable and idempotent: the required caller-stable operation key is validated and retained only as a one-way fingerprint, a completed exact retry replays the same account rather than creating a second account or duplicating the wallet, an interrupted attempt that created the account but not the terminal guest marker is recovered on retry, and different-key or different-mailbox retries fail closed. JSON/MySQL identity-document transactions enforce exactly one durable account owner for the guest player even under concurrent account claims. The guest record is marked terminal and linked so it leaves the trial lifecycle and stays out of Admin Users, and audit events carry only bounded provenance with no raw identifier in user-facing copy.
 - **TEST-111** (Tests) - PASS: Listener-free evidence verifies guest conversion: exact wallet preservation across the adopted player, password login of the converted account, terminal guest marking, required bounded idempotency keys, exact replay with a single owning account, rejection of different-key and different-mailbox retries, recovery of an interrupted conversion with terms acceptance, concurrent different-account claims converging on one durable wallet owner, rejection of a non-guest principal, validation of terms/password/email inputs, and rejection of a duplicate mailbox.
 - **AUTH-010** (Core) - PASS: The Casino keeps one canonical first-party identity system keyed by the internal Casino user id for tiltseven.com and casino.tiltseven.com. Guest trials, Admin-created accounts, self-service conversion, disabled public signup, OAuth links, and future passkeys are provider layers over that identity rather than account owners. Public enrollment policy exposes only boolean feature gates; full signup and passkey registration are disabled by default and fail closed without creating users, provider identities, or credentials.
-- **ADMIN-026** (Admin) - PASS: Admins can promote or remove the Admin role from account users and can set explicit account lifecycle states active, inactive, suspended, or locked through one readable grouped access control at every governed viewport. Guest Trials remain excluded from account-management routes, unsupported role values fail closed, every role/status mutation revokes affected sessions through canonical auth privilege tracking, and the JSON/MySQL identity transaction rejects sequential or concurrent changes that would leave no active Admin. Admin audit events include transaction-accurate before/after role, status, display name, and locale metadata for full operator review without exposing password material.
+- **ADMIN-026** (Admin) - SUPERSEDED: Admins can promote or remove the Admin role from account users and can set explicit account lifecycle states active, inactive, suspended, or locked through one readable grouped access control at every governed viewport. Guest Trials remain excluded from account-management routes, unsupported role values fail closed, every role/status mutation revokes affected sessions through canonical auth privilege tracking, and the JSON/MySQL identity transaction rejects sequential or concurrent changes that would leave no active Admin. Admin audit events include transaction-accurate before/after role, status, display name, and locale metadata for full operator review without exposing password material.
 - **FEEDBACK-005** (Core) - PASS: Problem reporting remains a manual Admin copy-paste workflow: the application prepares sanitized GitHub issue text and labels but never publishes externally unless a future disabled adapter is separately approved. Registered reporters can see their own safe report status summaries; screenshots, Admin notes, audit history, and raw reporter identity remain hidden. Guest trials cannot track abandoned reports unless they first convert into a durable account.
 - **I18N-009** (Application) - PASS: The product account spine preserves the approved EN/RU browser-visible copy while documenting that the full planned-locale program must land as governed waves with native translations, font coverage, visual evidence, and permanent requirement/test allocation before user exposure. No unsupported locale is silently added to account, enrollment, feedback, passkey, or Admin-role flows by this PR.
 - **TEST-112** (Tests) - PASS: Listener-free evidence verifies the product account spine: enrollment policy reports disabled signup and passkeys with guest conversion available, disabled signup creates no account, passkey registration fails closed, Admin role promotion/demotion and lifecycle states preserve last-active-Admin protection under concurrent demotions, reporter-visible status is account-scoped and attachment-free, and guest status tracking is rejected unless conversion creates a durable account. Exact-head browser evidence also requires the complete status, Admin-role, and save-control group to remain usable and contained in every governed viewport.
@@ -924,3 +924,6 @@ Historical source baseline: 9.1.0
 - **TEST-140** (Tests) - PASS: Listener-free source inspection proves the Casino nginx virtual hosts override the identity-bearing default access log, use the complete fixed route-family set, and expose exactly the five approved timing variables with every raw request, path, query, identity, network, header, cookie, body, and payload field excluded.
 - **STORAGE-010** (Storage) - PASS: Each MySQL application process owns one lazy thread-safe physical connection pool with validated capacity one through sixteen, bounded checkout and physical-connect deadlines, non-reconnecting idle liveness checks, request-scoped cursor and lease cleanup, fork/PID isolation, rollback and session reset before reuse, unhealthy-session discard, and terminal process cleanup, while JSON storage, schema version two, DDL-free runtime grants, transaction semantics, and application-only rollback remain unchanged.
 - **TEST-141** (Tests) - PASS: Focused fake-connector and disposable-MySQL evidence proves pool configuration bounds, hard capacity, waiter wake and timeout, physical reuse, non-reconnecting dead-session replacement, rollback/reset isolation, cleanup discard, connector failure, PID rebuild, terminal shutdown, provider integration, secret-free metrics, and sanitized p50/p95/throughput/error measurements at concurrency one, two, four, and eight with no exhaustion or cross-request session leakage.
+- **AUTH-012** (Core) - PASS: The configured bootstrap identity is idempotently migrated to a non-assignable platform_owner authority while preserving compatible Admin presentation, every committed migration revokes predecessor sessions, ordinary Admin and monitor identities retain Admin access without owner authority, and repeated process startup never rotates a current owner session.
+- **ADMIN-028** (Admin) - PASS: Only the current active platform owner can grant or revoke ordinary Admin authority through additive v2 account mutation, the target must already be an active canonical account, v2 account creation is player-only, platform-owner authority is not caller-assignable or removable, and transaction-scoped JSON/MySQL validation preserves at least one active owner and Admin while recording the canonical actor and revoking affected target sessions.
+- **TEST-138** (Tests) - PASS: Listener-free account-spine evidence proves one-time bootstrap-owner migration and session invalidation, owner-only additive-v2 Admin grant and revoke, ordinary-Admin denial, active-target enforcement, last-owner preservation under concurrent mutation, and v2 player-only creation without opening a listener or touching live identity data.

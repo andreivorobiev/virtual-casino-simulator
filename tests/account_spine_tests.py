@@ -53,10 +53,12 @@ class ProductAccountSpineTests(unittest.TestCase):
         # Remove the isolated feedback documents.
         self.temporary.cleanup()
 
-    # Build one active Admin identity for role-management tests.
+    # Build the active platform owner that alone can delegate Admin authority.
     def _owner_admin(self) -> dict:
-        # Create a canonical local Admin account.
-        return auth.create_user("owner-admin@example.test", "OwnerAdminPassw0rd!23", "Owner Admin", role="admin", terms_required=False)
+        # Create the compatible canonical Admin account.
+        owner = auth.create_user("owner-admin@example.test", "OwnerAdminPassw0rd!23", "Owner Admin", role="admin", terms_required=False)
+        # Attach bootstrap-only owner authority through the canonical privilege mutation.
+        return auth.update_user_by_id(owner["user_id"], lambda user: user.update({"role": "admin", "roles": ["admin", auth.PLATFORM_OWNER_ROLE]}))
 
     # Build one complete feedback submission body.
     def _report_body(self) -> dict:
@@ -89,39 +91,55 @@ class ProductAccountSpineTests(unittest.TestCase):
             # Attempt the future registration route.
             ROUTER.dispatch("POST", "/api/v2/me/passkeys/register", {}, context={"user": user})
 
-    # Prove Admins can promote/demote Admin roles without leaving the product adminless.
-    def test_admins_can_manage_admin_roles_and_lifecycle(self) -> None:
-        # Seed the current active Admin.
+    # Prove only the platform owner can delegate Admin while ordinary lifecycle controls remain bounded.
+    def test_platform_owner_controls_admin_roles_and_lifecycle(self) -> None:
+        # Seed the current active platform owner.
         owner = self._owner_admin()
         # Create one managed player account through the Admin API helper.
         created = admin.create_admin_user({"email": "managed@example.test", "display_name": "Managed User", "password": "ManagedUserPassw0rd!23", "role": "player", "terms_accepted": True})["user"]
-        # Promote the managed account to Admin.
-        promoted = admin.update_admin_user(created["user_id"], {"roles": ["admin"], "status": "active"})
+        # Promote the already-active managed account through owner authority.
+        promoted = admin.update_admin_user(created["user_id"], {"roles": ["admin"], "status": "active"}, actor=owner)
         # Require the account to carry the Admin role and active lifecycle.
         self.assertEqual((promoted["roles"], promoted["status"], promoted["active"]), (["admin"], "active", True))
+        # Create another ordinary player target for denied Admin delegation.
+        other = admin.create_admin_user({"email": "other@example.test", "display_name": "Other User", "password": "OtherUserPassw0rd!23", "role": "player", "terms_accepted": True})["user"]
+        # Reject role delegation by an ordinary Admin.
+        with self.assertRaises(ForbiddenError):
+            # Attempt to grant Admin authority from a non-owner actor.
+            admin.update_admin_user(other["user_id"], {"roles": ["admin"]}, actor=promoted)
+        # Move the second target inactive through the ordinary lifecycle boundary.
+        inactive = admin.update_admin_user(other["user_id"], {"status": "inactive"})
+        # Require the inactive account to remain retained and visible.
+        self.assertEqual((inactive["status"], inactive["active"]), ("inactive", False))
+        # Reject a combined or direct Admin grant to an inactive account.
+        with self.assertRaises(ValidationError):
+            # Attempt owner-authorized privilege assignment before reactivation.
+            admin.update_admin_user(other["user_id"], {"roles": ["admin"], "status": "active"}, actor=owner)
         # Suspend the promoted account without conflating it with deletion.
         suspended = admin.update_admin_user(created["user_id"], {"status": "suspended"})
         # Require suspended accounts to remain visible but inactive.
         self.assertEqual((suspended["status"], suspended["active"]), ("suspended", False))
-        # Demote the account back to player.
-        demoted = admin.update_admin_user(created["user_id"], {"roles": ["player"], "status": "active"})
+        # Demote and reactivate the account through owner authority.
+        demoted = admin.update_admin_user(created["user_id"], {"roles": ["player"], "status": "active"}, actor=owner)
         # Require the player role to replace Admin authority.
         self.assertEqual(demoted["roles"], ["player"])
-        # Reject removing the last active Admin role.
+        # Reject any direct mutation of bootstrap-managed owner authority.
+        with self.assertRaises(ForbiddenError):
+            # Attempt to demote the platform owner through assignable account roles.
+            admin.update_admin_user(owner["user_id"], {"roles": ["player"]}, actor=owner)
+        # Reject suspending the last active platform owner.
         with self.assertRaises(ValidationError):
-            # Attempt to demote the sole remaining owner Admin.
-            admin.update_admin_user(owner["user_id"], {"roles": ["player"]})
-        # Reject suspending the sole remaining owner Admin.
-        with self.assertRaises(ValidationError):
-            # Attempt to suspend the sole remaining owner Admin.
+            # Attempt to remove the sole remaining owner recovery path.
             admin.update_admin_user(owner["user_id"], {"status": "suspended"})
 
-    # Prove concurrent Admin demotions cannot both pass a stale last-active-Admin check.
-    def test_concurrent_admin_demotion_preserves_one_active_admin(self) -> None:
-        # Seed the first active Admin account.
+    # Prove concurrent demotions preserve the owner even when calls share a stale pre-read.
+    def test_concurrent_admin_demotion_preserves_platform_owner(self) -> None:
+        # Seed the bootstrap-managed owner account.
         owner = self._owner_admin()
-        # Seed a second active Admin through the canonical Admin creation boundary.
-        second = admin.create_admin_user({"email": "second-admin@example.test", "display_name": "Second Admin", "password": "SecondAdminPassw0rd!23", "role": "admin", "terms_accepted": True})["user"]
+        # Seed a second active account as an ordinary player.
+        second_player = admin.create_admin_user({"email": "second-admin@example.test", "display_name": "Second Admin", "password": "SecondAdminPassw0rd!23", "role": "player", "terms_accepted": True})["user"]
+        # Grant the second account ordinary Admin authority through the owner.
+        second = admin.update_admin_user(second_player["user_id"], {"roles": ["admin"]}, actor=owner)
         # Synchronize both callers after their account-only pre-read and before the identity transaction.
         mutation_barrier = threading.Barrier(2)
         # Retain the production atomic identity updater behind the synchronization seam.
@@ -137,12 +155,12 @@ class ProductAccountSpineTests(unittest.TestCase):
             # Attempt to remove this account's Admin role.
             try:
                 # Return the committed outcome when the invariant permits this demotion.
-                admin.update_admin_user(user_id, {"roles": ["player"], "status": "active"})
+                admin.update_admin_user(user_id, {"roles": ["player"], "status": "active"}, actor=owner)
                 # Mark the one accepted mutation.
                 return "updated"
-            # Treat the losing mutation as the required last-active-Admin rejection.
-            except ValidationError:
-                # Mark the one rejected mutation.
+            # Treat the owner-target mutation as the required authority rejection.
+            except (ForbiddenError, ValidationError):
+                # Mark the protected mutation.
                 return "blocked"
         # Patch the shared updater so both public Admin calls contend at the atomic boundary.
         with patch.object(auth, "update_user_by_id", side_effect=synchronized_update):
@@ -152,10 +170,48 @@ class ProductAccountSpineTests(unittest.TestCase):
                 outcomes = list(pool.map(demote, (owner["user_id"], second["user_id"])))
         # Require exactly one successful demotion and one invariant rejection.
         self.assertEqual(sorted(outcomes), ["blocked", "updated"])
-        # Count only active durable accounts that retain the Admin role after both calls.
-        remaining = [user for user in auth.load_users().get("users", []) if user.get("status") == "active" and "admin" in auth.roles_for_user(user)]
-        # Require one active Admin to remain after the concurrent race.
-        self.assertEqual(len(remaining), 1)
+        # Resolve all active identities that retain effective Admin access.
+        remaining = [user for user in auth.load_users().get("users", []) if auth.is_admin(user)]
+        # Require only the owner to retain effective Admin access after the race.
+        self.assertEqual([(user["user_id"], auth.is_platform_owner(user)) for user in remaining], [(owner["user_id"], True)])
+
+    # Prove bootstrap migration is one-way, session-invalidating, and idempotent.
+    def test_bootstrap_admin_is_promoted_to_platform_owner_once(self) -> None:
+        # Create the configured bootstrap identity in its legacy Admin-only shape.
+        legacy = auth.create_user(auth.AUTH_BOOTSTRAP_ADMIN_EMAIL, "OwnerAdminPassw0rd!23", "Legacy Bootstrap", role="admin", terms_required=False)
+        # Create one predecessor session that must lose its pre-owner privilege snapshot.
+        predecessor = auth.create_session(legacy, "owner-migration-test")
+        # Run the normal process-start bootstrap migration.
+        migrated = auth.bootstrap_admin_from_env()
+        # Require compatible Admin presentation plus bootstrap-only owner authority.
+        self.assertEqual((migrated["role"], migrated["roles"], auth.is_admin(migrated), auth.is_platform_owner(migrated)), ("admin", ["admin", auth.PLATFORM_OWNER_ROLE], True, True))
+        # Resolve the retained audit row for the predecessor session.
+        revoked_predecessor = next(session for session in auth.load_sessions().get("sessions", []) if session.get("session_id") == predecessor["session_id"])
+        # Require the committed privilege change to retain but invalidate the predecessor session.
+        self.assertEqual(revoked_predecessor.get("status"), "revoked")
+        # Create a fresh session after the one-time migration.
+        current = auth.create_session(migrated, "owner-idempotency-test")
+        # Re-run bootstrap without another privilege write.
+        repeated = auth.bootstrap_admin_from_env()
+        # Require stable roles and preservation of the post-migration session.
+        self.assertEqual(repeated["roles"], ["admin", auth.PLATFORM_OWNER_ROLE])
+        # Require idempotent startup to keep the current owner session active.
+        self.assertTrue(any(session.get("session_id") == current["session_id"] for session in auth.load_sessions().get("sessions", [])))
+
+    # Prove additive v2 policy separates ordinary account creation from Admin delegation.
+    def test_v2_creation_is_player_only_and_owner_delegation_is_explicit(self) -> None:
+        # Seed the bootstrap owner.
+        owner = self._owner_admin()
+        # Reject direct Admin creation through the additive v2 contract even for the owner.
+        with self.assertRaises(ValidationError):
+            # Attempt to skip the existing-active-account delegation rule.
+            ROUTER.dispatch("POST", "/api/v2/admin/users", {"username": "direct-v2-admin@example.test", "password": "DirectV2AdminPassw0rd!23", "display_name": "Direct V2 Admin", "roles": ["admin"], "locale": "en-US"}, context={"user": owner})
+        # Create an ordinary active player through the additive v2 contract.
+        created = ROUTER.dispatch("POST", "/api/v2/admin/users", {"username": "delegation-target@example.test", "password": "DelegationTargetPassw0rd!23", "display_name": "Delegation Target", "roles": ["player"], "locale": "en-US"}, context={"user": owner})
+        # Grant ordinary Admin authority only through the explicit owner-authorized update.
+        promoted = ROUTER.dispatch("PATCH", f"/api/v2/admin/users/{created['user_id']}", {"roles": ["admin"]}, context={"user": owner})
+        # Require the target to gain ordinary Admin without bootstrap-owner authority.
+        self.assertEqual((promoted["roles"], auth.is_platform_owner(promoted)), (["admin"], False))
 
     # Prove reporter-visible status follows the registered account and rejects abandoned guests.
     def test_reporter_status_is_account_scoped(self) -> None:
