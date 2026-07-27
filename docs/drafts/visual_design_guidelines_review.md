@@ -13,8 +13,9 @@ than introducing a disconnected redesign.
 2. Keep the stable path `docs/visual_design_standard.md`, retitle it **Visual
    Design Guidelines**, and expand it with the approved material below. This
    avoids a second competing visual authority and broken matrix references.
-3. Approve a four-pixel spacing system and a 44 by 44 CSS-pixel minimum for
-   primary touch actions.
+3. Approve a four-pixel spacing system. The touch-target minimum for primary
+   actions is already settled at 42 CSS pixels by issue #283, with 44
+   recommended for newly designed surfaces.
 4. Approve the current system-font strategy for UI and Georgia-style display
    typography, or request licensed/self-hosted brand fonts.
 5. Keep dark theme as the sole production theme for the first release; require
@@ -47,8 +48,10 @@ The visual character is:
 
 ## 2. Authority and relationship to UX
 
-- The approved `docs/ux_design_guidelines.md` governs journeys, behavior,
-  feedback, validation, recovery, accessibility, and trust.
+- The proposed `docs/ux_design_guidelines.md` (see
+  `docs/drafts/ux_design_guidelines_review.md`; not yet created or approved)
+  would govern journeys, behavior, feedback, validation, recovery,
+  accessibility, and trust.
 - The expanded `docs/visual_design_standard.md` governs visual language,
   hierarchy, composition, tokens, components, responsive presentation, and
   visual evidence.
@@ -175,7 +178,8 @@ constraint that the shared scale cannot satisfy.
 
 ### Touch and control sizing
 
-- Primary and high-frequency actions: minimum 44 by 44 CSS pixels.
+- Primary and high-frequency actions: minimum 42 by 42 CSS pixels (adopted,
+  issue #283), with 44 by 44 recommended for newly designed surfaces.
 - Standard inputs and secondary controls: minimum 40 CSS pixels high, with a
   44-pixel hit area where practical.
 - Icon-only controls: minimum 44 by 44 hit area and an accessible name.
@@ -486,8 +490,9 @@ Establish canonical UX and visual design guidelines and enforce them for every b
   busy, error, success, and reduced-motion states where applicable.
 - Required viewport and EN/RU evidence demonstrates no clipping, collision,
   overflow, stale state, or lost hierarchy.
-- The 42-versus-44-pixel touch-target rule is resolved in favor of one canonical
-  value.
+- Resolved (issue #283): the canonical primary touch-target floor is 42 CSS
+  pixels, with 44 recommended for newly designed surfaces. See
+  `docs/visual_design_standard.md`.
 - CI and review instructions require both UX behavior evidence and visual
   presentation evidence for browser-visible changes.
 

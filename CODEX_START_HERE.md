@@ -26,7 +26,7 @@ collision and dependency planning but do not treat them as merged behavior.
 
 ## Current release context
 
-- Packaged application release: `9.5.6`
+- Packaged application release: `0.9.5.8`
 - Historical source baseline: `9.1.0`
 - Canonical aggregate source: `modules/module-manifest.json`
 - Independent source-module revisions: `modules/*.json`
@@ -75,14 +75,14 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 ### Repository root
 
 - [`AGENTS.md`](AGENTS.md) — AGENTS.md - Virtual Casino Simulator repository instructions
-- [`ARCHITECTURE.md`](ARCHITECTURE.md) — Virtual Casino Simulator v9.1.0 Architecture
+- [`ARCHITECTURE.md`](ARCHITECTURE.md) — Virtual Casino Simulator Architecture
 - [`CHANGELOG.md`](CHANGELOG.md) — Changelog
 - [`CLAUDE.md`](CLAUDE.md) — Claude repository adapter
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — Contributing
 - [`ENGINEERING_PRACTICES.md`](ENGINEERING_PRACTICES.md) — Engineering practices
 - [`FIRST_PROMPT_FOR_CODEX.md`](FIRST_PROMPT_FOR_CODEX.md) — First prompt for Codex
 - [`README.md`](README.md) — Virtual Casino Simulator
-- [`RELEASE_NOTES.md`](RELEASE_NOTES.md) — Virtual Casino Simulator v9.5.6 Release Notes
+- [`RELEASE_NOTES.md`](RELEASE_NOTES.md) — Virtual Casino Simulator v0.9.5.8 Release Notes
 
 ### GitHub contribution templates
 
@@ -283,10 +283,12 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 - [`docs/motion_acceptance_contract.md`](docs/motion_acceptance_contract.md) — Deterministic motion acceptance contract
 - [`docs/mysql_migrations.md`](docs/mysql_migrations.md) — MySQL migration and DDL-free runtime gate
 - [`docs/oauth_invite_only.md`](docs/oauth_invite_only.md) — Invite-only OAuth operations boundary
+- [`docs/production_cicd_runbook.md`](docs/production_cicd_runbook.md) — Production CI/CD runbook
 - [`docs/production_service.md`](docs/production_service.md) — Production application service
 - [`docs/pwa_foundation.md`](docs/pwa_foundation.md) — Offline-safe PWA foundation
 - [`docs/recovery.md`](docs/recovery.md) — Encrypted recovery gate
 - [`docs/release_artifacts.md`](docs/release_artifacts.md) — Reproducible release artifacts
+- [`docs/release_versioning.md`](docs/release_versioning.md) — Release versioning
 - [`docs/releases/app/9.1.1/api_contract_freeze.md`](docs/releases/app/9.1.1/api_contract_freeze.md) — API contract freeze policy
 - [`docs/releases/app/9.1.1/github_codex_migration_plan.md`](docs/releases/app/9.1.1/github_codex_migration_plan.md) — GitHub and Codex migration plan
 - [`docs/releases/app/9.1.1/module_version_matrix.md`](docs/releases/app/9.1.1/module_version_matrix.md) — Module version matrix
@@ -313,7 +315,7 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 
 ### Web-scoped instructions
 
-- [`web/AGENTS.md`](web/AGENTS.md) — AGENTS.md - admin module
+- [`web/AGENTS.md`](web/AGENTS.md) — AGENTS.md - web browser shell
 - [`web/assets/fonts/README.md`](web/assets/fonts/README.md) — Native-label font subsets
 
 ### site documentation

@@ -33,7 +33,7 @@ Status: PR #118 is integrated on `origin/main` at `f8c836163eab3dc92d83e7bf875ee
 ## Passed safety and scope audits
 
 - The correction changes only the descriptor location plus issue-owned documentation/evidence; no shared integration file is edited.
-- `modules/three_card_poker.json` is absent, while the issue-owned proposal remains valid JSON at version `1.0.0`.
+- At the time of this audit `modules/three_card_poker.json` was absent while the issue-owned proposal remained valid JSON at version `1.0.0`; #77 has since promoted it to `modules/three_card_poker.json` and removed the proposal file.
 - No Three Card Poker backend file imports another game package or mutates player balances directly.
 - Every player-visible and accessible game string is sourced from paired EN/RU resources; Fold help explicitly states that Ante and any Pair Plus wager are forfeited.
 - No timer primitive, Python bytecode artifact, `data/` change, or `logs/` change remains.
@@ -54,7 +54,7 @@ The worker does not edit any of those shared integration surfaces.
 ## Deferred acceptance
 
 - Full API, Browser Tests, and Long Suite 100 run through the GitHub checks for the pushed PR head without touching the user's live local session.
-- The game remains intentionally absent from runtime catalog APIs until #77 promotes the proposal with its canonical revision.
+- The game is present in runtime catalog APIs; #77 promoted the descriptor with its canonical `three_card_poker` revision.
 - The packaged application release remains `9.1.1`; formal release work is not assigned.
 
 ## Listener safety

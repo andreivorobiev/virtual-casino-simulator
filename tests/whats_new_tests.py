@@ -87,9 +87,9 @@ class WhatsNewTests(unittest.TestCase):
             # Reject missing versions.
             {"show_in_whats_new": True, "title_key": "t", "body_key": "b"},
             # Reject incomplete versions.
-            entry("9.5"),
-            # Reject extended versions.
-            entry("9.5.2.1"),
+            entry("0.9.5"),
+            # Reject over-extended versions.
+            entry("0.9.5.5.1"),
             # Reject non-numeric versions.
             entry("release-current"),
             # Reject entries without a title key.
@@ -104,7 +104,7 @@ class WhatsNewTests(unittest.TestCase):
         # Require non-object and non-list catalog shapes to degrade to no entries.
         self.assertEqual(whats_new.eligible_entries("", "not-a-catalog"), [])
         # Require a boolean cap to fall back rather than becoming an accidental one-entry limit.
-        selected = whats_new.eligible_entries("", catalog([entry("9.5.0"), entry("9.4.0")], cap=True))
+        selected = whats_new.eligible_entries("", catalog([entry("0.9.5.0"), entry("9.4.0")], cap=True))
         # Require the default cap to preserve both eligible fixtures.
         self.assertEqual(len(selected), 2)
         # Require an oversized configured cap to remain bounded by the published contract ceiling.

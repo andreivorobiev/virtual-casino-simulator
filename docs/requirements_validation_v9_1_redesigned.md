@@ -1,5 +1,7 @@
 # Virtual Casino Simulator 9.1.0 Requirements and Validation Report
 
+**Historical.** Records the requirement registry as generated for the 9.1.0 release. It is not the live registry: the canonical source is `docs/requirements/requirements.json` and its generated view `docs/requirements/requirements_generated.md`. Current module revisions and the packaged release are owned by `modules/module-manifest.json`.
+
 **Release:** Control Plane + UX Stabilization Release  
 **Generated:** 2026-07-08T17:33:50Z  
 **Document revision:** 9.1.0-docs-redesign
@@ -9,7 +11,7 @@ This redesigned documentation uses separated architecture views, cleaner Mermaid
 ## Executive summary
 
 - Requirements tracked: **344**
-- PASS: **344**
+- PASS: **343** (as generated: 344; ADMIN-002 has since been SUPERSEDED)
 - Requirements with API/rule tests: **186**
 - Requirements with browser tests: **76**
 
@@ -158,7 +160,7 @@ flowchart LR
 | ID | Requirement | Status | API tests | Browser tests |
 |---|---|---|---|---|
 | ADMIN-001 | Admin console is available at /admin. | PASS | API-ADMIN-001 | BR-ADMIN-001 |
-| ADMIN-002 | Admin console is unauthenticated for local use. | PASS | API-ADMIN-001 |  |
+| ADMIN-002 | Admin console is unauthenticated for local use. | SUPERSEDED | API-ADMIN-001 |  |
 | ADMIN-003 | Admin overview shows version and requirement counts. | PASS | API-ADMIN-001 | BR-ADMIN-001 |
 | ADMIN-004 | Admin modules tab shows module revision numbers. | PASS | API-ADMIN-001 |  |
 | ADMIN-005 | Admin players tab shows player balances. | PASS | API-ADMIN-001 |  |
@@ -179,6 +181,8 @@ flowchart LR
 | ADMIN-020 | Admin Autoplay tab shows sessions and Stop All. | PASS | API-ADMIN-001 |  |
 | ADMIN-021 | Admin Requirements tab shows requirement coverage. | PASS | API-ADMIN-001 |  |
 | ADMIN-022 | Admin Tests tab shows latest test results. | PASS | API-ADMIN-001 |  |
+
+ADMIN-002 is superseded by AUTH-001/SESSION-001/USER-004. The Admin surface now requires an authenticated Admin session: every `/api/v1/admin/` and `/api/v2/admin/` request is gated by `auth.require_admin` in `casino/wsgi.py`, which fails closed in `casino/core/auth.py`.
 
 ### Audio
 

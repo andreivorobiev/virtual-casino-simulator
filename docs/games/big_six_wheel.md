@@ -52,7 +52,7 @@ Version `1.0.1` preserves the game and API contract while correcting the browser
 
 The integrated descriptor and shared lane now:
 
-- register `big_six_wheel: 1.0.1` in the aggregate manifest at catalog sort order 90;
+- register `big_six_wheel` in the aggregate manifest at catalog sort order 90, with the current revision owned by `modules/module-manifest.json`;
 - map permanent `BIG-SIX-001` through `BIG-SIX-006` requirements to API, browser, long-suite, motion-soak, and visual evidence;
 - register the additive contract in the shared digest and compatibility inventories;
 - discover the backend, lazy frontend, and `tests.game_drivers.big_six_wheel:play` from the module descriptor;

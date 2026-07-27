@@ -4422,8 +4422,8 @@
       "api_tests": [],
       "browser_tests": [],
       "implementation_files": [
-        "docs/requirements_validation_v9.pdf",
-        "docs/requirements_validation_v9.md",
+        "docs/requirements_validation_v9_1.pdf",
+        "docs/requirements_validation_v9_1.md",
         "docs/requirements.json",
         "RELEASE_NOTES.md"
       ],
@@ -4437,8 +4437,8 @@
       "api_tests": [],
       "browser_tests": [],
       "implementation_files": [
-        "docs/requirements_validation_v9.pdf",
-        "docs/requirements_validation_v9.md",
+        "docs/requirements_validation_v9_1.pdf",
+        "docs/requirements_validation_v9_1.md",
         "docs/requirements.json",
         "RELEASE_NOTES.md"
       ],
@@ -4454,8 +4454,8 @@
       ],
       "browser_tests": [],
       "implementation_files": [
-        "docs/requirements_validation_v9.pdf",
-        "docs/requirements_validation_v9.md",
+        "docs/requirements_validation_v9_1.pdf",
+        "docs/requirements_validation_v9_1.md",
         "docs/requirements.json",
         "RELEASE_NOTES.md"
       ],
@@ -4471,8 +4471,8 @@
       ],
       "browser_tests": [],
       "implementation_files": [
-        "docs/requirements_validation_v9.pdf",
-        "docs/requirements_validation_v9.md",
+        "docs/requirements_validation_v9_1.pdf",
+        "docs/requirements_validation_v9_1.md",
         "docs/requirements.json",
         "RELEASE_NOTES.md"
       ],
@@ -4486,8 +4486,8 @@
       "api_tests": [],
       "browser_tests": [],
       "implementation_files": [
-        "docs/requirements_validation_v9.pdf",
-        "docs/requirements_validation_v9.md",
+        "docs/requirements_validation_v9_1.pdf",
+        "docs/requirements_validation_v9_1.md",
         "docs/requirements.json",
         "RELEASE_NOTES.md"
       ],
@@ -4503,8 +4503,8 @@
       ],
       "browser_tests": [],
       "implementation_files": [
-        "docs/requirements_validation_v9.pdf",
-        "docs/requirements_validation_v9.md",
+        "docs/requirements_validation_v9_1.pdf",
+        "docs/requirements_validation_v9_1.md",
         "docs/requirements.json",
         "RELEASE_NOTES.md"
       ],
@@ -4518,8 +4518,8 @@
       "api_tests": [],
       "browser_tests": [],
       "implementation_files": [
-        "docs/requirements_validation_v9.pdf",
-        "docs/requirements_validation_v9.md",
+        "docs/requirements_validation_v9_1.pdf",
+        "docs/requirements_validation_v9_1.md",
         "docs/requirements.json",
         "RELEASE_NOTES.md"
       ],
@@ -4533,8 +4533,8 @@
       "api_tests": [],
       "browser_tests": [],
       "implementation_files": [
-        "docs/requirements_validation_v9.pdf",
-        "docs/requirements_validation_v9.md",
+        "docs/requirements_validation_v9_1.pdf",
+        "docs/requirements_validation_v9_1.md",
         "docs/requirements.json",
         "RELEASE_NOTES.md"
       ],
@@ -4565,8 +4565,8 @@
       "api_tests": [],
       "browser_tests": [],
       "implementation_files": [
-        "docs/requirements_validation_v9.pdf",
-        "docs/requirements_validation_v9.md",
+        "docs/requirements_validation_v9_1.pdf",
+        "docs/requirements_validation_v9_1.md",
         "docs/requirements.json",
         "RELEASE_NOTES.md"
       ],
@@ -4580,8 +4580,8 @@
       "api_tests": [],
       "browser_tests": [],
       "implementation_files": [
-        "docs/requirements_validation_v9.pdf",
-        "docs/requirements_validation_v9.md",
+        "docs/requirements_validation_v9_1.pdf",
+        "docs/requirements_validation_v9_1.md",
         "docs/requirements.json",
         "RELEASE_NOTES.md"
       ],
@@ -4595,8 +4595,8 @@
       "api_tests": [],
       "browser_tests": [],
       "implementation_files": [
-        "docs/requirements_validation_v9.pdf",
-        "docs/requirements_validation_v9.md",
+        "docs/requirements_validation_v9_1.pdf",
+        "docs/requirements_validation_v9_1.md",
         "docs/requirements.json",
         "RELEASE_NOTES.md"
       ],
@@ -4610,8 +4610,8 @@
       "api_tests": [],
       "browser_tests": [],
       "implementation_files": [
-        "docs/requirements_validation_v9.pdf",
-        "docs/requirements_validation_v9.md",
+        "docs/requirements_validation_v9_1.pdf",
+        "docs/requirements_validation_v9_1.md",
         "docs/requirements.json",
         "RELEASE_NOTES.md"
       ],
@@ -4625,8 +4625,8 @@
       "api_tests": [],
       "browser_tests": [],
       "implementation_files": [
-        "docs/requirements_validation_v9.pdf",
-        "docs/requirements_validation_v9.md",
+        "docs/requirements_validation_v9_1.pdf",
+        "docs/requirements_validation_v9_1.md",
         "docs/requirements.json",
         "RELEASE_NOTES.md"
       ],
@@ -4640,8 +4640,8 @@
       "api_tests": [],
       "browser_tests": [],
       "implementation_files": [
-        "docs/requirements_validation_v9.pdf",
-        "docs/requirements_validation_v9.md",
+        "docs/requirements_validation_v9_1.pdf",
+        "docs/requirements_validation_v9_1.md",
         "docs/requirements.json",
         "RELEASE_NOTES.md"
       ],
@@ -4706,7 +4706,7 @@
     {
       "id": "TOOL-003",
       "module": "Tooling",
-      "description": "Release tooling produces a deterministic tracked-file application archive, checksum-bound provenance and dependency manifest, clean extracted-copy smoke, fail-closed private-content exclusion, protected publication gate, and application-only prior-artifact rollback mapping.",
+      "description": "Release tooling produces a deterministic tracked-file application archive, checksum-bound provenance and dependency manifest, clean extracted-copy smoke, fail-closed private-content exclusion, extracted-host command inventory enforcement, protected publication gate, and application-only prior-artifact rollback mapping.",
       "status": "PASS",
       "api_tests": [],
       "browser_tests": [],
@@ -4726,11 +4726,17 @@
         "contracts/compatibility/app-9.5.3.json",
         "contracts/compatibility/app-9.5.4.json",
         "contracts/compatibility/app-9.5.5.json",
-        "contracts/compatibility/app-9.5.6.json"
+        "contracts/compatibility/app-9.5.6.json",
+        "contracts/compatibility/app-0.9.5.5.json",
+        "contracts/compatibility/app-0.9.5.6.json",
+        "contracts/compatibility/app-0.9.5.7.json",
+        "contracts/compatibility/app-0.9.5.8.json",
+        "scripts/resolve_release_predecessor.py",
+        "tests/release_predecessor_tests.py"
       ],
       "introduced_in": "9.2.0",
-      "changed_in": "9.5.6",
-      "notes": "Branch and ordinary manual candidates remain unpublished. The historical one-time owner-dispatched recovery created the retained v9.2.0 predecessor without overwrite or deletion paths. Normal v9.5.6 publication requires the verified retained v9.5.5 predecessor manifest and the protected release gates, including exact build-SHA and generated release.env verification. Rollback is application-only and never reverses the MySQL schema."
+      "changed_in": "0.9.5.8",
+      "notes": "Branch and ordinary manual candidates remain unpublished. The historical one-time owner-dispatched recovery created the retained v9.2.0 predecessor without overwrite or deletion paths. Normal v0.9.5.8 publication derives the exact retained v0.9.5.5 predecessor from repository compatibility policy, verifies the downloaded manifest, packages every workflow-derived extracted-host script, and never replaces the defective v0.9.5.6 or host-incomplete v0.9.5.7 assets. Rollback is application-only and never reverses the MySQL schema. The next large Claude LPR is reserved for v0.9.6.0."
     },
     {
       "id": "BOT-001",
@@ -7765,7 +7771,7 @@
       "id": "CRAPS-002", "module": "Craps", "description": "Authenticated sessions own private reload-safe rounds, roll actions, recovery state, history, and canonical route restoration.", "status": "PASS", "api_tests": ["API-CRAPS-001", "API-WALLET-RESTART-001"], "browser_tests": ["BR-CRAPS-001"], "implementation_files": ["casino/games/craps/api.py", "web/app.js", "tests/run_tests.py"], "introduced_in": "game-expansion-craps", "changed_in": "game-expansion-craps", "notes": "Session context overrides caller player ids and terminal actions remain replayable after archival."
     },
     {
-      "id": "CRAPS-003", "module": "Craps", "description": "Wagers, payouts, and refunds use the shared ledger exactly once under durable request identities.", "status": "PASS", "api_tests": ["API-CRAPS-001"], "browser_tests": [], "implementation_files": ["casino/games/craps/api.py", "casino/core/ledger.py", "tests/games/craps/test_craps.py", "tests/run_tests.py"], "introduced_in": "game-expansion-craps", "changed_in": "game-expansion-craps", "notes": "No game code mutates balances directly and conflicting retries fail closed."
+      "id": "CRAPS-003", "module": "Craps", "description": "Wagers, payouts, and refunds use the shared ledger exactly once under durable request identities.", "status": "PASS", "api_tests": ["API-CRAPS-001"], "browser_tests": [], "implementation_files": ["casino/games/craps/api.py", "casino/core/ledger.py", "tests/games/craps/test_api.py", "tests/run_tests.py"], "introduced_in": "game-expansion-craps", "changed_in": "game-expansion-craps", "notes": "No game code mutates balances directly and conflicting retries fail closed."
     },
     {
       "id": "CRAPS-004", "module": "Application", "description": "Craps supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.", "status": "PASS", "api_tests": [], "browser_tests": ["BR-CRAPS-001"], "implementation_files": ["web/games/craps.js", "web/i18n/en-US/games/craps.json", "web/i18n/ru-RU/games/craps.json", "tests/visual/visual_matrix.json", "tests/run_tests.py"], "introduced_in": "game-expansion-craps", "changed_in": "game-expansion-craps", "notes": "Evidence covers both locales and every governed viewport."
@@ -7999,7 +8005,7 @@
       "id": "OPS-005", "module": "Operations", "description": "Copied-deployment smoke records the loopback child PID and port, probes anonymous liveness plus authenticated readiness and Admin telemetry, verifies sanitized build provenance, stops the child, and proves the port closed.", "status": "PASS", "api_tests": ["API-OPS-001", "LONG-SUITE-100"], "browser_tests": ["BR-OPS-001"], "implementation_files": ["tests/long_suites.py", "tests/run_tests.py", "codex/tasks/artifacts/issue-72-operations-foundation/validation.md"], "introduced_in": "issue-72-operations-foundation", "changed_in": "issue-72-operations-foundation", "notes": "The harness always binds 127.0.0.1 on an OS-assigned port and records exact listener cleanup."
     },
     {
-      "id": "OPS-006", "module": "Operations", "description": "Production readiness and Admin Operations accept a root-managed SHA-256-verified monitor bearer only for GET /readyz and GET /api/v2/admin/operations, while every other API route continues to require a normal authenticated session.", "status": "PASS", "api_tests": ["SERVICE-WSGI-001", "EDGE-PREPARATION-001"], "browser_tests": [], "implementation_files": ["casino/core/auth.py", "casino/app.py", "casino/wsgi.py", "contracts/openapi/operations.v1.yaml", "contracts/compatibility/operations-foundation.json", "scripts/edge_gate.py", "tests/production_wsgi_probe.py", "tests/production_service_tests.py", "tests/edge_gate_tests.py"], "introduced_in": "cicd-main-deploy", "changed_in": "cicd-main-deploy", "notes": "The monitor token is not a browser login, is never stored in cleartext by the application, is omitted from anonymous liveness, and cannot access /api/v2/me, gameplay, account, or mutation routes."
+      "id": "OPS-006", "module": "Operations", "description": "Production readiness and Admin Operations accept a root-managed SHA-256-verified monitor bearer only for GET /readyz and GET /api/v2/admin/operations, while every other API route continues to require a normal authenticated session. Deployment validates the split root-managed bearer and application digest before cutover, and an explicit root-operator repair mode can atomically align only the digest without logging either value.", "status": "PASS", "api_tests": ["SERVICE-WSGI-001", "EDGE-PREPARATION-001", "MONITOR-CONFIG-001"], "browser_tests": [], "implementation_files": ["casino/core/auth.py", "casino/app.py", "casino/wsgi.py", "contracts/openapi/operations.v1.yaml", "contracts/compatibility/operations-foundation.json", "scripts/edge_gate.py", "scripts/validate_monitor_config.py", "tests/production_wsgi_probe.py", "tests/production_service_tests.py", "tests/edge_gate_tests.py", "tests/monitor_config_tests.py"], "introduced_in": "cicd-main-deploy", "changed_in": "0.9.5.7", "notes": "The monitor token is not a browser login, is never stored in cleartext by the application, is omitted from anonymous liveness, and cannot access /api/v2/me, gameplay, account, or mutation routes. Validation and repair output is secret-free; workflow use is read-only and any repair remains an explicit root-owner operation."
     },
     {
       "id": "TEST-044", "module": "Tests", "description": "Operations regression evidence covers anonymous and authenticated policy, healthy and degraded dependencies, Admin authorization, EN/RU responsive states, copied deployment, and listener cleanup.", "status": "PASS", "api_tests": ["API-OPS-001", "LONG-SUITE-100"], "browser_tests": ["BR-OPS-001"], "implementation_files": ["tests/operations/", "tests/run_tests.py", "tests/long_suites.py", "tests/visual/visual_matrix.json"], "introduced_in": "issue-72-operations-foundation", "changed_in": "issue-72-operations-foundation", "notes": "Allocated by GitHub issue #77 for the accepted issue #72 implementation and shared integration gate."
@@ -10171,7 +10177,7 @@
     {
       "id": "TOOL-008",
       "module": "Tooling",
-      "description": "Protected-main CI/CD publishes or reuses the immutable GitHub Release for the exact merged commit, refuses packaged-version tag reuse across different commits, deploys only hosted release assets over SSH, writes build provenance, switches /opt/casino/current atomically, verifies production through the edge observer, and rolls back the application symlink and release fragment if post-cutover health fails.",
+      "description": "Protected-main CI/CD publishes or reuses the immutable GitHub Release for the exact merged commit, refuses packaged-version tag reuse across different commits, resolves rollback only from the current compatibility record, verifies the exact downloaded predecessor manifest, requires every extracted-host workflow script inside the archive, deploys only hosted release assets over SSH, validates the monitor bearer/digest before cutover, writes build provenance, switches /opt/casino/current atomically, verifies production through the edge observer, and rolls back the application symlink and release fragment if post-cutover health fails.",
       "status": "PASS",
       "api_tests": [
         "DEPLOY-CICD-001"
@@ -10180,19 +10186,23 @@
       "implementation_files": [
         ".github/workflows/deploy-production.yml",
         "scripts/make_release.py",
+        "scripts/package_app.py",
+        "scripts/resolve_release_predecessor.py",
+        "scripts/validate_monitor_config.py",
         "scripts/write_release_env.py",
         "scripts/edge_gate.py",
         "docs/production_service.md",
-        "tests/cicd_deployment_tests.py"
+        "tests/cicd_deployment_tests.py",
+        "tests/release_artifact_tests.py"
       ],
       "introduced_in": "cicd-main-deploy",
-      "changed_in": "cicd-main-deploy",
-      "notes": "The workflow has no manual dispatch path; deployment requires scoped SSH secrets and uses the root-managed monitor bearer for readiness rather than a browser login."
+      "changed_in": "0.9.5.8",
+      "notes": "The workflow has no manual dispatch path, never uses release-list ordering for rollback policy, and never repairs root-managed monitor configuration automatically. The archive inventory is checked against every Python script invoked from the extracted or active release on the host. Deployment requires scoped SSH secrets and uses the root-managed monitor bearer for readiness rather than a browser login."
     },
     {
       "id": "TEST-133",
       "module": "Tests",
-      "description": "Listener-free CI/CD evidence verifies the production workflow's protected-main trigger, immutable version-conflict refusal, predecessor-manifest rollback requirement, hosted-asset download and verification, scoped SSH secret usage, generated release.env installation, post-cutover edge observation, and application rollback path.",
+      "description": "Listener-free CI/CD evidence verifies the production workflow's protected-main trigger, immutable version-conflict refusal, compatibility-declared predecessor selection, exact downloaded-manifest binding, rejection of release-list ordering, workflow-derived extracted-host script inventory, hosted-asset download and verification, scoped SSH secret usage, secret-safe monitor pair validation and explicit atomic repair, generated release.env installation, post-cutover edge observation, and application rollback path.",
       "status": "PASS",
       "api_tests": [
         "DEPLOY-CICD-001"
@@ -10200,12 +10210,18 @@
       "browser_tests": [],
       "implementation_files": [
         "tests/cicd_deployment_tests.py",
+        "tests/release_predecessor_tests.py",
+        "tests/monitor_config_tests.py",
+        "tests/release_artifact_tests.py",
         ".github/workflows/deploy-production.yml",
-        "scripts/make_release.py"
+        "scripts/make_release.py",
+        "scripts/package_app.py",
+        "scripts/resolve_release_predecessor.py",
+        "scripts/validate_monitor_config.py"
       ],
       "introduced_in": "cicd-main-deploy",
-      "changed_in": "cicd-main-deploy",
-      "notes": "This proof reads inert workflow text only; it does not open SSH, publish a release, deploy, mutate DNS, or run a browser."
+      "changed_in": "0.9.5.8",
+      "notes": "This proof reads inert workflow text and isolated temporary environment fixtures only; it does not open SSH, publish a release, deploy, mutate production configuration, mutate DNS, or run a browser."
     },
     {
       "id": "TEST-100",
@@ -10416,7 +10432,7 @@
     {
       "id": "TOUR-001",
       "module": "Core",
-      "description": "The server-only What's New foundation reads curated repository release metadata rather than deriving player content from module or application version changes. An entry is eligible only when its release version is an exact numeric triplet at or below the running application, both localization keys are non-empty, and the release coordinator's show_in_whats_new flag is exactly true. Missing, malformed, future, incomplete, or truthy-but-inexact entries fail closed. The shipped catalog is reconciled to packaged application 9.5.6 and remains explicitly disabled until the player UI, browser evidence, and release-coordinator activation remainder of issue #165 are accepted.",
+      "description": "The server-only What's New foundation reads curated repository release metadata rather than deriving player content from module or application version changes. An entry is eligible only when its release version is an exact numeric dotted release at or below the running application, both localization keys are non-empty, and the release coordinator's show_in_whats_new flag is exactly true. Missing, malformed, future, incomplete, or truthy-but-inexact entries fail closed. The shipped catalog is reconciled to packaged application 0.9.5.8 and remains explicitly disabled until the player UI, browser evidence, and release-coordinator activation remainder of issue #165 are accepted.",
       "status": "PASS",
       "api_tests": [
         "API-TOUR-001"
@@ -10453,7 +10469,7 @@
     {
       "id": "TEST-106",
       "module": "Tests",
-      "description": "Listener-free isolated-provider evidence verifies exact curated opt-in selection, skipped-release merge ordering and caps, malformed and future metadata fail-closed behavior, missing and malformed catalog recovery, durable per-subject server-stamped dismissal, retry idempotency, populated-neighbour isolation, disposable guest non-persistence, subjectless rejection, raw-version privacy, current packaged 9.5.6 metadata with activation disabled, complete EN/RU release keys, consent-free metadata shape, additive v2 route behavior, hostile caller identity and version inputs being rejected, and exact checked contract digest pinning.",
+      "description": "Listener-free isolated-provider evidence verifies exact curated opt-in selection, skipped-release merge ordering and caps, malformed and future metadata fail-closed behavior, missing and malformed catalog recovery, durable per-subject server-stamped dismissal, retry idempotency, populated-neighbour isolation, disposable guest non-persistence, subjectless rejection, raw-version privacy, current packaged 0.9.5.8 metadata with activation disabled, complete EN/RU release keys, consent-free metadata shape, additive v2 route behavior, hostile caller identity and version inputs being rejected, and exact checked contract digest pinning.",
       "status": "PASS",
       "api_tests": [
         "API-TOUR-001"

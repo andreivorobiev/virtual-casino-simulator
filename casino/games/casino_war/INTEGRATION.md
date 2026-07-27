@@ -1,6 +1,6 @@
 # Casino War integration record for #77
 
-The #77 integration lane adds `modules/casino_war.json` and its matching aggregate revision together after the isolated game slice is rebased onto the merged catalog baseline. The descriptor below records the accepted catalog contract used by backend, frontend, validators, and long-suite discovery.
+The #77 integration lane added `modules/casino_war.json` and its matching aggregate revision together after the isolated game slice was rebased onto the merged catalog baseline. The descriptor below records the catalog contract as first accepted; `modules/casino_war.json` is authoritative for the current revision used by backend, frontend, validators, and long-suite discovery.
 
 ## Accepted module descriptor
 
@@ -54,7 +54,7 @@ The #77 integration lane adds `modules/casino_war.json` and its matching aggrega
 }
 ```
 
-The accepted allocation uses sort order 80, module version 1.0.0, and permanent requirements `CW-001` through `CW-005`. The packaged application remains on the canonical #104 version interface while the compatible shared module revisions advance as reserved by #77.
+The first accepted allocation used sort order 80, module version 1.0.0, and permanent requirements `CW-001` through `CW-005`; the current module revision is owned by `modules/casino_war.json` and `modules/module-manifest.json`. The packaged application remains on the canonical #104 version interface while the compatible shared module revisions advance as reserved by #77.
 
 ## Shared test discovery
 

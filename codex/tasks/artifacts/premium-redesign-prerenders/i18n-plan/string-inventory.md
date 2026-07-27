@@ -1,5 +1,9 @@
 # String Inventory Map
 
+**Historical.** Records the planning-time string survey for the premium i18n work. The `I18N-*`
+requirements below have since been registered and are no longer proposals; `docs/requirements/requirements.json`
+is authoritative for their wording and status.
+
 This inventory is based on read-only inspection of `web/app.js`, `web/admin.js`, `web/core/*.js`, `web/games/*.js`, `web/index.html`, `web/admin.html`, `tests/run_tests.py`, module manifests, and the requirement registry.
 
 ## Requirements Context
@@ -14,11 +18,12 @@ Relevant existing requirements:
 - `ADMIN-019`: Admin Audio & Voice stores global audio settings.
 - `UX-001` through `UX-006`: stable game areas, action rails, result regions, scroll areas, autoplay status, and transform/opacity animation discipline.
 
-Proposed future requirements:
+Requirements proposed here, since registered (all three are now `PASS`; IDs and wording per
+`docs/requirements/requirements.json`):
 
 - `I18N-001`: Browser-visible UI strings are resource-backed with English default, Russian locale, and deterministic fallback.
-- `I18N-002`: Admin exposes Language/Locale controls with persisted settings.
-- `I18N-003`: Switching language updates visible text without resetting route, game state, wallet state, ledger state, bot state, or autoplay state.
+- `I18N-002`: Switching language updates visible text without resetting route, game state, wallet state, ledger state, bot state, or autoplay state.
+- `I18N-003`: Admin exposes Language/Locale controls with persisted settings.
 
 ## Shell and Lobby
 

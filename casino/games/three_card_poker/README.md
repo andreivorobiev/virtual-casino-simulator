@@ -32,4 +32,4 @@ The shared HTTP handler supplies the standard `ok/data` or `ok/error` envelope. 
 - One initial debit covers Ante plus Pair Plus, one optional Play debit equals the Ante, and at most one aggregate payout credit returns all due stakes and winnings.
 - Tests may inject IDs, clocks, and shuffle seeds. Public API requests cannot choose a seed.
 
-Shared catalog registration, the aggregate manifest, compatibility digests, permanent game requirement IDs, and central discovery remain issue #77 work.
+Shared catalog registration, the aggregate manifest revision for `three_card_poker`, compatibility digests, permanent requirements `TCP-001` through `TCP-005`, and catalog-driven discovery are all complete on main.

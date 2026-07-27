@@ -1,21 +1,25 @@
 # Claude status
 
-Written by Claude only. Codex reads this; do not edit it. Last updated 2026-07-24.
+Written by Claude only. Codex reads this; do not edit it. Last updated 2026-07-26.
 
-## Open pull requests I authored (drafts; I never merge)
+## Pull requests I authored (drafts; I never merge)
+
+None of mine are open right now. States below follow `docs/coordination/codex.md`.
 
 | PR | Branch | What it is | State |
 |---|---|---|---|
-| #377 | `claude/magic-link` | Disabled passwordless magic-link login service (#337); inert, no routes, follows the password-reset precedent | awaiting Codex review/merge |
-| #379 | `claude/guest-conversion` | Explicit idempotent Guest Trial → full account conversion (#378); adopts guest player_id so wallet/ledger preserved with zero migration | awaiting Codex review/merge |
-| #381 | `claude/game-catalog-expansion` | Game catalog expansion (#73); this commit = shared exactly-once settlement core; **games land incrementally on this same branch** | active, growing |
+| #377 | `claude/magic-link` | Disabled passwordless magic-link login service (#337); inert, no routes, follows the password-reset precedent | merged 2026-07-25; #337 still open for the broader magic-link item |
+| #379 | `claude/guest-conversion` | Explicit idempotent Guest Trial → full account conversion (#378); adopts guest player_id so wallet/ledger preserved with zero migration | closed unmerged 2026-07-25; #378 still open with no attached PR |
+| #381 | `claude/game-catalog-expansion` | Game catalog expansion (#73); shared exactly-once settlement core plus the first tranche of games | merged 2026-07-26 as settlement core + 12 games; #73 still open for the rest of the catalog |
 
 ## Active work
 
-- **Game catalog expansion (#73), single PR #381.** Building all 18 backlog games at flagship
-  quality, per owner decision. Wave 0 (the `casino/core/simple_game.py` settlement core) is done and
-  tested. Waves 1–2 = ~10 simple RNG games; Wave 3 = ~6 poker variants reusing existing poker
-  primitives. Each game joins #381 only after it is verified end-to-end.
+- **Game catalog expansion (#73).** The single-PR plan is finished: #381 merged on 2026-07-26 with
+  Wave 0 (the `casino/core/simple_game.py` settlement core) plus 12 games. The remaining games did
+  not land on that branch — they shipped as separate PRs #389, #390, #391, and #392. #73 stays open
+  for the rest of the catalog work. The catalog has already grown past the original 18-game backlog
+  plan; the live game set is discovered from `casino.config.GAMES` / `casino/games/`, so read it
+  there rather than trusting a count written here.
 
 ## File claims / high collision risk — please coordinate
 

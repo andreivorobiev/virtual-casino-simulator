@@ -1,4 +1,50 @@
-# Virtual Casino Simulator v9.5.6 Release Notes
+# Virtual Casino Simulator v0.9.5.8 Release Notes
+
+## Extracted-host package-inventory recovery patch
+
+- Supersedes the immutable but host-incomplete v0.9.5.7 publication with a new patch identity; the existing v0.9.5.7 tag and assets remain untouched.
+- Packages `scripts/package_app.py` and `scripts/validate_monitor_config.py`, which production activation executes from the extracted release before selector or service mutation.
+- Adds an archive-inventory regression that derives every extracted-release Python command from `.github/workflows/deploy-production.yml` and requires each referenced script to exist in the immutable archive.
+- Keeps publish-time-only predecessor resolution in the repository workflow while packaging the four host-required scripts: release verification, monitor validation, provenance writing, and edge observation.
+- Retains checksum-verified v0.9.5.5 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Preserves secret-safe explicit monitor digest repair plus read-only validation and does not authorize provider, DNS, billing, public signup, live OAuth, mail activation, unrestricted exposure, or GitHub-hosted SSH ingress expansion.
+
+## Prior v0.9.5.7 release-recovery publication
+
+## Deterministic rollback-provenance and monitor-recovery patch
+
+- Supersedes the immutable but non-deployable v0.9.5.6 publication with a new patch identity; the existing v0.9.5.6 tag and assets remain untouched.
+- Removes GitHub release-list ordering from rollback selection and derives the exact predecessor only from the current compatibility record.
+- Verifies the downloaded predecessor manifest's application version, immutable tag, and full source commit before building the candidate.
+- Retains checksum-verified v0.9.5.5 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Adds a secret-safe root-operator tool that validates the split monitor bearer/digest and can explicitly repair only the digest assignment without printing either value.
+- Makes production activation validate the monitor pairing before moving the release symlink; the workflow never performs automatic credential repair.
+- Preserves private-invite admission and does not authorize provider, DNS, billing, public signup, live OAuth, mail activation, unrestricted exposure, or GitHub-hosted SSH allowlist expansion.
+
+## Prior v0.9.5.6 documentation release
+
+## Documentation truth-pass and release-recovery patch
+
+- Packages the exact accepted protected-main state after v0.9.5.5 and the documentation truth pass as a distinct immutable patch release, excluding every unmerged branch and pull request.
+- Keeps the four-part private-beta version scheme intact: private-beta epoch `0`, Casino platform line `9`, product wave `5`, and patch `6`.
+- Keeps `0.9.6.0` reserved for the next large Claude LPR by bumping the product-wave slot and resetting the patch slot only when that bundle lands.
+- Carries the plain-English production CI/CD runbook, release-versioning policy, and corrected tracked Markdown documentation as the current protected-main source of truth.
+- Keeps the protected-main CI/CD implementation, TiltSeven canonical origin, Operations-only monitor bearer, MySQL schema 2, and application-only rollback controls from v0.9.5.5 unchanged.
+- Uses retained v0.9.5.5 release assets as the immediate application-only rollback predecessor; database rollback remains prohibited.
+- Preserves signup, live OAuth, provider networking, DNS, billing, and unrestricted public exposure as separately gated.
+
+## Prior v0.9.5.5 four-part protected-main release
+
+## Four-part private-beta versioning and CI/CD runbook release
+
+- Packages the exact accepted protected-main state after v9.5.6 as a distinct immutable release under the four-part private-beta version scheme, excluding every unmerged branch and pull request.
+- Maps the old `9.5.5` product line to `0.9.5.5`: private-beta epoch `0`, Casino platform line `9`, product wave `5`, and patch `5`.
+- Reserves `0.9.6.0` for the next large Claude LPR by bumping the product-wave slot and resetting the patch slot.
+- Adds a plain-English production CI/CD runbook covering protected-main release publication, production SSH secrets, host monitor-token setup, rollback behavior, canonical domain behavior, and the first rollout blocker.
+- Keeps the protected-main CI/CD implementation, TiltSeven canonical origin, Operations-only monitor bearer, MySQL schema 2, and application-only rollback controls from v9.5.6 unchanged.
+- Preserves signup, live OAuth, provider networking, DNS, billing, and unrestricted public exposure as separately gated.
+
+## Prior v9.5.6 protected-main CI/CD release
 
 ## Game catalog and accepted-foundations patch release
 
@@ -10,6 +56,17 @@
 - Replaces expiring browser-session monitor readiness with a root-managed bearer accepted only by `/readyz` and `/api/v2/admin/operations`; the legacy cookie variable remains a rollout fallback.
 - Keeps MySQL at schema version 2 and permits application-only rollback to the retained, checksum-verified v9.5.5 predecessor; database rollback remains prohibited.
 - Preserves signup, live OAuth, provider networking, DNS, billing, and unrestricted public exposure as separately gated.
+
+## Prior v9.5.5 protected-main release
+
+## Accepted catalog and disabled magic-link patch release
+
+- Packages the exact accepted protected-main state after v9.5.4 as a distinct immutable patch release.
+- Includes the accepted game catalog and correctness updates, localized Admin ledger-event labels, and the disabled optional magic-link foundation.
+- Rotates the PWA static-shell cache identity so existing browsers fetch the current protected application shell instead of continuing to serve cached v9.5.4 assets.
+- Keeps MySQL at schema version 2 and permits application-only rollback to the retained, checksum-verified v9.5.4 predecessor; database rollback remains prohibited.
+- Preserves manual-invite admission with public signup, live OAuth, provider networking, deployment, and unrestricted public exposure still separately gated.
+- This section was reconstructed from `contracts/compatibility/app-9.5.5.json`; the original v9.5.5 entry was missing from this record.
 
 ## Prior v9.5.4 protected-main release
 

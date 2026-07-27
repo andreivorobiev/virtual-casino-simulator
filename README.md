@@ -1,14 +1,14 @@
 # Virtual Casino Simulator
 
-Packaged application release: `9.5.6`
+Packaged application release: `0.9.5.8`
 
 Historical source baseline: `9.1.0`
 
-Local play-token browser casino simulator with Roulette, Slots, Blackjack, Baccarat, Keno, American Bingo, isolated game state, ledger-backed wallet accounting, authenticated private-beta users, Admin telemetry, and optional JSON or MySQL persistence.
+Local play-token browser casino simulator with a descriptor-driven catalog of isolated games (Roulette, Slots, Blackjack, Baccarat, Keno, American Bingo and many more; the canonical catalog is discovered from the `modules/*.json` descriptors), isolated game state, ledger-backed wallet accounting, authenticated private-beta users, Admin telemetry, and optional JSON or MySQL persistence.
 
 ## Current repository status
 
-This repository has advanced beyond the original v9.1.1 bootstrap snapshot. Packaged release v9.5.6 makes protected-main CI/CD the normal production deployment path, records TiltSeven as the canonical Casino origin, and replaces expiring browser-session monitor readiness with a root-managed Operations-only bearer while preserving the private-invite security, migration, recovery, provider-disablement, and public-exposure gates from v9.5.5. Independently versioned modules continue to record compatible source changes. Current module revisions and requirement status are recorded in the canonical manifests and generated requirements document.
+This repository has advanced beyond the original v9.1.1 bootstrap snapshot. Packaged release v0.9.5.8 supersedes the immutable but host-incomplete v0.9.5.7 publication by packaging every script invoked from the extracted release and testing that workflow-derived host commands resolve inside the archive. It preserves compatibility-owned predecessor selection, secret-safe monitor bearer/digest validation, the v0.9.5.5 application-only rollback target, TiltSeven canonical Casino origin, private-invite security, MySQL schema 2, provider-disablement, and public-exposure gates. Independently versioned modules continue to record compatible source changes. Current module revisions and requirement status are recorded in the canonical manifests and generated requirements document.
 
 ## Version sources
 
@@ -73,8 +73,11 @@ python tests/run_tests.py --browser
 Repository validation:
 
 ```bash
+python scripts/validate_game_catalog.py
 python scripts/validate_requirements.py
 python scripts/validate_versions.py
+python scripts/validate_contracts.py
+python scripts/validate_module_boundaries.py
 python scripts/generate_docs.py --check
 python scripts/check_comment_density.py
 ```

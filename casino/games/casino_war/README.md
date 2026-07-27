@@ -38,7 +38,7 @@ The game owns no animation or autoplay timers. Reduced-motion CSS disables decor
 - Session isolation: `SESSION-003`, `SESSION-004`, plus planned `SESSION-005` from #81/#110.
 - Cards and accessibility: `CARD-001`, `CARD-002`.
 - Locale behavior: `I18N-001`, `I18N-002`.
-- Issue #82 still needs permanent Casino War-specific requirement IDs allocated by the central requirements owner; this isolated branch does not invent or edit registry IDs.
+- Permanent Casino War requirements `CW-001` through `CW-005` are registered in `docs/requirements/requirements.json` and cover rules, session/reload state, ledger settlement, EN/RU responsive behavior, and discovered acceptance evidence.
 
 ## Focused validation
 

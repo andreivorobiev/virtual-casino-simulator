@@ -23,4 +23,4 @@ The engine uses `casino.core.cards` and `casino.core.poker` from #96. A seed exi
 - `POST /api/v1/games/multi-hand-video-poker/rounds/{round_id}/holds`
 - `POST /api/v1/games/multi-hand-video-poker/rounds/{round_id}/draw`
 
-The handlers can be registered into an isolated `casino.router.Router` for focused tests. Global registration remains owned by #110/#77.
+The handlers can be registered into an isolated `casino.router.Router` for focused tests. Global registration is catalog-driven from `modules/multi_hand_video_poker.json`.

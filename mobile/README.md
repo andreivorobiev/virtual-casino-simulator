@@ -11,7 +11,9 @@ This directory implements the bounded Phase 1 foundation approved by GitHub issu
 - Native lifecycle plugins are pinned independently in `package.json` and locked transitively in `pnpm-lock.yaml`.
 - The only dependency build script permitted by `pnpm-workspace.yaml` is the pinned platform-specific `esbuild` binary installer.
 
-The repository application release remains `9.1.1`; #188 does not create a formal packaged application release or alter the frozen aggregate module manifest owned by the separate #77 integration lane.
+This lane does not create a formal packaged application release and does not alter the aggregate module manifest owned by the separate #77 integration lane. The packaged application release was `9.1.1` when this foundation landed (2026-07-14); for the current release see `modules/module-manifest.json` (`application`).
+
+> **Status: unverified against the current backend.** This foundation has not been revalidated since it landed, while the backend has since added the deployment request-integrity policy (exact-Origin checking, per-session double-submit CSRF, SameSite session cookies) and the frontend added a service worker. The cross-origin `fetch` rewrite described below has not been demonstrated end to end against a deployed backend, and no CI workflow builds or tests this directory. Treat the runtime claims here as design intent, not verified behavior.
 
 ## Configuration contract
 

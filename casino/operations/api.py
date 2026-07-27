@@ -18,8 +18,8 @@ NOT_READY_MESSAGE = "Application dependencies are not ready"
 PROBE_FAILED_CODE = "OPERATIONS_PROBE_FAILED"
 # Publish one fixed message that prevents the global raw-exception handler from reflecting failures.
 PROBE_FAILED_MESSAGE = "Operations probe could not be completed"
-# Accept only the canonical semantic-version shape published by the Operations contract.
-APP_VERSION_PATTERN = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+$")
+# Accept legacy three-part and current four-part application versions published by the Operations contract.
+APP_VERSION_PATTERN = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+(?:\.[0-9]+)?$")
 # Accept only bounded hexadecimal deployment provenance already allowed by the contract.
 BUILD_SHA_PATTERN = re.compile(r"^[0-9a-f]{7,40}$")
 # Accept the UTC timestamp shape emitted by the canonical application clock.

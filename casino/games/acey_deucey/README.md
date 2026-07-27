@@ -22,6 +22,6 @@ Acey-Deucey is implemented as a distinct countable proposal from existing Red Do
 
 ## #77 integration
 
-- `modules/acey_deucey.json` owns version `1.0.0`, sort order `260`, and catalog discovery.
+- `modules/acey_deucey.json` owns the module version, sort order `260`, and catalog discovery.
 - Permanent requirements `AD-001` through `AD-005` cover rules, private state, ledger actions, localization, and evidence.
 - Compatibility, visual-matrix, browser, restart, and Long Suite 100 evidence are centrally traceable.

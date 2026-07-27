@@ -44,12 +44,18 @@ DEFAULT_MAX_MERGED_ENTRIES = 3
 def _version_key(value) -> tuple | None:
     # Split the candidate version into its dotted parts.
     parts = str(value or "").split(".")
-    # Refuse incomplete, extended, or non-numeric versions rather than guessing their ordering.
-    if len(parts) != 3 or any(not part.isdigit() for part in parts):
+    # Refuse incomplete, over-extended, or non-numeric versions rather than guessing their ordering.
+    if len(parts) not in (3, 4) or any(not part.isdigit() for part in parts):
         # Mark the malformed version unusable.
         return None
+    # Reject three-part values that already start with the new private-beta epoch.
+    if len(parts) == 3 and parts[0] == "0":
+        # Mark the incomplete four-part private-beta version unusable.
+        return None
+    # Preserve legacy three-part releases by treating them as private-beta epoch zero.
+    normalized = ["0", *parts] if len(parts) == 3 else parts
     # Build the exact numeric comparison tuple.
-    return tuple(int(part) for part in parts)
+    return tuple(int(part) for part in normalized)
 
 
 # Load the curated release metadata, tolerating an absent or malformed file.

@@ -26,7 +26,7 @@ Run the final integration pass for the premium redesign: resolve cross-worker vi
 ## Owned Files
 
 - `tests/run_tests.py` for final browser coverage
-- `docs/release-notes/**` only if a formal release note is requested
+- `RELEASE_NOTES.md` and `docs/releases/**` only if a formal release note is requested
 - Minimal integration edits in files already changed by child PRs, only after coordinator approval
 
 ## Files Not To Touch

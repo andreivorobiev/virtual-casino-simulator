@@ -42,4 +42,4 @@ The game owns no timer, so reduced-motion validation covers the CSS preference p
 
 ## Intake status
 
-Sort order `120` remains presentation metadata, not merge authorization. PR #117 stays draft until its exact pushed head has fresh green checks and the coordinator accepts the complete #77 evidence gate.
+Sort order `120` is presentation metadata. PR #117 was accepted; the descriptor, manifest revision, permanent `HILO-001` through `HILO-005` requirements, and visual row are all on main.
