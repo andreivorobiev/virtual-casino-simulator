@@ -10241,7 +10241,7 @@
     {
       "id": "STORAGE-008",
       "module": "Storage",
-      "description": "Player creation appends one row through the provider's lock-held path and never replaces the whole player document, so committed ledger history and concurrently committed balances always survive; the MySQL player-document replacement refuses to run while ledger rows exist instead of truncating them.",
+      "description": "Player creation appends one row through the provider's lock-held path and never replaces the whole player document, so committed ledger history and concurrently committed balances always survive; the compatible MySQL player-document writer inserts only missing supplied rows in one explicit transaction, never deletes or overwrites durable player or ledger rows, rolls back a partial batch on failure, and always closes its operation-scoped connection.",
       "status": "PASS",
       "api_tests": [
         "STORAGE-LEDGER-GUARD-001",
@@ -10254,8 +10254,8 @@
         "tests/storage_tests.py"
       ],
       "introduced_in": "issue-402-storage-row-ops",
-      "changed_in": "issue-402-storage-row-ops",
-      "notes": "Regression coverage writes ledger rows BEFORE creating the next player, which is the ordering earlier fixtures never exercised."
+      "changed_in": "issue-431-mysql-player-upsert",
+      "notes": "Regression coverage writes ledger rows before creating or compatibility-seeding the next player, proves stale supplied rows cannot overwrite committed wallet/lifecycle state, preserves exactly-once action identity through the MySQL live path, and executes a database-free partial-insert rollback proof."
     },
     {
       "id": "LEDGER-029",
