@@ -1,6 +1,28 @@
 {
-  "application": "0.9.5.12",
+  "app_version": "0.9.5.12",
   "source_baseline": "9.1.0",
+  "api_compatibility_matrix": "contracts/compatibility/module-api-matrix.json",
+  "release_provenance_requirement": "TOOL-003",
+  "release_channel": "restricted-preview-private-invite",
+  "access_policy": {
+    "admission": "manual-invite",
+    "public_signup": "disabled",
+    "live_oauth": "disabled"
+  },
+  "predecessor": {
+    "app_version": "0.9.5.11",
+    "compatibility_record": "contracts/compatibility/app-0.9.5.11.json",
+    "required_artifact": "release-manifest.json",
+    "source_commit_sha": "61f19fd6514053dd0acba3d1badb8e1f008a667f",
+    "artifact_sha256": "0e8cba05e1b57adc723ebe5f1ac4cc43f4f312d251ce1594a956480cf9d7ad54",
+    "manifest_sha256": "e91903726b1694cc00961ede131e0459312c4581d6396e8b3ef790e04813e6dc"
+  },
+  "rollback": {
+    "scope": "application-only",
+    "database_rollback": "prohibited",
+    "mysql_expected_schema_version": 2,
+    "requires_retained_predecessor_manifest": true
+  },
   "modules": {
     "application": "9.51.25",
     "core": "9.24.4",
@@ -64,5 +86,5 @@
     "daily_draw_lab": "1.0.0",
     "four_card_poker": "1.0.1"
   },
-  "created_at": "2026-07-09T00:00:00.000000Z"
+  "notes": "Compatible authentication-lifecycle patch that rotates the browser-readable double-submit cookie to a fresh anonymous bootstrap token after logout or Guest Trial end, preserving immediate sign-in without retaining the revoked session CSRF value. The exact immutable v0.9.5.11 release remains the application-only predecessor, MySQL schema 2 remains exact, database rollback is prohibited, and provider changes, DNS, billing, public signup, live OAuth, mail activation, unrestricted public exposure, credential rotation, and SSH ingress changes remain separately gated."
 }

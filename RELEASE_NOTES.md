@@ -1,4 +1,16 @@
-# Virtual Casino Simulator v0.9.5.11 Release Notes
+# Virtual Casino Simulator v0.9.5.12 Release Notes
+
+## Logout and Guest Trial CSRF continuity patch
+
+- Rotates the browser-readable double-submit cookie to a fresh anonymous bootstrap token after logout instead of deleting it.
+- Applies the same rotation after Guest Trial end so either sign-in path works immediately without a shell reload.
+- Expires the HttpOnly session credential and guarantees the revoked session CSRF value never survives the transition.
+- Adds listener-free production-adapter evidence for token attributes, per-transition uniqueness, and immediate registered-account sign-in after both flows.
+- Rotates the static-shell cache identity and keeps the curated What's New metadata explicitly disabled.
+- Retains exact immutable v0.9.5.11 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider, DNS, billing, public signup, live OAuth, mail, invitation, public-exposure, credential, SSH-ingress, or production mutation.
+
+## Prior v0.9.5.11 frontend safety patch
 
 ## Frontend safety and runtime-state hygiene patch
 
