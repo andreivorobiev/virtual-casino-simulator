@@ -1,4 +1,14 @@
-# Virtual Casino Simulator v0.9.5.8 Release Notes
+# Virtual Casino Simulator v0.9.5.9 Release Notes
+
+## Non-shell production monitor handoff patch
+
+- Replaces Bash sourcing of `/etc/casino/edge-monitor.env` with a packaged Python runner that parses only the exact protected Authorization assignment without evaluating shell syntax.
+- Passes the validated bearer directly to the existing read-only edge observer through an explicit in-process environment seam; it never renders the bearer, token, or digest.
+- Adds listener-free regression coverage for the required `Bearer <token>` scheme separator, inert shell-significant token bytes, fixed secret-safe failures, and complete workflow/archive inventory.
+- Retains exact immutable v0.9.5.8 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no credential rotation, provider, DNS, billing, public signup, live OAuth, mail activation, public exposure, SSH ingress, or production mutation.
+
+## Prior v0.9.5.8 package-inventory recovery
 
 ## Extracted-host package-inventory recovery patch
 

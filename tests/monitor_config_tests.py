@@ -17,6 +17,8 @@ from pathlib import Path
 
 # Import the tracked validator under test.
 from scripts import validate_monitor_config
+# Import the tracked non-shell observer runner under test.
+from scripts import run_edge_monitor
 
 
 # Prove monitor validation and repair never require a listener or real secret.
@@ -49,6 +51,54 @@ class MonitorConfigTests(unittest.TestCase):
     def test_matching_pair_passes(self):
         # Exercise the listener-free public validator.
         validate_monitor_config.validate_pair(self.monitor, self.application)
+
+    # Prove the runner preserves the exact Bearer value as one in-memory assignment.
+    def test_non_shell_runner_preserves_authorization_value(self):
+        # Replace the token with shell-significant bytes that remain inert outside a shell.
+        token = "synthetic-monitor-token-$HOME-$(false)-semicolon;"
+        # Write the exact scheme and token with the required separating space.
+        self.monitor.write_text(f"CASINO_EDGE_MONITOR_AUTHORIZATION=Bearer {token}\n", encoding="utf-8", newline="\n")
+        # Capture only the observer arguments and explicit environment seam.
+        captured = {}
+
+        # Model the edge observer without opening a listener or network connection.
+        def capture_gate(argv=None, environ=None):
+            # Copy the exact fixed command arguments for assertions.
+            captured["argv"] = list(argv or [])
+            # Copy the single explicit credential environment without rendering it.
+            captured["environ"] = dict(environ or {})
+            # Return the production observer's successful process status.
+            return 0
+
+        # Run the non-shell handoff against an inert policy path and capture seam.
+        result = run_edge_monitor.run_observation(self.monitor, self.root / "policy.json", gate_main=capture_gate)
+        # Require the observer status to propagate unchanged.
+        self.assertEqual(result, 0)
+        # Require the exact fixed read-only observer command.
+        self.assertEqual(captured["argv"], ["observe", "--policy", str(self.root / "policy.json")])
+        # Require only one exact Authorization assignment, including its scheme separator and inert metacharacters.
+        self.assertEqual(captured["environ"], {"CASINO_EDGE_MONITOR_AUTHORIZATION": f"Bearer {token}"})
+
+    # Prove runner parse failures never render the protected assignment.
+    def test_non_shell_runner_failure_is_secret_safe(self):
+        # Persist a malformed value containing an extra space after a synthetic sentinel.
+        sentinel = "synthetic-secret-sentinel"
+        # Write a value that the strict bearer grammar must reject before observation.
+        self.monitor.write_text(f"CASINO_EDGE_MONITOR_AUTHORIZATION=Bearer {sentinel} extra\n", encoding="utf-8", newline="\n")
+        # Capture the fixed command error boundary.
+        output = io.StringIO()
+        # Run the public command without any network-capable observer call.
+        with redirect_stdout(output), redirect_stderr(output):
+            # Invoke the same two fixed paths used by production.
+            result = run_edge_monitor.main(["--monitor-env", str(self.monitor), "--policy", str(self.root / "policy.json")])
+        # Require a fail-closed process result.
+        self.assertEqual(result, 1)
+        # Read the bounded combined command output.
+        message = output.getvalue()
+        # Reject the raw protected sentinel.
+        self.assertNotIn(sentinel, message)
+        # Require one fixed secret-safe failure category.
+        self.assertIn("edge monitor configuration invalid", message)
 
     # Prove a mismatched digest blocks cutover.
     def test_mismatch_fails_closed(self):

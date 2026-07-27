@@ -217,7 +217,7 @@ jobs:
           mv -Tf /opt/casino/current.next /opt/casino/current
           systemctl restart casino
           systemctl reload nginx
-          bash -lc 'set -a; . /etc/casino/edge-monitor.env; set +a; /opt/casino/venv/bin/python /opt/casino/current/scripts/edge_gate.py observe --policy /opt/casino/current/deploy/edge/restricted-preview.json'
+          /opt/casino/venv/bin/python /opt/casino/current/scripts/run_edge_monitor.py --monitor-env /etc/casino/edge-monitor.env --policy /opt/casino/current/deploy/edge/restricted-preview.json
           rm -rf "${staging}" "${prior_env}"
           trap - ERR
           REMOTE_DEPLOY

@@ -57,6 +57,8 @@ ALLOWED_FILES = {
     "scripts/package_app.py",
     # Package the secret-safe monitor pairing validator invoked before cutover.
     "scripts/validate_monitor_config.py",
+    # Package the non-shell monitor runner invoked after production restart.
+    "scripts/run_edge_monitor.py",
     "scripts/write_release_env.py",
 }
 # Reject runtime, private, generated, test, and local-evidence directories anywhere.
@@ -103,6 +105,8 @@ REQUIRED_FILES = {
     "scripts/package_app.py",
     # Require the monitor validator because it gates activation before selector mutation.
     "scripts/validate_monitor_config.py",
+    # Require the non-shell monitor runner because post-cutover health invokes it.
+    "scripts/run_edge_monitor.py",
     "scripts/write_release_env.py",
     "casino/core/recovery.py",
     "web/app.js",

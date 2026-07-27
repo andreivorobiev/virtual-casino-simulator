@@ -173,6 +173,8 @@
   "whatsNew.entry.0_9_5_6.body": "This release packages the accepted documentation truth pass as the current private-beta patch while keeping 0.9.6.0 reserved for the next large Claude product bundle.",
   "whatsNew.entry.0_9_5_8.title": "Complete release package recovery",
   "whatsNew.entry.0_9_5_8.body": "This release packages every host-required deployment script, keeps deterministic rollback and secret-safe monitor validation, and preserves 0.9.6.0 for the next product wave.",
+  "whatsNew.entry.0_9_5_9.title": "Safer automated monitoring",
+  "whatsNew.entry.0_9_5_9.body": "This release loads the root-managed monitor credential without shell evaluation, preserves deterministic rollback, and keeps 0.9.6.0 reserved for the next product wave.",
   "replay.title": "Round replay",
   "replay.empty": "No recent rounds to replay.",
   "replay.retention": "Replays are kept for {days} days.",
