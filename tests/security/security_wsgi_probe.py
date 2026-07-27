@@ -293,9 +293,54 @@ assert SENTINEL not in log_text and admin_token not in log_text and admin_csrf n
 
 # Logout through exact Origin and session CSRF proof.
 logout = request("POST", "/api/v2/auth/logout", {}, mutation_headers(admin_csrf, admin_token))
-# Require successful revocation and both cookie expirations.
+# Require successful revocation with one session expiry plus one CSRF rotation.
 assert logout["status"] == "200 OK"
-# Collect both ordered cookie clear headers.
+# Collect both ordered logout cookie headers.
 cleared = header_values(logout, "Set-Cookie")
-# Require session and CSRF cookies to clear with Secure, Strict, Max-Age, and epoch expiry.
-assert len(cleared) == 2 and all("Secure" in value and "SameSite=Strict" in value and "Max-Age=0" in value and "Expires=Thu, 01 Jan 1970" in value for value in cleared)
+# Require exactly the session expiration and the double-submit replacement.
+assert len(cleared) == 2
+# Read the expiring host-only session credential.
+session_cleared = next(value for value in cleared if value.startswith("casino_session="))
+# Require the session cookie to clear with Secure, Strict, Max-Age, and epoch expiry.
+assert "Secure" in session_cleared and "SameSite=Strict" in session_cleared and "Max-Age=0" in session_cleared and "Expires=Thu, 01 Jan 1970" in session_cleared
+# Read the rotated anonymous double-submit replacement issued by logout. (issue #438)
+rotated_csrf = response_cookie(logout, "casino_csrf")
+# Read the complete rotated cookie attributes for boundary assertions.
+rotated_attributes = next(value for value in cleared if value.startswith("casino_csrf="))
+# Require rotation rather than removal so the still-open sign-in view keeps a valid double-submit pair.
+assert 32 <= len(rotated_csrf) <= 128 and rotated_csrf != admin_csrf and "Max-Age=0" not in rotated_attributes
+# Require the rotated companion to stay browser-readable, Secure, Strict, and host-only.
+assert "HttpOnly" not in rotated_attributes and "Secure" in rotated_attributes and "SameSite=Strict" in rotated_attributes and "Domain=" not in rotated_attributes
+# Authenticate again immediately with the rotated anonymous pair exactly like the still-open sign-in form. (issue #438)
+relogin = request("POST", "/api/v2/auth/login", {"email": "preview-admin@example.invalid", "password": "synthetic-preview-password"}, mutation_headers(rotated_csrf))
+# Require login after logout to succeed without reloading the application shell.
+assert relogin["status"] == "200 OK"
+# Read the recovered session summary from the relogin envelope.
+relogin_session = decoded(relogin)["data"]["session"]
+# Require the recovered session to rotate onto its own distinct per-session CSRF proof.
+assert relogin_session["csrf_token"] != rotated_csrf and relogin_session["token"] != admin_token
+
+# Start one disposable guest trial from the anonymous sign-in surface with explicit terms acceptance. (issue #317)
+guest_started = request("POST", "/api/v2/auth/guest", {"accepted": True, "terms_version": "private-beta-1", "locale": "en-US", "device": "desktop"}, mutation_headers(relogin_session["csrf_token"]))
+# Require the anonymous guest creation to succeed under the browser integrity contract.
+assert guest_started["status"] == "200 OK"
+# Read the guest browser-session credential from its host-only cookie.
+guest_token = response_cookie(guest_started, "casino_session")
+# Read the guest session-bound double-submit value.
+guest_csrf = response_cookie(guest_started, "casino_csrf")
+# Read the one-time browser-context proof from the creation envelope.
+guest_nonce = decoded(guest_started)["data"]["guest_browser_nonce"]
+# End the trial through its authenticated lifecycle route with complete browser proofs. (issue #317)
+guest_end = request("POST", "/api/v2/auth/guest/end", {}, {"Origin": ORIGIN, "Cookie": f"casino_session={guest_token}; casino_csrf={guest_csrf}", "X-CSRF-Token": guest_csrf, "X-Guest-Browser-Nonce": guest_nonce})
+# Require the irreversible guest teardown to succeed.
+assert guest_end["status"] == "200 OK" and decoded(guest_end)["data"]["ended"] is True
+# Read the rotated anonymous double-submit replacement issued by trial end. (issue #438)
+guest_rotated = response_cookie(guest_end, "casino_csrf")
+# Read the complete rotated cookie attributes for boundary assertions.
+guest_rotated_attributes = next(value for value in header_values(guest_end, "Set-Cookie") if value.startswith("casino_csrf="))
+# Require trial end to rotate rather than remove the double-submit pair exactly like logout.
+assert 32 <= len(guest_rotated) <= 128 and guest_rotated != guest_csrf and "Max-Age=0" not in guest_rotated_attributes and "HttpOnly" not in guest_rotated_attributes
+# Authenticate a registered account immediately with the rotated pair exactly like the post-trial sign-in form. (issue #438)
+post_guest_login = request("POST", "/api/v2/auth/login", {"email": "preview-admin@example.invalid", "password": "synthetic-preview-password"}, mutation_headers(guest_rotated))
+# Require login after guest trial end to succeed without reloading the application shell.
+assert post_guest_login["status"] == "200 OK"

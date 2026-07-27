@@ -28,7 +28,7 @@ from casino.core.ids import new_id
 # Import required dependency so this module can use its public functions or constants.
 from casino.core.state_store import read_json, write_json, update_json
 # Import restricted-preview cookie helpers without coupling the auth store to WSGI.
-from casino.core.security import clear_csrf_cookie_header, csrf_cookie_header, new_csrf_token
+from casino.core.security import csrf_cookie_header, new_csrf_token
 # Import required dependency so this module can use its public functions or constants.
 from casino.errors import ConflictError, ForbiddenError, RateLimitError, UnauthorizedError, ValidationError
 
@@ -1246,15 +1246,15 @@ def clear_cookie_header(same_site: str = "Lax", secure: bool = False) -> tuple[s
     # Clear the host-only credential with both Max-Age and an epoch expiry.
     return ("Set-Cookie", f"{AUTH_SESSION_COOKIE}=; Path=/; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly{secure_attribute}; SameSite={same_site}")
 
-# Build all logout cookie expirations for the production browser boundary.
+# Build all logout cookie transitions for the production browser boundary.
 def clear_cookie_headers(same_site: str = "Lax", secure: bool = False, include_csrf: bool = False) -> list[tuple[str, str]]:
     # Start with the authenticated session credential expiration.
     headers = [clear_cookie_header(same_site, secure)]
-    # Clear the companion double-submit cookie when production set it.
+    # Rotate the companion double-submit cookie when production set it.
     if include_csrf:
-        # Prevent stale browser CSRF values from surviving logout.
-        headers.append(clear_csrf_cookie_header(same_site, secure))
-    # Return the complete ordered expiration header set.
+        # Replace the revoked session CSRF value with a fresh anonymous bootstrap token so the still-open sign-in view keeps a valid double-submit pair without a shell reload. (issue #438)
+        headers.append(csrf_cookie_header(new_csrf_token(), same_site, secure))
+    # Return the complete ordered logout header set.
     return headers
 
 # Define the is_public_api_path function used by this module.

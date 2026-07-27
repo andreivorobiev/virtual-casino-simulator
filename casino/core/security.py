@@ -333,14 +333,6 @@ def csrf_cookie_header(token: str, same_site: str, secure: bool = True) -> tuple
     return ("Set-Cookie", f"{CSRF_COOKIE}={token}; Path=/{secure_attribute}; SameSite={same_site}")
 
 
-# Expire the host-only CSRF cookie during logout.
-def clear_csrf_cookie_header(same_site: str, secure: bool = True) -> tuple[str, str]:
-    # Add Secure consistently with the session cookie being cleared.
-    secure_attribute = "; Secure" if secure else ""
-    # Clear both current and legacy browser storage using zero lifetime and an epoch date.
-    return ("Set-Cookie", f"{CSRF_COOKIE}=; Path=/; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT{secure_attribute}; SameSite={same_site}")
-
-
 # Return the fixed browser and transport headers required on every production response.
 def response_security_headers(effective_scheme: str) -> list[tuple[str, str]]:
     # Start with policy headers that apply over direct loopback and HTTPS edge requests.

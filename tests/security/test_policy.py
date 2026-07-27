@@ -328,10 +328,24 @@ class SessionSecurityTests(unittest.TestCase):
         self.assertTrue(all("Domain=" not in value for value in established))
         # Require the browser-readable CSRF cookie not to become an authentication credential.
         self.assertNotIn("HttpOnly", established[1])
-        # Build the complete logout expiration set.
+        # Build the complete logout transition set.
         cleared = [value for _name, value in auth.clear_cookie_headers("Strict", True, True)]
-        # Require both values to expire immediately and at the epoch.
-        self.assertTrue(all("Max-Age=0" in value and "Expires=Thu, 01 Jan 1970" in value for value in cleared))
+        # Require one expiring session credential plus one rotated CSRF companion.
+        self.assertEqual(len(cleared), 2)
+        # Require the session credential to expire immediately and at the epoch.
+        self.assertTrue("Max-Age=0" in cleared[0] and "Expires=Thu, 01 Jan 1970" in cleared[0])
+        # Require logout to rotate the browser-readable CSRF cookie rather than remove it. (issue #438)
+        rotated = cleared[1]
+        # Require the rotated companion to stay browser-readable, Secure, Strict, and host-only.
+        self.assertTrue(rotated.startswith("casino_csrf=") and "HttpOnly" not in rotated and "Secure" in rotated and "SameSite=Strict" in rotated and "Domain=" not in rotated)
+        # Read the anonymous replacement value from the leading cookie pair.
+        replacement = rotated.split(";", 1)[0].split("=", 1)[1]
+        # Require a bounded non-empty bootstrap token instead of an expiry.
+        self.assertTrue(32 <= len(replacement) <= 128 and "Max-Age=0" not in rotated)
+        # Build a second logout transition to observe per-logout rotation.
+        repeat = [value for _name, value in auth.clear_cookie_headers("Strict", True, True)][1]
+        # Require each logout to issue a distinct anonymous double-submit value.
+        self.assertNotEqual(replacement, repeat.split(";", 1)[0].split("=", 1)[1])
 
 
 # Validate deterministic thread-safe request bounds and capacity recovery.

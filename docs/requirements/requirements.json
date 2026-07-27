@@ -8025,7 +8025,7 @@
     {
       "id": "SESSION-006",
       "module": "Core",
-      "description": "Restricted-preview sessions use host-only Secure HttpOnly SameSite cookies, distinct per-session CSRF values, bounded per-user concurrent session retention with least-recently-used eviction, bounded lifetime, logout clearing, and revocation after privilege-bearing account changes.",
+      "description": "Restricted-preview sessions use host-only Secure HttpOnly SameSite cookies, distinct per-session CSRF values, bounded per-user concurrent session retention with least-recently-used eviction, bounded lifetime, logout clearing of the session credential with rotation of the browser-readable double-submit cookie onto a fresh anonymous bootstrap token, and revocation after privilege-bearing account changes.",
       "status": "PASS",
       "api_tests": [
         "API-SEC-PREVIEW-001",
@@ -8042,8 +8042,8 @@
         "casino/core/state_store.py"
       ],
       "introduced_in": "issue-203-restricted-preview-security",
-      "changed_in": "issue-226-concurrent-sessions",
-      "notes": "The CSRF value is intentionally distinct from the bearer-compatible session identifier and is never logged. Superseded the earlier single-session login-rotation behavior in favor of bounded concurrent sessions per SESSION-007 (issue #226)."
+      "changed_in": "issue-438-logout-csrf-rotation",
+      "notes": "The CSRF value is intentionally distinct from the bearer-compatible session identifier and is never logged. Superseded the earlier single-session login-rotation behavior in favor of bounded concurrent sessions per SESSION-007 (issue #226). Logout rotates rather than removes the double-submit cookie so the still-open sign-in view can authenticate without a shell reload; the revoked session CSRF value never survives logout (issue #438)."
     },
     {
       "id": "SESSION-007",
