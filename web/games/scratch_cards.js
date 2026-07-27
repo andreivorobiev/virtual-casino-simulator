@@ -29,6 +29,8 @@ let requestCounter = 0;
 let pendingStartId = null;
 // Retain an unresolved scratch action so a lost response cannot change its position set.
 let pendingScratch = null;
+// Retain the last committed wager so one click can buy the same card again.
+let lastBet = null;
 // Increment the mount generation so late async work cannot render into another route.
 let mountGeneration = 0;
 
@@ -138,10 +140,12 @@ function controlsHtml(card) {
   const remaining = coveredPositions(card);
   // Enable reveal-all only while one or more funded cells remain covered.
   const revealDisabled = busy || !card || !['ready', 'scratching'].includes(card.status) || remaining.length === 0;
+  // Enable one-click repeat only from an idle or settled phase with a remembered wager and no pending retry.
+  const repeatDisabled = busy || cardActive || Boolean(pendingStartId) || Boolean(pendingScratch) || !lastBet;
   // Select help copy that matches the actionable current phase.
   const help = canResumePurchase ? text('controls.pendingRetry') : (cardActive ? text('controls.scratchHelp') : text('controls.startHelp'));
   // Return a short keyboard-friendly rail without nested scrolling.
-  return `<section class="panel control-rail scratch-controls" aria-label="${safe(text('controls.region'))}"><h2>${safe(text('controls.title'))}</h2><label for="scratch-wager">${safe(text('controls.wager'))}</label><select id="scratch-wager" data-focus-id="wager"${cardActive || busy ? ' disabled' : ''}>${options}</select><button type="button" class="scratch-primary" data-action="start" data-focus-id="start"${startDisabled ? ' disabled' : ''}>${safe(text('controls.start'))}</button><button type="button" data-action="reveal-all" data-focus-id="reveal-all"${revealDisabled ? ' disabled' : ''}>${safe(text('controls.revealAll'))}</button><p class="scratch-help">${safe(help)}</p>${pendingScratch ? `<p class="scratch-pending" role="status">${safe(text('controls.pendingRetry'))}</p>` : ''}</section>`;
+  return `<section class="panel control-rail scratch-controls" aria-label="${safe(text('controls.region'))}"><h2>${safe(text('controls.title'))}</h2><label for="scratch-wager">${safe(text('controls.wager'))}</label><select id="scratch-wager" data-focus-id="wager"${cardActive || busy ? ' disabled' : ''}>${options}</select><button type="button" class="scratch-primary" data-action="start" data-focus-id="start"${startDisabled ? ' disabled' : ''}>${safe(text('controls.start'))}</button><button type="button" class="scratch-repeat" data-action="repeat" data-focus-id="repeat"${repeatDisabled ? ' disabled' : ''}>${safe(text('controls.repeat'))}</button><button type="button" data-action="reveal-all" data-focus-id="reveal-all"${revealDisabled ? ' disabled' : ''}>${safe(text('controls.revealAll'))}</button><p class="scratch-help">${safe(help)}</p>${pendingScratch ? `<p class="scratch-pending" role="status">${safe(text('controls.pendingRetry'))}</p>` : ''}</section>`;
 }
 
 
@@ -189,7 +193,7 @@ function stylesHtml() {
   // Keep the ticket wider than both support rails at desktop and stack in DOM journey order.
   return `<style>
     /* Own the Scratch Cards visual hierarchy inside the lazy game module. */
-    .scratch-shell{display:grid;grid-template-rows:auto minmax(0,1fr);gap:16px;height:100%;min-width:0}.scratch-header{display:flex;align-items:end;justify-content:space-between;gap:14px}.scratch-header h1,.scratch-header p{margin:0}.scratch-phase{max-width:42ch;padding:7px 12px;border:1px solid var(--gold);border-radius:999px;text-align:center}.scratch-layout{display:grid;grid-template-columns:minmax(210px,.72fr) minmax(500px,2.35fr) minmax(225px,.78fr);gap:16px;align-items:start;min-width:0}.scratch-controls,.scratch-details,.scratch-stage{border:1px solid var(--gold);border-radius:16px;background:rgba(20,10,34,.84);padding:16px}.scratch-controls{display:grid;gap:12px}.scratch-controls select,.scratch-controls button{min-height:42px}.scratch-primary{background:#a51f2d;color:#fff}.scratch-help,.scratch-pending,.scratch-muted,.scratch-stage-head p{color:var(--muted,#b8c8c1)}.scratch-stage{display:grid;gap:16px;min-width:0}.scratch-stage.is-empty{min-height:430px;place-content:center;text-align:center}.scratch-empty-mark{display:grid;place-items:center;width:112px;aspect-ratio:1;margin:auto;border:3px dashed rgba(255,215,128,.7);border-radius:24px;background:repeating-linear-gradient(135deg,rgba(255,215,128,.72) 0 8px,rgba(255,215,128,.12) 8px 16px)}.scratch-empty-mark::after{content:"";width:38%;aspect-ratio:1;border:5px solid #07150f;border-radius:50%;box-shadow:0 0 0 5px rgba(255,215,128,.8)}.scratch-stage-head{display:flex;align-items:start;justify-content:space-between;gap:12px}.scratch-stage-head h2{margin:.2rem 0 0}.scratch-ticket-id{padding:6px 9px;border-radius:8px;background:rgba(255,255,255,.05);font-size:.82rem}.scratch-grid{display:grid;grid-template-columns:repeat(3,minmax(90px,1fr));gap:12px;width:min(100%,620px);margin:auto}.scratch-cell{display:grid;place-content:center;gap:6px;aspect-ratio:1;min-height:90px;padding:10px;border:2px solid rgba(255,215,128,.32);border-radius:14px;background:linear-gradient(135deg,#8a774e,#d5c08b 45%,#786641);color:#10251c;transition:transform .16s ease,opacity .16s ease,border-color .16s ease}.scratch-cell.is-covered:not(:disabled):hover{transform:translateY(-2px);border-color:#fff1bd}.scratch-cell.is-revealed{background:linear-gradient(145deg,#f7edd0,#d8c38e);border-color:#ffd780;opacity:1}.scratch-foil{display:block;width:clamp(32px,5vw,54px);height:clamp(12px,2vw,20px);margin:auto;border-radius:999px;background:repeating-linear-gradient(90deg,#4f432c 0 5px,#d9c58f 5px 10px);box-shadow:0 0 0 3px rgba(16,37,28,.22)}.scratch-prize{font-size:clamp(.9rem,2vw,1.25rem);font-weight:800}.scratch-cell-state{font-size:.76rem;font-weight:700;text-transform:uppercase}.scratch-result{min-height:1.5em;margin:0;text-align:center;font-weight:700}.scratch-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.scratch-summary span{display:grid;gap:4px;padding:10px;border-radius:10px;background:rgba(255,255,255,.05)}.scratch-details{display:grid;gap:18px}.scratch-details h2,.scratch-details h3{margin-top:0}.scratch-tiers,.scratch-history{display:grid;gap:7px;margin:0;padding:0;list-style:none}.scratch-tiers li,.scratch-history li{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px;border-bottom:1px solid rgba(255,255,255,.1)}.scratch-shell button:focus-visible,.scratch-shell select:focus-visible{outline:3px solid var(--gold);outline-offset:3px}@media(max-width:1200px){.scratch-shell{height:auto}.scratch-layout{grid-template-columns:1fr}.scratch-controls{order:1}.scratch-stage{order:2}.scratch-details{order:3}.scratch-stage.is-empty{min-height:300px}}@media(max-width:520px){.scratch-header{align-items:start;flex-direction:column}.scratch-phase{max-width:100%}.scratch-controls,.scratch-details,.scratch-stage{padding:12px}.scratch-grid{gap:8px;grid-template-columns:repeat(3,minmax(0,1fr))}.scratch-cell{min-height:72px;padding:7px}.scratch-summary{grid-template-columns:1fr}.scratch-ticket-id{display:none}}@media(prefers-reduced-motion:reduce){.scratch-shell *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+    .scratch-shell{display:grid;grid-template-rows:auto minmax(0,1fr);gap:16px;height:100%;min-width:0}.scratch-header{display:flex;align-items:end;justify-content:space-between;gap:14px}.scratch-header h1,.scratch-header p{margin:0}.scratch-phase{max-width:42ch;padding:7px 12px;border:1px solid var(--gold);border-radius:999px;text-align:center}.scratch-layout{display:grid;grid-template-columns:minmax(210px,.72fr) minmax(500px,2.35fr) minmax(225px,.78fr);gap:16px;align-items:start;min-width:0}.scratch-controls,.scratch-details,.scratch-stage{border:1px solid var(--gold);border-radius:16px;background:rgba(20,10,34,.84);padding:16px}.scratch-controls{display:grid;gap:12px}.scratch-controls select,.scratch-controls button{min-height:42px}.scratch-primary{background:#a51f2d;color:#fff}.scratch-help,.scratch-pending,.scratch-muted,.scratch-stage-head p{color:var(--muted,#b8c8c1)}.scratch-stage{display:grid;gap:16px;min-width:0}.scratch-stage.is-empty{min-height:430px;place-content:center;text-align:center}.scratch-empty-mark{display:grid;place-items:center;width:112px;aspect-ratio:1;margin:auto;border:3px dashed rgba(255,215,128,.7);border-radius:24px;background:repeating-linear-gradient(135deg,rgba(255,215,128,.72) 0 8px,rgba(255,215,128,.12) 8px 16px)}.scratch-empty-mark::after{content:"";width:38%;aspect-ratio:1;border:5px solid #07150f;border-radius:50%;box-shadow:0 0 0 5px rgba(255,215,128,.8)}.scratch-stage-head{display:flex;align-items:start;justify-content:space-between;gap:12px}.scratch-stage-head h2{margin:.2rem 0 0}.scratch-ticket-id{padding:6px 9px;border-radius:8px;background:rgba(255,255,255,.05);font-size:.82rem}.scratch-grid{display:grid;grid-template-columns:repeat(3,minmax(90px,1fr));gap:12px;width:min(100%,620px);margin:auto}.scratch-cell{display:grid;place-content:center;gap:6px;aspect-ratio:1;min-height:90px;padding:10px;border:2px solid rgba(255,215,128,.32);border-radius:14px;background:linear-gradient(135deg,#8a774e,#d5c08b 45%,#786641);color:#10251c;transition:transform .16s ease,opacity .16s ease,border-color .16s ease}.scratch-cell.is-covered:not(:disabled):hover{transform:translateY(-2px);border-color:#fff1bd}.scratch-cell.is-revealed{background:linear-gradient(145deg,#f7edd0,#d8c38e);border-color:#ffd780;opacity:1}.scratch-foil{display:block;width:clamp(32px,5vw,54px);height:clamp(12px,2vw,20px);margin:auto;border-radius:999px;background:repeating-linear-gradient(90deg,#4f432c 0 5px,#d9c58f 5px 10px);box-shadow:0 0 0 3px rgba(16,37,28,.22)}.scratch-prize{font-size:clamp(.9rem,2vw,1.25rem);font-weight:800}.scratch-cell-state{font-size:.76rem;font-weight:700;text-transform:uppercase}.scratch-result{min-height:1.5em;margin:0;text-align:center;font-weight:700}.scratch-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.scratch-summary span{display:grid;gap:4px;padding:10px;border-radius:10px;background:rgba(255,255,255,.05)}.scratch-details{display:grid;gap:18px}.scratch-details h2,.scratch-details h3{margin-top:0}.scratch-tiers,.scratch-history{display:grid;gap:7px;margin:0;padding:0;list-style:none}.scratch-tiers li,.scratch-history li{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px;border-bottom:1px solid rgba(255,255,255,.1)}.scratch-shell button:focus-visible,.scratch-shell select:focus-visible{outline:3px solid var(--gold);outline-offset:3px}@media(max-width:1200px){.scratch-shell{height:auto}.scratch-layout{grid-template-columns:1fr}.scratch-controls{order:1}.scratch-stage{order:2}.scratch-details{order:3}.scratch-stage.is-empty{min-height:300px}}@media(max-width:520px){.scratch-header{align-items:start;flex-direction:column}.scratch-phase{max-width:100%}.scratch-controls,.scratch-details,.scratch-stage{padding:12px}.scratch-grid{gap:8px;grid-template-columns:repeat(3,minmax(0,1fr))}.scratch-cell{min-height:72px;padding:7px}.scratch-summary{grid-template-columns:1fr}.scratch-ticket-id{display:none}}@media(prefers-reduced-motion:reduce){.scratch-shell *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}.scratch-repeat{min-height:44px;background:transparent;color:var(--gold);border:1px solid var(--gold)}.scratch-repeat:disabled{opacity:.5}
     /* Keep the complete three-by-three stage and instruction visible at the primary desktop viewport. */
     .scratch-grid{width:min(100%,480px)}
     /* End the scoped style block without creating a second primary scroll surface. */
@@ -307,6 +311,8 @@ async function startCard() {
   pendingStartId = null;
   // Clear any stale reveal retry left from the prior settled card.
   pendingScratch = null;
+  // Remember the committed wager so one click can buy the same card again.
+  lastBet = { wager: request.wager };
   // Refresh the authenticated shared wallet without changing action success semantics.
   await refreshWalletSafely(generation);
 }
@@ -337,6 +343,21 @@ async function scratchPositions(positions) {
 }
 
 
+// Re-apply the last committed wager and buy one identical card without a timer.
+async function repeat() {
+  // Ignore repeat while an atomic action is unresolved, a purchase or reveal retry is pending, or no prior wager exists.
+  if (busy || pendingStartId || pendingScratch || !lastBet) return;
+  // Read the current card once to block repeat while a funded card is still mid-reveal.
+  const card = currentCard();
+  // Stop when an unsettled card would be abandoned by starting another.
+  if (card && card.status !== 'settled') return;
+  // Restore the previous wager into the local selection.
+  selectedWager = lastBet.wager;
+  // Buy the same card through the shared atomic action path.
+  await runAction(startCard);
+}
+
+
 // Attach semantic control handlers after every deterministic render.
 function bindEvents() {
   // Resolve the wager selector when the current phase allows changes.
@@ -347,6 +368,10 @@ function bindEvents() {
   const startButton = root?.querySelector('[data-action="start"]');
   // Start one retry-safe card when the control is available.
   if (startButton) startButton.onclick = () => runAction(startCard);
+  // Resolve the one-click repeat action.
+  const repeatButton = root?.querySelector('[data-action="repeat"]');
+  // Re-buy the last committed wager as one identical card.
+  if (repeatButton) repeatButton.onclick = () => repeat();
   // Resolve the stable reveal-all action.
   const revealAllButton = root?.querySelector('[data-action="reveal-all"]');
   // Reveal every remaining cell through one persisted action.
@@ -401,6 +426,8 @@ export const ScratchCardsGame = {
     const generation = ++mountGeneration;
     // Retain the shell-provided route outlet.
     root = node;
+    // Reset the repeatable wager so another session never inherits it.
+    lastBet = null;
     // Start protected loading so a rejected mount cannot retain a locale callback or outlet.
     try {
       // Load both active and fallback Scratch Cards dictionaries before first render.
@@ -415,6 +442,10 @@ export const ScratchCardsGame = {
       if (!ownsMount(generation)) return;
       // Cache only the public state used by controls, stage, and history.
       state = payload;
+      // Recover a repeatable wager from the newest settled card so repeat survives a reload.
+      const settledCard = currentCard()?.status === 'settled' ? currentCard() : [...(state?.recent_cards || [])].pop();
+      // Restore the repeatable wager only when a settled card exposes it.
+      if (settledCard && settledCard.wager != null) lastBet = { wager: Number(settledCard.wager) };
       // Render the complete issue #87 surface.
       render();
       // Resume a persisted purchase before exposing any reveal action.
@@ -437,6 +468,8 @@ export const ScratchCardsGame = {
       pendingStartId = null;
       // Release the pending reveal identity from this route instance.
       pendingScratch = null;
+      // Release the repeatable wager from this failed route instance.
+      lastBet = null;
       // Release the route outlet before the shared recovery UI takes ownership.
       root = null;
       // Release the local action flag without touching any global listener or timer.
@@ -459,6 +492,8 @@ export const ScratchCardsGame = {
     pendingStartId = null;
     // Release unresolved scratch records; persisted server state remains authoritative on remount.
     pendingScratch = null;
+    // Release the repeatable wager so the next session starts fresh.
+    lastBet = null;
     // Release the DOM reference so late promises cannot render into another route.
     root = null;
     // Release the local action flag; this module owns no timers or global listeners.

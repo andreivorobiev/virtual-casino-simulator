@@ -7,6 +7,7 @@
   "controls.deal": "Deal",
   "controls.fold": "Fold",
   "controls.help": "Deal five cards, then call for exactly twice the ante or fold before the dealer reveal.",
+  "controls.repeat": "Repeat bet",
   "controls.retryCall": "Retry call",
   "controls.retryDeal": "Retry deal",
   "controls.retryFold": "Retry fold",

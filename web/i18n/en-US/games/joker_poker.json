@@ -9,6 +9,7 @@
   "controls.deal": "Deal hand",
   "controls.draw": "Draw cards",
   "controls.holdHelp": "Held cards stay in place; unheld cards draw from the remaining deck.",
+  "controls.repeat": "Repeat bet",
   "controls.retryDeal": "Retry deal",
   "controls.retryDraw": "Retry draw",
   "controls.retryHelp": "Retrying uses the same action identity.",

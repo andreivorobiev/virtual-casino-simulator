@@ -41,6 +41,14 @@ assert.match(source, /import \{ renderCard \} from '\.\.\/core\/cards\.js'/);
 assert.match(source, /function localizedCard\b/);
 // Verify uncertain API actions retain retry-safe ids.
 assert.match(source, /retryActionIds/);
+// Verify the one-click repeat re-opens a round with the same base wager.
+assert.match(source, /async function repeat\b/);
+// Verify the repeat control is rendered as a secondary action button.
+assert.match(source, /data-action="repeat"/);
+// Verify repeat is guarded against in-flight, missing-wager, and active-round states.
+assert.match(source, /if \(busy \|\| !lastBet \|\| state\?\.active_round\) return/);
+// Verify the repeatable base wager is captured only after a settled round.
+assert.match(source, /settledRound\?\.phase === 'settled'/);
 // Verify this module owns no timer that could survive unmount.
 assert.doesNotMatch(source, /setTimeout|setInterval|requestAnimationFrame/);
 // Verify reduced-motion behavior is included in game-owned styling.
@@ -48,7 +56,7 @@ assert.match(source, /prefers-reduced-motion:reduce/);
 // Verify caller-controlled player compatibility helpers are not used by the browser module.
 assert.doesNotMatch(source, /withCurrentPlayer|currentPlayerPath/);
 // Verify visible titles and actions resolve through resource keys.
-for (const key of ['title', 'controls.deal', 'controls.pull', 'controls.ride', 'controls.wager', 'paytable.title']) {
+for (const key of ['title', 'controls.deal', 'controls.pull', 'controls.ride', 'controls.repeat', 'controls.wager', 'paytable.title']) {
   // Require non-empty English copy for every probed visible key.
   assert.equal(typeof english[key], 'string');
   // Require non-empty Russian copy for every probed visible key.

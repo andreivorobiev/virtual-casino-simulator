@@ -32,6 +32,14 @@ assert.match(source, /export const DeucesWildVideoPokerGame\b/);
 assert.match(source, /data-testid="deuces-wild-video-poker"/);
 // Verify the game cannot nest another main landmark inside the shared shell outlet.
 assert.doesNotMatch(source, /<main\b/);
+// Verify the additive one-click repeat control is rendered beside the primary deal action.
+assert.match(source, /data-action="repeat"/);
+// Verify the repeat handler starts a new deal instead of replaying holds or draws.
+assert.match(source, /async function repeat\b[\s\S]*runAction\(\(\) => deal\(lastBet\.wager\)\)/);
+// Verify both required locales expose the additive repeat-bet control label.
+assert.equal(english['controls.repeat'], 'Repeat bet');
+// Verify the paired Russian repeat-bet label is present and nonblank.
+assert.ok(russian['controls.repeat'] && russian['controls.repeat'].trim(), 'Russian controls.repeat must not be blank');
 // Verify the central game stage remains a localized named region after removing that landmark.
 assert.match(source, /<section class="dwvp-stage" aria-label="\$\{safe\(stageLabel\)\}"/);
 // Verify every localized lookup uses the game-owned resource domain.
@@ -99,7 +107,7 @@ for (const [key, englishValue] of Object.entries(english)) {
 }
 
 // Probe visible, control, result, and ARIA keys with direct lookups through localization.
-for (const key of ['title', 'controls.deal', 'controls.draw', 'stage.readyTitle', 'summary.outcome', 'cards.hold', 'paytable.title']) {
+for (const key of ['title', 'controls.deal', 'controls.draw', 'controls.repeat', 'stage.readyTitle', 'summary.outcome', 'cards.hold', 'paytable.title']) {
   // Require a direct or dynamically prefixed lookup for every probed player-facing category.
   assert.ok(source.includes(`text('${key}'`) || source.includes(`text(\`${key}`), `Frontend must localize ${key}`);
 }

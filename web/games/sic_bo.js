@@ -39,6 +39,8 @@ let rolling = false;
 let pendingActionId = null;
 // Retain the exact unresolved wager snapshot so retries cannot change semantics.
 let pendingWagers = null;
+// Retain the last committed wager map so one click can repeat the same shake.
+let lastBet = null;
 // Own one disposable #97 timer scope per mount.
 let motionScope = null;
 // Store the locale unsubscribe callback so route exit releases it.
@@ -232,8 +234,10 @@ function controlsHtml() {
   const actionLabel = rolling || busy ? text('controls.rolling') : active || pendingActionId ? text('controls.resume') : text('controls.shake');
   // Disable the action only when ready state has no selected positions or work is active.
   const actionDisabled = busy || (!active && !pendingActionId && selectedWagers.size === 0);
+  // Enable the one-click repeat only when a prior wager map exists and no shake or unresolved retry is active.
+  const repeatDisabled = busy || rolling || Boolean(pendingActionId) || !lastBet;
   // Return the stable control rail without moving its primary button between phases.
-  return `<aside class="sb-panel sb-controls" aria-label="${safe(text('aria.controls'))}"><h2>${safe(text('controls.title'))}</h2><label for="sb-wager">${safe(text('controls.wager'))}</label><input id="sb-wager" type="number" min="0.01" max="10000" step="0.01" value="${safe(wagerAmount)}"${locked ? ' disabled' : ''}><p class="sb-help">${safe(locked ? text('controls.lockedHelp') : text('controls.wagerHelp'))}</p><div class="sb-control-metric"><span>${safe(text('controls.selectedCount'))}</span><strong>${safe(selectedWagers.size)}</strong></div><div class="sb-control-metric"><span>${safe(text('controls.totalWager'))}</span><strong>${safe(tokenAmount(totalSelectedWager()))}</strong></div><button type="button" class="sb-primary" data-action="shake"${actionDisabled ? ' disabled' : ''}>${safe(actionLabel)}</button><button type="button" data-action="clear"${locked || !selectedWagers.size ? ' disabled' : ''}>${safe(text('controls.clear'))}</button></aside>`;
+  return `<aside class="sb-panel sb-controls" aria-label="${safe(text('aria.controls'))}"><h2>${safe(text('controls.title'))}</h2><label for="sb-wager">${safe(text('controls.wager'))}</label><input id="sb-wager" type="number" min="0.01" max="10000" step="0.01" value="${safe(wagerAmount)}"${locked ? ' disabled' : ''}><p class="sb-help">${safe(locked ? text('controls.lockedHelp') : text('controls.wagerHelp'))}</p><div class="sb-control-metric"><span>${safe(text('controls.selectedCount'))}</span><strong>${safe(selectedWagers.size)}</strong></div><div class="sb-control-metric"><span>${safe(text('controls.totalWager'))}</span><strong>${safe(tokenAmount(totalSelectedWager()))}</strong></div><button type="button" class="sb-primary" data-action="shake"${actionDisabled ? ' disabled' : ''}>${safe(actionLabel)}</button><button type="button" class="sb-repeat" data-action="repeat"${repeatDisabled ? ' disabled' : ''}>${safe(text('controls.repeat'))}</button><button type="button" data-action="clear"${locked || !selectedWagers.size ? ' disabled' : ''}>${safe(text('controls.clear'))}</button></aside>`;
 }
 
 
@@ -275,7 +279,7 @@ function stylesHtml() {
   // Keep the center stage dominant at desktop and stack control, stage, data below the shared breakpoint.
   return `<style>
     /* Own the complete Sic Bo layout inside the lazy game module. */
-    .sb-shell{display:grid;gap:16px;min-width:0}.sb-header{display:flex;align-items:end;justify-content:space-between;gap:12px}.sb-header h1,.sb-header p{margin:0}.sb-phase{min-height:36px;padding:8px 13px;border:1px solid var(--gold);border-radius:999px;display:inline-flex;align-items:center}.sb-layout{display:grid;grid-template-columns:minmax(220px,.7fr) minmax(0,2.5fr) minmax(235px,.78fr);gap:16px;align-items:start;min-width:0}.sb-panel,.sb-stage{border:1px solid var(--gold);border-radius:16px;background:rgba(20,10,34,.84);padding:16px;min-width:0}.sb-controls{display:grid;gap:12px}.sb-controls h2,.sb-data h2,.sb-board h2,.sb-bet-group h3{margin:0}.sb-controls input{min-height:44px}.sb-primary{min-height:46px;background:#a51f2d;color:#fff}.sb-help,.sb-board header p,.sb-empty,.sb-bet-odds,.sb-slip span,.sb-result p{color:var(--muted,#b8c8c1)}.sb-control-metric{display:flex;justify-content:space-between;gap:8px;padding:10px;border-radius:10px;background:rgba(255,255,255,.045)}.sb-stage{display:grid;gap:14px}.sb-dice-tray{min-height:132px;display:flex;align-items:center;justify-content:center;gap:clamp(14px,3vw,32px);border-radius:14px;background:radial-gradient(circle at 50% 20%,rgba(255,59,107,.14),rgba(0,0,0,.18));overflow:hidden}.sb-die{width:96px;aspect-ratio:1;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);padding:12px;border:2px solid #f5ead0;border-radius:18px;background:#fff7e8;box-shadow:0 12px 24px rgba(0,0,0,.28)}.sb-pip{display:grid;place-items:center}.sb-pip.is-visible::after{content:"";width:15px;height:15px;border-radius:50%;background:#13231c}.sb-die.is-rolling{animation:sb-tumble .65s ease-in-out infinite alternate}.sb-result{min-height:116px;padding:14px;border:1px solid rgba(255,255,255,.12);border-radius:12px}.sb-result h2,.sb-result p{margin:0}.sb-result-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:10px 0}.sb-result-grid span{display:grid;gap:4px;padding:9px;border-radius:9px;background:rgba(255,255,255,.045)}.sb-board{display:grid;gap:10px}.sb-board header{display:flex;align-items:end;justify-content:space-between;gap:12px}.sb-board header p{margin:0;max-width:52ch}.sb-bet-group{display:grid;gap:6px}.sb-bet-group h3{font-size:.88rem;color:var(--gold)}.sb-bet-grid{display:grid;gap:6px}.sb-bet-group[data-bet-group="ranges"] .sb-bet-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.sb-bet-group[data-bet-group="totals"] .sb-bet-grid{grid-template-columns:repeat(7,minmax(0,1fr))}.sb-bet-group[data-bet-group="singles"] .sb-bet-grid,.sb-bet-group[data-bet-group="doubles"] .sb-bet-grid{grid-template-columns:repeat(6,minmax(0,1fr))}.sb-bet-group[data-bet-group="triples"] .sb-bet-grid{grid-template-columns:repeat(7,minmax(0,1fr))}.sb-bet-group[data-bet-group="combinations"] .sb-bet-grid{grid-template-columns:repeat(5,minmax(0,1fr))}.sb-bet{min-height:46px;padding:6px;display:grid;place-items:center;gap:2px;border:1px solid rgba(255,255,255,.16);border-radius:9px;background:rgba(255,255,255,.045);line-height:1.08}.sb-bet.is-selected{border-color:var(--gold);box-shadow:inset 0 0 0 2px var(--gold)}.sb-bet-label{font-weight:700}.sb-bet-odds,.sb-bet-amount{font-size:.72rem}.sb-bet-amount{color:var(--gold)}.sb-data{max-height:720px;overflow-y:auto;display:grid;gap:18px;scrollbar-width:thin;scrollbar-color:var(--gold) rgba(255,255,255,.05)}.sb-data:focus-visible,.sb-shell button:focus-visible,.sb-shell input:focus-visible{outline:3px solid var(--gold);outline-offset:2px}.sb-data section{display:grid;gap:10px}.sb-slip,.sb-history{display:grid;gap:8px;margin:0;padding:0;list-style:none}.sb-slip li,.sb-history li{display:grid;gap:5px;padding:9px;border-radius:9px;background:rgba(255,255,255,.045)}.sb-slip li{grid-template-columns:minmax(0,1fr) auto}.sb-slip li div{display:grid}.sb-slip li button{grid-column:1/-1;min-height:42px}.sb-history li strong{letter-spacing:.12em}@keyframes sb-tumble{from{transform:translateY(-5px) rotate(-5deg);opacity:.72}to{transform:translateY(5px) rotate(5deg);opacity:1}}
+    .sb-shell{display:grid;gap:16px;min-width:0}.sb-header{display:flex;align-items:end;justify-content:space-between;gap:12px}.sb-header h1,.sb-header p{margin:0}.sb-phase{min-height:36px;padding:8px 13px;border:1px solid var(--gold);border-radius:999px;display:inline-flex;align-items:center}.sb-layout{display:grid;grid-template-columns:minmax(220px,.7fr) minmax(0,2.5fr) minmax(235px,.78fr);gap:16px;align-items:start;min-width:0}.sb-panel,.sb-stage{border:1px solid var(--gold);border-radius:16px;background:rgba(20,10,34,.84);padding:16px;min-width:0}.sb-controls{display:grid;gap:12px}.sb-controls h2,.sb-data h2,.sb-board h2,.sb-bet-group h3{margin:0}.sb-controls input{min-height:44px}.sb-primary{min-height:46px;background:#a51f2d;color:#fff}.sb-help,.sb-board header p,.sb-empty,.sb-bet-odds,.sb-slip span,.sb-result p{color:var(--muted,#b8c8c1)}.sb-control-metric{display:flex;justify-content:space-between;gap:8px;padding:10px;border-radius:10px;background:rgba(255,255,255,.045)}.sb-stage{display:grid;gap:14px}.sb-dice-tray{min-height:132px;display:flex;align-items:center;justify-content:center;gap:clamp(14px,3vw,32px);border-radius:14px;background:radial-gradient(circle at 50% 20%,rgba(255,59,107,.14),rgba(0,0,0,.18));overflow:hidden}.sb-die{width:96px;aspect-ratio:1;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);padding:12px;border:2px solid #f5ead0;border-radius:18px;background:#fff7e8;box-shadow:0 12px 24px rgba(0,0,0,.28)}.sb-pip{display:grid;place-items:center}.sb-pip.is-visible::after{content:"";width:15px;height:15px;border-radius:50%;background:#13231c}.sb-die.is-rolling{animation:sb-tumble .65s ease-in-out infinite alternate}.sb-result{min-height:116px;padding:14px;border:1px solid rgba(255,255,255,.12);border-radius:12px}.sb-result h2,.sb-result p{margin:0}.sb-result-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:10px 0}.sb-result-grid span{display:grid;gap:4px;padding:9px;border-radius:9px;background:rgba(255,255,255,.045)}.sb-board{display:grid;gap:10px}.sb-board header{display:flex;align-items:end;justify-content:space-between;gap:12px}.sb-board header p{margin:0;max-width:52ch}.sb-bet-group{display:grid;gap:6px}.sb-bet-group h3{font-size:.88rem;color:var(--gold)}.sb-bet-grid{display:grid;gap:6px}.sb-bet-group[data-bet-group="ranges"] .sb-bet-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.sb-bet-group[data-bet-group="totals"] .sb-bet-grid{grid-template-columns:repeat(7,minmax(0,1fr))}.sb-bet-group[data-bet-group="singles"] .sb-bet-grid,.sb-bet-group[data-bet-group="doubles"] .sb-bet-grid{grid-template-columns:repeat(6,minmax(0,1fr))}.sb-bet-group[data-bet-group="triples"] .sb-bet-grid{grid-template-columns:repeat(7,minmax(0,1fr))}.sb-bet-group[data-bet-group="combinations"] .sb-bet-grid{grid-template-columns:repeat(5,minmax(0,1fr))}.sb-bet{min-height:46px;padding:6px;display:grid;place-items:center;gap:2px;border:1px solid rgba(255,255,255,.16);border-radius:9px;background:rgba(255,255,255,.045);line-height:1.08}.sb-bet.is-selected{border-color:var(--gold);box-shadow:inset 0 0 0 2px var(--gold)}.sb-bet-label{font-weight:700}.sb-bet-odds,.sb-bet-amount{font-size:.72rem}.sb-bet-amount{color:var(--gold)}.sb-data{max-height:720px;overflow-y:auto;display:grid;gap:18px;scrollbar-width:thin;scrollbar-color:var(--gold) rgba(255,255,255,.05)}.sb-data:focus-visible,.sb-shell button:focus-visible,.sb-shell input:focus-visible{outline:3px solid var(--gold);outline-offset:2px}.sb-data section{display:grid;gap:10px}.sb-slip,.sb-history{display:grid;gap:8px;margin:0;padding:0;list-style:none}.sb-slip li,.sb-history li{display:grid;gap:5px;padding:9px;border-radius:9px;background:rgba(255,255,255,.045)}.sb-slip li{grid-template-columns:minmax(0,1fr) auto}.sb-slip li div{display:grid}.sb-slip li button{grid-column:1/-1;min-height:42px}.sb-history li strong{letter-spacing:.12em}@keyframes sb-tumble{from{transform:translateY(-5px) rotate(-5deg);opacity:.72}to{transform:translateY(5px) rotate(5deg);opacity:1}}.sb-repeat{min-height:46px;background:transparent;color:var(--gold);border:1px solid var(--gold)}.sb-repeat:disabled{opacity:.5}
     /* Fit the complete stage inside desktop primary while preserving 42px table controls. */
     @media(min-width:1101px) and (min-height:951px){.sb-shell{gap:10px}.sb-header h1{font-size:2.25rem;line-height:1}.sb-layout{gap:12px}.sb-panel,.sb-stage{padding:12px}.sb-stage{gap:7px}.sb-dice-tray{min-height:96px}.sb-die{width:72px;padding:8px;border-radius:14px}.sb-pip.is-visible::after{width:11px;height:11px}.sb-result{min-height:72px;padding:8px}.sb-result-grid{gap:5px;margin:5px 0}.sb-result-grid span{gap:2px;padding:5px}.sb-board{gap:4px}.sb-board header p{font-size:.8rem}.sb-bet-group{gap:2px}.sb-bet-group h3{font-size:.76rem}.sb-bet-grid{gap:3px}.sb-bet{min-height:42px;padding:2px}.sb-bet-odds,.sb-bet-amount{font-size:.66rem}.sb-data{max-height:776px}}
     /* Let desktop compact use one themed game-screen scroll instead of clipped panels. */
@@ -386,6 +390,17 @@ export function scheduleReveal({ timerScope, onReveal, duration = REVEAL_DURATIO
 }
 
 
+// Re-apply the last committed wager map and re-fire one shake without a timer.
+async function repeat() {
+  // Ignore repeat while an atomic action, reveal, or unresolved retry owns the snapshot, or without a prior wager map.
+  if (busy || rolling || pendingActionId || !lastBet) return;
+  // Restore the previous fixed wager map into the local selection state.
+  selectedWagers = new Map(Object.entries(lastBet.wagers).map(([betId, amount]) => [betId, Number(amount)]));
+  // Fire the shared exactly-once shake action with the restored wagers.
+  await shake();
+}
+
+
 // Execute or safely resume one server-authoritative round.
 async function shake() {
   // Ignore duplicate clicks while an atomic action or reveal remains active.
@@ -427,6 +442,8 @@ async function shake() {
       gameState = payload.state;
       // Refresh immutable table metadata when supplied by the action response.
       betCatalog = payload.bets || betCatalog;
+      // Remember the exact settled wager map so one click can repeat the same shake next round.
+      lastBet = { wagers: { ...(payload.round?.wagers || pendingWagers || {}) } };
       // Release the action identity only after a successful authoritative response.
       pendingActionId = null;
       // Release the frozen retry snapshot after success.
@@ -499,6 +516,10 @@ function bindEvents() {
   const shakeButton = root.querySelector('[data-action="shake"]');
   // Begin one action when the control exists.
   if (shakeButton) shakeButton.onclick = () => shake();
+  // Wire the one-click repeat that re-fires the previous wager map.
+  const repeatButton = root.querySelector('[data-action="repeat"]');
+  // Re-apply and re-fire the last committed shake when the control exists.
+  if (repeatButton) repeatButton.onclick = () => repeat();
   // Wire clear to selection-only state without any backend action.
   const clearButton = root.querySelector('[data-action="clear"]');
   // Clear every editable selection and refresh the preview.
@@ -520,6 +541,8 @@ export const SicBoGame = {
     const generation = mountGeneration;
     // Store the new route outlet for deterministic rendering.
     root = node;
+    // Reset the repeatable wager map so a new mount never inherits a stale one before state reconciles history.
+    lastBet = null;
     // Create one disposable reduced-motion-aware timer owner for this route.
     motionScope = createMotionTimerScope();
     // Load both active and fallback game-owned resources before rendering.
@@ -538,6 +561,10 @@ export const SicBoGame = {
     betCatalog = payload.bets || [];
     // Restore any interrupted exact action without exposing private dice.
     restoreActiveRound();
+    // Recover a repeatable wager map from the newest settled round so repeat survives a reload.
+    const recovered = gameState?.recent_rounds?.slice(-1)[0];
+    // Restore the repeatable configuration only when the newest settled round exposes its wager map.
+    lastBet = recovered?.wagers ? { wagers: { ...recovered.wagers } } : null;
     // Render the complete localized surface.
     render();
     // Refresh the shared wallet without game-owned balance text.
@@ -567,6 +594,8 @@ export const SicBoGame = {
     pendingActionId = null;
     // Release the frozen browser wager snapshot.
     pendingWagers = null;
+    // Clear the repeatable wager map so the next session starts fresh.
+    lastBet = null;
     // Reset atomic and decorative phase flags.
     busy = false;
     // Reset the decorative rolling phase.

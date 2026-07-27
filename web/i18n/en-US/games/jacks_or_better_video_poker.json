@@ -11,6 +11,7 @@
   "controls.deal": "Deal cards",
   "controls.draw": "Draw cards",
   "controls.holdHelp": "Choose any cards to hold, then draw once. Unheld cards are replaced.",
+  "controls.repeat": "Repeat bet",
   "controls.title": "Play controls",
   "controls.totalWager": "Total wager",
   "eyebrow": "Classic 9/6 draw poker",

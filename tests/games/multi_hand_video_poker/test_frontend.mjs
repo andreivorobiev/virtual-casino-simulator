@@ -34,6 +34,18 @@ assert.match(source, /const HAND_COUNTS = \[3, 5, 10\]/);
 assert.match(source, /pendingRequestId = pendingRequestId \|\| nextRequestId\(\)/);
 // Verify this module owns no timer that could survive unmount.
 assert.doesNotMatch(source, /setTimeout|setInterval|requestAnimationFrame/);
+// Verify the one-click repeat exposes a secondary control after the primary deal button.
+assert.match(source, /class="mhvp-repeat" data-action="repeat"/);
+// Verify the repeat action is implemented as an isolated re-deal helper.
+assert.match(source, /async function repeat\b/);
+// Verify a captured deal configuration drives the repeat instead of replaying holds.
+assert.match(source, /let lastBet = null/);
+// Verify the repeat control resolves its label through both resource domains.
+assert.equal(typeof english['controls.repeat'], 'string');
+// Require non-empty Russian repeat copy for locale parity.
+assert.equal(typeof russian['controls.repeat'], 'string');
+// Reject blank repeat strings that would expose an unlabeled control.
+assert.ok(english['controls.repeat'].trim() && russian['controls.repeat'].trim());
 // Verify reduced-motion behavior is included in game-owned styling.
 assert.match(source, /prefers-reduced-motion:reduce/);
 // Verify visible titles and actions resolve through resource keys.

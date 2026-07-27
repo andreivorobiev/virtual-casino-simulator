@@ -49,6 +49,7 @@
   "controls.drawing": "Drawing",
   "controls.replay": "Replay ticket",
   "controls.newTicket": "New ticket",
+  "controls.repeat": "Repeat bet",
   "status.ready": "Ready",
   "status.running": "Running",
   "status.repeatTicket": "Repeat ticket",

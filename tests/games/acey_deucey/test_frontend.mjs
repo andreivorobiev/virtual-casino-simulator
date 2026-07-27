@@ -19,6 +19,17 @@ assert.match(moduleSource, /export const AceyDeuceyGame/, 'AceyDeuceyGame export
 assert.match(moduleSource, /\/api\/v1\/games\/acey-deucey/, 'Acey-Deucey API root is required');
 // Verify the stable readiness selector exists.
 assert.match(moduleSource, /data-testid="acey-deucey"/, 'Acey-Deucey readiness selector is required');
+// Verify the one-click repeat control is rendered.
+assert.match(moduleSource, /data-action="repeat"/, 'Acey-Deucey repeat control is required');
+// Verify the repeat control carries its scoped presentation class.
+assert.match(moduleSource, /class="acey-repeat"/, 'Acey-Deucey repeat class is required');
+// Verify the repeat handler opens a fresh round through the shared deal action.
+assert.match(moduleSource, /async function repeat\(\)/, 'Acey-Deucey repeat handler is required');
+// Verify both locales expose the repeat control label.
+for (const dict of [en, ru]) {
+  // Confirm the repeat key is present in the resource file.
+  assert.ok(Object.prototype.hasOwnProperty.call(dict, 'controls.repeat'), 'controls.repeat is required in both locales');
+}
 // Verify the reduced-motion CSS path is present.
 assert.match(moduleSource, /prefers-reduced-motion:reduce/, 'Reduced-motion CSS is required');
 // Verify the module has no interval or timeout-owned animation loop.

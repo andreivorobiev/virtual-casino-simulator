@@ -7,6 +7,7 @@
   "cards.label": "{rank} of {suit}",
   "controls.deal": "Deal cards",
   "controls.dealNext": "Deal next round",
+  "controls.repeat": "Repeat bet",
   "controls.dealing": "Dealing",
   "controls.loading": "Loading table",
   "controls.help": "Choose Dragon, Tiger, or Tie and set a play-token wager.",

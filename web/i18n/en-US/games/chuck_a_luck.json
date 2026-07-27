@@ -4,6 +4,7 @@
   "action.rolling": "Dice rolling",
   "controls.aria": "Chuck-a-Luck wager controls",
   "controls.help": "Enter play-token wagers beside one or more faces. Each die matching a selected face increases that wager's return.",
+  "controls.repeat": "Repeat bet",
   "controls.title": "Play controls",
   "controls.total": "Total wager",
   "controls.wagers": "Face wagers",

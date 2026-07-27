@@ -109,6 +109,18 @@ assert.match(source, /min-height:42px/);
 assert.match(source, /max-height:950px[\s\S]*game-screen:has\(\.sb-shell\)[\s\S]*overflow-y:auto/);
 // Verify API errors are never rendered from server-owned English messages.
 assert.doesNotMatch(source, /toast\s*\(\s*error\.message/);
+// Verify the one-click repeat label exists in both paired locales.
+assert.ok(Object.hasOwn(english, 'controls.repeat') && Object.hasOwn(russian, 'controls.repeat'), 'missing controls.repeat');
+// Verify the secondary repeat action is rendered beside the primary shake control.
+assert.match(source, /class="sb-repeat" data-action="repeat"/);
+// Verify the repeat control is bound to a game-owned handler.
+assert.match(source, /\[data-action="repeat"\]/);
+// Verify the repeat handler re-applies the last committed wager map before firing one shake.
+assert.match(source, /async function repeat\(\)[\s\S]*selectedWagers = new Map\(Object\.entries\(lastBet\.wagers\)[\s\S]*await shake\(\)/);
+// Verify a successful settlement captures the exact submitted wager map for repeat.
+assert.match(source, /lastBet = \{ wagers: \{ \.\.\.\(payload\.round\?\.wagers \|\| pendingWagers \|\| \{\}\) \} \}/);
+// Verify the repeat action stays disabled until a prior wager map exists and no work is active.
+assert.match(source, /const repeatDisabled = busy \|\| rolling \|\| Boolean\(pendingActionId\) \|\| !lastBet/);
 
 // Create a deterministic ordinary-motion scope for exact reveal timing.
 const clock = createFakeClock();

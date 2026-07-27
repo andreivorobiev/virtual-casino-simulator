@@ -75,6 +75,12 @@ assert.match(source, /action_id: pendingDealActionId/);
 assert.match(source, /action_id: pendingDrawActionId/);
 // Verify this route owns no timer that could survive unmount or reload.
 assert.doesNotMatch(source, /setTimeout|setInterval|requestAnimationFrame/);
+// Verify the one-click repeat-bet control is present in production markup.
+assert.match(source, /data-action="repeat"/);
+// Verify both locales expose the repeat-bet control label.
+assert.ok(typeof english['controls.repeat'] === 'string' && english['controls.repeat'].trim());
+// Verify the paired Russian domain also owns the repeat-bet control label.
+assert.ok(typeof russian['controls.repeat'] === 'string' && russian['controls.repeat'].trim());
 // Verify game-owned CSS includes a responsive stacking breakpoint.
 assert.match(source, /@media\(max-width:1180px\)/);
 // Verify game-owned CSS explicitly removes optional motion under user preference.
@@ -83,7 +89,7 @@ assert.match(source, /@media\(prefers-reduced-motion:reduce\)/);
 // Verify independent module identity and the branded compatible patch revision.
 assert.equal(descriptor.module, 'jacks_or_better_video_poker');
 // Require the issue #91 game module to carry the TiltSeven palette patch.
-assert.equal(descriptor.version, '1.0.1');
+assert.equal(descriptor.version, '1.1.0');
 // Preserve the #77 sequencing document's reserved catalog slot.
 assert.equal(descriptor.game.sort_order, 170);
 // Require the canonical reloadable route derived from the game id.

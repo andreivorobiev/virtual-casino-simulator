@@ -36,6 +36,8 @@ let ante = 5;
 let acesUp = 0;
 // Prevent overlapping atomic browser actions.
 let busy = false;
+// Retain the last committed ante and Aces Up bet so one click can repeat the same wagers.
+let lastBet = null;
 // Store the locale cleanup callback so unmount releases subscriptions.
 let unsubscribeLocale = null;
 // Track mount generations so late network responses cannot revive an old route.
@@ -88,7 +90,7 @@ function ensureStyles() {
   // Tag the element so repeated mounts detect and reuse it.
   style.id = STYLE_ID;
   // Render only route-local selectors so no shared class is affected.
-  style.textContent = '.fourcp{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;width:100%;min-width:0;min-height:100%;color:var(--text,#f5ead6);align-items:start;} .fcp-stage{display:grid;gap:16px;padding:12px;min-width:0;} .fcp-heading{margin:0;color:var(--gold);font-size:clamp(24px,3vw,38px);line-height:1.1;} .fcp-row{display:grid;gap:6px;} .fcp-row h4{margin:0;color:var(--gold);text-transform:uppercase;font-size:12px;letter-spacing:.08em;} .fcp-cards{display:flex;gap:6px;flex-wrap:wrap;min-width:0;} .fcp-hand{outline:2px solid var(--gold);outline-offset:3px;border-radius:8px;} .fcp-actions{display:flex;flex-wrap:wrap;gap:8px;} .fcp-btn{min-height:44px;padding:0 16px;border:none;border-radius:12px;font-weight:900;font-size:15px;cursor:pointer;} .fcp-btn.play{background:linear-gradient(180deg,#0f9c4c,#0a5f2e);color:#fff;} .fcp-btn.fold{background:linear-gradient(180deg,#6b6b76,#3a3a42);color:#fff;} .fcp-btn.deal{background:linear-gradient(180deg,#d6323d,#8e1822);color:#fff;width:100%;} .fcp-btn:disabled{opacity:.55;cursor:not-allowed;} .fcp-panel{display:grid;gap:12px;min-width:0;} .fcp-card{padding:14px;border:1px solid var(--gold);border-radius:16px;background:rgba(0,0,0,.22);} .fcp-card h3{margin:0 0 10px;color:var(--gold);text-transform:uppercase;font-size:12px;letter-spacing:.08em;} .fcp-field{display:grid;gap:4px;margin-bottom:10px;} .fcp-field label{font-size:12px;font-weight:700;} .fcp-field input{min-height:40px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.05);color:var(--text);padding:0 10px;font-weight:800;} .fcp-pays{display:grid;gap:4px;font-size:12px;font-weight:700;} .fcp-pays div{display:flex;justify-content:space-between;} .fcp-pays span:last-child{color:var(--gold);} .fcp-result{min-height:24px;font-size:15px;color:var(--text);font-weight:800;} .fcp-result .net{font-weight:900;} @media (max-width:900px){.fourcp{grid-template-columns:1fr;}}';
+  style.textContent = '.fourcp{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;width:100%;min-width:0;min-height:100%;color:var(--text,#f5ead6);align-items:start;} .fcp-stage{display:grid;gap:16px;padding:12px;min-width:0;} .fcp-heading{margin:0;color:var(--gold);font-size:clamp(24px,3vw,38px);line-height:1.1;} .fcp-row{display:grid;gap:6px;} .fcp-row h4{margin:0;color:var(--gold);text-transform:uppercase;font-size:12px;letter-spacing:.08em;} .fcp-cards{display:flex;gap:6px;flex-wrap:wrap;min-width:0;} .fcp-hand{outline:2px solid var(--gold);outline-offset:3px;border-radius:8px;} .fcp-actions{display:flex;flex-wrap:wrap;gap:8px;} .fcp-btn{min-height:44px;padding:0 16px;border:none;border-radius:12px;font-weight:900;font-size:15px;cursor:pointer;} .fcp-btn.play{background:linear-gradient(180deg,#0f9c4c,#0a5f2e);color:#fff;} .fcp-btn.fold{background:linear-gradient(180deg,#6b6b76,#3a3a42);color:#fff;} .fcp-btn.deal{background:linear-gradient(180deg,#d6323d,#8e1822);color:#fff;width:100%;} .fcp-btn:disabled{opacity:.55;cursor:not-allowed;} .fcp-panel{display:grid;gap:12px;min-width:0;} .fcp-card{padding:14px;border:1px solid var(--gold);border-radius:16px;background:rgba(0,0,0,.22);} .fcp-card h3{margin:0 0 10px;color:var(--gold);text-transform:uppercase;font-size:12px;letter-spacing:.08em;} .fcp-field{display:grid;gap:4px;margin-bottom:10px;} .fcp-field label{font-size:12px;font-weight:700;} .fcp-field input{min-height:40px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.05);color:var(--text);padding:0 10px;font-weight:800;} .fcp-pays{display:grid;gap:4px;font-size:12px;font-weight:700;} .fcp-pays div{display:flex;justify-content:space-between;} .fcp-pays span:last-child{color:var(--gold);} .fcp-result{min-height:24px;font-size:15px;color:var(--text);font-weight:800;} .fcp-result .net{font-weight:900;} @media (max-width:900px){.fourcp{grid-template-columns:1fr;}}.fcp-repeat{min-height:44px;padding:0 16px;border:1px solid var(--gold);border-radius:12px;background:transparent;color:var(--gold);font-weight:900;font-size:15px;cursor:pointer;}.fcp-repeat:disabled{opacity:.5;cursor:not-allowed;}';
   // Attach the game-owned styles to the document head.
   document.head.append(style);
 }
@@ -206,8 +208,10 @@ function settledStage(round) {
   const net = round.net || 0;
   // Build the outcome result line with a signed net amount.
   const line = `${safe(text('outcome.' + round.outcome))} <span class="net">${net >= 0 ? '+' + net : net}</span>`;
-  // Return the revealed hands, the result, and a deal-again control.
-  return `${player}${dealer}<p class="fcp-result" data-testid="four-card-poker-result">${line}</p><div class="fcp-actions"><button class="fcp-btn deal" data-deal="1" type="button" ${busy ? 'disabled' : ''}>${safe(text('action.deal_again'))}</button></div>`;
+  // Enable the one-click repeat only when a prior bet exists and nothing is in flight.
+  const repeatDisabled = busy || !lastBet;
+  // Return the revealed hands, the result, a deal-again control, and a one-click repeat.
+  return `${player}${dealer}<p class="fcp-result" data-testid="four-card-poker-result">${line}</p><div class="fcp-actions"><button class="fcp-btn deal" data-deal="1" type="button" ${busy ? 'disabled' : ''}>${safe(text('action.deal_again'))}</button><button type="button" class="fcp-repeat" data-action="repeat"${repeatDisabled ? ' disabled' : ''}>${safe(text('controls.repeat'))}</button></div>`;
 }
 
 // Build the side panel with wager inputs and paytables.
@@ -234,6 +238,10 @@ function bindEvents() {
   if (acesInput) acesInput.onchange = () => { acesUp = normalizedWager(acesInput.value, 0); };
   // Bind every deal control to the deal action.
   root.querySelectorAll('[data-deal]').forEach(button => { button.onclick = deal; });
+  // Bind the one-click repeat that re-opens a round with the previous wagers.
+  const repeatButton = root.querySelector('[data-action="repeat"]');
+  // Attach the repeat handler when the control is present.
+  if (repeatButton) repeatButton.onclick = repeat;
   // Bind the fold control to a fold decision.
   const foldButton = root.querySelector('[data-fold]');
   // Attach the fold handler.
@@ -289,6 +297,20 @@ function deal() {
   });
 }
 
+// Re-apply the last committed wagers and open one identical round without a timer.
+async function repeat() {
+  // Read the newest round so an active decision blocks the repeat.
+  const round = currentRound();
+  // Ignore repeat while busy, unmounted, before any bet exists, or during a pending decision.
+  if (busy || !root || !lastBet || (round && round.phase === 'decision')) return;
+  // Restore the committed ante into the cached wager the deal reads.
+  ante = lastBet.ante;
+  // Restore the committed Aces Up side bet into the cached wager the deal reads.
+  acesUp = lastBet.aces_up;
+  // Fire the shared deal action with the restored wagers, never replaying a decision.
+  await deal();
+}
+
 // Apply one play or fold decision to the active round.
 function decide(decision, multiplier) {
   // Read the active round before acting.
@@ -308,6 +330,10 @@ function decide(decision, multiplier) {
     const payload = await post(`${API_ROOT}/rounds/${encodeURIComponent(round.round_id)}/decisions`, withCurrentPlayer({ action_id: pendingDecisionId, decision, multiplier }));
     // Adopt the settled result.
     adoptPayload(payload);
+    // Capture the committed wagers from the settled round so one click can repeat them.
+    const settled = currentRound();
+    // Remember the ante and Aces Up bet only when the round exposes its committed wagers.
+    if (settled && settled.ante !== undefined) lastBet = { ante: settled.ante, aces_up: settled.aces_up };
     // Release the resolved decision retry binding.
     pendingDecisionId = null;
     // Release the resolved decision context.
@@ -327,6 +353,8 @@ export const FourCardPokerGame = {
     mountGeneration += 1;
     // Store the current route outlet.
     root = node;
+    // Reset the repeatable wagers so a new session never inherits a prior bet.
+    lastBet = null;
     // Install shared and route-local styles.
     ensureSharedCardStyles();
     // Install the compact route-local styles.
@@ -345,6 +373,10 @@ export const FourCardPokerGame = {
       const payload = await api(currentPlayerPath(`${API_ROOT}/state`));
       // Adopt the loaded state.
       adoptPayload(payload);
+      // Recover the repeatable wagers from the newest round so repeat survives a reload.
+      const recovered = currentRound();
+      // Restore the committed ante and Aces Up bet only when a prior round exposes them.
+      if (recovered && recovered.ante !== undefined) lastBet = { ante: recovered.ante, aces_up: recovered.aces_up };
     } catch (error) {
       // Surface a load failure without breaking the shell.
       if (generation === mountGeneration) toast(text('error.load'), 'error');
@@ -372,6 +404,8 @@ export const FourCardPokerGame = {
     root = null;
     // Reset the in-flight guard because teardown cancelled any presentation.
     busy = false;
+    // Clear the repeatable wagers so the next session starts fresh.
+    lastBet = null;
     // Clear any pending retry ids so a later mount starts clean.
     pendingDealId = null;
     // Clear the pending decision id.

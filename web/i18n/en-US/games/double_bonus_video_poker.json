@@ -11,6 +11,7 @@
   "action.deal": "Deal",
   "action.deal_again": "Deal again",
   "action.draw": "Draw",
+  "controls.repeat": "Repeat bet",
   "outcome.win": "You win!",
   "outcome.push": "Push.",
   "outcome.lose": "No win.",

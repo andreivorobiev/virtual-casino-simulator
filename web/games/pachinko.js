@@ -26,6 +26,8 @@ let dropBusy = false;
 let localeUnsubscribe = null;
 // Retain the last landed pocket so a repaint after the drop keeps highlighting it.
 let landedPocket = null;
+// Retain the last committed stake so one click can repeat the same drop.
+let lastBet = null;
 
 // Translate one game-domain key with an optional fallback.
 const tx = (key, params, fallback) => t(key, params || {}, 'games/pachinko') || fallback || key;
@@ -45,7 +47,7 @@ function ensureStyles() {
   // Tag the element so repeated mounts detect and reuse it.
   style.id = STYLE_ID;
   // Render only route-local selectors so no shared class is affected.
-  style.textContent = '.pachinko{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;width:100%;min-width:0;min-height:100%;color:var(--text,#f5ead6);align-items:start;} .pk-stage{display:grid;justify-items:center;gap:12px;padding:12px;min-width:0;} .pk-board{position:relative;width:min(360px,80vw);aspect-ratio:1/1.05;background:radial-gradient(circle at 50% 0%,var(--felt2),var(--bg));border:6px solid var(--gold);border-radius:16px;overflow:hidden;box-shadow:0 12px 34px rgba(0,0,0,.45);} .pk-pin{position:absolute;width:6px;height:6px;border-radius:50%;background:#8fb6d6;transform:translate(-50%,-50%);} .pk-ball{position:absolute;width:16px;height:16px;border-radius:50%;background:radial-gradient(circle at 36% 32%,#fff,#e7bd58);transform:translate(-50%,-50%);transition:top ' + (STEP_MS/1000) + 's linear,left ' + (STEP_MS/1000) + 's linear;box-shadow:0 0 8px rgba(231,189,88,.8);z-index:2;} .pk-pockets{display:grid;grid-template-columns:repeat(13,1fr);gap:2px;width:min(360px,80vw);min-width:0;} .pk-pocket{min-height:34px;display:grid;place-items:center;border-radius:6px;font-weight:900;font-size:11px;background:rgba(255,255,255,.06);color:var(--text);} .pk-pocket.low{background:rgba(120,120,140,.18);} .pk-pocket.even{background:rgba(255,255,255,.12);} .pk-pocket.win{background:rgba(15,156,76,.28);color:#bff0cf;} .pk-pocket.jackpot{background:linear-gradient(180deg,#f0c45d,#a9791f);color:#241006;} .pk-pocket.hit{outline:2px solid #fff2c2;outline-offset:1px;box-shadow:0 0 0 2px rgba(255,242,194,.6);} .pk-panel{display:grid;gap:12px;min-width:0;} .pk-card{padding:14px;border:1px solid var(--gold);border-radius:16px;background:rgba(0,0,0,.22);} .pk-card h3{margin:0 0 10px;color:var(--gold);text-transform:uppercase;font-size:12px;letter-spacing:.08em;} .pk-chips{display:flex;flex-wrap:wrap;gap:8px;} .pk-chip{min-width:44px;min-height:40px;padding:0 10px;border:1px solid var(--border-soft,rgba(255,255,255,.18));border-radius:10px;background:rgba(255,255,255,.05);color:var(--text);font-weight:900;cursor:pointer;} .pk-chip[aria-pressed="true"]{border-color:var(--gold);background:rgba(231,189,88,.16);color:#fff2c2;} .pk-drop{width:100%;min-height:48px;border:none;border-radius:14px;background:linear-gradient(180deg,#0f9c4c,#0a5f2e);color:#fff;font-weight:900;font-size:16px;cursor:pointer;} .pk-drop:disabled{opacity:.55;cursor:not-allowed;} .pk-result{min-height:24px;font-size:15px;color:#fff2c2;text-align:center;} .pk-result .net{font-weight:900;} @media (max-width:900px){.pachinko{grid-template-columns:1fr;}}';
+  style.textContent = '.pachinko{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;width:100%;min-width:0;min-height:100%;color:var(--text,#f5ead6);align-items:start;} .pk-stage{display:grid;justify-items:center;gap:12px;padding:12px;min-width:0;} .pk-board{position:relative;width:min(360px,80vw);aspect-ratio:1/1.05;background:radial-gradient(circle at 50% 0%,var(--felt2),var(--bg));border:6px solid var(--gold);border-radius:16px;overflow:hidden;box-shadow:0 12px 34px rgba(0,0,0,.45);} .pk-pin{position:absolute;width:6px;height:6px;border-radius:50%;background:#8fb6d6;transform:translate(-50%,-50%);} .pk-ball{position:absolute;width:16px;height:16px;border-radius:50%;background:radial-gradient(circle at 36% 32%,#fff,#e7bd58);transform:translate(-50%,-50%);transition:top ' + (STEP_MS/1000) + 's linear,left ' + (STEP_MS/1000) + 's linear;box-shadow:0 0 8px rgba(231,189,88,.8);z-index:2;} .pk-pockets{display:grid;grid-template-columns:repeat(13,1fr);gap:2px;width:min(360px,80vw);min-width:0;} .pk-pocket{min-height:34px;display:grid;place-items:center;border-radius:6px;font-weight:900;font-size:11px;background:rgba(255,255,255,.06);color:var(--text);} .pk-pocket.low{background:rgba(120,120,140,.18);} .pk-pocket.even{background:rgba(255,255,255,.12);} .pk-pocket.win{background:rgba(15,156,76,.28);color:#bff0cf;} .pk-pocket.jackpot{background:linear-gradient(180deg,#f0c45d,#a9791f);color:#241006;} .pk-pocket.hit{outline:2px solid #fff2c2;outline-offset:1px;box-shadow:0 0 0 2px rgba(255,242,194,.6);} .pk-panel{display:grid;gap:12px;min-width:0;} .pk-card{padding:14px;border:1px solid var(--gold);border-radius:16px;background:rgba(0,0,0,.22);} .pk-card h3{margin:0 0 10px;color:var(--gold);text-transform:uppercase;font-size:12px;letter-spacing:.08em;} .pk-chips{display:flex;flex-wrap:wrap;gap:8px;} .pk-chip{min-width:44px;min-height:40px;padding:0 10px;border:1px solid var(--border-soft,rgba(255,255,255,.18));border-radius:10px;background:rgba(255,255,255,.05);color:var(--text);font-weight:900;cursor:pointer;} .pk-chip[aria-pressed="true"]{border-color:var(--gold);background:rgba(231,189,88,.16);color:#fff2c2;} .pk-drop{width:100%;min-height:48px;border:none;border-radius:14px;background:linear-gradient(180deg,#0f9c4c,#0a5f2e);color:#fff;font-weight:900;font-size:16px;cursor:pointer;} .pk-drop:disabled{opacity:.55;cursor:not-allowed;} .pk-result{min-height:24px;font-size:15px;color:#fff2c2;text-align:center;} .pk-result .net{font-weight:900;} @media (max-width:900px){.pachinko{grid-template-columns:1fr;}}.pk-repeat{width:100%;min-height:44px;border:1px solid var(--gold);border-radius:14px;background:transparent;color:var(--gold);font-weight:900;font-size:15px;cursor:pointer;}.pk-repeat:disabled{opacity:.5;cursor:not-allowed;}';
   // Attach the game-owned styles to the document head.
   document.head.appendChild(style);
 }
@@ -85,13 +87,17 @@ function render(resultText) {
   // Build the chip selector.
   const chips = CHIPS.map(value => `<button class="pk-chip" data-chip="${value}" type="button" aria-pressed="${stake === value}">${value}</button>`).join('');
   // Paint the whole route with the ball parked at the top centre.
-  root.innerHTML = `<section class="pachinko" data-testid="pachinko"><div class="pk-stage"><div class="pk-board" data-testid="pachinko-board">${pins()}<div class="pk-ball" data-testid="pachinko-ball" style="top:2%;left:50%;"></div></div><div class="pk-pockets">${pockets}</div><p class="pk-result" data-testid="pachinko-result" role="status">${resultText || safe(tx('result.idle', null, 'Set a stake and drop the ball.'))}</p></div><div class="pk-panel"><div class="pk-card"><h3>${safe(tx('stake.title', null, 'Stake'))}</h3><div class="pk-chips">${chips}</div></div><button class="pk-drop" data-testid="pachinko-drop" type="button" ${dropBusy ? 'disabled' : ''}>${safe(dropBusy ? tx('action.dropping', null, 'Dropping…') : tx('action.drop', null, 'Drop the ball'))}</button></div></section>`;
+  root.innerHTML = `<section class="pachinko" data-testid="pachinko"><div class="pk-stage"><div class="pk-board" data-testid="pachinko-board">${pins()}<div class="pk-ball" data-testid="pachinko-ball" style="top:2%;left:50%;"></div></div><div class="pk-pockets">${pockets}</div><p class="pk-result" data-testid="pachinko-result" role="status">${resultText || safe(tx('result.idle', null, 'Set a stake and drop the ball.'))}</p></div><div class="pk-panel"><div class="pk-card"><h3>${safe(tx('stake.title', null, 'Stake'))}</h3><div class="pk-chips">${chips}</div></div><button class="pk-drop" data-testid="pachinko-drop" type="button" ${dropBusy ? 'disabled' : ''}>${safe(dropBusy ? tx('action.dropping', null, 'Dropping…') : tx('action.drop', null, 'Drop the ball'))}</button><button class="pk-repeat" data-testid="pachinko-repeat" type="button" ${dropBusy || !lastBet ? 'disabled' : ''}>${safe(tx('controls.repeat', null, 'Repeat bet'))}</button></div></section>`;
   // Wire the chip buttons.
   root.querySelectorAll('[data-chip]').forEach(btn => { btn.onclick = () => { stake = Number(btn.dataset.chip); render(); }; });
   // Wire the drop action.
   const dropBtn = root.querySelector('[data-testid="pachinko-drop"]');
   // Attach the drop handler only when a drop is not already running.
   if (dropBtn) dropBtn.onclick = drop;
+  // Read the secondary one-click repeat control.
+  const repeatBtn = root.querySelector('[data-testid="pachinko-repeat"]');
+  // Attach the repeat handler only when a prior stake can be re-fired.
+  if (repeatBtn) repeatBtn.onclick = repeat;
 }
 
 // Animate the ball down the committed path so the visible landing matches the server pocket.
@@ -119,7 +125,11 @@ async function load() {
   // Read authoritative state so the render reflects the server, not client guesses.
   try {
     // Fetch the game state through the frozen v1 endpoint.
-    await api('/api/v1/games/pachinko/state');
+    const payload = await api('/api/v1/games/pachinko/state');
+    // Recover a repeatable stake from the newest settled drop so repeat survives a reload.
+    const restored = payload?.state?.recent_rounds?.[0]?.public;
+    // Restore the repeatable stake only when a settled drop is present.
+    if (restored?.wager?.stake) lastBet = { stake: restored.wager.stake };
   } catch (err) {
     // Surface a load failure without breaking the shell.
     toast(tx('error.load', null, 'Could not load Pachinko.'), 'error');
@@ -148,6 +158,8 @@ async function drop() {
     landedPocket = round.detail.pocket;
     // Refresh the shell wallet after settlement credits are applied.
     await refreshBalance();
+    // Remember the settled stake so the next drop can repeat it with one click.
+    lastBet = { stake };
     // Read the settled net for the result line.
     const net = round.net;
     // Compose the localized result copy from authoritative values only.
@@ -166,6 +178,16 @@ async function drop() {
   }
 }
 
+// Re-apply the last committed stake and re-fire one drop without a timer.
+async function repeat() {
+  // Ignore repeat while a drop is resolving or before any settled drop exists.
+  if (dropBusy || !lastBet || !root) return;
+  // Restore the previous stake into the local configuration.
+  stake = lastBet.stake;
+  // Fire the shared drop action with the restored stake.
+  await drop();
+}
+
 // Export the isolated Pachinko game for the shared shell.
 export const PachinkoGame = {
   // Expose the stable catalog identifier.
@@ -174,6 +196,8 @@ export const PachinkoGame = {
   async mount(node) {
     // Store the current route outlet.
     root = node;
+    // Reset the repeatable stake so another session never inherits it.
+    lastBet = null;
     // Install game-owned styles.
     ensureStyles();
     // Load both locales through the game-owned lazy domain before visible render.
@@ -193,5 +217,7 @@ export const PachinkoGame = {
     root = null;
     // Reset the in-flight guard because teardown cancelled any presentation.
     dropBusy = false;
+    // Clear the repeatable stake so the next session starts fresh.
+    lastBet = null;
   },
 };

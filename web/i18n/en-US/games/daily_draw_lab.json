@@ -9,6 +9,7 @@
   "stake.title": "Stake",
   "action.draw": "Run the draw",
   "action.drawing": "Drawing…",
+  "controls.repeat": "Repeat bet",
   "error.load": "Could not load Daily Draw Lab.",
   "error.draw": "Draw could not be completed."
 }

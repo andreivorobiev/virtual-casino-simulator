@@ -5,6 +5,7 @@
   "controls.ante": "Ante",
   "controls.deal": "Deal seven cards",
   "controls.houseWay": "Set by house way",
+  "controls.repeat": "Repeat bet",
   "controls.retryDeal": "Retry deal",
   "controls.retryHelp": "Network status is unclear; retry the same prepared action.",
   "controls.set": "Set hand",

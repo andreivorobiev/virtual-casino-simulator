@@ -30,6 +30,8 @@ let state = null;
 let rules = {};
 // Store the configured ante before the next round.
 let ante = 5;
+// Retain the last committed ante so one click can repeat the same round.
+let lastBet = null;
 // Prevent overlapping atomic browser actions.
 let busy = false;
 // Store the locale cleanup callback so unmount releases subscriptions.
@@ -78,7 +80,7 @@ function ensureStyles() {
   // Tag the element so repeated mounts detect and reuse it.
   style.id = STYLE_ID;
   // Render only route-local selectors so no shared class is affected.
-  style.textContent = '.teenp{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;width:100%;min-width:0;min-height:100%;color:var(--text,#f5ead6);align-items:start;} .tp-stage{display:grid;gap:16px;padding:12px;min-width:0;} .tp-row{display:grid;gap:6px;} .tp-row h4{margin:0;color:var(--gold);text-transform:uppercase;font-size:12px;letter-spacing:.08em;} .tp-cards{display:flex;gap:6px;flex-wrap:wrap;min-width:0;} .tp-cards.win{outline:2px solid var(--gold);outline-offset:3px;border-radius:8px;} .tp-actions{display:flex;flex-wrap:wrap;gap:8px;} .tp-btn{min-height:44px;padding:0 18px;border:none;border-radius:12px;font-weight:900;font-size:15px;cursor:pointer;} .tp-btn.play{background:linear-gradient(180deg,#0f9c4c,#0a5f2e);color:#fff;} .tp-btn.fold{background:linear-gradient(180deg,#6b6b76,#3a3a42);color:#fff;} .tp-btn.deal{background:linear-gradient(180deg,#d6323d,#8e1822);color:#fff;width:100%;} .tp-btn:disabled{opacity:.55;cursor:not-allowed;} .tp-btn:focus-visible,.tp-field input:focus-visible{outline:3px solid var(--gold);outline-offset:2px;} .tp-panel{display:grid;gap:12px;min-width:0;} .tp-card{padding:14px;border:1px solid var(--gold);border-radius:16px;background:rgba(0,0,0,.22);} .tp-card h3{margin:0 0 10px;color:var(--gold);text-transform:uppercase;font-size:12px;letter-spacing:.08em;} .tp-field{display:grid;gap:4px;margin-bottom:10px;} .tp-field label{font-size:12px;font-weight:700;} .tp-field input{min-height:40px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.05);color:var(--text);padding:0 10px;font-weight:800;} .tp-pays{display:grid;gap:4px;font-size:12px;font-weight:700;} .tp-pays div{display:flex;justify-content:space-between;} .tp-pays span:last-child{color:var(--gold);} .tp-rank{font-size:12px;font-weight:700;line-height:1.6;} .tp-result{min-height:24px;font-size:15px;color:var(--text);font-weight:800;} .tp-result .net{font-weight:900;} @media (max-width:900px){.teenp{grid-template-columns:1fr;}} @media (max-width:640px){.tp-stage{gap:10px;padding:8px;} .tp-panel{gap:8px;} .tp-card{padding:10px;} .tp-card h3{margin-bottom:6px;} .tp-field{margin-bottom:6px;} .tp-pays,.tp-rank{width:calc(100% - 160px);max-width:calc(100% - 160px);gap:2px;line-height:1.15;} .tp-actions{width:calc(100% - 160px);max-width:calc(100% - 160px);} .tp-pays div{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px;min-width:0;} .tp-pays span{min-width:0;overflow-wrap:anywhere;} body:has(.teenp) .report-problem-fab{width:144px;max-width:144px;white-space:normal;line-height:1.1;}} @media(prefers-reduced-motion:reduce){.teenp *{scroll-behavior:auto!important;transition:none!important;animation:none!important;}}';
+  style.textContent = '.teenp{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;width:100%;min-width:0;min-height:100%;color:var(--text,#f5ead6);align-items:start;} .tp-stage{display:grid;gap:16px;padding:12px;min-width:0;} .tp-row{display:grid;gap:6px;} .tp-row h4{margin:0;color:var(--gold);text-transform:uppercase;font-size:12px;letter-spacing:.08em;} .tp-cards{display:flex;gap:6px;flex-wrap:wrap;min-width:0;} .tp-cards.win{outline:2px solid var(--gold);outline-offset:3px;border-radius:8px;} .tp-actions{display:flex;flex-wrap:wrap;gap:8px;} .tp-btn{min-height:44px;padding:0 18px;border:none;border-radius:12px;font-weight:900;font-size:15px;cursor:pointer;} .tp-btn.play{background:linear-gradient(180deg,#0f9c4c,#0a5f2e);color:#fff;} .tp-btn.fold{background:linear-gradient(180deg,#6b6b76,#3a3a42);color:#fff;} .tp-btn.deal{background:linear-gradient(180deg,#d6323d,#8e1822);color:#fff;width:100%;} .tp-btn:disabled{opacity:.55;cursor:not-allowed;} .tp-btn:focus-visible,.tp-field input:focus-visible{outline:3px solid var(--gold);outline-offset:2px;} .tp-panel{display:grid;gap:12px;min-width:0;} .tp-card{padding:14px;border:1px solid var(--gold);border-radius:16px;background:rgba(0,0,0,.22);} .tp-card h3{margin:0 0 10px;color:var(--gold);text-transform:uppercase;font-size:12px;letter-spacing:.08em;} .tp-field{display:grid;gap:4px;margin-bottom:10px;} .tp-field label{font-size:12px;font-weight:700;} .tp-field input{min-height:40px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.05);color:var(--text);padding:0 10px;font-weight:800;} .tp-pays{display:grid;gap:4px;font-size:12px;font-weight:700;} .tp-pays div{display:flex;justify-content:space-between;} .tp-pays span:last-child{color:var(--gold);} .tp-rank{font-size:12px;font-weight:700;line-height:1.6;} .tp-result{min-height:24px;font-size:15px;color:var(--text);font-weight:800;} .tp-result .net{font-weight:900;} @media (max-width:900px){.teenp{grid-template-columns:1fr;}} @media (max-width:640px){.tp-stage{gap:10px;padding:8px;} .tp-panel{gap:8px;} .tp-card{padding:10px;} .tp-card h3{margin-bottom:6px;} .tp-field{margin-bottom:6px;} .tp-pays,.tp-rank{width:calc(100% - 160px);max-width:calc(100% - 160px);gap:2px;line-height:1.15;} .tp-actions{width:calc(100% - 160px);max-width:calc(100% - 160px);} .tp-pays div{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px;min-width:0;} .tp-pays span{min-width:0;overflow-wrap:anywhere;} body:has(.teenp) .report-problem-fab{width:144px;max-width:144px;white-space:normal;line-height:1.1;}} @media(prefers-reduced-motion:reduce){.teenp *{scroll-behavior:auto!important;transition:none!important;animation:none!important;}}.tp-repeat{width:100%;margin-top:8px;background:transparent;color:var(--gold);border:1px solid var(--gold);}.tp-repeat:disabled{opacity:.55;cursor:not-allowed;}';
   // Attach the game-owned styles to the document head.
   document.head.append(style);
 }
@@ -202,8 +204,10 @@ function settledStage(round) {
 
 // Build the side panel with the ante input and paytables.
 function sidePanel(deciding) {
+  // Enable the one-click repeat only outside a decision with a stored ante and nothing in flight.
+  const repeatDisabled = busy || !lastBet || Boolean(state?.active_round);
   // Hide the ante input while a decision is pending.
-  const wagerCard = deciding ? '' : `<div class="tp-card"><h3>${safe(text('label.ante'))}</h3><div class="tp-field"><label for="tp-ante">${safe(text('label.ante'))}</label><input id="tp-ante" data-ante type="number" min="1" step="1" value="${ante}"></div><button class="tp-btn deal" data-deal="1" type="button" ${busy ? 'disabled' : ''}>${safe(text('action.deal'))}</button></div>`;
+  const wagerCard = deciding ? '' : `<div class="tp-card"><h3>${safe(text('label.ante'))}</h3><div class="tp-field"><label for="tp-ante">${safe(text('label.ante'))}</label><input id="tp-ante" data-ante type="number" min="1" step="1" value="${ante}"></div><button class="tp-btn deal" data-deal="1" type="button" ${busy ? 'disabled' : ''}>${safe(text('action.deal'))}</button><button class="tp-btn tp-repeat" data-repeat="1" type="button" ${repeatDisabled ? 'disabled' : ''}>${safe(text('controls.repeat'))}</button></div>`;
   // Build the Bonus paytable card.
   const bonus = `<div class="tp-card"><h3>${safe(text('label.bonus'))}</h3><div class="tp-pays">${bonusRows()}</div></div>`;
   // Build the ranking reference card.
@@ -220,6 +224,10 @@ function bindEvents() {
   if (anteInput) anteInput.onchange = () => { ante = normalizedAnte(anteInput.value); };
   // Bind every deal control to the deal action.
   root.querySelectorAll('[data-deal]').forEach(button => { button.onclick = deal; });
+  // Bind the one-click repeat that re-opens a round with the previous ante.
+  const repeatButton = root.querySelector('[data-repeat]');
+  // Attach the repeat handler when the non-decision control is present.
+  if (repeatButton) repeatButton.onclick = repeat;
   // Bind the fold control to a fold decision.
   const foldButton = root.querySelector('[data-fold]');
   // Attach the fold handler.
@@ -243,6 +251,10 @@ async function runAction(worker) {
   try {
     // Perform the network action.
     await worker();
+    // Read the round the completed action produced.
+    const settledRound = currentRound();
+    // Remember the committed ante only after a round reaches settlement so one click can repeat it.
+    if (settledRound && settledRound.phase === 'settled') lastBet = { ante: settledRound.ante };
   } catch (error) {
     // Surface a bounded error to the player.
     if (generation === mountGeneration) toast(error?.message || text('error.action'), 'error');
@@ -275,6 +287,20 @@ function deal() {
     // Adopt the returned state and reveal the decision stage.
     adoptPayload(payload);
   });
+}
+
+// Re-apply the last committed ante and open one identical round without a timer.
+async function repeat() {
+  // Ignore repeat while busy, mid deal or decision retry, without a stored ante, or during an active round.
+  if (busy || pendingDealId || pendingDecisionId || !lastBet || state?.active_round) return;
+  // Restore the previous ante so the shared deal path reads the repeated stake.
+  ante = normalizedAnte(lastBet.ante);
+  // Read the ante input from the current frame to mirror the restored stake.
+  const anteInput = root?.querySelector('[data-ante]');
+  // Reflect the restored ante in the enabled control before dealing.
+  if (anteInput) anteInput.value = String(ante);
+  // Open one identical round through the shared deal action, never replaying play or fold.
+  await deal();
 }
 
 // Apply one play or fold decision to the active round.
@@ -315,6 +341,8 @@ export const TeenPattiGame = {
     mountGeneration += 1;
     // Store the current route outlet.
     root = node;
+    // Reset the repeatable ante so a new session never inherits a prior bet.
+    lastBet = null;
     // Install shared and route-local styles.
     ensureSharedCardStyles();
     // Install the compact route-local styles.
@@ -339,6 +367,10 @@ export const TeenPattiGame = {
     }
     // Stop when the route was replaced during the state load.
     if (generation !== mountGeneration) return;
+    // Recover a repeatable ante from the newest settled round so repeat survives a reload.
+    const recovered = state?.recent_rounds?.slice(-1)[0];
+    // Restore the repeatable ante only when a prior round exposes its committed ante.
+    if (recovered?.ante) lastBet = { ante: Number(recovered.ante) };
     // Render the first frame.
     render();
     // Refresh the shell wallet after mounting.
@@ -360,6 +392,8 @@ export const TeenPattiGame = {
     root = null;
     // Reset the in-flight guard because teardown cancelled any presentation.
     busy = false;
+    // Clear the repeatable ante so the next session starts fresh.
+    lastBet = null;
     // Clear any pending retry ids so a later mount starts clean.
     pendingDealId = null;
     // Clear the pending decision id.

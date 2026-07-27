@@ -8,6 +8,7 @@
   "stake.title": "Stake",
   "action.spin": "Spin the wheel",
   "action.spinning": "Spinning…",
+  "controls.repeat": "Repeat bet",
   "result.idle": "Choose a colour and spin.",
   "result.landed": "Landed on {color}.",
   "error.load": "Could not load Color Wheel.",

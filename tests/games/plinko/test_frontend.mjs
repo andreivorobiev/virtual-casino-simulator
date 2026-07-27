@@ -51,6 +51,12 @@ assert.doesNotMatch(source, /withCurrentPlayer|currentPlayerPath|player_id/);
 assert.match(source, /pendingDrop = pendingDrop \|\| \{ actionId: nextActionId\(\), wager \}/);
 // Verify wager blur does not replace the primary action before its click dispatches.
 assert.match(source, /wagerInput\.onchange = \(\) => \{ wager = wagerValue\(wagerInput\.value\); \};/);
+// Verify the one-click repeat control is rendered after the primary drop button.
+assert.match(source, /data-action="drop"[\s\S]*class="plinko-repeat" data-action="repeat"/);
+// Verify the repeat guard blocks busy, retry, and empty-history states.
+assert.match(source, /if \(busy \|\| pendingDrop \|\| !lastBet\) return;/);
+// Verify a settled drop captures the repeatable committed wager.
+assert.match(source, /lastBet = \{ wager: payload\.drop\.wager \}/);
 // Verify committed path replay comes from response data instead of client randomness.
 assert.match(source, /data-path=/);
 // Verify no browser randomness is used except action-id generation.
@@ -74,7 +80,7 @@ assert.ok((source.match(/await refreshBalance\(\)/g) || []).length >= 2);
 // Reject direct hard-coded English action labels inside generated markup.
 assert.doesNotMatch(source, />\s*(Drop puck|Retry drop|Wager)\s*</);
 // Verify representative visible and ARIA strings exist in both locales.
-for (const key of ['title', 'controls.drop', 'controls.retryDrop', 'stage.bucketAria', 'stage.bucketsAria', 'errors.actionFailed']) {
+for (const key of ['title', 'controls.drop', 'controls.repeat', 'controls.retryDrop', 'stage.bucketAria', 'stage.bucketsAria', 'errors.actionFailed']) {
   // Require a non-empty English value for the probed key.
   assert.ok(english[key]?.trim(), key + ' missing from English');
   // Require a non-empty Russian value for the probed key.

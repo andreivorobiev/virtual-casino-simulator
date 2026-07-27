@@ -9,6 +9,7 @@
   "action.deal_again": "Deal again",
   "action.fold": "Fold",
   "action.bet": "Bet {multiplier}x",
+  "controls.repeat": "Repeat bet",
   "outcome.win": "You win!",
   "outcome.push": "Push.",
   "outcome.lose": "You lose.",

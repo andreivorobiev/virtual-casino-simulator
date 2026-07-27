@@ -65,3 +65,13 @@ assert.match(source, /localeUnsubscribe\?\.\(\)/);
 assert.match(source, /await refreshBalance\(\)/);
 // Reject direct hard-coded English action labels inside generated markup.
 assert.doesNotMatch(source, />\s*(Count pile|Residue wagers|Paytable)\s*</);
+// Verify the one-click repeat control is present in production markup.
+assert.match(source, /data-action="repeat"/);
+// Verify the repeat control renders its localized label rather than hard-coded copy.
+assert.match(source, /translated\('controls\.repeat'\)/);
+// Verify both required locales expose the repeat control label.
+assert.ok(english['controls.repeat'] && russian['controls.repeat'], 'controls.repeat must exist in both locales');
+// Verify the English repeat label matches the shared cross-game copy.
+assert.equal(english['controls.repeat'], 'Repeat bet');
+// Verify the Russian repeat label matches the shared cross-game copy.
+assert.equal(russian['controls.repeat'], 'Повторить ставку');

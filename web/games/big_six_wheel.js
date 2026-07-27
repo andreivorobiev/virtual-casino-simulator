@@ -33,6 +33,8 @@ const ROUTE_CSS = [
   '.big-six-wheel__bet input{box-sizing:border-box;width:100%;min-height:42px;min-width:0;}', // Preserve keyboard and touch usability without pushing the mobile wager grid outside its panel.
   '.big-six-wheel__spin{min-height:46px;border:0;border-radius:12px;color:white;background:#a71922;font-weight:800;}', // Use the shared red primary-action convention.
   '.big-six-wheel__spin:disabled{opacity:.58;cursor:not-allowed;}', // Keep unavailable action state readable.
+  '.big-six-wheel__repeat{min-height:46px;border:1px solid rgba(255,215,128,.55);border-radius:12px;background:transparent;color:#ffd780;font-weight:800;}', // Present the repeat action as a secondary gold-outline control beside the primary spin.
+  '.big-six-wheel__repeat:disabled{opacity:.5;cursor:not-allowed;}', // Keep the unavailable repeat state readable.
   '.big-six-wheel__stage{display:grid;place-items:center;gap:14px;overflow:hidden;}', // Center the wheel without introducing a nested scroll surface.
   '.big-six-wheel__wheel-shell{position:relative;width:min(62vh,520px);max-width:100%;aspect-ratio:1;display:grid;place-items:center;}', // Keep the code-native wheel responsive and square.
   '.big-six-wheel__pointer{position:absolute;z-index:3;top:-4px;width:0;height:0;border-left:16px solid transparent;border-right:16px solid transparent;border-top:34px solid var(--gold,#f2c55c);filter:drop-shadow(0 3px 2px #000);}', // Render a reliable pointer without a special-font glyph.
@@ -70,6 +72,8 @@ let motionScope = null;
 let wheelAngle = 0;
 // Store whether the current animation collapsed to reduced motion for CSS evidence.
 let reducedMotionActive = false;
+// Retain the last committed wager map so one click can repeat the same spin.
+let lastBet = null;
 // Store the locale subscription cleanup callback.
 let localeUnsubscribe = null;
 
@@ -248,8 +252,10 @@ export function viewMarkup({ translate = tx } = {}) {
   const outcomeLabel = spinPending ? translated('action.spinning') : latestRound ? translated(`outcome.${latestRound.outcome}`) : translated('result.waiting');
   // Resolve net result detail only when a backend settlement exists.
   const resultDetail = spinPending ? translated('result.hint') : latestRound ? translated('result.net', { amount: tokenAmount(latestRound.net, translate) }) : translated('result.hint');
+  // Enable the one-click repeat only when a prior wager map exists and no spin or unresolved retry is active.
+  const repeatDisabled = spinPending || Boolean(pendingRequestId) || !lastBet;
   // Return a three-zone layout aligned with the visual-design standard.
-  return `<section class="big-six-wheel" data-testid="big-six-wheel"><header class="big-six-wheel__header"><div><h1>${translated('title')}</h1><p>${translated('subtitle')}</p></div><span class="big-six-wheel__phase" data-testid="big-six-wheel-phase">${translated(phase)}</span></header><div class="big-six-wheel__layout"><section class="big-six-wheel__panel big-six-wheel__controls" aria-label="${translated('controls.aria')}"><h2>${translated('controls.title')}</h2><p>${translated('controls.help')}</p>${wagerControlsHtml(translate)}<button class="big-six-wheel__spin" data-spin type="button"${spinPending ? ' disabled' : ''}>${translated(spinPending ? 'action.spinning' : 'action.spin')}</button><p class="big-six-wheel__error" data-error aria-live="polite"></p></section><section class="big-six-wheel__panel big-six-wheel__stage" aria-label="${translated('stage.aria')}"><div class="big-six-wheel__wheel-shell"><span class="big-six-wheel__pointer" aria-hidden="true"></span><div class="big-six-wheel__wheel" data-wheel data-reduced-motion="${reducedMotionActive}" style="--wheel-angle:${wheelAngle}deg" aria-hidden="true"></div><div class="big-six-wheel__hub"><span>${outcomeLabel}</span></div></div><div class="big-six-wheel__result" aria-live="polite"><strong>${outcomeLabel}</strong><span>${resultDetail}</span></div></section><aside class="big-six-wheel__panel big-six-wheel__data" aria-label="${translated('data.aria')}"><section><h2>${translated('paytable.title')}</h2>${paytableHtml(translate)}</section><section><h2>${translated('history.title')}</h2><div class="big-six-wheel__history" tabindex="0" aria-label="${translated('history.aria')}">${historyHtml(translate)}</div></section></aside></div></section>`;
+  return `<section class="big-six-wheel" data-testid="big-six-wheel"><header class="big-six-wheel__header"><div><h1>${translated('title')}</h1><p>${translated('subtitle')}</p></div><span class="big-six-wheel__phase" data-testid="big-six-wheel-phase">${translated(phase)}</span></header><div class="big-six-wheel__layout"><section class="big-six-wheel__panel big-six-wheel__controls" aria-label="${translated('controls.aria')}"><h2>${translated('controls.title')}</h2><p>${translated('controls.help')}</p>${wagerControlsHtml(translate)}<button class="big-six-wheel__spin" data-spin type="button"${spinPending ? ' disabled' : ''}>${translated(spinPending ? 'action.spinning' : 'action.spin')}</button><button type="button" class="big-six-wheel__repeat" data-action="repeat"${repeatDisabled ? ' disabled' : ''}>${translated('controls.repeat')}</button><p class="big-six-wheel__error" data-error aria-live="polite"></p></section><section class="big-six-wheel__panel big-six-wheel__stage" aria-label="${translated('stage.aria')}"><div class="big-six-wheel__wheel-shell"><span class="big-six-wheel__pointer" aria-hidden="true"></span><div class="big-six-wheel__wheel" data-wheel data-reduced-motion="${reducedMotionActive}" style="--wheel-angle:${wheelAngle}deg" aria-hidden="true"></div><div class="big-six-wheel__hub"><span>${outcomeLabel}</span></div></div><div class="big-six-wheel__result" aria-live="polite"><strong>${outcomeLabel}</strong><span>${resultDetail}</span></div></section><aside class="big-six-wheel__panel big-six-wheel__data" aria-label="${translated('data.aria')}"><section><h2>${translated('paytable.title')}</h2>${paytableHtml(translate)}</section><section><h2>${translated('history.title')}</h2><div class="big-six-wheel__history" tabindex="0" aria-label="${translated('history.aria')}">${historyHtml(translate)}</div></section></aside></div></section>`;
 }
 
 // Render the route and reconnect its game-owned inputs after DOM replacement.
@@ -262,6 +268,18 @@ function render() {
   root.querySelectorAll('[data-wager]').forEach(input => { input.oninput = () => { const amount = Number(input.value); if (Number.isFinite(amount) && amount > 0) wagers[input.dataset.wager] = amount; else delete wagers[input.dataset.wager]; }; });
   // Wire the one atomic spin action.
   root.querySelector('[data-spin]').onclick = spin;
+  // Wire the one-click repeat that re-fires the previous wager map.
+  root.querySelector('[data-action="repeat"]').onclick = repeat;
+}
+
+// Re-apply the last committed wager map and re-fire one spin without a timer.
+async function repeat() {
+  // Ignore repeat while spinning, holding an unresolved retry, or without a prior wager map.
+  if (spinPending || pendingRequestId || !lastBet) return;
+  // Restore the previous wager map into the local control state.
+  wagers = { ...lastBet.wagers };
+  // Fire the shared exactly-once spin action with the restored wagers.
+  await spin();
 }
 
 // Load session-bound state from the additive v1 game endpoint.
@@ -272,6 +290,8 @@ async function load() {
   reconcilePendingRequest();
   // Restore the latest real result without inventing a default wheel outcome.
   latestRound = gameState.recent_rounds?.length ? gameState.recent_rounds[gameState.recent_rounds.length - 1] : null;
+  // Recover a repeatable wager map from the newest settled round so repeat survives a reload.
+  lastBet = latestRound?.wagers ? { wagers: { ...latestRound.wagers } } : null;
   // Align a restored settled outcome without animating or losing cumulative orientation history.
   if (latestRound) wheelAngle = rotationForIndex(latestRound.result_index, 0, wheelAngle);
   // Restore a non-busy player-facing phase after navigation or reload reconciliation.
@@ -321,6 +341,8 @@ async function spin() {
     if (root !== mountedRoot || motionScope !== activeScope) return;
     // Hold the authoritative settlement out of visible result regions until motion completes.
     pendingRound = response.round;
+    // Remember the settled wager map so one click can repeat the same spin next round.
+    lastBet = { wagers: { ...(response.round?.wagers || command.wagers) } };
     // Capture the existing transform so the next target always advances instead of resetting absolutely.
     const startingAngle = wheelAngle;
     // Define one settlement callback that publishes the result only after presentation completes.
@@ -385,6 +407,8 @@ export const BigSixWheelGame = {
   async mount(node) {
     // Store the current route outlet before asynchronous initialization.
     root = node;
+    // Reset any repeatable wager map so a new mount never inherits a stale one before load reconciles history.
+    lastBet = null;
     // Install game-owned styles without changing shared CSS.
     ensureStyles();
     // Create one lifecycle-bound timer scope for this mount.
@@ -419,6 +443,8 @@ export const BigSixWheelGame = {
     spinPending = false;
     // Drop any hidden response because remount will reconcile it from server-owned history.
     pendingRound = null;
+    // Clear the repeatable wager map so the next session starts fresh.
+    lastBet = null;
     // Clear the presentation marker until a new mount reads the active media preference.
     reducedMotionActive = false;
     // Release any unresolved retry identity so a later mount or a different session cannot inherit it; remount reloads authoritative state. (issue #261)

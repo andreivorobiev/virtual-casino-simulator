@@ -13,6 +13,7 @@
   "action.deal_again": "Раздать снова",
   "action.fold": "Сбросить",
   "action.play": "Играть {multiplier}x",
+  "controls.repeat": "Повторить ставку",
   "outcome.player_win": "Вы выиграли!",
   "outcome.dealer_win": "Дилер выигрывает.",
   "outcome.folded": "Сброшено.",

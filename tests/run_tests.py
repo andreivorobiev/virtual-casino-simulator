@@ -1453,6 +1453,20 @@ def run_api_tests():
             raise AssertionError('frontend safety suite failed')
     # Record the invitation-log, toast, motion, Roulette failure, mobile layout, and runtime-output proof.
     run_case('FRONTEND-SAFETY-001',['SEC-013','UX-021','CORE-028','ROU-043','TEENP-002','MOTION-010','TEST-136'],run_frontend_safety_tests)
+    # Execute the complete listener-free catalog repeat-bet contract without opening a listener.
+    def run_repeat_bet_tests():
+        # Import the focused repeat-bet suite only when its mapped case runs.
+        from tests import repeat_bet_tests
+        # Load exactly the catalog, localization, delegation, guard, and timer assertions.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(repeat_bet_tests.RepeatBetTests)
+        # Execute the focused suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the named case when any governed game contract fails or errors.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the central failure label stable.
+            raise AssertionError('repeat-bet suite failed')
+    # Record all forty-three localized one-click repeat foundations under permanent ownership.
+    run_case('UI-REPEAT-BET-001',['UX-022','TEST-137'],run_repeat_bet_tests)
     # Centrally discover all mocked and disabled OAuth tests before any listener starts.
     run_case('OAUTH-MOCK-001',['OAUTH-001','OAUTH-002','OAUTH-003','OAUTH-004','OAUTH-005','OAUTH-007','OAUTH-008','OAUTH-009','TEST-045','TEST-093'],run_oauth_mock_tests)
     # Record focused deployment-default coverage before starting the normal loopback API server.
@@ -4645,6 +4659,92 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Execute the expansion matrix under each game-specific permanent test allocation.
                 run_case('BR-CATALOG-EXPANSION-001',['CWHEEL-001','CWHEEL-002','PDICE-001','PDICE-002','BOULE-001','BOULE-002','FARO-001','FARO-002','TEQ-001','TEQ-002','PACH-001','PACH-002','COINP-001','COINP-002','MARBLE-001','MARBLE-002','PATTERN-001','PATTERN-002','LGRID-001','LGRID-002','DDLAB-001','DDLAB-002','FOURCP-001','FOURCP-002','TEST-119','TEST-120','TEST-121','TEST-122','TEST-123','TEST-124','TEST-125','TEST-126','TEST-128','TEST-129','TEST-130','TEST-131'],catalog_expansion_visuals)
+                # Define catalog-wide repeat control, localization, real action, and visual acceptance. (UX-022, TEST-137)
+                def catalog_repeat_bet():
+                    # Pin the exact forty-three games that lacked the pre-existing Roulette and Baccarat behavior.
+                    repeat_ids=('acey_deucey','andar_bahar','big_six_wheel','bingo','boule','caribbean_stud','casino_holdem','casino_war','chuck_a_luck','coin_pusher','color_wheel','craps','crown_and_anchor','daily_draw_lab','deuces_wild_video_poker','double_bonus_video_poker','dragon_tiger','fan_tan','faro','four_card_poker','hi_lo','jacks_or_better_video_poker','joker_poker','keno','let_it_ride','lucky_grid','marble_race','mississippi_stud','multi_hand_video_poker','over_under_7','pachinko','pai_gow_poker','pattern_draw','plinko','poker_dice','red_dog','scratch_cards','sic_bo','slots','teen_patti','texas_holdem_practice_table','three_card_poker','trente_et_quarante')
+                    # Resolve every route and readiness marker from the authoritative catalog.
+                    repeat_games=[next(game for game in casino_config.GAMES if game['id']==game_id) for game_id in repeat_ids]
+                    # Reject missing or duplicate descriptors before any visible evidence can pass.
+                    assert len(repeat_games)==43 and len({game['id'] for game in repeat_games})==43
+                    # Select every supported repeat-button identity without coupling games to one CSS class.
+                    repeat_selector='button[data-action="repeat"],button[data-testid*="repeat"],button[data-repeat],button[id*="Repeat"],button[id*="repeat"]'
+                    # Pin exact visible copy in both installed locales.
+                    locale_copy={'en-US':'Repeat bet','ru-RU':'\u041f\u043e\u0432\u0442\u043e\u0440\u0438\u0442\u044c \u0441\u0442\u0430\u0432\u043a\u0443'}
+                    # Audit every route in both locales at a governed compact desktop viewport.
+                    page.set_viewport_size({'width':1440,'height':900})
+                    # Exercise every repeat control after a real locale change.
+                    for locale in ('en-US','ru-RU'):
+                        # Select the locale through the player-visible shell control.
+                        page.get_by_test_id('shell-locale-select').select_option(locale)
+                        # Wait until the runtime locale owns the next route render.
+                        page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale",arg=locale)
+                        # Walk the complete approved catalog slice.
+                        for game in repeat_games:
+                            # Navigate through the catalog-owned route control.
+                            page.get_by_test_id(f"nav-{game['id']}").click()
+                            # Wait for the independently declared game readiness marker.
+                            game_root=page.get_by_test_id(game['frontend']['ready_testid']); game_root.wait_for(timeout=5000)
+                            # Resolve the one visible repeat button inside the mounted route.
+                            repeat_button=game_root.locator(repeat_selector)
+                            # Require one semantic control so duplicate or phase-hidden copies cannot create ambiguity.
+                            assert repeat_button.count()==1,{'game':game['id'],'locale':locale,'repeatCount':repeat_button.count()}
+                            # Scroll the control into its owned viewport before geometry inspection.
+                            repeat_button.scroll_into_view_if_needed()
+                            # Require installed-locale copy on the real control.
+                            assert repeat_button.is_visible() and repeat_button.inner_text().strip()==locale_copy[locale],{'game':game['id'],'locale':locale,'copy':repeat_button.inner_text()}
+                            # Measure touch size, document containment, and fixed feedback-control clearance.
+                            geometry=page.evaluate("""({readyTestId,selector}) => { const root=document.querySelector(`[data-testid="${readyTestId}"]`); const button=root?.querySelector(selector); const rect=button?.getBoundingClientRect(); const feedback=document.querySelector('.report-problem-fab:not([hidden])')?.getBoundingClientRect(); const overlaps=Boolean(rect&&feedback&&rect.left<feedback.right&&rect.right>feedback.left&&rect.top<feedback.bottom&&rect.bottom>feedback.top); return {visible:Boolean(rect&&rect.width>0&&rect.height>0),width:Math.round(rect?.width||0),height:Math.round(rect?.height||0),left:Math.round(rect?.left||0),right:Math.round(rect?.right||0),viewportWidth:innerWidth,documentFits:document.documentElement.scrollWidth<=window.innerWidth+1,feedbackOverlap:overlaps}; }""",{'readyTestId':game['frontend']['ready_testid'],'selector':repeat_selector})
+                            # Reject hidden, undersized, clipped, overflowing, or feedback-obscured controls.
+                            assert geometry['visible'] and geometry['width']>=80 and geometry['height']>=40 and geometry['left']>=-1 and geometry['right']<=geometry['viewportWidth']+1 and geometry['documentFits'] and not geometry['feedbackOverlap'],{'game':game['id'],'locale':locale,'geometry':geometry}
+                    # Restore English before executing one real backend-funded repeat.
+                    page.get_by_test_id('shell-locale-select').select_option('en-US')
+                    # Wait for English before reading request payloads from the representative route.
+                    page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'en-US'")
+                    # Open Color Wheel because its fixed color and stake form one compact, auditable repeat configuration.
+                    page.get_by_test_id('nav-color_wheel').click(); page.get_by_test_id('color-wheel').wait_for(timeout=5000)
+                    # Capture the first real settlement request while using the primary action.
+                    with page.expect_request(lambda request: request.url.endswith('/api/v1/games/color-wheel/spins') and request.method=='POST') as first_request_info:
+                        # Start one normally configured spin through the visible primary button.
+                        page.get_by_test_id('color-wheel-spin').click()
+                    # Preserve only the non-secret wager configuration and exactly-once identity.
+                    first_payload=first_request_info.value.post_data_json
+                    # Wait until the decorative spin finishes and repeat becomes enabled.
+                    page.wait_for_function("() => !document.querySelector('[data-testid=\"color-wheel-repeat\"]')?.disabled",timeout=10000)
+                    # Capture the second real settlement request while using only one repeat click.
+                    with page.expect_request(lambda request: request.url.endswith('/api/v1/games/color-wheel/spins') and request.method=='POST') as repeated_request_info:
+                        # Trigger exactly one repeat through the localized secondary action.
+                        page.get_by_test_id('color-wheel-repeat').click()
+                    # Preserve the repeated request for exact configuration comparison.
+                    repeated_payload=repeated_request_info.value.post_data_json
+                    # Require the repeat to preserve color and stake while minting a fresh action identity.
+                    assert repeated_payload['color']==first_payload['color'] and repeated_payload['stake']==first_payload['stake'] and repeated_payload['request_id']!=first_payload['request_id'],{'first':first_payload,'repeat':repeated_payload}
+                    # Wait for the second settlement and busy-state cleanup before visual evidence.
+                    page.wait_for_function("() => !document.querySelector('[data-testid=\"color-wheel-repeat\"]')?.disabled",timeout=10000)
+                    # Enumerate eight representative EN/RU evidence rows across all governed viewport classes.
+                    evidence_rows=(('en-US','color_wheel','desktop_primary',1920,1080),('en-US','craps','desktop_compact',1440,900),('en-US','multi_hand_video_poker','tablet',1024,900),('en-US','pai_gow_poker','mobile',390,844),('ru-RU','color_wheel','mobile',390,844),('ru-RU','craps','tablet',1024,900),('ru-RU','multi_hand_video_poker','desktop_compact',1440,900),('ru-RU','pai_gow_poker','desktop_primary',1920,1080))
+                    # Capture each representative route with exact-source sidecar provenance.
+                    for locale,game_id,viewport_id,width,height in evidence_rows:
+                        # Switch through the real player locale selector before mounting the route.
+                        page.get_by_test_id('shell-locale-select').select_option(locale)
+                        # Wait for the active locale to own the route render.
+                        page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale",arg=locale)
+                        # Apply the exact governed viewport.
+                        page.set_viewport_size({'width':width,'height':height})
+                        # Resolve catalog metadata for the representative route.
+                        game=next(item for item in repeat_games if item['id']==game_id)
+                        # Open the route through its catalog-owned navigation control.
+                        page.get_by_test_id(f'nav-{game_id}').click(); game_root=page.get_by_test_id(game['frontend']['ready_testid']); game_root.wait_for(timeout=5000)
+                        # Resolve and expose the repeat control before capture.
+                        repeat_button=game_root.locator(repeat_selector); repeat_button.scroll_into_view_if_needed()
+                        # Require the same localized visible label in the exact evidence frame.
+                        assert repeat_button.count()==1 and repeat_button.inner_text().strip()==locale_copy[locale]
+                        # Capture the complete game surface with the governed repeat-ready state.
+                        game_evidence(f'after-pass-repeat-bet-{game_id}-{locale}-{viewport_id}.png',game_id,['repeat_available'],locale,viewport_id)
+                    # Restore English, primary desktop, and lobby ownership for later cases.
+                    page.get_by_test_id('shell-locale-select').select_option('en-US'); page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'en-US'"); page.set_viewport_size({'width':1920,'height':1080}); page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Record catalog-wide rendering plus one exact real-backend repeat and eight governed artifacts.
+                run_case('BR-REPEAT-BET-001',['UX-022','TEST-137'],catalog_repeat_bet)
                 # Store the browser audit that proves every game control is reachable inside a scroll region at one viewport. (issue #221)
                 nav_reach_script=r"""(rootSel) => {
                   // Resolve the mounted game root or fall back to the shared route outlet.

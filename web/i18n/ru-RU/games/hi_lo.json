@@ -6,6 +6,7 @@
   "controls.deal": "Открыть первую карту",
   "controls.higher": "Выше",
   "controls.lower": "Ниже",
+  "controls.repeat": "Повторить ставку",
   "controls.retryDeal": "Повторить раздачу",
   "controls.retryHelp": "Предыдущий ответ не был получен полностью. Безопасно повторите то же действие.",
   "controls.title": "Управление игрой",

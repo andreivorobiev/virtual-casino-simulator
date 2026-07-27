@@ -6,5 +6,6 @@
   "result.idle": "Set a stake and drop the ball.",
   "result.landed": "Landed on {mult}x.",
   "error.load": "Could not load Pachinko.",
-  "error.drop": "Drop could not be completed."
+  "error.drop": "Drop could not be completed.",
+  "controls.repeat": "Repeat bet"
 }

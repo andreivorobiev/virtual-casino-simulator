@@ -27,6 +27,8 @@ let revealBusy = false;
 let localeUnsubscribe = null;
 // Retain the last settled reveal so a repaint keeps showing prizes and matches.
 let shownReveal = null;
+// Retain the last committed picks and stake so one click can repeat the same reveal.
+let lastBet = null;
 
 // Translate one game-domain key with an optional fallback.
 const tx = (key, params, fallback) => t(key, params || {}, 'games/lucky_grid') || fallback || key;
@@ -40,7 +42,7 @@ function ensureStyles() {
   // Tag the element so repeated mounts detect and reuse it.
   style.id = STYLE_ID;
   // Render only route-local selectors so no shared class is affected.
-  style.textContent = '.lucky{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;width:100%;min-width:0;min-height:100%;color:var(--text,#f5ead6);align-items:start;} .lg-stage{display:grid;justify-items:center;gap:14px;padding:12px;min-width:0;} .lg-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:min(300px,74vw);} .lg-cell{aspect-ratio:1;border-radius:12px;background:rgba(255,255,255,.06);border:2px solid rgba(255,255,255,.12);display:grid;place-items:center;font-size:26px;font-weight:900;color:var(--text);cursor:pointer;} .lg-cell[aria-pressed="true"]{border-color:#fff2c2;box-shadow:0 0 0 2px rgba(255,242,194,.5);background:rgba(231,189,88,.14);} .lg-cell.prize{background:radial-gradient(circle at 40% 34%,#fff3bd,#e7bd58);color:#241006;} .lg-cell.matched{background:radial-gradient(circle at 40% 34%,#bff0cf,#0f9c4c);color:#052312;box-shadow:0 0 0 2px #fff2c2;} .lg-panel{display:grid;gap:12px;min-width:0;} .lg-card{padding:14px;border:1px solid var(--gold);border-radius:16px;background:rgba(0,0,0,.22);} .lg-card h3{margin:0 0 10px;color:var(--gold);text-transform:uppercase;font-size:12px;letter-spacing:.08em;} .lg-pays{display:grid;gap:6px;font-size:13px;font-weight:700;} .lg-pays div{display:flex;justify-content:space-between;} .lg-pays span:last-child{color:var(--gold);} .lg-chips{display:flex;flex-wrap:wrap;gap:8px;} .lg-chip{min-width:44px;min-height:40px;padding:0 10px;border:1px solid var(--border-soft,rgba(255,255,255,.18));border-radius:10px;background:rgba(255,255,255,.05);color:var(--text);font-weight:900;cursor:pointer;} .lg-chip[aria-pressed="true"]{border-color:#e7bd58;background:rgba(231,189,88,.16);color:#fff2c2;} .lg-go{width:100%;min-height:48px;border:none;border-radius:14px;background:linear-gradient(180deg,var(--gold),var(--brand-strong));color:#241006;font-weight:900;font-size:16px;cursor:pointer;} .lg-go:disabled{opacity:.55;cursor:not-allowed;} .lg-result{min-height:24px;font-size:15px;color:var(--text);text-align:center;} .lg-result .net{font-weight:900;} @media (max-width:900px){.lucky{grid-template-columns:1fr;}}';
+  style.textContent = '.lucky{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;width:100%;min-width:0;min-height:100%;color:var(--text,#f5ead6);align-items:start;} .lg-stage{display:grid;justify-items:center;gap:14px;padding:12px;min-width:0;} .lg-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:min(300px,74vw);} .lg-cell{aspect-ratio:1;border-radius:12px;background:rgba(255,255,255,.06);border:2px solid rgba(255,255,255,.12);display:grid;place-items:center;font-size:26px;font-weight:900;color:var(--text);cursor:pointer;} .lg-cell[aria-pressed="true"]{border-color:#fff2c2;box-shadow:0 0 0 2px rgba(255,242,194,.5);background:rgba(231,189,88,.14);} .lg-cell.prize{background:radial-gradient(circle at 40% 34%,#fff3bd,#e7bd58);color:#241006;} .lg-cell.matched{background:radial-gradient(circle at 40% 34%,#bff0cf,#0f9c4c);color:#052312;box-shadow:0 0 0 2px #fff2c2;} .lg-panel{display:grid;gap:12px;min-width:0;} .lg-card{padding:14px;border:1px solid var(--gold);border-radius:16px;background:rgba(0,0,0,.22);} .lg-card h3{margin:0 0 10px;color:var(--gold);text-transform:uppercase;font-size:12px;letter-spacing:.08em;} .lg-pays{display:grid;gap:6px;font-size:13px;font-weight:700;} .lg-pays div{display:flex;justify-content:space-between;} .lg-pays span:last-child{color:var(--gold);} .lg-chips{display:flex;flex-wrap:wrap;gap:8px;} .lg-chip{min-width:44px;min-height:40px;padding:0 10px;border:1px solid var(--border-soft,rgba(255,255,255,.18));border-radius:10px;background:rgba(255,255,255,.05);color:var(--text);font-weight:900;cursor:pointer;} .lg-chip[aria-pressed="true"]{border-color:#e7bd58;background:rgba(231,189,88,.16);color:#fff2c2;} .lg-go{width:100%;min-height:48px;border:none;border-radius:14px;background:linear-gradient(180deg,var(--gold),var(--brand-strong));color:#241006;font-weight:900;font-size:16px;cursor:pointer;} .lg-go:disabled{opacity:.55;cursor:not-allowed;} .lg-result{min-height:24px;font-size:15px;color:var(--text);text-align:center;} .lg-result .net{font-weight:900;} @media (max-width:900px){.lucky{grid-template-columns:1fr;}}.lg-repeat{width:100%;min-height:46px;border:1px solid var(--gold);border-radius:14px;background:transparent;color:var(--gold);font-weight:900;cursor:pointer;}.lg-repeat:disabled{opacity:.5;cursor:not-allowed;}';
   // Attach the game-owned styles to the document head.
   document.head.appendChild(style);
 }
@@ -86,7 +88,7 @@ function render(resultText) {
   // Report the picks-remaining hint.
   const hint = tx('pick.remaining', { count: PICKS - picks.length }, `Pick ${PICKS - picks.length} more`);
   // Paint the whole route.
-  root.innerHTML = `<section class="lucky" data-testid="lucky-grid"><div class="lg-stage"><div class="lg-grid" data-testid="lucky-grid-board">${cells}</div><p class="lg-result" data-testid="lucky-grid-result" role="status">${resultText || safe(picks.length < PICKS ? hint : tx('result.ready', null, 'Reveal the prizes.'))}</p></div><div class="lg-panel"><div class="lg-card"><h3>${safe(tx('pay.title', null, 'Payouts'))}</h3><div class="lg-pays">${pays}</div></div><div class="lg-card"><h3>${safe(tx('stake.title', null, 'Stake'))}</h3><div class="lg-chips">${chips}</div></div><button class="lg-go" data-testid="lucky-grid-go" type="button" ${revealBusy || picks.length !== PICKS ? 'disabled' : ''}>${safe(revealBusy ? tx('action.revealing', null, 'Revealing…') : tx('action.reveal', null, 'Reveal prizes'))}</button></div></section>`;
+  root.innerHTML = `<section class="lucky" data-testid="lucky-grid"><div class="lg-stage"><div class="lg-grid" data-testid="lucky-grid-board">${cells}</div><p class="lg-result" data-testid="lucky-grid-result" role="status">${resultText || safe(picks.length < PICKS ? hint : tx('result.ready', null, 'Reveal the prizes.'))}</p></div><div class="lg-panel"><div class="lg-card"><h3>${safe(tx('pay.title', null, 'Payouts'))}</h3><div class="lg-pays">${pays}</div></div><div class="lg-card"><h3>${safe(tx('stake.title', null, 'Stake'))}</h3><div class="lg-chips">${chips}</div></div><button class="lg-go" data-testid="lucky-grid-go" type="button" ${revealBusy || picks.length !== PICKS ? 'disabled' : ''}>${safe(revealBusy ? tx('action.revealing', null, 'Revealing…') : tx('action.reveal', null, 'Reveal prizes'))}</button><button class="lg-repeat" data-testid="lucky-grid-repeat" type="button" ${revealBusy || !lastBet ? 'disabled' : ''}>${safe(tx('controls.repeat', null, 'Repeat bet'))}</button></div></section>`;
   // Wire the cell pick buttons.
   root.querySelectorAll('[data-cell]').forEach(btn => { btn.onclick = () => { if (!revealBusy) togglePick(Number(btn.dataset.cell)); }; });
   // Wire the chip buttons.
@@ -95,6 +97,10 @@ function render(resultText) {
   const goBtn = root.querySelector('[data-testid="lucky-grid-go"]');
   // Attach the reveal handler only when a reveal is allowed.
   if (goBtn) goBtn.onclick = reveal;
+  // Wire the one-click repeat that re-fires the last committed picks and stake.
+  const repeatBtn = root.querySelector('[data-testid="lucky-grid-repeat"]');
+  // Attach the repeat handler; the button stays disabled until a prior reveal settles.
+  if (repeatBtn) repeatBtn.onclick = repeat;
 }
 
 // Load session-bound state and render the first frame.
@@ -102,7 +108,11 @@ async function load() {
   // Read authoritative state so the render reflects the server, not client guesses.
   try {
     // Fetch the game state through the frozen v1 endpoint.
-    await api('/api/v1/games/lucky-grid/state');
+    const data = await api('/api/v1/games/lucky-grid/state');
+    // Read the compact newest-first recent-round history retained per player.
+    const rounds = data?.state?.recent_rounds || [];
+    // Recover a repeatable bet from the newest settled round so repeat survives a reload.
+    if (rounds.length && rounds[0]?.public?.wager) lastBet = { picks: [...rounds[0].public.wager.picks], stake: rounds[0].public.wager.stake };
   } catch (err) {
     // Surface a load failure without breaking the shell.
     toast(tx('error.load', null, 'Could not load Lucky Grid.'), 'error');
@@ -126,6 +136,8 @@ async function reveal() {
     const round = response.round;
     // Reveal the authoritative committed prizes and matches.
     shownReveal = round.detail;
+    // Remember the exact committed picks and stake so one click can repeat the same reveal.
+    lastBet = { picks: [...round.wager.picks], stake: round.wager.stake };
     // Repaint immediately so the prizes and matches show during the reveal.
     render();
     // Wait for the decorative reveal to finish before announcing the result.
@@ -152,6 +164,18 @@ async function reveal() {
   }
 }
 
+// Re-apply the last committed picks and stake and re-fire one reveal without a timer.
+async function repeat() {
+  // Ignore repeat while a reveal is active, after teardown, or before any prior reveal has settled.
+  if (revealBusy || !root || !lastBet) return;
+  // Restore the previous picks into the local selection.
+  picks = [...lastBet.picks];
+  // Restore the previous stake into the local selection.
+  stake = lastBet.stake;
+  // Fire the shared exactly-once reveal action with the restored picks and stake.
+  await reveal();
+}
+
 // Export the isolated Lucky Grid game for the shared shell.
 export const LuckyGridGame = {
   // Expose the stable catalog identifier.
@@ -162,6 +186,8 @@ export const LuckyGridGame = {
     root = node;
     // Reset the picks for a fresh mount.
     picks = [];
+    // Reset the repeatable bet so a new mount never inherits a stale one before load reconciles history.
+    lastBet = null;
     // Install game-owned styles.
     ensureStyles();
     // Load both locales through the game-owned lazy domain before visible render.
@@ -181,5 +207,7 @@ export const LuckyGridGame = {
     root = null;
     // Reset the in-flight guard because teardown cancelled any presentation.
     revealBusy = false;
+    // Clear the repeatable bet so the next session starts fresh.
+    lastBet = null;
   },
 };

@@ -1,6 +1,6 @@
 {
   "module": "texas_holdem_practice_table",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "paths": ["casino/games/texas_holdem_practice_table/", "web/games/texas_holdem_practice_table.js", "web/i18n/en-US/games/texas_holdem_practice_table.json", "web/i18n/ru-RU/games/texas_holdem_practice_table.json"],
   "requirements_prefixes": ["THPT"],
   "contracts": ["contracts/openapi/texas_holdem_practice_table.v1.yaml"],

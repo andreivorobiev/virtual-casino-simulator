@@ -46,6 +46,8 @@ let pendingDealBet = null;
 let pendingDrawId = null;
 // Bind the unresolved draw retry id to one round and its held positions.
 let pendingDrawContext = null;
+// Retain the last settled bet so one click can start an identical new deal.
+let lastBet = null;
 
 // Resolve one owned localized string without a visible hard-coded fallback.
 function text(key, params = {}) {
@@ -78,7 +80,7 @@ function ensureStyles() {
   // Tag the element so repeated mounts detect and reuse it.
   style.id = STYLE_ID;
   // Render only route-local selectors so no shared class is affected.
-  style.textContent = '.dbvp{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;width:100%;min-width:0;min-height:100%;color:var(--text,#f5ead6);align-items:start;} .db-header{grid-column:1/-1;display:flex;align-items:end;justify-content:space-between;gap:12px;padding:0 12px;min-width:0;} .db-header h1{margin:0;font-size:clamp(24px,3vw,38px);line-height:1.05;} .db-phase{margin:0;padding:6px 10px;border:1px solid var(--gold);border-radius:999px;color:var(--text);font-size:12px;font-weight:800;} .db-stage{display:grid;gap:16px;padding:12px;min-width:0;justify-items:start;} .db-hand{display:flex;gap:8px;flex-wrap:wrap;min-width:0;} .db-slot{display:grid;justify-items:center;gap:4px;} .db-holdbtn{background:none;border:none;cursor:pointer;padding:0;border-radius:10px;} .db-holdbtn[aria-pressed="true"]{outline:2px solid var(--gold);outline-offset:3px;} .db-tag{font-size:11px;font-weight:900;color:var(--gold);text-transform:uppercase;min-height:14px;} .db-actions{display:flex;flex-wrap:wrap;gap:8px;} .db-btn{min-height:44px;padding:0 18px;border:none;border-radius:12px;font-weight:900;font-size:15px;cursor:pointer;} .db-btn.draw{background:linear-gradient(180deg,#0f9c4c,#0a5f2e);color:#fff;} .db-btn.deal{background:linear-gradient(180deg,#d6323d,#8e1822);color:#fff;width:100%;} .db-btn:disabled{opacity:.55;cursor:not-allowed;} .db-panel{display:grid;gap:12px;min-width:0;} .db-card{padding:14px;border:1px solid var(--gold);border-radius:16px;background:rgba(0,0,0,.22);} .db-card h3{margin:0 0 10px;color:var(--gold);text-transform:uppercase;font-size:12px;letter-spacing:.08em;} .db-field{display:grid;gap:4px;margin-bottom:10px;} .db-field label{font-size:12px;font-weight:700;} .db-field input{width:100%;max-width:100%;min-width:0;min-height:40px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.05);color:var(--text);padding:0 10px;font-weight:800;} .db-pays{display:grid;max-width:100%;min-width:0;gap:3px;font-size:12px;font-weight:700;} .db-pays div{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px;min-width:0;} .db-pays span{min-width:0;overflow-wrap:anywhere;} .db-pays span:last-child{color:var(--gold);} .db-result{min-height:24px;font-size:15px;color:var(--text);font-weight:800;} .db-result .net{font-weight:900;} @media (max-width:1200px){.db-card>h3,.db-card>.db-field,.db-card>.db-btn,.db-card>.db-pays{width:calc(100% - 160px);max-width:calc(100% - 160px);} body:has(.dbvp) .report-problem-fab{width:144px;max-width:144px;white-space:normal;line-height:1.1;}} @media (max-width:900px){.dbvp{grid-template-columns:1fr;}.db-header{align-items:start;flex-direction:column;}.db-header,.db-stage{padding-inline:0;}}';
+  style.textContent = '.dbvp{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;width:100%;min-width:0;min-height:100%;color:var(--text,#f5ead6);align-items:start;} .db-header{grid-column:1/-1;display:flex;align-items:end;justify-content:space-between;gap:12px;padding:0 12px;min-width:0;} .db-header h1{margin:0;font-size:clamp(24px,3vw,38px);line-height:1.05;} .db-phase{margin:0;padding:6px 10px;border:1px solid var(--gold);border-radius:999px;color:var(--text);font-size:12px;font-weight:800;} .db-stage{display:grid;gap:16px;padding:12px;min-width:0;justify-items:start;} .db-hand{display:flex;gap:8px;flex-wrap:wrap;min-width:0;} .db-slot{display:grid;justify-items:center;gap:4px;} .db-holdbtn{background:none;border:none;cursor:pointer;padding:0;border-radius:10px;} .db-holdbtn[aria-pressed="true"]{outline:2px solid var(--gold);outline-offset:3px;} .db-tag{font-size:11px;font-weight:900;color:var(--gold);text-transform:uppercase;min-height:14px;} .db-actions{display:flex;flex-wrap:wrap;gap:8px;} .db-btn{min-height:44px;padding:0 18px;border:none;border-radius:12px;font-weight:900;font-size:15px;cursor:pointer;} .db-btn.draw{background:linear-gradient(180deg,#0f9c4c,#0a5f2e);color:#fff;} .db-btn.deal{background:linear-gradient(180deg,#d6323d,#8e1822);color:#fff;width:100%;} .db-btn:disabled{opacity:.55;cursor:not-allowed;} .db-panel{display:grid;gap:12px;min-width:0;} .db-card{padding:14px;border:1px solid var(--gold);border-radius:16px;background:rgba(0,0,0,.22);} .db-card h3{margin:0 0 10px;color:var(--gold);text-transform:uppercase;font-size:12px;letter-spacing:.08em;} .db-field{display:grid;gap:4px;margin-bottom:10px;} .db-field label{font-size:12px;font-weight:700;} .db-field input{width:100%;max-width:100%;min-width:0;min-height:40px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.05);color:var(--text);padding:0 10px;font-weight:800;} .db-pays{display:grid;max-width:100%;min-width:0;gap:3px;font-size:12px;font-weight:700;} .db-pays div{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px;min-width:0;} .db-pays span{min-width:0;overflow-wrap:anywhere;} .db-pays span:last-child{color:var(--gold);} .db-result{min-height:24px;font-size:15px;color:var(--text);font-weight:800;} .db-result .net{font-weight:900;} @media (max-width:1200px){.db-card>h3,.db-card>.db-field,.db-card>.db-btn,.db-card>.db-pays{width:calc(100% - 160px);max-width:calc(100% - 160px);} body:has(.dbvp) .report-problem-fab{width:144px;max-width:144px;white-space:normal;line-height:1.1;}} @media (max-width:900px){.dbvp{grid-template-columns:1fr;}.db-header{align-items:start;flex-direction:column;}.db-header,.db-stage{padding-inline:0;}}.db-repeat{width:100%;margin-top:8px;min-height:44px;padding:0 18px;border:1px solid var(--gold);border-radius:12px;background:transparent;color:var(--gold);font-weight:900;font-size:15px;cursor:pointer;}.db-repeat:disabled{opacity:.5;cursor:not-allowed;}';
   // Attach the game-owned styles to the document head.
   document.head.append(style);
 }
@@ -190,8 +192,10 @@ function settledStage(round) {
 function sidePanel(drawing, settled) {
   // Select a next-round label only after a completed hand exists.
   const dealLabel = settled ? text('action.deal_again') : text('action.deal');
+  // Enable the one-click repeat only when a prior bet exists and no request or retry is active.
+  const repeatDisabled = busy || Boolean(pendingDealId) || Boolean(pendingDrawId) || !lastBet;
   // Hide the bet input while a draw is pending.
-  const wagerCard = drawing ? '' : `<div class="db-card"><h3>${safe(text('label.bet'))}</h3><div class="db-field"><label for="db-bet">${safe(text('label.bet'))}</label><input id="db-bet" data-bet type="number" min="1" step="1" value="${bet}"></div><button class="db-btn deal" data-deal="1" type="button" ${busy ? 'disabled' : ''}>${safe(dealLabel)}</button></div>`;
+  const wagerCard = drawing ? '' : `<div class="db-card"><h3>${safe(text('label.bet'))}</h3><div class="db-field"><label for="db-bet">${safe(text('label.bet'))}</label><input id="db-bet" data-bet type="number" min="1" step="1" value="${bet}"></div><button class="db-btn deal" data-deal="1" type="button" ${busy ? 'disabled' : ''}>${safe(dealLabel)}</button><button type="button" class="db-repeat" data-action="repeat" ${repeatDisabled ? 'disabled' : ''}>${safe(text('controls.repeat'))}</button></div>`;
   // Build the paytable card.
   const paytable = `<div class="db-card db-paytable"><h3>${safe(text('label.paytable'))}</h3><div class="db-pays">${paytableRows()}</div></div>`;
   // Return the stacked side panel.
@@ -208,6 +212,10 @@ function bindEvents() {
   root.querySelectorAll('[data-hold]').forEach(button => { button.onclick = () => toggleHold(Number(button.dataset.hold)); });
   // Bind every deal control to the deal action.
   root.querySelectorAll('[data-deal]').forEach(button => { button.onclick = deal; });
+  // Bind the one-click repeat control to a fresh same-bet deal.
+  const repeatButton = root.querySelector('[data-action="repeat"]');
+  // Attach the repeat handler when the control is present.
+  if (repeatButton) repeatButton.onclick = repeat;
   // Bind the draw control to the draw action.
   const drawButton = root.querySelector('[data-draw]');
   // Attach the draw handler.
@@ -302,7 +310,23 @@ function draw() {
     pendingDrawId = null;
     // Release the resolved draw context.
     pendingDrawContext = null;
+    // Read the newly settled round to capture its committed wager.
+    const settled = currentRound();
+    // Remember the settled bet so the next deal can repeat the same wager with one click.
+    if (settled && settled.phase === 'settled') lastBet = { bet: settled.bet };
   });
+}
+
+// Start one new deal with the previous bet without replaying the hold or draw.
+async function repeat() {
+  // Read the current round to block a repeat during an unsettled hand.
+  const round = currentRound();
+  // Ignore repeat while busy, holding an unresolved retry, mid-hand, or without a prior bet.
+  if (busy || pendingDealId || pendingDrawId || !lastBet || (round && round.phase === 'draw')) return;
+  // Restore the previous bet so the fresh deal commits the same wager.
+  bet = lastBet.bet;
+  // Fire the shared exactly-once deal action with the restored bet.
+  await deal();
 }
 
 // Export the isolated Double Bonus Video Poker game for the shared shell.
@@ -317,6 +341,8 @@ export const DoubleBonusVideoPokerGame = {
     mountGeneration += 1;
     // Store the current route outlet.
     root = node;
+    // Reset the repeatable bet so another session never inherits a prior wager.
+    lastBet = null;
     // Install shared and route-local styles.
     ensureSharedCardStyles();
     // Install the compact route-local styles.
@@ -335,6 +361,10 @@ export const DoubleBonusVideoPokerGame = {
       const payload = await api(currentPlayerPath(`${API_ROOT}/state`));
       // Adopt the loaded state.
       adoptPayload(payload);
+      // Read the newest reload-safe round to recover a repeatable bet.
+      const restored = currentRound();
+      // Restore the repeatable bet only when a settled round exposes its committed wager.
+      if (restored && restored.phase === 'settled') lastBet = { bet: restored.bet };
     } catch (error) {
       // Surface a load failure without breaking the shell.
       if (generation === mountGeneration) toast(text('error.load'), 'error');
@@ -368,5 +398,7 @@ export const DoubleBonusVideoPokerGame = {
     pendingDealId = null;
     // Clear the pending draw id.
     pendingDrawId = null;
+    // Clear the repeatable bet so the next session starts fresh.
+    lastBet = null;
   },
 };

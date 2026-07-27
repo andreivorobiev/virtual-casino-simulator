@@ -9,6 +9,7 @@
   "controls.raise": "Match wager and draw",
   "controls.readyHelp": "Choose a play-token wager, then deal the two opening cards.",
   "controls.region": "Red Dog controls",
+  "controls.repeat": "Repeat bet",
   "controls.title": "Play",
   "controls.wager": "Play-token wager",
   "errors.action": "The table action could not be completed. Try again.",

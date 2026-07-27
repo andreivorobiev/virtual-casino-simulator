@@ -6,7 +6,7 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.52.1
+- application: 9.53.0
 - core: 9.24.7
 - ledger: 9.1.1
 - players: 9.1.0
@@ -17,56 +17,56 @@ Historical source baseline: 9.1.0
 - operations: 1.1.2
 - marketing_site: 1.0.2
 - roulette: 9.4.11
-- slots: 9.1.7
+- slots: 9.2.0
 - blackjack: 9.1.6
 - baccarat: 9.1.7
-- keno: 9.2.7
-- bingo: 9.2.4
-- multi_hand_video_poker: 1.0.2
-- casino_war: 1.0.2
-- big_six_wheel: 1.0.4
-- red_dog: 1.0.1
-- dragon_tiger: 1.0.1
-- hi_lo: 1.0.1
-- three_card_poker: 1.0.1
-- jacks_or_better_video_poker: 1.0.1
-- deuces_wild_video_poker: 1.0.2
-- scratch_cards: 1.0.2
-- sic_bo: 1.0.1
-- chuck_a_luck: 1.0.1
-- craps: 1.0.2
-- crown_and_anchor: 1.0.3
-- over_under_7: 1.0.3
-- plinko: 1.0.2
-- fan_tan: 1.0.3
-- andar_bahar: 1.0.1
-- acey_deucey: 1.0.2
-- caribbean_stud: 1.0.2
-- let_it_ride: 1.0.1
-- casino_holdem: 1.0.2
-- double_bonus_video_poker: 1.0.1
-- mississippi_stud: 1.0.1
-- joker_poker: 1.0.1
-- texas_holdem_practice_table: 1.0.2
-- pai_gow_poker: 1.0.4
-- teen_patti: 1.0.3
-- tests: 1.60.47
-- docs: 1.60.47
+- keno: 9.3.0
+- bingo: 9.3.0
+- multi_hand_video_poker: 1.1.0
+- casino_war: 1.1.0
+- big_six_wheel: 1.1.0
+- red_dog: 1.1.0
+- dragon_tiger: 1.1.0
+- hi_lo: 1.1.0
+- three_card_poker: 1.1.0
+- jacks_or_better_video_poker: 1.1.0
+- deuces_wild_video_poker: 1.1.0
+- scratch_cards: 1.1.0
+- sic_bo: 1.1.0
+- chuck_a_luck: 1.1.0
+- craps: 1.1.0
+- crown_and_anchor: 1.1.0
+- over_under_7: 1.1.0
+- plinko: 1.1.0
+- fan_tan: 1.1.0
+- andar_bahar: 1.1.0
+- acey_deucey: 1.1.0
+- caribbean_stud: 1.1.0
+- let_it_ride: 1.1.0
+- casino_holdem: 1.1.0
+- double_bonus_video_poker: 1.1.0
+- mississippi_stud: 1.1.0
+- joker_poker: 1.1.0
+- texas_holdem_practice_table: 1.1.0
+- pai_gow_poker: 1.1.0
+- teen_patti: 1.1.0
+- tests: 1.61.0
+- docs: 1.61.0
 - contracts: 1.48.15
 - tooling: 1.21.4
 - commenting_policy: 1.0.0
-- color_wheel: 1.0.2
-- poker_dice: 1.0.1
-- boule: 1.0.1
-- faro: 1.0.1
-- trente_et_quarante: 1.0.1
-- pachinko: 1.0.1
-- coin_pusher: 1.0.1
-- marble_race: 1.0.1
-- pattern_draw: 1.0.1
-- lucky_grid: 1.0.1
-- daily_draw_lab: 1.0.1
-- four_card_poker: 1.0.2
+- color_wheel: 1.1.0
+- poker_dice: 1.1.0
+- boule: 1.1.0
+- faro: 1.1.0
+- trente_et_quarante: 1.1.0
+- pachinko: 1.1.0
+- coin_pusher: 1.1.0
+- marble_race: 1.1.0
+- pattern_draw: 1.1.0
+- lucky_grid: 1.1.0
+- daily_draw_lab: 1.1.0
+- four_card_poker: 1.1.0
 
 ## Requirements
 
@@ -918,3 +918,5 @@ Historical source baseline: 9.1.0
 - **TEST-135** (Tests) - PASS: Requirement-mapped cases fail when their predicate returns false, tautological always-true predicates are refused by a source invariant, requirement-mapped game cases pin per-player server-issued evidence, and every per-game, embedded, and tracked frontend suite executes in continuous integration.
 - **TOOL-009** (Tooling) - PASS: The comment-density gate counts only comment lines and whitespace-delimited inline comments as documentation and fails its workflow below an enforced repository-wide floor.
 - **TOOL-010** (Tooling) - PASS: Contract validation enforces module-to-contract matrix coverage and frozen digest currency for every declared and curated entry, and a merge-safe regeneration mode rebuilds both compatibility artifacts from module descriptors without dropping curated rows or standalone freezes.
+- **UX-022** (Application) - PASS: Each of the forty-three catalog games that previously lacked repeat-bet behavior renders one localized secondary Repeat bet control, keeps it unavailable until a player-owned settled wager configuration exists, and uses one activation to submit a fresh exactly-once game action with that exact base configuration without replaying later draw, hold, call, fold, or hand-setting decisions. Repeat remains guarded while work is active and introduces no parallel timer.
+- **TEST-137** (Tests) - PASS: Listener-free exact-source acceptance pins the complete forty-three-game repeat catalog, paired English and Russian copy, semantic button hooks, settled-wager guards, shared game-action delegation, in-flight exclusion, event wiring, and timer-free execution. Hosted exact-head Browser acceptance renders every control in both locales, proves one real backend-funded exact-configuration repeat, checks containment and fixed-feedback clearance, and captures eight after-pass visual rows across all governed viewport classes.

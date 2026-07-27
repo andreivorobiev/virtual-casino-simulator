@@ -1,6 +1,6 @@
 {
   "module": "pai_gow_poker",
-  "version": "1.0.4",
+  "version": "1.1.0",
   "paths": ["casino/games/pai_gow_poker/", "web/games/pai_gow_poker.js", "web/i18n/en-US/games/pai_gow_poker.json", "web/i18n/ru-RU/games/pai_gow_poker.json"],
   "requirements_prefixes": ["PGP"],
   "contracts": ["contracts/openapi/pai_gow_poker.v1.yaml"],

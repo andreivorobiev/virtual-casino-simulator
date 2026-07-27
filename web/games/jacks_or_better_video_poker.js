@@ -37,6 +37,8 @@ let actionCounter = 0;
 let pendingDealActionId = null;
 // Retain an unresolved draw action id so a lost response cannot duplicate the payout.
 let pendingDrawActionId = null;
+// Retain the last settled coin configuration so one click can repeat the same wager.
+let lastBet = null;
 
 
 // Resolve one game-owned localized string without a visible hard-coded fallback.
@@ -189,10 +191,12 @@ function controlsHtml(roundItem) {
   const dealDisabled = Boolean(state?.active_round) || busy;
   // Enable draw only while the initial hand awaits hold choices.
   const drawDisabled = !roundItem || roundItem.phase !== 'hold' || busy;
+  // Enable the one-click repeat only when a prior settled wager exists and no request, retry, or mid-hand round blocks a new deal.
+  const repeatDisabled = dealDisabled || Boolean(pendingDealActionId) || Boolean(pendingDrawActionId) || !lastBet;
   // Calculate the preview from the same coin count and value submitted to the server.
   const totalWager = selectedCoins * coinValue;
   // Return the complete control rail with stable primary-action placement.
-  return `<aside class="jobvp-panel jobvp-controls" aria-label="${safe(text('controls.title'))}"><h2>${safe(text('controls.title'))}</h2><fieldset${configurationDisabled ? ' disabled' : ''}><legend>${safe(text('controls.coinCount'))}</legend><div class="jobvp-coins">${coinButtons}</div></fieldset><label for="jobvp-coin-value">${safe(text('controls.coinValue'))}</label><input id="jobvp-coin-value" type="number" min="0.01" max="20000" step="0.01" value="${safe(coinValue)}"${configurationDisabled ? ' disabled' : ''}><p class="jobvp-total">${safe(text('controls.totalWager'))}<strong>${safe(tokenAmount(totalWager))}</strong></p><button type="button" class="jobvp-primary" data-action="deal"${dealDisabled ? ' disabled' : ''}>${safe(text('controls.deal'))}</button><button type="button" data-action="draw"${drawDisabled ? ' disabled' : ''}>${safe(text('controls.draw'))}</button><p class="jobvp-help">${safe(text('controls.holdHelp'))}</p></aside>`;
+  return `<aside class="jobvp-panel jobvp-controls" aria-label="${safe(text('controls.title'))}"><h2>${safe(text('controls.title'))}</h2><fieldset${configurationDisabled ? ' disabled' : ''}><legend>${safe(text('controls.coinCount'))}</legend><div class="jobvp-coins">${coinButtons}</div></fieldset><label for="jobvp-coin-value">${safe(text('controls.coinValue'))}</label><input id="jobvp-coin-value" type="number" min="0.01" max="20000" step="0.01" value="${safe(coinValue)}"${configurationDisabled ? ' disabled' : ''}><p class="jobvp-total">${safe(text('controls.totalWager'))}<strong>${safe(tokenAmount(totalWager))}</strong></p><button type="button" class="jobvp-primary" data-action="deal"${dealDisabled ? ' disabled' : ''}>${safe(text('controls.deal'))}</button><button type="button" class="jobvp-repeat" data-action="repeat"${repeatDisabled ? ' disabled' : ''}>${safe(text('controls.repeat'))}</button><button type="button" data-action="draw"${drawDisabled ? ' disabled' : ''}>${safe(text('controls.draw'))}</button><p class="jobvp-help">${safe(text('controls.holdHelp'))}</p></aside>`;
 }
 
 
@@ -220,7 +224,7 @@ function stylesHtml() {
   // Keep the five-card stage dominant at desktop and stack controls first on narrow screens.
   return `<style>
     /* Keep responsive issue #91 presentation isolated inside the lazy game module. */
-    .jobvp-shell{display:grid;gap:18px;min-width:0}.jobvp-header{display:flex;align-items:end;justify-content:space-between;gap:12px}.jobvp-header p,.jobvp-header h1{margin:0}.jobvp-header p{color:var(--gold);font-weight:800}.jobvp-phase{padding:7px 12px;border:1px solid var(--gold);border-radius:999px;background:rgba(255,59,107,.08)}.jobvp-layout{display:grid;grid-template-columns:minmax(220px,.72fr) minmax(520px,2.5fr) minmax(280px,1fr);gap:16px;align-items:start}.jobvp-panel,.jobvp-stage{min-width:0;padding:16px;border:1px solid var(--gold);border-radius:16px;background:rgba(20,10,34,.84)}.jobvp-controls{display:grid;gap:12px}.jobvp-controls fieldset{margin:0;padding:0;border:0}.jobvp-coins{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}.jobvp-coin{min-width:42px;min-height:44px}.jobvp-coin.is-selected{outline:3px solid var(--gold);outline-offset:2px}.jobvp-total{display:grid;gap:3px;margin:0;color:var(--muted,#b8c8c1)}.jobvp-total strong{color:var(--text);font-size:1.15rem}.jobvp-primary{min-height:48px;background:#a51f2d;color:#fff}.jobvp-help,.jobvp-data p,.jobvp-stage-guidance{color:var(--muted,#b8c8c1)}.jobvp-stage{display:grid;align-content:start;gap:18px;min-height:480px}.jobvp-stage-guidance{min-height:24px;margin:0;text-align:center}.jobvp-hand{display:grid;place-items:center;min-height:220px;padding:22px 12px;border:1px solid var(--gold);border-radius:14px;background:radial-gradient(circle at 50% 40%,rgba(35,17,61,.48),rgba(20,10,34,.18))}.jobvp-card-row{display:flex;flex-wrap:nowrap;justify-content:center;gap:10px;max-width:100%}.jobvp-card-button{position:relative;min-width:64px;min-height:94px;padding:3px;border:2px solid transparent;background:transparent}.jobvp-card-button.is-held{border-color:var(--gold);border-radius:10px}.jobvp-held-label{position:absolute;inset:auto 3px 3px;padding:2px 5px;border-radius:999px;background:var(--felt);color:var(--gold);font-size:10px;font-weight:800}.jobvp-result{display:grid;gap:12px;padding:16px;border:1px solid var(--gold);border-radius:14px;background:rgba(255,59,107,.07)}.jobvp-result h2{margin:0;text-align:center}.jobvp-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.jobvp-summary span{display:grid;gap:4px;padding:10px;border-radius:10px;background:rgba(255,255,255,.04)}.jobvp-summary strong{color:var(--text)}.jobvp-empty{min-height:400px;display:grid;place-content:center;text-align:center}.jobvp-data table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:.82rem}.jobvp-data th,.jobvp-data td{padding:7px 3px;border-bottom:1px solid rgba(255,255,255,.1);text-align:center;overflow-wrap:anywhere}.jobvp-data th:first-child{width:45%;text-align:left}.jobvp-data .is-selected{color:#211600;background:var(--gold);font-weight:900}.jobvp-card-button:focus-visible,.jobvp-shell button:focus-visible,.jobvp-shell input:focus-visible{outline:3px solid var(--gold);outline-offset:2px}@media(max-width:1180px){.jobvp-layout{grid-template-columns:1fr}.jobvp-controls{order:1}.jobvp-stage{order:2;min-height:0}.jobvp-data{order:3}.jobvp-summary{grid-template-columns:repeat(2,1fr)}}@media(max-width:520px){.jobvp-header{align-items:start;flex-direction:column}.jobvp-panel,.jobvp-stage{padding:12px}.jobvp-card-row{gap:4px}.jobvp-card-button{min-width:48px;min-height:76px;padding:2px}.jobvp-card-button .playing-card{width:44px;height:66px}.jobvp-hand{min-height:170px;padding:14px 4px}.jobvp-summary{grid-template-columns:1fr}.jobvp-data table{font-size:.72rem}.jobvp-data th,.jobvp-data td{padding:6px 2px}}@media(prefers-reduced-motion:reduce){.jobvp-shell *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+    .jobvp-shell{display:grid;gap:18px;min-width:0}.jobvp-header{display:flex;align-items:end;justify-content:space-between;gap:12px}.jobvp-header p,.jobvp-header h1{margin:0}.jobvp-header p{color:var(--gold);font-weight:800}.jobvp-phase{padding:7px 12px;border:1px solid var(--gold);border-radius:999px;background:rgba(255,59,107,.08)}.jobvp-layout{display:grid;grid-template-columns:minmax(220px,.72fr) minmax(520px,2.5fr) minmax(280px,1fr);gap:16px;align-items:start}.jobvp-panel,.jobvp-stage{min-width:0;padding:16px;border:1px solid var(--gold);border-radius:16px;background:rgba(20,10,34,.84)}.jobvp-controls{display:grid;gap:12px}.jobvp-controls fieldset{margin:0;padding:0;border:0}.jobvp-coins{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}.jobvp-coin{min-width:42px;min-height:44px}.jobvp-coin.is-selected{outline:3px solid var(--gold);outline-offset:2px}.jobvp-total{display:grid;gap:3px;margin:0;color:var(--muted,#b8c8c1)}.jobvp-total strong{color:var(--text);font-size:1.15rem}.jobvp-primary{min-height:48px;background:#a51f2d;color:#fff}.jobvp-help,.jobvp-data p,.jobvp-stage-guidance{color:var(--muted,#b8c8c1)}.jobvp-stage{display:grid;align-content:start;gap:18px;min-height:480px}.jobvp-stage-guidance{min-height:24px;margin:0;text-align:center}.jobvp-hand{display:grid;place-items:center;min-height:220px;padding:22px 12px;border:1px solid var(--gold);border-radius:14px;background:radial-gradient(circle at 50% 40%,rgba(35,17,61,.48),rgba(20,10,34,.18))}.jobvp-card-row{display:flex;flex-wrap:nowrap;justify-content:center;gap:10px;max-width:100%}.jobvp-card-button{position:relative;min-width:64px;min-height:94px;padding:3px;border:2px solid transparent;background:transparent}.jobvp-card-button.is-held{border-color:var(--gold);border-radius:10px}.jobvp-held-label{position:absolute;inset:auto 3px 3px;padding:2px 5px;border-radius:999px;background:var(--felt);color:var(--gold);font-size:10px;font-weight:800}.jobvp-result{display:grid;gap:12px;padding:16px;border:1px solid var(--gold);border-radius:14px;background:rgba(255,59,107,.07)}.jobvp-result h2{margin:0;text-align:center}.jobvp-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.jobvp-summary span{display:grid;gap:4px;padding:10px;border-radius:10px;background:rgba(255,255,255,.04)}.jobvp-summary strong{color:var(--text)}.jobvp-empty{min-height:400px;display:grid;place-content:center;text-align:center}.jobvp-data table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:.82rem}.jobvp-data th,.jobvp-data td{padding:7px 3px;border-bottom:1px solid rgba(255,255,255,.1);text-align:center;overflow-wrap:anywhere}.jobvp-data th:first-child{width:45%;text-align:left}.jobvp-data .is-selected{color:#211600;background:var(--gold);font-weight:900}.jobvp-card-button:focus-visible,.jobvp-shell button:focus-visible,.jobvp-shell input:focus-visible{outline:3px solid var(--gold);outline-offset:2px}@media(max-width:1180px){.jobvp-layout{grid-template-columns:1fr}.jobvp-controls{order:1}.jobvp-stage{order:2;min-height:0}.jobvp-data{order:3}.jobvp-summary{grid-template-columns:repeat(2,1fr)}}@media(max-width:520px){.jobvp-header{align-items:start;flex-direction:column}.jobvp-panel,.jobvp-stage{padding:12px}.jobvp-card-row{gap:4px}.jobvp-card-button{min-width:48px;min-height:76px;padding:2px}.jobvp-card-button .playing-card{width:44px;height:66px}.jobvp-hand{min-height:170px;padding:14px 4px}.jobvp-summary{grid-template-columns:1fr}.jobvp-data table{font-size:.72rem}.jobvp-data th,.jobvp-data td{padding:6px 2px}}@media(prefers-reduced-motion:reduce){.jobvp-shell *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}.jobvp-repeat{min-height:46px;background:transparent;color:var(--gold);border:1px solid var(--gold)}.jobvp-repeat:disabled{opacity:.5}
     /* End the isolated style block without creating runtime resources. */
   </style>`;
 }
@@ -288,6 +292,19 @@ async function deal() {
 }
 
 
+// Re-apply the last settled coin configuration and start one identical new deal without a timer.
+async function repeat() {
+  // Ignore repeat while a request is in flight, a retry is unresolved, a hand is mid-round, or no prior bet exists.
+  if (busy || pendingDealActionId || pendingDrawActionId || Boolean(state?.active_round) || !lastBet) return;
+  // Restore the previous coin count into the local pre-deal configuration.
+  selectedCoins = lastBet.coins;
+  // Restore the previous coin value so the rerendered input and deal read the repeated stake.
+  coinValue = lastBet.coin_value;
+  // Fire the shared exactly-once deal action with the restored wager, never replaying hold or draw choices.
+  await runAction(deal);
+}
+
+
 // Persist one changed hold position for reload-safe continuation.
 async function toggleHold(position) {
   // Read the active initial hand before constructing the next selection.
@@ -319,6 +336,10 @@ async function draw() {
   state = payload.state;
   // Clear the draw key only after the response proves settlement was recovered.
   pendingDrawActionId = null;
+  // Read the round the settlement produced for the repeatable configuration.
+  const settled = currentRound();
+  // Remember the settled coin configuration only from a fully settled round so one click can repeat the same wager.
+  if (settled?.phase === 'settled') lastBet = { coins: settled.coins, coin_value: settled.coin_value };
   // Refresh the shared wallet after any payout credit.
   await refreshBalance();
 }
@@ -349,6 +370,10 @@ function bindEvents() {
   const dealButton = root.querySelector('[data-action="deal"]');
   // Start one idempotent deal when the mounted button exists.
   if (dealButton) dealButton.onclick = () => runAction(deal);
+  // Wire the secondary repeat action that re-fires the previous settled wager.
+  const repeatButton = root.querySelector('[data-action="repeat"]');
+  // Start one new deal with the restored wager when the mounted button exists.
+  if (repeatButton) repeatButton.onclick = () => repeat();
   // Wire the draw action through shared busy handling.
   const drawButton = root.querySelector('[data-action="draw"]');
   // Settle the current hand when the mounted button exists.
@@ -371,6 +396,8 @@ export const JacksOrBetterVideoPokerGame = {
   async mount(node) {
     // Store the route outlet for subsequent deterministic renders.
     root = node;
+    // Reset the repeatable wager so a new session never inherits a prior bet.
+    lastBet = null;
     // Load active and fallback game-owned resources.
     await loadI18nDomain(DOMAIN);
     // Subscribe to locale changes without remounting or losing game state.
@@ -389,6 +416,8 @@ export const JacksOrBetterVideoPokerGame = {
     selectedCoins = restoredRound?.coins || selectedCoins;
     // Restore the round's coin value when direct navigation or reload finds state.
     coinValue = restoredRound?.coin_value || coinValue;
+    // Recover a repeatable wager from the newest settled round so repeat survives a reload.
+    if (restoredRound?.phase === 'settled') lastBet = { coins: restoredRound.coins, coin_value: restoredRound.coin_value };
     // Render the complete issue #91 surface.
     render();
     // Refresh the shared wallet without duplicating balance presentation.
@@ -402,6 +431,8 @@ export const JacksOrBetterVideoPokerGame = {
     unsubscribeLocale = null;
     // Clear cached player state from the inactive module.
     state = null;
+    // Clear the repeatable wager so the next session starts fresh.
+    lastBet = null;
     // Clear the mount node so late promises cannot render into another route.
     root = null;
     // No timers or global listeners remain because this module creates none.

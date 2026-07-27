@@ -81,8 +81,18 @@ assert.match(source, /if \(unsubscribeLocale\) unsubscribeLocale\(\)/);
 assert.ok((source.match(/await refreshBalance\(\)/g) || []).length >= 3);
 // Reject direct hard-coded English action labels inside generated markup.
 assert.doesNotMatch(source, />\s*(Deal seven cards|Set hand|Set by house way|Retry deal)\s*</);
+// Verify the module retains the last committed ante for one-click repeat.
+assert.match(source, /let lastBet = null/);
+// Verify the non-setting branch renders the one-click repeat control.
+assert.match(source, /class="pgp-repeat" data-action="repeat"/);
+// Verify repeat re-applies the stored ante through the shared deal path and never replays the hand-setting decision.
+assert.match(source, /async function repeat\(\)[\s\S]*runAction\(deal\)/);
+// Verify the committed ante is captured only after a round reaches terminal settlement.
+assert.match(source, /settledRound\.phase === 'settled'[\s\S]*lastBet = \{ wager: settledRound\.wager \}/);
+// Verify the repeat control carries game-owned styling with a disabled treatment.
+assert.match(source, /\.pgp-repeat\{[\s\S]*\.pgp-repeat:disabled\{opacity:\.5\}/);
 // Verify representative visible and ARIA strings exist in both locales.
-for (const key of ['title', 'controls.deal', 'controls.set', 'controls.houseWay', 'cards.faceDown', 'cards.cardLabel', 'stage.title', 'errors.actionFailed']) {
+for (const key of ['title', 'controls.deal', 'controls.set', 'controls.houseWay', 'controls.repeat', 'cards.faceDown', 'cards.cardLabel', 'stage.title', 'errors.actionFailed']) {
   // Require a non-empty English value for the probed key.
   assert.ok(english[key]?.trim(), key + ' missing from English');
   // Require a non-empty Russian value for the probed key.

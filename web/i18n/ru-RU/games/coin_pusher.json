@@ -5,6 +5,7 @@
   "pay.coins": "{count} монет",
   "stake.title": "Ставка",
   "action.drop": "Бросить монету",
+  "controls.repeat": "Повторить ставку",
   "action.dropping": "Падение…",
   "result.idle": "Задайте ставку и бросьте монету.",
   "result.cascade": "{coins} монет упало с края!",

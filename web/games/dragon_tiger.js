@@ -36,6 +36,8 @@ let dealing = false;
 let initialLoading = false;
 // Retain the complete unresolved request so retries reuse its action id and payload.
 let pendingAction = null;
+// Retain the last committed bet target and stake so one click can repeat it.
+let lastBet = null;
 // Retain locale cleanup so unmount releases its subscription.
 let unsubscribeLocale = null;
 
@@ -96,7 +98,7 @@ const GAME_CSS = [
   '.dt-panel{min-width:0;padding:16px;border:1px solid var(--border);border-radius:16px;background:rgba(20,10,34,.86)}', // Distinguish each zone.
   '.dt-controls,.dt-data{display:grid;align-content:start;gap:12px}.dt-bets{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}', // Organize control and data rails.
   '.dt-bet,.dt-deal{min-height:46px}.dt-bet.is-selected{outline:3px solid var(--gold);outline-offset:2px}.dt-deal{background:#a51f2d;color:#fff}', // Preserve touch size and non-color selection.
-  '.dt-stage{display:grid;gap:18px;min-height:430px;background:radial-gradient(circle at 50% 45%,rgba(35,17,61,.5),rgba(21,10,36,.96) 70%)}', // Provide a dominant table stage.
+  '.dt-stage{display:grid;gap:18px;min-height:430px;background:radial-gradient(circle at 50% 45%,rgba(35,17,61,.5),rgba(21,10,36,.96) 70%)}.dt-repeat{min-height:46px}.dt-repeat{background:transparent;color:var(--gold);border:1px solid var(--gold)}.dt-repeat:disabled{opacity:.5}', // Provide a dominant table stage.
   '.dt-stage-head{display:flex;align-items:start;justify-content:space-between;gap:12px}.dt-stage-head h2{margin:0}', // Keep result and bet context aligned.
   '.dt-hands{display:grid;grid-template-columns:1fr 1fr;gap:clamp(18px,5vw,70px);align-items:center;min-height:250px}', // Balance both card sides.
   '.dt-hand{display:grid;justify-items:center;gap:12px;padding:18px;border:1px solid rgba(255,255,255,.14);border-radius:14px}.dt-hand h3{margin:0}', // Give each side a labeled card bay.
@@ -160,7 +162,7 @@ function winnerKey(round) {
 }
 
 // Render all route markup through an injectable translation seam.
-export function viewMarkup({ snapshot = gameState, translate = text, selected = selectedBet, wagerValue = wager, isDealing = dealing, isLoading = initialLoading, pending = pendingAction } = {}) {
+export function viewMarkup({ snapshot = gameState, translate = text, selected = selectedBet, wagerValue = wager, isDealing = dealing, isLoading = initialLoading, pending = pendingAction, repeatable = lastBet } = {}) {
   // Resolve the newest completed round once for a consistent frame.
   const round = currentRound(snapshot);
   // Resolve the request-bound or settled player-facing phase.
@@ -171,6 +173,8 @@ export function viewMarkup({ snapshot = gameState, translate = text, selected = 
   const configurationDisabled = isLoading || isDealing || Boolean(pending);
   // Keep a saved retry actionable while blocking initial-load and in-flight clicks.
   const actionDisabled = isLoading || isDealing;
+  // Enable the one-click repeat only when a prior bet exists and no request or retry is active.
+  const repeatDisabled = actionDisabled || Boolean(pending) || !repeatable;
   // Render semantic pressed-state wager buttons with visible selected copy.
   const bets = BETS.map(bet => `<button type="button" class="dt-bet${selected === bet ? ' is-selected' : ''}" data-bet="${bet}" aria-pressed="${selected === bet}"${configurationDisabled ? ' disabled' : ''}>${safe(translate(`bets.${bet}`))}${selected === bet ? `<span class="dt-selected">${safe(translate('bets.selected'))}</span>` : ''}</button>`).join('');
   // Resolve the primary action label for normal, request, and retry states.
@@ -190,7 +194,7 @@ export function viewMarkup({ snapshot = gameState, translate = text, selected = 
   // Read server-owned shoe state for the data rail.
   const shoe = snapshot?.shoe || {};
   // Return the complete responsive three-zone route.
-  return `<section class="dragon-tiger" data-testid="dragon-tiger"><header class="dt-header"><div><p class="dt-muted">${safe(translate('eyebrow'))}</p><h1>${safe(translate('title'))}</h1></div><span class="dt-phase" role="status" aria-live="polite">${safe(phase)}</span></header><div class="dt-layout"><section class="dt-panel dt-controls" aria-label="${safe(translate('controls.region'))}"><h2>${safe(translate('controls.title'))}</h2><div class="dt-bets">${bets}</div><label for="dt-wager">${safe(translate('controls.wager'))}</label><input id="dt-wager" type="number" min="0.01" max="1000000" step="0.01" value="${safe(wagerValue)}"${configurationDisabled ? ' disabled' : ''}><button type="button" class="dt-deal" data-action="deal"${actionDisabled ? ' disabled' : ''}>${safe(actionLabel)}</button><p class="dt-muted">${safe(translate(pending ? 'controls.retryHelp' : 'controls.help'))}</p></section><main class="dt-panel dt-stage" data-testid="dragon-tiger-table" aria-label="${safe(translate('stage.region'))}"><div class="dt-stage-head"><div><p class="dt-muted">${safe(translate('stage.selectedBet', { bet: translate(`bets.${pending?.bet || round?.bet || selected}`) }))}</p><h2>${safe(result)}</h2></div><strong>${safe(phase)}</strong></div><div class="dt-hands"><section class="dt-hand" aria-label="${safe(translate('stage.dragonHand'))}"><h3>${safe(translate('bets.dragon'))}</h3>${dragonCard}</section><section class="dt-hand" aria-label="${safe(translate('stage.tigerHand'))}"><h3>${safe(translate('bets.tiger'))}</h3>${tigerCard}</section></div><div class="dt-summary"><div class="dt-stat"><span>${safe(translate('summary.wager'))}</span><strong>${safe(tokenAmount(round?.wager || 0, translate))}</strong></div><div class="dt-stat"><span>${safe(translate('summary.return'))}</span><strong>${safe(tokenAmount(round?.total_return || 0, translate))}</strong></div><div class="dt-stat"><span>${safe(translate('summary.net'))}</span><strong>${safe(tokenAmount(round?.net || 0, translate))}</strong></div></div></main><aside class="dt-panel dt-data" aria-label="${safe(translate('data.region'))}"><h2>${safe(translate('data.title'))}</h2><div class="dt-stat"><span>${safe(translate('data.cardsRemaining'))}</span><strong>${safe(formatNumber(shoe.cards_remaining || 0))}</strong></div><div class="dt-stat"><span>${safe(translate('data.deckCount'))}</span><strong>${safe(formatNumber(rules.deck_count || 0))}</strong></div><p class="dt-muted">${safe(translate('data.rule', { dragon: betRules.dragon?.net_odds ?? 1, tiger: betRules.tiger?.net_odds ?? 1, tie: betRules.tie?.net_odds ?? 11 }))}</p><h3>${safe(translate('history.title'))}</h3><div class="dt-history">${history || `<p class="dt-muted">${safe(translate('history.empty'))}</p>`}</div></aside></div></section>`;
+  return `<section class="dragon-tiger" data-testid="dragon-tiger"><header class="dt-header"><div><p class="dt-muted">${safe(translate('eyebrow'))}</p><h1>${safe(translate('title'))}</h1></div><span class="dt-phase" role="status" aria-live="polite">${safe(phase)}</span></header><div class="dt-layout"><section class="dt-panel dt-controls" aria-label="${safe(translate('controls.region'))}"><h2>${safe(translate('controls.title'))}</h2><div class="dt-bets">${bets}</div><label for="dt-wager">${safe(translate('controls.wager'))}</label><input id="dt-wager" type="number" min="0.01" max="1000000" step="0.01" value="${safe(wagerValue)}"${configurationDisabled ? ' disabled' : ''}><button type="button" class="dt-deal" data-action="deal"${actionDisabled ? ' disabled' : ''}>${safe(actionLabel)}</button><button type="button" class="dt-repeat" data-action="repeat"${repeatDisabled ? ' disabled' : ''}>${safe(translate('controls.repeat'))}</button><p class="dt-muted">${safe(translate(pending ? 'controls.retryHelp' : 'controls.help'))}</p></section><main class="dt-panel dt-stage" data-testid="dragon-tiger-table" aria-label="${safe(translate('stage.region'))}"><div class="dt-stage-head"><div><p class="dt-muted">${safe(translate('stage.selectedBet', { bet: translate(`bets.${pending?.bet || round?.bet || selected}`) }))}</p><h2>${safe(result)}</h2></div><strong>${safe(phase)}</strong></div><div class="dt-hands"><section class="dt-hand" aria-label="${safe(translate('stage.dragonHand'))}"><h3>${safe(translate('bets.dragon'))}</h3>${dragonCard}</section><section class="dt-hand" aria-label="${safe(translate('stage.tigerHand'))}"><h3>${safe(translate('bets.tiger'))}</h3>${tigerCard}</section></div><div class="dt-summary"><div class="dt-stat"><span>${safe(translate('summary.wager'))}</span><strong>${safe(tokenAmount(round?.wager || 0, translate))}</strong></div><div class="dt-stat"><span>${safe(translate('summary.return'))}</span><strong>${safe(tokenAmount(round?.total_return || 0, translate))}</strong></div><div class="dt-stat"><span>${safe(translate('summary.net'))}</span><strong>${safe(tokenAmount(round?.net || 0, translate))}</strong></div></div></main><aside class="dt-panel dt-data" aria-label="${safe(translate('data.region'))}"><h2>${safe(translate('data.title'))}</h2><div class="dt-stat"><span>${safe(translate('data.cardsRemaining'))}</span><strong>${safe(formatNumber(shoe.cards_remaining || 0))}</strong></div><div class="dt-stat"><span>${safe(translate('data.deckCount'))}</span><strong>${safe(formatNumber(rules.deck_count || 0))}</strong></div><p class="dt-muted">${safe(translate('data.rule', { dragon: betRules.dragon?.net_odds ?? 1, tiger: betRules.tiger?.net_odds ?? 1, tie: betRules.tie?.net_odds ?? 11 }))}</p><h3>${safe(translate('history.title'))}</h3><div class="dt-history">${history || `<p class="dt-muted">${safe(translate('history.empty'))}</p>`}</div></aside></div></section>`;
 }
 
 // Render current state and reconnect semantic controls.
@@ -207,6 +211,20 @@ function render() {
   if (wagerInput) wagerInput.onchange = () => { if (!initialLoading && !pendingAction) { wager = Math.min(1000000, Math.max(0.01, Math.round(Number(wagerInput.value || wager || 5) * 100) / 100)); render(); } };
   // Bind the one atomic deal action.
   root.querySelector('[data-action="deal"]')?.addEventListener('click', deal);
+  // Bind the one-click repeat that re-fires the previous bet.
+  root.querySelector('[data-action="repeat"]')?.addEventListener('click', repeat);
+}
+
+// Re-apply the last committed bet and re-fire one deal without a timer.
+async function repeat() {
+  // Ignore repeat while loading, dealing, or holding an unresolved retry, or without a prior bet.
+  if (initialLoading || dealing || pendingAction || !lastBet) return;
+  // Restore the previous bet target into the local configuration.
+  selectedBet = lastBet.bet;
+  // Restore the previous stake into the local configuration.
+  wager = lastBet.wager;
+  // Fire the shared exactly-once deal action with the restored bet.
+  await deal();
 }
 
 // Submit or retry one exactly-once Dragon Tiger round.
@@ -229,6 +247,10 @@ async function deal() {
     if (!root || identity !== mountIdentity) return;
     // Merge returned state, rules, and round for immediate and reload-consistent rendering.
     gameState = normalizeStatePayload(payload);
+    // Remember the settled bet and stake so the next round can repeat with one click.
+    const settled = currentRound(gameState);
+    // Capture the repeatable configuration only from a fully settled round.
+    if (settled) lastBet = { bet: settled.bet, wager: settled.wager };
     // Clear the action only after a successful server response.
     pendingAction = null;
     // Refresh the authenticated wallet without reclassifying a committed round as a failed deal.
@@ -271,6 +293,8 @@ export const DragonTigerGame = {
     gameState = { shoe: {}, rules: {}, recent_rounds: [] };
     // Reset request state so another user never inherits an action id.
     pendingAction = null;
+    // Reset the repeatable bet so another session never inherits it.
+    lastBet = null;
     // Reset the request-bound phase.
     dealing = false;
     // Hold every player action until the session-bound GET finishes.
@@ -295,6 +319,10 @@ export const DragonTigerGame = {
       if (!root || identity !== mountIdentity) return;
       // Store the documented state and top-level rules.
       gameState = normalizeStatePayload(payload);
+      // Recover a repeatable bet from the newest settled round so repeat survives a reload.
+      const restored = currentRound(gameState);
+      // Restore the repeatable configuration only when a settled round is present.
+      if (restored) lastBet = { bet: restored.bet, wager: restored.wager };
       // Release the initial action guard only after the snapshot is authoritative.
       initialLoading = false;
       // Render recovered shoe and round history.
@@ -334,6 +362,8 @@ export const DragonTigerGame = {
     gameState = { shoe: {}, rules: {}, recent_rounds: [] };
     // Clear any unresolved action identity at the session boundary.
     pendingAction = null;
+    // Clear the repeatable bet so the next session starts fresh.
+    lastBet = null;
     // Release request-bound presentation state; this module owns no timers.
     dealing = false;
     // Release initial-load presentation state at the session boundary.

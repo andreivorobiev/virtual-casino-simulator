@@ -101,6 +101,17 @@ test('issue #89 markup exposes the isolated visual contract', () => {
   assert.deepEqual(BET_IDS, ['one', 'two', 'three', 'four', 'five', 'six']); // Preserve the frozen canonical wager order.
 });
 
+// Verify the one-click repeat control renders, stays disabled without a prior roll, and is localized in both domains.
+test('repeat bet control renders localized and disabled before any settled roll', () => {
+  const translate = (key, params = {}) => `${key}${params.face ? `-${params.face}` : ''}`; // Reuse a deterministic translation seam without the DOM runtime.
+  const markup = viewMarkup({ translate }); // Render the untouched ready state through production markup.
+  assert.match(markup, /class="cal-repeat" data-action="repeat"/); // Expose the secondary repeat action with a stable selector.
+  assert.match(markup, /data-action="repeat" disabled/); // Keep repeat disabled before a repeatable wager map exists.
+  assert.ok(english['controls.repeat']?.trim()); // Require non-empty English repeat copy.
+  assert.ok(russian['controls.repeat']?.trim()); // Require non-empty Russian repeat copy.
+  assert.match(russian['controls.repeat'], /[А-Яа-яЁё]/); // Prove the Russian repeat copy is real Cyrillic text.
+});
+
 // Verify paired game-owned resources remain complete, readable, and free of shell copy.
 test('I18N-001 and I18N-002 EN/RU resources have exact parity', () => {
   assert.deepEqual(Object.keys(russian).sort(), Object.keys(english).sort()); // Require identical resource coverage in both locales.
