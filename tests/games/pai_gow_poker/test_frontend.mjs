@@ -69,6 +69,8 @@ assert.match(source, /min-height:44px/);
 assert.match(source, /@media\(min-width:561px\) and \(max-width:1600px\)\{\.pgp-shell\{padding-right:176px\}body:has\(\.pgp-shell\) \.report-problem-fab\{width:144px;max-width:144px/);
 // Verify the mobile control copy reserves the accepted fixed-feedback lane.
 assert.match(source, /\.pgp-controls \.pgp-help,.pgp-controls \.pgp-error\{width:calc\(100% - 160px\)/);
+// Verify mobile hand-setting actions reserve the same fixed-feedback lane after Repeat lengthens the control rail.
+assert.match(source, /\.pgp-controls fieldset\{padding-right:160px\}/);
 // Verify the mobile problem-report affordance is bounded to the route-local lane.
 assert.match(source, /body:has\(\.pgp-shell\) \.report-problem-fab\{width:144px;max-width:144px/);
 // Verify responsive stacking preserves control, stage, then data order.
@@ -91,6 +93,8 @@ assert.match(source, /async function repeat\(\)[\s\S]*runAction\(deal\)/);
 assert.match(source, /settledRound\.phase === 'settled'[\s\S]*lastBet = \{ wager: settledRound\.wager \}/);
 // Verify the repeat control carries game-owned styling with a disabled treatment.
 assert.match(source, /\.pgp-repeat\{[\s\S]*\.pgp-repeat:disabled\{opacity:\.5\}/);
+// Verify the additive repeat rules are moved inside the game-owned style element instead of emitted as visible text.
+assert.match(source, /replace\('<\/style>\.pgp-repeat', '\.pgp-repeat'\)[\s\S]*mobileSafe \+ '<\/style>'/);
 // Verify representative visible and ARIA strings exist in both locales.
 for (const key of ['title', 'controls.deal', 'controls.set', 'controls.houseWay', 'controls.repeat', 'cards.faceDown', 'cards.cardLabel', 'stage.title', 'errors.actionFailed']) {
   // Require a non-empty English value for the probed key.
