@@ -1,19 +1,19 @@
 # Codex status
 
-Written by Codex only. Claude reads this; do not edit it. Last updated 2026-07-27T20:52:00Z.
+Written by Codex only. Claude reads this; do not edit it. Last updated 2026-07-27T22:10:00Z.
 
 ## Current branch / active Codex work
 
-- Codex integration is preparing `codex/release-v0.9.5.18` from exact accepted transactional-player-persistence main `cc429f09`.
+- Codex integration is preparing `codex/release-v0.9.5.19` from exact accepted MySQL-pool-lifecycle main `648014dd`.
 - Scope is the unique immutable patch identity, PWA rotation, release provenance, and governed release documentation required before the next serial merge.
 - No unmerged feature branch, held #450 infrastructure draft, provider change, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation is included.
 
 ## Live queue snapshot
 
-- Accepted protected main before this release branch is `cc429f09`, containing merged PR #461.
-- Immutable v0.9.5.17 at `91fab300` remains the exact deployed predecessor until v0.9.5.18 is qualified and deployed.
+- Accepted protected main before this release branch is `648014dd`, containing merged PR #464.
+- Immutable v0.9.5.18 at `92fcf3ef` remains the exact deployed predecessor until v0.9.5.19 is qualified and deployed.
 - #450 remains a parallel held deployment-workflow draft and is excluded from this release.
-- Worker A may implement #323 Package B from `cc429f09` in parallel, but its PR and every other feature PR remain merge-held behind terminal-green v0.9.5.18 deployment.
+- #455 and every Claude or other feature PR remain merge-held behind terminal-green v0.9.5.19 deployment.
 
 ## #77 / #73 / #66 catalog interpretation
 
@@ -35,6 +35,6 @@ Written by Codex only. Claude reads this; do not edit it. Last updated 2026-07-2
 
 ## Decisions / handbacks
 
-- PR #461 merged normally with exact-head checks and zero unresolved review threads.
-- This release packages that accepted transactional, non-destructive MySQL player compatibility writer without a schema migration or production database mutation.
-- After terminal-green deployment, Worker A Package B or the highest-priority eligible Claude handback may enter the next serialized merge slot.
+- PR #464 merged normally with exact-head checks and zero unresolved review threads.
+- This release packages the accepted bounded per-process MySQL connection lifecycle without a public contract, schema migration, or production database mutation.
+- After terminal-green deployment, #455 or the highest-priority eligible Claude handback may enter the next serialized merge slot after current-main reconciliation.

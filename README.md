@@ -1,6 +1,6 @@
 # Virtual Casino Simulator
 
-Packaged application release: `0.9.5.18`
+Packaged application release: `0.9.5.19`
 
 Historical source baseline: `9.1.0`
 
@@ -8,7 +8,7 @@ Local play-token browser casino simulator with a descriptor-driven catalog of is
 
 ## Current repository status
 
-This repository has advanced beyond the original v9.1.1 bootstrap snapshot. Packaged release v0.9.5.18 carries the accepted transactional, non-destructive MySQL player persistence fix: the compatibility writer inserts only missing supplied rows, preserves durable wallet, lifecycle, ledger, and action-identity state, and rolls back partial batches. It retains the secret-safe nginx timing foundation, 46-game catalog-governance reconciliation, localized one-click Repeat bet program, TiltSeven Neon Pit identity, packaged non-shell production monitor handoff, compatibility-owned predecessor selection, exact v0.9.5.17 application-only rollback target, private-invite security, MySQL schema 2, provider-disablement, and public-exposure gates. Independently versioned modules continue to record compatible source changes. Current module revisions and requirement status are recorded in the canonical manifests and generated requirements document.
+This repository has advanced beyond the original v9.1.1 bootstrap snapshot. Packaged release v0.9.5.19 carries the accepted bounded per-process MySQL connection lifecycle: request-scoped leases reuse sanitized sessions under hard capacity and checkout deadlines, discard uncertain state, and preserve transaction, schema, and provider boundaries. It retains the transactional non-destructive player writer, secret-safe nginx timing foundation, 46-game catalog-governance reconciliation, localized one-click Repeat bet program, TiltSeven Neon Pit identity, packaged non-shell production monitor handoff, compatibility-owned predecessor selection, exact v0.9.5.18 application-only rollback target, private-invite security, MySQL schema 2, provider-disablement, and public-exposure gates. Independently versioned modules continue to record compatible source changes. Current module revisions and requirement status are recorded in the canonical manifests and generated requirements document.
 
 ## Version sources
 

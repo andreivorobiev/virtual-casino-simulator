@@ -8,7 +8,7 @@ Every protected `main` merge should automatically become the production release.
 
 The browser Admin login and the production monitor login are separate things. Browser login is for a person. The monitor credential is a server-owned bearer token used only by deployment health checks.
 
-Packaged release numbers use the four-part scheme documented in [the release versioning policy](release_versioning.md). The current line is `0.9.5.18`; `0.9.6.0` is reserved for the next large Claude LPR.
+Packaged release numbers use the four-part scheme documented in [the release versioning policy](release_versioning.md). The current line is `0.9.5.19`; `0.9.6.0` is reserved for the next large Claude LPR.
 
 ## What happens after a merge
 
@@ -103,6 +103,8 @@ v0.9.5.15 carries the accepted localized one-click Repeat bet control across the
 v0.9.5.17 carries the accepted repository-owned nginx timing foundation for issue #323. Its compatibility record retains exact immutable v0.9.5.16 as the application-only predecessor; MySQL remains at schema 2 and database rollback remains prohibited.
 
 v0.9.5.18 carries the accepted transactional, non-destructive MySQL player compatibility writer for issue #431. Its compatibility record retains exact immutable v0.9.5.17 as the application-only predecessor; MySQL remains at schema 2 and database rollback remains prohibited.
+
+v0.9.5.19 carries the accepted bounded per-process MySQL connection lifecycle for issue #323. Its compatibility record retains exact immutable v0.9.5.18 as the application-only predecessor; MySQL remains at schema 2 and database rollback remains prohibited.
 
 ## Historical first-rollout blocker
 

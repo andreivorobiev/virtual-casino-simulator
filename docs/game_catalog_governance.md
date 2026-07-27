@@ -4,7 +4,7 @@ GitHub issue #81 established the one-time integration interface for expanding th
 
 ## Current reconciliation
 
-The v0.9.5.18 release line retains 46 catalog-discovered playable game descriptors on the accepted catalog-reconciliation baseline. The historical `GAME_CATALOG_TARGET = 20` value remains a release-readiness floor and reporting target, not a cap and not an instruction to add another catalog mechanism.
+The v0.9.5.19 release line retains 46 catalog-discovered playable game descriptors on the accepted catalog-reconciliation baseline. The historical `GAME_CATALOG_TARGET = 20` value remains a release-readiness floor and reporting target, not a cap and not an instruction to add another catalog mechanism.
 
 Issues #73, #77, and #66 therefore should not be read as an active command to add duplicate game-registration infrastructure. Their current shared-architecture meaning is:
 
