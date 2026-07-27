@@ -4689,8 +4689,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             repeat_button=page.locator('#view').locator(repeat_selector)
                             # Require one semantic control so duplicate or phase-hidden copies cannot create ambiguity.
                             assert repeat_button.count()==1,{'game':game['id'],'locale':locale,'repeatCount':repeat_button.count()}
-                            # Scroll the control into its owned viewport before geometry inspection.
-                            repeat_button.scroll_into_view_if_needed()
+                            # Resolve and scroll atomically so an expected state-hydration rerender cannot detach a Playwright element handle mid-action.
+                            page.evaluate("""selector => document.querySelector('#view')?.querySelector(selector)?.scrollIntoView({block:'center',inline:'nearest'})""",repeat_selector)
                             # Require installed-locale copy on the real control.
                             assert repeat_button.is_visible() and repeat_button.inner_text().strip()==locale_copy[locale],{'game':game['id'],'locale':locale,'copy':repeat_button.inner_text()}
                             # Measure touch size, document containment, and fixed feedback-control clearance.
@@ -4735,8 +4735,10 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         game=next(item for item in repeat_games if item['id']==game_id)
                         # Open the route through its catalog-owned navigation control.
                         page.get_by_test_id(f'nav-{game_id}').click(); game_root=page.get_by_test_id(game['frontend']['ready_testid']); game_root.wait_for(timeout=5000)
-                        # Resolve and expose the repeat control before capture.
-                        repeat_button=page.locator('#view').locator(repeat_selector); repeat_button.scroll_into_view_if_needed()
+                        # Resolve the repeat control dynamically so evidence remains stable across route hydration rerenders.
+                        repeat_button=page.locator('#view').locator(repeat_selector)
+                        # Scroll atomically without retaining an element handle that a normal hydration rerender may detach.
+                        page.evaluate("""selector => document.querySelector('#view')?.querySelector(selector)?.scrollIntoView({block:'center',inline:'nearest'})""",repeat_selector)
                         # Require the same localized visible label in the exact evidence frame.
                         assert repeat_button.count()==1 and repeat_button.inner_text().strip()==locale_copy[locale]
                         # Capture the complete game surface with the governed repeat-ready state.
