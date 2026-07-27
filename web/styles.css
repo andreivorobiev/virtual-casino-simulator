@@ -841,7 +841,7 @@ label {
 
 /* Provide a zero-specificity keyboard focus ring for any in-game control that does not define its own, so every game route stays keyboard-legible on the dark felt. Wrapped in :where() so any game-owned :focus-visible rule still wins. */
 :where(#view.screen.game-screen button, #view.screen.game-screen input, #view.screen.game-screen select, #view.screen.game-screen [tabindex]):focus-visible {
-  outline: 3px solid #ff3b6b;
+  outline: 3px solid var(--gold);
   outline-offset: 2px;
 }
 

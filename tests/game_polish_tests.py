@@ -58,7 +58,7 @@ class GamePolishTests(unittest.TestCase):
         # Isolate the declared rule body without depending on unrelated stylesheet ordering.
         rule_body = stylesheet.split(selector, 1)[1].split("}", 1)[0]
         # Require a high-contrast nonzero outline and a positive offset around focused controls.
-        self.assertIn("outline: 3px solid #ffd780;", rule_body)
+        self.assertIn("outline: 3px solid var(--gold);", rule_body)
         # Require the ring to remain visually separated from the dark control boundary.
         self.assertIn("outline-offset: 2px;", rule_body)
 

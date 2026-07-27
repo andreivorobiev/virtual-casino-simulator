@@ -14,9 +14,9 @@ import unittest
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 # Name the exact public static paths permitted in the service-worker cache.
 EXPECTED_SHELL_ASSETS = {
-    "/index.html", "/styles.css", "/app.js", "/manifest.webmanifest", "/assets/favicon.svg",
+    "/index.html", "/styles.css", "/app.js", "/brands/tiltseven.js", "/manifest.webmanifest", "/assets/favicon.svg",
     "/assets/pwa-icon-192.png", "/assets/pwa-icon-512.png", "/assets/pwa-maskable-192.png", "/assets/pwa-maskable-512.png",
-    "/core/api.js", "/core/feedback.js", "/core/i18n.js", "/core/pwa.js", "/core/ui.js", "/core/voice.js",
+    "/core/api.js", "/core/brand.js", "/core/feedback.js", "/core/i18n.js", "/core/pwa.js", "/core/ui.js", "/core/voice.js",
     "/i18n/en-US/feedback.json", "/i18n/en-US/shell.json", "/i18n/ru-RU/feedback.json", "/i18n/ru-RU/shell.json",
 }
 # Name every governed lifecycle state required by the narrowed visual matrix.
