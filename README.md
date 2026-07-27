@@ -1,6 +1,6 @@
 # Virtual Casino Simulator
 
-Packaged application release: `0.9.5.16`
+Packaged application release: `0.9.5.17`
 
 Historical source baseline: `9.1.0`
 
@@ -8,7 +8,7 @@ Local play-token browser casino simulator with a descriptor-driven catalog of is
 
 ## Current repository status
 
-This repository has advanced beyond the original v9.1.1 bootstrap snapshot. Packaged release v0.9.5.16 carries the accepted catalog-governance reconciliation: 46 descriptor-discovered playable games, a historical 20-game readiness floor rather than a cap, and explicit #73/#77/#66 shared-integration boundaries. It retains the localized one-click Repeat bet program, TiltSeven Neon Pit identity, packaged non-shell production monitor handoff, compatibility-owned predecessor selection, exact v0.9.5.15 application-only rollback target, private-invite security, MySQL schema 2, provider-disablement, and public-exposure gates. Independently versioned modules continue to record compatible source changes. Current module revisions and requirement status are recorded in the canonical manifests and generated requirements document.
+This repository has advanced beyond the original v9.1.1 bootstrap snapshot. Packaged release v0.9.5.17 carries the accepted secret-safe nginx timing foundation: bounded method and route families plus response status, request time, and upstream response time, with raw paths, queries, identities, headers, cookies, and payloads excluded. It retains the 46-game catalog-governance reconciliation, localized one-click Repeat bet program, TiltSeven Neon Pit identity, packaged non-shell production monitor handoff, compatibility-owned predecessor selection, exact v0.9.5.16 application-only rollback target, private-invite security, MySQL schema 2, provider-disablement, and public-exposure gates. Independently versioned modules continue to record compatible source changes. Current module revisions and requirement status are recorded in the canonical manifests and generated requirements document.
 
 ## Version sources
 

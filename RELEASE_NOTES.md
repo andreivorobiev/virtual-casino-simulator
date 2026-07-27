@@ -1,4 +1,17 @@
-# Virtual Casino Simulator v0.9.5.16 Release Notes
+# Virtual Casino Simulator v0.9.5.17 Release Notes
+
+## Secret-safe nginx timing foundation
+
+- Adds a repository-owned nginx timing log schema with fixed low-cardinality method and route families.
+- Records only normalized method family, normalized route family, response status, total request time, and upstream response time.
+- Excludes raw methods, paths, queries, identifiers, client and upstream addresses, headers, cookies, tokens, bodies, byte counts, user agents, referrers, and application data from timing rows.
+- Applies the bounded timing log to both Casino virtual hosts without installing, reloading, or mutating production nginx configuration from the merge lane.
+- Keeps application percentiles, worker and queue telemetry, MySQL pool metrics, browser RUM, isolated benchmarks, connection pooling, and Gunicorn tuning as later issue #323 packages.
+- Rotates the PWA shell identity and keeps curated What's New metadata disabled pending its separately governed UI remainder.
+- Retains exact immutable v0.9.5.16 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation.
+
+## Prior v0.9.5.16 catalog-governance reconciliation release
 
 ## Catalog-governance reconciliation release
 
