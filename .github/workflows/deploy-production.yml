@@ -63,15 +63,17 @@ jobs:
       # Download the retained predecessor manifest needed for application-only rollback.
       - name: Download predecessor release manifest
         env:
+          APP_VERSION: ${{ steps.release_identity.outputs.app_version }}
           RELEASE_TAG: ${{ steps.release_identity.outputs.release_tag }}
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
-          previous_tag="$(gh api "repos/${GITHUB_REPOSITORY}/releases?per_page=100" | jq -r --arg current "${RELEASE_TAG}" '[.[] | select(.draft == false and .prerelease == false and .tag_name != $current)][0].tag_name // empty')"
+          previous_tag="$(python scripts/resolve_release_predecessor.py --app-version "${APP_VERSION}")"
           test -n "${previous_tag}"
           mkdir -p previous
           gh release download "${previous_tag}" --pattern release-manifest.json --dir previous --clobber
+          test "$(python scripts/resolve_release_predecessor.py --app-version "${APP_VERSION}" --verify-manifest previous/release-manifest.json)" = "${previous_tag}"
       # Build a checksum-bound release candidate from exact protected-main source bytes.
       - name: Build exact-main release candidate
         env:
@@ -196,7 +198,6 @@ jobs:
               systemctl reload nginx || true
             fi
           }
-          trap rollback ERR
           cd "${staging}"
           sha256sum -c checksums.txt
           if ! test -d "${release_root}"; then
@@ -208,7 +209,9 @@ jobs:
             rmdir "${tmp_release}"
           fi
           /opt/casino/venv/bin/python "${release_root}/scripts/package_app.py" --verify-only --archive "${staging}/virtual_casino_simulator_package.zip" --manifest "${staging}/release-manifest.json" --expected-commit "${release_sha}" --expected-tag "${release_tag}" --require-rollback
+          /opt/casino/venv/bin/python "${release_root}/scripts/validate_monitor_config.py" check --monitor-env /etc/casino/edge-monitor.env --application-env /etc/casino/casino.env
           /opt/casino/venv/bin/python "${release_root}/scripts/write_release_env.py" --manifest "${staging}/release-manifest.json" --destination "${staging}/release.env"
+          trap rollback ERR
           install -m 0640 -o root -g root "${staging}/release.env" /etc/casino/release.env
           ln -sfn "${release_root}" /opt/casino/current.next
           mv -Tf /opt/casino/current.next /opt/casino/current

@@ -46,6 +46,12 @@ from tests import recovery_tests
 from tests import edge_gate_tests
 # Import the focused deployment build-provenance suite.
 from tests import release_env_tests
+# Import listener-free compatibility-owned predecessor tests for protected publication.
+from tests import release_predecessor_tests
+# Import listener-free monitor bearer/digest validation and repair tests.
+from tests import monitor_config_tests
+# Import inert production workflow policy tests for exact-head deployment.
+from tests import cicd_deployment_tests
 # Import focused non-finite validation and persistence tests for TEST-055.
 from tests import nonfinite_money_tests
 # Import exact-source 50,000-cycle harness proofs for TEST-092.
@@ -946,6 +952,42 @@ def run_api_tests():
             raise AssertionError('deployment build provenance suite failed')
     # Record the listener-free deployment provenance fragment and service-unit ordering proof.
     run_case('DEPLOY-PROVENANCE-001',['TOOL-007','TEST-098'],run_release_env_tests)
+    # Execute compatibility-owned predecessor selection without contacting GitHub Releases.
+    def run_release_predecessor_tests():
+        # Load only the focused predecessor policy class.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(release_predecessor_tests.ReleasePredecessorTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any predecessor assertion failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure stable.
+            raise AssertionError('release predecessor policy suite failed')
+    # Record exact compatibility-owned rollback selection and manifest binding.
+    run_case('RELEASE-PREDECESSOR-001',['TOOL-003','TOOL-008','TEST-133'],run_release_predecessor_tests)
+    # Execute the split monitor bearer/digest proof without opening a listener.
+    def run_monitor_config_tests():
+        # Load only the focused root-managed monitor configuration class.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(monitor_config_tests.MonitorConfigTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any monitor assertion failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure secret-safe.
+            raise AssertionError('monitor configuration suite failed')
+    # Record listener-free validation, mismatch refusal, and explicit atomic repair.
+    run_case('MONITOR-CONFIG-001',['OPS-006','TOOL-008','TEST-133'],run_monitor_config_tests)
+    # Execute the inert production-workflow policy proof without GitHub, SSH, or deployment.
+    def run_cicd_deployment_tests():
+        # Load only the focused protected-main workflow policy class.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(cicd_deployment_tests.CicdDeploymentWorkflowTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any workflow assertion failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure stable.
+            raise AssertionError('production CI/CD workflow suite failed')
+    # Record immutable publication, hosted assets, SSH boundaries, and rollback behavior.
+    run_case('DEPLOY-CICD-001',['TOOL-008','TEST-133'],run_cicd_deployment_tests)
     # Execute the bounded Roulette anti-strobe proof without opening a listener or browser.
     def run_roulette_motion_tests():
         # Import the focused suite only when its mapped API case runs.
@@ -2927,11 +2969,11 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Await the production registration's fully activated worker before issuing competing manifest, icon, or reload traffic.
                         registration_identity=pwa_page.evaluate("""async () => { const timeout=new Promise(resolve => setTimeout(async () => { const registrations=await navigator.serviceWorker.getRegistrations(); const worker=registrations[0]?.installing||registrations[0]?.waiting||registrations[0]?.active; resolve({ready:false,state:worker?.state||'missing',scriptUrl:worker?.scriptURL||''}); },20000)); const active=navigator.serviceWorker.ready.then(registration => ({ready:Boolean(registration.active),state:registration.active?.state||'',scriptUrl:registration.active?.scriptURL||''})); return await Promise.race([active,timeout]); }""")
                         # Require atomic shell installation and activation at the canonical script before a controlled navigation is attempted.
-                        assert registration_identity=={'ready':True,'state':'activated','scriptUrl':f'{base}/sw.js?v=0.9.5.6'},{'registration':registration_identity,'workerDiagnostics':pwa_worker_diagnostics[-4:]}
+                        assert registration_identity=={'ready':True,'state':'activated','scriptUrl':f'{base}/sw.js?v=0.9.5.7'},{'registration':registration_identity,'workerDiagnostics':pwa_worker_diagnostics[-4:]}
                         # Reload only after activation so the navigation is deterministically controlled even when the initial clients.claim event raced first paint.
                         pwa_page.reload(wait_until='domcontentloaded'); pwa_page.get_by_test_id('lobby').wait_for(timeout=8000)
                         # Wait synchronously for the controlled reload and canonical page identity without an async polling predicate.
-                        pwa_page.wait_for_function("() => Boolean(navigator.serviceWorker.controller) && window.CasinoPwa?.version==='0.9.5.6'",timeout=8000)
+                        pwa_page.wait_for_function("() => Boolean(navigator.serviceWorker.controller) && window.CasinoPwa?.version==='0.9.5.7'",timeout=8000)
                         # Require the same-context reload to classify as warm rather than a fresh install claim.
                         assert pwa_page.evaluate("() => document.documentElement.dataset.pwaStart")=='warm-start'
                         # Read the manifest link and both Android/iOS browser-foundation meta contracts.
@@ -2951,7 +2993,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Read the controlling worker identity without opening CacheStorage through a competing page transaction.
                         worker_identity=pwa_page.evaluate("async () => { const active=(await navigator.serviceWorker.getRegistrations()).find(reg => reg.active)?.active; return { pageVersion:window.CasinoPwa?.version||'', controller:Boolean(navigator.serviceWorker.controller), scriptUrl:active?.scriptURL||'' }; }")
                         # Require the active root worker and page to share the canonical packaged version.
-                        assert worker_identity['pageVersion']=='0.9.5.6' and worker_identity['controller'] and worker_identity['scriptUrl'].endswith('/sw.js?v=0.9.5.6'),worker_identity
+                        assert worker_identity['pageVersion']=='0.9.5.7' and worker_identity['controller'] and worker_identity['scriptUrl'].endswith('/sw.js?v=0.9.5.7'),worker_identity
                         # Fetch an authoritative API path and prove it does not enter any worker cache.
                         pwa_page.evaluate("async () => { await fetch('/api/v1/casino/state',{credentials:'include'}); }")
                         # Enter true offline mode and require native fail-closed controls plus a pre-fetch API rejection.

@@ -46,6 +46,21 @@ class CicdDeploymentWorkflowTests(unittest.TestCase):
         # Require release candidates to be built with a predecessor manifest for rollback eligibility.
         self.assertIn('python scripts/make_release.py --release-tag "${RELEASE_TAG}" --previous-manifest previous/release-manifest.json', text)
 
+    # Prove rollback selection follows repository compatibility policy instead of release ordering.
+    def test_workflow_uses_compatibility_declared_predecessor(self):
+        # Read the workflow source as inert text.
+        text = self.workflow_text()
+        # Require the current packaged version to enter the resolver.
+        self.assertIn("APP_VERSION: ${{ steps.release_identity.outputs.app_version }}", text)
+        # Require exact predecessor selection from the tracked compatibility record.
+        self.assertIn('previous_tag="$(python scripts/resolve_release_predecessor.py --app-version "${APP_VERSION}")"', text)
+        # Require the downloaded manifest to be verified against the same declaration.
+        self.assertIn('--verify-manifest previous/release-manifest.json', text)
+        # Reject the defective latest-other-release heuristic that produced v0.9.5.6 provenance.
+        self.assertNotIn('releases?per_page=100', text)
+        # Reject any release-list API ordering as a rollback policy input.
+        self.assertNotIn('gh api "repos/${GITHUB_REPOSITORY}/releases', text)
+
     # Prove deployment consumes hosted Release assets rather than untrusted local build outputs.
     def test_workflow_deploys_hosted_release_assets(self):
         # Read the workflow source as inert text.
@@ -71,6 +86,20 @@ class CicdDeploymentWorkflowTests(unittest.TestCase):
         self.assertIn("mv -Tf /opt/casino/current.next /opt/casino/current", text)
         # Require the generated build-provenance fragment to be installed.
         self.assertIn("scripts/write_release_env.py", text)
+        # Require the root-managed bearer and application digest to match before symlink cutover.
+        monitor_validation = text.index("scripts/validate_monitor_config.py")
+        # Locate the release symlink mutation that follows all pre-cutover gates.
+        release_switch = text.index('ln -sfn "${release_root}" /opt/casino/current.next')
+        # Prove read-only monitor validation precedes the production release switch.
+        self.assertLess(monitor_validation, release_switch)
+        # Locate rollback activation separately from the rollback function definition.
+        rollback_trap = text.index("trap rollback ERR")
+        # Prove pre-cutover monitor validation fails without invoking production rollback mutation.
+        self.assertLess(monitor_validation, rollback_trap)
+        # Prove rollback protection begins before the first release-owned environment mutation.
+        self.assertLess(rollback_trap, text.index('install -m 0640 -o root -g root "${staging}/release.env" /etc/casino/release.env'))
+        # Require workflow use to remain read-only; repair is an explicit owner operation.
+        self.assertIn("scripts/validate_monitor_config.py\" check --monitor-env /etc/casino/edge-monitor.env --application-env /etc/casino/casino.env", text)
         # Require final edge observation after restart and nginx reload.
         self.assertIn("scripts/edge_gate.py observe", text)
 
