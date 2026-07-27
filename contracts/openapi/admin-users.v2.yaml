@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: Virtual Casino admin user-management API
   version: v2
-  description: Additive v2 contract for Admin-role-authorized private beta user administration, terms status, locale, and token/player inspection. Every operation requires an active authenticated user with the Admin role.
+  description: Additive v2 contract for Admin-role-authorized private beta user administration, terms status, locale, and token/player inspection. Every operation requires active Admin access, while Admin-role grant or revoke additionally requires the bootstrap-managed platform owner.
 servers:
   - url: /api/v2
 paths:
@@ -20,7 +20,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/UserListEnvelope'
     post:
-      summary: Create a private beta user and default bound player.
+      summary: Create a private beta player account and default bound player; Admin authority is delegated only after creation by the platform owner.
       operationId: admin_users_v2_create_user
       security:
         - cookieSession: []
@@ -53,7 +53,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/UserDetailEnvelope'
     patch:
-      summary: Update user active status, role assignments, display name, or locale.
+      summary: Update user active status, role assignments, display name, or locale; role assignment requires the platform owner and cannot mutate platform-owner authority.
       operationId: admin_users_v2_update_user
       security:
         - cookieSession: []
@@ -158,7 +158,7 @@ components:
           type: array
           items:
             type: string
-            enum: [player, admin]
+            enum: [player]
         locale:
           type: string
     UpdateUserRequest:
@@ -213,7 +213,7 @@ components:
           type: array
           items:
             type: string
-            enum: [player, admin]
+            enum: [player, admin, platform_owner]
         locale:
           type: string
         terms_accepted:

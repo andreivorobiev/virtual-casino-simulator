@@ -24,7 +24,7 @@ from casino.core.state_store import read_json
 # Import required dependency so this module can use its public functions or constants.
 from casino.bots import profiles, practice_opponents
 # Import required dependency so this module can use its public functions or constants.
-from casino.errors import NotFoundError, ValidationError
+from casino.errors import ForbiddenError, NotFoundError, ValidationError
 
 # Set REQ_PATH to the value needed for the next operation.
 REQ_PATH = DOCS_DIR / "requirements.json"
@@ -218,8 +218,8 @@ def _clean_status(value) -> str:
 def _active_admin_count(state: dict, replacement: dict | None = None) -> int:
     # Build the candidate user list with the replacement record substituted by user id.
     users = [replacement if replacement and user.get("user_id") == replacement.get("user_id") else user for user in state.get("users", [])]
-    # Count only active non-guest identities with the Admin role.
-    return sum(1 for user in users if not _is_guest_trial_user(user) and user.get("status") == "active" and "admin" in auth.roles_for_user(user))
+    # Count active non-guest identities with ordinary Admin or inherited owner access.
+    return sum(1 for user in users if not _is_guest_trial_user(user) and auth.is_admin(user))
 
 
 # Reject mutations that would leave the product without any active Admin.
@@ -230,10 +230,64 @@ def _require_remaining_admin(state: dict, replacement: dict) -> None:
         raise ValidationError("At least one active Admin must remain")
 
 
+# Count active platform owners after applying an optional in-memory replacement. (ADMIN-028)
+def _active_platform_owner_count(state: dict, replacement: dict | None = None) -> int:
+    # Substitute the candidate record so validation observes the exact post-mutation document.
+    users = [replacement if replacement and user.get("user_id") == replacement.get("user_id") else user for user in state.get("users", [])]
+    # Count only active durable accounts carrying bootstrap-managed owner authority.
+    return sum(1 for user in users if not _is_guest_trial_user(user) and auth.is_platform_owner(user))
+
+
+# Reject mutations that would remove or disable the last platform owner. (ADMIN-028)
+def _require_remaining_platform_owner(state: dict, replacement: dict) -> None:
+    # Check the complete post-mutation registry under the provider transaction.
+    if _active_platform_owner_count(state, replacement) < 1:
+        # Preserve at least one recoverable bootstrap authority.
+        raise ValidationError("At least one active platform owner must remain")
+
+
+# Validate the active Admin and owner invariants together. (ADMIN-028)
+def _require_remaining_authority(state: dict, replacement: dict) -> None:
+    # Preserve the existing Admin-surface availability invariant.
+    _require_remaining_admin(state, replacement)
+    # Preserve the stronger owner-delegation invariant.
+    _require_remaining_platform_owner(state, replacement)
+
+
+# Resolve an authenticated actor against current canonical state before a privileged role mutation. (ADMIN-028)
+def _current_platform_owner(actor: dict | None) -> dict:
+    # Read only the opaque actor id from request context.
+    actor_id = str((actor or {}).get("user_id") or "")
+    # Reject absent or synthetic identities before any account lookup.
+    if not actor_id:
+        # Return one enumeration-safe authorization failure.
+        raise ForbiddenError("Platform owner role is required")
+    # Resolve current durable authority so a stale session payload cannot retain owner power.
+    current = auth.find_user_by_id(actor_id)
+    # Require the canonical active owner role.
+    auth.require_platform_owner(current or {})
+    # Return the current actor for transaction-scoped validation and audit attribution.
+    return current
+
+
+# Build the transaction validator for owner-authorized role mutations. (ADMIN-028)
+def _owner_role_validator(actor_id: str):
+    # Validate the complete post-mutation identity document under one provider lock.
+    def validate(state: dict, replacement: dict) -> None:
+        # Resolve the actor from the same post-mutation document used for persistence.
+        actor = next((user for user in state.get("users", []) if user.get("user_id") == actor_id), None)
+        # Reject an owner who lost authority before this mutation could commit.
+        auth.require_platform_owner(actor or {})
+        # Preserve both Admin access and bootstrap owner recovery.
+        _require_remaining_authority(state, replacement)
+    # Return the closure accepted by the canonical identity updater.
+    return validate
+
+
 # Record full Admin-account mutation metadata in the internal app audit log.
-def _audit_user_change(event: str, before: dict, after: dict) -> None:
+def _audit_user_change(event: str, before: dict, after: dict, actor: dict | None = None) -> None:
     # Emit before and after role/status/display/locale fields for Admin-only review.
-    logger.info(event, user_id=after.get("user_id"), email=after.get("email"), before={"status": before.get("status"), "roles": before.get("roles"), "display_name": before.get("display_name"), "locale": before.get("locale")}, after={"status": after.get("status"), "roles": after.get("roles"), "display_name": after.get("display_name"), "locale": after.get("locale")})
+    logger.info(event, actor_id=(actor or {}).get("user_id"), user_id=after.get("user_id"), email=after.get("email"), before={"status": before.get("status"), "roles": before.get("roles"), "display_name": before.get("display_name"), "locale": before.get("locale")}, after={"status": after.get("status"), "roles": after.get("roles"), "display_name": after.get("display_name"), "locale": after.get("locale")})
 
 
 # Define the _as_bool function used by this module.
@@ -397,7 +451,7 @@ def set_admin_user_status(user_id, status):
         # Store the validated lifecycle state.
         record["status"] = requested_status
     # Update status through auth so privilege changes revoke predecessor sessions.
-    user = auth.update_user_by_id(user_id, mutate, state_validator=_require_remaining_admin)
+    user = auth.update_user_by_id(user_id, mutate, state_validator=_require_remaining_authority)
     # Update the linked player status through the public player service.
     players.update_player(current["player_id"], lambda player: player.update({"status": requested_status}))
     # Record the full before/after status mutation for Admin audit.
@@ -457,9 +511,11 @@ def update_admin_user_locale(user_id, body):
 
 
 # Define update_admin_user so the v2 PATCH contract mutates the canonical identity.
-def update_admin_user(user_id, body):
+def update_admin_user(user_id, body, actor=None):
     # Reject disposable guest-trial identities before any canonical account mutation can run.
     _account_user_by_id(_load_admin_users(), user_id)
+    # Resolve current owner authority only when the request changes role delegation.
+    owner = _current_platform_owner(actor) if "roles" in body else None
     # Capture the exact pre-mutation account inside the provider transaction for audit.
     before = {}
     # Define the canonical mutation applied to the requested identity.
@@ -480,20 +536,32 @@ def update_admin_user(user_id, body):
             user["display_name"] = _clean_text(body.get("display_name"), "display_name")
         # Update roles only when the contract field is present.
         if "roles" in body:
+            # Reject direct mutation of bootstrap-managed platform-owner authority.
+            if auth.PLATFORM_OWNER_ROLE in auth.roles_for_user(user):
+                # Preserve owner recovery even when another owner account may exist.
+                raise ForbiddenError("Platform owner role cannot be changed")
+            # Normalize the requested assignable player/Admin role collection.
+            requested_roles = _clean_roles(body.get("roles"))
+            # Require an already-active account before granting new Admin authority.
+            if "admin" in requested_roles and "admin" not in auth.roles_for_user(user) and before.get("status") != "active":
+                # Reject combined activation/promotion and inactive-account privilege grants.
+                raise ValidationError("Only an active account can be granted Admin")
             # Normalize the role list and preserve the compatible singular primary role.
-            user["roles"] = _clean_roles(body.get("roles"))
+            user["roles"] = requested_roles
             # Store the primary role for older clients.
             user["role"] = user["roles"][0]
         # Update locale metadata only when the contract field is present.
         if "locale" in body:
             # Store one locale across canonical and legacy aliases.
             user["locale"] = user["language"] = _clean_text(body.get("locale"), "locale")
-    # Apply the mutation through the canonical auth service.
-    user = auth.update_user_by_id(user_id, mutate, state_validator=_require_remaining_admin)
+    # Select the transaction validator that matches privilege or ordinary lifecycle changes.
+    validator = _owner_role_validator(owner["user_id"]) if owner else _require_remaining_authority
+    # Apply the mutation through the canonical auth service with transaction-scoped authority checks.
+    user = auth.update_user_by_id(user_id, mutate, state_validator=validator)
     # Keep the bound player status aligned with the canonical account status.
     players.update_player(user["player_id"], lambda player: player.update({"status": user.get("status", "active")}))
     # Record the full before/after mutation for Admin audit review.
-    _audit_user_change("admin_user_updated", before, user)
+    _audit_user_change("admin_user_updated", before, user, owner or actor)
     # Return the Admin-safe canonical summary.
     return _public_admin_user(user)
 
@@ -836,11 +904,15 @@ def register(router):
     # Register the published v2 canonical user creation route.
     @router.post(r"/api/v2/admin/users")
     # Define admin_users_v2_create for login-ready identity creation.
-    def admin_users_v2_create(body, query):
+    def admin_users_v2_create(body, query, context):
         # Treat a missing JSON body as an empty mapping before validation.
         body = body or {}
         # Normalize role input before mapping the v2 contract to the existing creation helper.
         roles = _clean_roles(body.get("roles") or body.get("role") or "player")
+        # Require additive v2 account creation to produce an ordinary player before delegation.
+        if roles != ["player"]:
+            # Keep Admin grants on existing active accounts behind owner-authorized PATCH.
+            raise ValidationError("New accounts must be created as players before Admin delegation")
         # Map the published username field to the canonical email identifier.
         payload = {**body, "email": body.get("email") or body.get("username"), "display_name": body.get("display_name") or body.get("username"), "role": roles[0], "language": body.get("locale") or "en-US", "initial_tokens": body.get("initial_tokens", 0)}
         # Return the flat user summary required by the v2 envelope.
@@ -856,9 +928,9 @@ def register(router):
     # Register the published v2 canonical user update route.
     @router.patch(r"/api/v2/admin/users/(?P<user_id>[^/]+)")
     # Define admin_users_v2_update for roles, status, display name, and locale.
-    def admin_users_v2_update(body, query, user_id):
+    def admin_users_v2_update(body, query, context, user_id):
         # Return the updated canonical identity summary.
-        return update_admin_user(user_id, body)
+        return update_admin_user(user_id, body, actor=context.get("user"))
 
     # Register the published v2 password reset route.
     @router.post(r"/api/v2/admin/users/(?P<user_id>[^/]+)/password")

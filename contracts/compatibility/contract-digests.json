@@ -1,6 +1,6 @@
 {
   "contracts/openapi/acey_deucey.v1.yaml": "0b9e8fb45e72af5c32220c9fcadc1884e870a1a5b99a018873c785f8385560e1",
-  "contracts/openapi/admin-users.v2.yaml": "7f0b1e7f3b5754b48a9b1e2677033ddcc5bba8663a483336fc8f2ede8be4ffb5",
+  "contracts/openapi/admin-users.v2.yaml": "a2727971e8f32198021f7bf33e94f080eb559c67e93063d7c08b4c36cd2b1785",
   "contracts/openapi/admin.v1.yaml": "bb85dc4742cca424fb0c83cedb99f969395fe08e28fe72330a6fcc89d065de24",
   "contracts/openapi/andar_bahar.v1.yaml": "14ea022ed9be9f25896857012de154600dffe271c8cb9bc67d7c401acadfd7df",
   "contracts/openapi/auth.v2.yaml": "98063b21b8151dbbc97fc0ba1f5d89232652f67c7b5c5f417feffd62fb450cc0",
