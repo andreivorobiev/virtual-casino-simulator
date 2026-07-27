@@ -10251,7 +10251,8 @@
       "description": "Client-supplied table rules are validated against a per-game declared domain before they are persisted, so no request can set a payout multiplier, commission, or shoe size that settlement math or shoe construction would then trust.",
       "status": "PASS",
       "api_tests": [
-        "STORAGE-TABLE-RULES-001"
+        "STORAGE-TABLE-RULES-001",
+        "API-ADMIN-GUEST-001"
       ],
       "browser_tests": [],
       "implementation_files": [
@@ -10269,7 +10270,8 @@
       "description": "Every play-token credit route applies the guest wallet freeze and the shared bounded amount gate, including the legacy v1 add-money route, so a disposable guest session cannot increase its own balance and no route can credit an unbounded amount.",
       "status": "PASS",
       "api_tests": [
-        "STORAGE-TABLE-RULES-001"
+        "STORAGE-TABLE-RULES-001",
+        "API-ADMIN-GUEST-001"
       ],
       "browser_tests": [],
       "implementation_files": [
@@ -10279,6 +10281,26 @@
       "introduced_in": "issue-410-guest-topup-parity",
       "changed_in": "issue-410-guest-topup-parity",
       "notes": "The v1 route previously took no session context at all, so the guest check could not run."
+    },
+    {
+      "id": "TEST-134",
+      "module": "Tests",
+      "description": "Provider-isolated JSON, disposable live MySQL, and authenticated API evidence proves player creation preserves committed ledger history and balances, destructive replacement fails closed, hostile Blackjack and Baccarat rule values are rejected at the real route boundary, and guest wallets remain frozen through both v1 and v2 credit routes.",
+      "status": "PASS",
+      "api_tests": [
+        "STORAGE-LEDGER-GUARD-001",
+        "STORAGE-TABLE-RULES-001",
+        "STORAGE-MYSQL-LIVE-001",
+        "API-ADMIN-GUEST-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/storage_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "slice1-storage-settings-authority",
+      "changed_in": "slice1-storage-settings-authority",
+      "notes": "The permanent evidence exercises behavior through provider and authenticated API boundaries; source inspection remains only a secondary regression guard."
     },
     {
       "id": "TEST-100",

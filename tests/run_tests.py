@@ -853,6 +853,18 @@ def validate_guest_admin_api(base):
         top_up=api(base,'/api/v2/me/tokens/add','POST',{'amount':1},ok=False,auth_token=token,extra_headers=guest_headers)
         # Prove the disposable starting grant cannot be increased through the normal shell endpoint.
         assert top_up['error']['code']=='FORBIDDEN' and api(base,'/api/v2/me',auth_token=token,extra_headers=guest_headers)['player']['token_balance']==balance_after_spin
+        # Exercise the frozen v1 credit route with the same guest proof so the parity fix is behavioral, not source-text-only. (TOKEN-006)
+        legacy_top_up=api(base,f"/api/v1/players/{guest['user']['player_id']}/add-money",'POST',{'amount':1},ok=False,auth_token=token,extra_headers=guest_headers)
+        # Require the v1 route to preserve the same fixed disposable balance as the v2 route.
+        assert legacy_top_up['error']['code']=='FORBIDDEN' and api(base,'/api/v2/me',auth_token=token,extra_headers=guest_headers)['player']['token_balance']==balance_after_spin
+        # Submit an out-of-domain Blackjack payout through the real authenticated API boundary. (LEDGER-029)
+        hostile_blackjack=api(base,'/api/v1/games/blackjack/settings','POST',{'blackjack_payout':1000000},ok=False,auth_token=token,extra_headers=guest_headers)
+        # Require the published validation envelope before the hostile payout can enter persistent game state.
+        assert hostile_blackjack['error']['code']=='VALIDATION_ERROR'
+        # Submit an out-of-domain Baccarat commission through the same authenticated boundary. (LEDGER-029)
+        hostile_baccarat=api(base,'/api/v1/games/baccarat/settings','POST',{'banker_commission':-1000},ok=False,auth_token=token,extra_headers=guest_headers)
+        # Require the published validation envelope before the hostile commission can reach settlement math.
+        assert hostile_baccarat['error']['code']=='VALIDATION_ERROR'
         # Prove the same guest cannot reach the Admin v2 summary.
         denied=api(base,'/api/v2/admin/guest-trials',ok=False,auth_token=token,extra_headers=guest_headers)
         # Require the central forbidden envelope rather than an empty or partial Admin response.

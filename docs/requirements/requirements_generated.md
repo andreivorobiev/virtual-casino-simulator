@@ -50,8 +50,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.0.0
 - pai_gow_poker: 1.0.2
 - teen_patti: 1.0.1
-- tests: 1.60.37
-- docs: 1.60.37
+- tests: 1.60.38
+- docs: 1.60.38
 - contracts: 1.48.9
 - tooling: 1.21.3
 - commenting_policy: 1.0.0
@@ -809,6 +809,7 @@ Historical source baseline: 9.1.0
 - **STORAGE-008** (Storage) - PASS: Player creation appends one row through the provider's lock-held path and never replaces the whole player document, so committed ledger history and concurrently committed balances always survive; the MySQL player-document replacement refuses to run while ledger rows exist instead of truncating them.
 - **LEDGER-029** (Ledger) - PASS: Client-supplied table rules are validated against a per-game declared domain before they are persisted, so no request can set a payout multiplier, commission, or shoe size that settlement math or shoe construction would then trust.
 - **TOKEN-006** (Tokens) - PASS: Every play-token credit route applies the guest wallet freeze and the shared bounded amount gate, including the legacy v1 add-money route, so a disposable guest session cannot increase its own balance and no route can credit an unbounded amount.
+- **TEST-134** (Tests) - PASS: Provider-isolated JSON, disposable live MySQL, and authenticated API evidence proves player creation preserves committed ledger history and balances, destructive replacement fails closed, hostile Blackjack and Baccarat rule values are rejected at the real route boundary, and guest wallets remain frozen through both v1 and v2 credit routes.
 - **TEST-100** (Tests) - PASS: Dependency-free deterministic unit tests prove motion timing profiles, reduced-motion resolution, complete lifecycle phase order, authoritative-result identity, overlap rejection, illegal-skip rejection, explicit recovery, stale-generation rejection, and route-disposal invalidation.
 - **TEST-102** (Tests) - PASS: Focused listener-free evidence parses the tracked Roulette curves to prove the anti-strobe rotor budget, monotonic coast-down, whole-turn endpoints, counter-rotation, linear timing, fine sampling, and all four reduced-motion suppression rules; the hosted Browser suite independently proves the live spin uses the expected named linear 3.6-second animations with all sampled stops and that reduced-motion media suppresses the mounted rotor and ball channels.
 - **USER-006** (Core) - PASS: Every authenticated persistent user has a personal locale and sound preference record that defaults deterministically, accepts only the installed locale catalog and strict booleans, rejects unknown fields, supports optimistic revisions, persists atomically through the configured JSON or MySQL document provider, and degrades structurally malformed records to canonical defaults. Guest trials receive a non-persisted response and never create a durable personal-settings document.
