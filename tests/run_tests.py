@@ -3049,13 +3049,13 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Read the manifest link and both Android/iOS browser-foundation meta contracts.
                         head_meta=pwa_page.evaluate("""() => { const link=document.querySelector('link[rel="manifest"]'); const apple=document.querySelector('link[rel="apple-touch-icon"]'); return { manifestHref:link?.getAttribute('href')||null, themeColor:document.querySelector('meta[name="theme-color"]')?.content||null, viewport:document.querySelector('meta[name="viewport"]')?.content||'', appleCapable:document.querySelector('meta[name="apple-mobile-web-app-capable"]')?.content||null, appleIcon:apple?.getAttribute('href')||null, appleSize:apple?.getAttribute('sizes')||null }; }""")
                         # Require standards-valid linked metadata without claiming a native install.
-                        assert head_meta=={'manifestHref':'/manifest.webmanifest','themeColor':'#03110c','viewport':'width=device-width,initial-scale=1,viewport-fit=cover','appleCapable':'yes','appleIcon':'/assets/pwa-icon-192.png','appleSize':'192x192'},head_meta
+                        assert head_meta=={'manifestHref':'/manifest.webmanifest','themeColor':'#0a0712','viewport':'width=device-width,initial-scale=1,viewport-fit=cover','appleCapable':'yes','appleIcon':'/assets/pwa-icon-192.png','appleSize':'192x192'},head_meta
                         # Fetch the manifest and validate complete any-purpose and maskable PNG rows.
                         manifest=pwa_page.evaluate("async () => (await (await fetch('/manifest.webmanifest')).json())")
                         # Index the exact icon contract for concise assertions.
                         icon_rows={(row['src'],row['sizes'],row['purpose'],row['type']) for row in manifest['icons']}
                         # Require standalone metadata and every reviewed PNG size/purpose pair.
-                        assert manifest['name']=='Virtual Casino Simulator' and manifest['display']=='standalone' and manifest['scope']=='/' and manifest['theme_color']=='#03110c' and icon_rows=={('/assets/pwa-icon-192.png','192x192','any','image/png'),('/assets/pwa-icon-512.png','512x512','any','image/png'),('/assets/pwa-maskable-192.png','192x192','maskable','image/png'),('/assets/pwa-maskable-512.png','512x512','maskable','image/png')},manifest
+                        assert manifest['name']=='TiltSeven' and manifest['display']=='standalone' and manifest['scope']=='/' and manifest['theme_color']=='#0a0712' and icon_rows=={('/assets/pwa-icon-192.png','192x192','any','image/png'),('/assets/pwa-icon-512.png','512x512','any','image/png'),('/assets/pwa-maskable-192.png','192x192','maskable','image/png'),('/assets/pwa-maskable-512.png','512x512','maskable','image/png')},manifest
                         # Require every icon response to be a nonempty PNG from the exact manifest paths.
                         icon_responses=pwa_page.evaluate("async icons => Promise.all(icons.map(async icon => { const response=await fetch(icon.src); return { src:icon.src, ok:response.ok, type:response.headers.get('content-type'), bytes:(await response.arrayBuffer()).byteLength }; }))",manifest['icons'])
                         # Reject missing, mislabeled, or placeholder icon responses.
@@ -3538,7 +3538,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Enumerate every governed viewport because the issue requires the shared entry surface at all four sizes.
                     brand_viewports={entry['id']:{'width':entry['width'],'height':entry['height']} for entry in visual_matrix['viewports']}
                     # Require the public document title to be the exact approved product name with no release suffix.
-                    assert page.title()=='Virtual Casino Simulator'
+                    assert page.title()=='TiltSeven'
                     # Exercise the unauthenticated restricted-preview entry state in both installed locales.
                     for brand_locale in ('en-US','ru-RU'):
                         # Switch through the visible guest locale control and wait for the canonical locale state.
@@ -4105,7 +4105,11 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Retain each locale/viewport header height so locale switching cannot silently shift the game stage.
                     header_heights={}
                     # Require the document title to present the exact approved product name without metadata.
-                    assert page.title()=='Virtual Casino Simulator' and not forbidden.search(page.title())
+                    assert page.title()=='TiltSeven' and not forbidden.search(page.title())
+                    # Read the runtime-applied brand identity, theme metadata, and canonical custom properties from the tested page.
+                    brand_runtime=page.evaluate("""() => { const root=document.documentElement; const style=getComputedStyle(root); return { id:root.dataset.brand||'', mark:document.querySelector('.brand-mark')?.textContent?.trim()||'', theme:document.querySelector('meta[name="theme-color"]')?.content||'', brand:style.getPropertyValue('--brand').trim(), accent:style.getPropertyValue('--accent').trim(), background:style.getPropertyValue('--bg').trim() }; }""")
+                    # Require one coherent TiltSeven/Neon Pit runtime instead of accepting only changed static copy.
+                    assert brand_runtime=={'id':'tiltseven','mark':'7','theme':'#0a0712','brand':'#ff3b6b','accent':'#22e0c3','background':'#0a0712'},brand_runtime
                     # Check the localized authenticated brand block in both installed locales.
                     for brand_locale in ('en-US','ru-RU'):
                         # Switch the shell locale through the visible control and wait for the runtime to settle.
@@ -4117,7 +4121,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Read the settled rendered player-facing brand subtitle for the metadata checks.
                         rendered_subtitle=page.locator('#shell-brand-subtitle').inner_text().strip()
                         # Require the approved product name to remain exact and resource-key-free.
-                        assert page.locator('#shell-brand-title').inner_text().strip()=='Virtual Casino Simulator'
+                        assert page.locator('#shell-brand-title').inner_text().strip()=='TiltSeven'
                         # Require the subtitle to keep the play-token safety cue while carrying no version metadata.
                         assert not forbidden.search(rendered_subtitle), rendered_subtitle
                         # Require the play-token cue to remain present in the locale's own words.
@@ -4135,7 +4139,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             # Record the topbar height for the later cross-locale stability comparison.
                             header_heights[(brand_locale,viewport_id)]=brand_geometry['topbarHeight']
                             # Capture exact-head authenticated lobby evidence with a self-describing sidecar.
-                            game_evidence(f'after-pass-shell-brand-authenticated-{brand_locale.lower()}-{viewport_id}.png','shell_lobby',['authenticated'],brand_locale,viewport_id)
+                            game_evidence(f'after-pass-shell-brand-authenticated-{brand_locale.lower()}-{viewport_id}.png','shell_lobby',['authenticated','tiltseven_neon_pit'],brand_locale,viewport_id)
                         # Open one representative affected game so shared-shell evidence is not limited to the lobby.
                         page.get_by_test_id('nav-roulette').click(); page.get_by_test_id('roulette-premium').wait_for(timeout=5000)
                         # Capture the same authenticated header across the representative game at all governed sizes.
@@ -4145,7 +4149,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             # Reject page-level horizontal overflow and require the shared brand lockup to remain visible above Roulette.
                             assert page.locator('.brand-lockup').is_visible() and page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1')
                             # Record one affected game surface alongside the shared lobby acceptance evidence.
-                            game_evidence(f'after-pass-roulette-brand-{brand_locale.lower()}-{viewport_id}.png','roulette',['betting'],brand_locale,viewport_id)
+                            game_evidence(f'after-pass-roulette-brand-{brand_locale.lower()}-{viewport_id}.png','roulette',['betting','tiltseven_neon_pit'],brand_locale,viewport_id)
                         # Return to the lobby before switching locale so the next evidence set starts from the canonical shell route.
                         page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                     # Compare matching viewport heights so EN/RU switching cannot move the game stage.
@@ -4185,7 +4189,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     # Verify the status/trust rail from the approved lobby is visible.
                     assert page.get_by_test_id('lobby-trust-rail').is_visible()
                     # Verify the premium lobby headline renders in the first route view.
-                    assert page.get_by_text('Midnight Ledger Casino').is_visible()
+                    assert page.get_by_text('The Neon Pit').is_visible()
                     # Verify the Roulette card still exposes its route action.
                     assert page.get_by_test_id('open-roulette').is_visible()
                     # Verify the catalog advertises one authoritative game count with no contradictory roadmap target. (issue #235)
@@ -4682,7 +4686,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Read the brand title text and its horizontal clip amount for the truncation assertion.
                         brand=page.evaluate("() => { const el=document.getElementById('shell-brand-title'); return {text:el.textContent.trim(), clip: el.scrollWidth - el.clientWidth}; }")
                         # Require the full product name with no ellipsis truncation at every width.
-                        assert brand['text']=='Virtual Casino Simulator' and brand['clip'] <= 1, f'brand truncated at {viewport_id}: {brand}'
+                        assert brand['text']=='TiltSeven' and brand['clip'] <= 1, f'brand truncated at {viewport_id}: {brand}'
                         # Read each primary-menu label width and its per-label clip for the readability assertion.
                         nav_items=page.evaluate("() => [...document.querySelectorAll('#main-nav .nav-item')].map(el=>({t:el.textContent.trim(), w:Math.round(el.getBoundingClientRect().width), clip: el.scrollWidth-el.clientWidth}))")
                         # Require every route label to stay readable (minimum touch width) and unclipped.

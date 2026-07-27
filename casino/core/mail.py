@@ -50,19 +50,21 @@ PURPOSE_PATHS = {
     "password_reset": "/account/reset",
     "magic_link": "/account/magic-link",
 }
+# Name one brand so every transactional subject line rebrands from a single edit.
+BRAND_NAME = "TiltSeven"
 # Provide accessible English subject and explanatory copy for every authorized purpose.
 ENGLISH_TEMPLATES = {
-    "invitation": ("Your Casino Simulator invitation", "Use the secure link below to accept your private invitation."),
-    "email_verification": ("Verify your Casino Simulator email", "Use the secure link below to verify your email address."),
-    "password_reset": ("Reset your Casino Simulator password", "Use the secure link below to reset your password."),
-    "magic_link": ("Your Casino Simulator sign-in link", "Use the secure link below to sign in to your existing private account."),
+    "invitation": (f"Your {BRAND_NAME} invitation", "Use the secure link below to accept your private invitation."),
+    "email_verification": (f"Verify your {BRAND_NAME} email", "Use the secure link below to verify your email address."),
+    "password_reset": (f"Reset your {BRAND_NAME} password", "Use the secure link below to reset your password."),
+    "magic_link": (f"Your {BRAND_NAME} sign-in link", "Use the secure link below to sign in to your existing private account."),
 }
 # Provide equivalent Russian subject and explanatory copy for every authorized purpose.
 RUSSIAN_TEMPLATES = {
-    "invitation": ("Приглашение в Casino Simulator", "Откройте защищённую ссылку ниже, чтобы принять личное приглашение."),
-    "email_verification": ("Подтвердите почту Casino Simulator", "Откройте защищённую ссылку ниже, чтобы подтвердить адрес почты."),
-    "password_reset": ("Сбросьте пароль Casino Simulator", "Откройте защищённую ссылку ниже, чтобы сбросить пароль."),
-    "magic_link": ("Ссылка для входа в Casino Simulator", "Откройте защищённую ссылку ниже, чтобы войти в существующую личную учётную запись."),
+    "invitation": (f"Приглашение в {BRAND_NAME}", "Откройте защищённую ссылку ниже, чтобы принять личное приглашение."),
+    "email_verification": (f"Подтвердите почту {BRAND_NAME}", "Откройте защищённую ссылку ниже, чтобы подтвердить адрес почты."),
+    "password_reset": (f"Сбросьте пароль {BRAND_NAME}", "Откройте защищённую ссылку ниже, чтобы сбросить пароль."),
+    "magic_link": (f"Ссылка для входа в {BRAND_NAME}", "Откройте защищённую ссылку ниже, чтобы войти в существующую личную учётную запись."),
 }
 # Collect translated templates behind the governed locale keys.
 TEMPLATES = {"en-US": ENGLISH_TEMPLATES, "ru-RU": RUSSIAN_TEMPLATES}

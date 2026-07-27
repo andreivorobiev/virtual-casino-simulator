@@ -25,9 +25,9 @@ const ROUTE_CSS = [
   '.big-six-wheel{display:grid;gap:12px;min-width:0;width:100%;min-height:100%;color:var(--text,#f5ead6);}', // Establish a stable route-local surface without allowing min-content overflow.
   '.big-six-wheel__header{display:flex;align-items:end;justify-content:space-between;gap:16px;padding:4px 2px;}', // Keep title and phase compact above the stage.
   '.big-six-wheel__header h1{margin:0;color:var(--gold,#f2c55c);font-size:clamp(30px,4vw,52px);}', // Make the game title the first hierarchy level.
-  '.big-six-wheel__phase{padding:7px 12px;border:1px solid rgba(242,197,92,.42);border-radius:999px;background:rgba(5,29,20,.9);}', // Reserve a concise player-facing phase chip.
+  '.big-six-wheel__phase{padding:7px 12px;border:1px solid var(--gold);border-radius:999px;background:var(--panel-strong);}', // Reserve a concise player-facing phase chip.
   '.big-six-wheel__layout{display:grid;grid-template-columns:minmax(220px,.72fr) minmax(420px,1.8fr) minmax(220px,.72fr);gap:14px;min-width:0;min-height:0;}', // Keep the wheel stage visually dominant on desktop without inheriting rail min-content width.
-  '.big-six-wheel__panel{min-width:0;padding:16px;border:1px solid rgba(242,197,92,.28);border-radius:18px;background:rgba(3,24,17,.9);}', // Separate controls, stage, and results while allowing responsive grid shrinkage.
+  '.big-six-wheel__panel{min-width:0;padding:16px;border:1px solid var(--border);border-radius:18px;background:var(--panel-strong);}', // Separate controls, stage, and results while allowing responsive grid shrinkage.
   '.big-six-wheel__controls{display:grid;align-content:start;gap:12px;}', // Keep wagering actions in one predictable control rail.
   '.big-six-wheel__bet{display:grid;grid-template-columns:minmax(0,1fr) 92px;gap:8px;align-items:center;}', // Align each localized outcome with its wager amount.
   '.big-six-wheel__bet input{box-sizing:border-box;width:100%;min-height:42px;min-width:0;}', // Preserve keyboard and touch usability without pushing the mobile wager grid outside its panel.
@@ -44,7 +44,7 @@ const ROUTE_CSS = [
   '.big-six-wheel__payrow,.big-six-wheel__history-row{display:flex;justify-content:space-between;gap:6px 10px;min-width:0;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.08);}', // Align compact game data rows without forcing the stacked route wider than the viewport.
   '.big-six-wheel__payrow span,.big-six-wheel__history-row span{min-width:0;overflow-wrap:anywhere;}', // Allow localized values to wrap instead of clipping adjacent controls and panels.
   '.big-six-wheel__history{max-height:260px;overflow:auto;scrollbar-width:thin;}', // Give the data rail one intentional keyboard-focusable scroll region.
-  '.big-six-wheel__error{min-height:20px;color:#ffb9b9;}', // Reserve localized validation and API error feedback.
+  '.big-six-wheel__error{min-height:20px;color:var(--bad);}', // Reserve localized validation and API error feedback.
   '@media(max-width:1500px) and (min-width:1201px){.big-six-wheel__wheel-shell{width:min(54vh,480px);}}', // Compress the complete three-zone stage at desktop compact without stacking it inside the fixed-height shared outlet.
   '@media(max-width:1200px){.big-six-wheel__layout{grid-template-columns:1fr;}.big-six-wheel__controls{order:1}.big-six-wheel__stage{order:2;grid-template-rows:auto auto;align-content:start;overflow:visible}.big-six-wheel__data{order:3}.big-six-wheel__wheel-shell{width:min(70vw,480px);}}', // Stack only when the shared shell also enables document scrolling, then preserve the complete intrinsic wheel stage.
   '@media(max-width:560px){.big-six-wheel__header{align-items:start;flex-direction:column}.big-six-wheel__panel{padding:12px}.big-six-wheel__bet{grid-template-columns:minmax(0,1fr) minmax(72px,84px);width:100%}.big-six-wheel__payrow,.big-six-wheel__history-row{flex-wrap:wrap}.big-six-wheel__payrow span:last-child,.big-six-wheel__history-row span:last-child{text-align:right}.big-six-wheel__wheel-shell{width:min(86vw,100%)}.big-six-wheel__wheel{border-width:8px}}', // Preserve complete controls, data values, and wheel containment on mobile.

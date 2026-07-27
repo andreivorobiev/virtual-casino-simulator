@@ -21,9 +21,9 @@ const ROUTE_CSS = [
   '.over-under-7{display:grid;gap:12px;min-height:100%;color:var(--text,#f5ead6);}', // Establish a stable route-local surface.
   '.ou7-header{display:flex;align-items:end;justify-content:space-between;gap:16px;padding:4px 2px;}', // Keep title and phase compact.
   '.ou7-header h1{margin:0;color:var(--gold,#f2c55c);font-size:clamp(30px,4vw,52px);}', // Make the game title the first visual level.
-  '.ou7-phase{padding:7px 12px;border:1px solid rgba(242,197,92,.42);border-radius:999px;background:rgba(5,29,20,.9);}', // Reserve a concise phase chip.
+  '.ou7-phase{padding:7px 12px;border:1px solid var(--gold);border-radius:999px;background:var(--panel-strong);}', // Reserve a concise phase chip.
   '.ou7-layout{display:grid;grid-template-columns:minmax(220px,.72fr) minmax(420px,1.8fr) minmax(220px,.72fr);gap:14px;min-height:0;}', // Keep dice stage visually dominant.
-  '.ou7-panel{padding:16px;border:1px solid rgba(242,197,92,.28);border-radius:18px;background:rgba(3,24,17,.9);}', // Separate controls, stage, and data.
+  '.ou7-panel{padding:16px;border:1px solid var(--gold);border-radius:18px;background:var(--panel-strong);}', // Separate controls, stage, and data.
   '.ou7-controls{display:grid;align-content:start;gap:12px;}', // Keep wager actions in one rail.
   '.ou7-bet{display:grid;grid-template-columns:minmax(0,1fr) 92px;gap:8px;align-items:center;}', // Align labels and wager amounts.
   '.ou7-bet input{min-height:44px;min-width:0;}', // Preserve keyboard and touch target size.

@@ -1,6 +1,6 @@
 {
   "module": "lucky_grid",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "paths": ["casino/games/lucky_grid/", "web/games/lucky_grid.js", "web/i18n/en-US/games/lucky_grid.json", "web/i18n/ru-RU/games/lucky_grid.json"],
   "requirements_prefixes": ["LGRID"],
   "contracts": ["contracts/openapi/lucky_grid.v1.yaml"],

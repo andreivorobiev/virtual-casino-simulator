@@ -19,16 +19,16 @@ const ROUTE_CSS = [
   '.fan-tan{display:grid;gap:12px;min-height:100%;color:var(--text,#f5ead6);}', // Establish a stable route-local surface.
   '.fan-tan__header{display:flex;align-items:end;justify-content:space-between;gap:16px;padding:4px 2px;}', // Keep title and phase compact above the stage.
   '.fan-tan__header h1{margin:0;color:var(--gold,#f2c55c);font-size:clamp(30px,4vw,52px);}', // Make the game title the first hierarchy level.
-  '.fan-tan__phase{padding:7px 12px;border:1px solid rgba(242,197,92,.42);border-radius:999px;background:rgba(5,29,20,.9);}', // Reserve a concise player-facing phase chip.
+  '.fan-tan__phase{padding:7px 12px;border:1px solid var(--gold);border-radius:999px;background:var(--panel-strong);}', // Reserve a concise player-facing phase chip.
   '.fan-tan__layout{display:grid;grid-template-columns:minmax(220px,.72fr) minmax(420px,1.8fr) minmax(220px,.72fr);gap:14px;min-height:0;}', // Keep the counting stage visually dominant on desktop.
-  '.fan-tan__panel{padding:16px;border:1px solid rgba(242,197,92,.28);border-radius:18px;background:rgba(3,24,17,.9);}', // Separate controls, stage, and results with governed surfaces.
+  '.fan-tan__panel{padding:16px;border:1px solid var(--gold);border-radius:18px;background:var(--panel-strong);}', // Separate controls, stage, and results with governed surfaces.
   '.fan-tan__controls{display:grid;align-content:start;gap:12px;}', // Keep wagering actions in one predictable control rail.
   '.fan-tan__bet{display:grid;grid-template-columns:minmax(0,1fr) 92px;gap:8px;align-items:center;}', // Align each localized residue with its wager amount.
   '.fan-tan__bet input{min-height:44px;min-width:0;}', // Preserve keyboard and touch usability for amount inputs.
   '.fan-tan__play{min-height:46px;border:0;border-radius:12px;color:white;background:#a71922;font-weight:800;}', // Use the shared red primary-action convention.
   '.fan-tan__play:disabled{opacity:.58;cursor:not-allowed;}', // Keep unavailable action state readable.
   '.fan-tan__stage{display:grid;place-items:center;gap:14px;overflow:hidden;}', // Center the counting pile without nested scroll.
-  '.fan-tan__tray{width:min(64vh,540px);max-width:100%;aspect-ratio:1.4;display:grid;place-items:center;border:2px solid rgba(242,197,92,.38);border-radius:18px;background:radial-gradient(circle at center,#174332,#061a13);}', // Draw the count tray as the dominant stage.
+  '.fan-tan__tray{width:min(64vh,540px);max-width:100%;aspect-ratio:1.4;display:grid;place-items:center;border:2px solid var(--gold);border-radius:18px;background:radial-gradient(circle at center,var(--felt2),var(--bg));}', // Draw the count tray as the dominant stage.
   '.fan-tan__beans{display:grid;grid-template-columns:repeat(8,18px);gap:8px;justify-content:center;align-content:center;}', // Render a compact code-native counted pile.
   '.fan-tan__bean{width:18px;height:18px;border-radius:50%;background:#f2c55c;box-shadow:0 2px 0 #8d681f;}', // Draw one reliable count marker without image assets.
   '.fan-tan__bean[data-residue="true"]{background:#ffefad;outline:3px solid #a71922;}', // Mark the final residue beyond color alone through outline.
@@ -36,7 +36,7 @@ const ROUTE_CSS = [
   '.fan-tan__data{display:grid;align-content:start;gap:12px;}', // Keep paytable and recent results distinct from controls.
   '.fan-tan__payrow,.fan-tan__history-row{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.08);}', // Align compact game data rows.
   '.fan-tan__history{max-height:260px;overflow:auto;scrollbar-width:thin;}', // Give the data rail one intentional keyboard-focusable scroll region.
-  '.fan-tan__error{min-height:20px;color:#ffb9b9;}', // Reserve localized validation and API error feedback.
+  '.fan-tan__error{min-height:20px;color:var(--bad);}', // Reserve localized validation and API error feedback.
   '@media(prefers-reduced-motion:reduce){.fan-tan__bean{transition:none;}}', // Respect platform reduced-motion preferences for counting presentation.
   '@media(max-width:1200px){.fan-tan__layout{grid-template-columns:1fr;}.fan-tan__controls{order:1}.fan-tan__stage{order:2}.fan-tan__data{order:3}.fan-tan__tray{width:min(80vw,520px);}}', // Stack control, stage, then data at the shared responsive transition.
   '@media(max-width:560px){.fan-tan__header{align-items:start;flex-direction:column}.fan-tan__panel{padding:12px}.fan-tan__bet{grid-template-columns:minmax(0,1fr) 84px}.fan-tan__beans{grid-template-columns:repeat(6,16px);gap:7px}.fan-tan__bean{width:16px;height:16px;}}', // Preserve complete controls and no horizontal overflow on mobile.

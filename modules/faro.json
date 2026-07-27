@@ -1,6 +1,6 @@
 {
   "module": "faro",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "paths": ["casino/games/faro/", "web/games/faro.js", "web/i18n/en-US/games/faro.json", "web/i18n/ru-RU/games/faro.json"],
   "requirements_prefixes": ["FARO"],
   "contracts": ["contracts/openapi/faro.v1.yaml"],

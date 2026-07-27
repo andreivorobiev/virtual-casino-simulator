@@ -8725,7 +8725,7 @@
     {
       "id": "UX-014",
       "module": "UX",
-      "description": "The player-facing brand block and document title present the product name and the play-tokens-only/no-cash-value safety cue without internal version, validation-stage, build, commit, environment, or debug metadata, in en-US and ru-RU across authenticated, unauthenticated guest, and restricted-preview login states at every governed viewport; exact build provenance remains available through the status/diagnostics surfaces rather than the brand block.",
+      "description": "The player-facing TiltSeven brand block, Neon Pit lobby venue, document title, and shared application palette are driven by one immutable active-brand descriptor whose runtime tokens, mark, and browser theme metadata apply before the authenticated shell renders. The en-US and ru-RU safety cue remains locale-owned and free of internal version, validation-stage, build, commit, environment, or debug metadata across authenticated, unauthenticated guest, and restricted-preview login states at every governed viewport; exact build provenance remains available through status and diagnostics rather than the brand block.",
       "status": "PASS",
       "api_tests": [],
       "browser_tests": [
@@ -8734,19 +8734,23 @@
       ],
       "implementation_files": [
         "web/index.html",
+        "web/app.js",
         "web/styles.css",
+        "web/brands/tiltseven.js",
+        "web/core/brand.js",
+        "web/assets/favicon.svg",
         "web/i18n/en-US/shell.json",
         "web/i18n/ru-RU/shell.json",
         "tests/visual/visual_matrix.json"
       ],
       "introduced_in": "issue-321-shell-version-copy",
-      "changed_in": "issue-321-shell-version-copy",
-      "notes": "Issue #321: 'v9 validation release' is removed from the brand subtitle and page title; the subtitle reserves its two-line footprint so header height stays locale-invariant; the restricted-preview guest state keeps the authenticated topbar absent; the status-rail APP version chip is retained for #287 provenance."
+      "changed_in": "pr-425-tiltseven-neon-pit",
+      "notes": "PR #425 retains the issue #321 metadata boundary while centralizing the reviewed TiltSeven name, seven mark, Neon Pit venue, palette tokens, and browser theme color. The restricted-preview guest state keeps the authenticated topbar absent, and the status-rail APP version chip remains the separate #287 provenance surface."
     },
     {
       "id": "TEST-079",
       "module": "Tests",
-      "description": "Browser evidence verifies, in en-US and ru-RU at 1920x1080, 1440x900, 1024x900, and 390x844, that authenticated lobby and Roulette headers render the canonical brand and safety cue without metadata or clipping, while unauthenticated guests in restricted preview receive a metadata-free title and login surface with no protected topbar.",
+      "description": "Browser evidence verifies the exact runtime TiltSeven identity, seven mark, Neon Pit tokens, browser theme metadata, and locale-owned safety cue in en-US and ru-RU at 1920x1080, 1440x900, 1024x900, and 390x844. Authenticated lobby and representative Roulette surfaces remain unclipped and contained, while unauthenticated restricted-preview guests receive a metadata-free title and login surface with no protected topbar.",
       "status": "PASS",
       "api_tests": [],
       "browser_tests": [
@@ -8758,8 +8762,8 @@
         "tests/visual/visual_matrix.json"
       ],
       "introduced_in": "issue-321-shell-version-copy",
-      "changed_in": "issue-321-shell-version-copy",
-      "notes": "Issue #321 exact-head evidence paths are logs/test-runs/after-pass-shell-brand-*.png and logs/test-runs/after-pass-roulette-brand-*.png with matching VIS-EVIDENCE-001 sidecars."
+      "changed_in": "pr-425-tiltseven-neon-pit",
+      "notes": "Exact-head evidence paths remain logs/test-runs/after-pass-shell-brand-*.png and logs/test-runs/after-pass-roulette-brand-*.png with matching VIS-EVIDENCE-001 sidecars. The sidecars now record the tiltseven_neon_pit state, and the browser case fails closed on the active data-brand identity and exact canonical token values."
     },
     {
       "id": "SLOT-029",
@@ -9379,7 +9383,7 @@
     {
       "id": "MAIL-005",
       "module": "Application",
-      "description": "Every authorized purpose has matching en-US and ru-RU subjects plus plain-text and semantic HTML alternatives whose action link has meaningful text and whose fixed content is safely escaped.",
+      "description": "Every authorized purpose has matching en-US and ru-RU subjects driven by one fixed reviewed TiltSeven brand constant, plus plain-text and semantic HTML alternatives whose action link has meaningful text and whose fixed content is safely escaped.",
       "status": "PASS",
       "api_tests": [
         "API-MAIL-001"
@@ -9393,8 +9397,8 @@
         "web/i18n/ru-RU/admin.json"
       ],
       "introduced_in": "issue-330-transactional-mail",
-      "changed_in": "issue-330-transactional-mail",
-      "notes": "No template accepts caller-authored HTML, subject, path, redirect, origin, or host values."
+      "changed_in": "pr-425-tiltseven-neon-pit",
+      "notes": "No template accepts caller-authored brand, HTML, subject, path, redirect, origin, or host values. Provider and network delivery remain separately dual-gated; the repository rebrand does not enable mail."
     },
     {
       "id": "MAIL-006",
@@ -9701,14 +9705,14 @@
     {
       "id": "PWA-001",
       "module": "Application",
-      "description": "The restricted-preview browser application publishes a standards-valid web manifest, complete 192- and 512-pixel any-purpose and maskable PNG icon sets, safe-area metadata, and a standalone-capable public shell while remaining fully usable in a normal browser; this repository foundation does not claim native Android or iOS installation acceptance, public hosting, or deployment.",
+      "description": "The restricted-preview browser application publishes a TiltSeven-branded standards-valid web manifest, matching theme and favicon metadata, complete 192- and 512-pixel any-purpose and maskable PNG icon sets, safe-area metadata, and a standalone-capable public shell while remaining fully usable in a normal browser; this repository foundation does not claim native Android or iOS installation acceptance, public hosting, or deployment.",
       "status": "PASS",
       "api_tests": [],
       "browser_tests": ["BR-PWA-001"],
-      "implementation_files": ["web/manifest.webmanifest", "web/index.html", "web/assets/pwa-icon-192.png", "web/assets/pwa-icon-512.png", "web/assets/pwa-maskable-192.png", "web/assets/pwa-maskable-512.png", "web/core/pwa.js", "docs/pwa_foundation.md"],
+      "implementation_files": ["web/manifest.webmanifest", "web/index.html", "web/assets/favicon.svg", "web/assets/pwa-icon-192.png", "web/assets/pwa-icon-512.png", "web/assets/pwa-maskable-192.png", "web/assets/pwa-maskable-512.png", "web/core/brand.js", "web/core/pwa.js", "docs/pwa_foundation.md"],
       "introduced_in": "issue-182-pwa-foundation",
-      "changed_in": "issue-182-pwa-foundation",
-      "notes": "Workroom #29 comment 5049351844 authorizes only this narrowed repository foundation. Full issue #182 remains open while #74 and #168 plus representative Android Chrome and iOS Safari/Home Screen install-relaunch evidence are incomplete."
+      "changed_in": "pr-425-tiltseven-neon-pit",
+      "notes": "The manifest and browser metadata now share the active TiltSeven ground color, while the native-install boundary remains unchanged. Full issue #182 remains open while #74 and #168 plus representative Android Chrome and iOS Safari/Home Screen install-relaunch evidence are incomplete."
     },
     {
       "id": "PWA-002",
@@ -9717,22 +9721,22 @@
       "status": "PASS",
       "api_tests": [],
       "browser_tests": ["BR-PWA-001"],
-      "implementation_files": ["web/sw.js", "web/core/pwa.js", "web/core/api.js", "web/app.js", "casino/app.py", "casino/wsgi.py", "web/i18n/en-US/shell.json", "web/i18n/ru-RU/shell.json", "docs/pwa_foundation.md"],
+      "implementation_files": ["web/sw.js", "web/core/brand.js", "web/brands/tiltseven.js", "web/core/pwa.js", "web/core/api.js", "web/app.js", "casino/app.py", "casino/wsgi.py", "web/i18n/en-US/shell.json", "web/i18n/ru-RU/shell.json", "docs/pwa_foundation.md"],
       "introduced_in": "issue-182-pwa-foundation",
-      "changed_in": "pr-368-expired-session-recovery",
-      "notes": "Install is atomic, activation prunes only prior Casino static-shell caches, update activation is user-requested, stale-client and failed-refresh states are explicit, protected-session expiry clears mounted authenticated chrome, anonymous enrollment remains intact, and no deployment or public exposure is authorized."
+      "changed_in": "pr-425-tiltseven-neon-pit",
+      "notes": "Install is atomic and now precaches the active brand descriptor and applier so the offline shell cannot boot without its imports. Activation still prunes only prior Casino static-shell caches, update activation is user-requested, protected-session expiry clears mounted authenticated chrome, anonymous enrollment remains intact, and no deployment or public exposure is authorized by this requirement."
     },
     {
       "id": "TEST-095",
       "module": "Tests",
-      "description": "Browser-free policy tests prove canonical cache identity, exact public-static allowlisting, complete PNG and maskable manifest assets, credential-free cache writes, fail-open request exclusion for non-GET/API/Admin/private traffic, explicit update rollback and cache cleanup, and requirement/version alignment; exact-head browser tests prove cold and warm shell, offline fail-closed actions, reconnect, update and failure, stale-client, expired-session, and route-restoration states in en-US and ru-RU at all four governed viewports with exact evidence provenance and listener cleanup.",
+      "description": "Browser-free policy tests prove canonical cache identity, exact public-static allowlisting including every imported brand module, complete TiltSeven manifest metadata plus PNG and maskable assets, credential-free cache writes, fail-open request exclusion for non-GET/API/Admin/private traffic, explicit update rollback and cache cleanup, and requirement/version alignment; exact-head browser tests prove cold and warm branded shell, offline fail-closed actions, reconnect, update and failure, stale-client, expired-session, and route-restoration states in en-US and ru-RU at all four governed viewports with exact evidence provenance and listener cleanup.",
       "status": "PASS",
       "api_tests": [],
       "browser_tests": ["BR-PWA-001"],
       "implementation_files": ["tests/pwa_tests.py", "tests/run_tests.py", "tests/visual/visual_matrix.json"],
       "introduced_in": "issue-182-pwa-foundation",
-      "changed_in": "9.5.3",
-      "notes": "TEST-092 remains exclusively owned by formal 50,000-cycle qualification. Browser-free coverage distinguishes mounted-session expiry from anonymous enrollment probes and requires the synthetic mismatched-worker message plus stale-client listener result to remain in one synchronous browser task; Android/iOS metadata is checked as a browser foundation only, and native install and relaunch evidence remains deferred with full issue #182."
+      "changed_in": "pr-425-tiltseven-neon-pit",
+      "notes": "TEST-092 remains exclusively owned by formal 50,000-cycle qualification. Browser-free coverage now fails when the active brand import graph is absent from the cache allowlist; Android/iOS metadata is still checked as a browser foundation only, and native install and relaunch evidence remains deferred with full issue #182."
     },
     {
       "id": "TEST-096",

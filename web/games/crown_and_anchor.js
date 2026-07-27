@@ -23,9 +23,9 @@ const ROUTE_CSS = [
   '.crown-anchor{display:grid;gap:12px;min-height:100%;color:var(--text,#f5ead6);}', // Establish a stable route-local surface.
   '.crown-anchor__header{display:flex;align-items:end;justify-content:space-between;gap:16px;padding:4px 2px;}', // Keep title and phase compact.
   '.crown-anchor__header h1{margin:0;color:var(--gold,#f2c55c);font-size:clamp(30px,4vw,52px);}', // Make the title primary.
-  '.crown-anchor__phase{padding:7px 12px;border:1px solid rgba(242,197,92,.42);border-radius:999px;background:rgba(27,35,28,.92);}', // Reserve a status chip.
+  '.crown-anchor__phase{padding:7px 12px;border:1px solid var(--gold);border-radius:999px;background:rgba(20,10,34,.92);}', // Reserve a status chip.
   '.crown-anchor__layout{display:grid;grid-template-columns:minmax(240px,.76fr) minmax(420px,1.6fr) minmax(240px,.78fr);gap:14px;min-height:0;}', // Keep the dice table dominant.
-  '.crown-anchor__panel{padding:16px;border:1px solid rgba(242,197,92,.28);border-radius:8px;background:rgba(10,25,23,.92);}', // Frame functional panels.
+  '.crown-anchor__panel{padding:16px;border:1px solid var(--border);border-radius:8px;background:rgba(20,10,34,.92);}', // Frame functional panels.
   '.crown-anchor__controls{display:grid;align-content:start;gap:12px;}', // Keep wagering actions in one rail.
   '.crown-anchor__bet{display:grid;grid-template-columns:minmax(0,1fr) 92px;gap:8px;align-items:center;}', // Align symbol and amount.
   '.crown-anchor__bet input{min-height:42px;min-width:0;}', // Preserve touch usability.

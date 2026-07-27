@@ -1,6 +1,6 @@
 {
   "module": "application",
-  "version": "9.51.27",
+  "version": "9.52.0",
   "paths": [
     "run.py",
     "pyproject.toml",
@@ -12,9 +12,11 @@
     "web/index.html",
     "web/manifest.webmanifest",
     "web/sw.js",
+    "web/brands/",
     "web/core/i18n.js",
     "web/core/api.js",
     "web/core/admin_labels.js",
+    "web/core/brand.js",
     "web/core/motion.js",
     "web/core/pwa.js",
     "web/core/ui.js",
@@ -22,6 +24,7 @@
     "web/assets/pwa-icon-512.png",
     "web/assets/pwa-maskable-192.png",
     "web/assets/pwa-maskable-512.png",
+    "web/assets/favicon.svg",
     "web/assets/fonts/",
     "web/i18n/"
   ],
