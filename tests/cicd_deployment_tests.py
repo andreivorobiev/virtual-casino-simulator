@@ -74,6 +74,80 @@ class CicdDeploymentWorkflowTests(unittest.TestCase):
         # Reject deployment from the runner's local dist directory.
         self.assertNotIn("scp -P \"${port}\" dist/", text)
 
+    # Prove only the production job can reach the controlled stable-egress runner.
+    def test_workflow_routes_only_deployment_to_controlled_runner(self):
+        # Read the workflow source as inert text.
+        text = self.workflow_text()
+        # Split the publication and deployment jobs at their stable workflow key.
+        publish, deploy = text.split("  deploy-production:\n", 1)
+        # Keep release construction and publication on isolated GitHub-hosted infrastructure.
+        self.assertIn("runs-on: ubuntu-latest", publish)
+        # Require every controlled-runner label so no partial-label runner can accept the job.
+        self.assertIn("runs-on: [self-hosted, linux, x64, casino-production-deploy]", deploy)
+        # Require the deployment job to enter the dedicated protected environment.
+        self.assertIn("environment: production", deploy)
+        # Reject fallback to an ordinary GitHub-hosted runner in the production job.
+        self.assertNotIn("runs-on: ubuntu-latest", deploy)
+        # Require runtime confirmation that GitHub classifies the selected runner as self-hosted.
+        self.assertIn('test "${RUNNER_ENVIRONMENT}" = "self-hosted"', deploy)
+        # Require runtime confirmation of the expected Linux operating system.
+        self.assertIn('test "${RUNNER_OS}" = "Linux"', deploy)
+        # Require runtime confirmation of the expected x64 architecture.
+        self.assertIn('test "${RUNNER_ARCH}" = "X64"', deploy)
+        # Reject dynamic GitHub-hosted address allowlisting as a substitute for stable egress.
+        self.assertNotIn("api.github.com/meta", deploy)
+
+    # Prove no pull-request or test workflow can claim the production runner label.
+    def test_controlled_runner_label_is_exclusive_to_production_workflow(self):
+        # Enumerate every checked-in YAML workflow in deterministic path order.
+        for workflow in sorted(WORKFLOW.parent.glob("*.yml")):
+            # Skip the one protected-main deployment workflow that owns the label.
+            if workflow == WORKFLOW:
+                # Continue without reading the allowed label occurrence.
+                continue
+            # Read each unrelated workflow as inert text.
+            text = workflow.read_text(encoding="utf-8")
+            # Reject the production label everywhere outside the deployment workflow.
+            self.assertNotIn("casino-production-deploy", text, workflow.name)
+
+    # Prove pinned SSH authentication succeeds before any remote staging mutation.
+    def test_workflow_preflights_controlled_ssh_before_upload(self):
+        # Read only the deployment job so publication commands cannot satisfy assertions.
+        deploy = self.workflow_text().split("  deploy-production:\n", 1)[1]
+        # Locate the three ordered steps that prepare, verify, and use SSH.
+        prepare = deploy.index("- name: Prepare SSH")
+        # Locate the secret-safe route/authentication preflight.
+        preflight = deploy.index("- name: Verify pinned SSH route and privilege")
+        # Locate the first remote staging mutation.
+        upload = deploy.index("- name: Upload release assets")
+        # Require key preparation to precede the read-only connectivity check.
+        self.assertLess(prepare, preflight)
+        # Require the read-only connectivity check to precede remote staging.
+        self.assertLess(preflight, upload)
+        # Require non-interactive authentication so the workflow cannot hang for input.
+        self.assertIn("-o BatchMode=yes", deploy)
+        # Require the checked-in workflow to enforce the pinned known-hosts file.
+        self.assertIn("-o StrictHostKeyChecking=yes", deploy)
+        # Require the scoped deployment key instead of an ambient runner SSH agent.
+        self.assertIn("-o IdentitiesOnly=yes", deploy)
+        # Require a bounded first connection attempt from the stable-egress route.
+        self.assertIn("-o ConnectTimeout=10", deploy)
+        # Require a no-op passwordless sudo check before the upload step.
+        self.assertIn('"sudo -n true"', deploy)
+        # Suppress endpoint-specific SSH diagnostics from public workflow output.
+        self.assertIn('"sudo -n true" >/dev/null 2>&1', deploy)
+
+    # Prove a persistent fallback runner cannot retain deploy key files after the job.
+    def test_workflow_always_cleans_runner_key_material(self):
+        # Read only the deployment job so cleanup evidence is scoped correctly.
+        deploy = self.workflow_text().split("  deploy-production:\n", 1)[1]
+        # Require cleanup even when an earlier deployment step fails.
+        self.assertIn("if: ${{ always() }}", deploy)
+        # Require both the private key and pinned host inventory to be removed.
+        self.assertIn('rm -f "${ssh_dir}/id_ed25519" "${ssh_dir}/known_hosts"', deploy)
+        # Require downloaded release assets to be removed from a reusable workspace.
+        self.assertIn("rm -f published/virtual_casino_simulator_package.zip published/release-manifest.json published/checksums.txt", deploy)
+
     # Prove host activation includes rollback and authenticated edge observation.
     def test_workflow_rolls_back_when_health_fails(self):
         # Read the workflow source as inert text.

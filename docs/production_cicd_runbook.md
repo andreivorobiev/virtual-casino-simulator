@@ -29,6 +29,31 @@ Packaged release numbers use the four-part scheme documented in [the release ver
 15. It runs authenticated production readiness through `scripts/run_edge_monitor.py`, which strictly parses only the root-managed Authorization assignment and calls `scripts/edge_gate.py observe` without shell evaluation.
 16. If the post-switch health check fails, it rolls the application symlink back to the previous release. Database rollback is never automatic.
 
+## Controlled deployment runner
+
+Release construction, publication, and hosted-asset verification stay on GitHub-hosted `ubuntu-latest`. Only the `deploy-production` job may run on the controlled SSH route, and it requires every one of these labels:
+
+- `self-hosted`
+- `linux`
+- `x64`
+- `casino-production-deploy`
+
+The runner must be repository-scoped, dedicated to protected-main Casino deployment, and located behind the already-approved stable egress that can reach the source-restricted SSH endpoint. An ephemeral or just-in-time runner is preferred. A persistent bootstrap runner must use an unprivileged runner service account, retain no SSH key or release asset after the job, and never accept pull-request workloads. This repository is public, so no pull-request workflow may target the production label.
+
+The production job also requires the `production` GitHub environment. Configure that environment to allow protected `main` only before merging this workflow slice. Do not put registration tokens, runner names, host identifiers, SSH material, or environment secrets in the repository, issues, logs, screenshots, or chat.
+
+The job fails closed unless GitHub reports a self-hosted Linux x64 runner. It then uses the pinned known-hosts inventory, the scoped deployment key, and a bounded non-interactive `sudo -n true` check before it creates remote staging. A route, host-key, authentication, or sudo-policy failure stops before upload. There is no fallback to an ordinary GitHub-hosted runner and no dynamic GitHub-hosted CIDR allowlist.
+
+One-time runner setup is intentionally outside the workflow:
+
+1. Prepare a clean Linux x64 runner on the approved stable egress.
+2. From repository **Settings → Actions → Runners**, generate a short-lived registration command and execute it locally on that runner without copying the token elsewhere.
+3. Register the custom `casino-production-deploy` label in addition to the default self-hosted platform labels.
+4. Configure the `production` environment for protected `main` and install the existing scoped deployment secrets there or retain the equivalently scoped repository secrets.
+5. Bring the runner online only after its operating-system updates, outbound GitHub access, SSH endpoint pin, and cleanup policy are verified.
+
+If no matching runner is online, GitHub leaves the deployment job queued. Do not change the job back to `ubuntu-latest`, rerun the known-unreachable hosted SSH path, or broaden SSH ingress.
+
 ## Required GitHub Actions secrets
 
 These repository secrets must exist before automatic deployment can reach the server:
@@ -110,13 +135,14 @@ That failure is expected until the secrets are installed. It is not related to a
 
 ## One-time setup checklist
 
-1. Add the five GitHub Actions secrets listed above.
-2. Install or rotate the production monitor bearer token.
-3. Store the bearer value in `/etc/casino/edge-monitor.env`.
-4. Use the explicit `repair-digest` command above to derive the application digest without shell or log exposure.
-5. Run read-only `check`.
-6. Restart the service once after changing host environment files.
-7. Rerun an eligible deployment path, or push the next protected-main release. Do not rerun an unchanged hosted job when the runner cannot reach source-restricted SSH ingress.
+1. Register the controlled deployment runner and configure the `production` environment as described above.
+2. Add the five GitHub Actions secrets listed above.
+3. Install or rotate the production monitor bearer token.
+4. Store the bearer value in `/etc/casino/edge-monitor.env`.
+5. Use the explicit `repair-digest` command above to derive the application digest without shell or log exposure.
+6. Run read-only `check`.
+7. Restart the service once after changing host environment files.
+8. Push the next unique protected-main release after the runner is online. Do not rerun an unchanged hosted job when the runner cannot reach source-restricted SSH ingress.
 
 After this one-time setup is correct, future protected-main merges should roll out without manual browser login.
 

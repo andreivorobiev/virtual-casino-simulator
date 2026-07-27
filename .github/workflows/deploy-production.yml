@@ -116,10 +116,23 @@ jobs:
     name: Deploy production
     needs:
       - publish-release
-    runs-on: ubuntu-latest
+    # Route production access only through the repository-scoped stable-egress runner.
+    runs-on: [self-hosted, linux, x64, casino-production-deploy]
+    # Keep production secrets and deployment history behind the dedicated environment.
+    environment: production
+    # Bound execution after a matching runner accepts the serialized deployment job.
+    timeout-minutes: 30
     permissions:
       contents: read
     steps:
+      # Refuse execution if a mislabeled runner does not report the required platform.
+      - name: Verify controlled deploy runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${RUNNER_ENVIRONMENT}" = "self-hosted"
+          test "${RUNNER_OS}" = "Linux"
+          test "${RUNNER_ARCH}" = "X64"
       # Download the exact hosted assets verified by the publication job.
       - name: Download deployable hosted assets
         uses: actions/download-artifact@v4
@@ -141,11 +154,28 @@ jobs:
           test -n "${CASINO_DEPLOY_SSH_USER}"
           test -n "${CASINO_DEPLOY_SSH_KEY}"
           test -n "${CASINO_DEPLOY_KNOWN_HOSTS}"
-          mkdir -p "${HOME}/.ssh"
-          printf '%s\n' "${CASINO_DEPLOY_SSH_KEY}" > "${HOME}/.ssh/id_ed25519"
-          chmod 600 "${HOME}/.ssh/id_ed25519"
-          printf '%s\n' "${CASINO_DEPLOY_KNOWN_HOSTS}" > "${HOME}/.ssh/known_hosts"
-          chmod 600 "${HOME}/.ssh/known_hosts"
+          ssh_dir="${RUNNER_TEMP}/casino-deploy-ssh"
+          install -d -m 0700 "${ssh_dir}"
+          printf '%s\n' "${CASINO_DEPLOY_SSH_KEY}" > "${ssh_dir}/id_ed25519"
+          chmod 600 "${ssh_dir}/id_ed25519"
+          printf '%s\n' "${CASINO_DEPLOY_KNOWN_HOSTS}" > "${ssh_dir}/known_hosts"
+          chmod 600 "${ssh_dir}/known_hosts"
+      # Prove the stable-egress route, pinned host key, deploy key, and sudo policy before upload.
+      - name: Verify pinned SSH route and privilege
+        env:
+          CASINO_DEPLOY_SSH_HOST: ${{ secrets.CASINO_DEPLOY_SSH_HOST }}
+          CASINO_DEPLOY_SSH_PORT: ${{ secrets.CASINO_DEPLOY_SSH_PORT }}
+          CASINO_DEPLOY_SSH_USER: ${{ secrets.CASINO_DEPLOY_SSH_USER }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          port="${CASINO_DEPLOY_SSH_PORT:-22}"
+          remote="${CASINO_DEPLOY_SSH_USER}@${CASINO_DEPLOY_SSH_HOST}"
+          ssh_dir="${RUNNER_TEMP}/casino-deploy-ssh"
+          if ! ssh -o BatchMode=yes -o ConnectionAttempts=1 -o ConnectTimeout=10 -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=${ssh_dir}/known_hosts" -i "${ssh_dir}/id_ed25519" -p "${port}" "${remote}" "sudo -n true" >/dev/null 2>&1; then
+            echo "Controlled deployment runner could not complete the pinned SSH/authentication/sudo preflight."
+            exit 1
+          fi
       # Upload only the verified hosted assets into one commit-named staging directory.
       - name: Upload release assets
         env:
@@ -158,8 +188,9 @@ jobs:
           port="${CASINO_DEPLOY_SSH_PORT:-22}"
           remote="${CASINO_DEPLOY_SSH_USER}@${CASINO_DEPLOY_SSH_HOST}"
           staging="/tmp/casino-cicd-${GITHUB_SHA}"
-          ssh -p "${port}" "${remote}" "sudo install -d -m 0700 '${staging}' && sudo chown '${CASINO_DEPLOY_SSH_USER}' '${staging}'"
-          scp -P "${port}" published/virtual_casino_simulator_package.zip published/release-manifest.json published/checksums.txt "${remote}:${staging}/"
+          ssh_dir="${RUNNER_TEMP}/casino-deploy-ssh"
+          ssh -o BatchMode=yes -o ConnectionAttempts=1 -o ConnectTimeout=10 -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=${ssh_dir}/known_hosts" -i "${ssh_dir}/id_ed25519" -p "${port}" "${remote}" "sudo install -d -m 0700 '${staging}' && sudo chown '${CASINO_DEPLOY_SSH_USER}' '${staging}'"
+          scp -o BatchMode=yes -o ConnectionAttempts=1 -o ConnectTimeout=10 -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=${ssh_dir}/known_hosts" -i "${ssh_dir}/id_ed25519" -P "${port}" published/virtual_casino_simulator_package.zip published/release-manifest.json published/checksums.txt "${remote}:${staging}/"
       # Switch production atomically and roll back automatically if post-cutover health fails.
       - name: Activate release and verify production
         env:
@@ -172,7 +203,8 @@ jobs:
           set -euo pipefail
           port="${CASINO_DEPLOY_SSH_PORT:-22}"
           remote="${CASINO_DEPLOY_SSH_USER}@${CASINO_DEPLOY_SSH_HOST}"
-          ssh -p "${port}" "${remote}" "sudo bash -s" -- "${GITHUB_SHA}" "${RELEASE_TAG}" <<'REMOTE_DEPLOY'
+          ssh_dir="${RUNNER_TEMP}/casino-deploy-ssh"
+          ssh -o BatchMode=yes -o ConnectionAttempts=1 -o ConnectTimeout=10 -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=${ssh_dir}/known_hosts" -i "${ssh_dir}/id_ed25519" -p "${port}" "${remote}" "sudo bash -s" -- "${GITHUB_SHA}" "${RELEASE_TAG}" <<'REMOTE_DEPLOY'
           set -euo pipefail
           release_sha="$1"
           release_tag="$2"
@@ -221,3 +253,14 @@ jobs:
           rm -rf "${staging}" "${prior_env}"
           trap - ERR
           REMOTE_DEPLOY
+      # Remove key material and downloaded assets even when preflight or cutover fails.
+      - name: Clean deployment runner
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh_dir="${RUNNER_TEMP}/casino-deploy-ssh"
+          rm -f "${ssh_dir}/id_ed25519" "${ssh_dir}/known_hosts"
+          rmdir "${ssh_dir}" 2>/dev/null || true
+          rm -f published/virtual_casino_simulator_package.zip published/release-manifest.json published/checksums.txt
+          rmdir published 2>/dev/null || true
