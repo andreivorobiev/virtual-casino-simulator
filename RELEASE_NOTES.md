@@ -1,6 +1,14 @@
-# Virtual Casino Simulator v0.9.5.9 Release Notes
+# Virtual Casino Simulator v0.9.5.10 Release Notes
 
-## Non-shell production monitor handoff patch
+## Deployment-restoring wallet-integrity release
+
+- Packages the exact accepted protected-main state after v0.9.5.9 as a distinct immutable patch release.
+- Restores automatic production deployment: the v0.9.5.9 tag already pointed at an earlier protected commit, so the deploy for the following merge refused to publish and no release was cut.
+- Carries the accepted wallet-integrity and server-authority slice: player creation no longer replaces the whole player document, blackjack and baccarat table rules are validated against a declared per-game domain, and the legacy v1 add-money route applies the guest wallet freeze and the shared bounded amount gate.
+- Rotates the PWA static-shell cache identity so existing browsers fetch the current protected application shell.
+- Keeps MySQL at schema version 2 and permits application-only rollback to the retained, checksum-verified v0.9.5.9 predecessor; database rollback remains prohibited.
+
+## Prior v0.9.5.9 Non-shell production monitor handoff patch
 
 - Replaces Bash sourcing of `/etc/casino/edge-monitor.env` with a packaged Python runner that parses only the exact protected Authorization assignment without evaluating shell syntax.
 - Passes the validated bearer directly to the existing read-only edge observer through an explicit in-process environment seam; it never renders the bearer, token, or digest.
