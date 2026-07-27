@@ -7,7 +7,7 @@ Historical source baseline: 9.1.0
 ## Independent module revisions
 
 - application: 9.51.24
-- core: 9.24.3
+- core: 9.24.4
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.0
@@ -50,8 +50,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.0.0
 - pai_gow_poker: 1.0.2
 - teen_patti: 1.0.2
-- tests: 1.60.41
-- docs: 1.60.41
+- tests: 1.60.42
+- docs: 1.60.42
 - contracts: 1.48.11
 - tooling: 1.21.3
 - commenting_policy: 1.0.0
@@ -659,7 +659,7 @@ Historical source baseline: 9.1.0
 - **CORE-023** (Core) - PASS: A production WSGI adapter initializes from explicit external runtime configuration, serves the complete same-origin application without invoking the development HTTP server, and is supported only through a fixed-loopback supervised process policy.
 - **TEST-046** (Tests) - PASS: Production-service validation covers listener-free WSGI parity, sanitized probes, authorization propagation, malformed input, fail-closed external configuration, fixed-loopback policy, hardened supervision, clean extracted-release startup, graceful restart, persistence, failure handling, and exact listener closure.
 - **SEC-010** (Core) - PASS: Restricted-preview production requests require exact canonical Host and Origin values, one exact loopback trusted-proxy contract, per-session CSRF proof for every unsafe method, bounded bodies and client windows, hardened response headers, and secret-safe fixed-class security logging.
-- **SESSION-006** (Core) - PASS: Restricted-preview sessions use host-only Secure HttpOnly SameSite cookies, distinct per-session CSRF values, bounded per-user concurrent session retention with least-recently-used eviction, bounded lifetime, logout clearing, and revocation after privilege-bearing account changes.
+- **SESSION-006** (Core) - PASS: Restricted-preview sessions use host-only Secure HttpOnly SameSite cookies, distinct per-session CSRF values, bounded per-user concurrent session retention with least-recently-used eviction, bounded lifetime, logout clearing of the session credential with rotation of the browser-readable double-submit cookie onto a fresh anonymous bootstrap token, and revocation after privilege-bearing account changes.
 - **SESSION-007** (Session) - PASS: Concurrent same-account logins create independent durable sessions that remain valid and never invalidate each other, bounded by a per-user cap with least-recently-used eviction and atomic session persistence that prevents lost writes, returning no 401 or 500 under concurrency.
 - **ADMIN-024** (Admin) - PASS: Admin HTML, JavaScript, and API surfaces require an active Admin session during restricted preview, and user privilege or status changes revoke existing sessions.
 - **AUTH-007** (Core) - PASS: Restricted preview keeps public signup disabled and fail-closed; additive invite-only OAuth routes remain disabled and provider-network inaccessible by default, create no users, never link by email, and require exact browser/session integrity when separately released.
