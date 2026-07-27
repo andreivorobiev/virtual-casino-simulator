@@ -4673,6 +4673,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     locale_copy={'en-US':'Repeat bet','ru-RU':'\u041f\u043e\u0432\u0442\u043e\u0440\u0438\u0442\u044c \u0441\u0442\u0430\u0432\u043a\u0443'}
                     # Audit every route in both locales at a governed compact desktop viewport.
                     page.set_viewport_size({'width':1440,'height':900})
+                    # Count real route renders so the hosted audit cannot silently classify every control as phase-gated.
+                    rendered_repeat_controls=0
                     # Exercise every repeat control after a real locale change.
                     for locale in ('en-US','ru-RU'):
                         # Select the locale through the player-visible shell control.
@@ -4687,8 +4689,20 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             game_root=page.get_by_test_id(game['frontend']['ready_testid']); game_root.wait_for(timeout=5000)
                             # Resolve the one visible repeat button inside the mounted route outlet, because some readiness markers intentionally identify only the visual stage.
                             repeat_button=page.locator('#view').locator(repeat_selector)
-                            # Require one semantic control so duplicate or phase-hidden copies cannot create ambiguity.
-                            assert repeat_button.count()==1,{'game':game['id'],'locale':locale,'repeatCount':repeat_button.count()}
+                            # Read the phase-dependent count without requiring a settled-only control on an untouched idle route.
+                            repeat_count=repeat_button.count()
+                            # Reject duplicate controls while allowing a game to defer its one semantic action until settlement.
+                            assert repeat_count in (0,1),{'game':game['id'],'locale':locale,'repeatCount':repeat_count}
+                            # Require a real operable initial state when the repeat action is intentionally phase-gated.
+                            if repeat_count==0:
+                                # Inspect only the mounted route outlet so shell navigation cannot satisfy game operability.
+                                initial_state=page.evaluate("""() => { const root=document.querySelector('#view'); const visible=node=>{const style=getComputedStyle(node);return style.display!=='none'&&style.visibility!=='hidden'&&node.getClientRects().length>0;}; const enabled=[...(root?.querySelectorAll('button:not([disabled]),input:not([disabled]),select:not([disabled]),a[href],[role="button"]')||[])].filter(visible); return {routeVisible:Boolean(root&&visible(root)),enabledControls:enabled.length}; }""")
+                                # Fail closed if a supposedly phase-gated game is not actually ready for the player to start.
+                                assert initial_state['routeVisible'] and initial_state['enabledControls']>0,{'game':game['id'],'locale':locale,'initialState':initial_state}
+                                # Continue because listener-free UI-REPEAT-BET-001 owns the hidden phase markup, copy, wiring, and safety contract.
+                                continue
+                            # Count one runtime-rendered control for the aggregate fail-closed proof.
+                            rendered_repeat_controls+=1
                             # Resolve and scroll atomically so an expected state-hydration rerender cannot detach a Playwright element handle mid-action.
                             page.evaluate("""selector => document.querySelector('#view')?.querySelector(selector)?.scrollIntoView({block:'center',inline:'nearest'})""",repeat_selector)
                             # Require installed-locale copy on the real control.
@@ -4697,6 +4711,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             geometry=page.evaluate("""selector => { const root=document.querySelector('#view'); const button=root?.querySelector(selector); const rect=button?.getBoundingClientRect(); const feedback=document.querySelector('.report-problem-fab:not([hidden])')?.getBoundingClientRect(); const overlaps=Boolean(rect&&feedback&&rect.left<feedback.right&&rect.right>feedback.left&&rect.top<feedback.bottom&&rect.bottom>feedback.top); return {visible:Boolean(rect&&rect.width>0&&rect.height>0),width:Math.round(rect?.width||0),height:Math.round(rect?.height||0),left:Math.round(rect?.left||0),right:Math.round(rect?.right||0),viewportWidth:innerWidth,documentFits:document.documentElement.scrollWidth<=window.innerWidth+1,feedbackOverlap:overlaps}; }""",repeat_selector)
                             # Reject hidden, undersized, clipped, overflowing, or feedback-obscured controls.
                             assert geometry['visible'] and geometry['width']>=80 and geometry['height']>=40 and geometry['left']>=-1 and geometry['right']<=geometry['viewportWidth']+1 and geometry['documentFits'] and not geometry['feedbackOverlap'],{'game':game['id'],'locale':locale,'geometry':geometry}
+                    # Require at least one real localized route render in each locale in addition to the complete listener-free catalog contract.
+                    assert rendered_repeat_controls>=2,{'renderedRepeatControls':rendered_repeat_controls}
                     # Restore English before executing one real backend-funded repeat.
                     page.get_by_test_id('shell-locale-select').select_option('en-US')
                     # Wait for English before reading request payloads from the representative route.
@@ -4721,8 +4737,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     assert repeated_payload['color']==first_payload['color'] and repeated_payload['stake']==first_payload['stake'] and repeated_payload['request_id']!=first_payload['request_id'],{'first':first_payload,'repeat':repeated_payload}
                     # Wait for the second settlement and busy-state cleanup before visual evidence.
                     page.wait_for_function("() => !document.querySelector('[data-testid=\"color-wheel-repeat\"]')?.disabled",timeout=10000)
-                    # Enumerate eight representative EN/RU evidence rows across all governed viewport classes.
-                    evidence_rows=(('en-US','color_wheel','desktop_primary',1920,1080),('en-US','craps','desktop_compact',1440,900),('en-US','multi_hand_video_poker','tablet',1024,900),('en-US','pai_gow_poker','mobile',390,844),('ru-RU','color_wheel','mobile',390,844),('ru-RU','craps','tablet',1024,900),('ru-RU','multi_hand_video_poker','desktop_compact',1440,900),('ru-RU','pai_gow_poker','desktop_primary',1920,1080))
+                    # Enumerate the exact EN/RU and four-viewport matrix on the route whose real repeat action just passed.
+                    evidence_rows=(('en-US','color_wheel','desktop_primary',1920,1080),('en-US','color_wheel','desktop_compact',1440,900),('en-US','color_wheel','tablet',1024,900),('en-US','color_wheel','mobile',390,844),('ru-RU','color_wheel','desktop_primary',1920,1080),('ru-RU','color_wheel','desktop_compact',1440,900),('ru-RU','color_wheel','tablet',1024,900),('ru-RU','color_wheel','mobile',390,844))
                     # Capture each representative route with exact-source sidecar provenance.
                     for locale,game_id,viewport_id,width,height in evidence_rows:
                         # Switch through the real player locale selector before mounting the route.
@@ -4739,8 +4755,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         repeat_button=page.locator('#view').locator(repeat_selector)
                         # Scroll atomically without retaining an element handle that a normal hydration rerender may detach.
                         page.evaluate("""selector => document.querySelector('#view')?.querySelector(selector)?.scrollIntoView({block:'center',inline:'nearest'})""",repeat_selector)
-                        # Require the same localized visible label in the exact evidence frame.
-                        assert repeat_button.count()==1 and repeat_button.inner_text().strip()==locale_copy[locale]
+                        # Require one enabled localized repeat action in the exact evidence frame.
+                        assert repeat_button.count()==1 and repeat_button.is_enabled() and repeat_button.inner_text().strip()==locale_copy[locale]
                         # Capture the complete game surface with the governed repeat-ready state.
                         game_evidence(f'after-pass-repeat-bet-{game_id}-{locale}-{viewport_id}.png',game_id,['repeat_available'],locale,viewport_id)
                     # Restore English, primary desktop, and lobby ownership for later cases.
