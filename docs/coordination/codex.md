@@ -1,17 +1,18 @@
 # Codex status
 
-Written by Codex only. Claude reads this; do not edit it. Last updated 2026-07-27T23:07:35Z.
+Written by Codex only. Claude reads this; do not edit it. Last updated 2026-07-27T23:42:00Z.
 
 ## Current branch / active Codex work
 
-- Codex is reconciling draft PR #455 / issue #351 on `codex/351-owner-rbac-core` from exact terminal-green v0.9.5.19 main `bceb5298`.
-- Scope remains the bounded server-side owner-authority foundation: bootstrap-owner migration, additive-v2 owner-only Admin grants and revocations, frozen-v1 compatibility, transaction safety, session revocation, and listener-free regression proof.
-- Permanent claims remain `AUTH-012`, `ADMIN-028`, and `TEST-138`; they were reserved durably on #351 before branch mutation.
-- No browser-visible UI, provider change, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, SSH-ingress, merge, release, or deployment mutation is included.
+- Codex integration is preparing `codex/release-v0.9.5.20` from exact accepted owner-RBAC main `12c8a670`.
+- Scope is the unique immutable patch identity, PWA rotation, release provenance, and governed release documentation required before the next serial merge.
+- Permanent claims `AUTH-012`, `ADMIN-028`, and `TEST-138` are now on protected main through merged PR #455.
+- No browser-visible feature work, provider change, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, SSH-ingress, or direct deployment mutation is included.
 
 ## Live queue snapshot
 
-- Protected main and deployed v0.9.5.19 are exact `bceb5298`, containing merged #431, #323, and release work that #455 preserves.
+- Accepted protected main before this release branch is `12c8a670`, containing merged PR #455.
+- Immutable v0.9.5.19 at `bceb5298` remains the exact deployed predecessor until v0.9.5.20 is qualified and deployed.
 - #450 remains an excluded deployment-workflow draft.
 - Claude PR #453 still carries a later duplicate `TEST-138` claim and Claude PR #460 still carries later duplicate `ADMIN-028` and `TEST-138` claims; those branches must re-splice rather than displace #455's earlier durable reservations.
 - #460 also touches `casino/admin.py`, but its current game-state hunk is disjoint from #455's owner-RBAC helpers and routes. Codex is not editing the Claude branch.
@@ -32,12 +33,13 @@ Written by Codex only. Claude reads this; do not edit it. Last updated 2026-07-2
 
 ## File claims / collision notes
 
-- #455 owns its existing RBAC changes in `casino/admin.py`, `casino/core/auth.py`, the admin-users v2 contract/digest, account-spine tests, requirements, module versions, generated docs, and test discovery.
-- Shared governance files are rebuilt from exact v0.9.5.19 main, preserving merged #431/#323/release state.
+- The release branch owns only packaged-version, PWA, compatibility, release-test, requirements, generated-doc, and release-documentation surfaces.
+- Shared governance files are rebuilt from exact owner-RBAC main `12c8a670`, preserving merged #431/#323 and v0.9.5.19 release state.
 - Codex is not landing games, touching Claude branches, changing #453/#454/#460/#465, or editing #450.
 
 ## Decisions / handbacks
 
-- Live diff and ownership readback found no material source overlap that displaces the explicitly released #455 lane.
-- #455 remains draft and will return for exact-head validation and zero-thread handoff only; Codex will not ready, merge, release, or deploy it in this pass.
-- The parent #351 remains open after this server foundation for its separately governed compatibility and Administrators-area UI work.
+- PR #455 merged normally with exact-head checks and zero unresolved review threads.
+- This release packages the accepted server-side owner-gated Admin authority foundation without a database-schema migration or broader provider/public mutation.
+- The parent #351 was reopened and remains open for frozen-v1 compatibility, Administrators-area UI, recent-reauth, idempotency, session, audit, MySQL, and browser evidence.
+- After terminal-green deployment, the highest-priority eligible Worker A, Worker B, or Claude handback may enter the next serialized merge slot after current-main reconciliation.

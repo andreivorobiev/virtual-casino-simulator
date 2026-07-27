@@ -1,4 +1,17 @@
-# Virtual Casino Simulator v0.9.5.19 Release Notes
+# Virtual Casino Simulator v0.9.5.20 Release Notes
+
+## Owner-gated Admin authority foundation
+
+- Promotes the bootstrap-managed identity to a nonassignable platform owner while preserving existing Admin authority.
+- Adds owner-only additive-v2 routes to grant or revoke Admin authority for active existing accounts and to create player-only accounts.
+- Enforces transaction-scoped last-owner and last-Admin invariants so concurrent or stale mutations fail closed.
+- Revokes affected privilege sessions and records actor-attributed audit events for accepted authority changes.
+- Leaves frozen v1 behavior unchanged; the remaining compatibility, Administrators-area UI, recent-reauth, idempotency, session, audit, MySQL, and browser evidence stays tracked by open issue #351.
+- Rotates the PWA shell identity and keeps curated What's New metadata disabled pending its separately governed UI remainder.
+- Retains exact immutable v0.9.5.19 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation.
+
+## Prior v0.9.5.19 bounded MySQL connection lifecycle
 
 ## Bounded MySQL connection lifecycle
 
