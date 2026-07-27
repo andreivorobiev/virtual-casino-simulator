@@ -16,7 +16,7 @@ The ZIP writer sorts members, fixes their timestamps and modes, and writes exact
 
 The packager obtains its source inventory from `git ls-files`; it never recursively walks the working directory. Only the runtime Python package, browser assets, module and contract metadata, selected public documentation, package metadata, launch entry point, deployment-only migration runner, and checksum-pinned canonical migration catalog/files are eligible. No parallel checked-in SQL schema snapshot exists to drift from the catalog.
 
-Runtime data, logs, tests, local evidence, caches, environment files, key-like files, local worktrees, and all untracked content are excluded. A credential-like tracked path beneath an otherwise allowed application root causes the build to fail instead of being silently omitted. Symlinks and unsafe archive paths are also rejected.
+Runtime data, logs, tests, local evidence, caches, environment files, key-like files, local worktrees, and all untracked content are excluded. A credential-like tracked path beneath an otherwise allowed application root causes the build to fail instead of being silently omitted. Symlinks and unsafe archive paths are also rejected. The allowlist and required inventory include every Python command that the production workflow runs from the extracted release; a regression derives those host paths from `.github/workflows/deploy-production.yml` and fails if any referenced script is absent from the archive.
 
 ## Validation and clean-copy smoke
 
@@ -51,7 +51,7 @@ The recovered v9.2.0 manifest is intentionally not rollback-eligible itself beca
 
 Each publication-eligible manifest records the immediately previous retained release version, commit, archive checksum, and manifest checksum. Before rollback, verify the retained manifest and archive, install the prior archive into a new immutable release directory, run the same clean-copy verification, then atomically repoint the application release selector according to the separately approved deployment procedure.
 
-The compatibility record, not GitHub release-list ordering, selects the retained predecessor. A published release with incorrect rollback provenance remains immutable and is superseded by a new patch identity; its assets and tag are never replaced in place. v0.9.5.7 therefore retains checksum-verified v0.9.5.5 as its declared application-only predecessor and intentionally does not use the defective v0.9.5.6 rollback pointer.
+The compatibility record, not GitHub release-list ordering, selects the retained predecessor. A published release with incorrect rollback provenance or an incomplete host-command inventory remains immutable and is superseded by a new patch identity; its assets and tag are never replaced in place. v0.9.5.8 therefore retains checksum-verified v0.9.5.5 as its declared application-only predecessor and intentionally uses neither the defective v0.9.5.6 rollback pointer nor the host-incomplete v0.9.5.7 archive.
 
 This gate covers application artifact rollback only. A predecessor may be selected only when its manifest accepts the already-applied MySQL migration version. Database or schema rollback is intentionally outside `TOOL-003` and must follow the separately accepted migration and recovery gates. A candidate without a valid prior manifest remains useful for branch validation but is not eligible for immutable publication.
 
@@ -69,10 +69,10 @@ Verify existing assets without rebuilding:
 python scripts/package_app.py --verify-only --archive dist/virtual_casino_simulator_package.zip --manifest dist/release-manifest.json
 ```
 
-Build a canonical tagged v0.9.5.7 candidate with the retained v0.9.5.5 rollback manifest selected by compatibility policy:
+Build a canonical tagged v0.9.5.8 candidate with the retained v0.9.5.5 rollback manifest selected by compatibility policy:
 
 ```powershell
-python scripts/make_release.py --release-tag v0.9.5.7 --previous-manifest previous/release-manifest.json
+python scripts/make_release.py --release-tag v0.9.5.8 --previous-manifest previous/release-manifest.json
 ```
 
-For v0.9.5.7, `previous/release-manifest.json` must be the checksum-verified retained v0.9.5.5 release manifest declared by `contracts/compatibility/app-0.9.5.7.json`. `scripts/resolve_release_predecessor.py` derives that exact tag and verifies the downloaded manifest before packaging. The immutable v0.9.5.6 assets are not replaced or used as rollback provenance because their recorded predecessor is inconsistent with repository policy. The resulting v0.9.5.7 pointer authorizes application-artifact rollback only; it neither rolls back MySQL schema version 2 nor permits provider, DNS, billing, signup, OAuth, mail, edge, or public-exposure changes.
+For v0.9.5.8, `previous/release-manifest.json` must be the checksum-verified retained v0.9.5.5 release manifest declared by `contracts/compatibility/app-0.9.5.8.json`. `scripts/resolve_release_predecessor.py` derives that exact tag and verifies the downloaded manifest before packaging. The immutable v0.9.5.6 and v0.9.5.7 assets are not replaced or used as rollback provenance because the former records the wrong predecessor and the latter omits scripts required for host activation. The resulting v0.9.5.8 pointer authorizes application-artifact rollback only; it neither rolls back MySQL schema version 2 nor permits provider, DNS, billing, signup, OAuth, mail, edge, or public-exposure changes.

@@ -8,7 +8,7 @@ Every protected `main` merge should automatically become the production release.
 
 The browser Admin login and the production monitor login are separate things. Browser login is for a person. The monitor credential is a server-owned bearer token used only by deployment health checks.
 
-Packaged release numbers use the four-part scheme documented in [the release versioning policy](release_versioning.md). The current line is `0.9.5.7`; `0.9.6.0` is reserved for the next large Claude LPR.
+Packaged release numbers use the four-part scheme documented in [the release versioning policy](release_versioning.md). The current line is `0.9.5.8`; `0.9.6.0` is reserved for the next large Claude LPR.
 
 ## What happens after a merge
 
@@ -65,13 +65,13 @@ Validate the installed pair without opening a listener or printing either value:
 sudo /opt/casino/venv/bin/python /opt/casino/current/scripts/validate_monitor_config.py check --monitor-env /etc/casino/edge-monitor.env --application-env /etc/casino/casino.env
 ```
 
-When an authorized root operator has intentionally installed or rotated the bearer, repair only the digest assignment from the separate bearer file. Before v0.9.5.7 is active, invoke the tool from the checksum-verified candidate release directory created during staging:
+When an authorized root operator has intentionally installed or rotated the bearer, repair only the digest assignment from the separate bearer file. Before v0.9.5.8 is active, invoke the tool from the checksum-verified candidate release directory created during staging:
 
 ```text
 sudo /opt/casino/venv/bin/python /opt/casino/releases/<verified-candidate-commit>/scripts/validate_monitor_config.py repair-digest --monitor-env /etc/casino/edge-monitor.env --application-env /etc/casino/casino.env
 ```
 
-After v0.9.5.7 is active, `/opt/casino/current/scripts/validate_monitor_config.py` is the canonical path. Repair mode does not accept a token on the command line, does not print the token or digest, rejects symlink and duplicate-assignment destinations, atomically replaces the application file, and preserves its unrelated settings, ownership, and permissions. Restart the Casino service after an authorized repair, then run read-only `check` again. The production workflow itself never selects repair mode; a mismatch blocks cutover.
+After v0.9.5.8 is active, `/opt/casino/current/scripts/validate_monitor_config.py` is the canonical path. Repair mode does not accept a token on the command line, does not print the token or digest, rejects symlink and duplicate-assignment destinations, atomically replaces the application file, and preserves its unrelated settings, ownership, and permissions. Restart the Casino service after an authorized repair, then run read-only `check` again. The production workflow itself never selects repair mode; a mismatch blocks cutover.
 
 The monitor token is accepted only for:
 
@@ -80,11 +80,11 @@ The monitor token is accepted only for:
 
 It is rejected for normal account, gameplay, Admin mutation, wallet, ledger, and `/api/v2/me` routes.
 
-## Recovery from the v0.9.5.6 publication
+## Recovery from the v0.9.5.6 and v0.9.5.7 publications
 
-The immutable v0.9.5.6 release manifest selected a different historical release because the workflow inferred rollback from GitHub release ordering. That release remains immutable and must not be replaced in place. v0.9.5.7 removes the release-order heuristic: rollback provenance comes only from `contracts/compatibility/app-0.9.5.7.json`, which retains v0.9.5.5 as the application-only predecessor. The workflow also verifies the downloaded predecessor manifest before building the new candidate.
+The immutable v0.9.5.6 release manifest selected a different historical release because the workflow inferred rollback from GitHub release ordering. v0.9.5.7 corrected predecessor selection but its package allowlist omitted `scripts/package_app.py` and `scripts/validate_monitor_config.py`, even though host activation invokes both from the extracted release. Neither immutable release is replaced in place. v0.9.5.8 keeps rollback provenance in `contracts/compatibility/app-0.9.5.8.json`, retains v0.9.5.5 as the application-only predecessor, packages every host-required script, and tests the archive against the host commands derived from the production workflow.
 
-The same recovery adds a fail-closed monitor configuration check before the application symlink moves. A root operator may use the explicit repair command above to align an intentionally rotated bearer and digest without exposing secret material.
+The recovery preserves the fail-closed monitor configuration check before the application symlink moves. A root operator may use the explicit repair command above to align an intentionally rotated bearer and digest without exposing secret material.
 
 ## Historical first-rollout blocker
 

@@ -27,9 +27,9 @@ class ReleasePredecessorTests(unittest.TestCase):
         (self.root / "contracts" / "compatibility").mkdir(parents=True)
         # Write the candidate release declaration.
         self.write_json(
-            "contracts/compatibility/app-0.9.5.7.json",
+            "contracts/compatibility/app-0.9.5.8.json",
             {
-                "app_version": "0.9.5.7",
+                "app_version": "0.9.5.8",
                 "predecessor": {
                     "app_version": "0.9.5.5",
                     "compatibility_record": "contracts/compatibility/app-0.9.5.5.json",
@@ -62,7 +62,7 @@ class ReleasePredecessorTests(unittest.TestCase):
         # Pin a syntactically valid manifest digest for resolution-only evidence.
         self.pin_manifest_digest("7" * 64)
         # Resolve the candidate's governed predecessor.
-        tag = resolve_release_predecessor.predecessor_tag("0.9.5.7", self.root)
+        tag = resolve_release_predecessor.predecessor_tag("0.9.5.8", self.root)
         # Require the retained v0.9.5.5 tag rather than release-list ordering.
         self.assertEqual(tag, "v0.9.5.5")
 
@@ -70,9 +70,9 @@ class ReleasePredecessorTests(unittest.TestCase):
     def test_rejects_redirected_predecessor_record(self):
         # Replace the candidate with a path that does not match its predecessor version.
         self.write_json(
-            "contracts/compatibility/app-0.9.5.7.json",
+            "contracts/compatibility/app-0.9.5.8.json",
             {
-                "app_version": "0.9.5.7",
+                "app_version": "0.9.5.8",
                 "predecessor": {
                     "app_version": "0.9.5.5",
                     "compatibility_record": "contracts/compatibility/app-0.9.5.6.json",
@@ -86,7 +86,7 @@ class ReleasePredecessorTests(unittest.TestCase):
         # Require resolution to reject the redirected policy input.
         with self.assertRaises(ValueError):
             # Execute the exact public resolver.
-            resolve_release_predecessor.predecessor_tag("0.9.5.7", self.root)
+            resolve_release_predecessor.predecessor_tag("0.9.5.8", self.root)
 
     # Prove downloaded manifests must bind the declared version, tag, and full commit.
     def test_verifies_exact_downloaded_manifest(self):
@@ -108,7 +108,7 @@ class ReleasePredecessorTests(unittest.TestCase):
         # Pin the exact synthetic manifest bytes in the candidate policy.
         self.pin_manifest_digest(hashlib.sha256(manifest.read_bytes()).hexdigest())
         # Verify the manifest against the candidate compatibility record.
-        tag = resolve_release_predecessor.verify_manifest("0.9.5.7", manifest, self.root)
+        tag = resolve_release_predecessor.verify_manifest("0.9.5.8", manifest, self.root)
         # Require the same immutable retained tag.
         self.assertEqual(tag, "v0.9.5.5")
 
@@ -134,12 +134,12 @@ class ReleasePredecessorTests(unittest.TestCase):
         # Require the verifier to reject cross-tag substitution.
         with self.assertRaises(ValueError):
             # Exercise the exact public verifier.
-            resolve_release_predecessor.verify_manifest("0.9.5.7", manifest, self.root)
+            resolve_release_predecessor.verify_manifest("0.9.5.8", manifest, self.root)
 
     # Update only the synthetic candidate's retained manifest checksum.
     def pin_manifest_digest(self, digest: str) -> None:
         # Resolve the candidate compatibility record.
-        path = self.root / "contracts" / "compatibility" / "app-0.9.5.7.json"
+        path = self.root / "contracts" / "compatibility" / "app-0.9.5.8.json"
         # Parse its current fixture content.
         value = json.loads(path.read_text(encoding="utf-8"))
         # Replace only the manifest identity pin.

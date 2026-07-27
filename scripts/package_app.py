@@ -53,6 +53,10 @@ ALLOWED_FILES = {
     "scripts/mysql_migrate.py",
     "scripts/recovery.py",
     "scripts/edge_gate.py",
+    # Package the exact extracted-release verifier invoked by production activation.
+    "scripts/package_app.py",
+    # Package the secret-safe monitor pairing validator invoked before cutover.
+    "scripts/validate_monitor_config.py",
     "scripts/write_release_env.py",
 }
 # Reject runtime, private, generated, test, and local-evidence directories anywhere.
@@ -95,6 +99,10 @@ REQUIRED_FILES = {
     "scripts/mysql_migrate.py",
     "scripts/recovery.py",
     "scripts/edge_gate.py",
+    # Require the verifier because activation executes it from the extracted release.
+    "scripts/package_app.py",
+    # Require the monitor validator because it gates activation before selector mutation.
+    "scripts/validate_monitor_config.py",
     "scripts/write_release_env.py",
     "casino/core/recovery.py",
     "web/app.js",
