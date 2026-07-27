@@ -1,6 +1,28 @@
 {
-  "application": "0.9.5.11",
+  "app_version": "0.9.5.11",
   "source_baseline": "9.1.0",
+  "api_compatibility_matrix": "contracts/compatibility/module-api-matrix.json",
+  "release_provenance_requirement": "TOOL-003",
+  "release_channel": "restricted-preview-private-invite",
+  "access_policy": {
+    "admission": "manual-invite",
+    "public_signup": "disabled",
+    "live_oauth": "disabled"
+  },
+  "predecessor": {
+    "app_version": "0.9.5.10",
+    "compatibility_record": "contracts/compatibility/app-0.9.5.10.json",
+    "required_artifact": "release-manifest.json",
+    "source_commit_sha": "fc0d4021c440a627f2bc21e90c55132d626d1183",
+    "artifact_sha256": "482c89104ea70c48d5c160c9e6fc203bdf2409bcb69f58dfb3daabdc367f07b3",
+    "manifest_sha256": "007c828c552c58e52fbe81b00bdffadb95a3d7e3d63308e591f4674893d0691d"
+  },
+  "rollback": {
+    "scope": "application-only",
+    "database_rollback": "prohibited",
+    "mysql_expected_schema_version": 2,
+    "requires_retained_predecessor_manifest": true
+  },
   "modules": {
     "application": "9.51.24",
     "core": "9.24.3",
@@ -64,5 +86,5 @@
     "daily_draw_lab": "1.0.0",
     "four_card_poker": "1.0.1"
   },
-  "created_at": "2026-07-09T00:00:00.000000Z"
+  "notes": "Compatible frontend-safety and runtime-state hygiene patch that removes URL query and fragment bearers from Admin-visible client telemetry, removes tracked mutable runtime snapshots, corrects shared failure feedback, guards Roulette actions with localized errors, strengthens live-region and reduced-motion behavior, preserves Teen Patti mobile feedback-control clearance, and rotates the static-shell cache identity. The exact immutable v0.9.5.10 release remains the application-only predecessor, MySQL schema 2 remains exact, database rollback is prohibited, and provider changes, DNS, billing, public signup, live OAuth, mail activation, unrestricted public exposure, credential rotation, and SSH ingress changes remain separately gated."
 }
