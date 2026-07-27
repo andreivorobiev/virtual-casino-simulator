@@ -1411,6 +1411,20 @@ def run_api_tests():
             raise AssertionError('restricted-preview security suite failed')
     # Record the complete listener-free request, access, session, and browser-helper security proof.
     run_case('API-SEC-PREVIEW-001',['SEC-010','SESSION-006','ADMIN-024','AUTH-007','TEST-047'],run_restricted_preview_security_tests)
+    # Execute the exact frontend safety helpers and tracked-source contracts without opening a listener.
+    def run_frontend_safety_tests():
+        # Import the focused frontend safety suite only when its mapped case runs.
+        from tests import frontend_safety_tests
+        # Load exactly the browser-free security, feedback, motion, and runtime-state class.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(frontend_safety_tests.FrontendSafetyTests)
+        # Execute the focused suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the named case when any exact-source assertion failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the central failure label stable.
+            raise AssertionError('frontend safety suite failed')
+    # Record the invitation-log, toast, motion, Roulette failure, mobile layout, and runtime-output proof.
+    run_case('FRONTEND-SAFETY-001',['SEC-013','UX-021','CORE-028','ROU-043','TEENP-002','MOTION-010','TEST-136'],run_frontend_safety_tests)
     # Centrally discover all mocked and disabled OAuth tests before any listener starts.
     run_case('OAUTH-MOCK-001',['OAUTH-001','OAUTH-002','OAUTH-003','OAUTH-004','OAUTH-005','OAUTH-007','OAUTH-008','OAUTH-009','TEST-045','TEST-093'],run_oauth_mock_tests)
     # Record focused deployment-default coverage before starting the normal loopback API server.

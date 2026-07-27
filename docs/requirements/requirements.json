@@ -12199,6 +12199,100 @@
       "introduced_in": "issue-74-admin-ledger-labels",
       "changed_in": "issue-74-admin-ledger-labels",
       "notes": "TEST-132 is the live next-free identifier after the active game-catalog PR reserved TEST-119 through TEST-131. Browser evidence is hosted only; local Playwright or Chromium is not part of this repair."
+    },
+    {
+      "id": "SEC-013",
+      "module": "Application",
+      "description": "Client error telemetry reduces the current address to origin and path before submission, so invitation, OAuth, password-reset, and other query or fragment bearers can never enter Admin-visible client logs; malformed addresses fail closed to a fixed non-sensitive marker.",
+      "status": "PASS",
+      "api_tests": [
+        "FRONTEND-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "web/core/api.js",
+        "tests/frontend_safety.mjs",
+        "tests/frontend_safety_tests.py"
+      ],
+      "introduced_in": "issue-417-client-log-url-sanitization",
+      "changed_in": "issue-417-client-log-url-sanitization",
+      "notes": "The sanitizer reconstructs only URL origin and pathname instead of filtering named parameters, so future secret-bearing query keys and fragments are covered without maintaining an allowlist."
+    },
+    {
+      "id": "CORE-028",
+      "module": "Application",
+      "description": "Mutable players, ledger, history, sessions, per-game state, and other generated runtime outputs remain under the ignored data/ root and are initialized from source defaults, never tracked as repository state or admitted by a broad source add.",
+      "status": "PASS",
+      "api_tests": [
+        "FRONTEND-SAFETY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        ".gitignore",
+        "tests/frontend_safety_tests.py"
+      ],
+      "introduced_in": "issue-419-runtime-state-hygiene",
+      "changed_in": "issue-419-runtime-state-hygiene",
+      "notes": "The focused proof rejects the previously tracked player, ledger, history, Baccarat, Bingo, and Keno runtime snapshots from Git's exact inventory while allowing normal bootstrap and API tests to create isolated disposable state."
+    },
+    {
+      "id": "UX-021",
+      "module": "Application",
+      "description": "The persistent shared toast announces feedback through stable polite atomic live-region semantics, classifies only explicit success variants into the success palette, renders string and boolean failures with the error palette, and affected Roulette actions expose localized failures instead of silent rejected promises. Legacy Slots, Baccarat, Bingo, and Keno animation channels stop under reduced motion, and the Teen Patti mobile action rail remains clear of the fixed feedback control.",
+      "status": "PASS",
+      "api_tests": [
+        "FRONTEND-SAFETY-001"
+      ],
+      "browser_tests": [
+        "BR-ROU-001",
+        "BR-SLOTS-PAYLINE-001",
+        "BR-KENO-001",
+        "BR-BINGO-001",
+        "BR-BAC-001",
+        "BR-TEEN-PATTI-001"
+      ],
+      "implementation_files": [
+        "web/core/ui.js",
+        "web/index.html",
+        "web/styles.css",
+        "web/games/roulette.js",
+        "web/games/baccarat.js",
+        "web/games/bingo.js",
+        "web/games/keno.js",
+        "web/games/teen_patti.js",
+        "web/i18n/en-US/games/roulette.json",
+        "web/i18n/ru-RU/games/roulette.json",
+        "tests/frontend_safety.mjs",
+        "tests/frontend_safety_tests.py"
+      ],
+      "introduced_in": "issues-421-422-423-426-frontend-safety",
+      "changed_in": "issues-421-422-423-426-frontend-safety",
+      "notes": "This requirement closes issues #422, #423, and #426 and only the shared-toast plus named legacy-motion slice of #421; the remaining per-game accessibility program stays open."
+    },
+    {
+      "id": "TEST-136",
+      "module": "Tests",
+      "description": "Listener-free exact-source evidence executes invitation URL sanitization and toast palette classification, rejects malformed-address disclosure and tracked runtime snapshots, pins stable toast live-region markup, proves affected reduced-motion selectors, requires all governed Roulette actions to use localized rejection handling, and pins Teen Patti mobile action-rail clearance. Hosted exact-head Browser acceptance requalifies the affected English and Russian game surfaces and visual matrix after reconciliation.",
+      "status": "PASS",
+      "api_tests": [
+        "FRONTEND-SAFETY-001"
+      ],
+      "browser_tests": [
+        "BR-ROU-001",
+        "BR-SLOTS-PAYLINE-001",
+        "BR-KENO-001",
+        "BR-BINGO-001",
+        "BR-BAC-001",
+        "BR-TEEN-PATTI-001"
+      ],
+      "implementation_files": [
+        "tests/frontend_safety.mjs",
+        "tests/frontend_safety_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issues-417-419-421-422-423-426-frontend-safety",
+      "changed_in": "issues-417-419-421-422-423-426-frontend-safety",
+      "notes": "TEST-135 is reserved by active Claude PR #442. TEST-136 is the next collision-free permanent identifier; browser execution remains hosted only."
     }
   ]
 }
