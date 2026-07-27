@@ -1,4 +1,14 @@
-# Virtual Casino Simulator v0.9.5.9 Release Notes
+# Virtual Casino Simulator v0.9.5.10 Release Notes
+
+## Wallet and table-rule integrity patch
+
+- Preserves committed ledger history when player creation encounters an existing player document and rejects destructive replacement of money history.
+- Applies the guest-wallet freeze and bounded amount validation to the frozen v1 credit route.
+- Rejects hostile Blackjack payout and Baccarat commission settings before persistence, with authenticated API regressions for both table-rule boundaries.
+- Retains exact immutable v0.9.5.9 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider, DNS, billing, public signup, live OAuth, mail, invitation, public-exposure, credential, SSH-ingress, or production mutation.
+
+## Prior v0.9.5.9 monitor handoff patch
 
 ## Non-shell production monitor handoff patch
 
