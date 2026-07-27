@@ -93,12 +93,8 @@ jobs:
       CASINO_MYSQL_USER: casino_runtime_204
       CASINO_MYSQL_PASSWORD: casino_ci_runtime_password
       CASINO_MYSQL_DATABASE: casino_base_204
-      # Keep browser accounts, ledgers, sessions, and game state outside the checkout.
-      CASINO_DATA_DIR: ${{ runner.temp }}/casino-browser-100-data
       # Authorize only this explicit disposable issue-owned profile.
       CASINO_225_DISPOSABLE: 1
-      # Persist the exact-source Package B aggregate packet outside the checkout.
-      CASINO_MYSQL_POOL_EVIDENCE: ${{ runner.temp }}/casino-browser-100-pool.json
     steps:
       # Pin the complete preflight and browser run to the dispatched source.
       - uses: actions/checkout@v4
@@ -112,11 +108,19 @@ jobs:
           python -m playwright install chromium
       - name: Run exact-source MySQL 1/2/4/8 preflight
         run: python tests/run_tests.py --storage --mysql-migrations-live
+        env:
+          # Persist the exact-source Package B aggregate packet outside the checkout.
+          CASINO_MYSQL_POOL_EVIDENCE: ${{ runner.temp }}/casino-browser-100-pool.json
       - name: Run exact 100-context browser qualification
         run: >-
           python -m tests.concurrent_browser_100
           --pool-preflight "${CASINO_MYSQL_POOL_EVIDENCE}"
           --report "${RUNNER_TEMP}/casino-browser-100.json"
+        env:
+          # Keep browser accounts, ledgers, sessions, and game state outside the checkout.
+          CASINO_DATA_DIR: ${{ runner.temp }}/casino-browser-100-data
+          # Read only the exact-source Package B packet written by the preceding step.
+          CASINO_MYSQL_POOL_EVIDENCE: ${{ runner.temp }}/casino-browser-100-pool.json
       - name: Upload terminal concurrent-browser evidence
         if: always()
         uses: actions/upload-artifact@v4
