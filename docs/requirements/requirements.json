@@ -12304,6 +12304,23 @@
       "notes": "TEST-135 is assigned to the reconciled open-bugs bundle in PR #442. TEST-136 remains the next permanent identifier and browser execution remains hosted only."
     },
     {
+      "id": "TEST-138",
+      "module": "Tests",
+      "description": "Browser evidence proves every registered catalog game keeps its enabled controls vertically reachable at the governed desktop viewports, failing when a control is clipped by a non-scrollable ancestor in the fixed-height shell.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-CONTROL-REACH-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py",
+        "web/styles.css"
+      ],
+      "introduced_in": "issue-221-control-reachability",
+      "changed_in": "issue-221-control-reachability",
+      "notes": "Closes the assertion gap reported in issue #221: horizontal containment alone passed layouts whose controls sat below a clipped page boundary."
+    },
+    {
       "id": "AUTH-011", "module": "Core", "description": "A public GET /api/v2/auth/csrf re-issues the host-only anonymous double-submit cookie, reusing an active session's value or a bounded existing cookie, and the browser client retries a missing double-submit pair exactly once through it before failing closed, so a precached or restarted sign-in surface recovers without a shell reload.", "status": "PASS", "api_tests": ["API-SEC-PREVIEW-001"], "browser_tests": [], "implementation_files": ["casino/app.py", "casino/wsgi.py", "casino/core/auth.py", "web/core/api.js", "contracts/openapi/auth.v2.yaml", "contracts/compatibility/restricted-preview-security.json"], "introduced_in": "issue-224-csrf-bootstrap", "changed_in": "issue-224-csrf-bootstrap", "notes": "The route is pinned by three layered allowlists (WSGI startup gate, contract validator, run_tests contract assertion); no token material ever enters a response body, and re-issue is idempotent for an existing bounded value so a racing tab cannot invalidate a sibling form."
     },
     {

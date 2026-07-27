@@ -50,7 +50,7 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.0
 - pai_gow_poker: 1.1.0
 - teen_patti: 1.1.0
-- tests: 1.61.7
+- tests: 1.61.8
 - docs: 1.61.7
 - contracts: 1.48.16
 - tooling: 1.21.4
@@ -907,6 +907,7 @@ Historical source baseline: 9.1.0
 - **CORE-028** (Application) - PASS: Mutable players, ledger, history, sessions, per-game state, and other generated runtime outputs remain under the ignored data/ root and are initialized from source defaults, never tracked as repository state or admitted by a broad source add.
 - **UX-021** (Application) - PASS: The persistent shared toast announces feedback through stable polite atomic live-region semantics, classifies only explicit success variants into the success palette, renders string and boolean failures with the error palette, and affected Roulette actions expose localized failures instead of silent rejected promises. Legacy Slots, Baccarat, Bingo, and Keno animation channels stop under reduced motion, and the Teen Patti mobile action rail remains clear of the fixed feedback control.
 - **TEST-136** (Tests) - PASS: Listener-free exact-source evidence executes invitation URL sanitization and toast palette classification, rejects malformed-address disclosure and tracked runtime snapshots, pins stable toast live-region markup, proves affected reduced-motion selectors, requires all governed Roulette actions to use localized rejection handling, and pins Teen Patti mobile action-rail clearance. Hosted exact-head Browser acceptance requalifies the affected English and Russian game surfaces and visual matrix after reconciliation.
+- **TEST-138** (Tests) - PASS: Browser evidence proves every registered catalog game keeps its enabled controls vertically reachable at the governed desktop viewports, failing when a control is clipped by a non-scrollable ancestor in the fixed-height shell.
 - **AUTH-011** (Core) - PASS: A public GET /api/v2/auth/csrf re-issues the host-only anonymous double-submit cookie, reusing an active session's value or a bounded existing cookie, and the browser client retries a missing double-submit pair exactly once through it before failing closed, so a precached or restarted sign-in surface recovers without a shell reload.
 - **SEC-012** (Core) - PASS: Every game outcome draw uses a non-seedable operating-system CSPRNG or an explicitly injected test generator, never the seedable global Mersenne Twister, and the module-boundary validator rejects any global random-module draw inside game code.
 - **LEDGER-030** (Ledger) - PASS: Legacy blackjack, baccarat, roulette, keno, and bingo settlement and refund credits commit through storage-atomic exactly-once action keys derived from identifiers durable at placement, with history and counters gated on first commitment, so concurrent requests and crash-window recoveries can never double-pay a wager.
