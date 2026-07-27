@@ -715,6 +715,8 @@ def run_mysql_live_provider_path():
     from casino.core import auth, autoplay, feedback, invitations, ledger, mail, one_time_tokens, players, state_store, storage
     # Import OAuth persistence only inside the explicitly requested disposable MySQL gate.
     from casino.core.oauth.persistence import FLOW_DOCUMENT_KEY, FLOW_SECRET_DOCUMENT_KEY, OAuthFlowRecord, OAuthFlowRepository, PersistentIdentityLinkRepository
+    # Import the conflict envelope expected when a destructive player replacement is refused. (#402)
+    from casino.errors import ConflictError
     # Import UTC helpers for one bounded flow fixture.
     from datetime import datetime, timedelta, timezone
 
@@ -946,7 +948,187 @@ def run_mysql_live_provider_path():
         assert state_store.load_player_game_state("slots", "human", lambda: {})["spins"][0]["round_id"] == "mysql_restart_round"
         # Verify bot profile and autoplay state survived provider reconstruction.
         assert profiles.get_bot("bot_1")["enabled"] is bot["enabled"] and autoplay.get_session(autoplay_session["autoplay_id"])["status"] == "running"
+        # Prove on the real service that creating a player never destroys committed money history.
+        # The historical defect hid here because every fixture seeded players BEFORE any ledger write,
+        # so the truncation inside the player-document replacement was never observed (issue #402).
+        guard_debit = ledger.debit("human", 15, "TEST_LIVE_CREATE_PLAYER_DEBIT", "storage", "round_live_create", {})
+        # Capture the committed balance so a stale-snapshot rewrite would be detectable.
+        guard_balance = players.get_player("human")["balance"]
+        # Create a player through the same public service guest trials and signup use.
+        guard_player = players.create_player("Live Ledger Guard", "guest", 100.0)
+        # Require the previously committed ledger row to still be readable after the player write.
+        assert any(row["ledger_id"] == guard_debit["ledger_id"] for row in ledger.read_recent("human", 10)), "player creation destroyed committed MySQL ledger history"
+        # Require the earlier wallet mutation to survive rather than being reverted from a snapshot.
+        assert players.get_player("human")["balance"] == guard_balance, "player creation reverted a committed MySQL balance"
+        # Require the new player row to be durably present alongside the seeded players.
+        assert any(row["player_id"] == guard_player["player_id"] for row in players.list_players())
+        # Require the destructive whole-document replacement to fail closed while history exists.
+        try:
+            # Attempt the replacement that previously truncated the ledger as a silent side effect.
+            players.save_players(players.default_players())
+            # Fail the case explicitly when the guarded replacement unexpectedly succeeded.
+            raise AssertionError("player document replacement must refuse to run over committed ledger history")
+        # Accept only the published conflict envelope from the fail-closed guard.
+        except ConflictError:
+            # Require the ledger to be intact after the refusal so nothing was partially deleted.
+            assert any(row["ledger_id"] == guard_debit["ledger_id"] for row in ledger.read_recent("human", 10))
     # Always clear provider injection after the live integration test.
     finally:
         # Restore normal provider selection for later API or browser suites.
         storage.set_provider_for_tests(None)
+
+
+# Prove player creation never destroys committed money history or reverts concurrent balances. (issue #402)
+def run_player_creation_preserves_ledger():
+    # Import the public player and ledger services plus storage injection helpers.
+    from casino.core import ledger, players, storage
+    # Import the conflict type expected when a destructive replacement is refused.
+    from casino.errors import ConflictError
+
+    # Create a temporary workspace so this test never mutates checked-in data files.
+    with tempfile.TemporaryDirectory() as tmp:
+        # Build an isolated data root for the JSON provider.
+        data_root = Path(tmp) / "data"
+        # Build a provider that uses the isolated data root.
+        provider = storage.JsonStorageProvider(data_root)
+        # Inject the isolated provider for all core storage callers.
+        storage.set_provider_for_tests(provider)
+        # Start protected logic so provider injection is always cleared.
+        try:
+            # Ensure the isolated storage directories exist.
+            provider.ensure_ready()
+            # Seed the default player document so a known wallet exists.
+            players.save_players(players.default_players())
+            # Move money BEFORE the next player is created. The original defect survived CI precisely
+            # because every existing fixture seeded players before writing any ledger rows.
+            debit = ledger.debit("human", 40, "TEST_CREATE_PLAYER_DEBIT", "storage", "round_create", {})
+            # Capture the committed post-transaction balance for the reversion check.
+            balance_after_debit = players.get_player("human")["balance"]
+            # Verify the debit actually committed before the player write under test.
+            assert debit["balance_after"] == balance_after_debit
+            # Create a second player through the public service that guest trials and signup both use.
+            created = players.create_player("Ledger Guard", "guest", 250.0)
+            # Verify creation still returns a usable player row.
+            assert created["player_id"] and created["balance"] == 250.0
+            # Verify the committed ledger row survived the player write.
+            rows = ledger.read_recent("human", 10)
+            # Require the exact pre-existing ledger event to still be readable.
+            assert any(row["ledger_id"] == debit["ledger_id"] for row in rows), "player creation destroyed committed ledger history"
+            # Verify the earlier wallet mutation was not reverted from a stale in-memory snapshot.
+            assert players.get_player("human")["balance"] == balance_after_debit, "player creation reverted a committed balance"
+            # Verify the newly created player is durably present alongside the original.
+            identifiers = {player["player_id"] for player in players.list_players()}
+            # Require both the seeded and the newly created player to be readable.
+            assert "human" in identifiers and created["player_id"] in identifiers
+            # Verify a second creation with the same display name still yields a distinct player row.
+            second = players.create_player("Ledger Guard", "guest", 250.0)
+            # Require independent identifiers so creation is not silently idempotent on display name.
+            assert second["player_id"] != created["player_id"]
+        # Always clear provider injection after the isolated test run.
+        finally:
+            # Restore normal provider selection for subsequent tests.
+            storage.set_provider_for_tests(None)
+
+    # Verify the MySQL replacement path now refuses to destroy money history instead of truncating it.
+    replace_source = inspect.getsource(storage.MySQLStorageProvider.save_players)
+    # Require the destructive unconditional ledger truncation to be gone from the player write path.
+    assert "DELETE FROM casino_ledger" not in replace_source, "player document replacement must not truncate the ledger"
+    # Require an explicit fail-closed guard so the operation cannot proceed over committed history.
+    assert "casino_ledger" in replace_source and "ConflictError" in replace_source
+    # Read the public creation path to prove it no longer performs a whole-document rewrite.
+    create_source = inspect.getsource(players.create_player)
+    # Strip comment text so the check inspects executable statements rather than prose about them.
+    create_statements = "\n".join(line.split("#", 1)[0] for line in create_source.splitlines())
+    # Require the row-scoped provider call that holds the wallet lock on both providers.
+    assert "ensure_player" in create_statements
+    # Require the destructive whole-document rewrite to be gone from the executable path.
+    assert "save_players" not in create_statements
+
+
+# Prove client-supplied table rules cannot escape their declared domain into payout math. (issue #404)
+def run_table_rule_authority():
+    # Import the shared declarative validator under test.
+    from casino.core.validation import apply_rule_updates
+    # Import the per-game rule domains that the settings routes enforce.
+    from casino.games.baccarat.api import RULE_DOMAIN as BACCARAT_RULES
+    # Import the blackjack domain alongside it for the same coverage.
+    from casino.games.blackjack.api import RULE_DOMAIN as BLACKJACK_RULES
+    # Import the validation envelope every rejection must use.
+    from casino.errors import ValidationError
+
+    # Collect the hostile values that previously reached settlement math unchecked.
+    hostile = [
+        # Reject the unbounded natural payout that allowed a one-hand balance mint.
+        (BLACKJACK_RULES, "blackjack_payout", 1000000),
+        # Reject a negative payout that would invert the settlement direction.
+        (BLACKJACK_RULES, "blackjack_payout", -5),
+        # Reject the oversized shoe that allocated billions of card strings.
+        (BLACKJACK_RULES, "decks", 100000000),
+        # Reject a non-numeric shoe size that previously raised an unhandled ValueError.
+        (BLACKJACK_RULES, "decks", "x"),
+        # Reject a truthy string standing in for a boolean switch.
+        (BLACKJACK_RULES, "dealer_hits_soft_17", "yes"),
+        # Reject the negative commission that inflated every banker win.
+        (BACCARAT_RULES, "banker_commission", -1000),
+        # Reject the unbounded tie payout that minted balance on a tie.
+        (BACCARAT_RULES, "tie_payout", 1e9),
+        # Reject a tie behaviour the engine does not implement.
+        (BACCARAT_RULES, "tie_behavior", "lose"),
+        # Reject non-finite input before it can reach money arithmetic.
+        (BACCARAT_RULES, "banker_commission", float("inf")),
+    ]
+    # Drive every hostile value through the shared validator.
+    for spec, key, value in hostile:
+        # Start protected logic so a missing rejection is reported precisely.
+        try:
+            # Attempt the update against an empty rules mapping.
+            apply_rule_updates({key: value}, {}, spec)
+            # Fail loudly when the hostile value was accepted.
+            raise AssertionError(f"{key} accepted out-of-domain value {value!r}")
+        # Accept only the published validation envelope.
+        except ValidationError:
+            # Continue to the next hostile case.
+            pass
+
+    # Verify legitimate published table offers still apply unchanged.
+    accepted = apply_rule_updates({"blackjack_payout": 1.5, "decks": 6, "late_surrender": False}, {}, BLACKJACK_RULES)
+    # Require each accepted rule to persist with its supplied value.
+    assert accepted == {"blackjack_payout": 1.5, "decks": 6, "late_surrender": False}
+    # Verify baccarat's published commission and tie payout still apply.
+    accepted_baccarat = apply_rule_updates({"banker_commission": 0.05, "tie_payout": 8}, {}, BACCARAT_RULES)
+    # Require both baccarat rules to persist with their supplied values.
+    assert accepted_baccarat == {"banker_commission": 0.05, "tie_payout": 8}
+    # Verify keys the game does not declare are ignored rather than persisted.
+    ignored = apply_rule_updates({"house_edge": 0, "blackjack_payout": 1.2}, {}, BLACKJACK_RULES)
+    # Require only the declared rule to be written through.
+    assert ignored == {"blackjack_payout": 1.2}
+
+    # Verify each settings route actually routes through the validator rather than assigning raw body
+    # values. Without this, reverting a route to `rules[key] = body[key]` would leave every assertion
+    # above still passing, because they only exercise the helper in isolation.
+    for module_name, marker in (("casino.games.blackjack.api", "blackjack"), ("casino.games.baccarat.api", "baccarat")):
+        # Import the game's route module to read its registration source.
+        module = __import__(module_name, fromlist=["register"])
+        # Read the registration function that owns the settings route.
+        register_source = inspect.getsource(module.register)
+        # Isolate the settings handler body from the surrounding route registrations.
+        settings_body = register_source.split(f'"/api/v1/games/{marker}/settings"')[1].split("@router.")[0]
+        # Strip comments so prose mentioning the old pattern cannot satisfy the check.
+        settings_statements = "\n".join(line.split("#", 1)[0] for line in settings_body.splitlines())
+        # Require the shared declarative validator on the executable path.
+        assert "apply_rule_updates" in settings_statements, f"{marker} settings route must validate rules"
+        # Require the unvalidated direct assignment to be gone.
+        assert "rules[key] = body[key]" not in settings_statements, f"{marker} settings route still assigns raw body values"
+
+    # Verify the legacy v1 add-money route now carries the guest freeze and a bounded amount. (#410)
+    from casino.app import build_router
+    # Read the router construction source that owns every v1 and v2 route handler.
+    add_money_source = inspect.getsource(build_router)
+    # Isolate the add-money handler body from the surrounding route registrations.
+    handler = add_money_source.split('"/api/v1/players/(?P<player_id>[^/]+)/add-money"')[1].split("@router.")[0]
+    # Require the session context so the handler can identify a guest at all.
+    assert "context" in handler
+    # Require the same guest freeze the v2 token route enforces.
+    assert "is_guest" in handler and "Guest trial balances cannot be increased" in handler
+    # Require the shared bounded money gate rather than a bare float conversion.
+    assert "require_amount" in handler

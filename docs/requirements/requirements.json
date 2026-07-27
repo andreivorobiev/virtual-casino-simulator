@@ -10227,6 +10227,82 @@
       "notes": "This proof reads inert workflow text and isolated temporary environment fixtures only; shell-significant synthetic bearer bytes remain inert and are never executed. It does not open SSH, publish a release, deploy, mutate production configuration, mutate DNS, or run a browser."
     },
     {
+      "id": "STORAGE-008",
+      "module": "Storage",
+      "description": "Player creation appends one row through the provider's lock-held path and never replaces the whole player document, so committed ledger history and concurrently committed balances always survive; the MySQL player-document replacement refuses to run while ledger rows exist instead of truncating them.",
+      "status": "PASS",
+      "api_tests": [
+        "STORAGE-LEDGER-GUARD-001",
+        "STORAGE-MYSQL-LIVE-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/players.py",
+        "casino/core/storage.py",
+        "tests/storage_tests.py"
+      ],
+      "introduced_in": "issue-402-storage-row-ops",
+      "changed_in": "issue-402-storage-row-ops",
+      "notes": "Regression coverage writes ledger rows BEFORE creating the next player, which is the ordering earlier fixtures never exercised."
+    },
+    {
+      "id": "LEDGER-029",
+      "module": "Ledger",
+      "description": "Client-supplied table rules are validated against a per-game declared domain before they are persisted, so no request can set a payout multiplier, commission, or shoe size that settlement math or shoe construction would then trust.",
+      "status": "PASS",
+      "api_tests": [
+        "STORAGE-TABLE-RULES-001",
+        "API-ADMIN-GUEST-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/validation.py",
+        "casino/games/blackjack/api.py",
+        "casino/games/baccarat/api.py"
+      ],
+      "introduced_in": "issue-404-settings-authority",
+      "changed_in": "issue-404-settings-authority",
+      "notes": "Covers unbounded payout, negative commission, oversized shoe, non-numeric and non-finite input, and undeclared keys."
+    },
+    {
+      "id": "TOKEN-006",
+      "module": "Tokens",
+      "description": "Every play-token credit route applies the guest wallet freeze and the shared bounded amount gate, including the legacy v1 add-money route, so a disposable guest session cannot increase its own balance and no route can credit an unbounded amount.",
+      "status": "PASS",
+      "api_tests": [
+        "STORAGE-TABLE-RULES-001",
+        "API-ADMIN-GUEST-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/app.py",
+        "casino/core/validation.py"
+      ],
+      "introduced_in": "issue-410-guest-topup-parity",
+      "changed_in": "issue-410-guest-topup-parity",
+      "notes": "The v1 route previously took no session context at all, so the guest check could not run."
+    },
+    {
+      "id": "TEST-134",
+      "module": "Tests",
+      "description": "Provider-isolated JSON, disposable live MySQL, and authenticated API evidence proves player creation preserves committed ledger history and balances, destructive replacement fails closed, hostile Blackjack and Baccarat rule values are rejected at the real route boundary, and guest wallets remain frozen through both v1 and v2 credit routes.",
+      "status": "PASS",
+      "api_tests": [
+        "STORAGE-LEDGER-GUARD-001",
+        "STORAGE-TABLE-RULES-001",
+        "STORAGE-MYSQL-LIVE-001",
+        "API-ADMIN-GUEST-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/storage_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "slice1-storage-settings-authority",
+      "changed_in": "slice1-storage-settings-authority",
+      "notes": "The permanent evidence exercises behavior through provider and authenticated API boundaries; source inspection remains only a secondary regression guard."
+    },
+    {
       "id": "TEST-100",
       "module": "Tests",
       "description": "Dependency-free deterministic unit tests prove motion timing profiles, reduced-motion resolution, complete lifecycle phase order, authoritative-result identity, overlap rejection, illegal-skip rejection, explicit recovery, stale-generation rejection, and route-disposal invalidation.",

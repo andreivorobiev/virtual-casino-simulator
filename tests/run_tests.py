@@ -278,6 +278,10 @@ def run_storage_tests(include_live=False, include_migration_live=False):
     run_case('STORAGE-JSON-IDEMPOTENCY-001',['LEDGER-026','STORAGE-005','STORAGE-006','TEST-043'],storage_tests.run_json_action_idempotency)
     # Execute funded practice-opponent debit, refund, payout, restart, owner, and process evidence.
     run_case('STORAGE-PRACTICE-OPPONENT-001',['BOT-009','BOT-010','BOT-011','ADMIN-023','LEDGER-026','STORAGE-005','STORAGE-006'],storage_tests.run_practice_opponent_accounting)
+    # Prove player creation preserves committed ledger history and never reverts a balance. (#402)
+    run_case('STORAGE-LEDGER-GUARD-001',['STORAGE-008','LEDGER-001','CORE-017'],storage_tests.run_player_creation_preserves_ledger)
+    # Prove client-supplied table rules and token credits stay inside their declared domains. (#404, #410)
+    run_case('STORAGE-TABLE-RULES-001',['LEDGER-029','TOKEN-006'],storage_tests.run_table_rule_authority)
     # Execute the MySQL schema and atomic ledger-provider path test without requiring a live service.
     run_case('STORAGE-MYSQL-001',['CORE-017','LEDGER-001','LEDGER-007','LEDGER-009'],storage_tests.run_mysql_schema_provider_path)
     # Execute the real-service persistence and concurrent-ledger gate only when explicitly requested.
@@ -849,6 +853,18 @@ def validate_guest_admin_api(base):
         top_up=api(base,'/api/v2/me/tokens/add','POST',{'amount':1},ok=False,auth_token=token,extra_headers=guest_headers)
         # Prove the disposable starting grant cannot be increased through the normal shell endpoint.
         assert top_up['error']['code']=='FORBIDDEN' and api(base,'/api/v2/me',auth_token=token,extra_headers=guest_headers)['player']['token_balance']==balance_after_spin
+        # Exercise the frozen v1 credit route with the same guest proof so the parity fix is behavioral, not source-text-only. (TOKEN-006)
+        legacy_top_up=api(base,f"/api/v1/players/{guest['user']['player_id']}/add-money",'POST',{'amount':1},ok=False,auth_token=token,extra_headers=guest_headers)
+        # Require the v1 route to preserve the same fixed disposable balance as the v2 route.
+        assert legacy_top_up['error']['code']=='FORBIDDEN' and api(base,'/api/v2/me',auth_token=token,extra_headers=guest_headers)['player']['token_balance']==balance_after_spin
+        # Submit an out-of-domain Blackjack payout through the real authenticated API boundary. (LEDGER-029)
+        hostile_blackjack=api(base,'/api/v1/games/blackjack/settings','POST',{'blackjack_payout':1000000},ok=False,auth_token=token,extra_headers=guest_headers)
+        # Require the published validation envelope before the hostile payout can enter persistent game state.
+        assert hostile_blackjack['error']['code']=='VALIDATION_ERROR'
+        # Submit an out-of-domain Baccarat commission through the same authenticated boundary. (LEDGER-029)
+        hostile_baccarat=api(base,'/api/v1/games/baccarat/settings','POST',{'banker_commission':-1000},ok=False,auth_token=token,extra_headers=guest_headers)
+        # Require the published validation envelope before the hostile commission can reach settlement math.
+        assert hostile_baccarat['error']['code']=='VALIDATION_ERROR'
         # Prove the same guest cannot reach the Admin v2 summary.
         denied=api(base,'/api/v2/admin/guest-trials',ok=False,auth_token=token,extra_headers=guest_headers)
         # Require the central forbidden envelope rather than an empty or partial Admin response.

@@ -988,8 +988,20 @@ class MySQLStorageProvider(StorageProvider):
         try:
             # Open a cursor for delete and insert statements.
             cursor = connection.cursor()
-            # Clear dependent ledger rows because a full player replacement is reset/bootstrap-only.
-            cursor.execute("DELETE FROM casino_ledger")
+            # Refuse to run as a whole-document replacement while committed money history exists.
+            # casino_ledger holds a FOREIGN KEY to casino_players with no ON DELETE CASCADE, so the only
+            # way this replacement can proceed is by first destroying the ledger. Doing that silently as
+            # a side effect of a player write destroyed the entire audit trail and the exactly-once
+            # action-identity rows, and it was reachable from ordinary player creation (issue #402).
+            # Legitimate callers reach this method only after reset() has already truncated the ledger,
+            # or on a fresh store during bootstrap, so an empty ledger is the correct precondition.
+            cursor.execute("SELECT EXISTS (SELECT 1 FROM casino_ledger)")
+            # Read the existence flag from the single-row result.
+            (has_ledger_rows,) = cursor.fetchone()
+            # Fail closed rather than deleting money history that this operation does not own.
+            if has_ledger_rows:
+                # Direct the caller at the row-scoped path instead of the destructive replacement.
+                raise ConflictError("Refusing to replace the player document while ledger history exists; use ensure_player or reset first")
             # Clear existing player rows before inserting the provided state.
             cursor.execute("DELETE FROM casino_players")
             # Insert each player from the provided state.
