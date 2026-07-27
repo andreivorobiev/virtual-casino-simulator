@@ -1,6 +1,6 @@
 # Virtual Casino Simulator
 
-Packaged application release: `0.9.5.14`
+Packaged application release: `0.9.5.15`
 
 Historical source baseline: `9.1.0`
 
@@ -8,7 +8,7 @@ Local play-token browser casino simulator with a descriptor-driven catalog of is
 
 ## Current repository status
 
-This repository has advanced beyond the original v9.1.1 bootstrap snapshot. Packaged release v0.9.5.14 carries the accepted TiltSeven Neon Pit identity across the authenticated shell, lobby, PWA metadata, game palettes, and fixed transactional-mail subjects while preserving semantic game colors and every private-invite safety boundary. It retains the packaged non-shell production monitor handoff, compatibility-owned predecessor selection, exact v0.9.5.13 application-only rollback target, TiltSeven canonical Casino origin, private-invite security, MySQL schema 2, provider-disablement, and public-exposure gates. Independently versioned modules continue to record compatible source changes. Current module revisions and requirement status are recorded in the canonical manifests and generated requirements document.
+This repository has advanced beyond the original v9.1.1 bootstrap snapshot. Packaged release v0.9.5.15 carries the accepted localized one-click Repeat bet control across the 43 catalog games that previously lacked it, with exactly-once primary-action replay, settled-wager restoration, mobile feedback clearance, and governed EN/RU evidence. It retains the TiltSeven Neon Pit identity, packaged non-shell production monitor handoff, compatibility-owned predecessor selection, exact v0.9.5.14 application-only rollback target, private-invite security, MySQL schema 2, provider-disablement, and public-exposure gates. Independently versioned modules continue to record compatible source changes. Current module revisions and requirement status are recorded in the canonical manifests and generated requirements document.
 
 ## Version sources
 

@@ -1,4 +1,17 @@
-# Virtual Casino Simulator v0.9.5.14 Release Notes
+# Virtual Casino Simulator v0.9.5.15 Release Notes
+
+## Localized one-click Repeat bet release
+
+- Adds one localized Repeat bet control to the 43 catalog games that previously lacked one while preserving the existing Roulette and Baccarat behaviors.
+- Restores the exact last settled base wager or configuration and delegates through each game’s existing primary action with a fresh request identity.
+- Keeps multi-stage follow-up choices outside replay, rejects in-flight or unsettled repeats, and preserves ledger-only balance mutation.
+- Adds listener-free 43-game EN/RU coverage plus exact-head hosted route, request-integrity, touch-target, containment, mobile feedback-clearance, and governed visual evidence.
+- Keeps additive repeat styles scoped inside each game-owned style element and preserves fixed feedback lanes on compact Pai Gow Poker, Teen Patti, and Color Wheel surfaces.
+- Rotates the PWA shell identity and keeps curated What's New metadata disabled pending its separately governed UI remainder.
+- Retains exact immutable v0.9.5.14 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation.
+
+## Prior v0.9.5.14 TiltSeven identity release
 
 ## TiltSeven Neon Pit identity release
 
