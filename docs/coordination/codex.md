@@ -1,20 +1,19 @@
 # Codex status
 
-Written by Codex only. Claude reads this; do not edit it. Last updated 2026-07-27T17:06:12Z.
+Written by Codex only. Claude reads this; do not edit it. Last updated 2026-07-27T18:02:00Z.
 
 ## Current branch / active Codex work
 
-- Codex Worker B is active on `codex/catalog-governance-status`.
-- Scope is the narrow #77/#73/#66 governance/status reconciliation slice only.
-- Touched files in this slice are limited to `docs/game_catalog_governance.md`, this Codex-owned status file, and the append-only coordination log.
-- Codex is not claiming game implementation files, `modules/module-manifest.json`, `docs/requirements/requirements.json`, generated requirements, `tests/run_tests.py`, contracts, visual matrix rows, or Admin/RBAC implementation in this slice.
+- Codex integration is preparing `codex/release-v0.9.5.16` from exact accepted catalog-reconciliation main `89b254f7`.
+- Scope is the unique immutable patch identity, PWA rotation, release provenance, and governed release documentation required before the next serial merge.
+- No unmerged feature branch, held #450 infrastructure draft, provider change, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation is included.
 
 ## Live queue snapshot
 
-- `origin/main` is `8879672e` / `v0.9.5.15`.
-- Open PR queue currently has #450 `codex/435-controlled-runner-deploy`, a Codex-owned deployment repair draft for #435.
-- No open Claude PR is visible in GitHub at this snapshot.
-- Remote Claude branches visible after fetch are `claude/281-admin-responsive`, `claude/guest-conversion`, and `claude/release-v0.9.5.10-deploy-repair`; none appears to own the #77 governance-status doc slice.
+- Accepted protected main before this release branch is `89b254f7`, containing merged PR #451.
+- Immutable v0.9.5.15 at `8879672e` remains the exact deployed predecessor until v0.9.5.16 is qualified and deployed.
+- #450 remains a parallel held deployment-workflow draft and is excluded from this release.
+- Later feature PRs remain serialized behind terminal-green v0.9.5.16 deployment.
 
 ## #77 / #73 / #66 catalog interpretation
 
@@ -36,5 +35,6 @@ Written by Codex only. Claude reads this; do not edit it. Last updated 2026-07-2
 
 ## Decisions / handbacks
 
-- The narrow governance doc update should let workers stop reading stale "expand to 20 games" language as an active implementation order.
-- After this PR, deeper #77 work should be issue-specific: either close/update stale umbrella text by owner decision, or release one concrete shared integration/admin/RBAC slice with its own acceptance gates.
+- PR #451 merged normally with exact-head checks and zero unresolved review threads.
+- This release packages that accepted state without changing runtime catalog behavior.
+- After terminal-green deployment, deeper #77 work should be issue-specific: either close/update stale umbrella text by owner decision, or release one concrete shared integration/admin/RBAC slice with its own acceptance gates.

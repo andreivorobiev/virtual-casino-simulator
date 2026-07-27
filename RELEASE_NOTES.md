@@ -1,4 +1,16 @@
-# Virtual Casino Simulator v0.9.5.15 Release Notes
+# Virtual Casino Simulator v0.9.5.16 Release Notes
+
+## Catalog-governance reconciliation release
+
+- Records the accepted 46 descriptor-discovered playable-game inventory without adding a second catalog or changing runtime discovery.
+- Clarifies that the historical 20-game catalog target is a release-readiness floor and reporting target, not a cap or an instruction to duplicate registration infrastructure.
+- Preserves #73 as the portfolio umbrella, #77 as the serialized shared-integration lane, and #66 as the broader multi-user, storage, operations, and release-readiness epic.
+- Keeps count-based inventory separate from per-game interaction, reload, reduced-motion, accessibility, localization, and product-quality completion evidence.
+- Rotates the PWA shell identity and keeps curated What's New metadata disabled pending its separately governed UI remainder.
+- Retains exact immutable v0.9.5.15 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation.
+
+## Prior v0.9.5.15 localized Repeat bet release
 
 ## Localized one-click Repeat bet release
 

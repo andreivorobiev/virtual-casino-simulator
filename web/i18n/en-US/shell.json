@@ -187,6 +187,8 @@
   "whatsNew.entry.0_9_5_14.body": "This release carries the TiltSeven name, seven mark, Neon Pit venue, and reviewed neon palette across the private Casino experience.",
   "whatsNew.entry.0_9_5_15.title": "Repeat your last bet",
   "whatsNew.entry.0_9_5_15.body": "This release adds a localized one-click Repeat bet control to the 43 games that previously lacked one while preserving exactly-once play and settled wager choices.",
+  "whatsNew.entry.0_9_5_16.title": "Catalog governance clarified",
+  "whatsNew.entry.0_9_5_16.body": "This release records the 46 descriptor-discovered games and clarifies the historical 20-game target as a readiness floor rather than a catalog cap.",
   "replay.title": "Round replay",
   "replay.empty": "No recent rounds to replay.",
   "replay.retention": "Replays are kept for {days} days.",
