@@ -43,37 +43,37 @@ const ROUTE_CSS = [
   '.cal-header{display:flex;align-items:end;justify-content:space-between;gap:16px;min-width:0;padding:2px;}', // Keep title and phase compact above the three-zone layout.
   '.cal-header h1{margin:0;color:var(--gold,#f2c55c);font-family:var(--font-display,serif);font-size:clamp(30px,3.5vw,50px);line-height:1;}', // Make the localized game title the primary heading.
   '.cal-header p{max-width:760px;margin:7px 0 0;color:var(--muted,#b8c8c1);}', // Keep the localized game explanation subordinate.
-  '.cal-phase{flex:0 0 auto;min-width:132px;padding:8px 12px;border:1px solid rgba(242,197,92,.42);border-radius:999px;background:rgba(5,29,20,.94);color:#fff2c2;text-align:center;font-weight:850;}', // Reserve a stable player-facing phase chip.
+  '.cal-phase{flex:0 0 auto;min-width:132px;padding:8px 12px;border:1px solid var(--gold);border-radius:999px;background:var(--felt);color:var(--text);text-align:center;font-weight:850;}', // Reserve a stable player-facing phase chip.
   '.cal-layout{display:grid;grid-template-columns:minmax(220px,.72fr) minmax(460px,1.9fr) minmax(220px,.72fr);gap:14px;min-width:0;min-height:0;}', // Keep the dice stage wider than both desktop support rails combined.
-  '.cal-panel{min-width:0;border-color:rgba(242,197,92,.32);border-radius:18px;background:linear-gradient(150deg,rgba(5,31,22,.96),rgba(2,17,12,.94));}', // Separate controls, stage, and data through governed surfaces.
+  '.cal-panel{min-width:0;border-color:var(--gold);border-radius:18px;background:linear-gradient(150deg,var(--felt),var(--bg));}', // Separate controls, stage, and data through governed surfaces.
   '.cal-controls{display:grid;align-content:start;gap:12px;}', // Keep all wager configuration in one predictable rail.
   '.cal-controls fieldset{display:grid;gap:8px;min-width:0;margin:0;padding:0;border:0;}', // Group the six related wager inputs semantically.
-  '.cal-controls legend{margin-bottom:8px;color:#fff2c2;font-weight:850;}', // Give the wager group a visible localized name.
+  '.cal-controls legend{margin-bottom:8px;color:var(--text);font-weight:850;}', // Give the wager group a visible localized name.
   '.cal-help,.cal-retry-note{margin:0;color:var(--muted,#b8c8c1);font-size:13px;line-height:1.4;}', // Keep instructional and retry copy compact.
   '.cal-wager{display:grid;grid-template-columns:minmax(0,1fr) 88px;gap:8px;align-items:center;min-height:46px;}', // Align each localized face label with its amount input.
   '.cal-wager-copy{display:grid;gap:2px;min-width:0;}', // Keep the label and payout summary together.
-  '.cal-wager-copy strong{color:#fff2c2;}', // Emphasize the wager target without relying on color alone.
+  '.cal-wager-copy strong{color:var(--text);}', // Emphasize the wager target without relying on color alone.
   '.cal-wager-copy small{color:var(--muted,#b8c8c1);line-height:1.25;}', // Keep the match-based payout summary readable.
   '.cal-wager input{width:100%;min-width:0;min-height:42px;}', // Preserve keyboard and touch usability for wager inputs.
   '.cal-wager-total{display:flex;justify-content:space-between;gap:8px;min-height:42px;padding:10px;border:1px solid rgba(255,255,255,.12);border-radius:11px;background:rgba(255,255,255,.04);}', // Reserve a stable aggregate wager summary.
   '.cal-roll{width:100%;min-height:48px;border:0;border-radius:12px;background:#a7192b;color:#fff;font-weight:900;}', // Use the governed red treatment for the primary action.
   '.cal-roll:disabled{opacity:.58;cursor:not-allowed;}', // Keep unavailable action state visible and understandable.
-  '.cal-error{min-height:38px;margin:0;color:#ffb9b9;line-height:1.35;}', // Reserve localized validation feedback without shifting controls.
+  '.cal-error{min-height:38px;margin:0;color:var(--bad);line-height:1.35;}', // Reserve localized validation feedback without shifting controls.
   '.cal-stage{display:grid;grid-template-rows:auto minmax(220px,1fr) auto;gap:14px;overflow:hidden;place-items:stretch;}', // Keep the full dice stage visible without a nested scrollbar.
   '.cal-stage-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;}', // Keep the stage heading and round total aligned.
-  '.cal-stage-heading h2{margin:0;color:#fff2c2;}', // Identify the dominant stage semantically.
+  '.cal-stage-heading h2{margin:0;color:var(--text);}', // Identify the dominant stage semantically.
   '.cal-total-chip{min-width:92px;padding:8px 10px;border:1px solid rgba(255,255,255,.14);border-radius:999px;text-align:center;}', // Reserve total output across every phase.
-  '.cal-dice-tray{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(10px,2vw,24px);place-items:center;width:100%;min-width:0;padding:clamp(16px,3vw,34px);border:2px solid rgba(242,197,92,.42);border-radius:24px;background:radial-gradient(circle at 50% 40%,rgba(23,91,64,.82),rgba(3,33,23,.96) 68%);box-shadow:inset 0 0 54px rgba(255,230,155,.05);}', // Present three code-native dice as the visual focus.
+  '.cal-dice-tray{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(10px,2vw,24px);place-items:center;width:100%;min-width:0;padding:clamp(16px,3vw,34px);border:2px solid var(--gold);border-radius:24px;background:radial-gradient(circle at 50% 40%,var(--felt2),var(--felt) 68%);box-shadow:inset 0 0 54px rgba(255,230,155,.05);}', // Present three code-native dice as the visual focus.
   '.cal-die{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);width:min(100%,150px);aspect-ratio:1;padding:15%;border:3px solid #cfb97b;border-radius:22%;background:linear-gradient(145deg,#fffdf2,#e7dcb9);box-shadow:0 16px 28px rgba(0,0,0,.38),inset 0 -8px 16px rgba(91,65,19,.13);transform:translateZ(0);}', // Draw each accessible die without special-font glyphs.
   '.cal-die.is-rolling{animation:cal-tumble .56s cubic-bezier(.2,.75,.25,1) infinite alternate;}', // Animate only transform and opacity during decorative preview.
   '.cal-pip{align-self:center;justify-self:center;width:clamp(8px,1.2vw,17px);aspect-ratio:1;border-radius:50%;background:#152019;box-shadow:inset 0 2px 2px rgba(255,255,255,.25);}', // Draw reliable code-native pips.
   '.cal-pip--1{grid-area:1/1}.cal-pip--2{grid-area:1/2}.cal-pip--3{grid-area:1/3}.cal-pip--4{grid-area:2/1}.cal-pip--5{grid-area:2/2}.cal-pip--6{grid-area:2/3}.cal-pip--7{grid-area:3/1}.cal-pip--8{grid-area:3/2}.cal-pip--9{grid-area:3/3}', // Position every possible pip in the three-by-three grid.
   '.cal-result{display:grid;gap:5px;align-content:center;min-height:92px;padding:13px;border:1px solid rgba(255,255,255,.12);border-radius:14px;background:rgba(0,0,0,.18);text-align:center;}', // Reserve final result copy so settlement never resizes the stage.
-  '.cal-result strong{color:#fff2c2;font-size:19px;}', // Emphasize the player-facing outcome summary.
+  '.cal-result strong{color:var(--text);font-size:19px;}', // Emphasize the player-facing outcome summary.
   '.cal-result span{color:var(--muted,#b8c8c1);}', // Keep supporting result detail subordinate.
   '.cal-data{display:grid;align-content:start;gap:16px;min-height:0;overflow:auto;}', // Keep the desktop data rail as the only governed nested scroll surface.
   '.cal-data section{display:grid;gap:8px;}', // Give each data group a consistent rhythm.
-  '.cal-data h2{margin:0;color:#fff2c2;}', // Label each data group clearly.
+  '.cal-data h2{margin:0;color:var(--text);}', // Label each data group clearly.
   '.cal-paytable{width:100%;border-collapse:collapse;font-size:13px;}', // Use a semantic compact table for the six wager profiles.
   '.cal-paytable th,.cal-paytable td{padding:8px 4px;border-bottom:1px solid rgba(255,255,255,.1);text-align:left;vertical-align:top;}', // Align paytable labels and payout sequences.
   '.cal-history{display:grid;gap:7px;}', // Let history expand into the single governed data-rail scroll surface.

@@ -1,6 +1,6 @@
 {
   "module": "craps",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "paths": ["casino/games/craps/", "web/games/craps.js", "web/i18n/en-US/games/craps.json", "web/i18n/ru-RU/games/craps.json"],
   "requirements_prefixes": ["CRAPS"],
   "contracts": ["contracts/openapi/craps.v1.yaml"],

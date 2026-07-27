@@ -6,8 +6,8 @@ Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.51.27
-- core: 9.24.5
+- application: 9.52.0
+- core: 9.24.6
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.1
@@ -16,57 +16,57 @@ Historical source baseline: 9.1.0
 - admin: 1.12.2
 - operations: 1.1.2
 - marketing_site: 1.0.2
-- roulette: 9.4.10
-- slots: 9.1.6
-- blackjack: 9.1.5
-- baccarat: 9.1.6
-- keno: 9.2.6
-- bingo: 9.2.3
-- multi_hand_video_poker: 1.0.1
-- casino_war: 1.0.1
-- big_six_wheel: 1.0.3
-- red_dog: 1.0.0
-- dragon_tiger: 1.0.0
-- hi_lo: 1.0.0
-- three_card_poker: 1.0.0
-- jacks_or_better_video_poker: 1.0.0
-- deuces_wild_video_poker: 1.0.1
-- scratch_cards: 1.0.1
-- sic_bo: 1.0.0
-- chuck_a_luck: 1.0.0
-- craps: 1.0.1
-- crown_and_anchor: 1.0.2
-- over_under_7: 1.0.2
-- plinko: 1.0.1
-- fan_tan: 1.0.2
-- andar_bahar: 1.0.0
-- acey_deucey: 1.0.1
-- caribbean_stud: 1.0.1
-- let_it_ride: 1.0.0
-- casino_holdem: 1.0.1
-- double_bonus_video_poker: 1.0.0
-- mississippi_stud: 1.0.0
-- joker_poker: 1.0.0
-- texas_holdem_practice_table: 1.0.1
-- pai_gow_poker: 1.0.3
-- teen_patti: 1.0.2
-- tests: 1.60.45
-- docs: 1.60.45
+- roulette: 9.4.11
+- slots: 9.1.7
+- blackjack: 9.1.6
+- baccarat: 9.1.7
+- keno: 9.2.7
+- bingo: 9.2.4
+- multi_hand_video_poker: 1.0.2
+- casino_war: 1.0.2
+- big_six_wheel: 1.0.4
+- red_dog: 1.0.1
+- dragon_tiger: 1.0.1
+- hi_lo: 1.0.1
+- three_card_poker: 1.0.1
+- jacks_or_better_video_poker: 1.0.1
+- deuces_wild_video_poker: 1.0.2
+- scratch_cards: 1.0.2
+- sic_bo: 1.0.1
+- chuck_a_luck: 1.0.1
+- craps: 1.0.2
+- crown_and_anchor: 1.0.3
+- over_under_7: 1.0.3
+- plinko: 1.0.2
+- fan_tan: 1.0.3
+- andar_bahar: 1.0.1
+- acey_deucey: 1.0.2
+- caribbean_stud: 1.0.2
+- let_it_ride: 1.0.1
+- casino_holdem: 1.0.2
+- double_bonus_video_poker: 1.0.1
+- mississippi_stud: 1.0.1
+- joker_poker: 1.0.1
+- texas_holdem_practice_table: 1.0.2
+- pai_gow_poker: 1.0.4
+- teen_patti: 1.0.3
+- tests: 1.60.46
+- docs: 1.60.46
 - contracts: 1.48.14
 - tooling: 1.21.4
 - commenting_policy: 1.0.0
-- color_wheel: 1.0.1
-- poker_dice: 1.0.0
-- boule: 1.0.0
-- faro: 1.0.0
-- trente_et_quarante: 1.0.0
-- pachinko: 1.0.0
-- coin_pusher: 1.0.0
-- marble_race: 1.0.0
-- pattern_draw: 1.0.0
-- lucky_grid: 1.0.0
-- daily_draw_lab: 1.0.0
-- four_card_poker: 1.0.1
+- color_wheel: 1.0.2
+- poker_dice: 1.0.1
+- boule: 1.0.1
+- faro: 1.0.1
+- trente_et_quarante: 1.0.1
+- pachinko: 1.0.1
+- coin_pusher: 1.0.1
+- marble_race: 1.0.1
+- pattern_draw: 1.0.1
+- lucky_grid: 1.0.1
+- daily_draw_lab: 1.0.1
+- four_card_poker: 1.0.2
 
 ## Requirements
 
@@ -710,8 +710,8 @@ Historical source baseline: 9.1.0
 - **TEST-072** (Tests) - PASS: Browser evidence at all four governed viewports verifies the lobby capacity line renders exactly one authoritative game count in en-US ('{n} available') and ru-RU ('Доступно: {n}'), with no roadmap-target clause, no English leakage in Russian, and named after-pass evidence.
 - **ROU-060** (Roulette) - PASS: Leaving the Roulette table with open, un-spun bets refunds each staked amount through the documented clear endpoint, so navigating away never strands an already-debited stake and the reopened round starts with no lingering bet.
 - **TEST-073** (Tests) - PASS: Browser evidence verifies that placing a Roulette bet debits the shared wallet, navigating away refunds the stake back to the pre-wager balance, and reopening the table shows no lingering open-bet chip.
-- **UX-014** (UX) - PASS: The player-facing brand block and document title present the product name and the play-tokens-only/no-cash-value safety cue without internal version, validation-stage, build, commit, environment, or debug metadata, in en-US and ru-RU across authenticated, unauthenticated guest, and restricted-preview login states at every governed viewport; exact build provenance remains available through the status/diagnostics surfaces rather than the brand block.
-- **TEST-079** (Tests) - PASS: Browser evidence verifies, in en-US and ru-RU at 1920x1080, 1440x900, 1024x900, and 390x844, that authenticated lobby and Roulette headers render the canonical brand and safety cue without metadata or clipping, while unauthenticated guests in restricted preview receive a metadata-free title and login surface with no protected topbar.
+- **UX-014** (UX) - PASS: The player-facing TiltSeven brand block, Neon Pit lobby venue, document title, and shared application palette are driven by one immutable active-brand descriptor whose runtime tokens, mark, and browser theme metadata apply before the authenticated shell renders. The en-US and ru-RU safety cue remains locale-owned and free of internal version, validation-stage, build, commit, environment, or debug metadata across authenticated, unauthenticated guest, and restricted-preview login states at every governed viewport; exact build provenance remains available through status and diagnostics rather than the brand block.
+- **TEST-079** (Tests) - PASS: Browser evidence verifies the exact runtime TiltSeven identity, seven mark, Neon Pit tokens, browser theme metadata, and locale-owned safety cue in en-US and ru-RU at 1920x1080, 1440x900, 1024x900, and 390x844. Authenticated lobby and representative Roulette surfaces remain unclipped and contained, while unauthenticated restricted-preview guests receive a metadata-free title and login surface with no protected topbar.
 - **SLOT-029** (Slots) - PASS: The Slots result renders every authoritative winning payline as a labelled, non-color-only SVG path whose five points are recalculated from the live reel-cell centers, remain within one CSS pixel after responsive resize, locale rerender, zoom, and route recovery, and preserve visible symbol identity in normal and reduced-motion modes.
 - **TEST-077** (Tests) - PASS: Deterministic browser evidence derives all twenty paths and payouts from the production Slots engine, restores a simultaneous-win outcome through the normal state loader, verifies every transformed SVG point within one CSS pixel of its authoritative cell, checks result/history identity, multi-win distinction, symbol visibility, zoom, reduced motion, and captures EN/RU after-pass evidence at all four governed viewports.
 - **UX-013** (UX) - PASS: The lobby route outlet is one bounded, keyboard-focusable vertical scroll region with a localized accessible name, visible focus and themed scroll affordances, wheel and touch panning, and native Page Down and End behavior, so every filtered catalog card and Play control remains reachable at 1920x1080, 1440x900, 1024x900, and 390x844 without page-level horizontal overflow or fixed-chrome overlap.
@@ -745,7 +745,7 @@ Historical source baseline: 9.1.0
 - **MAIL-002** (Security) - PASS: Durable mail state, receipts, diagnostics, errors, and logs exclude raw recipients, bearer tokens, tokened URLs, caller idempotency keys, credentials, and provider responses; persistence uses independent keyed HMAC-SHA256 digests, public startup rejects the known digest-key default, and structurally malformed state is preserved for operator recovery.
 - **MAIL-003** (Admin) - PASS: An Admin-only additive v2 readiness route and Operations card distinguish disabled, misconfigured, release-held, ready, and unavailable mail states and expose only fixed booleans, reason codes, and aggregate lifecycle/suppression counts; no consumer send, callback, bounce, signup, or recovery route is published.
 - **MAIL-004** (Core) - PASS: Every submission requires caller idempotency; changed-meaning reuse conflicts; JSON and MySQL perform one atomic delivery claim per attempt; known non-accepted failures use bounded exponential retry; ambiguous results become uncertain and never auto-retry; and per-recipient rate limits, internal bounce/complaint suppression, attempt ceilings, and terminal retention cleanup are enforced.
-- **MAIL-005** (Application) - PASS: Every authorized purpose has matching en-US and ru-RU subjects plus plain-text and semantic HTML alternatives whose action link has meaningful text and whose fixed content is safely escaped.
+- **MAIL-005** (Application) - PASS: Every authorized purpose has matching en-US and ru-RU subjects driven by one fixed reviewed TiltSeven brand constant, plus plain-text and semantic HTML alternatives whose action link has meaningful text and whose fixed content is safely escaped.
 - **MAIL-006** (Docs) - PASS: The transactional-mail runbook documents disabled defaults, separate release authority, sender/domain and SPF/DKIM/DMARC posture, canonical-origin and OAuth callback coordination, domain-move revalidation, bounded smoke evidence, rollback, suppression review, and the prohibition on treating repository merge as live authorization.
 - **TEST-090** (Tests) - PASS: Provider-free unit and API tests prove dual-gate inaccessibility, raw-value exclusion, public digest-key hardening, atomic caller idempotency, changed-meaning conflict, bounded retry, ambiguous-result freezing, rate limits, suppression, retention, malformed-state preservation, bilingual templates, Admin-only contract shape, absent consumer routes, and real MySQL cross-process single-claim behavior; exact-head browser evidence covers disabled, misconfigured, release-held, and suppression-summary states in en-US and ru-RU at all four governed viewports.
 - **INVITE-001** (Admin) - PASS: Authenticated Admins can list masked invitation lifecycle records and perform caller-idempotent create, resend, revoke, and fixed-policy cleanup actions through additive v2 routes; actor and recipient rate limits, resend cooldowns, fixed-reason audit history, and bounded retention apply without returning raw recipients, bearers, credentials, or tokened links.
@@ -770,9 +770,9 @@ Historical source baseline: 9.1.0
 - **TEST-101** (Tests) - PASS: Localization foundation tests lock all 25 metadata identities and RTL membership, require installed-resource key and placeholder parity across catalog-discovered domains, validate every configured translation and formatter tag and each complete bundled native-script label including fullwidth punctuation in the browser runtime, reject selection of unfinished locales, prove browser-local persistence, and capture the Admin foundation in both installed locales at all four governed viewports.
 - **UX-019** (Application) - PASS: Problem reporting and Admin triage remain keyboard-operable, focus-visible, scroll-contained, touch-sized, readable at 200 percent zoom, reduced-motion safe, and responsive across all governed viewports with paste, drop, file, preview-removal, retry, filter, draft, export, and deletion states.
 - **TEST-094** (Tests) - PASS: Provider-neutral unit, API, JSON-process, and disposable MySQL tests prove recoverable submission, single idempotent winners, durable rates, malformed-state preservation, atomic triage, privacy deletion and retention, metadata-only export, frozen-v1 compatibility, and manual-only publication; browser tests prove complete bilingual player and Admin states across governed viewports.
-- **PWA-001** (Application) - PASS: The restricted-preview browser application publishes a standards-valid web manifest, complete 192- and 512-pixel any-purpose and maskable PNG icon sets, safe-area metadata, and a standalone-capable public shell while remaining fully usable in a normal browser; this repository foundation does not claim native Android or iOS installation acceptance, public hosting, or deployment.
+- **PWA-001** (Application) - PASS: The restricted-preview browser application publishes a TiltSeven-branded standards-valid web manifest, matching theme and favicon metadata, complete 192- and 512-pixel any-purpose and maskable PNG icon sets, safe-area metadata, and a standalone-capable public shell while remaining fully usable in a normal browser; this repository foundation does not claim native Android or iOS installation acceptance, public hosting, or deployment.
 - **PWA-002** (Application) - PASS: A canonical-release-versioned root-scope service worker caches only one exact credential-free public static-shell allowlist, never intercepts non-GET, API, Admin, authenticated, private, wallet, ledger, outcome, invitation, OAuth, or provider traffic, and preserves the previous complete worker until an explicit update; offline server actions fail closed, and reconnect revalidates session, wallet, catalog, game state, and route before actions are released.
-- **TEST-095** (Tests) - PASS: Browser-free policy tests prove canonical cache identity, exact public-static allowlisting, complete PNG and maskable manifest assets, credential-free cache writes, fail-open request exclusion for non-GET/API/Admin/private traffic, explicit update rollback and cache cleanup, and requirement/version alignment; exact-head browser tests prove cold and warm shell, offline fail-closed actions, reconnect, update and failure, stale-client, expired-session, and route-restoration states in en-US and ru-RU at all four governed viewports with exact evidence provenance and listener cleanup.
+- **TEST-095** (Tests) - PASS: Browser-free policy tests prove canonical cache identity, exact public-static allowlisting including every imported brand module, complete TiltSeven manifest metadata plus PNG and maskable assets, credential-free cache writes, fail-open request exclusion for non-GET/API/Admin/private traffic, explicit update rollback and cache cleanup, and requirement/version alignment; exact-head browser tests prove cold and warm branded shell, offline fail-closed actions, reconnect, update and failure, stale-client, expired-session, and route-restoration states in en-US and ru-RU at all four governed viewports with exact evidence provenance and listener cleanup.
 - **TEST-096** (Tests) - PASS: The Roulette refund browser regression proves the logged deployment-closeout bugs for Clear bets and wager debit timing by placing a visible open wager, requiring the authoritative balance to debit on placement, activating the visible Clear bets control, and requiring the exact stake to be refunded before normal Roulette browser acceptance continues.
 - **TEST-099** (Tests) - PASS: An exact-source browser qualification runs one uninterrupted Baccarat session for exactly 2,000 rendered-control coups, permits only one attempt per round, requires exactly 2,000 accepted visible Deal activations and settled-to-wager-ready transitions, and rejects source drift, gaps, retries, browser diagnostics, wallet/account isolation failures, incomplete governed screenshots, or listener/runtime cleanup residue.
 - **TEST-092** (Tests) - PASS: An exact-source browser qualification executes exactly 50,000 completed UI cycles across every catalog game, assigns at least 1,666 cycles to each game, exercises every eligible game control at least 100 times or records an approved ineligible classification, captures all four governed viewports for human review, and rejects unexplained failures, incomplete ranges, incomplete declared non-control stages, source drift, or cleanup residue.

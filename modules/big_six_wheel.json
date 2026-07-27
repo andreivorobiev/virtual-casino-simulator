@@ -1,6 +1,6 @@
 {
   "module": "big_six_wheel",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "paths": [
     "casino/games/big_six_wheel/",
     "web/games/big_six_wheel.js",

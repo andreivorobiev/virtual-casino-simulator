@@ -1,6 +1,6 @@
 {
   "module": "acey_deucey",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "paths": ["casino/games/acey_deucey/", "web/games/acey_deucey.js", "web/i18n/en-US/games/acey_deucey.json", "web/i18n/ru-RU/games/acey_deucey.json"],
   "requirements_prefixes": ["AD"],
   "contracts": ["contracts/openapi/acey_deucey.v1.yaml"],

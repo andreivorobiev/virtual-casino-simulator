@@ -298,6 +298,7 @@
       "selector": "[data-testid='premium-topbar'], [data-testid='lobby']",
       "states": [
         "authenticated",
+        "tiltseven_neon_pit",
         "catalog_scrolled",
         "keyboard_focused_scroll_region",
         "single_authoritative_count",

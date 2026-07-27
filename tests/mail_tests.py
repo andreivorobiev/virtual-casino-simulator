@@ -18,7 +18,7 @@ from casino.errors import ConflictError, RateLimitError
 # Import startup configuration for the public digest-key guard proof.
 from casino import config
 # Import the mail state machine and safe transport classifications under test.
-from casino.core.mail import AmbiguousDeliveryError, MailService, RetryableDeliveryError
+from casino.core.mail import AmbiguousDeliveryError, BRAND_NAME, MailService, RetryableDeliveryError, TEMPLATES
 
 # Supply a test-only key that exceeds the public strength floor and is never logged.
 TEST_DIGEST_KEY = "mail-test-digest-key-" + ("x" * 32)
@@ -53,6 +53,19 @@ class RecordingTransport:
 
 # Prove safety, idempotency, retry, suppression, rendering, and diagnostics without network access.
 class MailServiceTests(unittest.TestCase):
+    # Prove every governed locale uses the single reviewed TiltSeven subject identity.
+    def test_subjects_use_the_active_brand_name(self):
+        # Require the configured subject identity to match the browser application's active brand.
+        self.assertEqual(BRAND_NAME, "TiltSeven")
+        # Exercise both installed locale template collections.
+        for locale, templates in TEMPLATES.items():
+            # Require every authorized purpose to include the canonical brand and exclude the retired product label.
+            for purpose, (subject, _copy) in templates.items():
+                # Keep failures self-describing without exposing recipient, bearer, or provider material.
+                self.assertIn(BRAND_NAME, subject, (locale, purpose, subject))
+                # Reject stale subject identity after the coordinated browser and mail rebrand.
+                self.assertNotIn("Casino Simulator", subject, (locale, purpose, subject))
+
     # Allocate one isolated state document and deterministic clock per test.
     def setUp(self):
         # Own a removable temporary root for the duration of the case.
