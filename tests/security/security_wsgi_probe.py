@@ -143,6 +143,31 @@ bootstrap_cookie = next(value for value in header_values(shell, "Set-Cookie") if
 # Assert the complete bootstrap attribute boundary.
 assert "Secure" in bootstrap_cookie and "SameSite=Strict" in bootstrap_cookie and "Domain=" not in bootstrap_cookie and "HttpOnly" not in bootstrap_cookie
 
+# Reject a sign-in that lost its double-submit cookie entirely, matching the stranded precached-shell browser. (issue #224)
+cookieless_login = request("POST", "/api/v2/auth/login", {"email": "preview-admin@example.invalid", "password": "synthetic-preview-password"}, {"Origin": ORIGIN, "X-CSRF-Token": ""})
+# Require the fixed fail-closed CSRF rejection for the cookie-less form.
+assert cookieless_login["status"] == "403 Forbidden"
+# Recover through the public CSRF bootstrap route exactly like the one-shot client retry. (issue #224)
+csrf_bootstrap = request("GET", "/api/v2/auth/csrf")
+# Require the anonymous recovery route to answer inside the standard envelope.
+assert csrf_bootstrap["status"] == "200 OK" and decoded(csrf_bootstrap)["ok"] is True
+# Read the re-issued host-only double-submit value.
+recovered_csrf = response_cookie(csrf_bootstrap, "casino_csrf")
+# Read the complete re-issued cookie attributes for boundary assertions.
+recovered_cookie = next(value for value in header_values(csrf_bootstrap, "Set-Cookie") if value.startswith("casino_csrf="))
+# Require the recovery cookie to keep the exact bootstrap attribute boundary without becoming HttpOnly.
+assert 32 <= len(recovered_csrf) <= 128 and "Secure" in recovered_cookie and "SameSite=Strict" in recovered_cookie and "Domain=" not in recovered_cookie and "HttpOnly" not in recovered_cookie
+# Require no token material in the public response body.
+assert recovered_csrf.encode("utf-8") not in csrf_bootstrap["body"]
+# Require an existing bounded double-submit value to be preserved rather than rotated on refresh. (issue #224)
+preserved = request("GET", "/api/v2/auth/csrf", headers={"Cookie": f"casino_csrf={recovered_csrf}"})
+# Require idempotent re-issue so a racing tab cannot invalidate the sibling tab's pending form.
+assert response_cookie(preserved, "casino_csrf") == recovered_csrf
+# Authenticate with the recovered pair exactly like the retried sign-in form. (issue #224)
+recovered_login = request("POST", "/api/v2/auth/login", {"email": "preview-admin@example.invalid", "password": "synthetic-preview-password"}, mutation_headers(recovered_csrf))
+# Require the previously stranded browser to sign in without reloading the shell.
+assert recovered_login["status"] == "200 OK"
+
 # Reject login without an Origin even when CSRF values match.
 missing_origin = request("POST", "/api/v2/auth/login", {"email": "preview-admin@example.invalid", "password": "synthetic-preview-password"}, {"Cookie": f"casino_csrf={bootstrap_csrf}", "X-CSRF-Token": bootstrap_csrf})
 # Require the fixed request-integrity failure.

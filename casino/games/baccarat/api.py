@@ -128,14 +128,18 @@ def register(router):
             res = engine.settle_bet(b, coup, state.get("rules",{}))
             # Set credit to the value needed for the next operation.
             credit = None
+            # Track storage replay evidence so a raced or recovered settlement never repeats side effects. (issue #403)
+            replayed = False
             # Branch when the following condition is true.
             if res["credit"] > 0:
-                # Set credit to the value needed for the next operation.
-                credit = ledger.credit(b["player_id"], res["credit"], "BACCARAT_SETTLEMENT_CREDIT", GAME_ID, coup["round_id"], {"bet_id": b["bet_id"], "outcome": res["outcome"]})
-            # Set bal to the value needed for the next operation.
-            bal = players.get_player(b["player_id"])["balance"]
-            # Execute this statement as part of the module's documented control flow.
-            append_history(GAME_ID, coup["round_id"], b["player_id"], b["type"], b["label"], b["amount"], res["outcome"], res["credit"], bal, coup)
+                # Commit or replay the payout under the durable placement-time bet action identity. (issue #403)
+                credit, replayed = ledger.credit_once(b["player_id"], res["credit"], "BACCARAT_SETTLEMENT_CREDIT", f"{b['bet_id']}:settlement", GAME_ID, coup["round_id"], {"bet_id": b["bet_id"], "outcome": res["outcome"]})
+            # Append history only for the committing call so raced or recovered retries cannot duplicate rows. (issue #403)
+            if not replayed:
+                # Set bal to the value needed for the next operation.
+                bal = players.get_player(b["player_id"])["balance"]
+                # Execute this statement as part of the module's documented control flow.
+                append_history(GAME_ID, coup["round_id"], b["player_id"], b["type"], b["label"], b["amount"], res["outcome"], res["credit"], bal, coup)
             # Execute this statement as part of the module's documented control flow.
             settlements.append({"bet": b, "settlement": res, "ledger": credit})
         # Execute this statement as part of the module's documented control flow.

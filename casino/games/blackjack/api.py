@@ -71,19 +71,27 @@ def finish_if_needed(state, rnd):
         for h in rnd["hands"]:
             # Set due to the value needed for the next operation.
             due = round(float(h.get("payout_due",0)),2)
-            # Branch when the following condition is true.
+            # Skip hands whose persisted display flag already survived a completed settlement save. (issue #403)
             if h.get("credited"):
                 # Execute this statement as part of the module's documented control flow.
                 continue
+            # Track storage replay evidence so a raced or recovered settlement never repeats side effects. (issue #403)
+            replayed = False
             # Branch when the following condition is true.
             if due > 0:
+                # Commit or replay the payout under the durable deal-time round-and-hand action identity. (issue #403)
+                event, replayed = ledger.credit_once(rnd["player_id"], due, "BLACKJACK_SETTLEMENT_CREDIT", f"{rnd['round_id']}:{h['hand_id']}:settlement", GAME_ID, rnd["round_id"], {"hand_id": h["hand_id"], "outcome": h.get("outcome")})
+                # Report only the newly committed event because a replay was already reported by the winning call. (issue #403)
+                if not replayed:
+                    # Execute this statement as part of the module's documented control flow.
+                    credits.append(event)
+            # Append history only for the committing call so raced or recovered retries cannot duplicate rows. (issue #403)
+            if not replayed:
+                # Set bal to the value needed for the next operation.
+                bal = players.get_player(rnd["player_id"])["balance"]
                 # Execute this statement as part of the module's documented control flow.
-                credits.append(ledger.credit(rnd["player_id"], due, "BLACKJACK_SETTLEMENT_CREDIT", GAME_ID, rnd["round_id"], {"hand_id": h["hand_id"], "outcome": h.get("outcome")}))
-            # Set bal to the value needed for the next operation.
-            bal = players.get_player(rnd["player_id"])["balance"]
-            # Execute this statement as part of the module's documented control flow.
-            append_history(GAME_ID, rnd["round_id"], rnd["player_id"], "hand", h["hand_id"], h["bet"], h.get("outcome","unknown"), due, bal, {"cards": h["cards"], "dealer": rnd["dealer"]["cards"]})
-            # Set h["credited"] to the value needed for the next operation.
+                append_history(GAME_ID, rnd["round_id"], rnd["player_id"], "hand", h["hand_id"], h["bet"], h.get("outcome","unknown"), due, bal, {"cards": h["cards"], "dealer": rnd["dealer"]["cards"]})
+            # Keep the display flag while the durable ledger action key remains the settlement authority. (issue #403)
             h["credited"] = True
         # Execute this statement as part of the module's documented control flow.
         engine.settle_round(rnd)

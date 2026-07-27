@@ -12,6 +12,30 @@ from casino.errors import ValidationError, ConflictError
 GAME_ID="bingo"
 # Set COLUMNS to the value needed for the next operation.
 COLUMNS = {"B": range(1,16), "I": range(16,31), "N": range(31,46), "G": range(46,61), "O": range(61,76)}
+# Draw cards and balls from OS entropy so layouts and ball order cannot be predicted from seedable process state. (issue #420)
+_rng = random.SystemRandom()
+# Bound non-blackout sessions to 50 draws so a card race can genuinely end with no winner. (issue #405)
+MAX_CALLS_DEFAULT = 50
+# Give blackout a longer 60-draw budget because covering all 24 numbers needs a deeper ball stream. (issue #405)
+MAX_CALLS_BLACKOUT = 60
+
+# Define the call_cap_for function used by this module.
+def call_cap_for(pattern):
+    # Return the per-pattern ball budget stamped onto each session at start. (issue #405)
+    return MAX_CALLS_BLACKOUT if pattern == "blackout" else MAX_CALLS_DEFAULT
+
+# Define the ensure_call_cap function used by this module.
+def ensure_call_cap(sess):
+    # Read the persisted ball budget from the session.
+    cap = sess.get("max_calls")
+    # Fail-safe migrate persisted pre-cap sessions to the pattern default instead of unlimited free calls. (issue #405)
+    if not isinstance(cap, int) or isinstance(cap, bool) or cap <= 0:
+        # Derive the default budget from the session pattern.
+        cap = call_cap_for(sess.get("pattern", "line"))
+        # Stamp the migrated budget so the session state shape converges on the current schema.
+        sess["max_calls"] = cap
+    # Return the enforced budget to the caller.
+    return cap
 
 # Define the default_state function used by this module.
 def default_state():
@@ -24,8 +48,8 @@ def make_card():
     cols = {}
     # Iterate through the collection to process each item.
     for col, rng in COLUMNS.items():
-        # Set cols[col] to the value needed for the next operation.
-        cols[col] = random.sample(list(rng), 5)
+        # Sample the column from the CSPRNG so card layouts are unpredictable. (issue #420)
+        cols[col] = _rng.sample(list(rng), 5)
     # Set cols["N"][2] to the value needed for the next operation.
     cols["N"][2] = "FREE"
     # Return the computed value to the caller.
@@ -47,8 +71,8 @@ def start_session(state, player_id, amount, pattern="line", bot_players=None):
     for bp in bot_players or []:
         # Execute this statement as part of the module's documented control flow.
         cards.append({"card_id": new_id("card"), "player_id": bp["player_id"], "amount": bp["amount"], "card": make_card(), "status":"active", "winner": False, "payout":0, "source":"bot"})
-    # Set sess to the value needed for the next operation.
-    sess = {"session_id": new_id("bingo"), "player_id": player_id, "amount": amount, "pattern": pattern, "card": cards[0]["card"], "cards": cards, "called": [], "status":"active", "created_at": utc_now(), "winner": None, "winning_card_id": None, "payout": 0}
+    # Stamp the bounded ball budget at start so a session can no longer draw forever toward a guaranteed win. (issue #405)
+    sess = {"session_id": new_id("bingo"), "player_id": player_id, "amount": amount, "pattern": pattern, "card": cards[0]["card"], "cards": cards, "called": [], "status":"active", "created_at": utc_now(), "winner": None, "winning_card_id": None, "payout": 0, "max_calls": call_cap_for(pattern)}
     # Set state["active_session"] to the value needed for the next operation.
     state["active_session"] = sess
     # Return the computed value to the caller.
@@ -163,18 +187,41 @@ def payout_for(pattern, amount):
     # Return the computed value to the caller.
     return round(float(amount) * {"line": 10, "four_corners": 12, "postage_stamp": 15, "blackout": 50}.get(pattern, 10), 2)
 
+# Define the finish_no_win function used by this module.
+def finish_no_win(state, sess):
+    # Mark the bounded session terminal as a loss with no winner and no payout. (issue #405)
+    sess["status"] = "no_win"; sess["completed_at"] = utc_now(); sess["payout"] = 0
+    # Iterate through the collection to process each item.
+    for card in sess.get("cards", []):
+        # Branch when the following condition is true.
+        if card.get("status") == "active":
+            # Mark the unfinished card lost so no later settlement path can ever credit it.
+            card["status"] = "lost"
+    # Archive the finished session exactly like the win path so the active slot is released.
+    state.setdefault("last_sessions", []).append(sess)
+    # Set state["last_sessions"] to the value needed for the next operation.
+    state["last_sessions"] = state["last_sessions"][-50:]
+    # Set state["active_session"] to the value needed for the next operation.
+    state["active_session"] = None
+
 # Define the call_next function used by this module.
 def call_next(state):
     # Set sess to the value needed for the next operation.
     sess = state.get("active_session")
     # Branch when the following condition is true.
     if not sess or sess.get("status") != "active": raise ConflictError("No active Bingo session")
+    # Enforce the per-session ball budget, fail-safe defaulting legacy sessions before any draw. (issue #405)
+    cap = ensure_call_cap(sess)
+    # Refuse another free draw when a legacy over-budget session already spent its cap; the caller must reset. (issue #405)
+    if len(sess.get("called", [])) >= cap:
+        # Fail closed instead of drawing beyond the bound.
+        raise ConflictError("Bingo call limit reached")
     # Set remaining to the value needed for the next operation.
     remaining = [n for n in range(1,76) if n not in sess["called"]]
     # Branch when the following condition is true.
     if not remaining: raise ConflictError("No Bingo balls remaining")
-    # Set n to the value needed for the next operation.
-    n = random.choice(remaining); sess["called"].append(n); sess["last_ball_label"] = ball_label(n)
+    # Draw the ball from the CSPRNG so the stream cannot be predicted from process state. (issue #420)
+    n = _rng.choice(remaining); sess["called"].append(n); sess["last_ball_label"] = ball_label(n)
     # Set winners to the value needed for the next operation.
     winners=[]
     # Iterate through the collection to process each item.
@@ -201,6 +248,10 @@ def call_next(state):
         state["last_sessions"] = state["last_sessions"][-50:]
         # Set state["active_session"] to the value needed for the next operation.
         state["active_session"] = None
+    # End the session as a zero-payout loss once the ball budget is spent without a completed pattern. (issue #405)
+    elif len(sess["called"]) >= cap:
+        # Finalize and archive the bounded loss through the shared terminal helper.
+        finish_no_win(state, sess)
     # Return the computed value to the caller.
     return sess, n
 

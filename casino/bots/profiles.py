@@ -236,8 +236,8 @@ def update_bot(bot_id: str, updates: dict) -> dict:
                 for game_id, strategy_id in strategies.items():
                     # Branch when the following condition is true.
                     if game_id not in CAPABILITIES or not CAPABILITIES[game_id].get("supports_bots"):
-                        # Raise an error so invalid input or state is reported explicitly.
-                        raise ValidationError(f"Bots are not supported for {game_id}")
+                        # Reject unsupported games without reflecting the caller-supplied identifier into the public envelope. (issue #418)
+                        raise ValidationError("Bots are not supported for the requested game")
                     # Set legal to the value needed for the next operation.
                     legal = {s["id"] for s in CAPABILITIES[game_id]["strategies"]}
                     # Branch when the following condition is true.

@@ -1,30 +1,7 @@
 {
-  "application": [
-    "contracts/openapi/auth.v2.yaml",
-    "contracts/openapi/feedback.v2.yaml",
-    "contracts/openapi/invitations.v2.yaml",
-    "contracts/openapi/self-service-batch.v2.yaml",
-    "contracts/openapi/transactional-mail.v2.yaml",
-    "contracts/openapi/user-settings.v2.yaml"
+  "acey_deucey": [
+    "contracts/openapi/acey_deucey.v1.yaml"
   ],
-  "core": [
-    "contracts/openapi/auth.v2.yaml",
-    "contracts/openapi/feedback.v2.yaml",
-    "contracts/openapi/invitations.v2.yaml",
-    "contracts/openapi/self-service-batch.v2.yaml",
-    "contracts/openapi/transactional-mail.v2.yaml",
-    "contracts/openapi/user-settings.v2.yaml"
-  ],
-  "ledger": [],
-  "players": [
-    "contracts/openapi/admin-users.v2.yaml",
-    "contracts/openapi/auth.v2.yaml"
-  ],
-  "bots": [
-    "contracts/openapi/bots.v1.yaml"
-  ],
-  "autoplay": [],
-  "audio": [],
   "admin": [
     "contracts/openapi/admin-users.v2.yaml",
     "contracts/openapi/admin.v1.yaml",
@@ -35,107 +12,56 @@
     "contracts/openapi/transactional-mail.v2.yaml",
     "contracts/openapi/user-settings.v2.yaml"
   ],
-  "operations": [
-    "contracts/openapi/operations.v1.yaml"
+  "andar_bahar": [
+    "contracts/openapi/andar_bahar.v1.yaml"
   ],
-  "roulette": [
-    "contracts/openapi/roulette.v1.yaml"
+  "application": [
+    "contracts/openapi/auth.v2.yaml",
+    "contracts/openapi/feedback.v2.yaml",
+    "contracts/openapi/invitations.v2.yaml",
+    "contracts/openapi/self-service-batch.v2.yaml",
+    "contracts/openapi/transactional-mail.v2.yaml",
+    "contracts/openapi/user-settings.v2.yaml"
   ],
-  "slots": [
-    "contracts/openapi/slots.v1.yaml"
-  ],
-  "blackjack": [
-    "contracts/openapi/blackjack.v1.yaml"
-  ],
+  "audio": [],
+  "autoplay": [],
   "baccarat": [
     "contracts/openapi/baccarat.v1.yaml"
-  ],
-  "keno": [
-    "contracts/openapi/keno.v1.yaml"
-  ],
-  "bingo": [
-    "contracts/openapi/bingo.v1.yaml"
-  ],
-  "multi_hand_video_poker": [
-    "contracts/openapi/multi_hand_video_poker.v1.yaml"
-  ],
-  "casino_war": [
-    "contracts/openapi/casino_war.v1.yaml"
   ],
   "big_six_wheel": [
     "contracts/openapi/big_six_wheel.v1.yaml"
   ],
-  "red_dog": [
-    "contracts/openapi/red_dog.v1.yaml"
+  "bingo": [
+    "contracts/openapi/bingo.v1.yaml"
   ],
-  "dragon_tiger": [
-    "contracts/openapi/dragon_tiger.v1.yaml"
+  "blackjack": [
+    "contracts/openapi/blackjack.v1.yaml"
   ],
-  "hi_lo": [
-    "contracts/openapi/hi_lo.v1.yaml"
+  "bots": [
+    "contracts/openapi/bots.v1.yaml"
   ],
-  "three_card_poker": [
-    "contracts/openapi/three_card_poker.v1.yaml"
-  ],
-  "jacks_or_better_video_poker": [
-    "contracts/openapi/jacks_or_better_video_poker.v1.yaml"
-  ],
-  "deuces_wild_video_poker": [
-    "contracts/openapi/deuces_wild_video_poker.v1.yaml"
-  ],
-  "scratch_cards": [
-    "contracts/openapi/scratch_cards.v1.yaml"
-  ],
-  "sic_bo": [
-    "contracts/openapi/sic_bo.v1.yaml"
-  ],
-  "chuck_a_luck": [
-    "contracts/openapi/chuck_a_luck.v1.yaml"
-  ],
-  "craps": [
-    "contracts/openapi/craps.v1.yaml"
-  ],
-  "crown_and_anchor": [
-    "contracts/openapi/crown_and_anchor.v1.yaml"
-  ],
-  "over_under_7": [
-    "contracts/openapi/over_under_7.v1.yaml"
-  ],
-  "plinko": [
-    "contracts/openapi/plinko.v1.yaml"
-  ],
-  "fan_tan": [
-    "contracts/openapi/fan_tan.v1.yaml"
-  ],
-  "andar_bahar": [
-    "contracts/openapi/andar_bahar.v1.yaml"
-  ],
-  "acey_deucey": [
-    "contracts/openapi/acey_deucey.v1.yaml"
+  "boule": [
+    "contracts/openapi/boule.v1.yaml"
   ],
   "caribbean_stud": [
     "contracts/openapi/caribbean_stud.v1.yaml"
   ],
-  "let_it_ride": [
-    "contracts/openapi/let_it_ride.v1.yaml"
-  ],
   "casino_holdem": [
     "contracts/openapi/casino_holdem.v1.yaml"
   ],
-  "joker_poker": [
-    "contracts/openapi/joker_poker.v1.yaml"
+  "casino_war": [
+    "contracts/openapi/casino_war.v1.yaml"
   ],
-  "texas_holdem_practice_table": [
-    "contracts/openapi/texas_holdem_practice_table.v1.yaml"
+  "chuck_a_luck": [
+    "contracts/openapi/chuck_a_luck.v1.yaml"
   ],
-  "pai_gow_poker": [
-    "contracts/openapi/pai_gow_poker.v1.yaml"
+  "coin_pusher": [
+    "contracts/openapi/coin_pusher.v1.yaml"
   ],
-  "teen_patti": [
-    "contracts/openapi/teen_patti.v1.yaml"
+  "color_wheel": [
+    "contracts/openapi/color_wheel.v1.yaml"
   ],
-  "tests": [],
-  "docs": [],
+  "commenting_policy": [],
   "contracts": [
     "contracts/openapi/admin-users.v2.yaml",
     "contracts/openapi/auth.v2.yaml",
@@ -144,6 +70,122 @@
     "contracts/openapi/operations.v1.yaml",
     "contracts/openapi/transactional-mail.v2.yaml"
   ],
+  "core": [
+    "contracts/openapi/auth.v2.yaml",
+    "contracts/openapi/feedback.v2.yaml",
+    "contracts/openapi/invitations.v2.yaml",
+    "contracts/openapi/self-service-batch.v2.yaml",
+    "contracts/openapi/transactional-mail.v2.yaml",
+    "contracts/openapi/user-settings.v2.yaml"
+  ],
+  "craps": [
+    "contracts/openapi/craps.v1.yaml"
+  ],
+  "crown_and_anchor": [
+    "contracts/openapi/crown_and_anchor.v1.yaml"
+  ],
+  "daily_draw_lab": [
+    "contracts/openapi/daily_draw_lab.v1.yaml"
+  ],
+  "deuces_wild_video_poker": [
+    "contracts/openapi/deuces_wild_video_poker.v1.yaml"
+  ],
+  "docs": [],
+  "double_bonus_video_poker": [
+    "contracts/openapi/double_bonus_video_poker.v1.yaml"
+  ],
+  "dragon_tiger": [
+    "contracts/openapi/dragon_tiger.v1.yaml"
+  ],
+  "fan_tan": [
+    "contracts/openapi/fan_tan.v1.yaml"
+  ],
+  "faro": [
+    "contracts/openapi/faro.v1.yaml"
+  ],
+  "four_card_poker": [
+    "contracts/openapi/four_card_poker.v1.yaml"
+  ],
+  "hi_lo": [
+    "contracts/openapi/hi_lo.v1.yaml"
+  ],
+  "jacks_or_better_video_poker": [
+    "contracts/openapi/jacks_or_better_video_poker.v1.yaml"
+  ],
+  "joker_poker": [
+    "contracts/openapi/joker_poker.v1.yaml"
+  ],
+  "keno": [
+    "contracts/openapi/keno.v1.yaml"
+  ],
+  "ledger": [],
+  "let_it_ride": [
+    "contracts/openapi/let_it_ride.v1.yaml"
+  ],
+  "lucky_grid": [
+    "contracts/openapi/lucky_grid.v1.yaml"
+  ],
+  "marble_race": [
+    "contracts/openapi/marble_race.v1.yaml"
+  ],
+  "mississippi_stud": [
+    "contracts/openapi/mississippi_stud.v1.yaml"
+  ],
+  "multi_hand_video_poker": [
+    "contracts/openapi/multi_hand_video_poker.v1.yaml"
+  ],
+  "operations": [
+    "contracts/openapi/operations.v1.yaml"
+  ],
+  "over_under_7": [
+    "contracts/openapi/over_under_7.v1.yaml"
+  ],
+  "pachinko": [
+    "contracts/openapi/pachinko.v1.yaml"
+  ],
+  "pai_gow_poker": [
+    "contracts/openapi/pai_gow_poker.v1.yaml"
+  ],
+  "pattern_draw": [
+    "contracts/openapi/pattern_draw.v1.yaml"
+  ],
+  "players": [
+    "contracts/openapi/admin-users.v2.yaml",
+    "contracts/openapi/auth.v2.yaml"
+  ],
+  "plinko": [
+    "contracts/openapi/plinko.v1.yaml"
+  ],
+  "poker_dice": [
+    "contracts/openapi/poker_dice.v1.yaml"
+  ],
+  "red_dog": [
+    "contracts/openapi/red_dog.v1.yaml"
+  ],
+  "roulette": [
+    "contracts/openapi/roulette.v1.yaml"
+  ],
+  "scratch_cards": [
+    "contracts/openapi/scratch_cards.v1.yaml"
+  ],
+  "sic_bo": [
+    "contracts/openapi/sic_bo.v1.yaml"
+  ],
+  "slots": [
+    "contracts/openapi/slots.v1.yaml"
+  ],
+  "teen_patti": [
+    "contracts/openapi/teen_patti.v1.yaml"
+  ],
+  "tests": [],
+  "texas_holdem_practice_table": [
+    "contracts/openapi/texas_holdem_practice_table.v1.yaml"
+  ],
+  "three_card_poker": [
+    "contracts/openapi/three_card_poker.v1.yaml"
+  ],
   "tooling": [],
-  "commenting_policy": []
+  "trente_et_quarante": [
+    "contracts/openapi/trente_et_quarante.v1.yaml"
+  ]
 }

@@ -48,6 +48,30 @@ def check_python_game_imports(errors):
                     # Execute this statement as part of the module's documented control flow.
                     errors.append(f"{path}:{lineno} imports bot strategies directly")
 
+# Match player-visible outcome draws routed through the seedable global Mersenne Twister. (issue #420)
+GLOBAL_RNG_RE = re.compile(r"\brandom\.(shuffle|choice|choices|sample|randint|randrange|random|uniform|betavariate|gauss)\s*\(")
+
+
+# Reject global-module randomness in game outcome code so entropy always comes from a CSPRNG or an injected generator. (issue #420)
+def check_game_rng(errors):
+    # Iterate every catalog game exactly like the import boundary above.
+    for game in GAMES:
+        # Walk each game module's Python sources.
+        for path in (ROOT / "casino" / "games" / game).rglob("*.py"):
+            # Read the module once for line-scoped matching.
+            text = path.read_text(encoding="utf-8")
+            # Scan each line so diagnostics stay clickable.
+            for lineno, line in enumerate(text.splitlines(), 1):
+                # Ignore comment lines so documentation cannot trip the gate.
+                if line.lstrip().startswith("#"):
+                    # Continue with the next line.
+                    continue
+                # Flag only direct global-module draws; SystemRandom instances and Random(seed) constructions never match.
+                if GLOBAL_RNG_RE.search(line):
+                    # Name the exact draw site so the swap to a SystemRandom receiver is mechanical.
+                    errors.append(f"{path}:{lineno} draws outcomes from the seedable global random module")
+
+
 # Define the check_js_game_imports function used by this module.
 def check_js_game_imports(errors):
     # Set game_dir to the value needed for the next operation.
@@ -85,6 +109,8 @@ def main():
     errors = []
     # Execute this statement as part of the module's documented control flow.
     check_python_game_imports(errors)
+    # Enforce CSPRNG-or-injected entropy for every game outcome draw. (issue #420)
+    check_game_rng(errors)
     # Execute this statement as part of the module's documented control flow.
     check_js_game_imports(errors)
     # Branch when the following condition is true.

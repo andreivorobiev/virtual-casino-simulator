@@ -77,15 +77,15 @@ def register(router):
         d=engine.draw(state); settlements=[]
         # Iterate through the collection to process each item.
         for r in d["results"]:
-            # Set t to the value needed for the next operation.
-            t=r["ticket"]; credit=None
-            # Branch when the following condition is true.
-            if r["payout"]>0: credit=ledger.credit(t["player_id"],r["payout"],"KENO_PAYOUT_CREDIT",GAME_ID,d["round_id"],{"ticket_id":t["ticket_id"],"catch_count":r["catch_count"]})
+            # Track the replay marker alongside the credit event for this durable ticket. (issue #403)
+            t=r["ticket"]; credit=None; replayed=False
+            # Credit each durable ticket exactly once, keeping the volatile catch count out of the fingerprinted details so a racing draw fails closed on ConflictError instead of double-paying. (issue #403)
+            if r["payout"]>0: credit,replayed=ledger.credit_once(t["player_id"],r["payout"],"KENO_PAYOUT_CREDIT",f"{t['ticket_id']}:payout",GAME_ID,d["round_id"],{"ticket_id":t["ticket_id"]})
             # Set bal to the value needed for the next operation.
             bal=players.get_player(t["player_id"])["balance"]
+            # Branch so history rows append only for first-time payouts and replays cannot duplicate them. (issue #403)
+            if not replayed: append_history(GAME_ID,d["round_id"],t["player_id"],"ticket",f"{len(t['spots'])} spots",t["amount"],"win" if r["payout"] else "loss",r["payout"],bal,{"drawn":d["drawn"],"spots":t["spots"],"catches":r["catches"]})
             # Execute this statement as part of the module's documented control flow.
-            append_history(GAME_ID,d["round_id"],t["player_id"],"ticket",f"{len(t['spots'])} spots",t["amount"],"win" if r["payout"] else "loss",r["payout"],bal,{"drawn":d["drawn"],"spots":t["spots"],"catches":r["catches"]})
-            # Execute this statement as part of the module's documented control flow.
-            settlements.append({"result":r,"ledger":credit})
+            settlements.append({"result":r,"ledger":credit,"replayed":replayed})
         # Execute this statement as part of the module's documented control flow.
         save_player_game_state(GAME_ID, player_id, state); return {"draw":d,"settlements":settlements,"bot_tickets":[], **payload(player_id, state)}

@@ -10,6 +10,8 @@ from casino.errors import ValidationError
 
 # Set GAME_ID to the value needed for the next operation.
 GAME_ID = "slots"
+# Pick reel stops from OS entropy so spin outcomes cannot be predicted from seedable process state. (issue #420)
+_rng = random.SystemRandom()
 # Set SYMBOLS to the value needed for the next operation.
 SYMBOLS = ["CHERRY", "LEMON", "BAR", "BELL", "SEVEN", "WILD", "SCATTER"]
 # Set REELS to the value needed for the next operation.
@@ -137,8 +139,8 @@ def spin(state, active_lines=5, line_bet=1.0):
     cost = 0.0 if free else round(active_lines * line_bet, 2)
     # Branch when the following condition is true.
     if free: state["free_spins"] = int(state.get("free_spins",0)) - 1
-    # Set stops to the value needed for the next operation.
-    stops = [random.randrange(len(r)) for r in REELS]
+    # Draw each reel stop from the CSPRNG instance instead of the seedable module generator. (issue #420)
+    stops = [_rng.randrange(len(r)) for r in REELS]
     # Set grid to the value needed for the next operation.
     grid = render_grid(stops)
     # Set result to the value needed for the next operation.

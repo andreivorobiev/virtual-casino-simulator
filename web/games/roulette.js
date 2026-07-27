@@ -673,6 +673,8 @@ function posForBet(bet) {
   const nums = bet.covered_numbers || [];
   // Return outside layout positions directly.
   if (bet.layout_kind === 'outside') return outsidePos(bet);
+  // Route pre-fix persisted bets that lack layout_kind by their outside bet type so legacy live-state chips also land on the outside rail. (issue #222)
+  if (bet.layout_kind == null && ['dozen', 'column', 'red', 'black', 'odd', 'even', 'low', 'high'].includes(bet.type)) return outsidePos(bet);
   // Return the street marker location.
   if (bet.type === 'street') {
     // Store the street row from the first covered number.

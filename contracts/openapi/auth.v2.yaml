@@ -101,6 +101,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/EnrollmentPolicyEnvelope'
+  /auth/csrf:
+    get:
+      summary: Re-issue the anonymous host-only double-submit cookie so a cookie-less sign-in surface can recover without a shell reload.
+      operationId: auth_v2_csrf_bootstrap
+      responses:
+        '200':
+          description: Empty standard envelope; the recovered value travels only in the Set-Cookie header, never the response body.
   /auth/signup:
     post:
       summary: Create a first-party account only when the explicit signup feature gate is enabled.

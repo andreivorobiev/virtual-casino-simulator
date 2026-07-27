@@ -20,8 +20,8 @@ from casino.core.ids import new_id
 from casino.core.state_store import load_player_game_state, save_player_game_state
 # Import canonical player-id validation for router-bound identities.
 from casino.core.validation import require_player_id
-# Import public conflict and validation errors for stable route responses.
-from casino.errors import ConflictError, ValidationError
+# Import public conflict, funds, and validation errors for stable route responses and escrow healing (issue #411).
+from casino.errors import ConflictError, InsufficientFundsError, ValidationError
 # Import only this game's deterministic rules through the allowed boundary.
 from casino.games.texas_holdem_practice_table import engine
 
@@ -157,6 +157,51 @@ class TexasHoldemPracticeTableController:
         # Return the reconciled retained hand.
         return hand
 
+    # Report whether a hand is still exactly as start_hand prepared it, before any table action (issue #411).
+    @staticmethod
+    def _is_prepared_hand(hand: dict) -> bool:
+        # A prepared hand is still preflop, has no applied actions, and carries only opening escrow debits.
+        return hand.get("phase") == "preflop" and not hand.get("action_log") and all(intent.get("direction") == "debit" and (intent.get("details") or {}).get("component") == "escrow" for intent in hand.get("ledger_intents", []))
+
+    # Credit back every already-committed opening escrow of one failed prepared hand (issue #411).
+    def _compensate_committed_escrows(self, hand: dict) -> int:
+        # Count reversed escrows so callers can tell a clean failure from a compensated one.
+        compensated = 0
+        # Walk every prepared movement because any committed prefix may precede the failing seat.
+        for intent in hand.get("ledger_intents", []):
+            # Reverse only opening escrow debits and never terminal settlement credits.
+            if intent.get("direction") != "debit" or (intent.get("details") or {}).get("component") != "escrow":
+                # Skip movements outside the compensation contract.
+                continue
+            # Leave intents alone when append-only history shows their debit never committed.
+            if self.ledger.find_action(intent["player_id"], intent["action_id"]) is None:
+                # Continue to the next prepared movement.
+                continue
+            # Derive the deterministic exactly-once compensation identity from the committed escrow action.
+            compensation_action_id = f"{intent['action_id']}:compensation"
+            # Mirror the committed intent so the credit reverses the exact seat, magnitude, and hand.
+            compensation = copy.deepcopy(intent)
+            # Bind the compensation to its own durable action identity.
+            compensation["action_id"] = compensation_action_id
+            # Reverse the wallet direction while keeping the reserved magnitude.
+            compensation["direction"] = "credit"
+            # Keep the established human refund vocabulary and the managed-opponent refund vocabulary.
+            compensation["transaction_type"] = "TEXAS_HOLDEM_ESCROW_REFUND_CREDIT" if intent.get("transaction_type") == "TEXAS_HOLDEM_ESCROW_DEBIT" else "PRACTICE_OPPONENT_ESCROW_REFUND"
+            # Expose the compensation identity to append-only recovery scans.
+            compensation["details"]["texas_holdem_action_id"] = compensation_action_id
+            # Route managed-opponent compensation through the audited refund controller action.
+            compensation["details"]["component"] = "refund"
+            # Preserve the reversed escrow identity for Admin audit correlation.
+            compensation["details"]["compensates_action_id"] = intent["action_id"]
+            # Commit at most once, reusing any row an earlier interrupted heal already wrote.
+            if self.ledger.find_action(compensation["player_id"], compensation_action_id) is None:
+                # Issue the reversing credit through the only permitted wallet seam.
+                self.ledger.transact(compensation)
+            # Record one reversed escrow toward zero net wallet movement.
+            compensated += 1
+        # Return how many committed escrows were reversed.
+        return compensated
+
     # Recover any interrupted movements in active or retained hands after reload.
     def _recover(self, player_id: str, state: dict) -> None:
         # Visit the active hand before bounded private history for event order.
@@ -171,8 +216,22 @@ class TexasHoldemPracticeTableController:
             pending = any(intent.get("action_id") not in state.get("ledger_actions", {}) for intent in hand.get("ledger_intents", []))
             # Reconcile missing markers or terminal pending settlement.
             if pending or hand.get("phase") == "ledger_pending":
-                # Recover only movements already prepared in durable game state.
-                self._reconcile_hand(player_id, state, hand)
+                # Contain an unfundable prepared hand instead of re-raising on every later route (issue #411).
+                try:
+                    # Recover only movements already prepared in durable game state.
+                    self._reconcile_hand(player_id, state, hand)
+                # Self-heal the bricked table by unwinding a prepared hand whose seat escrow cannot fund (issue #411).
+                except InsufficientFundsError:
+                    # Keep fail-closed behavior for history rows and any hand that advanced past its opening escrow.
+                    if hand is not state.get("active_hand") or not self._is_prepared_hand(hand):
+                        # Re-raise because only stranded prepared escrow is safe to unwind.
+                        raise
+                    # Credit back every committed escrow so net wallet movement returns to zero.
+                    self._compensate_committed_escrows(hand)
+                    # Clear the unfunded hand from the actionable slot so the table plays again.
+                    state["active_hand"] = None
+                    # Persist the healed document before continuing the original request.
+                    self.repository.save(player_id, state)
 
     # Build the standard game data payload shared by every route.
     def _payload(self, player_id: str, state: dict, hand=None, *, replayed=False) -> dict:
@@ -251,24 +310,34 @@ class TexasHoldemPracticeTableController:
             seed = self.seed_factory(action_id) if self.seed_factory else None
             # Prepare the complete private hand and escrow intent before wallet movement.
             hand = engine.create_hand(player_id, wager, action_id, seed=seed, hand_id=self.id_factory("thpt"), created_at=self.clock())
+            # Require every practice seat to cover its reserve before anything persists, so failure stays atomic (issue #411).
+            for opponent in engine.PRACTICE_OPPONENTS:
+                # Read each funded opponent wallet through the read-only player seam.
+                if self.player_reader(opponent["player_id"])["balance"] < hand["reserved_amount"]:
+                    # Fail closed with no persisted hand, no receipt, and no wallet movement.
+                    raise ConflictError("Lower the wager - a practice seat cannot cover the reserved bets")
             # Place the prepared hand in the actionable player-scoped slot.
             state["active_hand"] = hand
             # Map the client command before the first ledger call for recovery.
             state["requests"][action_id] = {"command": "start_hand", "hand_id": hand["hand_id"], "base_wager": wager}
             # Persist cards, board plan, and escrow identity before wallet mutation.
             self.repository.save(player_id, state)
-            # Reconcile the single opening escrow debit.
+            # Reconcile the four opening escrow debits.
             try:
-                # Apply or recover the prepared debit exactly once.
+                # Apply or recover the prepared debits exactly once.
                 self._reconcile_hand(player_id, state, hand)
-            # Restore clean state only when the first debit never committed.
+            # Unwind every committed escrow so a mid-reconcile failure strands no wager (issue #411).
             except Exception:
-                # Read the stable opening escrow action for failure classification.
-                escrow = hand["ledger_intents"][0]
-                # Roll back the prepared hand when append-only history has no debit.
-                if self.ledger.find_action(player_id, escrow["action_id"]) is None:
-                    # Restore the exact pre-request document.
-                    self.repository.save(player_id, prior_state)
+                # Credit back any escrow prefix that committed before the failing seat.
+                compensated = self._compensate_committed_escrows(hand)
+                # Restore the exact pre-request document so no phantom hand stays actionable.
+                restored = copy.deepcopy(prior_state)
+                # Retire a wallet-touching identity because its escrow rows are now refunded (issue #411).
+                if compensated:
+                    # Keep the receipt so a same-id retry fails closed instead of replaying refunded escrow rows as live.
+                    restored.setdefault("requests", {})[action_id] = {"command": "start_hand", "hand_id": hand["hand_id"], "base_wager": wager}
+                # Persist the rolled-back document with zero net wallet movement.
+                self.repository.save(player_id, restored)
                 # Re-raise the original ledger or storage error.
                 raise
             # Return the new preflop hand after committed wallet reservation.

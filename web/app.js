@@ -552,8 +552,20 @@ async function renderSignupGate(message = '', success = false) {
 }
 
 
+// Hold the transient invitation bearer in module memory so the URL, history, and referrer stop carrying it. (issue #417 residual)
+let invitationBearerToken = '';
+
 // Render the account-free private invitation enrollment form without creating state on page load. (INVITE-003, INVITE-005)
 function renderInvitationGate(message = '', success = false) {
+  // Read the bearer from the canonical URL exactly once per arrival rather than on every submit.
+  const arrivalToken = new URL(location.href).searchParams.get('token') || '';
+  // Capture a newly-arrived bearer without clobbering the held value on locale-driven rerenders.
+  if (arrivalToken) {
+    // Keep the bearer only in module-local memory for the pending redemption.
+    invitationBearerToken = arrivalToken;
+    // Scrub the bearer from the address bar, session history, and any later referrer immediately on entry.
+    history.replaceState({}, '', '/enroll/invitation');
+  }
   // Clear any stale authenticated shell identity while the public route is displayed.
   window.CasinoCurrentUser = null;
   // Keep the casino shell and lobby layout locked behind successful enrollment and later login.
@@ -580,8 +592,8 @@ async function handleInvitationSubmit(event) {
   event.preventDefault();
   // Resolve the generic live status outlet.
   const message = document.getElementById('invitation-message');
-  // Resolve the transient bearer from the canonical URL without copying it to DOM or durable storage.
-  const token = new URL(location.href).searchParams.get('token') || '';
+  // Prefer the entry-captured module-local bearer; fall back to the URL only for direct deep submissions. (issue #417 residual)
+  const token = invitationBearerToken || new URL(location.href).searchParams.get('token') || '';
   // Disable repeated clicks until the exact request settles.
   const submit = document.querySelector('[data-testid="invitation-submit"]');
   // Prevent a second in-flight mutation from this form.
@@ -594,6 +606,8 @@ async function handleInvitationSubmit(event) {
     await redeemInvitation(payload);
     // Remove the bearer from browser history immediately after terminal success.
     history.replaceState({}, '', '/');
+    // Drop the module-local bearer as soon as the redemption settles. (issue #417 residual)
+    invitationBearerToken = '';
     // Return to login with an identifier-free success prompt.
     renderLoginGate(t('invitation.success', {}, 'shell'));
   // Collapse disabled, malformed, expired, revoked, replayed, and raced results into one message.

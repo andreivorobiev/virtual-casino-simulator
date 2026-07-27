@@ -221,7 +221,7 @@ def compare(a_score, b_score) -> int:
     return (a_score > b_score) - (a_score < b_score)
 
 
-# Arrange seven cards by the standard house way, maximizing the legal high hand.
+# Arrange seven cards by the deterministic house way, balancing toward the strongest legal two-card hand (issue #407).
 def set_house_way(seven):
     # Normalize all seven cards once for repeated evaluation.
     cards = [normalize(c) for c in seven]
@@ -238,13 +238,13 @@ def set_house_way(seven):
             # Skip illegal arrangements where the low hand would outrank the high hand.
             if not split_is_legal(high, low):
                 continue
-            # Score both hands for comparison.
-            candidate = (evaluate_five(high), evaluate_two(low))
-            # Prefer the strongest high hand, breaking ties on the strongest low hand.
+            # Score the low hand first so the two-card hand drives the choice, closing the dump-the-kickers exploit (issue #407).
+            candidate = (evaluate_two(low), evaluate_five(high))
+            # Prefer the strongest legal low hand, breaking ties on the strongest high hand.
             if best is None or candidate > best[0]:
                 best = (candidate, high, low)
-    # Surface the chosen high and low hands with their scores.
-    return {"high": best[1], "low": best[2], "high_score": best[0][0], "low_score": best[0][1]}
+    # Surface the chosen hands, unpacking the low-first candidate score order (issue #407).
+    return {"high": best[1], "low": best[2], "high_score": best[0][1], "low_score": best[0][0]}
 
 
 # Settle a fully set player hand against the house-way dealer hand.

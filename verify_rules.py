@@ -1,7 +1,7 @@
-# AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
 #!/usr/bin/env python3
+# AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
 """Rule-level validation for Virtual Casino Simulator v9.
-# Execute this statement as part of the module's documented control flow.
+
 Run: python verify_rules.py
 """
 # Import required dependency so this module can use its public functions or constants.

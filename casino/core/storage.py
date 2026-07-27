@@ -176,6 +176,20 @@ class JsonStorageProvider(StorageProvider):
         self.log_dir = self.data_dir.parent / "logs" if data_dir is not None else LOG_DIR
         # Store the provider-local lock for compound JSON operations.
         self.lock = threading.RLock()
+        # Track how many ledger.jsonl bytes have been parsed into the incremental cache. (issue #412)
+        self._ledger_cache_offset = 0
+        # Track the ledger file mtime at the cached offset so rewrites invalidate the cache. (issue #412)
+        self._ledger_cache_mtime_ns: int | None = None
+        # Cache decoded valid ledger rows in append order so reads stop re-parsing the file. (issue #412)
+        self._ledger_cache_rows: list[dict] = []
+        # Index cached row references by player so filtered history reads stay O(tail). (issue #412)
+        self._ledger_cache_by_player: dict[Any, list[dict]] = {}
+        # Hold rows decoded from an unterminated trailing line without caching them. (issue #412)
+        self._ledger_cache_tail_rows: list[dict] = []
+        # Track the (size, mtime_ns) identity of the parsed committed-action registry file. (issue #412)
+        self._actions_cache_stat: tuple[int, int] | None = None
+        # Cache the parsed committed-action registry so wallet actions stop re-parsing it. (issue #412)
+        self._actions_cache_registry: Any = None
 
     # Return the local JSON players path.
     def players_path(self) -> Path:
@@ -225,6 +239,26 @@ class JsonStorageProvider(StorageProvider):
         # Create the settings directory used by the audio settings document.
         (self.data_dir / "settings").mkdir(parents=True, exist_ok=True)
 
+    # Forget every cached ledger row so the next read reloads from the file. (issue #412)
+    def _drop_ledger_cache(self) -> None:
+        # Restart incremental parsing from the beginning of the ledger file.
+        self._ledger_cache_offset = 0
+        # Forget the cached file identity so any observed state forces a reload.
+        self._ledger_cache_mtime_ns = None
+        # Discard previously decoded append-order rows.
+        self._ledger_cache_rows = []
+        # Discard the per-player index built from the discarded rows.
+        self._ledger_cache_by_player = {}
+        # Discard rows decoded from an unterminated trailing line.
+        self._ledger_cache_tail_rows = []
+
+    # Forget the cached committed-action registry so the next read reloads from the file. (issue #412)
+    def _drop_actions_cache(self) -> None:
+        # Forget the cached registry file identity.
+        self._actions_cache_stat = None
+        # Discard the cached parsed registry object.
+        self._actions_cache_registry = None
+
     # Reset local JSON storage by clearing the provider data directory.
     def reset(self) -> None:
         # Guard destructive local cleanup with the provider lock.
@@ -233,6 +267,10 @@ class JsonStorageProvider(StorageProvider):
             if self.data_dir.exists():
                 # Use shutil because the data directory may contain game subfolders.
                 shutil.rmtree(self.data_dir)
+            # Drop the ledger tail cache so reads never serve pre-reset rows. (issue #412)
+            self._drop_ledger_cache()
+            # Drop the action-registry cache alongside its removed backing file. (issue #412)
+            self._drop_actions_cache()
             # Recreate provider directories after clearing local state.
             self.ensure_ready()
 
@@ -495,30 +533,69 @@ class JsonStorageProvider(StorageProvider):
         # Serialize identity fragments so delimiters inside caller keys remain unambiguous.
         return json.dumps([player_id, scope, action_key], separators=(",", ":"))
 
+    # Decode one physical JSONL line using the historical malformed-line skipping semantics. (issue #412)
+    def _decode_ledger_line(self, line: str) -> dict | None:
+        # Start protected decoding so one malformed historical row does not block recovery.
+        try:
+            # Decode the candidate ledger row.
+            event = json.loads(line)
+        # Skip malformed rows consistently with the public recent-ledger reader.
+        except Exception:
+            # Report no row so callers continue to later append-only rows.
+            return None
+        # Keep dictionary rows that expose a ledger identity.
+        if isinstance(event, dict) and event.get("ledger_id"):
+            # Return the valid decoded event.
+            return event
+        # Report no row for identity-free payloads.
+        return None
+
     # Read valid ledger rows in their append order for recovery checks.
     def _ledger_rows(self) -> list[dict]:
-        # Return no rows for a fresh provider directory.
-        if not self.ledger_path().exists():
+        # Stat the append-only file once so unchanged content skips every re-parse. (issue #412)
+        try:
+            # Read the current size and modification identity of the ledger file.
+            stat = os.stat(self.ledger_path())
+        # Treat a missing file as an empty ledger exactly like the previous implementation.
+        except OSError:
+            # Drop cache state left behind by a removed or reset ledger file. (issue #412)
+            self._drop_ledger_cache()
             # Avoid opening an absent ledger file.
             return []
-        # Store valid decoded rows while tolerating unrelated historical corruption behavior.
-        rows = []
-        # Decode every physical JSONL row in append order.
-        for line in self.ledger_path().read_text(encoding="utf-8", errors="replace").splitlines():
-            # Start protected decoding so one malformed historical row does not block recovery.
-            try:
-                # Decode the candidate ledger row.
-                event = json.loads(line)
-            # Skip malformed rows consistently with the public recent-ledger reader.
-            except Exception:
-                # Continue to later append-only rows.
-                continue
+        # Serve cached rows when the file identity matches the last parse. (issue #412)
+        if stat.st_size == self._ledger_cache_offset and stat.st_mtime_ns == self._ledger_cache_mtime_ns:
+            # Return the cached append-order view without touching file contents.
+            return self._ledger_cache_rows
+        # Reload from the start after truncation or an equal-size rewrite. (issue #412)
+        if stat.st_size <= self._ledger_cache_offset:
+            # Drop the cache because append-only growth can no longer explain the observed file.
+            self._drop_ledger_cache()
+        # Read only the bytes appended after the cached offset. (issue #412)
+        with self.ledger_path().open("rb") as handle:
+            # Position the reader at the first unparsed byte.
+            handle.seek(self._ledger_cache_offset)
+            # Read exactly the appended region observed by the stat call.
+            appended = handle.read(stat.st_size - self._ledger_cache_offset)
+        # Split at the final newline so an unterminated trailing line is never cached. (issue #412)
+        boundary = appended.rfind(b"\n") + 1
+        # Decode complete lines with the same replacement policy as the previous full-file read.
+        for line in appended[:boundary].decode("utf-8", errors="replace").splitlines():
+            # Decode the candidate line with the historical malformed-line skipping.
+            event = self._decode_ledger_line(line)
             # Keep dictionary rows that expose a ledger identity.
-            if isinstance(event, dict) and event.get("ledger_id"):
-                # Add the valid event to the recovery view.
-                rows.append(event)
-        # Return all valid rows in commit order.
-        return rows
+            if event is not None:
+                # Add the valid event to the cached recovery view.
+                self._ledger_cache_rows.append(event)
+                # Index the same row reference by player for O(tail) filtered reads.
+                self._ledger_cache_by_player.setdefault(event.get("player_id"), []).append(event)
+        # Advance the cache offset past every fully terminated parsed line. (issue #412)
+        self._ledger_cache_offset += boundary
+        # Remember the file identity that produced the cached content. (issue #412)
+        self._ledger_cache_mtime_ns = stat.st_mtime_ns
+        # Re-decode unterminated trailing bytes each call without caching them. (issue #412)
+        self._ledger_cache_tail_rows = [row for row in (self._decode_ledger_line(line) for line in appended[boundary:].decode("utf-8", errors="replace").splitlines()) if row is not None]
+        # Return cached rows plus any uncacheable trailing rows in commit order.
+        return self._ledger_cache_rows + self._ledger_cache_tail_rows if self._ledger_cache_tail_rows else self._ledger_cache_rows
 
     # Project one durably committed action into players.json and ledger.jsonl.
     def _project_committed_action(self, event: dict) -> None:
@@ -553,10 +630,60 @@ class JsonStorageProvider(StorageProvider):
         # Append the original committed event after the wallet transition is durable.
         self._append_jsonl(self.ledger_path(), event)
 
+    # Cache one just-written registry object under its durable file identity. (issue #412)
+    def _store_actions_cache(self, registry: dict) -> None:
+        # Start protected stat logic so cache upkeep never fails a completed write.
+        try:
+            # Read the identity of the file that now contains exactly this registry.
+            stat = os.stat(self.ledger_actions_path())
+        # Fail toward re-reading on the next call instead of caching unverified state.
+        except OSError:
+            # Drop the cache so the next reader consults the file directly.
+            self._drop_actions_cache()
+            # Stop without caching.
+            return
+        # Store the registry reference for later stat-matched reuse.
+        self._actions_cache_registry = registry
+        # Store the file identity used to validate later cache hits.
+        self._actions_cache_stat = (stat.st_size, stat.st_mtime_ns)
+
+    # Read the committed-action registry through a (size, mtime_ns) stat-guarded cache. (issue #412)
+    def _read_actions_registry(self) -> Any:
+        # Stat the registry file so unchanged content skips a full JSON re-parse.
+        try:
+            # Read the current size and modification identity of the registry file.
+            stat = os.stat(self.ledger_actions_path())
+        # Treat a missing registry exactly like the previous per-call default read.
+        except OSError:
+            # Drop any cache tied to a removed registry file.
+            self._drop_actions_cache()
+            # Return a fresh mutable empty registry as the historical default factory did.
+            return self._empty_action_registry()
+        # Serve the cached parsed registry when the file identity is unchanged. (issue #412)
+        if self._actions_cache_registry is not None and self._actions_cache_stat == (stat.st_size, stat.st_mtime_ns):
+            # Return the cached registry object without re-reading the file.
+            return self._actions_cache_registry
+        # Build one call-local sentinel that only the corruption fallback can return.
+        sentinel = object()
+        # Re-read through the historical corruption-tolerant JSON reader.
+        parsed = self._read_json(self.ledger_actions_path(), lambda: sentinel)
+        # Preserve the historical corrupt-file behavior of backing up and returning a fresh default.
+        if parsed is sentinel:
+            # Never cache a corruption fallback so every later call re-checks the file.
+            self._drop_actions_cache()
+            # Return a fresh mutable empty registry exactly like the previous implementation.
+            return self._empty_action_registry()
+        # Cache the parsed payload under the pre-read identity so later writes force a reload.
+        self._actions_cache_registry = parsed
+        # Store the file identity used to validate later cache hits.
+        self._actions_cache_stat = (stat.st_size, stat.st_mtime_ns)
+        # Return the freshly parsed registry payload.
+        return parsed
+
     # Recover every journaled action before allowing a later wallet mutation.
     def _recover_committed_actions(self, registry: dict | None = None) -> dict:
-        # Load the durable registry when the caller did not already read it.
-        registry = registry or self._read_json(self.ledger_actions_path(), self._empty_action_registry)
+        # Load the durable registry through the stat-guarded cache when the caller did not pass one. (issue #412)
+        registry = registry or self._read_actions_registry()
         # Normalize malformed registry shapes to a safe empty action map.
         actions = registry.get("actions", {}) if isinstance(registry, dict) else {}
         # Track whether recovery completed any previously pending projections.
@@ -567,6 +694,8 @@ class JsonStorageProvider(StorageProvider):
             if record.get("projected") is True:
                 # Continue without rescanning the append-only ledger for settled actions.
                 continue
+            # Invalidate the registry cache before mutation so a failed projection cannot poison later reads. (issue #412)
+            self._drop_actions_cache()
             # Project the recorded immutable event exactly once.
             self._project_committed_action(record["event"])
             # Mark projection complete only after both compatible files are durable.
@@ -577,6 +706,8 @@ class JsonStorageProvider(StorageProvider):
         if recovered:
             # Atomically checkpoint the action journal after successful projection.
             self._write_json(self.ledger_actions_path(), registry)
+            # Re-cache the checkpointed registry under its new durable file identity. (issue #412)
+            self._store_actions_cache(registry)
         # Return the registry so the transaction can reuse its in-memory view.
         return registry
 
@@ -680,6 +811,8 @@ class JsonStorageProvider(StorageProvider):
                 event = _ledger_event(player_id, amount, transaction_type, before, after, game, round_id, committed_details)
                 # Allocate the next monotonic recovery sequence.
                 sequence = int(registry.get("next_sequence", 1))
+                # Invalidate the registry cache before mutation so an interrupted commit cannot poison later reads. (issue #412)
+                self._drop_actions_cache()
                 # Store the action record as the logical commit before projecting balance and JSONL.
                 registry.setdefault("actions", {})[identity] = {"sequence": sequence, "player_id": player_id, "action_scope": scope, "action_key": action_key, "action_fingerprint": fingerprint, "projected": False, "event": event}
                 # Advance the sequence for the next distinct action.
@@ -692,6 +825,8 @@ class JsonStorageProvider(StorageProvider):
                 registry["actions"][identity]["projected"] = True
                 # Checkpoint the projection marker so later reads skip settled journal entries.
                 self._write_json(self.ledger_actions_path(), registry)
+                # Re-cache the settled registry under its final durable file identity. (issue #412)
+                self._store_actions_cache(registry)
                 # Return the newly committed event with a non-replay marker.
                 return event, False
 
@@ -703,12 +838,18 @@ class JsonStorageProvider(StorageProvider):
             with self._ledger_process_lock():
                 # Project any action that committed before its process stopped or lost a response.
                 self._recover_committed_actions()
-                # Read all valid append-only rows after recovery.
+                # Read all valid append-only rows after refreshing the incremental cache. (issue #412)
                 rows = self._ledger_rows()
                 # Apply the optional player filter used by player and Admin history views.
                 if player_id is not None:
-                    # Keep only events owned by the requested player.
-                    rows = [event for event in rows if event.get("player_id") == player_id]
+                    # Filter the combined view directly while rare unterminated trailing rows exist. (issue #412)
+                    if self._ledger_cache_tail_rows:
+                        # Keep only events owned by the requested player.
+                        rows = [event for event in rows if event.get("player_id") == player_id]
+                    # Use the per-player index for the ordinary fully-cached case. (issue #412)
+                    else:
+                        # Keep only events owned by the requested player without scanning other wallets.
+                        rows = self._ledger_cache_by_player.get(player_id, [])
                 # Return the requested tail of matching rows.
                 return rows[-limit:]
 
@@ -942,9 +1083,9 @@ class MySQLStorageProvider(StorageProvider):
             state = default_factory()
             # Insert each default player row.
             for player in state.get("players", []):
-                # Insert one player with the current JSON-compatible field names.
+                # Use INSERT IGNORE so two processes racing this count-then-seed on a fresh database lose harmlessly instead of raising an unmapped IntegrityError out of the read path. (issue #431)
                 cursor.execute(
-                    "INSERT INTO casino_players (player_id, display_name, player_type, balance, created_at, updated_at, status) VALUES (%s, %s, %s, %s, %s, %s, %s)",  # Insert one seeded player row.
+                    "INSERT IGNORE INTO casino_players (player_id, display_name, player_type, balance, created_at, updated_at, status) VALUES (%s, %s, %s, %s, %s, %s, %s)",  # Insert one seeded player row while keeping any concurrently seeded row.
                     (player["player_id"], player["display_name"], player.get("type", "human"), round(float(player.get("balance", 0)), 2), player.get("created_at", utc_now()), player.get("updated_at", utc_now()), player.get("status", "active")),  # Bind seeded player fields.
                 )
 
@@ -1668,7 +1809,9 @@ def bootstrap_players(default_factory: Callable[[], dict]) -> None:
     provider = get_storage_provider()
     # Ensure backing storage exists before checking player bootstrap state.
     provider.ensure_ready()
-    # Seed default players only when storage has no players yet.
+    # Keep the empty check as a fast path that skips provisioning on already-seeded storage. (issue #431)
     if not provider.has_players():
-        # Persist the default player document through the active provider.
-        provider.save_players(default_factory())
+        # Route each seeded row through idempotent provisioning so the check-then-write race cannot clobber a concurrent bootstrap or wallet write. (issue #431)
+        for player in default_factory().get("players", []):
+            # Create or keep one default player exactly once under the provider's own locks.
+            provider.ensure_player(player)

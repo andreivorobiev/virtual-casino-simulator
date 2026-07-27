@@ -14,6 +14,8 @@ MEANINGFUL_RE = re.compile(r"\S")
 COMMENT_RE = re.compile(r"^\s*(#|//|/\*|\*)")
 # Set TRIVIAL_RE to the value needed for the next operation.
 TRIVIAL_RE = re.compile(r"^\s*([}\])};,]+|else\s*[{:]?|try\s*:|finally\s*:)$")
+# Fail the gate below this repository-wide floor so the density check can actually block a regression. (issue #416)
+MINIMUM_DENSITY_PERCENT = 98.0
 
 # Define the iter_files function used by this module.
 def iter_files():
@@ -30,20 +32,21 @@ def iter_files():
             # Execute this statement as part of the module's documented control flow.
             yield path
 
+# Recognize an inline trailing comment without counting URLs, anchors, or hex colors as documentation. (issue #416)
+INLINE_PY_COMMENT_RE = re.compile(r"\s#\s")
+# Require JavaScript inline comments to be delimited from code by whitespace so protocol slashes never match. (issue #416)
+INLINE_JS_COMMENT_RE = re.compile(r"\s//\s")
+
 # Define the line_has_comment_context function used by this module.
 def line_has_comment_context(lines, idx, suffix):
     # Set line to the value needed for the next operation.
     line = lines[idx]
-    # Branch when the following condition is true.
-    if COMMENT_RE.match(line):
+    # Accept a delimited inline trailing comment on the meaningful line itself.
+    if suffix == ".py" and INLINE_PY_COMMENT_RE.search(line):
         # Return the computed value to the caller.
         return True
-    # Branch when the following condition is true.
-    if suffix == ".py" and "#" in line:
-        # Return the computed value to the caller.
-        return True
-    # Branch when the following condition is true.
-    if suffix == ".js" and "//" in line:
+    # Accept the JavaScript inline form only when whitespace-delimited on both sides. (issue #416)
+    if suffix == ".js" and INLINE_JS_COMMENT_RE.search(line):
         # Return the computed value to the caller.
         return True
     # Set prev to the value needed for the next operation.
@@ -123,7 +126,13 @@ def main():
         for item in warnings[:50]:
             # Write diagnostic output so the current operation can be inspected.
             print(f" - {item}")
-    # Return the computed value to the caller.
+    # Fail the workflow when repository-wide density falls below the enforced floor. (issue #416)
+    if ratio < MINIMUM_DENSITY_PERCENT:
+        # Publish one actionable failure line naming the floor without hiding the earlier warning detail.
+        print(f"FAIL: comment density {ratio:.1f}% is below the enforced {MINIMUM_DENSITY_PERCENT:.1f}% floor.")
+        # Return a failing exit status so the comment-density gate can actually block a merge.
+        return 1
+    # Return the successful exit status when the floor is met.
     return 0
 
 # Branch when the following condition is true.

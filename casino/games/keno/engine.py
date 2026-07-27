@@ -10,6 +10,8 @@ from casino.errors import ValidationError
 
 # Set GAME_ID to the value needed for the next operation.
 GAME_ID = "keno"
+# Use operating-system-backed randomness for production number draws. (issue #420)
+_SYSTEM_RANDOM = random.SystemRandom()
 # Demo casino-style paytable. Keno paytables vary by house; rows 1-20 are explicit for validation.
 # Set PAYTABLE to the value needed for the next operation.
 PAYTABLE = {
@@ -87,8 +89,8 @@ def draw(state):
     if not state.get("open_tickets"):
         # Raise an error so invalid input or state is reported explicitly.
         raise ValidationError("Buy a Keno ticket first")
-    # Set drawn to the value needed for the next operation.
-    drawn = sorted(random.sample(range(1,81), 20))
+    # Draw twenty unique balls from the CSPRNG so results cannot be predicted from seeded Mersenne Twister state. (issue #420)
+    drawn = sorted(_SYSTEM_RANDOM.sample(range(1,81), 20))
     # Set rid to the value needed for the next operation.
     rid = new_id("kendraw")
     # Set results to the value needed for the next operation.
