@@ -50,10 +50,10 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.0
 - pai_gow_poker: 1.1.0
 - teen_patti: 1.1.0
-- tests: 1.63.1
-- docs: 1.63.1
+- tests: 1.63.2
+- docs: 1.63.2
 - contracts: 1.49.1
-- tooling: 1.21.4
+- tooling: 1.21.5
 - commenting_policy: 1.0.0
 - color_wheel: 1.1.0
 - poker_dice: 1.1.0
@@ -927,3 +927,4 @@ Historical source baseline: 9.1.0
 - **AUTH-012** (Core) - PASS: The configured bootstrap identity is idempotently migrated to a non-assignable platform_owner authority while preserving compatible Admin presentation, every committed migration revokes predecessor sessions, ordinary Admin and monitor identities retain Admin access without owner authority, and repeated process startup never rotates a current owner session.
 - **ADMIN-028** (Admin) - PASS: Only the current active platform owner can grant or revoke ordinary Admin authority through additive v2 account mutation, the target must already be an active canonical account, v2 account creation is player-only, platform-owner authority is not caller-assignable or removable, and transaction-scoped JSON/MySQL validation preserves at least one active owner and Admin while recording the canonical actor and revoking affected target sessions.
 - **TEST-138** (Tests) - PASS: Listener-free account-spine evidence proves one-time bootstrap-owner migration and session invalidation, owner-only additive-v2 Admin grant and revoke, ordinary-Admin denial, active-target enforcement, last-owner preservation under concurrent mutation, and v2 player-only creation without opening a listener or touching live identity data.
+- **TEST-142** (Tests) - PASS: An explicit exact-source qualification profile requires a completed disposable-MySQL 1/2/4/8 preflight, provisions exactly one hundred synthetic accounts, creates one hundred independent real-browser contexts on a disposable loopback runtime, synchronizes them at the rendered login gate, performs authentication, catalog navigation, and one complete game action through visible controls, and emits only aggregate latency, browser, HTTP, wallet, ledger, pool, coverage, concurrency, and cleanup evidence.

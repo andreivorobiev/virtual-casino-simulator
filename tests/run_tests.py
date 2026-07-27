@@ -58,6 +58,8 @@ from tests import cicd_deployment_tests
 from tests import nonfinite_money_tests
 # Import exact-source 50,000-cycle harness proofs for TEST-092.
 from tests.unit import ui_50000_tests
+# Import listener-free exact-100 concurrency harness proofs for TEST-142.
+from tests.unit import concurrent_browser_100_tests
 # Import the current-catalog hostile-client certification entrypoint.
 from tests.server_authority_tests import run_server_authority_tests
 # Import the reusable flushed reporter for TEST-010 browser execution.
@@ -948,6 +950,16 @@ def run_api_tests():
     runner_source=Path(__file__).read_text(encoding='utf-8')
     # Fail the whole lane immediately when a tautological mapped predicate reappears anywhere in this runner.
     assert re.search(r"assert_condition\(\s*True\s*,",runner_source) is None, 'tautological always-true mapped predicate found in tests/run_tests.py'
+    # Execute the exact-100 planner, barrier, aggregate, and workflow proofs without a listener or browser.
+    def run_concurrent_browser_100_harness_tests():
+        # Load only the focused issue #225 harness test class.
+        suite=unittest.defaultTestLoader.loadTestsFromTestCase(concurrent_browser_100_tests.ConcurrentBrowser100Tests)
+        # Execute the focused suite with concise standard output.
+        result=unittest.TextTestRunner(stream=sys.stdout,verbosity=1).run(suite)
+        # Fail the named central case when any focused assertion fails.
+        if not result.wasSuccessful(): raise AssertionError('100-context browser qualification harness unit suite failed')
+    # Record exact-user allocation, source-bound pool evidence, synchronization, privacy, and cleanup policy.
+    run_case('BROWSER-100-HARNESS-001',['AUTH-001','AUTH-002','SESSION-001','SESSION-005','TEST-039','TEST-042','TEST-142','CORE-021'],run_concurrent_browser_100_harness_tests)
     # Execute the listener-free TEST-092 allocation, classification, and resume-policy proofs.
     def run_ui_50000_harness_tests():
         # Load only the focused #227 harness test class.
