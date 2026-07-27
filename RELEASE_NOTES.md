@@ -1,6 +1,19 @@
-# Virtual Casino Simulator v0.9.5.13 Release Notes
+# Virtual Casino Simulator v0.9.5.14 Release Notes
 
-## Reliability, settlement, and governed-regression patch
+## TiltSeven Neon Pit identity release
+
+- Ships one immutable TiltSeven brand descriptor and one runtime applier for the approved product name, seven mark, Neon Pit venue, theme metadata, and browser palette tokens.
+- Applies the reviewed violet, rose, and mint palette to the shared shell, authenticated lobby, PWA metadata, and all 46 game surfaces while preserving semantic card suits, Roulette pockets, chips, payouts, success, warning, and error colors.
+- Preserves the current-main reduced-motion, containment, mobile-action, focus, session, and reliability behavior across every reconciled game route.
+- Rebrands fixed EN/RU transactional-mail subjects through a repository-owned constant without enabling delivery, provider networking, signup, invitation, or OAuth.
+- Makes concurrent exact-key invitation redemption converge after another worker commits the terminal state, while requiring exact caller, identity, and consumed-token bindings before accepting the replay.
+- Rotates the PWA shell identity and keeps curated What's New metadata disabled pending its separately governed UI remainder.
+- Retains exact immutable v0.9.5.13 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation.
+
+## Prior v0.9.5.13 reliability and integrity patch
+
+### Reliability, settlement, and governed-regression patch
 
 - Makes replayed settlement and refund identities storage-atomic for Blackjack, Baccarat, Roulette, Keno, and Bingo so a lost state save cannot duplicate wallet effects.
 - Adds a public host-only, one-shot CSRF bootstrap recovery path for unsafe browser requests while keeping missing-cookie recovery fail closed.

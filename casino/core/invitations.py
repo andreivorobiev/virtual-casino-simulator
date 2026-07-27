@@ -711,14 +711,30 @@ class InvitationService:
             auth.release_invited_identity(selected.get("invitation_id"))
             # Collapse every failure into the one public response.
             self._invalid_redemption()
+        # Track whether a concurrent exact-key worker already committed the terminal state.
+        completed_replay = {"matched": False}
         # Record successful token consumption before provisioning identity state.
         def token_consumed(raw_state: Any) -> dict:
             # Validate durable state before advancing the recovery phase.
             state = self._state(raw_state)
             # Resolve the exact claimed invitation.
             row = self._find(state, selected["invitation_id"])
+            # Read only structured recovery metadata before comparing replay bindings.
+            recovery_state = row.get("redemption") if isinstance(row, dict) and isinstance(row.get("redemption"), dict) else {}
+            # Compare the exact caller binding without exposing its stored verifier through timing.
+            same_caller = hmac.compare_digest(str(recovery_state.get("idempotency_digest", "")), idempotency_digest)
+            # Compare the deterministic identity references retained by the original claim.
+            same_identity = hmac.compare_digest(str(recovery_state.get("user_id", "")), str(redemption.get("user_id", ""))) and hmac.compare_digest(str(recovery_state.get("player_id", "")), str(redemption.get("player_id", "")))
+            # Compare the opaque consumed-token identifier returned to this exact caller.
+            same_token = hmac.compare_digest(str(recovery_state.get("token_id", "")), str(consumed.get("token_id", "")))
+            # Accept a concurrent worker's completed state only when every durable replay binding matches.
+            if row is not None and row.get("status") == "redeemed" and recovery_state.get("phase") == "complete" and same_caller and same_identity and same_token:
+                # Mark the terminal replay so this worker skips all remaining identity side effects.
+                completed_replay["matched"] = True
+                # Leave the already-committed invitation byte-for-byte unchanged.
+                return state
             # Require the same caller claim before changing recovery state.
-            if row is None or row.get("status") != "redeeming" or not hmac.compare_digest(str((row.get("redemption") or {}).get("idempotency_digest", "")), idempotency_digest):
+            if row is None or row.get("status") != "redeeming" or not same_caller:
                 # Preserve all state and require operator recovery.
                 raise ConflictError("Invitation redemption claim changed")
             # Advance the durable recovery phase after exact token confirmation.
@@ -731,6 +747,10 @@ class InvitationService:
             return state
         # Commit the token-consumed recovery boundary.
         update_json(self.store_path, token_consumed, default_invitations)
+        # Return the generic success when another exact-key worker already finalized the invitation.
+        if completed_replay["matched"]:
+            # Avoid re-running user, wallet, history, or audit effects after terminal convergence.
+            return {"status": "enrolled"}
         # Provision or resume the inactive user, deterministic wallet, terms acceptance, and activation.
         try:
             # Delegate the recoverable identity saga after the bearer is confirmed.
