@@ -1,6 +1,18 @@
 # Game Catalog Governance
 
-GitHub issue #81 establishes the one-time integration interface for expanding the simulator from six games to at least twenty. A playable game owns its catalog metadata in `modules/<game-id>.json`; shared runtime, shell, validator, and long-suite files discover that metadata and must not gain a new hardcoded game allowlist.
+GitHub issue #81 established the one-time integration interface for expanding the simulator from six games to at least twenty. A playable game owns its catalog metadata in `modules/<game-id>.json`; shared runtime, shell, validator, and long-suite files discover that metadata and must not gain a new hardcoded game allowlist.
+
+## Current reconciliation
+
+As of 2026-07-27 on protected `main` at `8879672e` (`v0.9.5.15`), the repository has 46 catalog-discovered playable game descriptors. The historical `GAME_CATALOG_TARGET = 20` value remains a release-readiness floor and reporting target, not a cap and not an instruction to add another catalog mechanism.
+
+Issues #73, #77, and #66 therefore should not be read as an active command to add duplicate game-registration infrastructure. Their current shared-architecture meaning is:
+
+- #73 remains the game-portfolio umbrella for catalog quality, per-game completion evidence, and any future game expansion beyond the installed set.
+- #77 remains the serialized shared-integration lane for collision-prone catalog files, descriptor promotion, requirements/test discovery, compatibility metadata, and acceptance evidence.
+- #66 remains the broad program epic that ties game catalog work to multi-user, storage, operations, and release-readiness boundaries.
+
+Count-based completion alone does not close a game leaf or umbrella issue. A game can be descriptor-discovered while still needing richer interaction, reload/recovery, reduced-motion, accessibility, localization, or product-quality evidence on its own issue.
 
 ## Source boundaries
 
@@ -10,9 +22,20 @@ GitHub issue #81 establishes the one-time integration interface for expanding th
 - `/api/v1/casino/games` and `/api/v1/casino/state` preserve their existing `games` arrays and add catalog/frontend metadata plus current and target counts.
 - `casino/core/request_player.py` and the router bind every `/api/v1/games/*` request to the authenticated player's session before a game handler runs.
 
+## #77 shared-file ownership
+
+The #77 owner coordinates changes to the collision surfaces that can break every worker if edited independently:
+
+- `modules/module-manifest.json` and any descriptor promotion that changes the installed catalog.
+- `docs/requirements/requirements.json` and its generated view.
+- `tests/run_tests.py`, long-suite discovery, visual-matrix registration, compatibility matrices, and catalog validators.
+- Shared shell/router/catalog documentation that changes how all games are discovered or navigated.
+
+Individual game workers should stay game-local until #77 explicitly releases a shared-integration slice. They should not create a second hardcoded catalog, edit global navigation allowlists, or allocate permanent requirement IDs outside the approved registry process.
+
 ## Adding an isolated game
 
-An isolated game slice should:
+An isolated game or catalog revision slice should:
 
 1. Add `modules/<game-id>.json` with a unique `game.id`, `sort_order`, `/games/<game-id>` route, primary category and category list.
 2. Declare `backend.register` as `package.module:callable`; the callable accepts the shared router and registers the game's frozen or additive API surface.
