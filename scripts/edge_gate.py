@@ -342,7 +342,7 @@ def _emit(record):
 
 
 # Parse the command, run only validation or observation, and return a process status.
-def main(argv=None):
+def main(argv=None, environ=None):
     # Create the two-command interface without any activation, rendering, or mutation action.
     parser = argparse.ArgumentParser(description="Validate or observe the Casino restricted-preview edge policy.")
     # Require an explicit read-only command.
@@ -361,8 +361,8 @@ def main(argv=None):
             _emit({"schema": "casino.edge-validation.v1", "status": "pass", "checks": ["access", "acme", "monitoring", "proxy", "rollback", "templates", "upstream"]})
             # Exit successfully after the non-mutating static pass.
             return 0
-        # Read the monitor credential from the inherited root-managed environment only.
-        monitor_header = _monitor_header_from_environment()
+        # Read the monitor credential from the explicit runner environment or inherited service environment.
+        monitor_header = _monitor_header_from_environment(environ)
         # Run the reviewed read-only observation and emit its sanitized result.
         _emit(observe(policy, monitor_header))
         # Exit successfully only after every live read-only gate passes.

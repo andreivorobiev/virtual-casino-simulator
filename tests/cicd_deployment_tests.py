@@ -100,8 +100,12 @@ class CicdDeploymentWorkflowTests(unittest.TestCase):
         self.assertLess(rollback_trap, text.index('install -m 0640 -o root -g root "${staging}/release.env" /etc/casino/release.env'))
         # Require workflow use to remain read-only; repair is an explicit owner operation.
         self.assertIn("scripts/validate_monitor_config.py\" check --monitor-env /etc/casino/edge-monitor.env --application-env /etc/casino/casino.env", text)
-        # Require final edge observation after restart and nginx reload.
-        self.assertIn("scripts/edge_gate.py observe", text)
+        # Require final edge observation through the packaged non-shell credential runner.
+        self.assertIn("scripts/run_edge_monitor.py --monitor-env /etc/casino/edge-monitor.env --policy /opt/casino/current/deploy/edge/restricted-preview.json", text)
+        # Reject shell sourcing because the Authorization assignment intentionally contains a scheme separator.
+        self.assertNotIn(". /etc/casino/edge-monitor.env", text)
+        # Reject a nested shell command boundary for any root-managed monitor value.
+        self.assertNotIn("bash -lc", text)
 
     # Prove the workflow requires scoped SSH secrets and does not embed host identities.
     def test_workflow_requires_scoped_ssh_secrets(self):

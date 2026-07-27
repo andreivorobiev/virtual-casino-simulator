@@ -64,6 +64,7 @@ class ReleaseArtifactTests(unittest.TestCase):
             "scripts/recovery.py": "# Fixture encrypted recovery runner.\n",
             "scripts/package_app.py": "# Fixture extracted-release verifier.\n",
             "scripts/validate_monitor_config.py": "# Fixture secret-safe monitor validator.\n",
+            "scripts/run_edge_monitor.py": "# Fixture non-shell edge monitor runner.\n",
             "scripts/write_release_env.py": "# Fixture deployment provenance writer.\n",
             "web/app.js": "// Fixture static application bundle.\n",
             "web/index.html": "<!doctype html><title>Fixture</title>\n",
@@ -222,8 +223,8 @@ class ReleaseArtifactTests(unittest.TestCase):
         host_scripts = set(re.findall(r'(?:\$\{release_root\}|/opt/casino/current)/(scripts/[A-Za-z0-9_.-]+\.py)', workflow))
         # Pin the reviewed host-command inventory so syntax drift cannot silently evade the extractor.
         self.assertEqual(host_scripts, {
-            "scripts/edge_gate.py",
             "scripts/package_app.py",
+            "scripts/run_edge_monitor.py",
             "scripts/validate_monitor_config.py",
             "scripts/write_release_env.py",
         })
@@ -384,19 +385,19 @@ class ReleaseArtifactTests(unittest.TestCase):
     # Prove the current private-invite compatibility record binds the exact safe predecessor boundary.
     def test_current_release_compatibility_binds_private_invite_predecessor(self):
         # Load the immutable packaged-release compatibility record governed by TOOL-003.
-        compatibility = json.loads((package_app.ROOT / "contracts" / "compatibility" / "app-0.9.5.8.json").read_text(encoding="utf-8"))
+        compatibility = json.loads((package_app.ROOT / "contracts" / "compatibility" / "app-0.9.5.9.json").read_text(encoding="utf-8"))
         # Require the canonical release and restricted-preview channel identities.
-        self.assertEqual((compatibility["app_version"], compatibility["release_channel"]), ("0.9.5.8", "restricted-preview-private-invite"))
+        self.assertEqual((compatibility["app_version"], compatibility["release_channel"]), ("0.9.5.9", "restricted-preview-private-invite"))
         # Require the exact prior packaged release and retained manifest filename.
         self.assertEqual(
             compatibility["predecessor"],
             {
-                "app_version": "0.9.5.5",
-                "compatibility_record": "contracts/compatibility/app-0.9.5.5.json",
+                "app_version": "0.9.5.8",
+                "compatibility_record": "contracts/compatibility/app-0.9.5.8.json",
                 "required_artifact": "release-manifest.json",
-                "source_commit_sha": "986103c42a5784c31568425573019eb83465f481",
-                "artifact_sha256": "b8b3e9e8c669c3d189a59a10f2c8d6fbb5e2116a7e38f4a03c735597460b54bf",
-                "manifest_sha256": "25a520b62a2347b719f93d45425cc29b023520187c1437f70a942544f28179f6",
+                "source_commit_sha": "3abe41d7ffbe075799550ab24276adf79d10c4fd",
+                "artifact_sha256": "0b1721768663edf6751baf8e118dde0371ccbd16dd4671c3b99cada6d09ec6db",
+                "manifest_sha256": "a6622d10634fe7edbdf043a970009f2f8623e87ace9562dd289a89c777c05bef",
             },
         )
         # Require application-only rollback while preserving the already-applied MySQL v2 boundary.

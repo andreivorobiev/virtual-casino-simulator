@@ -77,9 +77,9 @@ def read_assignment(path: pathlib.Path, name: str) -> str:
     return found
 
 
-# Derive the monitor token digest from the root-managed Authorization assignment.
-def expected_digest(monitor_path: pathlib.Path) -> str:
-    # Read the exact monitor Authorization value.
+# Read and validate the exact monitor Authorization assignment without shell evaluation.
+def validated_authorization(monitor_path: pathlib.Path) -> str:
+    # Read the exact monitor Authorization value through the strict assignment parser.
     authorization = read_assignment(monitor_path, AUTHORIZATION_ENV)
     # Require the fixed Bearer scheme and a strong, space-free token.
     match = AUTHORIZATION_RE.fullmatch(authorization)
@@ -87,6 +87,16 @@ def expected_digest(monitor_path: pathlib.Path) -> str:
     if not match:
         # Keep the failure category independent of secret content.
         raise ValueError("monitor authorization invalid")
+    # Return the exact validated header value for non-shell in-process use.
+    return authorization
+
+
+# Derive the monitor token digest from the root-managed Authorization assignment.
+def expected_digest(monitor_path: pathlib.Path) -> str:
+    # Read the exact validated monitor Authorization value.
+    authorization = validated_authorization(monitor_path)
+    # Match the already validated value to isolate only the bearer payload.
+    match = AUTHORIZATION_RE.fullmatch(authorization)
     # Hash only the token bytes because the application verifies the bearer payload, not the scheme.
     return hashlib.sha256(match.group(1).encode("utf-8")).hexdigest()
 
