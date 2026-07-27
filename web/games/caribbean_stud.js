@@ -249,6 +249,14 @@ function stylesHtml() {
   return '<style>/* Define the Caribbean Stud game layout and responsive regions. */.cs-shell{display:grid;gap:16px;min-width:0}.cs-header{display:flex;align-items:end;justify-content:space-between;gap:16px}.cs-header h1{margin:0}.cs-eyebrow{margin:0 0 4px;color:var(--muted,#b8c8c1)}.cs-phase{padding:7px 12px;border:1px solid var(--gold);border-radius:999px;color:var(--gold,#f6d47a)}.cs-layout{display:grid;grid-template-columns:minmax(220px,.7fr) minmax(520px,2.15fr) minmax(250px,.85fr);gap:16px;align-items:start}.cs-panel,.cs-stage{border:1px solid var(--gold);border-radius:12px;background:var(--panel-strong);padding:16px}.cs-controls,.cs-data{display:grid;align-content:start;gap:12px}.cs-controls input,.cs-controls button{min-height:44px}.cs-controls button[data-action=call]{background:var(--red,#a51f2d);color:#fff}.cs-help,.cs-retry,.cs-empty{color:var(--muted,#b8c8c1)}.cs-error{min-height:1.4em;margin:0;color:#ffd1d1}.cs-stage{display:grid;align-content:center;gap:20px;min-width:0;min-height:430px;background:radial-gradient(circle at 50% 42%,rgba(35,17,61,.42),rgba(20,10,34,.96) 70%)}.cs-hands{display:grid;gap:24px}.cs-hands article{display:grid;gap:12px}.cs-hands h3{margin:0}.cs-hands .playing-card{flex:none;width:clamp(3.9rem,7vw,6.4rem);font-size:clamp(1rem,2vw,1.45rem)}.cs-placeholder{min-height:8rem;display:grid;place-items:center;border:1px dashed rgba(255,255,255,.22);border-radius:10px;color:var(--muted,#b8c8c1);text-align:center}.cs-result{min-height:2.8em;margin:0;text-align:center}.cs-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.cs-summary span{display:grid;gap:5px;padding:10px;border-radius:8px;background:rgba(255,255,255,.05)}.cs-summary strong{overflow-wrap:anywhere}.cs-data section{display:grid;gap:10px}.cs-data ul{margin:0;padding-left:1.1rem}.cs-data li+li{margin-top:7px}.cs-paytable{margin:0;padding:0;list-style:none;display:grid;gap:6px}.cs-paytable li{display:grid;grid-template-columns:1fr auto;gap:8px;margin:0;padding:7px 9px;border-radius:8px;background:rgba(0,0,0,.18)}.cs-paytable strong{color:var(--gold,#f6d47a)}.cs-history-list{display:grid;gap:8px;max-height:285px;margin:0;padding:0;overflow:auto;list-style:none;scrollbar-width:thin}.cs-history-list li{display:grid;grid-template-columns:1fr auto;gap:8px;padding:9px;border-radius:8px;background:rgba(0,0,0,.2)}.cs-shell button:focus-visible,.cs-shell input:focus-visible,.cs-history-list:focus-visible{outline:3px solid var(--gold);outline-offset:2px}@media(max-width:1100px){.cs-layout{grid-template-columns:1fr}.cs-controls{order:1}.cs-stage{order:2;min-height:360px}.cs-data{order:3}}@media(max-width:560px){.cs-header{align-items:start;flex-direction:column}.cs-panel,.cs-stage{padding:12px}.cs-stage{min-height:330px}.cs-summary{grid-template-columns:1fr 1fr}.cs-hands .playing-card{width:clamp(3rem,17vw,4.8rem)}}@media(prefers-reduced-motion:reduce){.cs-shell *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}</style>.cs-repeat{min-height:44px;background:transparent;color:var(--gold);border:1px solid var(--gold)}.cs-repeat:disabled{opacity:.5}';
 }
 
+// Return repeat-aware styles without exposing CSS text after the style element.
+function repeatSafeStylesHtml() {
+  // Move the additive repeat rules ahead of the closing style tag.
+  const scoped = stylesHtml().replace('</style>.cs-repeat', '.cs-repeat');
+  // Close the corrected style element after every scoped repeat rule.
+  return scoped + '</style>';
+}
+
 // Bind semantic controls after each render.
 function bindEvents() {
   // Read the ante input from the current frame.
@@ -290,7 +298,7 @@ function render() {
   // Build the operational layout.
   const layout = '<div class="cs-layout">' + controlsHtml() + '<main class="cs-stage" aria-label="' + safe(text('stage.title')) + '">' + stageHtml(roundItem) + summaryHtml(roundItem) + '</main>' + dataHtml() + '</div>';
   // Replace the outlet atomically.
-  root.innerHTML = stylesHtml() + '<section class="cs-shell" data-testid="caribbean-stud">' + header + layout + '</section>';
+  root.innerHTML = repeatSafeStylesHtml() + '<section class="cs-shell" data-testid="caribbean-stud">' + header + layout + '</section>';
   // Attach handlers to the new controls.
   bindEvents();
 }

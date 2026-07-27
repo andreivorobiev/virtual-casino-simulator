@@ -68,6 +68,17 @@ for (const game of repeatGames) {
   assert.equal(russian[repeatKey], 'Повторить ставку', `${game}: Russian repeat copy`);
   // Require one semantic button hook through the supported catalog selector patterns.
   assert.match(source, /<button[^>]+(?:data-action="repeat"|data-testid="[^"]*repeat[^"]*"|data-repeat(?:=|[\s>])|id="[^"]*[Rr]epeat[^"]*")/, `${game}: repeat button hook`);
+  // Detect additive repeat selectors that were appended after an existing closing style tag.
+  const trailingRepeatSelector = source.match(/<\/style>(\.[a-z0-9-]*repeat)\{/i);
+  // Require affected modules to move that exact selector into a corrected style element before rendering.
+  if (trailingRepeatSelector) {
+    // Preserve the exact game-owned selector instead of accepting a generic replacement.
+    assert.ok(source.includes(`replace('</style>${trailingRepeatSelector[1]}', '${trailingRepeatSelector[1]}')`), `${game}: repeat CSS correction`);
+    // Count the correction helper declaration and its production render call.
+    const safeStyleCalls = source.match(/\brepeatSafeStyles?Html\(\)/g) || [];
+    // Prevent a dead helper from masking visible raw CSS in the generated route.
+    assert.ok(safeStyleCalls.length >= 2, `${game}: repeat CSS correction wiring`);
+  }
   // Extract only the game-owned repeat action for focused safety assertions.
   const repeatBody = functionBody(source, game);
   // Require every repeat action to depend on a previously committed wager snapshot.

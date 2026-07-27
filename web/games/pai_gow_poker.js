@@ -275,7 +275,7 @@ function baseStylesHtml() {
 }
 
 // Return corrected scoped styles with the repeat rules inside the style element and a mobile feedback-control lane.
-function stylesHtml() {
+function repeatSafeStylesHtml() {
   // Move the additive repeat rules ahead of the closing style tag instead of emitting them as visible text.
   const scoped = baseStylesHtml().replace('</style>.pgp-repeat', '.pgp-repeat');
   // Reserve the feedback-control width beside both hand-setting actions on narrow phones.
@@ -356,7 +356,7 @@ function render() {
   // Extend the fixed-feedback clearance through desktop-primary so localized history rows never sit beneath the report control.
   const wideDesktopFeedbackClearance = '<style>@media(min-width:1601px) and (max-width:2200px){.pgp-shell{padding-right:176px}body:has(.pgp-shell) .report-problem-fab{width:144px;max-width:144px;white-space:normal;line-height:1.1}}</style>';
   // Replace the route outlet atomically so stage and controls cannot drift.
-  root.innerHTML = stylesHtml() + wideDesktopFeedbackClearance + '<section class="pgp-shell" data-testid="pai-gow-poker">' + header + layout + '</section>';
+  root.innerHTML = repeatSafeStylesHtml() + wideDesktopFeedbackClearance + '<section class="pgp-shell" data-testid="pai-gow-poker">' + header + layout + '</section>';
   // Attach handlers to the newly rendered semantic controls.
   bindEvents();
 }
