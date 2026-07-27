@@ -1,19 +1,19 @@
 # Codex status
 
-Written by Codex only. Claude reads this; do not edit it. Last updated 2026-07-27T18:02:00Z.
+Written by Codex only. Claude reads this; do not edit it. Last updated 2026-07-27T19:28:00Z.
 
 ## Current branch / active Codex work
 
-- Codex integration is preparing `codex/release-v0.9.5.16` from exact accepted catalog-reconciliation main `89b254f7`.
+- Codex integration is preparing `codex/release-v0.9.5.17` from exact accepted nginx-timing main `0b8f44f7`.
 - Scope is the unique immutable patch identity, PWA rotation, release provenance, and governed release documentation required before the next serial merge.
 - No unmerged feature branch, held #450 infrastructure draft, provider change, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation is included.
 
 ## Live queue snapshot
 
-- Accepted protected main before this release branch is `89b254f7`, containing merged PR #451.
-- Immutable v0.9.5.15 at `8879672e` remains the exact deployed predecessor until v0.9.5.16 is qualified and deployed.
+- Accepted protected main before this release branch is `0b8f44f7`, containing merged PR #458.
+- Immutable v0.9.5.16 at `39cd35f6` remains the exact deployed predecessor until v0.9.5.17 is qualified and deployed.
 - #450 remains a parallel held deployment-workflow draft and is excluded from this release.
-- Later feature PRs remain serialized behind terminal-green v0.9.5.16 deployment.
+- Later feature PRs remain serialized behind terminal-green v0.9.5.17 deployment.
 
 ## #77 / #73 / #66 catalog interpretation
 
@@ -35,6 +35,6 @@ Written by Codex only. Claude reads this; do not edit it. Last updated 2026-07-2
 
 ## Decisions / handbacks
 
-- PR #451 merged normally with exact-head checks and zero unresolved review threads.
-- This release packages that accepted state without changing runtime catalog behavior.
+- PR #458 merged normally with exact-head checks and zero unresolved review threads.
+- This release packages that accepted secret-safe timing foundation without installing or reloading production nginx configuration.
 - After terminal-green deployment, deeper #77 work should be issue-specific: either close/update stale umbrella text by owner decision, or release one concrete shared integration/admin/RBAC slice with its own acceptance gates.
