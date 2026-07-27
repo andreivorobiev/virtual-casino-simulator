@@ -25,15 +25,15 @@ By default, copied environments are created under `C:\Users\andre\Documents\Code
 
 ## Pull Request Build
 
-Suite `100` is wired into `.github/workflows/long-suite-100.yml` and runs on every pull request. Treat the `Long Suite 100 / long_suite_100` check as mandatory once repository branch protection is updated to require it.
+Suite `100` is wired into `.github/workflows/long-suite-100.yml` and runs on every pull request as four parallel matrix shards plus one aggregate gate job. The gate job reports the exact `Long Suite 100 / long_suite_100` check context that repository branch protection requires, and it fails unless every shard succeeded, so the required check can never pass vacuously.
 
-The workflow runs:
+Each shard runs:
 
 ```powershell
-python tests/long_suites.py --suite 100 --copy-deployment
+python tests/long_suites.py --suite 100 --shard-count 4 --shard-index <N> --copy-deployment
 ```
 
-This includes the browser audio verification path.
+Shard `0` includes the browser audio verification path; shards `1` through `3` pass `--skip-browser-audio` and focus on API/gameplay volume, mirroring the soak lane. Superseded runs for the same pull request are cancelled automatically by the workflow concurrency group.
 
 ## Parallel Shards
 

@@ -2,9 +2,21 @@ name: Long Suite 100
 on:
   pull_request:
   workflow_dispatch:
+
+# Cancel superseded runs for the same pull request; pushes and dispatches keep unique groups.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
 jobs:
-  long_suite_100:
+  # Split the mandatory suite across parallel isolated workers exactly like the soak lane.
+  long_suite_100_shard:
+    name: long_suite_100_shard_${{ matrix.shard }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -14,11 +26,28 @@ jobs:
         run: python -m pip install -r requirements-dev.txt
       - name: Install Playwright Chromium
         run: python -m playwright install chromium
-      - name: Run mandatory Suite 100
-        run: python tests/long_suites.py --suite 100 --copy-deployment
-      - name: Upload long-suite artifacts
+      # Keep browser audio evidence on shard 0; the remaining shards cover API/gameplay volume.
+      - name: Run mandatory Suite 100 shard
+        shell: bash
+        run: |
+          if [ "${{ matrix.shard }}" = "0" ]; then
+            python tests/long_suites.py --suite 100 --shard-count 4 --shard-index "${{ matrix.shard }}" --copy-deployment
+          else
+            python tests/long_suites.py --suite 100 --shard-count 4 --shard-index "${{ matrix.shard }}" --copy-deployment --skip-browser-audio
+          fi
+      - name: Upload long-suite shard artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: long-suite-100-artifacts
+          name: long-suite-100-shard-${{ matrix.shard }}-artifacts
           path: logs/test-runs/
+
+  # Keep reporting the exact `long_suite_100` context required by branch protection.
+  long_suite_100:
+    needs: long_suite_100_shard
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      # Fail unless every shard succeeded so the required check can never pass vacuously.
+      - name: Require every shard to succeed
+        run: test "${{ needs.long_suite_100_shard.result }}" = "success"
