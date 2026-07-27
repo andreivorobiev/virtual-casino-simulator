@@ -8,6 +8,7 @@
   "controls.deal": "Раздать карты",
   "controls.draw": "Добрать карты",
   "controls.holdHelp": "Выберите карты, которые нужно оставить, затем один раз выполните добор.",
+  "controls.repeat": "Повторить ставку",
   "controls.title": "Управление игрой",
   "controls.totalWager": "Общая ставка",
   "controls.wager": "Ставка игровыми жетонами",

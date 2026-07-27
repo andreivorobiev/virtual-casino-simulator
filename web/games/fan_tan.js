@@ -27,6 +27,8 @@ const ROUTE_CSS = [
   '.fan-tan__bet input{min-height:44px;min-width:0;}', // Preserve keyboard and touch usability for amount inputs.
   '.fan-tan__play{min-height:46px;border:0;border-radius:12px;color:white;background:#a71922;font-weight:800;}', // Use the shared red primary-action convention.
   '.fan-tan__play:disabled{opacity:.58;cursor:not-allowed;}', // Keep unavailable action state readable.
+  '.fan-tan__repeat{min-height:46px;border:1px solid rgba(255,215,128,.55);border-radius:12px;background:transparent;color:#ffd780;font-weight:800;}', // Present the repeat action as a secondary gold-outline control beside the primary count.
+  '.fan-tan__repeat:disabled{opacity:.5;cursor:not-allowed;}', // Keep the unavailable repeat state readable.
   '.fan-tan__stage{display:grid;place-items:center;gap:14px;overflow:hidden;}', // Center the counting pile without nested scroll.
   '.fan-tan__tray{width:min(64vh,540px);max-width:100%;aspect-ratio:1.4;display:grid;place-items:center;border:2px solid var(--gold);border-radius:18px;background:radial-gradient(circle at center,var(--felt2),var(--bg));}', // Draw the count tray as the dominant stage.
   '.fan-tan__beans{display:grid;grid-template-columns:repeat(8,18px);gap:8px;justify-content:center;align-content:center;}', // Render a compact code-native counted pile.
@@ -58,6 +60,8 @@ let playPending = false;
 let motionScope = null;
 // Store whether the current count presentation used reduced motion.
 let reducedMotionActive = false;
+// Retain the last committed wager map so one click can repeat the same round.
+let lastBet = null;
 // Store the locale subscription cleanup callback.
 let localeUnsubscribe = null;
 
@@ -218,8 +222,10 @@ export function viewMarkup({ translate = tx } = {}) {
   const residueLabel = latestRound ? translated('result.residue', { residue: latestRound.residue }) : translated('result.waiting');
   // Resolve net result detail only when a backend settlement exists.
   const resultDetail = latestRound ? translated('result.net', { amount: tokenAmount(latestRound.net, translate) }) : translated('result.hint');
+  // Enable the one-click repeat only when a prior wager map exists and no round or unresolved retry is active.
+  const repeatDisabled = playPending || Boolean(pendingRequestId) || !lastBet;
   // Return a three-zone layout aligned with the visual-design standard.
-  return `<section class="fan-tan" data-testid="fan-tan"><header class="fan-tan__header"><div><h1>${translated('title')}</h1><p>${translated('subtitle')}</p></div><span class="fan-tan__phase" data-testid="fan-tan-phase">${translated(phase)}</span></header><div class="fan-tan__layout"><section class="fan-tan__panel fan-tan__controls" aria-label="${translated('controls.aria')}"><h2>${translated('controls.title')}</h2><p>${translated('controls.help')}</p>${wagerControlsHtml(translate)}<button class="fan-tan__play" data-play type="button"${playPending ? ' disabled' : ''}>${translated(playPending ? 'action.counting' : 'action.play')}</button><p class="fan-tan__error" data-error aria-live="polite"></p></section><section class="fan-tan__panel fan-tan__stage" aria-label="${translated('stage.aria')}"><div class="fan-tan__tray" data-reduced-motion="${reducedMotionActive}"><div class="fan-tan__beans">${beanHtml()}</div></div><div class="fan-tan__result" aria-live="polite"><strong>${residueLabel}</strong><span>${resultDetail}</span></div></section><aside class="fan-tan__panel fan-tan__data" aria-label="${translated('data.aria')}"><section><h2>${translated('paytable.title')}</h2>${paytableHtml(translate)}</section><section><h2>${translated('history.title')}</h2><div class="fan-tan__history" tabindex="0" aria-label="${translated('history.aria')}">${historyHtml(translate)}</div></section></aside></div></section>`;
+  return `<section class="fan-tan" data-testid="fan-tan"><header class="fan-tan__header"><div><h1>${translated('title')}</h1><p>${translated('subtitle')}</p></div><span class="fan-tan__phase" data-testid="fan-tan-phase">${translated(phase)}</span></header><div class="fan-tan__layout"><section class="fan-tan__panel fan-tan__controls" aria-label="${translated('controls.aria')}"><h2>${translated('controls.title')}</h2><p>${translated('controls.help')}</p>${wagerControlsHtml(translate)}<button class="fan-tan__play" data-play type="button"${playPending ? ' disabled' : ''}>${translated(playPending ? 'action.counting' : 'action.play')}</button><button type="button" class="fan-tan__repeat" data-action="repeat"${repeatDisabled ? ' disabled' : ''}>${translated('controls.repeat')}</button><p class="fan-tan__error" data-error aria-live="polite"></p></section><section class="fan-tan__panel fan-tan__stage" aria-label="${translated('stage.aria')}"><div class="fan-tan__tray" data-reduced-motion="${reducedMotionActive}"><div class="fan-tan__beans">${beanHtml()}</div></div><div class="fan-tan__result" aria-live="polite"><strong>${residueLabel}</strong><span>${resultDetail}</span></div></section><aside class="fan-tan__panel fan-tan__data" aria-label="${translated('data.aria')}"><section><h2>${translated('paytable.title')}</h2>${paytableHtml(translate)}</section><section><h2>${translated('history.title')}</h2><div class="fan-tan__history" tabindex="0" aria-label="${translated('history.aria')}">${historyHtml(translate)}</div></section></aside></div></section>`;
 }
 
 // Render the route and reconnect its game-owned inputs after DOM replacement.
@@ -232,6 +238,18 @@ function render() {
   root.querySelectorAll('[data-wager]').forEach(input => { input.oninput = () => { const amount = Number(input.value); if (Number.isFinite(amount) && amount > 0) wagers[input.dataset.wager] = amount; else delete wagers[input.dataset.wager]; }; });
   // Wire the one atomic play action.
   root.querySelector('[data-play]').onclick = play;
+  // Wire the one-click repeat that re-fires the previous wager map.
+  root.querySelector('[data-action="repeat"]').onclick = repeat;
+}
+
+// Re-apply the last committed wager map and re-fire one round without a timer.
+async function repeat() {
+  // Ignore repeat while counting, holding an unresolved retry, or without a prior wager map.
+  if (playPending || pendingRequestId || !lastBet) return;
+  // Restore the previous wager map into the local control state.
+  wagers = { ...lastBet.wagers };
+  // Fire the shared exactly-once play action with the restored wagers.
+  await play();
 }
 
 // Load session-bound state from the additive v1 game endpoint.
@@ -248,6 +266,8 @@ async function load() {
   reconcilePendingRequest();
   // Restore the latest real result without inventing a default residue.
   latestRound = gameState.state?.recent_rounds?.length ? gameState.state.recent_rounds[gameState.state.recent_rounds.length - 1] : null;
+  // Recover a repeatable wager map from the newest settled round so repeat survives a reload.
+  lastBet = latestRound?.wagers ? { wagers: { ...latestRound.wagers } } : null;
   // Render after rules and history resources are available.
   render();
 }
@@ -287,6 +307,8 @@ async function play() {
     if (root !== mountedRoot || motionScope !== activeScope) return;
     // Store the authoritative settlement before starting decorative presentation.
     latestRound = response.round;
+    // Remember the settled wager map so one click can repeat the same round next time.
+    lastBet = { wagers: { ...(response.round?.wagers || command.wagers) } };
     // Treat a platform reduced-motion preference as immediate counting evidence.
     reducedMotionActive = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true;
     // Schedule the final reveal through the shared motion scope.
@@ -320,6 +342,8 @@ export const FanTanGame = {
   async mount(node) {
     // Store the current route outlet before asynchronous initialization.
     root = node;
+    // Reset any repeatable wager map so a new mount never inherits a stale one before load reconciles history.
+    lastBet = null;
     // Install game-owned styles without changing shared CSS.
     ensureStyles();
     // Create one lifecycle-bound timer scope for this mount.
@@ -345,6 +369,8 @@ export const FanTanGame = {
     root = null;
     // Reset the in-flight guard because teardown cancelled presentation.
     playPending = false;
+    // Clear the repeatable wager map so the next session starts fresh.
+    lastBet = null;
     // Release any unresolved retry identity so a later mount or a different session cannot inherit it; remount reloads authoritative state. (issue #261)
     clearPendingRequest();
   },

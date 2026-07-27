@@ -36,6 +36,8 @@ let ante = 5;
 let pairPlus = 0;
 // Prevent overlapping atomic browser actions.
 let busy = false;
+// Retain the last committed Ante and optional Pair Plus so one click can repeat the same round.
+let lastBet = null;
 // Store the locale cleanup callback so unmount releases subscriptions.
 let unsubscribeLocale = null;
 // Track mount generations so late network responses cannot revive an old route.
@@ -287,10 +289,14 @@ function controlsHtml(roundItem) {
   const configurationDisabled = Boolean(roundItem && roundItem.phase !== 'settled') || busy;
   // Enable Play and Fold only for the active decision phase.
   const decisionEnabled = roundItem?.phase === 'decision' && !busy;
+  // Detect the decision phase so the one-click repeat only appears outside it.
+  const decision = roundItem?.phase === 'decision';
+  // Enable the one-click repeat only when a prior settled round exists and nothing is in flight.
+  const repeatDisabled = busy || !lastBet;
   // Keep the total initial debit preview beside its wager controls.
   const initialTotal = ante + pairPlus;
   // Return stable controls with primary actions in one reserved region.
-  return `<aside class="tcp-panel tcp-controls" aria-label="${safe(text('aria.controls'))}"><h2>${safe(text('controls.title'))}</h2><label for="tcp-ante">${safe(text('controls.ante'))}</label><input id="tcp-ante" data-testid="three-card-poker-ante" type="number" min="0.01" max="100000" step="0.01" value="${safe(ante)}"${configurationDisabled ? ' disabled' : ''}><label for="tcp-pair-plus">${safe(text('controls.pairPlus'))}</label><input id="tcp-pair-plus" data-testid="three-card-poker-pair-plus" type="number" min="0" max="100000" step="0.01" value="${safe(pairPlus)}"${configurationDisabled ? ' disabled' : ''}><p class="tcp-total">${safe(text('controls.initialTotal'))}: <strong>${safe(tokenAmount(initialTotal))}</strong></p><div class="tcp-action-slot"><button type="button" class="tcp-primary" data-action="deal"${configurationDisabled ? ' disabled' : ''}>${safe(roundItem?.phase === 'settled' ? text('controls.dealNext') : text('controls.deal'))}</button><div class="tcp-decision-actions"><button type="button" class="tcp-primary" data-action="play"${decisionEnabled ? '' : ' disabled'}>${safe(text('controls.play'))}</button><button type="button" data-action="fold"${decisionEnabled ? '' : ' disabled'}>${safe(text('controls.fold'))}</button></div></div><p class="tcp-help">${safe(roundItem?.phase === 'decision' ? text('controls.decisionHelp') : text('controls.readyHelp'))}</p></aside>`;
+  return `<aside class="tcp-panel tcp-controls" aria-label="${safe(text('aria.controls'))}"><h2>${safe(text('controls.title'))}</h2><label for="tcp-ante">${safe(text('controls.ante'))}</label><input id="tcp-ante" data-testid="three-card-poker-ante" type="number" min="0.01" max="100000" step="0.01" value="${safe(ante)}"${configurationDisabled ? ' disabled' : ''}><label for="tcp-pair-plus">${safe(text('controls.pairPlus'))}</label><input id="tcp-pair-plus" data-testid="three-card-poker-pair-plus" type="number" min="0" max="100000" step="0.01" value="${safe(pairPlus)}"${configurationDisabled ? ' disabled' : ''}><p class="tcp-total">${safe(text('controls.initialTotal'))}: <strong>${safe(tokenAmount(initialTotal))}</strong></p><div class="tcp-action-slot"><button type="button" class="tcp-primary" data-action="deal"${configurationDisabled ? ' disabled' : ''}>${safe(roundItem?.phase === 'settled' ? text('controls.dealNext') : text('controls.deal'))}</button>${decision ? '' : `<button type="button" class="tcp-repeat" data-action="repeat"${repeatDisabled ? ' disabled' : ''}>${safe(text('controls.repeat'))}</button>`}<div class="tcp-decision-actions"><button type="button" class="tcp-primary" data-action="play"${decisionEnabled ? '' : ' disabled'}>${safe(text('controls.play'))}</button><button type="button" data-action="fold"${decisionEnabled ? '' : ' disabled'}>${safe(text('controls.fold'))}</button></div></div><p class="tcp-help">${safe(roundItem?.phase === 'decision' ? text('controls.decisionHelp') : text('controls.readyHelp'))}</p></aside>`;
 }
 
 
@@ -345,7 +351,7 @@ function stylesHtml() {
   // Keep the card stage dominant on desktop, stack controls first on narrow screens, and disable decorative motion when requested.
   return `<style>
     /* Keep all issue #93 presentation scoped to the lazy game module. */
-    .tcp-shell{display:grid;gap:16px;min-width:0}.tcp-header{display:flex;align-items:end;justify-content:space-between;gap:14px}.tcp-header h1{margin:0}.tcp-header p{margin:0 0 4px;color:var(--gold,#f6d47a)}.tcp-layout{display:grid;grid-template-columns:minmax(210px,.72fr) minmax(520px,2.35fr) minmax(230px,.82fr);gap:16px;align-items:start;min-width:0}.tcp-panel{min-width:0;padding:16px;border:1px solid var(--gold);border-radius:16px;background:var(--panel-strong)}.tcp-controls{display:grid;gap:10px}.tcp-controls input,.tcp-controls button{min-height:44px}.tcp-total,.tcp-help{margin:0;color:var(--muted,#b8c8c1)}.tcp-action-slot{display:grid;gap:9px}.tcp-decision-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px}.tcp-primary{color:#fff;background:#a51f2d}.tcp-stage{display:grid;gap:14px;background:radial-gradient(circle at 50% 44%,rgba(35,17,61,.58),rgba(20,10,34,.96) 70%)}.tcp-stage-head{display:flex;align-items:start;justify-content:space-between;gap:12px}.tcp-stage-head p,.tcp-stage-head h2{margin:0}.tcp-phase{padding:7px 11px;border:1px solid var(--gold);border-radius:999px;color:var(--gold)}.tcp-table{display:grid;grid-template-rows:auto auto auto;gap:14px;place-items:center;min-height:510px;padding:20px;border:2px solid var(--gold);border-radius:18px;background:radial-gradient(circle,rgba(35,17,61,.38),rgba(20,10,34,.62))}.tcp-hand{display:grid;gap:8px;justify-items:center;width:100%}.tcp-hand header{display:flex;justify-content:space-between;gap:12px;width:min(100%,360px)}.tcp-hand h3{margin:0}.tcp-card-row{display:flex;flex-wrap:nowrap;justify-content:center;gap:clamp(7px,1.4vw,14px);min-height:92px}.tcp-card-waiting{display:inline-block;flex:0 1 clamp(3.25rem,10vw,6.5rem);min-width:3.25rem;aspect-ratio:5/7;border:2px dashed rgba(255,255,255,.25);border-radius:.65rem}.tcp-table-mark{display:grid;gap:4px;text-align:center;color:var(--gold)}.tcp-summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}.tcp-metric{min-width:0;padding:9px;border-radius:10px;background:rgba(0,0,0,.22)}.tcp-metric span{display:block;color:var(--muted,#b8c8c1);font-size:.78rem}.tcp-metric strong{display:block;overflow-wrap:anywhere}.tcp-data{display:grid;gap:16px}.tcp-data h2{margin:0 0 8px;font-size:1rem}.tcp-data table{width:100%;border-collapse:collapse}.tcp-data th,.tcp-data td{padding:5px 3px;border-bottom:1px solid rgba(255,255,255,.1);text-align:left}.tcp-data td{text-align:right}.tcp-history-list{display:grid;gap:7px}.tcp-history-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;padding:8px;border-radius:9px;background:rgba(0,0,0,.18)}.tcp-history-row span{display:block;color:var(--muted,#b8c8c1);font-size:.78rem}.tcp-shell button:focus-visible,.tcp-shell input:focus-visible{outline:3px solid var(--gold);outline-offset:2px}@media(max-width:1100px){.tcp-layout{grid-template-columns:1fr}.tcp-controls{order:1}.tcp-stage{order:2}.tcp-data{order:3}.tcp-table{min-height:430px}.tcp-summary{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:520px){.tcp-header{align-items:start;flex-direction:column}.tcp-panel{padding:12px}.tcp-stage-head{flex-direction:column}.tcp-table{min-height:390px;padding:12px}.tcp-summary{grid-template-columns:1fr 1fr}.tcp-card-row{gap:5px}.tcp-card-row .playing-card{min-width:2.85rem}.tcp-decision-actions{grid-template-columns:1fr}}@media(prefers-reduced-motion:reduce){.tcp-shell *{scroll-behavior:auto!important;transition:none!important;animation:none!important;transform:none!important}}
+    .tcp-shell{display:grid;gap:16px;min-width:0}.tcp-header{display:flex;align-items:end;justify-content:space-between;gap:14px}.tcp-header h1{margin:0}.tcp-header p{margin:0 0 4px;color:var(--gold,#f6d47a)}.tcp-layout{display:grid;grid-template-columns:minmax(210px,.72fr) minmax(520px,2.35fr) minmax(230px,.82fr);gap:16px;align-items:start;min-width:0}.tcp-panel{min-width:0;padding:16px;border:1px solid var(--gold);border-radius:16px;background:var(--panel-strong)}.tcp-controls{display:grid;gap:10px}.tcp-controls input,.tcp-controls button{min-height:44px}.tcp-total,.tcp-help{margin:0;color:var(--muted,#b8c8c1)}.tcp-action-slot{display:grid;gap:9px}.tcp-decision-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px}.tcp-primary{color:#fff;background:#a51f2d}.tcp-stage{display:grid;gap:14px;background:radial-gradient(circle at 50% 44%,rgba(35,17,61,.58),rgba(20,10,34,.96) 70%)}.tcp-stage-head{display:flex;align-items:start;justify-content:space-between;gap:12px}.tcp-stage-head p,.tcp-stage-head h2{margin:0}.tcp-phase{padding:7px 11px;border:1px solid var(--gold);border-radius:999px;color:var(--gold)}.tcp-table{display:grid;grid-template-rows:auto auto auto;gap:14px;place-items:center;min-height:510px;padding:20px;border:2px solid var(--gold);border-radius:18px;background:radial-gradient(circle,rgba(35,17,61,.38),rgba(20,10,34,.62))}.tcp-hand{display:grid;gap:8px;justify-items:center;width:100%}.tcp-hand header{display:flex;justify-content:space-between;gap:12px;width:min(100%,360px)}.tcp-hand h3{margin:0}.tcp-card-row{display:flex;flex-wrap:nowrap;justify-content:center;gap:clamp(7px,1.4vw,14px);min-height:92px}.tcp-card-waiting{display:inline-block;flex:0 1 clamp(3.25rem,10vw,6.5rem);min-width:3.25rem;aspect-ratio:5/7;border:2px dashed rgba(255,255,255,.25);border-radius:.65rem}.tcp-table-mark{display:grid;gap:4px;text-align:center;color:var(--gold)}.tcp-summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}.tcp-metric{min-width:0;padding:9px;border-radius:10px;background:rgba(0,0,0,.22)}.tcp-metric span{display:block;color:var(--muted,#b8c8c1);font-size:.78rem}.tcp-metric strong{display:block;overflow-wrap:anywhere}.tcp-data{display:grid;gap:16px}.tcp-data h2{margin:0 0 8px;font-size:1rem}.tcp-data table{width:100%;border-collapse:collapse}.tcp-data th,.tcp-data td{padding:5px 3px;border-bottom:1px solid rgba(255,255,255,.1);text-align:left}.tcp-data td{text-align:right}.tcp-history-list{display:grid;gap:7px}.tcp-history-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;padding:8px;border-radius:9px;background:rgba(0,0,0,.18)}.tcp-history-row span{display:block;color:var(--muted,#b8c8c1);font-size:.78rem}.tcp-shell button:focus-visible,.tcp-shell input:focus-visible{outline:3px solid var(--gold);outline-offset:2px}@media(max-width:1100px){.tcp-layout{grid-template-columns:1fr}.tcp-controls{order:1}.tcp-stage{order:2}.tcp-data{order:3}.tcp-table{min-height:430px}.tcp-summary{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:520px){.tcp-header{align-items:start;flex-direction:column}.tcp-panel{padding:12px}.tcp-stage-head{flex-direction:column}.tcp-table{min-height:390px;padding:12px}.tcp-summary{grid-template-columns:1fr 1fr}.tcp-card-row{gap:5px}.tcp-card-row .playing-card{min-width:2.85rem}.tcp-decision-actions{grid-template-columns:1fr}}@media(prefers-reduced-motion:reduce){.tcp-shell *{scroll-behavior:auto!important;transition:none!important;animation:none!important;transform:none!important}}.tcp-repeat{min-height:46px;background:transparent;color:var(--gold);border:1px solid var(--gold)}.tcp-repeat:disabled{opacity:.5}
     /* End the game-owned style block without allocating runtime timers. */
   </style>`;
 }
@@ -445,6 +451,21 @@ async function deal() {
 }
 
 
+// Re-apply the last committed wagers and open one identical round without a timer.
+async function repeat() {
+  // Ignore repeat while a request is in flight or before any settled round exists.
+  if (busy || !lastBet) return;
+  // Never repeat while a round still awaits its Play-or-Fold decision.
+  if (state?.active_round) return;
+  // Restore the committed Ante into cached pre-deal configuration.
+  ante = lastBet.ante;
+  // Restore the committed optional Pair Plus into cached pre-deal configuration.
+  pairPlus = lastBet.pair_plus;
+  // Fire the shared retry-safe deal with the restored wagers, never replaying the decision.
+  await runAction(deal);
+}
+
+
 // Resolve the active round through one retry-safe Play or Fold decision.
 async function decide(decision) {
   // Capture this route generation so a late settlement cannot revive unmounted state.
@@ -467,6 +488,10 @@ async function decide(decision) {
   if (generation !== mountGeneration || !root) return;
   // Adopt the settled reload-safe state returned by the backend.
   adoptPayload(payload);
+  // Read the round the decision just advanced beyond the choose phase.
+  const settledRound = currentRound();
+  // Remember the committed Ante and optional Pair Plus so one click can repeat the settled round.
+  if (settledRound && settledRound.phase !== 'decision') lastBet = { ante: Number(settledRound.ante ?? ante), pair_plus: Number(settledRound.pair_plus ?? pairPlus) };
   // Clear the decision id after the backend confirms settlement or replay.
   pendingDecisionActionId = null;
   // Clear the decision context after successful confirmation.
@@ -490,6 +515,10 @@ function bindEvents() {
   const dealButton = root?.querySelector('[data-action="deal"]');
   // Capture current inputs and start one retry-safe deal when enabled.
   if (dealButton) dealButton.onclick = () => { captureWagers(); runAction(deal); };
+  // Read the one-click repeat control created by the latest render.
+  const repeatButton = root?.querySelector('[data-action="repeat"]');
+  // Re-open a round with the previous settled wagers without touching the decision.
+  if (repeatButton) repeatButton.onclick = repeat;
   // Read the Play decision control created by the latest render.
   const playButton = root?.querySelector('[data-action="play"]');
   // Commit the matching Play wager through the public decision endpoint.
@@ -515,6 +544,8 @@ export const ThreeCardPokerGame = {
     root = node;
     // Reset the visual action lock for a fresh mount.
     busy = false;
+    // Reset the repeatable wagers so a new session never inherits a prior bet.
+    lastBet = null;
     // Install the shared responsive card presentation once.
     ensureSharedCardStyles();
     // Load active and fallback game-owned resources before rendering.
@@ -535,6 +566,10 @@ export const ThreeCardPokerGame = {
     ante = state?.active_round?.ante ?? ante;
     // Restore optional Pair Plus configuration from the active round.
     pairPlus = state?.active_round?.pair_plus ?? pairPlus;
+    // Recover a repeatable wager configuration from the newest settled round so repeat survives a reload.
+    const recovered = state?.recent_rounds?.[0];
+    // Restore the repeatable wagers only when a prior settled round exposes its committed values.
+    if (recovered) lastBet = { ante: Number(recovered.ante ?? ante), pair_plus: Number(recovered.pair_plus ?? 0) };
     // Render the complete issue #93 surface.
     render();
     // Align the persistent shell wallet with recovered ledger state.
@@ -554,6 +589,8 @@ export const ThreeCardPokerGame = {
     rules = {};
     // Release the visual action lock for a future mount.
     busy = false;
+    // Clear the repeatable wagers so the next session starts fresh.
+    lastBet = null;
     // Discard unresolved deal retry state because remount recovery reads the server first.
     pendingDealRequestId = null;
     // Discard the deal fingerprint together with its request id.

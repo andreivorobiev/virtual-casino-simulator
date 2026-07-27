@@ -1,6 +1,7 @@
 {
   "controls.drop": "Drop puck",
   "controls.help": "The server commits the peg path and bucket before this animation replays it.",
+  "controls.repeat": "Repeat bet",
   "controls.retryDrop": "Retry drop",
   "controls.retryHelp": "The previous response was incomplete. Retry the same drop safely.",
   "controls.title": "Play controls",

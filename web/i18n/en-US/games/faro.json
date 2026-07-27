@@ -10,6 +10,7 @@
   "stake.title": "Stake",
   "action.deal": "Deal the cards",
   "action.dealing": "Dealing…",
+  "controls.repeat": "Repeat bet",
   "result.idle": "Pick a rank and deal.",
   "outcome.win": "Player card wins!",
   "outcome.lose": "Banker card takes it.",

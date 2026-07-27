@@ -110,6 +110,14 @@ assert.doesNotMatch(source, /toast\(error\.message\)/);
 assert.doesNotMatch(source, /text\('(?:stage|history)\.round'/);
 // Verify every bounded history entry has explicit list-item semantics.
 assert.match(source, /class="tcp-history-row" role="listitem"/);
+// Verify the one-click repeat control is present in the rendered controls.
+assert.match(source, /data-action="repeat"/);
+// Verify the repeat control resolves its label through the owned locale domain.
+assert.match(source, /text\('controls\.repeat'\)/);
+// Verify the repeat bet copy exists in both required locales.
+assert.equal(typeof english['controls.repeat'], 'string', 'Missing English key: controls.repeat');
+// Verify the Russian repeat bet copy exists so the label never falls back to English.
+assert.equal(typeof russian['controls.repeat'], 'string', 'Missing Russian key: controls.repeat');
 
 // List representative visible and accessible resources required by the surface.
 const requiredKeys = [

@@ -7,6 +7,7 @@
   "stake.title": "Stake",
   "action.draw": "Draw the grid",
   "action.drawing": "Drawing…",
+  "controls.repeat": "Repeat bet",
   "result.idle": "Pick a pattern and draw.",
   "result.hit": "{bet} hit!",
   "result.miss": "No pattern.",

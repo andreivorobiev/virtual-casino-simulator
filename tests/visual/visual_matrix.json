@@ -452,7 +452,7 @@
         "reduced_motion",
         "zoomed",
         "route_restored"
-      ],
+      , "repeat_available"],
       "locales": [
         "en-US",
         "ru-RU"
@@ -487,7 +487,7 @@
         "edge_selected_focus_visible",
         "edge_final_caught",
         "route_restored"
-      ],
+      , "repeat_available"],
       "locales": [
         "en-US",
         "ru-RU"
@@ -517,7 +517,7 @@
         "calling",
         "won",
         "route_restored"
-      ],
+      , "repeat_available"],
       "locales": [
         "en-US",
         "ru-RU"
@@ -610,7 +610,7 @@
         "settled_5_hands",
         "settled_10_hands",
         "route_restored"
-      ],
+      , "repeat_available"],
       "locales": [
         "en-US",
         "ru-RU"
@@ -643,7 +643,7 @@
         "war_decision",
         "war_result",
         "route_restored"
-      ],
+      , "repeat_available"],
       "locales": [
         "en-US",
         "ru-RU"
@@ -679,7 +679,7 @@
         "motion_qualified",
         "reduced_motion",
         "route_restored"
-      ],
+      , "repeat_available"],
       "locales": [
         "en-US",
         "ru-RU"
@@ -797,7 +797,7 @@
         "consecutive_push",
         "third_card_settled",
         "route_restored"
-      ],
+      , "repeat_available"],
       "locales": [
         "en-US",
         "ru-RU"
@@ -833,7 +833,7 @@
         "exact_replay",
         "reduced_motion",
         "route_restored"
-      ],
+      , "repeat_available"],
       "locales": [
         "en-US",
         "ru-RU"
@@ -870,7 +870,7 @@
         "tie_refund",
         "reduced_motion",
         "route_restored"
-      ],
+      , "repeat_available"],
       "locales": [
         "en-US",
         "ru-RU"
@@ -899,7 +899,7 @@
       "id": "three_card_poker",
       "route": "/games/three_card_poker",
       "selector": "[data-testid='three-card-poker']",
-      "states": ["ready", "decision", "player_win", "dealer_win", "dealer_not_qualified", "folded", "reduced_motion", "route_restored"],
+      "states": ["ready", "decision", "player_win", "dealer_win", "dealer_not_qualified", "folded", "reduced_motion", "route_restored", "repeat_available"],
       "locales": ["en-US", "ru-RU"],
       "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
       "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
@@ -908,7 +908,7 @@
       "id": "jacks_or_better_video_poker",
       "route": "/games/jacks_or_better_video_poker",
       "selector": "[data-testid='jacks-or-better-video-poker']",
-      "states": ["ready", "choose_holds", "winning_hand", "losing_hand", "reduced_motion", "route_restored"],
+      "states": ["ready", "choose_holds", "winning_hand", "losing_hand", "reduced_motion", "route_restored", "repeat_available"],
       "locales": ["en-US", "ru-RU"],
       "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
       "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
@@ -917,7 +917,7 @@
       "id": "deuces_wild_video_poker",
       "route": "/games/deuces_wild_video_poker",
       "selector": "[data-testid='deuces-wild-video-poker']",
-      "states": ["ready", "choose_holds", "winning_hand", "losing_hand", "reduced_motion", "route_restored"],
+      "states": ["ready", "choose_holds", "winning_hand", "losing_hand", "reduced_motion", "route_restored", "repeat_available"],
       "locales": ["en-US", "ru-RU"],
       "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
       "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
@@ -926,7 +926,7 @@
       "id": "scratch_cards",
       "route": "/games/scratch_cards",
       "selector": "[data-testid='scratch-cards']",
-      "states": ["ready", "revealing", "settled_win", "settled_no_win", "reduced_motion", "route_restored"],
+      "states": ["ready", "revealing", "settled_win", "settled_no_win", "reduced_motion", "route_restored", "repeat_available"],
       "locales": ["en-US", "ru-RU"],
       "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
       "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
@@ -935,7 +935,7 @@
       "id": "sic_bo",
       "route": "/games/sic_bo",
       "selector": "[data-testid='sic-bo-table']",
-      "states": ["ready", "wagers_selected", "rolling", "settled", "reduced_motion", "route_restored"],
+      "states": ["ready", "wagers_selected", "rolling", "settled", "reduced_motion", "route_restored", "repeat_available"],
       "locales": ["en-US", "ru-RU"],
       "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
       "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
@@ -944,7 +944,7 @@
       "id": "chuck_a_luck",
       "route": "/games/chuck_a_luck",
       "selector": "[data-testid='chuck-a-luck']",
-      "states": ["ready", "rolling", "settled", "reduced_motion", "route_restored"],
+      "states": ["ready", "rolling", "settled", "reduced_motion", "route_restored", "repeat_available"],
       "locales": ["en-US", "ru-RU"],
       "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
       "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
@@ -953,7 +953,7 @@
       "id": "craps",
       "route": "/games/craps",
       "selector": "[data-testid='craps']",
-      "states": ["ready", "come_out", "point_active", "settled", "reduced_motion", "route_restored"],
+      "states": ["ready", "come_out", "point_active", "settled", "reduced_motion", "route_restored", "repeat_available"],
       "locales": ["en-US", "ru-RU"],
       "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
       "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
@@ -962,7 +962,7 @@
       "id": "crown_and_anchor",
       "route": "/games/crown_and_anchor",
       "selector": "[data-testid='crown-and-anchor']",
-      "states": ["ready", "rolling", "settled", "reduced_motion", "route_restored"],
+      "states": ["ready", "rolling", "settled", "reduced_motion", "route_restored", "repeat_available"],
       "locales": ["en-US", "ru-RU"],
       "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
       "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
@@ -971,7 +971,7 @@
       "id": "over_under_7",
       "route": "/games/over_under_7",
       "selector": "[data-testid='over-under-7']",
-      "states": ["ready", "rolling", "settled", "reduced_motion", "route_restored"],
+      "states": ["ready", "rolling", "settled", "reduced_motion", "route_restored", "repeat_available"],
       "locales": ["en-US", "ru-RU"],
       "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
       "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
@@ -980,7 +980,7 @@
       "id": "plinko",
       "route": "/games/plinko",
       "selector": "[data-testid='plinko']",
-      "states": ["ready", "path_replay", "settled", "reduced_motion", "route_restored"],
+      "states": ["ready", "path_replay", "settled", "reduced_motion", "route_restored", "repeat_available"],
       "locales": ["en-US", "ru-RU"],
       "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
       "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
@@ -989,7 +989,7 @@
       "id": "fan_tan",
       "route": "/games/fan_tan",
       "selector": "[data-testid='fan-tan']",
-      "states": ["ready", "counting", "settled", "reduced_motion", "route_restored"],
+      "states": ["ready", "counting", "settled", "reduced_motion", "route_restored", "repeat_available"],
       "locales": ["en-US", "ru-RU"],
       "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
       "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
@@ -998,7 +998,7 @@
       "id": "andar_bahar",
       "route": "/games/andar_bahar",
       "selector": "[data-testid='andar-bahar']",
-      "states": ["ready", "settled", "reduced_motion", "route_restored"],
+      "states": ["ready", "settled", "reduced_motion", "route_restored", "repeat_available"],
       "locales": ["en-US", "ru-RU"],
       "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
       "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
@@ -1007,7 +1007,7 @@
       "id": "acey_deucey",
       "route": "/games/acey_deucey",
       "selector": "[data-testid='acey-deucey']",
-      "states": ["ready", "boundaries_dealt", "settled", "passed", "reduced_motion", "route_restored"],
+      "states": ["ready", "boundaries_dealt", "settled", "passed", "reduced_motion", "route_restored", "repeat_available"],
       "locales": ["en-US", "ru-RU"],
       "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
       "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
@@ -1016,7 +1016,7 @@
       "id": "caribbean_stud",
       "route": "/games/caribbean_stud",
       "selector": "[data-testid='caribbean-stud']",
-      "states": ["ready", "decision", "dealer_not_qualified", "player_win", "push", "dealer_win", "fold", "reduced_motion", "route_restored"],
+      "states": ["ready", "decision", "dealer_not_qualified", "player_win", "push", "dealer_win", "fold", "reduced_motion", "route_restored", "repeat_available"],
       "locales": ["en-US", "ru-RU"],
       "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
       "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
@@ -1025,7 +1025,7 @@
       "id": "let_it_ride",
       "route": "/games/let_it_ride",
       "selector": "[data-testid='let-it-ride']",
-      "states": ["ready", "first_decision", "second_decision", "settled", "reduced_motion", "route_restored"],
+      "states": ["ready", "first_decision", "second_decision", "settled", "reduced_motion", "route_restored", "repeat_available"],
       "locales": ["en-US", "ru-RU"],
       "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
       "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
@@ -1034,7 +1034,7 @@
       "id": "casino_holdem",
       "route": "/games/casino_holdem",
       "selector": "[data-testid='casino-holdem']",
-      "states": ["ready", "decision", "dealer_not_qualified", "player_win", "dealer_win", "push", "folded", "reduced_motion", "route_restored"],
+      "states": ["ready", "decision", "dealer_not_qualified", "player_win", "dealer_win", "push", "folded", "reduced_motion", "route_restored", "repeat_available"],
       "locales": ["en-US", "ru-RU"],
       "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
       "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
@@ -1043,7 +1043,7 @@
       "id": "joker_poker",
       "route": "/games/joker_poker",
       "selector": "[data-testid='joker-poker']",
-      "states": ["ready", "choose_holds", "winning_hand", "losing_hand", "reduced_motion", "route_restored"],
+      "states": ["ready", "choose_holds", "winning_hand", "losing_hand", "reduced_motion", "route_restored", "repeat_available"],
       "locales": ["en-US", "ru-RU"],
       "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
       "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
@@ -1052,7 +1052,7 @@
       "id": "double_bonus_video_poker",
       "route": "/games/double_bonus_video_poker",
       "selector": "[data-testid='double-bonus-video-poker']",
-      "states": ["ready", "choose_holds", "settled", "reduced_motion", "route_restored"],
+      "states": ["ready", "choose_holds", "settled", "reduced_motion", "route_restored", "repeat_available"],
       "locales": ["en-US", "ru-RU"],
       "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
       "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
@@ -1061,7 +1061,7 @@
       "id": "mississippi_stud",
       "route": "/games/mississippi_stud",
       "selector": "[data-testid='mississippi-stud']",
-      "states": ["ready", "street_one_decision", "street_two_decision", "street_three_decision", "settled", "reduced_motion", "route_restored"],
+      "states": ["ready", "street_one_decision", "street_two_decision", "street_three_decision", "settled", "reduced_motion", "route_restored", "repeat_available"],
       "locales": ["en-US", "ru-RU"],
       "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
       "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
@@ -1070,7 +1070,7 @@
       "id": "texas_holdem_practice_table",
       "route": "/games/texas_holdem_practice_table",
       "selector": "[data-testid='texas-holdem-practice-table']",
-      "states": ["ready", "preflop_decision", "flop_decision", "turn_decision", "river_decision", "showdown", "folded", "settled", "reduced_motion", "route_restored", "client_tamper_refreshed"],
+      "states": ["ready", "preflop_decision", "flop_decision", "turn_decision", "river_decision", "showdown", "folded", "settled", "reduced_motion", "route_restored", "client_tamper_refreshed", "repeat_available"],
       "locales": ["en-US", "ru-RU"],
       "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
       "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
@@ -1079,7 +1079,7 @@
       "id": "color_wheel",
       "route": "/games/color_wheel",
       "selector": "[data-testid='color-wheel']",
-      "states": ["ready"],
+      "states": ["ready", "repeat_available"],
       "locales": ["en-US", "ru-RU"],
       "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
       "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
@@ -1088,7 +1088,7 @@
       "id": "poker_dice",
       "route": "/games/poker_dice",
       "selector": "[data-testid='poker-dice']",
-      "states": ["ready"],
+      "states": ["ready", "repeat_available"],
       "locales": ["en-US", "ru-RU"],
       "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
       "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
@@ -1097,7 +1097,7 @@
       "id": "boule",
       "route": "/games/boule",
       "selector": "[data-testid='boule']",
-      "states": ["ready"],
+      "states": ["ready", "repeat_available"],
       "locales": ["en-US", "ru-RU"],
       "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
       "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
@@ -1106,7 +1106,7 @@
       "id": "faro",
       "route": "/games/faro",
       "selector": "[data-testid='faro']",
-      "states": ["ready"],
+      "states": ["ready", "repeat_available"],
       "locales": ["en-US", "ru-RU"],
       "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
       "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
@@ -1115,7 +1115,7 @@
       "id": "trente_et_quarante",
       "route": "/games/trente_et_quarante",
       "selector": "[data-testid='trente-et-quarante']",
-      "states": ["ready"],
+      "states": ["ready", "repeat_available"],
       "locales": ["en-US", "ru-RU"],
       "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
       "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
@@ -1124,7 +1124,7 @@
       "id": "pachinko",
       "route": "/games/pachinko",
       "selector": "[data-testid='pachinko']",
-      "states": ["ready"],
+      "states": ["ready", "repeat_available"],
       "locales": ["en-US", "ru-RU"],
       "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
       "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
@@ -1133,7 +1133,7 @@
       "id": "coin_pusher",
       "route": "/games/coin_pusher",
       "selector": "[data-testid='coin-pusher']",
-      "states": ["ready"],
+      "states": ["ready", "repeat_available"],
       "locales": ["en-US", "ru-RU"],
       "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
       "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
@@ -1142,7 +1142,7 @@
       "id": "marble_race",
       "route": "/games/marble_race",
       "selector": "[data-testid='marble-race']",
-      "states": ["ready"],
+      "states": ["ready", "repeat_available"],
       "locales": ["en-US", "ru-RU"],
       "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
       "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
@@ -1151,7 +1151,7 @@
       "id": "pattern_draw",
       "route": "/games/pattern_draw",
       "selector": "[data-testid='pattern-draw']",
-      "states": ["ready"],
+      "states": ["ready", "repeat_available"],
       "locales": ["en-US", "ru-RU"],
       "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
       "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
@@ -1160,7 +1160,7 @@
       "id": "lucky_grid",
       "route": "/games/lucky_grid",
       "selector": "[data-testid='lucky-grid']",
-      "states": ["ready"],
+      "states": ["ready", "repeat_available"],
       "locales": ["en-US", "ru-RU"],
       "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
       "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
@@ -1169,7 +1169,7 @@
       "id": "daily_draw_lab",
       "route": "/games/daily_draw_lab",
       "selector": "[data-testid='daily-draw-lab']",
-      "states": ["ready"],
+      "states": ["ready", "repeat_available"],
       "locales": ["en-US", "ru-RU"],
       "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
       "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
@@ -1178,7 +1178,7 @@
       "id": "four_card_poker",
       "route": "/games/four_card_poker",
       "selector": "[data-testid='four-card-poker']",
-      "states": ["ready"],
+      "states": ["ready", "repeat_available"],
       "locales": ["en-US", "ru-RU"],
       "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
       "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
@@ -1187,7 +1187,7 @@
       "id": "pai_gow_poker",
       "route": "/games/pai_gow_poker",
       "selector": "[data-testid='pai-gow-poker']",
-      "states": ["ready", "setting", "win", "loss", "push", "reduced_motion", "route_restored"],
+      "states": ["ready", "setting", "win", "loss", "push", "reduced_motion", "route_restored", "repeat_available"],
       "locales": ["en-US", "ru-RU"],
       "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
       "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]
@@ -1196,7 +1196,7 @@
       "id": "teen_patti",
       "route": "/games/teen_patti",
       "selector": "[data-testid='teen-patti']",
-      "states": ["ready", "decision", "play_settled", "folded", "reduced_motion", "route_restored"],
+      "states": ["ready", "decision", "play_settled", "folded", "reduced_motion", "route_restored", "repeat_available"],
       "locales": ["en-US", "ru-RU"],
       "viewports": ["desktop_primary", "desktop_compact", "tablet", "mobile"],
       "gates": ["VIS-COPY-001", "VIS-TOKEN-002", "VIS-LAYOUT-001", "VIS-LAYOUT-002", "VIS-LAYOUT-003", "VIS-SCROLL-001", "VIS-SCROLL-002", "VIS-HIERARCHY-001", "VIS-RESPONSIVE-001", "VIS-EVIDENCE-001", "VIS-CATALOG-001"]

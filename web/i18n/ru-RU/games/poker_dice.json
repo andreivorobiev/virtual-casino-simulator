@@ -9,6 +9,7 @@
   "stake.title": "Ставка",
   "action.roll": "Бросить кости",
   "action.rolling": "Бросок…",
+  "controls.repeat": "Повторить ставку",
   "result.idle": "Задайте ставку и бросьте кости.",
   "result.win": "{hand}!",
   "result.lose": "Нет выигрышной комбинации.",

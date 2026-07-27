@@ -5,6 +5,8 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 // Import URL helpers for dynamic ES module loading.
 import { pathToFileURL } from 'node:url';
+// Import the file reader so locale parity for the repeat control can be asserted.
+import { readFileSync } from 'node:fs';
 
 // Provide a minimal document root before importing shared browser modules.
 globalThis.document = { documentElement: { lang: 'en-US', dir: 'ltr' }, head: { append() {} }, querySelectorAll() { return []; }, getElementById() { return null; }, createElement() { return { id: '', textContent: '' }; } };
@@ -58,5 +60,9 @@ assert.match(markup, /data-testid="crown-and-anchor"/);
 for (const index of [0, 1, 2]) assert.match(markup, new RegExp(`data-die="${index}"`));
 // Assert every authoritative symbol panel receives one stable geometry identity.
 for (const symbol of frontend.SYMBOL_IDS) assert.match(markup, new RegExp(`data-symbol="${symbol}"`));
+// Assert the one-click repeat action control is present in the rendered route.
+assert.match(markup, /data-action="repeat"/);
+// Assert both shipped locales expose the repeat-bet control key with exact parity.
+for (const locale of ['en-US', 'ru-RU']) assert.ok('controls.repeat' in JSON.parse(readFileSync(path.resolve(`web/i18n/${locale}/games/crown_and_anchor.json`), 'utf8')));
 // Report success for the Python wrapper.
 console.log('Crown and Anchor frontend module tests passed.');

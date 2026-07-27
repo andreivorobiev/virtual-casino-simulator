@@ -9,6 +9,7 @@
   "controls.decision": "Решение",
   "controls.decisionHelp": "Колл ставит сумму в два раза больше анте; пас завершает раунд и оставляет анте разыгранным.",
   "controls.fold": "Пас",
+  "controls.repeat": "Повторить ставку",
   "controls.retryDeal": "Повторить сдачу",
   "controls.retryHelp": "Статус сети неясен; повторите то же подготовленное действие.",
   "controls.title": "Управление столом",

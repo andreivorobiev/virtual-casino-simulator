@@ -5,6 +5,7 @@
   "controls.help": "Deal the two boundary cards, then play a wager or pass before the third card is shown.",
   "controls.pass": "Pass",
   "controls.play": "Play wager",
+  "controls.repeat": "Repeat bet",
   "controls.retryDeal": "Retry deal",
   "controls.retryHelp": "Retrying the same action keeps the original result.",
   "controls.retryPass": "Retry pass",

@@ -29,6 +29,8 @@ const ROUTE_CSS = [
   '.ou7-bet input{min-height:44px;min-width:0;}', // Preserve keyboard and touch target size.
   '.ou7-play{min-height:46px;border:0;border-radius:12px;color:white;background:#a71922;font-weight:800;}', // Use shared red primary-action convention.
   '.ou7-play:disabled{opacity:.58;cursor:not-allowed;}', // Keep unavailable action state readable.
+  '.ou7-repeat{min-height:46px;border:1px solid rgba(255,215,128,.55);border-radius:12px;background:transparent;color:#ffd780;font-weight:700;}', // Offer a secondary one-click repeat action.
+  '.ou7-repeat:disabled{opacity:.5;cursor:not-allowed;}', // Keep the repeat action state readable.
   '.ou7-stage{display:grid;grid-template-rows:auto minmax(0,1fr) auto;place-items:center;gap:16px;overflow:hidden;}', // Reserve a stable dice stage.
   '.ou7-dice{display:flex;align-items:center;justify-content:center;gap:18px;width:100%;min-height:240px;}', // Keep dice central and stable.
   '.ou7-die{display:grid;place-items:center;width:min(30vw,150px);aspect-ratio:1;border:3px solid #f0cf74;border-radius:18px;background:linear-gradient(145deg,#f9f1d5,#d7ba70);color:#10271d;font-size:clamp(44px,8vw,84px);font-weight:1000;box-shadow:0 16px 36px rgba(0,0,0,.38);}', // Render reliable code-native dice.
@@ -55,6 +57,8 @@ let wagers = {};
 let latestRound = null;
 // Store whether an action request or reveal is active.
 let playPending = false;
+// Store the last committed wager map so one click can repeat the same bet.
+let lastBet = null;
 // Store the current player-facing phase key.
 let phase = 'phase.ready';
 // Store the disposable timer scope for this mount.
@@ -225,8 +229,10 @@ export function viewMarkup({ translate = tx } = {}) {
   const outcome = latestRound ? translated(`outcome.${latestRound.outcome}`) : translated('result.waiting');
   // Resolve the result detail without creating fake totals.
   const detail = latestRound ? translated('result.detail', { total: latestRound.total, net: tokenAmount(latestRound.net, translate) }) : translated('result.hint');
+  // Enable the one-click repeat only when a prior committed bet exists and no request or retry is active.
+  const repeatDisabled = playPending || Boolean(pendingRequestId) || !lastBet;
   // Return the governed three-zone layout.
-  return `<section class="over-under-7" data-testid="over-under-7"><header class="ou7-header"><div><h1>${translated('title')}</h1><p>${translated('subtitle')}</p></div><span class="ou7-phase" data-testid="over-under-7-phase">${translated(phase)}</span></header><div class="ou7-layout"><section class="ou7-panel ou7-controls" aria-label="${translated('controls.aria')}"><h2>${translated('controls.title')}</h2><p>${translated('controls.help')}</p>${wagerControlsHtml(translate)}<button class="ou7-play" data-play type="button"${playPending ? ' disabled' : ''}>${translated(playPending ? 'action.rolling' : 'action.play')}</button><p class="ou7-error" data-error aria-live="polite"></p></section><section class="ou7-panel ou7-stage" aria-label="${translated('stage.aria')}"><div class="ou7-dice" aria-label="${translated('stage.diceAria')}"><span class="ou7-die${playPending && !reducedMotionActive ? ' rolling' : ''}" data-testid="ou7-die-1">${safe(dieValue(0))}</span><span class="ou7-die${playPending && !reducedMotionActive ? ' rolling' : ''}" data-testid="ou7-die-2">${safe(dieValue(1))}</span></div><div class="ou7-result" aria-live="polite"><strong class="ou7-total">${latestRound ? safe(latestRound.total) : translated('result.totalPlaceholder')}</strong><span>${outcome}</span><span>${detail}</span></div></section><aside class="ou7-panel ou7-data" aria-label="${translated('data.aria')}"><section><h2>${translated('paytable.title')}</h2>${paytableHtml(translate)}</section><section><h2>${translated('history.title')}</h2><div class="ou7-history" tabindex="0" aria-label="${translated('history.aria')}">${historyHtml(translate)}</div></section></aside></div></section>`;
+  return `<section class="over-under-7" data-testid="over-under-7"><header class="ou7-header"><div><h1>${translated('title')}</h1><p>${translated('subtitle')}</p></div><span class="ou7-phase" data-testid="over-under-7-phase">${translated(phase)}</span></header><div class="ou7-layout"><section class="ou7-panel ou7-controls" aria-label="${translated('controls.aria')}"><h2>${translated('controls.title')}</h2><p>${translated('controls.help')}</p>${wagerControlsHtml(translate)}<button class="ou7-play" data-play type="button"${playPending ? ' disabled' : ''}>${translated(playPending ? 'action.rolling' : 'action.play')}</button><button class="ou7-repeat" data-action="repeat" type="button"${repeatDisabled ? ' disabled' : ''}>${translated('controls.repeat')}</button><p class="ou7-error" data-error aria-live="polite"></p></section><section class="ou7-panel ou7-stage" aria-label="${translated('stage.aria')}"><div class="ou7-dice" aria-label="${translated('stage.diceAria')}"><span class="ou7-die${playPending && !reducedMotionActive ? ' rolling' : ''}" data-testid="ou7-die-1">${safe(dieValue(0))}</span><span class="ou7-die${playPending && !reducedMotionActive ? ' rolling' : ''}" data-testid="ou7-die-2">${safe(dieValue(1))}</span></div><div class="ou7-result" aria-live="polite"><strong class="ou7-total">${latestRound ? safe(latestRound.total) : translated('result.totalPlaceholder')}</strong><span>${outcome}</span><span>${detail}</span></div></section><aside class="ou7-panel ou7-data" aria-label="${translated('data.aria')}"><section><h2>${translated('paytable.title')}</h2>${paytableHtml(translate)}</section><section><h2>${translated('history.title')}</h2><div class="ou7-history" tabindex="0" aria-label="${translated('history.aria')}">${historyHtml(translate)}</div></section></aside></div></section>`;
 }
 
 // Render the route and reconnect inputs after DOM replacement.
@@ -239,6 +245,18 @@ function render() {
   root.querySelectorAll('[data-wager]').forEach(input => { input.oninput = () => { const amount = Number(input.value); if (Number.isFinite(amount) && amount > 0) wagers[input.dataset.wager] = amount; else delete wagers[input.dataset.wager]; }; });
   // Wire the one atomic play action.
   root.querySelector('[data-play]').onclick = play;
+  // Wire the one-click repeat that re-fires the previous wager map.
+  root.querySelector('[data-action="repeat"]').onclick = repeat;
+}
+
+// Re-apply the last committed wager map and re-fire one roll without a timer.
+async function repeat() {
+  // Ignore repeat while a request or reveal is active, holding an unresolved retry, or without a prior committed bet.
+  if (playPending || pendingRequestId || !lastBet) return;
+  // Restore the previous wager map into the local unsent controls.
+  wagers = { ...lastBet.wagers };
+  // Fire the shared exactly-once play action with the restored wagers.
+  await play();
 }
 
 // Load session-bound state from the additive endpoint.
@@ -249,6 +267,8 @@ async function load() {
   reconcilePendingRequest();
   // Restore the latest result from player-owned history.
   latestRound = gameState.state?.recent_rounds?.length ? gameState.state.recent_rounds[gameState.state.recent_rounds.length - 1] : null;
+  // Recover a repeatable wager map from the newest settled round so repeat survives a reload.
+  if (latestRound?.wagers) lastBet = { wagers: { ...latestRound.wagers } };
   // Render after rules and history are available.
   render();
 }
@@ -290,6 +310,8 @@ async function play() {
     if (root !== mountedRoot || motionScope !== activeScope) return;
     // Store the authoritative settled round.
     latestRound = response.round;
+    // Remember the settled wager map so the next roll can repeat the same bet with one click.
+    if (latestRound?.wagers) lastBet = { wagers: { ...latestRound.wagers } };
     // Schedule the final reveal through the shared motion primitive.
     scheduleDiceReveal({ timerScope: activeScope, onSettled: async () => { phase = 'phase.settled'; playPending = false; gameState = await api('/api/v1/games/over-under-7/state'); render(); await refreshBalance(); } });
     // Render dice values while the reveal timer owns phase completion.
@@ -321,6 +343,8 @@ export const OverUnder7Game = {
   async mount(node) {
     // Store route ownership before async initialization.
     root = node;
+    // Reset the repeatable bet so another session never inherits it before state loads.
+    lastBet = null;
     // Install game-owned CSS.
     ensureStyles();
     // Create one lifecycle-bound timer scope.
@@ -346,6 +370,8 @@ export const OverUnder7Game = {
     root = null;
     // Reset in-flight state for the next mount.
     playPending = false;
+    // Clear the repeatable bet so the next session starts fresh.
+    lastBet = null;
     // Release any unresolved retry identity so a later mount or a different session cannot inherit it; remount reloads authoritative state. (issue #261)
     clearPendingRequest();
   },

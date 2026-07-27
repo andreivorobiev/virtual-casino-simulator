@@ -18,6 +18,7 @@
   "controls.pairPlus": "Pair Plus wager (optional)",
   "controls.play": "Play",
   "controls.readyHelp": "Set the Ante and optional Pair Plus wagers, then deal three cards.",
+  "controls.repeat": "Repeat bet",
   "controls.title": "Play controls",
   "dealer.notQualified": "Dealer does not qualify",
   "dealer.pending": "Dealer qualification pending",

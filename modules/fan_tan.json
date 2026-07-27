@@ -1,6 +1,6 @@
 {
   "module": "fan_tan",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "paths": [
     "casino/games/fan_tan/",
     "web/games/fan_tan.js",

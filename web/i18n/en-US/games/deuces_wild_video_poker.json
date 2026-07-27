@@ -8,6 +8,7 @@
   "controls.deal": "Deal cards",
   "controls.draw": "Draw cards",
   "controls.holdHelp": "Select any cards to keep, then draw once to complete the hand.",
+  "controls.repeat": "Repeat bet",
   "controls.title": "Play controls",
   "controls.totalWager": "Total wager",
   "controls.wager": "Play-token wager",

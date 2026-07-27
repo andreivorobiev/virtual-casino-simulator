@@ -7,6 +7,7 @@
   "cards.label": "{rank}, масть {suit}",
   "controls.deal": "Раздать карты",
   "controls.dealNext": "Следующий раунд",
+  "controls.repeat": "Повторить ставку",
   "controls.dealing": "Раздача",
   "controls.loading": "Стол загружается",
   "controls.help": "Выберите Дракона, Тигра или ничью и задайте ставку в игровых жетонах.",

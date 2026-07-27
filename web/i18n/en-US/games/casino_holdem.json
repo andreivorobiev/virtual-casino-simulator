@@ -9,6 +9,7 @@
   "controls.decision": "Decision",
   "controls.decisionHelp": "Call commits a wager equal to twice the ante; fold ends the round and forfeits the ante.",
   "controls.fold": "Fold",
+  "controls.repeat": "Repeat bet",
   "controls.retryDeal": "Retry deal",
   "controls.retryHelp": "Network status is unclear; retry the same prepared action.",
   "controls.title": "Table controls",

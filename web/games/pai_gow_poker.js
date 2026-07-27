@@ -34,6 +34,8 @@ let unsubscribeLocale = null;
 let pendingDeal = null;
 // Retain an unresolved set identity, round, and low-hand indices for safe retry.
 let pendingDecision = null;
+// Retain the last committed ante so one click can repeat the same round.
+let lastBet = null;
 // Retain the low-hand card positions the player has selected while setting.
 let lowSelection = [];
 // Retain a localized error resource key for the reserved route error region.
@@ -191,8 +193,12 @@ function controlsHtml() {
   const retryHelp = pendingDeal || pendingDecision ? '<p class="pgp-retry" role="status">' + safe(text('controls.retryHelp')) + '</p>' : '';
   // Change the deal label when the same unresolved action can be retried.
   const dealLabel = pendingDeal ? text('controls.retryDeal') : text('controls.deal');
+  // Enable the one-click repeat only outside the setting phase with a stored ante and nothing in flight.
+  const repeatDisabled = Boolean(activeRound) || busy || Boolean(pendingDeal) || Boolean(pendingDecision) || !lastBet;
+  // Offer the one-click repeat only outside the open setting phase so the hand-setting decision stays unobstructed.
+  const repeatButton = canSet ? '' : '<button type="button" class="pgp-repeat" data-action="repeat"' + (repeatDisabled ? ' disabled' : '') + '>' + safe(text('controls.repeat')) + '</button>';
   // Return a stable control rail whose primary actions never move between phases.
-  return '<aside class="pgp-panel pgp-controls" aria-label="' + safe(text('controls.title')) + '"><h2>' + safe(text('controls.title')) + '</h2><label for="pgp-wager">' + safe(text('controls.ante')) + '</label><input id="pgp-wager" type="number" min="0.01" max="100000" step="0.01" value="' + safe(wager) + '"' + (wagerDisabled ? ' disabled' : '') + '><button type="button" class="pgp-primary" data-action="deal"' + (dealDisabled ? ' disabled' : '') + '>' + safe(dealLabel) + '</button><fieldset' + (canSet ? '' : ' disabled') + '><legend>' + safe(text('controls.setLegend')) + '</legend><button type="button" class="pgp-set" data-action="set"' + (setDisabled ? ' disabled' : '') + '>' + safe(text('controls.set')) + '</button><button type="button" class="pgp-houseway" data-action="house-way"' + (houseWayDisabled ? ' disabled' : '') + '>' + safe(text('controls.houseWay')) + '</button></fieldset><p class="pgp-help">' + safe(text('controls.setHelp')) + '</p>' + retryHelp + '<p class="pgp-error" role="alert" data-error>' + (lastErrorKey ? safe(text(lastErrorKey)) : '') + '</p></aside>';
+  return '<aside class="pgp-panel pgp-controls" aria-label="' + safe(text('controls.title')) + '"><h2>' + safe(text('controls.title')) + '</h2><label for="pgp-wager">' + safe(text('controls.ante')) + '</label><input id="pgp-wager" type="number" min="0.01" max="100000" step="0.01" value="' + safe(wager) + '"' + (wagerDisabled ? ' disabled' : '') + '><button type="button" class="pgp-primary" data-action="deal"' + (dealDisabled ? ' disabled' : '') + '>' + safe(dealLabel) + '</button>' + repeatButton + '<fieldset' + (canSet ? '' : ' disabled') + '><legend>' + safe(text('controls.setLegend')) + '</legend><button type="button" class="pgp-set" data-action="set"' + (setDisabled ? ' disabled' : '') + '>' + safe(text('controls.set')) + '</button><button type="button" class="pgp-houseway" data-action="house-way"' + (houseWayDisabled ? ' disabled' : '') + '>' + safe(text('controls.houseWay')) + '</button></fieldset><p class="pgp-help">' + safe(text('controls.setHelp')) + '</p>' + retryHelp + '<p class="pgp-error" role="alert" data-error>' + (lastErrorKey ? safe(text(lastErrorKey)) : '') + '</p></aside>';
 }
 
 // Render the player hand, settled arrangement, and protected dealer hand.
@@ -263,9 +269,19 @@ function dataHtml() {
 }
 
 // Return scoped responsive styles without modifying the shared application stylesheet.
-function stylesHtml() {
+function baseStylesHtml() {
   // Define the dominant stage, stable controls, responsive stack, focus, and reduced-motion rules.
-  return '<style>.pgp-shell{display:grid;gap:16px;min-width:0}.pgp-header{display:flex;align-items:end;justify-content:space-between;gap:16px}.pgp-header h1{margin:0}.pgp-eyebrow{margin:0 0 4px;color:var(--muted,#b8c8c1)}.pgp-phase{padding:7px 12px;border:1px solid var(--gold);border-radius:999px;color:var(--gold,#f6d47a)}.pgp-layout{display:grid;grid-template-columns:minmax(220px,.72fr) minmax(560px,2.5fr) minmax(240px,.82fr);gap:16px;align-items:start}.pgp-panel,.pgp-stage{border:1px solid var(--gold);border-radius:16px;background:var(--panel-strong);padding:16px}.pgp-controls,.pgp-data{display:grid;align-content:start;gap:13px}.pgp-controls h2,.pgp-data h2{margin:0}.pgp-controls fieldset{margin:0;padding:0;border:0;display:grid;gap:10px}.pgp-controls legend{margin-bottom:8px}.pgp-controls input,.pgp-controls button{min-height:44px}.pgp-primary{background:var(--red,#a51f2d);color:#fff}.pgp-set{background:var(--gold,#c99a3a);color:#1a1205}.pgp-help,.pgp-retry,.pgp-empty{color:var(--muted,#b8c8c1)}.pgp-error{min-height:1.4em;margin:0;color:#ffd1d1}.pgp-stage{display:grid;align-content:center;gap:18px;min-width:0;min-height:500px;background:radial-gradient(circle at 50% 44%,rgba(35,17,61,.45),rgba(20,10,34,.98) 70%)}.pgp-table-felt{display:grid;gap:16px}.pgp-card-row{display:grid;justify-items:center;gap:10px}.pgp-card-row h3{margin:0}.pgp-cards,.pgp-tiles{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;min-height:96px}.pgp-tile{padding:4px;border:2px solid transparent;border-radius:12px;background:transparent;cursor:pointer;line-height:0}.pgp-tile-selected{border-color:var(--gold);transform:translateY(-8px)}.pgp-cards .playing-card,.pgp-tiles .playing-card{flex:none;width:clamp(4.2rem,7vw,6.6rem);font-size:clamp(1rem,2vw,1.55rem)}.pgp-result{min-height:2.4em;margin:0;text-align:center}.pgp-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}.pgp-summary span{display:grid;gap:5px;padding:10px;border-radius:10px;background:rgba(255,255,255,.05)}.pgp-summary strong{overflow-wrap:anywhere}.pgp-data section{display:grid;gap:10px;min-width:0}.pgp-rules{margin:0;padding-left:1.1rem}.pgp-rules li+li{margin-top:7px}.pgp-history-list{display:grid;gap:8px;max-height:285px;margin:0;padding:0;overflow:auto;list-style:none;scrollbar-width:thin}.pgp-history-list li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;min-width:0;padding:9px;border-radius:9px;background:rgba(0,0,0,.2)}.pgp-history-list li span,.pgp-history-list li strong{min-width:0;overflow-wrap:anywhere}.pgp-shell button:focus-visible,.pgp-shell input:focus-visible,.pgp-history-list:focus-visible{outline:3px solid var(--gold);outline-offset:2px}@media(min-width:561px) and (max-width:1600px){.pgp-shell{padding-right:176px}body:has(.pgp-shell) .report-problem-fab{width:144px;max-width:144px;white-space:normal;line-height:1.1}}@media(max-width:1120px){.pgp-layout{grid-template-columns:1fr}.pgp-controls{order:1}.pgp-stage{order:2;min-height:420px}.pgp-data{order:3}}@media(max-width:560px){.pgp-header{align-items:start;flex-direction:column}.pgp-panel,.pgp-stage{padding:12px}.pgp-stage{min-height:380px}.pgp-cards,.pgp-tiles{gap:7px;min-height:82px}.pgp-cards .playing-card,.pgp-tiles .playing-card{width:clamp(3.4rem,18vw,4.9rem)}.pgp-summary{grid-template-columns:1fr 1fr}.pgp-history-list li{grid-template-columns:1fr}.pgp-controls .pgp-help,.pgp-controls .pgp-error{width:calc(100% - 160px);max-width:calc(100% - 160px)}body:has(.pgp-shell) .report-problem-fab{width:144px;max-width:144px;white-space:normal;line-height:1.1}}@media(prefers-reduced-motion:reduce){.pgp-shell *{scroll-behavior:auto!important;transition:none!important;animation:none!important}.pgp-tile-selected{transform:none}}</style>';
+  return '<style>.pgp-shell{display:grid;gap:16px;min-width:0}.pgp-header{display:flex;align-items:end;justify-content:space-between;gap:16px}.pgp-header h1{margin:0}.pgp-eyebrow{margin:0 0 4px;color:var(--muted,#b8c8c1)}.pgp-phase{padding:7px 12px;border:1px solid var(--gold);border-radius:999px;color:var(--gold,#f6d47a)}.pgp-layout{display:grid;grid-template-columns:minmax(220px,.72fr) minmax(560px,2.5fr) minmax(240px,.82fr);gap:16px;align-items:start}.pgp-panel,.pgp-stage{border:1px solid var(--gold);border-radius:16px;background:var(--panel-strong);padding:16px}.pgp-controls,.pgp-data{display:grid;align-content:start;gap:13px}.pgp-controls h2,.pgp-data h2{margin:0}.pgp-controls fieldset{margin:0;padding:0;border:0;display:grid;gap:10px}.pgp-controls legend{margin-bottom:8px}.pgp-controls input,.pgp-controls button{min-height:44px}.pgp-primary{background:var(--red,#a51f2d);color:#fff}.pgp-set{background:var(--gold,#c99a3a);color:#1a1205}.pgp-help,.pgp-retry,.pgp-empty{color:var(--muted,#b8c8c1)}.pgp-error{min-height:1.4em;margin:0;color:#ffd1d1}.pgp-stage{display:grid;align-content:center;gap:18px;min-width:0;min-height:500px;background:radial-gradient(circle at 50% 44%,rgba(35,17,61,.45),rgba(20,10,34,.98) 70%)}.pgp-table-felt{display:grid;gap:16px}.pgp-card-row{display:grid;justify-items:center;gap:10px}.pgp-card-row h3{margin:0}.pgp-cards,.pgp-tiles{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;min-height:96px}.pgp-tile{padding:4px;border:2px solid transparent;border-radius:12px;background:transparent;cursor:pointer;line-height:0}.pgp-tile-selected{border-color:var(--gold);transform:translateY(-8px)}.pgp-cards .playing-card,.pgp-tiles .playing-card{flex:none;width:clamp(4.2rem,7vw,6.6rem);font-size:clamp(1rem,2vw,1.55rem)}.pgp-result{min-height:2.4em;margin:0;text-align:center}.pgp-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}.pgp-summary span{display:grid;gap:5px;padding:10px;border-radius:10px;background:rgba(255,255,255,.05)}.pgp-summary strong{overflow-wrap:anywhere}.pgp-data section{display:grid;gap:10px;min-width:0}.pgp-rules{margin:0;padding-left:1.1rem}.pgp-rules li+li{margin-top:7px}.pgp-history-list{display:grid;gap:8px;max-height:285px;margin:0;padding:0;overflow:auto;list-style:none;scrollbar-width:thin}.pgp-history-list li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;min-width:0;padding:9px;border-radius:9px;background:rgba(0,0,0,.2)}.pgp-history-list li span,.pgp-history-list li strong{min-width:0;overflow-wrap:anywhere}.pgp-shell button:focus-visible,.pgp-shell input:focus-visible,.pgp-history-list:focus-visible{outline:3px solid var(--gold);outline-offset:2px}@media(min-width:561px) and (max-width:1600px){.pgp-shell{padding-right:176px}body:has(.pgp-shell) .report-problem-fab{width:144px;max-width:144px;white-space:normal;line-height:1.1}}@media(max-width:1120px){.pgp-layout{grid-template-columns:1fr}.pgp-controls{order:1}.pgp-stage{order:2;min-height:420px}.pgp-data{order:3}}@media(max-width:560px){.pgp-header{align-items:start;flex-direction:column}.pgp-panel,.pgp-stage{padding:12px}.pgp-stage{min-height:380px}.pgp-cards,.pgp-tiles{gap:7px;min-height:82px}.pgp-cards .playing-card,.pgp-tiles .playing-card{width:clamp(3.4rem,18vw,4.9rem)}.pgp-summary{grid-template-columns:1fr 1fr}.pgp-history-list li{grid-template-columns:1fr}.pgp-controls .pgp-help,.pgp-controls .pgp-error{width:calc(100% - 160px);max-width:calc(100% - 160px)}body:has(.pgp-shell) .report-problem-fab{width:144px;max-width:144px;white-space:normal;line-height:1.1}}@media(prefers-reduced-motion:reduce){.pgp-shell *{scroll-behavior:auto!important;transition:none!important;animation:none!important}.pgp-tile-selected{transform:none}}</style>.pgp-repeat{min-height:44px;background:transparent;color:var(--gold);border:1px solid var(--gold)}.pgp-repeat:disabled{opacity:.5}';
+}
+
+// Return corrected scoped styles with the repeat rules inside the style element and a mobile feedback-control lane.
+function repeatSafeStylesHtml() {
+  // Move the additive repeat rules ahead of the closing style tag instead of emitting them as visible text.
+  const scoped = baseStylesHtml().replace('</style>.pgp-repeat', '.pgp-repeat');
+  // Reserve the feedback-control width beside both hand-setting actions on narrow phones.
+  const mobileSafe = scoped.replace('@media(max-width:560px){', '@media(max-width:560px){.pgp-controls fieldset{padding-right:160px}');
+  // Close the corrected scoped stylesheet after every base and repeat rule.
+  return mobileSafe + '</style>';
 }
 
 // Bind semantic controls after each deterministic route render.
@@ -285,6 +301,10 @@ function bindEvents() {
     // Execute the prepared request through shared busy and error handling.
     runAction(deal);
   };
+  // Read the optional repeat control from the current frame.
+  const repeatButton = root?.querySelector('[data-action="repeat"]');
+  // Bind repeat separately so it re-deals the stored ante without a decision replay.
+  if (repeatButton) repeatButton.onclick = () => { repeat(); };
   // Bind each selectable card tile to the low-hand toggle.
   root?.querySelectorAll('[data-card-index]').forEach(button => {
     // Toggle one card position into or out of the two-card low hand.
@@ -336,7 +356,7 @@ function render() {
   // Extend the fixed-feedback clearance through desktop-primary so localized history rows never sit beneath the report control.
   const wideDesktopFeedbackClearance = '<style>@media(min-width:1601px) and (max-width:2200px){.pgp-shell{padding-right:176px}body:has(.pgp-shell) .report-problem-fab{width:144px;max-width:144px;white-space:normal;line-height:1.1}}</style>';
   // Replace the route outlet atomically so stage and controls cannot drift.
-  root.innerHTML = stylesHtml() + wideDesktopFeedbackClearance + '<section class="pgp-shell" data-testid="pai-gow-poker">' + header + layout + '</section>';
+  root.innerHTML = repeatSafeStylesHtml() + wideDesktopFeedbackClearance + '<section class="pgp-shell" data-testid="pai-gow-poker">' + header + layout + '</section>';
   // Attach handlers to the newly rendered semantic controls.
   bindEvents();
 }
@@ -355,6 +375,10 @@ async function runAction(action) {
   try {
     // Execute the prepared public game action.
     await action();
+    // Read the round that the completed action produced.
+    const settledRound = currentRound();
+    // Remember the committed ante only after a round reaches terminal settlement so one click can repeat it.
+    if (settledRound && settledRound.phase === 'settled') lastBet = { wager: settledRound.wager };
   // Translate failures without displaying server-owned English.
   } catch (error) {
     // Store the owned localized error key for the route region.
@@ -398,6 +422,22 @@ async function deal() {
   pendingDecision = null;
   // Refresh the persistent authenticated wallet after the ante debit.
   await refreshBalance();
+}
+
+// Re-apply the last committed ante and open one identical round without a timer.
+async function repeat() {
+  // Ignore repeat while busy, mid-retry, without a stored ante, or during an active setting round.
+  if (busy || pendingDeal || pendingDecision || !lastBet || state?.active_round) return;
+  // Restore the previous ante so the shared deal path reads the repeated stake.
+  wager = wagerValue(lastBet.wager);
+  // Read the ante input from the current frame to mirror the restored stake.
+  const wagerInput = root?.querySelector('#pgp-wager');
+  // Reflect the restored ante in the enabled control before dealing.
+  if (wagerInput) wagerInput.value = String(wager);
+  // Prepare the exact deal identity exactly as the deal button does.
+  pendingDeal = { actionId: nextActionId(), wager };
+  // Open one identical round through the shared deal action, never replaying the hand-setting decision.
+  await runAction(deal);
 }
 
 // Submit or replay one set decision action.
@@ -446,6 +486,8 @@ export const PaiGowPokerGame = {
     pendingDeal = null;
     // Clear any prior decision identity before reading current server state.
     pendingDecision = null;
+    // Reset the repeatable ante so a new session never inherits a prior bet.
+    lastBet = null;
     // Clear any prior low-hand selection before reading current server state.
     lowSelection = [];
     // Install shared accessible card presentation once.
@@ -468,6 +510,10 @@ export const PaiGowPokerGame = {
     rules = payload.rules || {};
     // Restore the active round ante into the locked control when present.
     wager = state?.active_round?.wager || wager;
+    // Recover a repeatable ante from the newest terminal round so repeat survives a reload.
+    const recovered = state?.recent_rounds?.slice(-1)[0];
+    // Restore the repeatable ante only when a prior round exposes its committed ante.
+    if (recovered?.wager) lastBet = { wager: Number(recovered.wager) };
     // Render the complete game-owned browser surface.
     render();
     // Align the persistent wallet with any recovered ledger marker.
@@ -491,6 +537,8 @@ export const PaiGowPokerGame = {
     pendingDeal = null;
     // Forget the route-local decision identity after teardown.
     pendingDecision = null;
+    // Clear the repeatable ante so the next session starts fresh.
+    lastBet = null;
     // Forget the route-local low-hand selection after teardown.
     lowSelection = [];
     // Clear the reserved localized error state.

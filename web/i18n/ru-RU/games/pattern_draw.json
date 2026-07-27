@@ -7,6 +7,7 @@
   "stake.title": "Ставка",
   "action.draw": "Разыграть сетку",
   "action.drawing": "Розыгрыш…",
+  "controls.repeat": "Повторить ставку",
   "result.idle": "Выберите узор и разыграйте.",
   "result.hit": "{bet} собран!",
   "result.miss": "Нет узора.",

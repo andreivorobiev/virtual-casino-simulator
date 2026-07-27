@@ -49,6 +49,7 @@
   "controls.drawing": "Розыгрыш",
   "controls.replay": "Повторить билет",
   "controls.newTicket": "Новый билет",
+  "controls.repeat": "Повторить ставку",
   "status.ready": "Готово",
   "status.running": "Идет",
   "status.repeatTicket": "Повтор билета",

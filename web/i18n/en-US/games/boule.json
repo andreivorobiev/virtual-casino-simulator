@@ -8,6 +8,7 @@
   "stake.title": "Stake",
   "action.spin": "Spin the boule",
   "action.spinning": "Spinning…",
+  "controls.repeat": "Repeat bet",
   "result.idle": "Pick a bet and spin.",
   "result.win": "Number {number} wins!",
   "result.lose": "Number {number}.",

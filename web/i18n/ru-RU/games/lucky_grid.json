@@ -9,6 +9,7 @@
   "stake.title": "Ставка",
   "action.reveal": "Открыть призы",
   "action.revealing": "Открытие…",
+  "controls.repeat": "Повторить ставку",
   "error.load": "Не удалось загрузить Счастливую сетку.",
   "error.reveal": "Не удалось завершить открытие."
 }

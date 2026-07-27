@@ -30,6 +30,8 @@ let busy = false;
 let unsubscribeLocale = null;
 // Retain unresolved action identities for exact network retries.
 let pendingAction = null;
+// Retain the last committed ante so one click can repeat the same round.
+let lastBet = null;
 // Retain one localized error key for the reserved alert region.
 let lastErrorKey = null;
 // Allocate fallback action identities when randomUUID is unavailable.
@@ -155,10 +157,14 @@ function controlsHtml() {
   const callDisabled = !canDecide || busy || Boolean(pendingAction && pendingAction.kind !== 'call');
   // Disable fold while no decision is open.
   const foldDisabled = !canDecide || busy || Boolean(pendingAction && pendingAction.kind !== 'fold');
+  // Enable the one-click repeat only outside the decision phase with a stored ante and nothing in flight.
+  const repeatDisabled = Boolean(activeRound) || busy || Boolean(pendingAction) || !lastBet;
+  // Offer the one-click repeat only outside the open decision so call and fold stay unobstructed.
+  const repeatButton = canDecide ? '' : '<button type="button" class="cs-repeat" data-action="repeat"' + (repeatDisabled ? ' disabled' : '') + '>' + safe(text('controls.repeat')) + '</button>';
   // Explain unresolved retry state when present.
   const retryHelp = pendingAction ? '<p class="cs-retry" role="status">' + safe(text('controls.retryHelp')) + '</p>' : '';
   // Return stable controls whose positions do not change between phases.
-  return '<aside class="cs-panel cs-controls" aria-label="' + safe(text('controls.title')) + '"><h2>' + safe(text('controls.title')) + '</h2><label for="cs-ante">' + safe(text('controls.ante')) + '</label><input id="cs-ante" type="number" min="0.01" max="100000" step="0.01" value="' + safe(ante) + '"' + (anteDisabled ? ' disabled' : '') + '><button type="button" data-action="deal"' + (dealDisabled ? ' disabled' : '') + '>' + safe(pendingAction?.kind === 'deal' ? text('controls.retryDeal') : text('controls.deal')) + '</button><button type="button" data-action="call"' + (callDisabled ? ' disabled' : '') + '>' + safe(pendingAction?.kind === 'call' ? text('controls.retryCall') : text('controls.call')) + '</button><button type="button" data-action="fold"' + (foldDisabled ? ' disabled' : '') + '>' + safe(pendingAction?.kind === 'fold' ? text('controls.retryFold') : text('controls.fold')) + '</button><p class="cs-help">' + safe(text('controls.help')) + '</p>' + retryHelp + '<p class="cs-error" role="alert" data-error>' + (lastErrorKey ? safe(text(lastErrorKey)) : '') + '</p></aside>';
+  return '<aside class="cs-panel cs-controls" aria-label="' + safe(text('controls.title')) + '"><h2>' + safe(text('controls.title')) + '</h2><label for="cs-ante">' + safe(text('controls.ante')) + '</label><input id="cs-ante" type="number" min="0.01" max="100000" step="0.01" value="' + safe(ante) + '"' + (anteDisabled ? ' disabled' : '') + '><button type="button" data-action="deal"' + (dealDisabled ? ' disabled' : '') + '>' + safe(pendingAction?.kind === 'deal' ? text('controls.retryDeal') : text('controls.deal')) + '</button>' + repeatButton + '<button type="button" data-action="call"' + (callDisabled ? ' disabled' : '') + '>' + safe(pendingAction?.kind === 'call' ? text('controls.retryCall') : text('controls.call')) + '</button><button type="button" data-action="fold"' + (foldDisabled ? ' disabled' : '') + '>' + safe(pendingAction?.kind === 'fold' ? text('controls.retryFold') : text('controls.fold')) + '</button><p class="cs-help">' + safe(text('controls.help')) + '</p>' + retryHelp + '<p class="cs-error" role="alert" data-error>' + (lastErrorKey ? safe(text(lastErrorKey)) : '') + '</p></aside>';
 }
 
 // Render player and dealer cards with dealer hole cards protected before call.
@@ -240,7 +246,15 @@ function dataHtml() {
 // Return scoped responsive and reduced-motion styles.
 function stylesHtml() {
   // Define compact operational layout without editing shared CSS.
-  return '<style>/* Define the Caribbean Stud game layout and responsive regions. */.cs-shell{display:grid;gap:16px;min-width:0}.cs-header{display:flex;align-items:end;justify-content:space-between;gap:16px}.cs-header h1{margin:0}.cs-eyebrow{margin:0 0 4px;color:var(--muted,#b8c8c1)}.cs-phase{padding:7px 12px;border:1px solid var(--gold);border-radius:999px;color:var(--gold,#f6d47a)}.cs-layout{display:grid;grid-template-columns:minmax(220px,.7fr) minmax(520px,2.15fr) minmax(250px,.85fr);gap:16px;align-items:start}.cs-panel,.cs-stage{border:1px solid var(--gold);border-radius:12px;background:var(--panel-strong);padding:16px}.cs-controls,.cs-data{display:grid;align-content:start;gap:12px}.cs-controls input,.cs-controls button{min-height:44px}.cs-controls button[data-action=call]{background:var(--red,#a51f2d);color:#fff}.cs-help,.cs-retry,.cs-empty{color:var(--muted,#b8c8c1)}.cs-error{min-height:1.4em;margin:0;color:#ffd1d1}.cs-stage{display:grid;align-content:center;gap:20px;min-width:0;min-height:430px;background:radial-gradient(circle at 50% 42%,rgba(35,17,61,.42),rgba(20,10,34,.96) 70%)}.cs-hands{display:grid;gap:24px}.cs-hands article{display:grid;gap:12px}.cs-hands h3{margin:0}.cs-hands .playing-card{flex:none;width:clamp(3.9rem,7vw,6.4rem);font-size:clamp(1rem,2vw,1.45rem)}.cs-placeholder{min-height:8rem;display:grid;place-items:center;border:1px dashed rgba(255,255,255,.22);border-radius:10px;color:var(--muted,#b8c8c1);text-align:center}.cs-result{min-height:2.8em;margin:0;text-align:center}.cs-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.cs-summary span{display:grid;gap:5px;padding:10px;border-radius:8px;background:rgba(255,255,255,.05)}.cs-summary strong{overflow-wrap:anywhere}.cs-data section{display:grid;gap:10px}.cs-data ul{margin:0;padding-left:1.1rem}.cs-data li+li{margin-top:7px}.cs-paytable{margin:0;padding:0;list-style:none;display:grid;gap:6px}.cs-paytable li{display:grid;grid-template-columns:1fr auto;gap:8px;margin:0;padding:7px 9px;border-radius:8px;background:rgba(0,0,0,.18)}.cs-paytable strong{color:var(--gold,#f6d47a)}.cs-history-list{display:grid;gap:8px;max-height:285px;margin:0;padding:0;overflow:auto;list-style:none;scrollbar-width:thin}.cs-history-list li{display:grid;grid-template-columns:1fr auto;gap:8px;padding:9px;border-radius:8px;background:rgba(0,0,0,.2)}.cs-shell button:focus-visible,.cs-shell input:focus-visible,.cs-history-list:focus-visible{outline:3px solid var(--gold);outline-offset:2px}@media(max-width:1100px){.cs-layout{grid-template-columns:1fr}.cs-controls{order:1}.cs-stage{order:2;min-height:360px}.cs-data{order:3}}@media(max-width:560px){.cs-header{align-items:start;flex-direction:column}.cs-panel,.cs-stage{padding:12px}.cs-stage{min-height:330px}.cs-summary{grid-template-columns:1fr 1fr}.cs-hands .playing-card{width:clamp(3rem,17vw,4.8rem)}}@media(prefers-reduced-motion:reduce){.cs-shell *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}</style>';
+  return '<style>/* Define the Caribbean Stud game layout and responsive regions. */.cs-shell{display:grid;gap:16px;min-width:0}.cs-header{display:flex;align-items:end;justify-content:space-between;gap:16px}.cs-header h1{margin:0}.cs-eyebrow{margin:0 0 4px;color:var(--muted,#b8c8c1)}.cs-phase{padding:7px 12px;border:1px solid var(--gold);border-radius:999px;color:var(--gold,#f6d47a)}.cs-layout{display:grid;grid-template-columns:minmax(220px,.7fr) minmax(520px,2.15fr) minmax(250px,.85fr);gap:16px;align-items:start}.cs-panel,.cs-stage{border:1px solid var(--gold);border-radius:12px;background:var(--panel-strong);padding:16px}.cs-controls,.cs-data{display:grid;align-content:start;gap:12px}.cs-controls input,.cs-controls button{min-height:44px}.cs-controls button[data-action=call]{background:var(--red,#a51f2d);color:#fff}.cs-help,.cs-retry,.cs-empty{color:var(--muted,#b8c8c1)}.cs-error{min-height:1.4em;margin:0;color:#ffd1d1}.cs-stage{display:grid;align-content:center;gap:20px;min-width:0;min-height:430px;background:radial-gradient(circle at 50% 42%,rgba(35,17,61,.42),rgba(20,10,34,.96) 70%)}.cs-hands{display:grid;gap:24px}.cs-hands article{display:grid;gap:12px}.cs-hands h3{margin:0}.cs-hands .playing-card{flex:none;width:clamp(3.9rem,7vw,6.4rem);font-size:clamp(1rem,2vw,1.45rem)}.cs-placeholder{min-height:8rem;display:grid;place-items:center;border:1px dashed rgba(255,255,255,.22);border-radius:10px;color:var(--muted,#b8c8c1);text-align:center}.cs-result{min-height:2.8em;margin:0;text-align:center}.cs-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.cs-summary span{display:grid;gap:5px;padding:10px;border-radius:8px;background:rgba(255,255,255,.05)}.cs-summary strong{overflow-wrap:anywhere}.cs-data section{display:grid;gap:10px}.cs-data ul{margin:0;padding-left:1.1rem}.cs-data li+li{margin-top:7px}.cs-paytable{margin:0;padding:0;list-style:none;display:grid;gap:6px}.cs-paytable li{display:grid;grid-template-columns:1fr auto;gap:8px;margin:0;padding:7px 9px;border-radius:8px;background:rgba(0,0,0,.18)}.cs-paytable strong{color:var(--gold,#f6d47a)}.cs-history-list{display:grid;gap:8px;max-height:285px;margin:0;padding:0;overflow:auto;list-style:none;scrollbar-width:thin}.cs-history-list li{display:grid;grid-template-columns:1fr auto;gap:8px;padding:9px;border-radius:8px;background:rgba(0,0,0,.2)}.cs-shell button:focus-visible,.cs-shell input:focus-visible,.cs-history-list:focus-visible{outline:3px solid var(--gold);outline-offset:2px}@media(max-width:1100px){.cs-layout{grid-template-columns:1fr}.cs-controls{order:1}.cs-stage{order:2;min-height:360px}.cs-data{order:3}}@media(max-width:560px){.cs-header{align-items:start;flex-direction:column}.cs-panel,.cs-stage{padding:12px}.cs-stage{min-height:330px}.cs-summary{grid-template-columns:1fr 1fr}.cs-hands .playing-card{width:clamp(3rem,17vw,4.8rem)}}@media(prefers-reduced-motion:reduce){.cs-shell *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}</style>.cs-repeat{min-height:44px;background:transparent;color:var(--gold);border:1px solid var(--gold)}.cs-repeat:disabled{opacity:.5}';
+}
+
+// Return repeat-aware styles without exposing CSS text after the style element.
+function repeatSafeStylesHtml() {
+  // Move the additive repeat rules ahead of the closing style tag.
+  const scoped = stylesHtml().replace('</style>.cs-repeat', '.cs-repeat');
+  // Close the corrected style element after every scoped repeat rule.
+  return scoped + '</style>';
 }
 
 // Bind semantic controls after each render.
@@ -267,6 +281,10 @@ function bindEvents() {
       runAction(kind === 'deal' ? deal : kind === 'call' ? callRound : foldRound);
     };
   });
+  // Read the optional repeat control from the current frame.
+  const repeatButton = root?.querySelector('[data-action="repeat"]');
+  // Bind repeat separately so it re-deals the stored ante without a decision replay.
+  if (repeatButton) repeatButton.onclick = () => { repeat(); };
 }
 
 // Render all game-owned regions from authenticated state.
@@ -280,7 +298,7 @@ function render() {
   // Build the operational layout.
   const layout = '<div class="cs-layout">' + controlsHtml() + '<main class="cs-stage" aria-label="' + safe(text('stage.title')) + '">' + stageHtml(roundItem) + summaryHtml(roundItem) + '</main>' + dataHtml() + '</div>';
   // Replace the outlet atomically.
-  root.innerHTML = stylesHtml() + '<section class="cs-shell" data-testid="caribbean-stud">' + header + layout + '</section>';
+  root.innerHTML = repeatSafeStylesHtml() + '<section class="cs-shell" data-testid="caribbean-stud">' + header + layout + '</section>';
   // Attach handlers to the new controls.
   bindEvents();
 }
@@ -299,6 +317,10 @@ async function runAction(action) {
   try {
     // Await the selected game action.
     await action();
+    // Read the round that the completed action produced.
+    const settledRound = currentRound();
+    // Remember the committed ante only after a round reaches a terminal settle so one click can repeat it.
+    if (settledRound && settledRound.phase !== 'decision') lastBet = { ante: settledRound.ante };
   // Translate failures locally.
   } catch (error) {
     // Store the localized error key.
@@ -334,6 +356,22 @@ async function deal() {
   pendingAction = null;
   // Refresh the shared wallet after the ante debit.
   await refreshBalance();
+}
+
+// Re-apply the last committed ante and open one identical round without a timer.
+async function repeat() {
+  // Ignore repeat while busy, mid-retry, without a stored ante, or during an active round.
+  if (busy || pendingAction || !lastBet || state?.active_round) return;
+  // Restore the previous ante so the shared deal path reads the repeated stake.
+  ante = anteValue(lastBet.ante);
+  // Read the ante input from the current frame to mirror the restored stake.
+  const anteInput = root?.querySelector('#cs-ante');
+  // Reflect the restored ante in the enabled control before dealing.
+  if (anteInput) anteInput.value = String(ante);
+  // Prepare the exact deal identity exactly as the deal button does.
+  pendingAction = { kind: 'deal', actionId: nextActionId('deal'), roundId: state?.active_round?.round_id, ante };
+  // Open one identical round through the shared deal action, never replaying call or fold.
+  await runAction(deal);
 }
 
 // Call or replay one fixed 2x ante reveal.
@@ -398,6 +436,8 @@ export const CaribbeanStudGame = {
     lastErrorKey = null;
     // Clear retry identity because server state is authoritative on mount.
     pendingAction = null;
+    // Reset the repeatable ante so a new session never inherits a prior bet.
+    lastBet = null;
     // Install shared card presentation.
     ensureSharedCardStyles();
     // Capture this mount for async guards.
@@ -416,6 +456,10 @@ export const CaribbeanStudGame = {
     state = payload.state;
     // Cache fixed rule metadata.
     rules = payload.rules || {};
+    // Recover a repeatable ante from the newest terminal round so repeat survives a reload.
+    const recovered = state?.recent_rounds?.slice(-1)[0];
+    // Restore the repeatable ante only when a prior round exposes its committed ante.
+    if (recovered?.ante) lastBet = { ante: Number(recovered.ante) };
     // Render the complete surface.
     render();
     // Align the wallet with any recovered ledger state.
@@ -437,6 +481,8 @@ export const CaribbeanStudGame = {
     busy = false;
     // Forget route-local retry identity.
     pendingAction = null;
+    // Clear the repeatable ante so the next session starts fresh.
+    lastBet = null;
     // Clear localized error state.
     lastErrorKey = null;
     // No timers or global event listeners are owned by this module.

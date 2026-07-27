@@ -24,6 +24,7 @@
   "board.title": "Betting positions",
   "controls.clear": "Clear bets",
   "controls.lockedHelp": "This exact wager is locked until the current action settles or is safely resumed.",
+  "controls.repeat": "Repeat bet",
   "controls.resume": "Resume shake",
   "controls.rolling": "Shaking dice…",
   "controls.selectedCount": "Selected positions",

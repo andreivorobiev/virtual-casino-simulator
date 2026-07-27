@@ -1,6 +1,6 @@
 {
   "module": "marble_race",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "paths": ["casino/games/marble_race/", "web/games/marble_race.js", "web/i18n/en-US/games/marble_race.json", "web/i18n/ru-RU/games/marble_race.json"],
   "requirements_prefixes": ["MARBLE"],
   "contracts": ["contracts/openapi/marble_race.v1.yaml"],

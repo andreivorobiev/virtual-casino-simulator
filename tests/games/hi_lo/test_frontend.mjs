@@ -59,6 +59,10 @@ assert.match(source, /pendingDeal = pendingDeal \|\| \{ actionId: nextActionId\(
 assert.match(source, /pendingGuess = pendingGuess \|\| \{ actionId: nextActionId\(\), roundId: activeRound\.round_id, guess \}/);
 // Verify this game owns no timer or animation-frame callback.
 assert.doesNotMatch(source, /setTimeout|setInterval|requestAnimationFrame/);
+// Verify the one-click repeat-bet control is rendered in production markup.
+assert.match(source, /data-action="repeat"/);
+// Verify the repeat-bet label exists in both required locales.
+assert.ok(english['controls.repeat']?.trim() && russian['controls.repeat']?.trim(), 'controls.repeat missing from a locale');
 // Verify reduced-motion behavior is included in game-owned styling.
 assert.match(source, /prefers-reduced-motion:reduce/);
 // Verify primary controls meet the minimum touch-target height.

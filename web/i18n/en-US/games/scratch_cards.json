@@ -1,6 +1,7 @@
 {
   "controls.pendingRetry": "The last reveal is waiting for a safe retry.",
   "controls.region": "Scratch Cards controls",
+  "controls.repeat": "Repeat bet",
   "controls.revealAll": "Reveal all covered prizes",
   "controls.scratchHelp": "Reveal one prize at a time or reveal every covered prize. Progress is saved after each action.",
   "controls.start": "Start card",

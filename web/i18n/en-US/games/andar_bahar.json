@@ -5,6 +5,7 @@
   "controls.bahar": "Bahar",
   "controls.help": "Choose Andar or Bahar. The first side to receive a card matching the joker rank wins.",
   "controls.play": "Play round",
+  "controls.repeat": "Repeat bet",
   "controls.retryHelp": "The previous response was incomplete. Retry the same action safely.",
   "controls.retryPlay": "Retry round",
   "controls.sideLegend": "Side prediction",

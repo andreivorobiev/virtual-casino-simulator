@@ -27,6 +27,8 @@ let root = null;
 let state = null;
 // Retain the selected fixed-limit unit before the next hand.
 let baseWager = 1;
+// Retain the last committed fixed-limit unit so one click can repeat the same hand.
+let lastBet = null;
 // Prevent overlapping atomic browser actions.
 let busy = false;
 // Retain the locale unsubscribe callback for leak-free unmount.
@@ -223,8 +225,10 @@ function controlsHtml(hand) {
   const callDisabled = busy || !legal.has('call');
   // Enable fold only when the server currently permits it.
   const foldDisabled = busy || !legal.has('fold');
+  // Enable the one-click repeat only between hands when a prior fixed unit exists and nothing is in flight.
+  const repeatDisabled = startDisabled || !lastBet;
   // Return wager configuration, escrow explanation, and stable action placement.
-  return `<aside class="thpt-panel thpt-controls" aria-label="${safe(text('controls.title'))}"><h2>${safe(text('controls.title'))}</h2><label for="thpt-wager">${safe(text('controls.baseWager'))}</label><input id="thpt-wager" type="number" min="0.01" max="20000" step="0.01" value="${safe(baseWager)}"${startDisabled ? ' disabled' : ''}><p class="thpt-reserve">${safe(text('controls.reserved'))}: <strong data-testid="thpt-reserve-amount">${safe(tokenAmount(baseWager * RESERVED_BET_UNITS))}</strong></p><button type="button" class="thpt-primary" data-action="start-hand"${startDisabled ? ' disabled' : ''}>${safe(text('controls.startHand'))}</button><div class="thpt-decision"><button type="button" class="thpt-primary" data-action="call"${callDisabled ? ' disabled' : ''}>${safe(text('controls.call'))}</button><button type="button" data-action="fold"${foldDisabled ? ' disabled' : ''}>${safe(text('controls.fold'))}</button></div><p>${safe(text('controls.help'))}</p></aside>`;
+  return `<aside class="thpt-panel thpt-controls" aria-label="${safe(text('controls.title'))}"><h2>${safe(text('controls.title'))}</h2><label for="thpt-wager">${safe(text('controls.baseWager'))}</label><input id="thpt-wager" type="number" min="0.01" max="20000" step="0.01" value="${safe(baseWager)}"${startDisabled ? ' disabled' : ''}><p class="thpt-reserve">${safe(text('controls.reserved'))}: <strong data-testid="thpt-reserve-amount">${safe(tokenAmount(baseWager * RESERVED_BET_UNITS))}</strong></p><button type="button" class="thpt-primary" data-action="start-hand"${startDisabled ? ' disabled' : ''}>${safe(text('controls.startHand'))}</button><button type="button" class="thpt-repeat" data-action="repeat"${repeatDisabled ? ' disabled' : ''}>${safe(text('controls.repeat'))}</button><div class="thpt-decision"><button type="button" class="thpt-primary" data-action="call"${callDisabled ? ' disabled' : ''}>${safe(text('controls.call'))}</button><button type="button" data-action="fold"${foldDisabled ? ' disabled' : ''}>${safe(text('controls.fold'))}</button></div><p>${safe(text('controls.help'))}</p></aside>`;
 }
 
 
@@ -251,7 +255,7 @@ function historyHtml(hand) {
 // Return scoped styles that keep the table dominant and stack cleanly.
 function stylesHtml() {
   // Keep the desktop center stage wider than both support rails combined.
-  const desktop = '.thpt-shell{display:grid;gap:16px;min-width:0}.thpt-header{display:flex;align-items:end;justify-content:space-between;gap:16px}.thpt-header h1{margin:0}.thpt-phase{min-width:150px;padding:7px 12px;border:1px solid var(--gold);border-radius:999px;text-align:center;color:var(--gold,#f6d47a)}.thpt-layout{display:grid;grid-template-columns:minmax(205px,.6fr) minmax(570px,2.4fr) minmax(220px,.65fr);gap:15px;align-items:start;min-width:0}.thpt-panel,.thpt-stage{border:1px solid var(--border);border-radius:16px;background:var(--panel-strong);padding:15px;min-width:0}.thpt-controls{display:grid;align-content:start;gap:12px}.thpt-controls input,.thpt-controls button{min-height:44px}.thpt-primary{background:var(--red,#a92a38);color:#fff}.thpt-decision{display:grid;grid-template-columns:1fr 1fr;gap:9px}.thpt-reserve,.thpt-controls p,.thpt-muted{color:var(--muted,#b8c7c0)}.thpt-stage{display:grid;gap:14px;background:radial-gradient(circle at 50% 45%,rgba(35,17,61,.42),rgba(21,10,36,.96) 72%)}.thpt-opponents{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.thpt-seat{display:grid;gap:8px;padding:10px;border:1px solid rgba(255,255,255,.13);border-radius:12px;background:rgba(0,0,0,.16)}.thpt-seat.is-acting{outline:2px solid var(--gold);outline-offset:2px}.thpt-seat.is-folded{opacity:.58}.thpt-seat.is-winner{box-shadow:0 0 0 3px var(--gold)}.thpt-seat header{display:flex;justify-content:space-between;gap:7px;align-items:center}.thpt-seat h3{margin:0;font-size:.95rem}.thpt-seat header span{font-size:.72rem;color:var(--muted,#b8c7c0)}.thpt-card-row{display:flex;flex-wrap:nowrap;justify-content:center;gap:7px;min-width:0}.thpt-seat .playing-card,.thpt-card-slot{flex:0 1 clamp(2.65rem,5vw,4.6rem);min-width:2.65rem}.thpt-card-slot{display:inline-flex;aspect-ratio:5/7;border:2px dashed rgba(255,255,255,.24);border-radius:.65rem;background:rgba(0,0,0,.12)}.thpt-seat dl{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:0}.thpt-seat dl div{min-width:0}.thpt-seat dt{color:var(--muted,#b8c7c0);font-size:.68rem}.thpt-seat dd{margin:2px 0 0;font-size:.78rem;overflow-wrap:anywhere}.thpt-table-center{display:grid;place-items:center;gap:13px;min-height:220px;padding:14px;border-radius:48%;background:rgba(35,17,61,.58);border:2px solid var(--border)}.thpt-pot{display:grid;justify-items:center}.thpt-pot strong{font-size:clamp(1.1rem,2vw,1.55rem)}.thpt-community{display:grid;justify-items:center;gap:8px;width:100%}.thpt-community h3{margin:0}.thpt-community .playing-card,.thpt-community .thpt-card-slot{flex-basis:clamp(3rem,7vw,5.2rem)}.thpt-human{display:grid;place-items:center}.thpt-human .thpt-seat{width:min(420px,100%)}.thpt-result{display:grid;gap:10px;padding:12px;border-radius:12px;background:rgba(255,215,128,.1);text-align:center}.thpt-result h2,.thpt-result p{margin:0}.thpt-result-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.thpt-result-grid span{display:grid;gap:3px}.thpt-history,.thpt-rules ul{display:grid;gap:8px;margin:0;padding-left:1.1rem}.thpt-history li{padding-bottom:7px;border-bottom:1px solid rgba(255,255,255,.1)}.thpt-rules{margin-top:18px}.thpt-ready{min-height:520px;place-content:center;text-align:center}.thpt-shell button:focus-visible,.thpt-shell input:focus-visible{outline:3px solid var(--gold);outline-offset:2px}';
+  const desktop = '.thpt-shell{display:grid;gap:16px;min-width:0}.thpt-header{display:flex;align-items:end;justify-content:space-between;gap:16px}.thpt-header h1{margin:0}.thpt-phase{min-width:150px;padding:7px 12px;border:1px solid var(--gold);border-radius:999px;text-align:center;color:var(--gold,#f6d47a)}.thpt-layout{display:grid;grid-template-columns:minmax(205px,.6fr) minmax(570px,2.4fr) minmax(220px,.65fr);gap:15px;align-items:start;min-width:0}.thpt-panel,.thpt-stage{border:1px solid var(--border);border-radius:16px;background:var(--panel-strong);padding:15px;min-width:0}.thpt-controls{display:grid;align-content:start;gap:12px}.thpt-controls input,.thpt-controls button{min-height:44px}.thpt-primary{background:var(--red,#a92a38);color:#fff}.thpt-decision{display:grid;grid-template-columns:1fr 1fr;gap:9px}.thpt-reserve,.thpt-controls p,.thpt-muted{color:var(--muted,#b8c7c0)}.thpt-stage{display:grid;gap:14px;background:radial-gradient(circle at 50% 45%,rgba(35,17,61,.42),rgba(21,10,36,.96) 72%)}.thpt-opponents{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.thpt-seat{display:grid;gap:8px;padding:10px;border:1px solid rgba(255,255,255,.13);border-radius:12px;background:rgba(0,0,0,.16)}.thpt-seat.is-acting{outline:2px solid var(--gold);outline-offset:2px}.thpt-seat.is-folded{opacity:.58}.thpt-seat.is-winner{box-shadow:0 0 0 3px var(--gold)}.thpt-seat header{display:flex;justify-content:space-between;gap:7px;align-items:center}.thpt-seat h3{margin:0;font-size:.95rem}.thpt-seat header span{font-size:.72rem;color:var(--muted,#b8c7c0)}.thpt-card-row{display:flex;flex-wrap:nowrap;justify-content:center;gap:7px;min-width:0}.thpt-seat .playing-card,.thpt-card-slot{flex:0 1 clamp(2.65rem,5vw,4.6rem);min-width:2.65rem}.thpt-card-slot{display:inline-flex;aspect-ratio:5/7;border:2px dashed rgba(255,255,255,.24);border-radius:.65rem;background:rgba(0,0,0,.12)}.thpt-seat dl{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:0}.thpt-seat dl div{min-width:0}.thpt-seat dt{color:var(--muted,#b8c7c0);font-size:.68rem}.thpt-seat dd{margin:2px 0 0;font-size:.78rem;overflow-wrap:anywhere}.thpt-table-center{display:grid;place-items:center;gap:13px;min-height:220px;padding:14px;border-radius:48%;background:rgba(35,17,61,.58);border:2px solid var(--border)}.thpt-pot{display:grid;justify-items:center}.thpt-pot strong{font-size:clamp(1.1rem,2vw,1.55rem)}.thpt-community{display:grid;justify-items:center;gap:8px;width:100%}.thpt-community h3{margin:0}.thpt-community .playing-card,.thpt-community .thpt-card-slot{flex-basis:clamp(3rem,7vw,5.2rem)}.thpt-human{display:grid;place-items:center}.thpt-human .thpt-seat{width:min(420px,100%)}.thpt-result{display:grid;gap:10px;padding:12px;border-radius:12px;background:rgba(255,215,128,.1);text-align:center}.thpt-result h2,.thpt-result p{margin:0}.thpt-result-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.thpt-result-grid span{display:grid;gap:3px}.thpt-history,.thpt-rules ul{display:grid;gap:8px;margin:0;padding-left:1.1rem}.thpt-history li{padding-bottom:7px;border-bottom:1px solid rgba(255,255,255,.1)}.thpt-rules{margin-top:18px}.thpt-ready{min-height:520px;place-content:center;text-align:center}.thpt-shell button:focus-visible,.thpt-shell input:focus-visible{outline:3px solid var(--gold);outline-offset:2px}.thpt-repeat{background:transparent;color:var(--gold);border:1px solid var(--gold)}.thpt-repeat:disabled{opacity:.5}';
   // Compress cards and supporting panels when desktop shell height is constrained.
   const compactHeight = '@media(max-height:950px) and (min-width:1101px){.thpt-shell{gap:8px}.thpt-header p{margin:0}.thpt-layout{gap:10px}.thpt-panel,.thpt-stage{padding:8px}.thpt-controls,.thpt-stage{gap:7px}.thpt-opponents{gap:6px}.thpt-seat{gap:4px;padding:6px}.thpt-seat .playing-card,.thpt-card-slot{flex-basis:2.25rem;min-width:2.1rem}.thpt-seat dt{font-size:.62rem}.thpt-seat dd{font-size:.7rem}.thpt-table-center{min-height:100px;padding:6px;gap:5px}.thpt-community{gap:4px}.thpt-community h3{font-size:.88rem}.thpt-community .playing-card,.thpt-community .thpt-card-slot{flex-basis:2.6rem;min-width:2.35rem}.thpt-result{gap:4px;padding:6px}.thpt-result h2{font-size:1rem}.thpt-result p,.thpt-result-grid{font-size:.75rem}.thpt-history,.thpt-rules ul{gap:5px;font-size:.78rem}.thpt-history li{padding-bottom:4px}.thpt-rules{margin-top:10px}.thpt-ready{min-height:360px}}';
   // Stack controls, stage, and data using document scrolling on tablet widths.
@@ -316,10 +320,27 @@ async function startHand(requestedWager) {
   const payload = await post(`${API_ROOT}/hands`, withCurrentPlayer({ action_id: pendingStart.actionId, base_wager: pendingStart.baseWager }));
   // Store returned reload-safe state after committed escrow reservation.
   state = payload.state;
+  // Remember the committed fixed unit so one click can repeat the identical hand.
+  lastBet = { baseWager };
   // Clear the retry key only after the server proves the logical hand exists.
   pendingStart = null;
   // Refresh the authenticated shared wallet after the ledger debit.
   await refreshBalance();
+}
+
+
+// Re-apply the last committed fixed unit and start one identical hand without a timer.
+function repeat() {
+  // Ignore repeat while a command is in flight, mid-hand, or before any unit has been committed.
+  if (busy || state?.active_hand || !lastBet) return;
+  // Restore the previous fixed unit into the wager input so the preview and start read it.
+  const wagerInput = root?.querySelector('#thpt-wager');
+  // Apply the stored unit only when the enabled wager input is present.
+  if (wagerInput) wagerInput.value = String(lastBet.baseWager);
+  // Restore the cached unit so the shared start path reads the repeated stake.
+  baseWager = lastBet.baseWager;
+  // Fire the shared start action through the same busy-safe wrapper as the primary button.
+  runAction(() => startHand(lastBet.baseWager));
 }
 
 
@@ -352,6 +373,10 @@ function bindEvents() {
   const startButton = root.querySelector('[data-action="start-hand"]');
   // Start one retry-safe hand when the button exists.
   if (startButton) startButton.onclick = () => runAction(() => startHand(baseWager));
+  // Wire the one-click repeat that starts a new hand with the previous fixed unit.
+  const repeatButton = root.querySelector('[data-action="repeat"]');
+  // Repeat the last committed unit when the button exists.
+  if (repeatButton) repeatButton.onclick = () => repeat();
   // Wire the fixed-limit call action.
   const callButton = root.querySelector('[data-action="call"]');
   // Apply one call only when server state permits it.
@@ -375,6 +400,8 @@ export const TexasHoldemPracticeTableGame = {
     root = node;
     // Capture mount identity so late promises cannot repaint another route.
     const mountedRoot = node;
+    // Reset the repeatable fixed unit so a new session never inherits a prior bet.
+    lastBet = null;
     // Install the shared card stylesheet idempotently.
     ensureSharedCardStyles();
     // Load both active and fallback game-owned dictionaries.
@@ -391,6 +418,10 @@ export const TexasHoldemPracticeTableGame = {
     state = payload.state;
     // Restore the active hand's wager unit after direct navigation or reload.
     baseWager = state?.active_hand?.base_wager || baseWager;
+    // Recover a repeatable fixed unit from the active or newest settled hand so repeat survives a reload.
+    const recovered = state?.active_hand || state?.recent_hands?.[0];
+    // Restore the repeatable unit only when a prior hand exposes its committed fixed unit.
+    if (recovered?.base_wager) lastBet = { baseWager: Number(recovered.base_wager) };
     // Render the complete issue #95 surface.
     render();
     // Refresh the shared authenticated wallet without game-owned balance text.
@@ -404,6 +435,8 @@ export const TexasHoldemPracticeTableGame = {
     unsubscribeLocale = null;
     // Clear cached player state from the inactive module.
     state = null;
+    // Clear the repeatable fixed unit so the next session starts fresh.
+    lastBet = null;
     // Release unresolved browser retry records with the inactive view.
     pendingStart = null;
     // Release any unresolved decision record with the inactive view.

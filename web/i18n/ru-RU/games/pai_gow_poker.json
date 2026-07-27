@@ -5,6 +5,7 @@
   "controls.ante": "Анте",
   "controls.deal": "Раздать семь карт",
   "controls.houseWay": "Разложить по правилам дома",
+  "controls.repeat": "Повторить ставку",
   "controls.retryDeal": "Повторить раздачу",
   "controls.retryHelp": "Состояние сети неясно; повторите то же подготовленное действие.",
   "controls.set": "Зафиксировать руку",

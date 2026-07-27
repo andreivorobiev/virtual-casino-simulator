@@ -10,6 +10,7 @@
   "stake.title": "Ставка",
   "action.deal": "Раздать карты",
   "action.dealing": "Раздача…",
+  "controls.repeat": "Повторить ставку",
   "result.idle": "Выберите ранг и раздайте.",
   "outcome.win": "Карта игрока выигрывает!",
   "outcome.lose": "Карта банкира забирает.",
