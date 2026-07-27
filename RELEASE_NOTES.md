@@ -1,6 +1,20 @@
-# Virtual Casino Simulator v0.9.5.12 Release Notes
+# Virtual Casino Simulator v0.9.5.13 Release Notes
 
-## Logout and Guest Trial CSRF continuity patch
+## Reliability, settlement, and governed-regression patch
+
+- Makes replayed settlement and refund identities storage-atomic for Blackjack, Baccarat, Roulette, Keno, and Bingo so a lost state save cannot duplicate wallet effects.
+- Adds a public host-only, one-shot CSRF bootstrap recovery path for unsafe browser requests while keeping missing-cookie recovery fail closed.
+- Funds competitive Bingo opponents, bounds win and no-win sessions, and commits Bingo payouts exactly once.
+- Hardens Pai Gow house-way selection, Texas Hold'em practice-seat solvency and stranded-hand recovery, Roulette layout persistence, and Craps ledger-tail caching without imposing a fixed evidence horizon.
+- Runs the previously orphaned per-game Python and Node suites in CI, enforces mapped test predicates, validates the module/API matrix and digests, and blocks comment density below the governed floor.
+- Uses cryptographically secure outcome draws unless an explicit injected test generator is supplied.
+- Rotates the PWA shell identity and keeps curated What's New metadata disabled pending its separately governed UI remainder.
+- Retains exact immutable v0.9.5.12 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider, DNS, billing, public signup, live OAuth, mail, invitation, public-exposure, credential, or SSH-ingress mutation.
+
+## Prior v0.9.5.12 authentication continuity patch
+
+### Logout and Guest Trial CSRF continuity patch
 
 - Rotates the browser-readable double-submit cookie to a fresh anonymous bootstrap token after logout instead of deleting it.
 - Applies the same rotation after Guest Trial end so either sign-in path works immediately without a shell reload.

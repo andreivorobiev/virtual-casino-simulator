@@ -181,6 +181,8 @@
   "whatsNew.entry.0_9_5_11.body": "This release protects URL bearers from client telemetry, makes failures visible and accessible, strengthens reduced-motion behavior, and rotates the offline shell safely.",
   "whatsNew.entry.0_9_5_12.title": "Reliable sign-in after logout",
   "whatsNew.entry.0_9_5_12.body": "This release rotates the anonymous request-integrity token after logout or Guest Trial end so the next sign-in works without reloading the page.",
+  "whatsNew.entry.0_9_5_13.title": "Reliability and integrity hardening",
+  "whatsNew.entry.0_9_5_13.body": "This release makes settlement replay safe across more games, strengthens request-integrity recovery, and brings the remaining governed regression suites into CI.",
   "replay.title": "Round replay",
   "replay.empty": "No recent rounds to replay.",
   "replay.retention": "Replays are kept for {days} days.",
