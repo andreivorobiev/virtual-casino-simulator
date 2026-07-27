@@ -209,12 +209,16 @@ function historyHtml() {
 
 // Render rule and history support regions.
 function dataHtml() {
-  // Read the server-published inside multiplier with proposal default.
-  const insideMultiplier = rules.inside_return_multiplier || 2;
+  // Read the server-published spread paytable; the inside price scales with the visible spread. (issue #408)
+  const paytable = rules.inside_paytable || {};
+  // Use the current round's spread so the player sees the price that actually applies to this deal.
+  const currentSpread = currentRound()?.inside_rank_count;
+  // Fall back to null when no round is prepared, so the copy explains the scaling instead of a number.
+  const insideMultiplier = currentSpread ? paytable[currentSpread] ?? paytable[String(currentSpread)] : null;
   // Read the server-published tie multiplier with proposal default.
   const tieMultiplier = rules.boundary_tie_return_multiplier ?? 0;
   // Return transparent return table and recent history.
-  return '<aside class="acey-panel acey-data" aria-label="' + safe(text('data.title')) + '"><section><h2>' + safe(text('rules.title')) + '</h2><ul><li>' + safe(text('rules.freeDeal')) + '</li><li>' + safe(text('rules.insideReturn', { multiplier: insideMultiplier })) + '</li><li>' + safe(text('rules.boundaryTie', { multiplier: tieMultiplier })) + '</li><li>' + safe(text('rules.outsideReturn')) + '</li><li>' + safe(text('rules.reducedMotion')) + '</li></ul></section><section><h2>' + safe(text('history.title')) + '</h2>' + historyHtml() + '</section></aside>';
+  return '<aside class="acey-panel acey-data" aria-label="' + safe(text('data.title')) + '"><section><h2>' + safe(text('rules.title')) + '</h2><ul><li>' + safe(text('rules.freeDeal')) + '</li><li>' + safe(insideMultiplier ? text('rules.insideReturn', { multiplier: insideMultiplier }) : text('rules.insideReturnScaled')) + '</li><li>' + safe(text('rules.boundaryTie', { multiplier: tieMultiplier })) + '</li><li>' + safe(text('rules.outsideReturn')) + '</li><li>' + safe(text('rules.reducedMotion')) + '</li></ul></section><section><h2>' + safe(text('history.title')) + '</h2>' + historyHtml() + '</section></aside>';
 }
 
 // Return scoped responsive and reduced-motion styles.

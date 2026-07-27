@@ -13,6 +13,7 @@ from casino.errors import ConflictError, InsufficientFundsError, NotFoundError
 from casino.games.acey_deucey import api, engine
 # Import the isolated service orchestration under test.
 from casino.games.acey_deucey.service import AceyDeuceyService, request_fingerprint
+from casino.games.acey_deucey import engine
 
 
 # Simulate player-scoped state documents without touching repository data files.
@@ -143,16 +144,19 @@ class AceyDeuceyApiTests(unittest.TestCase):
         first = self.call(f"/api/v1/games/acey-deucey/rounds/{round_id}/play", {"action_id": "play-win", "wager": 5})
         # Replay the same play action.
         second = self.call(f"/api/v1/games/acey-deucey/rounds/{round_id}/play", {"action_id": "play-win", "wager": 5})
-        # Verify the inside return table.
-        self.assertEqual(("inside", 10.0, 5.0), (first["round"]["outcome"], first["round"]["payout"], first["round"]["net"]))
+        # Verify the inside return against the published spread price rather than a flat multiple, so the
+        # assertion tracks the paytable instead of pinning a value the edge retune would break. (issue #408)
+        expected_payout = round(5 * engine.inside_return_multiplier(engine.inside_rank_count("2H", "AS")), 2)
+        # Confirm outcome, priced payout, and derived net together.
+        self.assertEqual(("inside", expected_payout, round(expected_payout - 5, 2)), (first["round"]["outcome"], first["round"]["payout"], first["round"]["net"]))
         # Verify replay reports the terminal result.
         self.assertTrue(second["replayed"])
         # Select wager debits and payout credits.
         debits = [event for event in self.ledger.events if event["transaction_type"] == "ACEY_DEUCEY_WAGER_DEBIT"]
         # Select payout credits.
         credits = [event for event in self.ledger.events if event["transaction_type"] == "ACEY_DEUCEY_PAYOUT_CREDIT"]
-        # Verify exactly one debit and one payout.
-        self.assertEqual((1, -5.0, 1, 10.0), (len(debits), debits[0]["amount"], len(credits), credits[0]["amount"]))
+        # Verify exactly one debit and one spread-priced payout credit.
+        self.assertEqual((1, -5.0, 1, expected_payout), (len(debits), debits[0]["amount"], len(credits), credits[0]["amount"]))
         # Verify stable ledger action suffixes.
         self.assertEqual(("ad:play-win:wager", "ad:play-win:payout"), (debits[0]["details"]["acey_deucey_action_id"], credits[0]["details"]["acey_deucey_action_id"]))
 
@@ -193,8 +197,10 @@ class AceyDeuceyApiTests(unittest.TestCase):
         self.assertNotIn("third_card", readable["state"]["active_round"])
         # Retry the released action identity with an affordable wager.
         settled = self.call(f"/api/v1/games/acey-deucey/rounds/{round_id}/play", {"action_id": "play-overbet", "wager": 5})
-        # Verify the retry settles once and creates one debit plus one inside payout.
-        self.assertEqual(("settled", 2, 10.0), (settled["round"]["phase"], len(self.ledger.events), self.ledger.balances["session-player"]))
+        # Verify the retry settles once and creates one debit plus one spread-priced inside payout.
+        expected_balance = round(5 * engine.inside_return_multiplier(engine.inside_rank_count("2H", "AS")), 2)
+        # Confirm the terminal phase, the exactly-two ledger events, and the priced balance together.
+        self.assertEqual(("settled", 2, expected_balance), (settled["round"]["phase"], len(self.ledger.events), self.ledger.balances["session-player"]))
 
     # Confirm reload repairs a legacy save-before-debit terminal row with no ledger proof.
     def test_reload_restores_legacy_pending_terminal_without_wager_proof(self):

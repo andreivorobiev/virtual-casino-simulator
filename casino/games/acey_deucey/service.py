@@ -128,7 +128,8 @@ class AceyDeuceyService:
             "rules": {  # Publish the exact proposal rules profile.
                 "decks": 1,  # Use one standard deck per deal.
                 "wager_timing": "after_boundaries_before_third_card",  # Distinguish from ante-first Red Dog.
-                "inside_return_multiplier": 2,  # Return stake plus even-money profit.
+                "inside_paytable": engine.inside_paytable(),  # Publish the spread-priced return so clients never guess a price.
+                "house_edge": engine.HOUSE_EDGE,  # State the constant edge the spread pricing holds at every spread. (issue #408)
                 "outside_return_multiplier": 0,  # Outside ranks lose the play wager.
                 "boundary_tie_return_multiplier": 0,  # Matching either boundary loses the play wager.
                 "pair_boundaries_have_no_inside_ranks": True,  # Explain equal-boundary edge cases.
