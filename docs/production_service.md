@@ -14,6 +14,14 @@ Requirement `CORE-023` defines the repository-side production process for the re
 - A future edge proxy may send same-origin requests to this loopback listener only after the separate edge gate is approved.
 - The adapter trusts forwarding metadata only from the one configured loopback peer under the exact paired-header policy in `docs/restricted_preview_security.md`. Issue #203 supplies repository policy and tests only; it does not install or configure that proxy.
 
+## Secret-safe edge timing
+
+Requirement `CORE-029` defines the first bounded observability slice for issue #323. The repository nginx template normalizes arbitrary request method tokens into the fixed `get`, `head`, `post`, `put`, `patch`, `delete`, `options`, and `other` families, then classifies requests into the fixed `probe`, `acme`, `admin`, `auth`, `game_api`, `api`, `static`, and `unknown` route families. It emits only normalized method family, fixed route family, response status, total request time, and upstream response time as JSON. The normalized URI is used only inside the nginx map and never enters the emitted row.
+
+The timing format deliberately excludes the raw request line, URI, query string, dynamic resource identifiers, client or upstream address, host, request and response headers, cookies, tokens, bodies, byte counts, user-agent, referrer, and application data. Both the HTTP redirect server and the HTTPS application server explicitly select this format so nginx's identity-bearing default combined format cannot be inherited for the Casino virtual host.
+
+This repository change does not render, copy, enable, reload, or inspect a production nginx configuration. Host installation remains a separately authorized deployment action. Later #323 packages own application percentiles, worker and queue telemetry, MySQL pool metrics, privacy-preserving browser measurements, the isolated benchmark, connection-lifecycle correction, and post-pooling server tuning.
+
 ## Static asset cache contract
 
 Requirement `CORE-026` defines one cache policy for the local development/test adapter and the production WSGI adapter: every HTML, CSS, localization, image, and lazy JavaScript response carries `Cache-Control: no-store`. API and liveness responses retain the same existing no-store behavior from `CORE-013`.
