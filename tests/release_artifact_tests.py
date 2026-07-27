@@ -6,6 +6,8 @@ import json
 import hashlib
 # Import portable paths for disposable release source trees.
 import pathlib
+# Import regular expressions for extracting host-executed workflow script paths.
+import re
 # Import temporary directory support so tests never touch user runtime data.
 import tempfile
 # Import unittest for repository-standard focused test execution.
@@ -60,6 +62,8 @@ class ReleaseArtifactTests(unittest.TestCase):
             "migrations/mysql/catalog.json": migration_catalog.replace("0002_upgrade.json", "0002_action_identity.json"),
             "scripts/mysql_migrate.py": "# Fixture deployment-only migration runner.\n",
             "scripts/recovery.py": "# Fixture encrypted recovery runner.\n",
+            "scripts/package_app.py": "# Fixture extracted-release verifier.\n",
+            "scripts/validate_monitor_config.py": "# Fixture secret-safe monitor validator.\n",
             "scripts/write_release_env.py": "# Fixture deployment provenance writer.\n",
             "web/app.js": "// Fixture static application bundle.\n",
             "web/index.html": "<!doctype html><title>Fixture</title>\n",
@@ -210,6 +214,34 @@ class ReleaseArtifactTests(unittest.TestCase):
             # Require the documented post-install command to exist in every release.
             self.assertIn(f"{package_app.ARCHIVE_ROOT}/scripts/write_release_env.py", archive.namelist())
 
+    # Prove every Python command executed from the extracted release exists in the immutable archive.
+    def test_deployment_host_scripts_are_packaged(self):
+        # Read the protected-main workflow that defines exact host activation commands.
+        workflow = (package_app.ROOT / ".github" / "workflows" / "deploy-production.yml").read_text(encoding="utf-8")
+        # Extract only scripts invoked through the staged release root or active release selector.
+        host_scripts = set(re.findall(r'(?:\$\{release_root\}|/opt/casino/current)/(scripts/[A-Za-z0-9_.-]+\.py)', workflow))
+        # Pin the reviewed host-command inventory so syntax drift cannot silently evade the extractor.
+        self.assertEqual(host_scripts, {
+            "scripts/edge_gate.py",
+            "scripts/package_app.py",
+            "scripts/validate_monitor_config.py",
+            "scripts/write_release_env.py",
+        })
+        # Build a structurally valid candidate from the complete required fixture inventory.
+        archive_path, _ = self.build("deployment-host-scripts")
+        # Inspect the immutable archive without extracting or executing host commands.
+        with zipfile.ZipFile(archive_path, "r") as archive:
+            # Normalize the packaged member names back to repository-relative paths.
+            packaged_paths = {
+                member.removeprefix(f"{package_app.ARCHIVE_ROOT}/")
+                for member in archive.namelist()
+            }
+        # Require every workflow-derived host command to resolve inside the extracted release.
+        self.assertTrue(host_scripts <= packaged_paths, {
+            "missing": sorted(host_scripts - packaged_paths),
+            "host_scripts": sorted(host_scripts),
+        })
+
     # Prove untracked private content is never considered by tracked-file packaging.
     def test_untracked_private_content_is_excluded(self):
         # Create a credential-like file that is deliberately absent from the tracked list.
@@ -352,9 +384,9 @@ class ReleaseArtifactTests(unittest.TestCase):
     # Prove the current private-invite compatibility record binds the exact safe predecessor boundary.
     def test_current_release_compatibility_binds_private_invite_predecessor(self):
         # Load the immutable packaged-release compatibility record governed by TOOL-003.
-        compatibility = json.loads((package_app.ROOT / "contracts" / "compatibility" / "app-0.9.5.7.json").read_text(encoding="utf-8"))
+        compatibility = json.loads((package_app.ROOT / "contracts" / "compatibility" / "app-0.9.5.8.json").read_text(encoding="utf-8"))
         # Require the canonical release and restricted-preview channel identities.
-        self.assertEqual((compatibility["app_version"], compatibility["release_channel"]), ("0.9.5.7", "restricted-preview-private-invite"))
+        self.assertEqual((compatibility["app_version"], compatibility["release_channel"]), ("0.9.5.8", "restricted-preview-private-invite"))
         # Require the exact prior packaged release and retained manifest filename.
         self.assertEqual(
             compatibility["predecessor"],

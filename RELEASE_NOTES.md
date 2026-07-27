@@ -1,4 +1,15 @@
-# Virtual Casino Simulator v0.9.5.7 Release Notes
+# Virtual Casino Simulator v0.9.5.8 Release Notes
+
+## Extracted-host package-inventory recovery patch
+
+- Supersedes the immutable but host-incomplete v0.9.5.7 publication with a new patch identity; the existing v0.9.5.7 tag and assets remain untouched.
+- Packages `scripts/package_app.py` and `scripts/validate_monitor_config.py`, which production activation executes from the extracted release before selector or service mutation.
+- Adds an archive-inventory regression that derives every extracted-release Python command from `.github/workflows/deploy-production.yml` and requires each referenced script to exist in the immutable archive.
+- Keeps publish-time-only predecessor resolution in the repository workflow while packaging the four host-required scripts: release verification, monitor validation, provenance writing, and edge observation.
+- Retains checksum-verified v0.9.5.5 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Preserves secret-safe explicit monitor digest repair plus read-only validation and does not authorize provider, DNS, billing, public signup, live OAuth, mail activation, unrestricted exposure, or GitHub-hosted SSH ingress expansion.
+
+## Prior v0.9.5.7 release-recovery publication
 
 ## Deterministic rollback-provenance and monitor-recovery patch
 
