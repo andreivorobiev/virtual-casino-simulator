@@ -1,103 +1,17 @@
 {
   "module": "teen_patti",
   "version": "1.0.2",
-  "paths": [
-    "casino/games/teen_patti/",
-    "web/games/teen_patti.js",
-    "web/i18n/en-US/games/teen_patti.json",
-    "web/i18n/ru-RU/games/teen_patti.json"
-  ],
-  "requirements_prefixes": [
-    "TEENP"
-  ],
-  "contracts": [
-    "contracts/openapi/teen_patti.v1.yaml"
-  ],
+  "paths": ["casino/games/teen_patti/", "web/games/teen_patti.js", "web/i18n/en-US/games/teen_patti.json", "web/i18n/ru-RU/games/teen_patti.json"],
+  "requirements_prefixes": ["TEENP"],
+  "contracts": ["contracts/openapi/teen_patti.v1.yaml"],
   "game": {
-    "id": "teen_patti",
-    "sort_order": 450,
-    "route": "/games/teen_patti",
-    "label": "Teen Patti Practice",
-    "category": "poker",
-    "categories": [
-      "table",
-      "cards",
-      "poker",
-      "strategy"
-    ],
-    "backend": {
-      "register": "casino.games.teen_patti.api:register"
-    },
-    "frontend": {
-      "module": "./games/teen_patti.js",
-      "export": "TeenPattiGame",
-      "ready_testid": "teen-patti",
-      "i18n_domain": "games/teen_patti",
-      "i18n_probe": "action.deal"
-    },
-    "tests": {
-      "long_driver": "tests.game_drivers.teen_patti:play"
-    },
-    "translations": {
-      "ru-RU": {
-        "label": "\u0422\u0438\u043d \u041f\u0430\u0442\u0442\u0438",
-        "kicker": "\u041f\u043e\u043a\u0435\u0440",
-        "description": "\u0422\u0440\u0451\u0445\u043a\u0430\u0440\u0442\u043e\u0447\u043d\u044b\u0439 \u043f\u043e\u043a\u0435\u0440 \u043f\u0440\u043e\u0442\u0438\u0432 \u0434\u0438\u043b\u0435\u0440\u0430: \u0430\u043d\u0442\u0435, \u0437\u0430\u0442\u0435\u043c \u0438\u0433\u0440\u0430 \u0438\u043b\u0438 \u0441\u0431\u0440\u043e\u0441; \u0434\u0438\u043b\u0435\u0440 \u043a\u0432\u0430\u043b\u0438\u0444\u0438\u0446\u0438\u0440\u0443\u0435\u0442\u0441\u044f \u0434\u0430\u043c\u043e\u0439, \u043f\u043e\u0441\u043b\u0435\u0434\u043e\u0432\u0430\u0442\u0435\u043b\u044c\u043d\u043e\u0441\u0442\u044c \u0431\u044c\u0451\u0442 \u0446\u0432\u0435\u0442, \u0431\u043e\u043d\u0443\u0441 \u0437\u0430 \u0442\u0440\u0435\u0439\u043b \u0438 \u0447\u0438\u0441\u0442\u0443\u044e \u043f\u043e\u0441\u043b\u0435\u0434\u043e\u0432\u0430\u0442\u0435\u043b\u044c\u043d\u043e\u0441\u0442\u044c, \u0441\u0435\u0440\u0432\u0435\u0440\u043d\u0430\u044f \u0440\u0430\u0437\u0434\u0430\u0447\u0430 \u0438 \u0440\u0430\u0441\u0447\u0451\u0442 \u0447\u0435\u0440\u0435\u0437 \u0436\u0443\u0440\u043d\u0430\u043b \u0436\u0435\u0442\u043e\u043d\u043e\u0432."
-      }
-    },
-    "lobby": {
-      "featured": false,
-      "wide": false,
-      "art_class": "teen-patti-art",
-      "symbol": "TP",
-      "kicker": "Poker room",
-      "description": "Three-card poker against the dealer: ante, then play or fold; the dealer qualifies with a queen, a sequence beats a colour, and a Bonus pays a trail or pure sequence, with server-authoritative deals and ledger-backed settlement.",
-      "tags": [
-        "Cards",
-        "Poker",
-        "Strategy",
-        "Ledger-backed"
-      ]
-    }
+    "id": "teen_patti", "sort_order": 450, "route": "/games/teen_patti", "label": "Teen Patti Practice", "category": "poker", "categories": ["table", "cards", "poker", "strategy"],
+    "backend": {"register": "casino.games.teen_patti.api:register"},
+    "frontend": {"module": "./games/teen_patti.js", "export": "TeenPattiGame", "ready_testid": "teen-patti", "i18n_domain": "games/teen_patti", "i18n_probe": "action.deal"},
+    "tests": {"long_driver": "tests.game_drivers.teen_patti:play"},
+    "translations": {"ru-RU": {"label": "Тин Патти", "kicker": "Покер", "description": "Трёхкарточный покер против дилера: анте, затем игра или сброс; дилер квалифицируется дамой, последовательность бьёт цвет, бонус за трейл и чистую последовательность, серверная раздача и расчёт через журнал жетонов."}},
+    "lobby": {"featured": false, "wide": false, "art_class": "teen-patti-art", "symbol": "TP", "kicker": "Poker room", "description": "Three-card poker against the dealer: ante, then play or fold; the dealer qualifies with a queen, a sequence beats a colour, and a Bonus pays a trail or pure sequence, with server-authoritative deals and ledger-backed settlement.", "tags": ["Cards", "Poker", "Strategy", "Ledger-backed"]}
   },
-  "depends_on": [
-    "core",
-    "ledger",
-    "players"
-  ],
-  "may_not_depend_on": [
-    "roulette",
-    "slots",
-    "blackjack",
-    "baccarat",
-    "keno",
-    "bingo",
-    "multi_hand_video_poker",
-    "casino_war",
-    "big_six_wheel",
-    "red_dog",
-    "dragon_tiger",
-    "hi_lo",
-    "three_card_poker",
-    "jacks_or_better_video_poker",
-    "deuces_wild_video_poker",
-    "scratch_cards",
-    "sic_bo",
-    "chuck_a_luck",
-    "craps",
-    "crown_and_anchor",
-    "over_under_7",
-    "plinko",
-    "fan_tan",
-    "andar_bahar",
-    "acey_deucey",
-    "caribbean_stud",
-    "let_it_ride",
-    "casino_holdem",
-    "double_bonus_video_poker",
-    "mississippi_stud",
-    "joker_poker",
-    "texas_holdem_practice_table",
-    "pai_gow_poker"
-  ]
+  "depends_on": ["core", "ledger", "players"],
+  "may_not_depend_on": ["roulette", "slots", "blackjack", "baccarat", "keno", "bingo", "multi_hand_video_poker", "casino_war", "big_six_wheel", "red_dog", "dragon_tiger", "hi_lo", "three_card_poker", "jacks_or_better_video_poker", "deuces_wild_video_poker", "scratch_cards", "sic_bo", "chuck_a_luck", "craps", "crown_and_anchor", "over_under_7", "plinko", "fan_tan", "andar_bahar", "acey_deucey", "caribbean_stud", "let_it_ride", "casino_holdem", "double_bonus_video_poker", "mississippi_stud", "joker_poker", "texas_holdem_practice_table", "pai_gow_poker"]
 }
