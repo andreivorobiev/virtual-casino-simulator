@@ -7014,8 +7014,10 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 assert not any(prefix in roulette_english_text for prefix in ('header.','controls.','stage.','result.','betSlip.','settlement.','scoreboard.','stats.','status.','settings.','bets.'))
                 # Verify Roulette values use explicit fake-money language instead of the legacy diamond-like glyph.
                 assert 'play tokens' in roulette_english_text and '\ufffd' not in roulette_english_text and '\u00e2\u2014\u02c6' not in roulette_english_text
-                # Verify the English route resolved every requested i18n key.
-                assert page.evaluate("import('/core/i18n.js').then(i18n => i18n.getLocaleState().missingKeyCount)") == 0
+                # Capture the full locale state so an English audit failure names its exact context.
+                roulette_locale_state=page.evaluate("import('/core/i18n.js').then(i18n => i18n.getLocaleState())")
+                # Verify the English route resolved every requested i18n key and name the state on failure.
+                assert roulette_locale_state['missingKeyCount']==0,{'locale':roulette_locale_state['locale'],'missingKeyCount':roulette_locale_state['missingKeyCount'],'loadedDomains':roulette_locale_state['loadedDomains']}
                 # Let the newly mounted route complete paint before capturing idle evidence.
                 page.wait_for_timeout(300)
                 # Capture idle-state visual evidence before any wager is placed.
