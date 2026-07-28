@@ -25,15 +25,17 @@ By default, copied environments are created under `C:\Users\andre\Documents\Code
 
 ## Pull Request Build
 
-Suite `100` is wired into `.github/workflows/long-suite-100.yml` and runs on every pull request. Treat the `Long Suite 100 / long_suite_100` check as mandatory once repository branch protection is updated to require it.
+Suite `100` is wired into `.github/workflows/long-suite-100.yml` and runs on every pull request as four parallel matrix shards plus one aggregate gate job. The gate job reports the exact `Long Suite 100 / long_suite_100` check context that repository branch protection requires, and it fails unless every shard succeeded, so the required check can never pass vacuously.
 
-The workflow runs:
+Each shard runs:
 
 ```powershell
-python tests/long_suites.py --suite 100 --copy-deployment
+python tests/long_suites.py --suite 100 --shard-count 4 --shard-index <N> --copy-deployment
 ```
 
-This includes the browser audio verification path.
+Shard `0` includes the browser audio verification path; shards `1` through `3` pass `--skip-browser-audio` and focus on API/gameplay volume, mirroring the soak lane. The four modulo partitions contain exactly 25 scenarios each with no overlap, while per-shard JSON reports are retained outside their disposable deployment copies under unique artifact names.
+
+Superseded ordinary runs for the same pull request are cancelled automatically by workflow-and-PR concurrency groups. Main pushes and manual dispatches fall back to unique run IDs, so they cannot cancel each other or formal 50,000-cycle, Baccarat sustained, release, deployment, or manually selected soak work. Browser Tests includes its own workflow file in the pull-request path filter so execution-policy edits always receive fresh exact-head browser evidence.
 
 ## Parallel Shards
 
