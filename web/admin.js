@@ -515,8 +515,10 @@ async function history() {
   setTitle('History', 'Cross-game CSV history rows.');
   // Load history rows through the existing Admin endpoint.
   const data = await api('/api/v1/admin/history?limit=500');
-  // Render history diagnostics.
-  view.innerHTML = `<section class="admin-card"><h3>History</h3>${pre(data.history || [])}</section>`;
+  // Normalize the rows into a readable newest-first list. (issue #457)
+  const rows = (data.history || []).slice().reverse();
+  // Render a real table with an empty-state instead of a raw JSON dump. (issue #457)
+  view.innerHTML = `<section class="admin-card"><h3>History</h3>${rows.length ? table(['Time', 'Player', 'Game', 'Bet', 'Amount', 'Payout', 'Outcome', 'Balance'], rows.map(row => `<tr><td>${safe(row.timestamp)}</td><td>${safe(row.player_id)}</td><td>${safe(humanLabel(row.game))}</td><td>${safe(row.bet_label || row.bet_type)}</td><td>${formatMoney(Number(row.amount))}</td><td>${formatMoney(Number(row.payout))}</td><td>${safe(row.outcome)}</td><td>${formatMoney(Number(row.balance_after))}</td></tr>`)) : emptyState('No history yet', 'Cross-game history rows appear here after players complete rounds.', 'admin-history-empty')}</section>`;
 }
 
 // Define telemetry to show server and client logs.
@@ -631,8 +633,10 @@ async function states() {
   setTitle('Game States', 'Isolated game state files.');
   // Load game states through the existing Admin endpoint.
   const data = await api('/api/v1/admin/game-states');
-  // Render game state diagnostics.
-  view.innerHTML = `<section class="admin-card"><h3>States</h3>${pre(data.states)}</section>`;
+  // Normalize the per-game/per-player state files into table rows. (issue #457)
+  const entries = Object.entries(data.states || {});
+  // Render a table of state files with an expandable raw view, and an empty-state instead of a raw {} dump. (issue #457)
+  view.innerHTML = `<section class="admin-card"><h3>States</h3>${entries.length ? table(['State', 'Keys', 'Detail'], entries.map(([key, info]) => `<tr><td>${safe(key)}</td><td>${safe(Object.keys(info.state || {}).length)}</td><td><details><summary>view</summary>${pre(info.state)}</details></td></tr>`)) : emptyState('No game states yet', 'Per-game state files appear here after players start games.', 'admin-game-states-empty')}</section>`;
 }
 
 // Define audio to preserve global sound and voice settings.
@@ -809,8 +813,10 @@ async function tests() {
   setTitle(t('nav.tests', {}, 'admin'), 'Latest API/browser test results.');
   // Load latest test results through the existing Admin endpoint.
   const data = await api('/api/v1/admin/test-results');
-  // Render test diagnostics.
-  view.innerHTML = `<section class="admin-card"><h3>Latest results</h3>${pre(data.results)}</section>`;
+  // Normalize the persisted results object; it is only written by a recorded test run. (issue #457)
+  const results = data.results || {};
+  // Show a readable expandable view when results exist, and a labelled empty-state instead of a raw {} otherwise. (issue #457)
+  view.innerHTML = `<section class="admin-card"><h3>Latest results</h3>${Object.keys(results).length ? `<details open><summary>${safe(Object.keys(results).length)} result fields</summary>${pre(results)}</details>` : emptyState('No test results recorded', 'Run the test suite with result persistence to populate this view.', 'admin-tests-empty')}</section>`;
 }
 
 // Define system to show module revisions and raw overview data.

@@ -13,7 +13,7 @@ Historical source baseline: 9.1.0
 - bots: 1.1.1
 - autoplay: 1.1.3
 - audio: 9.1.1
-- admin: 1.13.0
+- admin: 1.13.1
 - operations: 1.1.2
 - marketing_site: 1.0.2
 - roulette: 9.4.12
@@ -50,8 +50,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.0
 - pai_gow_poker: 1.1.0
 - teen_patti: 1.1.0
-- tests: 1.64.15
-- docs: 1.64.15
+- tests: 1.64.18
+- docs: 1.64.18
 - contracts: 1.49.9
 - tooling: 1.21.8
 - commenting_policy: 1.0.0
@@ -931,3 +931,5 @@ Historical source baseline: 9.1.0
 - **TEST-138** (Tests) - PASS: Listener-free account-spine evidence proves one-time bootstrap-owner migration and session invalidation, owner-only additive-v2 Admin grant and revoke, ordinary-Admin denial, active-target enforcement, last-owner preservation under concurrent mutation, and v2 player-only creation without opening a listener or touching live identity data.
 - **TEST-139** (Tests) - PASS: Hosted Browser evidence proves every registered catalog game keeps its enabled controls vertically reachable at the governed primary and compact desktop viewports, failing when a control is clipped by a non-scrollable ancestor in the fixed-height shell.
 - **TEST-143** (Tests) - PASS: Listener-free isolated-provider evidence proves persistent-account-only bounded session inventory, newest-first ordering, fixed one-way aliases, approved-field and coarse-client projection, secret and cross-account exclusion, idempotent targeted and all-session revocation, concurrent exactly-once transition counting, byte-exact preservation of syntactically invalid JSON, parseable malformed-document preservation, and invalid-request non-mutation.
+- **ADMIN-029** (Admin) - PASS: The admin diagnostic pages render real content instead of raw structures: Game States aggregates per-game and per-player state files from nested subdirectories (not only legacy top-level files), History renders a labelled table with an empty-state, and Tests renders a labelled empty-state when no results are recorded rather than a raw empty object.
+- **TEST-145** (Tests) - PASS: Listener-free regression proves the admin Game States aggregation surfaces both nested per-player state files and legacy top-level state files under distinct composite keys, so a non-recursive glob regression is caught.

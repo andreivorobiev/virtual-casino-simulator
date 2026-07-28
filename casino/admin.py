@@ -588,10 +588,12 @@ def game_states():
     states = {}
     # Branch when the following condition is true.
     if GAME_DATA_DIR.exists():
-        # Iterate through the collection to process each item.
-        for p in sorted(GAME_DATA_DIR.glob("*.json")):
-            # Set states[p.stem] to the value needed for the next operation.
-            states[p.stem] = {"path": str(p), "state": _read_json_file(p, {})}
+        # Recurse so per-game/per-player state files in subdirectories are included, not just legacy top-level files. (issue #457)
+        for p in sorted(GAME_DATA_DIR.rglob("*.json")):
+            # Key each state by its path relative to the game-data root so nested <game>/<player> files stay distinct and readable.
+            key = p.relative_to(GAME_DATA_DIR).with_suffix("").as_posix()
+            # Record the state file path and its parsed contents under the composite key.
+            states[key] = {"path": str(p), "state": _read_json_file(p, {})}
     # Return the computed value to the caller.
     return states
 

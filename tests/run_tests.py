@@ -1102,6 +1102,8 @@ def run_api_tests():
     run_case('API-BINGO-ECONOMICS-001',['BINGO-025'],lambda: run_unit_module('tests.bingo_economics_tests','bingo economics suite failed'))
     # Record the practice-table solvency, compensation, and self-heal proof. (issue #411)
     run_case('API-THPT-ESCROW-001',['THPT-006'],lambda: run_unit_module('tests.thpt_escrow_tests','practice-table escrow suite failed'))
+    # Record the admin Game States nested-state-file regression proof. (issue #457)
+    run_case('API-ADMIN-GAME-STATES-001',['ADMIN-029','TEST-145'],lambda: run_unit_module('tests.admin_game_states_tests','admin game-states nested-file suite failed'))
     # Execute the complete non-mutating edge preparation proof before any test listener starts.
     def run_edge_gate_tests():
         # Load only the focused TEST-050 unit-test class.
