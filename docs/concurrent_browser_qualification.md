@@ -14,6 +14,8 @@ production, a public endpoint, a real account, a provider, or paid infrastructur
 The hosted job is disabled by default. It can run only through the Boolean
 `concurrent_browser_138` workflow-dispatch input. Ordinary pull requests run the listener-free
 planner, barrier, artifact, workflow, and safety tests but do not launch the 138-context profile.
+The job installs both the `mysql` and `recovery` optional dependency groups before TEST-141 so
+the disposable preflight has its connector and the required encrypted-recovery backend.
 
 ## Observability-first sequence
 

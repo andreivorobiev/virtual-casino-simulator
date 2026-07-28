@@ -4,6 +4,7 @@ import asyncio  # Exercise the asynchronous synchronized barrier without launchi
 import json  # Persist one external exact-source pool preflight fixture.
 import os  # Patch only the explicit disposable marker for boundary tests.
 import tempfile  # Own and clean external listener-free evidence files.
+import tomllib  # Parse optional dependency groups for listener-free workflow policy proof.
 import unittest  # Integrate focused proofs with the repository test runner.
 from types import SimpleNamespace  # Build small aggregate-only barrier fixtures.
 from unittest import mock  # Isolate current-catalog and environment scenarios.
@@ -304,6 +305,16 @@ class ConcurrentBrowser138Tests(unittest.TestCase):
         job = workflow.split("\n  concurrent_browser_138:\n", 1)[1]
         # Require explicit workflow-dispatch authorization.
         self.assertIn("inputs.concurrent_browser_138 == true", job)
+        # Require the disposable MySQL preflight to install both connector and recovery groups.
+        self.assertEqual(job.count('python -m pip install -e ".[mysql,recovery]"'), 1)
+        # Reject the incomplete environment that reached TEST-141 without recovery crypto.
+        self.assertNotIn('python -m pip install -e ".[mysql]"', job)
+        # Resolve the canonical optional-dependency metadata without installing or opening a listener.
+        pyproject_path = concurrent_browser_138.ui_50000.ROOT / "pyproject.toml"
+        # Parse the exact checkout's dependency groups as inert TOML.
+        project = tomllib.loads(pyproject_path.read_text(encoding="utf-8"))
+        # Prove the installed recovery extra supplies the encryption backend required by TEST-141.
+        self.assertIn("cryptography>=46,<50", project["project"]["optional-dependencies"]["recovery"])
 
 
 # Run the focused listener-free suite directly.
