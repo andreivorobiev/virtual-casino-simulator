@@ -17,10 +17,10 @@ Historical source baseline: 9.1.0
 - operations: 1.1.2
 - marketing_site: 1.0.2
 - roulette: 9.4.12
-- slots: 9.2.0
+- slots: 9.2.1
 - blackjack: 9.1.7
 - baccarat: 9.1.8
-- keno: 9.3.0
+- keno: 9.3.1
 - bingo: 9.3.0
 - multi_hand_video_poker: 1.1.0
 - casino_war: 1.1.0
@@ -50,8 +50,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.0
 - pai_gow_poker: 1.1.0
 - teen_patti: 1.1.0
-- tests: 1.64.15
-- docs: 1.64.15
+- tests: 1.64.16
+- docs: 1.64.16
 - contracts: 1.49.9
 - tooling: 1.21.8
 - commenting_policy: 1.0.0
@@ -931,3 +931,6 @@ Historical source baseline: 9.1.0
 - **TEST-138** (Tests) - PASS: Listener-free account-spine evidence proves one-time bootstrap-owner migration and session invalidation, owner-only additive-v2 Admin grant and revoke, ordinary-Admin denial, active-target enforcement, last-owner preservation under concurrent mutation, and v2 player-only creation without opening a listener or touching live identity data.
 - **TEST-139** (Tests) - PASS: Hosted Browser evidence proves every registered catalog game keeps its enabled controls vertically reachable at the governed primary and compact desktop viewports, failing when a control is clipped by a non-scrollable ancestor in the fixed-height shell.
 - **TEST-143** (Tests) - PASS: Listener-free isolated-provider evidence proves persistent-account-only bounded session inventory, newest-first ordering, fixed one-way aliases, approved-field and coarse-client projection, secret and cross-account exclusion, idempotent targeted and all-session revocation, concurrent exactly-once transition counting, byte-exact preservation of syntactically invalid JSON, parseable malformed-document preservation, and invalid-request non-mutation.
+- **SLOT-036** (Slots) - PASS: Slots settlement is economically house-side: the line paytable, scatter-triggered free-spin frequency and award, and progressive contribution are calibrated so best-play total RTP is ~92% (about an 8% house edge) rather than the prior catastrophic ~400-515% player-positive return, with the symbol set, reels, paylines, grid, and CSPRNG unchanged.
+- **KENO-027** (Keno) - PASS: The keno paytable is house-side for every pick count 1-20: each spot count's exact hypergeometric RTP lands in a realistic ~90% band, correcting the prior player-positive returns for pick counts 9-14 (up to 143% RTP).
+- **TEST-144** (Tests) - PASS: Economics regression evidence proves the rebalanced slots and keno games are house-side: the slots settlement RTP is below one over a seeded engine run and every keno pick count's exact hypergeometric return is below one, so neither game is player-positive under best play.

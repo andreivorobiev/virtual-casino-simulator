@@ -266,8 +266,8 @@ class RouletteKenoSettlementTests(unittest.TestCase):
         with mock.patch.object(keno_engine, "_SYSTEM_RANDOM", _ScriptedBalls(list(range(1, 21)))):
             # Settle the ticket with the first racing draw.
             first = handlers[("POST", KENO_DRAW)]({}, {})
-        # Verify racer A paid the five-catch multiplier as a fresh, non-replayed credit.
-        self.assertEqual(first["settlements"][0]["result"]["payout"], 2500.0)
+        # Verify racer A paid the five-catch multiplier as a fresh, non-replayed credit. (5-spot 5-catch pays 620x after the issue #456 rebalance, so a 5.0 ticket returns 3100.0)
+        self.assertEqual(first["settlements"][0]["result"]["payout"], 3100.0)
         # Verify racer A's payout carried a non-replayed marker.
         self.assertFalse(first["settlements"][0]["replayed"])
         # Restore the pre-draw snapshot so racer B settles the same durable ticket.
@@ -282,8 +282,8 @@ class RouletteKenoSettlementTests(unittest.TestCase):
         rows = self._action_rows(f"{ticket_id}:payout")
         # Require exactly one payout row for the ticket identity.
         self.assertEqual(len(rows), 1)
-        # Require the wallet to reflect one purchase debit and one payout credit only.
-        self.assertEqual(players.get_player("human")["balance"], 5000.0 - 5.0 + 2500.0)
+        # Require the wallet to reflect one purchase debit and one payout credit only. (5-spot 5-catch = 620x after the issue #456 rebalance)
+        self.assertEqual(players.get_player("human")["balance"], 5000.0 - 5.0 + 3100.0)
 
     # Prove a crash-window re-run replays the committed settlement without a second credit. (issue #403)
     def test_crash_window_rerun_replays_settlement_without_second_credit(self):
@@ -338,6 +338,61 @@ class RouletteKenoSettlementTests(unittest.TestCase):
         self.assertEqual(open_bets[0]["layout_kind"], dozen["layout_kind"])
         # Require the catalog to classify dozen bets as outside-layout bets.
         self.assertEqual(dozen["layout_kind"], "outside")
+
+
+# Prove the shipped keno paytable stays house-side for every pick count so the issue #456 rebalance cannot silently regress. (issue #456)
+class KenoPaytableEconomicsTests(unittest.TestCase):
+    # A keno draw is fixed by the game rules: twenty balls are drawn from a field of eighty.
+    FIELD = 80
+    # Twenty balls are revealed every draw regardless of how many spots the ticket picked.
+    DRAWN = 20
+
+    # Return the exact hypergeometric probability of catching exactly `hits` of `spots` picked numbers. (issue #456)
+    def _p_hits(self, spots, hits):
+        # Import combinatorics locally so the module's import surface stays unchanged for other suites.
+        from math import comb
+        # Impossible catch counts (more hits than picks, or too few non-picks drawn) contribute zero probability.
+        if hits > spots or (self.DRAWN - hits) > (self.FIELD - spots) or hits < 0 or (self.DRAWN - hits) < 0:
+            # Report a zero probability for the unreachable catch count.
+            return 0.0
+        # P(exactly hits) = C(spots,hits) * C(field-spots, drawn-hits) / C(field, drawn).
+        return comb(spots, hits) * comb(self.FIELD - spots, self.DRAWN - hits) / comb(self.FIELD, self.DRAWN)
+
+    # Return the exact deterministic return-to-player for one pick count straight from the shipped engine paytable. (issue #456)
+    def _rtp(self, spots):
+        # RTP is the probability-weighted sum of payout multipliers over the paid catch levels; unpaid catches contribute nothing.
+        return sum(self._p_hits(spots, hits) * mult for hits, mult in keno_engine.PAYTABLE[spots].items())
+
+    # Require every pick count 1-20 to be house-edged so keno can never again be player-positive. (issues #456, #426)
+    def test_every_pick_count_is_house_edged(self):
+        # Check each supported pick count independently against the exact hypergeometric RTP.
+        for spots in range(1, 21):
+            # Compute the deterministic exact RTP for this pick count from the live paytable.
+            rtp = self._rtp(spots)
+            # Fail loudly if any pick count returns at or above the wager, which is the exact defect issue #456 fixes.
+            self.assertLess(rtp, 1.0, f"keno pick {spots} is player-positive (RTP={rtp:.4f}); issue #456 regression")
+
+    # Require every pick count to land inside the approved modest, consistent house-edge band for the rebalance. (issue #456)
+    def test_every_pick_count_in_target_rtp_band(self):
+        # Check each supported pick count against the intended [0.88, 0.94] return band.
+        for spots in range(1, 21):
+            # Compute the deterministic exact RTP for this pick count from the live paytable.
+            rtp = self._rtp(spots)
+            # Fail loudly if the return drops below the 0.88 floor (house edge too harsh vs the intended ~6-12%).
+            self.assertGreaterEqual(rtp, 0.88, f"keno pick {spots} RTP={rtp:.4f} below the 0.88 target floor; issue #456")
+            # Fail loudly if the return rises above the 0.94 ceiling (house edge too thin vs the intended ~6-12%).
+            self.assertLessEqual(rtp, 0.94, f"keno pick {spots} RTP={rtp:.4f} above the 0.94 target ceiling; issue #456")
+
+    # Require each row to keep a sensible shape: catching more numbers must never pay a smaller multiplier. (issue #456)
+    def test_paytable_multipliers_are_monotonic(self):
+        # Inspect each pick count row independently.
+        for spots in range(1, 21):
+            # Read the paid catch levels for this pick count in ascending catch-count order.
+            levels = sorted(keno_engine.PAYTABLE[spots])
+            # Compare every adjacent pair of catch levels.
+            for lower, higher in zip(levels, levels[1:]):
+                # Fail loudly if a higher catch count does not pay strictly more than a lower one.
+                self.assertLess(keno_engine.PAYTABLE[spots][lower], keno_engine.PAYTABLE[spots][higher], f"keno pick {spots} paytable is non-monotonic at catches {lower}->{higher}; issue #456")
 
 
 # Run the module directly through the standard unittest entry point.
