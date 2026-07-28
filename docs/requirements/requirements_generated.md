@@ -7,7 +7,7 @@ Historical source baseline: 9.1.0
 ## Independent module revisions
 
 - application: 9.53.7
-- core: 9.26.0
+- core: 9.27.0
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.1
@@ -50,8 +50,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.0
 - pai_gow_poker: 1.1.0
 - teen_patti: 1.1.0
-- tests: 1.63.1
-- docs: 1.63.1
+- tests: 1.64.0
+- docs: 1.64.0
 - contracts: 1.49.1
 - tooling: 1.21.4
 - commenting_policy: 1.0.0
@@ -661,6 +661,7 @@ Historical source baseline: 9.1.0
 - **SEC-010** (Core) - PASS: Restricted-preview production requests require exact canonical Host and Origin values, one exact loopback trusted-proxy contract, per-session CSRF proof for every unsafe method, bounded bodies and client windows, hardened response headers, and secret-safe fixed-class security logging.
 - **SESSION-006** (Core) - PASS: Restricted-preview sessions use host-only Secure HttpOnly SameSite cookies, distinct per-session CSRF values, bounded per-user concurrent session retention with least-recently-used eviction, bounded lifetime, logout clearing of the session credential with rotation of the browser-readable double-submit cookie onto a fresh anonymous bootstrap token, and revocation after privilege-bearing account changes.
 - **SESSION-007** (Session) - PASS: Concurrent same-account logins create independent durable sessions that remain valid and never invalidate each other, bounded by a per-user cap with least-recently-used eviction and atomic session persistence that prevents lost writes, returning no 401 or 500 under concurrency.
+- **SESSION-008** (Core) - PASS: The server-side Admin session-control core keeps disposable guest trials outside retained-account controls, lists at most one hundred sessions for one persistent account through stable one-way aliases and approved timestamp, lifecycle, authentication-method, and coarse-client fields, and provides idempotent targeted or all-session revocation through the existing atomic JSON/MySQL document transaction without exposing or logging raw session identifiers, bearer or CSRF material, user identifiers, IP addresses, or raw client strings.
 - **ADMIN-024** (Admin) - PASS: Admin HTML, JavaScript, and API surfaces require an active Admin session during restricted preview, and user privilege or status changes revoke existing sessions.
 - **AUTH-007** (Core) - PASS: Restricted preview keeps public signup disabled and fail-closed; additive invite-only OAuth routes remain disabled and provider-network inaccessible by default, create no users, never link by email, and require exact browser/session integrity when separately released.
 - **AUTH-008** (Core) - PASS: The authenticated shared shell renders and keyboard-wires Admin navigation only for an authenticated Admin user; normal-player locale rerenders and restored game routes never expose the affordance, while direct Admin HTML and API access remain server-enforced.
@@ -927,3 +928,4 @@ Historical source baseline: 9.1.0
 - **AUTH-012** (Core) - PASS: The configured bootstrap identity is idempotently migrated to a non-assignable platform_owner authority while preserving compatible Admin presentation, every committed migration revokes predecessor sessions, ordinary Admin and monitor identities retain Admin access without owner authority, and repeated process startup never rotates a current owner session.
 - **ADMIN-028** (Admin) - PASS: Only the current active platform owner can grant or revoke ordinary Admin authority through additive v2 account mutation, the target must already be an active canonical account, v2 account creation is player-only, platform-owner authority is not caller-assignable or removable, and transaction-scoped JSON/MySQL validation preserves at least one active owner and Admin while recording the canonical actor and revoking affected target sessions.
 - **TEST-138** (Tests) - PASS: Listener-free account-spine evidence proves one-time bootstrap-owner migration and session invalidation, owner-only additive-v2 Admin grant and revoke, ordinary-Admin denial, active-target enforcement, last-owner preservation under concurrent mutation, and v2 player-only creation without opening a listener or touching live identity data.
+- **TEST-143** (Tests) - PASS: Listener-free isolated-provider evidence proves persistent-account-only bounded session inventory, newest-first ordering, fixed one-way aliases, approved-field and coarse-client projection, secret and cross-account exclusion, idempotent targeted and all-session revocation, concurrent exactly-once transition counting, malformed-document preservation, and invalid-request non-mutation.
