@@ -1,5 +1,5 @@
 # AUTO-COMMENTED FOR CODEX: each meaningful executable line has an adjacent purpose comment.
-"""Bingo economics regression tests for issue #405 (guaranteed-win session) and issue #420 (CSPRNG draws)."""
+"""Bingo economics regression tests for issue #405 (guaranteed-win session), #420 (CSPRNG draws), and #452 (house-edged paytable and guaranteed competitor field)."""
 
 # Import atexit so the module-scoped scratch directory is always released at interpreter exit.
 import atexit
@@ -185,10 +185,12 @@ class BingoEconomicsTests(unittest.TestCase):
         engine._rng = random.Random(42)
         # Purchase a four-corners card so a scripted four-ball run can finish a card.
         resp = self._dispatch("POST", "/api/v1/games/bingo/cards", {"amount": 5, "pattern": "four_corners"})
-        # Read the seated cards; defaults seat bot_1 and bot_2.
+        # Read the seated cards; the two default bots fund two seats and a house spoiler fills the third. (issue #452)
         cards = resp["session"]["cards"]
-        # Confirm competitors are present before scripting the race.
-        self.assertEqual(3, len(cards))
+        # Confirm the guaranteed full four-card field is present before scripting the race. (issue #452)
+        self.assertEqual(4, len(cards))
+        # Confirm the third competitor seat is the synthetic house spoiler. (issue #452)
+        self.assertEqual("house", cards[3]["source"])
         # Read the first bot card and its owner.
         bot_card = cards[1]
         # Read the human corner numbers for the disjointness precondition.
@@ -217,15 +219,15 @@ class BingoEconomicsTests(unittest.TestCase):
         self.assertEqual(4995.0, self._balance("human"))
         # Verify no payout row ever reached the human ledger.
         self.assertNotIn("BINGO_PAYOUT_CREDIT", [t for t, _ in self._ledger_rows("human")])
-        # Verify the bot wallet absorbed its stake and the twelve-times four-corners payout.
-        self.assertEqual(5055.0, self._balance(bot_card["player_id"]))
-        # Verify the bot ledger shows the funding debit then the payout credit.
-        self.assertEqual([("BOT_BINGO_CARD_PURCHASED", -5.0), ("BINGO_PAYOUT_CREDIT", 60.0)], self._ledger_rows(bot_card["player_id"]))
+        # Verify the bot wallet absorbed its stake and the rebalanced 6.3x four-corners payout. (issue #452)
+        self.assertEqual(5026.5, self._balance(bot_card["player_id"]))
+        # Verify the bot ledger shows the funding debit then the rebalanced payout credit. (issue #452)
+        self.assertEqual([("BOT_BINGO_CARD_PURCHASED", -5.0), ("BINGO_PAYOUT_CREDIT", 31.5)], self._ledger_rows(bot_card["player_id"]))
 
     # Prove a lost state save replays one Bingo payout without a second credit or history row. (issue #403)
     def test_winning_card_settlement_replays_exactly_once(self):
         # Build one terminal winning card with a stable placement-time identity.
-        card = {"card_id": "card_exactly_once", "player_id": "human", "amount": 5.0, "card": {"B": [1, 2, 3, 4, 5]}, "status": "won", "winner": True, "payout": 50.0, "winning_coords": [[0, 0]]}
+        card = {"card_id": "card_exactly_once", "player_id": "human", "amount": 5.0, "card": {"B": [1, 2, 3, 4, 5]}, "status": "won", "winner": True, "payout": 17.0, "winning_coords": [[0, 0]]}
         # Build the terminal session shape consumed by the production settlement helper.
         session = {"session_id": "bingo_exactly_once", "player_id": "human", "amount": 5.0, "pattern": "line", "called": [1, 2, 3, 4, 5], "status": "won", "cards": [card]}
         # Settle the winning card for the first time.
@@ -246,79 +248,122 @@ class BingoEconomicsTests(unittest.TestCase):
         self.assertEqual("card_exactly_once:settlement", payout_rows[0]["details"]["ledger_action_key"])
         # Require exactly one outcome history row across both calls.
         self.assertEqual(1, len(history.recent_history(20, "bingo")))
-        # Require the wallet to include exactly one fifty-token payout.
-        self.assertEqual(5050.0, self._balance("human"))
+        # Require the wallet to include exactly one rebalanced line payout. (issue #452)
+        self.assertEqual(5017.0, self._balance("human"))
 
-    # Test 3: the call cap ends a never-winning session as no_win and fails closed afterwards.
-    def test_call_cap_ends_session_no_win_and_fails_closed(self):
-        # Disable both default bots so the capped solo path is exercised directly.
+    # Test 3: the call cap ends a never-winning fresh session as no_win and the engine then fails closed. (issue #405)
+    def test_call_cap_ends_fresh_session_no_win_and_fails_closed(self):
+        # Build a deterministic solo session directly on the engine so the cap path is isolated from the competitor field.
+        engine._rng = random.Random(99)
+        # Start from a fresh default document.
+        state = engine.default_state()
+        # Start a solo human line session with no competitor cards.
+        sess = engine.start_session(state, "human", 5, "line", bot_players=[])
+        # Compute the 51 numbers absent from the card so no drawn ball can ever mark it.
+        off_card = [n for n in range(1, 76) if n not in set(engine.numbers_on_card(sess["card"]))]
+        # Script only off-card balls so the single card can never complete within the cap.
+        engine._rng = _ScriptedRng(off_card, random.Random(1))
+        # Draw the full default budget through the production engine call path.
+        for _ in range(engine.MAX_CALLS_DEFAULT):
+            # Advance one drawn ball at a time.
+            engine.call_next(state)
+        # Verify the session terminated as a capped loss. (issue #405)
+        self.assertEqual("no_win", sess["status"])
+        # Verify the loss paid nothing.
+        self.assertEqual(0, sess["payout"])
+        # Verify the capped card was marked lost so it can never be credited later.
+        self.assertEqual("lost", sess["cards"][0]["status"])
+        # Verify the active slot was released.
+        self.assertIsNone(state["active_session"])
+        # Verify the loss was archived with the recent sessions.
+        self.assertEqual("no_win", state["last_sessions"][-1]["status"])
+        # Verify the engine refuses any further draw once the session has terminated.
+        with self.assertRaises(ConflictError):
+            # Attempt one extra call after termination.
+            engine.call_next(state)
+
+    # Test 3b: the guaranteed field seats house spoilers when no bot can fund a seat, and house cards are never credited. (issue #452)
+    def test_disabled_bots_still_seat_full_house_field(self):
+        # Disable every default bot so no bot wallet can fund a competitor seat.
         profiles.update_bot("bot_1", {"enabled": False})
         # Disable the second default bot as well.
         profiles.update_bot("bot_2", {"enabled": False})
-        # Build a deterministic solo card.
-        engine._rng = random.Random(99)
-        # Purchase the solo line card.
+        # Build a deterministic layout.
+        engine._rng = random.Random(3)
+        # Purchase a human line card through the production route.
         resp = self._dispatch("POST", "/api/v1/games/bingo/cards", {"amount": 5, "pattern": "line"})
-        # Confirm no bot could join while disabled.
-        self.assertEqual(1, len(resp["session"]["cards"]))
-        # Compute the 51 numbers absent from the card so no scripted ball can ever mark it.
-        off_card = [n for n in range(1, 76) if n not in set(engine.numbers_on_card(resp["session"]["card"]))]
-        # Script only off-card balls so the pattern can never complete within the cap.
-        engine._rng = _ScriptedRng(off_card, random.Random(1))
-        # Drive the full stream through the production /auto route in one request.
-        resp = self._dispatch("POST", "/api/v1/games/bingo/auto", {"max_calls": 75})
-        # Verify the stream stopped exactly at the fifty-call budget. (issue #405)
-        self.assertEqual(engine.MAX_CALLS_DEFAULT, len(resp["calls"]))
-        # Verify the session terminated as a loss.
-        self.assertEqual("no_win", resp["session"]["status"])
-        # Verify the loss paid nothing.
-        self.assertEqual(0, resp["session"]["payout"])
-        # Verify no settlement credit was produced.
-        self.assertEqual([], resp["credits"])
-        # Verify the capped card was marked lost so it can never be credited later.
-        self.assertEqual("lost", resp["session"]["cards"][0]["status"])
+        # Read the seated cards.
+        cards = resp["session"]["cards"]
+        # Verify the field is still full despite every bot being disabled. (issue #452)
+        self.assertEqual(4, len(cards))
+        # Verify the human holds the first card.
+        self.assertEqual("human", cards[0]["player_id"])
+        # Verify all three competitor seats are synthetic house spoilers. (issue #452)
+        self.assertTrue(all(c["source"] == "house" for c in cards[1:]))
+        # Verify the human paid exactly one card price and no bot wallet was touched.
+        self.assertEqual(4995.0, self._balance("human"))
+        # Verify the synthetic house identity was never created as a real player.
+        self.assertNotIn(bingo_api.HOUSE_COMPETITOR_ID, [p["player_id"] for p in players.list_players()])
+
+    # Test 3c: settlement never credits a winning house spoiler card. (issue #452)
+    def test_settlement_skips_house_cards(self):
+        # Build a terminal session whose only winning card is a house spoiler.
+        house = {"card_id": "hc", "player_id": bingo_api.HOUSE_COMPETITOR_ID, "amount": 5.0, "card": {}, "status": "won", "winner": True, "payout": 0, "source": "house", "winning_coords": []}
+        # Build the session shape the settlement helper consumes.
+        sess = {"session_id": "s_house", "player_id": "human", "amount": 5.0, "pattern": "line", "called": [1, 2, 3, 4, 5], "status": "won", "cards": [house]}
+        # Verify settlement produces no credit for the house winner.
+        self.assertEqual([], bingo_api.settle_if_done(sess))
+        # Verify no payout row ever reached the synthetic house identity.
+        self.assertEqual([], [r for r in ledger.read_recent(bingo_api.HOUSE_COMPETITOR_ID, 50) if r.get("transaction_type") == "BINGO_PAYOUT_CREDIT"])
+
+    # Test 3d: resetting a fresh session refunds only real cards and never a synthetic house spoiler. (issue #452)
+    def test_reset_before_calls_skips_house_cards(self):
+        # Build a deterministic layout.
+        engine._rng = random.Random(7)
+        # Buy a card so a fresh session with two funded bots plus one house spoiler is seated.
+        resp = self._dispatch("POST", "/api/v1/games/bingo/cards", {"amount": 5, "pattern": "line"})
+        # Confirm the guaranteed four-card field including the house spoiler.
+        self.assertEqual(4, len(resp["session"]["cards"]))
+        # Reset before any ball is called through the production route.
+        resp = self._dispatch("POST", "/api/v1/games/bingo/reset", {})
+        # Verify the reset refunded only the human and the two funded bots, never the house spoiler. (issue #452)
+        self.assertEqual(3, len(resp["refunds"]))
+        # Verify the human's stake was returned in full.
+        self.assertEqual(5000.0, self._balance("human"))
+        # Verify no refund row targeted the synthetic house identity.
+        self.assertEqual([], [r for r in ledger.read_recent(bingo_api.HOUSE_COMPETITOR_ID, 50) if r.get("transaction_type") == "BINGO_CARD_REFUND"])
         # Verify the active slot was released.
         self.assertIsNone(resp["state"]["active_session"])
-        # Verify the loss was archived with the recent sessions.
-        self.assertEqual("no_win", resp["state"]["last_sessions"][-1]["status"])
-        # Verify the human kept only the card debit with no credit back.
-        self.assertEqual(4995.0, self._balance("human"))
-        # Verify the audit trail recorded one zero-payout no_win session row.
-        self.assertIn("no_win", [row["outcome"] for row in history.recent_history(20, "bingo")])
-        # Verify a further single call fails closed with the envelope conflict error.
-        with self.assertRaises(ConflictError):
-            # Attempt one extra call after termination.
-            self._dispatch("POST", "/api/v1/games/bingo/call", {})
-        # Verify the auto path fails closed identically.
-        with self.assertRaises(ConflictError):
-            # Attempt one extra auto batch after termination.
-            self._dispatch("POST", "/api/v1/games/bingo/auto", {"max_calls": 5})
 
-    # Test 4: across a seeded 30-session loop with three bots and the cap the human nets negative.
-    def test_seeded_thirty_session_loop_human_net_is_negative(self):
-        # Enable the third bot so all three competitor seats fill each session. (issue #405)
-        profiles.update_bot("bot_3", {"enabled": True})
-        # Replace the module CSPRNG with one seeded generator covering cards and draws.
-        engine._rng = random.Random(20260726)
-        # Record the starting human balance.
-        start = self._balance("human")
-        # Play thirty complete bounded sessions.
-        for _ in range(30):
-            # Buy a blackout card: its 50x payout against roughly 0.2% capped completion odds makes
-            # negative expectation seed-robust, proving the guaranteed-win property is gone. (issue #405)
-            resp = self._dispatch("POST", "/api/v1/games/bingo/cards", {"amount": 5, "pattern": "blackout"})
-            # Verify the full four-card field was seated.
-            self.assertEqual(4, len(resp["session"]["cards"]))
-            # Verify the blackout budget was stamped.
-            self.assertEqual(engine.MAX_CALLS_BLACKOUT, resp["session"]["max_calls"])
-            # Drive the whole session in one bounded auto batch.
-            resp = self._dispatch("POST", "/api/v1/games/bingo/auto", {"max_calls": 75})
-            # Verify every session terminated within its budget.
-            self.assertIsNone(resp["state"]["active_session"])
-            # Verify the terminal status is either a genuine win or a capped loss.
-            self.assertIn(resp["session"]["status"], ("won", "no_win"))
-        # Verify the human's aggregate net over the loop is negative.
-        self.assertLess(self._balance("human") - start, 0)
+    # Test 4: every pattern's calibrated multiplier yields a modest house edge at the guaranteed field. (issue #452)
+    def test_every_pattern_is_house_edged(self):
+        # Read the calibrated paytable and the Monte-Carlo win probabilities it was derived from.
+        paytable, probability = engine.PAYTABLE, engine.MEASURED_WIN_PROBABILITY
+        # Require every published pattern to carry a measured win probability.
+        self.assertEqual(set(paytable), set(probability))
+        # Check each pattern's expected return against its stake.
+        for pattern, multiplier in paytable.items():
+            # Compute expected return per unit staked: P(win) times the total-return multiplier.
+            expected_return = probability[pattern] * multiplier
+            # Require a house edge: the expected return must be strictly below the stake. (issue #452)
+            self.assertLess(expected_return, 1.0, f"{pattern} is player-positive at x{multiplier}")
+            # Require the edge to stay modest rather than punishing, matching the ~0.9/P calibration.
+            self.assertLessEqual(0.05, 1.0 - expected_return, f"{pattern} edge is unexpectedly small")
+            # Require the edge to remain within a sane band so a future miscalibration is caught.
+            self.assertLessEqual(1.0 - expected_return, 0.16, f"{pattern} edge is unexpectedly large")
+        # Require the prior player-positive multipliers to be gone so the exploit cannot silently return.
+        self.assertNotEqual({"line": 10, "four_corners": 12, "postage_stamp": 15, "blackout": 50}, paytable)
+
+    # Test 4b: the calibrated payouts settle at the expected rebalanced amounts. (issue #452)
+    def test_payout_for_uses_rebalanced_multipliers(self):
+        # Verify the line payout reflects the rebalanced 3.4x multiplier on a five-token stake.
+        self.assertEqual(17.0, engine.payout_for("line", 5))
+        # Verify the four-corners payout reflects the rebalanced 6.3x multiplier.
+        self.assertEqual(31.5, engine.payout_for("four_corners", 5))
+        # Verify the postage-stamp payout reflects the rebalanced 3.5x multiplier.
+        self.assertEqual(17.5, engine.payout_for("postage_stamp", 5))
+        # Verify blackout became a genuine long-shot jackpot rather than a punishing +90% house edge.
+        self.assertEqual(3250.0, engine.payout_for("blackout", 5))
 
     # Test 5: persisted pre-cap sessions migrate to the default budget and enforce it.
     def test_legacy_session_without_max_calls_enforces_default_cap(self):

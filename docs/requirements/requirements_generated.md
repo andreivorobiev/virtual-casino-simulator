@@ -21,7 +21,7 @@ Historical source baseline: 9.1.0
 - blackjack: 9.1.7
 - baccarat: 9.1.8
 - keno: 9.3.0
-- bingo: 9.3.0
+- bingo: 9.3.1
 - multi_hand_video_poker: 1.1.0
 - casino_war: 1.1.0
 - big_six_wheel: 1.1.0
@@ -50,8 +50,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.0
 - pai_gow_poker: 1.1.0
 - teen_patti: 1.1.0
-- tests: 1.64.15
-- docs: 1.64.15
+- tests: 1.64.17
+- docs: 1.64.17
 - contracts: 1.49.9
 - tooling: 1.21.8
 - commenting_policy: 1.0.0
@@ -931,3 +931,4 @@ Historical source baseline: 9.1.0
 - **TEST-138** (Tests) - PASS: Listener-free account-spine evidence proves one-time bootstrap-owner migration and session invalidation, owner-only additive-v2 Admin grant and revoke, ordinary-Admin denial, active-target enforcement, last-owner preservation under concurrent mutation, and v2 player-only creation without opening a listener or touching live identity data.
 - **TEST-139** (Tests) - PASS: Hosted Browser evidence proves every registered catalog game keeps its enabled controls vertically reachable at the governed primary and compact desktop viewports, failing when a control is clipped by a non-scrollable ancestor in the fixed-height shell.
 - **TEST-143** (Tests) - PASS: Listener-free isolated-provider evidence proves persistent-account-only bounded session inventory, newest-first ordering, fixed one-way aliases, approved-field and coarse-client projection, secret and cross-account exclusion, idempotent targeted and all-session revocation, concurrent exactly-once transition counting, byte-exact preservation of syntactically invalid JSON, parseable malformed-document preservation, and invalid-request non-mutation.
+- **BINGO-026** (Bingo) - PASS: Every Bingo pattern pays roughly 0.9 divided by its measured win probability at the guaranteed four-card field, giving each pattern a modest single-digit-to-low-double-digit house edge instead of the prior player-positive returns, and the competitor field is always seated at full strength with synthetic house spoiler cards that end sessions but are never credited.
