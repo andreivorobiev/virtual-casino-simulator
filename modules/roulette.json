@@ -1,6 +1,6 @@
 {
   "module": "roulette",
-  "version": "9.4.11",
+  "version": "9.4.12",
   "paths": [
     "casino/games/roulette/",
     "web/games/roulette.js"
@@ -14,6 +14,29 @@
   ],
   "game": {
     "id": "roulette",
+    "rules": {
+      "settings_route": "/api/v1/games/roulette/settings",
+      "defaults": "casino.games.roulette.engine:default_state",
+      "defaults_key": "",
+      "fields": {
+        "mode": {
+          "kind": "enum",
+          "values": [
+            "single",
+            "double"
+          ]
+        },
+        "zero_rule": {
+          "kind": "enum",
+          "values": [
+            "normal",
+            "la_partage",
+            "en_prison"
+          ],
+          "settles": true
+        }
+      }
+    },
     "sort_order": 10,
     "route": "/games/roulette",
     "label": "Roulette",

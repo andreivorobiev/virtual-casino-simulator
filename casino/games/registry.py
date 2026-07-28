@@ -14,8 +14,8 @@ def list_games():
     out = []
     # Iterate through canonical catalog entries in their configured order.
     for game in GAMES:
-        # Copy the public metadata deeply so nested frontend and lobby values remain immutable.
-        item = copy.deepcopy({key: value for key, value in game.items() if key not in {"backend", "tests", "contracts", "paths"}})
+        # Copy public metadata deeply while withholding backend, test, contract, path, and internal rule-schema details.
+        item = copy.deepcopy({key: value for key, value in game.items() if key not in {"backend", "tests", "contracts", "paths", "rules"}})
         # Require every configured game to have a canonical module revision instead of masking drift.
         item["revision"] = MODULE_REVISIONS[game["id"]]
         # Preserve the legacy kind field as an alias for the primary catalog category.

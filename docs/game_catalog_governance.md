@@ -4,7 +4,7 @@ GitHub issue #81 established the one-time integration interface for expanding th
 
 ## Current reconciliation
 
-The v0.9.5.21 release line retains 46 catalog-discovered playable game descriptors on the accepted catalog-reconciliation baseline. The historical `GAME_CATALOG_TARGET = 20` value remains a release-readiness floor and reporting target, not a cap and not an instruction to add another catalog mechanism.
+The v0.9.5.22 release line retains 46 catalog-discovered playable game descriptors on the accepted catalog-reconciliation baseline and adds the accepted runtime-inert settings rule-schema gate. The historical `GAME_CATALOG_TARGET = 20` value remains a release-readiness floor and reporting target, not a cap and not an instruction to add another catalog mechanism.
 
 Issues #73, #77, and #66 therefore should not be read as an active command to add duplicate game-registration infrastructure. Their current shared-architecture meaning is:
 
@@ -21,6 +21,27 @@ Count-based completion alone does not close a game leaf or umbrella issue. A gam
 - `casino.config.GAMES` is the loaded runtime view of module-owned descriptors. Backend registration, API metadata, frontend registration, validators, and tests consume this view.
 - `/api/v1/casino/games` and `/api/v1/casino/state` preserve their existing `games` arrays and add catalog/frontend metadata plus current and target counts.
 - `casino/core/request_player.py` and the router bind every `/api/v1/games/*` request to the authenticated player's session before a game handler runs.
+
+## Rule-setting descriptors
+
+Any catalog game that registers a `POST` route ending in `/settings` must declare a `game.rules` object in its module descriptor. The catalog validator registers each backend against an in-memory router without opening a listener, then requires exact parity between the discovered route and `rules.settings_route`.
+
+The descriptor contains:
+
+- `settings_route`: the exact frozen game settings route.
+- `defaults`: a `module:callable` engine default-state factory.
+- `defaults_key`: the nested key containing rules, or an empty string when rules are top-level state.
+- `fields`: the settable rule names and their domains.
+- `kind`: one of `bool`, `enum`, `int`, or `number`.
+- `values`: the non-empty closed vocabulary for an enum.
+- `min` and `max`: inclusive finite bounds required together for numeric rules.
+- `allocates: true`: marks a value that controls allocation, iteration, or comparable resource use and therefore requires a finite maximum.
+- `settles: true`: marks a value used by settlement math and therefore requires an enum or finite lower and upper bounds.
+- `default`: an exceptional documented fallback only when existing engine code already supplies that fallback outside its default-state object.
+
+The validator rejects unknown schema keys, unsafe semantic flags, inverted or non-finite bounds, invalid engine defaults, undeclared settings routes, descriptors without matching routes, and multiple settings routes owned by one descriptor. Internal callable references and rule schemas are stripped from the public game catalog.
+
+The first #433 slice is intentionally governance-only. Existing handler validation remains the runtime authority until a separately reviewed follow-up mounts descriptor enforcement centrally, removes hand-written rule lists, updates frozen-contract documentation, and proves read-side state recovery. A descriptor by itself must never be treated as runtime enforcement.
 
 ## #77 shared-file ownership
 

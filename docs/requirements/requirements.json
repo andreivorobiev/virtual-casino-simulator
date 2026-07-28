@@ -4744,12 +4744,13 @@
         "contracts/compatibility/app-0.9.5.19.json",
         "contracts/compatibility/app-0.9.5.20.json",
         "contracts/compatibility/app-0.9.5.21.json",
+        "contracts/compatibility/app-0.9.5.22.json",
         "scripts/resolve_release_predecessor.py",
         "tests/release_predecessor_tests.py"
       ],
       "introduced_in": "9.2.0",
-      "changed_in": "0.9.5.21",
-      "notes": "Branch and ordinary manual candidates remain unpublished. The historical one-time owner-dispatched recovery created the retained v9.2.0 predecessor without overwrite or deletion paths. Normal v0.9.5.21 publication derives exact retained v0.9.5.20 from repository compatibility policy, verifies the downloaded manifest, packages every workflow-derived extracted-host script, and never replaces prior immutable assets. Rollback is application-only and never reverses the MySQL schema. The next large Claude LPR is reserved for v0.9.6.0."
+      "changed_in": "0.9.5.22",
+      "notes": "Branch and ordinary manual candidates remain unpublished. The historical one-time owner-dispatched recovery created the retained v9.2.0 predecessor without overwrite or deletion paths. Normal v0.9.5.22 publication derives exact retained v0.9.5.21 from repository compatibility policy, verifies the downloaded manifest, packages every workflow-derived extracted-host script, and never replaces prior immutable assets. Rollback is application-only and never reverses the MySQL schema. The next large Claude LPR is reserved for v0.9.6.0."
     },
     {
       "id": "BOT-001",
@@ -10547,7 +10548,7 @@
     {
       "id": "TOUR-001",
       "module": "Core",
-      "description": "The server-only What's New foundation reads curated repository release metadata rather than deriving player content from module or application version changes. An entry is eligible only when its release version is an exact numeric dotted release at or below the running application, both localization keys are non-empty, and the release coordinator's show_in_whats_new flag is exactly true. Missing, malformed, future, incomplete, or truthy-but-inexact entries fail closed. The shipped catalog is reconciled to packaged application 0.9.5.21 and remains explicitly disabled until the player UI, browser evidence, and release-coordinator activation remainder of issue #165 are accepted.",
+      "description": "The server-only What's New foundation reads curated repository release metadata rather than deriving player content from module or application version changes. An entry is eligible only when its release version is an exact numeric dotted release at or below the running application, both localization keys are non-empty, and the release coordinator's show_in_whats_new flag is exactly true. Missing, malformed, future, incomplete, or truthy-but-inexact entries fail closed. The shipped catalog is reconciled to packaged application 0.9.5.22 and remains explicitly disabled until the player UI, browser evidence, and release-coordinator activation remainder of issue #165 are accepted.",
       "status": "PASS",
       "api_tests": [
         "API-TOUR-001"
@@ -10584,7 +10585,7 @@
     {
       "id": "TEST-106",
       "module": "Tests",
-      "description": "Listener-free isolated-provider evidence verifies exact curated opt-in selection, skipped-release merge ordering and caps, malformed and future metadata fail-closed behavior, missing and malformed catalog recovery, durable per-subject server-stamped dismissal, retry idempotency, populated-neighbour isolation, disposable guest non-persistence, subjectless rejection, raw-version privacy, current packaged 0.9.5.21 metadata with activation disabled, complete EN/RU release keys, consent-free metadata shape, additive v2 route behavior, hostile caller identity and version inputs being rejected, and exact checked contract digest pinning.",
+      "description": "Listener-free isolated-provider evidence verifies exact curated opt-in selection, skipped-release merge ordering and caps, malformed and future metadata fail-closed behavior, missing and malformed catalog recovery, durable per-subject server-stamped dismissal, retry idempotency, populated-neighbour isolation, disposable guest non-persistence, subjectless rejection, raw-version privacy, current packaged 0.9.5.22 metadata with activation disabled, complete EN/RU release keys, consent-free metadata shape, additive v2 route behavior, hostile caller identity and version inputs being rejected, and exact checked contract digest pinning.",
       "status": "PASS",
       "api_tests": [
         "API-TOUR-001"
@@ -12252,6 +12253,27 @@
       "introduced_in": "issue-417-client-log-url-sanitization",
       "changed_in": "issue-417-client-log-url-sanitization",
       "notes": "The sanitizer reconstructs only URL origin and pathname instead of filtering named parameters, so future secret-bearing query keys and fragments are covered without maintaining an allowlist."
+    },
+    {
+      "id": "SEC-014",
+      "module": "Core",
+      "description": "Every catalog game that registers a POST settings route declares one module-owned rule schema whose route, finite allocation and settlement bounds, closed vocabularies, and engine or documented fallback defaults pass the catalog validator before the game can ship.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/game_rules.py",
+        "casino/games/registry.py",
+        "docs/game_catalog_governance.md",
+        "modules/blackjack.json",
+        "modules/baccarat.json",
+        "modules/roulette.json",
+        "scripts/validate_game_catalog.py",
+        "tests/games/test_game_rule_schema.py"
+      ],
+      "introduced_in": "issue-433-rule-schema-catalog-gate",
+      "changed_in": "issue-433-rule-schema-catalog-gate",
+      "notes": "The first governed slice is deliberately inert: it mirrors the already-merged issue #404 runtime domains, discovers routes without a listener, withholds internal schemas from public catalog payloads, and does not change request handling, persisted state, frozen v1 behavior, or gameplay. Baccarat's explicit descriptor fallback of 14 records the engine's existing cut-card fallback without changing its state projection. SEC-012 is permanently assigned to game entropy and was not reused."
     },
     {
       "id": "CORE-028",

@@ -1,6 +1,6 @@
 # Virtual Casino Simulator
 
-Packaged application release: `0.9.5.21`
+Packaged application release: `0.9.5.22`
 
 Historical source baseline: `9.1.0`
 
@@ -8,7 +8,7 @@ Local play-token browser casino simulator with a descriptor-driven catalog of is
 
 ## Current repository status
 
-This repository has advanced beyond the original v9.1.1 bootstrap snapshot. Packaged release v0.9.5.21 carries the accepted privacy-safe Admin session-control core: retained accounts receive bounded session summaries through one-way aliases, guest trials remain separate, targeted and all-session revocation are atomic, and malformed JSON evidence is preserved byte-for-byte behind a fixed operator-recovery boundary. It retains the owner-gated Admin authority foundation, bounded MySQL connection lifecycle, transactional non-destructive player writer, secret-safe nginx timing foundation, 46-game catalog-governance reconciliation, localized one-click Repeat bet program, TiltSeven Neon Pit identity, packaged non-shell production monitor handoff, compatibility-owned predecessor selection, exact v0.9.5.20 application-only rollback target, private-invite security, MySQL schema 2, provider-disablement, and public-exposure gates. Independently versioned modules continue to record compatible source changes. Current module revisions and requirement status are recorded in the canonical manifests and generated requirements document.
+This repository has advanced beyond the original v9.1.1 bootstrap snapshot. Packaged release v0.9.5.22 carries the accepted runtime-inert game rule-schema and catalog-validation foundation: every registered game settings route must have one module-owned descriptor with an exact route, validated defaults, closed enum vocabularies, and finite allocation or settlement bounds, while internal schema metadata remains absent from public catalog responses. It retains the privacy-safe Admin session-control core, owner-gated Admin authority foundation, bounded MySQL connection lifecycle, transactional non-destructive player writer, secret-safe nginx timing foundation, 46-game catalog-governance reconciliation, localized one-click Repeat bet program, TiltSeven Neon Pit identity, packaged non-shell production monitor handoff, compatibility-owned predecessor selection, exact v0.9.5.21 application-only rollback target, private-invite security, MySQL schema 2, provider-disablement, and public-exposure gates. Independently versioned modules continue to record compatible source changes. Current module revisions and requirement status are recorded in the canonical manifests and generated requirements document.
 
 ## Version sources
 
