@@ -284,7 +284,7 @@ class ConcurrentBrowser100Tests(unittest.TestCase):
     # Prove the hosted profile is opt-in, exact, sequential, and artifact-retaining.
     def test_workflow_keeps_formal_profile_explicit_and_exact(self):
         # Resolve the repository-owned browser workflow.
-        workflow_path = concurrent_browser_100.ui_50000.ROOT / ".github" / "workflows" / "browser-tests.yml"
+        workflow_path = concurrent_browser_100.ui_50000.ROOT / ".github" / "workflows" / "concurrent-browser-100.yml"
         # Read declarative workflow text without contacting GitHub.
         workflow = workflow_path.read_text(encoding="utf-8")
         # Require exactly one dispatch input plus one job identity.
@@ -303,9 +303,9 @@ class ConcurrentBrowser100Tests(unittest.TestCase):
         # Require terminal aggregate artifact upload on failure or success.
         self.assertIn("concurrent-browser-100-${{ github.sha }}", workflow)
         # Keep the expensive qualification outside ordinary pull-request execution.
-        job = workflow.split("  concurrent_browser_100:", 2)[2]
+        job = workflow.split("\n  concurrent_browser_100:\n", 1)[1]
         # Require explicit workflow-dispatch authorization.
-        self.assertIn("github.event_name == 'workflow_dispatch' && inputs.concurrent_browser_100 == true", job)
+        self.assertIn("inputs.concurrent_browser_100 == true", job)
 
 
 # Run the focused listener-free suite directly.

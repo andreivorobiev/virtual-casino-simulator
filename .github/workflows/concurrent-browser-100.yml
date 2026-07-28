@@ -1,0 +1,98 @@
+name: Concurrent Browser 100
+
+on:
+  # Keep the resource-intensive issue #225 profile owner-dispatched and disabled by default.
+  workflow_dispatch:
+    inputs:
+      concurrent_browser_100:
+        description: 'Run the authorized exact-source 100-context qualification after its catalog floor is reconciled'
+        required: true
+        default: false
+        type: boolean
+
+# Read repository source only; the qualification publishes no release or external state.
+permissions:
+  contents: read
+
+jobs:
+  # Run issue #225 only after its exact-user catalog floor becomes coherent.
+  concurrent_browser_100:
+    name: Concurrent browser 100
+    if: ${{ inputs.concurrent_browser_100 == true }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    services:
+      # Provide one isolated MySQL 8.4 service for the exact-source Package B preflight.
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: casino_ci_root_password
+          MYSQL_ROOT_HOST: "%"
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -pcasino_ci_root_password"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      # Keep the browser runtime on isolated JSON storage after the disposable MySQL preflight tears down.
+      CASINO_STORAGE_PROVIDER: json
+      # Mark the MySQL service as an explicitly disposable test target.
+      CASINO_MYSQL_DISPOSABLE_TEST: 1
+      # Supply a synthetic ephemeral administrator only to the isolated migration harness.
+      CASINO_MYSQL_TEST_ADMIN_HOST: 127.0.0.1
+      CASINO_MYSQL_TEST_ADMIN_PORT: 3306
+      CASINO_MYSQL_TEST_ADMIN_USER: root
+      CASINO_MYSQL_TEST_ADMIN_PASSWORD: casino_ci_root_password
+      # Supply a separate synthetic deployment-only migration identity.
+      CASINO_MYSQL_MIGRATION_HOST: 127.0.0.1
+      CASINO_MYSQL_MIGRATION_PORT: 3306
+      CASINO_MYSQL_MIGRATION_USER: casino_migrator_204
+      CASINO_MYSQL_MIGRATION_PASSWORD: casino_ci_migrator_password
+      CASINO_MYSQL_MIGRATION_DATABASE: casino_base_204
+      CASINO_MYSQL_MIGRATION_TARGET_BINDING_KEY: casino_ci_target_binding_key_material_204_only
+      # Supply the DDL-free synthetic runtime identity created by the live matrix.
+      CASINO_MYSQL_HOST: 127.0.0.1
+      CASINO_MYSQL_PORT: 3306
+      CASINO_MYSQL_USER: casino_runtime_204
+      CASINO_MYSQL_PASSWORD: casino_ci_runtime_password
+      CASINO_MYSQL_DATABASE: casino_base_204
+      # Authorize only this explicit disposable issue-owned profile.
+      CASINO_225_DISPOSABLE: 1
+    steps:
+      # Pin the complete preflight and browser run to the dispatched source.
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dev, browser, and disposable MySQL requirements
+        run: |
+          python -m pip install -r requirements-dev.txt
+          python -m pip install -e ".[mysql]"
+          python -m playwright install chromium
+      - name: Run exact-source MySQL 1/2/4/8 preflight
+        run: python tests/run_tests.py --storage --mysql-migrations-live
+        env:
+          # Persist the exact-source Package B aggregate packet outside the checkout.
+          CASINO_MYSQL_POOL_EVIDENCE: ${{ runner.temp }}/casino-browser-100-pool.json
+      - name: Run exact 100-context browser qualification
+        run: >-
+          python -m tests.concurrent_browser_100
+          --pool-preflight "${CASINO_MYSQL_POOL_EVIDENCE}"
+          --report "${RUNNER_TEMP}/casino-browser-100.json"
+        env:
+          # Keep browser accounts, ledgers, sessions, and game state outside the checkout.
+          CASINO_DATA_DIR: ${{ runner.temp }}/casino-browser-100-data
+          # Read only the exact-source Package B packet written by the preceding step.
+          CASINO_MYSQL_POOL_EVIDENCE: ${{ runner.temp }}/casino-browser-100-pool.json
+      - name: Upload terminal concurrent-browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: concurrent-browser-100-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/casino-browser-100.json
+            ${{ runner.temp }}/casino-browser-100-pool.json
+          if-no-files-found: warn
+          retention-days: 14
