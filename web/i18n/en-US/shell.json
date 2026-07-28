@@ -201,6 +201,8 @@
   "whatsNew.entry.0_9_5_21.body": "This release adds bounded server-side session summaries and atomic revocation for retained accounts without exposing raw session identifiers, tokens, addresses, or client strings.",
   "whatsNew.entry.0_9_5_22.title": "Game rule-schema catalog gate",
   "whatsNew.entry.0_9_5_22.body": "This release adds listener-free catalog validation for exact game settings routes, bounded rule domains, canonical defaults, and private schema metadata.",
+  "whatsNew.entry.0_9_5_23.title": "Faster safe qualification",
+  "whatsNew.entry.0_9_5_23.body": "This release safely cancels superseded checks for one pull request and splits mandatory Long Suite 100 into four isolated shards.",
   "replay.title": "Round replay",
   "replay.empty": "No recent rounds to replay.",
   "replay.retention": "Replays are kept for {days} days.",
