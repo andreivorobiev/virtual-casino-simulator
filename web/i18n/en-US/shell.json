@@ -195,6 +195,8 @@
   "whatsNew.entry.0_9_5_18.body": "This release inserts only missing player rows in one MySQL transaction without deleting or overwriting wallets, lifecycle state, ledger history, or action identities.",
   "whatsNew.entry.0_9_5_19.title": "Bounded MySQL connection lifecycle",
   "whatsNew.entry.0_9_5_19.body": "This release reuses sanitized MySQL sessions through a bounded per-process pool with request-scoped cleanup, fail-closed deadlines, and secret-safe lifecycle evidence.",
+  "whatsNew.entry.0_9_5_20.title": "Owner-gated Admin authority foundation",
+  "whatsNew.entry.0_9_5_20.body": "This release adds a server-side platform owner and owner-only additive-v2 Admin grant and revoke foundation with transaction-safe last-owner and last-Admin protections.",
   "replay.title": "Round replay",
   "replay.empty": "No recent rounds to replay.",
   "replay.retention": "Replays are kept for {days} days.",
