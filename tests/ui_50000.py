@@ -747,13 +747,14 @@ async def play_game_ui(page, game_id, ordinal, seen_counts, activated_counts, re
 
 
 # Attach credential-free diagnostics to one test-owned browser page.
-def attach_page_diagnostics(page, diagnostics):
+def attach_page_diagnostics(page, diagnostics, anonymous_probe_active=None):
     state = {"anonymous_probe_seen": False, "anonymous_console_seen": False}  # Track the expected pre-login identity probe signals.
 
     def on_console(message):  # Capture browser console errors only.
         if message.type == "error":  # Ignore ordinary application information.
-            expected_probe = str(message.text) == "Failed to load resource: the server responded with a status of 401 (Unauthorized)" and not state["anonymous_console_seen"]  # Recognize Chromium's expected anonymous current-user probe.
-            if expected_probe:  # Exclude exactly one bootstrap console diagnostic per session.
+            in_anonymous_window = bool(anonymous_probe_active()) if callable(anonymous_probe_active) else not state["anonymous_console_seen"]  # Resolve either caller-owned authentication state or the legacy single-probe allowance.
+            expected_probe = str(message.text) == "Failed to load resource: the server responded with a status of 401 (Unauthorized)" and in_anonymous_window  # Recognize only a pre-authentication current-user probe.
+            if expected_probe:  # Exclude expected anonymous bootstrap or hydration diagnostics.
                 state["anonymous_console_seen"] = True  # Ensure later unauthorized resource failures remain visible.
                 return  # Preserve only unexpected console errors.
             diagnostics["console_errors"][str(message.text)[:300]] += 1  # Group bounded public console messages.
@@ -765,8 +766,9 @@ def attach_page_diagnostics(page, diagnostics):
         if "/api/" not in response.url or response.status < 400:  # Ignore assets and successful API traffic.
             return  # Preserve only protected-request failures.
         path = "/" + response.url.split("/", 3)[-1].split("?", 1)[0]  # Strip origin and query data.
-        expected_probe = response.request.method == "GET" and path == "/api/v2/me" and response.status == 401 and not state["anonymous_probe_seen"]  # Recognize anonymous bootstrap.
-        if expected_probe:  # Exclude the expected pre-login response.
+        in_anonymous_window = bool(anonymous_probe_active()) if callable(anonymous_probe_active) else not state["anonymous_probe_seen"]  # Resolve exact caller-owned pre-authentication state or the legacy one-response allowance.
+        expected_probe = response.request.method == "GET" and path == "/api/v2/me" and response.status == 401 and in_anonymous_window  # Recognize only anonymous current-user probes.
+        if expected_probe:  # Exclude expected pre-login bootstrap and hydration responses.
             state["anonymous_probe_seen"] = True  # Ensure later current-user failures remain visible.
             return  # Preserve only unexpected failures.
         diagnostics["http_failures"][f"{response.status} {response.request.method} {path}"] += 1  # Group sanitized route evidence.
