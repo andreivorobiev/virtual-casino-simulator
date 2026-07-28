@@ -1,4 +1,4 @@
-"""Listener-free TEST-142 proofs for the issue #225 exact-100 browser qualification."""
+"""Listener-free TEST-142 proofs for the issue #225 exact-138 browser qualification."""
 
 import asyncio  # Exercise the asynchronous synchronized barrier without launching a browser.
 import json  # Persist one external exact-source pool preflight fixture.
@@ -8,11 +8,11 @@ import unittest  # Integrate focused proofs with the repository test runner.
 from types import SimpleNamespace  # Build small aggregate-only barrier fixtures.
 from unittest import mock  # Isolate current-catalog and environment scenarios.
 
-from tests import concurrent_browser_100  # Exercise the public qualification planner and aggregator.
+from tests import concurrent_browser_138  # Exercise the public qualification planner and aggregator.
 
 
 # Prove the exact-user planner, barrier, aggregation, privacy, and workflow contracts.
-class ConcurrentBrowser100Tests(unittest.TestCase):
+class ConcurrentBrowser138Tests(unittest.TestCase):
     # Build the issue-era thirty-game catalog used by the literal three-user floor.
     def thirty_games(self):
         # Return stable public test identifiers without depending on game implementation.
@@ -32,10 +32,10 @@ class ConcurrentBrowser100Tests(unittest.TestCase):
             "browser_diagnostics": {"console_errors": {}, "page_errors": {}, "http_failures": {}},
         }
 
-    # Prove exactly 100 users give every issue-era game at least three deterministic assignments.
-    def test_exact_thirty_game_plan_is_balanced(self):
-        # Build the literal issue-owned plan.
-        plan = concurrent_browser_100.build_assignment_plan(self.thirty_games())
+    # Prove exactly 138 users give every current registered game three deterministic assignments.
+    def test_exact_current_catalog_plan_is_balanced(self):
+        # Build the owner-authorized current-catalog plan.
+        plan = concurrent_browser_138.build_assignment_plan()
         # Count assignments by current public game id.
         counts = {}
         # Visit every deterministic assignment.
@@ -43,29 +43,27 @@ class ConcurrentBrowser100Tests(unittest.TestCase):
             # Increment the public game count.
             counts[row["game_id"]] = counts.get(row["game_id"], 0) + 1
         # Require exactly one row per synthetic user.
-        self.assertEqual(len(plan), 100)
+        self.assertEqual(len(plan), 138)
         # Require contiguous unique ordinals without account data.
-        self.assertEqual([row["user_index"] for row in plan], list(range(100)))
-        # Require the ten-game canonical prefix to receive four users.
-        self.assertEqual(list(counts.values()).count(4), 10)
-        # Require every remaining issue-era game to receive the literal floor of three.
-        self.assertEqual(list(counts.values()).count(3), 20)
+        self.assertEqual([row["user_index"] for row in plan], list(range(138)))
+        # Require every registered game to receive exactly the owner-selected floor.
+        self.assertEqual(set(counts.values()), {3})
 
-    # Prove current protected main fails before resource creation instead of weakening the issue floor.
-    def test_current_catalog_exposes_exact_acceptance_arithmetic_blocker(self):
+    # Prove the exact population remains coupled to the complete current catalog and three-user floor.
+    def test_current_catalog_rejects_any_shortened_population(self):
         # Pin the current registered catalog size so future additions require an explicit test update.
-        self.assertEqual(len(concurrent_browser_100.GAME_IDS), 46)
-        # Require a bounded aggregate-count diagnostic for the impossible exact-100 plan.
-        with self.assertRaisesRegex(ValueError, r"requires 138 users \(46 games x 3\).*exactly 100"):
-            # Attempt the unmodified formal current-catalog profile.
-            concurrent_browser_100.build_assignment_plan()
+        self.assertEqual(len(concurrent_browser_138.GAME_IDS), 46)
+        # Require the formal profile to reject even a one-user reduction before resource creation.
+        with self.assertRaisesRegex(ValueError, r"requires exactly 138 users"):
+            # Attempt to weaken the owner-authorized population.
+            concurrent_browser_138.build_assignment_plan(user_count=137)
 
     # Prove every asynchronous participant waits until the controller releases the exact barrier.
     def test_start_barrier_releases_only_after_all_parties_arrive(self):
         # Exercise the production barrier on one isolated event loop.
         async def scenario():
             # Build a four-party listener-free barrier.
-            barrier = concurrent_browser_100.StartBarrier(4)
+            barrier = concurrent_browser_138.StartBarrier(4)
             # Track task completion after release.
             completed = []
 
@@ -94,25 +92,25 @@ class ConcurrentBrowser100Tests(unittest.TestCase):
         # Run the listener-free asynchronous scenario.
         asyncio.run(scenario())
 
-    # Prove a complete thirty-game result passes without retaining user-level evidence.
+    # Prove a complete current-catalog result passes without retaining user-level evidence.
     def test_aggregate_accepts_complete_sanitized_result(self):
-        # Build the mathematically compatible exact-100 plan.
-        games = self.thirty_games()
+        # Build the owner-authorized exact-138 plan.
+        games = concurrent_browser_138.GAME_IDS
         # Patch only the catalog used by aggregate acceptance.
-        with mock.patch.object(concurrent_browser_100, "GAME_IDS", games):
+        with mock.patch.object(concurrent_browser_138, "GAME_IDS", games):
             # Build exact deterministic assignments.
-            assignments = concurrent_browser_100.build_assignment_plan(games)
+            assignments = concurrent_browser_138.build_assignment_plan(games)
             # Build one sanitized passing row per assignment.
             results = [self.passing_result(row) for row in assignments]
             # Model the exact synchronized barrier terminal state.
-            barrier = SimpleNamespace(ready=100, peak_ready=100)
+            barrier = SimpleNamespace(ready=138, peak_ready=138)
             # Provide complete aggregate-only isolation evidence.
             isolation = {
-                "unique_player_count": 100,
+                "unique_player_count": 138,
                 "duplicate_player_id_count": 0,
-                "matching_player_count": 100,
-                "nonnegative_balance_count": 100,
-                "users_with_gameplay_ledger": 100,
+                "matching_player_count": 138,
+                "nonnegative_balance_count": 138,
+                "users_with_gameplay_ledger": 138,
                 "duplicate_ledger_id_count": 0,
                 "duplicate_action_key_count": 0,
             }
@@ -143,7 +141,7 @@ class ConcurrentBrowser100Tests(unittest.TestCase):
                 "pool": {key: value for key, value in pool.items() if key not in {"provider", "available"}},
             }
             # Aggregate the exact-source terminal evidence.
-            report = concurrent_browser_100.aggregate_results(
+            report = concurrent_browser_138.aggregate_results(
                 assignments,
                 results,
                 barrier,
@@ -157,7 +155,7 @@ class ConcurrentBrowser100Tests(unittest.TestCase):
         # Require every pre-cleanup acceptance gate to pass.
         self.assertEqual(report["status"], "PASS")
         # Require the permanent browser identity and exact source.
-        self.assertEqual(report["qualification"]["test_id"], "BR-CONCURRENT-100-001")
+        self.assertEqual(report["qualification"]["test_id"], "BR-CONCURRENT-138-001")
         # Require exact aggregate peak concurrency.
         self.assertEqual(report["counts"]["peak_gameplay"], 73)
         # Reject accidental user-level result persistence.
@@ -170,24 +168,24 @@ class ConcurrentBrowser100Tests(unittest.TestCase):
     # Prove one browser error and one duplicate settlement identity fail the aggregate.
     def test_aggregate_rejects_browser_and_isolation_failures(self):
         # Build one compatible exact assignment.
-        games = self.thirty_games()
+        games = concurrent_browser_138.GAME_IDS
         # Patch only the aggregate catalog.
-        with mock.patch.object(concurrent_browser_100, "GAME_IDS", games):
+        with mock.patch.object(concurrent_browser_138, "GAME_IDS", games):
             # Build exact deterministic assignments.
-            assignments = concurrent_browser_100.build_assignment_plan(games)
+            assignments = concurrent_browser_138.build_assignment_plan(games)
             # Build passing task rows.
             results = [self.passing_result(row) for row in assignments]
             # Inject one bounded browser diagnostic.
             results[0]["browser_diagnostics"]["page_errors"] = {"synthetic failure": 1}
             # Model exact barrier completion.
-            barrier = SimpleNamespace(ready=100, peak_ready=100)
+            barrier = SimpleNamespace(ready=138, peak_ready=138)
             # Inject one duplicated ledger identity.
             isolation = {
-                "unique_player_count": 100,
+                "unique_player_count": 138,
                 "duplicate_player_id_count": 0,
-                "matching_player_count": 100,
-                "nonnegative_balance_count": 100,
-                "users_with_gameplay_ledger": 100,
+                "matching_player_count": 138,
+                "nonnegative_balance_count": 138,
+                "users_with_gameplay_ledger": 138,
                 "duplicate_ledger_id_count": 1,
                 "duplicate_action_key_count": 0,
             }
@@ -213,11 +211,11 @@ class ConcurrentBrowser100Tests(unittest.TestCase):
                     "wait_buckets_ms": {"1": 1, "5": 1, "25": 0, "100": 0, "500": 0, ">500": 0},
                 },
             }
-            report = concurrent_browser_100.aggregate_results(
+            report = concurrent_browser_138.aggregate_results(
                 assignments,
                 results,
                 barrier,
-                {"active_gameplay": 0, "peak_gameplay": 100},
+                {"active_gameplay": 0, "peak_gameplay": 138},
                 isolation,
                 {"provider": "json", "available": False},
                 pool_preflight,
@@ -264,48 +262,48 @@ class ConcurrentBrowser100Tests(unittest.TestCase):
                 # Write only the test-owned fixture.
                 json.dump(evidence, handle)
             # Require exact-source acceptance.
-            self.assertEqual(concurrent_browser_100.load_pool_preflight(path, "c" * 40), evidence)
+            self.assertEqual(concurrent_browser_138.load_pool_preflight(path, "c" * 40), evidence)
             # Require foreign-head evidence refusal.
             with self.assertRaisesRegex(ValueError, "source does not match"):
                 # Attempt to reuse the packet for another commit.
-                concurrent_browser_100.load_pool_preflight(path, "d" * 40)
+                concurrent_browser_138.load_pool_preflight(path, "d" * 40)
 
     # Prove the formal runner requires an explicit external disposable data root.
     def test_runtime_boundary_rejects_source_owned_data(self):
         # Patch the selected data root to the repository's normal data directory.
         with mock.patch.dict(os.environ, {"CASINO_225_DISPOSABLE": "1", "CASINO_DATA_DIR": "data"}, clear=False):
             # Patch the already-imported configuration value to the forbidden source child.
-            with mock.patch("casino.config.DATA_DIR", concurrent_browser_100.ui_50000.ROOT / "data"):
+            with mock.patch("casino.config.DATA_DIR", concurrent_browser_138.ui_50000.ROOT / "data"):
                 # Require refusal before any state mutation.
                 with self.assertRaisesRegex(RuntimeError, "outside the source checkout"):
                     # Validate only the safety boundary.
-                    concurrent_browser_100.validate_runtime_boundary()
+                    concurrent_browser_138.validate_runtime_boundary()
 
     # Prove the hosted profile is opt-in, exact, sequential, and artifact-retaining.
     def test_workflow_keeps_formal_profile_explicit_and_exact(self):
         # Resolve the repository-owned browser workflow.
-        workflow_path = concurrent_browser_100.ui_50000.ROOT / ".github" / "workflows" / "concurrent-browser-100.yml"
+        workflow_path = concurrent_browser_138.ui_50000.ROOT / ".github" / "workflows" / "browser-tests.yml"
         # Read declarative workflow text without contacting GitHub.
         workflow = workflow_path.read_text(encoding="utf-8")
         # Require exactly one dispatch input plus one job identity.
-        self.assertEqual(workflow.count("concurrent_browser_100:"), 2)
+        self.assertEqual(workflow.count("concurrent_browser_138:"), 2)
         # Require one exact module invocation.
-        self.assertEqual(workflow.count("python -m tests.concurrent_browser_100"), 1)
+        self.assertEqual(workflow.count("python -m tests.concurrent_browser_138"), 1)
         # Require an explicit disposable marker in the formal job.
         self.assertIn("CASINO_225_DISPOSABLE: 1", workflow)
         # Require an external runner-owned data root.
-        self.assertIn("CASINO_DATA_DIR: ${{ runner.temp }}/casino-browser-100-data", workflow)
+        self.assertIn("CASINO_DATA_DIR: ${{ runner.temp }}/casino-browser-138-data", workflow)
         # Require the Package B MySQL gate before the browser invocation.
         self.assertLess(
             workflow.index("python tests/run_tests.py --storage --mysql-migrations-live"),
-            workflow.index("python -m tests.concurrent_browser_100"),
+            workflow.index("python -m tests.concurrent_browser_138"),
         )
         # Require terminal aggregate artifact upload on failure or success.
-        self.assertIn("concurrent-browser-100-${{ github.sha }}", workflow)
+        self.assertIn("concurrent-browser-138-${{ github.sha }}", workflow)
         # Keep the expensive qualification outside ordinary pull-request execution.
-        job = workflow.split("\n  concurrent_browser_100:\n", 1)[1]
+        job = workflow.split("\n  concurrent_browser_138:\n", 1)[1]
         # Require explicit workflow-dispatch authorization.
-        self.assertIn("inputs.concurrent_browser_100 == true", job)
+        self.assertIn("inputs.concurrent_browser_138 == true", job)
 
 
 # Run the focused listener-free suite directly.

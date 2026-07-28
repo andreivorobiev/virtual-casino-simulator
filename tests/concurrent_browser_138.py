@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the issue #225 exact-100 real-browser qualification on a disposable loopback runtime."""
+"""Run the issue #225 exact-138 real-browser qualification on a disposable loopback runtime."""
 
 import argparse  # Parse the immutable qualification profile and artifact locations.
 import asyncio  # Coordinate independent browser contexts and the synchronized start barrier.
@@ -17,7 +17,7 @@ from casino.config import GAMES  # Discover the current registered game catalog 
 from tests import ui_50000  # Reuse exact-source UI drivers and secret-safe browser helpers.
 
 # Require exactly the issue-owned number of independent synthetic browser users.
-USER_COUNT = 100
+USER_COUNT = 138
 # Preserve the issue-owned minimum concurrent-user floor without silently weakening it.
 MINIMUM_USERS_PER_GAME = 3
 # Bound setup at the synchronized login gate before the harness releases any context.
@@ -48,7 +48,7 @@ def build_assignment_plan(game_ids=GAME_IDS, user_count=USER_COUNT, minimum_user
         raise ValueError("minimum users per game must be positive")
     # Calculate the smallest user population able to satisfy the declared current-catalog floor.
     minimum_required_users = len(normalized_games) * required_floor
-    # Fail before any local resource opens when exact 100-user acceptance is mathematically impossible.
+    # Fail before any local resource opens when the exact population cannot cover the complete catalog.
     if minimum_required_users > USER_COUNT:
         # Publish only safe aggregate counts needed to reconcile the stale issue criterion.
         raise ValueError(
@@ -322,9 +322,9 @@ def stop_loopback_server(server, thread):
 # Provision one synthetic account through the allowed setup-only Admin API.
 def create_synthetic_user(client, user_index, locale):
     # Build a reserved-domain identifier that can never receive real mail.
-    email = f"browser-100-{user_index:03d}@example.invalid"
+    email = f"browser-138-{user_index:03d}@example.invalid"
     # Build an in-memory test-only password unique to this disposable runtime.
-    password = f"Browser100-{user_index:03d}-Synthetic!"
+    password = f"Browser138-{user_index:03d}-Synthetic!"
     # Submit the account through the documented Admin boundary.
     created = client.call(
         "/api/v1/admin/users",
@@ -332,7 +332,7 @@ def create_synthetic_user(client, user_index, locale):
         {
             "email": email,
             "password": password,
-            "display_name": f"Browser 100 {user_index:03d}",
+            "display_name": f"Browser 138 {user_index:03d}",
             "initial_tokens": 1_000_000,
             "terms_accepted": True,
             "language": locale,
@@ -378,7 +378,7 @@ async def run_user(browser, client, assignment, user, barrier, counters, counter
         await page.get_by_test_id("login-gate").wait_for(state="visible", timeout=ui_50000.SETUP_TIMEOUT_MS)
         # Mark this exact independent context ready.
         result["barrier_ready"] = True
-        # Wait until all 100 contexts are ready and the controller releases them together.
+        # Wait until all 138 contexts are ready and the controller releases them together.
         await barrier.wait()
         # Start aggregate login timing immediately after the synchronized release.
         login_started = time.perf_counter()
@@ -544,7 +544,7 @@ def aggregate_results(assignments, results, barrier, counters, isolation, pool, 
     report = {
         "status": "PASS" if all(gates.values()) else "FAIL",
         "qualification": {
-            "test_id": "BR-CONCURRENT-100-001",
+            "test_id": "BR-CONCURRENT-138-001",
             "requirements": list(REQUIREMENT_IDS),
             "source_commit": source_commit,
             "user_count": USER_COUNT,
@@ -648,7 +648,7 @@ async def run_qualification(args):
         client.call("/api/v1/casino/reset", "POST", {})
         # Re-establish the setup-only Admin session after reset.
         client.login_default_user()
-        # Provision exactly 100 distinct synthetic accounts before opening browser contexts.
+        # Provision exactly 138 distinct synthetic accounts before opening browser contexts.
         for assignment in assignments:
             # Derive the same deterministic locale used by the browser task.
             locale = "en-US" if assignment["user_index"] % 2 == 0 else "ru-RU"
@@ -659,7 +659,7 @@ async def run_qualification(args):
 
         # Own the complete browser driver lifecycle.
         async with async_playwright() as playwright:
-            # Launch one process containing 100 independent browser contexts.
+            # Launch one process containing 138 independent browser contexts.
             browser = await playwright.chromium.launch(headless=not args.headed)
             # Start one task per deterministic assignment and unique synthetic account.
             tasks = [
@@ -775,7 +775,7 @@ async def run_qualification(args):
     ui_50000.write_json(Path(args.report).expanduser().resolve(), report)
     # Emit only concise public aggregate counts.
     print(
-        f"BROWSER100 {report['status']} "
+        f"BROWSER138 {report['status']} "
         f"barrier={report['counts']['barrier_ready']}/{USER_COUNT} "
         f"login={report['counts']['login_success']}/{USER_COUNT} "
         f"gameplay={report['counts']['gameplay_success']}/{USER_COUNT} "
@@ -789,11 +789,11 @@ async def run_qualification(args):
 # Parse the immutable formal profile without allowing acceptance counts to drift.
 def parse_args(argv=None):
     # Describe the exact issue-owned qualification.
-    parser = argparse.ArgumentParser(description="Run exactly 100 synchronized independent Casino browser users.")
+    parser = argparse.ArgumentParser(description="Run exactly 138 synchronized independent Casino browser users.")
     # Accept only an external terminal report path.
     parser.add_argument(
         "--report",
-        default=str(Path(tempfile.gettempdir()) / "casino-browser-100.json"),
+        default=str(Path(tempfile.gettempdir()) / "casino-browser-138.json"),
         help="External path for the sanitized aggregate JSON report.",
     )
     # Bound pre-login barrier setup while preserving the exact population.
@@ -801,7 +801,7 @@ def parse_args(argv=None):
         "--barrier-timeout",
         type=int,
         default=BARRIER_TIMEOUT_SECONDS,
-        help="Seconds to wait for all 100 rendered login gates.",
+        help="Seconds to wait for all 138 rendered login gates.",
     )
     # Require exact-source Package B 1/2/4/8 evidence before the browser run.
     parser.add_argument(
@@ -844,7 +844,7 @@ def main(argv=None):
     # Convert pre-resource planning and boundary failures to one bounded public diagnostic.
     except Exception as error:
         # Emit no traceback, private path, credential, token, cookie, PID, or port.
-        print(f"BROWSER100 FAIL controller={safe_error(error)}", flush=True)
+        print(f"BROWSER138 FAIL controller={safe_error(error)}", flush=True)
         # Return standard failure for the explicit workflow.
         return 1
 
