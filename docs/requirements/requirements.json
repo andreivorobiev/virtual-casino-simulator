@@ -4756,12 +4756,13 @@
         "contracts/compatibility/app-0.9.5.21.json",
         "contracts/compatibility/app-0.9.5.22.json",
         "contracts/compatibility/app-0.9.5.23.json",
+        "contracts/compatibility/app-0.9.5.24.json",
         "scripts/resolve_release_predecessor.py",
         "tests/release_predecessor_tests.py"
       ],
       "introduced_in": "9.2.0",
-      "changed_in": "0.9.5.23",
-      "notes": "Branch and ordinary manual candidates remain unpublished. The historical one-time owner-dispatched recovery created the retained v9.2.0 predecessor without overwrite or deletion paths. Normal v0.9.5.23 publication derives exact retained v0.9.5.22 from repository compatibility policy, verifies the downloaded manifest, packages every workflow-derived extracted-host script, and never replaces prior immutable assets. Rollback is application-only and never reverses the MySQL schema. The next large Claude LPR is reserved for v0.9.6.0."
+      "changed_in": "0.9.5.24",
+      "notes": "Branch and ordinary manual candidates remain unpublished. The historical one-time owner-dispatched recovery created the retained v9.2.0 predecessor without overwrite or deletion paths. Normal v0.9.5.24 publication derives exact retained v0.9.5.23 from repository compatibility policy, verifies the downloaded manifest, packages every workflow-derived extracted-host script, and never replaces prior immutable assets. Rollback is application-only and never reverses the MySQL schema. The next large Claude LPR is reserved for v0.9.6.0."
     },
     {
       "id": "BOT-001",
@@ -10562,7 +10563,7 @@
     {
       "id": "TOUR-001",
       "module": "Core",
-      "description": "The server-only What's New foundation reads curated repository release metadata rather than deriving player content from module or application version changes. An entry is eligible only when its release version is an exact numeric dotted release at or below the running application, both localization keys are non-empty, and the release coordinator's show_in_whats_new flag is exactly true. Missing, malformed, future, incomplete, or truthy-but-inexact entries fail closed. The shipped catalog is reconciled to packaged application 0.9.5.23 and remains explicitly disabled until the player UI, browser evidence, and release-coordinator activation remainder of issue #165 are accepted.",
+      "description": "The server-only What's New foundation reads curated repository release metadata rather than deriving player content from module or application version changes. An entry is eligible only when its release version is an exact numeric dotted release at or below the running application, both localization keys are non-empty, and the release coordinator's show_in_whats_new flag is exactly true. Missing, malformed, future, incomplete, or truthy-but-inexact entries fail closed. The shipped catalog is reconciled to packaged application 0.9.5.24 and remains explicitly disabled until the player UI, browser evidence, and release-coordinator activation remainder of issue #165 are accepted.",
       "status": "PASS",
       "api_tests": [
         "API-TOUR-001"
@@ -10599,7 +10600,7 @@
     {
       "id": "TEST-106",
       "module": "Tests",
-      "description": "Listener-free isolated-provider evidence verifies exact curated opt-in selection, skipped-release merge ordering and caps, malformed and future metadata fail-closed behavior, missing and malformed catalog recovery, durable per-subject server-stamped dismissal, retry idempotency, populated-neighbour isolation, disposable guest non-persistence, subjectless rejection, raw-version privacy, current packaged 0.9.5.23 metadata with activation disabled, complete EN/RU release keys, consent-free metadata shape, additive v2 route behavior, hostile caller identity and version inputs being rejected, and exact checked contract digest pinning.",
+      "description": "Listener-free isolated-provider evidence verifies exact curated opt-in selection, skipped-release merge ordering and caps, malformed and future metadata fail-closed behavior, missing and malformed catalog recovery, durable per-subject server-stamped dismissal, retry idempotency, populated-neighbour isolation, disposable guest non-persistence, subjectless rejection, raw-version privacy, current packaged 0.9.5.24 metadata with activation disabled, complete EN/RU release keys, consent-free metadata shape, additive v2 route behavior, hostile caller identity and version inputs being rejected, and exact checked contract digest pinning.",
       "status": "PASS",
       "api_tests": [
         "API-TOUR-001"
@@ -12271,7 +12272,7 @@
     {
       "id": "SEC-014",
       "module": "Core",
-      "description": "Every catalog game that registers a POST settings route declares one module-owned rule schema whose route, finite allocation and settlement bounds, closed vocabularies, and engine or documented fallback defaults pass the catalog validator before the game can ship.",
+      "description": "Every catalog game that registers a POST settings route declares one module-owned rule schema whose route, finite allocation and settlement bounds, closed vocabularies, and engine or documented fallback defaults pass the catalog validator before the game can ship, and the core exposes pure type-safe coercion that leaves every undeclared path inert.",
       "status": "PASS",
       "api_tests": [],
       "browser_tests": [],
@@ -12286,8 +12287,8 @@
         "tests/games/test_game_rule_schema.py"
       ],
       "introduced_in": "issue-433-rule-schema-catalog-gate",
-      "changed_in": "issue-433-rule-schema-catalog-gate",
-      "notes": "The first governed slice is deliberately inert: it mirrors the already-merged issue #404 runtime domains, discovers routes without a listener, withholds internal schemas from public catalog payloads, and does not change request handling, persisted state, frozen v1 behavior, or gameplay. Baccarat's explicit descriptor fallback of 14 records the engine's existing cut-card fallback without changing its state projection. SEC-012 is permanently assigned to game entropy and was not reused."
+      "changed_in": "issue-433-rule-coercion-core",
+      "notes": "The first two governed slices are deliberately runtime-inert: they mirror the already-merged issue #404 domains, discover routes without a listener, withhold internal schemas from public catalog payloads, and add a pure coercion boundary that is not called by the router. Declared numeric values become finite canonical types, booleans and enums are strict, unknown keys remain available to the existing handler allowlist, and undeclared paths return their exact original object. No request handling, persisted state, frozen v1 behavior, or gameplay changes. Baccarat's explicit descriptor fallback of 14 records the engine's existing cut-card fallback without changing its state projection. SEC-012 is permanently assigned to game entropy and was not reused."
     },
     {
       "id": "CORE-028",
@@ -12440,7 +12441,7 @@
       "changed_in": "issue-351-owner-rbac-core",
       "notes": "Permanent identifiers ADMIN-028, AUTH-012, and TEST-138 were reserved on issue #351 before branch mutation; no existing identifier was deleted or reused."
     },
-    {"id":"TEST-142","module":"Tests","description":"An explicit exact-source qualification profile requires a completed disposable-MySQL 1/2/4/8 preflight, provisions exactly 138 synthetic accounts, creates 138 independent real-browser contexts on a disposable loopback runtime, assigns exactly three users to each of the 46 registered games, synchronizes them at the rendered login gate, performs authentication, catalog navigation, and one complete game action through visible controls, and emits only aggregate latency, browser, HTTP, wallet, ledger, pool, coverage, concurrency, and cleanup evidence.","status":"PASS","api_tests":["BROWSER-138-HARNESS-001","STORAGE-MYSQL-LIVE-001"],"browser_tests":["BR-CONCURRENT-138-001"],"implementation_files":["tests/concurrent_browser_138.py","tests/unit/concurrent_browser_138_tests.py","tests/storage_tests.py","tests/run_tests.py",".github/workflows/browser-tests.yml"],"introduced_in":"issue-225-browser-load-qualification","changed_in":"issue-225-browser-load-qualification","notes":"The profile is opt-in and refuses source-owned data, public or production targets, any population other than exactly 138 users, foreign-head pool evidence, identity-bearing metrics, incomplete cleanup, or fewer than three users for any registered game. The owner selected the exact 138-user minimum because 46 games multiplied by three users per game equals 138; catalog growth remains fail-closed and requires a separately governed population change."},
+    {"id":"TEST-142","module":"Tests","description":"An explicit exact-source qualification profile requires a completed disposable-MySQL 1/2/4/8 preflight, provisions exactly 138 synthetic accounts, admits browser setup through a bounded pre-barrier queue, creates 138 independent real-browser contexts on a disposable loopback runtime, assigns exactly three users to each of the 46 registered games, synchronizes them at the rendered login gate, performs authentication, catalog navigation, and one complete game action through visible controls for every registered game, filters expected anonymous current-user probes only before rendered login succeeds, and emits only aggregate latency, browser, HTTP, wallet, ledger, pool, coverage, concurrency, and cleanup evidence.","status":"PASS","api_tests":["BROWSER-138-HARNESS-001","STORAGE-MYSQL-LIVE-001"],"browser_tests":["BR-CONCURRENT-138-001"],"implementation_files":["tests/concurrent_browser_138.py","tests/unit/concurrent_browser_138_tests.py","tests/storage_tests.py","tests/run_tests.py",".github/workflows/browser-tests.yml"],"introduced_in":"issue-225-browser-load-qualification","changed_in":"issue-225-browser-load-qualification","notes":"The profile is opt-in, limits simultaneous context creation and shell navigation to twelve, and refuses source-owned data, public or production targets, any population other than exactly 138 users, foreign-head pool evidence, identity-bearing metrics, incomplete cleanup, missing visible one-action drivers, post-authentication identity failures, or fewer than three users for any registered game. The owner selected the exact 138-user minimum because 46 games multiplied by three users per game equals 138; catalog growth remains fail-closed and requires a separately governed population change."},
     {
       "id": "TEST-143",
       "module": "Tests",

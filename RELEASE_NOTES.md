@@ -1,4 +1,19 @@
-# Virtual Casino Simulator v0.9.5.23 Release Notes
+# Virtual Casino Simulator v0.9.5.24 Release Notes
+
+## Runtime-inert game rule coercion foundation
+
+- Adds pure internal schema lookup and deterministic declared-field discovery for descriptor-owned settings routes.
+- Leaves every undeclared path reference-identically unchanged and copies only governed settings mappings.
+- Canonicalizes finite numeric strings and numbers, requires strict booleans and closed enum members, and enforces finite inclusive bounds.
+- Preserves unknown keys for the existing handler allowlist and never mutates caller-owned input.
+- Uses stable non-reflecting validation diagnostics so rejected request content is not echoed.
+- Keeps the router disconnected from the helper, preserving request handling, persisted state, frozen `/api/v1` behavior, gameplay, Admin, and browser surfaces.
+- Keeps issue #433 open for separately approved runtime mounting, frozen-v1 decisions, Baccarat scope, state repair, and Admin UI.
+- Rotates the PWA shell identity and keeps curated What's New metadata disabled pending its separately governed UI remainder.
+- Retains exact immutable v0.9.5.23 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation.
+
+## Prior v0.9.5.23 safe CI qualification acceleration
 
 ## Safe CI qualification acceleration
 

@@ -22,10 +22,30 @@ USER_COUNT = 138
 MINIMUM_USERS_PER_GAME = 3
 # Bound setup at the synchronized login gate before the harness releases any context.
 BARRIER_TIMEOUT_SECONDS = 180
+# Bound simultaneous context creation and shell navigation so the loopback runtime is observed under controlled admission.
+SETUP_ADMISSION_LIMIT = 12
 # Bind the formal report to permanent requirement and browser-test identities.
 REQUIREMENT_IDS = ("AUTH-001", "AUTH-002", "SESSION-001", "SESSION-005", "TEST-039", "TEST-042", "TEST-142", "CORE-021")
 # Reuse canonical game order so catalog growth changes the plan deterministically.
 GAME_IDS = tuple(game["id"] for game in GAMES)
+# Map each single-request catalog gap to its visible preparation controls and terminal action.
+SIMPLE_ONE_ACTION_DRIVERS = {
+    "boule": ((("[data-number]", 1),), '[data-testid="boule-spin"]'),  # Select one rendered number and spin the boule.
+    "coin_pusher": ((), '[data-testid="coin-pusher-drop"]'),  # Drop one rendered coin with the default visible stake.
+    "color_wheel": ((("[data-color]", 1),), '[data-testid="color-wheel-spin"]'),  # Select one rendered colour and spin.
+    "daily_draw_lab": ((("[data-number]", 1),), '[data-testid="daily-draw-lab-go"]'),  # Mark one rendered number and draw.
+    "faro": ((("[data-rank]", 1),), '[data-testid="faro-deal"]'),  # Select one rendered rank and deal.
+    "lucky_grid": ((("[data-cell]", 3),), '[data-testid="lucky-grid-go"]'),  # Select the exact three rendered cells and reveal.
+    "marble_race": ((("[data-bet]", 1), ("[data-marble]", 1)), '[data-testid="marble-race-go"]'),  # Select a market and marble before racing.
+    "pachinko": ((), '[data-testid="pachinko-drop"]'),  # Drop one rendered ball with the default visible stake.
+    "pattern_draw": ((("[data-bet]", 1),), '[data-testid="pattern-draw-draw"]'),  # Select one rendered pattern and draw.
+    "poker_dice": ((), '[data-testid="poker-dice-roll"]'),  # Roll the five rendered poker dice once.
+    "trente_et_quarante": ((("[data-bet]", 1),), '[data-testid="teq-deal"]'),  # Select one rendered coup wager and deal.
+}
+# Name the four decision games whose complete visible cycle requires more than one request.
+DECISION_ONE_ACTION_GAMES = frozenset({"four_card_poker", "mississippi_stud", "pai_gow_poker", "teen_patti"})
+# Pin the exact fifteen catalog gaps accepted from the governed failure artifact.
+CATALOG_GAP_GAME_IDS = tuple((*SIMPLE_ONE_ACTION_DRIVERS, *sorted(DECISION_ONE_ACTION_GAMES)))
 
 
 # Build one deterministic all-catalog assignment without opening a listener or browser.
@@ -348,8 +368,110 @@ def create_synthetic_user(client, user_index, locale):
     }
 
 
+# Run one asynchronous shell setup beneath the explicit admission bound and record aggregate concurrency.
+async def run_admitted_setup(admission, counters, counter_lock, operation):
+    # Wait for one setup slot without delaying contexts that already reached the login barrier.
+    async with admission:
+        # Serialize low-cardinality active and peak setup accounting.
+        async with counter_lock:
+            # Count this setup only after its semaphore slot is owned.
+            counters["active_setup"] += 1
+            # Preserve the greatest simultaneous pre-barrier setup population.
+            counters["peak_setup"] = max(counters["peak_setup"], counters["active_setup"])
+        # Always release active setup accounting even when navigation fails.
+        try:
+            # Execute the caller-owned context creation and visible-login preparation.
+            return await operation()
+        # Close the aggregate admission observation around every terminal path.
+        finally:
+            # Serialize the exact decrement before releasing the semaphore context.
+            async with counter_lock:
+                # Remove this setup from the active population.
+                counters["active_setup"] -= 1
+
+
+# Select one or more distinct enabled rendered controls through the established pointer helper.
+async def select_visible_controls(page, selector, count, ordinal, activated_counts):
+    # Discover only currently enabled controls for the declared public selector.
+    controls = await ui_50000.enabled_locators(page, selector)
+    # Require enough distinct controls to satisfy the game-owned visible preparation.
+    if len(controls) < int(count):
+        # Keep the diagnostic bounded to the public catalog game surface.
+        raise AssertionError("visible one-action preparation controls unavailable")
+    # Activate the requested number of distinct controls in deterministic rotating order.
+    for offset in range(int(count)):
+        # Click the rendered control through the same real-pointer helper as the established harness.
+        await ui_50000.click_locator(controls[(int(ordinal) + offset) % len(controls)], activated_counts)
+
+
+# Complete one visible action for each catalog game absent from the established 50,000-cycle driver.
+async def play_catalog_gap_ui(page, game_id, ordinal, seen_counts, activated_counts):
+    # Resolve the eleven single-request games through their fixed visible selector contract.
+    simple_driver = SIMPLE_ONE_ACTION_DRIVERS.get(game_id)
+    # Run a simple rendered selection-and-terminal-action cycle when one is declared.
+    if simple_driver is not None:
+        # Split visible preparation controls from the terminal action selector.
+        preparations, terminal_selector = simple_driver
+        # Apply every game-owned preparation before the action becomes eligible.
+        for selector, count in preparations:
+            # Select the exact bounded number of rendered controls.
+            await select_visible_controls(page, selector, count, ordinal, activated_counts)
+        # Commit and settle one visible game action.
+        await ui_50000.terminal_action(page, terminal_selector, activated_counts)
+    # Complete one Four Card Poker deal and rendered play decision.
+    elif game_id == "four_card_poker":
+        # Deal the visible five-card player hand.
+        await ui_50000.click_control(page, "[data-deal]", activated_counts)
+        # Require the rendered multiplier choices before selecting one.
+        await ui_50000.wait_any_enabled(page, ["[data-play]"])
+        # Select one legal visible play multiplier.
+        await select_visible_controls(page, "[data-play]", 1, ordinal, activated_counts)
+        # Require terminal deal-again readiness after settlement.
+        await ui_50000.wait_any_enabled(page, ["[data-deal]"])
+    # Complete all three Mississippi Stud decision streets with visible minimum bets.
+    elif game_id == "mississippi_stud":
+        # Deal the visible hole cards and first community street.
+        await ui_50000.click_control(page, "[data-deal]", activated_counts)
+        # Advance the exact three governed streets without leaving an open wager.
+        for street in range(3):
+            # Require a rendered legal bet at this street.
+            await ui_50000.wait_any_enabled(page, ["[data-bet]"])
+            # Rotate among the visible legal multipliers while preserving a complete cycle.
+            await select_visible_controls(page, "[data-bet]", 1, ordinal + street, activated_counts)
+        # Require terminal deal-again readiness after the river settlement.
+        await ui_50000.wait_any_enabled(page, ["[data-deal]"])
+    # Complete one Pai Gow Poker deal through the rendered house-way decision.
+    elif game_id == "pai_gow_poker":
+        # Deal the visible seven-card setting hand.
+        await ui_50000.click_control(page, '[data-action="deal"]', activated_counts)
+        # Require the game-owned automatic legal arrangement control.
+        await ui_50000.wait_any_enabled(page, ['[data-action="house-way"]'])
+        # Settle the hand through the rendered house-way action.
+        await ui_50000.click_control(page, '[data-action="house-way"]', activated_counts)
+        # Require terminal next-deal readiness after settlement.
+        await ui_50000.wait_any_enabled(page, ['[data-action="deal"]'])
+    # Complete one Teen Patti deal and rendered play decision.
+    elif game_id == "teen_patti":
+        # Deal the visible three-card player hand.
+        await ui_50000.click_control(page, "[data-deal]", activated_counts)
+        # Require the rendered play decision before settlement.
+        await ui_50000.wait_any_enabled(page, ["[data-play]"])
+        # Commit the visible play action.
+        await ui_50000.click_control(page, "[data-play]", activated_counts)
+        # Require terminal next-deal readiness in the wager panel.
+        await ui_50000.wait_any_enabled(page, ["[data-deal]"])
+    # Let the established full driver own every catalog game outside the accepted gap set.
+    else:
+        # Report that no concurrent-only driver was selected.
+        return False
+    # Record the terminal rendered state without persisting per-user controls.
+    await ui_50000.inventory_controls(page, seen_counts)
+    # Report successful ownership of this catalog gap.
+    return True
+
+
 # Run one independent browser context from the rendered login gate through one complete game play.
-async def run_user(browser, client, assignment, user, barrier, counters, counter_lock):
+async def run_user(browser, client, assignment, user, barrier, setup_admission, counters, counter_lock):
     # Derive one deterministic locale without introducing a user-visible allowlist.
     locale = "en-US" if assignment["user_index"] % 2 == 0 else "ru-RU"
     # Start without browser resources so partial setup remains cleanable.
@@ -364,18 +486,33 @@ async def run_user(browser, client, assignment, user, barrier, counters, counter
     }
     # Collect only grouped credential-free browser diagnostics for this context.
     diagnostics = {"console_errors": Counter(), "page_errors": Counter(), "http_failures": Counter()}
+    # Track whether this page has completed real form authentication for state-aware diagnostic filtering.
+    authentication_state = {"authenticated": False}
     # Start protected browser work so cookies and session storage always close.
     try:
-        # Create one independent cookie, cache, and session-storage boundary.
-        context = await browser.new_context(viewport={"width": 1440, "height": 900}, reduced_motion="reduce")
-        # Open one page owned only by this synthetic account.
-        page = await context.new_page()
-        # Attach grouped console, page, and protected-request failure observers.
-        ui_50000.attach_page_diagnostics(page, diagnostics)
-        # Navigate to the public shell before the synchronized release.
-        await page.goto(client.base_url, wait_until="domcontentloaded", timeout=ui_50000.SETUP_TIMEOUT_MS)
-        # Require the rendered login gate before counting this context at the barrier.
-        await page.get_by_test_id("login-gate").wait_for(state="visible", timeout=ui_50000.SETUP_TIMEOUT_MS)
+        # Define one admitted context-and-shell setup that releases its slot before the synchronized barrier wait.
+        async def prepare_login_gate():
+            # Rebind the outer context handle so terminal cleanup always owns it.
+            nonlocal context
+            # Create one independent cookie, cache, and session-storage boundary.
+            context = await browser.new_context(viewport={"width": 1440, "height": 900}, reduced_motion="reduce")
+            # Open one page owned only by this synthetic account.
+            page = await context.new_page()
+            # Attach state-aware grouped diagnostics before the first anonymous request.
+            ui_50000.attach_page_diagnostics(
+                page,
+                diagnostics,
+                anonymous_probe_active=lambda: not authentication_state["authenticated"],
+            )
+            # Navigate to the public shell beneath bounded setup admission.
+            await page.goto(client.base_url, wait_until="domcontentloaded", timeout=ui_50000.SETUP_TIMEOUT_MS)
+            # Require the rendered login gate before releasing the setup slot.
+            await page.get_by_test_id("login-gate").wait_for(state="visible", timeout=ui_50000.SETUP_TIMEOUT_MS)
+            # Return the admitted page while its independent context remains alive at the barrier.
+            return page
+
+        # Prepare this shell beneath the controller-owned admission semaphore.
+        page = await run_admitted_setup(setup_admission, counters, counter_lock, prepare_login_gate)
         # Mark this exact independent context ready.
         result["barrier_ready"] = True
         # Wait until all 138 contexts are ready and the controller releases them together.
@@ -386,6 +523,8 @@ async def run_user(browser, client, assignment, user, barrier, counters, counter
         activated_counts = Counter()
         # Authenticate through the real localized form.
         await ui_50000.login_through_ui(page, client.base_url, user, locale, activated_counts)
+        # Close the anonymous diagnostic window only after the real login flow succeeds.
+        authentication_state["authenticated"] = True
         # Preserve only the successful aggregate latency sample.
         result["login_seconds"] = time.perf_counter() - login_started
         # Record successful authentication.
@@ -404,8 +543,18 @@ async def run_user(browser, client, assignment, user, barrier, counters, counter
         try:
             # Navigate through the catalog-owned UI route.
             await ui_50000.navigate_to_game(page, assignment["game_id"], activated_counts, assignment["user_index"])
-            # Complete one game-owned action through rendered controls.
-            await ui_50000.play_game_ui(page, assignment["game_id"], assignment["user_index"], seen_counts, activated_counts)
+            # Try the exact fifteen accepted catalog-gap drivers before the established long-harness strategy.
+            gap_completed = await play_catalog_gap_ui(
+                page,
+                assignment["game_id"],
+                assignment["user_index"],
+                seen_counts,
+                activated_counts,
+            )
+            # Delegate every already-covered game to the established exact-source UI driver.
+            if not gap_completed:
+                # Complete one existing game-owned action through rendered controls.
+                await ui_50000.play_game_ui(page, assignment["game_id"], assignment["user_index"], seen_counts, activated_counts)
             # Preserve only the successful aggregate gameplay latency sample.
             result["play_seconds"] = time.perf_counter() - play_started
             # Record one terminal UI play.
@@ -510,64 +659,68 @@ def aggregate_results(assignments, results, barrier, counters, isolation, pool, 
     play_latencies = [row["play_seconds"] for row in results if "play_seconds" in row]
     # Build explicit boolean gates so one failure cannot be hidden by totals.
     gates = {
-        "exact_users": len(assignments) == USER_COUNT and len(results) == USER_COUNT,
-        "barrier": barrier.ready == USER_COUNT and barrier.peak_ready == USER_COUNT,
-        "authentication": sum(bool(row.get("login_ok")) for row in results) == USER_COUNT,
-        "gameplay": sum(bool(row.get("gameplay_ok")) for row in results) == USER_COUNT,
-        "catalog_coverage": set(assigned_by_game) == set(GAME_IDS)
-        and min(assigned_by_game.values(), default=0) >= MINIMUM_USERS_PER_GAME
-        and min(successful_by_game.values(), default=0) >= MINIMUM_USERS_PER_GAME,
-        "browser_diagnostics": not any(diagnostics[name] for name in diagnostics),
-        "isolation": isolation["unique_player_count"] == USER_COUNT
-        and isolation["duplicate_player_id_count"] == 0
-        and isolation["matching_player_count"] == USER_COUNT
-        and isolation["nonnegative_balance_count"] == USER_COUNT
-        and isolation["users_with_gameplay_ledger"] == USER_COUNT
-        and isolation["duplicate_ledger_id_count"] == 0
-        and isolation["duplicate_action_key_count"] == 0,
-        "context_cleanup": sum(bool(row.get("context_closed")) for row in results) == USER_COUNT,
-        "pool": not pool.get("available")
-        or (
-            int(pool.get("timeout_count", 0)) == 0
-            and int(pool.get("connector_error", 0)) == 0
-            and int(pool.get("in_use", 0)) == 0
-            and int(pool.get("waiting", 0)) == 0
-            and int(pool.get("physical_created", 0)) <= int(pool.get("capacity", 0))
+        "exact_users": len(assignments) == USER_COUNT and len(results) == USER_COUNT,  # Require exact assignment and result populations.
+        "setup_admission": counters["active_setup"] == 0  # Require every admitted setup to release its aggregate slot.
+        and 0 < counters["peak_setup"] <= SETUP_ADMISSION_LIMIT,  # Prove startup reached a positive bounded peak.
+        "barrier": barrier.ready == USER_COUNT and barrier.peak_ready == USER_COUNT,  # Require every context at the synchronized gate.
+        "authentication": sum(bool(row.get("login_ok")) for row in results) == USER_COUNT,  # Require every rendered login to succeed.
+        "gameplay": sum(bool(row.get("gameplay_ok")) for row in results) == USER_COUNT,  # Require every visible game action to settle.
+        "catalog_coverage": set(assigned_by_game) == set(GAME_IDS)  # Require assignments for the complete registered catalog.
+        and min(assigned_by_game.values(), default=0) >= MINIMUM_USERS_PER_GAME  # Preserve the three-user assignment floor.
+        and min(successful_by_game.values(), default=0) >= MINIMUM_USERS_PER_GAME,  # Preserve the three-user success floor.
+        "browser_diagnostics": not any(diagnostics[name] for name in diagnostics),  # Refuse grouped browser, page, or HTTP failures.
+        "isolation": isolation["unique_player_count"] == USER_COUNT  # Require one canonical player per synthetic account.
+        and isolation["duplicate_player_id_count"] == 0  # Refuse duplicate account-to-player bindings.
+        and isolation["matching_player_count"] == USER_COUNT  # Require every response to bind the expected player.
+        and isolation["nonnegative_balance_count"] == USER_COUNT  # Require every post-action wallet to remain solvent.
+        and isolation["users_with_gameplay_ledger"] == USER_COUNT  # Require gameplay-ledger evidence for every user.
+        and isolation["duplicate_ledger_id_count"] == 0  # Refuse duplicate ledger identities.
+        and isolation["duplicate_action_key_count"] == 0,  # Refuse duplicate settlement action identities.
+        "context_cleanup": sum(bool(row.get("context_closed")) for row in results) == USER_COUNT,  # Require every browser context to close.
+        "pool": not pool.get("available")  # Permit JSON-only fallback evidence without inventing MySQL counters.
+        or (  # Otherwise require terminally clean bounded MySQL pool evidence.
+            int(pool.get("timeout_count", 0)) == 0  # Refuse checkout timeouts.
+            and int(pool.get("connector_error", 0)) == 0  # Refuse connector failures.
+            and int(pool.get("in_use", 0)) == 0  # Require every physical lease to return.
+            and int(pool.get("waiting", 0)) == 0  # Require every waiter to resolve.
+            and int(pool.get("physical_created", 0)) <= int(pool.get("capacity", 0))  # Preserve fixed-cardinality capacity.
         ),
-        "pool_preflight": bool(pool_preflight)
-        and [row.get("concurrency") for row in pool_preflight.get("measurements", [])] == [1, 2, 4, 8]
-        and all(int(row.get("errors", 1)) == 0 for row in pool_preflight.get("measurements", []))
-        and int(pool_preflight.get("pool", {}).get("timeout_count", 1)) == 0
-        and int(pool_preflight.get("pool", {}).get("connector_error", 1)) == 0,
+        "pool_preflight": bool(pool_preflight)  # Require one exact-source Package B evidence packet.
+        and [row.get("concurrency") for row in pool_preflight.get("measurements", [])] == [1, 2, 4, 8]  # Require all governed levels in order.
+        and all(int(row.get("errors", 1)) == 0 for row in pool_preflight.get("measurements", []))  # Refuse measurement errors.
+        and int(pool_preflight.get("pool", {}).get("timeout_count", 1)) == 0  # Refuse preflight checkout timeouts.
+        and int(pool_preflight.get("pool", {}).get("connector_error", 1)) == 0,  # Refuse preflight connector failures.
     }
     # Build one secret-safe exact-source aggregate artifact.
     report = {
-        "status": "PASS" if all(gates.values()) else "FAIL",
+        "status": "PASS" if all(gates.values()) else "FAIL",  # Publish one fail-closed terminal outcome.
         "qualification": {
-            "test_id": "BR-CONCURRENT-138-001",
-            "requirements": list(REQUIREMENT_IDS),
-            "source_commit": source_commit,
-            "user_count": USER_COUNT,
-            "registered_game_count": len(GAME_IDS),
-            "minimum_users_per_game": MINIMUM_USERS_PER_GAME,
+            "test_id": "BR-CONCURRENT-138-001",  # Bind the permanent hosted browser identity.
+            "requirements": list(REQUIREMENT_IDS),  # Bind the complete permanent requirement set.
+            "source_commit": source_commit,  # Bind evidence to the exact qualified source.
+            "user_count": USER_COUNT,  # Publish only the fixed synthetic population.
+            "registered_game_count": len(GAME_IDS),  # Publish the aggregate catalog size.
+            "minimum_users_per_game": MINIMUM_USERS_PER_GAME,  # Publish the owner-selected coverage floor.
         },
-        "gates": gates,
+        "gates": gates,  # Preserve every independent acceptance gate.
         "counts": {
-            "barrier_ready": barrier.ready,
-            "login_success": sum(bool(row.get("login_ok")) for row in results),
-            "gameplay_success": sum(bool(row.get("gameplay_ok")) for row in results),
-            "contexts_closed": sum(bool(row.get("context_closed")) for row in results),
-            "peak_gameplay": counters["peak_gameplay"],
+            "setup_admission_limit": SETUP_ADMISSION_LIMIT,  # Publish the bounded pre-barrier policy.
+            "peak_setup": counters["peak_setup"],  # Publish only aggregate observed setup concurrency.
+            "barrier_ready": barrier.ready,  # Publish aggregate synchronized-gate population.
+            "login_success": sum(bool(row.get("login_ok")) for row in results),  # Publish aggregate authentication success.
+            "gameplay_success": sum(bool(row.get("gameplay_ok")) for row in results),  # Publish aggregate gameplay success.
+            "contexts_closed": sum(bool(row.get("context_closed")) for row in results),  # Publish aggregate context cleanup.
+            "peak_gameplay": counters["peak_gameplay"],  # Publish peak simultaneous post-login gameplay.
         },
-        "assigned_by_game": dict(sorted(assigned_by_game.items())),
-        "successful_by_game": dict(sorted(successful_by_game.items())),
-        "latency": {"login": latency_summary(login_latencies), "gameplay": latency_summary(play_latencies)},
-        "browser_diagnostics": {name: dict(counter.most_common()) for name, counter in diagnostics.items()},
-        "failure_counts": dict(failure_counts.most_common()),
-        "isolation": isolation,
-        "pool": pool,
-        "pool_preflight": pool_preflight,
-        "elapsed_seconds": round(float(elapsed_seconds), 3),
+        "assigned_by_game": dict(sorted(assigned_by_game.items())),  # Publish aggregate deterministic coverage only.
+        "successful_by_game": dict(sorted(successful_by_game.items())),  # Publish aggregate successful coverage only.
+        "latency": {"login": latency_summary(login_latencies), "gameplay": latency_summary(play_latencies)},  # Publish bounded latency summaries.
+        "browser_diagnostics": {name: dict(counter.most_common()) for name, counter in diagnostics.items()},  # Publish grouped safe failures.
+        "failure_counts": dict(failure_counts.most_common()),  # Publish bounded safe exception signatures.
+        "isolation": isolation,  # Publish aggregate wallet and ledger invariants.
+        "pool": pool,  # Publish fixed low-cardinality pool evidence.
+        "pool_preflight": pool_preflight,  # Preserve the exact-source 1/2/4/8 packet.
+        "elapsed_seconds": round(float(elapsed_seconds), 3),  # Publish bounded wall time.
     }
     # Return the terminal aggregate without user-level rows.
     return report
@@ -626,9 +779,11 @@ async def run_qualification(args):
     listener_cleanup = {"closed": False}
     # Build the exact synchronized pre-login boundary.
     barrier = StartBarrier(USER_COUNT)
-    # Track active and peak gameplay with aggregate counters only.
-    counters = {"active_gameplay": 0, "peak_gameplay": 0}
-    # Serialize active-gameplay counter mutations.
+    # Bound only pre-barrier context and shell setup while preserving all 138 independent waiting contexts.
+    setup_admission = asyncio.Semaphore(SETUP_ADMISSION_LIMIT)
+    # Track active and peak setup plus gameplay with aggregate counters only.
+    counters = {"active_setup": 0, "peak_setup": 0, "active_gameplay": 0, "peak_gameplay": 0}
+    # Serialize setup and gameplay counter mutations.
     counter_lock = asyncio.Lock()
     # Start without provisioned credential-bearing in-memory users.
     users = []
@@ -663,7 +818,7 @@ async def run_qualification(args):
             browser = await playwright.chromium.launch(headless=not args.headed)
             # Start one task per deterministic assignment and unique synthetic account.
             tasks = [
-                asyncio.create_task(run_user(browser, client, assignment, user, barrier, counters, counter_lock))
+                asyncio.create_task(run_user(browser, client, assignment, user, barrier, setup_admission, counters, counter_lock))
                 for assignment, user in zip(assignments, users)
             ]
             # Start without a barrier failure so every task can still be awaited.

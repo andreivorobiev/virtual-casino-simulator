@@ -1,6 +1,7 @@
 """Listener-free TEST-142 proofs for the issue #225 exact-138 browser qualification."""
 
 import asyncio  # Exercise the asynchronous synchronized barrier without launching a browser.
+from collections import Counter  # Match the grouped production diagnostic counter schema.
 import json  # Persist one external exact-source pool preflight fixture.
 import os  # Patch only the explicit disposable marker for boundary tests.
 import tempfile  # Own and clean external listener-free evidence files.
@@ -93,6 +94,191 @@ class ConcurrentBrowser138Tests(unittest.TestCase):
         # Run the listener-free asynchronous scenario.
         asyncio.run(scenario())
 
+    # Prove pre-barrier browser setup obeys the explicit admission bound.
+    def test_setup_admission_bounds_pre_barrier_work(self):
+        # Exercise the production helper with a deliberately small browser-free cap.
+        async def scenario():
+            # Use three slots so queuing is observable without heavy resources.
+            admission = asyncio.Semaphore(3)
+            # Mirror the aggregate-only production setup counters.
+            counters = {"active_setup": 0, "peak_setup": 0}
+            # Serialize the production counter mutations.
+            counter_lock = asyncio.Lock()
+            # Hold the first admitted cohort until bounded state is inspected.
+            release = asyncio.Event()
+            # Signal when the configured cap has been reached.
+            cap_reached = asyncio.Event()
+
+            # Model one admitted browser setup without opening Chromium.
+            async def operation():
+                # Observe the third active setup after the production helper accounts for it.
+                if counters["active_setup"] == 3:
+                    # Wake the test controller at the exact cap.
+                    cap_reached.set()
+                # Hold admitted work so queued operations cannot enter early.
+                await release.wait()
+
+            # Start more operations than the declared admission bound.
+            tasks = [
+                asyncio.create_task(
+                    concurrent_browser_138.run_admitted_setup(
+                        admission,
+                        counters,
+                        counter_lock,
+                        operation,
+                    )
+                )
+                for _ in range(12)
+            ]
+            # Wait until the first admitted cohort is fully active.
+            await asyncio.wait_for(cap_reached.wait(), timeout=1)
+            # Refuse any fourth concurrent pre-barrier setup.
+            self.assertEqual(counters["active_setup"], 3)
+            self.assertEqual(counters["peak_setup"], 3)
+            # Release the cohort and allow every queued operation to complete.
+            release.set()
+            await asyncio.gather(*tasks)
+            # Require complete active-accounting cleanup.
+            self.assertEqual(counters["active_setup"], 0)
+            self.assertEqual(counters["peak_setup"], 3)
+
+        # Run the listener-free admission scenario.
+        asyncio.run(scenario())
+
+    # Prove every accepted governed-run catalog gap has a bounded visible driver.
+    def test_catalog_gap_drivers_cover_all_fifteen_games(self):
+        # Pin the exact missing-game set from the accepted failed evidence.
+        expected_games = {
+            "boule",
+            "coin_pusher",
+            "color_wheel",
+            "daily_draw_lab",
+            "faro",
+            "four_card_poker",
+            "lucky_grid",
+            "marble_race",
+            "mississippi_stud",
+            "pachinko",
+            "pai_gow_poker",
+            "pattern_draw",
+            "poker_dice",
+            "teen_patti",
+            "trente_et_quarante",
+        }
+        # Require the fail-closed registry to cover exactly those fifteen games.
+        self.assertEqual(set(concurrent_browser_138.CATALOG_GAP_GAME_IDS), expected_games)
+
+        # Exercise every branch with awaitable browser-free UI spies.
+        async def scenario():
+            # Replace only browser primitives while retaining production branch selection.
+            with (
+                mock.patch.object(
+                    concurrent_browser_138,
+                    "select_visible_controls",
+                    new=mock.AsyncMock(),
+                ),
+                mock.patch.object(
+                    concurrent_browser_138.ui_50000,
+                    "click_control",
+                    new=mock.AsyncMock(),
+                ),
+                mock.patch.object(
+                    concurrent_browser_138.ui_50000,
+                    "wait_any_enabled",
+                    new=mock.AsyncMock(),
+                ),
+                mock.patch.object(
+                    concurrent_browser_138.ui_50000,
+                    "terminal_action",
+                    new=mock.AsyncMock(),
+                ),
+                mock.patch.object(
+                    concurrent_browser_138.ui_50000,
+                    "inventory_controls",
+                    new=mock.AsyncMock(),
+                ) as inventory,
+            ):
+                # Select every former gap driver once.
+                for game_id in sorted(expected_games):
+                    # Require a concrete production branch and terminal control inventory.
+                    handled = await concurrent_browser_138.play_catalog_gap_ui(
+                        object(),
+                        game_id,
+                        0,
+                        Counter(),
+                        Counter(),
+                    )
+                    self.assertTrue(handled, game_id)
+                # Every bounded driver must finish with one rendered-control inventory.
+                self.assertEqual(inventory.await_count, len(expected_games))
+
+        # Run the branch-completeness probe without Chromium.
+        asyncio.run(scenario())
+
+    # Prove expected anonymous current-user probes are ignored only before login.
+    def test_pre_auth_diagnostics_ignore_only_expected_me_probes(self):
+        # Store browser callbacks without creating a browser page.
+        class FakePage:
+            # Initialize one event-name-to-callback map.
+            def __init__(self):
+                # Preserve only the listener functions under test.
+                self.callbacks = {}
+
+            # Match Playwright's event-registration surface.
+            def on(self, event_name, callback):
+                # Retain the callback for deterministic direct invocation.
+                self.callbacks[event_name] = callback
+
+        # Model the exact browser console error emitted for a rejected resource request.
+        class FakeMessage:
+            # Mark the message as a browser error.
+            type = "error"
+            # Match Playwright's stable 401 console text.
+            text = "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+
+        # Model the request method used by the anonymous current-user probe.
+        class FakeRequest:
+            # Current-user hydration is read-only.
+            method = "GET"
+
+        # Model the protected current-user response read by the listener.
+        class FakeResponse:
+            # Keep the origin synthetic and query-free.
+            url = "https://casino.test/api/v2/me"
+            # Represent the expected anonymous result.
+            status = 401
+            # Expose the request object through Playwright's response surface.
+            request = FakeRequest()
+
+        # Track whether authoritative rendered login has completed.
+        authentication_state = {"authenticated": False}
+        # Match the grouped diagnostic mapping used by the real runner.
+        diagnostics = {
+            "console_errors": Counter(),
+            "page_errors": Counter(),
+            "http_failures": Counter(),
+        }
+        # Register the real diagnostic listeners against a browser-free page double.
+        page = FakePage()
+        concurrent_browser_138.ui_50000.attach_page_diagnostics(
+            page,
+            diagnostics,
+            anonymous_probe_active=lambda: not authentication_state["authenticated"],
+        )
+        # Repeated anonymous probes before login must not create false failures.
+        page.callbacks["console"](FakeMessage())
+        page.callbacks["response"](FakeResponse())
+        page.callbacks["console"](FakeMessage())
+        page.callbacks["response"](FakeResponse())
+        self.assertEqual(diagnostics["console_errors"], Counter())
+        self.assertEqual(diagnostics["http_failures"], Counter())
+        # The same failures after authentication must remain visible and fail closed.
+        authentication_state["authenticated"] = True
+        page.callbacks["console"](FakeMessage())
+        page.callbacks["response"](FakeResponse())
+        self.assertEqual(sum(diagnostics["console_errors"].values()), 1)
+        self.assertEqual(diagnostics["http_failures"]["401 GET /api/v2/me"], 1)
+
     # Prove a complete current-catalog result passes without retaining user-level evidence.
     def test_aggregate_accepts_complete_sanitized_result(self):
         # Build the owner-authorized exact-138 plan.
@@ -146,7 +332,7 @@ class ConcurrentBrowser138Tests(unittest.TestCase):
                 assignments,
                 results,
                 barrier,
-                {"active_gameplay": 0, "peak_gameplay": 73},
+                {"active_setup": 0, "peak_setup": 12, "active_gameplay": 0, "peak_gameplay": 73},
                 isolation,
                 pool,
                 pool_preflight,
@@ -216,7 +402,7 @@ class ConcurrentBrowser138Tests(unittest.TestCase):
                 assignments,
                 results,
                 barrier,
-                {"active_gameplay": 0, "peak_gameplay": 138},
+                {"active_setup": 0, "peak_setup": 12, "active_gameplay": 0, "peak_gameplay": 138},
                 isolation,
                 {"provider": "json", "available": False},
                 pool_preflight,

@@ -26,16 +26,25 @@ fixed wait-bucket values. The browser controller accepts the preflight only when
 same full source commit, contains all four levels, has zero errors and timeouts, leaves no lease or
 waiter residue, and keeps physical creation within capacity.
 
-The browser run then provisions exactly 138 users through the setup-only Admin API, creates 138
-independent Chromium contexts, waits for all contexts at the rendered login gate, and releases
-them together. Every task authenticates through the visible form, navigates through catalog UI,
-and invokes the existing game-owned DOM driver for one complete action. Backend calls after the
-run inspect only aggregate wallet, player-binding, ledger-identity, and action-key invariants.
+The browser run then provisions exactly 138 users through the setup-only Admin API. It admits at
+most 12 concurrent context-creation and public-shell navigation operations, releases each setup
+slot after that independent context reaches the rendered login gate, waits for all 138 contexts,
+and releases them together. This pre-barrier admission prevents browser startup from exhausting
+the disposable runner without weakening the synchronized 138-context gameplay requirement.
+
+Every task authenticates through the visible form, navigates through catalog UI, and invokes one
+bounded game-owned DOM driver for a complete action. The qualification supplies explicit
+one-action drivers for the fifteen catalog games that were absent from the inherited long-suite
+driver, while retaining the inherited driver for the other thirty-one games. Expected anonymous
+`GET /api/v2/me` 401 bootstrap and hydration probes are ignored only until the real rendered
+login succeeds; the same failure after authentication remains a red diagnostic. Backend calls
+after the run inspect only aggregate wallet, player-binding, ledger-identity, and action-key
+invariants.
 
 Terminal evidence contains no per-user rows. It reports aggregate login and gameplay p50, p95,
-p99, maximum, barrier population, peak gameplay, assigned and successful game counts, grouped
-browser/page/HTTP failures, duplicate identifiers, nonnegative wallets, pool counters, context
-closure, listener closure, and exact source commit.
+p99, maximum, setup admission limit and peak, barrier population, peak gameplay, assigned and
+successful game counts, grouped browser/page/HTTP failures, duplicate identifiers, nonnegative
+wallets, pool counters, context closure, listener closure, and exact source commit.
 
 ## Exact catalog coverage
 
