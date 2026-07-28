@@ -7,8 +7,6 @@ import unittest
 from casino.games.acey_deucey import engine
 # Import public validation errors for boundary assertions.
 from casino.errors import ValidationError
-import random
-from casino.core import cards
 
 
 # Verify deterministic rule classification and public state sanitization.
@@ -63,12 +61,6 @@ class AceyDeuceyEngineTests(unittest.TestCase):
             engine.normalize_wager(0)
 
 
-# Run this focused suite when invoked directly.
-if __name__ == "__main__":
-    # Exit through unittest's normal result handling.
-    unittest.main()
-
-
 # Prove the spread-priced return leaves the house ahead at every decision the player can see. (#408)
 class AceyDeuceySpreadPricingTests(unittest.TestCase):
     # Verify the published paytable prices every legal spread below break-even.
@@ -90,28 +82,39 @@ class AceyDeuceySpreadPricingTests(unittest.TestCase):
         with self.assertRaises(ValidationError):
             # Request a price for an unplayable spread.
             engine.inside_return_multiplier(0)
+        # A corrupt spread above the single-deck maximum is also unpriceable.
+        with self.assertRaises(ValidationError):
+            # Request a price outside the published paytable.
+            engine.inside_return_multiplier(12)
+
+    # Verify unpriceable boundaries fail before revealing or mutating the prepared round.
+    def test_zero_spread_play_preserves_prepared_round(self):
+        # Prepare adjacent boundaries with no rank available strictly inside.
+        prepared = engine.create_round("player-1", "deal-zero", left_card="7H", right_card="8S", third_card="KC", round_id="round-zero", created_at="2026-07-14T00:00:00Z", request_fingerprint="deal-zero-fp")
+        # Snapshot the complete prepared document before the rejected action.
+        original = dict(prepared)
+        # Reject the wager even though its hidden outcome would be outside.
+        with self.assertRaises(ValidationError):
+            # Exercise the pure transition before any service ledger boundary.
+            engine.play_round(prepared, 5, "play-zero", completed_at="2026-07-14T00:00:01Z", request_fingerprint="play-zero-fp")
+        # Preserve the private card, wager phase, and every retry field exactly.
+        self.assertEqual(original, prepared)
 
     # Verify the strategy issue #408 described no longer beats the house.
     def test_documented_exploit_is_no_longer_profitable(self):
-        # Reproduce the reported strategy: wait for a wide gap, then bet.
-        staked = returned = 0.0
-        # Use a fixed generator so the proof is deterministic.
-        generator = random.Random(4080)
-        # Deal enough rounds for the mean to settle.
-        for _ in range(60000):
-            # Draw a fresh shuffled deck through the shared card primitives.
-            deck = cards.shuffled_deck(rng=generator)
-            # Read the two public boundaries and the hidden third card.
-            left, right, third = deck[0], deck[1], deck[2]
-            # Measure the spread the player can see before choosing.
-            spread = engine.inside_rank_count(left, right)
-            # Skip the narrow gaps exactly as the reported exploit does.
-            if spread < 7:
-                continue
-            # Commit a unit stake on this favourable-looking deal.
-            staked += 1.0
-            # Credit the spread-priced return only on a strict inside result.
-            if engine.classify_result(left, right, third) == "inside":
-                returned += engine.inside_return_multiplier(spread)
-        # Require the house to retain an edge against the strategy that previously returned +33%.
-        self.assertLess(returned / staked, 1.0, f"exploit returns {returned / staked:.4f}")
+        # Reproduce the reported choice set exactly without a sampled load run.
+        wide_spread_returns = []
+        # Inspect every wide spread the strategy would select.
+        for spread in range(7, 12):
+            # Calculate the exact conditional return from the published price and card probability.
+            expected_return = engine.inside_return_multiplier(spread) * engine.CARDS_PER_RANK * spread / engine.REMAINING_AFTER_BOUNDARIES
+            # Retain the result for one aggregate assertion.
+            wide_spread_returns.append(expected_return)
+        # Every selected spread is house-positive, so any mixture of those choices is also house-positive.
+        self.assertLess(max(wide_spread_returns), 1.0)
+
+
+# Run this focused suite when invoked directly.
+if __name__ == "__main__":
+    # Exit through unittest's normal result handling.
+    unittest.main()

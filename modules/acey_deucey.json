@@ -13,6 +13,9 @@
   "contracts": [
     "contracts/openapi/acey_deucey.v1.yaml"
   ],
+  "compatibility": [
+    "contracts/compatibility/acey-deucey-spread-pricing.json"
+  ],
   "game": {
     "id": "acey_deucey",
     "sort_order": 260,

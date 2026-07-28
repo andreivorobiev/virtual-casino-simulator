@@ -2358,8 +2358,22 @@ def run_api_tests():
             andar_bahar_state_a=api(base,f'/api/v1/games/andar-bahar/state?player_id={user_b["player_id"]}',auth_token=token_a); andar_bahar_state_b=api(base,f'/api/v1/games/andar-bahar/state?player_id={user_a["player_id"]}',auth_token=token_b); assert andar_bahar_state_a['state']['recent_rounds'][-1]['round_id']==andar_bahar_a['round']['round_id'] and andar_bahar_state_b['state']['recent_rounds'][-1]['round_id']==andar_bahar_b['round']['round_id']
             # Require exactly one wager debit and at most one returned-token credit for the replayed round.
             andar_bahar_ledger_a=api(base,f'/api/v1/players/{user_a["player_id"]}/ledger',auth_token=token_a)['ledger']; andar_bahar_events_a=[row for row in andar_bahar_ledger_a if row.get('game')=='andar_bahar' and row.get('round_id')==andar_bahar_a['round']['round_id']]; assert sum(row.get('transaction_type')=='ANDAR_BAHAR_WAGER_DEBIT' for row in andar_bahar_events_a)==1 and sum(row.get('transaction_type')=='ANDAR_BAHAR_PAYOUT_CREDIT' for row in andar_bahar_events_a)<=1
-            # Prepare two session-bound Acey-Deucey rounds while hostile body identities challenge ownership.
-            acey_deucey_deal_a=api(base,'/api/v1/games/acey-deucey/rounds','POST',{'player_id':user_b['player_id'],'action_id':'wallet-acey-deucey-deal-a'},auth_token=token_a); acey_deucey_deal_b=api(base,'/api/v1/games/acey-deucey/rounds','POST',{'player_id':user_a['player_id'],'action_id':'wallet-acey-deucey-deal-b'},auth_token=token_b)
+            # Prepare one priceable session-owned Acey-Deucey round without assuming random boundaries permit Play.
+            def priceable_acey_deucey_deal(token,hostile_player,prefix):
+                # Bound free retries so a broken deal or pricing path cannot loop forever.
+                for attempt in range(12):
+                    # Deal through the authenticated session while retaining the hostile compatibility identity.
+                    dealt=api(base,'/api/v1/games/acey-deucey/rounds','POST',{'player_id':hostile_player,'action_id':f'{prefix}-deal-{attempt}'},auth_token=token)
+                    # Return the prepared round as soon as at least one strict inside rank has a price.
+                    if dealt['round']['inside_rank_count']>0: return dealt
+                    # Pass equal or adjacent boundaries without wallet movement before dealing again.
+                    passed=api(base,f'/api/v1/games/acey-deucey/rounds/{dealt["round"]["round_id"]}/pass','POST',{'player_id':hostile_player,'action_id':f'{prefix}-pass-{attempt}'},auth_token=token)
+                    # Require the pass-only branch to close without revealing the third card.
+                    assert passed['round']['phase']=='passed' and not passed['round'].get('third_card')
+                # Fail closed when the bounded real-deal sequence never exposes a legal wager.
+                raise AssertionError('Acey-Deucey did not deal a priceable spread in 12 attempts')
+            # Prepare two session-bound priceable rounds while hostile body identities challenge ownership.
+            acey_deucey_deal_a=priceable_acey_deucey_deal(token_a,user_b['player_id'],'wallet-acey-deucey-a'); acey_deucey_deal_b=priceable_acey_deucey_deal(token_b,user_a['player_id'],'wallet-acey-deucey-b')
             # Settle each private prepared round through an independent wagered action.
             acey_deucey_a=api(base,f'/api/v1/games/acey-deucey/rounds/{acey_deucey_deal_a["round"]["round_id"]}/play','POST',{'player_id':user_b['player_id'],'action_id':'wallet-acey-deucey-play-a','wager':1},auth_token=token_a); acey_deucey_b=api(base,f'/api/v1/games/acey-deucey/rounds/{acey_deucey_deal_b["round"]["round_id"]}/play','POST',{'player_id':user_a['player_id'],'action_id':'wallet-acey-deucey-play-b','wager':1},auth_token=token_b)
             # Replay one exact play and reject changed wager meaning under the same action identity.
@@ -6181,6 +6195,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
                     # Load exact UTF-8 title expectations from the paired canonical resource files.
                     expected_titles={locale:read_i18n_json(ROOT/'web'/'i18n'/locale/'games'/'acey_deucey.json')['title'] for locale in ('en-US','ru-RU')}
+                    # Load the English pass-only guidance for exact zero-spread UI evidence.
+                    no_inside_copy=read_i18n_json(ROOT/'web'/'i18n'/'en-US'/'games'/'acey_deucey.json')['controls.noInside']
                     # Capture one mounted state across both locales and every viewport.
                     def localized_evidence(prefix,states):
                         # Iterate through paired English and Russian game resources.
@@ -6199,16 +6215,42 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                 game_evidence(f'after-pass-acey-deucey-{prefix}-{locale.lower()}-{viewport_id}.png','acey_deucey',states,locale,viewport_id)
                         # Restore English desktop controls for the next public action.
                         page.get_by_test_id('shell-locale-select').select_option('en-US'); page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(100)
+                    # Deal through any pass-only boundaries until the backend publishes one legal spread price.
+                    def deal_until_priceable():
+                        # Bound retries so a broken pricing response fails instead of looping.
+                        for _attempt in range(12):
+                            # Deal one free real-backend boundary pair and await its decision controls.
+                            page.locator('[data-action="deal"]:not([disabled])').click(); page.locator('[data-action="pass"]:not([disabled])').wait_for(timeout=10000)
+                            # Read the exact server-owned spread, table price, and compatibility scalar.
+                            pricing=page.evaluate("""async () => { const payload=await (await fetch('/api/v1/games/acey-deucey/state')).json(); if(!payload.ok) throw new Error(payload.error?.message || 'Acey-Deucey state failed'); const row=payload.data.state.active_round; const spread=row.inside_rank_count; return {spread,multiplier:payload.data.rules.inside_paytable[String(spread)],legacy:payload.data.rules.inside_return_multiplier}; }""")
+                            # Accept a positive spread only when UI and both public price fields agree.
+                            if pricing['spread']>0:
+                                # Require enabled wager controls and one exact displayed total-return price.
+                                assert page.locator('[data-action="play"]').is_enabled() and page.locator('#acey-wager').is_enabled()
+                                # Preserve the deprecated scalar as the same current-round value.
+                                assert pricing['multiplier'] is not None and pricing['legacy']==pricing['multiplier']
+                                # Require localized rules copy to display the exact server-owned price.
+                                assert f"{pricing['multiplier']}x" in page.locator('.acey-data li').nth(1).inner_text()
+                                # Return the accepted price for downstream evidence.
+                                return pricing
+                            # Equal or adjacent ranks must disable Play and the wager input.
+                            assert page.locator('[data-action="play"]').is_disabled() and page.locator('#acey-wager').is_disabled()
+                            # Require explicit pass-only localized guidance instead of a silent disabled control.
+                            assert page.locator('.acey-help').inner_text()==no_inside_copy
+                            # Pass without wallet movement and await the next free-deal control.
+                            page.locator('[data-action="pass"]').click(); page.locator('[data-action="deal"]:not([disabled])').wait_for(timeout=10000)
+                        # Fail closed when no priceable server round appears inside the bounded search.
+                        raise AssertionError('Acey-Deucey did not publish a priceable spread in 12 deals')
                     # Capture the complete ready table before the free boundary deal.
                     localized_evidence('ready',['ready'])
-                    # Deal two real-backend boundaries without wallet movement.
-                    page.locator('[data-action="deal"]').click(); page.locator('[data-action="play"]:not([disabled])').wait_for(timeout=10000); localized_evidence('boundaries-dealt',['boundaries_dealt'])
+                    # Deal two real-backend boundaries and prove the exact spread price before wallet movement.
+                    deal_until_priceable(); localized_evidence('boundaries-dealt',['boundaries_dealt'])
                     # Pass the prepared decision and capture the no-wager terminal path.
-                    page.locator('[data-action="pass"]').click(); page.wait_for_function("() => document.querySelectorAll('.acey-history-list li').length >= 1",timeout=10000); localized_evidence('passed',['passed'])
+                    page.locator('[data-action="pass"]').click(); page.locator('[data-action="deal"]:not([disabled])').wait_for(timeout=10000); localized_evidence('passed',['passed'])
                     # Deal again, enter a play-token wager, and settle the hidden third card.
-                    page.locator('[data-action="deal"]').click(); page.locator('[data-action="play"]:not([disabled])').wait_for(timeout=10000); page.locator('#acey-wager').fill('1'); page.locator('[data-action="play"]').click(); page.wait_for_function("() => document.querySelectorAll('.acey-history-list li').length >= 2",timeout=10000); localized_evidence('settled',['settled'])
+                    deal_until_priceable(); page.locator('#acey-wager').fill('1'); page.locator('[data-action="play"]').click(); page.locator('[data-action="deal"]:not([disabled])').wait_for(timeout=10000); localized_evidence('settled',['settled'])
                     # Commit another pass under reduced motion and require stable history growth.
-                    page.emulate_media(reduced_motion='reduce'); page.locator('[data-action="deal"]').click(); page.locator('[data-action="pass"]:not([disabled])').wait_for(timeout=10000); page.locator('[data-action="pass"]').click(); page.wait_for_function("() => document.querySelectorAll('.acey-history-list li').length >= 3",timeout=10000); localized_evidence('reduced-motion',['reduced_motion'])
+                    page.emulate_media(reduced_motion='reduce'); page.locator('[data-action="deal"]').click(); page.locator('[data-action="pass"]:not([disabled])').wait_for(timeout=10000); page.locator('[data-action="pass"]').click(); page.locator('[data-action="deal"]:not([disabled])').wait_for(timeout=10000); localized_evidence('reduced-motion',['reduced_motion'])
                     # Reload the canonical route and require restored player-owned history.
                     page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('acey-deucey').wait_for(timeout=5000); assert page.locator('.acey-history-list li').count()>=3; localized_evidence('route-restored',['route_restored'])
                     # Return to the lobby for downstream browser cases.

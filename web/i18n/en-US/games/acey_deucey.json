@@ -3,6 +3,7 @@
   "cards.faceDown": "Face-down Acey-Deucey card",
   "controls.deal": "Deal boundaries",
   "controls.help": "Deal the two boundary cards, then play a wager or pass before the third card is shown.",
+  "controls.noInside": "These boundaries leave no inside rank, so Play is unavailable. Pass to deal again.",
   "controls.pass": "Pass",
   "controls.play": "Play wager",
   "controls.repeat": "Repeat bet",

@@ -92,9 +92,9 @@ def inside_return_multiplier(spread: int) -> float:
     removes that choice: P(inside) = CARDS_PER_RANK * spread / REMAINING_AFTER_BOUNDARIES, so a
     multiplier of (1 - HOUSE_EDGE) / P(inside) leaves the same edge at every spread.
     """
-    # Reject a spread that cannot contain an inside card, which has no defined price.
-    if spread <= 0:
-        # Fail closed rather than returning an unbounded multiplier.
+    # Reject a spread outside the complete single-deck boundary range.
+    if spread < 1 or spread > len(RANK_VALUES) - 2:
+        # Fail closed rather than returning an absent or nonsensical multiplier.
         raise ValidationError("Acey-Deucey boundaries leave no inside rank to wager on")
     # Convert the rank spread into the exact probability of a strict inside result.
     inside_probability = (CARDS_PER_RANK * spread) / REMAINING_AFTER_BOUNDARIES
@@ -190,12 +190,14 @@ def play_round(round_state: dict, wager, play_action_id: str, *, completed_at: s
     if not third_card:
         # Keep reload behavior deterministic and fail-closed.
         raise ConflictError("Acey-Deucey result card is unavailable")
-    # Classify the third card against the strict in-between rule.
-    outcome = classify_result(round_state["left_card"], round_state["right_card"], third_card)
     # Price this round from the spread the player could already see before wagering. (issue #408)
     spread = inside_rank_count(round_state["left_card"], round_state["right_card"])
+    # Validate and capture the price before reveal, state mutation, receipts, or ledger movement.
+    return_multiplier = inside_return_multiplier(spread)
+    # Classify the third card against the strict in-between rule only after the wager is priceable.
+    outcome = classify_result(round_state["left_card"], round_state["right_card"], third_card)
     # Return the spread-priced win only for a strict inside result; every other outcome loses.
-    payout = round(amount * inside_return_multiplier(spread), 2) if outcome == "inside" else 0.0
+    payout = round(amount * return_multiplier, 2) if outcome == "inside" else 0.0
     # Persist the play action identity.
     round_state["play_action_id"] = play_action_id
     # Persist the semantic retry fingerprint.

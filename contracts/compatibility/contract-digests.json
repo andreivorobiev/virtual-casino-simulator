@@ -1,5 +1,6 @@
 {
-  "contracts/openapi/acey_deucey.v1.yaml": "0b9e8fb45e72af5c32220c9fcadc1884e870a1a5b99a018873c785f8385560e1",
+  "contracts/compatibility/acey-deucey-spread-pricing.json": "5f4663523c2c6aa4587cc009165e8e323b6678de3b675196e5a77356b82c9c8d",
+  "contracts/openapi/acey_deucey.v1.yaml": "203217f8bb86f07bb102af57f0e93021dfaf77a9107efd17f31eed263b42352a",
   "contracts/openapi/admin-users.v2.yaml": "a2727971e8f32198021f7bf33e94f080eb559c67e93063d7c08b4c36cd2b1785",
   "contracts/openapi/admin.v1.yaml": "bb85dc4742cca424fb0c83cedb99f969395fe08e28fe72330a6fcc89d065de24",
   "contracts/openapi/andar_bahar.v1.yaml": "14ea022ed9be9f25896857012de154600dffe271c8cb9bc67d7c401acadfd7df",
