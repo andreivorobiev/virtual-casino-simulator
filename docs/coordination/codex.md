@@ -1,37 +1,35 @@
 # Codex status
 
-Written by Codex only. Claude reads this; do not edit it. Last updated 2026-07-28T09:14:16Z.
+Written by Codex only. Claude reads this; do not edit it. Last updated 2026-07-28T11:10:48Z.
 
 ## Current branch / active Codex work
 
-- PR #479 merged normally at exact protected main `0d1b0660cdc7fcf63fedbaa1ca3caaf134ed0b63`, with parents exactly terminal-green v0.9.5.23 main `098d2f3719d01d171a875c991c8537ecff07e27f` and accepted head `c58c4763e914ecfbe05fde934777c63479934365`.
-- `codex/release-v0.9.5.24` serializes that accepted runtime-inert #433 foundation as one unique immutable patch release.
-- Deployed v0.9.5.23 remains the live release until v0.9.5.24 passes protected publication and trusted owner/static terminal-green deployment.
-- No later PR may merge during this release/deployment hold.
+- Worker B owns issue #434 on `codex/434-complete-game-test-discovery`, based exactly on terminal-green v0.9.5.24 main `eb47dc03c58aff39f5392d51a822c3c87281624d`.
+- The bounded slice restores all nine Andar Bahar Python tests to the existing CI discovery command and makes catalog validation reject any test-bearing game package that lacks its required `__init__.py` marker.
+- #482 remains the serialized next merge target; this lane may publish a draft PR but must not ready, merge, release, or deploy.
 
 ## Live queue snapshot
 
-- #479 carries only internal descriptor lookup, pure settings-value coercion, listener-free regressions, and aligned governance. The helper is not mounted in the router and does not change request, state, contract, game, Admin, or browser behavior.
+- #350 is an umbrella routed to child issues and is not a standalone implementation lane.
+- #432's safe ledger/action cache work is already merged under `STORAGE-009` and `TEST-135`; the remaining sidecar/provider plan retains its recorded rollback, parity, and payload decisions.
 - #433 remains open for separately governed runtime mounting, frozen-v1/Baccarat scope, state repair, Admin, audit, and product decisions.
-- Worker A #467 completed its single authorized governed qualification at stale v0.9.5.23 main and preserved the failed artifact. It is merge-held and must reconcile once to terminal-green v0.9.5.24 before any repair handoff; a second governed qualification requires fresh owner authorization.
-- #450 remains held and excluded. Other open Claude proposals remain pending and cannot enter this serialized release.
+- #434 has no Claude or open-PR substantive owner; current CI discovery is already enabled, but Andar Bahar is the one catalog package silently skipped by the missing marker.
+- #441 remains a proposal awaiting owner decisions on the replacement commenting policy and remediation scope.
 
 ## Requirement / version claims
 
-- No permanent identifier is created, deleted, or reused by this release.
-- The accepted #479 slice reuses merged `SEC-014`; it allocates no new `TEST-*` identifier.
-- v0.9.5.24 owns packaged application `0.9.5.24`, application `9.53.11`, tests/docs `1.64.9`, and contracts `1.49.5`.
-- Core `9.27.2` and tooling `1.21.7` are preserved from accepted source. The exact immutable v0.9.5.23 release remains the application-only rollback predecessor; MySQL schema stays 2 and database rollback is prohibited.
+- This #434 slice reuses permanent `AB-005`; it creates, deletes, and reuses no permanent requirement or `TEST-*` identifier.
+- Current main owns tests/docs `1.64.9` and tooling `1.21.7`; Worker A #467 already claims tests/docs `1.64.10` and tooling `1.21.8`.
+- This non-overlapping slice provisionally claims tests/docs `1.64.11` and tooling `1.21.9`, subject to exact-current-main recalculation after #482 serialization.
 
 ## File claims / collision notes
 
-- Release-owned changes are limited to packaged version surfaces, compatibility and rollback provenance, PWA/cache identity, release tests, release docs, generated governance, and coordination records.
-- #467, #450, Claude feature source, gameplay economics, Admin/UI, production workflow, provider, DNS, ingress, secrets, signup, OAuth, mail, and invitation files are excluded.
-- Any later proposal that overlaps shared docs or manifests must rebase and recalculate versions from terminal-green v0.9.5.24.
+- Substantive files are limited to `tests/games/andar_bahar/__init__.py` and `scripts/validate_game_catalog.py`.
+- Governed metadata is limited to the `AB-005` source/generated requirement records, tests/docs/tooling descriptors and manifest, plus Codex-owned coordination status and one append-only log entry.
+- #482's `tests/run_tests.py` and `.github/workflows/browser-tests.yml`, #481's `web/styles.css`, Worker A #467 files, #450, Claude branches, game source, production, provider, DNS, billing, ingress, secrets, signup, OAuth, mail, and invitations are excluded.
 
 ## Decisions / handbacks
 
-- Exact undeclared paths return the original request object unchanged.
-- Exact descriptor-owned settings paths produce a separate mapping, canonicalize finite numeric values, require strict booleans and enums, enforce inclusive bounds, and preserve unknown keys for the existing handler allowlist.
-- The coercer never mutates caller-owned input and uses fixed, non-reflecting validation diagnostics.
-- Runtime mounting, hand-written validator removal, frozen-contract changes, state repair, and Admin UI remain separately governed #433 scope.
+- The new validator gate is conditional: games with no direct `tests/games/<id>/test_*.py` files remain valid, while a test-bearing package without `__init__.py` fails with the exact missing path.
+- No route, request, response, payout, game, Admin, browser, provider, or deployment behavior changes.
+- Exact-head qualification and the draft PR handback remain pending; no merge action is authorized.

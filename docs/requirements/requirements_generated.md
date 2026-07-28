@@ -50,10 +50,10 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.0
 - pai_gow_poker: 1.1.0
 - teen_patti: 1.1.0
-- tests: 1.64.9
-- docs: 1.64.9
+- tests: 1.64.11
+- docs: 1.64.11
 - contracts: 1.49.5
-- tooling: 1.21.7
+- tooling: 1.21.9
 - commenting_policy: 1.0.0
 - color_wheel: 1.1.0
 - poker_dice: 1.1.0
@@ -603,7 +603,7 @@ Historical source baseline: 9.1.0
 - **AB-002** (Andar Bahar) - PASS: Authenticated sessions own private reload-safe rounds, durable receipts, settled history, and canonical route restoration.
 - **AB-003** (Andar Bahar) - PASS: Wager debits and returned-token credits use the shared ledger exactly once under durable action identities.
 - **AB-004** (Application) - PASS: Andar Bahar supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.
-- **AB-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Andar Bahar with requirement, module, version, and visual traceability.
+- **AB-005** (Tests) - PASS: Catalog, contract, browser, per-game Python, and long-suite discovery include Andar Bahar with requirement, module, version, and visual traceability.
 - **AD-001** (Acey-Deucey) - PASS: Two free exposed boundaries precede a pass or wager decision, and strict inside ranks settle at even money while outside and boundary ties lose.
 - **AD-002** (Acey-Deucey) - PASS: Authenticated sessions own private reload-safe prepared rounds, hidden third cards, durable receipts, settled history, and canonical route restoration.
 - **AD-003** (Acey-Deucey) - PASS: Free deals and passes move no tokens; wager debits and returned-token credits use the shared ledger exactly once under durable action identities.
