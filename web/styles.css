@@ -2084,7 +2084,10 @@ h3 {
 }
 
 .red {
-  background: var(--red) !important;
+  /* Real roulette/table red for semantic game cells (grid, pockets, history),
+     matching the wheel's pockets. The brand rose (var(--red)/--brand) is for
+     chrome only and must not tint game red/green, or the felt clashes. */
+  background: #a91622 !important;
 }
 
 .black {
@@ -2092,7 +2095,9 @@ h3 {
 }
 
 .green {
-  background: var(--green) !important;
+  /* Real casino green for zero pockets and green game cells, matching the
+     wheel; not the brand mint (var(--green)/--accent). */
+  background: #087a43 !important;
 }
 
 /* Roulette table, wheel, chips, and statistics primitives. */
