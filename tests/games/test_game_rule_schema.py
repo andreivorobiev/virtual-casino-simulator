@@ -5,8 +5,10 @@ import unittest
 
 # Import the canonical runtime catalog used by startup and validation.
 from casino.config import GAMES
-# Import pure schema checks so unsafe descriptor fixtures need no server or persisted data.
-from casino.core.game_rules import validate_rule_schema
+# Import pure schema and coercion checks so fixtures need no server or persisted data.
+from casino.core.game_rules import coerce_request, declared_fields, schema_for, validate_rule_schema
+# Import the public validation envelope so rejection messages can be checked directly.
+from casino.errors import ValidationError
 # Import the public registry projection to prove internal schemas never reach browser clients.
 from casino.games.registry import list_games
 # Import the two merged #404 domains so this inert bridge cannot drift before runtime migration.
@@ -19,6 +21,110 @@ from scripts.validate_game_catalog import resolve_callable, validate_settings_sc
 
 # Prove settings routes, safety flags, defaults, and public projection remain descriptor-driven.
 class GameRuleSchemaTests(unittest.TestCase):
+    # Prove internal schema lookup and deterministic field declaration use the canonical catalog.
+    def test_internal_schema_lookup_and_declared_fields(self):
+        # Resolve the Blackjack schema through the new behavior-neutral catalog reader.
+        schema = schema_for("blackjack")
+        # Require the exact governed route rather than a derived or caller-authored path.
+        self.assertEqual(schema["settings_route"], "/api/v1/games/blackjack/settings")
+        # Require deterministic field order for a future handler allowlist replacement.
+        self.assertEqual(declared_fields("roulette"), ("mode", "zero_rule"))
+        # Keep every game without a settings descriptor inert.
+        self.assertEqual(declared_fields("slots"), ())
+        # Return absence rather than inventing metadata for an unknown game.
+        self.assertIsNone(schema_for("not-a-game"))
+
+    # Prove every non-settings path preserves the exact original request object.
+    def test_undeclared_path_is_reference_identical(self):
+        # Build one object carrying nested data so accidental copying is observable.
+        body = {"decks": "6", "nested": {"keep": True}}
+        # Pass a real game action path that has no rule descriptor.
+        result = coerce_request("/api/v1/games/blackjack/rounds", body)
+        # Require exact object identity, not merely equality, for the inert boundary.
+        self.assertIs(result, body)
+
+    # Prove declared fields become canonical types while unknown keys remain untouched.
+    def test_declared_request_values_are_coerced_without_mutating_input(self):
+        # Supply numeric strings, a strict boolean, and one handler-ignored key.
+        body = {
+            "decks": "6",
+            "blackjack_payout": "1.5",
+            "dealer_hits_soft_17": False,
+            "ignored": {"keep": "exact"},
+        }
+        # Coerce through the exact descriptor-owned settings route.
+        result = coerce_request("/api/v1/games/blackjack/settings", body)
+        # Require integer counts to become real integers.
+        self.assertEqual(result["decks"], 6)
+        # Require numeric enum strings to become the descriptor-owned float member.
+        self.assertEqual(result["blackjack_payout"], 1.5)
+        # Require strict booleans to remain unchanged.
+        self.assertIs(result["dealer_hits_soft_17"], False)
+        # Preserve unknown handler keys without interpreting or deleting them.
+        self.assertIs(result["ignored"], body["ignored"])
+        # Preserve the caller-owned request object for audit and retry safety.
+        self.assertEqual(body["decks"], "6")
+        # Return a distinct mapping only for a governed settings route.
+        self.assertIsNot(result, body)
+
+    # Prove every dangerous numeric representation fails before state or arithmetic exists.
+    def test_numeric_domains_reject_nonfinite_fractional_boolean_and_bounds(self):
+        # Enumerate one representative attack for each finite/type/range boundary.
+        cases = (
+            # Reject non-finite strings accepted by Python float conversion.
+            ({"decks": "NaN"}, "decks must be finite"),
+            # Reject overflowed JSON exponent values before any allocation.
+            ({"decks": 1e999}, "decks must be finite"),
+            # Reject fractional counts before integer narrowing.
+            ({"decks": 2.5}, "decks must be a whole number"),
+            # Reject bool-as-number despite Python's integer subclassing.
+            ({"decks": True}, "decks must be numeric"),
+            # Reject values below the descriptor minimum.
+            ({"decks": 0}, "decks must be at least 1"),
+            # Reject values above the finite allocation maximum.
+            ({"decks": 9}, "decks must be at most 8"),
+        )
+        # Exercise every invalid request without opening a listener or state store.
+        for body, message in cases:
+            # Keep each failure independently attributable.
+            with self.subTest(body=body):
+                # Require the standard validation envelope for the future router hook.
+                with self.assertRaisesRegex(ValidationError, f"^{message}$"):
+                    # Coerce against the shipped Blackjack descriptor.
+                    coerce_request("/api/v1/games/blackjack/settings", body)
+
+    # Prove closed vocabularies reject truthiness and canonicalize numeric members.
+    def test_closed_enums_are_strict_and_non_reflecting(self):
+        # Accept a JSON integer that is numerically equal to the descriptor float member.
+        payout = coerce_request("/api/v1/games/blackjack/settings", {"blackjack_payout": 1})
+        # Return the exact descriptor-owned float representation.
+        self.assertIs(type(payout["blackjack_payout"]), float)
+        # Reject an unlisted numeric payout without reflecting it.
+        with self.assertRaisesRegex(ValidationError, "^blackjack_payout must be one of the configured values$"):
+            # Exercise a finite value outside the closed payout vocabulary.
+            coerce_request("/api/v1/games/blackjack/settings", {"blackjack_payout": 1.4})
+        # Reject a wrong-case string enum without permissive normalization.
+        with self.assertRaisesRegex(ValidationError, "^mode must be one of the configured values$"):
+            # Exercise Roulette's existing server-owned closed vocabulary.
+            coerce_request("/api/v1/games/roulette/settings", {"mode": "Single"})
+        # Reject a string pretending to be a boolean switch.
+        with self.assertRaisesRegex(ValidationError, "^dealer_hits_soft_17 must be true or false$"):
+            # Prove strict bool validation stays distinct from enum handling.
+            coerce_request("/api/v1/games/blackjack/settings", {"dealer_hits_soft_17": "false"})
+
+    # Prove scalar bodies fail only on a declared settings route with a fixed diagnostic.
+    def test_declared_route_requires_object_without_reflection(self):
+        # Keep one secret-like marker that must never appear in a public error.
+        marker = "private-value-that-must-not-echo"
+        # Require a fixed validation response for a governed route.
+        with self.assertRaises(ValidationError) as captured:
+            # Pass the marker as scalar content rather than a mapping.
+            coerce_request("/api/v1/games/blackjack/settings", marker)
+        # Require the stable object diagnostic.
+        self.assertEqual(str(captured.exception), "Game settings body must be an object")
+        # Prove caller content is absent from the public message.
+        self.assertNotIn(marker, str(captured.exception))
+
     # Validate every current settings surface through its real backend registration callable.
     def test_current_settings_routes_have_valid_matching_descriptors(self):
         # Collect all catalog validation defects across every registered game.

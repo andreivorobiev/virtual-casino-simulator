@@ -5,6 +5,11 @@ import math
 # Import the mapping protocol so malformed descriptor objects fail with focused diagnostics.
 from collections.abc import Mapping
 
+# Import the standard validation envelope for future request-path integration.
+from casino.errors import ValidationError
+# Reuse the shared finite-number boundary so NaN and infinity fail consistently.
+from casino.core.validation import require_finite_number
+
 # Define the closed schema vocabulary shared by catalog validation and future runtime enforcement.
 RULE_KINDS = frozenset({"bool", "enum", "int", "number"})
 # Define the only supported top-level keys so misspelled governance fields cannot pass silently.
@@ -27,6 +32,180 @@ def _is_finite_number(value) -> bool:
 def _enum_contains(values: list, value) -> bool:
     # Require both type and value equality for every declared member.
     return any(type(candidate) is type(value) and candidate == value for candidate in values)
+
+
+# Resolve the current internal catalog lazily so importing this pure module cannot create a cycle.
+def _catalog_games(catalog=None):
+    # Use an injected catalog for listener-free fixtures and focused failure tests.
+    if catalog is not None:
+        # Return the caller-owned sequence without copying or normalizing it.
+        return catalog
+    # Import only when a runtime caller needs the canonical catalog.
+    from casino.config import GAMES
+    # Return the internal catalog whose public projection already strips rule descriptors.
+    return GAMES
+
+
+# Return one internal rule schema by stable catalog game identifier.
+def schema_for(game_id: str, *, catalog=None):
+    # Visit the selected catalog once because its size is bounded by repository validation.
+    for game in _catalog_games(catalog):
+        # Ignore malformed fixture rows that cannot own a stable game identifier.
+        if not isinstance(game, Mapping) or game.get("id") != game_id:
+            # Continue until the requested game is found.
+            continue
+        # Read the internal descriptor without exposing it through the public registry.
+        schema = game.get("rules")
+        # Return only an object schema because scalar metadata cannot be enforced safely.
+        return schema if isinstance(schema, Mapping) else None
+    # Report absence without inventing a schema for an unknown game.
+    return None
+
+
+# Return the complete sorted allowlist declared by one game descriptor.
+def declared_fields(game_id: str, *, catalog=None) -> tuple[str, ...]:
+    # Resolve the descriptor from the same internal catalog used by validation.
+    schema = schema_for(game_id, catalog=catalog)
+    # Return no fields when the game has no governed settings surface.
+    if not isinstance(schema, Mapping):
+        # Keep undeclared games inert for future central integration.
+        return ()
+    # Read the declared field map without accepting a scalar substitute.
+    fields = schema.get("fields")
+    # Return no fields when catalog validation has not supplied a usable map.
+    if not isinstance(fields, Mapping):
+        # Fail inertly here because the catalog gate owns structural diagnostics.
+        return ()
+    # Return deterministic names so handlers and tests never depend on JSON object order.
+    return tuple(sorted(field for field in fields if isinstance(field, str) and field))
+
+
+# Resolve the descriptor that owns one exact settings route.
+def _schema_for_path(path: str, *, catalog=None):
+    # Scan the bounded internal catalog for the exact route declared by one game.
+    for game in _catalog_games(catalog):
+        # Skip malformed rows before reading their internal rule metadata.
+        if not isinstance(game, Mapping):
+            # Continue to the remaining validated catalog entries.
+            continue
+        # Read only object descriptors because the catalog gate rejects every other shape.
+        schema = game.get("rules")
+        # Ignore games whose descriptor is absent or structurally unusable.
+        if not isinstance(schema, Mapping):
+            # Keep every undeclared game and non-settings route inert.
+            continue
+        # Return the descriptor only for an exact route match.
+        if schema.get("settings_route") == path:
+            # Stop at the owning descriptor after catalog validation proves route uniqueness.
+            return schema
+    # Return absence so undeclared paths preserve their original request object.
+    return None
+
+
+# Coerce one caller value through a structurally validated descriptor field.
+def coerce_rule_value(field: str, value, spec: Mapping):
+    # Fail closed if runtime integration is attempted with metadata the catalog gate should reject.
+    if not isinstance(spec, Mapping) or spec.get("kind") not in RULE_KINDS:
+        # Publish one stable message without exposing descriptor internals.
+        raise ValidationError("Game rule configuration is unavailable")
+    # Read the validated domain kind once for focused coercion.
+    kind = spec["kind"]
+    # Require strict booleans so strings and numeric truthiness cannot toggle table rules.
+    if kind == "bool":
+        # Reject every non-boolean representation without reflecting its supplied value.
+        if not isinstance(value, bool):
+            # Name only the descriptor-owned field in the public diagnostic.
+            raise ValidationError(f"{field} must be true or false")
+        # Preserve the canonical JSON boolean unchanged.
+        return value
+    # Resolve closed vocabularies without broad Python equality between bool and numbers.
+    if kind == "enum":
+        # Read the structurally validated member list.
+        values = spec.get("values")
+        # Fail closed if a future caller bypasses the catalog gate.
+        if not isinstance(values, list) or not values:
+            # Avoid publishing the malformed internal vocabulary.
+            raise ValidationError("Game rule configuration is unavailable")
+        # Treat a wholly numeric enum as numeric input while still rejecting booleans.
+        if all(_is_finite_number(candidate) for candidate in values):
+            # Reject bool before conversion because float(True) would otherwise become one.
+            if isinstance(value, bool):
+                # Use the same stable enum diagnostic as every other invalid member.
+                raise ValidationError(f"{field} must be one of the configured values")
+            # Convert numeric strings and JSON numbers through the shared finite gate.
+            number = require_finite_number(value, field=field)
+            # Return the descriptor-owned member so output type is canonical.
+            for candidate in values:
+                # Compare finite numeric magnitude only after bool and non-finite rejection.
+                if float(candidate) == number:
+                    # Preserve the exact int or float type stored in the descriptor.
+                    return candidate
+        # Preserve strict type-and-value matching for string or mixed vocabularies.
+        elif _enum_contains(values, value):
+            # Return the descriptor-owned value rather than the caller's equivalent object.
+            return next(candidate for candidate in values if type(candidate) is type(value) and candidate == value)
+        # Reject every member outside the closed descriptor vocabulary.
+        raise ValidationError(f"{field} must be one of the configured values")
+    # Reject bool before numeric conversion because it subclasses int in Python.
+    if isinstance(value, bool):
+        # Publish the numeric expectation without reflecting the caller value.
+        raise ValidationError(f"{field} must be numeric")
+    # Convert numeric strings and JSON numbers through the shared non-finite boundary.
+    number = require_finite_number(value, field=field)
+    # Require an exact whole number for allocation and count fields.
+    if kind == "int":
+        # Reject fractional values before narrowing their type.
+        if number != int(number):
+            # Name the descriptor field without echoing the rejected value.
+            raise ValidationError(f"{field} must be a whole number")
+        # Return a real integer so downstream code never receives a numeric string or float count.
+        number = int(number)
+    # Fail closed when malformed runtime metadata omits finite bounds.
+    if not _is_finite_number(spec.get("min")) or not _is_finite_number(spec.get("max")):
+        # Keep internal bound defects out of the public response.
+        raise ValidationError("Game rule configuration is unavailable")
+    # Enforce the inclusive lower bound declared by the module owner.
+    if number < spec["min"]:
+        # Report the safe descriptor bound without reflecting the request value.
+        raise ValidationError(f"{field} must be at least {spec['min']}")
+    # Enforce the inclusive upper bound that protects settlement and allocation.
+    if number > spec["max"]:
+        # Report the safe descriptor bound without reflecting the request value.
+        raise ValidationError(f"{field} must be at most {spec['max']}")
+    # Return a canonical int or finite float after all domain checks pass.
+    return number
+
+
+# Coerce declared fields for one exact settings route while leaving every other path inert.
+def coerce_request(path: str, body, *, catalog=None):
+    # Resolve the descriptor by exact route without interpreting caller-controlled path fragments.
+    schema = _schema_for_path(path, catalog=catalog)
+    # Preserve object identity for every undeclared path and all non-settings actions.
+    if schema is None:
+        # Return the original object byte-for-byte and reference-identically.
+        return body
+    # Require an object only after the request is known to target a governed settings route.
+    if not isinstance(body, Mapping):
+        # Publish a fixed message without reflecting scalar request content.
+        raise ValidationError("Game settings body must be an object")
+    # Read the field map whose structure is enforced by the catalog gate.
+    fields = schema.get("fields")
+    # Fail closed if runtime integration somehow bypasses repository validation.
+    if not isinstance(fields, Mapping):
+        # Do not guess a permissive rule surface from malformed metadata.
+        raise ValidationError("Game rule configuration is unavailable")
+    # Copy a governed request so the caller-owned object remains unchanged on success or failure.
+    coerced = dict(body)
+    # Visit every declared field rather than trusting request key order.
+    for field in sorted(fields):
+        # Preserve missing and unknown keys for the existing handler allowlist boundary.
+        if field not in body:
+            # Leave the current request copy untouched for this absent field.
+            continue
+        # Replace only declared values with their canonical validated representation.
+        coerced[field] = coerce_rule_value(field, body[field], fields[field])
+    # Return the validated request copy for a future central router hook.
+    return coerced
 
 
 # Validate one field specification independently from any engine default.
