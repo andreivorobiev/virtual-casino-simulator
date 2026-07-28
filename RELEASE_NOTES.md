@@ -1,4 +1,20 @@
-# Virtual Casino Simulator v0.9.5.24 Release Notes
+# Virtual Casino Simulator v0.9.5.25 Release Notes
+
+## Deterministic Browser shard-state controller
+
+- Keeps dependent Browser case families together through explicit startup-validated affinity groups.
+- Runs inline state producers, actions, assertions, and teardown only on their owning shard instead of replaying unowned browser behavior.
+- Uses case-neutral authentication bootstrap for non-auth shards and co-locates normal-user and Admin navigation evidence.
+- Proves one exact, non-duplicating 105-case union across four ordinary Browser shards with counts 27/26/26/26.
+- Fails the aggregate closed on missing, duplicate, failed, cancelled, or skipped shard evidence.
+- Preserves unsharded execution, the formal 50,000-cycle suite, Baccarat sustained work, per-shard browser-error invariants, and unconditional browser/listener cleanup.
+- Derives Browser PWA expectations from canonical packaged metadata so release literals cannot become stale.
+- Keeps issue #468 open for the separately governed remaining CI timing and documentation work.
+- Rotates the PWA shell identity and keeps curated What's New metadata disabled pending its separately governed UI remainder.
+- Retains exact immutable v0.9.5.24 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation.
+
+## Prior v0.9.5.24 runtime-inert game rule coercion foundation
 
 ## Runtime-inert game rule coercion foundation
 

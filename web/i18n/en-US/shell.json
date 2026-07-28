@@ -205,6 +205,8 @@
   "whatsNew.entry.0_9_5_23.body": "This release safely cancels superseded checks for one pull request and splits mandatory Long Suite 100 into four isolated shards.",
   "whatsNew.entry.0_9_5_24.title": "Safer game rule foundations",
   "whatsNew.entry.0_9_5_24.body": "This release adds strict internal game-rule coercion helpers without changing live game settings or gameplay.",
+  "whatsNew.entry.0_9_5_25.title": "Reliable Browser qualification",
+  "whatsNew.entry.0_9_5_25.body": "This release keeps dependent Browser cases on the same shard and verifies one exact 105-case result across four workers.",
   "replay.title": "Round replay",
   "replay.empty": "No recent rounds to replay.",
   "replay.retention": "Replays are kept for {days} days.",
