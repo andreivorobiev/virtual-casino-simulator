@@ -41,7 +41,9 @@ The descriptor contains:
 
 The validator rejects unknown schema keys, unsafe semantic flags, inverted or non-finite bounds, invalid engine defaults, undeclared settings routes, descriptors without matching routes, and multiple settings routes owned by one descriptor. Internal callable references and rule schemas are stripped from the public game catalog.
 
-The first #433 slice is intentionally governance-only. Existing handler validation remains the runtime authority until a separately reviewed follow-up mounts descriptor enforcement centrally, removes hand-written rule lists, updates frozen-contract documentation, and proves read-side state recovery. A descriptor by itself must never be treated as runtime enforcement.
+The core also exposes behavior-neutral helpers for internal schema lookup, deterministic declared-field discovery, and pure request coercion. On an exact descriptor-owned settings path, the coercer canonicalizes finite numeric strings and numbers, requires exact booleans and closed enum members, applies inclusive bounds, preserves unknown keys for the existing handler allowlist, and never mutates the caller-owned mapping. On every undeclared path, it returns the original request object unchanged.
+
+The first two #433 slices remain runtime-inert. Existing handler validation is still the request authority because the router does not call the coercion helper. A separately reviewed follow-up must obtain the outstanding product approval, mount descriptor enforcement centrally, remove hand-written rule lists, update frozen-contract documentation, and prove read-side state recovery. Descriptors and pure helpers by themselves must never be treated as runtime enforcement or a change to frozen `/api/v1` behavior.
 
 ## #77 shared-file ownership
 

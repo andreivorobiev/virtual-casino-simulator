@@ -7,7 +7,7 @@ Historical source baseline: 9.1.0
 ## Independent module revisions
 
 - application: 9.53.10
-- core: 9.27.1
+- core: 9.27.2
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.1
@@ -50,8 +50,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.0
 - pai_gow_poker: 1.1.0
 - teen_patti: 1.1.0
-- tests: 1.64.6
-- docs: 1.64.6
+- tests: 1.64.8
+- docs: 1.64.8
 - contracts: 1.49.4
 - tooling: 1.21.7
 - commenting_policy: 1.0.0
@@ -905,7 +905,7 @@ Historical source baseline: 9.1.0
 - **ADMIN-027** (Admin) - PASS: Dashboard and the full Admin Ledger render canonical transaction identities as explicit locale-resource-backed operator labels. Ordered suffix classification preserves the game dimension and distinguishes common wager, purchase, settlement, payout, refund, escrow, insurance, and token actions; future unknown identities fail closed to a generic localized ledger-operation label instead of exposing raw all-caps English enums. The complete audit record retains player, game, round, amount, and before/after balances.
 - **TEST-132** (Tests) - PASS: Listener-free Python and Node evidence inspects or executes the exact production Admin label helper module and proves all-caps normalization, acronym preservation, ordered movement classification, generic unknown-event fallback, complete EN/RU resource parity, and Dashboard/full-Ledger helper wiring. Hosted exact-head browser acceptance exercises both installed locales at all four governed Admin viewports, rejects raw enum separators and all-caps action labels, requires Cyrillic Russian action copy, verifies page containment, and captures sixteen matching Dashboard/Ledger image-sidecar pairs for human review.
 - **SEC-013** (Application) - PASS: Client error telemetry reduces the current address to origin and path before submission, so invitation, OAuth, password-reset, and other query or fragment bearers can never enter Admin-visible client logs; malformed addresses fail closed to a fixed non-sensitive marker.
-- **SEC-014** (Core) - PASS: Every catalog game that registers a POST settings route declares one module-owned rule schema whose route, finite allocation and settlement bounds, closed vocabularies, and engine or documented fallback defaults pass the catalog validator before the game can ship.
+- **SEC-014** (Core) - PASS: Every catalog game that registers a POST settings route declares one module-owned rule schema whose route, finite allocation and settlement bounds, closed vocabularies, and engine or documented fallback defaults pass the catalog validator before the game can ship, and the core exposes pure type-safe coercion that leaves every undeclared path inert.
 - **CORE-028** (Application) - PASS: Mutable players, ledger, history, sessions, per-game state, and other generated runtime outputs remain under the ignored data/ root and are initialized from source defaults, never tracked as repository state or admitted by a broad source add.
 - **UX-021** (Application) - PASS: The persistent shared toast announces feedback through stable polite atomic live-region semantics, classifies only explicit success variants into the success palette, renders string and boolean failures with the error palette, and affected Roulette actions expose localized failures instead of silent rejected promises. Legacy Slots, Baccarat, Bingo, and Keno animation channels stop under reduced motion, and the Teen Patti mobile action rail remains clear of the fixed feedback control.
 - **TEST-136** (Tests) - PASS: Listener-free exact-source evidence executes invitation URL sanitization and toast palette classification, rejects malformed-address disclosure and tracked runtime snapshots, pins stable toast live-region markup, proves affected reduced-motion selectors, requires all governed Roulette actions to use localized rejection handling, and pins Teen Patti mobile action-rail clearance. Hosted exact-head Browser acceptance requalifies the affected English and Russian game surfaces and visual matrix after reconciliation.
