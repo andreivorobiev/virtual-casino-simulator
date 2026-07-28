@@ -30,10 +30,15 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Run the ordinary suite for PR evidence and retain it as the formal 50,000-cycle prerequisite.
-  browser_tests:
+  # Run the ordinary suite as contiguous deterministic shards for PR evidence and the formal prerequisite.
+  browser_tests_shard:
+    name: browser_tests_shard_${{ matrix.shard }}
     if: ${{ github.event_name == 'pull_request' || inputs.formal_ui_50000 == true }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -43,14 +48,38 @@ jobs:
         run: python -m pip install -r requirements-dev.txt
       - name: Install Playwright Chromium
         run: python -m playwright install chromium
-      - name: Run browser tests
-        run: python tests/run_tests.py --browser
-      - name: Upload browser artifacts
+      # Each shard replays the common preamble and owns one contiguous slice of the case sequence.
+      - name: Run browser test shard
+        run: python tests/run_tests.py --browser --shard-count 4 --shard-index ${{ matrix.shard }}
+      - name: Upload browser shard artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: browser-test-artifacts
+          name: browser-test-artifacts-shard-${{ matrix.shard }}
           path: logs/test-runs/
+
+  # Keep reporting the historical `browser_tests` context by verifying exact aggregate coverage.
+  browser_tests:
+    needs: browser_tests_shard
+    if: ${{ always() && (github.event_name == 'pull_request' || inputs.formal_ui_50000 == true) }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      # Fail unless every shard succeeded so the aggregate context can never pass vacuously.
+      - name: Require every shard to succeed
+        run: test "${{ needs.browser_tests_shard.result }}" = "success"
+      - name: Download every shard result artifact
+        uses: actions/download-artifact@v4
+        with:
+          pattern: browser-test-artifacts-shard-*
+          path: logs/test-runs
+          merge-multiple: true
+      # Prove the shard union covers every literal browser case exactly once with no failures.
+      - name: Verify exact shard coverage
+        run: python tests/run_tests.py --verify-browser-shards logs/test-runs --shard-count 4
 
   # Run the focused issue #265 profile only for its explicit, owner-authorized dispatch.
   baccarat_sustained_2000:

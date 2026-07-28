@@ -1,6 +1,6 @@
 {
   "module": "tests",
-  "version": "1.64.9",
+  "version": "1.64.10",
   "paths": [
     "tests/",
     "verify_rules.py"
