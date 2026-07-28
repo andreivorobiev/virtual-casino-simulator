@@ -1,4 +1,18 @@
-# Virtual Casino Simulator v0.9.5.25 Release Notes
+# Virtual Casino Simulator v0.9.5.26 Release Notes
+
+## Governed Acey-Deucey spread pricing
+
+- Prices every playable inside wager from the visible card spread using a server-owned constant-edge return table.
+- Makes equal or adjacent boundary cards pass-only and rejects Play before hidden-card reveal, receipt creation, state mutation, or ledger movement.
+- Preserves the frozen `/api/v1` numeric `inside_return_multiplier` compatibility scalar and aligns it to the current or latest priceable round.
+- Adds optional paytable and house-edge rule fields with exact OpenAPI, compatibility-record, module-matrix, and digest evidence.
+- Keeps EN/RU controls aligned with the server price and disables Play plus wager editing when no honest inside price exists.
+- Derives Long Suite outcomes from the public paytable and verifies governed desktop, tablet, mobile, locale, accessibility, reduced-motion, and route-restoration behavior in Browser evidence.
+- Rotates the PWA shell identity and keeps curated What's New metadata disabled pending its separately governed UI remainder.
+- Retains exact immutable v0.9.5.25 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation.
+
+## Prior v0.9.5.25 deterministic Browser shard-state controller
 
 ## Deterministic Browser shard-state controller
 
