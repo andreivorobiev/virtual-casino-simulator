@@ -12254,6 +12254,27 @@
       "notes": "The sanitizer reconstructs only URL origin and pathname instead of filtering named parameters, so future secret-bearing query keys and fragments are covered without maintaining an allowlist."
     },
     {
+      "id": "SEC-014",
+      "module": "Core",
+      "description": "Every catalog game that registers a POST settings route declares one module-owned rule schema whose route, finite allocation and settlement bounds, closed vocabularies, and engine or documented fallback defaults pass the catalog validator before the game can ship.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/game_rules.py",
+        "casino/games/registry.py",
+        "docs/game_catalog_governance.md",
+        "modules/blackjack.json",
+        "modules/baccarat.json",
+        "modules/roulette.json",
+        "scripts/validate_game_catalog.py",
+        "tests/games/test_game_rule_schema.py"
+      ],
+      "introduced_in": "issue-433-rule-schema-catalog-gate",
+      "changed_in": "issue-433-rule-schema-catalog-gate",
+      "notes": "The first governed slice is deliberately inert: it mirrors the already-merged issue #404 runtime domains, discovers routes without a listener, withholds internal schemas from public catalog payloads, and does not change request handling, persisted state, frozen v1 behavior, or gameplay. Baccarat's explicit descriptor fallback of 14 records the engine's existing cut-card fallback without changing its state projection. SEC-012 is permanently assigned to game entropy and was not reused."
+    },
+    {
       "id": "CORE-028",
       "module": "Application",
       "description": "Mutable players, ledger, history, sessions, per-game state, and other generated runtime outputs remain under the ignored data/ root and are initialized from source defaults, never tracked as repository state or admitted by a broad source add.",
