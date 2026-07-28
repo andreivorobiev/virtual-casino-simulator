@@ -197,6 +197,8 @@
   "whatsNew.entry.0_9_5_19.body": "This release reuses sanitized MySQL sessions through a bounded per-process pool with request-scoped cleanup, fail-closed deadlines, and secret-safe lifecycle evidence.",
   "whatsNew.entry.0_9_5_20.title": "Owner-gated Admin authority foundation",
   "whatsNew.entry.0_9_5_20.body": "This release adds a server-side platform owner and owner-only additive-v2 Admin grant and revoke foundation with transaction-safe last-owner and last-Admin protections.",
+  "whatsNew.entry.0_9_5_21.title": "Privacy-safe session-control foundation",
+  "whatsNew.entry.0_9_5_21.body": "This release adds bounded server-side session summaries and atomic revocation for retained accounts without exposing raw session identifiers, tokens, addresses, or client strings.",
   "replay.title": "Round replay",
   "replay.empty": "No recent rounds to replay.",
   "replay.retention": "Replays are kept for {days} days.",

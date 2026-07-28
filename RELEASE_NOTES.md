@@ -1,4 +1,18 @@
-# Virtual Casino Simulator v0.9.5.20 Release Notes
+# Virtual Casino Simulator v0.9.5.21 Release Notes
+
+## Privacy-safe Admin session-control foundation
+
+- Adds a route-free server-side session inventory for retained full accounts while keeping disposable Guest Trials outside the control plane.
+- Returns at most 100 newest-first summaries through stable one-way aliases and approved timestamps, lifecycle classes, authentication-method classes, and coarse client families.
+- Excludes raw session identifiers, bearer and CSRF material, account identifiers, IP addresses, and raw client strings from the projected inventory.
+- Revokes one aliased session or every active session for one retained account idempotently through the existing atomic JSON/MySQL document transaction.
+- Fails closed on parseable malformed documents and syntactically invalid JSON while preserving original bytes without default substitution, backup, normalization, partial mutation, or rewrite.
+- Adds no Admin route, browser UI, or API contract; issue #351 remains open for authorization, reason capture, recent reauthentication, request idempotency, durable audit history, separate Administrators UI, EN/RU browser evidence, and additive v2 contracts.
+- Rotates the PWA shell identity and keeps curated What's New metadata disabled pending its separately governed UI remainder.
+- Retains exact immutable v0.9.5.20 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation.
+
+## Prior v0.9.5.20 owner-gated Admin authority foundation
 
 ## Owner-gated Admin authority foundation
 
