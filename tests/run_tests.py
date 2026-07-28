@@ -1044,6 +1044,18 @@ def run_api_tests():
             raise AssertionError('production CI/CD workflow suite failed')
     # Record immutable publication, hosted assets, SSH boundaries, and rollback behavior.
     run_case('DEPLOY-CICD-001',['TOOL-008','TEST-133'],run_cicd_deployment_tests)
+    # Execute listener-free ordinary-workflow cancellation and sharded qualification policy proofs.
+    def run_ci_qualification_tests():
+        # Load only the focused acceleration policy class.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(cicd_deployment_tests.CiQualificationWorkflowTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any workflow assertion failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure stable.
+            raise AssertionError('qualification acceleration policy suite failed')
+    # Record safe PR cancellation, exhaustive shards, audio ownership, artifacts, and aggregate behavior.
+    run_case('CI-QUALIFICATION-001',['TOOL-002','TEST-036'],run_ci_qualification_tests)
     # Execute the bounded Roulette anti-strobe proof without opening a listener or browser.
     def run_roulette_motion_tests():
         # Import the focused suite only when its mapped API case runs.
