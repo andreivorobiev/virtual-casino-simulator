@@ -4679,6 +4679,14 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     reset_lobby_scroll()
                 # Execute the full locale, viewport, state, and interaction matrix under the permanent requirement mapping.
                 run_case('BR-LOBBY-RESP-001',['CORE-015','UX-009','UX-012','UX-013','TEST-072','TEST-076','UX-016','TEST-085'],responsive_lobby)
+                # Restore the canonical English handoff when this shard skipped the producing lobby case.
+                if not browser_shard_owns('BR-LOBBY-RESP-001'):
+                    # Reselect English through the same visible shell control the skipped case body uses.
+                    page.get_by_test_id('shell-locale-select').select_option('en-US')
+                    # Wait for the English rerender before downstream game coverage continues.
+                    page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'en-US'")
+                    # Restore the primary desktop viewport the skipped case body would have left behind.
+                    page.set_viewport_size({'width':1920,'height':1080})
                 # Define catalog_route_discovery to mount every frontend driver from catalog metadata.
                 def catalog_route_discovery():
                     # Select a catalog game with a route id that differs from its display label for loader-copy coverage. (UX-011)
