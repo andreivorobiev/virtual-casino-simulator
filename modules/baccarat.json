@@ -1,6 +1,6 @@
 {
   "module": "baccarat",
-  "version": "9.1.7",
+  "version": "9.1.8",
   "paths": [
     "casino/games/baccarat/",
     "web/games/baccarat.js"
@@ -13,6 +13,46 @@
   ],
   "game": {
     "id": "baccarat",
+    "rules": {
+      "settings_route": "/api/v1/games/baccarat/settings",
+      "defaults": "casino.games.baccarat.engine:default_state",
+      "defaults_key": "rules",
+      "fields": {
+        "decks": {
+          "kind": "int",
+          "min": 1,
+          "max": 8,
+          "allocates": true
+        },
+        "tie_payout": {
+          "kind": "enum",
+          "values": [
+            8,
+            9
+          ],
+          "settles": true
+        },
+        "banker_commission": {
+          "kind": "number",
+          "min": 0,
+          "max": 0.25,
+          "settles": true
+        },
+        "tie_behavior": {
+          "kind": "enum",
+          "values": [
+            "push"
+          ]
+        },
+        "cut_cards_remaining": {
+          "kind": "int",
+          "min": 1,
+          "max": 104,
+          "default": 14,
+          "allocates": true
+        }
+      }
+    },
     "sort_order": 60,
     "route": "/games/baccarat",
     "label": "Baccarat",

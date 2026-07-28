@@ -1,6 +1,6 @@
 {
   "module": "blackjack",
-  "version": "9.1.6",
+  "version": "9.1.7",
   "paths": [
     "casino/games/blackjack/",
     "web/games/blackjack.js"
@@ -13,6 +13,46 @@
   ],
   "game": {
     "id": "blackjack",
+    "rules": {
+      "settings_route": "/api/v1/games/blackjack/settings",
+      "defaults": "casino.games.blackjack.engine:default_state",
+      "defaults_key": "rules",
+      "fields": {
+        "decks": {
+          "kind": "int",
+          "min": 1,
+          "max": 8,
+          "allocates": true
+        },
+        "dealer_hits_soft_17": {
+          "kind": "bool"
+        },
+        "blackjack_payout": {
+          "kind": "enum",
+          "values": [
+            1.5,
+            1.2,
+            1.0
+          ],
+          "settles": true
+        },
+        "max_split_hands": {
+          "kind": "int",
+          "min": 1,
+          "max": 4,
+          "allocates": true
+        },
+        "double_after_split": {
+          "kind": "bool"
+        },
+        "late_surrender": {
+          "kind": "bool"
+        },
+        "split_aces_one_card": {
+          "kind": "bool"
+        }
+      }
+    },
     "sort_order": 50,
     "route": "/games/blackjack",
     "label": "Blackjack",
