@@ -8208,6 +8208,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     normal_admin_navigation=collect_normal_admin_navigation()
                     # Unpack the bounded two-role authorization values without cross-shard local state.
                     normal_admin_nav_results=normal_admin_navigation['results']; admin_nav_viewports=normal_admin_navigation['viewports']; normal_admin_nav_route_restored=normal_admin_navigation['route_restored']; normal_admin_html_result=normal_admin_navigation['html']; normal_admin_js_result=normal_admin_navigation['js']; normal_admin_api_result=normal_admin_navigation['api']
+                    # Clear only the three expected normal-role 403 observations before Admin coverage continues.
+                    console_errors.clear(); http_errors.clear()
                     # Replace the normal-user browser cookie with an authenticated Admin session.
                     admin_browser_login=page.request.post(base+'/api/v2/auth/login',data={'email':DEFAULT_AUTH_EMAIL,'password':DEFAULT_AUTH_PASSWORD})
                     # Verify the browser context received a successful Admin login response.

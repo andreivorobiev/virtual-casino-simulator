@@ -378,6 +378,25 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         # Require the Keno driver to use the real draw action rather than a hidden API shortcut.
         self.assertIn("page.get_by_test_id('keno-draw').click()", runner_source)
 
+    # Prove expected normal-role denials cannot poison the final browser-error invariant.
+    def test_browser_admin_affinity_clears_only_expected_denial_observations(self):
+        # Read exact browser source without importing its runtime.
+        source, tree = self.browser_runner_syntax()
+        # Select the browser runner and isolate its source.
+        runner = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "run_browser_tests")
+        # Read the complete browser function for producer/cleanup ordering checks.
+        runner_source = ast.get_source_segment(source, runner)
+        # Locate the normal-role authorization producer on the Admin-owned shard.
+        producer_index = runner_source.index("normal_admin_navigation=collect_normal_admin_navigation()")
+        # Locate the bounded expected-denial cleanup after that producer.
+        cleanup_index = runner_source.index("console_errors.clear(); http_errors.clear()", producer_index)
+        # Locate Admin login after the normal-role denial evidence is retained.
+        admin_login_index = runner_source.index("admin_browser_login=page.request.post", producer_index)
+        # Require expected 403 observations to clear only after collection and before Admin activity.
+        self.assertLess(producer_index, cleanup_index)
+        # Preserve final invariant signal for every unexpected Admin-side browser failure.
+        self.assertLess(cleanup_index, admin_login_index)
+
     # Prove ordinary sharding does not alter formal 50k or sustained Baccarat governance.
     def test_browser_sharding_preserves_formal_and_baccarat_jobs(self):
         # Read the complete workflow as inert text.
