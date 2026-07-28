@@ -236,6 +236,7 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 - [`docs/claude_codex_work_division.md`](docs/claude_codex_work_division.md) — Claude and Codex work-division proposal
 - [`docs/codex_parallel_workflow.md`](docs/codex_parallel_workflow.md) — Parallel agent workflow
 - [`docs/commenting_policy.md`](docs/commenting_policy.md) — Commenting policy
+- [`docs/concurrent_browser_qualification.md`](docs/concurrent_browser_qualification.md) — Concurrent browser qualification
 - [`docs/coordination/claude.md`](docs/coordination/claude.md) — Claude status
 - [`docs/coordination/codex.md`](docs/coordination/codex.md) — Codex status
 - [`docs/coordination/README.md`](docs/coordination/README.md) — Agent coordination channel
