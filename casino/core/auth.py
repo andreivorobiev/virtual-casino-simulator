@@ -25,8 +25,8 @@ from casino.core import guest_analytics
 from casino.core.clock import utc_now
 # Import required dependency so this module can use its public functions or constants.
 from casino.core.ids import new_id
-# Import required dependency so this module can use its public functions or constants.
-from casino.core.state_store import read_json, write_json, update_json
+# Import normal and strict document boundaries so session control preserves corrupt evidence.
+from casino.core.state_store import read_json, read_json_strict, write_json, update_json, update_json_strict
 # Import restricted-preview cookie helpers without coupling the auth store to WSGI.
 from casino.core.security import csrf_cookie_header, new_csrf_token
 # Import required dependency so this module can use its public functions or constants.
@@ -58,6 +58,14 @@ EDGE_MONITOR_TOKEN_SHA256_ENV = "CASINO_EDGE_MONITOR_TOKEN_SHA256"
 EDGE_MONITOR_TOKEN_HASH_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 # Limit the monitor principal to the two read-only Operations probes required by deployment.
 MONITOR_AUTH_PATHS = frozenset({"/readyz", "/api/v2/admin/operations"})
+# Bound the Admin session inventory so later routes cannot expose an unbounded identity document. (SESSION-008)
+MAX_ADMIN_SESSION_RESULTS = 100
+# Accept only the stable one-way session alias shape emitted by this module. (SESSION-008)
+ADMIN_SESSION_ALIAS_PATTERN = re.compile(r"^[0-9a-f]{16}$")
+# Publish only reviewed authentication-method classes instead of arbitrary stored strings. (SESSION-008)
+ADMIN_SESSION_AUTH_METHODS = frozenset({"local", "google", "facebook"})
+# Publish only reviewed lifecycle classes instead of arbitrary stored strings. (SESSION-008)
+ADMIN_SESSION_STATUSES = frozenset({"active", "revoked"})
 
 # Define the utc_datetime function used by this module.
 def utc_datetime() -> datetime:
@@ -1188,6 +1196,181 @@ def revoke_sessions_for_user(user_id: str) -> int:
     # Persist the account-scoped revocation result atomically.
     update_json(SESSIONS_PATH, mutate, default_sessions)
     # Return only the number of invalidated predecessors.
+    return changed["value"]
+
+# Require a retained full account before exposing or mutating its session inventory. (SESSION-008)
+def _require_session_control_target(user_id: str) -> dict:
+    # Reject missing or non-string identifiers through one enumeration-safe response.
+    if not isinstance(user_id, str) or not user_id.strip():
+        # Avoid distinguishing absent, malformed, and guest identities to callers.
+        raise ValidationError("Persistent account is required")
+    # Resolve the canonical identity from the retained user store.
+    user = find_user_by_id(user_id)
+    # Reject unknown and disposable guest principals through the same bounded response.
+    if not user or is_guest(user):
+        # Keep the server-side boundary unavailable to temporary marketing identities.
+        raise ValidationError("Persistent account is required")
+    # Return the retained canonical account for future policy checks.
+    return user
+
+# Reject malformed session documents without rewriting recoverable operator evidence. (SESSION-008)
+def _validated_session_rows(state: dict) -> list[dict]:
+    # Require the canonical document and collection shapes before inspecting any row.
+    if not isinstance(state, dict) or not isinstance(state.get("sessions"), list):
+        # Abort before an atomic writer can publish a default or partial repair.
+        raise RuntimeError("Session storage requires operator recovery")
+    # Validate every row before a caller can mutate any matching session.
+    for session in state["sessions"]:
+        # Require the complete identity and lifecycle keys used by inventory and revocation.
+        if not isinstance(session, dict) or not isinstance(session.get("session_id"), str) or not session.get("session_id") or not isinstance(session.get("user_id"), str) or not session.get("user_id") or not isinstance(session.get("status"), str) or not session.get("status"):
+            # Preserve the complete malformed document for operator recovery.
+            raise RuntimeError("Session storage requires operator recovery")
+    # Return the validated rows without copying secret-bearing records.
+    return state["sessions"]
+
+# Derive a stable non-reversible lookup alias without exposing session or bearer material. (SESSION-008)
+def admin_session_alias(session_id: str) -> str:
+    # Reject empty identifiers so no shared alias can be created accidentally.
+    if not isinstance(session_id, str) or not session_id:
+        # Keep malformed persisted identifiers outside the Admin lookup namespace.
+        raise RuntimeError("Session storage requires operator recovery")
+    # Domain-separate the digest from any other identifier hash used by the application.
+    material = f"admin-session\0{session_id}".encode("utf-8")
+    # Return a compact stable alias suitable for exact Admin follow-up actions.
+    return hashlib.sha256(material).hexdigest()[:16]
+
+# Classify the stored client hint into a fixed privacy-safe family. (SESSION-008)
+def _admin_session_client_family(client: object) -> str:
+    # Normalize only in memory so the raw client value is never returned or persisted elsewhere.
+    value = str(client or "").lower()
+    # Detect tablet hints before generic mobile tokens such as Android.
+    if any(token in value for token in ("ipad", "tablet")):
+        # Publish the fixed tablet family.
+        return "tablet"
+    # Detect common handheld browser hints without exposing the exact device or agent.
+    if any(token in value for token in ("mobile", "android", "iphone")):
+        # Publish the fixed mobile family.
+        return "mobile"
+    # Detect command-line and API clients as a single coarse family.
+    if any(token in value for token in ("curl", "python", "httpclient", "http-client", "api-client")):
+        # Publish the fixed API family.
+        return "api"
+    # Detect common desktop browser and operating-system hints.
+    if any(token in value for token in ("windows", "macintosh", "x11", "mozilla", "chrome", "safari", "firefox", "edge")):
+        # Publish the fixed desktop family.
+        return "desktop"
+    # Keep IP addresses, novel user agents, and absent hints in one non-identifying bucket.
+    return "unknown"
+
+# Project one secret-bearing session row into the bounded Admin inventory shape. (SESSION-008)
+def _admin_session_summary(session: dict) -> dict:
+    # Normalize missing legacy authentication metadata to the historical local-login behavior.
+    auth_method = session.get("auth_method") or "local"
+    # Replace unreviewed stored values with a fixed non-identifying class.
+    safe_auth_method = auth_method if auth_method in ADMIN_SESSION_AUTH_METHODS else "unknown"
+    # Replace unreviewed stored lifecycle values with a fixed non-identifying class.
+    safe_status = session["status"] if session["status"] in ADMIN_SESSION_STATUSES else "unknown"
+    # Return only approved timestamps, fixed classes, and the one-way lookup alias.
+    return {
+        # Publish the stable alias used by targeted revocation.
+        "session_alias": admin_session_alias(session["session_id"]),
+        # Publish the durable creation timestamp without changing storage.
+        "created_at": session.get("created_at"),
+        # Prefer the latest activity timestamp while supporting legacy session rows.
+        "last_activity_at": session.get("updated_at") or session.get("created_at"),
+        # Publish the existing bounded expiry timestamp.
+        "expires_at": session.get("expires_at"),
+        # Publish only a fixed reviewed lifecycle class.
+        "status": safe_status,
+        # Publish only a fixed reviewed authentication-method class.
+        "auth_method": safe_auth_method,
+        # Publish only the fixed client family derived from the raw stored hint.
+        "client_family": _admin_session_client_family(session.get("client")),
+    }
+
+# List one persistent account's bounded privacy-safe session inventory. (SESSION-008)
+def list_admin_sessions_for_user(user_id: str, limit: int = MAX_ADMIN_SESSION_RESULTS) -> list[dict]:
+    # Validate the target before touching secret-bearing session storage.
+    _require_session_control_target(user_id)
+    # Reject booleans and out-of-range values because bool is an int subclass in Python.
+    if isinstance(limit, bool) or not isinstance(limit, int) or limit < 1 or limit > MAX_ADMIN_SESSION_RESULTS:
+        # Keep every caller on the documented bounded inventory contract.
+        raise ValidationError("Session result limit is invalid")
+    # Read through the strict provider boundary so corrupt JSON cannot appear as an empty inventory.
+    state = read_json_strict(SESSIONS_PATH, default_sessions, "Session storage requires operator recovery")
+    # Validate the complete document before deriving any partial result.
+    rows = _validated_session_rows(state)
+    # Select only the exact target account without exposing unrelated identities.
+    selected = [session for session in rows if session["user_id"] == user_id]
+    # Sort newest activity first using compatible ISO timestamps and a stable identifier tie-break.
+    selected.sort(key=lambda session: (str(session.get("updated_at") or session.get("created_at") or ""), str(session["session_id"])), reverse=True)
+    # Return only the bounded privacy-safe projections.
+    return [_admin_session_summary(session) for session in selected[:limit]]
+
+# Revoke one active session by its one-way account-scoped Admin alias. (SESSION-008)
+def revoke_admin_session_for_user(user_id: str, session_alias: str) -> int:
+    # Validate the persistent target before entering the session transaction.
+    _require_session_control_target(user_id)
+    # Accept only the exact alias shape emitted by the inventory.
+    if not isinstance(session_alias, str) or not ADMIN_SESSION_ALIAS_PATTERN.fullmatch(session_alias):
+        # Reject malformed lookup material without reading or rewriting session state.
+        raise ValidationError("Session alias is invalid")
+    # Count only a newly committed active-to-revoked transition.
+    changed = {"value": 0}
+    # Define the complete targeted mutation under the provider transaction.
+    def mutate(state: dict) -> dict:
+        # Validate every row before changing any target record.
+        rows = _validated_session_rows(state)
+        # Resolve all exact account-and-alias matches without leaking whether another account owns the alias.
+        matches = [session for session in rows if session["user_id"] == user_id and hmac.compare_digest(admin_session_alias(session["session_id"]), session_alias)]
+        # Fail closed on a cryptographic alias collision instead of revoking multiple records.
+        if len(matches) > 1:
+            # Preserve the complete document for operator investigation.
+            raise RuntimeError("Session storage requires operator recovery")
+        # Revoke the sole matching active session when one exists.
+        if matches and matches[0]["status"] == "active":
+            # Make the selected session unusable immediately.
+            matches[0]["status"] = "revoked"
+            # Record the bounded lifecycle timestamp without changing any secret.
+            matches[0]["updated_at"] = utc_now()
+            # Record the single committed transition for idempotent callers.
+            changed["value"] = 1
+        # Preserve the canonical schema marker on a successful transaction.
+        state["schema_version"] = SCHEMA_VERSION
+        # Return the complete session document for atomic persistence.
+        return state
+    # Persist through the strict boundary so invalid JSON bytes are never normalized or overwritten.
+    update_json_strict(SESSIONS_PATH, mutate, default_sessions, "Session storage requires operator recovery")
+    # Return only whether one active session transitioned.
+    return changed["value"]
+
+# Revoke every active session for one retained full account through the Admin boundary. (SESSION-008)
+def revoke_all_admin_sessions_for_user(user_id: str) -> int:
+    # Validate the persistent target before entering the session transaction.
+    _require_session_control_target(user_id)
+    # Count exact active-to-revoked transitions.
+    changed = {"value": 0}
+    # Define the complete account-scoped mutation under the provider transaction.
+    def mutate(state: dict) -> dict:
+        # Validate every row before changing any target record.
+        rows = _validated_session_rows(state)
+        # Inspect each validated row while holding the atomic provider boundary.
+        for session in rows:
+            # Revoke only active records owned by the selected retained account.
+            if session["user_id"] == user_id and session["status"] == "active":
+                # Make the selected session unusable immediately.
+                session["status"] = "revoked"
+                # Record the bounded lifecycle timestamp without changing any secret.
+                session["updated_at"] = utc_now()
+                # Count the committed transition for idempotent callers.
+                changed["value"] += 1
+        # Preserve the canonical schema marker on a successful transaction.
+        state["schema_version"] = SCHEMA_VERSION
+        # Return the complete session document for atomic persistence.
+        return state
+    # Persist through the strict boundary so invalid JSON bytes are never normalized or overwritten.
+    update_json_strict(SESSIONS_PATH, mutate, default_sessions, "Session storage requires operator recovery")
+    # Return only the number of newly revoked active sessions.
     return changed["value"]
 
 # Revoke active sessions created through one external provider while preserving local login.

@@ -1215,6 +1215,20 @@ def run_api_tests():
             raise AssertionError('product account-spine suite failed')
     # Record disabled signup/passkeys, owner-only Admin delegation, and reporter-status proof.
     run_case('API-ACCOUNT-SPINE-001',['AUTH-010','AUTH-012','ADMIN-028','FEEDBACK-005','I18N-009','TEST-112','TEST-138'],run_account_spine_tests)
+    # Execute the privacy-safe Admin session-control core without opening a listener.
+    def run_admin_session_control_tests():
+        # Load only the focused session inventory and revocation class.
+        from tests import admin_session_control_tests
+        # Build a concise unittest suite for isolated provider-backed assertions.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(admin_session_control_tests.AdminSessionControlTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any focused session-control proof failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure text secret-safe.
+            raise AssertionError('Admin session-control suite failed')
+    # Record bounded inventory, one-way aliases, atomic revocation, and fail-closed storage proof.
+    run_case('API-ADMIN-SESSIONS-001',['SESSION-006','SESSION-007','SESSION-008','ADMIN-028','TEST-143'],run_admin_session_control_tests)
     # Execute the repository-only static marketing-site proof without a listener.
     def run_marketing_site_tests():
         # Import the focused suite only when its mapped static case runs.

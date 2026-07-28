@@ -8073,6 +8073,26 @@
       "notes": "Introduced by issue #226 to replace single-session login rotation; concurrent UI sessions no longer evict one another and session-file writes are atomic under a shared lock."
     },
     {
+      "id": "SESSION-008",
+      "module": "Core",
+      "description": "The server-side Admin session-control core keeps disposable guest trials outside retained-account controls, lists at most one hundred sessions for one persistent account through stable one-way aliases and approved timestamp, lifecycle, authentication-method, and coarse-client fields, and provides idempotent targeted or all-session revocation through the existing atomic JSON/MySQL document transaction without exposing or logging raw session identifiers, bearer or CSRF material, user identifiers, IP addresses, or raw client strings.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ADMIN-SESSIONS-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/auth.py",
+        "casino/core/state_store.py",
+        "casino/core/storage.py",
+        "tests/admin_session_control_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-351-session-control-core",
+      "changed_in": "issue-351-session-control-core",
+      "notes": "This slice is deliberately route-free and UI-free so it does not overlap the active Admin-empty-state work in PR #460. Strict provider reads preserve MySQL behavior while refusing the default JSON reader's corruption fallback; syntactically invalid bytes and parseable structural corruption both raise one fixed operator-recovery error before normalization, backup, partial mutation, or rewrite. Later #351 work must add owner-approved Admin authorization, reason, recent-reauthentication, idempotency, durable audit history, separate Administrators UI, EN/RU browser coverage, and additive v2 contracts before exposing this core."
+    },
+    {
       "id": "ADMIN-024", "module": "Admin", "description": "Admin HTML, JavaScript, and API surfaces require an active Admin session during restricted preview, and user privilege or status changes revoke existing sessions.", "status": "PASS", "api_tests": ["API-SEC-PREVIEW-001", "API-ADMIN-USERS-001"], "browser_tests": ["BR-SEC-PREVIEW-001"], "implementation_files": ["casino/wsgi.py", "casino/admin.py", "web/admin.html", "web/admin.js"], "introduced_in": "issue-203-restricted-preview-security", "changed_in": "issue-203-restricted-preview-security", "notes": "Manual invitation is the only approved enrollment path at this stage."
     },
     {
@@ -12382,6 +12402,23 @@
       "introduced_in": "issue-351-owner-rbac-core",
       "changed_in": "issue-351-owner-rbac-core",
       "notes": "Permanent identifiers ADMIN-028, AUTH-012, and TEST-138 were reserved on issue #351 before branch mutation; no existing identifier was deleted or reused."
+    },
+    {
+      "id": "TEST-143",
+      "module": "Tests",
+      "description": "Listener-free isolated-provider evidence proves persistent-account-only bounded session inventory, newest-first ordering, fixed one-way aliases, approved-field and coarse-client projection, secret and cross-account exclusion, idempotent targeted and all-session revocation, concurrent exactly-once transition counting, byte-exact preservation of syntactically invalid JSON, parseable malformed-document preservation, and invalid-request non-mutation.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ADMIN-SESSIONS-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/admin_session_control_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-351-session-control-core",
+      "changed_in": "issue-351-session-control-core",
+      "notes": "TEST-143 was reserved durably on issue #351 after live collision readback. TEST-139 remains reserved for the separately coordinated Claude #453 re-splice, and TEST-142 belongs to open PR #467."
     }
   ]
 }

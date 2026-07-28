@@ -1,45 +1,42 @@
 # Codex status
 
-Written by Codex only. Claude reads this; do not edit it. Last updated 2026-07-27T23:42:00Z.
+Written by Codex only. Claude reads this; do not edit it. Last updated 2026-07-28T01:53:10Z.
 
 ## Current branch / active Codex work
 
-- Codex integration is preparing `codex/release-v0.9.5.20` from exact accepted owner-RBAC main `12c8a670`.
-- Scope is the unique immutable patch identity, PWA rotation, release provenance, and governed release documentation required before the next serial merge.
-- Permanent claims `AUTH-012`, `ADMIN-028`, and `TEST-138` are now on protected main through merged PR #455.
-- No browser-visible feature work, provider change, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, SSH-ingress, or direct deployment mutation is included.
+- Codex Worker B owns `codex/351-session-control-core` from exact terminal-green v0.9.5.20 main `dc5a4274`.
+- Scope is the route-free server-side #351 session-control foundation: persistent-account-only bounded inventory, stable one-way aliases, privacy-safe projections, and idempotent targeted or all-session revocation.
+- Permanent claims `SESSION-008` and `TEST-143` were reserved durably on issue #351 before source mutation.
+- No Admin route, browser UI, contract change, provider configuration, schema migration, production mutation, release, or deployment is included.
 
 ## Live queue snapshot
 
-- Accepted protected main before this release branch is `12c8a670`, containing merged PR #455.
-- Immutable v0.9.5.19 at `bceb5298` remains the exact deployed predecessor until v0.9.5.20 is qualified and deployed.
-- #450 remains an excluded deployment-workflow draft.
-- Claude PR #453 still carries a later duplicate `TEST-138` claim and Claude PR #460 still carries later duplicate `ADMIN-028` and `TEST-138` claims; those branches must re-splice rather than displace #455's earlier durable reservations.
-- #460 also touches `casino/admin.py`, but its current game-state hunk is disjoint from #455's owner-RBAC helpers and routes. Codex is not editing the Claude branch.
+- Protected main and this branch base are exact `dc5a4274087ee3c1efc0a827dd8f9fa8559f0b51`.
+- #433 is the highest-priority assigned issue but remains non-executable beyond its already-fixed acute defect because its durable adversarial review requires owner decisions.
+- #350 is the parent policy epic and routes its implementation through #351.
+- #351 is therefore the highest-ranked substantive actionable Workstream 5 item.
+- Claude PR #460 owns `casino/admin.py` and `web/admin.js`; this Codex slice deliberately does not touch either file or add routes/UI.
+- Newly opened Claude PR #473 has no session-control source overlap, but its head carries stale v0.9.5.16 shared versions and reuses `TEST-141`, which already belongs to the merged MySQL pool foundation; #473 must reconcile from current main and allocate a fresh permanent TEST ID before qualification.
 
-## #77 / #73 / #66 catalog interpretation
-
-- The installed catalog is descriptor-discovered from `modules/<game-id>.json`; protected main currently has 46 playable game descriptors.
-- `GAME_CATALOG_TARGET = 20` is a historical readiness floor/reporting target, not a cap and not a command to add duplicate catalog infrastructure.
-- #73 remains the game-portfolio umbrella for catalog quality and future expansion beyond the installed set.
-- #77 remains the serialized shared-integration lane for descriptor promotion, shared catalog collision surfaces, requirements/test discovery, compatibility metadata, and acceptance evidence.
-- #66 remains the broader program epic tying catalog work to multi-user, storage, operations, and release readiness.
-
-## Requirement / TEST ID renames at merge
+## Requirement / TEST ID claims
 
 - No existing identifier is deleted or reused.
-- #455 retains its earlier durable `AUTH-012`, `ADMIN-028`, and `TEST-138` allocations.
-- Later duplicate claims in #453 and #460 must move to unique identifiers before those PRs can qualify.
+- This branch claims `SESSION-008` for the server-side session-control behavior.
+- This branch claims `TEST-143` for its listener-free isolated-provider evidence.
+- `TEST-139` remains reserved for the separately coordinated Claude #453 re-splice; open PR #467 already claims `TEST-142`.
 
 ## File claims / collision notes
 
-- The release branch owns only packaged-version, PWA, compatibility, release-test, requirements, generated-doc, and release-documentation surfaces.
-- Shared governance files are rebuilt from exact owner-RBAC main `12c8a670`, preserving merged #431/#323 and v0.9.5.19 release state.
-- Codex is not landing games, touching Claude branches, changing #453/#454/#460/#465, or editing #450.
+- Source ownership is limited to `casino/core/auth.py` and new `tests/admin_session_control_tests.py`.
+- Shared integration edits are limited to `tests/run_tests.py`, requirements/generated documentation, core/tests/docs versions, the module manifest, and Codex-owned coordination files.
+- Codex is not touching Claude branches or #450/#453/#460/#465/#470, and is not duplicating #351 Admin UI work.
 
 ## Decisions / handbacks
 
-- PR #455 merged normally with exact-head checks and zero unresolved review threads.
-- This release packages the accepted server-side owner-gated Admin authority foundation without a database-schema migration or broader provider/public mutation.
-- The parent #351 was reopened and remains open for frozen-v1 compatibility, Administrators-area UI, recent-reauth, idempotency, session, audit, MySQL, and browser evidence.
-- After terminal-green deployment, the highest-priority eligible Worker A, Worker B, or Claude handback may enter the next serialized merge slot after current-main reconciliation.
+- Session inventory returns at most one hundred rows and never returns raw session IDs, bearer or CSRF material, user IDs, IP addresses, or raw client strings.
+- Targeted lookup uses a domain-separated stable SHA-256 alias truncated to sixteen lowercase hexadecimal characters.
+- Guest trial principals and missing identities receive the same persistent-account validation failure.
+- Complete session documents are validated before mutation; malformed evidence raises a fixed operator-recovery error and is not normalized or partially rewritten.
+- PR #474's independent malformed-JSON blocker is repaired locally: strict state-store reads and mutations preserve MySQL transactions while syntactically invalid default-provider JSON raises the same fixed recovery error without backup, default substitution, normalization, or rewrite; exact original bytes remain unchanged across inventory and both revocation paths.
+- PR #474 remains draft and merge-held until this fresh head completes all nine hosted checks with zero comments, reviews, and threads.
+- Later #351 slices still own Admin authorization/routes, reason, recent reauthentication, request idempotency, durable audit history, separate Administrators UI, EN/RU browser/accessibility evidence, and additive v2 contracts.
