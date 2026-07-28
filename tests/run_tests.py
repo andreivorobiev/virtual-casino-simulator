@@ -66,6 +66,10 @@ from tests.progress import ProgressReporter
 RESULTS=[]
 # Track the browser-suite reporter only while named browser cases are executing.
 ACTIVE_PROGRESS=None
+# Hold the active contiguous browser shard as a half-open (start, stop) case-sequence range.
+BROWSER_SHARD_RANGE=None
+# Count executed browser run_case positions so contiguous shards partition deterministically.
+BROWSER_CASE_SEQ=0
 # Set SESSION_TOKEN to the value needed for the next operation.
 SESSION_TOKEN=None
 # Set DEFAULT_AUTH_EMAIL to the value needed for the next operation.
@@ -221,6 +225,12 @@ def stop_server(proc, base):
 
 # Define the run_case function used by this module.
 def run_case(test_id, reqs, fn):
+    # Claim this call's deterministic sequence position before any shard ownership decision.
+    global BROWSER_CASE_SEQ
+    # Copy then advance the shared counter so every call owns exactly one position.
+    seq=BROWSER_CASE_SEQ; BROWSER_CASE_SEQ+=1
+    # Skip cases owned by other contiguous browser shards without recording or reporting them.
+    if BROWSER_SHARD_RANGE is not None and not BROWSER_SHARD_RANGE[0]<=seq<BROWSER_SHARD_RANGE[1]: return
     # Read the active browser reporter without changing API or storage runner behavior.
     progress=ACTIVE_PROGRESS
     # Flush the named browser-test start before its body begins.
@@ -248,12 +258,70 @@ def run_case(test_id, reqs, fn):
         # Preserve the existing mapped PASS result.
         record(test_id, reqs, 'PASS')
 
-# Count literal BR-prefixed cases from the browser runner so totals cannot drift from discovery.
-def browser_case_total():
+# List literal BR-prefixed case ids from the browser runner in deterministic source order.
+def browser_case_ids():
     # Read only the browser runner source from this checkout.
     source=inspect.getsource(run_browser_tests)
-    # Count every literal named browser run_case without maintaining another allowlist.
-    return len(re.findall(r"\brun_case\(\s*['\"]BR-",source))
+    # Extract every literal named browser run_case id without maintaining another allowlist.
+    return re.findall(r"\brun_case\(\s*['\"](BR-[A-Za-z0-9\-]+)['\"]",source)
+
+# Count literal BR-prefixed cases from the browser runner so totals cannot drift from discovery.
+def browser_case_total():
+    # Count the deterministic literal id list so counting and listing can never disagree.
+    return len(browser_case_ids())
+
+# Compute one contiguous near-equal shard range over the deterministic browser case sequence.
+def browser_shard_range(total, shard_count, shard_index):
+    # Give the first remainder shards one extra case so shard sizes differ by at most one.
+    base=total//shard_count; rem=total%shard_count
+    # Start after every earlier shard's cases including their remainder extras.
+    start=shard_index*base+min(shard_index,rem)
+    # Return the half-open contiguous range owned by this shard.
+    return (start,start+base+(1 if shard_index<rem else 0))
+
+# Report whether this shard executes the named literal case so inline handoffs can compensate.
+def browser_shard_owns(case_id):
+    # Treat unsharded runs as owning every case.
+    if BROWSER_SHARD_RANGE is None: return True
+    # Resolve the case's deterministic sequence position from the literal id list.
+    position=browser_case_ids().index(case_id)
+    # Report contiguous ownership of the resolved position.
+    return BROWSER_SHARD_RANGE[0]<=position<BROWSER_SHARD_RANGE[1]
+
+# Verify aggregated browser shard results cover every literal case exactly once and pass.
+def verify_browser_shards(results_dir, shard_count):
+    # Load the deterministic expected id list from this exact checkout's source.
+    expected=browser_case_ids()
+    # Track every observed browser case id and the shard that executed it.
+    seen={}
+    # Read each shard's unique result file and fail on any missing shard evidence.
+    for index in range(shard_count):
+        # Resolve the exact per-shard result file created by the sharded browser runner.
+        path=Path(results_dir)/f'browser_results_shard_{index}_of_{shard_count}.json'
+        # Fail closed when a shard finished without leaving its retained result evidence.
+        if not path.exists(): print(f'BROWSER_SHARDS FAIL missing shard result file {path}'); return 1
+        # Parse this shard's retained result records.
+        data=json.loads(path.read_text(encoding='utf-8'))
+        # Examine only browser-suite records so mixed local suite runs cannot confuse coverage.
+        for result in data['results']:
+            # Skip non-browser records defensively without counting them as coverage.
+            if not str(result['test_id']).startswith('BR-'): continue
+            # Fail closed when any shard retained a non-passing browser case.
+            if result['status']!='PASS': print(f'BROWSER_SHARDS FAIL non-passing case {result["test_id"]} in shard {index}'); return 1
+            # Fail closed when two shards both claim one case.
+            if result['test_id'] in seen: print(f'BROWSER_SHARDS FAIL duplicate case {result["test_id"]} in shards {seen[result["test_id"]]} and {index}'); return 1
+            # Record this case's owning shard for duplicate detection.
+            seen[result['test_id']]=index
+    # Collect every literal case that never executed on any shard.
+    missing=[case_id for case_id in expected if case_id not in seen]
+    # Fail closed when the shard union leaves any literal case unexecuted.
+    if missing: print(f'BROWSER_SHARDS FAIL missing cases {missing}'); return 1
+    # Collect executed ids that no longer exist in this checkout's literal case list.
+    extra=sorted(set(seen)-set(expected))
+    # Fail closed when shards executed ids the current source does not declare.
+    if extra: print(f'BROWSER_SHARDS FAIL unexpected cases {extra}'); return 1
+    # Print the exact verified aggregate so workflow logs retain the coverage evidence.
+    print(f'BROWSER_SHARDS VERIFIED cases={len(expected)} shards={shard_count}'); return 0
 
 # Define assert_condition so concise mapped checks still fail when their predicate is false.
 def assert_condition(value, message):
@@ -2972,17 +3040,23 @@ def run_api_tests():
         stop_server(proc,base); save_results()
 
 # Define the run_browser_tests function used by this module.
-def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds=2700.0):
-    # Make the active reporter visible to the existing shared run_case helper.
-    global ACTIVE_PROGRESS
+def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds=2700.0,shard_count=1,shard_index=0):
+    # Make the active reporter and shard partition visible to the existing shared run_case helper.
+    global ACTIVE_PROGRESS,BROWSER_SHARD_RANGE,BROWSER_CASE_SEQ
     # Start protected logic so failures can be handled safely.
     try: from playwright.sync_api import sync_playwright
     # Handle the expected failure path for the protected logic.
     except Exception:
         # Write diagnostic output so the current operation can be inspected.
         print('Playwright is not installed. Install with python -m pip install -r requirements-dev.txt and python -m playwright install chromium'); return 2
-    # Build one reusable reporter with exact named-case totals and configurable CI timing.
-    progress=ProgressReporter(browser_case_total(),heartbeat_seconds,stall_seconds,timeout_seconds)
+    # Partition the deterministic case sequence before the reporter learns its exact total.
+    shard_range=browser_shard_range(browser_case_total(),shard_count,shard_index)
+    # Reset the shared sequence counter so shard ownership always starts at position zero.
+    BROWSER_CASE_SEQ=0
+    # Activate contiguous shard ownership only for real multi-shard runs.
+    BROWSER_SHARD_RANGE=shard_range if shard_count>1 else None
+    # Build one reusable reporter with exact owned-case totals and configurable CI timing.
+    progress=ProgressReporter(shard_range[1]-shard_range[0],heartbeat_seconds,stall_seconds,timeout_seconds)
     # Start flushed phase and watchdog output before the ephemeral server starts.
     progress.start('browser-server-startup')
     # Route existing run_case calls through this reporter only for the browser suite.
@@ -3756,6 +3830,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_timeout(150)
                 # Execute this statement as part of the module's documented control flow.
                 run_case('BR-AUTH-LOGIN-001',['AUTH-UI-001','TERMS-UI-001','AUTH-UI-002','TEST-071'],auth_login_gate)
+                # Reselect the Russian gate through the visible control when this shard skipped the producing cases.
+                if not browser_shard_owns('BR-TOUCH-TARGET-AUTH-001'): page.get_by_test_id('auth-locale-select').select_option('ru-RU')
                 # Keep the Russian locale selected by the OAuth acceptance loop for login persistence coverage.
                 page.wait_for_function("() => window.CasinoI18n && window.CasinoI18n.getLocaleState().locale === 'ru-RU'")
                 # Wait for the fresh email field to be ready after the locale rerender.
@@ -9046,8 +9122,12 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
         progress.close(status)
         # Prevent later API or storage cases from inheriting browser instrumentation.
         ACTIVE_PROGRESS=None
+        # Prevent later API or storage cases from inheriting browser shard ownership.
+        BROWSER_SHARD_RANGE=None
         # Preserve the existing JSON result artifact path and behavior.
         save_results()
+        # Retain one shard-unique result file so aggregate verification can prove exact coverage.
+        if shard_count>1: (ROOT/'logs'/'test-runs'/f'browser_results_shard_{shard_index}_of_{shard_count}.json').write_text(json.dumps({'shard_index':shard_index,'shard_count':shard_count,'case_start':shard_range[0],'case_stop':shard_range[1],'results':RESULTS},indent=2),encoding='utf-8')
     # Return success only when browser execution and tracked listener cleanup both passed.
     return 0 if status=='PASS' else 1
 
@@ -9071,6 +9151,12 @@ def main():
     ap.add_argument('--stall-seconds',type=float,default=180.0)
     # Configure the real browser-suite wall-clock timeout.
     ap.add_argument('--timeout-seconds',type=float,default=2700.0)
+    # Split the browser suite into contiguous deterministic shards for parallel workers.
+    ap.add_argument('--shard-count',type=int,default=1)
+    # Select this worker's zero-based contiguous browser shard.
+    ap.add_argument('--shard-index',type=int,default=0)
+    # Verify aggregated per-shard result files from a directory instead of running any suite.
+    ap.add_argument('--verify-browser-shards',default=None)
     # Parse caller options before running any suite.
     args=ap.parse_args()
     # Reject heartbeat intervals outside issue #207 acceptance before starting work.
@@ -9079,6 +9165,16 @@ def main():
     if args.stall_seconds<args.heartbeat_seconds: ap.error('--stall-seconds must be at least --heartbeat-seconds')
     # Reject non-positive real suite timeouts.
     if args.timeout_seconds<=0: ap.error('--timeout-seconds must be greater than 0')
+    # Reject impossible browser shard setups before any suite starts.
+    if args.shard_count<1: ap.error('--shard-count must be at least 1')
+    # Keep shard ownership within the configured worker range.
+    if not 0<=args.shard_index<args.shard_count: ap.error('--shard-index must be between 0 and shard-count - 1')
+    # Keep sharding meaningful for the exact literal browser case sequence.
+    if args.shard_count>browser_case_total(): ap.error('--shard-count must not exceed the literal browser case total')
+    # Keep shard selection scoped to the browser suite and aggregate verification only.
+    if args.shard_count>1 and not (args.browser or args.verify_browser_shards): ap.error('--shard-count applies only to --browser or --verify-browser-shards')
+    # Run aggregate shard verification alone so gate jobs never start servers or suites.
+    if args.verify_browser_shards: return verify_browser_shards(args.verify_browser_shards,args.shard_count)
     # Branch when the following condition is true.
     if not args.api and not args.browser and not args.storage and not args.mysql_live and not args.mysql_migrations_live: args.api=True
     # Start protected logic so failures can be handled safely.
@@ -9090,7 +9186,7 @@ def main():
         # Branch when the following condition is true.
         if args.browser:
             # Set code to the value needed for the next operation.
-            code=run_browser_tests(args.heartbeat_seconds,args.stall_seconds,args.timeout_seconds)
+            code=run_browser_tests(args.heartbeat_seconds,args.stall_seconds,args.timeout_seconds,args.shard_count,args.shard_index)
             # Branch when the following condition is true.
             if code: return code
     # Run cleanup logic regardless of success or failure.
