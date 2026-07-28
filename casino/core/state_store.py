@@ -92,6 +92,31 @@ def read_json(path: Path, default: Any) -> Any:
             # Return the computed value to the caller.
             return default() if callable(default) else default
 
+# Read one JSON document without normalizing syntactically corrupt operator evidence. (SESSION-008)
+def read_json_strict(path: Path, default: Any, invalid_message: str) -> Any:
+    # Resolve the provider document key for persistent files under data/.
+    document_key = _provider_document_key(path)
+    # Retain the existing provider read behavior when MySQL owns the canonical document.
+    if document_key is not None and storage_provider_name() == "mysql":
+        # Preserve lazy defaults while MySQL validates its JSON payload at the provider boundary.
+        return get_storage_provider().read_document(document_key, default)
+    # Ensure runtime directories exist before reading the default JSON provider.
+    ensure_dirs()
+    # Serialize this read against in-process JSON writers.
+    with _LOCK:
+        # Return the caller's default only when no document exists.
+        if not path.exists():
+            # Preserve lazy default-factory behavior for a genuinely absent document.
+            return default() if callable(default) else default
+        # Start strict decoding without creating a corrupt-file backup or replacement.
+        try:
+            # Decode the complete existing document while leaving its bytes untouched.
+            return json.loads(path.read_text(encoding="utf-8"))
+        # Convert syntax and encoding corruption into the caller's fixed recovery boundary.
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            # Preserve the original document exactly for operator recovery.
+            raise RuntimeError(invalid_message) from None
+
 # Define the write_json function used by this module.
 def write_json(path: Path, data: Any) -> None:
     # Resolve the provider document key for persistent files under data/.
@@ -208,6 +233,31 @@ def update_json(path: Path, mutator: Callable[[Any], Any], default: Any) -> Any:
             # Apply the caller-owned mutation to the current state.
             updated = mutator(current)
             # Write the mutated state through the same atomic temp-file replace.
+            write_json(path, updated)
+            # Return the persisted state to the caller.
+            return updated
+
+# Apply an atomic mutation that refuses to normalize syntactically corrupt JSON. (SESSION-008)
+def update_json_strict(path: Path, mutator: Callable[[Any], Any], default: Any, invalid_message: str) -> Any:
+    # Resolve the provider document key for persistent files under data/.
+    document_key = _provider_document_key(path)
+    # Retain the existing row-locking MySQL transaction for provider-backed documents.
+    if document_key is not None and storage_provider_name() == "mysql":
+        # Delegate validation, mutation, rollback, and commit to the MySQL provider boundary.
+        return get_storage_provider().update_document(document_key, mutator, default)
+    # Ensure runtime directories exist before locking the default JSON document.
+    ensure_dirs()
+    # Serialize the complete strict read-modify-write in this process.
+    with _LOCK:
+        # Create the parent only so the lock sidecar can protect an absent document.
+        path.parent.mkdir(parents=True, exist_ok=True)
+        # Hold the established cross-process lock for the complete strict mutation.
+        with _file_lock(path):
+            # Read without the permissive corruption backup/default behavior.
+            current = read_json_strict(path, default, invalid_message)
+            # Apply the caller-owned mutation only after strict decoding succeeds.
+            updated = mutator(current)
+            # Publish the complete validated result through the existing atomic replace.
             write_json(path, updated)
             # Return the persisted state to the caller.
             return updated

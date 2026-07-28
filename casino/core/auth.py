@@ -25,8 +25,8 @@ from casino.core import guest_analytics
 from casino.core.clock import utc_now
 # Import required dependency so this module can use its public functions or constants.
 from casino.core.ids import new_id
-# Import required dependency so this module can use its public functions or constants.
-from casino.core.state_store import read_json, write_json, update_json
+# Import normal and strict document boundaries so session control preserves corrupt evidence.
+from casino.core.state_store import read_json, read_json_strict, write_json, update_json, update_json_strict
 # Import restricted-preview cookie helpers without coupling the auth store to WSGI.
 from casino.core.security import csrf_cookie_header, new_csrf_token
 # Import required dependency so this module can use its public functions or constants.
@@ -1296,8 +1296,8 @@ def list_admin_sessions_for_user(user_id: str, limit: int = MAX_ADMIN_SESSION_RE
     if isinstance(limit, bool) or not isinstance(limit, int) or limit < 1 or limit > MAX_ADMIN_SESSION_RESULTS:
         # Keep every caller on the documented bounded inventory contract.
         raise ValidationError("Session result limit is invalid")
-    # Read the current provider-backed session document without mutating it.
-    state = read_json(SESSIONS_PATH, default_sessions)
+    # Read through the strict provider boundary so corrupt JSON cannot appear as an empty inventory.
+    state = read_json_strict(SESSIONS_PATH, default_sessions, "Session storage requires operator recovery")
     # Validate the complete document before deriving any partial result.
     rows = _validated_session_rows(state)
     # Select only the exact target account without exposing unrelated identities.
@@ -1339,8 +1339,8 @@ def revoke_admin_session_for_user(user_id: str, session_alias: str) -> int:
         state["schema_version"] = SCHEMA_VERSION
         # Return the complete session document for atomic persistence.
         return state
-    # Persist the targeted revocation atomically across JSON and MySQL providers.
-    update_json(SESSIONS_PATH, mutate, default_sessions)
+    # Persist through the strict boundary so invalid JSON bytes are never normalized or overwritten.
+    update_json_strict(SESSIONS_PATH, mutate, default_sessions, "Session storage requires operator recovery")
     # Return only whether one active session transitioned.
     return changed["value"]
 
@@ -1368,8 +1368,8 @@ def revoke_all_admin_sessions_for_user(user_id: str) -> int:
         state["schema_version"] = SCHEMA_VERSION
         # Return the complete session document for atomic persistence.
         return state
-    # Persist the account-scoped revocation atomically across JSON and MySQL providers.
-    update_json(SESSIONS_PATH, mutate, default_sessions)
+    # Persist through the strict boundary so invalid JSON bytes are never normalized or overwritten.
+    update_json_strict(SESSIONS_PATH, mutate, default_sessions, "Session storage requires operator recovery")
     # Return only the number of newly revoked active sessions.
     return changed["value"]
 

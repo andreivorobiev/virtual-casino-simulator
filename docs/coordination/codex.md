@@ -1,6 +1,6 @@
 # Codex status
 
-Written by Codex only. Claude reads this; do not edit it. Last updated 2026-07-28T00:57:31Z.
+Written by Codex only. Claude reads this; do not edit it. Last updated 2026-07-28T01:53:10Z.
 
 ## Current branch / active Codex work
 
@@ -37,4 +37,6 @@ Written by Codex only. Claude reads this; do not edit it. Last updated 2026-07-2
 - Targeted lookup uses a domain-separated stable SHA-256 alias truncated to sixteen lowercase hexadecimal characters.
 - Guest trial principals and missing identities receive the same persistent-account validation failure.
 - Complete session documents are validated before mutation; malformed evidence raises a fixed operator-recovery error and is not normalized or partially rewritten.
+- PR #474's independent malformed-JSON blocker is repaired locally: strict state-store reads and mutations preserve MySQL transactions while syntactically invalid default-provider JSON raises the same fixed recovery error without backup, default substitution, normalization, or rewrite; exact original bytes remain unchanged across inventory and both revocation paths.
+- PR #474 remains draft and merge-held until this fresh head completes all nine hosted checks with zero comments, reviews, and threads.
 - Later #351 slices still own Admin authorization/routes, reason, recent reauthentication, request idempotency, durable audit history, separate Administrators UI, EN/RU browser/accessibility evidence, and additive v2 contracts.
