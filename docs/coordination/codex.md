@@ -1,38 +1,31 @@
 # Codex status
 
-Written by Codex only. Claude reads this; do not edit it. Last updated 2026-07-28T05:56:00Z.
+Written by Codex only. Claude reads this; do not edit it. Last updated 2026-07-28T07:47:00Z.
 
 ## Current branch / active Codex work
 
-- PR #476 merged normally at exact protected main `cd51f95f8bf85730ef0785bf02324e492b68de2f`.
-- `codex/release-v0.9.5.22` serializes that accepted runtime-inert rule-schema/catalog-gate foundation behind a unique immutable release and terminal-green deployment.
+- PR #470 merged normally at exact protected main `ae1ba6f945ed5cb43cd345e5b85732d961091b32`.
+- `codex/release-v0.9.5.23` serializes the accepted safe CI qualification acceleration behind one unique immutable release and terminal-green trusted deployment.
 - No other PR may merge during this release/deployment boundary; #450 remains held and excluded.
-- Worker A PR #467 is exact-current-main ordinary-green at `18ab6368` but cannot dispatch its second governed qualification without fresh owner authorization.
+- Worker A/#467 and Worker B/#433 remain preserved but must reconcile shared tests/docs allocations after v0.9.5.23.
 
 ## Live queue snapshot
 
-- Protected main is `cd51f95f8bf85730ef0785bf02324e492b68de2f`; deployed immutable v0.9.5.21 remains exact `aaf46a6d86c0b5f1529b21f15810f2f98a0eaad4` until v0.9.5.22 is terminal green.
-- #433 remains open after its bounded schema/catalog-gate foundation; runtime enforcement and Admin UI remain separately governed scope.
-- #350 is an umbrella routed to #351/#352; #432/#434/#441 are lower-ranked P2 items.
-- #450 remains excluded. Worker A/#467 and Claude PRs #473/#465/#460/#454/#453 plus CI PR #470 remain no-touch except acknowledged shared metadata that must be re-read at handoff.
+- Protected main is `ae1ba6f945ed5cb43cd345e5b85732d961091b32`; deployed immutable v0.9.5.22 remains exact `3ab40e11dd50df24423bb9b3a649e0ece6180cda` until v0.9.5.23 is terminal green.
+- #468 remains open after its bounded same-PR cancellation and Long Suite 100 sharding slice; browser sharding, affected-game selection, and remaining overhead work stay separately governed.
+- #433 remains open after its runtime-inert schema/catalog foundation; runtime enforcement and Admin UI remain separately governed.
+- #450 remains excluded and cannot replace or disable the trusted owner/static deployment lane.
 
-## Requirement / TEST ID claims
+## Requirement / version claims
 
-- No existing identifier is deleted or reused.
-- `SEC-014` is reserved for #433 because permanent `SEC-012` already belongs to game entropy and `SEC-013` belongs to client-log URL sanitization.
-- `TEST-139` remains reserved for Claude #453 and `TEST-142` for Worker A/#467; this #433 slice does not claim either.
-- Merged `SESSION-008` and `TEST-143` remain unchanged.
-- Worker A/#467 claims tests/docs `1.64.2`; merged #433 owns tests/docs `1.64.3` and tooling `1.21.6`; the v0.9.5.22 release advances tests/docs to `1.64.4` and contracts to `1.49.3`.
-
-## File claims / collision notes
-
-- Substantive files: `casino/core/game_rules.py`, `casino/games/registry.py`, `scripts/validate_game_catalog.py`, `modules/{blackjack,baccarat,roulette}.json`, and `tests/games/test_game_rule_schema.py`.
-- Shared governance files: requirements, generated requirements, Codex coordination status/log, module descriptor versions, and `modules/module-manifest.json`.
-- No `.github/workflows`, `tests/run_tests.py`, Worker A harness/storage files, Claude game economics/Admin/UI files, production, provider, DNS, ingress, secrets, signup, OAuth, mail, or invitation files are in scope.
+- No permanent requirement or TEST identifier was added, deleted, or reused by #470.
+- #470 updates `TOOL-002` and `TEST-036`, owns tooling `1.21.7`, and owns tests/docs `1.64.5`.
+- The v0.9.5.23 release advances application to `9.53.10`, contracts to `1.49.4`, and tests/docs to `1.64.6`.
+- Worker B's frozen #433 follow-up must re-splice its provisional tests/docs `1.64.6` claim above the release after serialization clears.
 
 ## Decisions / handbacks
 
-- The descriptors mirror only domains already merged under #404; no new payout or table-rule policy is invented.
-- Baccarat's descriptor records its existing cut-card fallback of 14 without changing engine state or response projection.
-- Internal rule schemas are explicitly withheld from public catalog payloads.
-- Runtime descriptor enforcement, state repair, handler-list removal, and contract/matrix publication remain later #433 slices requiring separate current-main review.
+- Ordinary cancellation is limited to superseded runs for the same workflow and pull request; main pushes and manual dispatches use unique run IDs.
+- Release, deployment, formal 50,000-cycle, Baccarat sustained, and manual soak work remain outside PR cancellation.
+- Mandatory Long Suite 100 owns four exhaustive 25-scenario shards, shard-zero audio, unique terminal artifacts, tracked listener closure, and the exact fail-closed `long_suite_100` aggregate.
+- Browser Tests self-triggers for its own workflow changes; #470 exact-head Browser evidence passed 105/105 without any formal or sustained dispatch.

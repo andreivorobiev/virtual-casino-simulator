@@ -1,4 +1,4 @@
-"""Listener-free CI/CD workflow policy tests for TOOL-008 and TEST-133."""
+"""Listener-free CI/CD workflow policy tests for TOOL-002/008 and TEST-036/133."""
 
 # Import path helpers so assertions read the checked-in workflow from any cwd.
 from pathlib import Path
@@ -9,6 +9,24 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 # Point at the protected-main production deployment workflow.
 WORKFLOW = ROOT / ".github" / "workflows" / "deploy-production.yml"
+# Point at every ordinary workflow that may cancel only superseded runs for one pull request.
+PR_QUALIFICATION_WORKFLOWS = (
+    ROOT / ".github" / "workflows" / "browser-tests.yml",
+    ROOT / ".github" / "workflows" / "ci.yml",
+    ROOT / ".github" / "workflows" / "comment-density.yml",
+    ROOT / ".github" / "workflows" / "contract-tests.yml",
+    ROOT / ".github" / "workflows" / "docs.yml",
+    ROOT / ".github" / "workflows" / "long-suite-100.yml",
+    ROOT / ".github" / "workflows" / "module-boundaries.yml",
+)
+# Point at the sharded mandatory long-suite workflow.
+LONG_SUITE_WORKFLOW = ROOT / ".github" / "workflows" / "long-suite-100.yml"
+# Point at the manual 300/500 soak workflow that must never inherit PR cancellation.
+LONG_SOAK_WORKFLOW = ROOT / ".github" / "workflows" / "long-suite-soak.yml"
+# Point at the immutable publication workflow whose in-flight work must never be cancelled.
+RELEASE_WORKFLOW = ROOT / ".github" / "workflows" / "release.yml"
+# Point at the long-suite runner so artifact and listener cleanup invariants can be inspected inertly.
+LONG_SUITE_RUNNER = ROOT / "tests" / "long_suites.py"
 
 
 # Validate the production deployment workflow without invoking GitHub or SSH.
@@ -119,6 +137,115 @@ class CicdDeploymentWorkflowTests(unittest.TestCase):
         self.assertNotIn("casino.tiltseven.com", text)
         # Reject the deprecated monitor cookie as a workflow-owned dependency.
         self.assertNotIn("CASINO_EDGE_MONITOR_COOKIE", text)
+
+
+# Validate ordinary qualification acceleration without starting a browser, listener, or workflow.
+class CiQualificationWorkflowTests(unittest.TestCase):
+    # Read one tracked workflow using the repository encoding.
+    def workflow_text(self, path: Path) -> str:
+        # Return inert workflow source for exact policy assertions.
+        return path.read_text(encoding="utf-8")
+
+    # Prove cancellation is scoped to one workflow and one pull request only.
+    def test_concurrency_cancels_only_superseded_runs_for_the_same_pr(self):
+        # Preserve the exact expression whose fallback makes non-PR runs unique.
+        expected_group = "group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}"
+        # Inspect every ordinary workflow changed by the acceleration slice.
+        for workflow in PR_QUALIFICATION_WORKFLOWS:
+            # Read the workflow as data without invoking GitHub Actions.
+            text = self.workflow_text(workflow)
+            # Require the workflow name plus PR-number group with a unique run fallback.
+            self.assertIn(expected_group, text, workflow.name)
+            # Permit cancellation only inside that exact event-scoped group.
+            self.assertIn("cancel-in-progress: true", text, workflow.name)
+        # Read Browser Tests separately because it also owns governed manual qualifications.
+        browser_text = self.workflow_text(PR_QUALIFICATION_WORKFLOWS[0])
+        # Require manual dispatch to remain available for formal and Baccarat evidence.
+        self.assertIn("workflow_dispatch:", browser_text)
+        # Require the formal 50,000-cycle input to remain governed by the unique-run fallback.
+        self.assertIn("formal_ui_50000:", browser_text)
+        # Require the Baccarat sustained input to remain governed by the unique-run fallback.
+        self.assertIn("baccarat_sustained_2000:", browser_text)
+        # Require Browser Tests to execute when its own workflow policy changes.
+        self.assertIn("- '.github/workflows/browser-tests.yml'", browser_text)
+        # Read protected publication and deployment workflows independently.
+        release_text = self.workflow_text(RELEASE_WORKFLOW)
+        # Keep release candidates and recovery dispatches non-cancellable.
+        self.assertIn("cancel-in-progress: false", release_text)
+        # Reject inheritance of the pull-request cancellation expression.
+        self.assertNotIn(expected_group, release_text)
+        # Read the protected-main deployment workflow independently.
+        deploy_text = self.workflow_text(WORKFLOW)
+        # Keep production cutover work non-cancellable.
+        self.assertIn("cancel-in-progress: false", deploy_text)
+        # Reject inheritance of the pull-request cancellation expression.
+        self.assertNotIn(expected_group, deploy_text)
+        # Read the manually selected 300/500 soak workflow independently.
+        soak_text = self.workflow_text(LONG_SOAK_WORKFLOW)
+        # Keep the formal soak workflow manual.
+        self.assertIn("workflow_dispatch:", soak_text)
+        # Reject PR-scoped cancellation for manually authorized soak evidence.
+        self.assertNotIn("cancel-in-progress: true", soak_text)
+
+    # Prove four deterministic workers exhaust Suite 100 without duplicate scenarios.
+    def test_long_suite_shards_are_exhaustive_and_nonduplicating(self):
+        # Import the runner only after inert workflow checks have been defined.
+        from tests import long_suites
+        # Compute the exact scenario ownership of every governed shard.
+        shard_sets = [set(long_suites.shard_indices(100, 4, index)) for index in range(4)]
+        # Require the balanced 25-scenario allocation expected for 100 modulo four.
+        self.assertEqual([len(shard) for shard in shard_sets], [25, 25, 25, 25])
+        # Require the union to cover every logical scenario exactly.
+        self.assertEqual(set().union(*shard_sets), set(range(100)))
+        # Compare every distinct pair so no scenario can execute twice.
+        for left_index in range(4):
+            # Compare only later shards to avoid redundant pairs.
+            for right_index in range(left_index + 1, 4):
+                # Require disjoint ownership for the selected shard pair.
+                self.assertTrue(shard_sets[left_index].isdisjoint(shard_sets[right_index]))
+
+    # Prove shard audio ownership, artifacts, cleanup, and the required aggregate fail closed.
+    def test_long_suite_workflow_preserves_audio_artifacts_cleanup_and_gate(self):
+        # Read the mandatory workflow as inert text.
+        workflow_text = self.workflow_text(LONG_SUITE_WORKFLOW)
+        # Require exactly four shard identities.
+        self.assertIn("shard: [0, 1, 2, 3]", workflow_text)
+        # Preserve every shard result even when another shard fails.
+        self.assertIn("fail-fast: false", workflow_text)
+        # Isolate the shell branch that owns the audio policy.
+        shard_script = workflow_text.split("run: |", 1)[1].split("- name: Upload long-suite shard artifacts", 1)[0]
+        # Separate shard zero from the deliberate non-audio shards.
+        audio_branch, non_audio_branch = shard_script.split("else", 1)
+        # Require shard zero to retain LONG-AUDIO-001 execution.
+        self.assertNotIn("--skip-browser-audio", audio_branch)
+        # Require only the remaining branch to skip the duplicated audio probe.
+        self.assertIn("--skip-browser-audio", non_audio_branch)
+        # Require isolated disposable deployments for all parallel workers.
+        self.assertEqual(shard_script.count("--copy-deployment"), 2)
+        # Require a unique artifact identity for each matrix worker.
+        self.assertIn("name: long-suite-100-shard-${{ matrix.shard }}-artifacts", workflow_text)
+        # Upload terminal evidence even when one shard command fails.
+        self.assertIn("if: always()", workflow_text)
+        # Require the exact branch-protection aggregate job identifier once.
+        self.assertEqual(workflow_text.splitlines().count("  long_suite_100:"), 1)
+        # Require the aggregate to depend on the complete matrix result.
+        self.assertIn("needs: long_suite_100_shard", workflow_text)
+        # Ensure the aggregate executes for failed, cancelled, or skipped dependencies.
+        self.assertIn('run: test "${{ needs.long_suite_100_shard.result }}" = "success"', workflow_text)
+        # Read runner cleanup behavior without opening its loopback server.
+        runner_text = self.workflow_text(LONG_SUITE_RUNNER)
+        # Preserve JSON evidence outside disposable copies before their removal.
+        self.assertIn("report_root = ROOT if args.copy_deployment else repo_root", runner_text)
+        # Require tracked listener cleanup before the report is finalized.
+        cleanup_index = runner_text.index("listener_cleanup = progress.cleanup()")
+        # Locate the terminal report write that captures closure evidence.
+        report_index = runner_text.index("report_path.write_text")
+        # Locate disposable deployment cleanup after artifact preservation.
+        deployment_cleanup_index = runner_text.index("shutil.rmtree(cleanup_target")
+        # Prove listener cleanup is captured before the report write.
+        self.assertLess(cleanup_index, report_index)
+        # Prove the preserved report is written before the copied tree is removed.
+        self.assertLess(report_index, deployment_cleanup_index)
 
 
 # Run focused evidence directly when invoked by a developer or release validator.

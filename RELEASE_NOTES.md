@@ -1,4 +1,19 @@
-# Virtual Casino Simulator v0.9.5.22 Release Notes
+# Virtual Casino Simulator v0.9.5.23 Release Notes
+
+## Safe CI qualification acceleration
+
+- Cancels only superseded ordinary workflow runs for the same pull request by grouping on workflow name and pull-request number.
+- Uses unique run IDs for main pushes and manual dispatches, so PR updates cannot cancel formal 50,000-cycle, Baccarat sustained, release, deployment, or soak work.
+- Splits mandatory Long Suite 100 into four isolated deterministic shards of 25 exhaustive scenarios each.
+- Retains `LONG-AUDIO-001` on shard zero, skips only that duplicate browser probe on shards one through three, and preserves unique per-shard terminal artifacts after listener cleanup.
+- Keeps the exact branch-protection job id `long_suite_100` and fails closed unless every matrix shard succeeds.
+- Makes Browser Tests self-trigger when its own workflow policy changes and records fresh 105/105 exact-head browser evidence for this release line.
+- Changes no gameplay, API, storage, ledger, authentication, browser UI, production workflow, deployment route, or database schema.
+- Rotates the PWA shell identity and keeps curated What's New metadata disabled pending its separately governed UI remainder.
+- Retains exact immutable v0.9.5.22 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation.
+
+## Prior v0.9.5.22 runtime-inert game rule-schema catalog gate
 
 ## Runtime-inert game rule-schema catalog gate
 

@@ -3,6 +3,11 @@ on:
   pull_request:
   push:
     branches: [ main ]
+# Cancel superseded runs for the same pull request; pushes and dispatches keep unique groups.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
 jobs:
   contract_tests:
     runs-on: ubuntu-latest

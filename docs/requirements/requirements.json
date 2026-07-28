@@ -4692,16 +4692,26 @@
       "module": "Tooling",
       "description": "GitHub Actions exposes Suite 100 as a pull request check and Suite 300 or 500 as a manually selected sharded soak run.",
       "status": "PASS",
-      "api_tests": [],
+      "api_tests": [
+        "CI-QUALIFICATION-001"
+      ],
       "browser_tests": [],
       "implementation_files": [
         ".github/workflows/long-suite-100.yml",
         ".github/workflows/long-suite-soak.yml",
+        ".github/workflows/browser-tests.yml",
+        ".github/workflows/ci.yml",
+        ".github/workflows/comment-density.yml",
+        ".github/workflows/contract-tests.yml",
+        ".github/workflows/docs.yml",
+        ".github/workflows/module-boundaries.yml",
+        "tests/cicd_deployment_tests.py",
+        "tests/run_tests.py",
         "docs/long_test_suites.md"
       ],
       "introduced_in": "9.1.2",
-      "changed_in": "9.1.2",
-      "notes": "Suite 100 becomes a PR workflow check; Suite 300/500 are chosen through workflow_dispatch."
+      "changed_in": "issue-468-ci-speed-quick-wins",
+      "notes": "Suite 100 uses four exhaustive modulo shards and one fail-closed aggregate gate. Only superseded ordinary runs for the same pull request may be cancelled; main pushes and manual dispatches use unique run IDs, while release, deployment, formal qualification, and soak work remains non-cancellable."
     },
     {
       "id": "TOOL-003",
@@ -4745,12 +4755,13 @@
         "contracts/compatibility/app-0.9.5.20.json",
         "contracts/compatibility/app-0.9.5.21.json",
         "contracts/compatibility/app-0.9.5.22.json",
+        "contracts/compatibility/app-0.9.5.23.json",
         "scripts/resolve_release_predecessor.py",
         "tests/release_predecessor_tests.py"
       ],
       "introduced_in": "9.2.0",
-      "changed_in": "0.9.5.22",
-      "notes": "Branch and ordinary manual candidates remain unpublished. The historical one-time owner-dispatched recovery created the retained v9.2.0 predecessor without overwrite or deletion paths. Normal v0.9.5.22 publication derives exact retained v0.9.5.21 from repository compatibility policy, verifies the downloaded manifest, packages every workflow-derived extracted-host script, and never replaces prior immutable assets. Rollback is application-only and never reverses the MySQL schema. The next large Claude LPR is reserved for v0.9.6.0."
+      "changed_in": "0.9.5.23",
+      "notes": "Branch and ordinary manual candidates remain unpublished. The historical one-time owner-dispatched recovery created the retained v9.2.0 predecessor without overwrite or deletion paths. Normal v0.9.5.23 publication derives exact retained v0.9.5.22 from repository compatibility policy, verifies the downloaded manifest, packages every workflow-derived extracted-host script, and never replaces prior immutable assets. Rollback is application-only and never reverses the MySQL schema. The next large Claude LPR is reserved for v0.9.6.0."
     },
     {
       "id": "BOT-001",
@@ -6114,19 +6125,22 @@
       "description": "Suite 100 is available as the mandatory long-suite pull request validation path.",
       "status": "PASS",
       "api_tests": [
-        "LONG-SUITE-100"
+        "LONG-SUITE-100",
+        "CI-QUALIFICATION-001"
       ],
       "browser_tests": [
         "LONG-AUDIO-001"
       ],
       "implementation_files": [
         "tests/long_suites.py",
+        "tests/cicd_deployment_tests.py",
+        "tests/run_tests.py",
         ".github/workflows/long-suite-100.yml",
         "docs/long_test_suites.md"
       ],
       "introduced_in": "9.1.2",
-      "changed_in": "9.1.2",
-      "notes": "Repository rulesets must add the Long Suite 100 check as required after this workflow lands."
+      "changed_in": "issue-468-ci-speed-quick-wins",
+      "notes": "The exact Long Suite 100 required context aggregates four isolated shards and passes only when every shard succeeds. Shard zero owns LONG-AUDIO-001; the other three skip that duplicate browser probe deliberately."
     },
     {
       "id": "AUDIO-008",
@@ -10548,7 +10562,7 @@
     {
       "id": "TOUR-001",
       "module": "Core",
-      "description": "The server-only What's New foundation reads curated repository release metadata rather than deriving player content from module or application version changes. An entry is eligible only when its release version is an exact numeric dotted release at or below the running application, both localization keys are non-empty, and the release coordinator's show_in_whats_new flag is exactly true. Missing, malformed, future, incomplete, or truthy-but-inexact entries fail closed. The shipped catalog is reconciled to packaged application 0.9.5.22 and remains explicitly disabled until the player UI, browser evidence, and release-coordinator activation remainder of issue #165 are accepted.",
+      "description": "The server-only What's New foundation reads curated repository release metadata rather than deriving player content from module or application version changes. An entry is eligible only when its release version is an exact numeric dotted release at or below the running application, both localization keys are non-empty, and the release coordinator's show_in_whats_new flag is exactly true. Missing, malformed, future, incomplete, or truthy-but-inexact entries fail closed. The shipped catalog is reconciled to packaged application 0.9.5.23 and remains explicitly disabled until the player UI, browser evidence, and release-coordinator activation remainder of issue #165 are accepted.",
       "status": "PASS",
       "api_tests": [
         "API-TOUR-001"
@@ -10585,7 +10599,7 @@
     {
       "id": "TEST-106",
       "module": "Tests",
-      "description": "Listener-free isolated-provider evidence verifies exact curated opt-in selection, skipped-release merge ordering and caps, malformed and future metadata fail-closed behavior, missing and malformed catalog recovery, durable per-subject server-stamped dismissal, retry idempotency, populated-neighbour isolation, disposable guest non-persistence, subjectless rejection, raw-version privacy, current packaged 0.9.5.22 metadata with activation disabled, complete EN/RU release keys, consent-free metadata shape, additive v2 route behavior, hostile caller identity and version inputs being rejected, and exact checked contract digest pinning.",
+      "description": "Listener-free isolated-provider evidence verifies exact curated opt-in selection, skipped-release merge ordering and caps, malformed and future metadata fail-closed behavior, missing and malformed catalog recovery, durable per-subject server-stamped dismissal, retry idempotency, populated-neighbour isolation, disposable guest non-persistence, subjectless rejection, raw-version privacy, current packaged 0.9.5.23 metadata with activation disabled, complete EN/RU release keys, consent-free metadata shape, additive v2 route behavior, hostile caller identity and version inputs being rejected, and exact checked contract digest pinning.",
       "status": "PASS",
       "api_tests": [
         "API-TOUR-001"

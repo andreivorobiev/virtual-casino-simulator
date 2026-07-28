@@ -27,6 +27,13 @@ on:
       - 'tests/test_progress.py'
       - 'tests/run_tests.py'
       - 'modules/module-manifest.json'
+      # Re-run Browser evidence when this workflow's trigger or execution policy changes.
+      - '.github/workflows/browser-tests.yml'
+# Cancel superseded runs for the same pull request; pushes and dispatches keep unique groups.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
 jobs:
   # Run the ordinary suite for PR evidence and retain it as the formal 50,000-cycle prerequisite.
   browser_tests:
