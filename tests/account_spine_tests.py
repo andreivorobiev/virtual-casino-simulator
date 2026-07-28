@@ -4,6 +4,8 @@
 from concurrent.futures import ThreadPoolExecutor
 # Import a barrier so both Admin mutations pass their public pre-read before the atomic claim.
 import threading
+# Import timedelta so timeout-policy tests can age server-owned session timestamps deterministically.
+from datetime import timedelta
 # Import temporary storage roots for feedback tests that must not touch user data.
 import tempfile
 # Import unittest so the central API runner can execute this focused suite.
@@ -28,7 +30,7 @@ from casino.core import storage
 # Import direct JSON writers for auth/session reset.
 from casino.core.state_store import write_json
 # Import expected bounded validation and authorization errors.
-from casino.errors import ForbiddenError, ValidationError
+from casino.errors import ForbiddenError, UnauthorizedError, ValidationError
 
 
 # Verify product-account policy, Admin roles, passkeys, and reporter status remain bounded.
@@ -39,6 +41,8 @@ class ProductAccountSpineTests(unittest.TestCase):
         write_json(auth.USERS_PATH, auth.default_users())
         # Reset auth sessions so role-revocation assertions start empty.
         write_json(auth.SESSIONS_PATH, auth.default_sessions())
+        # Reset the server-authoritative timeout policy so every test begins with approved defaults.
+        write_json(auth.SESSION_TIMEOUT_POLICY_PATH, auth.default_session_timeout_policy())
         # Reset wallet records so Admin-created users receive predictable linked players.
         players.save_players(players.default_players())
         # Allocate an isolated feedback provider for reporter-status tests.
@@ -48,6 +52,8 @@ class ProductAccountSpineTests(unittest.TestCase):
 
     # Restore global provider state after every test.
     def tearDown(self) -> None:
+        # Restore valid timeout policy even when a corruption test intentionally writes invalid bytes.
+        write_json(auth.SESSION_TIMEOUT_POLICY_PATH, auth.default_session_timeout_policy())
         # Release the feedback provider seam.
         storage.set_provider_for_tests(None)
         # Remove the isolated feedback documents.
@@ -212,6 +218,178 @@ class ProductAccountSpineTests(unittest.TestCase):
         promoted = ROUTER.dispatch("PATCH", f"/api/v2/admin/users/{created['user_id']}", {"roles": ["admin"]}, context={"user": owner})
         # Require the target to gain ordinary Admin without bootstrap-owner authority.
         self.assertEqual((promoted["roles"], auth.is_platform_owner(promoted)), (["admin"], False))
+
+    # Prove only the platform owner can persist one bounded timeout policy. (SESSION-009, TEST-146)
+    def test_platform_owner_controls_session_timeout_policy(self) -> None:
+        # Read the absent/default-equivalent policy through the strict production boundary.
+        defaults = auth.load_session_timeout_policy()
+        # Require the owner-approved default and bounds-facing values.
+        self.assertEqual((defaults["enabled"], defaults["idle_timeout_seconds"], defaults["absolute_timeout_seconds"], defaults["warning_seconds"]), (True, 1_800, 43_200, 120))
+        # Seed the sole current platform owner.
+        owner = self._owner_admin()
+        # Create one ordinary account and grant only normal Admin authority.
+        ordinary = auth.create_user("timeout-admin@example.test", "TimeoutAdminPassw0rd!23", "Timeout Admin", terms_required=False)
+        # Attach ordinary Admin authority without bootstrap ownership.
+        ordinary_admin = auth.update_user_by_id(ordinary["user_id"], lambda user: user.update({"role": "admin", "roles": ["admin"]}))
+        # Reject configuration mutation by an ordinary Admin.
+        with self.assertRaises(ForbiddenError):
+            # Attempt to shorten the idle duration without owner authority.
+            auth.update_session_timeout_policy(ordinary_admin, {"idle_timeout_seconds": 600})
+        # Commit a complete bounded owner-authorized policy update.
+        updated = auth.update_session_timeout_policy(owner, {"enabled": True, "idle_timeout_seconds": 600, "absolute_timeout_seconds": 3_600, "warning_seconds": 60})
+        # Require exact effective values and canonical opaque actor metadata.
+        self.assertEqual((updated["enabled"], updated["idle_timeout_seconds"], updated["absolute_timeout_seconds"], updated["warning_seconds"], updated["updated_by"]), (True, 600, 3_600, 60, owner["user_id"]))
+        # Require one bounded server timestamp without caller-provided audit text.
+        self.assertIsInstance(updated["updated_at"], str)
+        # Reject booleans-as-durations, out-of-range values, impossible warnings, and unknown fields.
+        for invalid in ({"idle_timeout_seconds": True}, {"idle_timeout_seconds": 299}, {"absolute_timeout_seconds": 1_799}, {"warning_seconds": 601}, {"idle_timeout_seconds": 300, "warning_seconds": 300}, {"provider": "browser"}):
+            # Keep each invalid mutation outside durable policy state.
+            with self.assertRaises(ValidationError):
+                # Attempt the bounded owner mutation.
+                auth.update_session_timeout_policy(owner, invalid)
+        # Require rejected requests to leave the committed valid policy unchanged.
+        self.assertEqual(auth.load_session_timeout_policy(), updated)
+
+    # Prove idle and absolute policy changes apply to already-issued persistent sessions. (SESSION-009, TEST-146)
+    def test_timeout_policy_applies_immediately_to_existing_sessions(self) -> None:
+        # Seed the owner who may change policy.
+        owner = self._owner_admin()
+        # Create one persistent player and issue its first session under defaults.
+        user = auth.create_user("timeout-user@example.test", "TimeoutUserPassw0rd!23", "Timeout User", terms_required=False)
+        # Retain the opaque bearer for authoritative authentication attempts.
+        idle_session = auth.create_session(user, "timeout-idle-test")
+        # Capture one current server timestamp for deterministic aging.
+        now = auth.utc_datetime()
+        # Age the first session beyond the shortest allowed idle duration while preserving legacy expiry.
+        def age_idle(state: dict) -> dict:
+            # Locate only the newly issued row.
+            for stored in state.get("sessions", []):
+                # Match the exact server session identifier.
+                if stored.get("session_id") == idle_session["session_id"]:
+                    # Preserve a recent absolute creation time.
+                    stored["created_at"] = (now - timedelta(seconds=60)).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+                    # Move last activity beyond the five-minute idle boundary.
+                    stored["updated_at"] = (now - timedelta(seconds=301)).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+            # Return the complete session document.
+            return state
+        # Persist deterministic old activity through the production document seam.
+        auth.update_json(auth.SESSIONS_PATH, age_idle, auth.default_sessions)
+        # Shorten policy after session creation to prove existing-session application.
+        auth.update_session_timeout_policy(owner, {"idle_timeout_seconds": 300, "absolute_timeout_seconds": 1_800, "warning_seconds": 60})
+        # Model the host-only browser cookie used when the static shell asks for CSRF bootstrap state.
+        cookie_headers = {"Cookie": f"{auth.AUTH_SESSION_COOKIE}={idle_session['token']}"}
+        # Require refresh bootstrap to withhold authenticated shell proof after policy timeout.
+        self.assertEqual(auth.csrf_token_for_session_cookie(cookie_headers), "")
+        # Reject the now-idle session through normal authentication.
+        with self.assertRaises(UnauthorizedError):
+            # Attempt to authenticate the expired bearer.
+            auth.authenticate_token(idle_session["token"])
+        # Issue another session and age only its absolute creation timestamp.
+        absolute_session = auth.create_session(user, "timeout-absolute-test")
+        # Define one absolute-lifetime-only aging mutation.
+        def age_absolute(state: dict) -> dict:
+            # Locate the second session without changing unrelated rows.
+            for stored in state.get("sessions", []):
+                # Match the second opaque server identifier.
+                if stored.get("session_id") == absolute_session["session_id"]:
+                    # Move creation beyond the thirty-minute absolute boundary.
+                    stored["created_at"] = (now - timedelta(seconds=1_801)).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+                    # Keep last activity recent so only absolute expiry decides.
+                    stored["updated_at"] = now.isoformat(timespec="milliseconds").replace("+00:00", "Z")
+            # Return the complete session document.
+            return state
+        # Persist deterministic absolute age.
+        auth.update_json(auth.SESSIONS_PATH, age_absolute, auth.default_sessions)
+        # Reject the absolute-expired bearer even though activity is recent.
+        with self.assertRaises(UnauthorizedError):
+            # Attempt to authenticate the absolute-expired session.
+            auth.authenticate_token(absolute_session["token"])
+        # Issue a third session that remains within both configured policy limits.
+        active_session = auth.create_session(user, "timeout-touch-test")
+        # Capture one old activity timestamp beyond the bounded touch cadence.
+        old_activity = (now - timedelta(seconds=61)).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+        # Define one still-active session aging mutation.
+        def age_active(state: dict) -> dict:
+            # Locate only the third session.
+            for stored in state.get("sessions", []):
+                # Match the exact server session identifier.
+                if stored.get("session_id") == active_session["session_id"]:
+                    # Preserve a recent creation time inside the absolute bound.
+                    stored["created_at"] = (now - timedelta(seconds=120)).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+                    # Age activity enough to require one server-owned touch.
+                    stored["updated_at"] = old_activity
+            # Return the complete session document.
+            return state
+        # Persist the still-valid old activity marker.
+        auth.update_json(auth.SESSIONS_PATH, age_active, auth.default_sessions)
+        # Authenticate normally so the server refreshes activity without browser-supplied time.
+        resolved_session, resolved_user = auth.authenticate_token(active_session["token"])
+        # Require the expected account and a refreshed request-local activity timestamp.
+        self.assertEqual((resolved_user["user_id"], resolved_session["session_id"]), (user["user_id"], active_session["session_id"]))
+        # Require the persisted server activity marker to advance from the deterministic old value.
+        persisted = next(stored for stored in auth.load_sessions()["sessions"] if stored["session_id"] == active_session["session_id"])
+        # Prove the bounded touch was committed and reflected locally.
+        self.assertEqual(persisted["updated_at"], resolved_session["updated_at"])
+        # Prove the committed timestamp advanced from the deterministic old value.
+        self.assertNotEqual(persisted["updated_at"], old_activity)
+
+    # Prove disabling policy preserves legacy expiry while enabled policy covers guest-shaped rows. (SESSION-009, TEST-146)
+    def test_timeout_policy_preserves_legacy_and_guest_bounds(self) -> None:
+        # Seed the current owner.
+        owner = self._owner_admin()
+        # Capture one current server time and a future legacy expiry.
+        now = auth.utc_datetime()
+        # Build one guest-shaped active row with server-owned timestamps.
+        row = {"status": "active", "created_at": (now - timedelta(seconds=1_801)).isoformat(timespec="milliseconds").replace("+00:00", "Z"), "updated_at": now.isoformat(timespec="milliseconds").replace("+00:00", "Z"), "expires_at": (now + timedelta(hours=1)).isoformat(timespec="milliseconds").replace("+00:00", "Z")}
+        # Apply the shortest absolute policy to the generic guest-compatible session evaluator.
+        policy = auth.update_session_timeout_policy(owner, {"idle_timeout_seconds": 300, "absolute_timeout_seconds": 1_800, "warning_seconds": 60})
+        # Require the same server policy to reject the guest-shaped row by absolute lifetime.
+        self.assertFalse(auth._session_is_active(row, now, policy))
+        # Disable the added policy while retaining the established durable expiry.
+        disabled = auth.update_session_timeout_policy(owner, {"enabled": False})
+        # Require legacy future expiry to remain valid when owner policy is disabled.
+        self.assertTrue(auth._session_is_active(row, now, disabled))
+        # Require legacy expiry itself to remain authoritative under disabled policy.
+        row["expires_at"] = (now - timedelta(seconds=1)).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+        # Reject the row once the established expiry is past.
+        self.assertFalse(auth._session_is_active(row, now, disabled))
+
+    # Prove malformed timeout policy fails closed and preserves exact operator evidence. (SESSION-009, TEST-146)
+    def test_timeout_policy_preserves_malformed_storage(self) -> None:
+        # Seed the platform owner used to prove mutation also refuses malformed current state.
+        owner = self._owner_admin()
+        # Seed one persistent account and valid session before corrupting only policy storage.
+        user = auth.create_user("timeout-corrupt@example.test", "TimeoutCorruptPassw0rd!23", "Timeout Corrupt", terms_required=False)
+        # Retain the bearer so normal authentication must consult the corrupt policy.
+        session = auth.create_session(user, "timeout-corrupt-test")
+        # Write syntactically invalid bytes that the strict boundary must not replace or back up.
+        original = b'{\"enabled\": true, \"idle_timeout_seconds\":'
+        # Persist exact invalid bytes through the isolated JSON-provider path.
+        auth.SESSION_TIMEOUT_POLICY_PATH.write_bytes(original)
+        # Reject both direct policy reads and authenticated access.
+        with self.assertRaises(RuntimeError):
+            # Attempt a strict direct read.
+            auth.load_session_timeout_policy()
+        # Require normal authentication to fail before restoring any shell or game route.
+        with self.assertRaises(RuntimeError):
+            # Attempt to authenticate while policy intent is unknowable.
+            auth.authenticate_token(session["token"])
+        # Require the invalid document to remain byte-identical for operator recovery.
+        self.assertEqual(auth.SESSION_TIMEOUT_POLICY_PATH.read_bytes(), original)
+        # Replace invalid JSON with parseable but structurally invalid policy evidence.
+        malformed = b'{"schema_version":"1","enabled":"yes","idle_timeout_seconds":1800}'
+        # Persist the exact malformed document without using a normalizing helper.
+        auth.SESSION_TIMEOUT_POLICY_PATH.write_bytes(malformed)
+        # Reject direct reads of parseable malformed policy state.
+        with self.assertRaises(RuntimeError):
+            # Attempt validation through the production policy reader.
+            auth.load_session_timeout_policy()
+        # Reject owner mutation because a partial update must not discard unknown policy intent.
+        with self.assertRaises(RuntimeError):
+            # Attempt to repair one field without an explicit operator recovery workflow.
+            auth.update_session_timeout_policy(owner, {"enabled": False})
+        # Require parseable malformed evidence to remain byte-identical after read and mutation attempts.
+        self.assertEqual(auth.SESSION_TIMEOUT_POLICY_PATH.read_bytes(), malformed)
 
     # Prove reporter-visible status follows the registered account and rejects abandoned guests.
     def test_reporter_status_is_account_scoped(self) -> None:

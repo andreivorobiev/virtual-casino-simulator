@@ -36,6 +36,8 @@ from casino.errors import ConflictError, ForbiddenError, RateLimitError, Unautho
 USERS_PATH = DATA_DIR / "auth" / "users.json"
 # Set SESSIONS_PATH to the value needed for the next operation.
 SESSIONS_PATH = DATA_DIR / "auth" / "sessions.json"
+# Persist the server-authoritative timeout policy independently from bearer session rows. (SESSION-009)
+SESSION_TIMEOUT_POLICY_PATH = DATA_DIR / "auth" / "session_timeout_policy.json"
 # Set PASSWORD_ITERATIONS to the value needed for the next operation.
 PASSWORD_ITERATIONS = 120_000
 # Set PUBLIC_API_PATHS to the value needed for the next operation.
@@ -66,6 +68,30 @@ ADMIN_SESSION_ALIAS_PATTERN = re.compile(r"^[0-9a-f]{16}$")
 ADMIN_SESSION_AUTH_METHODS = frozenset({"local", "google", "facebook"})
 # Publish only reviewed lifecycle classes instead of arbitrary stored strings. (SESSION-008)
 ADMIN_SESSION_STATUSES = frozenset({"active", "revoked"})
+# Enable the owner-approved session policy by default for every durable session class. (SESSION-009)
+DEFAULT_SESSION_TIMEOUT_ENABLED = True
+# Expire a session after thirty minutes without an authoritative authenticated request. (SESSION-009)
+DEFAULT_SESSION_IDLE_TIMEOUT_SECONDS = 1_800
+# Bound every session to twelve hours even when authenticated activity continues. (SESSION-009)
+DEFAULT_SESSION_ABSOLUTE_TIMEOUT_SECONDS = 43_200
+# Reserve two minutes for the later browser warning surface without trusting the browser to expire access. (SESSION-009)
+DEFAULT_SESSION_WARNING_SECONDS = 120
+# Keep an enabled idle policy usable while preventing effectively immediate expiry. (SESSION-009)
+MIN_SESSION_IDLE_TIMEOUT_SECONDS = 300
+# Prevent an Admin configuration from extending idle access beyond one day. (SESSION-009)
+MAX_SESSION_IDLE_TIMEOUT_SECONDS = 86_400
+# Keep the absolute lifetime long enough for one usable authenticated session. (SESSION-009)
+MIN_SESSION_ABSOLUTE_TIMEOUT_SECONDS = 1_800
+# Cap the owner-controlled absolute lifetime at thirty days. (SESSION-009)
+MAX_SESSION_ABSOLUTE_TIMEOUT_SECONDS = 2_592_000
+# Bound the optional warning interval to the approved ten-minute maximum. (SESSION-009)
+MAX_SESSION_WARNING_SECONDS = 600
+# Avoid a durable session write more than once per minute while preserving server-observed idle activity. (SESSION-009)
+SESSION_ACTIVITY_TOUCH_INTERVAL_SECONDS = 60
+# Enumerate the only caller-controlled policy fields accepted by the core mutation boundary. (SESSION-009)
+SESSION_TIMEOUT_POLICY_FIELDS = frozenset({"enabled", "idle_timeout_seconds", "absolute_timeout_seconds", "warning_seconds"})
+# Enumerate the complete persisted shape so unknown fields cannot be destroyed by a later partial write. (SESSION-009)
+SESSION_TIMEOUT_POLICY_STORAGE_FIELDS = SESSION_TIMEOUT_POLICY_FIELDS | frozenset({"schema_version", "updated_at", "updated_by"})
 
 # Define the utc_datetime function used by this module.
 def utc_datetime() -> datetime:
@@ -86,6 +112,11 @@ def default_users() -> dict:
 def default_sessions() -> dict:
     # Return the computed value to the caller.
     return {"schema_version": SCHEMA_VERSION, "sessions": []}
+
+# Return the owner-approved default timeout policy for a genuinely absent document. (SESSION-009)
+def default_session_timeout_policy() -> dict:
+    # Publish fixed defaults plus empty audit metadata without inferring an operator action.
+    return {"schema_version": SCHEMA_VERSION, "enabled": DEFAULT_SESSION_TIMEOUT_ENABLED, "idle_timeout_seconds": DEFAULT_SESSION_IDLE_TIMEOUT_SECONDS, "absolute_timeout_seconds": DEFAULT_SESSION_ABSOLUTE_TIMEOUT_SECONDS, "warning_seconds": DEFAULT_SESSION_WARNING_SECONDS, "updated_at": None, "updated_by": None}
 
 # Define the load_users function used by this module.
 def load_users() -> dict:
@@ -841,16 +872,190 @@ def validate_session_bounds() -> None:
         # Name only the public setting so supplied values never enter diagnostics.
         raise RuntimeError("CASINO_SESSION_TTL_SECONDS is outside the supported restricted-preview range")
 
-# Return whether one stored session is active and unexpired without propagating corrupt timestamps.
-def _session_is_active(session: dict, now: datetime) -> bool:
+# Validate one integer timeout without accepting booleans as numbers. (SESSION-009)
+def _validated_timeout_seconds(value, minimum: int, maximum: int) -> int:
+    # Reject bool explicitly because Python otherwise treats it as an integer.
+    if isinstance(value, bool) or not isinstance(value, int) or value < minimum or value > maximum:
+        # Keep supplied values out of the stable configuration error.
+        raise ValidationError("Session timeout policy is invalid")
+    # Return the reviewed integer unchanged.
+    return value
+
+
+# Validate and detach one complete timeout-policy document without normalizing storage. (SESSION-009)
+def _validated_session_timeout_policy(state: dict) -> dict:
+    # Require one bounded object with no unreviewed fields before any write can replace it.
+    if not isinstance(state, dict) or set(state) - SESSION_TIMEOUT_POLICY_STORAGE_FIELDS:
+        # Preserve the original document for operator recovery.
+        raise RuntimeError("Session timeout policy requires operator recovery")
+    # Read the stored schema marker before accepting the document.
+    schema_version = state.get("schema_version")
+    # Require one bounded schema marker instead of normalizing arbitrary persisted data.
+    if not isinstance(schema_version, str) or not 1 <= len(schema_version) <= 64:
+        # Preserve malformed version evidence for operator recovery.
+        raise RuntimeError("Session timeout policy requires operator recovery")
+    # Require the exact boolean type instead of truthy strings or numbers.
+    if not isinstance(state.get("enabled"), bool):
+        # Preserve parseable malformed state without guessing its intent.
+        raise RuntimeError("Session timeout policy requires operator recovery")
+    # Convert bounded-field validation failures into the fixed storage-recovery boundary.
+    try:
+        # Validate the idle duration against the approved five-minute-to-one-day range.
+        idle_timeout = _validated_timeout_seconds(state.get("idle_timeout_seconds"), MIN_SESSION_IDLE_TIMEOUT_SECONDS, MAX_SESSION_IDLE_TIMEOUT_SECONDS)
+        # Validate the absolute duration against the approved thirty-minute-to-thirty-day range.
+        absolute_timeout = _validated_timeout_seconds(state.get("absolute_timeout_seconds"), MIN_SESSION_ABSOLUTE_TIMEOUT_SECONDS, MAX_SESSION_ABSOLUTE_TIMEOUT_SECONDS)
+        # Validate the warning duration independently so zero remains an explicit no-warning setting.
+        warning_seconds = _validated_timeout_seconds(state.get("warning_seconds"), 0, MAX_SESSION_WARNING_SECONDS)
+    # Treat any bounded-field failure as recoverable operator state rather than a caller error.
+    except ValidationError:
+        # Preserve the complete document without rewriting a guessed replacement.
+        raise RuntimeError("Session timeout policy requires operator recovery") from None
+    # Require a positive warning to finish before the idle deadline.
+    if warning_seconds and warning_seconds >= idle_timeout:
+        # Reject a policy whose warning can never precede server expiry.
+        raise RuntimeError("Session timeout policy requires operator recovery")
+    # Read the optional last-update timestamp without requiring metadata on the default document.
+    updated_at = state.get("updated_at")
+    # Validate a persisted update timestamp when one exists.
+    if updated_at is not None:
+        # Require a bounded timestamp string before parsing it.
+        if not isinstance(updated_at, str) or not 1 <= len(updated_at) <= 64:
+            # Preserve malformed audit metadata for operator recovery.
+            raise RuntimeError("Session timeout policy requires operator recovery")
+        # Start protected timestamp parsing so invalid metadata fails closed.
+        try:
+            # Parse the complete timestamp without retaining an interpreted value.
+            parse_time(updated_at)
+        # Reject malformed timestamp metadata through the fixed recovery boundary.
+        except (TypeError, ValueError):
+            # Preserve the complete document without a normalization write.
+            raise RuntimeError("Session timeout policy requires operator recovery") from None
+    # Read the optional opaque actor identifier.
+    updated_by = state.get("updated_by")
+    # Require a bounded actor identifier whenever update metadata exists.
+    if updated_by is not None and (not isinstance(updated_by, str) or not 1 <= len(updated_by) <= 128):
+        # Avoid exposing or rewriting malformed actor metadata.
+        raise RuntimeError("Session timeout policy requires operator recovery")
+    # Require update time and actor metadata to appear together.
+    if (updated_at is None) != (updated_by is None):
+        # Preserve incomplete audit metadata rather than inventing its missing half.
+        raise RuntimeError("Session timeout policy requires operator recovery")
+    # Return only the reviewed detached shape used by session evaluation and future Admin routes.
+    return {"schema_version": schema_version, "enabled": state["enabled"], "idle_timeout_seconds": idle_timeout, "absolute_timeout_seconds": absolute_timeout, "warning_seconds": warning_seconds, "updated_at": updated_at, "updated_by": updated_by}
+
+
+# Read the policy through the strict provider boundary so malformed evidence never becomes defaults. (SESSION-009)
+def load_session_timeout_policy() -> dict:
+    # Read an absent document as the approved defaults while refusing corrupt JSON bytes.
+    state = read_json_strict(SESSION_TIMEOUT_POLICY_PATH, default_session_timeout_policy, "Session timeout policy requires operator recovery")
+    # Validate parseable structure before the policy can authorize any session.
+    return _validated_session_timeout_policy(state)
+
+
+# Persist one partial owner-authorized policy update through the shared JSON/MySQL transaction. (SESSION-009)
+def update_session_timeout_policy(actor: dict, changes: dict) -> dict:
+    # Resolve the actor against current canonical state so a stale role payload cannot mutate policy.
+    current_actor = find_user_by_id(str((actor or {}).get("user_id") or ""))
+    # Require one active retained platform owner at the mutation boundary.
+    if not current_actor or current_actor.get("status") != "active":
+        # Use the same non-reflecting authority error as other owner-only operations.
+        raise ForbiddenError("Platform owner access required")
+    # Enforce bootstrap-only owner authority independently from ordinary Admin access.
+    require_platform_owner(current_actor)
+    # Require a non-empty object containing only reviewed configurable fields.
+    if not isinstance(changes, dict) or not changes or set(changes) - SESSION_TIMEOUT_POLICY_FIELDS:
+        # Reject unknown or empty mutations without reading or rewriting policy state.
+        raise ValidationError("Session timeout policy is invalid")
+    # Validate the boolean separately so truthy strings never enable or disable security policy.
+    if "enabled" in changes and not isinstance(changes["enabled"], bool):
+        # Keep supplied values out of the stable caller error.
+        raise ValidationError("Session timeout policy is invalid")
+    # Validate each optional numeric field before entering the provider transaction.
+    if "idle_timeout_seconds" in changes:
+        # Enforce the approved idle bounds.
+        _validated_timeout_seconds(changes["idle_timeout_seconds"], MIN_SESSION_IDLE_TIMEOUT_SECONDS, MAX_SESSION_IDLE_TIMEOUT_SECONDS)
+    # Validate the optional absolute lifetime independently.
+    if "absolute_timeout_seconds" in changes:
+        # Enforce the approved absolute-lifetime bounds.
+        _validated_timeout_seconds(changes["absolute_timeout_seconds"], MIN_SESSION_ABSOLUTE_TIMEOUT_SECONDS, MAX_SESSION_ABSOLUTE_TIMEOUT_SECONDS)
+    # Validate the optional warning interval independently.
+    if "warning_seconds" in changes:
+        # Enforce the approved warning bounds including explicit zero.
+        _validated_timeout_seconds(changes["warning_seconds"], 0, MAX_SESSION_WARNING_SECONDS)
+    # Publish the committed detached policy to the caller only after provider success.
+    result = {}
+    # Define the complete strict read-modify-write operation.
+    def mutate(state: dict) -> dict:
+        # Validate existing state before a partial update can discard recoverable evidence.
+        current = _validated_session_timeout_policy(state)
+        # Merge only the reviewed caller fields into a detached candidate.
+        candidate = {**current, **changes}
+        # Stamp the current schema marker on every committed policy document.
+        candidate["schema_version"] = SCHEMA_VERSION
+        # Record the canonical opaque actor rather than caller-supplied identity metadata.
+        candidate["updated_by"] = current_actor["user_id"]
+        # Record one server timestamp for Admin status and future audit correlation.
+        candidate["updated_at"] = utc_now()
+        # Reject a warning that cannot finish before the candidate idle deadline.
+        if candidate["warning_seconds"] and candidate["warning_seconds"] >= candidate["idle_timeout_seconds"]:
+            # Report invalid caller configuration without misclassifying stored state as corrupt.
+            raise ValidationError("Session timeout policy is invalid")
+        # Revalidate cross-field warning semantics after applying the partial update.
+        validated = _validated_session_timeout_policy(candidate)
+        # Copy the committed candidate for the post-transaction return.
+        result.update(validated)
+        # Return the complete validated document for atomic persistence.
+        return validated
+    # Apply strict JSON-byte preservation or the provider's MySQL row transaction as configured.
+    update_json_strict(SESSION_TIMEOUT_POLICY_PATH, mutate, default_session_timeout_policy, "Session timeout policy requires operator recovery")
+    # Return only the committed reviewed policy shape.
+    return result
+
+
+# Return whether one stored session survives the established durable expiry boundary. (SESSION-007)
+def _session_survives_legacy_expiry(session: dict, now: datetime) -> bool:
     # Reject non-active records before parsing their expiry.
     if session.get("status") != "active":
         # Exclude revoked and malformed status values from the active registry.
         return False
     # Start protected expiry parsing so a damaged record fails closed.
     try:
-        # Require the durable expiry to be later than the supplied UTC time.
+        # Require the durable legacy expiry to remain an independent upper bound.
         return parse_time(str(session.get("expires_at", ""))) > now
+    # Treat missing, malformed, and non-string timestamps as expired.
+    except (TypeError, ValueError):
+        # Avoid retaining a session whose expiration cannot be proven.
+        return False
+
+
+# Return whether one matched principal survives legacy, idle, and absolute server bounds. (SESSION-009)
+def _session_is_active(session: dict, now: datetime, policy: dict | None = None) -> bool:
+    # Preserve the established durable expiry as an independent upper bound.
+    if not _session_survives_legacy_expiry(session, now):
+        # Reject revoked, malformed, or legacy-expired rows before policy evaluation.
+        return False
+    # Start protected policy parsing so damaged timestamps fail closed.
+    try:
+        # Load strict current policy only when a caller did not already snapshot it.
+        current_policy = load_session_timeout_policy() if policy is None else _validated_session_timeout_policy(policy)
+        # Preserve legacy expiry-only behavior when the platform owner explicitly disables policy.
+        if not current_policy["enabled"]:
+            # Keep the established durable expiry authoritative.
+            return True
+        # Parse the server-issued creation timestamp for the absolute lifetime.
+        created_at = parse_time(str(session.get("created_at", "")))
+        # Parse the latest server-observed authenticated activity with a legacy creation fallback.
+        last_activity_at = parse_time(str(session.get("updated_at") or session.get("created_at") or ""))
+        # Reject a session at or beyond its configured absolute lifetime.
+        if created_at + timedelta(seconds=current_policy["absolute_timeout_seconds"]) <= now:
+            # Keep absolute expiry authoritative even when activity continues.
+            return False
+        # Reject a session at or beyond its configured idle lifetime.
+        if last_activity_at + timedelta(seconds=current_policy["idle_timeout_seconds"]) <= now:
+            # Prevent a browser refresh from restoring an idle-expired session.
+            return False
+        # Accept only a row that survives every server-authoritative bound.
+        return True
     # Treat missing, malformed, and non-string timestamps as expired.
     except (TypeError, ValueError):
         # Avoid retaining a session whose expiration cannot be proven.
@@ -860,10 +1065,58 @@ def _session_is_active(session: dict, now: datetime) -> bool:
 def prune_sessions(state: dict) -> dict:
     # Set now to the value needed for the next operation.
     now = utc_datetime()
-    # Set state["sessions"] to the value needed for the next operation.
-    state["sessions"] = [session for session in state.get("sessions", []) if isinstance(session, dict) and _session_is_active(session, now)][-MAX_STORED_SESSIONS:]
+    # Prune only the legacy expiry before identity resolution so guest teardown still sees its matched principal.
+    state["sessions"] = [session for session in state.get("sessions", []) if isinstance(session, dict) and _session_survives_legacy_expiry(session, now)][-MAX_STORED_SESSIONS:]
     # Return the computed value to the caller.
     return state
+
+
+# Refresh one persistent session's idle marker at a bounded write cadence. (SESSION-009)
+def _touch_persistent_session_activity(session: dict, policy: dict) -> None:
+    # Skip durable activity writes while the owner has disabled idle/absolute policy.
+    if not policy["enabled"]:
+        # Preserve legacy expiry-only behavior without needless storage mutation.
+        return
+    # Capture one server timestamp for the cadence check and committed update.
+    current_time = utc_datetime()
+    # Start protected parsing so malformed activity metadata cannot be repaired by a touch.
+    try:
+        # Read the latest server-owned activity timestamp with a creation fallback.
+        last_activity = parse_time(str(session.get("updated_at") or session.get("created_at") or ""))
+        # Compute elapsed server-observed inactivity while both timestamps are known-compatible.
+        elapsed_seconds = (current_time - last_activity).total_seconds()
+    # Fail closed through the normal authentication pruning path for malformed or timezone-incompatible rows.
+    except (TypeError, ValueError):
+        # Leave the malformed row untouched because the caller cannot establish safe activity.
+        return
+    # Avoid a provider write when the last touch is inside the reviewed cadence.
+    if elapsed_seconds < SESSION_ACTIVITY_TOUCH_INTERVAL_SECONDS:
+        # Preserve the existing timestamp until a meaningful activity interval passes.
+        return
+    # Format the single server timestamp in the established durable session shape.
+    activity_at = current_time.isoformat(timespec="milliseconds").replace("+00:00", "Z")
+    # Define the strict account-independent activity update.
+    def mutate(state: dict) -> dict:
+        # Validate every row before changing one session so corrupt evidence remains intact.
+        rows = _validated_session_rows(state)
+        # Search only by the already-authenticated opaque server session identifier.
+        for stored in rows:
+            # Skip unrelated or concurrently revoked sessions.
+            if stored.get("session_id") != session.get("session_id") or stored.get("status") != "active":
+                # Continue without exposing whether another row exists.
+                continue
+            # Refresh only the server-observed activity marker.
+            stored["updated_at"] = activity_at
+            # Stop after the unique authenticated session is touched.
+            break
+        # Preserve the canonical session-document marker.
+        state["schema_version"] = SCHEMA_VERSION
+        # Return the complete document for atomic persistence.
+        return state
+    # Refuse to normalize syntactically or structurally corrupt session storage.
+    update_json_strict(SESSIONS_PATH, mutate, default_sessions, "Session storage requires operator recovery")
+    # Reflect the touch in the request-local projection used downstream.
+    session["updated_at"] = activity_at
 
 # Evict the least-recently-used active predecessors once one identity exceeds the per-user cap. (SESSION-007)
 def _evict_user_sessions_over_cap(state: dict, user_id: str) -> None:
@@ -886,6 +1139,8 @@ def _evict_user_sessions_over_cap(state: dict, user_id: str) -> None:
 def create_session(user: dict, client: str = "", auth_method: str = "local") -> dict:
     # Set now to the value needed for the next operation.
     now = utc_now()
+    # Refuse to mint resumable access while timeout policy intent is malformed.
+    load_session_timeout_policy()
     # Accept only password or reviewed provider methods in durable session metadata.
     if auth_method not in {"local", "google", "facebook"}:
         # Reject unreviewed authentication authorities before issuing bearer material.
@@ -1038,7 +1293,11 @@ def csrf_token_for_session_cookie(headers) -> str:
     if not token:
         # Preserve anonymous shell bootstrap behavior.
         return ""
-    # Read a pruned in-memory session view without refreshing activity or persisting state.
+    # Refuse to re-issue authenticated CSRF state while timeout policy intent is malformed.
+    timeout_policy = load_session_timeout_policy()
+    # Capture one authoritative server time for the shell-facing policy decision.
+    current_time = utc_datetime()
+    # Read a legacy-pruned in-memory session view without refreshing activity or persisting state.
     state = prune_sessions(load_sessions())
     # Inspect only surviving active sessions for the exact opaque cookie.
     for session in state.get("sessions", []):
@@ -1046,6 +1305,10 @@ def csrf_token_for_session_cookie(headers) -> str:
         if session.get("status") != "active" or not hmac.compare_digest(str(session.get("token") or ""), token):
             # Continue to the next bounded session row.
             continue
+        # Withhold authenticated shell proof when the matched session is idle- or absolute-expired.
+        if not _session_is_active(session, current_time, timeout_policy):
+            # Prevent a browser refresh from restoring authenticated shell state after timeout.
+            return ""
         # Read the browser-readable session CSRF value without authenticating a guest browser proof.
         csrf_token = session.get("csrf_token")
         # Accept only the bounded generated proof shape used by application sessions.
@@ -1064,6 +1327,8 @@ def authenticate_token(token: str, guest_browser_nonce: str = "") -> tuple[dict,
         # Raise an error so invalid input or state is reported explicitly.
         raise UnauthorizedError()
     # Read a pruned in-memory view without persisting so concurrent logins are not clobbered. (SESSION-007)
+    timeout_policy = load_session_timeout_policy()
+    # Read a legacy-pruned in-memory view without persisting so concurrent logins are not clobbered. (SESSION-007)
     state = prune_sessions(load_sessions())
     # Iterate through the collection to process each item.
     for session in state.get("sessions", []):
@@ -1075,6 +1340,16 @@ def authenticate_token(token: str, guest_browser_nonce: str = "") -> tuple[dict,
             if not user or user.get("status") != "active":
                 # Raise an error so invalid input or state is reported explicitly.
                 raise ForbiddenError("User is inactive")
+            # Apply the current policy only after resolving the principal so guest teardown remains authoritative.
+            if not _session_is_active(session, utc_datetime(), timeout_policy):
+                # Irreversibly close a disposable guest that expires under the shared owner policy.
+                if is_guest(user):
+                    # Preserve the guest lifecycle guarantee instead of merely hiding its session row.
+                    end_guest_trial(user, "timeout_policy")
+                    # Return the established guest-expiry error.
+                    raise UnauthorizedError("Guest trial expired")
+                # Reject a persistent session without restoring authenticated UI or API access.
+                raise UnauthorizedError("Session is invalid or expired")
             # Recheck external-provider rollback, link ownership, and active configuration on every request.
             if session.get("auth_method", "local") in {"google", "facebook"}:
                 # Import lazily so the core auth module does not create an OAuth import cycle.
@@ -1083,6 +1358,10 @@ def authenticate_token(token: str, guest_browser_nonce: str = "") -> tuple[dict,
                 if not provider_session_is_authorized(session, user):
                     # Reject the provider session without affecting local-password sessions.
                     raise UnauthorizedError("External provider session is no longer authorized")
+            # Refresh persistent-account activity at a bounded cadence after every successful server authentication.
+            if not is_guest(user):
+                # Keep the authoritative idle marker server-owned without changing guest-specific lifecycle behavior.
+                _touch_persistent_session_activity(session, timeout_policy)
             # Refresh the guest's de-identified activity marker so the Admin active-now window stays truthful. (issue #317)
             if is_guest(user):
                 # End an expired absolute-lifetime session before any protected route can resume it.
