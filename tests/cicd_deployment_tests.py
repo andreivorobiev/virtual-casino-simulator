@@ -359,6 +359,25 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         # Reject the stale equality form that previously required manual release edits.
         self.assertIsNone(re.search(r"CasinoPwa\?\.version===['\"]\d+\.\d+\.\d+", runner_source))
 
+    # Prove isolated route-i18n coverage produces every state-dependent interpolation it consumes.
+    def test_browser_route_i18n_declares_visible_state_producers(self):
+        # Read exact runner source without importing Playwright.
+        source, tree = self.browser_runner_syntax()
+        # Select the browser runner and isolate its source.
+        runner = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "run_browser_tests")
+        # Read the complete browser function for declared-driver inspection.
+        runner_source = ast.get_source_segment(source, runner)
+        # Require the Slots history interpolation to own one visible spin producer.
+        self.assertIn("'games/slots':drive_slots_interpolation", runner_source)
+        # Require the Keno final-draw interpolation to own one visible draw producer.
+        self.assertIn("'games/keno':drive_keno_interpolation", runner_source)
+        # Require every route-specific producer to execute after mount and before audit.
+        self.assertIn("if interpolation_driver: interpolation_driver()", runner_source)
+        # Require state production to use only current player-visible action controls.
+        self.assertIn("page.get_by_test_id('slots-spin').click()", runner_source)
+        # Require the Keno driver to use the real draw action rather than a hidden API shortcut.
+        self.assertIn("page.get_by_test_id('keno-draw').click()", runner_source)
+
     # Prove ordinary sharding does not alter formal 50k or sustained Baccarat governance.
     def test_browser_sharding_preserves_formal_and_baccarat_jobs(self):
         # Read the complete workflow as inert text.

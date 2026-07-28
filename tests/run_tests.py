@@ -8068,6 +8068,26 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         concurrent_state=page.evaluate("""async () => { const i18n = await import('/core/i18n.js'); await Promise.all([i18n.initI18n({ domains: ['games/roulette'] }), i18n.initI18n({ domains: ['games/roulette', 'games/bingo'] }), i18n.initI18n({ domains: ['games/bingo'] })]); return i18n.getLocaleState(); }""")
                         # Verify concurrent repeated initialization loads both requested domains exactly once in state.
                         assert {'games/roulette','games/bingo'}.issubset(set(concurrent_state['loadedDomains']))
+                        # Produce one visible Slots history row when this isolated shard has no prior spin.
+                        def drive_slots_interpolation():
+                            # Skip the action when the current user already owns a rendered spin history row.
+                            if page.locator('[data-testid="slots-recent-spins"] .slots-history-row').count(): return
+                            # Spin through the same visible control a player uses.
+                            page.get_by_test_id('slots-spin').click()
+                            # Wait for one settled history row and a re-enabled action before auditing text.
+                            page.wait_for_function("() => Boolean(document.querySelector('[data-testid=\"slots-recent-spins\"] .slots-history-row')) && !document.querySelector('[data-testid=\"slots-spin\"]')?.disabled",timeout=5000)
+                        # Produce one complete Keno draw when this isolated shard has no final-draw metric.
+                        def drive_keno_interpolation():
+                            # Skip the action when a prior draw already rendered its complete twenty-ball result.
+                            if page.get_by_test_id('keno-drawn-ball').count()==20: return
+                            # Select ten stable spots through public visible number controls.
+                            for spot in (3,8,12,17,24,31,44,55,63,72): page.get_by_test_id(f'keno-num-{spot}').click()
+                            # Start one real draw through the current visible control.
+                            page.get_by_test_id('keno-draw').click()
+                            # Wait until the route owns a complete final-draw interpolation state.
+                            page.wait_for_function("() => document.querySelectorAll('[data-testid=\"keno-drawn-ball\"]').length === 20",timeout=5000)
+                        # Declare only route-owned state producers needed by interpolation templates.
+                        route_interpolation_drivers={'games/slots':drive_slots_interpolation,'games/keno':drive_keno_interpolation}
                         # Store stable navigation, mount, domain, and interpolation probes for every game route.
                         route_specs=[('nav-roulette','roulette-wheel','games/roulette','stats.rolls'),('nav-slots','slot-grid','games/slots','history.row'),('nav-keno','keno-premium-hero','games/keno','metric.finalDraw.label'),('nav-bingo','premium-bingo','games/bingo','drawer.callsText'),('nav-blackjack','blackjack-premium','games/blackjack','drawer.cards'),('nav-baccarat','baccarat-wager-setup','games/baccarat','shoe.cards')]
                         # Audit every route in both installed UI locales without persisting the test preference.
@@ -8088,6 +8108,10 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                     page.get_by_test_id(nav_testid).click()
                                 # Wait for the route-owned stable mount selector before scanning strings.
                                 page.get_by_test_id(ready_testid).wait_for(timeout=5000)
+                                # Run only the mounted route's declared visible state producer when required.
+                                interpolation_driver=route_interpolation_drivers.get(domain)
+                                # Produce the interpolation state inside this same case and shard.
+                                if interpolation_driver: interpolation_driver()
                                 # Apply the complete domain, key-leak, placeholder, encoding, and label audit.
                                 assert_route_i18n(domain, interpolation_key)
                         # Restore English so the following independent Admin page starts from the suite default.
