@@ -1,4 +1,17 @@
-# Virtual Casino Simulator v0.9.5.26 Release Notes
+# Virtual Casino Simulator v0.9.5.27 Release Notes
+
+## All-game desktop control reachability
+
+- Adds one hosted Browser gate for every enabled control in all 46 registered games at the governed primary and compact desktop viewports.
+- Fails closed when a visible control is clipped by a fixed-height, non-scrollable ancestor and has no vertical scroll owner.
+- Produces exact-commit PNG and JSON after-pass sidecars for all 92 game and viewport surfaces.
+- Keeps the four-shard Browser union exact at 106 cases with unique artifacts, fail-closed aggregation, and listener cleanup.
+- Preserves gameplay, frozen API contracts, UI styling, formal 50,000-cycle work, and Baccarat sustained qualification unchanged.
+- Rotates the PWA shell identity and keeps curated What's New metadata disabled pending its separately governed UI remainder.
+- Retains exact immutable v0.9.5.26 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation.
+
+## Prior v0.9.5.26 governed Acey-Deucey spread pricing
 
 ## Governed Acey-Deucey spread pricing
 
