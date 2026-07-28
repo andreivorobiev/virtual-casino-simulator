@@ -1,18 +1,18 @@
 # Codex status
 
-Written by Codex only. Claude reads this; do not edit it. Last updated 2026-07-28T03:36:00Z.
+Written by Codex only. Claude reads this; do not edit it. Last updated 2026-07-28T05:56:00Z.
 
 ## Current branch / active Codex work
 
-- Codex Worker B owns `codex/433-rule-schema-catalog-gate` from exact terminal-green v0.9.5.21 main `aaf46a6d`.
-- Scope is the inert descriptor/governance foundation for #433: current settings-route schemas, pure schema validation, catalog route/default parity, and listener-free regression proof.
-- This slice does not change router dispatch, persisted state, OpenAPI, compatibility matrices, frozen v1 behavior, gameplay, or browser UI.
-- PR #474 branch/worktree/process cleanup is complete; its accepted head is contained in protected main and no #474 refs remain.
+- PR #476 merged normally at exact protected main `cd51f95f8bf85730ef0785bf02324e492b68de2f`.
+- `codex/release-v0.9.5.22` serializes that accepted runtime-inert rule-schema/catalog-gate foundation behind a unique immutable release and terminal-green deployment.
+- No other PR may merge during this release/deployment boundary; #450 remains held and excluded.
+- Worker A PR #467 is exact-current-main ordinary-green at `18ab6368` but cannot dispatch its second governed qualification without fresh owner authorization.
 
 ## Live queue snapshot
 
-- Protected main and deployed immutable v0.9.5.21 are exact `aaf46a6d86c0b5f1529b21f15810f2f98a0eaad4`.
-- #433 is `P1` / `stack-rank:071` and had no assignee, claim comment, or open PR before Worker B claimed the bounded foundation.
+- Protected main is `cd51f95f8bf85730ef0785bf02324e492b68de2f`; deployed immutable v0.9.5.21 remains exact `aaf46a6d86c0b5f1529b21f15810f2f98a0eaad4` until v0.9.5.22 is terminal green.
+- #433 remains open after its bounded schema/catalog-gate foundation; runtime enforcement and Admin UI remain separately governed scope.
 - #350 is an umbrella routed to #351/#352; #432/#434/#441 are lower-ranked P2 items.
 - #450 remains excluded. Worker A/#467 and Claude PRs #473/#465/#460/#454/#453 plus CI PR #470 remain no-touch except acknowledged shared metadata that must be re-read at handoff.
 
@@ -22,7 +22,7 @@ Written by Codex only. Claude reads this; do not edit it. Last updated 2026-07-2
 - `SEC-014` is reserved for #433 because permanent `SEC-012` already belongs to game entropy and `SEC-013` belongs to client-log URL sanitization.
 - `TEST-139` remains reserved for Claude #453 and `TEST-142` for Worker A/#467; this #433 slice does not claim either.
 - Merged `SESSION-008` and `TEST-143` remain unchanged.
-- Worker A/#467 now claims tests/docs `1.64.2`; #433 uses tests/docs `1.64.3` and tooling `1.21.6`, skipping #467/#450 tooling `1.21.5`.
+- Worker A/#467 claims tests/docs `1.64.2`; merged #433 owns tests/docs `1.64.3` and tooling `1.21.6`; the v0.9.5.22 release advances tests/docs to `1.64.4` and contracts to `1.49.3`.
 
 ## File claims / collision notes
 

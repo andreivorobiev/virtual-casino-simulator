@@ -1,4 +1,18 @@
-# Virtual Casino Simulator v0.9.5.21 Release Notes
+# Virtual Casino Simulator v0.9.5.22 Release Notes
+
+## Runtime-inert game rule-schema catalog gate
+
+- Requires every registered `POST .../settings` game route to declare one module-owned rule schema before packaging.
+- Validates exact route ownership, engine or documented fallback defaults, closed enum vocabularies, and finite allocation and settlement bounds without opening a listener.
+- Adds governed descriptors for the existing Blackjack, Baccarat, and Roulette settings surfaces while preserving their already-accepted runtime domains.
+- Rejects unknown schema keys, unsafe semantic flags, inverted or non-finite bounds, invalid defaults, undeclared settings routes, and descriptors without matching routes.
+- Withholds callable references and internal rule-schema metadata from public game-list responses.
+- Activates no request-time enforcement, handler change, gameplay change, settlement change, Admin UI, browser UI, or API contract; issue #433 remains open for runtime enforcement and Admin scope.
+- Rotates the PWA shell identity and keeps curated What's New metadata disabled pending its separately governed UI remainder.
+- Retains exact immutable v0.9.5.21 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation.
+
+## Prior v0.9.5.21 privacy-safe Admin session-control foundation
 
 ## Privacy-safe Admin session-control foundation
 
