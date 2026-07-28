@@ -8,7 +8,7 @@ Every protected `main` merge should automatically become the production release.
 
 The browser Admin login and the production monitor login are separate things. Browser login is for a person. The monitor credential is a server-owned bearer token used only by deployment health checks.
 
-Packaged release numbers use the four-part scheme documented in [the release versioning policy](release_versioning.md). The current line is `0.9.5.23`; `0.9.6.0` is reserved for the next large Claude LPR.
+Packaged release numbers use the four-part scheme documented in [the release versioning policy](release_versioning.md). The current line is `0.9.5.24`; `0.9.6.0` is reserved for the next large Claude LPR.
 
 ## What happens after a merge
 
@@ -111,6 +111,8 @@ v0.9.5.21 carries the accepted privacy-safe Admin session-control core for issue
 v0.9.5.22 carries the accepted runtime-inert game rule-schema and catalog-validation foundation for issue #433. Its compatibility record retains exact immutable v0.9.5.21 as the application-only predecessor; MySQL remains at schema 2 and database rollback remains prohibited.
 
 v0.9.5.23 carries the accepted same-PR ordinary-check cancellation and four-shard mandatory Long Suite 100 acceleration for issue #468. Its compatibility record retains exact immutable v0.9.5.22 as the application-only predecessor; MySQL remains at schema 2 and database rollback remains prohibited.
+
+v0.9.5.24 carries the accepted runtime-inert descriptor lookup and pure settings-value coercion foundation for issue #433. Its compatibility record retains exact immutable v0.9.5.23 as the application-only predecessor; MySQL remains at schema 2 and database rollback remains prohibited.
 
 ## Historical first-rollout blocker
 
