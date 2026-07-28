@@ -40,9 +40,11 @@ def play(client, index):
     # Require the deprecated frozen-v1 scalar to describe the same current-round price.
     assert dealt["rules"]["inside_return_multiplier"] == multiplier, "Acey-Deucey compatibility scalar drifted from the current spread price"
     # Derive the terminal return from the server-owned spread price.
-    expected_payout = multiplier if round_row["outcome"] == "inside" else 0.0
+    expected_payout = round(float(multiplier), 2) if round_row["outcome"] == "inside" else 0.0
+    # Mirror the ledger-facing two-decimal net normalization used by the game engine.
+    expected_net = round(expected_payout - 1.0, 2)
     # Compare the published payout and net against the priced in-between profile.
-    assert round_row["phase"] == "settled" and round_row["outcome"] in ("inside", "outside", "boundary_tie") and round_row["payout"] == expected_payout and round_row["net"] == expected_payout - 1.0, "Acey-Deucey settlement does not match the published profile"
+    assert round_row["phase"] == "settled" and round_row["outcome"] in ("inside", "outside", "boundary_tie") and round_row["payout"] == expected_payout and round_row["net"] == expected_net, "Acey-Deucey settlement does not match the published profile"
     # Require exact retry recovery for round identity and hidden-card reveal.
     assert replay["replayed"] is True and replay["round"]["round_id"] == round_row["round_id"] and replay["round"]["third_card"] == round_row["third_card"], "Acey-Deucey retry changed the committed result"
     # Return the settled round for optional runner diagnostics.
