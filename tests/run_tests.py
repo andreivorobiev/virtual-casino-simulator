@@ -4869,6 +4869,42 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
                 # Execute the expansion matrix under each game-specific permanent test allocation.
                 run_case('BR-CATALOG-EXPANSION-001',['CWHEEL-001','CWHEEL-002','PDICE-001','PDICE-002','BOULE-001','BOULE-002','FARO-001','FARO-002','TEQ-001','TEQ-002','PACH-001','PACH-002','COINP-001','COINP-002','MARBLE-001','MARBLE-002','PATTERN-001','PATTERN-002','LGRID-001','LGRID-002','DDLAB-001','DDLAB-002','FOURCP-001','FOURCP-002','TEST-119','TEST-120','TEST-121','TEST-122','TEST-123','TEST-124','TEST-125','TEST-126','TEST-128','TEST-129','TEST-130','TEST-131'],catalog_expansion_visuals)
+                # Prove every catalog game keeps its enabled controls vertically reachable in the fixed-height shell. (issue #221, CORE-015, UX-004, TEST-139)
+                def control_reachability():
+                    # Pin the two governed desktop viewports where clipped controls were originally reported.
+                    reach_viewports=(('desktop_primary',1920,1080),('desktop_compact',1440,900))
+                    # Collect every offending surface before failing so one hosted run reports the complete catalog.
+                    unreachable_report={}
+                    # Restore the governed English shell before walking routes and capturing reviewable evidence.
+                    page.get_by_test_id('shell-locale-select').select_option('en-US')
+                    # Wait until the public locale state owns the next route render.
+                    page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'en-US'")
+                    # Sweep the authoritative registry rather than maintaining a second catalog list.
+                    for reach_game in casino_config.GAMES:
+                        # Return through the real shell lobby before mounting each registered game.
+                        page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=8000)
+                        # Enter the game through its catalog-owned navigation control.
+                        page.get_by_test_id(f"nav-{reach_game['id']}").click()
+                        # Wait for the descriptor-declared ready marker before measuring the complete route outlet.
+                        page.get_by_test_id(reach_game['frontend']['ready_testid']).wait_for(timeout=10000)
+                        # Measure and capture both required desktop surfaces.
+                        for reach_viewport_id,reach_width,reach_height in reach_viewports:
+                            # Apply the exact governed viewport and let responsive layout settle.
+                            page.set_viewport_size({'width':reach_width,'height':reach_height}); page.wait_for_timeout(160)
+                            # Inspect every enabled route control while excluding Chromium geometry retained inside collapsed disclosures.
+                            reach=page.evaluate("""() => { const root=document.querySelector('#view'); const visible=node=>{const style=getComputedStyle(node);return style.display!=='none'&&style.visibility!=='hidden'&&node.getClientRects().length>0;}; const inCollapsedDisclosure=node=>Boolean(node.closest('details:not([open])'))&&!node.closest('summary'); const clipsY=el=>{const overflow=getComputedStyle(el).overflowY;return overflow==='hidden'||overflow==='clip';}; const scrollsY=el=>{const overflow=getComputedStyle(el).overflowY;return (overflow==='auto'||overflow==='scroll')&&el.scrollHeight>el.clientHeight+1;}; const label=node=>node.getAttribute('data-testid')||node.getAttribute('data-action')||node.getAttribute('aria-label')||(node.textContent||'').trim().slice(0,24)||node.tagName.toLowerCase(); const enabled=[...(root?.querySelectorAll('button:not([disabled]),input:not([disabled]),select:not([disabled]),a[href],[role="button"]')||[])].filter(node=>visible(node)&&!inCollapsedDisclosure(node)); const unreachable=[]; for(const node of enabled){const rect=node.getBoundingClientRect();let ancestor=node.parentElement;let blocked=false;let reachableByScroll=false;while(ancestor&&ancestor!==document.documentElement){if(scrollsY(ancestor)){reachableByScroll=true;break;}if(clipsY(ancestor)){const bounds=ancestor.getBoundingClientRect();if(rect.bottom>bounds.bottom+1||rect.top<bounds.top-1){blocked=true;break;}}ancestor=ancestor.parentElement;}if(!blocked&&!reachableByScroll&&(rect.bottom>window.innerHeight+1||rect.top<-1)){const documentScrolls=document.scrollingElement&&document.scrollingElement.scrollHeight>window.innerHeight+1;if(!documentScrolls)blocked=true;}if(blocked)unreachable.push(label(node));}return {enabledControls:enabled.length,unreachableControls:[...new Set(unreachable)]};}""")
+                            # Reject an empty route so missing game controls cannot produce a vacuous pass.
+                            assert reach['enabledControls']>0,{'game':reach_game['id'],'viewport':reach_viewport_id,'reach':reach}
+                            # Preserve the complete bounded failure set for one actionable hosted result.
+                            if reach['unreachableControls']: unreachable_report[f"{reach_game['id']}@{reach_viewport_id}"]=reach['unreachableControls'][:8]
+                            # Emit exact-commit after-pass evidence for independent human review of every governed surface.
+                            game_evidence(f"after-pass-control-reach-{reach_game['id']}-en-{reach_viewport_id}.png",reach_game['id'],['ready','control_reachability'],'en-US',reach_viewport_id)
+                    # Fail after the full sweep so the artifact and error identify every clipped route.
+                    assert not unreachable_report,unreachable_report
+                    # Restore the canonical lobby and primary viewport for the next independent case.
+                    page.set_viewport_size({'width':1920,'height':1080}); page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                # Execute one shard-owned full-catalog case under the reserved permanent test mapping.
+                run_case('BR-CONTROL-REACH-001',['CORE-015','UX-004','TEST-139'],control_reachability)
                 # Define catalog-wide repeat control, localization, real action, and visual acceptance. (UX-022, TEST-137)
                 def catalog_repeat_bet():
                     # Pin the exact forty-three games that lacked the pre-existing Roulette and Baccarat behavior.

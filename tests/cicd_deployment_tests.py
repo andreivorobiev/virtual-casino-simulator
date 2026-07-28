@@ -270,10 +270,10 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         runner = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "run_browser_tests")
         # Extract permanent literal IDs in deterministic source order.
         case_ids = re.findall(r"\brun_case\(\s*['\"](BR-[A-Za-z0-9\-]+)['\"]", ast.get_source_segment(source, runner))
-        # Require the current exact suite inventory and balanced 27/26/26/26 allocation.
-        self.assertEqual(len(case_ids), 105)
+        # Require the current exact suite inventory and balanced 27/27/26/26 allocation.
+        self.assertEqual(len(case_ids), 106)
         # Compute the same half-open contiguous partition used by the production runner.
-        ranges = [(0, 27), (27, 53), (53, 79), (79, 105)]
+        ranges = [(0, 27), (27, 54), (54, 80), (80, 106)]
         # Locate the literal affinity declaration at module scope.
         affinity_node = next(node for node in tree.body if isinstance(node, ast.Assign) and any(isinstance(target, ast.Name) and target.id == "BROWSER_CASE_AFFINITY_GROUPS" for target in node.targets))
         # Read only literal strings and tuples from the tracked declaration.
