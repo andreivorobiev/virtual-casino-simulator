@@ -32,19 +32,28 @@ slot after that independent context reaches the rendered login gate, waits for a
 and releases them together. This pre-barrier admission prevents browser startup from exhausting
 the disposable runner without weakening the synchronized 138-context gameplay requirement.
 
-Every task authenticates through the visible form, navigates through catalog UI, and invokes one
-bounded game-owned DOM driver for a complete action. The qualification supplies explicit
-one-action drivers for the fifteen catalog games that were absent from the inherited long-suite
-driver, while retaining the inherited driver for the other thirty-one games. Expected anonymous
-`GET /api/v2/me` 401 bootstrap and hydration probes are ignored only until the real rendered
-login succeeds; the same failure after authentication remains a red diagnostic. Backend calls
-after the run inspect only aggregate wallet, player-binding, ledger-identity, and action-key
-invariants.
+Every task submits from that already-rendered login gate; it does not issue a synchronized second
+navigation after barrier release. The formal profile applies one 90-second absolute login deadline,
+above the accepted failed run's 64.265-second maximum successful login latency, while ordinary
+browser profiles retain their existing per-operation timeouts. Fixed phase counters identify
+context setup, barrier, login-gate, locale, credentials, terms, login response, authenticated lobby,
+game navigation, game action, and context cleanup without user-level rows.
+
+Each task then navigates through catalog UI and invokes one bounded game-owned DOM driver for a
+complete action. The qualification supplies explicit one-action drivers for the fifteen catalog
+games that were absent from the inherited long-suite driver, while retaining the inherited driver
+for the other thirty-one games. Pai Gow waits for the initial Deal control to become enabled before
+the pointer action. Expected anonymous `GET /api/v2/me` 401 bootstrap and hydration probes are
+ignored only until the real rendered login succeeds; the same failure after authentication remains
+a red diagnostic. Backend calls after the run inspect only aggregate wallet, player-binding,
+ledger-identity, and action-key invariants. Each ledger query is player-scoped before its 100-row
+limit so a global Admin cap cannot hide a synthetic player's gameplay evidence.
 
 Terminal evidence contains no per-user rows. It reports aggregate login and gameplay p50, p95,
-p99, maximum, setup admission limit and peak, barrier population, peak gameplay, assigned and
-successful game counts, grouped browser/page/HTTP failures, duplicate identifiers, nonnegative
-wallets, pool counters, context closure, listener closure, and exact source commit.
+p99, maximum, fixed phase completion and failure counts, setup admission limit and peak, barrier
+population, peak gameplay, assigned and successful game counts, grouped browser/page/HTTP
+failures, duplicate identifiers, nonnegative wallets, pool counters, context closure, listener
+closure, and exact source commit.
 
 ## Exact catalog coverage
 

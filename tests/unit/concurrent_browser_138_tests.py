@@ -31,6 +31,7 @@ class ConcurrentBrowser138Tests(unittest.TestCase):
             "context_closed": True,
             "login_seconds": 0.1,
             "play_seconds": 0.2,
+            "completed_phases": list(concurrent_browser_138.FORMAL_PHASES),  # Model complete fixed-phase evidence.
             "browser_diagnostics": {"console_errors": {}, "page_errors": {}, "http_failures": {}},
         }
 
@@ -144,6 +145,135 @@ class ConcurrentBrowser138Tests(unittest.TestCase):
 
         # Run the listener-free admission scenario.
         asyncio.run(scenario())
+
+    # Prove the formal profile reuses the rendered gate and applies one bounded absolute deadline.
+    def test_formal_login_reuses_rendered_gate_with_bounded_deadline(self):
+        # Exercise only the wrapper contract without opening Chromium.
+        async def scenario():
+            # Build one fixed aggregate observer spy.
+            observer = mock.Mock()
+            # Replace the shared rendered-login helper with one awaitable spy.
+            with mock.patch.object(concurrent_browser_138.ui_50000, "login_through_ui", new=mock.AsyncMock()) as login:  # Replace the browser helper with one awaitable spy.
+                # Submit one already-rendered form through the formal wrapper.
+                await concurrent_browser_138.login_from_rendered_gate("page", "http://127.0.0.1", {"email": "synthetic@example.test", "password": "not-persisted"}, "en-US", Counter(), observer)
+                # Refuse the failed-run redundant navigation and preserve the fixed 90-second ceiling.
+                login.assert_awaited_once_with(
+                    "page",  # Preserve the already-rendered page.
+                    "http://127.0.0.1",  # Preserve the inert public base URL argument.
+                    {"email": "synthetic@example.test", "password": "not-persisted"},  # Preserve one in-memory synthetic user.
+                    "en-US",  # Preserve the fixed locale argument.
+                    mock.ANY,  # Accept the task-local aggregate activation counter.
+                    navigate=False,  # Refuse the synchronized second navigation.
+                    deadline_ms=90_000,  # Require the bounded formal absolute deadline.
+                    phase_observer=observer,  # Forward the fixed aggregate phase observer.
+                )
+
+        # Run the listener-free wrapper proof.
+        asyncio.run(scenario())
+
+    # Prove Pai Gow waits for deterministic initial-deal readiness before pointer activation.
+    def test_pai_gow_driver_waits_for_deal_readiness(self):
+        # Exercise the production driver with browser-free awaitable spies.
+        async def scenario():
+            # Preserve the exact order of readiness and pointer operations.
+            events = []
+
+            # Record one fixed readiness selector.
+            async def wait_any_enabled(_page, selectors):
+                # Append only the public selector under test.
+                events.append(("wait", selectors[0]))
+
+            # Record one fixed pointer selector.
+            async def click_control(_page, selector, _activated_counts):
+                # Append only the public selector under test.
+                events.append(("click", selector))
+
+            # Replace browser primitives while retaining the production branch.
+            with (
+                mock.patch.object(concurrent_browser_138.ui_50000, "wait_any_enabled", new=wait_any_enabled),  # Observe fixed readiness checks.
+                mock.patch.object(concurrent_browser_138.ui_50000, "click_control", new=click_control),  # Observe fixed pointer actions.
+                mock.patch.object(concurrent_browser_138.ui_50000, "inventory_controls", new=mock.AsyncMock()),  # Avoid browser inventory work.
+            ):
+                # Complete exactly one Pai Gow visible action.
+                handled = await concurrent_browser_138.play_catalog_gap_ui(
+                    object(),
+                    "pai_gow_poker",
+                    0,
+                    Counter(),
+                    Counter(),
+                )
+            # Require the production branch to own this catalog game.
+            self.assertTrue(handled)
+            # Require readiness before deal, house-way readiness before settlement, and terminal deal readiness.
+            self.assertEqual(
+                events,  # Compare the complete recorded readiness/action sequence.
+                [
+                    ("wait", '[data-action="deal"]'),  # Require initial readiness.
+                    ("click", '[data-action="deal"]'),  # Commit the ready initial deal.
+                    ("wait", '[data-action="house-way"]'),  # Require the rendered legal arrangement.
+                    ("click", '[data-action="house-way"]'),  # Settle through the ready arrangement.
+                    ("wait", '[data-action="deal"]'),  # Require terminal next-deal readiness.
+                ],
+            )
+
+        # Run the browser-free deterministic readiness proof.
+        asyncio.run(scenario())
+
+    # Prove ledger evidence filters by player before the bounded row limit.
+    def test_isolation_uses_player_scoped_ledger_routes(self):
+        # Build the exact formal synthetic population without real account identifiers.
+        users = [{"user_id": f"user-{index:03d}", "player_id": f"player-{index:03d}"} for index in range(concurrent_browser_138.USER_COUNT)]  # Build one deterministic public identity pair per formal user.
+
+        # Model only the two bounded evidence routes used after browser cleanup.
+        class FakeClient:
+            # Initialize one call inventory for route-scope assertions.
+            def __init__(self):
+                # Retain only public request paths.
+                self.paths = []
+
+            # Return deterministic player state and ledger rows.
+            def call(self, path):
+                # Preserve the public path for filter-before-limit proof.
+                self.paths.append(path)
+                # Resolve the Admin state route.
+                if path.startswith("/api/v2/admin/users/"):
+                    # Resolve the public synthetic user segment before its state suffix.
+                    user_id = path.rsplit("/", 2)[1]
+                    # Derive the synthetic ordinal from the public test id.
+                    ordinal = int(user_id.rsplit("-", 1)[1])
+                    # Return the matching player and one nonnegative fake-money balance.
+                    return {"player_id": f"player-{ordinal:03d}", "token_balance": 100}
+                # Resolve the player-scoped bounded ledger route.
+                if path.startswith("/api/v1/players/"):
+                    # Derive the synthetic player id from the path.
+                    player_id = path.split("/", 5)[4]
+                    # Return one unique gameplay row for this player.
+                    return {
+                        "ledger": [  # Return the standard bounded ledger collection.
+                            {
+                                "ledger_id": f"ledger-{player_id}",  # Preserve one unique immutable row identity.
+                                "transaction_type": "BET",  # Mark the row as gameplay rather than setup grant.
+                                "game": "baccarat",  # Preserve one public game identity.
+                                "details": {"ledger_action_key": f"action-{player_id}"},  # Preserve one unique action identity.
+                            }
+                        ]
+                    }
+                # Refuse any unexpected or global evidence route.
+                raise AssertionError(f"unexpected evidence path: {path}")
+
+        # Collect the production aggregate through the browser-free fake client.
+        client = FakeClient()
+        evidence = concurrent_browser_138.collect_isolation_evidence(client, users)
+        # Require one gameplay-ledger row for every synthetic player beyond the global hundred-row cap.
+        self.assertEqual(evidence["users_with_gameplay_ledger"], 138)
+        # Require no duplicate player, ledger, or action identities.
+        self.assertEqual(evidence["duplicate_player_id_count"], 0)
+        self.assertEqual(evidence["duplicate_ledger_id_count"], 0)
+        self.assertEqual(evidence["duplicate_action_key_count"], 0)
+        # Reject the global Admin ledger route that filtered only after its hundred-row cap.
+        self.assertFalse(any(path.startswith("/api/v1/admin/ledger") for path in client.paths))
+        # Require exactly one player-scoped bounded ledger request per synthetic account.
+        self.assertEqual(sum(path.startswith("/api/v1/players/") and path.endswith("/ledger?limit=100") for path in client.paths), 138)
 
     # Prove every accepted governed-run catalog gap has a bounded visible driver.
     def test_catalog_gap_drivers_cover_all_fifteen_games(self):
@@ -345,6 +475,10 @@ class ConcurrentBrowser138Tests(unittest.TestCase):
         self.assertEqual(report["qualification"]["test_id"], "BR-CONCURRENT-138-001")
         # Require exact aggregate peak concurrency.
         self.assertEqual(report["counts"]["peak_gameplay"], 73)
+        # Require every fixed phase to report exact aggregate completion.
+        self.assertEqual(set(report["phase_counts"]["completed"].values()), {138})
+        # Require the passing aggregate to retain zero failures in every fixed phase bucket.
+        self.assertEqual(set(report["phase_counts"]["failed"].values()), {0})
         # Reject accidental user-level result persistence.
         self.assertNotIn("results", report)
         # Reject credential-shaped fields anywhere in the public schema.

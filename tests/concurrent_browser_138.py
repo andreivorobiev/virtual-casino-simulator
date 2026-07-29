@@ -24,6 +24,12 @@ MINIMUM_USERS_PER_GAME = 3
 BARRIER_TIMEOUT_SECONDS = 180
 # Bound simultaneous context creation and shell navigation so the loopback runtime is observed under controlled admission.
 SETUP_ADMISSION_LIMIT = 12
+# Bound the formal post-barrier login to one absolute window above the observed 64.265-second hosted maximum.
+FORMAL_LOGIN_DEADLINE_MS = 90_000
+# Publish only fixed low-cardinality phases for aggregate completion and failure evidence.
+FORMAL_PHASES = ("context_setup", "barrier", "login_gate", "locale_selection", "credential_entry", "terms_acceptance", "login_response", "authenticated_lobby", "gameplay_navigation", "gameplay_action", "context_cleanup")  # Keep every aggregate phase fixed and low-cardinality.
+# Keep otherwise unclassified failures inside one fixed aggregate bucket.
+FORMAL_FAILURE_PHASES = (*FORMAL_PHASES, "unclassified")
 # Bind the formal report to permanent requirement and browser-test identities.
 REQUIREMENT_IDS = ("AUTH-001", "AUTH-002", "SESSION-001", "SESSION-005", "TEST-039", "TEST-042", "TEST-142", "CORE-021")
 # Reuse canonical game order so catalog growth changes the plan deterministically.
@@ -390,6 +396,12 @@ async def run_admitted_setup(admission, counters, counter_lock, operation):
                 counters["active_setup"] -= 1
 
 
+# Submit the already-rendered login form beneath the formal absolute deadline.
+async def login_from_rendered_gate(page, base_url, user, locale, activated_counts, phase_observer):
+    # Reuse the pre-barrier page and refuse the redundant synchronized navigation from the failed hosted run.
+    await ui_50000.login_through_ui(page, base_url, user, locale, activated_counts, navigate=False, deadline_ms=FORMAL_LOGIN_DEADLINE_MS, phase_observer=phase_observer)
+
+
 # Select one or more distinct enabled rendered controls through the established pointer helper.
 async def select_visible_controls(page, selector, count, ordinal, activated_counts):
     # Discover only currently enabled controls for the declared public selector.
@@ -442,6 +454,8 @@ async def play_catalog_gap_ui(page, game_id, ordinal, seen_counts, activated_cou
         await ui_50000.wait_any_enabled(page, ["[data-deal]"])
     # Complete one Pai Gow Poker deal through the rendered house-way decision.
     elif game_id == "pai_gow_poker":
+        # Require deterministic initial-deal readiness before the first rendered pointer action.
+        await ui_50000.wait_any_enabled(page, ['[data-action="deal"]'])
         # Deal the visible seven-card setting hand.
         await ui_50000.click_control(page, '[data-action="deal"]', activated_counts)
         # Require the game-owned automatic legal arrangement control.
@@ -477,13 +491,36 @@ async def run_user(browser, client, assignment, user, barrier, setup_admission, 
     # Start without browser resources so partial setup remains cleanable.
     context = None
     # Start one fail-closed aggregate result without account identifiers.
-    result = {
-        "game_id": assignment["game_id"],
-        "barrier_ready": False,
-        "login_ok": False,
-        "gameplay_ok": False,
-        "context_closed": False,
-    }
+    result = {"game_id": assignment["game_id"], "barrier_ready": False, "login_ok": False, "gameplay_ok": False, "context_closed": False, "completed_phases": []}  # Keep one sanitized task result with fixed aggregate flags only.
+    # Track the active fixed phase for one bounded terminal failure bucket.
+    current_phase = None
+    # Track completed fixed phases without publishing per-user activity rows.
+    completed_phases = set()
+
+    # Record one fixed phase transition for this task-local result.
+    def observe_phase(name, status):
+        # Rebind the task-local active phase after validating the fixed schema.
+        nonlocal current_phase
+        # Reject accidental selector, account, URL, or other high-cardinality phase labels.
+        if name not in FORMAL_PHASES:
+            # Keep the diagnostic independent of any private task state.
+            raise ValueError("formal login observer received an unknown phase")
+        # Mark the active phase when a governed operation starts.
+        if status == "started":
+            # Preserve only the fixed phase identity.
+            current_phase = name
+        # Mark a fixed phase complete after its terminal operation succeeds.
+        elif status == "completed":
+            # Add the fixed identity to the task-local aggregate set.
+            completed_phases.add(name)
+            # Clear the active phase only when the matching phase completed.
+            if current_phase == name:
+                # Avoid attributing later failures to an already-completed phase.
+                current_phase = None
+        # Refuse ungoverned status values before they reach the artifact.
+        else:
+            # Preserve one bounded schema diagnostic.
+            raise ValueError("formal login observer received an unknown status")
     # Collect only grouped credential-free browser diagnostics for this context.
     diagnostics = {"console_errors": Counter(), "page_errors": Counter(), "http_failures": Counter()}
     # Track whether this page has completed real form authentication for state-aware diagnostic filtering.
@@ -511,18 +548,26 @@ async def run_user(browser, client, assignment, user, barrier, setup_admission, 
             # Return the admitted page while its independent context remains alive at the barrier.
             return page
 
+        # Record bounded pre-barrier context setup.
+        observe_phase("context_setup", "started")
         # Prepare this shell beneath the controller-owned admission semaphore.
         page = await run_admitted_setup(setup_admission, counters, counter_lock, prepare_login_gate)
+        # Record terminal context setup after the rendered gate is visible.
+        observe_phase("context_setup", "completed")
         # Mark this exact independent context ready.
         result["barrier_ready"] = True
+        # Record synchronized barrier waiting.
+        observe_phase("barrier", "started")
         # Wait until all 138 contexts are ready and the controller releases them together.
         await barrier.wait()
+        # Record terminal barrier release.
+        observe_phase("barrier", "completed")
         # Start aggregate login timing immediately after the synchronized release.
         login_started = time.perf_counter()
         # Track rendered login controls without persisting individual control histories.
         activated_counts = Counter()
-        # Authenticate through the real localized form.
-        await ui_50000.login_through_ui(page, client.base_url, user, locale, activated_counts)
+        # Authenticate through the already-rendered real localized form without another navigation.
+        await login_from_rendered_gate(page, client.base_url, user, locale, activated_counts, observe_phase)
         # Close the anonymous diagnostic window only after the real login flow succeeds.
         authentication_state["authenticated"] = True
         # Preserve only the successful aggregate latency sample.
@@ -541,8 +586,14 @@ async def run_user(browser, client, assignment, user, barrier, setup_admission, 
         seen_counts = Counter()
         # Start protected gameplay concurrency accounting.
         try:
+            # Record catalog-navigation work independently from the game-owned action.
+            observe_phase("gameplay_navigation", "started")
             # Navigate through the catalog-owned UI route.
             await ui_50000.navigate_to_game(page, assignment["game_id"], activated_counts, assignment["user_index"])
+            # Record terminal catalog navigation after the game route is ready.
+            observe_phase("gameplay_navigation", "completed")
+            # Record the visible game-action phase.
+            observe_phase("gameplay_action", "started")
             # Try the exact fifteen accepted catalog-gap drivers before the established long-harness strategy.
             gap_completed = await play_catalog_gap_ui(
                 page,
@@ -555,6 +606,8 @@ async def run_user(browser, client, assignment, user, barrier, setup_admission, 
             if not gap_completed:
                 # Complete one existing game-owned action through rendered controls.
                 await ui_50000.play_game_ui(page, assignment["game_id"], assignment["user_index"], seen_counts, activated_counts)
+            # Record terminal visible game action.
+            observe_phase("gameplay_action", "completed")
             # Preserve only the successful aggregate gameplay latency sample.
             result["play_seconds"] = time.perf_counter() - play_started
             # Record one terminal UI play.
@@ -569,14 +622,22 @@ async def run_user(browser, client, assignment, user, barrier, setup_admission, 
     except Exception as error:
         # Retain no user, credential, URL query, path, or raw log detail.
         result["error"] = safe_error(error)
+        # Preserve only the active fixed phase or one bounded fallback bucket.
+        result["failure_phase"] = current_phase or "unclassified"
     # Always destroy this independent browser context.
     finally:
         # Close cookies, cache, pages, and session storage when context creation succeeded.
         if context is not None:
+            # Record the fixed cleanup phase before releasing the independent context.
+            observe_phase("context_cleanup", "started")
             # Release the exact test-owned browser context.
             await context.close()
             # Record successful context cleanup.
             result["context_closed"] = True
+            # Record terminal context cleanup.
+            observe_phase("context_cleanup", "completed")
+        # Convert the task-local set into fixed canonical order for aggregate counting.
+        result["completed_phases"] = [phase for phase in FORMAL_PHASES if phase in completed_phases]
         # Convert diagnostic counters to deterministic JSON mappings.
         result["browser_diagnostics"] = {name: dict(counter.most_common()) for name, counter in diagnostics.items()}
     # Return one sanitized task result without account identifiers.
@@ -607,8 +668,8 @@ def collect_isolation_evidence(client, users):
         matching_players += int(state["player_id"] == user["player_id"])
         # Count nonnegative synthetic wallet state.
         nonnegative_balances += int(float(state["token_balance"]) >= 0)
-        # Read this player's bounded ledger through the setup-only Admin evidence API.
-        rows = client.call(f"/api/v1/admin/ledger?player_id={user['player_id']}&limit=100")["ledger"]
+        # Read this player's bounded ledger through the player-filtered-before-limit evidence API.
+        rows = client.call(f"/api/v1/players/{user['player_id']}/ledger?limit=100")["ledger"]
         # Keep immutable ledger identifiers in memory only for duplicate detection.
         ledger_ids.extend(str(row.get("ledger_id") or "") for row in rows if row.get("ledger_id"))
         # Exclude the one setup grant before requiring gameplay ledger evidence.
@@ -645,6 +706,10 @@ def aggregate_results(assignments, results, barrier, counters, isolation, pool, 
     successful_by_game = Counter(row["game_id"] for row in results if row.get("gameplay_ok"))
     # Group bounded task failure signatures.
     failure_counts = Counter(row.get("error") for row in results if row.get("error"))
+    # Count completed fixed phases without retaining user-level rows.
+    completed_phase_counts = Counter(phase for row in results for phase in row.get("completed_phases", ()))
+    # Count the terminal fixed failure phase for each failed task.
+    failed_phase_counts = Counter(row.get("failure_phase", "unclassified") for row in results if row.get("error"))
     # Merge grouped browser diagnostics without retaining user-level rows.
     diagnostics = {"console_errors": Counter(), "page_errors": Counter(), "http_failures": Counter()}
     # Visit every terminal context result.
@@ -717,6 +782,10 @@ def aggregate_results(assignments, results, barrier, counters, isolation, pool, 
         "latency": {"login": latency_summary(login_latencies), "gameplay": latency_summary(play_latencies)},  # Publish bounded latency summaries.
         "browser_diagnostics": {name: dict(counter.most_common()) for name, counter in diagnostics.items()},  # Publish grouped safe failures.
         "failure_counts": dict(failure_counts.most_common()),  # Publish bounded safe exception signatures.
+        "phase_counts": {
+            "completed": {phase: completed_phase_counts.get(phase, 0) for phase in FORMAL_PHASES},  # Publish fixed completion counts.
+            "failed": {phase: failed_phase_counts.get(phase, 0) for phase in FORMAL_FAILURE_PHASES},  # Publish fixed failure counts.
+        },
         "isolation": isolation,  # Publish aggregate wallet and ledger invariants.
         "pool": pool,  # Publish fixed low-cardinality pool evidence.
         "pool_preflight": pool_preflight,  # Preserve the exact-source 1/2/4/8 packet.

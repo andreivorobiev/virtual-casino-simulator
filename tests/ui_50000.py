@@ -816,27 +816,104 @@ def create_synthetic_user(client, shard_label, run_id, locale):
 
 
 # Log one synthetic user in through the rendered authentication form.
-async def login_through_ui(page, base_url, user, locale, activated_counts):
-    CONTROL_NAMESPACE.set("auth")  # Attribute the one-time rendered login controls to authentication lifecycle evidence.
-    await page.goto(base_url, wait_until="domcontentloaded", timeout=SETUP_TIMEOUT_MS)  # Load the public login UI.
-    locale_select = page.get_by_test_id("auth-locale-select")  # Resolve the auth language selector.
-    await locale_select.select_option(locale, timeout=SETUP_TIMEOUT_MS)  # Select the shard locale through the UI.
-    activated_counts[await control_signature(locale_select)] += 1  # Count the visible locale change.
-    await fill_control(page.get_by_test_id("login-email"), user["email"], activated_counts, SETUP_TIMEOUT_MS)  # Enter the synthetic email after the locale rerender.
-    await fill_control(page.get_by_test_id("login-password"), user["password"], activated_counts, SETUP_TIMEOUT_MS)  # Enter the local-only password after the locale rerender.
-    terms = page.get_by_test_id("login-terms-check")  # Resolve the fake-money acknowledgement.
-    await terms.check(timeout=SETUP_TIMEOUT_MS)  # Accept simulator terms through the form.
-    activated_counts[await control_signature(terms)] += 1  # Count the successful checkbox activation.
-    async with page.expect_response(lambda response: response.url.endswith("/api/v2/auth/login") and response.request.method == "POST", timeout=SETUP_TIMEOUT_MS) as response_info:  # Observe the form-owned login request.
-        await click_locator(page.get_by_test_id("login-submit"), activated_counts, SETUP_TIMEOUT_MS)  # Submit through the rendered button.
-    response = await response_info.value  # Resolve the authentication response.
-    if response.status >= 400:  # Fail promptly on rejected login.
-        raise AssertionError(f"UI login endpoint returned HTTP {response.status}")  # Preserve status without credentials.
-    await page.get_by_test_id("lobby").wait_for(state="visible", timeout=SETUP_TIMEOUT_MS)  # Require the authenticated catalog.
-    browser_identity = await page.evaluate("window.CasinoCurrentUser?.user?.email || ''")  # Read the UI-bound identity only.
-    if str(browser_identity).lower() != user["email"].lower():  # Detect session leakage or incorrect binding.
-        raise AssertionError("browser identity did not match the synthetic shard user")  # Fail without exposing identity values.
-    CONTROL_NAMESPACE.set("shell")  # Attribute the authenticated lobby and subsequent navigation to the shared shell.
+async def login_through_ui(page, base_url, user, locale, activated_counts, *, navigate=True, deadline_ms=None, phase_observer=None):  # Preserve ordinary callers while exposing formal-only gate reuse, deadline, and phase seams.
+    # Preserve the ordinary per-operation timeout unless a formal profile supplies one absolute deadline.
+    deadline_at = None if deadline_ms is None else time.perf_counter() + (int(deadline_ms) / 1000)
+
+    # Publish fixed low-cardinality phase transitions only when the caller supplies an aggregate observer.
+    def observe_phase(name, status):
+        # Avoid changing ordinary browser evidence when no formal observer is configured.
+        if phase_observer is not None:
+            # Forward only the caller-owned fixed phase and status labels.
+            phase_observer(name, status)
+
+    # Calculate the remaining absolute formal deadline or retain the established ordinary timeout.
+    def operation_timeout():
+        # Keep ordinary long-suite behavior unchanged outside the formal concurrent profile.
+        if deadline_at is None:
+            # Return the established setup timeout for each independent operation.
+            return SETUP_TIMEOUT_MS
+        # Convert the remaining wall time into the positive millisecond value expected by Playwright.
+        remaining_ms = int((deadline_at - time.perf_counter()) * 1000)
+        # Fail with one bounded diagnostic when the formal aggregate deadline is exhausted.
+        if remaining_ms <= 0:
+            # Avoid leaking account, page, URL, or selector state in the terminal artifact.
+            raise TimeoutError("formal login deadline exceeded")
+        # Preserve at least one millisecond for the next already-started formal phase.
+        return max(1, remaining_ms)
+
+    # Attribute the one-time rendered login controls to authentication lifecycle evidence.
+    CONTROL_NAMESPACE.set("auth")
+    # Load the public login UI only for callers that have not already rendered the gate.
+    if navigate:
+        # Record the optional shell-navigation phase for aggregate formal diagnostics.
+        observe_phase("shell_navigation", "started")
+        # Load the public login UI through the established ordinary or remaining formal timeout.
+        await page.goto(base_url, wait_until="domcontentloaded", timeout=operation_timeout())
+        # Record terminal shell-navigation completion without URL or account identity.
+        observe_phase("shell_navigation", "completed")
+    # Record the fixed login-gate phase before inspecting the existing rendered shell.
+    observe_phase("login_gate", "started")
+    # Require the rendered login gate even when a formal caller reuses its pre-barrier page.
+    await page.get_by_test_id("login-gate").wait_for(state="visible", timeout=operation_timeout())
+    # Record successful gate reuse before localized form mutation begins.
+    observe_phase("login_gate", "completed")
+    # Record the localized-selector phase.
+    observe_phase("locale_selection", "started")
+    # Resolve the auth language selector.
+    locale_select = page.get_by_test_id("auth-locale-select")
+    # Select the shard locale through the UI.
+    await locale_select.select_option(locale, timeout=operation_timeout())
+    # Count the visible locale change.
+    activated_counts[await control_signature(locale_select)] += 1
+    # Record the completed localized-selector phase.
+    observe_phase("locale_selection", "completed")
+    # Record the credential-entry phase without publishing account data.
+    observe_phase("credential_entry", "started")
+    # Enter the synthetic email after the locale rerender.
+    await fill_control(page.get_by_test_id("login-email"), user["email"], activated_counts, operation_timeout())
+    # Enter the local-only password after the locale rerender.
+    await fill_control(page.get_by_test_id("login-password"), user["password"], activated_counts, operation_timeout())
+    # Record terminal credential entry without retaining values.
+    observe_phase("credential_entry", "completed")
+    # Record the simulator-terms phase.
+    observe_phase("terms_acceptance", "started")
+    # Resolve the fake-money acknowledgement.
+    terms = page.get_by_test_id("login-terms-check")
+    # Accept simulator terms through the form.
+    await terms.check(timeout=operation_timeout())
+    # Count the successful checkbox activation.
+    activated_counts[await control_signature(terms)] += 1
+    # Record terminal terms acceptance.
+    observe_phase("terms_acceptance", "completed")
+    # Record the rendered login-response phase.
+    observe_phase("login_response", "started")
+    # Observe the form-owned login request beneath the same absolute formal deadline.
+    async with page.expect_response(lambda response: response.url.endswith("/api/v2/auth/login") and response.request.method == "POST", timeout=operation_timeout()) as response_info:  # Observe the form-owned login request beneath the same absolute formal deadline.
+        # Submit through the rendered button.
+        await click_locator(page.get_by_test_id("login-submit"), activated_counts, operation_timeout())
+    # Resolve the authentication response.
+    response = await response_info.value
+    # Fail promptly on rejected login.
+    if response.status >= 400:
+        # Preserve status without credentials.
+        raise AssertionError(f"UI login endpoint returned HTTP {response.status}")
+    # Record successful form response before authenticated shell hydration.
+    observe_phase("login_response", "completed")
+    # Record the authenticated-lobby phase.
+    observe_phase("authenticated_lobby", "started")
+    # Require the authenticated catalog.
+    await page.get_by_test_id("lobby").wait_for(state="visible", timeout=operation_timeout())
+    # Read the UI-bound identity only.
+    browser_identity = await page.evaluate("window.CasinoCurrentUser?.user?.email || ''")
+    # Detect session leakage or incorrect binding.
+    if str(browser_identity).lower() != user["email"].lower():
+        # Fail without exposing identity values.
+        raise AssertionError("browser identity did not match the synthetic shard user")
+    # Record terminal authenticated-shell readiness.
+    observe_phase("authenticated_lobby", "completed")
+    # Attribute the authenticated lobby and subsequent navigation to the shared shell.
+    CONTROL_NAMESPACE.set("shell")
 
 
 # Save one JSON artifact atomically enough for local test review.
