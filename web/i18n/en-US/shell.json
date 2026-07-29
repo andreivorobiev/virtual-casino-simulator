@@ -211,6 +211,8 @@
   "whatsNew.entry.0_9_5_26.body": "This release prices the inside wager by its visible spread and keeps equal or adjacent cards pass-only.",
   "whatsNew.entry.0_9_5_27.title": "Reachable game controls",
   "whatsNew.entry.0_9_5_27.body": "This release verifies that enabled controls stay reachable in every registered game at both governed desktop sizes.",
+  "whatsNew.entry.0_9_5_28.title": "Full-catalog load proof",
+  "whatsNew.entry.0_9_5_28.body": "This release proves three simultaneous players complete a governed action in every registered game with exact isolation and cleanup.",
   "replay.title": "Round replay",
   "replay.empty": "No recent rounds to replay.",
   "replay.retention": "Replays are kept for {days} days.",

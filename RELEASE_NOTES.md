@@ -1,4 +1,18 @@
-# Virtual Casino Simulator v0.9.5.27 Release Notes
+# Virtual Casino Simulator v0.9.5.28 Release Notes
+
+## Governed 138-browser full-catalog qualification
+
+- Proves exactly 138 simultaneous users across all 46 registered games, with exactly three assigned and three successful users per game.
+- Requires barrier, login, navigation, and gameplay completion for all 138 contexts and records fixed game, phase, and action-state attribution.
+- Verifies 136/136 committed wager actions through exact player-scoped ledger evidence while two legitimate no-wager actions produce no fabricated game ledger rows.
+- Proves 138 unique matching players, zero duplicate player, action, or ledger identifiers, and nonnegative balances.
+- Exercises disposable MySQL concurrency 1/2/4/8 with zero errors, timeouts, residual leases, or waiters.
+- Hardens concurrent autoplay registry updates, Keno lazy-module delivery, Double Bonus Deal/Draw readiness, and client-log peer-disconnect handling.
+- Keeps browser diagnostics, autoplay 404s, and governed client-log 500s at zero while closing all 138 contexts, the listener, and the job container.
+- Retains exact immutable v0.9.5.27 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation.
+
+## Prior v0.9.5.27 all-game desktop control reachability
 
 ## All-game desktop control reachability
 
