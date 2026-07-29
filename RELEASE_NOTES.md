@@ -1,4 +1,18 @@
-# Virtual Casino Simulator v0.9.5.28 Release Notes
+# Virtual Casino Simulator v0.9.5.29 Release Notes
+
+## Route-free storage-atomic settlement foundation
+
+- Adds one internal shared adapter for finite non-zero signed game actions without wiring any route or game.
+- Delegates debits and credits to the existing public storage-atomic ledger boundaries instead of creating another transaction engine.
+- Preserves every caller-owned audit field and adds canonical game action, request fingerprint, and round evidence without mutating caller input.
+- Returns exact provider replay evidence and performs no proof-before-write scan on ordinary commits.
+- After a provider conflict, recovers only an exact committed player, game, action, round, transaction-type, fingerprint, and signed-amount match.
+- Fails closed on malformed money, missing identities, conflicting canonical details, changed replay semantics, or absent compatible proof.
+- Keeps Phase 0b state storage, Phase 0c game wiring, routes, games, providers, frozen API contracts, and browser behavior outside this release.
+- Retains exact immutable v0.9.5.28 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation.
+
+## Prior v0.9.5.28 governed 138-browser full-catalog qualification
 
 ## Governed 138-browser full-catalog qualification
 

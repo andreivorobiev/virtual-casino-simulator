@@ -1,33 +1,36 @@
 # Codex status
 
-Written by Codex only. Claude reads this; do not edit it. Last updated 2026-07-29T04:55:00Z.
+Written by Codex only. Claude reads this; do not edit it. Last updated 2026-07-29T05:17:00Z.
 
 ## Current branch / active Codex work
 
-- `codex/430-settlement-core` reconciles preserved checkpoint `6eb83259` with terminal-green v0.9.5.28 main `49bbdcde`.
-- Scope is only the independently revertible #430 Phase 0a route-free settlement foundation plus its governed requirement mapping and central listener-free registration.
-- Integration Queue remains the sole merge/release/deploy executor; this branch will publish a draft PR only.
+- PR #507 merged normally at exact protected main `157863f1` after its exact-current source, governance, hosted-check, and zero-review audit.
+- `codex/release-v0.9.5.29` serializes the accepted #430 Phase 0a settlement foundation as one unique immutable patch release.
+- Deployed v0.9.5.28 remains live until v0.9.5.29 passes protected publication and trusted owner/static terminal-green deployment.
+- No later PR may merge during this release/deployment hold.
 
 ## Live queue snapshot
 
-- #430 Phase 0a is the highest actionable queue item after an independent Integration Queue guard.
-- Higher P1 #471 is blocked by its missing stack rank and stale/conflicting #473; #433 rank071 remains owner-policy blocked.
-- #450 and every Claude-owned or other-worker substantive path remain excluded.
+- #507 owns only the accepted route-free shared settlement adapter and its governed listener-free evidence.
+- Worker A may continue #501 controller qualification in parallel but cannot ready, merge, release, or deploy it during this hold.
+- #503 remains higher-priority for the next integration slot only if it returns exact-current and fully repaired after v0.9.5.29 deployment.
+- #450 and every other unmerged proposal remain excluded.
 
 ## Requirement / version claims
 
-- `GAMECORE-003` is allocated to the route-free signed-action settlement adapter; no generic TEST ID is allocated.
-- Core advances `9.27.3` to `9.28.0` because AGENTS.md classifies compatible additions as minor changes; tests and docs advance `1.64.21` to `1.64.22`.
-- Packaged application `0.9.5.28`, application `9.53.15`, contracts `1.49.10`, tooling `1.21.9`, and every unrelated module remain unchanged.
+- No permanent identifier is created, deleted, or reused by this release.
+- The accepted #507 change owns `GAMECORE-003` and central case `API-GAMECORE-002`; no generic TEST ID was allocated.
+- v0.9.5.29 owns packaged application `0.9.5.29`, application `9.53.16`, tests/docs `1.64.23`, and contracts `1.49.11`.
+- Core `9.28.0`, tooling `1.21.9`, and every unrelated module are preserved from the accepted merge.
 
 ## File claims / collision notes
 
-- Substantive ownership is limited to `casino/core/settlement.py` and `tests/settlement_core_tests.py`.
-- Governed integration is limited to the `GAMECORE-003` requirement, `API-GAMECORE-002` central registration, core/tests/docs descriptors and manifest entries, generated requirements documentation, and this Codex-owned coordination record.
-- Routes, games, Phase 0b/0c, provider implementations, public deployment, #441, #450, and Claude/other-worker branches remain untouched.
+- Release-owned changes are limited to packaged version surfaces, compatibility and rollback provenance, PWA/cache identity, release tests, release docs, generated governance, and coordination records.
+- #501, #503, #450, Phase 0b/0c, routes, games, provider implementations, production workflow, DNS, ingress, secrets, signup, OAuth, mail, and invitation files are excluded.
+- Any later proposal overlapping shared docs or manifests must reconcile and recalculate versions from terminal-green v0.9.5.29.
 
 ## Decisions / handbacks
 
-- The adapter delegates one signed movement to the existing public storage-atomic `debit_once` or `credit_once` boundary; it does not create a new provider or transaction engine.
-- Canonical game action, request fingerprint, and round evidence are additive and caller audit details remain unchanged.
-- Provider replay is returned exactly; post-conflict recovery accepts only a fully compatible committed row and otherwise preserves the original conflict.
+- The accepted adapter delegates one signed movement to the existing public storage-atomic `debit_once` or `credit_once` boundary and creates no provider or transaction engine.
+- Canonical game action, request fingerprint, and round evidence are additive; provider replay remains exact and incompatible recovery fails closed.
+- Exact immutable v0.9.5.28 remains the application-only rollback predecessor; MySQL schema stays 2 and database rollback is prohibited.
