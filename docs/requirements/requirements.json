@@ -7617,14 +7617,14 @@
     {
       "id": "HILO-001",
       "module": "Hi-Lo",
-      "description": "Hi-Lo compares two standard-card ranks with ace high and suits ignored, returning 2x for a correct prediction, 1x for an equal-rank refund, and 0 for an incorrect prediction.",
+      "description": "Hi-Lo compares two standard-card ranks with ace high and suits ignored, using the server-owned visible-rank paytable for a correct prediction, a 1x equal-rank refund, and a 0x incorrect result.",
       "status": "PASS",
       "api_tests": ["API-HILO-001"],
       "browser_tests": ["BR-HILO-001"],
-      "implementation_files": ["casino/games/hi_lo/engine.py", "web/games/hi_lo.js"],
+      "implementation_files": ["casino/games/hi_lo/engine.py", "casino/games/hi_lo/service.py", "contracts/openapi/hi_lo.v1.yaml", "web/games/hi_lo.js", "tests/games/hi_lo/test_economics.py"],
       "introduced_in": "game-expansion-hi-lo",
-      "changed_in": "game-expansion-hi-lo",
-      "notes": "Allocated by GitHub issue #77 for issue #85; focused and real-backend tests cover ace-high rank-only comparison and every correct, equal-rank, and incorrect settlement class."
+      "changed_in": "issue-406-hi-lo-rank-pricing",
+      "notes": "Issue #406 retains the deprecated frozen-v1 correct-return scalar at 2 while an additive server-owned 0.96x-through-1.93x rank table becomes authoritative for settlement and visible EN/RU rules."
     },
     {
       "id": "HILO-002",
@@ -7647,8 +7647,8 @@
       "browser_tests": [],
       "implementation_files": ["casino/games/hi_lo/service.py", "casino/core/ledger.py", "tests/games/hi_lo/test_api.py", "tests/run_tests.py"],
       "introduced_in": "game-expansion-hi-lo",
-      "changed_in": "game-expansion-hi-lo",
-      "notes": "Game code never mutates balances directly; exact deal and guess retries recover immutable ledger proof while changed wagers or directions fail closed."
+      "changed_in": "issue-406-hi-lo-rank-pricing",
+      "notes": "Game code never mutates balances directly; exact deal and guess retries recover immutable ledger proof, rank-priced credits retain the authoritative multiplier, and changed wagers or directions fail closed."
     },
     {
       "id": "HILO-004",
@@ -7671,8 +7671,8 @@
       "browser_tests": ["BR-CATALOG-DISCOVERY-001", "BR-HILO-001"],
       "implementation_files": ["modules/hi_lo.json", "modules/module-manifest.json", "contracts/compatibility/module-api-matrix.json", "tests/game_drivers/hi_lo.py", "tests/visual/visual_matrix.json", "tests/run_tests.py"],
       "introduced_in": "game-expansion-hi-lo",
-      "changed_in": "game-expansion-hi-lo",
-      "notes": "The descriptor uses sort order 120 and the normalized tests.game_drivers.hi_lo:play driver reference released by issue #77."
+      "changed_in": "issue-406-hi-lo-rank-pricing",
+      "notes": "The descriptor uses sort order 120; the normalized tests.game_drivers.hi_lo:play driver verifies fractional-wager settlement against the published rank table at ledger precision."
     },
     {
       "id": "TCP-001",

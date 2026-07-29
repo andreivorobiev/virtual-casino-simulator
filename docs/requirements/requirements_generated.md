@@ -27,7 +27,7 @@ Historical source baseline: 9.1.0
 - big_six_wheel: 1.1.0
 - red_dog: 1.1.0
 - dragon_tiger: 1.1.0
-- hi_lo: 1.1.0
+- hi_lo: 1.1.1
 - three_card_poker: 1.1.0
 - jacks_or_better_video_poker: 1.1.0
 - deuces_wild_video_poker: 1.1.0
@@ -50,9 +50,9 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.0
 - pai_gow_poker: 1.1.0
 - teen_patti: 1.1.0
-- tests: 1.64.27
-- docs: 1.64.27
-- contracts: 1.49.14
+- tests: 1.64.28
+- docs: 1.64.28
+- contracts: 1.49.15
 - tooling: 1.21.10
 - commenting_policy: 1.0.0
 - color_wheel: 1.1.0
@@ -539,7 +539,7 @@ Historical source baseline: 9.1.0
 - **DT-003** (Dragon Tiger) - PASS: Dragon Tiger wager debits and settlement credits use the shared ledger exactly once under stable action identifiers and immutable request fingerprints.
 - **DT-004** (Application) - PASS: The Dragon Tiger surface and persistent shared shell provide complete English and Russian copy and remain responsive, accessible, and reduced-motion safe across required viewports.
 - **DT-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery automatically include Dragon Tiger with requirement, module, version, and visual evidence traceability.
-- **HILO-001** (Hi-Lo) - PASS: Hi-Lo compares two standard-card ranks with ace high and suits ignored, returning 2x for a correct prediction, 1x for an equal-rank refund, and 0 for an incorrect prediction.
+- **HILO-001** (Hi-Lo) - PASS: Hi-Lo compares two standard-card ranks with ace high and suits ignored, using the server-owned visible-rank paytable for a correct prediction, a 1x equal-rank refund, and a 0x incorrect result.
 - **HILO-002** (Hi-Lo) - PASS: Authenticated sessions own isolated reload-safe Hi-Lo active decisions, recent rounds, and canonical route restoration.
 - **HILO-003** (Hi-Lo) - PASS: Hi-Lo wager debits, equal-rank refunds, and winning payouts use the shared ledger exactly once under stable action identifiers and immutable request fingerprints.
 - **HILO-004** (Application) - PASS: The Hi-Lo surface provides complete English and Russian copy and remains responsive, accessible, and reduced-motion safe across required viewports and decision outcomes.

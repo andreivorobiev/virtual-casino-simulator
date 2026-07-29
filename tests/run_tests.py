@@ -5680,6 +5680,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.wait_for_function("() => document.querySelector('.hilo-phase')?.textContent === 'Ready to deal'",timeout=5000)
                     # Require the canonical route, complete English title, and initial ready phase.
                     assert page.url.split('?',1)[0].endswith('/games/hi_lo') and page.locator('.hilo-header h1').inner_text()=='Hi-Lo' and page.locator('.hilo-phase').inner_text()=='Ready to deal'
+                    # Require the exact authoritative range as two-decimal player-facing tokens.
+                    hi_lo_rules=page.locator('.hilo-rules').inner_text(); assert '0.96x' in hi_lo_rules and '1.93x' in hi_lo_rules
                     # Define every named viewport required by the Hi-Lo visual-matrix row.
                     required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
                     # Define a helper that captures one registered live state in both supported locales and every governed viewport.
@@ -5692,6 +5694,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             page.wait_for_timeout(100)
                             # Verify the mounted game title belongs to the selected locale.
                             assert page.locator('.hilo-header h1').inner_text()==('Hi-Lo' if locale=='en-US' else 'Больше — меньше')
+                            # Require the same exact server-owned price range in both governed locales.
+                            localized_rules=page.locator('.hilo-rules').inner_text(); assert '0.96x' in localized_rules and '1.93x' in localized_rules,{'locale':locale,'rules':localized_rules}
                             # Inspect the mounted Russian game for representative English-copy leakage.
                             if locale=='ru-RU':
                                 # Read only the game-owned surface so shell brand names do not create false positives.
@@ -5718,8 +5722,12 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                     page.locator('[data-action="deal"]').click(); page.wait_for_function("() => document.querySelector('.hilo-phase')?.textContent === 'Choose higher or lower'",timeout=5000)
                     # Require the protected next card and both documented choice controls during the active decision.
                     assert page.get_by_text('Face-down playing card',exact=True).count()==0 and page.locator('[data-guess="higher"]').is_enabled() and page.locator('[data-guess="lower"]').is_enabled()
+                    # Read the active card and its authoritative price through the same authenticated frozen-v1 response.
+                    active_price=page.evaluate("""async () => { const payload=await (await fetch('/api/v1/games/hi-lo/state')).json(); if(!payload.ok) throw new Error(payload.error?.message || 'Hi-Lo state failed'); const card=payload.data.state.active_round.current_card; return payload.data.rules.correct_paytable[card.slice(0,-1)]; }""")
+                    # Require the visible decision copy to show that exact server price with two decimal places.
+                    assert f'{active_price:.2f}x' in page.get_by_test_id('hi-lo-current-return').inner_text()
                     # Capture the higher-or-lower choice state in both locales and every required viewport.
-                    localized_evidence('choose',['choose_higher_or_lower'])
+                    localized_evidence('choose',['choose_higher_or_lower','rank_priced_choice'])
                     # Complete the mounted choice so later direct public actions start without an active-round conflict.
                     page.locator('[data-guess="higher"]').click(); page.wait_for_function("() => !['Choose higher or lower',''].includes(document.querySelector('.hilo-phase')?.textContent || '')",timeout=5000)
                     # Define a bounded real-backend search for one documented settlement class.
@@ -5727,27 +5735,29 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Retain real entropy while giving the one-in-thirteen tie state ample opportunity.
                         for attempt in range(240):
                             # Deal and settle one public session-bound round without any test-only seed seam.
-                            result=page.evaluate("""async ({target,attempt}) => { const call=async(path,body)=>{ const response=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); const payload=await response.json(); if(!payload.ok) throw new Error(payload.error?.message || 'Hi-Lo evidence action failed'); return payload.data; }; const deal=await call('/api/v1/games/hi-lo/rounds',{action_id:`browser-hi-lo-${target}-${attempt}-deal`,wager:1}); return (await call(`/api/v1/games/hi-lo/rounds/${encodeURIComponent(deal.round.round_id)}/guesses`,{action_id:`browser-hi-lo-${target}-${attempt}-guess`,guess:'higher'})).round; }""",{'target':target,'attempt':attempt})
+                            result=page.evaluate("""async ({target,attempt}) => { const call=async(path,body)=>{ const response=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); const payload=await response.json(); if(!payload.ok) throw new Error(payload.error?.message || 'Hi-Lo evidence action failed'); return payload.data; }; const deal=await call('/api/v1/games/hi-lo/rounds',{action_id:`browser-hi-lo-${target}-${attempt}-deal`,wager:1}); return await call(`/api/v1/games/hi-lo/rounds/${encodeURIComponent(deal.round.round_id)}/guesses`,{action_id:`browser-hi-lo-${target}-${attempt}-guess`,guess:'higher'}); }""",{'target':target,'attempt':attempt})
                             # Return immediately when the registered shuffled backend produces the requested class.
-                            if result['outcome']==target:
-                                # Preserve the exact terminal round for payout assertions.
+                            if result['round']['outcome']==target:
+                                # Preserve the exact terminal round and authoritative rule table for payout assertions.
                                 return result
                         # Fail the browser case if the bounded real-backend search never reaches the governed state.
                         raise AssertionError(f'Hi-Lo did not produce {target} within 240 rounds')
                     # Find and mount one real correct prediction.
-                    correct_round=find_outcome('correct'); page.reload(wait_until='networkidle'); page.get_by_test_id('hi-lo').wait_for(timeout=5000)
-                    # Require the documented 2x return before recording correct-result evidence.
-                    assert correct_round['payout']==correct_round['wager']*2 and correct_round['net']==correct_round['wager']
+                    correct_result=find_outcome('correct'); correct_round=correct_result['round']; page.reload(wait_until='networkidle'); page.get_by_test_id('hi-lo').wait_for(timeout=5000)
+                    # Select the exact total-return price published for the visible current-card rank.
+                    correct_price=correct_result['rules']['correct_paytable'][correct_round['current_card'][:-1]]
+                    # Require ledger-rounded rank pricing before recording correct-result evidence.
+                    assert correct_round['payout']==round(correct_round['wager']*correct_price,2) and correct_round['net']==round(correct_round['payout']-correct_round['wager'],2)
                     # Capture correct prediction evidence in both locales and every required viewport.
                     localized_evidence('correct',['correct_guess'])
                     # Find and mount one real incorrect prediction.
-                    incorrect_round=find_outcome('incorrect'); page.reload(wait_until='networkidle'); page.get_by_test_id('hi-lo').wait_for(timeout=5000)
+                    incorrect_round=find_outcome('incorrect')['round']; page.reload(wait_until='networkidle'); page.get_by_test_id('hi-lo').wait_for(timeout=5000)
                     # Require the documented zero return before recording incorrect-result evidence.
                     assert incorrect_round['payout']==0 and incorrect_round['net']==-incorrect_round['wager']
                     # Capture incorrect prediction evidence in both locales and every required viewport.
                     localized_evidence('incorrect',['incorrect_guess'])
                     # Find and mount one real equal-rank refund.
-                    tie_round=find_outcome('tie'); page.reload(wait_until='networkidle'); page.get_by_test_id('hi-lo').wait_for(timeout=5000)
+                    tie_round=find_outcome('tie')['round']; page.reload(wait_until='networkidle'); page.get_by_test_id('hi-lo').wait_for(timeout=5000)
                     # Require the documented 1x refund and zero net before recording tie evidence.
                     assert tie_round['payout']==tie_round['wager'] and tie_round['net']==0
                     # Capture equal-rank refund evidence in both locales and every required viewport.

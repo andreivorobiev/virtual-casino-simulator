@@ -21,6 +21,51 @@ GUESSES = ("higher", "lower")
 RANK_VALUES = {rank: value for value, rank in enumerate(RANKS, start=2)}
 # Bound reload-safe history so one player document cannot grow without limit.
 RECENT_ROUND_LIMIT = 20
+# Target total-return house edge held uniformly across every visible current-card rank. (issue #406)
+HOUSE_EDGE = 0.035
+# Three cards of the current rank remain unseen, so a stake-refunding tie occurs with probability 3/51.
+TIE_PROBABILITY = 3 / 51
+
+
+# Probability the optimal higher/lower guess wins for a visible card of this ordering value.
+def _optimal_win_probability(rank_value: int) -> float:
+    # Four cards sit at every other rank; the optimal guess follows the more populated direction.
+    higher = 4 * (max(RANK_VALUES.values()) - rank_value)
+    # Count the lower-card branch independently so middle ranks remain symmetric.
+    lower = 4 * (rank_value - min(RANK_VALUES.values()))
+    # Best play always calls the larger side of the 51 unseen cards.
+    return max(higher, lower) / 51
+
+
+# Derive one ledger-precision total-return price from an ordered visible-card rank.
+def _rank_return_multiplier(rank_value: int) -> float:
+    # Subtract the refunded-tie probability before pricing the correct-call branch.
+    return round((1 - HOUSE_EDGE - TIE_PROBABILITY) / _optimal_win_probability(rank_value), 2)
+
+
+# Own the complete immutable rank price table at the server engine boundary.
+CORRECT_PAYTABLE = {rank: _rank_return_multiplier(value) for rank, value in RANK_VALUES.items()}
+
+
+# Price a correct guess from the server-owned table for the visible current card.
+def correct_return_multiplier(current_card) -> float:
+    """Return the authoritative total-return multiplier for ``current_card``."""
+    # Normalize the card through the shared primitive before selecting its public rank key.
+    rank = coerce_card(current_card).rank
+    # Return the same value published to API clients in the additive paytable.
+    return CORRECT_PAYTABLE[rank]
+
+
+# Publish a detached rank-to-multiplier table so clients never recompute a price.
+def correct_paytable() -> dict:
+    # Copy the immutable engine table so callers cannot mutate settlement authority.
+    return dict(CORRECT_PAYTABLE)
+
+
+# Frozen-v1 compatibility scalar retained for legacy even-money clients; superseded by correct_paytable(). (issue #406)
+CORRECT_RETURN_MULTIPLIER = 2
+# Refund the wager on an equal-rank tie; unchanged by the rank pricing.
+TIE_RETURN_MULTIPLIER = 1
 
 
 # Build one fresh player-scoped state document.
@@ -150,8 +195,8 @@ def settle_round(round_state: dict, guess, guess_action_id: str, *, completed_at
     correct = (normalized_guess == "higher" and comparison > 0) or (normalized_guess == "lower" and comparison < 0)
     # Classify equal ranks as a refund regardless of suits.
     outcome = "tie" if comparison == 0 else "correct" if correct else "incorrect"
-    # Return stake plus even-money winnings for a correct prediction.
-    payout = round(round_state["wager"] * 2, 2) if outcome == "correct" else round_state["wager"] if outcome == "tie" else 0.0
+    # Return stake plus the rank-priced winnings for a correct prediction; a tie refunds the wager.
+    payout = round(round_state["wager"] * correct_return_multiplier(round_state["current_card"]), 2) if outcome == "correct" else round_state["wager"] if outcome == "tie" else 0.0
     # Store the canonical player decision.
     round_state["guess"] = normalized_guess
     # Store the settlement action identity for safe retries.
