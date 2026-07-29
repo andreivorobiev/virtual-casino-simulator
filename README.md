@@ -1,6 +1,6 @@
 # Virtual Casino Simulator
 
-Packaged application release: `0.9.5.23`
+Packaged application release: `0.9.5.33`
 
 Historical source baseline: `9.1.0`
 
@@ -8,7 +8,7 @@ Local play-token browser casino simulator with a descriptor-driven catalog of is
 
 ## Current repository status
 
-This repository has advanced beyond the original v9.1.1 bootstrap snapshot. Packaged release v0.9.5.23 carries the accepted CI qualification acceleration: superseded ordinary checks are cancelled only within the same pull request, and mandatory Long Suite 100 runs as four isolated exhaustive shards behind its exact fail-closed aggregate context. It retains the runtime-inert game rule-schema gate, privacy-safe Admin session-control core, owner-gated Admin authority foundation, bounded MySQL connection lifecycle, transactional non-destructive player writer, secret-safe nginx timing foundation, 46-game catalog-governance reconciliation, localized one-click Repeat bet program, TiltSeven Neon Pit identity, packaged non-shell production monitor handoff, compatibility-owned predecessor selection, exact v0.9.5.22 application-only rollback target, private-invite security, MySQL schema 2, provider-disablement, and public-exposure gates. Independently versioned modules continue to record compatible source changes. Current module revisions and requirement status are recorded in the canonical manifests and generated requirements document.
+This repository has advanced beyond the original v9.1.1 bootstrap snapshot. Packaged release v0.9.5.33 carries the accepted Slots economics-only slice for issue #471: one authoritative engine/API/browser/localization model governs the line-bet and line-count domain, scatter awards, four-spin bonus, earned free-spin basis, and a bounded paid-only progressive qualified at 20 lines and line bet 1.00. It retains exact visible-rank Hi-Lo and independent Andar/Bahar pricing, fail-closed affected-game Browser qualification, the route-free settlement foundation, governed exact 138-browser full-catalog qualification, all-game desktop control-reachability, governed Acey-Deucey spread pricing, deterministic Browser shard state, runtime-inert rule coercion, private-invite security, MySQL schema 2, provider-disablement, public-exposure gates, and exact v0.9.5.32 application-only rollback. It makes no durable action-reservation, cross-process, exactly-once, or composite state-and-ledger claim; that #430 Phase 0c remainder stays open on issue #471. Independently versioned modules continue to record compatible source changes. Current module revisions and requirement status are recorded in the canonical manifests and generated requirements document.
 
 ## Version sources
 

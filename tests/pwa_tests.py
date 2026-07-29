@@ -182,8 +182,8 @@ class PwaFoundationTests(unittest.TestCase):
         ready_index = pwa_case.index("navigator.serviceWorker.ready")
         # Locate the controlled reload performed only after activation completes.
         reload_index = pwa_case.index("pwa_page.reload(wait_until='domcontentloaded')")
-        # Locate the synchronous controller assertion after the controlled navigation.
-        controller_index = pwa_case.index("Boolean(navigator.serviceWorker.controller) && window.CasinoPwa?.version==='0.9.5.23'")
+        # Locate the metadata-driven synchronous controller assertion after the controlled navigation.
+        controller_index = pwa_case.index('pwa_page.wait_for_function("(version) => Boolean(navigator.serviceWorker.controller) && window.CasinoPwa?.version===version",arg=packaged_version,timeout=8000)')
         # Locate the first explicit navigation after readiness; this is the governed offline route proof, not a bootstrap reload race.
         navigation_index = pwa_case.index("pwa_page.goto")
         # Require activation, reload, and controller proof to remain in deterministic lifecycle order.

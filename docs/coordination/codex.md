@@ -1,37 +1,37 @@
 # Codex status
 
-Written by Codex only. Claude reads this; do not edit it. Last updated 2026-07-28T08:40:06Z.
+Written by Codex only. Claude reads this; do not edit it. Last updated 2026-07-29T14:25:00Z.
 
 ## Current branch / active Codex work
 
-- Immutable v0.9.5.23 is terminal green at exact protected main `098d2f3719d01d171a875c991c8537ecff07e27f`.
-- Worker B owns `codex/433-rule-coercion-core`, rebased from that exact main, for a second runtime-inert #433 foundation slice.
-- The branch adds only internal descriptor lookup, pure settings-value coercion, and listener-free regression tests. It does not mount the helper in the router or change any request, state, contract, game, Admin, or browser behavior.
-- The branch remains draft-only. Codex must not merge, release, or deploy it in this lane.
+- PR #515 merged normally at exact protected main `8b201f96` after exact-current ancestry, compatibility, engine/API/current-ledger equations, six-scenario Long evidence, all-nine-workflow, Browser artifact, visual-matrix, and zero-review audit.
+- `codex/release-v0.9.5.33` serializes the accepted #471 Slots economics-only slice as one unique immutable patch release.
+- Deployed v0.9.5.32 remains live until v0.9.5.33 passes protected publication and trusted owner/static terminal-green deployment.
+- No later PR may merge during this release/deployment hold.
 
 ## Live queue snapshot
 
-- #470 is merged and deployed; its event-scoped cancellation, four Long Suite 100 shards, aggregate gate, workflow changes, tooling `1.21.7`, and v0.9.5.23 release metadata are preserved.
-- #433 is the highest-priority clean Workstream 5 lane at P1 / stack rank 071.
-- Runtime enforcement remains blocked on explicit owner decisions about frozen-v1 narrowing, Baccarat route/rule scope, and read-side state repair.
-- #450 remains held and excluded. Worker A/#467 and Claude PRs #473/#465/#460/#454/#453 are no-touch except shared metadata re-read before handoff.
+- #515 owns only the accepted existing-route Slots economics, API, browser, localization, and governed evidence changes.
+- Original contributor PR #473 remains preserved by ancestry and is superseded for the accepted Slots slice by the controller.
+- Issue #471 remains open at P1 stack-rank 003 for the separately governed #430 Phase 0c composite state-and-ledger remainder; Keno issue #472 remains open at P2 stack-rank 004 as the next product lane.
+- #450 and every other unmerged proposal remain excluded.
 
 ## Requirement / version claims
 
-- No permanent identifier is created, deleted, or reused.
-- This slice reuses merged `SEC-014`; it allocates no new `TEST-*` identifier.
-- `TEST-139` remains reserved for Claude #453 and `TEST-142` remains reserved for Worker A/#467.
-- Protected main owns tests/docs `1.64.6`, and open #460 owns `1.64.7`; this branch therefore allocates core `9.27.2`, tests `1.64.8`, and docs `1.64.8`. Application stays `9.53.10` / packaged v0.9.5.23, contracts stay `1.49.4`, and tooling stays `1.21.7`.
+- No permanent identifier is created, deleted, or reused by this release.
+- The accepted #515 change updates existing Slots requirement and test mappings; no permanent identifier is created, deleted, or reused by the release.
+- v0.9.5.33 owns packaged application `0.9.5.33`, application `9.53.20`, tests/docs `1.64.31`, and contracts `1.49.17`.
+- Slots `9.3.0`, core `9.28.0`, tooling `1.21.11`, and every unrelated module are preserved from the accepted merge.
 
 ## File claims / collision notes
 
-- Substantive files: `casino/core/game_rules.py` and `tests/games/test_game_rule_schema.py`.
-- Shared governance files: `docs/requirements/requirements.json`, its generated view, `docs/game_catalog_governance.md`, Codex coordination status/log, `modules/{core,tests,docs}.json`, and `modules/module-manifest.json`.
-- No substantive file overlaps #467, #450, or any open Claude branch. No `.github/workflows`, `tests/run_tests.py`, Worker A harness/storage files, game economics/Admin/UI files, production, provider, DNS, ingress, secrets, signup, OAuth, mail, or invitation files are in scope.
+- Release-owned changes are limited to packaged version surfaces, compatibility and rollback provenance, PWA/cache identity, release tests, release docs, generated governance, and coordination records.
+- #450, #472, Phase 0b/0c, unrelated routes and games, provider implementations, production workflow, DNS, ingress, secrets, signup, OAuth, mail, and invitation files are excluded.
+- Any later proposal overlapping shared docs or manifests must reconcile and recalculate versions from terminal-green v0.9.5.33.
 
 ## Decisions / handbacks
 
-- Exact undeclared paths return the original request object unchanged.
-- Exact descriptor-owned settings paths produce a separate mapping, canonicalize finite numeric values, require strict booleans and enums, and preserve unknown keys for the existing handler allowlist.
-- The coercer never mutates caller-owned input and uses fixed, non-reflecting validation diagnostics.
-- Runtime mounting, hand-written validator removal, frozen-contract changes, state repair, and Admin UI remain separately governed #433 scope.
+- Slots preserves the frozen-v1 cent line-bet and 1/3/5/9/20-line input domain while aligning engine, route, browser, and EN/RU copy on one authoritative settlement model.
+- One scalar progressive is eligible only for paid 20-line spins at line bet 1.00; free spins preserve its current value and their earned wager basis.
+- This release makes no durable action-reservation, cross-process, exactly-once, or composite state-and-ledger claim; #471 remains open for that Phase 0c remainder.
+- Exact immutable v0.9.5.32 remains the application-only rollback predecessor; MySQL schema stays 2 and database rollback is prohibited.

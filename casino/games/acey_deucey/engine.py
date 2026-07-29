@@ -72,6 +72,42 @@ def boundary_values(left_card, right_card) -> tuple[int, int]:
     return min(left_value, right_value), max(left_value, right_value)
 
 
+# Target house edge applied uniformly to every spread. (issue #408)
+HOUSE_EDGE = 0.035
+
+# Cards left in the shoe once both boundary cards are exposed.
+REMAINING_AFTER_BOUNDARIES = 50
+
+# Cards sharing one rank, used to convert a rank spread into a card count.
+CARDS_PER_RANK = 4
+
+
+# Price the inside wager for one spread so the house edge does not depend on what the player sees.
+def inside_return_multiplier(spread: int) -> float:
+    """Return the total return multiplier for a strict inside win at this spread.
+
+    The player wagers after both boundaries are public, so a flat multiplier is mispriced: a wide
+    spread is far more likely to land inside than a narrow one. Betting only the wide spreads was
+    therefore strictly profitable (issue #408). Scaling the return by the actual inside probability
+    removes that choice: P(inside) = CARDS_PER_RANK * spread / REMAINING_AFTER_BOUNDARIES, so a
+    multiplier of (1 - HOUSE_EDGE) / P(inside) leaves the same edge at every spread.
+    """
+    # Reject a spread outside the complete single-deck boundary range.
+    if spread < 1 or spread > len(RANK_VALUES) - 2:
+        # Fail closed rather than returning an absent or nonsensical multiplier.
+        raise ValidationError("Acey-Deucey boundaries leave no inside rank to wager on")
+    # Convert the rank spread into the exact probability of a strict inside result.
+    inside_probability = (CARDS_PER_RANK * spread) / REMAINING_AFTER_BOUNDARIES
+    # Price the return so expected value stays below one at every spread.
+    return round((1 - HOUSE_EDGE) / inside_probability, 2)
+
+
+# Publish the full spread-to-multiplier paytable so clients never recompute the price themselves.
+def inside_paytable() -> dict:
+    # Build one entry per legal spread from a single boundary pair up to the widest ace-to-two gap.
+    return {spread: inside_return_multiplier(spread) for spread in range(1, len(RANK_VALUES) - 1)}
+
+
 # Count ranks strictly between the two exposed boundary cards.
 def inside_rank_count(left_card, right_card) -> int:
     # Read normalized low and high rank values.
@@ -154,10 +190,14 @@ def play_round(round_state: dict, wager, play_action_id: str, *, completed_at: s
     if not third_card:
         # Keep reload behavior deterministic and fail-closed.
         raise ConflictError("Acey-Deucey result card is unavailable")
-    # Classify the third card against the strict in-between rule.
+    # Price this round from the spread the player could already see before wagering. (issue #408)
+    spread = inside_rank_count(round_state["left_card"], round_state["right_card"])
+    # Validate and capture the price before reveal, state mutation, receipts, or ledger movement.
+    return_multiplier = inside_return_multiplier(spread)
+    # Classify the third card against the strict in-between rule only after the wager is priceable.
     outcome = classify_result(round_state["left_card"], round_state["right_card"], third_card)
-    # Return stake plus even-money profit only for a strict inside win.
-    payout = round(amount * 2, 2) if outcome == "inside" else 0.0
+    # Return the spread-priced win only for a strict inside result; every other outcome loses.
+    payout = round(amount * return_multiplier, 2) if outcome == "inside" else 0.0
     # Persist the play action identity.
     round_state["play_action_id"] = play_action_id
     # Persist the semantic retry fingerprint.
