@@ -1,6 +1,6 @@
 # Virtual Casino Simulator
 
-Packaged application release: `0.9.5.29`
+Packaged application release: `0.9.5.30`
 
 Historical source baseline: `9.1.0`
 
@@ -8,7 +8,7 @@ Local play-token browser casino simulator with a descriptor-driven catalog of is
 
 ## Current repository status
 
-This repository has advanced beyond the original v9.1.1 bootstrap snapshot. Packaged release v0.9.5.29 carries the accepted route-free shared settlement-adapter foundation for issue #430. It delegates finite signed game actions to the existing storage-atomic ledger boundaries, preserves caller audit details, and permits post-conflict recovery only from exact player, game, action, round, transaction, fingerprint, and amount proof. The adapter remains game-inert and route-free while retaining the governed exact 138-browser full-catalog qualification, all-game desktop control-reachability gate, governed Acey-Deucey spread pricing, deterministic Browser shard-state controller, runtime-inert game rule-schema coercion foundation, safe CI qualification acceleration, private-invite security, MySQL schema 2, provider-disablement, public-exposure gates, and exact v0.9.5.28 application-only rollback target. Independently versioned modules continue to record compatible source changes. Current module revisions and requirement status are recorded in the canonical manifests and generated requirements document.
+This repository has advanced beyond the original v9.1.1 bootstrap snapshot. Packaged release v0.9.5.30 carries the accepted fail-closed affected-game Browser qualification controller for issue #468 item 4. Pull requests may omit only dedicated cases owned by unaffected catalog games; shared, unknown, protected-main, release, and authorized formal inputs retain complete coverage, and the aggregate independently verifies the detector-owned selection. The release retains the route-free settlement foundation, governed exact 138-browser full-catalog qualification, all-game desktop control-reachability gate, governed Acey-Deucey spread pricing, deterministic Browser shard-state controller, runtime-inert game rule-schema coercion foundation, safe CI qualification acceleration, private-invite security, MySQL schema 2, provider-disablement, public-exposure gates, and exact v0.9.5.29 application-only rollback target. Independently versioned modules continue to record compatible source changes. Current module revisions and requirement status are recorded in the canonical manifests and generated requirements document.
 
 ## Version sources
 

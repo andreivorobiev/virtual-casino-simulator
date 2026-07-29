@@ -1,4 +1,18 @@
-# Virtual Casino Simulator v0.9.5.29 Release Notes
+# Virtual Casino Simulator v0.9.5.30 Release Notes
+
+## Fail-closed affected-game Browser qualification
+
+- Maps changed pull-request files to catalog-owned games and falls back to complete coverage for every shared, unknown, or ambiguous path.
+- Runs complete Browser coverage for protected-main pushes, release inputs, manual formal qualification, and pull requests carrying the explicit full-browser label.
+- Omits only dedicated acceptance cases owned by unaffected games; shared shell, authentication, PWA, Admin, affinity-owned, and unmapped cases remain included.
+- Passes the detector-owned game selection independently to every shard and the aggregate instead of trusting artifact declarations.
+- Fails the aggregate closed on detector failure, missing, duplicate, failed, unexpected, or selection-mismatched shard evidence.
+- Preserves four deterministic Browser shards, unique artifacts, unconditional browser/listener cleanup, and the historical required aggregate context.
+- Keeps formal 50,000-cycle, governed 138-context, and sustained Baccarat profiles isolated behind their existing owner gates.
+- Retains exact immutable v0.9.5.29 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation.
+
+## Prior v0.9.5.29 route-free storage-atomic settlement foundation
 
 ## Route-free storage-atomic settlement foundation
 
