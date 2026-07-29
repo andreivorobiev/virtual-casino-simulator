@@ -35,6 +35,11 @@ jobs:
           else
             python tests/long_suites.py --suite 100 --shard-count 4 --shard-index "${{ matrix.shard }}" --copy-deployment --skip-browser-audio
           fi
+      # Run the one-million-paid-spin economics matrix once without multiplying it across shards.
+      - name: Prove Slots economics and best play
+        if: matrix.shard == 1
+        timeout-minutes: 20
+        run: python -m tests.slots_economics_long
       - name: Upload long-suite shard artifacts
         if: always()
         uses: actions/upload-artifact@v4

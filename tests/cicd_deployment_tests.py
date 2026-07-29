@@ -242,6 +242,10 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         self.assertEqual(shard_script.count("--copy-deployment"), 2)
         # Require a unique artifact identity for each matrix worker.
         self.assertIn("name: long-suite-100-shard-${{ matrix.shard }}-artifacts", workflow_text)
+        # Invoke the Slots proof as a package module so repository imports resolve on hosted Linux.
+        self.assertIn("run: python -m tests.slots_economics_long", workflow_text)
+        # Reject direct-file execution because it omits the repository root from Python's import path.
+        self.assertNotIn("run: python tests/slots_economics_long.py", workflow_text)
         # Upload terminal evidence even when one shard command fails.
         self.assertIn("if: always()", workflow_text)
         # Require the exact branch-protection aggregate job identifier once.
@@ -280,10 +284,10 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         runner = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "run_browser_tests")
         # Extract permanent literal IDs in deterministic source order.
         case_ids = re.findall(r"\brun_case\(\s*['\"](BR-[A-Za-z0-9\-]+)['\"]", ast.get_source_segment(source, runner))
-        # Require the current exact suite inventory and balanced 27/27/26/26 allocation.
-        self.assertEqual(len(case_ids), 106)
+        # Require the current exact suite inventory and balanced 27/27/27/26 allocation.
+        self.assertEqual(len(case_ids), 107)
         # Compute the same half-open contiguous partition used by the production runner.
-        ranges = [(0, 27), (27, 54), (54, 80), (80, 106)]
+        ranges = [(0, 27), (27, 54), (54, 81), (81, 107)]
         # Locate the literal affinity declaration at module scope.
         affinity_node = next(node for node in tree.body if isinstance(node, ast.Assign) and any(isinstance(target, ast.Name) and target.id == "BROWSER_CASE_AFFINITY_GROUPS" for target in node.targets))
         # Read only literal strings and tuples from the tracked declaration.
