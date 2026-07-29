@@ -94,16 +94,16 @@ class SettlementAdapter:
 
     # Locate and validate one committed action without allowing another scope to satisfy it.
     def find_action(
-        self,
+        self,  # Use this adapter's injected public-ledger seams.
         *,
-        game_id,
-        player_id,
-        signed_amount,
-        transaction_type,
-        round_id,
-        action_key,
-        request_fingerprint,
-    ):
+        game_id,  # Scope proof to one registered game.
+        player_id,  # Scope proof to one authenticated wallet.
+        signed_amount,  # Match the exact signed money movement.
+        transaction_type,  # Match the immutable ledger meaning.
+        round_id,  # Match the immutable game round.
+        action_key,  # Match the game-owned action identity.
+        request_fingerprint,  # Match the upstream request semantics.
+    ):  # Return the exact compatible event or no proof.
         # Validate the fixed game namespace before reading player history.
         game_id = _require_identity(game_id, field="game_id")
         # Validate the authenticated wallet identity before filtering ledger proof.
@@ -171,17 +171,17 @@ class SettlementAdapter:
 
     # Commit or replay one signed storage-atomic game action.
     def apply_action_once(
-        self,
+        self,  # Use this adapter's injected public-ledger seams.
         *,
-        game_id,
-        player_id,
-        signed_amount,
-        transaction_type,
-        round_id,
-        action_key,
-        request_fingerprint,
-        details=None,
-    ) -> tuple[dict, bool]:
+        game_id,  # Namespace provider idempotency to one game.
+        player_id,  # Select the authenticated wallet.
+        signed_amount,  # Route a debit or credit by sign.
+        transaction_type,  # Persist the immutable ledger meaning.
+        round_id,  # Persist the immutable game round.
+        action_key,  # Delegate one game-owned action identity.
+        request_fingerprint,  # Preserve upstream request semantics.
+        details=None,  # Extend the audit envelope without replacement.
+    ) -> tuple[dict, bool]:  # Return the exact event and replay marker.
         # Validate the game namespace before constructing canonical audit evidence.
         game_id = _require_identity(game_id, field="game_id")
         # Validate the authenticated wallet identity before any provider call.
@@ -204,35 +204,35 @@ class SettlementAdapter:
             if signed_amount < 0:
                 # Return the provider's exact event and replay marker.
                 return self._debit_once(
-                    player_id=player_id,
-                    amount=abs(signed_amount),
-                    transaction_type=transaction_type,
-                    action_key=action_key,
-                    game=game_id,
-                    round_id=round_id,
-                    details=event_details,
+                    player_id=player_id,  # Debit only the authenticated wallet.
+                    amount=abs(signed_amount),  # Give the debit boundary a positive magnitude.
+                    transaction_type=transaction_type,  # Preserve the caller's ledger meaning.
+                    action_key=action_key,  # Reuse the stable storage idempotency key.
+                    game=game_id,  # Preserve the game namespace.
+                    round_id=round_id,  # Preserve the game round.
+                    details=event_details,  # Attach caller and canonical audit evidence.
                 )
             # Route positive signed movements through the public credit-once boundary.
             return self._credit_once(
-                player_id=player_id,
-                amount=signed_amount,
-                transaction_type=transaction_type,
-                action_key=action_key,
-                game=game_id,
-                round_id=round_id,
-                details=event_details,
+                player_id=player_id,  # Credit only the authenticated wallet.
+                amount=signed_amount,  # Give the credit boundary a positive magnitude.
+                transaction_type=transaction_type,  # Preserve the caller's ledger meaning.
+                action_key=action_key,  # Reuse the stable storage idempotency key.
+                game=game_id,  # Preserve the game namespace.
+                round_id=round_id,  # Preserve the game round.
+                details=event_details,  # Attach caller and canonical audit evidence.
             )
         # Recover only when another compatible request may have committed first.
         except ConflictError:
             # Read the winner's immutable proof after the provider rejects this proposal.
             recovered = self.find_action(
-                game_id=game_id,
-                player_id=player_id,
-                signed_amount=signed_amount,
-                transaction_type=transaction_type,
-                round_id=round_id,
-                action_key=action_key,
-                request_fingerprint=request_fingerprint,
+                game_id=game_id,  # Require the same game namespace.
+                player_id=player_id,  # Require the same authenticated wallet.
+                signed_amount=signed_amount,  # Require the same signed movement.
+                transaction_type=transaction_type,  # Require the same ledger meaning.
+                round_id=round_id,  # Require the same game round.
+                action_key=action_key,  # Require the same game action identity.
+                request_fingerprint=request_fingerprint,  # Require the same request semantics.
             )
             # Preserve the provider's original conflict when no compatible winner exists.
             if recovered is None:

@@ -14,15 +14,15 @@ from casino.errors import ConflictError, ValidationError
 # Build one committed ledger row with the canonical action evidence under test.
 def _event(
     *,
-    player_id="player-a",
-    game="example-game",
-    round_id="round-1",
-    transaction_type="wager",
-    amount=-5.0,
-    action_key="action-1",
-    request_fingerprint="fingerprint-1",
-    extra_details=None,
-):
+    player_id="player-a",  # Select the fixture wallet identity.
+    game="example-game",  # Select the fixture game namespace.
+    round_id="round-1",  # Select the fixture round identity.
+    transaction_type="wager",  # Select the fixture ledger meaning.
+    amount=-5.0,  # Select the fixture signed movement.
+    action_key="action-1",  # Select the fixture game action identity.
+    request_fingerprint="fingerprint-1",  # Select the fixture request semantics.
+    extra_details=None,  # Extend the fixture audit envelope when needed.
+):  # Return one complete committed-event fixture.
     # Preserve supplied game-specific evidence before adding canonical fields.
     details = dict(extra_details or {})
     # Add the game-owned identity used by response and recovery lookup.

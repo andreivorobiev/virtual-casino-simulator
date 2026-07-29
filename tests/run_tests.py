@@ -1398,6 +1398,20 @@ def run_api_tests():
             raise AssertionError('simple-game settlement core suite failed')
     # Record the listener-free exactly-once wager, replay, conflict, and crash-recovery proof.
     run_case('API-GAMECORE-001',['GAMECORE-001','GAMECORE-002','TEST-127'],run_simple_game_core_tests)
+    # Execute the route-free signed-action settlement-adapter proof without opening a listener.
+    def run_settlement_adapter_tests():
+        # Load only the focused storage-atomic adapter class.
+        from tests import settlement_core_tests
+        # Build the focused listener-free suite explicitly.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(settlement_core_tests.SettlementAdapterTests)
+        # Execute the suite with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any adapter proof failed or errored.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure text secret-safe.
+            raise AssertionError('settlement adapter suite failed')
+    # Record the additive audit, sign routing, replay, conflict, and bounded recovery proof.
+    run_case('API-GAMECORE-002',['GAMECORE-003'],run_settlement_adapter_tests)
     # Execute the Color Wheel rules and settlement proof without opening a listener.
     def run_color_wheel_tests():
         # Load only the focused Color Wheel class.

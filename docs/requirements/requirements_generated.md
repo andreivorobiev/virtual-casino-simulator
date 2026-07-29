@@ -7,7 +7,7 @@ Historical source baseline: 9.1.0
 ## Independent module revisions
 
 - application: 9.53.15
-- core: 9.27.3
+- core: 9.28.0
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.1
@@ -50,8 +50,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.0
 - pai_gow_poker: 1.1.0
 - teen_patti: 1.1.0
-- tests: 1.64.21
-- docs: 1.64.21
+- tests: 1.64.22
+- docs: 1.64.22
 - contracts: 1.49.10
 - tooling: 1.21.9
 - commenting_policy: 1.0.0
@@ -839,6 +839,7 @@ Historical source baseline: 9.1.0
 - **TEST-110** (Tests) - PASS: Listener-free evidence verifies the Compare Games foundation and shared API boundary: money-math attributes are excluded and never present on a row, localization readiness is derived per locale, request bounds reject too-few, too-many, and malformed requests, unknown games are reported as missing, every new route stays authenticated, OpenAPI/compatibility/module ownership/exact-byte digests stay aligned, and every added copy namespace ships complete EN and RU strings with identical placeholders.
 - **GAMECORE-001** (Core) - PASS: A shared wager-and-settle core provides one exactly-once ledger settlement path for catalog games: a caller supplies only a pure bet validator and a deterministic resolver, and the core draws server entropy, debits one aggregate wager, settles deterministically, and credits any single aggregate return. The wager debit and the settlement credit are each applied exactly once, guarded by ledger proof plus a request fingerprint, so one caller-stable request id maps to exactly one round and a retry replays the identical committed outcome without moving the wallet again.
 - **GAMECORE-002** (Core) - PASS: The shared settlement core fails closed on every abuse and error path: a request id reused with different wager content is rejected as a conflict rather than double-spending, an action identity can never move two different amounts, a non-positive or malformed wager is rejected before any wallet movement, a missing or malformed request id is rejected, and per-player round state is bounded. The deterministic round identity is game-scoped so one game's proof can never satisfy another game.
+- **GAMECORE-003** (Core) - PASS: A route-free shared settlement adapter applies one finite non-zero signed game action through the public storage-atomic ledger debit-once or credit-once boundary. It preserves caller audit details, adds canonical game action, request fingerprint, and round evidence without mutating caller input, returns an exact provider replay when available, and after a provider conflict recovers only a committed row whose player, game, action, round, transaction type, fingerprint, and signed amount all match. Missing, malformed, or conflicting identity and money evidence fails closed before another balance movement.
 - **TEST-127** (Tests) - PASS: Listener-free evidence verifies the shared simple-game settlement core: winning and losing rounds settle exactly once with correct balances, a retried request replays without double-spending, a request id reused with different content fails closed, settlement recovers deterministically from committed ledger proof after total per-player state loss, invalid wagers and missing request ids are rejected before any wallet movement, and the deterministic round id is stable and game-scoped.
 - **CWHEEL-001** (Color Wheel) - PASS: Color Wheel is a twenty-segment wheel built on the shared exactly-once settlement core. A spin debits one bounded play-token stake on a chosen colour, draws one server-authoritative landed segment, and credits the colour's total-return multiplier on a match: red and black pay two times, green six times, and gold sixteen times. Every payout is house-positive because each colour's segment probability times its multiplier is below one. Unknown colours and non-integer, non-positive, or over-limit stakes are rejected before any wallet movement.
 - **CWHEEL-002** (Color Wheel) - PASS: Color Wheel inherits the shared core's exactly-once settlement: one caller-stable request id maps to one spin, a retry replays the identical committed landed segment and payout without moving the wallet again, and a request id reused with different wager content fails closed. The additive v1 contract exposes only the game-owned state and spins routes and never alters the frozen shared API. The published bet catalog reports honest segment counts and multipliers.

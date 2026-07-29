@@ -10896,6 +10896,24 @@
       "notes": "Introduced for the game-catalog expansion (#73). The crash-recovery guarantee is proven by wiping per-player state mid-round and confirming settlement recovers from committed ledger proof without a second wallet movement."
     },
     {
+      "id": "GAMECORE-003",
+      "module": "Core",
+      "description": "A route-free shared settlement adapter applies one finite non-zero signed game action through the public storage-atomic ledger debit-once or credit-once boundary. It preserves caller audit details, adds canonical game action, request fingerprint, and round evidence without mutating caller input, returns an exact provider replay when available, and after a provider conflict recovers only a committed row whose player, game, action, round, transaction type, fingerprint, and signed amount all match. Missing, malformed, or conflicting identity and money evidence fails closed before another balance movement.",
+      "status": "PASS",
+      "api_tests": [
+        "API-GAMECORE-002"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/settlement.py",
+        "tests/settlement_core_tests.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-430-settlement-foundation",
+      "changed_in": "issue-430-settlement-foundation",
+      "notes": "Introduced as the independently revertible Phase 0a foundation for issue #430. This checkpoint is route-free and game-inert; later state-store and game wiring phases remain separately governed."
+    },
+    {
       "id": "TEST-127",
       "module": "Tests",
       "description": "Listener-free evidence verifies the shared simple-game settlement core: winning and losing rounds settle exactly once with correct balances, a retried request replays without double-spending, a request id reused with different content fails closed, settlement recovers deterministically from committed ledger proof after total per-player state loss, invalid wagers and missing request ids are rejected before any wallet movement, and the deterministic round id is stable and game-scoped.",
