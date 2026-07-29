@@ -1,4 +1,18 @@
-# Virtual Casino Simulator v0.9.5.33 Release Notes
+# Virtual Casino Simulator v0.9.5.34 Release Notes
+
+## Authoritative house-side Keno economics
+
+- Rebalances one server-authoritative paytable across every legal one-through-twenty-spot Keno ticket.
+- Keeps every positive award at least stake-neutral while preserving strictly increasing rows and full-catch jackpots.
+- Preserves the frozen `/api/v1` routes, standard envelopes, accepted `0.01`–`1,000,000` play-token range, and existing `round(float(amount) * multiplier, 2)` settlement law.
+- Applies the owner-approved `3.49x` pick-one cent-rounding exception so the one-cent ticket remains house-side.
+- Proves all 230 hypergeometric outcome classes with exact rational evidence and bounds realized production settlement below `1` across the complete accepted amount domain, including IEEE-754 error.
+- Verifies maximum-stake maximum-jackpot engine, API, current-ledger, and history equations while restoring randomness after proof.
+- Verifies sixty-four governed Keno states across English and Russian and four viewports, including numeric jackpot, transient drawing, open-ticket precedence, route restoration, Repeat, autoplay, and aligned history.
+- Retains exact immutable v0.9.5.33 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation.
+
+## Prior v0.9.5.33 authoritative house-side Slots economics
 
 ## Authoritative house-side Slots economics
 
