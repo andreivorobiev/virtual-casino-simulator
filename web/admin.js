@@ -103,6 +103,8 @@ async function load(tab = 'dashboard') {
     if (tab === 'operations') return operations();
     // Branch to the game state renderer.
     if (tab === 'states') return states();
+    // Await the per-game payout-rate economics renderer inside the load-error boundary. (issue #456)
+    if (tab === 'economics') return await economics();
     // Branch to the audio renderer.
     if (tab === 'audio') return audio();
     // Branch to the browser-local language renderer.
@@ -625,6 +627,35 @@ async function operations() {
     // Render a clear symbol and recovery instruction so color is not the only status signal.
     view.innerHTML = `<section class="admin-card danger" data-testid="admin-operations-down"><h2>${safe(t('operations.symbol.down', {}, 'admin'))} ${safe(t('operations.state.down', {}, 'admin'))}</h2><p>${safe(t('operations.detail.down', {}, 'admin'))}</p></section>`;
   }
+}
+
+// Format a stored payout ratio as a readable percentage or a dash when no wagers anchor it. (issue #456)
+const ratePercent = value => (value === null || value === undefined) ? '—' : `${(value * 100).toFixed(1)}%`;
+
+// Render the continuous per-game payout-rate telemetry with a drill-down. (issue #456)
+async function economics() {
+  // Set the economics view title and subtitle.
+  setTitle('Economics', 'Continuous per-game payout rates from the shared ledger.');
+  // Load the aggregated per-game payout rates over the recent ledger window.
+  const data = await api('/api/v1/admin/economics');
+  // Read the per-game rows, richest activity first for scanning.
+  const games = (data.games || []).slice().sort((a, b) => (b.wagered || 0) - (a.wagered || 0));
+  // Render the per-game table with a drill-down control and a player-positive warning, or an empty state.
+  view.innerHTML = `<section class="admin-card"><h3>Payout rates</h3><p class="muted">Window: last ${safe(data.window)} ledger events. Rate = returned ÷ wagered play tokens; funded opponents excluded.</p>${games.length ? table(['Game', 'Wagered', 'Returned', 'Payout rate', 'House edge', 'Status', ''], games.map(row => `<tr${row.player_positive ? ' class="danger"' : ''}><td>${safe(row.game)}</td><td>${safe(row.wagered)}</td><td>${safe(row.returned)}</td><td>${safe(ratePercent(row.payout_rate))}</td><td>${safe(ratePercent(row.house_edge))}</td><td>${row.player_positive ? '<strong>PLAYER-POSITIVE</strong>' : 'house-side'}</td><td><button type="button" data-economics-game="${safe(row.game)}">drill down</button></td></tr>`)) : emptyState('No wagered games yet', 'Per-game payout rates appear here once players place wagers.', 'admin-economics-empty')}</section>`;
+  // Wire each drill-down control to the single-game detail view.
+  view.querySelectorAll('[data-economics-game]').forEach(button => { button.onclick = () => economicsDetail(button.dataset.economicsGame); });
+}
+
+// Render one game's payout-rate drill-down with a transaction breakdown and recent rows. (issue #456)
+async function economicsDetail(game) {
+  // Set the drill-down title for the selected game.
+  setTitle('Economics', `Payout-rate detail for ${game}.`);
+  // Load the single-game economics detail.
+  const data = await api(`/api/v1/admin/economics/${encodeURIComponent(game)}`);
+  // Render the aggregate header, per-type breakdown, and recent rows with a back control.
+  view.innerHTML = `<section class="admin-card"><div class="row"><button id="economics-back" type="button">Back</button><span class="badge">${safe(game)}</span>${data.player_positive ? '<span class="badge danger">PLAYER-POSITIVE</span>' : ''}</div><p>Payout rate <strong>${safe(ratePercent(data.payout_rate))}</strong> · house edge ${safe(ratePercent(data.house_edge))} · wagered ${safe(data.wagered)} · returned ${safe(data.returned)} over ${safe(data.events)} events.</p><h3>By transaction type</h3>${(data.by_transaction_type || []).length ? table(['Transaction type', 'Count', 'Net total'], data.by_transaction_type.map(row => `<tr><td>${safe(row.transaction_type)}</td><td>${safe(row.count)}</td><td>${safe(row.total)}</td></tr>`)) : emptyState('No activity', 'This game has no player-facing ledger movements yet.', 'admin-economics-detail-empty')}<h3>Recent events</h3>${(data.recent || []).length ? table(['Player', 'Type', 'Amount'], data.recent.map(row => `<tr><td>${safe(row.player_id)}</td><td>${safe(row.transaction_type)}</td><td>${safe(row.amount)}</td></tr>`)) : emptyState('No recent events', 'Recent ledger movements for this game appear here.', 'admin-economics-recent-empty')}</section>`;
+  // Wire the back control to the economics summary.
+  view.querySelector('#economics-back').onclick = () => economics();
 }
 
 // Define states to show isolated game state files.

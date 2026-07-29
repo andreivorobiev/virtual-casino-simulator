@@ -598,6 +598,93 @@ def game_states():
     return states
 
 
+# Ledger transaction fragments belonging to funded opponents or account seeding, excluded from player rates. (issue #456)
+_NON_PLAYER_LEDGER_FRAGMENTS = ("OPPONENT", "FUNDING", "FUND_ACCOUNT")
+
+
+# Decide whether one ledger event is a real player-facing wager or return rather than opponent/funding plumbing.
+def _is_player_facing(event: dict) -> bool:
+    # Read the transaction type defensively so malformed rows never raise.
+    transaction_type = str(event.get("transaction_type", ""))
+    # Keep only rows that carry a game and are not funded-opponent or account-funding movements.
+    return bool(event.get("game")) and not any(fragment in transaction_type for fragment in _NON_PLAYER_LEDGER_FRAGMENTS)
+
+
+# Aggregate per-game wagered-versus-returned play tokens from the shared ledger into live payout rates. (issue #456)
+def game_economics(window: int = 100_000):
+    # Accumulate signed wager and return totals per registered game over a bounded recent window.
+    by_game = {}
+    for event in ledger.read_recent(limit=window):
+        # Skip non-game and funded-opponent movements so the rate reflects real players only.
+        if not _is_player_facing(event):
+            continue
+        # Read the signed movement; debits are negative wagers and credits are positive returns.
+        amount = event.get("amount", 0) or 0
+        aggregate = by_game.setdefault(event["game"], {"wagered": 0.0, "returned": 0.0, "events": 0})
+        aggregate["events"] += 1
+        # Split the signed amount into cumulative wagered and returned totals.
+        if amount < 0:
+            aggregate["wagered"] += -amount
+        elif amount > 0:
+            aggregate["returned"] += amount
+    # Derive the payout rate and house edge for every game with recorded wagers.
+    rows = []
+    for game in sorted(by_game):
+        aggregate = by_game[game]
+        wagered = round(aggregate["wagered"], 2)
+        returned = round(aggregate["returned"], 2)
+        # Publish the payout rate only when at least one wager anchors the ratio.
+        rate = round(returned / wagered, 4) if wagered > 0 else None
+        rows.append({
+            "game": game,
+            "wagered": wagered,
+            "returned": returned,
+            "events": aggregate["events"],
+            "payout_rate": rate,
+            "house_edge": round(1 - rate, 4) if rate is not None else None,
+            "player_positive": bool(rate is not None and rate > 1.0),
+        })
+    # Publish the window size and per-game rows for continuous Admin monitoring.
+    return {"window": window, "games": rows}
+
+
+# Provide a single game's payout-rate drill-down with a per-transaction-type breakdown and recent rows. (issue #456)
+def game_economics_detail(game: str, window: int = 100_000, recent: int = 50):
+    # Retain only this game's player-facing movements from the same bounded window.
+    events = [event for event in ledger.read_recent(limit=window) if event.get("game") == game and _is_player_facing(event)]
+    # Break the movements down by transaction type for a readable settlement profile.
+    by_type = {}
+    wagered = 0.0
+    returned = 0.0
+    for event in events:
+        transaction_type = str(event.get("transaction_type", "unknown"))
+        amount = event.get("amount", 0) or 0
+        breakdown = by_type.setdefault(transaction_type, {"count": 0, "total": 0.0})
+        breakdown["count"] += 1
+        breakdown["total"] += amount
+        # Track the aggregate wagered and returned totals alongside the per-type split.
+        if amount < 0:
+            wagered += -amount
+        elif amount > 0:
+            returned += amount
+    wagered = round(wagered, 2)
+    returned = round(returned, 2)
+    # Compute the aggregate payout rate for the drill-down header.
+    rate = round(returned / wagered, 4) if wagered > 0 else None
+    # Return the aggregate, the type breakdown, and the newest rows for inspection.
+    return {
+        "game": game,
+        "wagered": wagered,
+        "returned": returned,
+        "events": len(events),
+        "payout_rate": rate,
+        "house_edge": round(1 - rate, 4) if rate is not None else None,
+        "player_positive": bool(rate is not None and rate > 1.0),
+        "by_transaction_type": [{"transaction_type": name, "count": data["count"], "total": round(data["total"], 2)} for name, data in sorted(by_type.items())],
+        "recent": events[:recent],
+    }
+
+
 # Define the overview function used by this module.
 def overview():
     # Set reqs to the value needed for the next operation.
@@ -768,6 +855,20 @@ def register(router):
     def admin_states(body, query):
         # Return the computed value to the caller.
         return {"states": game_states()}
+
+    # Attach this decorator so the following function is registered with the framework.
+    @router.get(r"/api/v1/admin/economics")
+    # Publish the continuous per-game payout-rate telemetry for the Admin economics view. (issue #456)
+    def admin_economics(body, query):
+        # Return the aggregated per-game payout rates over the recent ledger window.
+        return game_economics()
+
+    # Attach this decorator so the following function is registered with the framework.
+    @router.get(r"/api/v1/admin/economics/(?P<game>[a-z0-9_]+)")
+    # Publish one game's payout-rate drill-down with a transaction breakdown and recent rows. (issue #456)
+    def admin_economics_detail(body, query, game):
+        # Return the single-game economics detail for the Admin drill-down.
+        return game_economics_detail(game)
 
     # Attach this decorator so the following function is registered with the framework.
     @router.get(r"/api/v1/admin/users")

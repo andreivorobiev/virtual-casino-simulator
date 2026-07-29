@@ -13,7 +13,7 @@ Historical source baseline: 9.1.0
 - bots: 1.1.1
 - autoplay: 1.1.3
 - audio: 9.1.1
-- admin: 1.13.1
+- admin: 1.13.2
 - operations: 1.1.2
 - marketing_site: 1.0.2
 - roulette: 9.4.12
@@ -50,8 +50,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.0
 - pai_gow_poker: 1.1.0
 - teen_patti: 1.1.0
-- tests: 1.64.18
-- docs: 1.64.18
+- tests: 1.64.23
+- docs: 1.64.23
 - contracts: 1.49.9
 - tooling: 1.21.8
 - commenting_policy: 1.0.0
@@ -933,3 +933,5 @@ Historical source baseline: 9.1.0
 - **TEST-143** (Tests) - PASS: Listener-free isolated-provider evidence proves persistent-account-only bounded session inventory, newest-first ordering, fixed one-way aliases, approved-field and coarse-client projection, secret and cross-account exclusion, idempotent targeted and all-session revocation, concurrent exactly-once transition counting, byte-exact preservation of syntactically invalid JSON, parseable malformed-document preservation, and invalid-request non-mutation.
 - **ADMIN-029** (Admin) - PASS: The admin diagnostic pages render real content instead of raw structures: Game States aggregates per-game and per-player state files from nested subdirectories (not only legacy top-level files), History renders a labelled table with an empty-state, and Tests renders a labelled empty-state when no results are recorded rather than a raw empty object.
 - **TEST-145** (Tests) - PASS: Listener-free regression proves the admin Game States aggregation surfaces both nested per-player state files and legacy top-level state files under distinct composite keys, so a non-recursive glob regression is caught.
+- **ADMIN-030** (Admin) - PASS: The admin console publishes a continuous per-game payout rate (returned divided by wagered play tokens) from the shared ledger, flags any player-positive game, and drills down to a per-transaction-type breakdown with recent rows, excluding funded-opponent and non-game movements.
+- **TEST-146** (Tests) - PASS: A listener-free regression proves the admin economics aggregation computes per-game payout rates and house edges, flags player-positive games, and excludes funded-opponent and non-game ledger movements from the drill-down.

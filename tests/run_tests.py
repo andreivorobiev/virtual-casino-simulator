@@ -1104,6 +1104,8 @@ def run_api_tests():
     run_case('API-THPT-ESCROW-001',['THPT-006'],lambda: run_unit_module('tests.thpt_escrow_tests','practice-table escrow suite failed'))
     # Record the admin Game States nested-state-file regression proof. (issue #457)
     run_case('API-ADMIN-GAME-STATES-001',['ADMIN-029','TEST-145'],lambda: run_unit_module('tests.admin_game_states_tests','admin game-states nested-file suite failed'))
+    # Record the admin per-game payout-rate telemetry aggregation proof. (issue #456)
+    run_case('API-ADMIN-ECONOMICS-001',['ADMIN-030','TEST-146'],lambda: run_unit_module('tests.admin_economics_tests','admin economics payout-rate suite failed'))
     # Execute the complete non-mutating edge preparation proof before any test listener starts.
     def run_edge_gate_tests():
         # Load only the focused TEST-050 unit-test class.
