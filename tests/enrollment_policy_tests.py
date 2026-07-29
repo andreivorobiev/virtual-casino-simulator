@@ -108,6 +108,94 @@ class EnrollmentPolicyTests(unittest.TestCase):
         self.assertEqual(enrollment_policy.MODE_CLOSED, resolved["mode"])
 
 
+# Prove enforcement consults the policy and records every decision. (issue #333, slice 2)
+class EnrollmentEnforcementTests(unittest.TestCase):
+    # Capture the deployed flags and install an audit collector.
+    def setUp(self) -> None:
+        # Remember the real flag values.
+        self._flags = (config.SIGNUP_ENABLED, config.INVITATIONS_ENABLED, config.ENROLLMENT_ENABLED)
+        # Collect emitted audit events instead of writing to the application log.
+        self.events = []
+        # Remember the real log function so it can be restored.
+        self._info = enrollment_policy.logger.info
+        # Redirect the audit sink into the collector.
+        enrollment_policy.logger.info = lambda event, **fields: self.events.append((event, fields))
+
+    # Restore the flags, provider, and log function.
+    def tearDown(self) -> None:
+        # Put the original flags back.
+        config.SIGNUP_ENABLED, config.INVITATIONS_ENABLED, config.ENROLLMENT_ENABLED = self._flags
+        # Restore the real log function.
+        enrollment_policy.logger.info = self._info
+        # Release any injected provider.
+        storage.set_provider_for_tests(None)
+
+    # Install an isolated provider so no stored document leaks between cases.
+    def _isolate(self, tmp):
+        # Point the provider at the temporary directory.
+        storage.set_provider_for_tests(storage.JsonStorageProvider(Path(tmp) / "data"))
+
+    # Verify a closed mode denies every governed route and audits each refusal.
+    def test_closed_mode_denies_and_audits_every_route(self) -> None:
+        # Represent the shipped restricted-preview default.
+        config.SIGNUP_ENABLED = config.INVITATIONS_ENABLED = config.ENROLLMENT_ENABLED = False
+        # Isolate storage for this case.
+        with tempfile.TemporaryDirectory() as tmp:
+            # Install the temporary provider.
+            self._isolate(tmp)
+            # Evaluate each governed enrollment route.
+            for route in (enrollment_policy.ROUTE_SIGNUP, enrollment_policy.ROUTE_INVITATION, enrollment_policy.ROUTE_OAUTH):
+                # Require the closed mode to deny it.
+                self.assertFalse(enrollment_policy.evaluate(route)["allowed"], f"{route} was allowed while closed")
+            # Require one audit event per evaluation with no event lost.
+            self.assertEqual(3, len(self.events))
+            # Require every recorded decision to be a denial.
+            self.assertTrue(all(fields["decision"] == "denied" for _, fields in self.events))
+
+    # Verify the audit event carries no caller-supplied or credential material.
+    def test_audit_events_carry_only_allowlisted_fields(self) -> None:
+        # Isolate storage so the evaluation is deterministic.
+        with tempfile.TemporaryDirectory() as tmp:
+            # Install the temporary provider.
+            self._isolate(tmp)
+            # Evaluate one route to emit a single event.
+            enrollment_policy.evaluate(enrollment_policy.ROUTE_SIGNUP)
+            # Read the recorded fields.
+            _, fields = self.events[0]
+            # Require every emitted key to be explicitly allowlisted.
+            self.assertTrue(set(fields).issubset(enrollment_policy.AUDIT_FIELDS), f"unexpected audit keys: {set(fields) - enrollment_policy.AUDIT_FIELDS}")
+
+    # Verify an unreviewed reason cannot reach the log.
+    def test_unrecognized_reason_is_collapsed(self) -> None:
+        # Emit an event carrying a reason outside the reviewed vocabulary.
+        enrollment_policy._audit("enrollment_decision", route="signup", reason="totally-new-reason")
+        # Read the recorded fields.
+        _, fields = self.events[0]
+        # Require the unreviewed reason to be replaced rather than logged verbatim.
+        self.assertEqual("unknown_route", fields["reason"])
+
+    # Verify enabling one method does not enable another.
+    def test_enabling_email_does_not_enable_providers(self) -> None:
+        # Leave the environment closed so only the stored document matters.
+        config.SIGNUP_ENABLED = config.INVITATIONS_ENABLED = config.ENROLLMENT_ENABLED = False
+        # Isolate storage for the durable write.
+        with tempfile.TemporaryDirectory() as tmp:
+            # Build and install the provider.
+            provider = storage.JsonStorageProvider(Path(tmp) / "data")
+            # Make it active.
+            storage.set_provider_for_tests(provider)
+            # Create the storage root before writing.
+            provider.ensure_ready()
+            # Store a self-signup policy enabling only email.
+            provider.update_document(enrollment_policy.POLICY_DOCUMENT_KEY, lambda current: {"schema_version": 1, "mode": enrollment_policy.MODE_SELF_SIGNUP, "methods": {"email": True, "google": False, "facebook": False}, "invitations_enabled": False}, enrollment_policy.environment_baseline)
+            # Require email signup to be allowed.
+            self.assertTrue(enrollment_policy.evaluate(enrollment_policy.ROUTE_SIGNUP)["allowed"])
+            # Require a provider method to stay denied despite the open mode.
+            self.assertFalse(enrollment_policy.evaluate(enrollment_policy.ROUTE_OAUTH, method="google")["allowed"])
+            # Require invitation redemption to stay denied because the capability was not retained.
+            self.assertFalse(enrollment_policy.evaluate(enrollment_policy.ROUTE_INVITATION)["allowed"])
+
+
 # Allow direct execution for focused local runs.
 if __name__ == "__main__":
     # Run the focused suite.

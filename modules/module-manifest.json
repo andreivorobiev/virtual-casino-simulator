@@ -3,7 +3,7 @@
   "source_baseline": "9.1.0",
   "modules": {
     "application": "9.53.22",
-    "core": "9.28.1",
+    "core": "9.28.2",
     "ledger": "9.1.1",
     "players": "9.1.0",
     "bots": "1.1.1",

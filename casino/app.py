@@ -307,6 +307,12 @@ def build_router() -> Router:
         if set(body or {}) - {"token", "email", "password", "display_name", "locale", "terms_version", "accepted", "idempotency_key"}:
             # Fail closed through the same generic envelope used for every public rejection.
             raise ValidationError("invitation could not be redeemed", dict(invitations.GENERIC_REDEMPTION_DETAILS))
+        # Consult the durable enrollment policy before consuming the bearer, so a closed mode suspends
+        # outstanding redemption exactly as issue #333 specifies, and the refusal is audited. (#333, slice 2)
+        if not enrollment_policy.evaluate(enrollment_policy.ROUTE_INVITATION)["allowed"]:
+            # Reuse the identical generic envelope so a suspended mode is indistinguishable from an
+            # invalid token; disclosing which one applied would enable invitation probing.
+            raise ValidationError("invitation could not be redeemed", dict(invitations.GENERIC_REDEMPTION_DETAILS))
         # Redeem through the invitation lifecycle; disabled enrollment and every abuse case fail closed generically.
         return invitations.redeem(str((body or {}).get("token", "")), str((body or {}).get("email", "")), str((body or {}).get("password", "")), str((body or {}).get("display_name", "")), str((body or {}).get("locale", "en-US")), str((body or {}).get("terms_version", "")), (body or {}).get("accepted") is True, str((body or {}).get("idempotency_key", "")))
 
@@ -344,8 +350,11 @@ def build_router() -> Router:
     @router.post(r"/api/v2/auth/signup")
     # Create a local first-party user only when the explicit signup gate is enabled.
     def auth_signup(body, query, context):
-        # Keep the route present but fail closed until the operator enables signup intentionally.
-        if not SIGNUP_ENABLED:
+        # Consult the durable enrollment policy rather than the process flag, so the decision that is
+        # enforced is the same one that is audited and published. Still fails closed. (#333, slice 2)
+        signup_decision = enrollment_policy.evaluate(enrollment_policy.ROUTE_SIGNUP)
+        # Keep the route present but fail closed until the policy allows public email enrollment.
+        if not signup_decision["allowed"]:
             # Reject disabled signup before validating account fields to avoid account enumeration.
             raise ForbiddenError("Full account signup is disabled")
         # Reject unsupported fields so public signup cannot smuggle roles, status, wallet, or provider identity.

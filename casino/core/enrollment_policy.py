@@ -19,6 +19,8 @@ row inside a transaction), so two Admins cannot interleave a change.
 from casino import config
 # Import the storage provider accessor so the document uses the active backend.
 from casino.core.storage import get_storage_provider
+# Import the application log facade so enrollment decisions reach the audit trail.
+from casino.core import logger
 # Import the validation envelope so a rejected policy value fails closed with a stable code.
 from casino.errors import ValidationError
 
@@ -151,3 +153,88 @@ def capabilities() -> dict:
         # Publish the per-method flags without exposing environment names or operator settings.
         "methods": dict(policy["methods"]),
     }
+
+
+# Restrict audit fields so no email, token, or credential material can be logged accidentally.
+# This mirrors the allowlist convention in casino/core/one_time_tokens.py. (issue #333, slice 2)
+AUDIT_FIELDS = frozenset({"route", "mode", "method", "decision", "reason"})
+
+# Enumerate the internal decision reasons so logs stay useful without becoming caller-visible state.
+AUDIT_REASONS = frozenset({"allowed", "mode_closed", "method_disabled", "invitations_disabled", "unknown_route"})
+
+# Name each governed enrollment route so a typo cannot silently bypass the policy.
+ROUTE_SIGNUP = "signup"
+# Redemption of an Admin invitation.
+ROUTE_INVITATION = "invitation"
+# Starting a provider sign-up flow.
+ROUTE_OAUTH = "oauth"
+
+# Map each governed route to the self-signup method it consumes, where one applies.
+ROUTE_METHODS = {ROUTE_SIGNUP: "email"}
+
+
+# Forward one sanitized enrollment decision to the application audit log.
+def _audit(event: str, **fields) -> None:
+    # Retain only explicitly approved non-secret audit keys.
+    safe_fields = {key: value for key, value in fields.items() if key in AUDIT_FIELDS}
+    # Collapse any unexpected internal reason so an unreviewed string cannot reach the log.
+    if "reason" in safe_fields and safe_fields["reason"] not in AUDIT_REASONS:
+        # Replace an unrecognized reason with the generic unknown-route category.
+        safe_fields["reason"] = "unknown_route"
+    # Emit through the standard info facade; enrollment decisions are operational, not errors.
+    logger.info(event, **safe_fields)
+
+
+# Decide whether one enrollment route may proceed, and record why either way.
+def evaluate(route: str, *, method: str | None = None) -> dict:
+    """Return the decision for ``route`` and emit exactly one audit event.
+
+    Every governed enrollment entry point calls this instead of reading a flag, so the decision that
+    is enforced and the decision that is audited can never disagree.
+    """
+    # Resolve the capabilities once so the decision and the audit describe the same state.
+    resolved = capabilities()
+    # Read the mode that gates every route.
+    mode = resolved["mode"]
+    # Resolve which self-signup method this route consumes, preferring an explicit caller override.
+    consumed = method or ROUTE_METHODS.get(route)
+    # Reject a route this release does not govern rather than silently allowing it.
+    if route not in (ROUTE_SIGNUP, ROUTE_INVITATION, ROUTE_OAUTH):
+        # Record the refusal so an unrouted caller is visible in the audit trail.
+        _audit("enrollment_decision", route=route, mode=mode, decision="denied", reason="unknown_route")
+        # Deny by default because an unknown route has no reviewed policy.
+        return {"allowed": False, "reason": "unknown_route", "mode": mode}
+    # Close every enrollment route while the mode is closed.
+    if mode == MODE_CLOSED:
+        # Record the mode-level refusal.
+        _audit("enrollment_decision", route=route, mode=mode, method=consumed, decision="denied", reason="mode_closed")
+        # Deny without disclosing which specific prerequisite is missing.
+        return {"allowed": False, "reason": "mode_closed", "mode": mode}
+    # Gate invitation redemption on the retained invitation capability.
+    if route == ROUTE_INVITATION:
+        # Refuse when invitations are not live even though the mode is open.
+        if resolved["invitation_enrollment_enabled"] is not True:
+            # Record the capability-level refusal.
+            _audit("enrollment_decision", route=route, mode=mode, decision="denied", reason="invitations_disabled")
+            # Deny invitation redemption.
+            return {"allowed": False, "reason": "invitations_disabled", "mode": mode}
+        # Record the allowed redemption.
+        _audit("enrollment_decision", route=route, mode=mode, decision="allowed", reason="allowed")
+        # Allow invitation redemption.
+        return {"allowed": True, "reason": "allowed", "mode": mode}
+    # Every remaining route consumes a public self-signup method, which requires self-signup mode.
+    if mode != MODE_SELF_SIGNUP:
+        # Record that a public method was attempted outside self-signup mode.
+        _audit("enrollment_decision", route=route, mode=mode, method=consumed, decision="denied", reason="mode_closed")
+        # Deny the public method.
+        return {"allowed": False, "reason": "mode_closed", "mode": mode}
+    # Require the specific method to be enabled, so enabling one provider never enables another.
+    if not consumed or resolved["methods"].get(consumed) is not True:
+        # Record the method-level refusal.
+        _audit("enrollment_decision", route=route, mode=mode, method=consumed, decision="denied", reason="method_disabled")
+        # Deny the disabled method.
+        return {"allowed": False, "reason": "method_disabled", "mode": mode}
+    # Record the allowed public enrollment.
+    _audit("enrollment_decision", route=route, mode=mode, method=consumed, decision="allowed", reason="allowed")
+    # Allow the public method.
+    return {"allowed": True, "reason": "allowed", "mode": mode}

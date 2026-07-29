@@ -12485,7 +12485,7 @@
     {
       "id": "AUTH-013",
       "module": "Auth",
-      "description": "Enrollment is governed by a durable concurrency-safe policy document resolving an enrollment mode and independent self-signup method flags, seeded from and falling back to the deployed environment baseline so no stored state is required to preserve behaviour; unknown modes and non-boolean method values fail closed.",
+      "description": "Enrollment is governed by a durable concurrency-safe policy document resolving an enrollment mode and independent self-signup method flags, seeded from and falling back to the deployed environment baseline; public signup and invitation redemption are enforced through that policy, every decision emits one allowlisted audit event, and unknown modes, non-boolean method values, unrouted callers, and a closed mode all fail closed.",
       "status": "PASS",
       "api_tests": [
         "API-ENROLLMENT-POLICY-001"
@@ -12498,7 +12498,7 @@
       ],
       "introduced_in": "issue-333-enrollment-policy-store",
       "changed_in": "issue-333-enrollment-policy-store",
-      "notes": "Slice 1 of issue #333 is read-path only: no Admin write surface and no provider enablement. Enforcement, audit, the least-privilege permission, readiness gating, and the Admin UI follow in later slices."
+      "notes": "Slices 1-2 of issue #333: durable resolution plus enforcement and audit at signup and invitation redemption. A closed mode reuses the identical generic redemption envelope so it cannot be distinguished from an invalid token. OAuth start carries a policy hook but no wiring, because providers are absent today. The least-privilege permission, readiness gating, and Admin UI follow in later slices."
     },
     {
       "id": "ADMIN-028",
