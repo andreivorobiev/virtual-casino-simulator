@@ -2,16 +2,15 @@
 # Import required dependency so this module can use its public functions or constants.
 from casino.core.state_store import load_player_game_state, save_player_game_state
 # Import required dependency so this module can use its public functions or constants.
-from casino.core.validation import require_amount, require_player_id
+from casino.core.validation import require_player_id
 # Import required dependency so this module can use its public functions or constants.
 from casino.core import ledger, players
 # Import required dependency so this module can use its public functions or constants.
 from casino.core.history import append_history
+# Import the shared opaque-id helper so debit, spin, credit, and history share one round.
+from casino.core.ids import new_id
 # Import required dependency so this module can use its public functions or constants.
 from casino.games.slots import engine
-# Import required dependency so this module can use its public functions or constants.
-from casino.errors import ValidationError
-
 # Set GAME_ID to the value needed for the next operation.
 GAME_ID = "slots"
 
@@ -24,8 +23,8 @@ def request_player_id(body, query) -> str:
 def payload(player_id: str, state=None):
     # Set state to the value needed for the next operation.
     state = state or load_player_game_state(GAME_ID, player_id, engine.default_state)
-    # Return the computed value to the caller.
-    return {"game": GAME_ID, "state": state, "player": players.get_player(player_id), "config": {"symbols": engine.SYMBOLS, "paylines": list(engine.PAYLINES.keys()), "paytable": engine.PAYTABLE}}
+    # Return detached runtime rules so the browser never relies on stale embedded economics.
+    return {"game": GAME_ID, "state": state, "player": players.get_player(player_id), "config": {"symbols": list(engine.SYMBOLS), "paylines": list(engine.PAYLINES.keys()), "paytable": {symbol: dict(table) for symbol, table in engine.PAYTABLE.items()}, "economics": engine.economics_config()}}
 
 # Define the register function used by this module.
 def register(router):
@@ -45,44 +44,36 @@ def register(router):
     def spin(body, query):
         # Set player_id to the value needed for the next operation.
         player_id = request_player_id(body, query)
-        # Start protected logic so failures can be handled safely.
-        try:
-            # Set active_lines to the value needed for the next operation.
-            active_lines = int(body.get("active_lines", 5))
-        # Handle the expected failure path for the protected logic.
-        except Exception:
-            # Raise an error so invalid input or state is reported explicitly.
-            raise ValidationError("active_lines must be numeric")
-        # Branch when the following condition is true.
-        if active_lines not in engine.PAYLINES:
-            # Raise an error so invalid input or state is reported explicitly.
-            raise ValidationError("active_lines must be one of 1,3,5,9,20")
-        # Set line_bet to the value needed for the next operation.
-        line_bet = require_amount(body.get("line_bet", 1))
+        # Normalize the submitted line count through the exact engine-owned closed vocabulary.
+        active_lines = engine.normalize_active_lines(body.get("active_lines", 5))
+        # Preserve the frozen v1 cent-normalized amount range at the game-owned boundary.
+        line_bet = engine.normalize_line_bet(body.get("line_bet", 1))
         # Set state to the value needed for the next operation.
         state = load_player_game_state(GAME_ID, player_id, engine.default_state)
-        # Set is_free to the value needed for the next operation.
-        is_free = int(state.get("free_spins",0)) > 0
-        # Set cost to the value needed for the next operation.
-        cost = 0 if is_free else round(active_lines * line_bet, 2)
+        # Preview the exact current-route cost while a banked feature remains zero-cost.
+        configuration = engine.effective_configuration(state, active_lines, line_bet)
+        # Use the engine-owned cost equation before the current ledger debit.
+        cost = configuration["cost"]
+        # Allocate one round identity before money movement so every debit and settlement row reconciles.
+        round_id = new_id("slot")
         # Set debit to the value needed for the next operation.
         debit = None
         # Branch when the following condition is true.
         if cost > 0:
             # Set debit to the value needed for the next operation.
-            debit = ledger.debit(player_id, cost, "SLOTS_SPIN_DEBIT", GAME_ID, None, {"active_lines": active_lines, "line_bet": line_bet})
+            debit = ledger.debit(player_id, cost, "SLOTS_SPIN_DEBIT", GAME_ID, round_id, {"active_lines": configuration["active_lines"], "line_bet": configuration["line_bet"], "cost": cost})
         # Set result to the value needed for the next operation.
-        result = engine.spin(state, active_lines, line_bet)
+        result = engine.spin(state, active_lines, line_bet, round_id=round_id)
         # Set credit to the value needed for the next operation.
         credit = None
         # Branch when the following condition is true.
         if result["payout"] > 0:
             # Set credit to the value needed for the next operation.
-            credit = ledger.credit(player_id, result["payout"], "SLOTS_PAYOUT_CREDIT", GAME_ID, result["round_id"], {"wins": result["wins"]})
+            credit = ledger.credit(player_id, result["payout"], "SLOTS_PAYOUT_CREDIT", GAME_ID, result["round_id"], {"wins": result["wins"], "line_payout": result["line_payout"], "scatter_payout": result["scatter_payout"], "progressive_hit": result["progressive_hit"]})
         # Set bal to the value needed for the next operation.
         bal = players.get_player(player_id)["balance"]
         # Execute this statement as part of the module's documented control flow.
-        append_history(GAME_ID, result["round_id"], player_id, "spin", f"{active_lines} lines @ {line_bet}", cost, "win" if result["payout"] else "loss", result["payout"], bal, result)
+        append_history(GAME_ID, result["round_id"], player_id, "spin", f"{result['active_lines']} lines @ {result['line_bet']}", result["cost"], "win" if result["payout"] else "loss", result["payout"], bal, result)
         # Execute this statement as part of the module's documented control flow.
         save_player_game_state(GAME_ID, player_id, state)
         # Return the computed value to the caller.

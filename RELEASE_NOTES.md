@@ -1,4 +1,142 @@
-# Virtual Casino Simulator v0.9.5.25 Release Notes
+# Virtual Casino Simulator v0.9.5.35 Release Notes
+
+## Listener-free request-latency baseline
+
+- Adds an explicit test-only direct-WSGI baseline for authenticated current-user, Slots state, Roulette state, aggregate Casino state, and idempotent Boule actions.
+- Measures each fixed route family at concurrency 1, 2, 4, and 8 with eight warm-ups, sixty-four measured operations, and a rolling at-most-N scheduler.
+- Runs against isolated external JSON and callback-owned disposable loopback MySQL providers while preserving the repository's default MySQL pool settings.
+- Keeps authentication plus Boule first-write, replay, conflict, receipt-retention, and authoritative wallet invariants outside every timed row.
+- Emits only exact-source aggregate evidence with strict schema and recursive type validation; identities, auth material, requests, wagers, outcomes, samples, paths, hosts, timestamps, and exception text are excluded.
+- Defines no numeric latency threshold because hosted hardware varies; acceptance requires complete rows, positive measurements, exact replay controls, zero errors, and cleanup.
+- Opens no listener and changes no runtime route, API contract, provider implementation, pool default, game, production workflow, or deployment behavior.
+- Retains exact immutable v0.9.5.34 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation.
+
+## Prior v0.9.5.34 authoritative house-side Keno economics
+
+## Authoritative house-side Keno economics
+
+- Rebalances one server-authoritative paytable across every legal one-through-twenty-spot Keno ticket.
+- Keeps every positive award at least stake-neutral while preserving strictly increasing rows and full-catch jackpots.
+- Preserves the frozen `/api/v1` routes, standard envelopes, accepted `0.01`–`1,000,000` play-token range, and existing `round(float(amount) * multiplier, 2)` settlement law.
+- Applies the owner-approved `3.49x` pick-one cent-rounding exception so the one-cent ticket remains house-side.
+- Proves all 230 hypergeometric outcome classes with exact rational evidence and bounds realized production settlement below `1` across the complete accepted amount domain, including IEEE-754 error.
+- Verifies maximum-stake maximum-jackpot engine, API, current-ledger, and history equations while restoring randomness after proof.
+- Verifies sixty-four governed Keno states across English and Russian and four viewports, including numeric jackpot, transient drawing, open-ticket precedence, route restoration, Repeat, autoplay, and aligned history.
+- Retains exact immutable v0.9.5.33 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation.
+
+## Prior v0.9.5.33 authoritative house-side Slots economics
+
+## Authoritative house-side Slots economics
+
+- Aligns the engine, existing API route, browser, and English/Russian copy on one authoritative line-bet, payline, scatter, four-free-spin, and progressive model.
+- Keeps the frozen `/api/v1` cent line-bet domain and the supported 1, 3, 5, 9, and 20 line choices compatible.
+- Qualifies one bounded scalar progressive only for paid 20-line spins at line bet `1.00`; other paid configurations and every free spin preserve the current meter.
+- Locks free spins to their earned wager basis so consuming requests cannot escalate the bonus value.
+- Proves six real-engine scenarios with at least 1,000,000 paid spins each, complete retriggered bonus drain, restored randomness, and a 99% upper confidence bound below `1`.
+- Verifies exact engine, route, current-ledger, history, and browser equations, including the maximum accepted line bet.
+- Verifies all ten governed Slots states in English and Russian across four viewports, including progressive hit/reset, bonus basis, paylines, repeat, and route restoration.
+- Makes no durable action-reservation, cross-process, exactly-once, or composite state-and-ledger claim; issue #471 remains open for the separately governed #430 Phase 0c remainder.
+- Retains exact immutable v0.9.5.32 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation.
+
+## Prior v0.9.5.32 exact visible-rank Hi-Lo pricing
+
+## Exact visible-rank Hi-Lo pricing
+
+- Makes the server-owned visible-rank paytable authoritative for settlement, with total-return prices from `0.96x` through `1.93x`.
+- Keeps ties as exact `1x` refunds and proves fractional-wager cent rounding through the catalog Long driver.
+- Preserves the required deprecated frozen `/api/v1` integer `correct_return_multiplier=2` scalar for older clients.
+- Adds optional `correct_paytable` and `house_edge` fields without changing the standard response envelope.
+- Records player-scoped ledger payout-multiplier evidence for exact replay and audit.
+- Verifies the localized price range and active-rank price across English and Russian at all four governed viewports.
+- Retains exact immutable v0.9.5.31 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation.
+
+## Prior v0.9.5.31 independent Andar and Bahar side pricing
+
+## Independent Andar and Bahar side pricing
+
+- Prices Andar at 1.90x and Bahar at 2.00x instead of presenting one shared side return.
+- Preserves the deprecated frozen `/api/v1` integer `return_multiplier=2` scalar for older clients.
+- Adds an optional `return_multipliers` object with exact per-side values and LF-stable OpenAPI digest coverage.
+- Records exact rational return-to-player evidence: Andar `8151/8330` (97.8511%) and Bahar `808/833` (96.9988%).
+- Aligns settlement, API, contract, Long Suite, EN/RU copy, and governed Browser evidence with the independent prices.
+- Verifies both exact `1.90x` and `2.00x` displays across English and Russian, four viewports, and four governed states.
+- Retains exact immutable v0.9.5.30 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation.
+
+## Prior v0.9.5.30 fail-closed affected-game Browser qualification
+
+## Fail-closed affected-game Browser qualification
+
+- Maps changed pull-request files to catalog-owned games and falls back to complete coverage for every shared, unknown, or ambiguous path.
+- Runs complete Browser coverage for protected-main pushes, release inputs, manual formal qualification, and pull requests carrying the explicit full-browser label.
+- Omits only dedicated acceptance cases owned by unaffected games; shared shell, authentication, PWA, Admin, affinity-owned, and unmapped cases remain included.
+- Passes the detector-owned game selection independently to every shard and the aggregate instead of trusting artifact declarations.
+- Fails the aggregate closed on detector failure, missing, duplicate, failed, unexpected, or selection-mismatched shard evidence.
+- Preserves four deterministic Browser shards, unique artifacts, unconditional browser/listener cleanup, and the historical required aggregate context.
+- Keeps formal 50,000-cycle, governed 138-context, and sustained Baccarat profiles isolated behind their existing owner gates.
+- Retains exact immutable v0.9.5.29 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation.
+
+## Prior v0.9.5.29 route-free storage-atomic settlement foundation
+
+## Route-free storage-atomic settlement foundation
+
+- Adds one internal shared adapter for finite non-zero signed game actions without wiring any route or game.
+- Delegates debits and credits to the existing public storage-atomic ledger boundaries instead of creating another transaction engine.
+- Preserves every caller-owned audit field and adds canonical game action, request fingerprint, and round evidence without mutating caller input.
+- Returns exact provider replay evidence and performs no proof-before-write scan on ordinary commits.
+- After a provider conflict, recovers only an exact committed player, game, action, round, transaction-type, fingerprint, and signed-amount match.
+- Fails closed on malformed money, missing identities, conflicting canonical details, changed replay semantics, or absent compatible proof.
+- Keeps Phase 0b state storage, Phase 0c game wiring, routes, games, providers, frozen API contracts, and browser behavior outside this release.
+- Retains exact immutable v0.9.5.28 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation.
+
+## Prior v0.9.5.28 governed 138-browser full-catalog qualification
+
+## Governed 138-browser full-catalog qualification
+
+- Proves exactly 138 simultaneous users across all 46 registered games, with exactly three assigned and three successful users per game.
+- Requires barrier, login, navigation, and gameplay completion for all 138 contexts and records fixed game, phase, and action-state attribution.
+- Verifies 136/136 committed wager actions through exact player-scoped ledger evidence while two legitimate no-wager actions produce no fabricated game ledger rows.
+- Proves 138 unique matching players, zero duplicate player, action, or ledger identifiers, and nonnegative balances.
+- Exercises disposable MySQL concurrency 1/2/4/8 with zero errors, timeouts, residual leases, or waiters.
+- Hardens concurrent autoplay registry updates, Keno lazy-module delivery, Double Bonus Deal/Draw readiness, and client-log peer-disconnect handling.
+- Keeps browser diagnostics, autoplay 404s, and governed client-log 500s at zero while closing all 138 contexts, the listener, and the job container.
+- Retains exact immutable v0.9.5.27 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation.
+
+## Prior v0.9.5.27 all-game desktop control reachability
+
+## All-game desktop control reachability
+
+- Adds one hosted Browser gate for every enabled control in all 46 registered games at the governed primary and compact desktop viewports.
+- Fails closed when a visible control is clipped by a fixed-height, non-scrollable ancestor and has no vertical scroll owner.
+- Produces exact-commit PNG and JSON after-pass sidecars for all 92 game and viewport surfaces.
+- Keeps the four-shard Browser union exact at 106 cases with unique artifacts, fail-closed aggregation, and listener cleanup.
+- Preserves gameplay, frozen API contracts, UI styling, formal 50,000-cycle work, and Baccarat sustained qualification unchanged.
+- Rotates the PWA shell identity and keeps curated What's New metadata disabled pending its separately governed UI remainder.
+- Retains exact immutable v0.9.5.26 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation.
+
+## Prior v0.9.5.26 governed Acey-Deucey spread pricing
+
+## Governed Acey-Deucey spread pricing
+
+- Prices every playable inside wager from the visible card spread using a server-owned constant-edge return table.
+- Makes equal or adjacent boundary cards pass-only and rejects Play before hidden-card reveal, receipt creation, state mutation, or ledger movement.
+- Preserves the frozen `/api/v1` numeric `inside_return_multiplier` compatibility scalar and aligns it to the current or latest priceable round.
+- Adds optional paytable and house-edge rule fields with exact OpenAPI, compatibility-record, module-matrix, and digest evidence.
+- Keeps EN/RU controls aligned with the server price and disables Play plus wager editing when no honest inside price exists.
+- Derives Long Suite outcomes from the public paytable and verifies governed desktop, tablet, mobile, locale, accessibility, reduced-motion, and route-restoration behavior in Browser evidence.
+- Rotates the PWA shell identity and keeps curated What's New metadata disabled pending its separately governed UI remainder.
+- Retains exact immutable v0.9.5.25 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation.
+
+## Prior v0.9.5.25 deterministic Browser shard-state controller
 
 ## Deterministic Browser shard-state controller
 

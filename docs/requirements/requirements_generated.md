@@ -1,33 +1,33 @@
 # Virtual Casino Requirements and Validation
 
-Packaged application release: 0.9.5.25
+Packaged application release: 0.9.5.35
 
 Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.53.12
-- core: 9.27.2
+- application: 9.53.22
+- core: 9.28.0
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.1
-- autoplay: 1.1.3
+- autoplay: 1.1.4
 - audio: 9.1.1
 - admin: 1.13.0
 - operations: 1.1.2
 - marketing_site: 1.0.2
 - roulette: 9.4.12
-- slots: 9.2.0
+- slots: 9.3.0
 - blackjack: 9.1.7
 - baccarat: 9.1.8
-- keno: 9.3.0
+- keno: 9.3.1
 - bingo: 9.3.0
 - multi_hand_video_poker: 1.1.0
 - casino_war: 1.1.0
 - big_six_wheel: 1.1.0
 - red_dog: 1.1.0
 - dragon_tiger: 1.1.0
-- hi_lo: 1.1.0
+- hi_lo: 1.1.1
 - three_card_poker: 1.1.0
 - jacks_or_better_video_poker: 1.1.0
 - deuces_wild_video_poker: 1.1.0
@@ -39,8 +39,8 @@ Historical source baseline: 9.1.0
 - over_under_7: 1.1.0
 - plinko: 1.1.0
 - fan_tan: 1.1.0
-- andar_bahar: 1.1.0
-- acey_deucey: 1.1.0
+- andar_bahar: 1.1.1
+- acey_deucey: 1.1.1
 - caribbean_stud: 1.1.0
 - let_it_ride: 1.1.0
 - casino_holdem: 1.1.0
@@ -50,10 +50,10 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.0
 - pai_gow_poker: 1.1.0
 - teen_patti: 1.1.0
-- tests: 1.64.11
-- docs: 1.64.11
-- contracts: 1.49.6
-- tooling: 1.21.8
+- tests: 1.64.35
+- docs: 1.64.35
+- contracts: 1.49.19
+- tooling: 1.21.12
 - commenting_policy: 1.0.0
 - color_wheel: 1.1.0
 - poker_dice: 1.1.0
@@ -121,7 +121,7 @@ Historical source baseline: 9.1.0
 - **LOG-003** (Logging) - PASS: Client/browser log is written as JSONL.
 - **LOG-004** (Logging) - PASS: API requests are logged with method and path.
 - **LOG-005** (Logging) - PASS: Unhandled API exceptions are logged.
-- **LOG-006** (Logging) - PASS: Client window errors are posted to the backend logger.
+- **LOG-006** (Logging) - PASS: Client window errors are posted to the backend logger, and a peer disconnect after persistence cannot recurse into a misleading HTTP 500 response.
 - **LOG-007** (Logging) - PASS: Recent app logs are exposed through admin APIs.
 - **LOG-008** (Logging) - PASS: Recent error logs are exposed through admin APIs.
 - **LOG-009** (Logging) - PASS: Recent client logs are exposed through admin APIs.
@@ -367,7 +367,7 @@ Historical source baseline: 9.1.0
 - **DOC-015** (Documentation) - PASS: Known limitations are documented when applicable.
 - **DOC-016** (Documentation) - PASS: Parallel-agent workflow documentation defines coordinator and worker responsibilities for humans, Claude, Codex, and other automation.
 - **TOOL-001** (Tooling) - PASS: Agent task packets and pull-request templates preserve author, coordinator, merge executor, scope, file ownership, validation, dependency, exact-head, and handback context.
-- **TOOL-002** (Tooling) - PASS: GitHub Actions exposes Suite 100 as a pull request check and Suite 300 or 500 as a manually selected sharded soak run.
+- **TOOL-002** (Tooling) - PASS: GitHub Actions exposes fail-closed sharded qualification: Suite 100 runs on pull requests, Suite 300 or 500 is manually selected, and Browser pull requests select only unambiguously affected game-owned cases while shared, unknown, protected-main, release, and manual inputs retain complete coverage.
 - **TOOL-003** (Tooling) - PASS: Release tooling produces a deterministic tracked-file application archive, checksum-bound provenance and dependency manifest, clean extracted-copy smoke, fail-closed private-content exclusion, extracted-host command inventory enforcement, protected publication gate, and application-only prior-artifact rollback mapping.
 - **BOT-001** (Bots) - PASS: Bots are represented as controllers for player accounts, not embedded game objects.
 - **BOT-002** (Bots) - PASS: Game modules must not import bot strategy modules.
@@ -392,7 +392,7 @@ Historical source baseline: 9.1.0
 - **AUTO-003** (Autoplay) - PASS: Stop prevents any new round or action from starting.
 - **AUTO-004** (Autoplay) - PASS: Stop during an atomic action completes that action safely and schedules no follow-up action.
 - **AUTO-005** (Autoplay) - PASS: Autoplay speed consistently affects inter-round delay.
-- **AUTO-006** (Autoplay) - PASS: Autoplay logs start, stop, tick, completion, and error status through the server session store.
+- **AUTO-006** (Autoplay) - PASS: Autoplay logs start, stop, tick, completion, and error status through a server session store whose in-process lifecycle transactions preserve every concurrently issued session id.
 - **AUTO-007** (Autoplay) - PASS: Admin shows active and recent autoplay sessions.
 - **AUTO-008** (Autoplay) - PASS: Admin Stop All requests stop for all server-registered autoplay sessions.
 - **AUTO-009** (Autoplay) - PASS: Roulette autoplay repeats the saved bet template.
@@ -539,7 +539,7 @@ Historical source baseline: 9.1.0
 - **DT-003** (Dragon Tiger) - PASS: Dragon Tiger wager debits and settlement credits use the shared ledger exactly once under stable action identifiers and immutable request fingerprints.
 - **DT-004** (Application) - PASS: The Dragon Tiger surface and persistent shared shell provide complete English and Russian copy and remain responsive, accessible, and reduced-motion safe across required viewports.
 - **DT-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery automatically include Dragon Tiger with requirement, module, version, and visual evidence traceability.
-- **HILO-001** (Hi-Lo) - PASS: Hi-Lo compares two standard-card ranks with ace high and suits ignored, returning 2x for a correct prediction, 1x for an equal-rank refund, and 0 for an incorrect prediction.
+- **HILO-001** (Hi-Lo) - PASS: Hi-Lo compares two standard-card ranks with ace high and suits ignored, using the server-owned visible-rank paytable for a correct prediction, a 1x equal-rank refund, and a 0x incorrect result.
 - **HILO-002** (Hi-Lo) - PASS: Authenticated sessions own isolated reload-safe Hi-Lo active decisions, recent rounds, and canonical route restoration.
 - **HILO-003** (Hi-Lo) - PASS: Hi-Lo wager debits, equal-rank refunds, and winning payouts use the shared ledger exactly once under stable action identifiers and immutable request fingerprints.
 - **HILO-004** (Application) - PASS: The Hi-Lo surface provides complete English and Russian copy and remains responsive, accessible, and reduced-motion safe across required viewports and decision outcomes.
@@ -599,12 +599,12 @@ Historical source baseline: 9.1.0
 - **FAN-TAN-003** (Fan-Tan) - PASS: Aggregate residue wagers and returned-token credits use the shared ledger exactly once under durable action identities.
 - **FAN-TAN-004** (Application) - PASS: Fan-Tan supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.
 - **FAN-TAN-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Fan-Tan with requirement, module, version, and visual traceability.
-- **AB-001** (Andar Bahar) - PASS: A joker or match card sets the rank and alternating Andar/Bahar deals stop at the first matching rank with transparent even-money settlement.
+- **AB-001** (Andar Bahar) - PASS: Alternating Andar/Bahar deals stop at the first matching rank and settle with exact side prices: Andar returns 1.90x and Bahar returns 2.00x.
 - **AB-002** (Andar Bahar) - PASS: Authenticated sessions own private reload-safe rounds, durable receipts, settled history, and canonical route restoration.
 - **AB-003** (Andar Bahar) - PASS: Wager debits and returned-token credits use the shared ledger exactly once under durable action identities.
-- **AB-004** (Application) - PASS: Andar Bahar supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.
+- **AB-004** (Application) - PASS: Andar Bahar supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play with unobscured wallet and feedback controls.
 - **AB-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Andar Bahar with requirement, module, version, and visual traceability.
-- **AD-001** (Acey-Deucey) - PASS: Two free exposed boundaries precede a pass or wager decision, and strict inside ranks settle at even money while outside and boundary ties lose.
+- **AD-001** (Acey-Deucey) - PASS: Two free exposed boundaries precede a pass or wager decision; a play requires at least one strict inside rank and settles at the server-owned spread price that holds a constant target house edge, while outside ranks and boundary ties lose.
 - **AD-002** (Acey-Deucey) - PASS: Authenticated sessions own private reload-safe prepared rounds, hidden third cards, durable receipts, settled history, and canonical route restoration.
 - **AD-003** (Acey-Deucey) - PASS: Free deals and passes move no tokens; wager debits and returned-token credits use the shared ledger exactly once under durable action identities.
 - **AD-004** (Application) - PASS: Acey-Deucey supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.
@@ -799,6 +799,7 @@ Historical source baseline: 9.1.0
 - **SLOT-033** (Slots) - PLANNED: Each stopped reel aligns its visible symbols within one CSS pixel and remains stationary; win lines and highlights begin only after the final stop, preserve symbol identity, remain bounded and non-blocking, and provide non-celebratory loss and reduced-motion alternatives.
 - **SLOT-034** (Slots) - PLANNED: Slots autoplay starts only after settlement, Stop prevents a new spin, and free-spin, wallet, route, refresh, locale, history, API-error, and browser-history recovery preserve the authoritative result without duplicate debit, payout, bonus, or stale presentation residue.
 - **SLOT-035** (Tests) - PLANNED: Slots motion acceptance maps at least 100 committed spins across losses, wins, wilds, scatters, free spins, progressive state, repeated grids, and every speed profile and supplies exact-head transform, stop, alignment, cleanup, EN/RU, four-viewport, normal, and reduced-motion video evidence with independent review.
+- **SLOT-036** (Slots) - PASS: Slots uses one server-authoritative paytable, scatter award, four-free-spin feature, and constant-size progressive meter; only a paid spin at exactly twenty lines and a 1.00 line bet contributes to or can win the meter, every free spin preserves it, and an earned feature remains locked to its paid-trigger line and stake basis. The frozen v1 cent stake and line-count vocabulary remains accepted, current debit and payout rows reconcile to one result round, and governed evidence proves house-side best play over at least one million paid spins per approved scenario with complete bonus-chain drainage plus localized responsive presentation.
 - **RESET-001** (Core) - PASS: Email password recovery is disabled by default and, when enabled, is enumeration-safe: initiation returns one identical acknowledgement for existing, unknown, malformed, inactive, credential-free, and rate-limited mailboxes, and mail is submitted only for a recoverable local account. No response, error, or audit event discloses account existence.
 - **RESET-002** (Core) - PASS: Recovery completion consumes a purpose-bound password_reset bearer atomically and only then replaces the stored credential, clears the forced-reset marker, and revokes every existing session for the account. An interrupted credential write is recoverable only by replaying the exact mailbox, bearer, replacement, and caller request; a changed replacement remains rejected, while an exact replay after success returns the original receipt without rotating credential authority again. Disabled recovery, malformed input, weak passwords, expired, replayed, revoked, tampered, wrong-subject bearers, and accounts that became inactive or credential-free all fail closed with one identical generic error; password policy is enforced before the bearer is spent so a weak password cannot burn a valid token.
 - **RESET-003** (Core) - PASS: Recovery never exposes sensitive material: no password, raw bearer, or recipient address appears in results, errors, or audit events, which carry only a keyed recipient digest, token id, user id, outcome, and reason; at most one recovery bearer is ever valid per mailbox because reissue revokes any previously delivered bearer, and a bearer whose delivery is rejected is revoked immediately so no undelivered link stays usable.
@@ -822,9 +823,9 @@ Historical source baseline: 9.1.0
 - **WELL-001** (Core) - PASS: The server-only session-wellness preference foundation is explicitly opt-in and off by default, persists only for authenticated non-guest subjects, accepts only elapsed-reminder, suggested-stopping-point, cadence, and optimistic-revision fields, rejects an entire payload carrying unknown or privilege fields, bounds cadence from 10 through 240 minutes so it cannot become countdown pressure or silently never arrive, and rejects stale concurrent updates. Disposable guest trials receive explicit non-persisted responses and create no durable wellness record. Acknowledging a reminder grants no token, streak, bonus, or reward and creates no ledger movement.
 - **WELL-002** (Core) - PASS: The additive authenticated wellness summary derives its player and active-session start boundary exclusively from server context, reads only a bounded authoritative committed-ledger window, re-filters provider rows to the session player, and reports plain movement, staked, returned, and arithmetic net play-token totals without a verdict, advice, loss-chasing language, or value implication. All drafted wellness copy ships in EN and RU with identical placeholders and is scanned against prohibited deposit, purchase, cash-value, prize, redemption, reward, streak, urgency, and loss-chasing framing.
 - **TEST-105** (Tests) - PASS: Listener-free isolated-provider evidence verifies opt-in defaults, durable registered-user configuration, disposable guest non-persistence, cadence floor and ceiling with strict type rejection, whole-payload unknown-field rejection, optimistic stale-write conflicts, reward-free acknowledgement with an unchanged ledger, neutral active-session totals with no verdict, populated-neighbour privacy, malformed-document recovery, subjectless fail-closed behavior, prohibited-framing scanning across every drafted wellness string, complete EN/RU placeholder parity, server-owned session-bound route behavior, additive v2 contract shape, and exact contract digest pinning.
-- **TOUR-001** (Core) - PASS: The server-only What's New foundation reads curated repository release metadata rather than deriving player content from module or application version changes. An entry is eligible only when its release version is an exact numeric dotted release at or below the running application, both localization keys are non-empty, and the release coordinator's show_in_whats_new flag is exactly true. Missing, malformed, future, incomplete, or truthy-but-inexact entries fail closed. The shipped catalog is reconciled to packaged application 0.9.5.25 and remains explicitly disabled until the player UI, browser evidence, and release-coordinator activation remainder of issue #165 are accepted.
+- **TOUR-001** (Core) - PASS: The server-only What's New foundation reads curated repository release metadata rather than deriving player content from module or application version changes. An entry is eligible only when its release version is an exact numeric dotted release at or below the running application, both localization keys are non-empty, and the release coordinator's show_in_whats_new flag is exactly true. Missing, malformed, future, incomplete, or truthy-but-inexact entries fail closed. The shipped catalog is reconciled to packaged application 0.9.5.35 and remains explicitly disabled until the player UI, browser evidence, and release-coordinator activation remainder of issue #165 are accepted.
 - **TOUR-002** (Core) - PASS: An authenticated registered subject receives at most one capped newest-first merged set of explicitly enabled curated entries and a changelog path. Published entries carry localization keys only, never raw release identifiers. Acknowledgement is atomically persisted per server-derived subject, stamped only from the canonical running application version, and retry-idempotent for that release; one subject cannot dismiss another subject's tour. Disposable guest trials receive an empty non-persisted eligibility response and a non-persisted acknowledgement, creating no durable What's New document.
-- **TEST-106** (Tests) - PASS: Listener-free isolated-provider evidence verifies exact curated opt-in selection, skipped-release merge ordering and caps, malformed and future metadata fail-closed behavior, missing and malformed catalog recovery, durable per-subject server-stamped dismissal, retry idempotency, populated-neighbour isolation, disposable guest non-persistence, subjectless rejection, raw-version privacy, current packaged 0.9.5.25 metadata with activation disabled, complete EN/RU release keys, consent-free metadata shape, additive v2 route behavior, hostile caller identity and version inputs being rejected, and exact checked contract digest pinning.
+- **TEST-106** (Tests) - PASS: Listener-free isolated-provider evidence verifies exact curated opt-in selection, skipped-release merge ordering and caps, malformed and future metadata fail-closed behavior, missing and malformed catalog recovery, durable per-subject server-stamped dismissal, retry idempotency, populated-neighbour isolation, disposable guest non-persistence, subjectless rejection, raw-version privacy, current packaged 0.9.5.35 metadata with activation disabled, complete EN/RU release keys, consent-free metadata shape, additive v2 route behavior, hostile caller identity and version inputs being rejected, and exact checked contract digest pinning.
 - **MARKETING-001** (Marketing Site) - PASS: The repository contains an independently owned static TiltSeven landing-page scaffold in English and Russian. Each locale provides semantic header, navigation, main, and footer landmarks; a single top-level heading; keyboard skip navigation; stable accessible names; local-only runtime assets; and responsive containment at every governed viewport. The scaffold uses no JavaScript, forms, trackers, payment controls, or third-party runtime dependency.
 - **MARKETING-002** (Marketing Site) - PASS: Every locale presents TiltSeven as a play-token casino simulator with no cash value and explicit absence of deposits, purchases, withdrawals, redemption, prizes, transfer, sale, exchange, or conversion. The only absolute hyperlink is the separately governed canonical Casino origin, and acceptance never activates that link or changes the Casino deployment.
 - **MARKETING-003** (Marketing Site) - PASS: Future publication is fail-closed behind a separate owner-approved packet naming the canonical host, redirects, hosting account and path, DNS and TLS ownership, exact commit and artifact digest, privacy and analytics policy, rollback, operator, and independent verification. Repository documentation contains no operative provider endpoint, credential, live DNS record, deployment claim, or instruction that can be mistaken for current authorization.
@@ -839,6 +840,7 @@ Historical source baseline: 9.1.0
 - **TEST-110** (Tests) - PASS: Listener-free evidence verifies the Compare Games foundation and shared API boundary: money-math attributes are excluded and never present on a row, localization readiness is derived per locale, request bounds reject too-few, too-many, and malformed requests, unknown games are reported as missing, every new route stays authenticated, OpenAPI/compatibility/module ownership/exact-byte digests stay aligned, and every added copy namespace ships complete EN and RU strings with identical placeholders.
 - **GAMECORE-001** (Core) - PASS: A shared wager-and-settle core provides one exactly-once ledger settlement path for catalog games: a caller supplies only a pure bet validator and a deterministic resolver, and the core draws server entropy, debits one aggregate wager, settles deterministically, and credits any single aggregate return. The wager debit and the settlement credit are each applied exactly once, guarded by ledger proof plus a request fingerprint, so one caller-stable request id maps to exactly one round and a retry replays the identical committed outcome without moving the wallet again.
 - **GAMECORE-002** (Core) - PASS: The shared settlement core fails closed on every abuse and error path: a request id reused with different wager content is rejected as a conflict rather than double-spending, an action identity can never move two different amounts, a non-positive or malformed wager is rejected before any wallet movement, a missing or malformed request id is rejected, and per-player round state is bounded. The deterministic round identity is game-scoped so one game's proof can never satisfy another game.
+- **GAMECORE-003** (Core) - PASS: A route-free shared settlement adapter applies one finite non-zero signed game action through the public storage-atomic ledger debit-once or credit-once boundary. It preserves caller audit details, adds canonical game action, request fingerprint, and round evidence without mutating caller input, returns an exact provider replay when available, and after a provider conflict recovers only a committed row whose player, game, action, round, transaction type, fingerprint, and signed amount all match. Missing, malformed, or conflicting identity and money evidence fails closed before another balance movement.
 - **TEST-127** (Tests) - PASS: Listener-free evidence verifies the shared simple-game settlement core: winning and losing rounds settle exactly once with correct balances, a retried request replays without double-spending, a request id reused with different content fails closed, settlement recovers deterministically from committed ledger proof after total per-player state loss, invalid wagers and missing request ids are rejected before any wallet movement, and the deterministic round id is stable and game-scoped.
 - **CWHEEL-001** (Color Wheel) - PASS: Color Wheel is a twenty-segment wheel built on the shared exactly-once settlement core. A spin debits one bounded play-token stake on a chosen colour, draws one server-authoritative landed segment, and credits the colour's total-return multiplier on a match: red and black pay two times, green six times, and gold sixteen times. Every payout is house-positive because each colour's segment probability times its multiplier is below one. Unknown colours and non-integer, non-positive, or over-limit stakes are rejected before any wallet movement.
 - **CWHEEL-002** (Color Wheel) - PASS: Color Wheel inherits the shared core's exactly-once settlement: one caller-stable request id maps to one spin, a retry replays the identical committed landed segment and payout without moving the wallet again, and a request id reused with different wager content fails closed. The additive v1 contract exposes only the game-owned state and spins routes and never alters the frozen shared API. The published bet catalog reports honest segment counts and multipliers.
@@ -929,4 +931,9 @@ Historical source baseline: 9.1.0
 - **AUTH-012** (Core) - PASS: The configured bootstrap identity is idempotently migrated to a non-assignable platform_owner authority while preserving compatible Admin presentation, every committed migration revokes predecessor sessions, ordinary Admin and monitor identities retain Admin access without owner authority, and repeated process startup never rotates a current owner session.
 - **ADMIN-028** (Admin) - PASS: Only the current active platform owner can grant or revoke ordinary Admin authority through additive v2 account mutation, the target must already be an active canonical account, v2 account creation is player-only, platform-owner authority is not caller-assignable or removable, and transaction-scoped JSON/MySQL validation preserves at least one active owner and Admin while recording the canonical actor and revoking affected target sessions.
 - **TEST-138** (Tests) - PASS: Listener-free account-spine evidence proves one-time bootstrap-owner migration and session invalidation, owner-only additive-v2 Admin grant and revoke, ordinary-Admin denial, active-target enforcement, last-owner preservation under concurrent mutation, and v2 player-only creation without opening a listener or touching live identity data.
+- **TEST-142** (Tests) - PASS: An explicit exact-source qualification profile requires a completed disposable-MySQL 1/2/4/8 preflight, provisions exactly 138 synthetic accounts, admits browser setup through a bounded pre-barrier queue, creates 138 independent real-browser contexts on a disposable loopback runtime, assigns exactly three users to each of the 46 registered games, synchronizes them at the rendered login gate, reuses that rendered gate under one formal-only bounded login deadline, performs authentication plus catalog navigation and one complete game action under one formal-only data-derived absolute gameplay deadline, attributes bounded failures to public game, fixed phase, and fixed action state, filters expected anonymous current-user probes only before rendered login succeeds, evaluates action-aware wager and non-wager evidence through player-scoped filter-before-limit ledger routes, and emits only aggregate phase, action-state, latency, browser, HTTP, wallet, ledger, pool, coverage, concurrency, and cleanup evidence.
+- **TEST-139** (Tests) - PASS: Hosted Browser evidence proves every registered catalog game keeps its enabled controls vertically reachable at the governed primary and compact desktop viewports, failing when a control is clipped by a non-scrollable ancestor in the fixed-height shell.
 - **TEST-143** (Tests) - PASS: Listener-free isolated-provider evidence proves persistent-account-only bounded session inventory, newest-first ordering, fixed one-way aliases, approved-field and coarse-client projection, secret and cross-account exclusion, idempotent targeted and all-session revocation, concurrent exactly-once transition counting, byte-exact preservation of syntactically invalid JSON, parseable malformed-document preservation, and invalid-request non-mutation.
+- **KENO-027** (Keno) - PASS: Keno uses one server-authoritative, strictly increasing paytable for every legal one-through-twenty-spot ticket, with every positive award at least one times the ticket, strictly increasing full-catch jackpots, exact ideal hypergeometric returns in the approved house-side band except the disclosed one-spot cent-rounding exception, and realized production float-plus-hundredth rounding strictly below one for every frozen-v1 amount from 0.01 through 1,000,000. The state API, current ledger and history equations, browser controls, exact jackpot copy, route restoration, repeat, autoplay, and localized player disclosure all consume the same rules without changing the frozen v1 request, route, envelope, or payout law.
+- **TEST-147** (Tests) - PASS: Listener-free and hosted exact-head evidence proves all 230 Keno outcome classes, exact hypergeometric probability rows, paytable and jackpot monotonicity, frozen production rounding across the complete accepted amount domain, maximum-stake maximum-jackpot settlement, current ledger and history equations, entropy restoration, API-paytable equality, and the unchanged frozen-v1 contract. Hosted Long publishes exact rational per-row evidence, while Browser acceptance emits all sixty-four eight-state by two-locale by four-viewport cells and behaviorally proves exact open-ticket and settled-history amount restoration, Repeat, first autoplay tick, player-scoped history alignment, numeric jackpot visibility, and listener cleanup.
+- **TEST-148** (Tests) - PASS: An explicit listener-free request-latency baseline measures direct WSGI handling for authenticated current-user, Slots state, Roulette state, aggregate Casino state, and idempotent Boule actions against isolated external JSON and callback-owned disposable loopback MySQL providers. Every route family runs fixed warm-up work followed by exactly sixty-four measured operations at concurrency one, two, four, and eight through a rolling at-most-N future window, default MySQL pool settings, untimed authentication and Boule first/replay/conflict controls, zero accepted errors, and cleanup. Evidence is an atomic caller-external aggregate containing only schema, exact source commit, provider, route family, concurrency, p50 and p95 milliseconds, throughput, error count, and response-byte total, with no numeric performance threshold or network, edge, Gunicorn, multi-process, identity, request, outcome, sample, timestamp, path, host, database, or exception detail.

@@ -141,20 +141,24 @@ function controlsHtml() {
   const activeRound = state?.active_round;
   // Allow play and pass only during the wager phase.
   const canDecide = activeRound?.phase === 'wager';
-  // Disable wager edits while a decision or pending action owns state.
-  const wagerDisabled = !canDecide || busy || Boolean(pendingAction);
+  // Require a positive server-published inside spread before exposing a play wager.
+  const hasInsidePrice = canDecide && Number(activeRound?.inside_rank_count) > 0;
+  // Disable wager edits when no priced play exists or a pending action owns state.
+  const wagerDisabled = !hasInsidePrice || busy || Boolean(pendingAction);
   // Disable dealing while an active round is open.
   const dealDisabled = Boolean(activeRound) || busy || Boolean(pendingAction && pendingAction.kind !== 'deal');
-  // Disable play while no boundary decision is open.
-  const playDisabled = !canDecide || busy || Boolean(pendingAction && pendingAction.kind !== 'play');
+  // Disable play while no priceable inside outcome exists.
+  const playDisabled = !hasInsidePrice || busy || Boolean(pendingAction && pendingAction.kind !== 'play');
   // Disable pass while no boundary decision is open.
   const passDisabled = !canDecide || busy || Boolean(pendingAction && pendingAction.kind !== 'pass');
   // Enable one-click repeat only outside an open round when a prior settled wager exists and nothing is in flight.
   const repeatDisabled = busy || Boolean(activeRound) || Boolean(pendingAction) || !lastBet;
   // Explain unresolved retry state when present.
   const retryHelp = pendingAction ? '<p class="acey-retry" role="status">' + safe(text('controls.retryHelp')) + '</p>' : '';
+  // Explain why passing is the only valid decision for equal or adjacent boundaries.
+  const decisionHelp = canDecide && !hasInsidePrice ? text('controls.noInside') : text('controls.help');
   // Return stable controls whose positions do not change between phases.
-  return '<aside class="acey-panel acey-controls" aria-label="' + safe(text('controls.title')) + '"><h2>' + safe(text('controls.title')) + '</h2><label for="acey-wager">' + safe(text('controls.wager')) + '</label><input id="acey-wager" type="number" min="0.01" max="100000" step="0.01" value="' + safe(wager) + '"' + (wagerDisabled ? ' disabled' : '') + '><button type="button" data-action="deal"' + (dealDisabled ? ' disabled' : '') + '>' + safe(pendingAction?.kind === 'deal' ? text('controls.retryDeal') : text('controls.deal')) + '</button><button type="button" class="acey-repeat" data-action="repeat"' + (repeatDisabled ? ' disabled' : '') + '>' + safe(text('controls.repeat')) + '</button><button type="button" data-action="play"' + (playDisabled ? ' disabled' : '') + '>' + safe(pendingAction?.kind === 'play' ? text('controls.retryPlay') : text('controls.play')) + '</button><button type="button" data-action="pass"' + (passDisabled ? ' disabled' : '') + '>' + safe(pendingAction?.kind === 'pass' ? text('controls.retryPass') : text('controls.pass')) + '</button><p class="acey-help">' + safe(text('controls.help')) + '</p>' + retryHelp + '<p class="acey-error" role="alert" data-error>' + (lastErrorKey ? safe(text(lastErrorKey)) : '') + '</p></aside>';
+  return '<aside class="acey-panel acey-controls" aria-label="' + safe(text('controls.title')) + '"><h2>' + safe(text('controls.title')) + '</h2><label for="acey-wager">' + safe(text('controls.wager')) + '</label><input id="acey-wager" type="number" min="0.01" max="100000" step="0.01" value="' + safe(wager) + '"' + (wagerDisabled ? ' disabled' : '') + '><button type="button" data-action="deal"' + (dealDisabled ? ' disabled' : '') + '>' + safe(pendingAction?.kind === 'deal' ? text('controls.retryDeal') : text('controls.deal')) + '</button><button type="button" class="acey-repeat" data-action="repeat"' + (repeatDisabled ? ' disabled' : '') + '>' + safe(text('controls.repeat')) + '</button><button type="button" data-action="play"' + (playDisabled ? ' disabled' : '') + '>' + safe(pendingAction?.kind === 'play' ? text('controls.retryPlay') : text('controls.play')) + '</button><button type="button" data-action="pass"' + (passDisabled ? ' disabled' : '') + '>' + safe(pendingAction?.kind === 'pass' ? text('controls.retryPass') : text('controls.pass')) + '</button><p class="acey-help">' + safe(decisionHelp) + '</p>' + retryHelp + '<p class="acey-error" role="alert" data-error>' + (lastErrorKey ? safe(text(lastErrorKey)) : '') + '</p></aside>';
 }
 
 // Render the three-card stage with a protected third card until play.
@@ -209,12 +213,16 @@ function historyHtml() {
 
 // Render rule and history support regions.
 function dataHtml() {
-  // Read the server-published inside multiplier with proposal default.
-  const insideMultiplier = rules.inside_return_multiplier || 2;
+  // Read the server-published spread paytable; the inside price scales with the visible spread. (issue #408)
+  const paytable = rules.inside_paytable || {};
+  // Use the current round's spread so the player sees the price that actually applies to this deal.
+  const currentSpread = currentRound()?.inside_rank_count;
+  // Use no multiplier before a round or for pass-only zero spreads; active prices come only from the table.
+  const insideMultiplier = currentSpread > 0 ? paytable[currentSpread] ?? paytable[String(currentSpread)] : null;
   // Read the server-published tie multiplier with proposal default.
   const tieMultiplier = rules.boundary_tie_return_multiplier ?? 0;
   // Return transparent return table and recent history.
-  return '<aside class="acey-panel acey-data" aria-label="' + safe(text('data.title')) + '"><section><h2>' + safe(text('rules.title')) + '</h2><ul><li>' + safe(text('rules.freeDeal')) + '</li><li>' + safe(text('rules.insideReturn', { multiplier: insideMultiplier })) + '</li><li>' + safe(text('rules.boundaryTie', { multiplier: tieMultiplier })) + '</li><li>' + safe(text('rules.outsideReturn')) + '</li><li>' + safe(text('rules.reducedMotion')) + '</li></ul></section><section><h2>' + safe(text('history.title')) + '</h2>' + historyHtml() + '</section></aside>';
+  return '<aside class="acey-panel acey-data" aria-label="' + safe(text('data.title')) + '"><section><h2>' + safe(text('rules.title')) + '</h2><ul><li>' + safe(text('rules.freeDeal')) + '</li><li>' + safe(insideMultiplier ? text('rules.insideReturn', { multiplier: insideMultiplier }) : text('rules.insideReturnScaled')) + '</li><li>' + safe(text('rules.boundaryTie', { multiplier: tieMultiplier })) + '</li><li>' + safe(text('rules.outsideReturn')) + '</li><li>' + safe(text('rules.reducedMotion')) + '</li></ul></section><section><h2>' + safe(text('history.title')) + '</h2>' + historyHtml() + '</section></aside>';
 }
 
 // Return scoped responsive and reduced-motion styles.
