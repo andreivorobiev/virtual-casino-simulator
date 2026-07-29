@@ -15,8 +15,12 @@ def play(client, index):
     assert round_row["dealt_cards"] and all(item["side"] == ("andar" if position % 2 == 0 else "bahar") for position, item in enumerate(round_row["dealt_cards"])), "Andar Bahar returned a non-alternating deal"
     # Require the terminal reveal to publish the first matching side.
     assert round_row["dealt_cards"][-1]["matched"] is True and round_row["winning_side"] == round_row["dealt_cards"][-1]["side"], "Andar Bahar did not settle on the terminal rank match"
-    # Require transparent even-money returned-token settlement.
-    expected_payout = 2.0 if round_row["winning_side"] == "andar" else 0.0
+    # Resolve the authoritative per-side price from the server response rather than assuming one. (#409)
+    multipliers = (result.get("rules") or {}).get("return_multipliers") or {}
+    # Require the server to publish a price for the backed side.
+    assert "andar" in multipliers, "Andar Bahar published no per-side return table"
+    # The driver always backs Andar, so price the win from Andar's own multiplier.
+    expected_payout = round(1.0 * multipliers["andar"], 2) if round_row["winning_side"] == "andar" else 0.0
     # Compare the published payout and net against the documented rule.
     assert round_row["payout"] == expected_payout and round_row["net"] == expected_payout - 1.0, "Andar Bahar settlement does not match the published rule"
     # Require the retry to preserve identity and every authoritative deal fact.

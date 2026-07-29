@@ -13,6 +13,7 @@ from casino.errors import ConflictError, ValidationError
 from casino.games.andar_bahar import api, engine
 # Import the isolated service orchestration under test.
 from casino.games.andar_bahar.service import AndarBaharService
+from casino.games.andar_bahar import engine
 
 
 # Simulate player-scoped state documents without touching repository data files.
@@ -115,8 +116,10 @@ class AndarBaharApiTests(unittest.TestCase):
         self.assertEqual(1, len([event for event in self.ledger.events if event["transaction_type"] == "ANDAR_BAHAR_WAGER_DEBIT"]))
         # Verify the winning payout returns stake plus even-money winnings.
         self.assertEqual(1, len([event for event in self.ledger.events if event["transaction_type"] == "ANDAR_BAHAR_PAYOUT_CREDIT"]))
-        # Verify the final fake balance reflects exactly one debit and one payout.
-        self.assertEqual(107.0, self.ledger.balances["session-player"])
+        # Derive the expected balance from the published Andar price so this tracks the paytable. (#409)
+        expected_balance = round(100.0 - 7.0 + 7.0 * engine.return_multiplier("andar"), 2)
+        # Verify the final fake balance reflects exactly one debit and one side-priced payout.
+        self.assertEqual(expected_balance, self.ledger.balances["session-player"])
         # Request the other player's isolated state while spoofing the first player in the query.
         other_state = self.call("/api/v1/games/andar-bahar/state?player_id=session-player", method="GET", context={"bound_player_id": "other-player", "user": {"player_id": "other-player"}})
         # Verify the other session cannot read the first player's history.

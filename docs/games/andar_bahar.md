@@ -10,7 +10,10 @@ Andar Bahar is a distinct catalog game whose server-authoritative deal exposes o
 - Cards are dealt alternately to Andar, then Bahar.
 - The first side to receive a card with the same rank as the joker card wins.
 - Suits do not decide the outcome.
-- A correct side prediction returns 2x the wager: stake plus even-money winnings.
+- A correct side prediction returns a side-specific multiple of the wager. Andar receives the first
+  card after the joker and therefore wins 429/833 = 51.50% of deals, so paying both sides even money
+  returned 103.0% of turnover to an Andar bettor (issue #409). Andar now returns 1.9x and Bahar 2.0x,
+  the standard commercial correction, leaving the house 2.15% on Andar and 3.00% on Bahar.
 - An incorrect side prediction returns 0 play tokens.
 - All copy uses toy-simulator play-token language and does not imply cash value, deposits, purchases, withdrawals, prizes, redemption, or transferable value.
 

@@ -22,8 +22,25 @@ SIDES = ("andar", "bahar")
 DEAL_ORDER = ("andar", "bahar")
 # Bound reload-safe history so one player document cannot grow indefinitely.
 RECENT_ROUND_LIMIT = 20
-# Pay even-money total returns for the side that first receives the matching rank.
-RETURN_MULTIPLIER = 2
+# Price each side for the advantage the deal order gives it. Andar always receives the first card
+# after the joker, so it wins 429/833 = 51.50% of deals. Paying both sides even money therefore
+# returned 103.0% of turnover to an Andar bettor and took 3.0% from a Bahar bettor (issue #409).
+# Commercial Andar Bahar shortens Andar to 0.9:1 for exactly this reason.
+RETURN_MULTIPLIERS = {"andar": 1.9, "bahar": 2.0}
+
+# Retain the frozen-v1 scalar so existing clients keep reading a true value: it is the Bahar price,
+# which is unchanged at even money. New clients should read RETURN_MULTIPLIERS per side.
+RETURN_MULTIPLIER = RETURN_MULTIPLIERS["bahar"]
+
+
+# Resolve the total return multiplier for one side of the table.
+def return_multiplier(side: str) -> float:
+    # Reject any side outside the published pair rather than defaulting to a price.
+    if side not in RETURN_MULTIPLIERS:
+        # Fail closed so an unknown side can never be paid.
+        raise ValidationError("Andar Bahar side must be andar or bahar")
+    # Return the side-specific price that keeps the house ahead on both sides.
+    return RETURN_MULTIPLIERS[side]
 
 
 # Build one fresh player-scoped state document.
@@ -119,7 +136,8 @@ def create_round(player_id: str, wager, side, action_id: str, *, match_card: str
     # Store the side that first received the matching rank.
     winning_side = terminal["side"]
     # Calculate total returned play tokens for a correct prediction.
-    payout = round(amount * RETURN_MULTIPLIER, 2) if selected_side == winning_side else 0.0
+    # Price the win from the side the player actually backed, not one shared multiplier. (issue #409)
+    payout = round(amount * return_multiplier(selected_side), 2) if selected_side == winning_side else 0.0
     # Return one complete but settlement-pending state document.
     return {
         "round_id": round_id,  # Correlate state, routes, and ledger movements.

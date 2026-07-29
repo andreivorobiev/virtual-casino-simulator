@@ -37,8 +37,10 @@ class AndarBaharEngineTests(unittest.TestCase):
     def test_correct_side_returns_twice_the_wager(self):
         # Build one winning Andar prediction.
         round_state = self.round(side="andar", wager=12.5)
-        # Verify the documented winner and returned amount.
-        self.assertEqual(("andar", "win", 25.0, 12.5), (round_state["winning_side"], round_state["outcome"], round_state["payout"], round_state["net"]))
+        # Derive the expected return from the published per-side price so this tracks the paytable. (#409)
+        expected_payout = round(12.5 * engine.return_multiplier("andar"), 2)
+        # Verify the documented winner and the side-priced returned amount.
+        self.assertEqual(("andar", "win", expected_payout, round(expected_payout - 12.5, 2)), (round_state["winning_side"], round_state["outcome"], round_state["payout"], round_state["net"]))
         # Verify the transparent sequence stops on the matching rank.
         self.assertTrue(round_state["dealt_cards"][-1]["matched"])
 

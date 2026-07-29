@@ -1,17 +1,98 @@
 {
   "module": "andar_bahar",
-  "version": "1.1.0",
-  "paths": ["casino/games/andar_bahar/", "web/games/andar_bahar.js", "web/i18n/en-US/games/andar_bahar.json", "web/i18n/ru-RU/games/andar_bahar.json"],
-  "requirements_prefixes": ["AB"],
-  "contracts": ["contracts/openapi/andar_bahar.v1.yaml"],
+  "version": "1.1.1",
+  "paths": [
+    "casino/games/andar_bahar/",
+    "web/games/andar_bahar.js",
+    "web/i18n/en-US/games/andar_bahar.json",
+    "web/i18n/ru-RU/games/andar_bahar.json"
+  ],
+  "requirements_prefixes": [
+    "AB"
+  ],
+  "contracts": [
+    "contracts/openapi/andar_bahar.v1.yaml"
+  ],
   "game": {
-    "id": "andar_bahar", "sort_order": 250, "route": "/games/andar_bahar", "label": "Andar Bahar", "category": "table", "categories": ["table", "cards", "strategy"],
-    "backend": {"register": "casino.games.andar_bahar.api:register"},
-    "frontend": {"module": "./games/andar_bahar.js", "export": "AndarBaharGame", "ready_testid": "andar-bahar", "i18n_domain": "games/andar_bahar", "i18n_probe": "controls.play"},
-    "tests": {"long_driver": "tests.game_drivers.andar_bahar:play"},
-    "translations": {"ru-RU": {"label": "Андар Бахар", "kicker": "Карточный стол", "description": "Выберите Андар или Бахар и наблюдайте прозрачную раздачу до первого совпадения ранга с картой-джокером.", "tags": ["Карты", "Сравнение ранга", "Стратегия", "Журнал жетонов"]}},
-    "lobby": {"featured": false, "wide": false, "art_class": "andar-bahar-art", "symbol": "AB", "kicker": "Card showdown", "description": "Pick Andar or Bahar, reveal the joker card, and settle the first rank match through the play-token ledger.", "tags": ["Cards", "Rank match", "Strategy", "Ledger-backed"]}
+    "id": "andar_bahar",
+    "sort_order": 250,
+    "route": "/games/andar_bahar",
+    "label": "Andar Bahar",
+    "category": "table",
+    "categories": [
+      "table",
+      "cards",
+      "strategy"
+    ],
+    "backend": {
+      "register": "casino.games.andar_bahar.api:register"
+    },
+    "frontend": {
+      "module": "./games/andar_bahar.js",
+      "export": "AndarBaharGame",
+      "ready_testid": "andar-bahar",
+      "i18n_domain": "games/andar_bahar",
+      "i18n_probe": "controls.play"
+    },
+    "tests": {
+      "long_driver": "tests.game_drivers.andar_bahar:play"
+    },
+    "translations": {
+      "ru-RU": {
+        "label": "\u0410\u043d\u0434\u0430\u0440 \u0411\u0430\u0445\u0430\u0440",
+        "kicker": "\u041a\u0430\u0440\u0442\u043e\u0447\u043d\u044b\u0439 \u0441\u0442\u043e\u043b",
+        "description": "\u0412\u044b\u0431\u0435\u0440\u0438\u0442\u0435 \u0410\u043d\u0434\u0430\u0440 \u0438\u043b\u0438 \u0411\u0430\u0445\u0430\u0440 \u0438 \u043d\u0430\u0431\u043b\u044e\u0434\u0430\u0439\u0442\u0435 \u043f\u0440\u043e\u0437\u0440\u0430\u0447\u043d\u0443\u044e \u0440\u0430\u0437\u0434\u0430\u0447\u0443 \u0434\u043e \u043f\u0435\u0440\u0432\u043e\u0433\u043e \u0441\u043e\u0432\u043f\u0430\u0434\u0435\u043d\u0438\u044f \u0440\u0430\u043d\u0433\u0430 \u0441 \u043a\u0430\u0440\u0442\u043e\u0439-\u0434\u0436\u043e\u043a\u0435\u0440\u043e\u043c.",
+        "tags": [
+          "\u041a\u0430\u0440\u0442\u044b",
+          "\u0421\u0440\u0430\u0432\u043d\u0435\u043d\u0438\u0435 \u0440\u0430\u043d\u0433\u0430",
+          "\u0421\u0442\u0440\u0430\u0442\u0435\u0433\u0438\u044f",
+          "\u0416\u0443\u0440\u043d\u0430\u043b \u0436\u0435\u0442\u043e\u043d\u043e\u0432"
+        ]
+      }
+    },
+    "lobby": {
+      "featured": false,
+      "wide": false,
+      "art_class": "andar-bahar-art",
+      "symbol": "AB",
+      "kicker": "Card showdown",
+      "description": "Pick Andar or Bahar, reveal the joker card, and settle the first rank match through the play-token ledger.",
+      "tags": [
+        "Cards",
+        "Rank match",
+        "Strategy",
+        "Ledger-backed"
+      ]
+    }
   },
-  "depends_on": ["core", "ledger", "players"],
-  "may_not_depend_on": ["roulette", "slots", "blackjack", "baccarat", "keno", "bingo", "multi_hand_video_poker", "casino_war", "big_six_wheel", "red_dog", "dragon_tiger", "hi_lo", "three_card_poker", "jacks_or_better_video_poker", "deuces_wild_video_poker", "scratch_cards", "sic_bo", "chuck_a_luck", "craps", "crown_and_anchor", "over_under_7", "plinko", "fan_tan"]
+  "depends_on": [
+    "core",
+    "ledger",
+    "players"
+  ],
+  "may_not_depend_on": [
+    "roulette",
+    "slots",
+    "blackjack",
+    "baccarat",
+    "keno",
+    "bingo",
+    "multi_hand_video_poker",
+    "casino_war",
+    "big_six_wheel",
+    "red_dog",
+    "dragon_tiger",
+    "hi_lo",
+    "three_card_poker",
+    "jacks_or_better_video_poker",
+    "deuces_wild_video_poker",
+    "scratch_cards",
+    "sic_bo",
+    "chuck_a_luck",
+    "craps",
+    "crown_and_anchor",
+    "over_under_7",
+    "plinko",
+    "fan_tan"
+  ]
 }

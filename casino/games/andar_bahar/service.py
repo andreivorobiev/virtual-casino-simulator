@@ -131,7 +131,8 @@ class AndarBaharService:
                 "sides": list(engine.SIDES),  # Advertise the two legal side predictions.
                 "deal_order": list(engine.DEAL_ORDER),  # Document Andar-first alternating reveal order.
                 "match_rank_only": True,  # Explain that suits never decide the result.
-                "return_multiplier": engine.RETURN_MULTIPLIER,  # Return stake plus even-money win.
+                "return_multipliers": dict(engine.RETURN_MULTIPLIERS),  # Publish the per-side price so clients stop assuming one shared multiplier. (issue #409)
+                "return_multiplier": engine.RETURN_MULTIPLIER,  # Retain the deprecated frozen-v1 scalar; it is the unchanged Bahar price.
             },
         }
 
