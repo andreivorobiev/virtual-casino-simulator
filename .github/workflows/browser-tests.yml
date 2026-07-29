@@ -29,16 +29,72 @@ on:
       - 'modules/module-manifest.json'
       # Re-run Browser evidence when this workflow's trigger or execution policy changes.
       - '.github/workflows/browser-tests.yml'
+  push:
+    branches:
+      - main
+    # Re-run the complete Browser suite when protected-main UI/runtime inputs advance.
+    paths:
+      - 'web/**'
+      - 'casino/**'
+      - 'tests/browser/**'
+      - 'tests/progress.py'
+      - 'tests/test_progress.py'
+      - 'tests/run_tests.py'
+      - 'modules/module-manifest.json'
+      - '.github/workflows/browser-tests.yml'
 # Cancel superseded runs for the same pull request; pushes and dispatches keep unique groups.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: true
 
 jobs:
+  # Resolve which games' dedicated browser cases must run so a single-game PR skips the unaffected heavy cluster. (issue #468 item 4)
+  detect_affected_games:
+    name: detect_affected_games
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'push' || inputs.formal_ui_50000 == true }}
+    runs-on: ubuntu-latest
+    outputs:
+      games_arg: ${{ steps.detect.outputs.games_arg }}
+      decision: ${{ steps.detect.outputs.decision }}
+    steps:
+      # Default-depth checkout only supplies the detector script and catalog; changed files come from the API, not history.
+      - uses: actions/checkout@v4
+      # Map changed files to affected games, defaulting to the full suite whenever anything is shared or unclear.
+      - name: Resolve affected browser games
+        id: detect
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          IS_PR: ${{ github.event_name == 'pull_request' }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HAS_FULL_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'full-browser') }}
+        shell: bash
+        run: |
+          set -uo pipefail
+          # Formal 50,000-cycle dispatch and an explicit full-browser label always run the complete suite.
+          if [ "${IS_PR}" != "true" ] || [ "${HAS_FULL_LABEL}" = "true" ]; then
+            decision=FULL
+          else
+            # List changed files through the API so no deep-history fetch is needed; any failure falls back to the full suite.
+            changed="$(gh api --paginate "repos/${REPO}/pulls/${PR_NUMBER}/files" --jq '.[].filename' || true)"
+            decision="$(printf '%s\n' "${changed}" | python3 scripts/affected_browser_games.py 2>/dev/null || echo FULL)"
+            # Treat an empty or absent decision as the conservative full suite.
+            [ -n "${decision}" ] || decision=FULL
+          fi
+          # FULL and NONE both run the whole suite; a game list restricts execution to those games' dedicated cases.
+          case "${decision}" in
+            FULL|NONE) games_arg="" ;;
+            *) games_arg="--games ${decision}" ;;
+          esac
+          echo "decision=${decision}" >> "${GITHUB_OUTPUT}"
+          echo "games_arg=${games_arg}" >> "${GITHUB_OUTPUT}"
+          echo "Affected browser games decision: ${decision} (runner arg: '${games_arg}')"
+
   # Run the ordinary suite as contiguous deterministic shards for PR evidence and the formal prerequisite.
   browser_tests_shard:
     name: browser_tests_shard_${{ matrix.shard }}
-    if: ${{ github.event_name == 'pull_request' || inputs.formal_ui_50000 == true }}
+    needs: detect_affected_games
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'push' || inputs.formal_ui_50000 == true }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -53,9 +109,9 @@ jobs:
         run: python -m pip install -r requirements-dev.txt
       - name: Install Playwright Chromium
         run: python -m playwright install chromium
-      # Each shard replays the common preamble and owns one contiguous slice of the case sequence.
+      # Each shard replays the common preamble and owns one contiguous slice of the case sequence; the games arg is empty for a full run.
       - name: Run browser test shard
-        run: python tests/run_tests.py --browser --shard-count 4 --shard-index ${{ matrix.shard }}
+        run: python tests/run_tests.py --browser --shard-count 4 --shard-index ${{ matrix.shard }} ${{ needs.detect_affected_games.outputs.games_arg }}
       - name: Upload browser shard artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -65,26 +121,30 @@ jobs:
 
   # Keep reporting the historical `browser_tests` context by verifying exact aggregate coverage.
   browser_tests:
-    needs: browser_tests_shard
-    if: ${{ always() && (github.event_name == 'pull_request' || inputs.formal_ui_50000 == true) }}
+    needs:
+      - detect_affected_games
+      - browser_tests_shard
+    if: ${{ always() && (github.event_name == 'pull_request' || github.event_name == 'push' || inputs.formal_ui_50000 == true) }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      # Fail unless every shard succeeded so the aggregate context can never pass vacuously.
-      - name: Require every shard to succeed
-        run: test "${{ needs.browser_tests_shard.result }}" = "success"
+      # Fail unless detection and every shard succeeded so the aggregate context can never pass vacuously.
+      - name: Require detector and every shard to succeed
+        run: |
+          test "${{ needs.detect_affected_games.result }}" = "success"
+          test "${{ needs.browser_tests_shard.result }}" = "success"
       - name: Download every shard result artifact
         uses: actions/download-artifact@v4
         with:
           pattern: browser-test-artifacts-shard-*
           path: logs/test-runs
           merge-multiple: true
-      # Prove the shard union covers every literal browser case exactly once with no failures.
+      # Prove the shard union covers the detector-owned selection exactly once and reject inconsistent shard declarations.
       - name: Verify exact shard coverage
-        run: python tests/run_tests.py --verify-browser-shards logs/test-runs --shard-count 4
+        run: python tests/run_tests.py --verify-browser-shards logs/test-runs --shard-count 4 ${{ needs.detect_affected_games.outputs.games_arg }}
 
   # Run the focused issue #265 profile only for its explicit, owner-authorized dispatch.
   baccarat_sustained_2000:

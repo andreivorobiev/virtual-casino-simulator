@@ -4696,7 +4696,7 @@
     {
       "id": "TOOL-002",
       "module": "Tooling",
-      "description": "GitHub Actions exposes Suite 100 as a pull request check and Suite 300 or 500 as a manually selected sharded soak run.",
+      "description": "GitHub Actions exposes fail-closed sharded qualification: Suite 100 runs on pull requests, Suite 300 or 500 is manually selected, and Browser pull requests select only unambiguously affected game-owned cases while shared, unknown, protected-main, release, and manual inputs retain complete coverage.",
       "status": "PASS",
       "api_tests": [
         "CI-QUALIFICATION-001"
@@ -4717,7 +4717,7 @@
       ],
       "introduced_in": "9.1.2",
       "changed_in": "issue-468-ci-speed-quick-wins",
-      "notes": "Suite 100 uses four exhaustive modulo shards and one fail-closed aggregate gate. Only superseded ordinary runs for the same pull request may be cancelled; main pushes and manual dispatches use unique run IDs, while release, deployment, formal qualification, and soak work remains non-cancellable."
+      "notes": "Suite 100 uses four exhaustive modulo shards and one fail-closed aggregate gate. Browser pull requests may omit only dedicated cases owned by unaffected games; shared or unknown changes, protected-main pushes, and authorized manual profiles run complete coverage. The Browser aggregate independently receives the detector selection and rejects missing, duplicate, failing, unexpected, or selection-mismatched shard evidence. Only superseded ordinary runs for the same pull request may be cancelled; main pushes and manual dispatches use unique run IDs, while release, deployment, formal qualification, and soak work remains non-cancellable."
     },
     {
       "id": "TOOL-003",
