@@ -324,7 +324,7 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
             overrides = {
                 "CASINO_MYSQL_POOL_SIZE": "16",
                 "CASINO_MYSQL_POOL_WAIT_MS": "10000",
-                "CASINO_MYSQL_POOL_MAX_IDLE_SECONDS": "999",
+                "CASINO_MYSQL_CONNECT_TIMEOUT_SECONDS": "60",
             }
             # Restore the caller environment after configuration proof.
             with mock.patch.dict(os.environ, overrides, clear=False):
@@ -332,6 +332,15 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
                 benchmark._configure_child_environment("json", Path(temporary))
                 # Require the exact test-only request allowance.
                 self.assertEqual(os.environ["CASINO_RATE_LIMIT_REQUESTS"], "10000")
+                # Pin the complete current pool-control contract read by mysql_pool.py.
+                self.assertEqual(
+                    benchmark.MYSQL_POOL_OVERRIDE_KEYS,
+                    (
+                        "CASINO_MYSQL_POOL_SIZE",
+                        "CASINO_MYSQL_POOL_WAIT_MS",
+                        "CASINO_MYSQL_CONNECT_TIMEOUT_SECONDS",
+                    ),
+                )
                 # Require every optional pool override to be absent.
                 self.assertTrue(all(key not in os.environ for key in benchmark.MYSQL_POOL_OVERRIDE_KEYS))
 

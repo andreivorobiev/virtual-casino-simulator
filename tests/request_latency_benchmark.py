@@ -48,7 +48,7 @@ SOURCE_COMMIT_PATTERN = re.compile(r"^[0-9a-f]{40}$")
 MYSQL_POOL_OVERRIDE_KEYS = (
     "CASINO_MYSQL_POOL_SIZE",  # Preserve the default capacity.
     "CASINO_MYSQL_POOL_WAIT_MS",  # Preserve the default checkout wait.
-    "CASINO_MYSQL_POOL_MAX_IDLE_SECONDS",  # Preserve the default idle lifetime.
+    "CASINO_MYSQL_CONNECT_TIMEOUT_SECONDS",  # Preserve the default connector deadline.
 )
 # Enumerate the only low-cardinality route-family labels allowed in evidence.
 ROUTE_FAMILIES = (
