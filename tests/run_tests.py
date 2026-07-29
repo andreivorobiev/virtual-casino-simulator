@@ -8134,18 +8134,40 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                 region_evidence(f'after-pass-keno-edge-selected-focus-{edge_locale.lower()}-{edge_viewport_id}.png',edge_board_evidence_selector,'keno',['edge_selected_focus_visible'],edge_locale,edge_viewport_id)
                                 # Count the exact selected and focus-visible matrix cell.
                                 keno_matrix_cells+=1
+                                # Collect the exact public Keno action requests emitted after the amount edit.
+                                edge_action_requests=[]
+                                # Define the scoped request observer used only for this one matrix action.
+                                def capture_edge_action_request(request):
+                                    # Record ticket and draw POSTs while ignoring unrelated shell traffic.
+                                    if request.method=='POST' and (request.url.endswith('/api/v1/games/keno/tickets') or request.url.endswith('/api/v1/games/keno/draw')): edge_action_requests.append(request)
+                                # Attach the observer before the edit can blur into the public Draw control.
+                                page.on('request',capture_edge_action_request)
                                 # Use the frozen one-cent amount so the visible action proves browser/server domain agreement.
-                                page.get_by_test_id('keno-amount').fill('0.01')
-                                # Start one real public draw from the selected corners.
-                                page.get_by_test_id('keno-draw').click()
-                                # Wait for the production reveal loop to enter a genuine partial drawing state.
-                                page.wait_for_function("""() => { const count=document.querySelectorAll('[data-testid="keno-drawn-ball"]').length; return count>=2 && count<20; }""",timeout=5000)
-                                # Record the governed drawing state from the actual public action path.
-                                region_evidence(f'after-pass-keno-drawing-{edge_locale.lower()}-{edge_viewport_id}.png','.keno-premium','keno',['drawing'],edge_locale,edge_viewport_id)
-                                # Count the exact drawing matrix cell.
-                                keno_matrix_cells+=1
-                                # Wait for the real action to finish before replacing only its test-owned persisted state.
-                                page.wait_for_function("""() => document.querySelectorAll('[data-testid="keno-drawn-ball"]').length === 20 && !document.querySelector('[data-testid="keno-draw"]')?.disabled""",timeout=6000)
+                                try:
+                                    # Edit through the real input so blur/change ordering matches the production click path.
+                                    page.get_by_test_id('keno-amount').fill('0.01')
+                                    # Start exactly one real public draw from the selected corners.
+                                    page.get_by_test_id('keno-draw').click()
+                                    # Wait for the production reveal loop to enter a genuine partial drawing state.
+                                    page.wait_for_function("""() => { const count=document.querySelectorAll('[data-testid="keno-drawn-ball"]').length; return count>=2 && count<20; }""",timeout=5000)
+                                    # Record the governed drawing state from the actual public action path.
+                                    region_evidence(f'after-pass-keno-drawing-{edge_locale.lower()}-{edge_viewport_id}.png','.keno-premium','keno',['drawing'],edge_locale,edge_viewport_id)
+                                    # Count the exact drawing matrix cell.
+                                    keno_matrix_cells+=1
+                                    # Wait for the real action to finish before replacing only its test-owned persisted state.
+                                    page.wait_for_function("""() => document.querySelectorAll('[data-testid="keno-drawn-ball"]').length === 20 && !document.querySelector('[data-testid="keno-draw"]')?.disabled""",timeout=6000)
+                                # Always detach the scoped observer so later matrix actions cannot contaminate this count.
+                                finally:
+                                    # Remove the exact callback registered for this one public action.
+                                    page.remove_listener('request',capture_edge_action_request)
+                                # Resolve the exact ticket and draw requests captured from the single click.
+                                edge_ticket_requests=[request for request in edge_action_requests if request.url.endswith('/api/v1/games/keno/tickets')]; edge_draw_requests=[request for request in edge_action_requests if request.url.endswith('/api/v1/games/keno/draw')]
+                                # Require one ticket purchase and one draw request, with no blur-time swallowed or duplicate action.
+                                assert len(edge_ticket_requests)==1 and len(edge_draw_requests)==1,[(request.method,request.url) for request in edge_action_requests]
+                                # Decode the exact frozen-v1 ticket request emitted by the edited input.
+                                edge_ticket_body=edge_ticket_requests[0].post_data_json
+                                # Require the single request to retain exact amount and selected spots.
+                                assert float(edge_ticket_body['amount'])==0.01 and edge_ticket_body['spots']==[1,5,10,71,80],edge_ticket_body
                                 # Persist one deterministic final draw so caught/latest state does not depend on random outcomes.
                                 save_player_game_state('keno',edge_player,final_edge_state)
                                 # Reconstruct the route from authoritative history and wait for all twenty final balls.

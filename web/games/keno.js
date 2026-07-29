@@ -812,8 +812,8 @@ function drawerHtml() {
 function bindEvents() {
   // Wire every Keno number cell to spot selection.
   root.querySelectorAll('[data-keno-num]').forEach(button => { button.onclick = () => toggleSpot(Number(button.dataset.kenoNum)); });
-  // Wire the amount input to local state.
-  root.querySelector('#kenoAmount')?.addEventListener('change', () => { readAmount(); render(); });
+  // Synchronize amount state without replacing the focused control during blur into Draw.
+  root.querySelector('#kenoAmount')?.addEventListener('change', readAmount);
   // Wire quick-pick controls when they are present.
   root.querySelector('#quick5')?.addEventListener('click', () => quickPick(5));
   // Wire the ten-spot quick-pick control when it is present.

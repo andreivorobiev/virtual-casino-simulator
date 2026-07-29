@@ -490,6 +490,10 @@ class KenoEconomicsTests(TestCase):
         self.assertIn("amount = Number(ticket.amount)", frontend)
         # Require settled-history amount restoration for repeat and autoplay after reload.
         self.assertIn("amount = Number(result.ticket.amount)", frontend)
+        # Require amount blur to synchronize state without rerendering and detaching the clicked Draw control.
+        self.assertIn("addEventListener('change', readAmount)", frontend)
+        # Reject the prior blur-time root replacement that swallowed the first public Draw click.
+        self.assertNotIn("addEventListener('change', () => { readAmount(); render(); })", frontend)
         # Read the governed visual inventory.
         visual = json.loads((ROOT / "tests" / "visual" / "visual_matrix.json").read_text(encoding="utf-8"))
         # Resolve the single Keno matrix entry.
