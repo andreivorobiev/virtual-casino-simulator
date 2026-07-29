@@ -17,7 +17,6 @@ import unittest  # Integrate focused proofs with the repository test runner.
 from types import SimpleNamespace  # Build small aggregate-only barrier fixtures.
 from unittest import mock  # Isolate current-catalog and environment scenarios.
 
-from casino import app as casino_app  # Exercise the shared loopback static and API response boundaries.
 from casino.core import autoplay  # Exercise the synchronized server-side autoplay registry.
 from tests import concurrent_browser_138  # Exercise the public qualification planner and aggregator.
 
@@ -463,6 +462,8 @@ class ConcurrentBrowser138Tests(unittest.TestCase):
 
     # Prove the governed listener can serve every Keno lazy module in one exact browser-free burst.
     def test_concurrent_keno_lazy_module_delivery_uses_hardened_server_contract(self):
+        # Import the optional-dependency application only when this focused boundary proof executes.
+        from casino import app as casino_app
         # Require the listener queue to exceed the exact governed context population.
         self.assertGreaterEqual(casino_app.CasinoThreadingHTTPServer.request_queue_size, 138)
         # Read the exact module bytes expected from every concurrent route request.
@@ -546,6 +547,8 @@ class ConcurrentBrowser138Tests(unittest.TestCase):
 
     # Prove a disconnected client-log response cannot recurse into a misleading HTTP 500.
     def test_client_log_peer_disconnect_is_terminal_and_invalid_payload_stays_fail_closed(self):
+        # Import the optional-dependency application only when this focused boundary proof executes.
+        from casino import app as casino_app
         # Encode one valid diagnostic body that must be persisted before response delivery.
         valid_body = json.dumps({"event": "module_transport_error", "details": {"game": "keno"}}).encode("utf-8")
 
