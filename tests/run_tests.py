@@ -40,6 +40,8 @@ from casino.core.state_store import save_player_game_state, write_json
 from casino.errors import ForbiddenError, RateLimitError, UnauthorizedError, ValidationError
 # Import storage tests so provider parity can run without the broad API suite.
 from tests import storage_tests
+# Import the durable enrollment-policy suite so the central runner owns its evidence. (issue #333)
+from tests import enrollment_policy_tests
 # Import bounded MySQL pool lifecycle and concurrency evidence.
 from tests import mysql_pool_tests
 # Import listener-free migration policy tests for every storage validation run.
@@ -499,6 +501,15 @@ def run_storage_tests(include_live=False, include_migration_live=False, request_
     run_case('STORAGE-JSON-IDEMPOTENCY-001',['LEDGER-026','STORAGE-005','STORAGE-006','TEST-043'],storage_tests.run_json_action_idempotency)
     # Execute funded practice-opponent debit, refund, payout, restart, owner, and process evidence.
     run_case('STORAGE-PRACTICE-OPPONENT-001',['BOT-009','BOT-010','BOT-011','ADMIN-023','LEDGER-026','STORAGE-005','STORAGE-006'],storage_tests.run_practice_opponent_accounting)
+    # Prove enrollment resolves through the durable policy without changing deployed behaviour. (#333)
+    def run_enrollment_policy_tests():
+        # Load the focused listener-free policy suite.
+        suite=unittest.defaultTestLoader.loadTestsFromModule(enrollment_policy_tests)
+        # Execute with concise standard output.
+        result=unittest.TextTestRunner(stream=sys.stdout,verbosity=1).run(suite)
+        # Fail the named central case when any focused assertion failed.
+        if not result.wasSuccessful(): raise AssertionError("enrollment policy suite failed")
+    run_case('API-ENROLLMENT-POLICY-001',['AUTH-013'],run_enrollment_policy_tests)
     # Prove player creation preserves committed ledger history and never reverts a balance. (#402)
     run_case('STORAGE-LEDGER-GUARD-001',['STORAGE-008','LEDGER-001','CORE-017'],storage_tests.run_player_creation_preserves_ledger)
     # Prove client-supplied table rules and token credits stay inside their declared domains. (#404, #410)

@@ -12483,6 +12483,24 @@
       "notes": "platform_owner is bootstrap-managed and cannot be requested through normal account creation or role payloads. is_admin intentionally treats the owner as an Admin while require_platform_owner keeps delegation authority separate."
     },
     {
+      "id": "AUTH-013",
+      "module": "Auth",
+      "description": "Enrollment is governed by a durable concurrency-safe policy document resolving an enrollment mode and independent self-signup method flags, seeded from and falling back to the deployed environment baseline so no stored state is required to preserve behaviour; unknown modes and non-boolean method values fail closed.",
+      "status": "PASS",
+      "api_tests": [
+        "API-ENROLLMENT-POLICY-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "casino/core/enrollment_policy.py",
+        "casino/app.py",
+        "tests/enrollment_policy_tests.py"
+      ],
+      "introduced_in": "issue-333-enrollment-policy-store",
+      "changed_in": "issue-333-enrollment-policy-store",
+      "notes": "Slice 1 of issue #333 is read-path only: no Admin write surface and no provider enablement. Enforcement, audit, the least-privilege permission, readiness gating, and the Admin UI follow in later slices."
+    },
+    {
       "id": "ADMIN-028",
       "module": "Admin",
       "description": "Only the current active platform owner can grant or revoke ordinary Admin authority through additive v2 account mutation, the target must already be an active canonical account, v2 account creation is player-only, platform-owner authority is not caller-assignable or removable, and transaction-scoped JSON/MySQL validation preserves at least one active owner and Admin while recording the canonical actor and revoking affected target sessions.",

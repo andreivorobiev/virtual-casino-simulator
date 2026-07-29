@@ -37,7 +37,7 @@ from casino.core.state_store import ensure_dirs, migrate_from_v7_if_needed
 # Import required dependency so this module can bootstrap whichever storage provider is configured.
 from casino.core.storage import bootstrap_players, get_storage_provider
 # Import required dependency so this module can use its public functions or constants.
-from casino.core import logger, players, ledger, history, auth, feedback, guest_analytics, invitations, receipts, user_settings, wellness, whats_new, replay, table_profiles, game_compare, guest_conversion
+from casino.core import logger, players, ledger, history, auth, feedback, guest_analytics, invitations, receipts, user_settings, wellness, whats_new, replay, table_profiles, game_compare, guest_conversion, enrollment_policy
 # Import required dependency so this module can use its public functions or constants.
 from casino.games.registry import catalog_summary, list_games, register_games
 # Import required dependency so this module can use its public functions or constants.
@@ -314,8 +314,12 @@ def build_router() -> Router:
     @router.get(r"/api/v2/auth/enrollment-policy")
     # Publish signup, invitation, guest, conversion, and passkey availability without creating identity state.
     def auth_enrollment_policy(body, query):
+        # Resolve enrollment through the durable policy rather than reading process environment flags
+        # directly, so an Admin change in a later slice takes effect without a restart. With no stored
+        # document the policy reproduces the environment baseline, so this response is unchanged. (#333)
+        enrollment = enrollment_policy.capabilities()
         # Return feature gates only, never environment names, credentials, or operator settings.
-        return {"signup_enabled": SIGNUP_ENABLED, "guest_trials_enabled": auth.GUEST_TRIALS_ENABLED, "invitation_enrollment_enabled": INVITATIONS_ENABLED and ENROLLMENT_ENABLED, "guest_conversion_enabled": True, "passkeys_enabled": PASSKEYS_ENABLED, "canonical_identity": "casino_user_id", "shared_auth_origin": "tiltseven_first_party"}
+        return {"signup_enabled": enrollment["signup_enabled"], "guest_trials_enabled": auth.GUEST_TRIALS_ENABLED, "invitation_enrollment_enabled": enrollment["invitation_enrollment_enabled"], "enrollment_mode": enrollment["mode"], "guest_conversion_enabled": True, "passkeys_enabled": PASSKEYS_ENABLED, "canonical_identity": "casino_user_id", "shared_auth_origin": "tiltseven_first_party"}
 
     # Attach a public CSRF bootstrap so a cookie-less sign-in surface can recover without a shell reload. (issue #224)
     @router.get(r"/api/v2/auth/csrf")
