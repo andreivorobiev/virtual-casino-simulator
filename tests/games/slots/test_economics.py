@@ -431,6 +431,8 @@ class SlotsEconomicsTests(TestCase):
             self.assertTrue(all(token in resource["paytable.progressive"] for token in ("{contribution}", "{seed}", "{lines}", "{lineBet}")))
             # Require nonqualifying controls to expose an explicit localized state.
             self.assertTrue(all(token in resource["feature.progressiveIneligible"] for token in ("{amount}", "{lines}", "{lineBet}")))
+            # Keep every formatted play-token amount at the end of its visible leaf for label and clipping policy.
+            self.assertTrue(resource["feature.progressive"].endswith("{amount}") and resource["feature.progressiveIneligible"].endswith("{amount}") and resource["paytable.progressive"].endswith("{seed}"))
             # Require the exact frozen lower and upper values in localized validation.
             self.assertIn("0", resource["errors.lineBetRange"])
             # Reject every stale scatter/free-spin literal from visible copy.
@@ -439,8 +441,8 @@ class SlotsEconomicsTests(TestCase):
             self.assertNotIn("8 ", resource["paytable.scatter"])
             # Require the scatter trigger to disclose its inclusive threshold.
             self.assertIn("or more" if locale == "en-US" else "или более", resource["paytable.scatter"])
-            # Require start/reset copy to distinguish the seed from the current accrued value.
-            self.assertIn("starts and resets" if locale == "en-US" else "начинается и сбрасывается", resource["paytable.progressive"])
+            # Require terminal seed/reset copy to distinguish the seed from the current accrued value.
+            self.assertIn("Seed/reset" if locale == "en-US" else "Начало/сброс", resource["paytable.progressive"])
             # Require nonqualifying and feature actions to preserve the current meter rather than the seed.
             self.assertIn("current value" if locale == "en-US" else "текущее значение", resource["paytable.progressive"])
         # Read the shipped frontend source for authoritative runtime configuration use.
@@ -449,6 +451,8 @@ class SlotsEconomicsTests(TestCase):
         self.assertIn("progressive_qualifying_lines", frontend)
         # Require input edits to refresh the progressive state without waiting for a spin.
         self.assertIn("updateProgressiveDisplay()", frontend)
+        # Keep the paytable seed on the shared formatter while locale copy places it at the leaf end.
+        self.assertIn("seed: fm(rules.progressive_seed ?? 200)", frontend)
         # Reject the transient caller-keyed meter-map implementation.
         self.assertNotIn("progressive_meters", frontend)
         # Reject both stale hardcoded progressive fallback spellings.
