@@ -51,7 +51,7 @@ The recovered v9.2.0 manifest is intentionally not rollback-eligible itself beca
 
 Each publication-eligible manifest records the immediately previous retained release version, commit, archive checksum, and manifest checksum. Before rollback, verify the retained manifest and archive, install the prior archive into a new immutable release directory, run the same clean-copy verification, then atomically repoint the application release selector according to the separately approved deployment procedure.
 
-The compatibility record, not GitHub release-list ordering, selects the retained predecessor. A published release with incorrect rollback provenance or an incomplete host-command inventory remains immutable and is superseded by a new patch identity; its assets and tag are never replaced in place. v0.9.5.30 retains the exact checksum-verified v0.9.5.29 release as its application-only predecessor while carrying fail-closed affected-game Browser qualification. v0.9.5.29 in turn retains v0.9.5.28 for the route-free storage-atomic settlement-adapter foundation.
+The compatibility record, not GitHub release-list ordering, selects the retained predecessor. A published release with incorrect rollback provenance or an incomplete host-command inventory remains immutable and is superseded by a new patch identity; its assets and tag are never replaced in place. v0.9.5.31 retains the exact checksum-verified v0.9.5.30 release as its application-only predecessor while carrying independent Andar/Bahar side pricing. v0.9.5.30 in turn retains v0.9.5.29 for fail-closed affected-game Browser qualification.
 
 This gate covers application artifact rollback only. A predecessor may be selected only when its manifest accepts the already-applied MySQL migration version. Database or schema rollback is intentionally outside `TOOL-003` and must follow the separately accepted migration and recovery gates. A candidate without a valid prior manifest remains useful for branch validation but is not eligible for immutable publication.
 
@@ -69,10 +69,10 @@ Verify existing assets without rebuilding:
 python scripts/package_app.py --verify-only --archive dist/virtual_casino_simulator_package.zip --manifest dist/release-manifest.json
 ```
 
-Build a canonical tagged v0.9.5.30 candidate with the retained v0.9.5.29 rollback manifest selected by compatibility policy:
+Build a canonical tagged v0.9.5.31 candidate with the retained v0.9.5.30 rollback manifest selected by compatibility policy:
 
 ```powershell
-python scripts/make_release.py --release-tag v0.9.5.30 --previous-manifest previous/release-manifest.json
+python scripts/make_release.py --release-tag v0.9.5.31 --previous-manifest previous/release-manifest.json
 ```
 
-For v0.9.5.30, `previous/release-manifest.json` must be the checksum-verified retained v0.9.5.29 release manifest declared by `contracts/compatibility/app-0.9.5.30.json`. `scripts/resolve_release_predecessor.py` derives that exact tag and verifies the downloaded manifest before packaging. The resulting v0.9.5.30 pointer authorizes application-artifact rollback only; it neither rolls back MySQL schema version 2 nor permits credential rotation, provider, DNS, billing, signup, OAuth, mail, edge, SSH-ingress, or public-exposure changes.
+For v0.9.5.31, `previous/release-manifest.json` must be the checksum-verified retained v0.9.5.30 release manifest declared by `contracts/compatibility/app-0.9.5.31.json`. `scripts/resolve_release_predecessor.py` derives that exact tag and verifies the downloaded manifest before packaging. The resulting v0.9.5.31 pointer authorizes application-artifact rollback only; it neither rolls back MySQL schema version 2 nor permits credential rotation, provider, DNS, billing, signup, OAuth, mail, edge, SSH-ingress, or public-exposure changes.
