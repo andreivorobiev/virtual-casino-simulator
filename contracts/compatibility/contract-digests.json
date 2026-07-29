@@ -30,7 +30,7 @@
   "contracts/openapi/feedback.v2.yaml": "818cf33160ae661e1c594d2e1cb37be6ce4a56adfba174929f6237d3ee8c59dc",
   "contracts/openapi/four_card_poker.v1.yaml": "5c6098126ef1b2927dd0d194c89344aec24950c0e354a2bf132b6d9519bb1c0e",
   "contracts/openapi/guest-trials.v2.yaml": "8a03a5b60dcf630e7bab6dcefe03d1a79ff89ccb6531a278f6d66550f6b831f0",
-  "contracts/openapi/hi_lo.v1.yaml": "7bc59bd68c15ca048b408105f459514ec39ec7ce13bffe9ff6ed14069414820f",
+  "contracts/openapi/hi_lo.v1.yaml": "7f7eaae6e5195b0c9698853730507180e4e2139979437b3a9121b5ececb608ee",
   "contracts/openapi/invitations.v2.yaml": "0fb335cef30e229cb2fffc0d77b29ec56f121b05fd3d639b9d98cac6d3a50d93",
   "contracts/openapi/jacks_or_better_video_poker.v1.yaml": "f6923416af4171254677872ac8b6cd884981b245913b2c4ac7f090ed1f0ca3c1",
   "contracts/openapi/joker_poker.v1.yaml": "84ae12bb90c2880287f49a04a867d09d429d13cfa0ccda0a9780c740c6c50b6b",

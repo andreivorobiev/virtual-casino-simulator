@@ -21,6 +21,49 @@ GUESSES = ("higher", "lower")
 RANK_VALUES = {rank: value for value, rank in enumerate(RANKS, start=2)}
 # Bound reload-safe history so one player document cannot grow without limit.
 RECENT_ROUND_LIMIT = 20
+# Target total-return house edge held uniformly across every visible current-card rank. (issue #406)
+HOUSE_EDGE = 0.035
+# Three cards of the current rank remain unseen, so a stake-refunding tie occurs with probability 3/51.
+TIE_PROBABILITY = 3 / 51
+
+
+# Probability the optimal higher/lower guess wins for a visible card of this ordering value.
+def _optimal_win_probability(rank_value: int) -> float:
+    # Four cards sit at every other rank; the optimal guess follows the more populated direction.
+    higher = 4 * (max(RANK_VALUES.values()) - rank_value)
+    lower = 4 * (rank_value - min(RANK_VALUES.values()))
+    # Best play always calls the larger side of the 51 unseen cards.
+    return max(higher, lower) / 51
+
+
+# Price a correct guess for the visible current card so the house edge does not depend on its rank.
+def correct_return_multiplier(current_card) -> float:
+    """Return the total-return multiplier for a correct higher/lower call on ``current_card``.
+
+    Even money let a player always guess the majority direction for a +50.7% edge (issue #406). A tie
+    already refunds the wager, so pricing a correct call at
+    (1 - HOUSE_EDGE - TIE_PROBABILITY) / P(optimal guess wins) leaves the same edge whether the visible
+    card is extreme (a near-certain call) or near the middle (a near coin flip).
+    """
+    # Resolve the visible rank to its ordering value.
+    value = RANK_VALUES[coerce_card(current_card).rank]
+    # Price the correct return against the optimal win probability for this rank.
+    return round((1 - HOUSE_EDGE - TIE_PROBABILITY) / _optimal_win_probability(value), 2)
+
+
+# Publish the full rank-to-multiplier paytable so clients never recompute a price themselves.
+def correct_paytable() -> dict:
+    # Build one entry per rank keyed by its public symbol.
+    return {
+        rank: round((1 - HOUSE_EDGE - TIE_PROBABILITY) / _optimal_win_probability(value), 2)
+        for rank, value in RANK_VALUES.items()
+    }
+
+
+# Frozen-v1 compatibility scalar retained for legacy even-money clients; superseded by correct_paytable(). (issue #406)
+CORRECT_RETURN_MULTIPLIER = 2
+# Refund the wager on an equal-rank tie; unchanged by the rank pricing.
+TIE_RETURN_MULTIPLIER = 1
 
 
 # Build one fresh player-scoped state document.
@@ -150,8 +193,8 @@ def settle_round(round_state: dict, guess, guess_action_id: str, *, completed_at
     correct = (normalized_guess == "higher" and comparison > 0) or (normalized_guess == "lower" and comparison < 0)
     # Classify equal ranks as a refund regardless of suits.
     outcome = "tie" if comparison == 0 else "correct" if correct else "incorrect"
-    # Return stake plus even-money winnings for a correct prediction.
-    payout = round(round_state["wager"] * 2, 2) if outcome == "correct" else round_state["wager"] if outcome == "tie" else 0.0
+    # Return stake plus the rank-priced winnings for a correct prediction; a tie refunds the wager.
+    payout = round(round_state["wager"] * correct_return_multiplier(round_state["current_card"]), 2) if outcome == "correct" else round_state["wager"] if outcome == "tie" else 0.0
     # Store the canonical player decision.
     round_state["guess"] = normalized_guess
     # Store the settlement action identity for safe retries.

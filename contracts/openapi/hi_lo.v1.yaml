@@ -205,9 +205,28 @@ components:
           maxItems: 20
           items:
             $ref: '#/components/schemas/Round'
+    CorrectPaytable:
+      type: object
+      description: Server-owned total-return multipliers for a correct call, keyed by the visible current-card rank. (issue #406)
+      required: ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
+      properties:
+        '2': {type: number, exclusiveMinimum: 0}
+        '3': {type: number, exclusiveMinimum: 0}
+        '4': {type: number, exclusiveMinimum: 0}
+        '5': {type: number, exclusiveMinimum: 0}
+        '6': {type: number, exclusiveMinimum: 0}
+        '7': {type: number, exclusiveMinimum: 0}
+        '8': {type: number, exclusiveMinimum: 0}
+        '9': {type: number, exclusiveMinimum: 0}
+        '10': {type: number, exclusiveMinimum: 0}
+        'J': {type: number, exclusiveMinimum: 0}
+        'Q': {type: number, exclusiveMinimum: 0}
+        'K': {type: number, exclusiveMinimum: 0}
+        'A': {type: number, exclusiveMinimum: 0}
+      additionalProperties: false
     Rules:
       type: object
-      required: [guesses, ace_high, suits_break_ties, correct_return_multiplier, tie_return_multiplier]
+      required: [guesses, ace_high, suits_break_ties, correct_return_multiplier, tie_return_multiplier, correct_paytable, house_edge]
       properties:
         guesses:
           type: array
@@ -223,11 +242,19 @@ components:
           type: boolean
           enum: [false]
         correct_return_multiplier:
-          type: integer
-          enum: [2]
+          type: number
+          deprecated: true
+          description: Frozen-v1 compatibility scalar for even-money legacy clients; use correct_paytable.
         tie_return_multiplier:
           type: integer
           enum: [1]
+        correct_paytable:
+          $ref: '#/components/schemas/CorrectPaytable'
+        house_edge:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Target edge the rank pricing holds at every current card. (issue #406)
     Player:
       type: object
       additionalProperties: true

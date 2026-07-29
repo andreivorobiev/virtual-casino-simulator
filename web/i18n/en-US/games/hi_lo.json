@@ -49,7 +49,7 @@
   "results.incorrect": "Incorrect prediction. The wager is settled.",
   "results.tie": "The ranks are equal. Your wager was returned.",
   "rules.aceHigh": "Aces rank above kings.",
-  "rules.correctReturn": "A correct prediction returns {multiplier} times the wager.",
+  "rules.correctReturn": "A correct prediction returns {min} to {max} times the wager, priced by the visible card's rank.",
   "rules.suitsIgnored": "Only ranks are compared; suits are ignored.",
   "rules.tieReturn": "Equal ranks return {multiplier} times the wager.",
   "rules.title": "How Hi-Lo works",

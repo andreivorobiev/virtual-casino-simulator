@@ -234,14 +234,16 @@ class HiLoApiTests(unittest.TestCase):
         reloaded = self.call("/api/v1/games/hi-lo/state", method="GET")
         # Replay the same guess after reload.
         second = self.call(f"/api/v1/games/hi-lo/rounds/{round_id}/guesses", {"action_id": "guess-win", "guess": "higher"})
+        # Derive the expected return from the visible 2 rank price (0.96 on a near-certain higher call). (issue #406)
+        expected_payout = round(5 * engine.correct_return_multiplier("2H"), 2)
         # Verify deterministic result and explicit replay behavior.
-        self.assertEqual(("correct", 10.0, True), (first["round"]["outcome"], first["round"]["payout"], second["replayed"]))
+        self.assertEqual(("correct", expected_payout, True), (first["round"]["outcome"], first["round"]["payout"], second["replayed"]))
         # Verify reload restored a complete settlement marker.
         self.assertEqual("complete", reloaded["state"]["recent_rounds"][-1]["settlement_status"])
         # Verify exactly one payout credit exists after recovery and replay.
         credits = [event for event in self.ledger.events if event["transaction_type"] == "HI_LO_PAYOUT_CREDIT"]
         # Verify the returned amount and complete audit dimensions.
-        self.assertEqual((1, 10.0, "session-player", engine.GAME_ID, round_id, "guess-win"), (len(credits), credits[0]["amount"], credits[0]["player_id"], credits[0]["game"], credits[0]["round_id"], credits[0]["details"]["hi_lo_action_id"]))
+        self.assertEqual((1, expected_payout, "session-player", engine.GAME_ID, round_id, "guess-win"), (len(credits), credits[0]["amount"], credits[0]["player_id"], credits[0]["game"], credits[0]["round_id"], credits[0]["details"]["hi_lo_action_id"]))
 
     # Confirm equal ranks refund once and a changed terminal retry fails closed.
     def test_tie_refund_and_conflicting_guess_retry(self):

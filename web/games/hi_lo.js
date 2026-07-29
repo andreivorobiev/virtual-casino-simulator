@@ -222,12 +222,16 @@ function historyHtml() {
 
 // Render the rules and recent results in the supporting data rail.
 function dataHtml() {
-  // Read server rule values while preserving documented defaults during initial loading.
-  const correctMultiplier = rules.correct_return_multiplier || 2;
+  // Read the server-owned rank paytable and derive the displayed price range during loading.
+  const paytable = rules.correct_paytable || {};
+  const prices = Object.values(paytable).filter(function (value) { return typeof value === 'number'; });
+  // Fall back to the deprecated even-money scalar before the first rules payload arrives.
+  const minMultiplier = prices.length ? Math.min.apply(null, prices) : (rules.correct_return_multiplier || 2);
+  const maxMultiplier = prices.length ? Math.max.apply(null, prices) : (rules.correct_return_multiplier || 2);
   // Read the tie multiplier for localized rule explanation.
   const tieMultiplier = rules.tie_return_multiplier || 1;
   // Return distinct rule and history regions in one supporting rail.
-  return '<aside class="hilo-panel hilo-data" aria-label="' + safe(text('data.title')) + '"><section><h2>' + safe(text('rules.title')) + '</h2><ul class="hilo-rules"><li>' + safe(text('rules.aceHigh')) + '</li><li>' + safe(text('rules.suitsIgnored')) + '</li><li>' + safe(text('rules.correctReturn', { multiplier: correctMultiplier })) + '</li><li>' + safe(text('rules.tieReturn', { multiplier: tieMultiplier })) + '</li></ul></section><section><h2>' + safe(text('history.title')) + '</h2>' + historyHtml() + '</section></aside>';
+  return '<aside class="hilo-panel hilo-data" aria-label="' + safe(text('data.title')) + '"><section><h2>' + safe(text('rules.title')) + '</h2><ul class="hilo-rules"><li>' + safe(text('rules.aceHigh')) + '</li><li>' + safe(text('rules.suitsIgnored')) + '</li><li>' + safe(text('rules.correctReturn', { min: minMultiplier, max: maxMultiplier })) + '</li><li>' + safe(text('rules.tieReturn', { multiplier: tieMultiplier })) + '</li></ul></section><section><h2>' + safe(text('history.title')) + '</h2>' + historyHtml() + '</section></aside>';
 }
 
 // Return scoped responsive styles without modifying the shared application stylesheet.

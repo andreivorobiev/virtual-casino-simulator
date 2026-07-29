@@ -129,8 +129,10 @@ class HiLoService:
                 "guesses": list(engine.GUESSES),  # Advertise the two legal decisions.
                 "ace_high": True,  # Explain rank ordering.
                 "suits_break_ties": False,  # Explain equal-rank handling.
-                "correct_return_multiplier": 2,  # Return stake plus even-money win.
-                "tie_return_multiplier": 1,  # Refund the wager on equal rank.
+                "correct_return_multiplier": engine.CORRECT_RETURN_MULTIPLIER,  # Retain the deprecated frozen-v1 even-money scalar for legacy clients.
+                "tie_return_multiplier": engine.TIE_RETURN_MULTIPLIER,  # Refund the wager on equal rank.
+                "correct_paytable": engine.correct_paytable(),  # Publish the rank-priced correct return so clients never guess a price. (issue #406)
+                "house_edge": engine.HOUSE_EDGE,  # State the constant edge the rank pricing holds at every current card. (issue #406)
             },
         }
 

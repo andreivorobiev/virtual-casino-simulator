@@ -7604,18 +7604,7 @@
       "changed_in": "game-expansion-dragon-tiger",
       "notes": "The descriptor uses sort order 100 and the normalized tests.game_drivers.dragon_tiger:play driver reference released by issue #77."
     },
-    {
-      "id": "HILO-001",
-      "module": "Hi-Lo",
-      "description": "Hi-Lo compares two standard-card ranks with ace high and suits ignored, returning 2x for a correct prediction, 1x for an equal-rank refund, and 0 for an incorrect prediction.",
-      "status": "PASS",
-      "api_tests": ["API-HILO-001"],
-      "browser_tests": ["BR-HILO-001"],
-      "implementation_files": ["casino/games/hi_lo/engine.py", "web/games/hi_lo.js"],
-      "introduced_in": "game-expansion-hi-lo",
-      "changed_in": "game-expansion-hi-lo",
-      "notes": "Allocated by GitHub issue #77 for issue #85; focused and real-backend tests cover ace-high rank-only comparison and every correct, equal-rank, and incorrect settlement class."
-    },
+    {"id": "HILO-001", "module": "Hi-Lo", "description": "Hi-Lo compares two standard-card ranks with ace high and suits ignored, returning a rank-priced multiple that holds a uniform house edge for a correct prediction, 1x for an equal-rank refund, and 0 for an incorrect prediction.", "status": "PASS", "api_tests": ["API-HILO-001"], "browser_tests": ["BR-HILO-001"], "implementation_files": ["casino/games/hi_lo/engine.py", "web/games/hi_lo.js", "casino/games/hi_lo/service.py", "contracts/openapi/hi_lo.v1.yaml", "tests/games/hi_lo/test_economics.py"], "introduced_in": "game-expansion-hi-lo", "changed_in": "issue-406-hi-lo-rank-pricing", "notes": "Allocated by GitHub issue #77 for issue #85; focused and real-backend tests cover ace-high rank-only comparison and every correct, equal-rank, and incorrect settlement class. Even money let a player always call the majority direction for a +50.7% edge (issue #406); a correct call is now priced per visible rank at (1 - house_edge - tie_probability) / P(optimal guess wins) so the edge is uniform and the game is no longer player-positive."},
     {
       "id": "HILO-002",
       "module": "Hi-Lo",
