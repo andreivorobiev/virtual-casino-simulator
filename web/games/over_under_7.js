@@ -36,7 +36,7 @@ const ROUTE_CSS = [
   '.ou7-die{display:grid;place-items:center;width:min(30vw,150px);aspect-ratio:1;border:3px solid #f0cf74;border-radius:18px;background:linear-gradient(145deg,#f9f1d5,#d7ba70);color:#10271d;font-size:clamp(44px,8vw,84px);font-weight:1000;box-shadow:0 16px 36px rgba(0,0,0,.38);}', // Render reliable code-native dice.
   '.ou7-die.rolling{animation:ou7Roll .18s linear infinite;}', // Use transform-only decorative motion.
   '.ou7-result{display:grid;gap:4px;min-height:70px;text-align:center;}', // Reserve result space so layout does not shift.
-  '.ou7-total{font-size:clamp(34px,6vw,64px);font-weight:1000;color:#ffe8a4;}', // Emphasize the rolled total.
+  '.ou7-total{font-size:clamp(34px,6vw,64px);font-weight:1000;color:var(--text);}', // Emphasize the rolled total.
   '.ou7-data{display:grid;align-content:start;gap:12px;}', // Keep paytable and history distinct.
   '.ou7-payrow,.ou7-history-row{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.08);}', // Align compact rows.
   '.ou7-history{max-height:260px;overflow:auto;scrollbar-width:thin;}', // Give data rail one focusable scroll region.
