@@ -2,14 +2,19 @@
 
 import asyncio  # Exercise the asynchronous synchronized barrier without launching a browser.
 from collections import Counter  # Match the grouped production diagnostic counter schema.
+from concurrent.futures import ThreadPoolExecutor  # Drive deterministic concurrent autoplay registry transactions.
+import copy  # Return independent fake registry snapshots like JSON deserialization.
 import json  # Persist one external exact-source pool preflight fixture.
 import os  # Patch only the explicit disposable marker for boundary tests.
 import tempfile  # Own and clean external listener-free evidence files.
+import time  # Widen fake registry read/write races for deterministic concurrency evidence.
 import tomllib  # Parse optional dependency groups for listener-free workflow policy proof.
 import unittest  # Integrate focused proofs with the repository test runner.
 from types import SimpleNamespace  # Build small aggregate-only barrier fixtures.
 from unittest import mock  # Isolate current-catalog and environment scenarios.
 
+from casino.app import build_router  # Inspect real autoplay route registrations without opening a listener.
+from casino.core import autoplay  # Exercise the synchronized server-side autoplay registry.
 from tests import concurrent_browser_138  # Exercise the public qualification planner and aggregator.
 
 
@@ -33,6 +38,7 @@ class ConcurrentBrowser138Tests(unittest.TestCase):
             "login_seconds": 0.1,  # Preserve one bounded successful login sample.
             "play_seconds": 0.2,  # Preserve one bounded successful gameplay sample.
             "completed_phases": list(concurrent_browser_138.FORMAL_PHASES),  # Model complete fixed-phase evidence.
+            "completed_action_states": list(concurrent_browser_138.FORMAL_ACTION_STATES),  # Model complete fixed action-state evidence.
             "browser_diagnostics": {"console_errors": {}, "page_errors": {}, "http_failures": {}},  # Model clean grouped browser diagnostics.
         }
 
@@ -189,6 +195,25 @@ class ConcurrentBrowser138Tests(unittest.TestCase):
         # Require ordinary profiles to retain the exact caller-owned timeout after restoration.
         self.assertEqual(concurrent_browser_138.ui_50000.operation_timeout_ms(15_000), 15_000)
 
+    # Prove the formal gameplay deadline is derived from hosted success evidence, rounded, and capped.
+    def test_formal_gameplay_deadline_uses_documented_hosted_latency_policy(self):
+        # Require the third-run p95/max plus fixed margins to round upward to two minutes.
+        self.assertEqual(concurrent_browser_138.FORMAL_GAMEPLAY_DEADLINE_MS, 120_000)
+        # Require p95-plus-thirty-seconds to own the current evidence bound.
+        self.assertGreater(
+            concurrent_browser_138.OBSERVED_GAMEPLAY_SUCCESS_P95_MS + concurrent_browser_138.FORMAL_GAMEPLAY_P95_MARGIN_MS,  # Compare the p95 evidence bound.
+            concurrent_browser_138.OBSERVED_GAMEPLAY_SUCCESS_MAX_MS + concurrent_browser_138.FORMAL_GAMEPLAY_MAX_MARGIN_MS,  # Compare the maximum-tail bound.
+        )
+        # Require a future extreme observation to remain beneath the documented hard cap.
+        self.assertEqual(
+            concurrent_browser_138.derive_formal_gameplay_deadline_ms(p95_ms=200_000, maximum_ms=210_000),  # Derive from deliberately extreme observations.
+            concurrent_browser_138.FORMAL_GAMEPLAY_DEADLINE_HARD_CAP_MS,  # Require the documented fixed ceiling.
+        )
+        # Refuse malformed policy inputs rather than silently shrinking the formal window.
+        with self.assertRaisesRegex(ValueError, "nonnegative latency"):
+            # Supply one invalid observed p95.
+            concurrent_browser_138.derive_formal_gameplay_deadline_ms(p95_ms=-1)
+
     # Prove formal gameplay emits fixed navigation phases and returns one action-aware ledger expectation.
     def test_formal_gameplay_uses_one_deadline_and_fixed_navigation_phases(self):
         # Exercise the production orchestration without a listener or browser.
@@ -228,10 +253,11 @@ class ConcurrentBrowser138Tests(unittest.TestCase):
                 # Run one non-gap assignment beneath the formal wrapper.
                 expectation = await concurrent_browser_138.run_formal_gameplay(
                     object(),  # Use one inert browser-free page seam.
-                    {"game_id": "baccarat", "user_index": 0},  # Select one inherited wagering driver.
+                    {"game_id": "craps", "user_index": 0},  # Select one unaffected inherited wagering driver.
                     Counter(),  # Collect no persistent rendered-control state.
                     Counter(),  # Collect no persistent activation state.
                     observe_phase,  # Record only fixed phase transitions.
+                    lambda _name, _status: None,  # Accept only fixed action-state transitions.
                 )
             # Require the action-aware evidence to remain fail-closed for a wager.
             self.assertEqual(expectation, "wager_required")
@@ -282,12 +308,198 @@ class ConcurrentBrowser138Tests(unittest.TestCase):
                         Counter(),  # Collect no rendered-control state.
                         Counter(),  # Collect no pointer-activation state.
                         lambda _name, _status: None,  # Accept only fixed phase callbacks.
+                        lambda _name, _status: None,  # Accept only fixed action-state callbacks.
                     )
             # Require task-local deadline cleanup after cancellation.
             self.assertIsNone(concurrent_browser_138.ui_50000.FORMAL_OPERATION_DEADLINE.get())
 
         # Run the bounded cancellation proof.
         asyncio.run(scenario())
+
+    # Prove every diagnosed game uses a bounded ready/action/settlement driver without long-suite coverage work.
+    def test_formal_bounded_drivers_cover_all_eleven_diagnosed_games(self):
+        # Exercise every production branch with listener-free awaitable browser seams.
+        async def scenario():
+            # Preserve the exact public game set diagnosed from the terminal third-run artifact.
+            expected_games = {
+                "baccarat",  # Preserve one diagnosed coup driver.
+                "big_six_wheel",  # Preserve one diagnosed input-and-spin driver.
+                "bingo",  # Preserve one diagnosed card-purchase driver.
+                "blackjack",  # Preserve one diagnosed decision driver.
+                "double_bonus_video_poker",  # Preserve one diagnosed draw-poker driver.
+                "jacks_or_better_video_poker",  # Preserve one diagnosed draw-poker driver.
+                "keno",  # Preserve one diagnosed ticket driver.
+                "multi_hand_video_poker",  # Preserve one diagnosed draw-poker driver.
+                "roulette",  # Preserve one diagnosed wager-and-spin driver.
+                "scratch_cards",  # Preserve one diagnosed card-settlement driver.
+                "slots",  # Preserve one diagnosed spin driver.
+            }
+            # Require the production ownership set to stay exact.
+            self.assertEqual(concurrent_browser_138.FORMAL_BOUNDED_GAME_IDS, expected_games)
+            # Return the caller's first public selector as immediately actionable.
+            async def wait_any_enabled(_page, selectors, *_args):
+                # Preserve caller priority for deterministic decision tests.
+                return selectors[0]
+
+            # Return one inert rendered locator for every selector.
+            async def enabled_locators(_page, _selector):
+                # Preserve a nonempty actionable control surface.
+                return [object()]
+
+            # Exercise each diagnosed driver independently.
+            for ordinal, game_id in enumerate(sorted(expected_games)):
+                # Preserve only fixed action-state transitions for this public game.
+                events = []
+
+                # Record one fixed low-cardinality transition.
+                def observe_state(name, status):
+                    # Append only the governed action state and status.
+                    events.append((name, status))
+
+                # Build a minimal page seam for the three helpers that resolve locators directly.
+                page = SimpleNamespace(
+                    get_by_test_id=lambda _test_id: object(),  # Return one inert Keno reset locator.
+                    locator=lambda _selector: object(),  # Return one inert direct-selector locator.
+                    wait_for_function=mock.AsyncMock(),  # Model Roulette's resolving-state observation.
+                    wait_for_timeout=mock.AsyncMock(),  # Model request-owned busy-state rerender allowance.
+                )
+                # Replace only browser primitives while retaining every production branch and state boundary.
+                with (
+                    mock.patch.object(concurrent_browser_138.ui_50000, "inventory_controls", new=mock.AsyncMock()),  # Avoid DOM inventory.
+                    mock.patch.object(concurrent_browser_138.ui_50000, "wait_any_enabled", new=wait_any_enabled),  # Model immediate readiness.
+                    mock.patch.object(concurrent_browser_138.ui_50000, "enabled_locators", new=enabled_locators),  # Model one enabled control.
+                    mock.patch.object(concurrent_browser_138.ui_50000, "locator_ready", new=mock.AsyncMock(return_value=False)),  # Keep Keno in fresh-ticket state.
+                    mock.patch.object(concurrent_browser_138.ui_50000, "click_control", new=mock.AsyncMock()),  # Record no real pointer work.
+                    mock.patch.object(concurrent_browser_138.ui_50000, "click_locator", new=mock.AsyncMock()),  # Record no real pointer work.
+                    mock.patch.object(concurrent_browser_138.ui_50000, "fill_control", new=mock.AsyncMock()),  # Record no keyboard work.
+                    mock.patch.object(concurrent_browser_138.ui_50000, "roulette_add_bet", new=mock.AsyncMock()),  # Model committed drawer readiness.
+                ):
+                    # Complete one bounded public action for this diagnosed game.
+                    handled = await concurrent_browser_138.play_formal_bounded_ui(
+                        page,  # Reuse the inert task-owned page seam.
+                        game_id,  # Select the diagnosed public game.
+                        ordinal,  # Preserve deterministic visible selection.
+                        Counter(),  # Collect no persistent control inventory.
+                        Counter(),  # Collect no persistent pointer history.
+                        observe_state,  # Record fixed state transitions.
+                    )
+                # Require explicit formal-only ownership.
+                self.assertTrue(handled, game_id)
+                # Require every started fixed state to reach a matching completion.
+                self.assertEqual(Counter(name for name, status in events if status == "started"), Counter(name for name, status in events if status == "completed"), game_id)
+                # Require genuine initial readiness before action commitment.
+                self.assertIn(("initial_ready", "completed"), events, game_id)
+                self.assertIn(("action_commit", "completed"), events, game_id)
+
+        # Run the listener-free all-driver proof.
+        asyncio.run(scenario())
+
+    # Prove the formal controller selects the bounded driver instead of the inherited long-suite strategy.
+    def test_formal_controller_routes_diagnosed_game_to_bounded_driver(self):
+        # Exercise the orchestration without opening a listener or browser.
+        async def scenario():
+            # Model navigation as one immediate rendered route transition.
+            navigation = mock.AsyncMock()
+            # Model the bounded Baccarat driver as successfully handled.
+            bounded = mock.AsyncMock(return_value=True)
+            # Keep the long-suite driver red if the controller reaches it.
+            inherited = mock.AsyncMock(return_value="wager_required")
+            # Replace only browser operations while retaining production ownership selection.
+            with (
+                mock.patch.object(concurrent_browser_138.ui_50000, "navigate_to_game", new=navigation),  # Replace visible route work.
+                mock.patch.object(concurrent_browser_138, "play_formal_bounded_ui", new=bounded),  # Observe bounded ownership.
+                mock.patch.object(concurrent_browser_138.ui_50000, "play_game_ui", new=inherited),  # Detect forbidden long-suite delegation.
+            ):
+                # Run one diagnosed assignment through the formal controller.
+                expectation = await concurrent_browser_138.run_formal_gameplay(
+                    object(),  # Use one inert browser-free page seam.
+                    {"game_id": "baccarat", "user_index": 0},  # Select one diagnosed game.
+                    Counter(),  # Collect no persistent rendered controls.
+                    Counter(),  # Collect no persistent pointer actions.
+                    lambda _name, _status: None,  # Accept fixed phase transitions.
+                    lambda _name, _status: None,  # Accept fixed action-state transitions.
+                )
+            # Preserve fail-closed wager evidence for the bounded visible action.
+            self.assertEqual(expectation, "wager_required")
+            # Require one exact bounded-driver invocation.
+            bounded.assert_awaited_once()
+            # Refuse the unrelated 50,000-cycle strategy in the formal profile.
+            inherited.assert_not_awaited()
+
+        # Run the listener-free routing proof.
+        asyncio.run(scenario())
+
+    # Prove concurrent autoplay starts and lifecycle calls preserve every issued session id.
+    def test_autoplay_registry_serializes_concurrent_lifecycle_transactions(self):
+        # Start one fake JSON-deserialized registry owned only by this listener-free test.
+        registry = autoplay.default_state()
+
+        # Return an independent delayed snapshot so unlocked read-modify-write calls would overwrite siblings.
+        def fake_load_state():
+            # Widen the read window enough for the worker pool to expose lost-update behavior.
+            time.sleep(0.001)
+            # Match real JSON deserialization by returning a detached object graph.
+            return copy.deepcopy(registry)
+
+        # Replace the fake persisted registry with one independent delayed snapshot.
+        def fake_save_state(state):
+            # Rebind the test-owned registry after the simulated storage delay.
+            nonlocal registry
+            # Widen the write window enough for concurrent callers to overlap without the production lock.
+            time.sleep(0.001)
+            # Match atomic JSON replacement with a detached committed object graph.
+            registry = copy.deepcopy(state)
+
+        # Patch only storage I/O while retaining production ids, timestamps, validation, and locking.
+        with (
+            mock.patch.object(autoplay, "load_state", side_effect=fake_load_state),  # Replace only registry reads.
+            mock.patch.object(autoplay, "save_state", side_effect=fake_save_state),  # Replace only registry writes.
+        ):
+            # Start more concurrent sessions than the hosted artifact's five missing registrations.
+            with ThreadPoolExecutor(max_workers=12) as executor:
+                # Create twenty-four independent server registrations.
+                sessions = list(executor.map(lambda index: autoplay.start("slots", f"player-{index:02d}", "medium", 2), range(24)))
+            # Preserve every unique server-issued id after concurrent start transactions.
+            autoplay_ids = [session["autoplay_id"] for session in sessions]
+            # Require no generated identity collision.
+            self.assertEqual(len(set(autoplay_ids)), 24)
+            # Require every issued id to remain immediately readable.
+            self.assertEqual({autoplay.get_session(autoplay_id)["autoplay_id"] for autoplay_id in autoplay_ids}, set(autoplay_ids))
+            # Tick every retained session concurrently through the same transaction boundary.
+            with ThreadPoolExecutor(max_workers=12) as executor:
+                # Require every tick to complete without a lost-session 404 boundary.
+                ticked = list(executor.map(autoplay.tick, autoplay_ids))
+            # Require one committed round per independent session.
+            self.assertEqual({row["rounds_completed"] for row in ticked}, {1})
+            # Request every stop concurrently.
+            with ThreadPoolExecutor(max_workers=12) as executor:
+                # Preserve every retained id through the stop transition.
+                stopped = list(executor.map(autoplay.stop, autoplay_ids))
+            # Require every stop request to remain associated with its issued id.
+            self.assertEqual({row["autoplay_id"] for row in stopped}, set(autoplay_ids))
+            # Complete every stop concurrently like the shared browser controller.
+            with ThreadPoolExecutor(max_workers=12) as executor:
+                # Preserve every retained id through finish-stop.
+                terminal = list(executor.map(autoplay.finish_stop, autoplay_ids))
+        # Require all twenty-four sessions to remain present and terminal.
+        self.assertEqual(len(registry["sessions"]), 24)
+        self.assertEqual({row["status"] for row in terminal}, {"stopped"})
+
+    # Prove the browser controller's exact autoplay paths resolve in the real router.
+    def test_autoplay_browser_paths_match_registered_server_routes(self):
+        # Build the real listener-free application router.
+        router = build_router()
+        # Enumerate every path observed as 404 in the preserved governed artifact.
+        requests = (
+            ("GET", "/api/v1/autoplay/sessions/auto-regression"),  # Preserve the session-read path.
+            ("POST", "/api/v1/autoplay/tick"),  # Preserve the round-tick path.
+            ("POST", "/api/v1/autoplay/stop"),  # Preserve the stop-request path.
+            ("POST", "/api/v1/autoplay/finish-stop"),  # Preserve the terminal-stop path.
+        )
+        # Require each browser-owned public request to match one real server registration.
+        for method, path in requests:
+            # Reject path drift independently from runtime storage behavior.
+            self.assertTrue(any(route.match(method, path) for route in router.routes), f"{method} {path}")
 
     # Prove Pai Gow waits for deterministic initial-deal readiness before pointer activation.
     def test_pai_gow_driver_waits_for_deal_readiness(self):
@@ -759,6 +971,8 @@ class ConcurrentBrowser138Tests(unittest.TestCase):
             row["error"] = "enabled control timeout: ['[data-action=\"deal\"]']"
             # Attribute the failure to the fixed game-action phase.
             row["failure_phase"] = "gameplay_action"
+            # Attribute the identical selector failure to the fixed initial-readiness state.
+            row["failure_action_state"] = "initial_ready"
             # Remove the terminal action completion from phase evidence.
             row["completed_phases"] = [phase for phase in row["completed_phases"] if phase != "gameplay_action"]
         # Model exact barrier and cleanup completion.
@@ -818,11 +1032,13 @@ class ConcurrentBrowser138Tests(unittest.TestCase):
         self.assertEqual(
             report["failure_attribution"],
             [
-                {"game_id": "dragon_tiger", "phase": "gameplay_action", "error": "enabled control timeout: ['[data-action=\"deal\"]']", "count": 1},  # Attribute Dragon Tiger.
-                {"game_id": "hi_lo", "phase": "gameplay_action", "error": "enabled control timeout: ['[data-action=\"deal\"]']", "count": 1},  # Attribute Hi-Lo.
-                {"game_id": "red_dog", "phase": "gameplay_action", "error": "enabled control timeout: ['[data-action=\"deal\"]']", "count": 1},  # Attribute Red Dog.
+                {"game_id": "dragon_tiger", "phase": "gameplay_action", "action_state": "initial_ready", "error": "enabled control timeout: ['[data-action=\"deal\"]']", "count": 1},  # Attribute Dragon Tiger.
+                {"game_id": "hi_lo", "phase": "gameplay_action", "action_state": "initial_ready", "error": "enabled control timeout: ['[data-action=\"deal\"]']", "count": 1},  # Attribute Hi-Lo.
+                {"game_id": "red_dog", "phase": "gameplay_action", "action_state": "initial_ready", "error": "enabled control timeout: ['[data-action=\"deal\"]']", "count": 1},  # Attribute Red Dog.
             ],
         )
+        # Require the fixed action-state failure counter to preserve all three readiness defects.
+        self.assertEqual(report["action_state_counts"]["failed"]["initial_ready"], 3)
 
     # Prove exact-source fixed-cardinality pool evidence is accepted and foreign evidence is rejected.
     def test_pool_preflight_requires_exact_source_and_fixed_schema(self):

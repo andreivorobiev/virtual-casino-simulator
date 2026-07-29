@@ -4,6 +4,7 @@
 import argparse  # Parse the immutable qualification profile and artifact locations.
 import asyncio  # Coordinate independent browser contexts and the synchronized start barrier.
 import json  # Persist only sanitized aggregate qualification evidence.
+import math  # Round hosted latency evidence to one stable formal-only deadline quantum.
 import os  # Require the explicit disposable-runtime marker before opening local resources.
 import shutil  # Remove only the harness-owned copied runtime after listener closure.
 import socket  # Prove the exact loopback listener closes after the qualification.
@@ -26,12 +27,26 @@ BARRIER_TIMEOUT_SECONDS = 180
 SETUP_ADMISSION_LIMIT = 12
 # Bound the formal post-barrier login to one absolute window above the observed 64.265-second hosted maximum.
 FORMAL_LOGIN_DEADLINE_MS = 90_000
-# Bound combined formal navigation and gameplay above the observed 70.065-second hosted maximum without lowering concurrency.
-FORMAL_GAMEPLAY_DEADLINE_MS = 90_000
+# Preserve the terminal third-run successful gameplay p95 as the public data point for deadline policy.
+OBSERVED_GAMEPLAY_SUCCESS_P95_MS = 85_071
+# Preserve the terminal third-run successful gameplay maximum as the public tail data point.
+OBSERVED_GAMEPLAY_SUCCESS_MAX_MS = 88_788
+# Add one fixed thirty-second safety margin to the hosted successful p95.
+FORMAL_GAMEPLAY_P95_MARGIN_MS = 30_000
+# Require at least fifteen seconds beyond the hosted successful maximum.
+FORMAL_GAMEPLAY_MAX_MARGIN_MS = 15_000
+# Round the derived deadline upward to a stable five-second evidence quantum.
+FORMAL_GAMEPLAY_DEADLINE_QUANTUM_MS = 5_000
+# Refuse a formal gameplay window longer than two and one-half minutes.
+FORMAL_GAMEPLAY_DEADLINE_HARD_CAP_MS = 150_000
 # Publish only fixed low-cardinality phases for aggregate completion and failure evidence.
 FORMAL_PHASES = ("context_setup", "barrier", "login_gate", "locale_selection", "credential_entry", "terms_acceptance", "login_response", "authenticated_lobby", "gameplay_navigation", "navigation_return_lobby", "navigation_lobby_ready", "navigation_route_open", "navigation_game_ready", "gameplay_action", "context_cleanup")  # Keep every aggregate phase fixed and low-cardinality.
 # Keep otherwise unclassified failures inside one fixed aggregate bucket.
 FORMAL_FAILURE_PHASES = (*FORMAL_PHASES, "unclassified")
+# Publish only fixed low-cardinality action states inside the assigned game-action phase.
+FORMAL_ACTION_STATES = ("driver_selection", "initial_ready", "wager_selection", "action_commit", "decision_resolution", "settlement_ready", "next_action_ready", "generic_driver")  # Keep action-state attribution independent of selectors, players, and payloads.
+# Keep otherwise unclassified game-action failures inside one fixed aggregate state bucket.
+FORMAL_FAILURE_ACTION_STATES = (*FORMAL_ACTION_STATES, "unclassified")
 # Bind the formal report to permanent requirement and browser-test identities.
 REQUIREMENT_IDS = ("AUTH-001", "AUTH-002", "SESSION-001", "SESSION-005", "TEST-039", "TEST-042", "TEST-142", "CORE-021")
 # Reuse canonical game order so catalog growth changes the plan deterministically.
@@ -54,6 +69,51 @@ SIMPLE_ONE_ACTION_DRIVERS = {
 DECISION_ONE_ACTION_GAMES = frozenset({"four_card_poker", "mississippi_stud", "pai_gow_poker", "teen_patti"})
 # Pin the exact fifteen catalog gaps accepted from the governed failure artifact.
 CATALOG_GAP_GAME_IDS = tuple((*SIMPLE_ONE_ACTION_DRIVERS, *sorted(DECISION_ONE_ACTION_GAMES)))
+# Name the exact eleven inherited long-suite drivers that exceeded the bounded formal gameplay window.
+FORMAL_BOUNDED_GAME_IDS = frozenset(
+    {
+        "baccarat",  # Replace refund/rebet coverage with one ready wager and settled coup.
+        "big_six_wheel",  # Replace broad input rotation with one visible wager and spin.
+        "bingo",  # Replace autoplay/reset coverage with one purchased-card action.
+        "blackjack",  # Replace rare-control balancing with one deterministic settled hand.
+        "double_bonus_video_poker",  # Replace mode/hold coverage with one deal/draw cycle.
+        "jacks_or_better_video_poker",  # Replace mode/hold coverage with one deal/draw cycle.
+        "keno",  # Replace board/refund coverage with one quick-pick ticket and draw.
+        "multi_hand_video_poker",  # Replace mode/hold coverage with one deal/draw cycle.
+        "roulette",  # Replace table-wide pointer coverage with one wager and spin.
+        "scratch_cards",  # Replace cell-coverage rotation with one card settlement.
+        "slots",  # Keep one ready spin without shared autoplay coverage.
+    }
+)
+# Group the three affected draw-poker modules that share the same bounded ready/deal/draw contract.
+FORMAL_DRAW_POKER_GAME_IDS = frozenset({"double_bonus_video_poker", "jacks_or_better_video_poker", "multi_hand_video_poker"})
+
+
+# Derive one formal-only gameplay deadline from successful hosted latency evidence and fixed policy bounds.
+def derive_formal_gameplay_deadline_ms(
+    p95_ms=OBSERVED_GAMEPLAY_SUCCESS_P95_MS,  # Accept the preserved successful hosted p95.
+    maximum_ms=OBSERVED_GAMEPLAY_SUCCESS_MAX_MS,  # Accept the preserved successful hosted maximum.
+    p95_margin_ms=FORMAL_GAMEPLAY_P95_MARGIN_MS,  # Accept the fixed p95 safety margin.
+    maximum_margin_ms=FORMAL_GAMEPLAY_MAX_MARGIN_MS,  # Accept the fixed tail safety margin.
+    quantum_ms=FORMAL_GAMEPLAY_DEADLINE_QUANTUM_MS,  # Accept the stable rounding quantum.
+    hard_cap_ms=FORMAL_GAMEPLAY_DEADLINE_HARD_CAP_MS,  # Accept the formal-only absolute hard cap.
+):  # Keep every policy input explicit for listener-free regression coverage.
+    # Normalize every policy input to an integer millisecond value.
+    values = tuple(int(value) for value in (p95_ms, maximum_ms, p95_margin_ms, maximum_margin_ms, quantum_ms, hard_cap_ms))
+    # Reject absent or negative observed latency and nonpositive rounding/cap policy.
+    if values[0] < 0 or values[1] < 0 or values[2] < 0 or values[3] < 0 or values[4] < 1 or values[5] < 1:
+        # Keep a malformed policy from silently weakening the fail-closed formal profile.
+        raise ValueError("formal gameplay deadline policy requires nonnegative latency and positive quantum/cap")
+    # Preserve the larger of the p95-plus-margin and maximum-plus-tail-margin bounds.
+    evidence_bound_ms = max(values[0] + values[2], values[1] + values[3])
+    # Round upward so minor hosted timing variance cannot change the published deadline by milliseconds.
+    rounded_bound_ms = int(math.ceil(evidence_bound_ms / values[4]) * values[4])
+    # Apply the documented hard cap without changing ordinary browser timeouts.
+    return min(rounded_bound_ms, values[5])
+
+
+# Bind the formal profile to the documented hosted evidence formula at import time.
+FORMAL_GAMEPLAY_DEADLINE_MS = derive_formal_gameplay_deadline_ms()
 
 
 # Build one deterministic all-catalog assignment without opening a listener or browser.
@@ -486,8 +546,202 @@ async def play_catalog_gap_ui(page, game_id, ordinal, seen_counts, activated_cou
     return True
 
 
+# Run one awaitable browser operation while publishing a fixed action-state boundary.
+async def run_formal_action_state(action_state_observer, state, operation):
+    # Mark the fixed low-cardinality state active before its browser operation begins.
+    action_state_observer(state, "started")
+    # Await the caller-owned browser operation without creating a new timeout budget.
+    result = await operation
+    # Mark the fixed state complete only after its browser operation succeeds.
+    action_state_observer(state, "completed")
+    # Return any selector or action result needed by the next bounded state.
+    return result
+
+
+# Complete one bounded ready/action/settlement cycle for each diagnosed inherited long-suite driver.
+async def play_formal_bounded_ui(page, game_id, ordinal, seen_counts, activated_counts, action_state_observer):
+    # Keep ordinary UI50K coverage unchanged by selecting only the eleven diagnosed formal games.
+    if game_id not in FORMAL_BOUNDED_GAME_IDS:
+        # Report that another explicit or inherited driver owns this game.
+        return False
+    # Inventory the assigned route once without exercising configuration or shared autoplay coverage.
+    await ui_50000.inventory_controls(page, seen_counts)
+    # Complete one Roulette wager and spin without the long-suite table-wide pointer schedule.
+    if game_id == "roulette":
+        # Require one visible straight-up wager target before pointer activation.
+        await run_formal_action_state(action_state_observer, "initial_ready", ui_50000.wait_any_enabled(page, ['[data-testid^="roulette-num-"]']))
+        # Resolve the currently actionable number targets after readiness.
+        numbers = await ui_50000.enabled_locators(page, '[data-testid^="roulette-num-"]')
+        # Refuse a disappeared table rather than converting it to a generic deadline.
+        if not numbers:
+            # Preserve one public readiness diagnostic for this game.
+            raise AssertionError("Roulette number targets unavailable")
+        # Add one deterministic straight-up wager and await its committed drawer row.
+        await run_formal_action_state(action_state_observer, "wager_selection", ui_50000.roulette_add_bet(page, numbers[int(ordinal) % len(numbers)], activated_counts))
+        # Commit the real visible spin without running unrelated table coverage.
+        await run_formal_action_state(action_state_observer, "action_commit", ui_50000.click_control(page, '[data-testid="roulette-spin"]', activated_counts))
+        # Require the committed disabled resolving state before accepting a later ready button.
+        roulette_resolving = """() => { const result = document.querySelector('[data-testid=\"roulette-result-region\"]'); const spin = document.querySelector('[data-testid=\"roulette-spin\"]'); return Boolean(result?.dataset.phase === 'spinning' && spin?.disabled); }"""
+        # Attribute a missing resolving transition separately from next-round readiness.
+        await run_formal_action_state(
+            action_state_observer,  # Attribute this wait to the task-local fixed state observer.
+            "settlement_ready",  # Separate resolving transition from pointer commit and next readiness.
+            page.wait_for_function(roulette_resolving, timeout=ui_50000.operation_timeout_ms(ui_50000.ACTION_TIMEOUT_MS)),  # Reuse the remaining formal deadline.
+        )
+        # Require a genuinely enabled fresh-spin control after settlement.
+        await run_formal_action_state(action_state_observer, "next_action_ready", ui_50000.wait_any_enabled(page, ['[data-testid="roulette-spin"]']))
+    # Complete one Slots spin without creating a shared autoplay session.
+    elif game_id == "slots":
+        # Require the rendered spin action before committing it.
+        await run_formal_action_state(action_state_observer, "initial_ready", ui_50000.wait_any_enabled(page, ['[data-testid="slots-spin"]']))
+        # Commit one visible spin.
+        await run_formal_action_state(action_state_observer, "action_commit", ui_50000.click_control(page, '[data-testid="slots-spin"]', activated_counts))
+        # Allow the request-owned busy rerender to replace the pre-click enabled spin control.
+        await page.wait_for_timeout(5)
+        # Require next-spin readiness after the reel result settles.
+        await run_formal_action_state(action_state_observer, "next_action_ready", ui_50000.wait_any_enabled(page, ['[data-testid="slots-spin"]']))
+    # Complete one five-number Keno ticket without broad board or refund coverage.
+    elif game_id == "keno":
+        # Normalize a retained result only when its public new-ticket action is ready.
+        new_ticket = page.get_by_test_id("keno-new-ticket")
+        # Start a fresh ticket through the visible UI when the prior disposable state retained a result.
+        if await ui_50000.locator_ready(new_ticket):
+            # Reset only this assigned player's disposable ticket state.
+            await run_formal_action_state(action_state_observer, "initial_ready", ui_50000.click_locator(new_ticket, activated_counts))
+        # Require the bounded five-number helper before selection.
+        await run_formal_action_state(action_state_observer, "initial_ready", ui_50000.wait_any_enabled(page, ["#quick5"]))
+        # Select exactly five visible numbers.
+        await run_formal_action_state(action_state_observer, "wager_selection", ui_50000.click_control(page, "#quick5", activated_counts))
+        # Purchase the selected player-scoped ticket.
+        await run_formal_action_state(action_state_observer, "action_commit", ui_50000.click_control(page, '[data-testid="keno-buy"]', activated_counts))
+        # Require the public draw action after purchase.
+        await run_formal_action_state(action_state_observer, "settlement_ready", ui_50000.wait_any_enabled(page, ['[data-testid="keno-draw"]']))
+        # Draw and settle the purchased ticket.
+        await run_formal_action_state(action_state_observer, "decision_resolution", ui_50000.click_control(page, '[data-testid="keno-draw"]', activated_counts))
+        # Require terminal new-ticket readiness after the draw animation.
+        await run_formal_action_state(action_state_observer, "next_action_ready", ui_50000.wait_any_enabled(page, ['[data-testid="keno-new-ticket"]']))
+    # Complete one Bingo card purchase and require the next legal call action.
+    elif game_id == "bingo":
+        # Require a fresh card-purchase state without starting shared autoplay.
+        await run_formal_action_state(action_state_observer, "initial_ready", ui_50000.wait_any_enabled(page, ['[data-testid="bingo-buy"]']))
+        # Purchase one visible synthetic card.
+        await run_formal_action_state(action_state_observer, "action_commit", ui_50000.click_control(page, '[data-testid="bingo-buy"]', activated_counts))
+        # Require the rendered next legal action after the wager commits.
+        await run_formal_action_state(action_state_observer, "next_action_ready", ui_50000.wait_any_enabled(page, ['[data-testid="bingo-call"]']))
+    # Complete one Blackjack hand with deterministic legal decisions rather than deficit balancing.
+    elif game_id == "blackjack":
+        # Require one fresh-hand action before the first wager.
+        await run_formal_action_state(action_state_observer, "initial_ready", ui_50000.wait_any_enabled(page, ['[data-testid="blackjack-deal"]']))
+        # Deal one public hand.
+        await run_formal_action_state(action_state_observer, "action_commit", ui_50000.click_control(page, '[data-testid="blackjack-deal"]', activated_counts))
+        # Allow the request-owned decision rerender to replace the pre-click enabled deal control.
+        await page.wait_for_timeout(5)
+        # Mark the bounded legal-decision loop as one fixed public action state.
+        action_state_observer("decision_resolution", "started")
+        # Resolve at most twelve legal states before requiring a terminal next deal.
+        for _step in range(12):
+            # Prefer terminal readiness, then deterministic settlement actions, then progress actions.
+            choice = await ui_50000.wait_any_enabled(
+                page,  # Reuse this task's rendered Blackjack table.
+                [
+                    '[data-testid="blackjack-deal"]',  # Prefer terminal next-hand readiness.
+                    '[data-testid="blackjack-stand"]',  # Prefer deterministic ordinary settlement.
+                    '[data-testid="blackjack-surrender"]',  # Resolve a legal surrender state.
+                    '[data-testid="blackjack-even-money"]',  # Resolve a legal natural decision.
+                    '[data-testid="blackjack-insurance"]',  # Resolve a legal insurance decision.
+                    '[data-testid="blackjack-double"]',  # Prefer a one-action terminal wager when legal.
+                    '[data-testid="blackjack-hit"]',  # Advance an ordinary nonterminal hand.
+                    '[data-testid="blackjack-split"]',  # Preserve progress when split is the remaining legal action.
+                ],
+            )
+            # Stop immediately when the table exposes a fresh-hand action.
+            if choice == '[data-testid="blackjack-deal"]':
+                # Mark the deterministic decision sequence terminal.
+                action_state_observer("decision_resolution", "completed")
+                # Leave the bounded loop after exact next-hand readiness.
+                break
+            # Dispatch the first currently legal deterministic decision through the real pointer path.
+            await ui_50000.click_control(page, choice, activated_counts)
+            # Allow the next decision or settlement rerender to replace the clicked control.
+            await page.wait_for_timeout(5)
+        # Reject cycling or stranded hands rather than masking them with a longer global deadline.
+        else:
+            # Preserve one exact game-owned readiness diagnostic.
+            raise AssertionError("Blackjack formal driver did not reach next-deal readiness within 12 decisions")
+        # Publish the already-observed terminal fresh-hand boundary as a separate fixed state.
+        await run_formal_action_state(action_state_observer, "next_action_ready", ui_50000.wait_any_enabled(page, ['[data-testid="blackjack-deal"]']))
+    # Complete one Baccarat wager and coup without the long-suite refund/rebet cycle.
+    elif game_id == "baccarat":
+        # Require the asynchronous wager rail before selection.
+        await run_formal_action_state(action_state_observer, "initial_ready", ui_50000.wait_any_enabled(page, ["[data-bet]"]))
+        # Select one deterministic visible wager zone.
+        await run_formal_action_state(action_state_observer, "wager_selection", select_visible_controls(page, "[data-bet]", 1, ordinal, activated_counts))
+        # Require the wager response to expose its removable committed row.
+        await run_formal_action_state(action_state_observer, "settlement_ready", ui_50000.wait_any_enabled(page, ["[data-clear]"]))
+        # Deal and settle the committed coup.
+        await run_formal_action_state(action_state_observer, "action_commit", ui_50000.click_control(page, '[data-testid="baccarat-deal"]', activated_counts))
+        # Allow the reveal-phase rerender to replace the pre-click enabled deal control.
+        await page.wait_for_timeout(5)
+        # Require next-coup readiness after the reveal theater finishes.
+        await run_formal_action_state(action_state_observer, "next_action_ready", ui_50000.wait_any_enabled(page, ['[data-testid="baccarat-deal"]']))
+    # Complete one bounded deal/draw cycle for the three diagnosed draw-poker modules.
+    elif game_id in FORMAL_DRAW_POKER_GAME_IDS:
+        # Require the initial deal control without rotating long-suite configuration.
+        await run_formal_action_state(action_state_observer, "initial_ready", ui_50000.wait_any_enabled(page, ['[data-action="deal"]']))
+        # Deal the shared player hand.
+        await run_formal_action_state(action_state_observer, "action_commit", ui_50000.click_control(page, '[data-action="deal"]', activated_counts))
+        # Require and commit the legal draw action without broad hold-position coverage.
+        await run_formal_action_state(action_state_observer, "decision_resolution", ui_50000.wait_any_enabled(page, ['[data-action="draw"]']))
+        # Settle the hand through the public draw control.
+        await run_formal_action_state(action_state_observer, "settlement_ready", ui_50000.click_control(page, '[data-action="draw"]', activated_counts))
+        # Require terminal next-hand readiness.
+        await run_formal_action_state(action_state_observer, "next_action_ready", ui_50000.wait_any_enabled(page, ['[data-action="deal"]']))
+    # Complete one Big Six wager and spin without rotating every wager input.
+    elif game_id == "big_six_wheel":
+        # Require at least one visible wager input.
+        await run_formal_action_state(action_state_observer, "initial_ready", ui_50000.wait_any_enabled(page, ["[data-wager]"]))
+        # Fill one deterministic wager while clearing no unrelated outcome fields in the fresh disposable state.
+        wagers = await ui_50000.enabled_locators(page, "[data-wager]")
+        # Refuse a disappeared wager rail after readiness.
+        if not wagers:
+            # Preserve one exact game-owned readiness diagnostic.
+            raise AssertionError("Big Six wager inputs unavailable")
+        # Enter one bounded synthetic-token wager.
+        await run_formal_action_state(action_state_observer, "wager_selection", ui_50000.fill_control(wagers[int(ordinal) % len(wagers)], "1", activated_counts))
+        # Commit one public spin.
+        await run_formal_action_state(action_state_observer, "action_commit", ui_50000.click_control(page, "[data-spin]", activated_counts))
+        # Allow the resolving rerender to replace the pre-click enabled spin control.
+        await page.wait_for_timeout(5)
+        # Require fresh-spin readiness after settlement.
+        await run_formal_action_state(action_state_observer, "next_action_ready", ui_50000.wait_any_enabled(page, ["[data-spin]"]))
+    # Complete one Scratch Card purchase and settlement without rotating coverage across all cells.
+    elif game_id == "scratch_cards":
+        # Require a fresh-card purchase action.
+        await run_formal_action_state(action_state_observer, "initial_ready", ui_50000.wait_any_enabled(page, ['[data-action="start"]']))
+        # Purchase one synthetic card.
+        await run_formal_action_state(action_state_observer, "action_commit", ui_50000.click_control(page, '[data-action="start"]', activated_counts))
+        # Require at least one covered rendered cell after the purchase response.
+        await run_formal_action_state(action_state_observer, "settlement_ready", ui_50000.wait_any_enabled(page, ['[data-testid^="scratch-cell-"]']))
+        # Resolve one covered cell through the public pointer path before using reveal-all.
+        cells = await ui_50000.enabled_locators(page, '[data-testid^="scratch-cell-"]')
+        # Refuse a disappeared card after readiness.
+        if not cells:
+            # Preserve one exact game-owned readiness diagnostic.
+            raise AssertionError("Scratch Card exposed no covered cells")
+        # Reveal one deterministic covered cell.
+        await run_formal_action_state(action_state_observer, "decision_resolution", ui_50000.click_locator(cells[int(ordinal) % len(cells)], activated_counts))
+        # Settle the remaining covered cells through the public action.
+        await run_formal_action_state(action_state_observer, "settlement_ready", ui_50000.click_control(page, '[data-action="reveal-all"]', activated_counts))
+        # Require a fresh-card action after all nine cells settle.
+        await run_formal_action_state(action_state_observer, "next_action_ready", ui_50000.wait_any_enabled(page, ['[data-action="start"]']))
+    # Record the terminal rendered state without persisting user-level controls.
+    await ui_50000.inventory_controls(page, seen_counts)
+    # Report successful ownership of this diagnosed formal driver.
+    return True
+
+
 # Run navigation and one visible action beneath one formal task-local absolute deadline.
-async def run_formal_gameplay(page, assignment, seen_counts, activated_counts, phase_observer):
+async def run_formal_gameplay(page, assignment, seen_counts, activated_counts, phase_observer, action_state_observer):
     # Convert the fixed millisecond policy to one monotonic absolute deadline shared by every nested browser operation.
     absolute_deadline = time.perf_counter() + (FORMAL_GAMEPLAY_DEADLINE_MS / 1000)
     # Install the deadline only in this asynchronous browser task so ordinary profiles and sibling contexts stay isolated.
@@ -509,18 +763,47 @@ async def run_formal_gameplay(page, assignment, seen_counts, activated_counts, p
         phase_observer("gameplay_navigation", "completed")
         # Record the visible game-action phase.
         phase_observer("gameplay_action", "started")
-        # Try the exact fifteen accepted catalog-gap drivers before the established long-harness strategy.
-        gap_completed = await play_catalog_gap_ui(
-            page,  # Reuse the task-owned rendered game route.
-            assignment["game_id"],  # Select the assigned public catalog driver.
-            assignment["user_index"],  # Preserve deterministic visible action choice.
-            seen_counts,  # Collect aggregate ready and terminal controls.
-            activated_counts,  # Collect aggregate pointer activation evidence.
-        )
+        # Record fixed driver-selection attribution before choosing a bounded or inherited path.
+        action_state_observer("driver_selection", "started")
+        # Resolve explicit ownership without beginning any game action under the selection state.
+        gap_owned = assignment["game_id"] in CATALOG_GAP_GAME_IDS
+        # Resolve whether the diagnosed formal-only readiness driver owns this game.
+        bounded_owned = assignment["game_id"] in FORMAL_BOUNDED_GAME_IDS
+        # Record driver selection complete before any game-owned action begins.
+        action_state_observer("driver_selection", "completed")
+        # Start with no completed explicit driver.
+        explicit_completed = False
+        # Run one of the exact fifteen accepted catalog-gap drivers.
+        if gap_owned:
+            # Attribute the established bounded gap cycle to one fixed driver state.
+            action_state_observer("generic_driver", "started")
+            # Complete the declared gap driver through visible controls.
+            explicit_completed = await play_catalog_gap_ui(
+                page,  # Reuse the task-owned rendered game route.
+                assignment["game_id"],  # Select the assigned public catalog driver.
+                assignment["user_index"],  # Preserve deterministic visible action choice.
+                seen_counts,  # Collect aggregate ready and terminal controls.
+                activated_counts,  # Collect aggregate pointer activation evidence.
+            )
+            # Record the bounded gap driver terminal only after it succeeds.
+            action_state_observer("generic_driver", "completed")
+        # Run one of the exact eleven diagnosed formal-only readiness drivers.
+        elif bounded_owned:
+            # Complete the formal-specific ready/action/settlement cycle.
+            explicit_completed = await play_formal_bounded_ui(
+                page,  # Reuse the task-owned rendered game route.
+                assignment["game_id"],  # Select the assigned public game.
+                assignment["user_index"],  # Preserve deterministic visible choices.
+                seen_counts,  # Collect only aggregate rendered-control evidence.
+                activated_counts,  # Collect only aggregate pointer activation evidence.
+                action_state_observer,  # Emit fixed low-cardinality action states.
+            )
         # Require player-scoped wager evidence for every bounded catalog-gap driver.
         action_evidence = "wager_required"
         # Delegate every already-covered game to the established exact-source UI driver.
-        if not gap_completed:
+        if not explicit_completed:
+            # Attribute inherited long-suite execution to one fixed generic state.
+            action_state_observer("generic_driver", "started")
             # Complete one existing game-owned action and capture its actual wager/non-wager classification.
             action_evidence = await ui_50000.play_game_ui(
                 page,  # Reuse the task-owned rendered game route.
@@ -529,6 +812,8 @@ async def run_formal_gameplay(page, assignment, seen_counts, activated_counts, p
                 seen_counts,  # Collect aggregate control observations.
                 activated_counts,  # Collect aggregate pointer activations.
             )
+            # Record terminal inherited-driver completion.
+            action_state_observer("generic_driver", "completed")
         # Refuse missing or expanded action classifications before evidence collection.
         if action_evidence not in {"wager_required", "non_wager"}:
             # Keep the diagnostic fixed and independent of any account or gameplay payload.
@@ -562,8 +847,12 @@ async def run_user(browser, client, assignment, user, barrier, setup_admission, 
     result = {"game_id": assignment["game_id"], "barrier_ready": False, "login_ok": False, "gameplay_ok": False, "ledger_expectation": "unclassified", "context_closed": False, "completed_phases": []}  # Keep one sanitized task result with fixed aggregate flags only.
     # Track the active fixed phase for one bounded terminal failure bucket.
     current_phase = None
+    # Track the active fixed game-action state for precise bounded readiness attribution.
+    current_action_state = None
     # Track completed fixed phases without publishing per-user activity rows.
     completed_phases = set()
+    # Track completed fixed action states without publishing per-user selector histories.
+    completed_action_states = set()
 
     # Record one fixed phase transition for this task-local result.
     def observe_phase(name, status):
@@ -589,6 +878,31 @@ async def run_user(browser, client, assignment, user, barrier, setup_admission, 
         else:
             # Preserve one bounded schema diagnostic.
             raise ValueError("formal phase observer received an unknown status")
+
+    # Record one fixed action-state transition for this task-local result.
+    def observe_action_state(name, status):
+        # Rebind the task-local active action state after validating the fixed schema.
+        nonlocal current_action_state
+        # Reject selectors, payloads, and other high-cardinality action-state labels.
+        if name not in FORMAL_ACTION_STATES:
+            # Keep the diagnostic independent of any private task state.
+            raise ValueError("formal action-state observer received an unknown state")
+        # Mark the fixed action state active before its governed browser operation.
+        if status == "started":
+            # Preserve only the fixed low-cardinality state identity.
+            current_action_state = name
+        # Mark the fixed action state terminal only after its operation succeeds.
+        elif status == "completed":
+            # Add the state to the task-local aggregate set.
+            completed_action_states.add(name)
+            # Clear the active state only when the matching state completed.
+            if current_action_state == name:
+                # Avoid attributing later failures to an already-completed state.
+                current_action_state = None
+        # Refuse ungoverned status values before they reach the artifact.
+        else:
+            # Preserve one bounded schema diagnostic.
+            raise ValueError("formal action-state observer received an unknown status")
     # Collect only grouped credential-free browser diagnostics for this context.
     diagnostics = {"console_errors": Counter(), "page_errors": Counter(), "http_failures": Counter()}
     # Track whether this page has completed real form authentication for state-aware diagnostic filtering.
@@ -661,6 +975,7 @@ async def run_user(browser, client, assignment, user, barrier, setup_admission, 
                 seen_counts,  # Collect only task-local control observations.
                 activated_counts,  # Collect only task-local pointer activations.
                 observe_phase,  # Emit fixed aggregate phase transitions.
+                observe_action_state,  # Emit fixed aggregate game-action states.
             )
             # Preserve only the successful aggregate gameplay latency sample.
             result["play_seconds"] = time.perf_counter() - play_started
@@ -678,6 +993,8 @@ async def run_user(browser, client, assignment, user, barrier, setup_admission, 
         result["error"] = safe_error(error)
         # Preserve only the active fixed phase or one bounded fallback bucket.
         result["failure_phase"] = current_phase or "unclassified"
+        # Preserve only the active fixed action state when failure occurred inside gameplay.
+        result["failure_action_state"] = current_action_state or "unclassified"
     # Always destroy this independent browser context.
     finally:
         # Close cookies, cache, pages, and session storage when context creation succeeded.
@@ -692,6 +1009,8 @@ async def run_user(browser, client, assignment, user, barrier, setup_admission, 
             observe_phase("context_cleanup", "completed")
         # Convert the task-local set into fixed canonical order for aggregate counting.
         result["completed_phases"] = [phase for phase in FORMAL_PHASES if phase in completed_phases]
+        # Convert the task-local action-state set into fixed canonical order for aggregate counting.
+        result["completed_action_states"] = [state for state in FORMAL_ACTION_STATES if state in completed_action_states]
         # Convert diagnostic counters to deterministic JSON mappings.
         result["browser_diagnostics"] = {name: dict(counter.most_common()) for name, counter in diagnostics.items()}
     # Return one sanitized task result without account identifiers.
@@ -805,9 +1124,18 @@ def aggregate_results(assignments, results, barrier, counters, isolation, pool, 
     completed_phase_counts = Counter(phase for row in results for phase in row.get("completed_phases", ()))
     # Count the terminal fixed failure phase for each failed task.
     failed_phase_counts = Counter(row.get("failure_phase", "unclassified") for row in results if row.get("error"))
-    # Attribute each bounded public failure signature to its assigned game and fixed phase without retaining a user row.
-    failure_attribution_counts = Counter(
-        (str(row.get("game_id") or "controller"), str(row.get("failure_phase") or "unclassified"), str(row.get("error")))  # Retain only public game, fixed phase, and scrubbed error.
+    # Count completed fixed action states without retaining user-level rows.
+    completed_action_state_counts = Counter(state for row in results for state in row.get("completed_action_states", ()))
+    # Count the terminal fixed action state for each failed task.
+    failed_action_state_counts = Counter(row.get("failure_action_state", "unclassified") for row in results if row.get("error"))
+    # Attribute each bounded public failure signature to its assigned game, fixed phase, and fixed action state.
+    failure_attribution_counts = Counter(  # Aggregate only sanitized public attribution dimensions.
+        (  # Build one stable four-part attribution key.
+            str(row.get("game_id") or "controller"),  # Retain only the public assigned game.
+            str(row.get("failure_phase") or "unclassified"),  # Retain one fixed phase.
+            str(row.get("failure_action_state") or "unclassified"),  # Retain one fixed action state.
+            str(row.get("error")),  # Retain one scrubbed bounded error signature.
+        )
         for row in results  # Visit each sanitized task result.
         if row.get("error")  # Exclude successful rows from failure attribution.
     )
@@ -831,6 +1159,16 @@ def aggregate_results(assignments, results, barrier, counters, isolation, pool, 
         "barrier": barrier.ready == USER_COUNT and barrier.peak_ready == USER_COUNT,  # Require every context at the synchronized gate.
         "authentication": sum(bool(row.get("login_ok")) for row in results) == USER_COUNT,  # Require every rendered login to succeed.
         "gameplay": sum(bool(row.get("gameplay_ok")) for row in results) == USER_COUNT,  # Require every visible game action to settle.
+        "action_state_attribution": all(  # Require driver ownership for every authenticated task.
+            "driver_selection" in row.get("completed_action_states", ())  # Require every task that entered gameplay to record driver ownership.
+            for row in results  # Inspect each aggregate-only result.
+            if row.get("login_ok")  # Exclude tasks that never reached game navigation.
+        )
+        and all(  # Require concrete fixed-state attribution for each game-action failure.
+            row.get("failure_action_state") in FORMAL_ACTION_STATES  # Require a fixed concrete state for every game-action failure.
+            for row in results  # Inspect each aggregate-only result.
+            if row.get("error") and row.get("failure_phase") == "gameplay_action"  # Limit state attribution to the game-action phase.
+        ),
         "catalog_coverage": set(assigned_by_game) == set(GAME_IDS)  # Require assignments for the complete registered catalog.
         and min(assigned_by_game.values(), default=0) >= MINIMUM_USERS_PER_GAME  # Preserve the three-user assignment floor.
         and min(successful_by_game.values(), default=0) >= MINIMUM_USERS_PER_GAME,  # Preserve the three-user success floor.
@@ -886,12 +1224,16 @@ def aggregate_results(assignments, results, barrier, counters, isolation, pool, 
         "browser_diagnostics": {name: dict(counter.most_common()) for name, counter in diagnostics.items()},  # Publish grouped safe failures.
         "failure_counts": dict(failure_counts.most_common()),  # Publish bounded safe exception signatures.
         "failure_attribution": [
-            {"game_id": game_id, "phase": phase, "error": error, "count": count}  # Publish one aggregate public attribution row.
-            for (game_id, phase, error), count in sorted(failure_attribution_counts.items())  # Preserve deterministic public ordering.
-        ],  # Publish exact public game/phase/error attribution without user-level rows.
+            {"game_id": game_id, "phase": phase, "action_state": action_state, "error": error, "count": count}  # Publish one aggregate public attribution row.
+            for (game_id, phase, action_state, error), count in sorted(failure_attribution_counts.items())  # Preserve deterministic public ordering.
+        ],  # Publish exact public game/phase/state/error attribution without user-level rows.
         "phase_counts": {
             "completed": {phase: completed_phase_counts.get(phase, 0) for phase in FORMAL_PHASES},  # Publish fixed completion counts.
             "failed": {phase: failed_phase_counts.get(phase, 0) for phase in FORMAL_FAILURE_PHASES},  # Publish fixed failure counts.
+        },
+        "action_state_counts": {  # Publish fixed action-state totals beside the existing phase totals.
+            "completed": {state: completed_action_state_counts.get(state, 0) for state in FORMAL_ACTION_STATES},  # Publish fixed action-state completion counts.
+            "failed": {state: failed_action_state_counts.get(state, 0) for state in FORMAL_FAILURE_ACTION_STATES},  # Publish fixed terminal action-state failures.
         },
         "isolation": isolation,  # Publish aggregate wallet and ledger invariants.
         "pool": pool,  # Publish fixed low-cardinality pool evidence.

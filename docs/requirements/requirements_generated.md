@@ -11,7 +11,7 @@ Historical source baseline: 9.1.0
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.1
-- autoplay: 1.1.3
+- autoplay: 1.1.4
 - audio: 9.1.1
 - admin: 1.13.0
 - operations: 1.1.2
@@ -50,8 +50,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.0
 - pai_gow_poker: 1.1.0
 - teen_patti: 1.1.0
-- tests: 1.64.16
-- docs: 1.64.16
+- tests: 1.64.17
+- docs: 1.64.17
 - contracts: 1.49.9
 - tooling: 1.21.9
 - commenting_policy: 1.0.0
@@ -392,7 +392,7 @@ Historical source baseline: 9.1.0
 - **AUTO-003** (Autoplay) - PASS: Stop prevents any new round or action from starting.
 - **AUTO-004** (Autoplay) - PASS: Stop during an atomic action completes that action safely and schedules no follow-up action.
 - **AUTO-005** (Autoplay) - PASS: Autoplay speed consistently affects inter-round delay.
-- **AUTO-006** (Autoplay) - PASS: Autoplay logs start, stop, tick, completion, and error status through the server session store.
+- **AUTO-006** (Autoplay) - PASS: Autoplay logs start, stop, tick, completion, and error status through a server session store whose in-process lifecycle transactions preserve every concurrently issued session id.
 - **AUTO-007** (Autoplay) - PASS: Admin shows active and recent autoplay sessions.
 - **AUTO-008** (Autoplay) - PASS: Admin Stop All requests stop for all server-registered autoplay sessions.
 - **AUTO-009** (Autoplay) - PASS: Roulette autoplay repeats the saved bet template.
@@ -929,6 +929,6 @@ Historical source baseline: 9.1.0
 - **AUTH-012** (Core) - PASS: The configured bootstrap identity is idempotently migrated to a non-assignable platform_owner authority while preserving compatible Admin presentation, every committed migration revokes predecessor sessions, ordinary Admin and monitor identities retain Admin access without owner authority, and repeated process startup never rotates a current owner session.
 - **ADMIN-028** (Admin) - PASS: Only the current active platform owner can grant or revoke ordinary Admin authority through additive v2 account mutation, the target must already be an active canonical account, v2 account creation is player-only, platform-owner authority is not caller-assignable or removable, and transaction-scoped JSON/MySQL validation preserves at least one active owner and Admin while recording the canonical actor and revoking affected target sessions.
 - **TEST-138** (Tests) - PASS: Listener-free account-spine evidence proves one-time bootstrap-owner migration and session invalidation, owner-only additive-v2 Admin grant and revoke, ordinary-Admin denial, active-target enforcement, last-owner preservation under concurrent mutation, and v2 player-only creation without opening a listener or touching live identity data.
-- **TEST-142** (Tests) - PASS: An explicit exact-source qualification profile requires a completed disposable-MySQL 1/2/4/8 preflight, provisions exactly 138 synthetic accounts, admits browser setup through a bounded pre-barrier queue, creates 138 independent real-browser contexts on a disposable loopback runtime, assigns exactly three users to each of the 46 registered games, synchronizes them at the rendered login gate, reuses that rendered gate under one formal-only bounded login deadline, performs authentication plus catalog navigation and one complete game action under one formal-only absolute gameplay deadline, attributes bounded failures to public game and fixed phase, filters expected anonymous current-user probes only before rendered login succeeds, evaluates action-aware wager and non-wager evidence through player-scoped filter-before-limit ledger routes, and emits only aggregate phase, latency, browser, HTTP, wallet, ledger, pool, coverage, concurrency, and cleanup evidence.
+- **TEST-142** (Tests) - PASS: An explicit exact-source qualification profile requires a completed disposable-MySQL 1/2/4/8 preflight, provisions exactly 138 synthetic accounts, admits browser setup through a bounded pre-barrier queue, creates 138 independent real-browser contexts on a disposable loopback runtime, assigns exactly three users to each of the 46 registered games, synchronizes them at the rendered login gate, reuses that rendered gate under one formal-only bounded login deadline, performs authentication plus catalog navigation and one complete game action under one formal-only data-derived absolute gameplay deadline, attributes bounded failures to public game, fixed phase, and fixed action state, filters expected anonymous current-user probes only before rendered login succeeds, evaluates action-aware wager and non-wager evidence through player-scoped filter-before-limit ledger routes, and emits only aggregate phase, action-state, latency, browser, HTTP, wallet, ledger, pool, coverage, concurrency, and cleanup evidence.
 - **TEST-139** (Tests) - PASS: Hosted Browser evidence proves every registered catalog game keeps its enabled controls vertically reachable at the governed primary and compact desktop viewports, failing when a control is clipped by a non-scrollable ancestor in the fixed-height shell.
 - **TEST-143** (Tests) - PASS: Listener-free isolated-provider evidence proves persistent-account-only bounded session inventory, newest-first ordering, fixed one-way aliases, approved-field and coarse-client projection, secret and cross-account exclusion, idempotent targeted and all-session revocation, concurrent exactly-once transition counting, byte-exact preservation of syntactically invalid JSON, parseable malformed-document preservation, and invalid-request non-mutation.
