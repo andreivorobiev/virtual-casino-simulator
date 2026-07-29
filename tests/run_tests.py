@@ -382,11 +382,13 @@ def browser_expected_case_ids(affected_games):
     return [case_id for case_id in browser_case_ids() if not (case_id in _BROWSER_ACCEPTANCE_CASE_GAME and _BROWSER_ACCEPTANCE_CASE_GAME[case_id] not in affected_games)]
 
 # Verify aggregated browser shard results cover every expected case exactly once and pass.
-def verify_browser_shards(results_dir, shard_count, affected_games=None):
-    # Load the deterministic expected id list, honoring any affected-game selection this run used.
-    expected=browser_expected_case_ids(affected_games)
+def verify_browser_shards(results_dir, shard_count):
     # Track every observed browser case id and the shard that executed it.
     seen={}
+    # Collect each shard's self-declared affected-game selection so the expected set needs no external input.
+    declared=[]
+    # Retain parsed shard payloads for a second pass once the shared selection is known.
+    shard_payloads=[]
     # Read each shard's unique result file and fail on any missing shard evidence.
     for index in range(shard_count):
         # Resolve the exact per-shard result file created by the sharded browser runner.
@@ -395,6 +397,14 @@ def verify_browser_shards(results_dir, shard_count, affected_games=None):
         if not path.exists(): print(f'BROWSER_SHARDS FAIL missing shard result file {path}'); return 1
         # Parse this shard's retained result records.
         data=json.loads(path.read_text(encoding='utf-8'))
+        # Preserve the payload and its declared selection for reconciliation below.
+        shard_payloads.append((index,data)); declared.append(data.get('affected_games'))
+    # Reject shards that disagree on the affected-game selection because the expected set would be ambiguous.
+    if len({tuple(entry) if entry is not None else None for entry in declared})!=1: print(f'BROWSER_SHARDS FAIL shards disagree on affected games {declared}'); return 1
+    # Derive the expected case set from the single agreed selection recorded by the shards themselves.
+    expected=browser_expected_case_ids(set(declared[0]) if declared[0] is not None else None)
+    # Reconcile every shard's browser records against the agreed expected set.
+    for index,data in shard_payloads:
         # Examine only browser-suite records so mixed local suite runs cannot confuse coverage.
         for result in data['results']:
             # Skip non-browser records defensively without counting them as coverage.
@@ -9377,8 +9387,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
         BROWSER_AFFECTED_GAMES=None
         # Preserve the existing JSON result artifact path and behavior.
         save_results()
-        # Retain one shard-unique result file so aggregate verification can prove exact coverage.
-        if shard_count>1: (ROOT/'logs'/'test-runs'/f'browser_results_shard_{shard_index}_of_{shard_count}.json').write_text(json.dumps({'shard_index':shard_index,'shard_count':shard_count,'case_start':shard_range[0],'case_stop':shard_range[1],'results':RESULTS},indent=2),encoding='utf-8')
+        # Retain one shard-unique, self-describing result file so aggregate verification needs no external selection input.
+        if shard_count>1: (ROOT/'logs'/'test-runs'/f'browser_results_shard_{shard_index}_of_{shard_count}.json').write_text(json.dumps({'shard_index':shard_index,'shard_count':shard_count,'case_start':shard_range[0],'case_stop':shard_range[1],'affected_games':(sorted(affected_games) if affected_games else None),'results':RESULTS},indent=2),encoding='utf-8')
     # Return success only when browser execution and tracked listener cleanup both passed.
     return 0 if status=='PASS' else 1
 
@@ -9436,8 +9446,8 @@ def main():
     if args.shard_count>browser_case_total(): ap.error('--shard-count must not exceed the literal browser case total')
     # Keep shard selection scoped to the browser suite and aggregate verification only.
     if args.shard_count>1 and not (args.browser or args.verify_browser_shards): ap.error('--shard-count applies only to --browser or --verify-browser-shards')
-    # Run aggregate shard verification alone so gate jobs never start servers or suites.
-    if args.verify_browser_shards: return verify_browser_shards(args.verify_browser_shards,args.shard_count,affected_games)
+    # Run aggregate shard verification alone; the expected set comes from the shards' self-declared selection, not this flag.
+    if args.verify_browser_shards: return verify_browser_shards(args.verify_browser_shards,args.shard_count)
     # Branch when the following condition is true.
     if not args.api and not args.browser and not args.storage and not args.mysql_live and not args.mysql_migrations_live: args.api=True
     # Start protected logic so failures can be handled safely.

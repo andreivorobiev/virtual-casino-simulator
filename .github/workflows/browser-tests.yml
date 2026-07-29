@@ -103,7 +103,7 @@ jobs:
 
   # Keep reporting the historical `browser_tests` context by verifying exact aggregate coverage.
   browser_tests:
-    needs: [detect_affected_games, browser_tests_shard]
+    needs: browser_tests_shard
     if: ${{ always() && (github.event_name == 'pull_request' || inputs.formal_ui_50000 == true) }}
     runs-on: ubuntu-latest
     steps:
@@ -120,9 +120,9 @@ jobs:
           pattern: browser-test-artifacts-shard-*
           path: logs/test-runs
           merge-multiple: true
-      # Prove the shard union covers every expected browser case exactly once with no failures; the games arg must match the shards' selection.
+      # Prove the shard union covers every expected browser case exactly once with no failures; the selection is read from the shard files.
       - name: Verify exact shard coverage
-        run: python tests/run_tests.py --verify-browser-shards logs/test-runs --shard-count 4 ${{ needs.detect_affected_games.outputs.games_arg }}
+        run: python tests/run_tests.py --verify-browser-shards logs/test-runs --shard-count 4
 
   # Run the focused issue #265 profile only for its explicit, owner-authorized dispatch.
   baccarat_sustained_2000:
