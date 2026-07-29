@@ -1,6 +1,6 @@
 {
   "module": "roulette",
-  "version": "9.4.12",
+  "version": "9.4.13",
   "paths": [
     "casino/games/roulette/",
     "web/games/roulette.js"
