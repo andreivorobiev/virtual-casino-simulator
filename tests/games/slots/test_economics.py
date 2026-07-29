@@ -464,5 +464,8 @@ class SlotsEconomicsTests(TestCase):
         # Require resource-derived progressive labels and reject the superseded English-only eligible token.
         self.assertIn("i18n.t('feature.progressive',args,'games/slots')", browser_runner)
         self.assertNotIn("includes('Eligible:')", browser_runner)
+        # Require localized validation to use the active browser resource rather than a detached source-file oracle.
+        self.assertIn("i18n.t('errors.lineBetRange',{},'games/slots')", browser_runner)
+        self.assertNotIn("localized_feedback={locale:json.loads", browser_runner)
         # Require maximum-line maximum-stake arithmetic remains finite in the shipped numeric domain.
         self.assertTrue(math.isfinite(20 * engine.MAX_LINE_BET))

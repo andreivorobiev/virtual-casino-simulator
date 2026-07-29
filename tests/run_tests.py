@@ -7712,14 +7712,20 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         assert line_bet.get_attribute('aria-invalid')=='false' and page.get_by_test_id('slots-line-bet-feedback').inner_text()=='' and '60' in page.get_by_test_id('slots-round-cost').inner_text() and not observed_spin_requests
                         # Re-enter the reported invalid value so governed evidence records the correction feedback.
                         line_bet.fill('-5'); page.wait_for_function("() => document.querySelector('[data-testid=\"slots-line-bet\"]')?.getAttribute('aria-invalid') === 'true'")
-                        # Define the localized feedback required in each governed locale.
-                        localized_feedback={locale:json.loads((ROOT/'web'/'i18n'/locale/'games'/'slots.json').read_text(encoding='utf-8'))['errors.lineBetRange'] for locale in ('en-US','ru-RU')}
+                        # Define the governed locale vocabulary exercised through the live browser resource loader.
+                        validation_locales=('en-US','ru-RU')
                         # Define the affected compact and mobile visual-matrix viewports.
                         validation_viewports={'desktop_compact':{'width':1440,'height':900},'mobile':{'width':390,'height':844}}
                         # Exercise localized invalid-input presentation without losing corrected state.
-                        for locale,expected_feedback in localized_feedback.items():
+                        for locale in validation_locales:
                             # Change locale through the shared visible shell control.
-                            page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_function("expected => document.querySelector('[data-testid=\"slots-line-bet-feedback\"]')?.textContent.trim() === expected",arg=expected_feedback)
+                            page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_function("expected => window.CasinoI18n?.getLocaleState().locale === expected",arg=locale)
+                            # Exercise the invalid input after the locale settles so the current resource owns feedback.
+                            localized_line_bet=page.get_by_test_id('slots-line-bet'); localized_line_bet.fill('-5')
+                            # Resolve the exact message from the same active browser resource boundary as the game.
+                            expected_feedback=page.evaluate("""async () => { const i18n=await import('/core/i18n.js'); return i18n.t('errors.lineBetRange',{},'games/slots'); }""")
+                            # Require exact localized feedback, correction, invalid state, and no token-moving request.
+                            page.wait_for_function("expected => document.querySelector('[data-testid=\"slots-line-bet-feedback\"]')?.textContent.trim() === expected",arg=expected_feedback); assert localized_line_bet.input_value()=='0.01' and localized_line_bet.get_attribute('aria-invalid')=='true' and not observed_spin_requests
                             # Capture and measure every affected viewport for the active locale.
                             for viewport_id,viewport in validation_viewports.items():
                                 # Resize to the exact governed dimensions before containment checks.
@@ -7731,7 +7737,11 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                 # Record focused after-pass evidence without accepting unrelated nav or reel defects.
                                 region_evidence(f'after-pass-slots-control-invalid-line-bet-{locale}-{viewport_id}.png','.slots-control','slots',['invalid_line_bet'],locale,viewport_id)
                         # Restore English and primary desktop dimensions before the real corrected spin.
-                        page.get_by_test_id('shell-locale-select').select_option('en-US'); page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_function("() => document.querySelector('[data-testid=\"slots-line-bet-feedback\"]')?.textContent.trim() === 'Line bet must round to a cent value from 0.01 to 1,000,000 play tokens. Reset to 0.01.'")
+                        page.get_by_test_id('shell-locale-select').select_option('en-US'); page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'en-US'")
+                        # Resolve the restored exact English message through the live resource boundary.
+                        restored_feedback=page.evaluate("""async () => { const i18n=await import('/core/i18n.js'); return i18n.t('errors.lineBetRange',{},'games/slots'); }""")
+                        # Require the restored live region to equal that authoritative resource.
+                        page.wait_for_function("expected => document.querySelector('[data-testid=\"slots-line-bet-feedback\"]')?.textContent.trim() === expected",arg=restored_feedback)
                         # Submit one corrected spin and capture the exact public request emitted by the visible button.
                         with page.expect_request(lambda request: request.method=='POST' and request.url.endswith('/api/v1/games/slots/spin')) as corrected_request_info: page.get_by_test_id('slots-spin').click()
                         # Read the frozen endpoint payload after Playwright observes the real request.
