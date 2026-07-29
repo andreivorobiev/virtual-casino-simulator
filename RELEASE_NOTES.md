@@ -1,4 +1,17 @@
-# Virtual Casino Simulator v0.9.5.31 Release Notes
+# Virtual Casino Simulator v0.9.5.32 Release Notes
+
+## Exact visible-rank Hi-Lo pricing
+
+- Makes the server-owned visible-rank paytable authoritative for settlement, with total-return prices from `0.96x` through `1.93x`.
+- Keeps ties as exact `1x` refunds and proves fractional-wager cent rounding through the catalog Long driver.
+- Preserves the required deprecated frozen `/api/v1` integer `correct_return_multiplier=2` scalar for older clients.
+- Adds optional `correct_paytable` and `house_edge` fields without changing the standard response envelope.
+- Records player-scoped ledger payout-multiplier evidence for exact replay and audit.
+- Verifies the localized price range and active-rank price across English and Russian at all four governed viewports.
+- Retains exact immutable v0.9.5.31 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation.
+
+## Prior v0.9.5.31 independent Andar and Bahar side pricing
 
 ## Independent Andar and Bahar side pricing
 
