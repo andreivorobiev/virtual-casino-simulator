@@ -1,6 +1,6 @@
 # Virtual Casino Simulator
 
-Packaged application release: `0.9.5.28`
+Packaged application release: `0.9.5.29`
 
 Historical source baseline: `9.1.0`
 
@@ -8,7 +8,7 @@ Local play-token browser casino simulator with a descriptor-driven catalog of is
 
 ## Current repository status
 
-This repository has advanced beyond the original v9.1.1 bootstrap snapshot. Packaged release v0.9.5.28 carries the governed exact 138-browser full-catalog qualification: exact-commit hosted evidence proves three simultaneous users complete one action in each of all 46 registered games, with exact player-scoped ledger isolation, bounded MySQL connection evidence, zero browser diagnostics, and complete cleanup. It includes the accepted concurrent autoplay-registry, Keno module-delivery, client-log peer-disconnect, and formal-driver readiness fixes exposed by fail-closed qualification. It retains the all-game desktop control-reachability gate, governed Acey-Deucey spread pricing, deterministic Browser shard-state controller, runtime-inert game rule-schema coercion foundation, safe CI qualification acceleration, privacy-safe Admin session-control core, owner-gated Admin authority foundation, bounded MySQL connection lifecycle, transactional non-destructive player writer, secret-safe nginx timing foundation, 46-game catalog-governance reconciliation, localized one-click Repeat bet program, TiltSeven Neon Pit identity, packaged non-shell production monitor handoff, compatibility-owned predecessor selection, exact v0.9.5.27 application-only rollback target, private-invite security, MySQL schema 2, provider-disablement, and public-exposure gates. Independently versioned modules continue to record compatible source changes. Current module revisions and requirement status are recorded in the canonical manifests and generated requirements document.
+This repository has advanced beyond the original v9.1.1 bootstrap snapshot. Packaged release v0.9.5.29 carries the accepted route-free shared settlement-adapter foundation for issue #430. It delegates finite signed game actions to the existing storage-atomic ledger boundaries, preserves caller audit details, and permits post-conflict recovery only from exact player, game, action, round, transaction, fingerprint, and amount proof. The adapter remains game-inert and route-free while retaining the governed exact 138-browser full-catalog qualification, all-game desktop control-reachability gate, governed Acey-Deucey spread pricing, deterministic Browser shard-state controller, runtime-inert game rule-schema coercion foundation, safe CI qualification acceleration, private-invite security, MySQL schema 2, provider-disablement, public-exposure gates, and exact v0.9.5.28 application-only rollback target. Independently versioned modules continue to record compatible source changes. Current module revisions and requirement status are recorded in the canonical manifests and generated requirements document.
 
 ## Version sources
 
