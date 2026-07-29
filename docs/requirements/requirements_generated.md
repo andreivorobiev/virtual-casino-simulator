@@ -20,7 +20,7 @@ Historical source baseline: 9.1.0
 - slots: 9.3.0
 - blackjack: 9.1.7
 - baccarat: 9.1.8
-- keno: 9.3.0
+- keno: 9.3.1
 - bingo: 9.3.0
 - multi_hand_video_poker: 1.1.0
 - casino_war: 1.1.0
@@ -50,10 +50,10 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.0
 - pai_gow_poker: 1.1.0
 - teen_patti: 1.1.0
-- tests: 1.64.31
-- docs: 1.64.31
+- tests: 1.64.32
+- docs: 1.64.32
 - contracts: 1.49.17
-- tooling: 1.21.11
+- tooling: 1.21.12
 - commenting_policy: 1.0.0
 - color_wheel: 1.1.0
 - poker_dice: 1.1.0
@@ -934,3 +934,5 @@ Historical source baseline: 9.1.0
 - **TEST-142** (Tests) - PASS: An explicit exact-source qualification profile requires a completed disposable-MySQL 1/2/4/8 preflight, provisions exactly 138 synthetic accounts, admits browser setup through a bounded pre-barrier queue, creates 138 independent real-browser contexts on a disposable loopback runtime, assigns exactly three users to each of the 46 registered games, synchronizes them at the rendered login gate, reuses that rendered gate under one formal-only bounded login deadline, performs authentication plus catalog navigation and one complete game action under one formal-only data-derived absolute gameplay deadline, attributes bounded failures to public game, fixed phase, and fixed action state, filters expected anonymous current-user probes only before rendered login succeeds, evaluates action-aware wager and non-wager evidence through player-scoped filter-before-limit ledger routes, and emits only aggregate phase, action-state, latency, browser, HTTP, wallet, ledger, pool, coverage, concurrency, and cleanup evidence.
 - **TEST-139** (Tests) - PASS: Hosted Browser evidence proves every registered catalog game keeps its enabled controls vertically reachable at the governed primary and compact desktop viewports, failing when a control is clipped by a non-scrollable ancestor in the fixed-height shell.
 - **TEST-143** (Tests) - PASS: Listener-free isolated-provider evidence proves persistent-account-only bounded session inventory, newest-first ordering, fixed one-way aliases, approved-field and coarse-client projection, secret and cross-account exclusion, idempotent targeted and all-session revocation, concurrent exactly-once transition counting, byte-exact preservation of syntactically invalid JSON, parseable malformed-document preservation, and invalid-request non-mutation.
+- **KENO-027** (Keno) - PASS: Keno uses one server-authoritative, strictly increasing paytable for every legal one-through-twenty-spot ticket, with every positive award at least one times the ticket, strictly increasing full-catch jackpots, exact ideal hypergeometric returns in the approved house-side band except the disclosed one-spot cent-rounding exception, and realized production float-plus-hundredth rounding strictly below one for every frozen-v1 amount from 0.01 through 1,000,000. The state API, current ledger and history equations, browser controls, exact jackpot copy, route restoration, repeat, autoplay, and localized player disclosure all consume the same rules without changing the frozen v1 request, route, envelope, or payout law.
+- **TEST-147** (Tests) - PASS: Listener-free and hosted exact-head evidence proves all 230 Keno outcome classes, exact hypergeometric probability rows, paytable and jackpot monotonicity, frozen production rounding across the complete accepted amount domain, maximum-stake maximum-jackpot settlement, current ledger and history equations, entropy restoration, API-paytable equality, and the unchanged frozen-v1 contract. Hosted Long publishes exact rational per-row evidence, while Browser acceptance emits all sixty-four eight-state by two-locale by four-viewport cells and behaviorally proves exact open-ticket and settled-history amount restoration, Repeat, first autoplay tick, player-scoped history alignment, numeric jackpot visibility, and listener cleanup.

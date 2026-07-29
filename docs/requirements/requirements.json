@@ -12538,6 +12538,60 @@
       "introduced_in": "issue-351-session-control-core",
       "changed_in": "issue-351-session-control-core",
       "notes": "TEST-143 was reserved durably on issue #351 after live collision readback. TEST-139 remains reserved for the separately coordinated Claude #453 re-splice, and TEST-142 belongs to open PR #467."
+    },
+    {
+      "id": "KENO-027",
+      "module": "Keno",
+      "description": "Keno uses one server-authoritative, strictly increasing paytable for every legal one-through-twenty-spot ticket, with every positive award at least one times the ticket, strictly increasing full-catch jackpots, exact ideal hypergeometric returns in the approved house-side band except the disclosed one-spot cent-rounding exception, and realized production float-plus-hundredth rounding strictly below one for every frozen-v1 amount from 0.01 through 1,000,000. The state API, current ledger and history equations, browser controls, exact jackpot copy, route restoration, repeat, autoplay, and localized player disclosure all consume the same rules without changing the frozen v1 request, route, envelope, or payout law.",
+      "status": "PASS",
+      "api_tests": [
+        "API-KENO-ECONOMICS-001"
+      ],
+      "browser_tests": [
+        "BR-KENO-EDGE-001"
+      ],
+      "implementation_files": [
+        "casino/games/keno/engine.py",
+        "web/games/keno.js",
+        "web/i18n/en-US/games/keno.json",
+        "web/i18n/ru-RU/games/keno.json",
+        "scripts/verify_keno_economics_artifact.py",
+        "tests/games/keno/test_economics.py",
+        "tests/keno_economics_long.py",
+        "tests/roulette_keno_settlement_tests.py",
+        "tests/cicd_deployment_tests.py",
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json",
+        ".github/workflows/long-suite-100.yml"
+      ],
+      "introduced_in": "issue-472-keno-paytable-controller",
+      "changed_in": "issue-472-keno-paytable-controller",
+      "notes": "The owner retained the frozen one-cent minimum and production round(float(amount) * multiplier, 2) behavior. Pick one is the explicit ideal-return exception at 3.49x/87.25 percent so its one-cent realized return is 75 percent rather than 100 percent. Exact Fraction proof covers all 230 outcome classes; production-expression enumeration covers 0.01 through 0.99 and a one-sided IEEE-754 error bound covers every accepted amount at least one play token."
+    },
+    {
+      "id": "TEST-147",
+      "module": "Tests",
+      "description": "Listener-free and hosted exact-head evidence proves all 230 Keno outcome classes, exact hypergeometric probability rows, paytable and jackpot monotonicity, frozen production rounding across the complete accepted amount domain, maximum-stake maximum-jackpot settlement, current ledger and history equations, entropy restoration, API-paytable equality, and the unchanged frozen-v1 contract. Hosted Long publishes exact rational per-row evidence, while Browser acceptance emits all sixty-four eight-state by two-locale by four-viewport cells and behaviorally proves exact open-ticket and settled-history amount restoration, Repeat, first autoplay tick, player-scoped history alignment, numeric jackpot visibility, and listener cleanup.",
+      "status": "PASS",
+      "api_tests": [
+        "API-KENO-ECONOMICS-001"
+      ],
+      "browser_tests": [
+        "BR-KENO-EDGE-001"
+      ],
+      "implementation_files": [
+        "scripts/verify_keno_economics_artifact.py",
+        "tests/games/keno/test_economics.py",
+        "tests/keno_economics_long.py",
+        "tests/roulette_keno_settlement_tests.py",
+        "tests/cicd_deployment_tests.py",
+        "tests/run_tests.py",
+        "tests/visual/visual_matrix.json",
+        ".github/workflows/long-suite-100.yml"
+      ],
+      "introduced_in": "issue-472-keno-paytable-controller",
+      "changed_in": "issue-472-keno-paytable-controller",
+      "notes": "TEST-147 was reserved on issue #472 after live collision readback: TEST-144 remains historical combined contributor ancestry, while open controller lanes own TEST-145 and TEST-146. Browser and Long remain governed hosted evidence; no local Playwright, Chromium, or Monte Carlo substitutes the exact proof."
     }
   ]
 }

@@ -266,8 +266,10 @@ class RouletteKenoSettlementTests(unittest.TestCase):
         with mock.patch.object(keno_engine, "_SYSTEM_RANDOM", _ScriptedBalls(list(range(1, 21)))):
             # Settle the ticket with the first racing draw.
             first = handlers[("POST", KENO_DRAW)]({}, {})
+        # Resolve the current authoritative five-catch award through the server table.
+        expected_payout = round(5.0 * keno_engine.PAYTABLE[5][5], 2)
         # Verify racer A paid the five-catch multiplier as a fresh, non-replayed credit.
-        self.assertEqual(first["settlements"][0]["result"]["payout"], 2500.0)
+        self.assertEqual(first["settlements"][0]["result"]["payout"], expected_payout)
         # Verify racer A's payout carried a non-replayed marker.
         self.assertFalse(first["settlements"][0]["replayed"])
         # Restore the pre-draw snapshot so racer B settles the same durable ticket.
@@ -283,7 +285,7 @@ class RouletteKenoSettlementTests(unittest.TestCase):
         # Require exactly one payout row for the ticket identity.
         self.assertEqual(len(rows), 1)
         # Require the wallet to reflect one purchase debit and one payout credit only.
-        self.assertEqual(players.get_player("human")["balance"], 5000.0 - 5.0 + 2500.0)
+        self.assertEqual(players.get_player("human")["balance"], 5000.0 - 5.0 + expected_payout)
 
     # Prove a crash-window re-run replays the committed settlement without a second credit. (issue #403)
     def test_crash_window_rerun_replays_settlement_without_second_credit(self):

@@ -20,6 +20,8 @@ sys.path.insert(0, str(ROOT))
 from casino.games.blackjack import api as blackjack_api, engine as blackjack_engine
 # Import Slots rules so deterministic browser evidence is derived from the authoritative twenty-payline table.
 from casino.games.slots import engine as slots_engine
+# Import Keno rules so browser fixtures use the same paytable and production rounding as the server.
+from casino.games.keno import engine as keno_engine
 # Import the canonical catalog so guest compatibility is proved for every released game state route.
 from casino.games.registry import list_games as list_catalog_games
 # Import auth helpers so API tests can seed users through the backend storage seam.
@@ -1647,6 +1649,20 @@ def run_api_tests():
             raise AssertionError('keno ball-rail layout suite failed')
     # Record the listener-free Keno drawn-ball rail overflow regression proof.
     run_case('UI-KENO-BALL-RAIL-001',['KENO-026','TEST-113'],run_keno_ball_rail_tests)
+    # Execute the exact Keno paytable, float-rounding, engine, route, ledger, and UI policy proof.
+    def run_keno_economics_tests():
+        # Import only the focused Keno economics class at its mapped API-suite position.
+        from tests.games.keno import test_economics as keno_economics_tests
+        # Load the exact listener-free economics and compatibility suite.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(keno_economics_tests.KenoEconomicsTests)
+        # Execute with concise in-process reporting.
+        result = unittest.TextTestRunner(stream=sys.stdout, verbosity=1).run(suite)
+        # Fail the central named case when any exact proof or current-route equation regresses.
+        if not result.wasSuccessful():
+            # Preserve unittest detail while keeping the named failure text secret-safe.
+            raise AssertionError('Keno economics suite failed')
+    # Record the exact all-domain Keno economics and current-route settlement proof.
+    run_case('API-KENO-ECONOMICS-001',['KENO-027','TEST-147'],run_keno_economics_tests)
     # Execute the production Admin label rules, EN/RU resources, and surface wiring without opening a listener or browser.
     def run_admin_ledger_label_tests():
         # Import the focused listener-free suite only when its mapped case runs.
@@ -8042,12 +8058,20 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         edge_player=page.evaluate("() => { const shellPlayer = window.CasinoCurrentUser?.player || window.CasinoCurrentPlayer || {}; return shellPlayer.player_id || window.CasinoCurrentUser?.player_id || localStorage.getItem('casino.currentPlayerId') || 'human'; }")
                         # Define the exact governed viewport matrix from the visual standard.
                         edge_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
+                        # Pin the complete eight-state by two-locale by four-viewport evidence count.
+                        keno_matrix_expected_cells=64
+                        # Count each exact governed state/locale/viewport cell as its evidence is written.
+                        keno_matrix_cells=0
                         # Keep the idle state free of prior tickets and draws before each locale/viewport capture.
                         empty_edge_state={'open_tickets':[],'last_draws':[]}
-                        # Build one legitimate one-catch final draw with the latest result on bottom-right cell 80.
-                        edge_draw=[2,3,4,5,6,7,8,9,11,12,13,14,15,16,17,18,19,20,21,80]
-                        # Reuse the existing one-spot Keno multiplier so evidence state agrees with the published paytable.
-                        final_edge_state={'open_tickets':[],'last_draws':[{'round_id':'keno-edge-final','timestamp':'2026-07-20T00:00:00Z','drawn':edge_draw,'results':[{'ticket':{'ticket_id':'keno-edge-catch','player_id':edge_player,'spots':[80],'amount':1,'source':'browser-test','created_at':'2026-07-20T00:00:00Z'},'catches':[80],'catch_count':1,'multiplier':3,'payout':3}]}]}
+                        # Build one legitimate twenty-catch final draw whose selected range includes edge cell 80.
+                        edge_draw=list(range(61,81))
+                        # Resolve the exact top jackpot from the server table instead of a stale Browser fixture.
+                        edge_jackpot_multiplier=keno_engine.PAYTABLE[20][20]
+                        # Apply the frozen production payout law to the one-token visual ticket.
+                        edge_jackpot_payout=round(1.0*edge_jackpot_multiplier,2)
+                        # Persist one authoritative full-catch jackpot state for result, restore, repeat, and exact-value evidence.
+                        final_edge_state={'open_tickets':[],'last_draws':[{'round_id':'keno-edge-final','timestamp':'2026-07-20T00:00:00Z','drawn':edge_draw,'results':[{'ticket':{'ticket_id':'keno-edge-catch','player_id':edge_player,'spots':edge_draw,'amount':1,'source':'browser-test','created_at':'2026-07-20T00:00:00Z'},'catches':edge_draw,'catch_count':20,'multiplier':edge_jackpot_multiplier,'payout':edge_jackpot_payout}]}]}
                         # Exercise both installed player-facing locales.
                         for edge_locale in ('en-US','ru-RU'):
                             # Exercise every governed viewport without substituting an approximate breakpoint.
@@ -8086,6 +8110,16 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                 edge_board_evidence_selector='[data-testid="keno-board-scroll"]' if edge_viewport_id in ('desktop_primary','desktop_compact') else '.keno-premium'
                                 # Record self-describing idle evidence for this exact locale and viewport.
                                 region_evidence(f'after-pass-keno-edge-idle-{edge_locale.lower()}-{edge_viewport_id}.png',edge_board_evidence_selector,'keno',['edge_idle'],edge_locale,edge_viewport_id)
+                                # Count the exact idle edge matrix cell.
+                                keno_matrix_cells+=1
+                                # Select one real number so the selection cell cannot duplicate the idle state.
+                                page.get_by_test_id('keno-num-5').click()
+                                # Require the draft selection to be visible and server-authoritative paytable preview to stay mounted.
+                                assert page.get_by_test_id('keno-num-5').get_attribute('aria-pressed')=='true' and page.get_by_test_id('keno-paytable-preview').is_visible()
+                                # Record the governed non-empty draft selection state.
+                                region_evidence(f'after-pass-keno-selection-{edge_locale.lower()}-{edge_viewport_id}.png',edge_board_evidence_selector,'keno',['selection'],edge_locale,edge_viewport_id)
+                                # Count the exact selection matrix cell.
+                                keno_matrix_cells+=1
                                 # Select all four corner cells through the same public controls used by a player.
                                 for edge_number in (1,10,71,80): page.get_by_test_id(f'keno-num-{edge_number}').click()
                                 # Start keyboard traversal from the named board region so the first corner receives true focus-visible state.
@@ -8098,12 +8132,70 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                 assert all(page.get_by_test_id(f'keno-num-{edge_number}').get_attribute('aria-pressed')=='true' for edge_number in (1,10,71,80))
                                 # Record selected and focus-visible evidence from the real public controls.
                                 region_evidence(f'after-pass-keno-edge-selected-focus-{edge_locale.lower()}-{edge_viewport_id}.png',edge_board_evidence_selector,'keno',['edge_selected_focus_visible'],edge_locale,edge_viewport_id)
+                                # Count the exact selected and focus-visible matrix cell.
+                                keno_matrix_cells+=1
+                                # Collect the exact public Keno action requests emitted after the amount edit.
+                                edge_action_requests=[]
+                                # Define the scoped request observer used only for this one matrix action.
+                                def capture_edge_action_request(request):
+                                    # Record ticket and draw POSTs while ignoring unrelated shell traffic.
+                                    if request.method=='POST' and (request.url.endswith('/api/v1/games/keno/tickets') or request.url.endswith('/api/v1/games/keno/draw')): edge_action_requests.append(request)
+                                # Attach the observer before the edit can blur into the public Draw control.
+                                page.on('request',capture_edge_action_request)
+                                # Use the frozen one-cent amount so the visible action proves browser/server domain agreement.
+                                try:
+                                    # Edit through the real input so blur/change ordering matches the production click path.
+                                    page.get_by_test_id('keno-amount').fill('0.01')
+                                    # Start exactly one real public draw from the selected corners.
+                                    page.get_by_test_id('keno-draw').click()
+                                    # Wait for the production reveal loop to enter a genuine partial drawing state.
+                                    page.wait_for_function("""() => { const count=document.querySelectorAll('[data-testid="keno-drawn-ball"]').length; return count>=2 && count<20; }""",timeout=5000)
+                                    # Resolve the drawing PNG target without retaining a locator across the production rerender loop.
+                                    keno_drawing_target=screenshots/f'after-pass-keno-drawing-{edge_locale.lower()}-{edge_viewport_id}.png'
+                                    # Atomically read the current partial count and page-relative crop before another reveal rerender can detach the region.
+                                    keno_drawing_probe=page.evaluate("""() => { const region=document.querySelector('.keno-premium'); const rect=region.getBoundingClientRect(); const drawnCount=document.querySelectorAll('[data-testid="keno-drawn-ball"]').length; return {drawn_count:drawnCount,clip:{x:rect.left+window.scrollX,y:rect.top+window.scrollY,width:rect.width,height:rect.height}}; }""")
+                                    # Require this exact artifact to remain a genuine partial 2..19-ball drawing with a paintable region.
+                                    assert 2<=keno_drawing_probe['drawn_count']<20 and keno_drawing_probe['clip']['width']>0 and keno_drawing_probe['clip']['height']>0,keno_drawing_probe
+                                    # Capture through the page-level clip so the 65ms root replacement cannot detach a screenshot locator.
+                                    page.screenshot(path=str(keno_drawing_target),clip=keno_drawing_probe['clip'],animations='disabled',style='#toast, .status-bar { visibility: hidden !important; }')
+                                    # Record the active viewport dimensions beside the governed matrix viewport id.
+                                    keno_drawing_viewport=page.viewport_size
+                                    # Record the current focus target without retaining a live element reference.
+                                    keno_drawing_focused=page.evaluate("() => document.activeElement?.getAttribute('data-testid') || document.activeElement?.getAttribute('data-action') || ''")
+                                    # Preserve the standard after-pass metadata and disclose the same bounded region selector.
+                                    keno_drawing_metadata={'evidence_class':'after_pass','branch':evidence_branch,'commit':evidence_commit,'surface':'keno','states':['drawing'],'locale':edge_locale,'viewport':{'id':edge_viewport_id,**keno_drawing_viewport},'path':str(keno_drawing_target.relative_to(ROOT)).replace('\\','/'),'focused_control':keno_drawing_focused,'region_selector':'.keno-premium','drawn_count':keno_drawing_probe['drawn_count']}
+                                    # Write the drawing sidecar next to the page-level clipped image for independent audit.
+                                    keno_drawing_target.with_suffix('.json').write_text(json.dumps(keno_drawing_metadata,indent=2,ensure_ascii=False),encoding='utf-8')
+                                    # Count the exact drawing matrix cell.
+                                    keno_matrix_cells+=1
+                                    # Wait for the real action to finish before replacing only its test-owned persisted state.
+                                    page.wait_for_function("""() => document.querySelectorAll('[data-testid="keno-drawn-ball"]').length === 20 && !document.querySelector('[data-testid="keno-draw"]')?.disabled""",timeout=6000)
+                                # Always detach the scoped observer so later matrix actions cannot contaminate this count.
+                                finally:
+                                    # Remove the exact callback registered for this one public action.
+                                    page.remove_listener('request',capture_edge_action_request)
+                                # Resolve the exact ticket and draw requests captured from the single click.
+                                edge_ticket_requests=[request for request in edge_action_requests if request.url.endswith('/api/v1/games/keno/tickets')]; edge_draw_requests=[request for request in edge_action_requests if request.url.endswith('/api/v1/games/keno/draw')]
+                                # Require one ticket purchase and one draw request, with no blur-time swallowed or duplicate action.
+                                assert len(edge_ticket_requests)==1 and len(edge_draw_requests)==1,[(request.method,request.url) for request in edge_action_requests]
+                                # Decode the exact frozen-v1 ticket request emitted by the edited input.
+                                edge_ticket_body=edge_ticket_requests[0].post_data_json
+                                # Require the single request to retain exact amount and selected spots.
+                                assert float(edge_ticket_body['amount'])==0.01 and edge_ticket_body['spots']==[1,5,10,71,80],edge_ticket_body
                                 # Persist one deterministic final draw so caught/latest state does not depend on random outcomes.
                                 save_player_game_state('keno',edge_player,final_edge_state)
                                 # Reconstruct the route from authoritative history and wait for all twenty final balls.
                                 page.reload(wait_until='networkidle'); page.get_by_test_id('keno-premium-hero').wait_for(timeout=5000); page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale",arg=edge_locale); page.wait_for_function("() => document.querySelectorAll('[data-testid=\"keno-drawn-ball\"]').length === 20",timeout=5000)
-                                # Require the seeded result to render every draw plus the caught/latest bottom-right edge cell.
-                                assert page.locator('.keno-num.drawn').count()==20 and page.locator('.keno-num.catch').count()==1 and page.get_by_test_id('keno-num-80').evaluate("cell => cell.classList.contains('catch') && cell.classList.contains('latest')")
+                                # Require the seeded result to render every draw plus all caught cells and the latest bottom-right edge.
+                                assert page.locator('.keno-num.drawn').count()==20 and page.locator('.keno-num.catch').count()==20 and page.get_by_test_id('keno-num-80').evaluate("cell => cell.classList.contains('catch') && cell.classList.contains('latest')")
+                                # Require the restored live amount and enabled repeat action to match the settled authoritative ticket.
+                                assert float(page.get_by_test_id('keno-amount').input_value())==1.0 and not page.locator('[data-action="repeat"]').is_disabled()
+                                # Require the exact numeric jackpot magnitude to remain visible rather than collapsing to a generic label.
+                                active_paytable_digits=re.sub(r'\D','',page.get_by_test_id('keno-paytable-active').inner_text())
+                                # Match the full authoritative multiplier despite locale-owned separators.
+                                assert str(keno_engine.PAYTABLE[20][20]) in active_paytable_digits,active_paytable_digits
+                                # Require the ideal-versus-realized fake-token disclosure on the result surface.
+                                assert page.get_by_test_id('keno-economics-note').is_visible()
                                 # Measure the completed drawn-ball rail before scrolling so internal overflow cannot masquerade as clipped page content.
                                 rail_probe=page.get_by_test_id('keno-drawn-balls').evaluate("""rail => { const style=getComputedStyle(rail); const box=rail.getBoundingClientRect(); const owner=rail.closest('.keno-stage-panel')?.getBoundingClientRect(); const last=rail.querySelector('[data-testid="keno-drawn-ball"]:last-child')?.getBoundingClientRect(); return {clientWidth:rail.clientWidth,scrollWidth:rail.scrollWidth,scrollLeft:rail.scrollLeft,maxScrollLeft:rail.scrollWidth-rail.clientWidth,minWidth:style.minWidth,maxWidth:style.maxWidth,overflowX:style.overflowX,overflowY:style.overflowY,tabindex:rail.getAttribute('tabindex'),role:rail.getAttribute('role'),label:rail.getAttribute('aria-label'),box:{left:box.left,right:box.right},owner:owner&&{left:owner.left,right:owner.right},last:last&&{left:last.left,right:last.right}}; }""")
                                 # Require one named keyboard-reachable horizontal owner bounded inside the stage whether this viewport needs overflow or fits all balls.
@@ -8126,10 +8218,142 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                 edge_final_evidence_selector='[data-testid="keno-drawn-balls"]' if edge_viewport_id in ('desktop_primary','desktop_compact') else '.keno-premium'
                                 # Record final-draw and caught/latest evidence for this exact locale and viewport.
                                 region_evidence(f'after-pass-keno-edge-final-caught-{edge_locale.lower()}-{edge_viewport_id}.png',edge_final_evidence_selector,'keno',['edge_final_caught'],edge_locale,edge_viewport_id)
+                                # Count the exact final-edge matrix cell.
+                                keno_matrix_cells+=1
+                                # Record exact settled result evidence with the authoritative multiplier and payout visible.
+                                region_evidence(f'after-pass-keno-result-{edge_locale.lower()}-{edge_viewport_id}.png','.keno-premium','keno',['result'],edge_locale,edge_viewport_id)
+                                # Count the exact result matrix cell.
+                                keno_matrix_cells+=1
+                                # Persist the authoritative settled fixture again before testing a distinct route reconstruction.
+                                save_player_game_state('keno',edge_player,final_edge_state)
+                                # Reconstruct the route independently from the persisted result instead of reusing the result DOM.
+                                page.reload(wait_until='networkidle'); page.get_by_test_id('keno-premium-hero').wait_for(timeout=5000)
+                                # Wait for the requested locale and all authoritative result balls after reconstruction.
+                                page.wait_for_function("locale => window.CasinoI18n?.getLocaleState().locale === locale",arg=edge_locale); page.wait_for_function("() => document.querySelectorAll('[data-testid=\"keno-drawn-ball\"]').length === 20",timeout=5000)
+                                # Read the exact state returned by the frozen public route after reconstruction.
+                                restored_edge_state=page.request.get(base+'/api/v1/games/keno/state').json()['data']['state']
+                                # Resolve the exact authoritative terminal draw and ticket used by the restored surface.
+                                restored_edge_draw=restored_edge_state['last_draws'][-1]; restored_edge_ticket=restored_edge_draw['results'][0]['ticket']
+                                # Require exact round, spots, and amount rather than accepting a visually similar route.
+                                assert restored_edge_draw['round_id']=='keno-edge-final' and restored_edge_ticket['spots']==edge_draw and float(restored_edge_ticket['amount'])==1.0,restored_edge_state
+                                # Require the reconstructed public controls to reflect exactly the restored ticket.
+                                assert page.locator('.keno-num.selected').count()==len(edge_draw) and all(page.get_by_test_id(f'keno-num-{edge_number}').get_attribute('aria-pressed')=='true' for edge_number in edge_draw) and float(page.get_by_test_id('keno-amount').input_value())==1.0
+                                # Record route-restored evidence only after exact state and live-control assertions pass.
+                                region_evidence(f'after-pass-keno-route-restored-{edge_locale.lower()}-{edge_viewport_id}.png','.keno-premium','keno',['route_restored'],edge_locale,edge_viewport_id)
+                                # Count the exact route-restored matrix cell.
+                                keno_matrix_cells+=1
+                                # Bring the enabled Repeat control into view before creating a distinct focus-visible state.
+                                repeat_edge_control=page.locator('[data-action="repeat"]'); repeat_edge_control.scroll_into_view_if_needed(); repeat_edge_control.focus()
+                                # Read the exact accessible and focus state from the live Repeat control.
+                                repeat_edge_probe=repeat_edge_control.evaluate("control => ({focused:document.activeElement===control,disabled:control.disabled,ariaDisabled:control.getAttribute('aria-disabled'),text:control.textContent.trim()})")
+                                # Require a visibly focused, enabled, named Repeat control backed by the restored ticket.
+                                assert repeat_edge_probe['focused'] and not repeat_edge_probe['disabled'] and repeat_edge_probe['ariaDisabled']!='true' and repeat_edge_probe['text'],repeat_edge_probe
+                                # Record repeat-available evidence only after its distinct focus and authoritative state pass.
+                                region_evidence(f'after-pass-keno-repeat-available-{edge_locale.lower()}-{edge_viewport_id}.png','.keno-premium','keno',['repeat_available'],edge_locale,edge_viewport_id)
+                                # Count the exact repeat-available matrix cell.
+                                keno_matrix_cells+=1
+                        # Require every one of the 64 governed Keno matrix cells to have passed assertions and emitted evidence.
+                        assert keno_matrix_cells==keno_matrix_expected_cells,(keno_matrix_cells,keno_matrix_expected_cells)
                         # Restore an empty English desktop route so the existing real-draw regression remains independent.
                         save_player_game_state('keno',edge_player,empty_edge_state); page.set_viewport_size({'width':1920,'height':1080}); page.reload(wait_until='networkidle'); page.get_by_test_id('keno-premium-hero').wait_for(timeout=5000); page.get_by_test_id('shell-locale-select').select_option('en-US'); page.wait_for_function("() => window.CasinoI18n?.getLocaleState().locale === 'en-US'")
-                    # Execute the Keno edge-containment geometry regression.
-                    run_case('BR-KENO-EDGE-001',['KENO-025','KENO-026','TEST-078','TEST-113'],keno_edge_containment)
+                    # Prove restored ticket authority, repeat, autoplay, and aligned history through public controls. (issue #472)
+                    def keno_economics_route_behavior():
+                        # Resolve the authenticated player whose isolated state drives this current-route proof.
+                        behavior_player=page.evaluate("() => { const shellPlayer=window.CasinoCurrentUser?.player || window.CasinoCurrentPlayer || {}; return shellPlayer.player_id || window.CasinoCurrentUser?.player_id || localStorage.getItem('casino.currentPlayerId') || 'human'; }")
+                        # Build one settled result whose amount intentionally differs from the Keno default.
+                        settled_spots=[2,4,6,8,10]
+                        # Apply the exact production one-cent payout expression for the no-catch fixture.
+                        settled_state={'open_tickets':[],'last_draws':[{'round_id':'keno-restore-settled','timestamp':'2026-07-20T00:00:00Z','drawn':list(range(21,41)),'results':[{'ticket':{'ticket_id':'keno-restore-ticket','player_id':behavior_player,'spots':settled_spots,'amount':0.07,'source':'browser-test','created_at':'2026-07-20T00:00:00Z'},'catches':[],'catch_count':0,'multiplier':0,'payout':0}]}]}
+                        # Add a newer open ticket with different authority for the open-ticket restoration branch.
+                        open_spots=[1,5,9]
+                        # Persist both sources so the open ticket must win visible restoration precedence.
+                        open_state={'open_tickets':[{'ticket_id':'keno-open-restore','player_id':behavior_player,'spots':open_spots,'amount':0.11,'source':'browser-test','created_at':'2026-07-20T00:01:00Z'}],'last_draws':settled_state['last_draws']}
+                        # Reconstruct the route from the state containing both historical and open-ticket values.
+                        save_player_game_state('keno',behavior_player,open_state); page.reload(wait_until='networkidle'); page.get_by_test_id('keno-premium-hero').wait_for(timeout=5000)
+                        # Read each open-ticket restoration predicate into one diagnostic probe.
+                        open_restore_probe={'amount':float(page.get_by_test_id('keno-amount').input_value()),'open_rows':page.get_by_test_id('keno-open-ticket').count(),'selected_count':page.locator('.keno-num.selected').count(),'pressed_spots':[spot for spot in open_spots if page.get_by_test_id(f'keno-num-{spot}').get_attribute('aria-pressed')=='true'],'drawn_count':page.locator('[data-testid="keno-drawn-ball"]').count(),'paytable_comparisons':page.get_by_test_id('keno-paytable-comparison').count(),'new_ticket_controls':page.get_by_test_id('keno-new-ticket').count(),'buy_controls':page.get_by_test_id('keno-buy').count()}
+                        # Require the newest open human ticket to own the exact live fake-token amount.
+                        assert open_restore_probe['amount']==0.11,open_restore_probe
+                        # Require exactly one visible open-ticket row instead of the older result drawer.
+                        assert open_restore_probe['open_rows']==1,open_restore_probe
+                        # Require exactly the three authoritative open-ticket spots to remain selected and pressed.
+                        assert open_restore_probe['selected_count']==len(open_spots) and open_restore_probe['pressed_spots']==open_spots,open_restore_probe
+                        # Require the older settled draw to remain history only while the open ticket owns the board.
+                        assert open_restore_probe['drawn_count']==0,open_restore_probe
+                        # Require selection controls and reject every historical result-mode surface.
+                        assert open_restore_probe['buy_controls']==1 and open_restore_probe['paytable_comparisons']==0 and open_restore_probe['new_ticket_controls']==0,open_restore_probe
+                        # Replace the state with settled history only so repeat and autoplay restoration share one authority.
+                        save_player_game_state('keno',behavior_player,settled_state); page.reload(wait_until='networkidle'); page.get_by_test_id('keno-premium-hero').wait_for(timeout=5000)
+                        # Require settled history to restore the exact live amount, spots, and repeat availability.
+                        assert float(page.get_by_test_id('keno-amount').input_value())==0.07 and page.locator('.keno-num.selected').count()==len(settled_spots) and all(page.get_by_test_id(f'keno-num-{spot}').get_attribute('aria-pressed')=='true' for spot in settled_spots) and not page.locator('[data-action="repeat"]').is_disabled()
+                        # Capture the repeat purchase request emitted by the real visible control.
+                        with page.expect_response(lambda response: response.url.endswith('/api/v1/games/keno/draw') and response.request.method=='POST') as repeat_draw_response:
+                            # Capture the ticket purchase paired with the same repeat action.
+                            with page.expect_request(lambda request: request.url.endswith('/api/v1/games/keno/tickets') and request.method=='POST') as repeat_request:
+                                # Start the one-click repeat through the player-facing action.
+                                page.locator('[data-action="repeat"]').click()
+                        # Parse the exact frozen-v1 request body sent by repeat.
+                        repeat_body=repeat_request.value.post_data_json
+                        # Require repeat to reuse both exact restored fields.
+                        assert repeat_body['spots']==settled_spots and float(repeat_body['amount'])==0.07,repeat_body
+                        # Read the terminal draw response before any seeded state can replace it.
+                        repeat_draw=repeat_draw_response.value.json()['data']['draw']
+                        # Resolve the exact human result and round identity returned by the action.
+                        repeat_result=next(result for result in repeat_draw['results'] if result['ticket']['player_id']==behavior_player)
+                        # Wait for the exact new round identity to become visible in history.
+                        page.wait_for_function("""roundId => [...document.querySelectorAll('[data-testid="keno-history"] .keno-history-row span')].some(node => node.textContent.trim()===roundId)""",arg=repeat_draw['round_id'],timeout=7000)
+                        # Read player-scoped Keno history only after the exact terminal round is visible.
+                        repeat_history=page.request.get(base+'/api/v1/casino/history?game=keno').json()['data']['history']
+                        # Resolve the exact aligned history row by current round identity.
+                        repeat_history_row=next(row for row in repeat_history if row['round_id']==repeat_draw['round_id'])
+                        # Decode its compatibility-preserved structured details.
+                        repeat_details=json.loads(repeat_history_row['details_json'])
+                        # Require exact amount, spots, catches, payout, and outcome alignment.
+                        assert float(repeat_history_row['amount'])==0.07 and repeat_details['spots']==settled_spots and repeat_details['catches']==repeat_result['catches'] and float(repeat_history_row['payout'])==float(repeat_result['payout']) and repeat_history_row['outcome']==('win' if repeat_result['payout'] else 'loss'),repeat_history_row
+                        # Read the exact post-repeat state from the current public state route.
+                        repeat_state=page.request.get(base+'/api/v1/games/keno/state').json()['data']['state']
+                        # Require exactly one added draw whose settled ticket retains repeat's restored fields.
+                        assert len(repeat_state['last_draws'])==2 and repeat_state['last_draws'][-1]['results'][0]['ticket']['spots']==settled_spots and float(repeat_state['last_draws'][-1]['results'][0]['ticket']['amount'])==0.07,repeat_state
+                        # Re-seed the settled fixture so the first autoplay tick starts from a clean reload.
+                        save_player_game_state('keno',behavior_player,settled_state); page.reload(wait_until='networkidle'); page.get_by_test_id('keno-premium-hero').wait_for(timeout=5000)
+                        # Configure exactly one fast autoplay round through public controls.
+                        page.get_by_test_id('keno-auto-rounds').fill('1'); page.get_by_test_id('keno-auto-speed').select_option('fast')
+                        # Capture the first autoplay purchase request after route restoration.
+                        with page.expect_response(lambda response: response.url.endswith('/api/v1/games/keno/draw') and response.request.method=='POST',timeout=10000) as autoplay_draw_response:
+                            # Capture the first ticket purchase paired with the one-round autoplay session.
+                            with page.expect_request(lambda request: request.url.endswith('/api/v1/games/keno/tickets') and request.method=='POST',timeout=10000) as autoplay_request:
+                                # Start server-authorized autoplay through the mounted control plane.
+                                page.get_by_test_id('keno-auto-start').click()
+                        # Parse the first autoplay action body.
+                        autoplay_body=autoplay_request.value.post_data_json
+                        # Require the first tick to reuse exact restored spots and amount without falling back to five.
+                        assert autoplay_body['spots']==settled_spots and float(autoplay_body['amount'])==0.07,autoplay_body
+                        # Read the terminal autoplay draw response before checking rendered state.
+                        autoplay_draw=autoplay_draw_response.value.json()['data']['draw']
+                        # Resolve the exact first-tick human result.
+                        autoplay_result=next(result for result in autoplay_draw['results'] if result['ticket']['player_id']==behavior_player)
+                        # Wait for the exact new round identity and stopped one-round control-plane state.
+                        page.wait_for_function("""roundId => document.querySelector('[data-testid="autoplay-keno"] .badge')?.textContent==='Off' && [...document.querySelectorAll('[data-testid="keno-history"] .keno-history-row span')].some(node => node.textContent.trim()===roundId)""",arg=autoplay_draw['round_id'],timeout=10000)
+                        # Read player-scoped Keno history after exact autoplay completion.
+                        autoplay_history=page.request.get(base+'/api/v1/casino/history?game=keno').json()['data']['history']
+                        # Resolve and decode the exact aligned autoplay history row.
+                        autoplay_history_row=next(row for row in autoplay_history if row['round_id']==autoplay_draw['round_id']); autoplay_details=json.loads(autoplay_history_row['details_json'])
+                        # Require exact first-tick amount, spots, catches, payout, and outcome alignment.
+                        assert float(autoplay_history_row['amount'])==0.07 and autoplay_details['spots']==settled_spots and autoplay_details['catches']==autoplay_result['catches'] and float(autoplay_history_row['payout'])==float(autoplay_result['payout']) and autoplay_history_row['outcome']==('win' if autoplay_result['payout'] else 'loss'),autoplay_history_row
+                        # Read the exact post-autoplay state from the public route.
+                        autoplay_state=page.request.get(base+'/api/v1/games/keno/state').json()['data']['state']
+                        # Require one and only one added draw whose first tick retained restored fields.
+                        assert len(autoplay_state['last_draws'])==2 and autoplay_state['last_draws'][-1]['results'][0]['ticket']['spots']==settled_spots and float(autoplay_state['last_draws'][-1]['results'][0]['ticket']['amount'])==0.07,autoplay_state
+                        # Restore an empty state so the following legacy Keno acceptance starts independently.
+                        save_player_game_state('keno',behavior_player,{'open_tickets':[],'last_draws':[]}); page.reload(wait_until='networkidle'); page.get_by_test_id('keno-premium-hero').wait_for(timeout=5000)
+                    # Combine the existing edge proof and new economics behavior under their one contiguous owning case.
+                    def keno_complete_acceptance():
+                        # Execute all sixty-four exact visual-matrix cells first.
+                        keno_edge_containment()
+                        # Execute current-route restoration, Repeat, autoplay, and history behavior second.
+                        keno_economics_route_behavior()
+                    # Execute complete Keno geometry, economics, restoration, and interaction acceptance on one shard.
+                    run_case('BR-KENO-EDGE-001',['KENO-025','KENO-026','KENO-027','TEST-078','TEST-113','TEST-147'],keno_complete_acceptance)
                     # Select ten deterministic spots so paytable comparison has a stable row.
                     for spot in [3,8,12,17,24,31,44,55,63,72]: page.get_by_test_id(f'keno-num-{spot}').click()
                     # Store the spot-selection board box for stability assertions.
@@ -8175,7 +8399,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Resolve the browser shell's active player id before seeding focused evidence.
                         keno_singular_player=page.evaluate("() => { const shellPlayer = window.CasinoCurrentUser?.player || window.CasinoCurrentPlayer || {}; return shellPlayer.player_id || window.CasinoCurrentUser?.player_id || localStorage.getItem('casino.currentPlayerId') || 'human'; }")
                         # Seed deterministic one-catch Keno state so singular copy is proven without relying on a random draw.
-                        keno_singular_state={'open_tickets':[],'last_draws':[{'round_id':'keno-singular-copy','timestamp':'2026-07-19T00:00:00Z','drawn':list(range(1,21)),'results':[{'ticket':{'ticket_id':'keno-one-catch','player_id':keno_singular_player,'spots':[1],'amount':1,'source':'browser-test','created_at':'2026-07-19T00:00:00Z'},'catches':[1],'catch_count':1,'multiplier':3,'payout':3}]}]}
+                        keno_singular_state={'open_tickets':[],'last_draws':[{'round_id':'keno-singular-copy','timestamp':'2026-07-19T00:00:00Z','drawn':list(range(1,21)),'results':[{'ticket':{'ticket_id':'keno-one-catch','player_id':keno_singular_player,'spots':[1],'amount':1,'source':'browser-test','created_at':'2026-07-19T00:00:00Z'},'catches':[1],'catch_count':1,'multiplier':keno_engine.PAYTABLE[1][1],'payout':round(1.0*keno_engine.PAYTABLE[1][1],2)}]}]}
                         # Persist the focused state through the same test data store used by the browser server.
                         save_player_game_state('keno',keno_singular_player,keno_singular_state)
                         # Select English before reload so the copy assertion checks the exact reported wording.
