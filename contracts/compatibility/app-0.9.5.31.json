@@ -1,6 +1,28 @@
 {
-  "application": "0.9.5.31",
+  "app_version": "0.9.5.31",
   "source_baseline": "9.1.0",
+  "api_compatibility_matrix": "contracts/compatibility/module-api-matrix.json",
+  "release_provenance_requirement": "TOOL-003",
+  "release_channel": "restricted-preview-private-invite",
+  "access_policy": {
+    "admission": "manual-invite",
+    "public_signup": "disabled",
+    "live_oauth": "disabled"
+  },
+  "predecessor": {
+    "app_version": "0.9.5.30",
+    "compatibility_record": "contracts/compatibility/app-0.9.5.30.json",
+    "required_artifact": "release-manifest.json",
+    "source_commit_sha": "56168500a7f561227b2721e993903711e977da38",
+    "artifact_sha256": "5e27b4b0e4244ca736d6a29ed1f4f03dff33362d00fcae72fa2a18059bbba253",
+    "manifest_sha256": "880b4bcf8e97491fd8ea0806099ac73170e1843da563c20d53e57b16f82f17e2"
+  },
+  "rollback": {
+    "scope": "application-only",
+    "database_rollback": "prohibited",
+    "mysql_expected_schema_version": 2,
+    "requires_retained_predecessor_manifest": true
+  },
   "modules": {
     "application": "9.53.18",
     "core": "9.28.0",
@@ -64,5 +86,5 @@
     "daily_draw_lab": "1.1.0",
     "four_card_poker": "1.1.0"
   },
-  "created_at": "2026-07-09T00:00:00.000000Z"
+  "notes": "Compatible patch release carrying the accepted independent Andar and Bahar side pricing for issue #409. Andar returns 1.90x and Bahar returns 2.00x with exact rational RTP evidence, while the deprecated frozen-v1 integer return_multiplier remains 2 and the optional return_multipliers object provides additive per-side detail. EN/RU browser evidence covers both prices across four governed viewports and four states. Frozen API compatibility and standard envelopes remain intact. No database schema, provider, DNS, billing, public signup, live OAuth, mail, invitation, public exposure, credential, or SSH-ingress behavior changes. Exact immutable v0.9.5.30 remains the application-only predecessor, MySQL schema 2 remains exact, and database rollback is prohibited."
 }

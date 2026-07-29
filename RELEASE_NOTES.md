@@ -1,4 +1,17 @@
-# Virtual Casino Simulator v0.9.5.30 Release Notes
+# Virtual Casino Simulator v0.9.5.31 Release Notes
+
+## Independent Andar and Bahar side pricing
+
+- Prices Andar at 1.90x and Bahar at 2.00x instead of presenting one shared side return.
+- Preserves the deprecated frozen `/api/v1` integer `return_multiplier=2` scalar for older clients.
+- Adds an optional `return_multipliers` object with exact per-side values and LF-stable OpenAPI digest coverage.
+- Records exact rational return-to-player evidence: Andar `8151/8330` (97.8511%) and Bahar `808/833` (96.9988%).
+- Aligns settlement, API, contract, Long Suite, EN/RU copy, and governed Browser evidence with the independent prices.
+- Verifies both exact `1.90x` and `2.00x` displays across English and Russian, four viewports, and four governed states.
+- Retains exact immutable v0.9.5.30 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation.
+
+## Prior v0.9.5.30 fail-closed affected-game Browser qualification
 
 ## Fail-closed affected-game Browser qualification
 
