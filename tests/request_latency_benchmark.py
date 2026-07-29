@@ -485,7 +485,7 @@ def _boule_controls(client: DirectWSGIClient) -> tuple[object, float]:
 
 
 # Re-prove the control receipt after timed keys exceed the compact state cache.
-def _boule_receipt_cap_control(client: DirectWSGIClient, original_round, original_balance: float) -> None:
+def _boule_receipt_cap_control(client: DirectWSGIClient, original_round) -> None:
     # Capture the authoritative wallet after timed actions and before receipt replay.
     current_balance = _current_player_balance(client)
     # Reuse the exact original control body only after all timed rows complete.
@@ -496,8 +496,8 @@ def _boule_receipt_cap_control(client: DirectWSGIClient, original_round, origina
     )
     # Parse only the standard success envelope.
     payload = replay.payload()
-    # Require durable replay after compact recent-round eviction.
-    if replay.status != "200 OK" or payload.get("ok") is not True or payload["data"].get("replayed") is not True or payload["data"].get("round") != original_round or _response_player_balance(payload) != original_balance:
+    # Require durable round replay plus the route's current authoritative player projection.
+    if replay.status != "200 OK" or payload.get("ok") is not True or payload["data"].get("replayed") is not True or payload["data"].get("round") != original_round or _response_player_balance(payload) != current_balance:
         # Raise one fixed receipt-cap failure.
         raise RequestLatencyBenchmarkError("Boule receipt-cap control failed")
     # Reuse the evicted control key with different content after the durable replay.
@@ -871,13 +871,13 @@ def _collect_rows(client: DirectWSGIClient) -> list[dict]:
             # Append only the approved aggregate row.
             rows.append(_measure_row(client, route_family, concurrency))
     # Prove Boule first, replay, conflict, and wallet invariants before timed mutations.
-    original_round, original_balance = _boule_controls(client)
+    original_round, _original_balance = _boule_controls(client)
     # Measure the one mutation family only after every GET row is terminal.
     for concurrency in CONCURRENCY_LEVELS:
         # Append one approved timed Boule row.
         rows.append(_measure_row(client, "boule_spin", concurrency))
     # Re-prove the original receipt after timed keys exceed compact state retention.
-    _boule_receipt_cap_control(client, original_round, original_balance)
+    _boule_receipt_cap_control(client, original_round)
     # Return the complete deterministic five-by-four inventory.
     return rows
 

@@ -391,9 +391,9 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
             return {"round_id": "unit"}, 99.0
 
         # Record the post-cap control boundary.
-        def receipt(_client, original_round, original_balance):
-            # Require exact internal state propagation.
-            self.assertEqual((original_round, original_balance), ({"round_id": "unit"}, 99.0))
+        def receipt(_client, original_round):
+            # Require exact internal round propagation.
+            self.assertEqual(original_round, {"round_id": "unit"})
             # Retain the terminal control marker.
             actions.append(("control", "post-cap"))
 
@@ -709,12 +709,12 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
                 # Return durable replay for the original body.
                 if body["bet"] == "even":
                     # Model the standard successful replay envelope.
-                    return Response("200 OK", {"ok": True, "data": {"replayed": True, "round": {"round_id": "original"}, "player": {"balance": 77.0}}})
+                    return Response("200 OK", {"ok": True, "data": {"replayed": True, "round": {"round_id": "original"}, "player": {"balance": 88.0}}})
                 # Model the standard conflict envelope for changed content.
                 return Response("409 Conflict", {"ok": False, "error": {"code": "CONFLICT"}})
 
         # Execute both receipt-cap controls outside timed work.
-        benchmark._boule_receipt_cap_control(Client(), {"round_id": "original"}, 77.0)
+        benchmark._boule_receipt_cap_control(Client(), {"round_id": "original"})
         # Require wallet read, original replay, conflict, then wallet re-read.
         self.assertEqual(
             [(method, path, body) for method, path, body in captured],  # Compare complete controls.
@@ -785,7 +785,7 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
                 # Return exact original replay state.
                 if self.index == 2:
                     # Model one durable replay.
-                    return Response("200 OK", {"ok": True, "data": {"replayed": True, "round": {"round_id": "original"}, "player": {"balance": 40.0}}})
+                    return Response("200 OK", {"ok": True, "data": {"replayed": True, "round": {"round_id": "original"}, "player": {"balance": 50.0}}})
                 # Return the required semantic conflict.
                 if self.index == 3:
                     # Model one fixed conflict.
@@ -796,7 +796,7 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         # Require the fixed post-cap wallet diagnostic.
         with self.assertRaises(benchmark.RequestLatencyBenchmarkError) as cap_error:
             # Execute the hostile post-cap controls.
-            benchmark._boule_receipt_cap_control(PostCapMismatch(), {"round_id": "original"}, 40.0)
+            benchmark._boule_receipt_cap_control(PostCapMismatch(), {"round_id": "original"})
         # Require no wallet value in the error.
         self.assertEqual(str(cap_error.exception), "Boule receipt-cap wallet control failed")
 
