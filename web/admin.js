@@ -87,6 +87,8 @@ async function load(tab = 'dashboard') {
     if (tab === 'players') return playersBots();
     // Branch to the Admin beta-user renderer.
     if (tab === 'users') return users();
+    // Await the owner-gated session-timeout policy so rejected requests stay inside the localized load-error boundary. (SESSION-008)
+    if (tab === 'sessions') return await sessions();
     // Await private invitation controls so rejected v2 requests stay inside the localized load-error boundary. (INVITE-005)
     if (tab === 'invitations') return await invitations();
     // Await Guest Trials so rejected Admin requests stay inside the localized load-error boundary. (issue #317)
@@ -671,6 +673,30 @@ async function saveAudio() {
   toast('Audio settings saved.', true);
 }
 
+// Render the owner-facing session-timeout policy so idle and absolute limits can be adjusted in place. (SESSION-008)
+async function sessions() {
+  // Set the Sessions and security title and helper copy.
+  setTitle(t('sessions.title', {}, 'admin'), t('sessions.subtitle', {}, 'admin'));
+  // Load the current owner-gated session-timeout policy.
+  const data = await api('/api/v2/admin/session-settings');
+  // Store the policy with a safe empty fallback.
+  const s = data.settings || {};
+  // Render the idle, absolute, stricter-admin, and admin-idle controls in one owner card.
+  view.innerHTML = `<section class="admin-card" data-testid="admin-sessions-policy"><h3>${safe(t('sessions.heading', {}, 'admin'))}</h3><div class="grid3"><label>${safe(t('sessions.idle', {}, 'admin'))}<input id="idle_timeout_minutes" type="number" min="1" max="1440" value="${safe(s.idle_timeout_minutes)}" data-testid="admin-sessions-idle"></label><label>${safe(t('sessions.absolute', {}, 'admin'))}<input id="absolute_timeout_hours" type="number" min="1" max="24" value="${safe(s.absolute_timeout_hours)}" data-testid="admin-sessions-absolute"></label><label>${safe(t('sessions.adminIdle', {}, 'admin'))}<input id="admin_idle_timeout_minutes" type="number" min="1" max="1440" value="${safe(s.admin_idle_timeout_minutes)}" data-testid="admin-sessions-admin-idle"></label></div><label><input id="admin_stricter" type="checkbox" ${s.admin_stricter ? 'checked' : ''} data-testid="admin-sessions-admin-stricter"> ${safe(t('sessions.adminStricter', {}, 'admin'))}</label><p class="muted">${safe(t('sessions.help', {}, 'admin'))}</p><div class="row"><button id="saveSessions" data-testid="admin-save-sessions" class="gold">${safe(t('sessions.save', {}, 'admin'))}</button></div></section>`;
+  // Bind the save action after rendering.
+  view.querySelector('#saveSessions').onclick = saveSessions;
+}
+
+// Persist the owner-authored session-timeout policy through the owner-gated endpoint.
+async function saveSessions() {
+  // Build the payload from the three numeric fields and the stricter-admin flag; the server clamps to reviewed bounds.
+  const payload = { idle_timeout_minutes: Number(view.querySelector('#idle_timeout_minutes').value), absolute_timeout_hours: Number(view.querySelector('#absolute_timeout_hours').value), admin_idle_timeout_minutes: Number(view.querySelector('#admin_idle_timeout_minutes').value), admin_stricter: view.querySelector('#admin_stricter').checked };
+  // Persist through the owner-gated session-settings endpoint.
+  await api('/api/v2/admin/session-settings', { method: 'POST', body: payload });
+  // Show save feedback.
+  toast(t('sessions.saved', {}, 'admin'), true);
+}
+
 // Define previewVoice to speak a short sample with the saved voice settings.
 async function previewVoice() {
   // Load latest settings before previewing speech.
@@ -831,7 +857,7 @@ const MENU = [
   // Overview section: the landing dashboard.
   { id: 'overview', label: 'nav.section.overview', items: [{ tab: 'dashboard', label: 'nav.dashboard', domain: 'admin' }] },
   // Identity and access section: accounts, invitations, and disposable guests.
-  { id: 'identity', label: 'nav.section.identity', items: [{ tab: 'users', label: 'nav.users', domain: 'admin' }, { tab: 'invitations', label: 'nav.invitations', domain: 'admin' }, { tab: 'guests', label: 'nav.guests', domain: 'admin' }] },
+  { id: 'identity', label: 'nav.section.identity', items: [{ tab: 'users', label: 'nav.users', domain: 'admin' }, { tab: 'sessions', label: 'nav.sessions', domain: 'admin' }, { tab: 'invitations', label: 'nav.invitations', domain: 'admin' }, { tab: 'guests', label: 'nav.guests', domain: 'admin' }] },
   // Players and economy section: player wallets, ledger, history, and autoplay.
   { id: 'players', label: 'nav.section.players', items: [{ tab: 'players', label: 'nav.players', domain: 'admin' }, { tab: 'ledger', label: 'nav.ledger', domain: 'admin' }, { tab: 'history', label: 'nav.history', domain: 'admin' }, { tab: 'autoplay', label: 'nav.autoplay', domain: 'admin' }] },
   // Content and support section: game state, problem reports, audio, and locale.
