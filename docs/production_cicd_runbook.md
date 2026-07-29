@@ -8,7 +8,7 @@ Every protected `main` merge should automatically become the production release.
 
 The browser Admin login and the production monitor login are separate things. Browser login is for a person. The monitor credential is a server-owned bearer token used only by deployment health checks.
 
-Packaged release numbers use the four-part scheme documented in [the release versioning policy](release_versioning.md). The current line is `0.9.5.31`; `0.9.6.0` is reserved for the next large Claude LPR.
+Packaged release numbers use the four-part scheme documented in [the release versioning policy](release_versioning.md). The current line is `0.9.5.32`; `0.9.6.0` is reserved for the next large Claude LPR.
 
 ## What happens after a merge
 
@@ -127,6 +127,8 @@ v0.9.5.29 carries the accepted route-free storage-atomic settlement-adapter foun
 v0.9.5.30 carries the accepted fail-closed affected-game Browser qualification controller for issue #468 item 4. Its compatibility record retains exact immutable v0.9.5.29 as the application-only predecessor; MySQL remains at schema 2 and database rollback remains prohibited.
 
 v0.9.5.31 carries the accepted independent Andar/Bahar side pricing for issue #409 while preserving the deprecated frozen-v1 integer return scalar. Its compatibility record retains exact immutable v0.9.5.30 as the application-only predecessor; MySQL remains at schema 2 and database rollback remains prohibited.
+
+v0.9.5.32 carries the accepted exact visible-rank Hi-Lo pricing for issue #406 while preserving the deprecated frozen-v1 integer return scalar. Its compatibility record retains exact immutable v0.9.5.31 as the application-only predecessor; MySQL remains at schema 2 and database rollback remains prohibited.
 
 ## Historical first-rollout blocker
 
