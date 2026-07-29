@@ -433,8 +433,32 @@ def assert_condition(value, message):
     # Raise a focused assertion when the mapped acceptance predicate is false.
     assert value, message
 
+# Resolve exact request-latency source provenance without accepting a branch name.
+def request_latency_source_commit():
+    # Prefer the exact hosted checkout identity when GitHub supplies one.
+    hosted_sha=str(os.environ.get('GITHUB_SHA','')).strip().lower()
+    # Accept only a full lowercase hexadecimal commit.
+    if re.fullmatch(r'[0-9a-f]{40}',hosted_sha): return hosted_sha
+    # Resolve the exact local checkout commit without changing repository state.
+    result=subprocess.run(['git','rev-parse','HEAD'],cwd=str(ROOT),capture_output=True,text=True,timeout=10)
+    # Normalize the bounded command output.
+    local_sha=result.stdout.strip().lower() if result.returncode==0 else ''
+    # Require exact immutable provenance before an explicit benchmark begins.
+    if not re.fullmatch(r'[0-9a-f]{40}',local_sha): raise AssertionError('request-latency source commit is unavailable')
+    # Return the exact checkout commit.
+    return local_sha
+
+# Run one explicit provider baseline in a fresh listener-free child.
+def run_request_latency_provider(provider,output_path):
+    # Import the benchmark lazily only for its explicit selector.
+    from tests import request_latency_benchmark
+    # Resolve exact source provenance before launching the child.
+    source_commit=request_latency_source_commit()
+    # Run without passing any provider credential through the callback or child arguments.
+    request_latency_benchmark.run_provider_subprocess(provider,source_commit,output_path)
+
 # Define the run_storage_tests function used by this module.
-def run_storage_tests(include_live=False, include_migration_live=False):
+def run_storage_tests(include_live=False, include_migration_live=False, request_latency_callback=None):
     # Define one focused unittest runner for bounded MySQL pool lifecycle behavior.
     def run_mysql_pool_tests():
         # Load only the STORAGE-010 and TEST-141 pool test class.
@@ -486,7 +510,7 @@ def run_storage_tests(include_live=False, include_migration_live=False):
         # Import the service-dependent matrix only after the disposable selector is explicit.
         from tests.mysql_migration_live import run_mysql_migration_live_matrix
         # Map clean bootstrap, upgrade, refusal, restart, grants, and lock evidence.
-        run_case('MYSQL-MIGRATION-LIVE-001',['MYSQL-005','STORAGE-007','STORAGE-010','OTT-001','OTT-002','MAIL-002','MAIL-004','TEST-048','TEST-089','TEST-090','TEST-141'],run_mysql_migration_live_matrix)
+        run_case('MYSQL-MIGRATION-LIVE-001',['MYSQL-005','STORAGE-007','STORAGE-010','OTT-001','OTT-002','MAIL-002','MAIL-004','TEST-048','TEST-089','TEST-090','TEST-141'],lambda: run_mysql_migration_live_matrix(request_latency_callback))
 
 # Define the read_i18n_json function used by this module.
 def read_i18n_json(path):
@@ -1121,6 +1145,18 @@ def run_api_tests():
     runner_source=Path(__file__).read_text(encoding='utf-8')
     # Fail the whole lane immediately when a tautological mapped predicate reappears anywhere in this runner.
     assert re.search(r"assert_condition\(\s*True\s*,",runner_source) is None, 'tautological always-true mapped predicate found in tests/run_tests.py'
+    # Execute only listener-free benchmark policy and scheduler unit proof on the ordinary API path.
+    def run_request_latency_unit_tests():
+        # Import the focused TEST-148 suite lazily so no benchmark or WSGI application starts during runner import.
+        from tests.unit import request_latency_benchmark_tests
+        # Load exactly the bounded request-latency unit class.
+        suite=unittest.defaultTestLoader.loadTestsFromTestCase(request_latency_benchmark_tests.RequestLatencyBenchmarkTests)
+        # Execute the focused suite with concise standard output.
+        result=unittest.TextTestRunner(stream=sys.stdout,verbosity=1).run(suite)
+        # Fail the named central case when any policy, privacy, callback, or scheduler assertion failed.
+        if not result.wasSuccessful(): raise AssertionError('request-latency baseline unit suite failed')
+    # Map the ordinary listener-free unit proof without executing either provider benchmark.
+    run_case('REQUEST-LATENCY-UNIT-001',['TEST-148'],run_request_latency_unit_tests)
     # Execute the exact-138 planner, barrier, aggregate, and workflow proofs without a listener or browser.
     def run_concurrent_browser_138_harness_tests():
         # Load only the focused issue #225 harness test class.
@@ -9905,6 +9941,10 @@ def main():
     ap.add_argument('--mysql-live',action='store_true')
     # Add the explicit disposable MySQL 8.4 migration selector.
     ap.add_argument('--mysql-migrations-live',action='store_true')
+    # Select one explicit listener-free request-latency provider baseline.
+    ap.add_argument('--request-latency',choices=('json','mysql'),default=None)
+    # Select the caller-owned external aggregate evidence destination.
+    ap.add_argument('--request-latency-output',default=None)
     # Configure heartbeat cadence while enforcing the public sixty-second maximum below.
     ap.add_argument('--heartbeat-seconds',type=float,default=45.0)
     # Configure the non-failing no-progress warning threshold.
@@ -9921,6 +9961,12 @@ def main():
     ap.add_argument('--games',default=None)
     # Parse caller options before running any suite.
     args=ap.parse_args()
+    # Require an external output only with the explicit request-latency selector.
+    if bool(args.request_latency)!=bool(args.request_latency_output): ap.error('--request-latency and --request-latency-output must be supplied together')
+    # Require the existing disposable migration lifecycle for a MySQL baseline.
+    if args.request_latency=='mysql' and not args.mysql_migrations_live: ap.error('--request-latency mysql requires --mysql-migrations-live')
+    # Keep the JSON baseline separate from MySQL migration and live-service selectors.
+    if args.request_latency=='json' and (args.mysql_live or args.mysql_migrations_live): ap.error('--request-latency json cannot be combined with MySQL live selectors')
     # Resolve the affected-game restriction once so the runner and the aggregate verifier agree on the expected set.
     affected_games=None
     if args.games is not None:
@@ -9948,11 +9994,15 @@ def main():
     # Run aggregate shard verification alone using the detector-owned expected selection.
     if args.verify_browser_shards: return verify_browser_shards(args.verify_browser_shards,args.shard_count,affected_games)
     # Branch when the following condition is true.
-    if not args.api and not args.browser and not args.storage and not args.mysql_live and not args.mysql_migrations_live: args.api=True
+    if not args.api and not args.browser and not args.storage and not args.mysql_live and not args.mysql_migrations_live and not args.request_latency: args.api=True
     # Start protected logic so failures can be handled safely.
     try:
+        # Build the credential-free MySQL callback only for the explicit benchmark selector.
+        request_latency_callback=(lambda: run_case('REQUEST-LATENCY-MYSQL-001',['TEST-148'],lambda: run_request_latency_provider('mysql',args.request_latency_output))) if args.request_latency=='mysql' else None
         # Branch when the following condition is true.
-        if args.storage or args.mysql_live or args.mysql_migrations_live: run_storage_tests(include_live=args.mysql_live,include_migration_live=args.mysql_migrations_live)
+        if args.storage or args.mysql_live or args.mysql_migrations_live: run_storage_tests(include_live=args.mysql_live,include_migration_live=args.mysql_migrations_live,request_latency_callback=request_latency_callback)
+        # Run the JSON provider only through its explicit benchmark selector.
+        if args.request_latency=='json': run_case('REQUEST-LATENCY-JSON-001',['TEST-148'],lambda: run_request_latency_provider('json',args.request_latency_output))
         # Branch when the following condition is true.
         if args.api: run_api_tests()
         # Branch when the following condition is true.
