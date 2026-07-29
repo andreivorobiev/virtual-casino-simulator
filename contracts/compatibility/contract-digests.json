@@ -1,9 +1,10 @@
 {
   "contracts/compatibility/acey-deucey-spread-pricing.json": "5f4663523c2c6aa4587cc009165e8e323b6678de3b675196e5a77356b82c9c8d",
+  "contracts/compatibility/andar-bahar-side-pricing.json": "a5479da440aa841d4080660c77ee03816b9131396a108ba440f4f1f09cae155b",
   "contracts/openapi/acey_deucey.v1.yaml": "203217f8bb86f07bb102af57f0e93021dfaf77a9107efd17f31eed263b42352a",
   "contracts/openapi/admin-users.v2.yaml": "a2727971e8f32198021f7bf33e94f080eb559c67e93063d7c08b4c36cd2b1785",
   "contracts/openapi/admin.v1.yaml": "bb85dc4742cca424fb0c83cedb99f969395fe08e28fe72330a6fcc89d065de24",
-  "contracts/openapi/andar_bahar.v1.yaml": "14ea022ed9be9f25896857012de154600dffe271c8cb9bc67d7c401acadfd7df",
+  "contracts/openapi/andar_bahar.v1.yaml": "7d25913c80730f28a66516f75b42739cce01e7d33cd741ca970bf4a92d2fcd25",
   "contracts/openapi/auth.v2.yaml": "98063b21b8151dbbc97fc0ba1f5d89232652f67c7b5c5f417feffd62fb450cc0",
   "contracts/openapi/autoplay.v1.yaml": "435d7bf8d4a278e6b56634695f8fcfcb9648f1d8b7297c942ebc6c5c97c0d552",
   "contracts/openapi/baccarat.v1.yaml": "738da72771628936fb2305331a01b810befbd26413f38d8901036cac4f372b48",

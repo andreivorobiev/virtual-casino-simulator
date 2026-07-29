@@ -6268,6 +6268,8 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                 def andar_bahar_acceptance():
                     # Open the catalog-owned route and wait for the stable game selector.
                     page.get_by_test_id('nav-andar_bahar').click(); page.get_by_test_id('andar-bahar').wait_for(timeout=5000)
+                    # Require both authoritative prices as exact two-decimal visible English tokens before evidence.
+                    andar_rules=page.locator('.andar-rules').inner_text(); assert '1.90x' in andar_rules and '2.00x' in andar_rules
                     # Enumerate all governed viewport dimensions.
                     required_viewports=[('desktop_primary',1920,1080),('desktop_compact',1440,900),('tablet',1024,900),('mobile',390,844)]
                     # Load exact UTF-8 title expectations from the paired canonical resource files.
@@ -6280,12 +6282,18 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                             page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_timeout(100)
                             # Require the localized game title rather than a fallback key or English leakage.
                             assert page.locator('.andar-header h1').inner_text()==expected_titles[locale]
+                            # Require exact owner-approved price tokens in both governed locale renderings.
+                            localized_rules=page.locator('.andar-rules').inner_text(); assert '1.90x' in localized_rules and '2.00x' in localized_rules,{'locale':locale,'rules':localized_rules}
                             # Validate containment and capture after-pass evidence at every viewport.
                             for viewport_id,width,height in required_viewports:
                                 # Resize to the exact visual matrix dimensions.
                                 page.set_viewport_size({'width':width,'height':height}); page.wait_for_timeout(100)
                                 # Reject horizontal overflow and require the mounted rank-match table.
                                 assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.get_by_test_id('andar-bahar').is_visible()
+                                # Measure the fixed feedback affordance and shell wallet against game-owned visible content.
+                                clearance=page.evaluate("""() => { const root=document.querySelector('[data-testid="andar-bahar"]'); const feedback=document.querySelector('.report-problem-fab:not([hidden])')?.getBoundingClientRect(); const wallet=document.querySelector('.wallet-pill:not([hidden])')?.getBoundingClientRect(); const rootRect=root?.getBoundingClientRect(); const intersects=(a,b)=>a&&b&&a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top; const visible=node=>{const style=getComputedStyle(node);return style.display!=='none'&&style.visibility!=='hidden'&&node.getClientRects().length>0;}; const hits=[]; for(const node of root?.querySelectorAll('button,input,select,h1,h2,h3,p,li,label,legend,span,strong')||[]){if(!visible(node))continue; const rect=node.matches('h1,h2,h3,p,li,label,legend,span,strong')?(()=>{const range=document.createRange();range.selectNodeContents(node);return [...range.getClientRects()].find(item=>intersects(item,feedback));})():node.getBoundingClientRect(); if(rect&&intersects(rect,feedback))hits.push(node.getAttribute('data-action')||node.getAttribute('data-side')||node.tagName.toLowerCase());} return {feedbackHits:[...new Set(hits)],walletOverlapsGame:intersects(wallet,rootRect)}; }""")
+                                # Reject the original phone collision while proving normal-flow wallet chrome stays outside the game.
+                                assert not clearance['walletOverlapsGame'] and (viewport_id!='mobile' or not clearance['feedbackHits']),{'locale':locale,'viewport':viewport_id,'clearance':clearance}
                                 # Record self-describing evidence for this state and viewport.
                                 game_evidence(f'after-pass-andar-bahar-{prefix}-{locale.lower()}-{viewport_id}.png','andar_bahar',states,locale,viewport_id)
                         # Restore English desktop controls for the next public action.
