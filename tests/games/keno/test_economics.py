@@ -510,5 +510,11 @@ class KenoEconomicsTests(TestCase):
         self.assertIn("keno_matrix_expected_cells=64", browser_source)
         # Require the Browser oracle to strip localized non-digits instead of matching a literal backslash-D token.
         self.assertIn(r"active_paytable_digits=re.sub(r'\D',''", browser_source)
+        # Require transient drawing evidence to use a page-level clip instead of a detachable locator screenshot.
+        self.assertIn("keno_drawing_probe=page.evaluate", browser_source)
+        # Require the page screenshot to consume the atomically resolved Keno drawing clip.
+        self.assertIn("page.screenshot(path=str(keno_drawing_target),clip=keno_drawing_probe['clip']", browser_source)
+        # Reject regression to the generic locator screenshot on the transient drawing cell.
+        self.assertNotIn("region_evidence(f'after-pass-keno-drawing-", browser_source)
         # Require the full-catalog jackpot value to be sourced from the server table.
         self.assertIn("keno_engine.PAYTABLE[20][20]", browser_source)

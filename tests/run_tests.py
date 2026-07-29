@@ -8150,8 +8150,22 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                     page.get_by_test_id('keno-draw').click()
                                     # Wait for the production reveal loop to enter a genuine partial drawing state.
                                     page.wait_for_function("""() => { const count=document.querySelectorAll('[data-testid="keno-drawn-ball"]').length; return count>=2 && count<20; }""",timeout=5000)
-                                    # Record the governed drawing state from the actual public action path.
-                                    region_evidence(f'after-pass-keno-drawing-{edge_locale.lower()}-{edge_viewport_id}.png','.keno-premium','keno',['drawing'],edge_locale,edge_viewport_id)
+                                    # Resolve the drawing PNG target without retaining a locator across the production rerender loop.
+                                    keno_drawing_target=screenshots/f'after-pass-keno-drawing-{edge_locale.lower()}-{edge_viewport_id}.png'
+                                    # Atomically read the current partial count and page-relative crop before another reveal rerender can detach the region.
+                                    keno_drawing_probe=page.evaluate("""() => { const region=document.querySelector('.keno-premium'); const rect=region.getBoundingClientRect(); const drawnCount=document.querySelectorAll('[data-testid="keno-drawn-ball"]').length; return {drawn_count:drawnCount,clip:{x:rect.left+window.scrollX,y:rect.top+window.scrollY,width:rect.width,height:rect.height}}; }""")
+                                    # Require this exact artifact to remain a genuine partial 2..19-ball drawing with a paintable region.
+                                    assert 2<=keno_drawing_probe['drawn_count']<20 and keno_drawing_probe['clip']['width']>0 and keno_drawing_probe['clip']['height']>0,keno_drawing_probe
+                                    # Capture through the page-level clip so the 65ms root replacement cannot detach a screenshot locator.
+                                    page.screenshot(path=str(keno_drawing_target),clip=keno_drawing_probe['clip'],animations='disabled',style='#toast, .status-bar { visibility: hidden !important; }')
+                                    # Record the active viewport dimensions beside the governed matrix viewport id.
+                                    keno_drawing_viewport=page.viewport_size
+                                    # Record the current focus target without retaining a live element reference.
+                                    keno_drawing_focused=page.evaluate("() => document.activeElement?.getAttribute('data-testid') || document.activeElement?.getAttribute('data-action') || ''")
+                                    # Preserve the standard after-pass metadata and disclose the same bounded region selector.
+                                    keno_drawing_metadata={'evidence_class':'after_pass','branch':evidence_branch,'commit':evidence_commit,'surface':'keno','states':['drawing'],'locale':edge_locale,'viewport':{'id':edge_viewport_id,**keno_drawing_viewport},'path':str(keno_drawing_target.relative_to(ROOT)).replace('\\','/'),'focused_control':keno_drawing_focused,'region_selector':'.keno-premium','drawn_count':keno_drawing_probe['drawn_count']}
+                                    # Write the drawing sidecar next to the page-level clipped image for independent audit.
+                                    keno_drawing_target.with_suffix('.json').write_text(json.dumps(keno_drawing_metadata,indent=2,ensure_ascii=False),encoding='utf-8')
                                     # Count the exact drawing matrix cell.
                                     keno_matrix_cells+=1
                                     # Wait for the real action to finish before replacing only its test-owned persisted state.
