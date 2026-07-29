@@ -113,10 +113,10 @@ class AndarBaharApiTests(unittest.TestCase):
         self.assertEqual(first["round"]["round_id"], second["round"]["round_id"])
         # Verify one wager debit and one payout credit exist after replay.
         self.assertEqual(1, len([event for event in self.ledger.events if event["transaction_type"] == "ANDAR_BAHAR_WAGER_DEBIT"]))
-        # Verify the winning payout returns stake plus even-money winnings.
+        # Verify the winning payout returns stake plus the Andar side-priced winnings. (issue #409)
         self.assertEqual(1, len([event for event in self.ledger.events if event["transaction_type"] == "ANDAR_BAHAR_PAYOUT_CREDIT"]))
-        # Verify the final fake balance reflects exactly one debit and one payout.
-        self.assertEqual(107.0, self.ledger.balances["session-player"])
+        # Verify the final fake balance reflects one debit and one side-priced payout (7 * 1.87 = 13.09).
+        self.assertEqual(106.09, self.ledger.balances["session-player"])
         # Request the other player's isolated state while spoofing the first player in the query.
         other_state = self.call("/api/v1/games/andar-bahar/state?player_id=session-player", method="GET", context={"bound_player_id": "other-player", "user": {"player_id": "other-player"}})
         # Verify the other session cannot read the first player's history.

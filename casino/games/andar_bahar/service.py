@@ -131,7 +131,9 @@ class AndarBaharService:
                 "sides": list(engine.SIDES),  # Advertise the two legal side predictions.
                 "deal_order": list(engine.DEAL_ORDER),  # Document Andar-first alternating reveal order.
                 "match_rank_only": True,  # Explain that suits never decide the result.
-                "return_multiplier": engine.RETURN_MULTIPLIER,  # Return stake plus even-money win.
+                "return_multiplier": engine.RETURN_MULTIPLIER,  # Retain the deprecated frozen-v1 even-money scalar for legacy clients.
+                "side_paytable": engine.side_paytable(),  # Publish the side-priced return so clients never guess a price. (issue #409)
+                "house_edge": engine.HOUSE_EDGE,  # State the constant edge the side pricing holds on either bet. (issue #409)
             },
         }
 

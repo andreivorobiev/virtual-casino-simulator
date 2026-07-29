@@ -1,0 +1,49 @@
+{
+  "artifact": "andar-bahar-side-pricing",
+  "issue": "https://github.com/andreivorobiev/virtual-casino-simulator/issues/409",
+  "status": "compatible_patch",
+  "contract": "contracts/openapi/andar_bahar.v1.yaml",
+  "compatibility": {
+    "api_v1_frozen": true,
+    "routes": "unchanged",
+    "requests": "unchanged",
+    "envelopes": "unchanged",
+    "session_authority": "unchanged",
+    "ledger_authority": "unchanged"
+  },
+  "response_rules": {
+    "retained": {
+      "return_multiplier": "deprecated even-money scalar retained for frozen-v1 clients"
+    },
+    "added": {
+      "side_paytable": "server-owned total-return multipliers for the andar and bahar sides",
+      "house_edge": "target edge used to derive both side prices"
+    },
+    "authoritative_price": "rules.side_paytable[round.selected_side]",
+    "first_card_asymmetry": "andar receives the first card and wins with probability 10725/20825, so it is priced below bahar"
+  },
+  "settlement": {
+    "payout_shape": "unchanged numeric total return",
+    "losing_side": "zero return",
+    "winning_side": "wager multiplied by the server-owned side price"
+  },
+  "browser": {
+    "server_owned_copy": true,
+    "locales": [
+      "en-US",
+      "ru-RU"
+    ],
+    "visual_matrix_surface": "andar_bahar"
+  },
+  "excluded_authority": [
+    "database schema",
+    "provider configuration",
+    "deployment",
+    "DNS",
+    "billing",
+    "public signup",
+    "OAuth",
+    "mail",
+    "invitation"
+  ]
+}

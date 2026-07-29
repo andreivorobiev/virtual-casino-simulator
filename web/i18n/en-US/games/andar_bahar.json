@@ -44,7 +44,7 @@
   "rules.alternating": "After the joker card, cards are dealt alternately to Andar, then Bahar.",
   "rules.matchCard": "The exposed joker card sets the rank to match.",
   "rules.rankOnly": "Only rank decides the result; suits do not break ties.",
-  "rules.return": "A correct side prediction returns {multiplier} times the wager.",
+  "rules.return": "A correct Andar prediction returns {andar} times the wager; a correct Bahar prediction returns {bahar} times.",
   "rules.title": "How Andar Bahar works",
   "sides.andar": "Andar",
   "sides.bahar": "Bahar",

@@ -22,7 +22,35 @@ SIDES = ("andar", "bahar")
 DEAL_ORDER = ("andar", "bahar")
 # Bound reload-safe history so one player document cannot grow indefinitely.
 RECENT_ROUND_LIMIT = 20
-# Pay even-money total returns for the side that first receives the matching rank.
+# Target total-return house edge applied uniformly to both sides. (issue #409)
+HOUSE_EDGE = 0.035
+# After the joker is exposed, 51 cards remain and exactly 3 share its rank. Cards deal alternately
+# starting with Andar, so Andar holds the 26 odd deal positions and Bahar the 25 even ones; the first
+# matching card therefore lands on Andar with probability 10725/20825 (~0.5150). Paying both sides a
+# flat even money let a player guarantee a +3.0% edge by always backing Andar (issue #409).
+SIDE_WIN_PROBABILITY = {"andar": 10725 / 20825, "bahar": 1 - 10725 / 20825}
+
+
+# Price the winning return for one side so the house keeps HOUSE_EDGE whichever side the player backs.
+def side_return_multiplier(side: str) -> float:
+    """Return the total-return multiplier for a winning bet on ``side``.
+
+    Scaling each side's return by (1 - HOUSE_EDGE) / P(side wins) equalizes the house edge across the
+    two choices, removing the always-bet-Andar exploit while keeping the wager settlement numeric.
+    """
+    # Resolve the side to its exact first-match probability.
+    probability = SIDE_WIN_PROBABILITY[normalize_side(side)]
+    # Price the return so expected value stays below one on either side.
+    return round((1 - HOUSE_EDGE) / probability, 2)
+
+
+# Publish the full side-to-multiplier paytable so clients never recompute the price themselves.
+def side_paytable() -> dict:
+    # Build one entry per legal betting side in deterministic order.
+    return {side: side_return_multiplier(side) for side in SIDES}
+
+
+# Frozen-v1 compatibility scalar retained for legacy clients; superseded by side_paytable(). (issue #409)
 RETURN_MULTIPLIER = 2
 
 
@@ -118,8 +146,8 @@ def create_round(player_id: str, wager, side, action_id: str, *, match_card: str
         raise ValidationError("Andar Bahar sequence must end on the first matching rank")
     # Store the side that first received the matching rank.
     winning_side = terminal["side"]
-    # Calculate total returned play tokens for a correct prediction.
-    payout = round(amount * RETURN_MULTIPLIER, 2) if selected_side == winning_side else 0.0
+    # Calculate total returned play tokens for a correct prediction using the side-priced multiplier.
+    payout = round(amount * side_return_multiplier(selected_side), 2) if selected_side == winning_side else 0.0
     # Return one complete but settlement-pending state document.
     return {
         "round_id": round_id,  # Correlate state, routes, and ledger movements.

@@ -178,9 +178,17 @@ components:
           maxItems: 20
           items:
             $ref: '#/components/schemas/Round'
+    SidePaytable:
+      type: object
+      description: Server-owned total-return multipliers keyed by legal betting side. (issue #409)
+      required: [andar, bahar]
+      properties:
+        andar: {type: number, exclusiveMinimum: 0}
+        bahar: {type: number, exclusiveMinimum: 0}
+      additionalProperties: false
     Rules:
       type: object
-      required: [sides, deal_order, match_rank_only, return_multiplier]
+      required: [sides, deal_order, match_rank_only, return_multiplier, side_paytable, house_edge]
       properties:
         sides:
           type: array
@@ -194,8 +202,16 @@ components:
           type: boolean
           enum: [true]
         return_multiplier:
-          type: integer
-          enum: [2]
+          type: number
+          deprecated: true
+          description: Frozen-v1 compatibility scalar for even-money legacy clients; use side_paytable.
+        side_paytable:
+          $ref: '#/components/schemas/SidePaytable'
+        house_edge:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Target edge the side pricing holds on either bet. (issue #409)
     Player:
       type: object
       additionalProperties: true

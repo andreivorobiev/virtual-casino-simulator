@@ -33,12 +33,12 @@ class AndarBaharEngineTests(unittest.TestCase):
         # Verify the first dealt card belongs to Andar.
         self.assertEqual("andar", first[1][0]["side"])
 
-    # Confirm correct Andar/Bahar predictions return stake plus even-money winnings.
-    def test_correct_side_returns_twice_the_wager(self):
+    # Confirm a correct Andar prediction returns stake plus the side-priced winnings. (issue #409)
+    def test_correct_side_returns_the_andar_side_price(self):
         # Build one winning Andar prediction.
         round_state = self.round(side="andar", wager=12.5)
-        # Verify the documented winner and returned amount.
-        self.assertEqual(("andar", "win", 25.0, 12.5), (round_state["winning_side"], round_state["outcome"], round_state["payout"], round_state["net"]))
+        # Verify the documented winner and the side-priced return (12.5 * 1.87 = 23.38, net 10.88).
+        self.assertEqual(("andar", "win", 23.38, 10.88), (round_state["winning_side"], round_state["outcome"], round_state["payout"], round_state["net"]))
         # Verify the transparent sequence stops on the matching rank.
         self.assertTrue(round_state["dealt_cards"][-1]["matched"])
 

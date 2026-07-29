@@ -215,10 +215,12 @@ function historyHtml() {
 
 // Render the rules and recent results in the supporting data rail.
 function dataHtml() {
-  // Read server rule values while preserving documented defaults during initial loading.
-  const multiplier = rules.return_multiplier || 2;
+  // Read the server-owned side prices while preserving documented defaults during initial loading.
+  const paytable = rules.side_paytable || {};
+  const andar = paytable.andar || rules.return_multiplier || 2;
+  const bahar = paytable.bahar || rules.return_multiplier || 2;
   // Return distinct rule and history regions in one supporting rail.
-  return '<aside class="andar-panel andar-data" aria-label="' + safe(text('data.title')) + '"><section><h2>' + safe(text('rules.title')) + '</h2><ul class="andar-rules"><li>' + safe(text('rules.matchCard')) + '</li><li>' + safe(text('rules.alternating')) + '</li><li>' + safe(text('rules.rankOnly')) + '</li><li>' + safe(text('rules.return', { multiplier })) + '</li></ul></section><section><h2>' + safe(text('history.title')) + '</h2>' + historyHtml() + '</section></aside>';
+  return '<aside class="andar-panel andar-data" aria-label="' + safe(text('data.title')) + '"><section><h2>' + safe(text('rules.title')) + '</h2><ul class="andar-rules"><li>' + safe(text('rules.matchCard')) + '</li><li>' + safe(text('rules.alternating')) + '</li><li>' + safe(text('rules.rankOnly')) + '</li><li>' + safe(text('rules.return', { andar, bahar })) + '</li></ul></section><section><h2>' + safe(text('history.title')) + '</h2>' + historyHtml() + '</section></aside>';
 }
 
 // Return scoped responsive styles without modifying the shared application stylesheet.
