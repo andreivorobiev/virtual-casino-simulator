@@ -103,10 +103,10 @@ const PREMIUM_STYLE = [
   '.roulette-wheel .ball-radial.descending{animation:roulettePremiumBallDescent var(--rou-descent-ms,1500ms) linear forwards;}', // Drop the ball from the rim into its authoritative pocket with the descent shape carried by sampled stops.
   '.roulette-wheel .ball-dot.settled{animation:rouletteBallSettle .52s cubic-bezier(.2,.8,.2,1);}', // Give the authoritative result a short physical settle rather than an abrupt swap.
   '.roulette-wheel .ball-dot.parked{opacity:.72;}', // Show an unassigned ball without implying a fake result pocket.
-  '.roulette-premium .fixed-result.win .roulette-result-pocket{animation:rouletteResultBloom .72s cubic-bezier(.2,.8,.2,1);}', // Bloom the settled pocket badge once so the reveal lands with weight.
-  '.roulette-premium .table-cell.result-cell,.roulette-premium .outside-cell.result-cell{animation:rouletteCellReveal .9s cubic-bezier(.2,.8,.2,1);}', // Flash the winning felt region once when settlement locks it.
-  '.roulette-history-pills span.result-cell{animation:roulettePillPop .5s cubic-bezier(.2,.8,.2,1);}', // Pop the newest history pocket so the trail visibly extends.
-  '@media (prefers-reduced-motion: reduce){.roulette-premium .wheel-ring.spinning,.roulette-premium .ball-dot.spinning{animation:none;}.roulette-wheel .ball-dot.settled{animation:none;}.roulette-spin-orbit::after{animation:none;}.roulette-wheel .wheel-orient,.roulette-wheel .ball-orbit,.roulette-wheel .ball-radial{transition:none!important;animation:none!important;}.roulette-wheel .ball-trail{opacity:0!important;}.roulette-premium .fixed-result.win .roulette-result-pocket,.roulette-premium .table-cell.result-cell,.roulette-premium .outside-cell.result-cell,.roulette-history-pills span.result-cell{animation:none;}}', // Present the authoritative pocket without rotation when the player asks for reduced motion.
+  '.roulette-premium.just-settled .fixed-result.win .roulette-result-pocket{animation:rouletteResultBloom .72s cubic-bezier(.2,.8,.2,1);}', // Bloom the settled pocket badge once on the fresh settle render only.
+  '.roulette-premium.just-settled .table-cell.result-cell,.roulette-premium.just-settled .outside-cell.result-cell{animation:rouletteCellReveal .9s cubic-bezier(.2,.8,.2,1);}', // Flash the winning felt region once on the fresh settle render only.
+  '.roulette-premium.just-settled .roulette-history-pills span.result-cell{animation:roulettePillPop .5s cubic-bezier(.2,.8,.2,1);}', // Pop the newest history pocket once on the fresh settle render only.
+  '@media (prefers-reduced-motion: reduce){.roulette-premium .wheel-ring.spinning,.roulette-premium .ball-dot.spinning{animation:none;}.roulette-wheel .ball-dot.settled{animation:none;}.roulette-spin-orbit::after{animation:none;}.roulette-wheel .wheel-orient,.roulette-wheel .ball-orbit,.roulette-wheel .ball-radial{transition:none!important;animation:none!important;}.roulette-wheel .ball-trail{opacity:0!important;}.roulette-premium.just-settled .fixed-result.win .roulette-result-pocket,.roulette-premium.just-settled .table-cell.result-cell,.roulette-premium.just-settled .outside-cell.result-cell,.roulette-premium.just-settled .roulette-history-pills span.result-cell{animation:none;}}', // Present the authoritative pocket without rotation when the player asks for reduced motion.
   '.roulette-premium .fixed-result{position:relative;z-index:2;display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:12px;min-height:100px;margin:0 12px 12px;padding:12px 14px;overflow:hidden;border:1px solid rgba(255,255,255,.1);border-radius:11px;background:linear-gradient(135deg,rgba(0,0,0,.36),rgba(255,255,255,.025));}', // Integrate result presentation into the wheel console.
   '.roulette-result-pocket{display:grid;place-items:center;width:58px;height:58px;border:2px solid rgba(255,238,183,.68);border-radius:50%;color:#fff5d5;font-family:var(--font-display);font-size:26px;font-weight:1000;box-shadow:0 8px 18px rgba(0,0,0,.42),inset 0 0 18px rgba(255,255,255,.12);}', // Present the winning pocket as the primary settlement signal.
   '.roulette-result-copy{display:grid;gap:3px;min-width:0;}', // Keep result headline and supporting value aligned.
@@ -215,6 +215,8 @@ let ballDepth = 0;
 let motionScope = null;
 // Store a deferred locale repaint request raised while a spin animation owns the live DOM.
 let pendingLocaleRender = false;
+// Store the round whose settled render is fresh so settle choreography plays once and never on repaints.
+let freshSettleRoundId = null;
 
 // Resolve a Roulette-owned localized string from the game domain.
 const rt = (key, params = {}) => t(key, params, GAME_DOMAIN);
@@ -577,6 +579,20 @@ function waitMotion(ms) {
   return new Promise(resolve => { motionScope.schedule(resolve, ms, { reducedMotion: false }); });
 }
 
+// Lift the captured ball back onto the outer track the moment a spin's first frame is live.
+function liftBallOffPocket() {
+  // Find the radial wrapper in the freshly rendered spinning wheel.
+  const radial = root?.querySelector('.ball-radial');
+  // Skip safely when the wheel is not mounted.
+  if (!radial) return;
+  // Arm the short rim-lift transition on the live wrapper.
+  radial.style.transition = `transform ${BALL_LIFT_MS}ms cubic-bezier(.3,.1,.4,1)`;
+  // Move the ball to track depth so its launch circuits stay concentric with the hub.
+  radial.style.transform = 'translateY(0px)';
+  // Record track depth so any mid-spin repaint renders the lifted pose rather than the stale pocket.
+  ballDepth = 0;
+}
+
 // Steer the live wheel and ball wrappers so the ball physically lands on the authoritative pocket. (ROU-053, ROU-054)
 function launchHonestLanding(payload, revealMs, revealStartedAt) {
   // Read the authoritative pocket committed by the backend for this exact spin.
@@ -586,7 +602,7 @@ function launchHonestLanding(payload, revealMs, revealStartedAt) {
   // Locate the winning pocket on the rendered wheel.
   const targetIndex = nums.indexOf(resultPocket);
   // Skip wrapper travel rather than inventing a pocket when the result is not on this wheel. (ROU-051)
-  if (targetIndex < 0 || !root) return;
+  if (targetIndex < 0 || !root) return 0;
   // Find the rotor-orientation wrapper installed by the spinning render.
   const orient = root.querySelector('.wheel-orient');
   // Find the ball's orbital wrapper.
@@ -594,7 +610,7 @@ function launchHonestLanding(payload, revealMs, revealStartedAt) {
   // Find the ball's radial-depth wrapper.
   const radial = root.querySelector('.ball-radial');
   // Stop safely when a rerender or route transition removed the animated wheel.
-  if (!orient || !orbit || !radial) return;
+  if (!orient || !orbit || !radial) return 0;
   // Seed decorative pocket scatter from the committed round id so one round always lands the same way.
   const random = createSeededRandom(String(payload?.round?.round_id || 'roulette-round'));
   // Choose the rotor's new rest orientation one-plus clockwise turns ahead with seeded scatter.
@@ -605,10 +621,6 @@ function launchHonestLanding(payload, revealMs, revealStartedAt) {
   const ballTarget = ballOrbitAngle - BALL_EXTRA_TURNS * 360 - norm360(ballOrbitAngle - pocketAngle);
   // Give the wrappers whatever part of the reveal budget the backend round-trip has not consumed.
   const travelMs = Math.max(MIN_LANDING_MS, revealMs - (performance.now() - revealStartedAt));
-  // Lift the previously captured ball back onto the outer track before its launch circuits.
-  radial.style.transition = `transform ${BALL_LIFT_MS}ms cubic-bezier(.3,.1,.4,1)`;
-  // Move the ball to track depth through the lift transition.
-  radial.style.transform = 'translateY(0px)';
   // Force one layout read so the browser commits the start frame before target transforms change. (PR #311 pattern)
   orient.getBoundingClientRect();
   // Coast the rotor wrapper to its new rest orientation over the remaining reveal budget.
@@ -621,21 +633,26 @@ function launchHonestLanding(payload, revealMs, revealStartedAt) {
   orbit.style.transform = `rotate(${ballTarget}deg)`;
   // Occupy the second half of the wrapper travel with the pocket descent.
   const descentMs = Math.round(travelMs * .5);
-  // Arm the descent through the route-owned scope so navigation cancels it with the spin. (MOTION-002)
-  motionScope?.schedule(() => {
-    // Clear the lift transition so the sampled descent keyframes own radial motion exclusively.
-    radial.style.transition = 'none';
-    // Publish the descent duration consumed by the keyframe animation shorthand.
-    radial.style.setProperty('--rou-descent-ms', `${descentMs}ms`);
-    // Start the sampled rim-departure, separator-bounce, and capture sequence.
-    radial.classList.add('descending');
-  }, travelMs - descentMs, { reducedMotion: false });
+  // Arm the descent only while the route scope is live so a disposed scope degrades the descent instead of throwing.
+  if (motionScope && !motionScope.disposed) {
+    // Schedule the descent through the route-owned scope so navigation cancels it with the spin. (MOTION-002)
+    motionScope.schedule(() => {
+      // Clear the lift transition so the sampled descent keyframes own radial motion exclusively.
+      radial.style.transition = 'none';
+      // Publish the descent duration consumed by the keyframe animation shorthand.
+      radial.style.setProperty('--rou-descent-ms', `${descentMs}ms`);
+      // Start the sampled rim-departure, separator-bounce, and capture sequence.
+      radial.classList.add('descending');
+    }, travelMs - descentMs, { reducedMotion: false });
+  }
   // Persist the normalized rest pose so the settled rerender continues this exact orientation seamlessly.
   wheelRestAngle = norm360(wheelTarget);
   // Persist the ball's normalized final orbital angle for the same seamless handoff.
   ballOrbitAngle = norm360(ballTarget);
   // Persist the captured pocket depth the descent ends on.
   ballDepth = BALL_POCKET_DEPTH;
+  // Return the wrapper travel time so the caller can hold the reveal until the landing completes.
+  return travelMs;
 }
 
 // Spin the Roulette wheel using the existing engine, bot, ledger, and settlement path.
@@ -664,6 +681,8 @@ async function spin(show = true) {
     const revealStartedAt = performance.now();
     // Rerender immediately so animation starts before settlement display.
     render();
+    // Lift the captured ball onto the track right away so its launch circuits stay concentric.
+    if (show && !reducedMotion) liftBallOffPocket();
     // Let compatible bots commit their public Roulette actions before the human spin.
     await playBotRound('roulette');
     // Play the existing wheel rolling sound trimmed to the reveal time this spin still has left.
@@ -671,9 +690,9 @@ async function spin(show = true) {
     // Post the spin request through the frozen v1 endpoint without changing payloads.
     const payload = await post('/api/v1/games/roulette/spin', withCurrentPlayer());
     // Steer the live wrappers toward the authoritative pocket for full-motion human spins.
-    if (show && !reducedMotion) launchHonestLanding(payload, revealMs, revealStartedAt);
-    // Hold the reveal lock for whatever part of the budget the backend round-trip has not consumed.
-    await waitMotion(Math.max(220, revealMs - (performance.now() - revealStartedAt)));
+    const landingMs = show && !reducedMotion ? launchHonestLanding(payload, revealMs, revealStartedAt) : 0;
+    // Hold the reveal lock until both the remaining budget and the actual landing travel complete.
+    await waitMotion(Math.max(220, revealMs - (performance.now() - revealStartedAt), landingMs));
     // Apply returned state, catalog, players, and stats.
     applyPayload(payload);
     // Store the authoritative result from this spin response.
@@ -682,6 +701,8 @@ async function spin(show = true) {
     lastSpinColor = payload.round.result_color;
     // Store the authoritative round id from this spin response.
     lastRoundId = payload.round.round_id;
+    // Mark the upcoming settled render as fresh so its one-shot choreography plays exactly once.
+    freshSettleRoundId = payload.round.round_id;
     // Filter settlement rows to the human player for the drawer.
     const human = (payload.settlements || []).filter(row => row.bet.player_id === currentPlayerId());
     // Cache settlement row presentation using existing API values only.
@@ -713,6 +734,10 @@ async function spin(show = true) {
     pendingLocaleRender = false;
     // Rerender the unlocked controls after both success and failure.
     render();
+    // Start the one-shot settle choreography on the live DOM so later repaints can never replay or cut it.
+    if (freshSettleRoundId !== null && uiPhase === 'settled' && root) root.querySelector('.roulette-premium')?.classList.add('just-settled');
+    // Consume the fresh-settle marker after its single choreography start.
+    freshSettleRoundId = null;
     // Refresh the bot panel after the final rerender.
     await updateBotPanel();
   }
@@ -1185,12 +1210,14 @@ export const RouletteGame = {
     if (motionScope) motionScope.dispose();
     // Clear the disposed scope handle so a later mount builds a fresh one.
     motionScope = null;
+    // Capture whether a spin was resolving so the refund guard below keeps its issue-246 meaning.
+    const wasSpinning = spinBusy;
     // Release the spin guard because a cancelled reveal can never finish its finally block.
     spinBusy = false;
     // Normalize the phase so a remount never resumes a phantom spin presentation.
     if (uiPhase === 'spinning') uiPhase = 'betting';
     // Refund any open, un-spun bets so leaving the table never strands already-debited stakes. (issue #246)
-    if (humanBets().length && !spinBusy) {
+    if (humanBets().length && !wasSpinning) {
       // Fire the documented clear/refund endpoint best-effort; the route is leaving, so do not await or rerender, and refresh only the shared wallet.
       post('/api/v1/games/roulette/clear', withCurrentPlayer()).then(() => refreshBalance()).catch(() => {});
     }
