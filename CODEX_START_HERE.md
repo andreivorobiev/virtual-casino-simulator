@@ -269,6 +269,7 @@ Generated from Git's tracked and non-ignored Markdown inventory. Every repositor
 - [`docs/games/over_under_7.md`](docs/games/over_under_7.md) — Over/Under 7
 - [`docs/games/plinko.md`](docs/games/plinko.md) — Plinko
 - [`docs/games/scratch_cards.md`](docs/games/scratch_cards.md) — Scratch Cards isolated game slice
+- [`docs/games/slots.md`](docs/games/slots.md) — Slots
 - [`docs/games/three_card_poker.md`](docs/games/three_card_poker.md) — Three Card Poker isolated game slice
 - [`docs/github_codex_migration_plan.md`](docs/github_codex_migration_plan.md) — GitHub and Codex migration plan
 - [`docs/github_setup_checklist.md`](docs/github_setup_checklist.md) — GitHub setup checklist

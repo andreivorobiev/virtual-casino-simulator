@@ -603,7 +603,8 @@
       "description": "Slot spin debits spin cost before settlement.",
       "status": "PASS",
       "api_tests": [
-        "API-SLOT-001"
+        "API-SLOT-001",
+        "API-SLOT-ECONOMICS-001"
       ],
       "browser_tests": [],
       "implementation_files": [
@@ -10137,6 +10138,32 @@
       "introduced_in": "work-items-21-30-motion-foundation",
       "changed_in": "work-items-21-30-motion-foundation",
       "notes": "Static screenshots alone cannot satisfy issue #170."
+    },
+    {
+      "id": "SLOT-036",
+      "module": "Slots",
+      "description": "Slots uses one server-authoritative paytable, scatter award, four-free-spin feature, and constant-size progressive meter; only a paid spin at exactly twenty lines and a 1.00 line bet contributes to or can win the meter, every free spin preserves it, and an earned feature remains locked to its paid-trigger line and stake basis. The frozen v1 cent stake and line-count vocabulary remains accepted, current debit and payout rows reconcile to one result round, and governed evidence proves house-side best play over at least one million paid spins per approved scenario with complete bonus-chain drainage plus localized responsive presentation.",
+      "status": "PASS",
+      "api_tests": [
+        "API-SLOT-001"
+      ],
+      "browser_tests": [
+        "BR-SLOT-LINE-BET-001",
+        "BR-SLOT-ECONOMICS-001"
+      ],
+      "implementation_files": [
+        "casino/games/slots/engine.py",
+        "casino/games/slots/api.py",
+        "web/games/slots.js",
+        "web/i18n/en-US/games/slots.json",
+        "web/i18n/ru-RU/games/slots.json",
+        "tests/games/slots/test_economics.py",
+        "tests/slots_economics_long.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-471-slots-economics-split-a",
+      "changed_in": "issue-471-slots-economics-split-a",
+      "notes": "The one exact progressive qualifier is twenty lines by a 1.00 line bet. Six real-engine Long scenarios each execute one million paid spins, drain every triggered and retriggered feature chain before the paid-cycle confidence block closes, use paid cost as the denominator, and require every 99 percent upper confidence bound to remain below 1. The nonqualifying one-line strategy and the qualifying twenty-line strategy have separate predeclared near-92-percent acceptance bands. A separate provider transaction dependency remains outside this Split A delivery and is tracked by issue #430 Phase0c."
     },
     {
       "id": "RESET-001",

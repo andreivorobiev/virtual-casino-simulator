@@ -83,7 +83,7 @@ BROWSER_CASE_AFFINITY_GROUPS={
     # Keep login, terms, wallet, shell, catalog, and responsive lobby state on shard zero.
     'auth_lobby':('BR-STATIC-CACHE-001','BR-MARKETING-001','BR-SHELL-BRAND-GUEST-001','BR-OAUTH-001','BR-TOUCH-TARGET-AUTH-001','BR-AUTH-LOGIN-001','BR-TERMS-001','BR-AUTH-SHELL-001','BR-OAUTH-RUNTIME-001','BR-TOKEN-001','BR-SEC-001','BR-AUTH-LOCALE-001','BR-AUTH-LOGOUT-001','BR-TOKEN-FRACTION-001','BR-SHELL-001','BR-TOUCH-TARGET-001','BR-SHELL-BRAND-001','BR-TOKEN-WALLET-001','BR-LOBBY-001','BR-CATALOG-NAV-001','BR-CATALOG-I18N-RU-001','BR-LOBBY-RESP-001'),
     # Keep Roulette, autoplay, Slots, and Keno transitions on their shared owning shard.
-    'roulette_slots_keno':('BR-ROU-HITMAP-001','BR-ROU-REFUND-001','BR-ROU-SLIP-AUDIT-001','BR-ROU-PREMIUM-001','BR-I18N-GAMESTATE-ROU-001','BR-ROU-MOTION-CURVE-001','BR-ROU-SPINNING-COPY-001','BR-ROU-LOCKED-REMOVE-001','BR-ROU-001','BR-ROU-REDUCED-MOTION-001','BR-AUTO-START-FAIL-001','BR-AUTO-ROU-001','BR-MONEY-LABEL-001','BR-SLOTS-PAYLINE-001','BR-SLOT-LINE-BET-001','BR-SLOT-001','BR-KENO-EDGE-001','BR-KENO-001'),
+    'roulette_slots_keno':('BR-ROU-HITMAP-001','BR-ROU-REFUND-001','BR-ROU-SLIP-AUDIT-001','BR-ROU-PREMIUM-001','BR-I18N-GAMESTATE-ROU-001','BR-ROU-MOTION-CURVE-001','BR-ROU-SPINNING-COPY-001','BR-ROU-LOCKED-REMOVE-001','BR-ROU-001','BR-ROU-REDUCED-MOTION-001','BR-AUTO-START-FAIL-001','BR-AUTO-ROU-001','BR-MONEY-LABEL-001','BR-SLOTS-PAYLINE-001','BR-SLOT-LINE-BET-001','BR-SLOT-ECONOMICS-001','BR-SLOT-001','BR-KENO-EDGE-001','BR-KENO-001'),
     # Keep Bingo, Blackjack, Baccarat, feedback, Admin, audio, and i18n state on shard three.
     'bingo_admin':('BR-BINGO-PURCHASE-001','BR-BINGO-001','BR-BJ-NATURAL-PAYOUT-001','BR-BJ-001','BR-BJ-I18N-001','BR-BJ-INSURANCE-NET-001','BR-BAC-COPY-001','BR-BAC-FRESH-SHOE-001','BR-BAC-MUTATION-001','BR-BAC-001','BR-I18N-ROUTES-001','BR-FEEDBACK-001','BR-ADMIN-NAV-AUTH-001','BR-ADMIN-001','BR-ADMIN-LEDGER-LABELS-001','BR-ADMIN-FEEDBACK-001','BR-ADMIN-OAUTH-001','BR-ADMIN-MAIL-001','BR-INVITE-001','BR-OPS-001','BR-ADMIN-PRACTICE-OPPONENT-001','BR-ADMIN-USERS-001','BR-ADMIN-GUEST-001','BR-AUDIO-001','BR-I18N-FOUNDATION-001','BR-I18N-ADMIN-001'),
 }
@@ -1335,6 +1335,21 @@ def run_api_tests():
             raise AssertionError('cross-game copy and focus suite failed')
     # Record the listener-free return semantics, identifier privacy, Russian terminology, and focus proof.
     run_case('UI-GAME-POLISH-001',['I18N-010','UX-020','TEST-117'],run_game_polish_tests)
+
+    # Execute the listener-free Slots economics, route, ledger-equation, and copy regressions.
+    def run_slots_economics_tests():
+        # Import the bounded SLOT-036 test module without opening a browser or listener.
+        from tests.games.slots import test_economics
+        # Load exactly the module-owned economics assertions.
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(test_economics.SlotsEconomicsTests)
+        # Run through the shared fail-closed unittest result collector.
+        result = unittest.TextTestRunner(verbosity=1).run(suite)
+        # Fail the named API case when any focused invariant failed or errored.
+        if not result.wasSuccessful():
+            # Raise one stable harness error after unittest printed exact diagnostics.
+            raise AssertionError('Slots economics suite failed')
+    # Record the complete browser-free Split A acceptance under its permanent requirement.
+    run_case('API-SLOT-ECONOMICS-001',['SLOT-036'],run_slots_economics_tests)
     # Execute the opt-in wellness, current-session summary, concurrency, and neutral-copy proof without a listener.
     def run_wellness_tests():
         # Import the focused suite only when its mapped API case runs.
@@ -7598,11 +7613,11 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Require the authoritative engine to return all twenty indexed rows before UI evidence is seeded.
                         assert len(payline_result['wins'])==20 and [win['line'] for win in payline_result['wins']]==payline_rows
                         # Build the persisted spin shape consumed by the normal Slots route loader.
-                        payline_spin={'round_id':'slot-payline-acceptance','timestamp':'2026-07-20T00:00:00Z','stops':[0,0,0,0,0],'grid':payline_grid,'active_lines':20,'line_bet':1,'cost':20,**payline_result,'free_spin':False,'free_spins_remaining':0,'progressive':1000}
+                        payline_spin={'round_id':'slot-payline-acceptance','timestamp':'2026-07-20T00:00:00Z','stops':[0,0,0,0,0],'grid':payline_grid,'active_lines':20,'line_bet':1,'cost':20,**payline_result,'free_spin':False,'free_spins_remaining':0,'progressive_eligible':True,'progressive_before':slots_engine.PROGRESSIVE_SEED,'progressive_contribution':0.2,'progressive_hit':0.0,'progressive':slots_engine.PROGRESSIVE_SEED+0.2}
                         # Resolve the authenticated browser player before writing isolated deterministic game state.
                         payline_player=page.evaluate("() => { const shellPlayer=window.CasinoCurrentUser?.player || window.CasinoCurrentPlayer || {}; return shellPlayer.player_id || window.CasinoCurrentUser?.player_id || localStorage.getItem('casino.currentPlayerId') || 'human'; }")
                         # Persist the authoritative result through the same state store the Slots route reads after refresh.
-                        save_player_game_state('slots',payline_player,{'last_spins':[payline_spin],'progressive':1000,'free_spins':0})
+                        save_player_game_state('slots',payline_player,{'last_spins':[payline_spin],'progressive':slots_engine.PROGRESSIVE_SEED+0.2,'progressive_basis':{'active_lines':slots_engine.PROGRESSIVE_QUALIFYING_LINES,'line_bet':slots_engine.PROGRESSIVE_QUALIFYING_LINE_BET},'free_spins':0})
                         # Reload the real route so the overlay, result text, and history all recover from one authoritative state.
                         page.reload(wait_until='networkidle'); page.get_by_test_id('slots-payline').wait_for(timeout=5000)
                         # Define a browser-side audit that compares every rendered SVG point with its actual cell center in screen coordinates.
@@ -7675,10 +7690,20 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         page.on('request',observe_slots_spin)
                         # Select the real browser-visible line-bet input.
                         line_bet=page.get_by_test_id('slots-line-bet')
+                        # Preserve the settled result headline before changing any progressive eligibility control.
+                        settled_headline=page.get_by_test_id('slots-progressive-headline').inner_text()
+                        # Switch just below the exact qualifier and require dedicated eligibility to update immediately.
+                        line_bet.fill('0.99'); page.wait_for_function("() => document.querySelector('[data-testid=\"slots-progressive-status\"]')?.textContent.includes('Not eligible')")
+                        # Require eligibility changes to preserve the settled payout headline and history.
+                        assert page.get_by_test_id('slots-progressive-headline').inner_text()==settled_headline and page.get_by_test_id('slots-recent-spins').is_visible()
+                        # Restore the exact qualifier and require the eligible status without another game action.
+                        line_bet.fill('1.00'); page.wait_for_function("() => document.querySelector('[data-testid=\"slots-progressive-status\"]')?.textContent.includes('Eligible:')")
+                        # Require the settled result headline to survive the second control transition.
+                        assert page.get_by_test_id('slots-progressive-headline').inner_text()==settled_headline
                         # Type the reported negative value through the normal input event path.
-                        line_bet.fill('-5'); page.wait_for_function("() => document.querySelector('[data-testid=\"slots-line-bet\"]')?.value === '1'")
+                        line_bet.fill('-5'); page.wait_for_function("() => document.querySelector('[data-testid=\"slots-line-bet\"]')?.value === '0.01'")
                         # Require immediate correction, machine-readable invalid state, localized feedback, and zero requests.
-                        assert line_bet.get_attribute('aria-invalid')=='true' and page.get_by_test_id('slots-line-bet-feedback').text_content().strip()=='Line bet must be a whole number of at least 1. Reset to 1.' and not observed_spin_requests
+                        assert line_bet.get_attribute('aria-invalid')=='true' and page.get_by_test_id('slots-line-bet-feedback').text_content().strip()=='Line bet must round to a cent value from 0.01 to 1,000,000 play tokens. Reset to 0.01.' and not observed_spin_requests
                         # Type a valid replacement to prove the error clears and visible cost updates before any spin.
                         line_bet.fill('3'); page.wait_for_timeout(50)
                         # Require the valid state and the twenty-line cost implied by the visible controls.
@@ -7686,7 +7711,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Re-enter the reported invalid value so governed evidence records the correction feedback.
                         line_bet.fill('-5'); page.wait_for_function("() => document.querySelector('[data-testid=\"slots-line-bet\"]')?.getAttribute('aria-invalid') === 'true'")
                         # Define the localized feedback required in each governed locale.
-                        localized_feedback={'en-US':'Line bet must be a whole number of at least 1. Reset to 1.','ru-RU':'Ставка на линию должна быть целым числом не меньше 1. Значение сброшено на 1.'}
+                        localized_feedback={locale:json.loads((ROOT/'web'/'i18n'/locale/'games'/'slots.json').read_text(encoding='utf-8'))['errors.lineBetRange'] for locale in ('en-US','ru-RU')}
                         # Define the affected compact and mobile visual-matrix viewports.
                         validation_viewports={'desktop_compact':{'width':1440,'height':900},'mobile':{'width':390,'height':844}}
                         # Exercise localized invalid-input presentation without losing corrected state.
@@ -7704,15 +7729,15 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                 # Record focused after-pass evidence without accepting unrelated nav or reel defects.
                                 region_evidence(f'after-pass-slots-control-invalid-line-bet-{locale}-{viewport_id}.png','.slots-control','slots',['invalid_line_bet'],locale,viewport_id)
                         # Restore English and primary desktop dimensions before the real corrected spin.
-                        page.get_by_test_id('shell-locale-select').select_option('en-US'); page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_function("() => document.querySelector('[data-testid=\"slots-line-bet-feedback\"]')?.textContent.trim() === 'Line bet must be a whole number of at least 1. Reset to 1.'")
+                        page.get_by_test_id('shell-locale-select').select_option('en-US'); page.set_viewport_size({'width':1920,'height':1080}); page.wait_for_function("() => document.querySelector('[data-testid=\"slots-line-bet-feedback\"]')?.textContent.trim() === 'Line bet must round to a cent value from 0.01 to 1,000,000 play tokens. Reset to 0.01.'")
                         # Submit one corrected spin and capture the exact public request emitted by the visible button.
                         with page.expect_request(lambda request: request.method=='POST' and request.url.endswith('/api/v1/games/slots/spin')) as corrected_request_info: page.get_by_test_id('slots-spin').click()
                         # Read the frozen endpoint payload after Playwright observes the real request.
                         corrected_payload=corrected_request_info.value.post_data_json
                         # Wait for a completed real round rather than accepting request emission alone.
                         page.wait_for_function("() => !document.querySelector('[data-testid=\"slots-spin\"]')?.disabled && document.querySelector('[data-testid=\"slots-result\"]')?.textContent.includes('Result.')",timeout=5000)
-                        # Require one corrected whole-token line bet and an authoritative completed result.
-                        assert corrected_payload['line_bet']==1 and corrected_payload['active_lines']==20 and observed_spin_requests and page.get_by_test_id('slots-result').is_visible()
+                        # Require one corrected minimum-cent line bet and an authoritative completed result.
+                        assert corrected_payload['line_bet']==0.01 and corrected_payload['active_lines']==20 and observed_spin_requests and page.get_by_test_id('slots-result').is_visible()
                         # Limit the visible autoplay control to one round so its corrected plan can be inspected safely.
                         page.get_by_test_id('slots-auto-rounds').fill('1')
                         # Define one deterministic control-plane response while leaving the real Slots action unmocked.
@@ -7726,7 +7751,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Read the request body emitted by the shared autoplay control plane.
                         autoplay_payload=autoplay_request_info.value.post_data_json
                         # Require the corrected visible value to reach the autoplay plan unchanged.
-                        assert autoplay_payload['plan']['active_lines']==20 and autoplay_payload['plan']['line_bet']==1
+                        assert autoplay_payload['plan']['active_lines']==20 and autoplay_payload['plan']['line_bet']==0.01
                         # Wait for the one locally committed autoplay action to settle and return the controls to Off.
                         page.wait_for_function("() => !document.querySelector('[data-testid=\"slots-spin\"]')?.disabled && document.querySelector('[data-testid=\"autoplay-slots\"] .badge')?.textContent === 'Off'",timeout=5000)
                         # Clear the synthetic session identifier so later route-unmount cleanup stays listener-free.
@@ -7736,7 +7761,203 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         # Detach the observer so later game traffic cannot affect this completed case.
                         page.remove_listener('request',observe_slots_spin)
                     # Record immediate feedback, synchronization, localization, evidence, and real request coverage.
-                    run_case('BR-SLOT-LINE-BET-001',['SLOT-027','TEST-058','UX-009'],slots_line_bet_validation)
+                    run_case('BR-SLOT-LINE-BET-001',['SLOT-027','SLOT-036','TEST-058','UX-009'],slots_line_bet_validation)
+                    # Define the complete governed Slots economics and visual-state matrix for SLOT-036.
+                    def slots_economics_visual_matrix():
+                        # Resolve the authenticated player whose isolated Slots state drives deterministic evidence.
+                        matrix_player=page.evaluate("() => { const shellPlayer=window.CasinoCurrentUser?.player || window.CasinoCurrentPlayer || {}; return shellPlayer.player_id || window.CasinoCurrentUser?.player_id || localStorage.getItem('casino.currentPlayerId') || 'human'; }")
+                        # Read every exact viewport from the authoritative visual matrix.
+                        matrix_viewports={entry['id']:{'width':entry['width'],'height':entry['height']} for entry in visual_matrix['viewports']}
+                        # Require the complete governed viewport vocabulary before any evidence capture.
+                        assert set(matrix_viewports)=={'desktop_primary','desktop_compact','tablet','mobile'}
+                        # Build one deterministic grid with an ordinary single-line CHERRY win.
+                        win_grid=[['LEMON','BAR','BELL','SEVEN','CHERRY'],['CHERRY','CHERRY','CHERRY','LEMON','BAR'],['BAR','BELL','SEVEN','CHERRY','LEMON']]
+                        # Build one deterministic all-SEVEN grid with twenty line wins and one qualifying jackpot.
+                        multi_grid=[['SEVEN' for _column in range(5)] for _row in range(3)]
+                        # Build one deterministic three-SCATTER grid that awards the exact four-spin feature.
+                        bonus_grid=[['SCATTER','SCATTER','SCATTER','BELL','SEVEN'],['LEMON','BAR','BELL','SEVEN','CHERRY'],['BAR','BELL','SEVEN','CHERRY','LEMON']]
+                        # Build one complete persisted spin from the authoritative engine rules.
+                        def matrix_spin(round_id,grid,active_lines,line_bet):
+                            # Evaluate exact line and scatter components through production rules.
+                            evaluated=slots_engine.evaluate(grid,active_lines,line_bet)
+                            # Resolve the fixed paid-only progressive qualifier from production rules.
+                            eligible=slots_engine.progressive_eligible(active_lines,line_bet)
+                            # Calculate the exact qualifying paid contribution before any same-spin jackpot.
+                            contribution=round(active_lines*line_bet*slots_engine.PROGRESSIVE_RATE,8) if eligible else 0.0
+                            # Resolve a five-SEVEN result through the same win evidence used by the production engine.
+                            progressive_hit=slots_engine.PROGRESSIVE_SEED+contribution if eligible and any(win.get('symbol')=='SEVEN' and win.get('count')==5 for win in evaluated['wins']) else 0.0
+                            # Reconcile the exact complete result payout with the progressive component.
+                            payout=round(evaluated['payout']+progressive_hit,2)
+                            # Reset only a winning qualifier; otherwise retain the contributed scalar meter.
+                            meter=slots_engine.PROGRESSIVE_SEED if progressive_hit else slots_engine.PROGRESSIVE_SEED+contribution
+                            # Return the complete state row consumed by the real route loader.
+                            return {'round_id':round_id,'timestamp':'2026-07-29T00:00:00Z','stops':[0,0,0,0,0],'grid':grid,'requested_active_lines':active_lines,'requested_line_bet':line_bet,'active_lines':active_lines,'line_bet':line_bet,'cost':round(active_lines*line_bet,2),**evaluated,'payout':payout,'free_spin':False,'free_spins_remaining':evaluated['free_spins_awarded'],'progressive_eligible':eligible,'progressive_basis':{'active_lines':slots_engine.PROGRESSIVE_QUALIFYING_LINES,'line_bet':slots_engine.PROGRESSIVE_QUALIFYING_LINE_BET},'progressive_before':slots_engine.PROGRESSIVE_SEED,'progressive_contribution':contribution,'progressive_hit':progressive_hit,'progressive':meter}
+                        # Build authoritative win, multi-win, and bonus rows once.
+                        win_spin=matrix_spin('slots-matrix-win',win_grid,1,0.01)
+                        # Build the simultaneous-payline jackpot row from the exact qualifier.
+                        multi_spin=matrix_spin('slots-matrix-multi',multi_grid,20,1.0)
+                        # Build the feature-trigger row from a nonqualifying minimum stake.
+                        bonus_spin=matrix_spin('slots-matrix-bonus',bonus_grid,1,0.01)
+                        # Require exact engine and progressive components before they become browser evidence.
+                        assert win_spin['line_payout']==0.02 and len(multi_spin['wins'])==20 and multi_spin['progressive_eligible'] and multi_spin['progressive_contribution']==0.2 and multi_spin['progressive_hit']==200.2 and multi_spin['progressive']==slots_engine.PROGRESSIVE_SEED and multi_spin['payout']==round(multi_spin['line_payout']+multi_spin['scatter_payout']+multi_spin['progressive_hit'],2) and bonus_spin['free_spins_awarded']==4 and bonus_spin['scatter_payout']==0
+                        # Build one constant-size default state with the exact qualifier metadata.
+                        def matrix_state(spins=None,free_spins=0,basis=None,meter=None):
+                            # Start from the production default so state shape cannot drift.
+                            prepared=slots_engine.default_state()
+                            # Replace only deterministic recent-spin evidence for this matrix cell.
+                            prepared['last_spins']=list(spins or [])
+                            # Set the feature bank required by the bonus state.
+                            prepared['free_spins']=free_spins
+                            # Retain an exact visible meter where a fixture provides one.
+                            prepared['progressive']=slots_engine.PROGRESSIVE_SEED if meter is None else meter
+                            # Store a server-owned paid-trigger basis only for an open feature chain.
+                            if basis: prepared['free_spin_basis']=dict(basis)
+                            # Return constant-size state with no caller-derived meter map.
+                            return prepared
+                        # Map every persisted visual state to its authoritative backend fixture.
+                        persisted_states={
+                            'idle':matrix_state(),  # Seed a pristine state for idle evidence.
+                            'win':matrix_state([win_spin]),  # Seed one exact ordinary winning line.
+                            'multi_win':matrix_state([multi_spin],meter=multi_spin['progressive']),  # Seed jackpot reset.
+                            'bonus':matrix_state([bonus_spin],free_spins=4,basis={'active_lines':1,'line_bet':0.01}),  # Seed bonus bank.
+                            'repeat_available':matrix_state([win_spin]),  # Seed a repeatable completed round.
+                            'route_restored':matrix_state([multi_spin],meter=multi_spin['progressive']),  # Seed restoration.
+                        }
+                        # Fetch the live API config once to prove exact server-owned rules reach the browser route.
+                        runtime=page.request.get(base+'/api/v1/games/slots/state').json()['data']['config']
+                        # Read the additive economics block under the frozen v1 envelope.
+                        economics=runtime['economics']
+                        # Require exact qualifier, one-meter policy, scatter/free rules, cent domain, and paytable values.
+                        assert economics['progressive_qualifying_lines']==20 and economics['progressive_qualifying_line_bet']==1.0 and economics['progressive_meter_limit']==1 and economics['progressive_basis_policy']=='single_exact_qualifier'
+                        # Require exact scatter and feature configuration.
+                        assert economics['scatter_pays']=={'4':1,'5':5} or economics['scatter_pays']=={4:1,5:5}
+                        # Require exact four-spin feature and frozen cent bounds.
+                        assert economics['free_spins_awarded']==4 and economics['line_bet']['api_minimum']==0.01 and economics['line_bet']['api_maximum']==1000000
+                        # Require the API paytable to equal the detached authoritative engine table.
+                        assert runtime['paytable']=={symbol:{str(count):multiplier for count,multiplier in table.items()} for symbol,table in slots_engine.PAYTABLE.items()}
+                        # Exercise both installed localized packs.
+                        for locale in ('en-US','ru-RU'):
+                            # Exercise all four exact governed viewport sizes.
+                            for viewport_id,viewport in matrix_viewports.items():
+                                # Apply the exact viewport before route reconstruction.
+                                page.set_viewport_size(viewport)
+                                # Capture each persisted state from its exact server-owned document.
+                                for state_name,prepared_state in persisted_states.items():
+                                    # Save one detached copy so route reads cannot mutate a later matrix cell.
+                                    save_player_game_state('slots',matrix_player,json.loads(json.dumps(prepared_state)))
+                                    # Reload the canonical Slots route from the persisted state.
+                                    page.reload(wait_until='networkidle'); page.get_by_test_id('slots-premium').wait_for(timeout=5000)
+                                    # Switch through the visible locale control and wait for the runtime rerender.
+                                    page.get_by_test_id('shell-locale-select').select_option(locale); page.wait_for_function("expected => window.CasinoI18n?.getLocaleState().locale === expected",arg=locale)
+                                    # Read the exact backing state/config returned to the mounted browser.
+                                    backing=page.request.get(base+'/api/v1/games/slots/state').json()['data']
+                                    # Re-enter the route through normal navigation for the route-restored cell.
+                                    if state_name=='route_restored':
+                                        # Leave the game through the shared lobby action.
+                                        page.get_by_test_id('nav-lobby').click(); page.get_by_test_id('lobby').wait_for(timeout=5000)
+                                        # Return through the catalog-owned Slots route.
+                                        page.get_by_test_id('nav-slots').click(); page.get_by_test_id('slots-premium').wait_for(timeout=5000)
+                                        # Read state again after the real unmount/remount cycle.
+                                        restored=page.request.get(base+'/api/v1/games/slots/state').json()['data']
+                                        # Require the same exact round, result, meter, and economics configuration after restoration.
+                                        assert restored['state']['last_spins'][-1]==backing['state']['last_spins'][-1] and restored['state']['progressive']==backing['state']['progressive'] and restored['config']['economics']==backing['config']['economics']
+                                    # Read exact localized paytable and eligibility surfaces.
+                                    visible=page.get_by_test_id('slots-premium').inner_text()
+                                    # Require exact changed economics tokens without raw resource keys.
+                                    assert '1000' not in visible and 'paytable.' not in visible and 'feature.' not in visible
+                                    # Require the one-meter qualifier to remain visible in both localized layouts.
+                                    assert '20' in visible and ('1.00' in visible or '1,00' in visible)
+                                    # Render the exact authoritative localized rule strings through the active browser runtime.
+                                    expected_rules=page.evaluate("""async () => { const i18n=await import('/core/i18n.js'); const amount=i18n.formatMoney(200); const number=i18n.formatNumber; return {scatter:i18n.t('paytable.scatter',{threshold:number(3),freeSpins:number(4),four:number(1),five:number(5)},'games/slots'),progressive:i18n.t('paytable.progressive',{seed:amount,contribution:number(1),lines:number(20),lineBet:'1.00'},'games/slots'),eligible:i18n.t('feature.progressive',{amount,lines:number(20),lineBet:'1.00'},'games/slots'),ineligible:i18n.t('feature.progressiveIneligible',{amount,lines:number(20),lineBet:'1.00'},'games/slots')}; }""")
+                                    # Determine the exact eligibility state represented by this persisted fixture.
+                                    expected_eligible=state_name in ('idle','multi_win','route_restored')
+                                    # Verify either the visible paytable or feature drawer carries exact localized server-owned copy.
+                                    if page.get_by_test_id('slots-pay-scatter').count():
+                                        # Require exact scatter and progressive text rather than numeric substrings.
+                                        assert page.get_by_test_id('slots-pay-scatter').locator('span').inner_text()==expected_rules['scatter'] and page.get_by_test_id('slots-pay-progressive').locator('span').inner_text()==expected_rules['progressive']
+                                    else:
+                                        # Require the feature drawer to disclose the exact current eligibility state.
+                                        assert page.get_by_test_id('slots-progressive-feature-status').inner_text()==expected_rules['eligible' if expected_eligible else 'ineligible']
+                                    # Require the dedicated control status to match the precise fixture eligibility.
+                                    assert page.get_by_test_id('slots-progressive-status').inner_text()==expected_rules['eligible' if expected_eligible else 'ineligible']
+                                    # Read the exact payline identities rendered from the backing result.
+                                    rendered_lines=[int(value) for value in page.locator('[data-testid="slots-payline"] polyline').evaluate_all("paths => paths.map(path => path.dataset.lineNumber)")] if page.get_by_test_id('slots-payline').count() else []
+                                    # Require idle to contain no result, paylines, or enabled repeat action.
+                                    if state_name=='idle':
+                                        # Prove one disclosed seed, no result history, no lines, and no repeat setup.
+                                        assert backing['state']['last_spins']==[] and backing['state']['progressive']==slots_engine.PROGRESSIVE_SEED and rendered_lines==[] and page.locator('[data-action="repeat"]').is_disabled()
+                                    # Require the ordinary win to preserve one exact line identity and payout.
+                                    elif state_name=='win':
+                                        # Prove one line-one CHERRY return and its visible result amount.
+                                        assert backing['state']['last_spins'][-1]['round_id']=='slots-matrix-win' and backing['state']['last_spins'][-1]['payout']==0.02 and rendered_lines==[1] and page.get_by_test_id('slots-result').is_visible() and page.evaluate("""async () => { const i18n=await import('/core/i18n.js'); return i18n.formatMoney(.02); }""") in page.get_by_test_id('slots-result').inner_text()
+                                    # Require the progressive multi-win to prove exact contribution, hit, payout, and reset.
+                                    elif state_name=='multi_win':
+                                        # Resolve the exact persisted jackpot result once.
+                                        jackpot=backing['state']['last_spins'][-1]
+                                        # Prove twenty winning line identities and the complete qualifying settlement.
+                                        assert rendered_lines==list(range(1,21)) and jackpot['progressive_eligible'] and jackpot['progressive_contribution']==0.2 and jackpot['progressive_hit']==200.2 and jackpot['payout']==round(jackpot['line_payout']+jackpot['scatter_payout']+jackpot['progressive_hit'],2)
+                                        # Prove the backing meter reset while the visible headline retains the won amount.
+                                        assert backing['state']['progressive']==slots_engine.PROGRESSIVE_SEED and expected_rules['eligible']==page.get_by_test_id('slots-progressive-status').inner_text() and page.get_by_test_id('slots-progressive-headline').inner_text()==page.evaluate("""async () => { const i18n=await import('/core/i18n.js'); return i18n.t('cabinet.progressiveHit',{amount:i18n.formatMoney(200.2)},'games/slots'); }""")
+                                    # Require the feature state to retain the exact award and trusted paid-trigger basis.
+                                    elif state_name=='bonus':
+                                        # Prove four pending feature actions, their exact one-line one-cent basis, and no progressive movement.
+                                        assert backing['state']['free_spins']==4 and backing['state']['free_spin_basis']=={'active_lines':1,'line_bet':0.01} and backing['state']['last_spins'][-1]['free_spins_awarded']==4 and not backing['state']['last_spins'][-1]['progressive_eligible'] and backing['state']['last_spins'][-1]['progressive_hit']==0
+                                        # Require the cabinet headline to expose the exact localized four-spin bank.
+                                        assert page.get_by_test_id('slots-progressive-headline').inner_text()==page.evaluate("""async () => { const i18n=await import('/core/i18n.js'); return i18n.t('cabinet.freeSpins',{count:i18n.formatNumber(4)},'games/slots'); }""")
+                                    # Require repeat availability to use the exact preceding visible setup.
+                                    elif state_name=='repeat_available':
+                                        # Prove one retained result and an enabled current-semantics Repeat control.
+                                        assert backing['state']['last_spins'][-1]['round_id']=='slots-matrix-win' and page.locator('[data-action="repeat"]').is_enabled() and rendered_lines==[1]
+                                    # Require route restoration to retain the exact qualifying result and all line identities.
+                                    elif state_name=='route_restored':
+                                        # Prove the same exact jackpot round, reset meter, and twenty paylines survived remount.
+                                        assert backing['state']['last_spins'][-1]['round_id']=='slots-matrix-multi' and backing['state']['progressive']==slots_engine.PROGRESSIVE_SEED and rendered_lines==list(range(1,21))
+                                    # Require no document-level overflow at any matrix size.
+                                    assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1')
+                                    # Require the complete game root, control, cabinet, and data drawer to remain rendered.
+                                    assert page.get_by_test_id('slot-grid').is_visible() and page.locator('.slots-control').is_visible() and page.locator('.slots-drawer').is_visible()
+                                    # Capture one exact-head image and sidecar for this persisted state.
+                                    game_evidence(f'after-pass-slots-economics-{state_name}-{locale}-{viewport_id}.png','slots',[state_name],locale,viewport_id)
+                                # Seed idle state for the three interaction-owned visual states.
+                                save_player_game_state('slots',matrix_player,matrix_state())
+                                # Reload and restore the active locale after the deterministic seed.
+                                page.reload(wait_until='networkidle'); page.get_by_test_id('slots-premium').wait_for(timeout=5000); page.get_by_test_id('shell-locale-select').select_option(locale)
+                                # Enter invalid input through the player-visible control.
+                                page.get_by_test_id('slots-line-bet').fill('-5'); page.wait_for_function("() => document.querySelector('[data-testid=\"slots-line-bet\"]')?.getAttribute('aria-invalid') === 'true'")
+                                # Read state after the invalid edit to prove it caused no hidden game action.
+                                invalid_backing=page.request.get(base+'/api/v1/games/slots/state').json()['data']['state']
+                                # Require exact correction, localized feedback, nonqualification, and unchanged seed state.
+                                assert page.get_by_test_id('slots-line-bet').input_value()=='0.01' and page.get_by_test_id('slots-line-bet-feedback').inner_text().strip() and page.get_by_test_id('slots-progressive-status').inner_text().strip() and invalid_backing['last_spins']==[] and invalid_backing['progressive']==slots_engine.PROGRESSIVE_SEED
+                                # Capture the exact invalid-input matrix cell.
+                                game_evidence(f'after-pass-slots-economics-invalid_line_bet-{locale}-{viewport_id}.png','slots',['invalid_line_bet'],locale,viewport_id)
+                                # Enable the real reduced-motion media preference and rebuild the route.
+                                page.emulate_media(reduced_motion='reduce'); page.reload(wait_until='networkidle'); page.get_by_test_id('slots-premium').wait_for(timeout=5000)
+                                # Require the real media preference, idle reel cells, and bounded layout under reduced motion.
+                                assert page.evaluate("matchMedia('(prefers-reduced-motion: reduce)').matches") and page.get_by_test_id('slot-grid').is_visible() and page.locator('.slots-symbol.spinning').count()==0 and page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1')
+                                # Capture the reduced-motion matrix cell.
+                                game_evidence(f'after-pass-slots-economics-reduced_motion-{locale}-{viewport_id}.png','slots',['reduced_motion'],locale,viewport_id)
+                                # Restore normal motion and apply the governed 125-percent zoom state.
+                                page.emulate_media(reduced_motion='no-preference'); page.reload(wait_until='networkidle'); page.get_by_test_id('slots-premium').wait_for(timeout=5000); page.evaluate("document.body.style.zoom='125%'"); page.wait_for_timeout(120)
+                                # Require the exact zoom value, page containment, and visible primary action.
+                                assert page.evaluate("document.body.style.zoom==='125%'") and page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1') and page.get_by_test_id('slots-spin').is_visible()
+                                # Capture the zoomed matrix cell.
+                                game_evidence(f'after-pass-slots-economics-zoomed-{locale}-{viewport_id}.png','slots',['zoomed'],locale,viewport_id)
+                                # Restore zoom before exercising the real committed spinning state.
+                                page.evaluate("document.body.style.zoom=''")
+                                # Use the minimum nonqualifying setup so matrix capture cannot materially deplete the wallet.
+                                page.get_by_test_id('slots-lines').select_option('1'); page.get_by_test_id('slots-line-bet').fill('0.01')
+                                # Begin one real action and wait for the committed in-progress render.
+                                page.get_by_test_id('slots-spin').click(); page.wait_for_function("() => document.querySelector('[data-testid=\"slots-spin\"]')?.disabled === true")
+                                # Require a real disabled action, all fifteen moving cells, and visible nonqualifying status while pending.
+                                assert page.get_by_test_id('slots-spin').is_disabled() and page.locator('.slots-symbol.spinning').count()==15 and page.get_by_test_id('slots-progressive-status').is_visible()
+                                # Capture the actual spinning matrix cell before the fixed reveal delay completes.
+                                game_evidence(f'after-pass-slots-economics-spinning-{locale}-{viewport_id}.png','slots',['spinning'],locale,viewport_id)
+                                # Wait for the real action to finish before the next matrix cell or viewport.
+                                page.wait_for_function("() => document.querySelector('[data-testid=\"slots-spin\"]')?.disabled === false",timeout=5000)
+                        # Restore English, primary desktop, normal motion, and normal zoom for downstream cases.
+                        page.get_by_test_id('shell-locale-select').select_option('en-US'); page.set_viewport_size(matrix_viewports['desktop_primary']); page.emulate_media(reduced_motion='no-preference'); page.evaluate("document.body.style.zoom=''")
+                    # Execute full engine/config/copy/state geometry and visual-matrix evidence.
+                    run_case('BR-SLOT-ECONOMICS-001',['SLOT-010','SLOT-011','SLOT-012','SLOT-013','SLOT-014','SLOT-015','SLOT-016','SLOT-017','SLOT-018','SLOT-019','SLOT-036'],slots_economics_visual_matrix)
                     # Refresh idle boxes after the focused real spin so the existing animation comparison uses one baseline.
                     idle_box=page.get_by_test_id('slots-cabinet').bounding_box(); idle_result_box=page.get_by_test_id('slots-result').bounding_box()
                     # Start one real spin through the browser-visible control.
