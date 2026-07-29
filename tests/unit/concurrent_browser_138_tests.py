@@ -1,11 +1,14 @@
 """Listener-free TEST-142 proofs for the issue #225 exact-138 browser qualification."""
 
 import asyncio  # Exercise the asynchronous synchronized barrier without launching a browser.
+import ast  # Parse production route decorators without importing optional application dependencies.
 from collections import Counter  # Match the grouped production diagnostic counter schema.
 from concurrent.futures import ThreadPoolExecutor  # Drive deterministic concurrent autoplay registry transactions.
 import copy  # Return independent fake registry snapshots like JSON deserialization.
 import json  # Persist one external exact-source pool preflight fixture.
 import os  # Patch only the explicit disposable marker for boundary tests.
+from pathlib import Path  # Resolve the tracked application source independently from the runner working directory.
+import re  # Match concrete browser paths against production route patterns.
 import tempfile  # Own and clean external listener-free evidence files.
 import time  # Widen fake registry read/write races for deterministic concurrency evidence.
 import tomllib  # Parse optional dependency groups for listener-free workflow policy proof.
@@ -13,7 +16,6 @@ import unittest  # Integrate focused proofs with the repository test runner.
 from types import SimpleNamespace  # Build small aggregate-only barrier fixtures.
 from unittest import mock  # Isolate current-catalog and environment scenarios.
 
-from casino.app import build_router  # Inspect real autoplay route registrations without opening a listener.
 from casino.core import autoplay  # Exercise the synchronized server-side autoplay registry.
 from tests import concurrent_browser_138  # Exercise the public qualification planner and aggregator.
 
@@ -487,8 +489,23 @@ class ConcurrentBrowser138Tests(unittest.TestCase):
 
     # Prove the browser controller's exact autoplay paths resolve in the real router.
     def test_autoplay_browser_paths_match_registered_server_routes(self):
-        # Build the real listener-free application router.
-        router = build_router()
+        # Read the tracked production router source without importing optional Pillow or provider dependencies.
+        app_source = (Path(__file__).resolve().parents[2] / "casino" / "app.py").read_text(encoding="utf-8")
+        # Parse decorators structurally so formatting changes cannot create a false route match.
+        app_tree = ast.parse(app_source)
+        # Collect only literal GET and POST patterns registered inside production source.
+        registrations = {
+            (decorator.func.attr.upper(), decorator.args[0].value)
+            for node in ast.walk(app_tree)
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+            for decorator in node.decorator_list
+            if isinstance(decorator, ast.Call)
+            and isinstance(decorator.func, ast.Attribute)
+            and decorator.func.attr in {"get", "post"}
+            and decorator.args
+            and isinstance(decorator.args[0], ast.Constant)
+            and isinstance(decorator.args[0].value, str)
+        }
         # Enumerate every path observed as 404 in the preserved governed artifact.
         requests = (
             ("GET", "/api/v1/autoplay/sessions/auto-regression"),  # Preserve the session-read path.
@@ -499,7 +516,10 @@ class ConcurrentBrowser138Tests(unittest.TestCase):
         # Require each browser-owned public request to match one real server registration.
         for method, path in requests:
             # Reject path drift independently from runtime storage behavior.
-            self.assertTrue(any(route.match(method, path) for route in router.routes), f"{method} {path}")
+            self.assertTrue(
+                any(registered_method == method and re.fullmatch(pattern, path) for registered_method, pattern in registrations),
+                f"{method} {path}",
+            )
 
     # Prove Pai Gow waits for deterministic initial-deal readiness before pointer activation.
     def test_pai_gow_driver_waits_for_deal_readiness(self):
