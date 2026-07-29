@@ -459,5 +459,10 @@ class SlotsEconomicsTests(TestCase):
         self.assertNotIn("progressive || 1000", frontend)
         # Reject the old whole-token-only minimum declaration.
         self.assertNotIn("const MIN_LINE_BET = 1;", frontend)
+        # Read the Browser harness so changed localized copy cannot leave a stale literal wait behind.
+        browser_runner = (ROOT / "tests" / "run_tests.py").read_text(encoding="utf-8")
+        # Require resource-derived progressive labels and reject the superseded English-only eligible token.
+        self.assertIn("i18n.t('feature.progressive',args,'games/slots')", browser_runner)
+        self.assertNotIn("includes('Eligible:')", browser_runner)
         # Require maximum-line maximum-stake arithmetic remains finite in the shipped numeric domain.
         self.assertTrue(math.isfinite(20 * engine.MAX_LINE_BET))

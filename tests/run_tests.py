@@ -7690,14 +7690,16 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                         page.on('request',observe_slots_spin)
                         # Select the real browser-visible line-bet input.
                         line_bet=page.get_by_test_id('slots-line-bet')
+                        # Resolve exact active-locale eligibility prefixes from authoritative resources rather than stale literals.
+                        progressive_labels=page.evaluate("""async () => { const i18n=await import('/core/i18n.js'); const marker='__AMOUNT__'; const args={amount:marker,lines:i18n.formatNumber(20),lineBet:'1.00'}; return {eligible:i18n.t('feature.progressive',args,'games/slots').split(marker)[0],ineligible:i18n.t('feature.progressiveIneligible',args,'games/slots').split(marker)[0]}; }""")
                         # Preserve the settled result headline before changing any progressive eligibility control.
                         settled_headline=page.get_by_test_id('slots-progressive-headline').inner_text()
                         # Switch just below the exact qualifier and require dedicated eligibility to update immediately.
-                        line_bet.fill('0.99'); page.wait_for_function("() => document.querySelector('[data-testid=\"slots-progressive-status\"]')?.textContent.includes('Not eligible')")
+                        line_bet.fill('0.99'); page.wait_for_function("expected => document.querySelector('[data-testid=\"slots-progressive-status\"]')?.textContent.startsWith(expected)",arg=progressive_labels['ineligible'])
                         # Require eligibility changes to preserve the settled payout headline and history.
                         assert page.get_by_test_id('slots-progressive-headline').inner_text()==settled_headline and page.get_by_test_id('slots-recent-spins').is_visible()
                         # Restore the exact qualifier and require the eligible status without another game action.
-                        line_bet.fill('1.00'); page.wait_for_function("() => document.querySelector('[data-testid=\"slots-progressive-status\"]')?.textContent.includes('Eligible:')")
+                        line_bet.fill('1.00'); page.wait_for_function("expected => document.querySelector('[data-testid=\"slots-progressive-status\"]')?.textContent.startsWith(expected)",arg=progressive_labels['eligible'])
                         # Require the settled result headline to survive the second control transition.
                         assert page.get_by_test_id('slots-progressive-headline').inner_text()==settled_headline
                         # Type the reported negative value through the normal input event path.
