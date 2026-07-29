@@ -1,6 +1,6 @@
 # Virtual Casino Simulator
 
-Packaged application release: `0.9.5.32`
+Packaged application release: `0.9.5.33`
 
 Historical source baseline: `9.1.0`
 
@@ -8,7 +8,7 @@ Local play-token browser casino simulator with a descriptor-driven catalog of is
 
 ## Current repository status
 
-This repository has advanced beyond the original v9.1.1 bootstrap snapshot. Packaged release v0.9.5.32 carries accepted Hi-Lo visible-rank pricing for issue #406: the server settles exact total-return prices from 0.96x through 1.93x, ties refund 1x, and the deprecated frozen-v1 integer scalar remains compatible for older clients. The release retains independent Andar/Bahar pricing, fail-closed affected-game Browser qualification, the route-free settlement foundation, governed exact 138-browser full-catalog qualification, all-game desktop control-reachability, governed Acey-Deucey spread pricing, deterministic Browser shard state, runtime-inert rule coercion, private-invite security, MySQL schema 2, provider-disablement, public-exposure gates, and exact v0.9.5.31 application-only rollback. Independently versioned modules continue to record compatible source changes. Current module revisions and requirement status are recorded in the canonical manifests and generated requirements document.
+This repository has advanced beyond the original v9.1.1 bootstrap snapshot. Packaged release v0.9.5.33 carries the accepted Slots economics-only slice for issue #471: one authoritative engine/API/browser/localization model governs the line-bet and line-count domain, scatter awards, four-spin bonus, earned free-spin basis, and a bounded paid-only progressive qualified at 20 lines and line bet 1.00. It retains exact visible-rank Hi-Lo and independent Andar/Bahar pricing, fail-closed affected-game Browser qualification, the route-free settlement foundation, governed exact 138-browser full-catalog qualification, all-game desktop control-reachability, governed Acey-Deucey spread pricing, deterministic Browser shard state, runtime-inert rule coercion, private-invite security, MySQL schema 2, provider-disablement, public-exposure gates, and exact v0.9.5.32 application-only rollback. It makes no durable action-reservation, cross-process, exactly-once, or composite state-and-ledger claim; that #430 Phase 0c remainder stays open on issue #471. Independently versioned modules continue to record compatible source changes. Current module revisions and requirement status are recorded in the canonical manifests and generated requirements document.
 
 ## Version sources
 
