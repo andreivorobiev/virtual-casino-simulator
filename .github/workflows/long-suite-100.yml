@@ -39,7 +39,7 @@ jobs:
       - name: Prove Slots economics and best play
         if: matrix.shard == 1
         timeout-minutes: 20
-        run: python tests/slots_economics_long.py
+        run: python -m tests.slots_economics_long
       - name: Upload long-suite shard artifacts
         if: always()
         uses: actions/upload-artifact@v4

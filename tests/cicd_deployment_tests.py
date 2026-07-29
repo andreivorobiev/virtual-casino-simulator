@@ -242,6 +242,10 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         self.assertEqual(shard_script.count("--copy-deployment"), 2)
         # Require a unique artifact identity for each matrix worker.
         self.assertIn("name: long-suite-100-shard-${{ matrix.shard }}-artifacts", workflow_text)
+        # Invoke the Slots proof as a package module so repository imports resolve on hosted Linux.
+        self.assertIn("run: python -m tests.slots_economics_long", workflow_text)
+        # Reject direct-file execution because it omits the repository root from Python's import path.
+        self.assertNotIn("run: python tests/slots_economics_long.py", workflow_text)
         # Upload terminal evidence even when one shard command fails.
         self.assertIn("if: always()", workflow_text)
         # Require the exact branch-protection aggregate job identifier once.
