@@ -1,4 +1,19 @@
-# Virtual Casino Simulator v0.9.5.32 Release Notes
+# Virtual Casino Simulator v0.9.5.33 Release Notes
+
+## Authoritative house-side Slots economics
+
+- Aligns the engine, existing API route, browser, and English/Russian copy on one authoritative line-bet, payline, scatter, four-free-spin, and progressive model.
+- Keeps the frozen `/api/v1` cent line-bet domain and the supported 1, 3, 5, 9, and 20 line choices compatible.
+- Qualifies one bounded scalar progressive only for paid 20-line spins at line bet `1.00`; other paid configurations and every free spin preserve the current meter.
+- Locks free spins to their earned wager basis so consuming requests cannot escalate the bonus value.
+- Proves six real-engine scenarios with at least 1,000,000 paid spins each, complete retriggered bonus drain, restored randomness, and a 99% upper confidence bound below `1`.
+- Verifies exact engine, route, current-ledger, history, and browser equations, including the maximum accepted line bet.
+- Verifies all ten governed Slots states in English and Russian across four viewports, including progressive hit/reset, bonus basis, paylines, repeat, and route restoration.
+- Makes no durable action-reservation, cross-process, exactly-once, or composite state-and-ledger claim; issue #471 remains open for the separately governed #430 Phase 0c remainder.
+- Retains exact immutable v0.9.5.32 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation.
+
+## Prior v0.9.5.32 exact visible-rank Hi-Lo pricing
 
 ## Exact visible-rank Hi-Lo pricing
 
