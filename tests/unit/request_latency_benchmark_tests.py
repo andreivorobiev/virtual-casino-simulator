@@ -846,6 +846,30 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         with self.assertRaises(benchmark.RequestLatencyBenchmarkError):
             # Validate the hostile provenance type.
             benchmark.validate_evidence(numeric_source)
+        # Exercise top-level identities with non-string JSON scalar and container types.
+        for identity_key, hostile_value in (
+            ("schema", 1),  # Replace the schema string with a numeric scalar.
+            ("provider", ["json"]),  # Replace the provider string with an unhashable list.
+            ("provider", {"name": "json"}),  # Replace the provider with an object.
+        ):
+            # Build a fresh valid packet before the hostile type replacement.
+            hostile_identity = self.evidence()
+            # Replace only the selected governed string identity.
+            hostile_identity[identity_key] = hostile_value
+            # Require one fixed benchmark error rather than a raw type exception.
+            with self.assertRaises(benchmark.RequestLatencyBenchmarkError):
+                # Validate the hostile top-level identity.
+                benchmark.validate_evidence(hostile_identity)
+        # Exercise row route identity with non-string JSON values.
+        for hostile_route in (1, ["current_user"], {"name": "current_user"}):
+            # Build a fresh valid grid before the hostile type replacement.
+            hostile_route_packet = self.evidence()
+            # Replace only one governed route string.
+            hostile_route_packet["rows"][0]["route_family"] = hostile_route
+            # Require exact string-domain rejection before set construction.
+            with self.assertRaises(benchmark.RequestLatencyBenchmarkError):
+                # Validate the hostile route identity.
+                benchmark.validate_evidence(hostile_route_packet)
         # Exercise JSON scalar types that compare equal to integer concurrency one.
         for ambiguous_concurrency in (True, 1.0):
             # Build a fresh valid grid before the hostile type replacement.
@@ -906,6 +930,26 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         with self.assertRaises(benchmark.RequestLatencyBenchmarkError):
             # Validate the impossible row.
             benchmark.validate_evidence(misordered)
+        # Build one packet with exact positive integers too large for float conversion.
+        huge_integer = self.evidence()
+        # Retain exact percentile ordering beyond binary floating-point range.
+        huge_integer["rows"][0]["p50_ms"] = 10**400
+        # Keep the tail exactly one integer unit above the median.
+        huge_integer["rows"][0]["p95_ms"] = 10**400 + 1
+        # Use the same exact integer domain for throughput validation.
+        huge_integer["rows"][0]["throughput_rps"] = 10**400
+        # Require successful validation without OverflowError or coercion.
+        benchmark.validate_evidence(huge_integer)
+        # Build one packet whose integer percentile order is hidden by float conversion.
+        precise_misorder = self.evidence()
+        # Set the median one exact integer above the binary-float precision boundary.
+        precise_misorder["rows"][0]["p50_ms"] = 2**53 + 1
+        # Set the tail lower by one while both values coerce to the same float.
+        precise_misorder["rows"][0]["p95_ms"] = 2**53
+        # Require direct exact-number ordering to reject the row.
+        with self.assertRaises(benchmark.RequestLatencyBenchmarkError):
+            # Validate the precision-sensitive percentile order.
+            benchmark.validate_evidence(precise_misorder)
         # Build one packet with zero returned bytes.
         empty = self.evidence()
         # Replace the positive aggregate byte total.
@@ -987,6 +1031,14 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
                 benchmark.run_benchmark("json", "c" * 40, "private-output")
             # Prove the output path was never inspected.
             resolve_output.assert_not_called()
+        # Reject a numeric forty-digit caller value before checkout resolution.
+        with mock.patch.object(benchmark, "_checkout_head") as checkout_head:
+            # Require the exact invalid-source diagnostic.
+            with self.assertRaisesRegex(benchmark.RequestLatencyBenchmarkError, "^source commit is invalid$"):
+                # Attempt to coerce numeric provenance through the public boundary.
+                benchmark.run_benchmark("json", int("1" * 40), "private-output")
+            # Prove no checkout, provider, or output work followed the type failure.
+            checkout_head.assert_not_called()
         # Enumerate timeout and process-launch provenance failures containing sentinels.
         failures = (
             subprocess.TimeoutExpired(["git", "private-sentinel"], 1, output="private-sentinel"),  # Inject timeout detail.

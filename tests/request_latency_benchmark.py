@@ -620,8 +620,10 @@ def validate_evidence(evidence: dict) -> None:
     if not isinstance(evidence, dict) or set(evidence) != EVIDENCE_KEYS:
         # Fail closed on missing or private top-level fields.
         raise RequestLatencyBenchmarkError("evidence fields are invalid")
-    # Require the exact schema identity.
-    if evidence.get("schema") != EVIDENCE_SCHEMA:
+    # Read the schema identity without accepting another JSON scalar type.
+    schema = evidence.get("schema")
+    # Require the exact string schema identity.
+    if not isinstance(schema, str) or schema != EVIDENCE_SCHEMA:
         # Reject unknown evidence versions.
         raise RequestLatencyBenchmarkError("evidence schema is invalid")
     # Read source provenance without coercing another JSON scalar into text.
@@ -630,8 +632,10 @@ def validate_evidence(evidence: dict) -> None:
     if not isinstance(source_commit, str) or not SOURCE_COMMIT_PATTERN.fullmatch(source_commit):
         # Reject a branch name or other dynamic identifier.
         raise RequestLatencyBenchmarkError("evidence source commit is invalid")
-    # Restrict provider identity to the two approved low-cardinality values.
-    if evidence.get("provider") not in {"json", "mysql"}:
+    # Read provider identity before set membership can encounter an unhashable JSON value.
+    provider = evidence.get("provider")
+    # Restrict provider identity to the two approved low-cardinality strings.
+    if not isinstance(provider, str) or provider not in {"json", "mysql"}:
         # Reject host or database-derived provider text.
         raise RequestLatencyBenchmarkError("evidence provider is invalid")
     # Require exactly five route families by four concurrency rows.
@@ -652,8 +656,8 @@ def validate_evidence(evidence: dict) -> None:
         route_family = row.get("route_family")
         # Read concurrency without accepting JSON booleans or floats as integers.
         concurrency = row.get("concurrency")
-        # Reject unknown routes or non-integer concurrency before constructing a set key.
-        if route_family not in ROUTE_FAMILIES or isinstance(concurrency, bool) or not isinstance(concurrency, int) or concurrency not in CONCURRENCY_LEVELS:
+        # Reject non-string or unknown routes and non-integer concurrency before a set key.
+        if not isinstance(route_family, str) or route_family not in ROUTE_FAMILIES or isinstance(concurrency, bool) or not isinstance(concurrency, int) or concurrency not in CONCURRENCY_LEVELS:
             # Fail closed on ambiguous aggregate identity.
             raise RequestLatencyBenchmarkError("evidence row identity is invalid")
         # Construct the now-type-safe route/concurrency identity.
@@ -668,12 +672,20 @@ def validate_evidence(evidence: dict) -> None:
         for key in ("p50_ms", "p95_ms", "throughput_rps"):
             # Read the numeric aggregate without coercing strings.
             value = row.get(key)
-            # Reject booleans, non-numbers, infinities, zero, negatives, and NaN.
-            if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value)) or float(value) <= 0:
+            # Reject booleans and non-numbers before any numeric operation.
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                # Raise one fixed aggregate diagnostic.
+                raise RequestLatencyBenchmarkError("evidence aggregate is invalid")
+            # Reject nonfinite floats without coercing arbitrarily large exact integers.
+            if isinstance(value, float) and not math.isfinite(value):
+                # Raise one fixed aggregate diagnostic.
+                raise RequestLatencyBenchmarkError("evidence aggregate is invalid")
+            # Reject zero and negative aggregates using their exact JSON numeric value.
+            if value <= 0:
                 # Raise one fixed aggregate diagnostic.
                 raise RequestLatencyBenchmarkError("evidence aggregate is invalid")
         # Require the tail percentile to be no lower than the median.
-        if float(row["p95_ms"]) < float(row["p50_ms"]):
+        if row["p95_ms"] < row["p50_ms"]:
             # Reject impossible percentile ordering.
             raise RequestLatencyBenchmarkError("evidence percentile order is invalid")
         # Read the error count without coercing another JSON numeric type.
@@ -908,8 +920,8 @@ def _close_active_provider(storage_module) -> None:
 
 # Run the complete listener-free benchmark inside one already isolated child.
 def run_benchmark(provider: str, source_commit: str, output_path: str | Path) -> dict:
-    # Validate provenance before application initialization.
-    if not SOURCE_COMMIT_PATTERN.fullmatch(str(source_commit or "")):
+    # Validate exact string provenance before application initialization.
+    if not isinstance(source_commit, str) or not SOURCE_COMMIT_PATTERN.fullmatch(source_commit):
         # Refuse non-commit source identities.
         raise RequestLatencyBenchmarkError("source commit is invalid")
     # Resolve the independent checkout identity before provider or output work.
