@@ -113,7 +113,7 @@ class AndarBaharApiTests(unittest.TestCase):
         self.assertEqual(first["round"]["round_id"], second["round"]["round_id"])
         # Verify one wager debit and one payout credit exist after replay.
         self.assertEqual(1, len([event for event in self.ledger.events if event["transaction_type"] == "ANDAR_BAHAR_WAGER_DEBIT"]))
-        # Verify the winning payout returns stake plus even-money winnings.
+        # Verify the winning payout credits the complete 1.90x Andar returned-token price.
         self.assertEqual(1, len([event for event in self.ledger.events if event["transaction_type"] == "ANDAR_BAHAR_PAYOUT_CREDIT"]))
         # Verify the final fake balance reflects one debit and the 1.90x Andar return.
         self.assertEqual(106.3, self.ledger.balances["session-player"])

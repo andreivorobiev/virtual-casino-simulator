@@ -64,6 +64,12 @@ class AndarBaharCompatibilityTests(unittest.TestCase):
         self.assertTrue(all("{andar}" in resource["rules.return"] and "{bahar}" in resource["rules.return"] for resource in (en, ru)))
         # Require the additive table with a frozen-scalar fallback for old compatible servers.
         self.assertIn("rules.return_multipliers || { andar: rules.return_multiplier || 2, bahar: rules.return_multiplier || 2 }", source)
+        # Require exact two-decimal formatting for the authoritative Andar player-facing price.
+        self.assertIn("const andarPrice = Number(multipliers.andar).toFixed(2);", source)
+        # Require exact two-decimal formatting for the authoritative Bahar player-facing price.
+        self.assertIn("const baharPrice = Number(multipliers.bahar).toFixed(2);", source)
+        # Require i18n interpolation to consume only the preformatted exact display tokens.
+        self.assertIn("text('rules.return', { andar: andarPrice, bahar: baharPrice })", source)
         # Reject the obsolete one-price interpolation path.
         self.assertNotIn("text('rules.return', { multiplier })", source)
         # Reserve a bounded mobile feedback column and bottom clearance within the game-owned stylesheet.

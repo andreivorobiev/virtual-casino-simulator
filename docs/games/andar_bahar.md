@@ -28,6 +28,6 @@ The frontend module renders the joker card, the transparent alternating sequence
 
 ## Catalog Integration
 
-The descriptor at `modules/andar_bahar.json` owns module version `1.0.0`, route `/games/andar_bahar`, sort order `250`, paired EN/RU resources, the additive contract, and `tests.game_drivers.andar_bahar:play`. Permanent requirements `AB-001` through `AB-005` map rules, session/restart behavior, ledger safety, browser localization, and catalog-wide evidence.
+The descriptor at `modules/andar_bahar.json` owns module version `1.1.1`, route `/games/andar_bahar`, sort order `250`, paired EN/RU resources, the additive contract, and `tests.game_drivers.andar_bahar:play`. Permanent requirements `AB-001` through `AB-005` map rules, session/restart behavior, ledger safety, browser localization, and catalog-wide evidence.
 
 The visual surface `andar_bahar` covers `ready`, `settled`, `reduced_motion`, and `route_restored` in both locales at desktop primary, desktop compact, tablet, and mobile viewports. Shared registration remains catalog-driven; no bespoke router, shell, or long-suite allowlist is required.

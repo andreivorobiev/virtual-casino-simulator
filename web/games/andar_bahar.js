@@ -217,8 +217,12 @@ function historyHtml() {
 function dataHtml() {
   // Prefer the additive side table while retaining the frozen scalar as an old-server fallback.
   const multipliers = rules.return_multipliers || { andar: rules.return_multiplier || 2, bahar: rules.return_multiplier || 2 };
+  // Format the authoritative Andar price as the owner-approved two-decimal player-facing token.
+  const andarPrice = Number(multipliers.andar).toFixed(2);
+  // Format the authoritative Bahar price identically so integer JSON values cannot shorten visible copy.
+  const baharPrice = Number(multipliers.bahar).toFixed(2);
   // Return distinct rule and history regions in one supporting rail.
-  return '<aside class="andar-panel andar-data" aria-label="' + safe(text('data.title')) + '"><section><h2>' + safe(text('rules.title')) + '</h2><ul class="andar-rules"><li>' + safe(text('rules.matchCard')) + '</li><li>' + safe(text('rules.alternating')) + '</li><li>' + safe(text('rules.rankOnly')) + '</li><li>' + safe(text('rules.return', { andar: multipliers.andar, bahar: multipliers.bahar })) + '</li></ul></section><section><h2>' + safe(text('history.title')) + '</h2>' + historyHtml() + '</section></aside>';
+  return '<aside class="andar-panel andar-data" aria-label="' + safe(text('data.title')) + '"><section><h2>' + safe(text('rules.title')) + '</h2><ul class="andar-rules"><li>' + safe(text('rules.matchCard')) + '</li><li>' + safe(text('rules.alternating')) + '</li><li>' + safe(text('rules.rankOnly')) + '</li><li>' + safe(text('rules.return', { andar: andarPrice, bahar: baharPrice })) + '</li></ul></section><section><h2>' + safe(text('history.title')) + '</h2>' + historyHtml() + '</section></aside>';
 }
 
 // Return scoped responsive styles without modifying the shared application stylesheet.
