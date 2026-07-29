@@ -1,6 +1,6 @@
 # Virtual Casino Simulator
 
-Packaged application release: `0.9.5.34`
+Packaged application release: `0.9.5.35`
 
 Historical source baseline: `9.1.0`
 
@@ -8,7 +8,7 @@ Local play-token browser casino simulator with a descriptor-driven catalog of is
 
 ## Current repository status
 
-This repository has advanced beyond the original v9.1.1 bootstrap snapshot. Packaged release v0.9.5.34 carries the accepted Keno economics correction for issue #472: one server-authoritative paytable governs all 1–20-spot tickets, every positive award is at least stake-neutral, rows and jackpots increase strictly, and realized frozen-v1 settlement remains house-side across the accepted 0.01–1,000,000 play-token domain. It retains authoritative Slots economics, exact visible-rank Hi-Lo and independent Andar/Bahar pricing, fail-closed affected-game Browser qualification, the route-free settlement foundation, governed exact 138-browser full-catalog qualification, all-game desktop control-reachability, governed Acey-Deucey spread pricing, deterministic Browser shard state, runtime-inert rule coercion, private-invite security, MySQL schema 2, provider-disablement, public-exposure gates, and exact v0.9.5.33 application-only rollback. The frozen v1 Keno routes, envelopes, amount range, and float-plus-hundredth payout law remain compatible. Independently versioned modules continue to record compatible source changes. Current module revisions and requirement status are recorded in the canonical manifests and generated requirements document.
+This repository has advanced beyond the original v9.1.1 bootstrap snapshot. Packaged release v0.9.5.35 carries the accepted listener-free request-latency baseline for issue #323: direct production-WSGI handling is measured against isolated external JSON and disposable loopback MySQL providers for five fixed route families at concurrency 1, 2, 4, and 8, with aggregate-only evidence and no hardware-dependent pass/fail threshold. It retains authoritative house-side Keno and Slots economics, exact visible-rank Hi-Lo and independent Andar/Bahar pricing, fail-closed affected-game Browser qualification, the route-free settlement foundation, governed exact 138-browser full-catalog qualification, all-game desktop control-reachability, governed Acey-Deucey spread pricing, deterministic Browser shard state, runtime-inert rule coercion, private-invite security, MySQL schema 2, provider-disablement, public-exposure gates, and exact v0.9.5.34 application-only rollback. The baseline opens no listener and changes no runtime route, API contract, provider implementation, pool default, game, or production behavior. Independently versioned modules continue to record compatible source changes. Current module revisions and requirement status are recorded in the canonical manifests and generated requirements document.
 
 ## Version sources
 
