@@ -624,8 +624,10 @@ def validate_evidence(evidence: dict) -> None:
     if evidence.get("schema") != EVIDENCE_SCHEMA:
         # Reject unknown evidence versions.
         raise RequestLatencyBenchmarkError("evidence schema is invalid")
-    # Require exact hexadecimal source provenance.
-    if not SOURCE_COMMIT_PATTERN.fullmatch(str(evidence.get("source_commit") or "")):
+    # Read source provenance without coercing another JSON scalar into text.
+    source_commit = evidence.get("source_commit")
+    # Require an exact hexadecimal string so numeric JSON values cannot impersonate provenance.
+    if not isinstance(source_commit, str) or not SOURCE_COMMIT_PATTERN.fullmatch(source_commit):
         # Reject a branch name or other dynamic identifier.
         raise RequestLatencyBenchmarkError("evidence source commit is invalid")
     # Restrict provider identity to the two approved low-cardinality values.
@@ -646,10 +648,18 @@ def validate_evidence(evidence: dict) -> None:
         if not isinstance(row, dict) or set(row) != ROW_KEYS:
             # Reject extra identifiers, paths, samples, or diagnostics.
             raise RequestLatencyBenchmarkError("evidence row fields are invalid")
-        # Normalize the fixed route/concurrency identity.
-        identity = (row.get("route_family"), row.get("concurrency"))
-        # Reject unknown or duplicate grid entries.
-        if identity[0] not in ROUTE_FAMILIES or identity[1] not in CONCURRENCY_LEVELS or identity in seen:
+        # Read the fixed route identity without coercion.
+        route_family = row.get("route_family")
+        # Read concurrency without accepting JSON booleans or floats as integers.
+        concurrency = row.get("concurrency")
+        # Reject unknown routes or non-integer concurrency before constructing a set key.
+        if route_family not in ROUTE_FAMILIES or isinstance(concurrency, bool) or not isinstance(concurrency, int) or concurrency not in CONCURRENCY_LEVELS:
+            # Fail closed on ambiguous aggregate identity.
+            raise RequestLatencyBenchmarkError("evidence row identity is invalid")
+        # Construct the now-type-safe route/concurrency identity.
+        identity = (route_family, concurrency)
+        # Reject a duplicate grid entry.
+        if identity in seen:
             # Fail closed on ambiguous aggregate identity.
             raise RequestLatencyBenchmarkError("evidence row identity is invalid")
         # Record this unique grid entry.
@@ -666,8 +676,10 @@ def validate_evidence(evidence: dict) -> None:
         if float(row["p95_ms"]) < float(row["p50_ms"]):
             # Reject impossible percentile ordering.
             raise RequestLatencyBenchmarkError("evidence percentile order is invalid")
-        # Require zero integer errors in accepted baseline evidence.
-        if row.get("errors") != 0 or isinstance(row.get("errors"), bool):
+        # Read the error count without coercing another JSON numeric type.
+        errors = row.get("errors")
+        # Require a true integer zero in accepted baseline evidence.
+        if isinstance(errors, bool) or not isinstance(errors, int) or errors != 0:
             # Refuse successful evidence with hidden failures.
             raise RequestLatencyBenchmarkError("evidence errors are nonzero")
         # Require a positive integer byte total.

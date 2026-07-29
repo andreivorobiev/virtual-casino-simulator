@@ -838,6 +838,34 @@ class RequestLatencyBenchmarkTests(unittest.TestCase):
         with self.assertRaises(benchmark.RequestLatencyBenchmarkError):
             # Validate the incomplete packet.
             benchmark.validate_evidence(missing)
+        # Replace string provenance with a numeric JSON scalar that has forty digits.
+        numeric_source = self.evidence()
+        # Preserve the visual hexadecimal width while changing the recursive type.
+        numeric_source["source_commit"] = int("1" * 40)
+        # Require provenance validation to reject the non-string scalar.
+        with self.assertRaises(benchmark.RequestLatencyBenchmarkError):
+            # Validate the hostile provenance type.
+            benchmark.validate_evidence(numeric_source)
+        # Exercise JSON scalar types that compare equal to integer concurrency one.
+        for ambiguous_concurrency in (True, 1.0):
+            # Build a fresh valid grid before the hostile type replacement.
+            hostile_concurrency = self.evidence()
+            # Replace only one governed integer with the ambiguous scalar.
+            hostile_concurrency["rows"][0]["concurrency"] = ambiguous_concurrency
+            # Require exact integer-domain validation before grid equality.
+            with self.assertRaises(benchmark.RequestLatencyBenchmarkError):
+                # Validate the hostile concurrency type.
+                benchmark.validate_evidence(hostile_concurrency)
+        # Replace the integer error count with equal-valued JSON scalar variants.
+        for ambiguous_errors in (0.0, False):
+            # Build a fresh valid packet before the hostile type replacement.
+            hostile_errors = self.evidence()
+            # Preserve numeric equality while violating the governed recursive type.
+            hostile_errors["rows"][0]["errors"] = ambiguous_errors
+            # Require a true integer zero rather than Python equality coercion.
+            with self.assertRaises(benchmark.RequestLatencyBenchmarkError):
+                # Validate the hostile error-count type.
+                benchmark.validate_evidence(hostile_errors)
         # Collect every recursive evidence key without rejecting the governed schema name.
         recursive_keys = set(benchmark.EVIDENCE_KEYS) | set(benchmark.ROW_KEYS)
         # Require no identity, auth, request, wager, outcome, path, or exception field.
