@@ -8177,7 +8177,7 @@ def run_browser_tests(heartbeat_seconds=45.0,stall_seconds=180.0,timeout_seconds
                                 # Require the restored live amount and enabled repeat action to match the settled authoritative ticket.
                                 assert float(page.get_by_test_id('keno-amount').input_value())==1.0 and not page.locator('[data-action="repeat"]').is_disabled()
                                 # Require the exact numeric jackpot magnitude to remain visible rather than collapsing to a generic label.
-                                active_paytable_digits=re.sub(r'\\D','',page.get_by_test_id('keno-paytable-active').inner_text())
+                                active_paytable_digits=re.sub(r'\D','',page.get_by_test_id('keno-paytable-active').inner_text())
                                 # Match the full authoritative multiplier despite locale-owned separators.
                                 assert str(keno_engine.PAYTABLE[20][20]) in active_paytable_digits,active_paytable_digits
                                 # Require the ideal-versus-realized fake-token disclosure on the result surface.

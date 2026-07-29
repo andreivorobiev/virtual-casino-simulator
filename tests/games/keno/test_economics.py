@@ -508,5 +508,7 @@ class KenoEconomicsTests(TestCase):
         self.assertIn("keno_engine.PAYTABLE[1][1]", browser_source)
         # Require a complete 64-cell evidence counter and exact numeric jackpot assertion.
         self.assertIn("keno_matrix_expected_cells=64", browser_source)
+        # Require the Browser oracle to strip localized non-digits instead of matching a literal backslash-D token.
+        self.assertIn(r"active_paytable_digits=re.sub(r'\D',''", browser_source)
         # Require the full-catalog jackpot value to be sourced from the server table.
         self.assertIn("keno_engine.PAYTABLE[20][20]", browser_source)
