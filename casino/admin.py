@@ -12,7 +12,7 @@ from casino.config import DATA_DIR, GAME_DATA_DIR, LOG_DIR, DOCS_DIR, APP_VERSIO
 # Import required dependency so this module can use its public functions or constants.
 from casino.module_versions import list_module_revisions
 # Import required dependency so this module can use its public functions or constants.
-from casino.core import auth, players, ledger, history, logger, autoplay, feedback, settings
+from casino.core import auth, players, ledger, history, logger, autoplay, feedback, settings, session_settings
 # Import the de-identified guest-trial telemetry for the Admin Guest Trials section. (issue #317)
 from casino.core import guest_analytics
 # Import the invitation lifecycle for the Admin invitation-by-email section. (issue #332)
@@ -1034,6 +1034,24 @@ def register(router):
     def save_audio(body, query):
         # Return the computed value to the caller.
         return {"settings": settings.save_audio_settings(body)}
+
+    # Expose the global registered-account session-timeout policy to the owner console. (SESSION-008)
+    @router.get(r"/api/v2/admin/session-settings")
+    # Return the current validated session-timeout policy for owner review.
+    def get_session_settings(body, query, context=None):
+        # Require the platform owner because the policy governs every account's authenticated lifetime.
+        _current_platform_owner((context or {}).get("user"))
+        # Return the validated policy document under the standard settings envelope.
+        return {"settings": session_settings.session_settings()}
+
+    # Persist an owner-authored change to the global session-timeout policy. (SESSION-008)
+    @router.post(r"/api/v2/admin/session-settings")
+    # Accept and clamp an owner update to the session-timeout policy.
+    def save_session_settings_route(body, query, context=None):
+        # Require the platform owner before mutating the security-relevant policy.
+        _current_platform_owner((context or {}).get("user"))
+        # Persist the clamped policy and echo the stored values.
+        return {"settings": session_settings.save_session_settings(body or {})}
 
     # Attach this decorator so the following function is registered with the framework.
     @router.get(r"/api/v1/admin/autoplay")
