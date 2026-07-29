@@ -865,6 +865,7 @@
       "states": [
         "ready",
         "choose_higher_or_lower",
+        "rank_priced_choice",
         "correct_guess",
         "incorrect_guess",
         "tie_refund",

@@ -13,7 +13,7 @@ One wagered round has two steps:
 1. Deal one visible opening card and debit the wager.
 2. Choose whether the next card will be `higher` or `lower`.
 
-Cards come from one standard 52-card deck without replacement through the merged #96 card primitive. Rank comparison ignores suits and treats ace as high. A correct prediction returns twice the wager (stake plus an even-money win), an equal rank returns the original wager as a tie refund, and an incorrect prediction returns nothing.
+Cards come from one standard 52-card deck without replacement through the merged #96 card primitive. Rank comparison ignores suits and treats ace as high. A correct prediction uses the server-owned visible-rank paytable, from `0.96x` on a 2 or ace to `1.93x` on an 8. An equal rank returns the original wager as a tie refund, and an incorrect prediction returns nothing. The deprecated frozen-v1 scalar remains `2`, while `rules.correct_paytable` is the authoritative settlement source for current clients.
 
 The private reveal card is persisted before the wager debit, excluded from API responses, and never written to wager ledger details. The browser therefore cannot inspect the result before choosing.
 

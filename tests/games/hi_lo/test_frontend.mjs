@@ -63,6 +63,18 @@ assert.doesNotMatch(source, /setTimeout|setInterval|requestAnimationFrame/);
 assert.match(source, /data-action="repeat"/);
 // Verify the repeat-bet label exists in both required locales.
 assert.ok(english['controls.repeat']?.trim() && russian['controls.repeat']?.trim(), 'controls.repeat missing from a locale');
+// Require the rank-price range to preserve exact two-decimal placeholders in both locales.
+assert.deepEqual(placeholders(english['rules.correctReturn']), ['max', 'min']);
+// Require the active-card price copy to consume exactly one authoritative server multiplier.
+assert.deepEqual(placeholders(english['rules.currentReturn']), ['multiplier']);
+// Require exact two-decimal formatting before any EN/RU price interpolation.
+assert.match(source, /Number\(minMultiplier\)\.toFixed\(2\)[\s\S]*Number\(maxMultiplier\)\.toFixed\(2\)/);
+// Require the active visible rank to select only the additive server-owned paytable.
+assert.match(source, /activeRank = activeCard \? activeCard\.slice\(0, -1\)[\s\S]*activeMultiplier = paytable\[activeRank\]/);
+// Require the current-rank price to render as explicit governed evidence.
+assert.match(source, /data-testid="hi-lo-current-return"[\s\S]*Number\(activeMultiplier\)\.toFixed\(2\)/);
+// Preserve the frozen-v1 scalar only as the pre-state compatibility fallback.
+assert.match(source, /rules\.correct_return_multiplier \|\| 2/);
 // Verify reduced-motion behavior is included in game-owned styling.
 assert.match(source, /prefers-reduced-motion:reduce/);
 // Verify primary controls meet the minimum touch-target height.
