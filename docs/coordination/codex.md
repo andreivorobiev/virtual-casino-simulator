@@ -1,35 +1,33 @@
 # Codex status
 
-Written by Codex only. Claude reads this; do not edit it. Last updated 2026-07-29T19:15:00Z.
+Written by Codex only. Claude reads this; do not edit it. Last updated 2026-07-29T20:17:47Z.
 
 ## Current branch / active Codex work
 
-- PR #517 merged normally at exact protected main `3690397d` after exact-current ancestry, frozen-v1 compatibility, exact 230-class economics, production-rounding proof, all-nine-workflow, Browser artifact, sixty-four-cell visual matrix, and zero-review audit.
-- `codex/release-v0.9.5.34` serializes the accepted #472 Keno economics correction as one unique immutable patch release.
-- Deployed v0.9.5.33 remains live until v0.9.5.34 passes protected publication and trusted owner/static terminal-green deployment.
-- No later PR may merge during this release/deployment hold.
+- Immutable v0.9.5.34 is terminal green at exact protected and deployed main `3b6b82f3`.
+- `codex/323-request-latency-baseline` owns the active bounded issue #323 listener-free JSON/MySQL request-latency baseline from exact v0.9.5.34.
+- The branch is implementation-only and has no ready, merge, release, deployment, provider, ingress, or settings authority.
 
 ## Live queue snapshot
 
-- #517 owns only the accepted Keno paytable, existing frozen-v1 settlement, browser, localization, and governed evidence changes.
-- Original contributor PR #473 remains untouched; its accepted contributor ancestry and credit were already preserved through merged PR #515.
-- Issue #472 remains open at P2 stack-rank 004 until this release is terminal green; issue #471 remains open at P1 stack-rank 003 for the separately governed #430 Phase 0c remainder.
-- #450 and every other unmerged proposal remain excluded.
+- #435 rank 001 remains externally blocked, #450 remains held/excluded, and #471 rank 003 remains blocked on #430 Phase 0c.
+- #323 is P1 stack-rank 005 and is the highest actionable owner-released lane.
+- The exact owned source surface is `tests/request_latency_benchmark.py`, `tests/unit/request_latency_benchmark_tests.py`, one optional callback seam in `tests/mysql_migration_live.py`, and minimal explicit selection/registration in `tests/run_tests.py`.
 
 ## Requirement / version claims
 
-- The accepted #517 change owns KENO-027 and TEST-147 after exact live collision readback; no permanent identifier is deleted or reused by the release.
-- v0.9.5.34 owns packaged application `0.9.5.34`, application `9.53.21`, tests/docs `1.64.33`, and contracts `1.49.18`.
-- Keno `9.3.1`, core `9.28.0`, tooling `1.21.12`, and every unrelated module are preserved from the accepted merge.
+- TEST-148 is allocated only to the #323 request-latency baseline after live main/open-head collision readback.
+- The proposal allocates tests/docs `1.64.34` from current `1.64.33`.
+- Application `9.53.21`, core `9.28.0`, storage, contracts `1.49.18`, tooling `1.21.12`, every game module, and packaged application `0.9.5.34` remain unchanged.
 
 ## File claims / collision notes
 
-- Release-owned changes are limited to packaged version surfaces, compatibility and rollback provenance, PWA/cache identity, release tests, release docs, generated governance, and coordination records.
-- #450, #471 Phase 0c, Phase 0b, unrelated routes and games, provider implementations, production workflow, DNS, ingress, secrets, signup, OAuth, mail, and invitation files are excluded.
-- Any later proposal overlapping shared docs or manifests must reconcile and recalculate versions from terminal-green v0.9.5.34.
+- The baseline opens no listener and changes no application route, provider implementation, pool default, runtime, contract, game, deployment, or production surface.
+- MySQL runs only inside the existing disposable loopback migration lifecycle after grants and before its unchanged cleanup; JSON uses external temporary state.
+- #450, Claude worktrees, provider/public/DNS/billing/signup/OAuth/mail/invitation/ingress, Browser/Chromium, and every unrelated issue remain excluded.
 
 ## Decisions / handbacks
 
-- Keno preserves the frozen-v1 one-cent minimum, amount ceiling, routes, envelopes, and float-plus-hundredth settlement law while correcting every 1–20-spot paytable row.
-- Pick one uses the owner-approved 3.49x exception; exact rational and production-expression evidence keeps every accepted pick-count and amount house-side.
-- Exact immutable v0.9.5.33 remains the application-only rollback predecessor; MySQL schema stays 2 and database rollback is prohibited.
+- Durable issue claim: `https://github.com/andreivorobiev/virtual-casino-simulator/issues/323#issuecomment-5122886053`.
+- Evidence is aggregate-only and atomic outside the checkout; no latency threshold is introduced.
+- Ordinary `--api` runs only TEST-148 unit/policy proof. Provider measurements require the explicit request-latency selector and output path.

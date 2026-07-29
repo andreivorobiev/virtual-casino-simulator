@@ -12593,6 +12593,27 @@
       "introduced_in": "issue-472-keno-paytable-controller",
       "changed_in": "issue-472-keno-paytable-controller",
       "notes": "TEST-147 was reserved on issue #472 after live collision readback: TEST-144 remains historical combined contributor ancestry, while open controller lanes own TEST-145 and TEST-146. Browser and Long remain governed hosted evidence; no local Playwright, Chromium, or Monte Carlo substitutes the exact proof."
+    },
+    {
+      "id": "TEST-148",
+      "module": "Tests",
+      "description": "An explicit listener-free request-latency baseline measures direct WSGI handling for authenticated current-user, Slots state, Roulette state, aggregate Casino state, and idempotent Boule actions against isolated external JSON and callback-owned disposable loopback MySQL providers. Every route family runs fixed warm-up work followed by exactly sixty-four measured operations at concurrency one, two, four, and eight through a rolling at-most-N future window, default MySQL pool settings, untimed authentication and Boule first/replay/conflict controls, zero accepted errors, and cleanup. Evidence is an atomic caller-external aggregate containing only schema, exact source commit, provider, route family, concurrency, p50 and p95 milliseconds, throughput, error count, and response-byte total, with no numeric performance threshold or network, edge, Gunicorn, multi-process, identity, request, outcome, sample, timestamp, path, host, database, or exception detail.",
+      "status": "PASS",
+      "api_tests": [
+        "REQUEST-LATENCY-UNIT-001",
+        "REQUEST-LATENCY-JSON-001",
+        "REQUEST-LATENCY-MYSQL-001"
+      ],
+      "browser_tests": [],
+      "implementation_files": [
+        "tests/request_latency_benchmark.py",
+        "tests/unit/request_latency_benchmark_tests.py",
+        "tests/mysql_migration_live.py",
+        "tests/run_tests.py"
+      ],
+      "introduced_in": "issue-323-request-latency-baseline",
+      "changed_in": "issue-323-request-latency-baseline",
+      "notes": "TEST-148 was reserved durably on issue #323 after exact v0.9.5.34 ownership and collision readback. The benchmark imports casino.wsgi only in a fresh child after provider and authentication environment readiness, opens no listener, uses no provider administrator or private migration helper, and invokes MySQL only through a no-argument callback after the existing disposable migration and DML-grant boundary and before its existing cleanup. The baseline records measurements only and defines no pass/fail latency threshold."
     }
   ]
 }
