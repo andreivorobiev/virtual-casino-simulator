@@ -24,15 +24,16 @@ class ConcurrentBrowser138Tests(unittest.TestCase):
     def passing_result(self, assignment):
         # Return no user, credential, token, cookie, path, process, or listener identity.
         return {
-            "game_id": assignment["game_id"],
-            "barrier_ready": True,
-            "login_ok": True,
-            "gameplay_ok": True,
-            "context_closed": True,
-            "login_seconds": 0.1,
-            "play_seconds": 0.2,
+            "game_id": assignment["game_id"],  # Preserve the public assigned game.
+            "barrier_ready": True,  # Model exact synchronized readiness.
+            "login_ok": True,  # Model successful rendered authentication.
+            "gameplay_ok": True,  # Model one complete visible action.
+            "ledger_expectation": "wager_required",  # Require one assigned-game player-scoped row.
+            "context_closed": True,  # Model terminal browser cleanup.
+            "login_seconds": 0.1,  # Preserve one bounded successful login sample.
+            "play_seconds": 0.2,  # Preserve one bounded successful gameplay sample.
             "completed_phases": list(concurrent_browser_138.FORMAL_PHASES),  # Model complete fixed-phase evidence.
-            "browser_diagnostics": {"console_errors": {}, "page_errors": {}, "http_failures": {}},
+            "browser_diagnostics": {"console_errors": {}, "page_errors": {}, "http_failures": {}},  # Model clean grouped browser diagnostics.
         }
 
     # Prove exactly 138 users give every current registered game three deterministic assignments.
@@ -171,6 +172,123 @@ class ConcurrentBrowser138Tests(unittest.TestCase):
         # Run the listener-free wrapper proof.
         asyncio.run(scenario())
 
+    # Prove the formal operation deadline is task-local, absolute, and absent from ordinary profiles.
+    def test_formal_operation_deadline_preserves_ordinary_timeouts(self):
+        # Freeze monotonic time so the remaining formal window is deterministic.
+        with mock.patch.object(concurrent_browser_138.ui_50000.time, "perf_counter", return_value=100.0):
+            # Install one task-local ninety-second absolute deadline.
+            token = concurrent_browser_138.ui_50000.FORMAL_OPERATION_DEADLINE.set(190.0)
+            # Start protected context restoration.
+            try:
+                # Require the ordinary fifteen-second input to expand only to the remaining formal absolute window.
+                self.assertEqual(concurrent_browser_138.ui_50000.operation_timeout_ms(15_000), 90_000)
+            # Always restore the ordinary browser context.
+            finally:
+                # Remove only the test-owned deadline.
+                concurrent_browser_138.ui_50000.FORMAL_OPERATION_DEADLINE.reset(token)
+        # Require ordinary profiles to retain the exact caller-owned timeout after restoration.
+        self.assertEqual(concurrent_browser_138.ui_50000.operation_timeout_ms(15_000), 15_000)
+
+    # Prove formal gameplay emits fixed navigation phases and returns one action-aware ledger expectation.
+    def test_formal_gameplay_uses_one_deadline_and_fixed_navigation_phases(self):
+        # Exercise the production orchestration without a listener or browser.
+        async def scenario():
+            # Preserve every fixed phase transition in caller order.
+            events = []
+
+            # Record only the fixed public phase and status.
+            def observe_phase(name, status):
+                # Append one deterministic phase transition.
+                events.append((name, status))
+
+            # Model the shared navigation helper and its fixed subphase callbacks.
+            async def navigate(_page, _game_id, _activated_counts, _ordinal, phase_observer=None):
+                # Require the governed caller to supply the fixed observer.
+                self.assertIs(phase_observer, observe_phase)
+                # Emit each public subphase exactly once.
+                for phase in ("navigation_return_lobby", "navigation_lobby_ready", "navigation_route_open", "navigation_game_ready"):
+                    # Record one subphase start.
+                    phase_observer(phase, "started")
+                    # Record one subphase completion.
+                    phase_observer(phase, "completed")
+
+            # Return one deterministic wagering action classification.
+            async def play(_page, _game_id, _ordinal, _seen_counts, _activated_counts):
+                # Require an active formal remaining-time override inside the driver.
+                self.assertGreater(concurrent_browser_138.ui_50000.operation_timeout_ms(15_000), 15_000)
+                # Model a rendered action that commits a wager.
+                return "wager_required"
+
+            # Replace only browser primitives while retaining the production deadline and phase controller.
+            with (
+                mock.patch.object(concurrent_browser_138.ui_50000, "navigate_to_game", new=navigate),
+                mock.patch.object(concurrent_browser_138, "play_catalog_gap_ui", new=mock.AsyncMock(return_value=False)),
+                mock.patch.object(concurrent_browser_138.ui_50000, "play_game_ui", new=play),
+            ):
+                # Run one non-gap assignment beneath the formal wrapper.
+                expectation = await concurrent_browser_138.run_formal_gameplay(
+                    object(),  # Use one inert browser-free page seam.
+                    {"game_id": "baccarat", "user_index": 0},  # Select one inherited wagering driver.
+                    Counter(),  # Collect no persistent rendered-control state.
+                    Counter(),  # Collect no persistent activation state.
+                    observe_phase,  # Record only fixed phase transitions.
+                )
+            # Require the action-aware evidence to remain fail-closed for a wager.
+            self.assertEqual(expectation, "wager_required")
+            # Require top-level navigation/action phases plus all four fixed navigation subphases.
+            self.assertEqual(
+                events,
+                [
+                    ("gameplay_navigation", "started"),  # Start aggregate navigation.
+                    ("navigation_return_lobby", "started"),  # Start persistent Lobby activation.
+                    ("navigation_return_lobby", "completed"),  # Complete persistent Lobby activation.
+                    ("navigation_lobby_ready", "started"),  # Start Lobby render observation.
+                    ("navigation_lobby_ready", "completed"),  # Complete Lobby render observation.
+                    ("navigation_route_open", "started"),  # Start assigned route activation.
+                    ("navigation_route_open", "completed"),  # Complete assigned route activation.
+                    ("navigation_game_ready", "started"),  # Start module-ready observation.
+                    ("navigation_game_ready", "completed"),  # Complete module-ready observation.
+                    ("gameplay_navigation", "completed"),  # Complete aggregate navigation.
+                    ("gameplay_action", "started"),  # Start the assigned visible action.
+                    ("gameplay_action", "completed"),  # Complete the assigned visible action.
+                ],
+            )
+            # Require task-local deadline cleanup after the formal operation returns.
+            self.assertIsNone(concurrent_browser_138.ui_50000.FORMAL_OPERATION_DEADLINE.get())
+
+        # Run the browser-free formal orchestration proof.
+        asyncio.run(scenario())
+
+    # Prove one exhausted formal gameplay window fails with a stable public diagnostic.
+    def test_formal_gameplay_deadline_fails_closed(self):
+        # Exercise the outer absolute bound without launching Chromium.
+        async def scenario():
+            # Model navigation that cannot complete inside the patched absolute window.
+            async def stalled_navigation(*_args, **_kwargs):
+                # Sleep beyond the test-owned one-millisecond deadline.
+                await asyncio.sleep(0.02)
+
+            # Patch only the bounded policy and stalled navigation primitive.
+            with (
+                mock.patch.object(concurrent_browser_138, "FORMAL_GAMEPLAY_DEADLINE_MS", 1),
+                mock.patch.object(concurrent_browser_138.ui_50000, "navigate_to_game", new=stalled_navigation),
+            ):
+                # Require one fixed fail-closed diagnostic instead of a framework timeout.
+                with self.assertRaisesRegex(AssertionError, "formal gameplay absolute deadline exceeded"):
+                    # Run one browser-free assignment through the production deadline wrapper.
+                    await concurrent_browser_138.run_formal_gameplay(
+                        object(),  # Use one inert browser-free page seam.
+                        {"game_id": "baccarat", "user_index": 0},  # Select one inherited driver.
+                        Counter(),  # Collect no rendered-control state.
+                        Counter(),  # Collect no pointer-activation state.
+                        lambda _name, _status: None,  # Accept only fixed phase callbacks.
+                    )
+            # Require task-local deadline cleanup after cancellation.
+            self.assertIsNone(concurrent_browser_138.ui_50000.FORMAL_OPERATION_DEADLINE.get())
+
+        # Run the bounded cancellation proof.
+        asyncio.run(scenario())
+
     # Prove Pai Gow waits for deterministic initial-deal readiness before pointer activation.
     def test_pai_gow_driver_waits_for_deal_readiness(self):
         # Exercise the production driver with browser-free awaitable spies.
@@ -223,6 +341,10 @@ class ConcurrentBrowser138Tests(unittest.TestCase):
     def test_isolation_uses_player_scoped_ledger_routes(self):
         # Build the exact formal synthetic population without real account identifiers.
         users = [{"user_id": f"user-{index:03d}", "player_id": f"player-{index:03d}"} for index in range(concurrent_browser_138.USER_COUNT)]  # Build one deterministic public identity pair per formal user.
+        # Build one successful wagering result for each deterministic formal assignment.
+        results = [self.passing_result(assignment) for assignment in concurrent_browser_138.build_assignment_plan()]
+        # Map each synthetic player to its assigned public game for exact evidence attribution.
+        game_by_player = {user["player_id"]: result["game_id"] for user, result in zip(users, results)}
 
         # Model only the two bounded evidence routes used after browser cleanup.
         class FakeClient:
@@ -253,7 +375,7 @@ class ConcurrentBrowser138Tests(unittest.TestCase):
                             {
                                 "ledger_id": f"ledger-{player_id}",  # Preserve one unique immutable row identity.
                                 "transaction_type": "BET",  # Mark the row as gameplay rather than setup grant.
-                                "game": "baccarat",  # Preserve one public game identity.
+                                "game": game_by_player[player_id],  # Preserve the exact assigned public game identity.
                                 "details": {"ledger_action_key": f"action-{player_id}"},  # Preserve one unique action identity.
                             }
                         ]
@@ -263,17 +385,70 @@ class ConcurrentBrowser138Tests(unittest.TestCase):
 
         # Collect the production aggregate through the browser-free fake client.
         client = FakeClient()
-        evidence = concurrent_browser_138.collect_isolation_evidence(client, users)
+        evidence = concurrent_browser_138.collect_isolation_evidence(client, users, results)
         # Require one gameplay-ledger row for every synthetic player beyond the global hundred-row cap.
         self.assertEqual(evidence["users_with_gameplay_ledger"], 138)
         # Require no duplicate player, ledger, or action identities.
         self.assertEqual(evidence["duplicate_player_id_count"], 0)
         self.assertEqual(evidence["duplicate_ledger_id_count"], 0)
         self.assertEqual(evidence["duplicate_action_key_count"], 0)
+        # Require exact assigned-game evidence for every wagering action.
+        self.assertEqual(evidence["wager_evidence_required"], 138)
+        self.assertEqual(evidence["wager_evidence_satisfied"], 138)
+        # Require no action to be silently treated as non-wagering.
+        self.assertEqual(evidence["non_wager_actions"], 0)
         # Reject the global Admin ledger route that filtered only after its hundred-row cap.
         self.assertFalse(any(path.startswith("/api/v1/admin/ledger") for path in client.paths))
         # Require exactly one player-scoped bounded ledger request per synthetic account.
         self.assertEqual(sum(path.startswith("/api/v1/players/") and path.endswith("/ledger?limit=100") for path in client.paths), 138)
+
+    # Prove action-aware evidence accepts legitimate no-wager completions while requiring an assigned-game wager row.
+    def test_isolation_distinguishes_non_wager_actions_from_committed_wagers(self):
+        # Build three synthetic users representing Play, Pass, and automatic terminal action paths.
+        users = [{"user_id": f"user-{index}", "player_id": f"player-{index}"} for index in range(3)]
+        # Model one wagering Play and two legitimate no-wager completions.
+        results = [
+            {"game_id": "acey_deucey", "gameplay_ok": True, "ledger_expectation": "wager_required"},  # Model rendered Play.
+            {"game_id": "acey_deucey", "gameplay_ok": True, "ledger_expectation": "non_wager"},  # Model rendered Pass.
+            {"game_id": "acey_deucey", "gameplay_ok": True, "ledger_expectation": "non_wager"},  # Model automatic free-boundary terminal state.
+        ]
+
+        # Return one exact player-scoped assigned-game ledger row only for the wagering action.
+        class FakeClient:
+            # Resolve the two evidence routes without opening storage or a listener.
+            def call(self, path):
+                # Return one matching nonnegative player state.
+                if path.startswith("/api/v2/admin/users/"):
+                    # Derive the synthetic ordinal from the public user segment.
+                    ordinal = int(path.rsplit("/", 2)[1].rsplit("-", 1)[1])
+                    # Preserve exact user-to-player binding.
+                    return {"player_id": f"player-{ordinal}", "token_balance": 100}
+                # Resolve the exact player-scoped ledger route.
+                if path.startswith("/api/v1/players/"):
+                    # Derive the synthetic ordinal from the public player segment.
+                    ordinal = int(path.split("/", 5)[4].rsplit("-", 1)[1])
+                    # Return one assigned-game wager row only for the rendered Play path.
+                    rows = [
+                        {
+                            "ledger_id": "ledger-player-0",  # Preserve one immutable player-scoped row identity.
+                            "transaction_type": "BET",  # Mark the committed wager movement.
+                            "game": "acey_deucey",  # Bind the row to the assigned public game.
+                            "details": {"ledger_action_key": "acey-play-0"},  # Preserve one unique action identity.
+                        }
+                    ] if ordinal == 0 else []
+                    # Return the standard bounded ledger collection.
+                    return {"ledger": rows}
+                # Refuse any global or unexpected evidence route.
+                raise AssertionError(f"unexpected evidence path: {path}")
+
+        # Collect the production action-aware aggregate.
+        evidence = concurrent_browser_138.collect_isolation_evidence(FakeClient(), users, results)
+        # Require the committed wager to have one exact assigned-game player-scoped row.
+        self.assertEqual((evidence["wager_evidence_required"], evidence["wager_evidence_satisfied"]), (1, 1))
+        # Require both legitimate no-wager actions to remain accepted without fabricated ledger movement.
+        self.assertEqual((evidence["non_wager_actions"], evidence["non_wager_actions_with_ledger"]), (2, 0))
+        # Require every successful action to have exactly one recognized expectation.
+        self.assertEqual(evidence["classified_gameplay_actions"], 3)
 
     # Prove every accepted governed-run catalog gap has a bounded visible driver.
     def test_catalog_gap_drivers_cover_all_fifteen_games(self):
@@ -419,17 +594,26 @@ class ConcurrentBrowser138Tests(unittest.TestCase):
             assignments = concurrent_browser_138.build_assignment_plan(games)
             # Build one sanitized passing row per assignment.
             results = [self.passing_result(row) for row in assignments]
+            # Classify two successful Acey-Deucey assignments as rendered no-wager Pass or automatic outcomes.
+            for row in [result for result in results if result["game_id"] == "acey_deucey"][:2]:
+                # Preserve successful gameplay while changing only its actual ledger expectation.
+                row["ledger_expectation"] = "non_wager"
             # Model the exact synchronized barrier terminal state.
             barrier = SimpleNamespace(ready=138, peak_ready=138)
             # Provide complete aggregate-only isolation evidence.
             isolation = {
-                "unique_player_count": 138,
-                "duplicate_player_id_count": 0,
-                "matching_player_count": 138,
-                "nonnegative_balance_count": 138,
-                "users_with_gameplay_ledger": 138,
-                "duplicate_ledger_id_count": 0,
-                "duplicate_action_key_count": 0,
+                "unique_player_count": 138,  # Preserve one unique player per account.
+                "duplicate_player_id_count": 0,  # Model no duplicate player binding.
+                "matching_player_count": 138,  # Preserve exact account-to-player binding.
+                "nonnegative_balance_count": 138,  # Keep every synthetic wallet solvent.
+                "users_with_gameplay_ledger": 136,  # Exclude the two legitimate no-wager completions.
+                "wager_evidence_required": 136,  # Require evidence only for actions that committed wagers.
+                "wager_evidence_satisfied": 136,  # Satisfy every committed wager.
+                "non_wager_actions": 2,  # Model Pass and automatic free-boundary completion.
+                "non_wager_actions_with_ledger": 0,  # Model no unexpected movement.
+                "classified_gameplay_actions": 138,  # Classify the complete formal population.
+                "duplicate_ledger_id_count": 0,  # Preserve unique ledger row identities.
+                "duplicate_action_key_count": 0,  # Preserve exactly-once action identities.
             }
             # Provide a clean fixed-cardinality MySQL snapshot.
             pool = {
@@ -507,6 +691,11 @@ class ConcurrentBrowser138Tests(unittest.TestCase):
                 "matching_player_count": 138,
                 "nonnegative_balance_count": 138,
                 "users_with_gameplay_ledger": 138,
+                "wager_evidence_required": 138,  # Require all modeled actions to produce evidence.
+                "wager_evidence_satisfied": 138,  # Satisfy every modeled wager.
+                "non_wager_actions": 0,  # Model no token-free paths.
+                "non_wager_actions_with_ledger": 0,  # Model no unexpected movement.
+                "classified_gameplay_actions": 138,  # Classify the complete formal population.
                 "duplicate_ledger_id_count": 1,
                 "duplicate_action_key_count": 0,
             }
@@ -549,6 +738,91 @@ class ConcurrentBrowser138Tests(unittest.TestCase):
         self.assertFalse(report["gates"]["browser_diagnostics"])
         # Require duplicate settlement evidence to keep isolation red.
         self.assertFalse(report["gates"]["isolation"])
+
+    # Prove identical enabled-Deal failures remain precisely attributable to public game and fixed phase.
+    def test_deal_state_failures_are_attributed_by_game_and_phase(self):
+        # Build the exact complete current-catalog assignment.
+        assignments = concurrent_browser_138.build_assignment_plan()
+        # Start from one sanitized successful result per user.
+        results = [self.passing_result(assignment) for assignment in assignments]
+        # Select three distinct public games that use the same rendered Deal selector.
+        failed_games = ("dragon_tiger", "red_dog", "hi_lo")
+        # Inject one identical Deal readiness failure into each public game.
+        for game_id in failed_games:
+            # Resolve the first deterministic result for this game.
+            row = next(result for result in results if result["game_id"] == game_id)
+            # Mark the visible action incomplete.
+            row["gameplay_ok"] = False
+            # Remove the successful latency sample.
+            row.pop("play_seconds")
+            # Preserve the identical bounded public selector diagnostic.
+            row["error"] = "enabled control timeout: ['[data-action=\"deal\"]']"
+            # Attribute the failure to the fixed game-action phase.
+            row["failure_phase"] = "gameplay_action"
+            # Remove the terminal action completion from phase evidence.
+            row["completed_phases"] = [phase for phase in row["completed_phases"] if phase != "gameplay_action"]
+        # Model exact barrier and cleanup completion.
+        barrier = SimpleNamespace(ready=138, peak_ready=138)
+        # Model action-aware isolation for the remaining 135 successful wagering actions.
+        isolation = {
+            "unique_player_count": 138,  # Preserve one unique player per account.
+            "duplicate_player_id_count": 0,  # Model no duplicate player bindings.
+            "matching_player_count": 138,  # Preserve exact account-to-player bindings.
+            "nonnegative_balance_count": 138,  # Keep every synthetic wallet solvent.
+            "users_with_gameplay_ledger": 135,  # Model rows for the successful actions only.
+            "wager_evidence_required": 135,  # Require evidence for each successful wager.
+            "wager_evidence_satisfied": 135,  # Satisfy each successful wager.
+            "non_wager_actions": 0,  # Model no token-free action in this failure scenario.
+            "non_wager_actions_with_ledger": 0,  # Model no unexpected no-wager movement.
+            "classified_gameplay_actions": 135,  # Classify all successful actions.
+            "duplicate_ledger_id_count": 0,  # Preserve unique immutable ledger rows.
+            "duplicate_action_key_count": 0,  # Preserve exactly-once action identities.
+        }
+        # Build one clean fixed-cardinality exact-source MySQL preflight.
+        pool_preflight = {
+            "source_commit": "e" * 40,  # Bind the fixture to one exact synthetic source.
+            "measurements": [
+                {"concurrency": concurrency, "p50_ms": 1.0, "p95_ms": 2.0, "throughput_rps": 10.0, "errors": 0}  # Preserve one clean aggregate row.
+                for concurrency in (1, 2, 4, 8)  # Cover every governed preflight level.
+            ],
+            "pool": {
+                "capacity": 2,  # Preserve the configured pool capacity.
+                "in_use": 0,  # Require terminal lease cleanup.
+                "idle": 2,  # Return both physical sessions.
+                "waiting": 0,  # Require terminal waiter cleanup.
+                "physical_created": 2,  # Keep physical creation within capacity.
+                "reused": 50,  # Prove bounded connection reuse.
+                "discarded": 0,  # Model no unhealthy-session discard.
+                "wait_count": 2,  # Preserve fixed aggregate wait evidence.
+                "timeout_count": 0,  # Refuse checkout exhaustion.
+                "rollback_cleanup": 0,  # Model no residual rollback cleanup.
+                "connector_error": 0,  # Refuse connector failures.
+                "wait_buckets_ms": {"1": 1, "5": 1, "25": 0, "100": 0, "500": 0, ">500": 0},  # Preserve fixed wait buckets.
+            },
+        }
+        # Aggregate without retaining user-level failure rows.
+        report = concurrent_browser_138.aggregate_results(
+            assignments,  # Preserve the exact complete assignment.
+            results,  # Aggregate the three deterministic Deal failures.
+            barrier,  # Preserve exact synchronized readiness.
+            {"active_setup": 0, "peak_setup": 12, "active_gameplay": 0, "peak_gameplay": 138},  # Preserve bounded concurrency.
+            isolation,  # Supply action-aware aggregate evidence.
+            {"provider": "json", "available": False},  # Avoid inventing runtime MySQL counters.
+            pool_preflight,  # Supply exact-source Package B evidence.
+            "e" * 40,  # Bind the report to one synthetic source.
+            90,  # Preserve one bounded synthetic elapsed time.
+        )
+        # Require the complete qualification to remain fail-closed.
+        self.assertEqual(report["status"], "FAIL")
+        # Require one exact aggregate row for each affected public game.
+        self.assertEqual(
+            report["failure_attribution"],
+            [
+                {"game_id": "dragon_tiger", "phase": "gameplay_action", "error": "enabled control timeout: ['[data-action=\"deal\"]']", "count": 1},  # Attribute Dragon Tiger.
+                {"game_id": "hi_lo", "phase": "gameplay_action", "error": "enabled control timeout: ['[data-action=\"deal\"]']", "count": 1},  # Attribute Hi-Lo.
+                {"game_id": "red_dog", "phase": "gameplay_action", "error": "enabled control timeout: ['[data-action=\"deal\"]']", "count": 1},  # Attribute Red Dog.
+            ],
+        )
 
     # Prove exact-source fixed-cardinality pool evidence is accepted and foreign evidence is rejected.
     def test_pool_preflight_requires_exact_source_and_fixed_schema(self):

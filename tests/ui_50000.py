@@ -63,6 +63,8 @@ ESSENTIAL_STAGE_CONTRACTS = {
 }
 # Keep each asynchronous shard's control identities scoped to auth, shell, or one game.
 CONTROL_NAMESPACE = ContextVar("ui_50000_control_namespace", default="unscoped")
+# Allow an explicitly governed caller to replace ordinary per-operation timeouts with one task-local absolute deadline.
+FORMAL_OPERATION_DEADLINE = ContextVar("ui_50000_formal_operation_deadline", default=None)
 
 
 # Convert one exception into a bounded single-line local diagnostic.
@@ -71,6 +73,17 @@ def safe_error(exc):
     home = str(Path.home())  # Resolve the current private host profile prefix once.
     message = message.replace(home.replace("\\", "\\\\"), "<user-home>").replace(home, "<user-home>")  # Remove literal and escaped private profile prefixes.
     return (message or exc.__class__.__name__)[:500]  # Bound artifacts while preserving the actionable prefix.
+
+
+# Resolve one ordinary timeout or the remaining task-local formal absolute window.
+def operation_timeout_ms(default_timeout_ms):
+    deadline = FORMAL_OPERATION_DEADLINE.get()  # Read only the current asynchronous task's optional formal deadline.
+    if deadline is None:  # Preserve every ordinary browser profile's established timeout behavior.
+        return int(default_timeout_ms)  # Return the caller-owned ordinary timeout unchanged.
+    remaining_ms = int((float(deadline) - time.perf_counter()) * 1000)  # Convert the absolute monotonic deadline to a remaining Playwright timeout.
+    if remaining_ms < 1:  # Refuse an operation after the formal absolute window has already expired.
+        raise TimeoutError("formal gameplay absolute deadline exceeded")  # Keep the terminal diagnostic fixed and identity-free.
+    return remaining_ms  # Give the current operation only the remaining formal window, never a fresh per-operation budget.
 
 
 # Return one nearest-rank percentile from a numeric sample.
@@ -245,7 +258,7 @@ async def locator_ready(locator):
 async def wait_any_enabled(page, selectors, timeout_ms=ACTION_TIMEOUT_MS):
     expression = """selectors => selectors.some(selector => { const node = document.querySelector(selector); return Boolean(node && !node.disabled && node.getClientRects().length); })"""  # Poll rendered actionability without clicking.
     try:  # Add the bounded selector intent to otherwise generic Playwright timeout evidence.
-        await page.wait_for_function(expression, arg=selectors, timeout=timeout_ms)  # Wait through asynchronous rerenders.
+        await page.wait_for_function(expression, arg=selectors, timeout=operation_timeout_ms(timeout_ms))  # Wait through asynchronous rerenders without resetting a formal absolute deadline.
     except Exception as exc:  # Convert framework-only timeouts into actionable control-state evidence.
         raise AssertionError(f"enabled control timeout: {selectors}") from exc  # Preserve only public selector identities.
     for selector in selectors:  # Preserve caller priority when several actions are ready.
@@ -259,7 +272,7 @@ async def wait_any_enabled(page, selectors, timeout_ms=ACTION_TIMEOUT_MS):
 async def wait_roulette_bet_drawer(page, expected_rows, timeout_ms=ACTION_TIMEOUT_MS):
     expression = """expected => { const clear = document.querySelector('#clear'); const rows = [...document.querySelectorAll('[data-clear]')]; if (!clear || rows.length !== expected) return false; if (expected === 0) return clear.disabled; return !clear.disabled && rows.every(row => !row.disabled && row.getClientRects().length); }"""  # Bind acceptance to both the clear-all state and every rendered removable wager row.
     try:  # Convert a missing request-owned rerender into one bounded harness diagnostic.
-        await page.wait_for_function(expression, arg=int(expected_rows), timeout=timeout_ms)  # Wait through the asynchronous refund or wager response before another mutation.
+        await page.wait_for_function(expression, arg=int(expected_rows), timeout=operation_timeout_ms(timeout_ms))  # Wait through the asynchronous refund or wager response before another mutation.
     except Exception as exc:  # Preserve only the public drawer-state contract in terminal evidence.
         raise AssertionError(f"Roulette bet drawer did not settle at {expected_rows} rows") from exc  # Reject overlapping wager mutations instead of clicking a stale DOM instance.
 
@@ -268,7 +281,7 @@ async def wait_roulette_bet_drawer(page, expected_rows, timeout_ms=ACTION_TIMEOU
 async def wait_roulette_bet_drawer_minimum(page, minimum_rows, timeout_ms=ACTION_TIMEOUT_MS):
     expression = """minimum => { const clear = document.querySelector('#clear'); const rows = [...document.querySelectorAll('[data-clear]')]; return Boolean(clear && !clear.disabled && rows.length >= minimum && rows.every(row => !row.disabled && row.getClientRects().length)); }"""  # Accept single bets and multi-component call bets only after their complete response-owned render.
     try:  # Convert a missing populated rerender into one bounded harness diagnostic.
-        await page.wait_for_function(expression, arg=int(minimum_rows), timeout=timeout_ms)  # Wait until the wager response exposes its removable drawer rows.
+        await page.wait_for_function(expression, arg=int(minimum_rows), timeout=operation_timeout_ms(timeout_ms))  # Wait until the wager response exposes its removable drawer rows.
     except Exception as exc:  # Preserve only the public populated-drawer contract in terminal evidence.
         raise AssertionError(f"Roulette bet drawer did not reach {minimum_rows} rows") from exc  # Reject a wager mutation that never became player-visible.
 
@@ -282,11 +295,11 @@ async def roulette_add_bet(page, locator, activated_counts):
 
 # Click a locator through Playwright's real pointer path and record its signature.
 async def click_locator(locator, activated_counts, timeout_ms=ACTION_TIMEOUT_MS):
-    await locator.wait_for(state="visible", timeout=timeout_ms)  # Require the control to render.
+    await locator.wait_for(state="visible", timeout=operation_timeout_ms(timeout_ms))  # Require the control to render within any active formal absolute deadline.
     if not await locator.is_enabled():  # Refuse disabled programmatic activation.
         raise AssertionError("rendered control was disabled")  # Preserve actual UI semantics.
     signature = await control_signature(locator)  # Capture the stable control identity before rerender.
-    await locator.click(timeout=timeout_ms)  # Use a real actionability-checked pointer click.
+    await locator.click(timeout=operation_timeout_ms(timeout_ms))  # Use a real actionability-checked pointer click without resetting a formal deadline.
     activated_counts[signature] += 1  # Count only successfully dispatched UI activations.
     return signature  # Return the activated signature for state-specific logic.
 
@@ -299,22 +312,22 @@ async def click_control(page, selector, activated_counts, timeout_ms=ACTION_TIME
 
 # Fill one rendered input and record it as a control activation.
 async def fill_control(locator, value, activated_counts, timeout_ms=ACTION_TIMEOUT_MS):
-    await locator.wait_for(state="visible", timeout=timeout_ms)  # Require the input to render.
+    await locator.wait_for(state="visible", timeout=operation_timeout_ms(timeout_ms))  # Require the input to render within any active formal absolute deadline.
     if not await locator.is_enabled():  # Respect disabled configuration states.
         raise AssertionError("rendered input was disabled")  # Refuse hidden backdoor changes.
     signature = await control_signature(locator)  # Capture stable input identity.
-    await locator.fill(str(value), timeout=timeout_ms)  # Enter the synthetic value through the form control.
+    await locator.fill(str(value), timeout=operation_timeout_ms(timeout_ms))  # Enter the synthetic value without resetting a formal deadline.
     activated_counts[signature] += 1  # Count the successful UI edit.
     return signature  # Return the input signature for evidence.
 
 
 # Select one option through the rendered select control and record its stable identity.
 async def select_control(locator, value, activated_counts, timeout_ms=ACTION_TIMEOUT_MS):
-    await locator.wait_for(state="visible", timeout=timeout_ms)  # Require the select to render.
+    await locator.wait_for(state="visible", timeout=operation_timeout_ms(timeout_ms))  # Require the select to render within any active formal absolute deadline.
     if not await locator.is_enabled():  # Respect phase-owned configuration locking.
         raise AssertionError("rendered select was disabled")  # Refuse a hidden programmatic mutation.
     signature = await control_signature(locator)  # Capture identity before a change-triggered rerender.
-    await locator.select_option(str(value), timeout=timeout_ms)  # Change the value through the public form control.
+    await locator.select_option(str(value), timeout=operation_timeout_ms(timeout_ms))  # Change the value without resetting a formal deadline.
     activated_counts[signature] += 1  # Count only a successful rendered selection.
     return signature  # Return the configuration identity for evidence.
 
@@ -392,7 +405,7 @@ async def roulette_terminal_action(page, activated_counts):
     await click_control(page, selector, activated_counts)  # Start the real pointer-owned spin through the rendered control.
     resolving_expression = """() => { const result = document.querySelector('[data-testid=\"roulette-result-region\"]'); const spin = document.querySelector('[data-testid=\"roulette-spin\"]'); return Boolean(result?.dataset.phase === 'spinning' && spin?.disabled); }"""  # Require the committed disabled resolving render before polling for the next round.
     try:  # Convert framework-only timing failures into one stable Roulette transition diagnostic.
-        await page.wait_for_function(resolving_expression, timeout=ACTION_TIMEOUT_MS)  # Prevent the pre-click enabled node from satisfying terminal readiness during its replacement race.
+        await page.wait_for_function(resolving_expression, timeout=operation_timeout_ms(ACTION_TIMEOUT_MS))  # Prevent the pre-click enabled node from satisfying terminal readiness during its replacement race.
     except Exception as exc:  # Preserve a missing busy transition as an actionable product or harness failure.
         raise AssertionError("Roulette spin did not enter resolving state") from exc  # Expose only the public state contract in terminal evidence.
     await wait_any_enabled(page, [selector])  # Accept the cycle only after settlement returns a genuinely enabled fresh-spin control.
@@ -420,7 +433,7 @@ async def acey_deucey_terminal_action(page, ordinal, seen_counts, activated_coun
     choice = await wait_any_enabled(page, ['[data-action="play"]', '[data-action="pass"]', '[data-action="deal"]'])  # Wait for a legal decision or an automatically terminal pair/consecutive deal.
     if choice == '[data-action="deal"]':  # Accept a round that settled without exposing a player decision.
         await inventory_controls(page, seen_counts)  # Preserve the terminal next-deal control for complete coverage accounting.
-        return  # Complete the UI cycle without fabricating a wager or decision.
+        return "non_wager"  # Classify the automatic free-boundary result without fabricating ledger evidence.
     await inventory_controls(page, seen_counts)  # Discover both legal decision controls and the newly enabled wager input.
     decisions = await enabled_locators(page, '[data-action="play"],[data-action="pass"]')  # Resolve only currently actionable decision buttons after the deal rerender.
     if not decisions:  # Reject a prepared round that exposes no legal choice.
@@ -433,6 +446,7 @@ async def acey_deucey_terminal_action(page, ordinal, seen_counts, activated_coun
         raise AssertionError("Acey-Deucey exposed an unknown decision")  # Keep the state-machine mismatch actionable.
     await click_locator(decision, activated_counts)  # Commit the selected decision through Playwright's real pointer path.
     await wait_any_enabled(page, ['[data-action="deal"]'])  # Require terminal settlement and fresh-boundary readiness.
+    return "wager_required" if action == "play" else "non_wager"  # Bind ledger acceptance to the actual rendered decision.
 
 
 # Select one least-covered draw-poker hold only after both the deal and hold response own the rendered DOM.
@@ -449,7 +463,7 @@ async def draw_poker_select_balanced_hold(page, seen_counts, activated_counts):
     await click_locator(target, activated_counts)  # Toggle the selected hold through the real pointer and public API path.
     committed_expression = """position => [...document.querySelectorAll('[data-hold-position]')].some(node => node.dataset.holdPosition === String(position) && node.getAttribute('aria-pressed') === 'true' && !node.disabled && node.getClientRects().length)"""  # Require the persisted response to publish the selected, actionable held card.
     try:  # Convert a lost or stale hold response into one bounded state-contract diagnostic.
-        await page.wait_for_function(committed_expression, arg=target_position, timeout=ACTION_TIMEOUT_MS)  # Serialize the hold mutation before Draw can consume its server-owned state.
+        await page.wait_for_function(committed_expression, arg=target_position, timeout=operation_timeout_ms(ACTION_TIMEOUT_MS))  # Serialize the hold mutation before Draw can consume its server-owned state.
     except Exception as exc:  # Preserve only the public rendered-state failure in terminal evidence.
         raise AssertionError(f"draw-poker hold did not commit at position {target_position}") from exc  # Reject a draw that would race or omit the selected hold.
 
@@ -491,18 +505,32 @@ async def rotate_wager_inputs(page, ordinal, activated_counts):
 
 
 # Navigate from the authenticated shell to one game through visible UI controls.
-async def navigate_to_game(page, game_id, activated_counts, ordinal=None):
+async def navigate_to_game(page, game_id, activated_counts, ordinal=None, phase_observer=None):
     CONTROL_NAMESPACE.set("shell")  # Attribute persistent navigation actions to the shared shell.
+    if callable(phase_observer):  # Emit only fixed formal subphases when a governed caller supplies an observer.
+        phase_observer("navigation_return_lobby", "started")  # Attribute failure before the persistent Lobby control commits.
     await click_control(page, '[data-testid="nav-lobby"]', activated_counts, SETUP_TIMEOUT_MS)  # Return through the persistent top navigation.
-    await page.get_by_test_id("lobby").wait_for(state="visible", timeout=SETUP_TIMEOUT_MS)  # Require the catalog surface.
+    if callable(phase_observer):  # Complete the fixed control-activation subphase without affecting ordinary runs.
+        phase_observer("navigation_return_lobby", "completed")  # Record successful persistent navigation activation.
+        phase_observer("navigation_lobby_ready", "started")  # Attribute waiting for the catalog-owned Lobby render.
+    await page.get_by_test_id("lobby").wait_for(state="visible", timeout=operation_timeout_ms(SETUP_TIMEOUT_MS))  # Require the catalog surface within any formal absolute deadline.
+    if callable(phase_observer):  # Record the fixed catalog-render boundary only for governed evidence.
+        phase_observer("navigation_lobby_ready", "completed")  # Record the visible Lobby state.
+        phase_observer("navigation_route_open", "started")  # Attribute activation of the assigned public game route.
     entry_selector = f'[data-testid="nav-{game_id}"]' if ordinal is not None and ordinal % 10 == 0 else f'[data-testid="open-{game_id}"]'  # Route at least one hundred full-run cycles through each top-nav game button.
     await click_control(page, entry_selector, activated_counts, SETUP_TIMEOUT_MS)  # Enter through the assigned rendered navigation control.
-    await page.get_by_test_id(READY_TEST_IDS[game_id]).wait_for(state="visible", timeout=SETUP_TIMEOUT_MS)  # Require module readiness.
+    if callable(phase_observer):  # Separate pointer completion from asynchronous module readiness.
+        phase_observer("navigation_route_open", "completed")  # Record the assigned route activation.
+        phase_observer("navigation_game_ready", "started")  # Attribute the public module-ready observation.
+    await page.get_by_test_id(READY_TEST_IDS[game_id]).wait_for(state="visible", timeout=operation_timeout_ms(SETUP_TIMEOUT_MS))  # Require module readiness within any formal absolute deadline.
+    if callable(phase_observer):  # Complete the last fixed formal navigation subphase.
+        phase_observer("navigation_game_ready", "completed")  # Record the visible game-ready boundary.
     CONTROL_NAMESPACE.set(game_id)  # Attribute all subsequent controls to the entered game module.
 
 
 # Complete one terminal game play using only rendered controls.
 async def play_game_ui(page, game_id, ordinal, seen_counts, activated_counts, replica_index=0):
+    action_evidence = "wager_required"  # Require player-scoped game ledger evidence unless the rendered action proves it was non-wagering.
     await inventory_controls(page, seen_counts)  # Discover ready-state controls before the play.
     await exercise_configuration_controls(page, ordinal, activated_counts)  # Cover visible fields and disclosures before the game locks them.
     await exercise_autoplay_controls(page, ordinal, activated_counts)  # Cover shared Start/Stop without leaving background play active.
@@ -658,9 +686,9 @@ async def play_game_ui(page, game_id, ordinal, seen_counts, activated_counts, re
         if not cells:  # Reject a purchased card without rendered reveal targets.
             raise AssertionError("Scratch Card exposed no covered cells")  # Preserve the missing gameplay surface.
         await click_locator(cells[ordinal % len(cells)], activated_counts)  # Reveal one rotating position so every cell exceeds one hundred uses.
-        await page.wait_for_function("() => document.querySelectorAll('.scratch-cell.is-revealed').length >= 1", timeout=SETUP_TIMEOUT_MS)  # Require the single-cell reveal to render before starting the terminal action.
+        await page.wait_for_function("() => document.querySelectorAll('.scratch-cell.is-revealed').length >= 1", timeout=operation_timeout_ms(SETUP_TIMEOUT_MS))  # Require the single-cell reveal to render before starting the terminal action.
         await click_control(page, '[data-action="reveal-all"]', activated_counts)  # Reveal every cell through the public control.
-        await page.wait_for_function("() => document.querySelectorAll('.scratch-cell.is-revealed').length === 9", timeout=SETUP_TIMEOUT_MS)  # Require all nine authorized values to render after settlement.
+        await page.wait_for_function("() => document.querySelectorAll('.scratch-cell.is-revealed').length === 9", timeout=operation_timeout_ms(SETUP_TIMEOUT_MS))  # Require all nine authorized values to render after settlement.
         await wait_any_enabled(page, ['[data-action="start"]'])  # Require a fresh-card state.
     elif game_id == "sic_bo":  # Exercise rotating selections across the full bet board.
         bets = page.locator("[data-bet-id]")  # Discover every catalog wager button.
@@ -699,7 +727,7 @@ async def play_game_ui(page, game_id, ordinal, seen_counts, activated_counts, re
         opening = await wait_any_enabled(page, ['[data-action="call"]', '[data-action="fold"]', '[data-action="start-hand"]'])  # Wait for the preflop decision or an automatic terminal result.
         if opening == '[data-action="start-hand"]':  # Accept a rare automatically settled hand.
             await inventory_controls(page, seen_counts)  # Preserve the terminal control state before leaving the branch.
-            return  # Complete the UI cycle without inventing another action.
+            return action_evidence  # Retain fail-closed wager evidence for the committed start-hand action.
         await inventory_controls(page, seen_counts)  # Discover Call and Fold together in the opening decision state.
         if ordinal % 2 == 0:  # Cover the immediate fold path.
             await click_control(page, '[data-action="fold"]', activated_counts)  # Fold through the rendered decision.
@@ -717,7 +745,7 @@ async def play_game_ui(page, game_id, ordinal, seen_counts, activated_counts, re
         await click_control(page, f'[data-side="{"andar" if ordinal % 2 == 0 else "bahar"}"]', activated_counts)  # Select a rotating side.
         await terminal_action(page, '[data-action="play"]', activated_counts)  # Deal and settle the round.
     elif game_id == "acey_deucey":  # Exercise pass and play when legally available.
-        await acey_deucey_terminal_action(page, ordinal, seen_counts, activated_counts)  # Respect Deal-before-wager ownership while covering Play, Pass, and automatic settlement.
+        action_evidence = await acey_deucey_terminal_action(page, ordinal, seen_counts, activated_counts)  # Classify the actual rendered Pass, Play, or automatic free-boundary result.
     elif game_id == "caribbean_stud":  # Exercise call and fold decisions.
         await click_control(page, '[data-action="deal"]', activated_counts)  # Deal the five-card hand.
         await inventory_controls(page, seen_counts)  # Discover Call and Fold in their live decision state.
@@ -744,6 +772,7 @@ async def play_game_ui(page, game_id, ordinal, seen_counts, activated_counts, re
     else:  # Refuse silent catalog omissions.
         raise AssertionError(f"no UI cycle strategy for catalog game {game_id}")  # Force an explicit strategy for every game.
     await inventory_controls(page, seen_counts)  # Discover terminal and conditional-state controls after the play.
+    return action_evidence  # Return one fixed action-aware ledger expectation without identity or gameplay payload data.
 
 
 # Attach credential-free diagnostics to one test-owned browser page.

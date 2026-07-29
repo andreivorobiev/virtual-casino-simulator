@@ -26,8 +26,10 @@ BARRIER_TIMEOUT_SECONDS = 180
 SETUP_ADMISSION_LIMIT = 12
 # Bound the formal post-barrier login to one absolute window above the observed 64.265-second hosted maximum.
 FORMAL_LOGIN_DEADLINE_MS = 90_000
+# Bound combined formal navigation and gameplay above the observed 70.065-second hosted maximum without lowering concurrency.
+FORMAL_GAMEPLAY_DEADLINE_MS = 90_000
 # Publish only fixed low-cardinality phases for aggregate completion and failure evidence.
-FORMAL_PHASES = ("context_setup", "barrier", "login_gate", "locale_selection", "credential_entry", "terms_acceptance", "login_response", "authenticated_lobby", "gameplay_navigation", "gameplay_action", "context_cleanup")  # Keep every aggregate phase fixed and low-cardinality.
+FORMAL_PHASES = ("context_setup", "barrier", "login_gate", "locale_selection", "credential_entry", "terms_acceptance", "login_response", "authenticated_lobby", "gameplay_navigation", "navigation_return_lobby", "navigation_lobby_ready", "navigation_route_open", "navigation_game_ready", "gameplay_action", "context_cleanup")  # Keep every aggregate phase fixed and low-cardinality.
 # Keep otherwise unclassified failures inside one fixed aggregate bucket.
 FORMAL_FAILURE_PHASES = (*FORMAL_PHASES, "unclassified")
 # Bind the formal report to permanent requirement and browser-test identities.
@@ -484,6 +486,72 @@ async def play_catalog_gap_ui(page, game_id, ordinal, seen_counts, activated_cou
     return True
 
 
+# Run navigation and one visible action beneath one formal task-local absolute deadline.
+async def run_formal_gameplay(page, assignment, seen_counts, activated_counts, phase_observer):
+    # Convert the fixed millisecond policy to one monotonic absolute deadline shared by every nested browser operation.
+    absolute_deadline = time.perf_counter() + (FORMAL_GAMEPLAY_DEADLINE_MS / 1000)
+    # Install the deadline only in this asynchronous browser task so ordinary profiles and sibling contexts stay isolated.
+    deadline_token = ui_50000.FORMAL_OPERATION_DEADLINE.set(absolute_deadline)
+
+    # Execute the fixed navigation and action phases under the same absolute deadline.
+    async def operation():
+        # Record aggregate catalog-navigation work independently from the game-owned action.
+        phase_observer("gameplay_navigation", "started")
+        # Navigate through the catalog UI while emitting fixed public navigation subphases.
+        await ui_50000.navigate_to_game(
+            page,  # Reuse the authenticated task-owned page.
+            assignment["game_id"],  # Select only the assigned public game.
+            activated_counts,  # Preserve aggregate rendered-control evidence.
+            assignment["user_index"],  # Retain deterministic route-selection coverage.
+            phase_observer=phase_observer,  # Emit only fixed navigation subphases.
+        )
+        # Record terminal catalog navigation after the game route is ready.
+        phase_observer("gameplay_navigation", "completed")
+        # Record the visible game-action phase.
+        phase_observer("gameplay_action", "started")
+        # Try the exact fifteen accepted catalog-gap drivers before the established long-harness strategy.
+        gap_completed = await play_catalog_gap_ui(
+            page,  # Reuse the task-owned rendered game route.
+            assignment["game_id"],  # Select the assigned public catalog driver.
+            assignment["user_index"],  # Preserve deterministic visible action choice.
+            seen_counts,  # Collect aggregate ready and terminal controls.
+            activated_counts,  # Collect aggregate pointer activation evidence.
+        )
+        # Require player-scoped wager evidence for every bounded catalog-gap driver.
+        action_evidence = "wager_required"
+        # Delegate every already-covered game to the established exact-source UI driver.
+        if not gap_completed:
+            # Complete one existing game-owned action and capture its actual wager/non-wager classification.
+            action_evidence = await ui_50000.play_game_ui(
+                page,  # Reuse the task-owned rendered game route.
+                assignment["game_id"],  # Select the assigned inherited game driver.
+                assignment["user_index"],  # Preserve deterministic action selection.
+                seen_counts,  # Collect aggregate control observations.
+                activated_counts,  # Collect aggregate pointer activations.
+            )
+        # Refuse missing or expanded action classifications before evidence collection.
+        if action_evidence not in {"wager_required", "non_wager"}:
+            # Keep the diagnostic fixed and independent of any account or gameplay payload.
+            raise AssertionError("formal gameplay action produced an invalid ledger expectation")
+        # Record terminal visible game action.
+        phase_observer("gameplay_action", "completed")
+        # Return one fixed action-aware expectation to post-browser isolation evidence.
+        return action_evidence
+
+    # Always release the task-local deadline even when navigation, action, or cancellation fails.
+    try:
+        # Enforce the absolute bound independently of Playwright so loops cannot create fresh operation budgets.
+        return await asyncio.wait_for(operation(), timeout=FORMAL_GAMEPLAY_DEADLINE_MS / 1000)
+    # Convert either the outer bound or an exhausted nested remaining-time calculation to one stable signature.
+    except (asyncio.TimeoutError, TimeoutError) as error:
+        # Preserve one public fail-closed deadline diagnostic.
+        raise AssertionError("formal gameplay absolute deadline exceeded") from error
+    # Restore the caller's prior context after every terminal path.
+    finally:
+        # Remove only this task's formal timeout override.
+        ui_50000.FORMAL_OPERATION_DEADLINE.reset(deadline_token)
+
+
 # Run one independent browser context from the rendered login gate through one complete game play.
 async def run_user(browser, client, assignment, user, barrier, setup_admission, counters, counter_lock):
     # Derive one deterministic locale without introducing a user-visible allowlist.
@@ -491,7 +559,7 @@ async def run_user(browser, client, assignment, user, barrier, setup_admission, 
     # Start without browser resources so partial setup remains cleanable.
     context = None
     # Start one fail-closed aggregate result without account identifiers.
-    result = {"game_id": assignment["game_id"], "barrier_ready": False, "login_ok": False, "gameplay_ok": False, "context_closed": False, "completed_phases": []}  # Keep one sanitized task result with fixed aggregate flags only.
+    result = {"game_id": assignment["game_id"], "barrier_ready": False, "login_ok": False, "gameplay_ok": False, "ledger_expectation": "unclassified", "context_closed": False, "completed_phases": []}  # Keep one sanitized task result with fixed aggregate flags only.
     # Track the active fixed phase for one bounded terminal failure bucket.
     current_phase = None
     # Track completed fixed phases without publishing per-user activity rows.
@@ -504,7 +572,7 @@ async def run_user(browser, client, assignment, user, barrier, setup_admission, 
         # Reject accidental selector, account, URL, or other high-cardinality phase labels.
         if name not in FORMAL_PHASES:
             # Keep the diagnostic independent of any private task state.
-            raise ValueError("formal login observer received an unknown phase")
+            raise ValueError("formal phase observer received an unknown phase")
         # Mark the active phase when a governed operation starts.
         if status == "started":
             # Preserve only the fixed phase identity.
@@ -520,7 +588,7 @@ async def run_user(browser, client, assignment, user, barrier, setup_admission, 
         # Refuse ungoverned status values before they reach the artifact.
         else:
             # Preserve one bounded schema diagnostic.
-            raise ValueError("formal login observer received an unknown status")
+            raise ValueError("formal phase observer received an unknown status")
     # Collect only grouped credential-free browser diagnostics for this context.
     diagnostics = {"console_errors": Counter(), "page_errors": Counter(), "http_failures": Counter()}
     # Track whether this page has completed real form authentication for state-aware diagnostic filtering.
@@ -586,28 +654,14 @@ async def run_user(browser, client, assignment, user, barrier, setup_admission, 
         seen_counts = Counter()
         # Start protected gameplay concurrency accounting.
         try:
-            # Record catalog-navigation work independently from the game-owned action.
-            observe_phase("gameplay_navigation", "started")
-            # Navigate through the catalog-owned UI route.
-            await ui_50000.navigate_to_game(page, assignment["game_id"], activated_counts, assignment["user_index"])
-            # Record terminal catalog navigation after the game route is ready.
-            observe_phase("gameplay_navigation", "completed")
-            # Record the visible game-action phase.
-            observe_phase("gameplay_action", "started")
-            # Try the exact fifteen accepted catalog-gap drivers before the established long-harness strategy.
-            gap_completed = await play_catalog_gap_ui(
-                page,
-                assignment["game_id"],
-                assignment["user_index"],
-                seen_counts,
-                activated_counts,
+            # Run catalog navigation and one visible action beneath the formal absolute gameplay deadline.
+            result["ledger_expectation"] = await run_formal_gameplay(
+                page,  # Reuse the authenticated task-owned page.
+                assignment,  # Preserve the public game and deterministic ordinal.
+                seen_counts,  # Collect only task-local control observations.
+                activated_counts,  # Collect only task-local pointer activations.
+                observe_phase,  # Emit fixed aggregate phase transitions.
             )
-            # Delegate every already-covered game to the established exact-source UI driver.
-            if not gap_completed:
-                # Complete one existing game-owned action through rendered controls.
-                await ui_50000.play_game_ui(page, assignment["game_id"], assignment["user_index"], seen_counts, activated_counts)
-            # Record terminal visible game action.
-            observe_phase("gameplay_action", "completed")
             # Preserve only the successful aggregate gameplay latency sample.
             result["play_seconds"] = time.perf_counter() - play_started
             # Record one terminal UI play.
@@ -644,8 +698,12 @@ async def run_user(browser, client, assignment, user, barrier, setup_admission, 
     return result
 
 
-# Validate post-run account and ledger isolation through setup-only Admin APIs.
-def collect_isolation_evidence(client, users):
+# Validate post-run account and action-aware ledger isolation through setup-only Admin APIs.
+def collect_isolation_evidence(client, users, results):
+    # Require one terminal task result for each synthetic account before pairing private in-memory identities.
+    if len(users) != len(results):
+        # Refuse misaligned action evidence rather than attributing one player's ledger to another result.
+        raise ValueError("isolation evidence requires one result per synthetic user")
     # Track canonical player identities only in memory.
     player_ids = [user["player_id"] for user in users]
     # Count duplicated canonical player identities.
@@ -660,8 +718,18 @@ def collect_isolation_evidence(client, users):
     nonnegative_balances = 0
     # Count users with at least one gameplay ledger event beyond the setup grant.
     users_with_gameplay_ledger = 0
+    # Count successful actions whose rendered path committed a wager and therefore requires exact game-owned ledger evidence.
+    wager_evidence_required = 0
+    # Count required wager actions with at least one matching player-scoped game ledger row.
+    wager_evidence_satisfied = 0
+    # Count successful rendered actions that explicitly completed without committing a wager.
+    non_wager_actions = 0
+    # Count non-wager actions that unexpectedly mutated the assigned game's ledger.
+    non_wager_actions_with_ledger = 0
+    # Count successful actions with one accepted wager/non-wager expectation.
+    classified_gameplay_actions = 0
     # Inspect every synthetic account sequentially after browser activity has stopped.
-    for user in users:
+    for user, result in zip(users, results):
         # Read only this account's bounded Admin state.
         state = client.call(f"/api/v2/admin/users/{user['user_id']}/state")
         # Count the canonical player binding without persisting either identity.
@@ -676,6 +744,28 @@ def collect_isolation_evidence(client, users):
         gameplay_rows = [row for row in rows if row.get("transaction_type") != "ADMIN_TOKEN_GRANT"]
         # Count users with at least one game-owned ledger movement.
         users_with_gameplay_ledger += int(bool(gameplay_rows))
+        # Isolate only rows owned by the assigned public game before evaluating this action's expectation.
+        assigned_game_rows = [row for row in gameplay_rows if str(row.get("game") or "") == str(result.get("game_id") or "")]
+        # Evaluate ledger expectations only for a terminally successful visible gameplay action.
+        if result.get("gameplay_ok"):
+            # Resolve the fixed expectation produced by the actual rendered action path.
+            expectation = result.get("ledger_expectation")
+            # Require game-owned ledger evidence when the rendered action committed a wager.
+            if expectation == "wager_required":
+                # Count one fail-closed wager expectation.
+                wager_evidence_required += 1
+                # Count satisfaction only from this exact player's assigned-game ledger rows.
+                wager_evidence_satisfied += int(bool(assigned_game_rows))
+                # Count one accepted action classification.
+                classified_gameplay_actions += 1
+            # Accept an explicitly classified non-wager action without fabricating a debit or settlement.
+            elif expectation == "non_wager":
+                # Count one legitimate visible no-wager completion.
+                non_wager_actions += 1
+                # Keep unexpected game-owned money movement red rather than treating no-wager as optional evidence.
+                non_wager_actions_with_ledger += int(bool(assigned_game_rows))
+                # Count one accepted action classification.
+                classified_gameplay_actions += 1
         # Build bounded action identities only when the ledger exposes an idempotency key.
         action_keys = [
             (str(row.get("game") or ""), str(row["details"]["ledger_action_key"]))
@@ -693,6 +783,11 @@ def collect_isolation_evidence(client, users):
         "matching_player_count": matching_players,
         "nonnegative_balance_count": nonnegative_balances,
         "users_with_gameplay_ledger": users_with_gameplay_ledger,
+        "wager_evidence_required": wager_evidence_required,  # Publish the count of successful actions that committed wagers.
+        "wager_evidence_satisfied": wager_evidence_satisfied,  # Publish exact assigned-game row satisfaction.
+        "non_wager_actions": non_wager_actions,  # Publish legitimate visible no-wager completions.
+        "non_wager_actions_with_ledger": non_wager_actions_with_ledger,  # Publish unexpected money movement on no-wager paths.
+        "classified_gameplay_actions": classified_gameplay_actions,  # Publish recognized action expectations.
         "duplicate_ledger_id_count": duplicate_ledger_ids,
         "duplicate_action_key_count": duplicate_action_keys,
     }
@@ -710,6 +805,12 @@ def aggregate_results(assignments, results, barrier, counters, isolation, pool, 
     completed_phase_counts = Counter(phase for row in results for phase in row.get("completed_phases", ()))
     # Count the terminal fixed failure phase for each failed task.
     failed_phase_counts = Counter(row.get("failure_phase", "unclassified") for row in results if row.get("error"))
+    # Attribute each bounded public failure signature to its assigned game and fixed phase without retaining a user row.
+    failure_attribution_counts = Counter(
+        (str(row.get("game_id") or "controller"), str(row.get("failure_phase") or "unclassified"), str(row.get("error")))  # Retain only public game, fixed phase, and scrubbed error.
+        for row in results  # Visit each sanitized task result.
+        if row.get("error")  # Exclude successful rows from failure attribution.
+    )
     # Merge grouped browser diagnostics without retaining user-level rows.
     diagnostics = {"console_errors": Counter(), "page_errors": Counter(), "http_failures": Counter()}
     # Visit every terminal context result.
@@ -738,7 +839,9 @@ def aggregate_results(assignments, results, barrier, counters, isolation, pool, 
         and isolation["duplicate_player_id_count"] == 0  # Refuse duplicate account-to-player bindings.
         and isolation["matching_player_count"] == USER_COUNT  # Require every response to bind the expected player.
         and isolation["nonnegative_balance_count"] == USER_COUNT  # Require every post-action wallet to remain solvent.
-        and isolation["users_with_gameplay_ledger"] == USER_COUNT  # Require gameplay-ledger evidence for every user.
+        and isolation["classified_gameplay_actions"] == USER_COUNT  # Require every successful action to declare one fixed ledger expectation.
+        and isolation["wager_evidence_satisfied"] == isolation["wager_evidence_required"]  # Require exact player-scoped assigned-game rows for every wagering action.
+        and isolation["non_wager_actions_with_ledger"] == 0  # Refuse unexpected game-owned money movement for legitimate no-wager actions.
         and isolation["duplicate_ledger_id_count"] == 0  # Refuse duplicate ledger identities.
         and isolation["duplicate_action_key_count"] == 0,  # Refuse duplicate settlement action identities.
         "context_cleanup": sum(bool(row.get("context_closed")) for row in results) == USER_COUNT,  # Require every browser context to close.
@@ -782,6 +885,10 @@ def aggregate_results(assignments, results, barrier, counters, isolation, pool, 
         "latency": {"login": latency_summary(login_latencies), "gameplay": latency_summary(play_latencies)},  # Publish bounded latency summaries.
         "browser_diagnostics": {name: dict(counter.most_common()) for name, counter in diagnostics.items()},  # Publish grouped safe failures.
         "failure_counts": dict(failure_counts.most_common()),  # Publish bounded safe exception signatures.
+        "failure_attribution": [
+            {"game_id": game_id, "phase": phase, "error": error, "count": count}  # Publish one aggregate public attribution row.
+            for (game_id, phase, error), count in sorted(failure_attribution_counts.items())  # Preserve deterministic public ordering.
+        ],  # Publish exact public game/phase/error attribution without user-level rows.
         "phase_counts": {
             "completed": {phase: completed_phase_counts.get(phase, 0) for phase in FORMAL_PHASES},  # Publish fixed completion counts.
             "failed": {phase: failed_phase_counts.get(phase, 0) for phase in FORMAL_FAILURE_PHASES},  # Publish fixed failure counts.
@@ -915,7 +1022,7 @@ async def run_qualification(args):
             # Clear the local handle so the outer cleanup does not close it twice.
             browser = None
         # Collect canonical wallet, ledger, and settlement isolation evidence after browser activity stops.
-        isolation = collect_isolation_evidence(client, users)
+        isolation = collect_isolation_evidence(client, users, results)
         # Capture final fixed-cardinality Package B pool metrics from the process that served the load.
         pool = pool_snapshot()
     # Preserve a terminal aggregate even when setup or controller logic fails.
@@ -974,6 +1081,11 @@ async def run_qualification(args):
             "matching_player_count": 0,
             "nonnegative_balance_count": 0,
             "users_with_gameplay_ledger": 0,
+            "wager_evidence_required": 0,  # Preserve the terminal schema after early failure.
+            "wager_evidence_satisfied": 0,  # Preserve missing wager proof explicitly.
+            "non_wager_actions": 0,  # Preserve absent no-wager evidence explicitly.
+            "non_wager_actions_with_ledger": 0,  # Preserve the no-wager anomaly field.
+            "classified_gameplay_actions": 0,  # Preserve absent action classification explicitly.
             "duplicate_ledger_id_count": 0,
             "duplicate_action_key_count": 0,
         }
