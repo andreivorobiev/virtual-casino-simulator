@@ -50,10 +50,10 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.0
 - pai_gow_poker: 1.1.0
 - teen_patti: 1.1.0
-- tests: 1.64.22
-- docs: 1.64.22
+- tests: 1.64.24
+- docs: 1.64.24
 - contracts: 1.49.10
-- tooling: 1.21.9
+- tooling: 1.21.10
 - commenting_policy: 1.0.0
 - color_wheel: 1.1.0
 - poker_dice: 1.1.0
@@ -367,7 +367,7 @@ Historical source baseline: 9.1.0
 - **DOC-015** (Documentation) - PASS: Known limitations are documented when applicable.
 - **DOC-016** (Documentation) - PASS: Parallel-agent workflow documentation defines coordinator and worker responsibilities for humans, Claude, Codex, and other automation.
 - **TOOL-001** (Tooling) - PASS: Agent task packets and pull-request templates preserve author, coordinator, merge executor, scope, file ownership, validation, dependency, exact-head, and handback context.
-- **TOOL-002** (Tooling) - PASS: GitHub Actions exposes Suite 100 as a pull request check and Suite 300 or 500 as a manually selected sharded soak run.
+- **TOOL-002** (Tooling) - PASS: GitHub Actions exposes fail-closed sharded qualification: Suite 100 runs on pull requests, Suite 300 or 500 is manually selected, and Browser pull requests select only unambiguously affected game-owned cases while shared, unknown, protected-main, release, and manual inputs retain complete coverage.
 - **TOOL-003** (Tooling) - PASS: Release tooling produces a deterministic tracked-file application archive, checksum-bound provenance and dependency manifest, clean extracted-copy smoke, fail-closed private-content exclusion, extracted-host command inventory enforcement, protected publication gate, and application-only prior-artifact rollback mapping.
 - **BOT-001** (Bots) - PASS: Bots are represented as controllers for player accounts, not embedded game objects.
 - **BOT-002** (Bots) - PASS: Game modules must not import bot strategy modules.

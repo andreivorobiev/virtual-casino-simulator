@@ -353,8 +353,12 @@ _BROWSER_ACCEPTANCE_CASE_GAME={case_id:game_id for game_id,case_id in BROWSER_GA
 def validate_browser_affected_games():
     # Read the deterministic literal browser case inventory and the current catalog once.
     case_ids=set(browser_case_ids()); catalog_ids={game['id'] for game in casino_config.GAMES}
+    # Flatten declared affinity cases so dedicated deselection can never bypass a producer/consumer group.
+    affinity_case_ids={case_id for group_case_ids in BROWSER_CASE_AFFINITY_GROUPS.values() for case_id in group_case_ids}
     # Reject a map that pairs two games with one case because deselection would then be ambiguous.
     if len(set(BROWSER_GAME_ACCEPTANCE_CASES.values()))!=len(BROWSER_GAME_ACCEPTANCE_CASES): raise AssertionError('duplicate dedicated acceptance case in affected-game map')
+    # Reject any dedicated case that is also affinity-owned because partial group deselection would break state ownership.
+    if set(BROWSER_GAME_ACCEPTANCE_CASES.values())&affinity_case_ids: raise AssertionError('affected-game map contains an affinity-owned browser case')
     # Require every mapped game and case to still exist so a stale map fails startup instead of under-testing.
     for game_id,case_id in BROWSER_GAME_ACCEPTANCE_CASES.items():
         # Fail closed on an unknown catalog game id.
@@ -383,14 +387,14 @@ def browser_expected_case_ids(affected_games):
     # Otherwise drop each dedicated per-game acceptance case whose game is not among the affected games.
     return [case_id for case_id in browser_case_ids() if not (case_id in _BROWSER_ACCEPTANCE_CASE_GAME and _BROWSER_ACCEPTANCE_CASE_GAME[case_id] not in affected_games)]
 
-# Verify aggregated browser shard results cover every expected case exactly once and pass.
-def verify_browser_shards(results_dir, shard_count):
+# Verify aggregated browser shard results cover the independently expected selection exactly once and pass.
+def verify_browser_shards(results_dir, shard_count, affected_games=None):
     # Track every observed browser case id and the shard that executed it.
     seen={}
-    # Collect each shard's self-declared affected-game selection so the expected set needs no external input.
-    declared=[]
-    # Retain parsed shard payloads for a second pass once the shared selection is known.
-    shard_payloads=[]
+    # Canonicalize the detector-owned selection so shard self-descriptions can be checked rather than trusted.
+    expected_declaration=sorted(affected_games) if affected_games else None
+    # Derive the expected case set only from the workflow-supplied detector selection.
+    expected=browser_expected_case_ids(affected_games)
     # Read each shard's unique result file and fail on any missing shard evidence.
     for index in range(shard_count):
         # Resolve the exact per-shard result file created by the sharded browser runner.
@@ -399,14 +403,8 @@ def verify_browser_shards(results_dir, shard_count):
         if not path.exists(): print(f'BROWSER_SHARDS FAIL missing shard result file {path}'); return 1
         # Parse this shard's retained result records.
         data=json.loads(path.read_text(encoding='utf-8'))
-        # Preserve the payload and its declared selection for reconciliation below.
-        shard_payloads.append((index,data)); declared.append(data.get('affected_games'))
-    # Reject shards that disagree on the affected-game selection because the expected set would be ambiguous.
-    if len({tuple(entry) if entry is not None else None for entry in declared})!=1: print(f'BROWSER_SHARDS FAIL shards disagree on affected games {declared}'); return 1
-    # Derive the expected case set from the single agreed selection recorded by the shards themselves.
-    expected=browser_expected_case_ids(set(declared[0]) if declared[0] is not None else None)
-    # Reconcile every shard's browser records against the agreed expected set.
-    for index,data in shard_payloads:
+        # Reject a shard whose self-description does not match the detector-owned aggregate selection.
+        if data.get('affected_games')!=expected_declaration: print(f'BROWSER_SHARDS FAIL shard {index} affected games {data.get("affected_games")} != expected {expected_declaration}'); return 1
         # Examine only browser-suite records so mixed local suite runs cannot confuse coverage.
         for result in data['results']:
             # Skip non-browser records defensively without counting them as coverage.
@@ -9472,8 +9470,8 @@ def main():
     if args.shard_count>browser_case_total(): ap.error('--shard-count must not exceed the literal browser case total')
     # Keep shard selection scoped to the browser suite and aggregate verification only.
     if args.shard_count>1 and not (args.browser or args.verify_browser_shards): ap.error('--shard-count applies only to --browser or --verify-browser-shards')
-    # Run aggregate shard verification alone; the expected set comes from the shards' self-declared selection, not this flag.
-    if args.verify_browser_shards: return verify_browser_shards(args.verify_browser_shards,args.shard_count)
+    # Run aggregate shard verification alone using the detector-owned expected selection.
+    if args.verify_browser_shards: return verify_browser_shards(args.verify_browser_shards,args.shard_count,affected_games)
     # Branch when the following condition is true.
     if not args.api and not args.browser and not args.storage and not args.mysql_live and not args.mysql_migrations_live: args.api=True
     # Start protected logic so failures can be handled safely.

@@ -6,10 +6,12 @@
 #   <gid>[,<gid>...]          -> run only these affected games' dedicated browser cases plus shared cases
 #   NONE                      -> no browser-relevant files changed at all
 #
-# The rule is deliberately conservative: any changed path that is not unambiguously owned by a single
-# catalog game forces FULL, so a shared-code change can never silently skip cross-game coverage.
+# The rule is deliberately conservative: any changed path that is not unambiguously owned by a single catalog game forces full coverage.
+# Import regular expressions for repository path ownership matching.
 import re
+# Import process arguments and standard input for the workflow-facing CLI.
 import sys
+# Import path helpers for checkout-independent catalog loading.
 from pathlib import Path
 
 # Resolve the repository root from this script's location so catalog import works from any CWD.
@@ -24,21 +26,33 @@ GAME_IDS = {game["id"] for game in casino_config.GAMES}
 
 # Declare the per-game path patterns; each captures the owning game id in group 1.
 GAME_PATH_PATTERNS = [
+    # Match backend game-package ownership.
     re.compile(r"^casino/games/([^/]+)/"),
+    # Match game-owned test-package ownership.
     re.compile(r"^tests/games/([^/]+)/"),
+    # Match one browser driver owned by its game id.
     re.compile(r"^tests/game_drivers/([^/]+)\.py$"),
+    # Match one frontend game module.
     re.compile(r"^web/games/([^/]+)\.js$"),
+    # Match one localized frontend game dictionary.
     re.compile(r"^web/i18n/[^/]+/games/([^/]+)\.json$"),
+    # Match one game-owned frozen API contract.
     re.compile(r"^contracts/openapi/([^/.]+)\.v1\.yaml$"),
+    # Match one module manifest, subject to catalog validation below.
     re.compile(r"^modules/([^/]+)\.json$"),
+    # Match one game documentation page before the irrelevant-path override.
     re.compile(r"^docs/games/([^/]+)\.md$"),
+    # Match one game evidence directory before the irrelevant-path override.
     re.compile(r"^docs/evidence/([^/]+)/"),
 ]
 
 # Paths that never affect browser behavior, so they neither add a game nor force a full run.
 BROWSER_IRRELEVANT_PATTERNS = [
+    # Ignore prose-only game documentation.
     re.compile(r"^docs/games/[^/]+\.md$"),
+    # Ignore retained evidence that does not alter executable browser behavior.
     re.compile(r"^docs/evidence/[^/]+/"),
+    # Ignore game-package agent or readme guidance.
     re.compile(r"^casino/games/[^/]+/(?:AGENTS|README)\.md$"),
 ]
 
@@ -49,14 +63,19 @@ def classify(path):
     path = path.replace("\\", "/").strip()
     # Ignore empty lines from the diff input.
     if not path:
+        # Return no ownership for an empty path.
         return None
     # Documentation and evidence changes never change rendered behavior, so they gate nothing.
     if any(pattern.match(path) for pattern in BROWSER_IRRELEVANT_PATTERNS):
+        # Return no ownership for documentation-only changes.
         return None
     # A path owned by exactly one catalog game contributes that game.
     for pattern in GAME_PATH_PATTERNS:
+        # Match the normalized path against this ownership rule.
         match = pattern.match(path)
+        # Accept only ownership that resolves to a live catalog game.
         if match and match.group(1) in GAME_IDS:
+            # Return the canonical game id captured by this rule.
             return match.group(1)
     # Any other changed path is shared or unrecognized and must force the full suite.
     return "SHARED"
@@ -66,26 +85,34 @@ def classify(path):
 def resolve(paths):
     # Collect the specific games touched and whether any shared path appeared.
     games = set()
+    # Track any fail-closed shared-path verdict.
     saw_shared = False
+    # Track whether any browser-relevant path was observed.
     saw_any = False
     # Classify every changed path once.
     for path in paths:
+        # Resolve this path to one game, shared ownership, or irrelevance.
         verdict = classify(path)
         # Skip browser-irrelevant paths without affecting the decision.
         if verdict is None:
+            # Continue without changing the browser-relevant decision.
             continue
         # Record that at least one browser-relevant path changed.
         saw_any = True
         # A shared path forces the full suite regardless of any game paths.
         if verdict == "SHARED":
+            # Preserve the full-suite requirement for the final reduction.
             saw_shared = True
         else:
+            # Retain one unambiguous affected game id.
             games.add(verdict)
     # A shared change always wins: run everything.
     if saw_shared:
+        # Return the explicit full-coverage token.
         return "FULL"
     # No browser-relevant change at all.
     if not saw_any:
+        # Return the explicit no-browser-relevance token.
         return "NONE"
     # Only unambiguous single-game paths changed: restrict to those games.
     return ",".join(sorted(games))
@@ -97,9 +124,11 @@ def main(argv):
     paths = argv[1:] if len(argv) > 1 else sys.stdin.read().splitlines()
     # Emit the single decision token for the workflow to consume.
     print(resolve(paths))
+    # Return conventional CLI success.
     return 0
 
 
 # Run as a CLI when invoked directly.
 if __name__ == "__main__":
+    # Exit with the detector CLI's explicit status.
     raise SystemExit(main(sys.argv))
