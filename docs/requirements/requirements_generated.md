@@ -7,7 +7,7 @@ Historical source baseline: 9.1.0
 ## Independent module revisions
 
 - application: 9.53.14
-- core: 9.27.2
+- core: 9.27.3
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.1
@@ -50,8 +50,8 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.0
 - pai_gow_poker: 1.1.0
 - teen_patti: 1.1.0
-- tests: 1.64.19
-- docs: 1.64.19
+- tests: 1.64.20
+- docs: 1.64.20
 - contracts: 1.49.9
 - tooling: 1.21.9
 - commenting_policy: 1.0.0
@@ -121,7 +121,7 @@ Historical source baseline: 9.1.0
 - **LOG-003** (Logging) - PASS: Client/browser log is written as JSONL.
 - **LOG-004** (Logging) - PASS: API requests are logged with method and path.
 - **LOG-005** (Logging) - PASS: Unhandled API exceptions are logged.
-- **LOG-006** (Logging) - PASS: Client window errors are posted to the backend logger.
+- **LOG-006** (Logging) - PASS: Client window errors are posted to the backend logger, and a peer disconnect after persistence cannot recurse into a misleading HTTP 500 response.
 - **LOG-007** (Logging) - PASS: Recent app logs are exposed through admin APIs.
 - **LOG-008** (Logging) - PASS: Recent error logs are exposed through admin APIs.
 - **LOG-009** (Logging) - PASS: Recent client logs are exposed through admin APIs.

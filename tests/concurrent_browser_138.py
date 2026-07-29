@@ -266,18 +266,18 @@ def load_pool_preflight(path, source_commit):
     pool = evidence["pool"]
     # Require the exact documented snapshot field set.
     allowed_pool_fields = {
-        "capacity",
-        "in_use",
-        "idle",
-        "waiting",
-        "physical_created",
-        "reused",
-        "discarded",
-        "wait_count",
-        "timeout_count",
-        "rollback_cleanup",
-        "connector_error",
-        "wait_buckets_ms",
+        "capacity",  # Preserve the configured connection ceiling.
+        "in_use",  # Preserve the current leased-connection count.
+        "idle",  # Preserve the reusable idle-connection count.
+        "waiting",  # Preserve the current lease-waiter count.
+        "physical_created",  # Preserve the physical connection creation count.
+        "reused",  # Preserve the successful connection-reuse count.
+        "discarded",  # Preserve the rejected connection count.
+        "wait_count",  # Preserve the cumulative lease-wait count.
+        "timeout_count",  # Preserve the cumulative lease-timeout count.
+        "rollback_cleanup",  # Preserve the rollback cleanup count.
+        "connector_error",  # Preserve the connector failure count.
+        "wait_buckets_ms",  # Preserve the fixed low-cardinality latency buckets.
     }
     # Reject missing or additional pool fields.
     if set(pool) != allowed_pool_fields:
@@ -358,7 +358,7 @@ def start_loopback_server():
     # Bootstrap the synthetic default Admin used only for setup and aggregate evidence.
     auth.bootstrap_admin_from_env()
     # Ask the operating system for one test-owned loopback listener after runtime setup succeeds.
-    server = app.ThreadingHTTPServer(("127.0.0.1", 0), app.Handler)
+    server = app.CasinoThreadingHTTPServer(("127.0.0.1", 0), app.Handler)
     # Resolve the exact assigned local port without publishing it in artifacts.
     port = int(server.server_address[1])
     # Run the request server on one named test-owned daemon thread.

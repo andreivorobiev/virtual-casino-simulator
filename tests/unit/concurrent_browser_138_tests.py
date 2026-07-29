@@ -5,6 +5,7 @@ import ast  # Parse production route decorators without importing optional appli
 from collections import Counter  # Match the grouped production diagnostic counter schema.
 from concurrent.futures import ThreadPoolExecutor  # Drive deterministic concurrent autoplay registry transactions.
 import copy  # Return independent fake registry snapshots like JSON deserialization.
+import io  # Build in-memory request and response streams for browser-free HTTP boundary proofs.
 import json  # Persist one external exact-source pool preflight fixture.
 import os  # Patch only the explicit disposable marker for boundary tests.
 from pathlib import Path  # Resolve the tracked application source independently from the runner working directory.
@@ -16,6 +17,7 @@ import unittest  # Integrate focused proofs with the repository test runner.
 from types import SimpleNamespace  # Build small aggregate-only barrier fixtures.
 from unittest import mock  # Isolate current-catalog and environment scenarios.
 
+from casino import app as casino_app  # Exercise the shared loopback static and API response boundaries.
 from casino.core import autoplay  # Exercise the synchronized server-side autoplay registry.
 from tests import concurrent_browser_138  # Exercise the public qualification planner and aggregator.
 
@@ -458,6 +460,187 @@ class ConcurrentBrowser138Tests(unittest.TestCase):
 
         # Run the complete listener-free selector-contract proof.
         asyncio.run(scenario())
+
+    # Prove the governed listener can serve every Keno lazy module in one exact browser-free burst.
+    def test_concurrent_keno_lazy_module_delivery_uses_hardened_server_contract(self):
+        # Require the listener queue to exceed the exact governed context population.
+        self.assertGreaterEqual(casino_app.CasinoThreadingHTTPServer.request_queue_size, 138)
+        # Read the exact module bytes expected from every concurrent route request.
+        expected = (Path(__file__).resolve().parents[2] / "web" / "games" / "keno.js").read_bytes()
+
+        # Serve one isolated Keno module request through the real static route without a socket.
+        def request_module(_ordinal):
+            # Allocate the production handler without invoking BaseHTTPRequestHandler's listener constructor.
+            handler = object.__new__(casino_app.Handler)
+            # Select the exact lazy-module path observed in the failed governed run.
+            handler.path = "/games/keno.js"
+            # Provide the empty public request headers used by a same-origin module fetch.
+            handler.headers = {}
+            # Identify the request method for fixed disconnect diagnostics.
+            handler.command = "GET"
+            # Capture only the response bytes in memory.
+            handler.wfile = io.BytesIO()
+            # Capture the selected status without writing a socket response.
+            handler.send_response = mock.Mock()
+            # Capture response headers without exposing environment data.
+            handler.send_header = mock.Mock()
+            # Treat header completion as an in-memory no-op.
+            handler.end_headers = mock.Mock()
+            # Route the request through the actual static-file boundary.
+            delivered = handler._serve_static()
+            # Require one successful complete-body delivery.
+            self.assertTrue(delivered)
+            # Require the exact tracked Keno module bytes.
+            self.assertEqual(handler.wfile.getvalue(), expected)
+            # Require a successful static status rather than an index fallback or error.
+            handler.send_response.assert_called_once_with(200)
+            # Return one stable size for aggregate verification.
+            return len(handler.wfile.getvalue())
+
+        # Drive exactly 138 simultaneous handler tasks without launching Chromium.
+        with ThreadPoolExecutor(max_workers=138) as executor:
+            # Collect every terminal module response.
+            sizes = list(executor.map(request_module, range(138)))
+        # Require complete exact delivery for every governed assignment.
+        self.assertEqual(sizes, [len(expected)] * 138)
+        # Require the qualification runtime source to instantiate the hardened listener instead of the default queue.
+        harness_source = Path(concurrent_browser_138.__file__).read_text(encoding="utf-8")
+        # Pin the exact listener constructor used by the governed profile.
+        self.assertIn('app.CasinoThreadingHTTPServer(("127.0.0.1", 0), app.Handler)', harness_source)
+
+        # Reject one static response write as though the lazy-module peer reset its socket.
+        class ResetSink:
+            # Model the exact module-body transport boundary without a real browser.
+            def write(self, _payload):
+                # Raise the platform-independent reset class handled by production.
+                raise ConnectionResetError("synthetic module peer reset")
+
+        # Allocate a second production handler for the reset boundary.
+        reset_handler = object.__new__(casino_app.Handler)
+        # Select the exact Keno lazy-module route.
+        reset_handler.path = "/games/keno.js"
+        # Provide the public static-request headers.
+        reset_handler.headers = {}
+        # Identify the static method for secret-safe diagnostics.
+        reset_handler.command = "GET"
+        # Fail only at the response-body write.
+        reset_handler.wfile = ResetSink()
+        # Retain the selected static response status.
+        reset_statuses = []
+        # Record status selection without a socket.
+        reset_handler.send_response = reset_statuses.append
+        # Ignore individual static headers.
+        reset_handler.send_header = mock.Mock()
+        # Complete buffered headers before the synthetic reset.
+        reset_handler.end_headers = mock.Mock()
+        # Capture only the fixed disconnect diagnostic.
+        with mock.patch.object(casino_app.logger, "warning") as reset_warning:
+            # Require the real static route to absorb only the closed-peer transport error.
+            delivered = reset_handler._serve_static()
+        # Preserve a false delivery result so route readiness remains fail-closed.
+        self.assertFalse(delivered)
+        # Refuse any retry, fallback index, or misleading error response.
+        self.assertEqual(reset_statuses, [200])
+        # Require one fixed path/method diagnostic without exception content.
+        reset_warning.assert_called_once_with("http_peer_disconnect", method="GET", path="/games/keno.js")
+
+    # Prove a disconnected client-log response cannot recurse into a misleading HTTP 500.
+    def test_client_log_peer_disconnect_is_terminal_and_invalid_payload_stays_fail_closed(self):
+        # Encode one valid diagnostic body that must be persisted before response delivery.
+        valid_body = json.dumps({"event": "module_transport_error", "details": {"game": "keno"}}).encode("utf-8")
+
+        # Reject every body write as though the reporting browser closed its peer socket.
+        class BrokenPipeSink:
+            # Model the exact response-body boundary from the governed run.
+            def write(self, _payload):
+                # Raise only the transport exception accepted by the production response helper.
+                raise BrokenPipeError("synthetic peer disconnect")
+
+        # Build one production handler around in-memory request state.
+        handler = object.__new__(casino_app.Handler)
+        # Select the frozen client-log route.
+        handler.path = "/api/v1/log/client"
+        # Select the published mutation method.
+        handler.command = "POST"
+        # Supply only the declared body length.
+        handler.headers = {"Content-Length": str(len(valid_body))}
+        # Preserve one non-identifying loopback peer.
+        handler.client_address = ("127.0.0.1", 0)
+        # Provide the valid diagnostic body through an in-memory stream.
+        handler.rfile = io.BytesIO(valid_body)
+        # Fail only when the completed response body would reach the peer.
+        handler.wfile = BrokenPipeSink()
+        # Retain every attempted response status.
+        statuses = []
+        # Record status selection without opening a socket.
+        handler.send_response = statuses.append
+        # Ignore individual headers while preserving response control flow.
+        handler.send_header = mock.Mock()
+        # Complete buffered headers before the synthetic body disconnect.
+        handler.end_headers = mock.Mock()
+        # Preserve the real diagnostic write and fixed disconnect log while rejecting generic exception logging.
+        with (
+            mock.patch.object(casino_app.auth, "authenticate_headers", return_value=({"session_id": "synthetic"}, {"role": "admin"})),  # Establish one inert authenticated context.
+            mock.patch.object(casino_app.auth, "is_admin", return_value=True),  # Avoid unrelated player binding in this transport proof.
+            mock.patch.object(casino_app.logger, "client", return_value={"stored": True}) as client_log,
+            mock.patch.object(casino_app.logger, "warning") as warning_log,
+            mock.patch.object(casino_app.logger, "error") as error_log,
+        ):
+            # Process the exact route through the production API adapter.
+            handler._handle_api()
+        # Require the real client diagnostic to be persisted exactly once.
+        client_log.assert_called_once_with("client_event", client_event="module_transport_error", details={"game": "keno"}, href="", user_agent="")
+        # Require one secret-safe peer-disconnect diagnostic.
+        warning_log.assert_called_once_with("http_peer_disconnect", method="POST", path="/api/v1/log/client")
+        # Refuse the old recursive generic-exception path.
+        error_log.assert_not_called()
+        # Refuse any second misleading 500 response attempt.
+        self.assertEqual(statuses, [200])
+
+        # Encode one structurally invalid non-object payload that must not be accepted as a client log.
+        invalid_body = json.dumps(["not-an-object"]).encode("utf-8")
+        # Allocate a fresh handler so no response state leaks across scenarios.
+        invalid_handler = object.__new__(casino_app.Handler)
+        # Select the same frozen route.
+        invalid_handler.path = "/api/v1/log/client"
+        # Select the published mutation method.
+        invalid_handler.command = "POST"
+        # Supply the invalid body's exact length.
+        invalid_handler.headers = {"Content-Length": str(len(invalid_body))}
+        # Preserve one non-identifying loopback peer.
+        invalid_handler.client_address = ("127.0.0.1", 0)
+        # Provide the invalid body through an isolated stream.
+        invalid_handler.rfile = io.BytesIO(invalid_body)
+        # Capture the sanitized failure envelope.
+        invalid_handler.wfile = io.BytesIO()
+        # Retain the selected failure status.
+        invalid_statuses = []
+        # Record status selection without opening a listener.
+        invalid_handler.send_response = invalid_statuses.append
+        # Ignore individual response headers.
+        invalid_handler.send_header = mock.Mock()
+        # Treat header completion as an in-memory no-op.
+        invalid_handler.end_headers = mock.Mock()
+        # Reject diagnostic persistence while retaining the expected validation boundary.
+        with (
+            mock.patch.object(casino_app.auth, "authenticate_headers", return_value=({"session_id": "synthetic"}, {"role": "admin"})),  # Establish one inert authenticated context.
+            mock.patch.object(casino_app.auth, "is_admin", return_value=True),  # Avoid unrelated player binding in this validation proof.
+            mock.patch.object(casino_app.logger, "client") as invalid_client_log,
+            mock.patch.object(casino_app.logger, "error") as invalid_error_log,
+            mock.patch.object(casino_app.logger, "warning") as invalid_warning_log,
+        ):
+            # Process the invalid payload through the unchanged fail-closed API boundary.
+            invalid_handler._handle_api()
+        # Refuse persistence of a malformed client-log document.
+        invalid_client_log.assert_not_called()
+        # Refuse conversion of a caller validation error into an internal exception.
+        invalid_error_log.assert_not_called()
+        # Require one fixed sanitized validation diagnostic.
+        invalid_warning_log.assert_called_once()
+        # Require one 400 envelope for a genuine invalid payload.
+        self.assertEqual(invalid_statuses, [400])
+        # Require the body to expose only the standard validation code.
+        self.assertIn(b'"code": "VALIDATION_ERROR"', invalid_handler.wfile.getvalue())
 
     # Prove the formal controller selects the bounded driver instead of the inherited long-suite strategy.
     def test_formal_controller_routes_diagnosed_game_to_bounded_driver(self):
