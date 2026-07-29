@@ -85,8 +85,14 @@ FORMAL_BOUNDED_GAME_IDS = frozenset(
         "slots",  # Keep one ready spin without shared autoplay coverage.
     }
 )
-# Group the three affected draw-poker modules that share the same bounded ready/deal/draw contract.
-FORMAL_DRAW_POKER_GAME_IDS = frozenset({"double_bonus_video_poker", "jacks_or_better_video_poker", "multi_hand_video_poker"})
+# Bind each bounded draw-poker driver to its game-owned rendered deal and draw selector contract.
+FORMAL_DRAW_POKER_SELECTORS = {
+    "double_bonus_video_poker": ("[data-deal]", "[data-draw]"),  # Match Double Bonus's dedicated data attributes.
+    "jacks_or_better_video_poker": ('[data-action="deal"]', '[data-action="draw"]'),  # Match the shared action attributes.
+    "multi_hand_video_poker": ('[data-action="deal"]', '[data-action="draw"]'),  # Match the shared action attributes.
+}
+# Derive the exact three affected draw-poker module identities from the governed selector contracts.
+FORMAL_DRAW_POKER_GAME_IDS = frozenset(FORMAL_DRAW_POKER_SELECTORS)
 
 
 # Derive one formal-only gameplay deadline from successful hosted latency evidence and fixed policy bounds.
@@ -686,16 +692,18 @@ async def play_formal_bounded_ui(page, game_id, ordinal, seen_counts, activated_
         await run_formal_action_state(action_state_observer, "next_action_ready", ui_50000.wait_any_enabled(page, ['[data-testid="baccarat-deal"]']))
     # Complete one bounded deal/draw cycle for the three diagnosed draw-poker modules.
     elif game_id in FORMAL_DRAW_POKER_GAME_IDS:
-        # Require the initial deal control without rotating long-suite configuration.
-        await run_formal_action_state(action_state_observer, "initial_ready", ui_50000.wait_any_enabled(page, ['[data-action="deal"]']))
-        # Deal the shared player hand.
-        await run_formal_action_state(action_state_observer, "action_commit", ui_50000.click_control(page, '[data-action="deal"]', activated_counts))
-        # Require and commit the legal draw action without broad hold-position coverage.
-        await run_formal_action_state(action_state_observer, "decision_resolution", ui_50000.wait_any_enabled(page, ['[data-action="draw"]']))
-        # Settle the hand through the public draw control.
-        await run_formal_action_state(action_state_observer, "settlement_ready", ui_50000.click_control(page, '[data-action="draw"]', activated_counts))
+        # Resolve the game-owned DOM contract instead of assuming all three modules share action attributes.
+        deal_selector, draw_selector = FORMAL_DRAW_POKER_SELECTORS[game_id]
+        # Require the game-specific initial deal control without rotating long-suite configuration.
+        await run_formal_action_state(action_state_observer, "initial_ready", ui_50000.wait_any_enabled(page, [deal_selector]))
+        # Deal the player hand through the same game-specific visible control.
+        await run_formal_action_state(action_state_observer, "action_commit", ui_50000.click_control(page, deal_selector, activated_counts))
+        # Require the game-specific legal draw action without broad hold-position coverage.
+        await run_formal_action_state(action_state_observer, "decision_resolution", ui_50000.wait_any_enabled(page, [draw_selector]))
+        # Settle the hand through the matching game-specific public draw control.
+        await run_formal_action_state(action_state_observer, "settlement_ready", ui_50000.click_control(page, draw_selector, activated_counts))
         # Require terminal next-hand readiness.
-        await run_formal_action_state(action_state_observer, "next_action_ready", ui_50000.wait_any_enabled(page, ['[data-action="deal"]']))
+        await run_formal_action_state(action_state_observer, "next_action_ready", ui_50000.wait_any_enabled(page, [deal_selector]))
     # Complete one Big Six wager and spin without rotating every wager input.
     elif game_id == "big_six_wheel":
         # Require at least one visible wager input.

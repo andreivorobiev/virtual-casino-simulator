@@ -396,6 +396,69 @@ class ConcurrentBrowser138Tests(unittest.TestCase):
         # Run the listener-free all-driver proof.
         asyncio.run(scenario())
 
+    # Prove Double Bonus uses its actual dedicated deal/draw attributes through every bounded readiness state.
+    def test_double_bonus_bounded_driver_uses_game_owned_selector_contract(self):
+        # Exercise the production bounded branch without opening a listener or browser.
+        async def scenario():
+            # Read the real browser module so the harness contract cannot drift away from rendered markup.
+            source = (Path(__file__).resolve().parents[2] / "web" / "games" / "double_bonus_video_poker.js").read_text(encoding="utf-8")
+            # Require both dedicated controls and reject the stale shared deal-selector assumption.
+            self.assertIn('data-deal="1"', source)
+            self.assertIn('data-draw="1"', source)
+            self.assertNotIn('data-action="deal"', source)
+            # Record each readiness selector in the order the state machine requires it.
+            readiness = []
+            # Record each pointer selector separately from readiness.
+            actions = []
+            # Preserve fixed action-state transitions for initial, deal, draw, settlement, and next-hand boundaries.
+            states = []
+
+            # Return the caller's sole selector as immediately actionable.
+            async def wait_any_enabled(_page, selectors, *_args):
+                # Record the immutable selector tuple before returning its first item.
+                readiness.append(tuple(selectors))
+                # Return the game-owned actionable selector.
+                return selectors[0]
+
+            # Record one public pointer selector without executing browser work.
+            async def click_control(_page, selector, _activated_counts):
+                # Preserve only the game-owned selector contract.
+                actions.append(selector)
+
+            # Record one fixed low-cardinality action-state transition.
+            def observe_state(name, status):
+                # Append only the governed state identity and transition.
+                states.append((name, status))
+
+            # Patch browser primitives while retaining the production driver branch and selectors.
+            with (
+                mock.patch.object(concurrent_browser_138.ui_50000, "inventory_controls", new=mock.AsyncMock()),  # Avoid DOM inventory.
+                mock.patch.object(concurrent_browser_138.ui_50000, "wait_any_enabled", new=wait_any_enabled),  # Observe readiness selectors.
+                mock.patch.object(concurrent_browser_138.ui_50000, "click_control", new=click_control),  # Observe action selectors.
+            ):
+                # Complete the exact Double Bonus formal deal/draw cycle.
+                handled = await concurrent_browser_138.play_formal_bounded_ui(
+                    object(),  # Use one inert task-owned page seam.
+                    "double_bonus_video_poker",  # Select the diagnosed game-specific branch.
+                    0,  # Preserve deterministic assignment input.
+                    Counter(),  # Collect no persistent control inventory.
+                    Counter(),  # Collect no persistent pointer history.
+                    observe_state,  # Record fixed formal state boundaries.
+                )
+            # Require exact bounded ownership and initial-deal, draw, and post-settlement deal readiness.
+            self.assertTrue(handled)
+            self.assertEqual(readiness, [("[data-deal]",), ("[data-draw]",), ("[data-deal]",)])
+            # Require the real pointer path to commit only the dedicated deal and draw controls.
+            self.assertEqual(actions, ["[data-deal]", "[data-draw]"])
+            # Reject both stale shared selectors across every observed readiness and pointer operation.
+            self.assertNotIn('[data-action="deal"]', {selector for group in readiness for selector in group} | set(actions))
+            self.assertNotIn('[data-action="draw"]', {selector for group in readiness for selector in group} | set(actions))
+            # Require every started bounded action state to complete.
+            self.assertEqual(Counter(name for name, status in states if status == "started"), Counter(name for name, status in states if status == "completed"))
+
+        # Run the complete listener-free selector-contract proof.
+        asyncio.run(scenario())
+
     # Prove the formal controller selects the bounded driver instead of the inherited long-suite strategy.
     def test_formal_controller_routes_diagnosed_game_to_bounded_driver(self):
         # Exercise the orchestration without opening a listener or browser.
