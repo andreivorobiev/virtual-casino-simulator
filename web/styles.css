@@ -2577,6 +2577,57 @@ h3 {
   border-top: 1px solid rgba(255, 255, 255, .12);
 }
 
+.admin-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.admin-nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.admin-nav-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 4px 8px;
+  background: transparent;
+  border: 0;
+  color: rgba(255, 255, 255, .5);
+  font-size: 11px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.admin-nav-section:hover {
+  color: rgba(255, 255, 255, .8);
+}
+
+.admin-nav-chevron {
+  font-size: 12px;
+  transition: transform .15s ease;
+}
+
+.admin-nav-group.collapsed .admin-nav-chevron {
+  transform: rotate(-90deg);
+}
+
+.admin-nav-items {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.admin-nav-group.collapsed .admin-nav-items {
+  display: none;
+}
+
 .admin-main {
   display: grid;
   grid-template-rows: auto 1fr;
@@ -3121,6 +3172,16 @@ h3 {
   .admin-sidebar button {
     flex: 0 0 auto;
     min-height: 42px;
+  }
+
+  .admin-nav,
+  .admin-nav-group,
+  .admin-nav-items {
+    display: contents;
+  }
+
+  .admin-nav-section {
+    display: none;
   }
 
   .admin-brand,

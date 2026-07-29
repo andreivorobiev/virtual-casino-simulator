@@ -826,9 +826,60 @@ async function system() {
 }
 
 // Define bindChrome to attach static Admin chrome event handlers.
+// Declare the nested Admin navigation as data so sections and pages stay registry-driven instead of hardcoded markup.
+const MENU = [
+  // Overview section: the landing dashboard.
+  { id: 'overview', label: 'nav.section.overview', items: [{ tab: 'dashboard', label: 'nav.dashboard', domain: 'admin' }] },
+  // Identity and access section: accounts, invitations, and disposable guests.
+  { id: 'identity', label: 'nav.section.identity', items: [{ tab: 'users', label: 'nav.users', domain: 'admin' }, { tab: 'invitations', label: 'nav.invitations', domain: 'admin' }, { tab: 'guests', label: 'nav.guests', domain: 'admin' }] },
+  // Players and economy section: player wallets, ledger, history, and autoplay.
+  { id: 'players', label: 'nav.section.players', items: [{ tab: 'players', label: 'nav.players', domain: 'admin' }, { tab: 'ledger', label: 'nav.ledger', domain: 'admin' }, { tab: 'history', label: 'nav.history', domain: 'admin' }, { tab: 'autoplay', label: 'nav.autoplay', domain: 'admin' }] },
+  // Content and support section: game state, problem reports, audio, and locale.
+  { id: 'content', label: 'nav.section.content', items: [{ tab: 'states', label: 'nav.states', domain: 'admin' }, { tab: 'feedback', label: 'feedback.admin.title', domain: 'feedback' }, { tab: 'audio', label: 'nav.audio', domain: 'admin' }, { tab: 'language', label: 'nav.language', domain: 'admin' }] },
+  // System and operations section: health, telemetry, requirements, tests, and modules.
+  { id: 'system', label: 'nav.section.system', items: [{ tab: 'operations', label: 'nav.operations', domain: 'admin' }, { tab: 'telemetry', label: 'nav.telemetry', domain: 'admin' }, { tab: 'requirements', label: 'nav.requirements', domain: 'admin' }, { tab: 'tests', label: 'nav.tests', domain: 'admin' }, { tab: 'system', label: 'nav.system', domain: 'admin' }] },
+];
+
+// Render the nested sidebar from the MENU tree, preserving every tab's data-tab and admin-tab-* hooks.
+function renderNav() {
+  // Resolve the navigation container injected by admin.html.
+  const nav = document.getElementById('adminNav');
+  // Stop when the container is absent so the module never fails on an unexpected shell.
+  if (!nav) return;
+  // Build each section as a collapsible group whose items keep their exact test and i18n hooks.
+  nav.innerHTML = MENU.map(section => {
+    // Build the item buttons, keeping data-tab, an admin-tab-* test id, and the declarative i18n binding.
+    const items = section.items.map(item =>
+      `<button data-tab="${item.tab}" data-testid="admin-tab-${item.tab}" data-i18n="${item.label}" data-i18n-domain="${item.domain}">${item.tab}</button>`
+    ).join('');
+    // Wrap the localized section header and its items in one labelled, collapsible group.
+    return `<div class="admin-nav-group" data-group="${section.id}">` +
+      `<button type="button" class="admin-nav-section" data-group-toggle="${section.id}" data-testid="admin-section-${section.id}" aria-expanded="true">` +
+        `<span data-i18n="${section.label}" data-i18n-domain="admin">${section.id}</span>` +
+        `<span class="admin-nav-chevron" aria-hidden="true">▾</span>` +
+      `</button>` +
+      `<div class="admin-nav-items">${items}</div>` +
+    `</div>`;
+  }).join('');
+}
+
+// Collapse or expand one navigation group when its header is activated.
+function toggleGroup(header) {
+  // Resolve the owning group element.
+  const group = header.closest('.admin-nav-group');
+  // Stop when the header is detached from a group.
+  if (!group) return;
+  // Flip the collapsed state and mirror it on the accessible expanded attribute.
+  const collapsed = group.classList.toggle('collapsed');
+  // Publish the current expansion state for assistive technology.
+  header.setAttribute('aria-expanded', String(!collapsed));
+}
+
 function bindChrome() {
   // Bind every sidebar tab to the shared activator.
   document.querySelectorAll('[data-tab]').forEach(button => button.onclick = () => activate(button.dataset.tab));
+  // Bind every section header to collapse or expand its group.
+  document.querySelectorAll('[data-group-toggle]').forEach(header => header.onclick = () => toggleGroup(header));
   // Bind refresh to rerender the current tab.
   document.getElementById('refreshAdmin').onclick = () => load(current);
   // Bind Back to Casino without inline HTML handlers.
@@ -872,14 +923,16 @@ async function start() {
   injectResponsiveAdminStyles();
   // Load common and Admin dictionaries before rendering text.
   await initI18n({ domains: ['admin', 'feedback'] });
-  // Apply declarative translations to static Admin chrome.
+  // Build the nested navigation from the MENU tree before translating so its labels localize in place.
+  renderNav();
+  // Apply declarative translations to static Admin chrome and the freshly rendered navigation.
   applyTranslations(document);
   // Bind Admin chrome controls after translations are ready.
   bindChrome();
   // Subscribe to locale changes so the current tab rerenders in place.
   onLocaleChange(() => { applyTranslations(document); load(current); });
-  // Render the initial dashboard tab.
-  load('dashboard');
+  // Mark and render the initial dashboard tab so its sidebar entry shows the active state.
+  activate('dashboard');
 }
 
 // Start the Admin module.
