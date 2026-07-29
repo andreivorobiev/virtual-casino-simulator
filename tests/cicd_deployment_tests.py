@@ -327,8 +327,12 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         case_ids = re.findall(r"\brun_case\(\s*['\"](BR-[A-Za-z0-9\-]+)['\"]", ast.get_source_segment(source, runner))
         # Require the current exact suite inventory after the Keno economics proof joined its edge owner case.
         self.assertEqual(len(case_ids), 107)
-        # Compute the same half-open contiguous partition used by the production runner.
-        ranges = [(0, 27), (27, 54), (54, 81), (81, 107)]
+        # Import the runner module so ownership checks use the same duration-balanced packer the workers use. (issue #502)
+        from tests import run_tests as browser_runner_module
+        # Compute the exact packed partition for the production six-shard matrix.
+        shard_sets = browser_runner_module.browser_shard_case_sets(6)
+        # Require the packed sets to partition the literal inventory with no gaps or overlaps.
+        self.assertEqual(sorted(case_id for shard_cases in shard_sets for case_id in shard_cases), sorted(case_ids))
         # Locate the one permanent Keno owner call that carries both edge and economics acceptance.
         keno_owner_call = next(node for node in ast.walk(runner) if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "run_case" and ast.literal_eval(node.args[0]) == "BR-KENO-EDGE-001")
         # Read the owner call's permanent requirement mapping without executing Browser code.
@@ -359,8 +363,8 @@ class CiQualificationWorkflowTests(unittest.TestCase):
             positions = [case_ids.index(case_id) for case_id in group_case_ids]
             # Require one contiguous source range so bulk skip accounting cannot hide unrelated cases.
             self.assertEqual(positions, list(range(positions[0], positions[0] + len(positions))), group_name)
-            # Resolve the deterministic owner of each position.
-            owners = {index for position in positions for index, shard_range in enumerate(ranges) if shard_range[0] <= position < shard_range[1]}
+            # Resolve the packed owner of each group member.
+            owners = {index for index, shard_cases in enumerate(shard_sets) for case_id in group_case_ids if case_id in shard_cases}
             # Require all producers and consumers to execute on one shard.
             self.assertEqual(len(owners), 1, group_name)
             # Guest loops retain unconditional run_case accounting through owner-conditioned iterables.
@@ -562,12 +566,12 @@ class CiQualificationWorkflowTests(unittest.TestCase):
     def test_browser_sharding_preserves_formal_and_baccarat_jobs(self):
         # Read the complete workflow as inert text.
         workflow_text = self.workflow_text(BROWSER_WORKFLOW)
-        # Require exactly four ordinary browser shard identities.
-        self.assertIn("shard: [0, 1, 2, 3]", workflow_text)
+        # Require exactly six duration-balanced ordinary browser shard identities. (issue #502)
+        self.assertIn("shard: [0, 1, 2, 3, 4, 5]", workflow_text)
         # Require exact aggregate result accounting through the historical branch-protection context.
         self.assertIn("      - browser_tests_shard", workflow_text)
         # Require literal-case union verification after every shard succeeds.
-        self.assertIn("--verify-browser-shards logs/test-runs --shard-count 4", workflow_text)
+        self.assertIn("--verify-browser-shards logs/test-runs --shard-count 6", workflow_text)
         # Preserve the explicit formal 50,000-cycle authorization input and exact aggregate.
         self.assertIn("formal_ui_50000:", workflow_text)
         # Preserve the exact formal cycle count and source-commit-bound aggregate.

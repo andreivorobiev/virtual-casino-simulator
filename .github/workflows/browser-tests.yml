@@ -99,7 +99,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [0, 1, 2, 3]
+        shard: [0, 1, 2, 3, 4, 5]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -109,9 +109,9 @@ jobs:
         run: python -m pip install -r requirements-dev.txt
       - name: Install Playwright Chromium
         run: python -m playwright install chromium
-      # Each shard replays the common preamble and owns one contiguous slice of the case sequence; the games arg is empty for a full run.
+      # Each shard replays the common preamble and owns one duration-balanced packed case set; the games arg is empty for a full run. (issue #502)
       - name: Run browser test shard
-        run: python tests/run_tests.py --browser --shard-count 4 --shard-index ${{ matrix.shard }} ${{ needs.detect_affected_games.outputs.games_arg }}
+        run: python tests/run_tests.py --browser --shard-count 6 --shard-index ${{ matrix.shard }} ${{ needs.detect_affected_games.outputs.games_arg }}
       - name: Upload browser shard artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -144,7 +144,7 @@ jobs:
           merge-multiple: true
       # Prove the shard union covers the detector-owned selection exactly once and reject inconsistent shard declarations.
       - name: Verify exact shard coverage
-        run: python tests/run_tests.py --verify-browser-shards logs/test-runs --shard-count 4 ${{ needs.detect_affected_games.outputs.games_arg }}
+        run: python tests/run_tests.py --verify-browser-shards logs/test-runs --shard-count 6 ${{ needs.detect_affected_games.outputs.games_arg }}
 
   # Run the focused issue #265 profile only for its explicit, owner-authorized dispatch.
   baccarat_sustained_2000:
