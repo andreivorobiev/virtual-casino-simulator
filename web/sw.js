@@ -19,6 +19,7 @@ const SHELL_ASSETS = Object.freeze([
   '/assets/pwa-maskable-512.png',
   '/core/api.js',
   '/core/brand.js',
+  '/core/celebrate.js',
   '/core/feedback.js',
   '/core/i18n.js',
   '/core/pwa.js',

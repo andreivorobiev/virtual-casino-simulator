@@ -412,6 +412,7 @@ label {
 }
 
 .wallet-pill {
+  position: relative;
   display: grid;
   grid-template-columns: 36px minmax(0, 1fr);
   grid-template-rows: auto auto;
@@ -427,6 +428,58 @@ label {
     linear-gradient(135deg, rgba(255, 59, 107, 0.12), transparent 48%),
     rgba(20, 10, 34, 0.9);
   box-shadow: inset 0 0 22px rgba(255, 59, 107, 0.06), 0 10px 26px rgba(0, 0, 0, 0.22);
+}
+
+/* Win feedback (core/celebrate.js): a gold glow on gain + a floating "+amount", reduced-motion aware.
+   The glow is a pseudo-overlay so it never clobbers the wallet's base shadow. */
+.wallet-pill.wallet-win::after,
+.wallet-pill.wallet-bigwin::after {
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  pointer-events: none;
+  content: "";
+  box-shadow: 0 0 22px 2px rgba(232, 199, 96, 0.55), inset 0 0 16px rgba(232, 199, 96, 0.18);
+  animation: wallet-glow-fade 0.9s ease-out forwards;
+}
+.wallet-pill.wallet-bigwin::after {
+  box-shadow: 0 0 38px 4px rgba(232, 199, 96, 0.7), inset 0 0 20px rgba(232, 199, 96, 0.22);
+  animation-duration: 1.1s;
+}
+.wallet-pill.wallet-bigwin {
+  animation: wallet-bigwin-scale 1.1s ease-out;
+}
+.wallet-gain {
+  position: absolute;
+  top: 1px;
+  right: 14px;
+  z-index: 6;
+  pointer-events: none;
+  color: var(--metal-gold, #e8c760);
+  font-size: 13px;
+  font-weight: 900;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+  animation: wallet-gain-rise 1.15s ease-out forwards;
+}
+@keyframes wallet-glow-fade {
+  0% { opacity: 0; }
+  25% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes wallet-bigwin-scale {
+  0%, 100% { transform: scale(1); }
+  25% { transform: scale(1.04); }
+}
+@keyframes wallet-gain-rise {
+  0% { opacity: 0; transform: translateY(6px) scale(0.9); }
+  20% { opacity: 1; transform: translateY(-2px) scale(1); }
+  100% { opacity: 0; transform: translateY(-26px) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wallet-pill.wallet-win::after,
+  .wallet-pill.wallet-bigwin::after,
+  .wallet-pill.wallet-bigwin { animation: none; }
+  .wallet-gain { display: none; }
 }
 
 .wallet-pill::before {

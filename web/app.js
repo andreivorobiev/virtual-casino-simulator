@@ -9,6 +9,8 @@ import { getLocaleState, initI18n, onLocaleChange, registerI18nDomains, setLocal
 import { initPwa } from './core/pwa.js';
 // Import the active brand and its runtime token applier so one config skins the app.
 import { activeBrand, applyBrand } from './core/brand.js';
+// Import the shell-level win feedback so token gains animate consistently across every game.
+import { initWalletCelebration } from './core/celebrate.js';
 // Import required dependency so this module can preload global voice settings before games mount.
 import { loadVoiceSettings } from './core/voice.js';
 // Import the registered-user problem-report dialog without adding feedback code to the shared shell.
@@ -1079,6 +1081,8 @@ export async function navigate(route, options = {}) {
 async function init() {
   // Apply the active brand's design tokens and theme colour before first paint.
   applyBrand(activeBrand);
+  // Observe the shared wallet so any balance change animates and any gain celebrates, in every game.
+  initWalletCelebration();
   // Initialize i18n before any auth or shell markup renders.
   await initI18n({ domains: ['shell', 'feedback'] });
   // Bind the native problem-report dialog after its translation domain is ready.
