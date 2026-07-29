@@ -207,7 +207,8 @@
       "status": "PASS",
       "api_tests": [],
       "browser_tests": [
-        "BR-LOBBY-001"
+        "BR-LOBBY-001",
+        "BR-CONTROL-REACH-001"
       ],
       "implementation_files": [
         "casino/app.py",
@@ -737,15 +738,20 @@
     {
       "id": "LOG-006",
       "module": "Logging",
-      "description": "Client window errors are posted to the backend logger.",
+      "description": "Client window errors are posted to the backend logger, and a peer disconnect after persistence cannot recurse into a misleading HTTP 500 response.",
       "status": "PASS",
-      "api_tests": [],
+      "api_tests": [
+        "BROWSER-138-HARNESS-001"
+      ],
       "browser_tests": [],
       "implementation_files": [
         "casino/core/logger.py",
-        "casino/admin.py"
+        "casino/admin.py",
+        "casino/app.py",
+        "tests/unit/concurrent_browser_138_tests.py"
       ],
-      "notes": ""
+      "changed_in": "issue-225-browser-load-qualification",
+      "notes": "The development/test HTTP adapter catches only closed-peer transport errors after the client diagnostic is stored, records a fixed method and normalized path, and does not attempt a second response. Malformed non-object log payloads still fail closed through the sanitized error envelope."
     },
     {
       "id": "LOG-007",
@@ -4757,12 +4763,16 @@
         "contracts/compatibility/app-0.9.5.22.json",
         "contracts/compatibility/app-0.9.5.23.json",
         "contracts/compatibility/app-0.9.5.24.json",
+        "contracts/compatibility/app-0.9.5.25.json",
+        "contracts/compatibility/app-0.9.5.26.json",
+        "contracts/compatibility/app-0.9.5.27.json",
+        "contracts/compatibility/app-0.9.5.28.json",
         "scripts/resolve_release_predecessor.py",
         "tests/release_predecessor_tests.py"
       ],
       "introduced_in": "9.2.0",
-      "changed_in": "0.9.5.24",
-      "notes": "Branch and ordinary manual candidates remain unpublished. The historical one-time owner-dispatched recovery created the retained v9.2.0 predecessor without overwrite or deletion paths. Normal v0.9.5.24 publication derives exact retained v0.9.5.23 from repository compatibility policy, verifies the downloaded manifest, packages every workflow-derived extracted-host script, and never replaces prior immutable assets. Rollback is application-only and never reverses the MySQL schema. The next large Claude LPR is reserved for v0.9.6.0."
+      "changed_in": "0.9.5.28",
+      "notes": "Branch and ordinary manual candidates remain unpublished. The historical one-time owner-dispatched recovery created the retained v9.2.0 predecessor without overwrite or deletion paths. Normal v0.9.5.28 publication derives exact retained v0.9.5.27 from repository compatibility policy, verifies the downloaded manifest, packages every workflow-derived extracted-host script, and never replaces prior immutable assets. Rollback is application-only and never reverses the MySQL schema. The next large Claude LPR is reserved for v0.9.6.0."
     },
     {
       "id": "BOT-001",
@@ -5183,17 +5193,18 @@
     {
       "id": "AUTO-006",
       "module": "Autoplay",
-      "description": "Autoplay logs start, stop, tick, completion, and error status through the server session store.",
+      "description": "Autoplay logs start, stop, tick, completion, and error status through a server session store whose in-process lifecycle transactions preserve every concurrently issued session id.",
       "status": "PASS",
       "api_tests": [],
       "browser_tests": [],
       "implementation_files": [
         "casino/core/autoplay.py",
-        "web/core/autoplay.js"
+        "web/core/autoplay.js",
+        "tests/unit/concurrent_browser_138_tests.py"
       ],
       "introduced_in": "9.1.0",
-      "changed_in": "9.1.0",
-      "notes": "Introduced in v9.1.0."
+      "changed_in": "issue-225-browser-load-qualification",
+      "notes": "The JSON-backed registry serializes complete read-modify-write transactions so concurrent starts, reads, ticks, stops, finish-stop calls, bulk stops, and player teardown cannot overwrite sibling sessions; listener-free route and concurrency regressions cover the exact browser paths observed as twelve HTTP 404 diagnostics."
     },
     {
       "id": "AUTO-007",
@@ -5745,7 +5756,9 @@
       "description": "Long history, stats, paytables, and logs use internal scroll areas.",
       "status": "PASS",
       "api_tests": [],
-      "browser_tests": [],
+      "browser_tests": [
+        "BR-CONTROL-REACH-001"
+      ],
       "implementation_files": [
         "web/styles.css",
         "web/games/roulette.js",
@@ -7884,7 +7897,7 @@
       "id": "AB-005", "module": "Tests", "description": "Catalog, contract, browser, and long-suite discovery include Andar Bahar with requirement, module, version, and visual traceability.", "status": "PASS", "api_tests": ["API-CATALOG-001", "LONG-SUITE-100"], "browser_tests": ["BR-CATALOG-DISCOVERY-001", "BR-AB-001"], "implementation_files": ["modules/andar_bahar.json", "modules/module-manifest.json", "contracts/compatibility/module-api-matrix.json", "tests/game_drivers/andar_bahar.py", "tests/visual/visual_matrix.json", "tests/run_tests.py"], "introduced_in": "game-expansion-andar-bahar", "changed_in": "game-expansion-andar-bahar", "notes": "Descriptor sort order 250 and the catalog-discovered long driver are canonical."
     },
     {
-      "id": "AD-001", "module": "Acey-Deucey", "description": "Two free exposed boundaries precede a pass or wager decision, and strict inside ranks settle at even money while outside and boundary ties lose.", "status": "PASS", "api_tests": ["API-AD-001"], "browser_tests": ["BR-AD-001"], "implementation_files": ["casino/games/acey_deucey/engine.py", "web/games/acey_deucey.js"], "introduced_in": "game-expansion-acey-deucey", "changed_in": "game-expansion-acey-deucey", "notes": "Issue #77 allocates the permanent distinct rules requirement for issue #149."
+      "id": "AD-001", "module": "Acey-Deucey", "description": "Two free exposed boundaries precede a pass or wager decision; a play requires at least one strict inside rank and settles at the server-owned spread price that holds a constant target house edge, while outside ranks and boundary ties lose.", "status": "PASS", "api_tests": ["API-AD-001"], "browser_tests": ["BR-AD-001"], "implementation_files": ["casino/games/acey_deucey/engine.py", "casino/games/acey_deucey/service.py", "contracts/openapi/acey_deucey.v1.yaml", "contracts/compatibility/acey-deucey-spread-pricing.json", "tests/game_drivers/acey_deucey.py", "tests/games/acey_deucey/test_api.py", "tests/games/acey_deucey/test_engine.py", "web/games/acey_deucey.js"], "introduced_in": "game-expansion-acey-deucey", "changed_in": "issue-408-acey-spread-pricing", "notes": "The compatible frozen-v1 repair retains the deprecated scalar rules field, adds the authoritative complete paytable and target edge, and makes equal or adjacent boundaries pass-only before reveal or ledger movement."
     },
     {
       "id": "AD-002", "module": "Acey-Deucey", "description": "Authenticated sessions own private reload-safe prepared rounds, hidden third cards, durable receipts, settled history, and canonical route restoration.", "status": "PASS", "api_tests": ["API-AD-001", "API-WALLET-RESTART-001"], "browser_tests": ["BR-AD-001"], "implementation_files": ["casino/games/acey_deucey/api.py", "casino/games/acey_deucey/service.py", "web/app.js", "tests/run_tests.py"], "introduced_in": "game-expansion-acey-deucey", "changed_in": "game-expansion-acey-deucey", "notes": "Session context overrides caller player ids, prepared cards remain private, and committed results survive reload and process restart."
@@ -10563,7 +10576,7 @@
     {
       "id": "TOUR-001",
       "module": "Core",
-      "description": "The server-only What's New foundation reads curated repository release metadata rather than deriving player content from module or application version changes. An entry is eligible only when its release version is an exact numeric dotted release at or below the running application, both localization keys are non-empty, and the release coordinator's show_in_whats_new flag is exactly true. Missing, malformed, future, incomplete, or truthy-but-inexact entries fail closed. The shipped catalog is reconciled to packaged application 0.9.5.24 and remains explicitly disabled until the player UI, browser evidence, and release-coordinator activation remainder of issue #165 are accepted.",
+      "description": "The server-only What's New foundation reads curated repository release metadata rather than deriving player content from module or application version changes. An entry is eligible only when its release version is an exact numeric dotted release at or below the running application, both localization keys are non-empty, and the release coordinator's show_in_whats_new flag is exactly true. Missing, malformed, future, incomplete, or truthy-but-inexact entries fail closed. The shipped catalog is reconciled to packaged application 0.9.5.28 and remains explicitly disabled until the player UI, browser evidence, and release-coordinator activation remainder of issue #165 are accepted.",
       "status": "PASS",
       "api_tests": [
         "API-TOUR-001"
@@ -10600,7 +10613,7 @@
     {
       "id": "TEST-106",
       "module": "Tests",
-      "description": "Listener-free isolated-provider evidence verifies exact curated opt-in selection, skipped-release merge ordering and caps, malformed and future metadata fail-closed behavior, missing and malformed catalog recovery, durable per-subject server-stamped dismissal, retry idempotency, populated-neighbour isolation, disposable guest non-persistence, subjectless rejection, raw-version privacy, current packaged 0.9.5.24 metadata with activation disabled, complete EN/RU release keys, consent-free metadata shape, additive v2 route behavior, hostile caller identity and version inputs being rejected, and exact checked contract digest pinning.",
+      "description": "Listener-free isolated-provider evidence verifies exact curated opt-in selection, skipped-release merge ordering and caps, malformed and future metadata fail-closed behavior, missing and malformed catalog recovery, durable per-subject server-stamped dismissal, retry idempotency, populated-neighbour isolation, disposable guest non-persistence, subjectless rejection, raw-version privacy, current packaged 0.9.5.28 metadata with activation disabled, complete EN/RU release keys, consent-free metadata shape, additive v2 route behavior, hostile caller identity and version inputs being rejected, and exact checked contract digest pinning.",
       "status": "PASS",
       "api_tests": [
         "API-TOUR-001"
@@ -12440,6 +12453,24 @@
       "introduced_in": "issue-351-owner-rbac-core",
       "changed_in": "issue-351-owner-rbac-core",
       "notes": "Permanent identifiers ADMIN-028, AUTH-012, and TEST-138 were reserved on issue #351 before branch mutation; no existing identifier was deleted or reused."
+    },
+    {"id":"TEST-142","module":"Tests","description":"An explicit exact-source qualification profile requires a completed disposable-MySQL 1/2/4/8 preflight, provisions exactly 138 synthetic accounts, admits browser setup through a bounded pre-barrier queue, creates 138 independent real-browser contexts on a disposable loopback runtime, assigns exactly three users to each of the 46 registered games, synchronizes them at the rendered login gate, reuses that rendered gate under one formal-only bounded login deadline, performs authentication plus catalog navigation and one complete game action under one formal-only data-derived absolute gameplay deadline, attributes bounded failures to public game, fixed phase, and fixed action state, filters expected anonymous current-user probes only before rendered login succeeds, evaluates action-aware wager and non-wager evidence through player-scoped filter-before-limit ledger routes, and emits only aggregate phase, action-state, latency, browser, HTTP, wallet, ledger, pool, coverage, concurrency, and cleanup evidence.","status":"PASS","api_tests":["BROWSER-138-HARNESS-001","STORAGE-MYSQL-LIVE-001"],"browser_tests":["BR-CONCURRENT-138-001"],"implementation_files":["casino/app.py","tests/concurrent_browser_138.py","tests/unit/concurrent_browser_138_tests.py","tests/unit/ui_50000_tests.py","tests/storage_tests.py","tests/run_tests.py",".github/workflows/browser-tests.yml"],"introduced_in":"issue-225-browser-load-qualification","changed_in":"issue-225-browser-load-qualification","notes":"The profile is opt-in, limits simultaneous context creation and shell navigation to twelve, submits from the already-rendered login gate without a synchronized second navigation, keeps the formal login bound at 90 seconds, and derives the formal-only gameplay bound as 120 seconds from the larger of hosted successful p95 85,071 ms plus a fixed 30,000 ms margin or hosted successful maximum 88,788 ms plus a fixed 15,000 ms tail margin, rounded upward to 5,000 ms with a 150,000 ms hard cap. The task-local deadline propagates through nested UI helpers without changing ordinary profiles. Fixed navigation, action phase, and action-state counters identify public game readiness boundaries; eleven diagnosed games use bounded ready/action/settlement drivers instead of unrelated long-suite coverage, Double Bonus Video Poker follows its game-owned data-deal/data-draw selector contract while the other draw-poker modules retain their data-action contract, identical Deal-state failures remain attributable by public game, and Pai Gow waits for initial-deal readiness. The loopback runtime queues at least 256 requests for the 138-context route burst, completes 138 concurrent exact Keno module reads in browser-free regression, and treats a closed static peer as an incomplete delivery so rendered route readiness remains fail-closed. The profile accepts explicit Acey-Deucey Pass or automatic free-boundary actions only without game-owned ledger movement, requires exact player-scoped assigned-game evidence for every committed wager, and refuses source-owned data, public or production targets, any population other than exactly 138 users, foreign-head pool evidence, identity-bearing metrics, incomplete cleanup, missing visible one-action drivers, post-authentication identity failures, autoplay registry/path loss, global capped ledger evidence, or fewer than three users for any registered game. The owner selected the exact 138-user minimum because 46 games multiplied by three users per game equals 138; catalog growth remains fail-closed and requires a separately governed population change."},
+    {
+      "id": "TEST-139",
+      "module": "Tests",
+      "description": "Hosted Browser evidence proves every registered catalog game keeps its enabled controls vertically reachable at the governed primary and compact desktop viewports, failing when a control is clipped by a non-scrollable ancestor in the fixed-height shell.",
+      "status": "PASS",
+      "api_tests": [],
+      "browser_tests": [
+        "BR-CONTROL-REACH-001"
+      ],
+      "implementation_files": [
+        "tests/run_tests.py",
+        "web/styles.css"
+      ],
+      "introduced_in": "issue-221-control-reachability",
+      "changed_in": "issue-221-control-reachability",
+      "notes": "TEST-139 was reserved for the issue #221 controller after TEST-138 was allocated earlier to issue #351; the hosted case emits exact-commit after-pass evidence for all 46 registered games at both governed desktop viewports."
     },
     {
       "id": "TEST-143",

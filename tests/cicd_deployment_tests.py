@@ -1,7 +1,11 @@
 """Listener-free CI/CD workflow policy tests for TOOL-002/008 and TEST-036/133."""
 
+# Import Python syntax inspection for listener-free browser ownership policy tests.
+import ast
 # Import path helpers so assertions read the checked-in workflow from any cwd.
 from pathlib import Path
+# Import regular expressions for deterministic literal browser case discovery.
+import re
 # Import unittest for dependency-free workflow policy checks.
 import unittest
 
@@ -27,6 +31,10 @@ LONG_SOAK_WORKFLOW = ROOT / ".github" / "workflows" / "long-suite-soak.yml"
 RELEASE_WORKFLOW = ROOT / ".github" / "workflows" / "release.yml"
 # Point at the long-suite runner so artifact and listener cleanup invariants can be inspected inertly.
 LONG_SUITE_RUNNER = ROOT / "tests" / "long_suites.py"
+# Point at the browser runner whose inline state must be affinity-owned.
+BROWSER_RUNNER = ROOT / "tests" / "run_tests.py"
+# Point at the ordinary, formal, and sustained browser workflow.
+BROWSER_WORKFLOW = ROOT / ".github" / "workflows" / "browser-tests.yml"
 
 
 # Validate the production deployment workflow without invoking GitHub or SSH.
@@ -246,6 +254,167 @@ class CiQualificationWorkflowTests(unittest.TestCase):
         self.assertLess(cleanup_index, report_index)
         # Prove the preserved report is written before the copied tree is removed.
         self.assertLess(report_index, deployment_cleanup_index)
+
+    # Read and parse the browser runner without importing Playwright or opening a listener.
+    def browser_runner_syntax(self):
+        # Read exact checked-in source once for syntax and literal policy assertions.
+        source = self.workflow_text(BROWSER_RUNNER)
+        # Parse the source as data so ownership checks cannot execute browser code.
+        return source, ast.parse(source)
+
+    # Prove declared producer/consumer groups fit one deterministic shard and guard their bodies.
+    def test_browser_shard_affinity_groups_are_contiguous_and_guarded(self):
+        # Parse the exact browser runner source without importing it.
+        source, tree = self.browser_runner_syntax()
+        # Select the one browser runner function that owns all permanent BR cases.
+        runner = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "run_browser_tests")
+        # Extract permanent literal IDs in deterministic source order.
+        case_ids = re.findall(r"\brun_case\(\s*['\"](BR-[A-Za-z0-9\-]+)['\"]", ast.get_source_segment(source, runner))
+        # Require the current exact suite inventory and balanced 27/27/26/26 allocation.
+        self.assertEqual(len(case_ids), 106)
+        # Compute the same half-open contiguous partition used by the production runner.
+        ranges = [(0, 27), (27, 54), (54, 80), (80, 106)]
+        # Locate the literal affinity declaration at module scope.
+        affinity_node = next(node for node in tree.body if isinstance(node, ast.Assign) and any(isinstance(target, ast.Name) and target.id == "BROWSER_CASE_AFFINITY_GROUPS" for target in node.targets))
+        # Read only literal strings and tuples from the tracked declaration.
+        affinity_groups = ast.literal_eval(affinity_node.value)
+        # Require every producer/consumer group introduced by the controller repair.
+        self.assertEqual(set(affinity_groups), {"auth_backend_pwa", "guest_lifecycle", "auth_lobby", "roulette_slots_keno", "bingo_admin"})
+        # Validate every group against exact case identity and one-shard ownership.
+        for group_name, group_case_ids in affinity_groups.items():
+            # Reject a misspelled, duplicated, or removed permanent case.
+            self.assertEqual(len(group_case_ids), len(set(group_case_ids)), group_name)
+            # Resolve exact source positions for every group member.
+            positions = [case_ids.index(case_id) for case_id in group_case_ids]
+            # Require one contiguous source range so bulk skip accounting cannot hide unrelated cases.
+            self.assertEqual(positions, list(range(positions[0], positions[0] + len(positions))), group_name)
+            # Resolve the deterministic owner of each position.
+            owners = {index for position in positions for index, shard_range in enumerate(ranges) if shard_range[0] <= position < shard_range[1]}
+            # Require all producers and consumers to execute on one shard.
+            self.assertEqual(len(owners), 1, group_name)
+            # Guest loops retain unconditional run_case accounting through owner-conditioned iterables.
+            if group_name == "guest_lifecycle":
+                # Require both disposable lifecycle loops to test the declared owner before any setup.
+                self.assertGreaterEqual(source.count("browser_shard_owns_group('guest_lifecycle')"), 2)
+            # Guarded bulk ranges require both an execution guard and explicit unowned accounting.
+            else:
+                # Require the complete inline body to sit beneath its declared group owner.
+                self.assertIn(f"if browser_shard_owns_group('{group_name}'):", source)
+                # Require unowned guarded bodies to advance their exact literal positions.
+                self.assertIn(f"skip_browser_affinity('{group_name}')", source)
+
+    # Prove inline assertions cannot execute outside an owning shard or callback.
+    def test_browser_inline_assertions_are_affinity_owned(self):
+        # Parse exact browser source and retain text for ancestor inspection.
+        source, tree = self.browser_runner_syntax()
+        # Select the browser runner whose nested callbacks are isolated by run_case.
+        runner = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "run_browser_tests")
+        # Build parent links for precise callback and guard ancestry.
+        parents = {}
+        # Visit every syntax node inside the browser runner.
+        for node in ast.walk(runner):
+            # Link every direct child back to its parent.
+            for child in ast.iter_child_nodes(node):
+                # Retain the unique syntax parent for upward ownership checks.
+                parents[child] = node
+        # Inspect every assertion that can execute directly in run_browser_tests.
+        for assertion in (node for node in ast.walk(runner) if isinstance(node, ast.Assert)):
+            # Walk upward until the browser runner or a nested callback is reached.
+            ancestor = parents.get(assertion)
+            # Track whether a declared owner guard or owner-conditioned loop dominates the assertion.
+            owned = False
+            # Inspect every syntax ancestor of this assertion.
+            while ancestor is not None and ancestor is not runner:
+                # Assertions inside a nested callback execute only through their owning run_case.
+                if isinstance(ancestor, (ast.FunctionDef, ast.Lambda)):
+                    # Mark callback-owned assertions as structurally isolated.
+                    owned = True
+                    # Stop because outer source placement cannot execute the callback body.
+                    break
+                # Treat declared group guards and owner-conditioned guest loops as explicit affinity.
+                if isinstance(ancestor, (ast.If, ast.For)) and "browser_shard_owns_group" in (ast.get_source_segment(source, ancestor.test if isinstance(ancestor, ast.If) else ancestor.iter) or ""):
+                    # Mark this inline assertion as affinity-owned.
+                    owned = True
+                    # Stop after finding the nearest valid ownership boundary.
+                    break
+                # Continue toward the browser runner.
+                ancestor = parents.get(ancestor)
+            # Reject the original line-7010 failure class and any future unowned inline assertion.
+            self.assertTrue(owned, f"unowned inline browser assertion at line {assertion.lineno}")
+
+    # Prove PWA browser acceptance follows current module metadata rather than a stale release literal.
+    def test_browser_pwa_assertions_use_current_packaged_version(self):
+        # Read exact runner source and isolate the browser function.
+        source, tree = self.browser_runner_syntax()
+        # Select the one browser runner function.
+        runner = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "run_browser_tests")
+        # Read only the browser function's source for stale identity checks.
+        runner_source = ast.get_source_segment(source, runner)
+        # Require canonical module metadata to provide the acceptance identity.
+        self.assertIn("packaged_version=json.loads((ROOT/'modules'/'module-manifest.json')", runner_source)
+        # Require service-worker registration and page identity checks to use that value.
+        self.assertIn("f'{base}/sw.js?v={packaged_version}'", runner_source)
+        # Reject any hard-coded packaged release in worker query strings or page-version assertions.
+        self.assertIsNone(re.search(r"sw\.js\?v=\d+\.\d+\.\d+", runner_source))
+        # Reject the stale equality form that previously required manual release edits.
+        self.assertIsNone(re.search(r"CasinoPwa\?\.version===['\"]\d+\.\d+\.\d+", runner_source))
+
+    # Prove isolated route-i18n coverage produces every state-dependent interpolation it consumes.
+    def test_browser_route_i18n_declares_visible_state_producers(self):
+        # Read exact runner source without importing Playwright.
+        source, tree = self.browser_runner_syntax()
+        # Select the browser runner and isolate its source.
+        runner = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "run_browser_tests")
+        # Read the complete browser function for declared-driver inspection.
+        runner_source = ast.get_source_segment(source, runner)
+        # Require the Slots history interpolation to own one visible spin producer.
+        self.assertIn("'games/slots':drive_slots_interpolation", runner_source)
+        # Require the Keno final-draw interpolation to own one visible draw producer.
+        self.assertIn("'games/keno':drive_keno_interpolation", runner_source)
+        # Require every route-specific producer to execute after mount and before audit.
+        self.assertIn("if interpolation_driver: interpolation_driver()", runner_source)
+        # Require state production to use only current player-visible action controls.
+        self.assertIn("page.get_by_test_id('slots-spin').click()", runner_source)
+        # Require the Keno driver to use the real draw action rather than a hidden API shortcut.
+        self.assertIn("page.get_by_test_id('keno-draw').click()", runner_source)
+
+    # Prove expected normal-role denials cannot poison the final browser-error invariant.
+    def test_browser_admin_affinity_clears_only_expected_denial_observations(self):
+        # Read exact browser source without importing its runtime.
+        source, tree = self.browser_runner_syntax()
+        # Select the browser runner and isolate its source.
+        runner = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "run_browser_tests")
+        # Read the complete browser function for producer/cleanup ordering checks.
+        runner_source = ast.get_source_segment(source, runner)
+        # Locate the normal-role authorization producer on the Admin-owned shard.
+        producer_index = runner_source.index("normal_admin_navigation=collect_normal_admin_navigation()")
+        # Locate the bounded expected-denial cleanup after that producer.
+        cleanup_index = runner_source.index("console_errors.clear(); http_errors.clear()", producer_index)
+        # Locate Admin login after the normal-role denial evidence is retained.
+        admin_login_index = runner_source.index("admin_browser_login=page.request.post", producer_index)
+        # Require expected 403 observations to clear only after collection and before Admin activity.
+        self.assertLess(producer_index, cleanup_index)
+        # Preserve final invariant signal for every unexpected Admin-side browser failure.
+        self.assertLess(cleanup_index, admin_login_index)
+
+    # Prove ordinary sharding does not alter formal 50k or sustained Baccarat governance.
+    def test_browser_sharding_preserves_formal_and_baccarat_jobs(self):
+        # Read the complete workflow as inert text.
+        workflow_text = self.workflow_text(BROWSER_WORKFLOW)
+        # Require exactly four ordinary browser shard identities.
+        self.assertIn("shard: [0, 1, 2, 3]", workflow_text)
+        # Require exact aggregate result accounting through the historical branch-protection context.
+        self.assertIn("needs: browser_tests_shard", workflow_text)
+        # Require literal-case union verification after every shard succeeds.
+        self.assertIn("--verify-browser-shards logs/test-runs --shard-count 4", workflow_text)
+        # Preserve the explicit formal 50,000-cycle authorization input and exact aggregate.
+        self.assertIn("formal_ui_50000:", workflow_text)
+        # Preserve the exact formal cycle count and source-commit-bound aggregate.
+        self.assertIn("--total-cycles 50000", workflow_text)
+        # Preserve the separately authorized sustained Baccarat input and exact runner.
+        self.assertIn("baccarat_sustained_2000:", workflow_text)
+        # Require the focused Baccarat command to remain independent of ordinary shard execution.
+        self.assertIn("python -m tests.baccarat_sustained", workflow_text)
 
 
 # Run focused evidence directly when invoked by a developer or release validator.

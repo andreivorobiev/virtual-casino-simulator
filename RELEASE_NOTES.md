@@ -1,4 +1,61 @@
-# Virtual Casino Simulator v0.9.5.24 Release Notes
+# Virtual Casino Simulator v0.9.5.28 Release Notes
+
+## Governed 138-browser full-catalog qualification
+
+- Proves exactly 138 simultaneous users across all 46 registered games, with exactly three assigned and three successful users per game.
+- Requires barrier, login, navigation, and gameplay completion for all 138 contexts and records fixed game, phase, and action-state attribution.
+- Verifies 136/136 committed wager actions through exact player-scoped ledger evidence while two legitimate no-wager actions produce no fabricated game ledger rows.
+- Proves 138 unique matching players, zero duplicate player, action, or ledger identifiers, and nonnegative balances.
+- Exercises disposable MySQL concurrency 1/2/4/8 with zero errors, timeouts, residual leases, or waiters.
+- Hardens concurrent autoplay registry updates, Keno lazy-module delivery, Double Bonus Deal/Draw readiness, and client-log peer-disconnect handling.
+- Keeps browser diagnostics, autoplay 404s, and governed client-log 500s at zero while closing all 138 contexts, the listener, and the job container.
+- Retains exact immutable v0.9.5.27 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation.
+
+## Prior v0.9.5.27 all-game desktop control reachability
+
+## All-game desktop control reachability
+
+- Adds one hosted Browser gate for every enabled control in all 46 registered games at the governed primary and compact desktop viewports.
+- Fails closed when a visible control is clipped by a fixed-height, non-scrollable ancestor and has no vertical scroll owner.
+- Produces exact-commit PNG and JSON after-pass sidecars for all 92 game and viewport surfaces.
+- Keeps the four-shard Browser union exact at 106 cases with unique artifacts, fail-closed aggregation, and listener cleanup.
+- Preserves gameplay, frozen API contracts, UI styling, formal 50,000-cycle work, and Baccarat sustained qualification unchanged.
+- Rotates the PWA shell identity and keeps curated What's New metadata disabled pending its separately governed UI remainder.
+- Retains exact immutable v0.9.5.26 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation.
+
+## Prior v0.9.5.26 governed Acey-Deucey spread pricing
+
+## Governed Acey-Deucey spread pricing
+
+- Prices every playable inside wager from the visible card spread using a server-owned constant-edge return table.
+- Makes equal or adjacent boundary cards pass-only and rejects Play before hidden-card reveal, receipt creation, state mutation, or ledger movement.
+- Preserves the frozen `/api/v1` numeric `inside_return_multiplier` compatibility scalar and aligns it to the current or latest priceable round.
+- Adds optional paytable and house-edge rule fields with exact OpenAPI, compatibility-record, module-matrix, and digest evidence.
+- Keeps EN/RU controls aligned with the server price and disables Play plus wager editing when no honest inside price exists.
+- Derives Long Suite outcomes from the public paytable and verifies governed desktop, tablet, mobile, locale, accessibility, reduced-motion, and route-restoration behavior in Browser evidence.
+- Rotates the PWA shell identity and keeps curated What's New metadata disabled pending its separately governed UI remainder.
+- Retains exact immutable v0.9.5.25 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation.
+
+## Prior v0.9.5.25 deterministic Browser shard-state controller
+
+## Deterministic Browser shard-state controller
+
+- Keeps dependent Browser case families together through explicit startup-validated affinity groups.
+- Runs inline state producers, actions, assertions, and teardown only on their owning shard instead of replaying unowned browser behavior.
+- Uses case-neutral authentication bootstrap for non-auth shards and co-locates normal-user and Admin navigation evidence.
+- Proves one exact, non-duplicating 105-case union across four ordinary Browser shards with counts 27/26/26/26.
+- Fails the aggregate closed on missing, duplicate, failed, cancelled, or skipped shard evidence.
+- Preserves unsharded execution, the formal 50,000-cycle suite, Baccarat sustained work, per-shard browser-error invariants, and unconditional browser/listener cleanup.
+- Derives Browser PWA expectations from canonical packaged metadata so release literals cannot become stale.
+- Keeps issue #468 open for the separately governed remaining CI timing and documentation work.
+- Rotates the PWA shell identity and keeps curated What's New metadata disabled pending its separately governed UI remainder.
+- Retains exact immutable v0.9.5.24 as the application-only rollback predecessor, preserves MySQL schema 2, and prohibits database rollback.
+- Performs no provider, DNS, billing, public signup, live OAuth, mail activation, invitation, public-exposure, credential, or SSH-ingress mutation.
+
+## Prior v0.9.5.24 runtime-inert game rule coercion foundation
 
 ## Runtime-inert game rule coercion foundation
 

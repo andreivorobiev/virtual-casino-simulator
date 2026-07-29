@@ -29,7 +29,15 @@ assert.match(moduleSource, /async function repeat\(\)/, 'Acey-Deucey repeat hand
 for (const dict of [en, ru]) {
   // Confirm the repeat key is present in the resource file.
   assert.ok(Object.prototype.hasOwnProperty.call(dict, 'controls.repeat'), 'controls.repeat is required in both locales');
+  // Confirm the no-inside decision has localized pass-only guidance.
+  assert.ok(Object.prototype.hasOwnProperty.call(dict, 'controls.noInside'), 'controls.noInside is required in both locales');
 }
+// Verify play and wager controls require a strictly positive visible spread.
+assert.match(moduleSource, /const hasInsidePrice = canDecide && Number\(activeRound\?\.inside_rank_count\) > 0;/, 'Play must require a priceable inside spread');
+// Verify the play control is disabled through the shared priceability guard.
+assert.match(moduleSource, /const playDisabled = !hasInsidePrice/, 'Play must fail closed when no inside price exists');
+// Verify pass-only guidance is selected for equal or adjacent boundaries.
+assert.match(moduleSource, /text\('controls\.noInside'\)/, 'No-inside boundaries must explain the pass-only decision');
 // Verify the reduced-motion CSS path is present.
 assert.match(moduleSource, /prefers-reduced-motion:reduce/, 'Reduced-motion CSS is required');
 // Verify the module has no interval or timeout-owned animation loop.

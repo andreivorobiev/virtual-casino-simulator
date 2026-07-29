@@ -1,6 +1,6 @@
 # Virtual Casino Simulator
 
-Packaged application release: `0.9.5.24`
+Packaged application release: `0.9.5.28`
 
 Historical source baseline: `9.1.0`
 
@@ -8,7 +8,7 @@ Local play-token browser casino simulator with a descriptor-driven catalog of is
 
 ## Current repository status
 
-This repository has advanced beyond the original v9.1.1 bootstrap snapshot. Packaged release v0.9.5.24 carries the accepted runtime-inert game rule-schema coercion foundation: exact undeclared paths remain reference-identical, while descriptor-owned settings paths can be copied into finite canonical types behind strict boolean, enum, and bound checks without mounting the helper in the router. It retains the safe CI qualification acceleration, privacy-safe Admin session-control core, owner-gated Admin authority foundation, bounded MySQL connection lifecycle, transactional non-destructive player writer, secret-safe nginx timing foundation, 46-game catalog-governance reconciliation, localized one-click Repeat bet program, TiltSeven Neon Pit identity, packaged non-shell production monitor handoff, compatibility-owned predecessor selection, exact v0.9.5.23 application-only rollback target, private-invite security, MySQL schema 2, provider-disablement, and public-exposure gates. Independently versioned modules continue to record compatible source changes. Current module revisions and requirement status are recorded in the canonical manifests and generated requirements document.
+This repository has advanced beyond the original v9.1.1 bootstrap snapshot. Packaged release v0.9.5.28 carries the governed exact 138-browser full-catalog qualification: exact-commit hosted evidence proves three simultaneous users complete one action in each of all 46 registered games, with exact player-scoped ledger isolation, bounded MySQL connection evidence, zero browser diagnostics, and complete cleanup. It includes the accepted concurrent autoplay-registry, Keno module-delivery, client-log peer-disconnect, and formal-driver readiness fixes exposed by fail-closed qualification. It retains the all-game desktop control-reachability gate, governed Acey-Deucey spread pricing, deterministic Browser shard-state controller, runtime-inert game rule-schema coercion foundation, safe CI qualification acceleration, privacy-safe Admin session-control core, owner-gated Admin authority foundation, bounded MySQL connection lifecycle, transactional non-destructive player writer, secret-safe nginx timing foundation, 46-game catalog-governance reconciliation, localized one-click Repeat bet program, TiltSeven Neon Pit identity, packaged non-shell production monitor handoff, compatibility-owned predecessor selection, exact v0.9.5.27 application-only rollback target, private-invite security, MySQL schema 2, provider-disablement, and public-exposure gates. Independently versioned modules continue to record compatible source changes. Current module revisions and requirement status are recorded in the canonical manifests and generated requirements document.
 
 ## Version sources
 

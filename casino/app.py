@@ -59,6 +59,16 @@ ADMIN_STATIC_PATHS = frozenset({"/admin", "/admin.html", "/admin.js", "/web/admi
 PWA_PUBLIC_SHELL_HEADER = "X-Casino-Public-Shell"
 # Define one cache contract consumed by both supported HTTP adapters. (CORE-026)
 CACHE_CONTROL_NO_STORE = "no-store"
+# Bound the development/test listener backlog above the governed 138-context navigation burst. (CORE-021, TEST-142)
+CONCURRENT_REQUEST_QUEUE_SIZE = 256
+# Classify only transport errors that prove the peer can no longer receive a response. (LOG-006)
+PEER_DISCONNECT_ERRORS = (BrokenPipeError, ConnectionAbortedError, ConnectionResetError)
+
+
+# Keep concurrent lazy-module requests queued without changing production WSGI behavior. (CORE-021, TEST-142)
+class CasinoThreadingHTTPServer(ThreadingHTTPServer):
+    # Accept the complete governed browser burst plus bounded API fan-out before the OS rejects a socket.
+    request_queue_size = CONCURRENT_REQUEST_QUEUE_SIZE
 
 # Define the build_router function used by this module.
 def build_router() -> Router:
@@ -211,8 +221,38 @@ def build_router() -> Router:
     @router.post(r"/api/v1/log/client")
     # Define the client_log function used by this module.
     def client_log(body, query):
-        # Return the computed value to the caller.
-        return {"logged": logger.client("client_event", **body)}
+        # Reject non-object payloads before they can enter persistent diagnostics. (LOG-006)
+        if not isinstance(body, dict):
+            # Return the published validation envelope instead of an internal server error.
+            raise ValidationError("Client log payload must be an object")
+        # Read the public low-cardinality client event name.
+        client_event = body.get("event")
+        # Require one bounded nonempty string so malformed diagnostics stay fail-closed.
+        if not isinstance(client_event, str) or not client_event.strip() or len(client_event) > 100:
+            # Reject absent, non-string, blank, or unbounded event names.
+            raise ValidationError("Client log event must be a nonempty string of at most 100 characters")
+        # Normalize absent diagnostic details to one empty object.
+        details = body.get("details", {})
+        # Refuse scalar or collection details that cannot preserve the documented object shape.
+        if not isinstance(details, dict):
+            # Reject malformed details through the standard validation response.
+            raise ValidationError("Client log details must be an object")
+        # Normalize the already client-sanitized location field.
+        href = body.get("href", "")
+        # Require a string location marker without interpreting or expanding it server-side.
+        if not isinstance(href, str):
+            # Reject malformed location evidence before persistence.
+            raise ValidationError("Client log href must be a string")
+        # Normalize the browser-owned user-agent field.
+        user_agent = body.get("user_agent", "")
+        # Require the same string shape emitted by the published browser helper.
+        if not isinstance(user_agent, str):
+            # Reject malformed agent evidence before persistence.
+            raise ValidationError("Client log user_agent must be a string")
+        # Persist the fixed backend record type and retain the browser event under a non-colliding field.
+        logged = logger.client("client_event", client_event=client_event.strip(), details=details, href=href, user_agent=user_agent)
+        # Return the existing success shape only after persistence completes.
+        return {"logged": logged}
 
     # Attach this decorator so the following function is registered with the framework.
     @router.post(r"/api/v2/auth/login")
@@ -664,6 +704,23 @@ class Handler(BaseHTTPRequestHandler):
             # Return the computed value to the caller.
             return {"_raw": raw.decode("utf-8", errors="replace")}
 
+    # Finish one buffered response without turning a peer disconnect into a second HTTP response.
+    def _finish_response(self, raw):
+        # Start protected transport completion after status and headers have been selected.
+        try:
+            # Flush the buffered headers exactly once.
+            self.end_headers()
+            # Write the complete selected body while the peer remains connected.
+            self.wfile.write(raw)
+        # Handle only closed-peer transport boundaries; application failures still propagate.
+        except PEER_DISCONNECT_ERRORS:
+            # Record a fixed secret-safe diagnostic without query, body, header, or exception content.
+            logger.warning("http_peer_disconnect", method=self.command, path=urlparse(self.path).path)
+            # Report that no complete response reached the peer.
+            return False
+        # Report successful response delivery to focused regressions and future callers.
+        return True
+
     # Define the _send_json function used by this module.
     def _send_json(self, status, payload, extra_headers=None):
         # Set raw to the value needed for the next operation.
@@ -680,10 +737,8 @@ class Handler(BaseHTTPRequestHandler):
         for name, value in extra_headers or []:
             # Execute this statement as part of the module's documented control flow.
             self.send_header(name, value)
-        # Execute this statement as part of the module's documented control flow.
-        self.end_headers()
-        # Execute this statement as part of the module's documented control flow.
-        self.wfile.write(raw)
+        # Finish once so a peer disconnect cannot re-enter the generic API 500 path. (LOG-006)
+        return self._finish_response(raw)
 
     # Send one same-origin OAuth completion redirect without serializing callback data.
     def _send_redirect(self, location: str, extra_headers=None):
@@ -875,10 +930,8 @@ class Handler(BaseHTTPRequestHandler):
             cookie_name, cookie_header = csrf_cookie_header(bootstrap_token, "Lax", False)
             # Add the exact application-owned Set-Cookie header.
             self.send_header(cookie_name, cookie_header)
-        # Execute this statement as part of the module's documented control flow.
-        self.end_headers()
-        # Execute this statement as part of the module's documented control flow.
-        self.wfile.write(content)
+        # Finish once so an abandoned static request cannot destabilize sibling lazy-module delivery.
+        return self._finish_response(content)
 
 # Define the serve function used by this module.
 def serve(host=DEFAULT_HOST, port=DEFAULT_PORT, open_browser=True):
@@ -893,7 +946,7 @@ def serve(host=DEFAULT_HOST, port=DEFAULT_PORT, open_browser=True):
     # Bootstrap the default administrator after player storage is initialized.
     auth.bootstrap_admin_from_env()
     # Set httpd to the value needed for the next operation.
-    httpd = ThreadingHTTPServer((host, port), Handler)
+    httpd = CasinoThreadingHTTPServer((host, port), Handler)
     # Set url to the value needed for the next operation.
     url = f"http://{host}:{port}/"
     # Set logger.info("server_start", url to the value needed for the next operation.

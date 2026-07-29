@@ -1,17 +1,17 @@
 # Virtual Casino Requirements and Validation
 
-Packaged application release: 0.9.5.24
+Packaged application release: 0.9.5.28
 
 Historical source baseline: 9.1.0
 
 ## Independent module revisions
 
-- application: 9.53.11
-- core: 9.27.2
+- application: 9.53.15
+- core: 9.27.3
 - ledger: 9.1.1
 - players: 9.1.0
 - bots: 1.1.1
-- autoplay: 1.1.3
+- autoplay: 1.1.4
 - audio: 9.1.1
 - admin: 1.13.0
 - operations: 1.1.2
@@ -40,7 +40,7 @@ Historical source baseline: 9.1.0
 - plinko: 1.1.0
 - fan_tan: 1.1.0
 - andar_bahar: 1.1.0
-- acey_deucey: 1.1.0
+- acey_deucey: 1.1.1
 - caribbean_stud: 1.1.0
 - let_it_ride: 1.1.0
 - casino_holdem: 1.1.0
@@ -50,10 +50,10 @@ Historical source baseline: 9.1.0
 - texas_holdem_practice_table: 1.1.0
 - pai_gow_poker: 1.1.0
 - teen_patti: 1.1.0
-- tests: 1.64.9
-- docs: 1.64.9
-- contracts: 1.49.5
-- tooling: 1.21.7
+- tests: 1.64.21
+- docs: 1.64.21
+- contracts: 1.49.10
+- tooling: 1.21.9
 - commenting_policy: 1.0.0
 - color_wheel: 1.1.0
 - poker_dice: 1.1.0
@@ -121,7 +121,7 @@ Historical source baseline: 9.1.0
 - **LOG-003** (Logging) - PASS: Client/browser log is written as JSONL.
 - **LOG-004** (Logging) - PASS: API requests are logged with method and path.
 - **LOG-005** (Logging) - PASS: Unhandled API exceptions are logged.
-- **LOG-006** (Logging) - PASS: Client window errors are posted to the backend logger.
+- **LOG-006** (Logging) - PASS: Client window errors are posted to the backend logger, and a peer disconnect after persistence cannot recurse into a misleading HTTP 500 response.
 - **LOG-007** (Logging) - PASS: Recent app logs are exposed through admin APIs.
 - **LOG-008** (Logging) - PASS: Recent error logs are exposed through admin APIs.
 - **LOG-009** (Logging) - PASS: Recent client logs are exposed through admin APIs.
@@ -392,7 +392,7 @@ Historical source baseline: 9.1.0
 - **AUTO-003** (Autoplay) - PASS: Stop prevents any new round or action from starting.
 - **AUTO-004** (Autoplay) - PASS: Stop during an atomic action completes that action safely and schedules no follow-up action.
 - **AUTO-005** (Autoplay) - PASS: Autoplay speed consistently affects inter-round delay.
-- **AUTO-006** (Autoplay) - PASS: Autoplay logs start, stop, tick, completion, and error status through the server session store.
+- **AUTO-006** (Autoplay) - PASS: Autoplay logs start, stop, tick, completion, and error status through a server session store whose in-process lifecycle transactions preserve every concurrently issued session id.
 - **AUTO-007** (Autoplay) - PASS: Admin shows active and recent autoplay sessions.
 - **AUTO-008** (Autoplay) - PASS: Admin Stop All requests stop for all server-registered autoplay sessions.
 - **AUTO-009** (Autoplay) - PASS: Roulette autoplay repeats the saved bet template.
@@ -604,7 +604,7 @@ Historical source baseline: 9.1.0
 - **AB-003** (Andar Bahar) - PASS: Wager debits and returned-token credits use the shared ledger exactly once under durable action identities.
 - **AB-004** (Application) - PASS: Andar Bahar supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.
 - **AB-005** (Tests) - PASS: Catalog, contract, browser, and long-suite discovery include Andar Bahar with requirement, module, version, and visual traceability.
-- **AD-001** (Acey-Deucey) - PASS: Two free exposed boundaries precede a pass or wager decision, and strict inside ranks settle at even money while outside and boundary ties lose.
+- **AD-001** (Acey-Deucey) - PASS: Two free exposed boundaries precede a pass or wager decision; a play requires at least one strict inside rank and settles at the server-owned spread price that holds a constant target house edge, while outside ranks and boundary ties lose.
 - **AD-002** (Acey-Deucey) - PASS: Authenticated sessions own private reload-safe prepared rounds, hidden third cards, durable receipts, settled history, and canonical route restoration.
 - **AD-003** (Acey-Deucey) - PASS: Free deals and passes move no tokens; wager debits and returned-token credits use the shared ledger exactly once under durable action identities.
 - **AD-004** (Application) - PASS: Acey-Deucey supplies complete English and Russian responsive, accessible, reduced-motion-safe, timer-clean play.
@@ -822,9 +822,9 @@ Historical source baseline: 9.1.0
 - **WELL-001** (Core) - PASS: The server-only session-wellness preference foundation is explicitly opt-in and off by default, persists only for authenticated non-guest subjects, accepts only elapsed-reminder, suggested-stopping-point, cadence, and optimistic-revision fields, rejects an entire payload carrying unknown or privilege fields, bounds cadence from 10 through 240 minutes so it cannot become countdown pressure or silently never arrive, and rejects stale concurrent updates. Disposable guest trials receive explicit non-persisted responses and create no durable wellness record. Acknowledging a reminder grants no token, streak, bonus, or reward and creates no ledger movement.
 - **WELL-002** (Core) - PASS: The additive authenticated wellness summary derives its player and active-session start boundary exclusively from server context, reads only a bounded authoritative committed-ledger window, re-filters provider rows to the session player, and reports plain movement, staked, returned, and arithmetic net play-token totals without a verdict, advice, loss-chasing language, or value implication. All drafted wellness copy ships in EN and RU with identical placeholders and is scanned against prohibited deposit, purchase, cash-value, prize, redemption, reward, streak, urgency, and loss-chasing framing.
 - **TEST-105** (Tests) - PASS: Listener-free isolated-provider evidence verifies opt-in defaults, durable registered-user configuration, disposable guest non-persistence, cadence floor and ceiling with strict type rejection, whole-payload unknown-field rejection, optimistic stale-write conflicts, reward-free acknowledgement with an unchanged ledger, neutral active-session totals with no verdict, populated-neighbour privacy, malformed-document recovery, subjectless fail-closed behavior, prohibited-framing scanning across every drafted wellness string, complete EN/RU placeholder parity, server-owned session-bound route behavior, additive v2 contract shape, and exact contract digest pinning.
-- **TOUR-001** (Core) - PASS: The server-only What's New foundation reads curated repository release metadata rather than deriving player content from module or application version changes. An entry is eligible only when its release version is an exact numeric dotted release at or below the running application, both localization keys are non-empty, and the release coordinator's show_in_whats_new flag is exactly true. Missing, malformed, future, incomplete, or truthy-but-inexact entries fail closed. The shipped catalog is reconciled to packaged application 0.9.5.24 and remains explicitly disabled until the player UI, browser evidence, and release-coordinator activation remainder of issue #165 are accepted.
+- **TOUR-001** (Core) - PASS: The server-only What's New foundation reads curated repository release metadata rather than deriving player content from module or application version changes. An entry is eligible only when its release version is an exact numeric dotted release at or below the running application, both localization keys are non-empty, and the release coordinator's show_in_whats_new flag is exactly true. Missing, malformed, future, incomplete, or truthy-but-inexact entries fail closed. The shipped catalog is reconciled to packaged application 0.9.5.28 and remains explicitly disabled until the player UI, browser evidence, and release-coordinator activation remainder of issue #165 are accepted.
 - **TOUR-002** (Core) - PASS: An authenticated registered subject receives at most one capped newest-first merged set of explicitly enabled curated entries and a changelog path. Published entries carry localization keys only, never raw release identifiers. Acknowledgement is atomically persisted per server-derived subject, stamped only from the canonical running application version, and retry-idempotent for that release; one subject cannot dismiss another subject's tour. Disposable guest trials receive an empty non-persisted eligibility response and a non-persisted acknowledgement, creating no durable What's New document.
-- **TEST-106** (Tests) - PASS: Listener-free isolated-provider evidence verifies exact curated opt-in selection, skipped-release merge ordering and caps, malformed and future metadata fail-closed behavior, missing and malformed catalog recovery, durable per-subject server-stamped dismissal, retry idempotency, populated-neighbour isolation, disposable guest non-persistence, subjectless rejection, raw-version privacy, current packaged 0.9.5.24 metadata with activation disabled, complete EN/RU release keys, consent-free metadata shape, additive v2 route behavior, hostile caller identity and version inputs being rejected, and exact checked contract digest pinning.
+- **TEST-106** (Tests) - PASS: Listener-free isolated-provider evidence verifies exact curated opt-in selection, skipped-release merge ordering and caps, malformed and future metadata fail-closed behavior, missing and malformed catalog recovery, durable per-subject server-stamped dismissal, retry idempotency, populated-neighbour isolation, disposable guest non-persistence, subjectless rejection, raw-version privacy, current packaged 0.9.5.28 metadata with activation disabled, complete EN/RU release keys, consent-free metadata shape, additive v2 route behavior, hostile caller identity and version inputs being rejected, and exact checked contract digest pinning.
 - **MARKETING-001** (Marketing Site) - PASS: The repository contains an independently owned static TiltSeven landing-page scaffold in English and Russian. Each locale provides semantic header, navigation, main, and footer landmarks; a single top-level heading; keyboard skip navigation; stable accessible names; local-only runtime assets; and responsive containment at every governed viewport. The scaffold uses no JavaScript, forms, trackers, payment controls, or third-party runtime dependency.
 - **MARKETING-002** (Marketing Site) - PASS: Every locale presents TiltSeven as a play-token casino simulator with no cash value and explicit absence of deposits, purchases, withdrawals, redemption, prizes, transfer, sale, exchange, or conversion. The only absolute hyperlink is the separately governed canonical Casino origin, and acceptance never activates that link or changes the Casino deployment.
 - **MARKETING-003** (Marketing Site) - PASS: Future publication is fail-closed behind a separate owner-approved packet naming the canonical host, redirects, hosting account and path, DNS and TLS ownership, exact commit and artifact digest, privacy and analytics policy, rollback, operator, and independent verification. Repository documentation contains no operative provider endpoint, credential, live DNS record, deployment claim, or instruction that can be mistaken for current authorization.
@@ -929,4 +929,6 @@ Historical source baseline: 9.1.0
 - **AUTH-012** (Core) - PASS: The configured bootstrap identity is idempotently migrated to a non-assignable platform_owner authority while preserving compatible Admin presentation, every committed migration revokes predecessor sessions, ordinary Admin and monitor identities retain Admin access without owner authority, and repeated process startup never rotates a current owner session.
 - **ADMIN-028** (Admin) - PASS: Only the current active platform owner can grant or revoke ordinary Admin authority through additive v2 account mutation, the target must already be an active canonical account, v2 account creation is player-only, platform-owner authority is not caller-assignable or removable, and transaction-scoped JSON/MySQL validation preserves at least one active owner and Admin while recording the canonical actor and revoking affected target sessions.
 - **TEST-138** (Tests) - PASS: Listener-free account-spine evidence proves one-time bootstrap-owner migration and session invalidation, owner-only additive-v2 Admin grant and revoke, ordinary-Admin denial, active-target enforcement, last-owner preservation under concurrent mutation, and v2 player-only creation without opening a listener or touching live identity data.
+- **TEST-142** (Tests) - PASS: An explicit exact-source qualification profile requires a completed disposable-MySQL 1/2/4/8 preflight, provisions exactly 138 synthetic accounts, admits browser setup through a bounded pre-barrier queue, creates 138 independent real-browser contexts on a disposable loopback runtime, assigns exactly three users to each of the 46 registered games, synchronizes them at the rendered login gate, reuses that rendered gate under one formal-only bounded login deadline, performs authentication plus catalog navigation and one complete game action under one formal-only data-derived absolute gameplay deadline, attributes bounded failures to public game, fixed phase, and fixed action state, filters expected anonymous current-user probes only before rendered login succeeds, evaluates action-aware wager and non-wager evidence through player-scoped filter-before-limit ledger routes, and emits only aggregate phase, action-state, latency, browser, HTTP, wallet, ledger, pool, coverage, concurrency, and cleanup evidence.
+- **TEST-139** (Tests) - PASS: Hosted Browser evidence proves every registered catalog game keeps its enabled controls vertically reachable at the governed primary and compact desktop viewports, failing when a control is clipped by a non-scrollable ancestor in the fixed-height shell.
 - **TEST-143** (Tests) - PASS: Listener-free isolated-provider evidence proves persistent-account-only bounded session inventory, newest-first ordering, fixed one-way aliases, approved-field and coarse-client projection, secret and cross-account exclusion, idempotent targeted and all-session revocation, concurrent exactly-once transition counting, byte-exact preservation of syntactically invalid JSON, parseable malformed-document preservation, and invalid-request non-mutation.

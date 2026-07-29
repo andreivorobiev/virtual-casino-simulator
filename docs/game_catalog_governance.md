@@ -4,7 +4,7 @@ GitHub issue #81 established the one-time integration interface for expanding th
 
 ## Current reconciliation
 
-The v0.9.5.24 release line retains 46 catalog-discovered playable game descriptors, the accepted runtime-inert settings rule-schema and coercion foundations, and the accelerated repository qualification workflow. The historical `GAME_CATALOG_TARGET = 20` value remains a release-readiness floor and reporting target, not a cap and not an instruction to add another catalog mechanism.
+The v0.9.5.28 release line retains 46 catalog-discovered playable game descriptors, the exact 138-browser full-catalog qualification, the all-game desktop control-reachability gate, governed Acey-Deucey spread pricing, the accepted runtime-inert settings rule-schema and coercion foundations, and the deterministic four-shard Browser qualification workflow. The historical `GAME_CATALOG_TARGET = 20` value remains a release-readiness floor and reporting target, not a cap and not an instruction to add another catalog mechanism.
 
 Issues #73, #77, and #66 therefore should not be read as an active command to add duplicate game-registration infrastructure. Their current shared-architecture meaning is:
 
@@ -41,7 +41,7 @@ The descriptor contains:
 
 The validator rejects unknown schema keys, unsafe semantic flags, inverted or non-finite bounds, invalid engine defaults, undeclared settings routes, descriptors without matching routes, and multiple settings routes owned by one descriptor. Internal callable references and rule schemas are stripped from the public game catalog.
 
-The v0.9.5.24 release line retains behavior-neutral helpers for internal schema lookup, deterministic declared-field discovery, and pure request coercion. On an exact descriptor-owned settings path, the coercer canonicalizes finite numeric strings and numbers, requires exact booleans and closed enum members, applies inclusive bounds, preserves unknown keys for the existing handler allowlist, and never mutates the caller-owned mapping. On every undeclared path, it returns the original request object unchanged.
+The v0.9.5.28 release line retains behavior-neutral helpers for internal schema lookup, deterministic declared-field discovery, and pure request coercion. On an exact descriptor-owned settings path, the coercer canonicalizes finite numeric strings and numbers, requires exact booleans and closed enum members, applies inclusive bounds, preserves unknown keys for the existing handler allowlist, and never mutates the caller-owned mapping. On every undeclared path, it returns the original request object unchanged.
 
 The first two #433 slices remain runtime-inert. Existing handler validation is still the request authority because the router does not call the coercion helper. A separately reviewed follow-up must obtain the outstanding product approval, mount descriptor enforcement centrally, remove hand-written rule lists, update frozen-contract documentation, and prove read-side state recovery. Descriptors and pure helpers by themselves must never be treated as runtime enforcement or a change to frozen `/api/v1` behavior.
 
