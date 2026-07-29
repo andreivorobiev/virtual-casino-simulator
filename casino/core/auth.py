@@ -1125,6 +1125,42 @@ def authenticate_token(token: str, guest_browser_nonce: str = "") -> tuple[dict,
                 session["updated_at"] = activity_now
                 # Touch only the one-way analytics id; the summary never stores user, player, or session identifiers.
                 guest_analytics.record_event(user.get("guest_analytics_id"))
+            # Enforce the global idle and absolute session-timeout policy for registered accounts. (SESSION-008)
+            else:
+                # Import the policy resolver lazily so the core auth module keeps a flat import graph.
+                from casino.core.session_settings import resolve_timeout_seconds
+                # Read one UTC instant used for both timeout comparisons and any activity refresh.
+                policy_now = utc_datetime()
+                # Resolve the effective idle and absolute limits, honoring the stricter admin policy.
+                idle_seconds, absolute_seconds = resolve_timeout_seconds(is_admin(user))
+                # Measure elapsed time since login for the absolute cap, tolerating a missing creation stamp.
+                created_elapsed = (policy_now - parse_time(session.get("created_at") or session.get("updated_at"))).total_seconds()
+                # Measure elapsed time since the last observed activity for the idle cap.
+                idle_elapsed = (policy_now - parse_time(session.get("updated_at") or session.get("created_at"))).total_seconds()
+                # Revoke and reject a session past either limit so the next request must re-authenticate.
+                if created_elapsed >= absolute_seconds or idle_elapsed >= idle_seconds:
+                    # Mark the timed-out session revoked so it cannot be resumed.
+                    revoke_session_by_id(session.get("session_id"))
+                    # Reject without exposing which limit elapsed.
+                    raise UnauthorizedError("Session is invalid or expired")
+                # Refresh the server-observed activity marker only when it is stale enough to matter, avoiding a write per request.
+                if idle_elapsed >= 60:
+                    # Capture the activity timestamp once for the atomic refresh.
+                    activity_now = utc_now()
+                    # Define the atomic authenticated-activity mutation for the one matching session.
+                    def touch_account_session(stored_state: dict) -> dict:
+                        # Find only the authenticated session by its opaque identifier.
+                        for stored in stored_state.get("sessions", []):
+                            # Match the session without comparing or copying its bearer credential.
+                            if stored.get("session_id") == session.get("session_id"):
+                                # Slide the server-observed inactivity marker forward.
+                                stored["updated_at"] = activity_now
+                        # Return the mutated sessions document for atomic persistence.
+                        return stored_state
+                    # Persist activity atomically so concurrent requests cannot restore stale session state.
+                    update_json(SESSIONS_PATH, touch_account_session, default_sessions)
+                    # Reflect the touch in the request-local session used by downstream code.
+                    session["updated_at"] = activity_now
             # Return the computed value to the caller.
             return session, user
     # Raise an error so invalid input or state is reported explicitly.
@@ -1168,6 +1204,29 @@ def logout(token: str) -> dict:
     update_json(SESSIONS_PATH, mutate, default_sessions)
     # Return the computed value to the caller.
     return {"logged_out": changed["value"]}
+
+# Revoke one session by its opaque identifier so a timed-out account cannot resume it. (SESSION-008)
+def revoke_session_by_id(session_id: str) -> None:
+    # Define the atomic revocation that only touches the identified session record.
+    def mutate(state: dict) -> dict:
+        # Normalize malformed persisted state into the canonical sessions container.
+        if not isinstance(state, dict) or "sessions" not in state:
+            # Reset to a fresh default sessions document before mutation.
+            state = default_sessions()
+        # Iterate through the collection to process each item.
+        for session in state.get("sessions", []):
+            # Branch when the stored session identifier matches without touching bearer material.
+            if session.get("session_id") == session_id:
+                # Mark the timed-out session revoked so it cannot be resumed.
+                session["status"] = "revoked"
+                # Record the revocation time consistent with logout.
+                session["updated_at"] = utc_now()
+        # Stamp the schema version consistent with save_sessions.
+        state["schema_version"] = SCHEMA_VERSION
+        # Return the mutated state for atomic persistence.
+        return state
+    # Persist the revocation atomically so a concurrent login is never clobbered.
+    update_json(SESSIONS_PATH, mutate, default_sessions)
 
 # Revoke every active session owned by one account after a privilege change.
 def revoke_sessions_for_user(user_id: str) -> int:
